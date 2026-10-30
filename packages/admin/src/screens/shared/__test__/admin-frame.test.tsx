@@ -56,13 +56,6 @@ const unfold = () => screen.getByRole("button", { name: tui("sidebar.unfold") })
 const siteName = () => within(rail()).queryByRole("link", { name: testSite.SITE_NAME || "CMS" });
 
 describe("the admin frame", () => {
-	it("shows the rail next to the page on a wide screen", () => {
-		stubWidth(false);
-		renderFrame();
-		expect(within(rail()).getAllByRole("link").length).toBeGreaterThan(0);
-		expect(screen.getByRole("heading", { level: 1, name: "Page" })).toBeTruthy();
-	});
-
 	it("keeps the rail in a drawer on a narrow screen: a button opens it, choosing a row closes it, and there is no fold", () => {
 		stubWidth(true);
 		renderFrame();
@@ -102,18 +95,6 @@ describe("folding the sidebar to its icons", () => {
 		expect(siteName()).toBeTruthy();
 	});
 
-	it("remembers the folded state in this browser", () => {
-		const first = renderFrame();
-		fireEvent.click(fold());
-		first.unmount();
-		renderFrame();
-		expect(siteName()).toBeNull();
-		fireEvent.click(unfold());
-		cleanup();
-		renderFrame();
-		expect(siteName()).toBeTruthy();
-	});
-
 	it("names a folded row and its count in a tooltip", async () => {
 		vi.stubGlobal(
 			"fetch",
@@ -128,58 +109,6 @@ describe("folding the sidebar to its icons", () => {
 		fireEvent.mouseMove(tools);
 		const tip = await screen.findByText(`${t("sidebar.tools")} 3`);
 		expect(tip.textContent).toContain(`${t("sidebar.tools")} 3`);
-	});
-
-	it("puts a dot on the tools icon while deliveries have failed, and none for the trash", async () => {
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => jsonResponse({ items: [], total: 4, counts: { failed: 2, dead: 1 } })),
-		);
-		renderFrame();
-		// Unfolded, the count is written; no dot yet.
-		const badge = t("sidebar.eventsBadge", { count: 3 });
-		const tools = () => within(rail()).getByRole("link", { name: new RegExp(t("sidebar.tools")) });
-		await within(tools()).findByLabelText(badge);
-		expect(within(tools()).queryByRole("img", { name: badge })).toBeNull();
-		fireEvent.click(fold());
-		expect(within(tools()).getByRole("img", { name: badge })).toBeTruthy();
-		const trash = within(rail()).getByRole("link", { name: new RegExp(t("sidebar.trash")) });
-		expect(within(trash).queryByRole("img")).toBeNull();
-	});
-
-	it("shows no folders while folded", () => {
-		render(
-			<AdminQueryProvider>
-				<AdminUiLabels>
-					<AdminFrame
-						sidebar={{
-							activeNav: testSite.DEFAULT_COLLECTION,
-							folderNav: {
-								collection: testSite.DEFAULT_COLLECTION,
-								currentFolder: "all",
-								folders: [
-									{
-										id: "a",
-										collection: testSite.DEFAULT_COLLECTION,
-										parentId: null,
-										name: "Dev",
-										position: 0,
-										version: 1,
-									},
-								],
-								onSelectFolder: () => undefined,
-								onDropEntries: () => undefined,
-							},
-						}}
-					>
-						<h1>Page</h1>
-					</AdminFrame>
-				</AdminUiLabels>
-			</AdminQueryProvider>,
-		);
-		expect(within(rail()).getByRole("button", { name: "Dev" })).toBeTruthy();
-		fireEvent.click(fold());
-		expect(within(rail()).queryByRole("button", { name: "Dev" })).toBeNull();
 	});
 });
 

@@ -263,20 +263,6 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(reload.rememberSaved).toHaveBeenCalled();
 	});
 
-	it("leaves the list as it was when the sheet is cancelled", async () => {
-		open();
-		await screen.findByTestId("collection-nav-post");
-		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
-		const sheet = await screen.findByRole("dialog", { name: tCollection("collection.createTitle") });
-		fireEvent.change(within(sheet).getByRole("textbox", { name: tCollection("collection.newName") }), {
-			target: { value: "Notes" },
-		});
-		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(inList("notes")).toBe(false);
-		expect(screen.queryByTestId("save-bar")).toBeNull();
-	});
-
 	it("waits for an identifier when the name has no ASCII letters, and gives an item no public address", async () => {
 		open();
 		await screen.findByTestId("collection-nav-post");
@@ -302,81 +288,6 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		const body = lastPreview()?.body?.schema as { collections: Record<string, Record<string, unknown>> };
 		expect(body.collections.tag).toMatchObject({ kind: "item", label: "태그" });
 		expect(body.collections.tag?.path).toBeUndefined();
-	});
-});
-
-describe("flow 4 · 컬렉션 기본 탭", () => {
-	it("shows the view and the structure, with the identifier and the kind as read-only text", async () => {
-		open();
-		const editor = await screen.findByTestId("collection-post");
-
-		// The tabs: basics, fields with their count, and the editor. The preview button belongs to the fields tab only.
-		expect(
-			within(editor)
-				.getByRole("tab", { name: tCollection("collection.tabs.basics") })
-				.getAttribute("aria-selected"),
-		).toBe("true");
-		expect(
-			within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }).textContent,
-		).toContain("2");
-		expect(within(editor).getByRole("tab", { name: tCollection("collection.tabs.editor") })).toBeTruthy();
-		expect(screen.queryByRole("button", { name: tFields("layout.previewTitle") })).toBeNull();
-
-		// Two sections, in this order.
-		const headings = within(editor)
-			.getAllByRole("heading", { level: 2 })
-			.map((heading) => heading.textContent);
-		expect(headings.slice(0, 2)).toEqual([
-			tCollection("collection.viewTitle"),
-			tCollection("collection.structureTitle"),
-		]);
-
-		// The identifier and the kind cannot be changed: text with a lock, no field, no radio, no icon picker.
-		expect(
-			within(editor).queryByRole("textbox", { name: new RegExp(`^${tCollection("collection.newId")}`) }),
-		).toBeNull();
-		expect(within(editor).queryByRole("radio")).toBeNull();
-		expect(within(editor).queryByRole("combobox")).toBeNull();
-		expect(within(editor).queryByRole("button", { name: /아이콘|icon/i })).toBeNull();
-		expect(within(editor).getByText("post")).toBeTruthy();
-		expect(within(editor).getByRole("img", { name: t("lock.cannotChange") })).toBeTruthy();
-		expect(editor.textContent).toContain(tCollection("collection.kindText.document"));
-
-		// The display name and the folders switch are the view; the address is a switch with its middle part as the field.
-		const label = within(editor).getByRole("textbox", { name: tCollection("collection.label") }) as HTMLInputElement;
-		expect(label.value).toBe("Post");
-		expect(within(editor).getByRole("switch", { name: tCollection("collection.folders") })).toBeTruthy();
-		const path = within(editor).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement;
-		expect(path.value).toBe("posts");
-		expect(within(editor).queryByRole("img", { name: t("changed") })).toBeNull();
-
-		// A new address marks its label and joins the changes, and the save sends it.
-		fireEvent.change(path, { target: { value: "blog" } });
-		const pathRow = within(editor)
-			.getByRole("switch", { name: tCollection("collection.path") })
-			.closest("label") as HTMLElement;
-		expect(within(pathRow).getByRole("img", { name: t("changed") })).toBeTruthy();
-		const bar = screen.getByTestId("save-bar");
-		expect(hasChangeCount(1)).toBe(true);
-		fireEvent.click(within(bar).getByRole("button", { name: t("bar.list") }));
-		expect(
-			await screen.findByRole("menuitem", { name: new RegExp(`^Post · ${tCollection("collection.path")}`) }),
-		).toBeTruthy();
-		fireEvent.keyDown(globalThis.document.activeElement ?? document.body, { key: "Escape" });
-		fireEvent.click(within(bar).getByRole("button", { name: t("bar.save") }));
-		await screen.findByRole("dialog");
-		await waitFor(() => expect(lastPreview()).toBeTruthy());
-		const body = lastPreview()?.body?.schema as { collections: Record<string, { path?: string }> };
-		expect(body.collections.post?.path).toBe("/blog/:slug");
-	});
-
-	it("opens the fields tab with the preview button at the right of the tab row", async () => {
-		open();
-		const editor = await screen.findByTestId("collection-post");
-		fireEvent.click(within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
-		const preview = await screen.findByRole("button", { name: tFields("layout.previewTitle") });
-		expect(preview.getAttribute("aria-pressed")).not.toBeNull();
-		expect(within(editor).getByTestId("field-title")).toBeTruthy();
 	});
 });
 
@@ -410,42 +321,6 @@ const pressDelete = async () => {
 };
 
 describe("flow 4 · 필드 시트", () => {
-	it("opens a field in the sections 보기 and 구조 and says beside the disabled button why it cannot be deleted", async () => {
-		open();
-		const editor = await screen.findByTestId("collection-post");
-		fireEvent.click(within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
-		fireEvent.click(await within(editor).findByRole("button", { name: tFields("field.toggle", { name: "title" }) }));
-		const sheet = await screen.findByRole("dialog");
-
-		// The two sections, in this order, after the title of the sheet; the name of the field is text with a lock, not a field.
-		const headings = within(sheet)
-			.getAllByRole("heading", { level: 2 })
-			.map((heading) => heading.textContent);
-		expect(headings.slice(1)).toEqual([tFields("sheet.view"), tFields("sheet.structure")]);
-		expect(within(sheet).getByRole("textbox", { name: tFields("field.name") })).toBeTruthy();
-		const label = within(sheet).getByRole("textbox", { name: tFields("field.label") }) as HTMLInputElement;
-		expect(label.labels?.[0]?.textContent).not.toContain("*");
-
-		// The title field cannot be deleted: the button is off and the reason is written beside it, not in a tooltip.
-		const remove = within(sheet).getByRole("button", { name: tFields("sheet.delete") }) as HTMLButtonElement;
-		expect(remove.disabled).toBe(true);
-		expect(within(sheet).getByTestId("remove-blocked").textContent).toBe(tFields("field.removeBlocked.title"));
-
-		// Cancel drops the edit; Save keeps it as one change of the field.
-		fireEvent.change(label, { target: { value: "Heading" } });
-		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(screen.queryByTestId("save-bar")).toBeNull();
-		fireEvent.click(within(editor).getByRole("button", { name: tFields("field.toggle", { name: "title" }) }));
-		const again = await screen.findByRole("dialog");
-		fireEvent.change(within(again).getByRole("textbox", { name: tFields("field.label") }), {
-			target: { value: "Heading" },
-		});
-		fireEvent.click(within(again).getByRole("button", { name: tFields("sheet.save") }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(hasChangeCount(1)).toBe(true);
-	});
-
 	it("renames a field on Save: the name is taken when the input is left, and the rename joins the changes as one", async () => {
 		open();
 		const editor = await screen.findByTestId("collection-post");

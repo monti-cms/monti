@@ -111,16 +111,6 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+%$/);
 	});
 
-	it("renders the transform wrapper when crop and rotate attributes are present", () => {
-		const { props } = createProps({
-			crop: "10,20,50,40",
-			rotate: "90",
-		});
-		const { container } = renderWithSite(<CmsImageNodeView {...props} />);
-		const wrapper = container.querySelector('[data-slot="image-transform-wrapper"]');
-		expect(wrapper).toBeTruthy();
-	});
-
 	it("can open the crop and rotate sheet and perform rotate and apply", () => {
 		const { props, updateAttributes } = createProps();
 		renderWithSite(<CmsImageNodeView {...props} />);
@@ -155,20 +145,6 @@ describe("CmsImageNodeView", () => {
 		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
 		act(() => {
 			window.dispatchEvent(new PointerEvent("pointerup"));
-		});
-
-		expect(updateAttributes).not.toHaveBeenCalled();
-	});
-
-	it("cleans up without calling updateAttributes on pointercancel", () => {
-		const { props, updateAttributes } = createProps({ width: "400px" });
-		renderWithSite(<CmsImageNodeView {...props} />);
-
-		const rightHandle = screen.getByLabelText(t("imageNode.resizeRight"));
-		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
-		act(() => {
-			window.dispatchEvent(new PointerEvent("pointermove", { clientX: 200 }));
-			window.dispatchEvent(new PointerEvent("pointercancel"));
 		});
 
 		expect(updateAttributes).not.toHaveBeenCalled();

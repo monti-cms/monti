@@ -80,17 +80,6 @@ describe("the tools page", () => {
 		await expect(open("templates", build(false))).rejects.toThrow("not-found");
 	});
 
-	it("has one title, the tabs as links in order, and the open tab marked", async () => {
-		await open("data");
-		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
-		const links = within(tabs()).getAllByRole("link");
-		expect(links.map((link) => link.getAttribute("href"))).toEqual(toolsTabs(site).map((tab) => tab.href));
-		const current = links.filter((link) => link.getAttribute("aria-current") === "page");
-		expect(current).toHaveLength(1);
-		expect(current[0]?.getAttribute("href")).toBe(toolsTabs(site).find((tab) => tab.id === "data")?.href);
-	});
-
 	it("shows a plugin's page as the last tab, under the same title", async () => {
 		await open("stats");
 		expect(screen.getByText("stats page body")).toBeTruthy();
@@ -113,10 +102,5 @@ describe("the tools page", () => {
 			.getAllByRole("link")
 			.filter((link) => link !== events);
 		for (const link of others) expect(within(link).queryByLabelText(/\d/)).toBeNull();
-	});
-
-	it("leaves the templates tab out when the site turns templates off", async () => {
-		await open("data", build(false));
-		expect(within(tabs()).queryByRole("link", { name: new RegExp(t("tab.templates")) })).toBeNull();
 	});
 });

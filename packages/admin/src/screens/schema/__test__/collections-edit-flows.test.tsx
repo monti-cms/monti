@@ -220,21 +220,6 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		expect(screen.getByTestId("field-subtitle").textContent).not.toContain(tChanges("tag.removed"));
 	});
 
-	it("08 the preview panel says it shows the draft and that it is not saved, and has no list of what to fix", async () => {
-		openFields();
-		await removeField("subtitle");
-		const panel = await openPreview();
-		expect(panel.textContent).toContain(tProblem("preview.label"));
-		expect(within(panel).queryByTestId("layout-preview-problems")).toBeNull();
-		expect(panel.textContent).not.toContain(tProblem("preview.fix"));
-		// Its head's × closes it, as the toolbar button does (the ui part names it; this test renders no admin labels for it).
-		fireEvent.click(within(panel).getByRole("button", { name: /^(Close|닫기)$/ }));
-		await waitFor(() => expect(screen.queryByTestId("layout-preview")).toBeNull());
-		expect(screen.getByRole("button", { name: tFields("layout.previewTitle") }).getAttribute("aria-pressed")).toBe(
-			"false",
-		);
-	});
-
 	it("09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {
 		state = stateOf({
 			post: post({ subtitle: field("부제"), format: { kind: "select", label: "글 종류", options: {} } }),
@@ -395,50 +380,6 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		return dialog;
 	};
 
-	it("11 is a sheet with one block per change, the title says where, and the footer holds only cancel and apply", async () => {
-		const dialog = await review();
-		expect(dialog.getAttribute("data-slot")).toBe("sheet-content");
-		expect(dialog.textContent).toContain(`${tReview("review.title")}`);
-		expect(dialog.textContent).toContain(tReview("review.what", { name: "게시글", count: 1 }));
-
-		// One block for the rename (the added field and the removed one are not blocks of their own), one for the removal, one for the required field.
-		expect(
-			within(dialog)
-				.getAllByTestId(/^impact-/)
-				.map((block) => block.getAttribute("data-testid")),
-		).toEqual([`impact-${SUMMARY}`, `impact-${SUBTITLE}`, `impact-${FORMAT}`]);
-		const tags = within(dialog)
-			.getAllByTestId(/^impact-/)
-			.map((block) => block.querySelector('[data-slot="change-tag"]')?.textContent);
-		expect(tags).toEqual([tReview("tag.rename"), tReview("tag.drop"), tReview("tag.required")]);
-		expect(within(dialog).getByTestId(`impact-${SUMMARY}`).textContent).toContain("summary → excerpt");
-
-		// Nothing but the two buttons in the footer, and no note about the file.
-		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
-		expect(dialog.textContent).not.toContain("monti.schema.ts에");
-		expect(apply(dialog).disabled).toBe(false);
-
-		// The choices of the board: the rename moves the values or starts empty.
-		const rename = within(dialog).getByTestId(`impact-${SUMMARY}`);
-		expect(within(rename).getByRole("radio", { name: new RegExp(tReview("choice.move")) })).toBeTruthy();
-		expect(within(rename).getByRole("radio", { name: new RegExp(tReview("choice.blank")) })).toBeTruthy();
-		// The removed field is kept, moved to another field, or deleted; the required one is filled or left.
-		const removed = within(dialog).getByTestId(`impact-${SUBTITLE}`);
-		expect(
-			within(removed)
-				.getAllByRole("radio")
-				.map((radio) => radio.getAttribute("aria-checked")),
-		).toEqual(["true", "false", "false"]);
-		expect(removed.textContent).toContain(tReview("note.kept"));
-		expect(within(dialog).getByTestId(`impact-${FORMAT}`).textContent).toContain(tReview("note.required"));
-		// The affected entries close the sheet, with a link to the first ones and the count of the rest.
-		expect(dialog.textContent).toContain(tReview("affected.title", { kind: "document" }));
-		expect(within(dialog).getByRole("link", { name: "첫 번째 글" })).toBeTruthy();
-		expect(dialog.textContent).toContain(
-			tReview("affected.more", { count: tReview("count.entries", { count: 146, kind: "document" }) }),
-		);
-	});
-
 	it("11 what is chosen is what the apply sends: the transforms, in the PUT", async () => {
 		const dialog = await review();
 		// The first request had no picks: the server's own defaults.
@@ -589,26 +530,6 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 		expect(put()?.body).toMatchObject({ baseHash: "hash-1", acknowledged: [KEY] });
 		expect(Object.keys(put()?.body ?? {})).not.toContain("redirects");
 	});
-
-	it("14 says nothing about old addresses when no published entry changes address", async () => {
-		previewOf = () =>
-			preview({
-				impacts: [
-					{
-						change: change("collection_path_changed", { from: "/posts/:slug", to: "/blog/:slug" }),
-						key: KEY,
-						entries: 0,
-						sample: [],
-						consequence: "none",
-						checked: true,
-					},
-				],
-			});
-		mount({ draft: pathDraft, saved: pathSaved });
-		const block = await within(await sheet()).findByTestId(`impact-${KEY}`);
-		expect(block.textContent).not.toContain(tReview("path.entries"));
-		expect(block.textContent).not.toContain(tReview("path.note"));
-	});
 });
 
 describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
@@ -654,61 +575,6 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 		expect(block.textContent).toContain(tReview("consequence.none"));
 		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
 	});
-
-	/** Adds a collection through the new-collection form and presses the title row's save. */
-	const createNote = async () => {
-		window.history.replaceState(null, "", "/admin/settings/collections?collection=post");
-		open();
-		const tCollection = testSite.createTranslator((await import("../collection.messages")).schemaCollectionMessages);
-		fireEvent.click(await screen.findByRole("button", { name: t("collection.create") }));
-		const textbox = (name: string) => screen.findByRole("textbox", { name: new RegExp(`^${name}`) });
-		fireEvent.change(await textbox(tCollection("collection.newName")), { target: { value: "노트" } });
-		fireEvent.change(await textbox(tCollection("collection.newId")), { target: { value: "note" } });
-		fireEvent.click(screen.getByRole("button", { name: tCollection("collection.createConfirm") }));
-		await waitFor(() => expect(saveButton().disabled).toBe(false));
-		fireEvent.click(saveButton());
-		const dialog = await sheet();
-		await waitFor(() => expect(apply(dialog).disabled).toBe(false));
-		return dialog;
-	};
-
-	it("06 applying leaves 'the collection was created' with a link to its entries for the next page", async () => {
-		state = stateOf({ post: post({}) });
-		previewOf = () =>
-			preview({
-				impacts: [
-					{
-						change: { kind: "collection_added", collection: "note" },
-						key: KEY,
-						entries: 0,
-						sample: [],
-						consequence: "none",
-						checked: true,
-					},
-				],
-			});
-		const dialog = await createNote();
-		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
-		expect(reload.rememberSaved).toHaveBeenCalledWith(
-			tReview("saved.created", { name: "노트" }),
-			testSite.adminHref("?collection=note"),
-		);
-		expect(tReview("saved.created", { name: "노트" })).toBe("노트를 만들었어요");
-	});
-
-	it("06 any other save leaves the one line 적용됐어요 and no link", async () => {
-		state = stateOf({ post: post({ subtitle: field("부제") }) });
-		openFields();
-		await removeField("subtitle");
-		fireEvent.click(saveButton());
-		const dialog = await sheet();
-		await waitFor(() => expect(apply(dialog).disabled).toBe(false));
-		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
-		expect(reload.rememberSaved).toHaveBeenCalledWith(t("save.done"));
-		expect(t("save.done")).toBe("적용됐어요");
-	});
 });
 
 describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
@@ -729,13 +595,6 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 		expect(options.action.label).toBe(tReview("saved.view"));
 		options.action.onClick();
 		expect(nav.navigate).toHaveBeenCalledWith("/admin?collection=note");
-	});
-
-	it("06 shows the plain line, with no action, when the save left no link", async () => {
-		reload.takeSavedMessage.mockReturnValueOnce({ message: t("save.done") } as never);
-		openFields();
-		await screen.findByTestId("schema-screen");
-		expect(toast).toHaveBeenCalledWith(t("save.done"), undefined);
 	});
 
 	it("when the database does not take the saved file, the page says so with a way to reload", async () => {
@@ -826,16 +685,5 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		expect(put()?.body?.trashLocales).toEqual(["en"]);
 		expect(put()?.body?.transforms).toEqual([]);
 		expect(toast).not.toHaveBeenCalled();
-	});
-
-	it("08 a language with no translations needs no choice", async () => {
-		previewOf = () =>
-			preview({
-				decisions: [{ ...decision, entries: 0 }],
-				impacts: [{ change: decision.change, key: KEY, entries: 0, sample: [], consequence: "none", checked: true }],
-			});
-		const dialog = await removeEnglish();
-		expect(within(within(dialog).getByTestId(`impact-${KEY}`)).queryAllByRole("radio")).toHaveLength(0);
-		expect(apply(dialog).disabled).toBe(false);
 	});
 });

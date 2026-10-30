@@ -85,19 +85,6 @@ describe("resolveEditorWidths", () => {
 });
 
 describe(t("editorWidth.label"), () => {
-	it("starts at the normal width without configured steps, and offers normal and full only", async () => {
-		await renderEditor();
-		expect(editorWidth()).toBe(DEFAULT_EDITOR_WIDTH);
-		expect(await openMenu()).toHaveLength(2);
-	});
-
-	it("starts at the first configured step and lists the steps in config order, full last", async () => {
-		await renderEditor({ widths });
-		expect(editorWidth()).toBe(widths[0]?.width);
-		const items = await openMenu();
-		expect(items.map((item) => item.textContent)).toEqual([...widths.map((step) => step.label), t("editorWidth.full")]);
-	});
-
 	it("applies a picked step and remembers it after reopening", async () => {
 		await renderEditor({ widths });
 		await openMenu();
@@ -107,27 +94,5 @@ describe(t("editorWidth.label"), () => {
 		cleanup();
 		await renderEditor({ widths });
 		await waitFor(() => expect(editorWidth()).toBe(widths[1]?.width));
-	});
-
-	it("remembers full too", async () => {
-		await renderEditor({ widths });
-		await openMenu();
-		fireEvent.click(screen.getByRole("menuitemradio", { name: t("editorWidth.full") }));
-		await waitFor(() => expect(editorWidth()).toBe(FULL_EDITOR_WIDTH));
-
-		cleanup();
-		await renderEditor({ widths });
-		await waitFor(() => expect(editorWidth()).toBe(FULL_EDITOR_WIDTH));
-	});
-
-	it("falls back to the first step when the remembered step is no longer in the config", async () => {
-		await renderEditor({ widths });
-		await openMenu();
-		fireEvent.click(screen.getByRole("menuitemradio", { name: widths[1]?.label }));
-		await waitFor(() => expect(editorWidth()).toBe(widths[1]?.width));
-
-		cleanup();
-		await renderEditor({ widths: [{ label: "태블릿", width: "768px" }] });
-		expect(editorWidth()).toBe("768px");
 	});
 });

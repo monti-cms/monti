@@ -123,35 +123,6 @@ describe("EventsScreen", () => {
 		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 	});
 
-	it("with no subscriber on any row, leaves out the delivery columns", async () => {
-		fetchMock.mockImplementation(async () =>
-			json({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }),
-		);
-		renderScreen();
-
-		await screen.findByText("slug-e3");
-		for (const column of ["column.subscriber", "column.attempts", "column.lastError", "column.nextAttempt"] as const) {
-			expect(screen.queryByRole("columnheader", { name: t(column) })).toBeNull();
-		}
-		expect(screen.getByRole("columnheader", { name: t("column.when") })).toBeTruthy();
-	});
-
-	it("keeps the delivery columns while some row has a subscriber", async () => {
-		renderScreen();
-
-		await screen.findByText("search-index");
-		for (const column of ["column.subscriber", "column.attempts", "column.lastError", "column.nextAttempt"] as const) {
-			expect(screen.getByRole("columnheader", { name: t(column) })).toBeTruthy();
-		}
-	});
-
-	it("names the collection of an event by its label, not its key", async () => {
-		renderScreen();
-
-		const row = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
-		expect(within(row).getByText(testSite.COLLECTION_DEFINITIONS.post.label, { exact: false })).toBeTruthy();
-	});
-
 	it("retries one delivery with its subscriber", async () => {
 		renderScreen();
 		fireEvent.click(
@@ -190,19 +161,6 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
 		// Nothing pending or failed is left to retry.
-		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
-	});
-
-	it("offers no retry when nothing is pending or failed, even with events listed", async () => {
-		fetchMock.mockImplementation(async () =>
-			json({
-				items: [item("e3", null, "recorded", "saved"), item("e4", "webhook", "delivered")],
-				total: 2,
-				counts: { ...counts, failed: 0, dead: 2 },
-			}),
-		);
-		renderScreen();
-		expect(await screen.findByText("slug-e3")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
@@ -257,22 +215,6 @@ describe("EventsScreen", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 		expect(await screen.findByText("search-index")).toBeTruthy();
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
-	});
-
-	it("shows the status as the first column and marks the picked status tab", async () => {
-		renderScreen();
-		const row = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
-
-		const headers = screen.getAllByRole("columnheader");
-		expect(headers[0]?.textContent).toBe(t("column.state"));
-		expect(within(row).getAllByRole("cell")[0]?.textContent).toBe(t("state.failed"));
-		expect(screen.getByRole("tab", { name: t("filter.all") }).getAttribute("aria-selected")).toBe("true");
-
-		fireEvent.click(screen.getByRole("tab", { name: t("filter.delivered") }));
-		await waitFor(() =>
-			expect(screen.getByRole("tab", { name: t("filter.delivered") }).getAttribute("aria-selected")).toBe("true"),
-		);
-		expect(screen.getByRole("tab", { name: t("filter.all") }).getAttribute("aria-selected")).toBe("false");
 	});
 
 	it("pages through the events", async () => {

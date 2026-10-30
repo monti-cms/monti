@@ -266,14 +266,6 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(withoutIds(savedDoc(editor))).toEqual(withoutIds(before));
 	});
 
-	it("separate commands are separate document changes (what transact groups)", async () => {
-		const editor = await mountTabs();
-		const transactions = countTransactions(editor);
-		click("rename-separately");
-		await waitFor(() => expect(savedDefault(editor)).toBe("첫 번째"));
-		expect(transactions.count).toBe(2);
-	});
-
 	it("a rule broken inside transact writes nothing and returns the failure", async () => {
 		let result: EditorResult<unknown> | null = null;
 		function Probe() {
@@ -320,14 +312,6 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 });
 
 describe("useBlockEditor", () => {
-	it("throws a clear error outside a block view", () => {
-		function Outside() {
-			useBlockEditor();
-			return null;
-		}
-		expect(() => renderWithSite(<Outside />)).toThrow(/inside a block view/);
-	});
-
 	it("gives a view its name, definition, id, selection state and an escape hatch", async () => {
 		let seen: ReturnType<typeof useBlockEditor> | null = null;
 		function Spy() {

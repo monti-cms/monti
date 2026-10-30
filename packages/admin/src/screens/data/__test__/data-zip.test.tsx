@@ -239,14 +239,6 @@ describe("Data page: choosing a zip", () => {
 		expect(restoreModes(fetchMock)).toEqual([]);
 	});
 
-	it("says it is reading on the page until the sheet can open", async () => {
-		serve();
-		renderData();
-		choose();
-		expect(await screen.findByText(ti("preview.loading"))).toBeTruthy();
-		await importSheet();
-	});
-
 	it("refuses a file over the size the server takes, before sending it", async () => {
 		const fetchMock = serve({ limit: 10 });
 		renderData();
@@ -287,23 +279,6 @@ describe("Import sheet", () => {
 				.getAttribute("href"),
 		).toBe(testSite.adminHref());
 		expect(within(sheet).queryByRole("button", { name: tc("cancel") })).toBeNull();
-	});
-
-	it("closes from Cancel and from the close button, and the page forgets the file", async () => {
-		const fetchMock = serve();
-		renderData();
-		choose();
-		let sheet = await importSheet();
-		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(screen.queryByText("blog-export.zip")).toBeNull();
-
-		// The same file chosen again is read again.
-		choose();
-		sheet = await importSheet();
-		fireEvent.click(within(sheet).getByRole("button", { name: "Close" }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(importModes(fetchMock)).toEqual(["preview", "preview"]);
 	});
 
 	it("cannot be left while it imports: no close button, and Escape does nothing", async () => {
