@@ -235,5 +235,35 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect(err).toBeInstanceOf(CmsError);
 			expect((err as CmsError).code).toBe("conflict");
 		});
+
+		it("restores a folder that the backup lists before its parent", async () => {
+			const source = await factory.create();
+			const target = await factory.create();
+			try {
+				const parent = await source.store.createFolder({
+					collection: contentCollection,
+					parentId: null,
+					name: "Parent",
+				});
+				const child = await source.store.createFolder({
+					collection: contentCollection,
+					parentId: parent.id,
+					name: "Child",
+				});
+				const snapshot = await source.store.readExportSnapshot();
+				const folderOf = (id: string) =>
+					snapshot.folders.find((folder) => folder.id === id) as (typeof snapshot.folders)[number];
+				// The order of a backup's folders is not promised: here the child comes first.
+				const childFirst = { ...snapshot, folders: [folderOf(child.id), folderOf(parent.id)] };
+
+				await target.store.restoreArchive(childFirst);
+
+				const byId = (folders: typeof snapshot.folders) => [...folders].sort((a, b) => a.id.localeCompare(b.id));
+				expect(byId((await target.store.readExportSnapshot()).folders)).toEqual(byId(snapshot.folders));
+			} finally {
+				await source.close();
+				await target.close();
+			}
+		});
 	});
 };
