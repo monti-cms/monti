@@ -46,7 +46,8 @@ const renderShell = (
 
 beforeEach(() => {
 	window.localStorage.clear();
-	fakeApi().install();
+	// The admin frame asks for its rail counts.
+	fakeApi().withEmptyRail().install();
 });
 afterEach(() => {
 	cleanup();
