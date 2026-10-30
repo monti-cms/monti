@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { contentCollection, recordRelationField, requiredMetadata } from "../../../../test/any-site";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, recordRelationField, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { paragraphsFormat } from "../../../../test/paragraphs-format";
-import { testSite } from "../../../../test/site";
+import { testConfig, testSite } from "../../../../test/site";
 import type { Collection } from "../../../core/collections";
 import type { ContentStore, Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
@@ -12,6 +12,7 @@ import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import { createMediaService } from "../../../services/media-service";
 import { createTrashService, PURGE_EVERY_MS } from "../../../services/trash-service";
+import { createSite } from "../../../site";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -164,6 +165,30 @@ describe("trash", () => {
 					reference.type === "metadata" ? { type: "metadata", path: "tagIds", ordinal: 0 } : { type: "body" },
 				],
 			})),
+		});
+	};
+
+	/** Moves an entry out of its folder, to the top of its collection. */
+	const moveToTop = (entry: Entry): Promise<Entry> => moveTo(entry, null);
+
+	/** Moves an entry into a folder, or to the top with `null`. */
+	const moveTo = async (entry: Entry, folderId: string | null): Promise<Entry> => {
+		const current = await store.getEntry(entry.id);
+		return store.saveWorkingWithReferences({
+			entryId: current.id,
+			expectedVersion: current.version,
+			snapshot: {
+				collection: current.collection,
+				slug: current.workingSlug,
+				metadata: current.working.metadata,
+				doc: current.working.doc,
+				contentHash: current.working.contentHash,
+				issues: [],
+				references: [],
+				imageSources: [],
+			} as never,
+			references: [],
+			folderId,
 		});
 	};
 
@@ -331,6 +356,170 @@ describe("trash", () => {
 				filesInUse: 0,
 			});
 		});
+
+		it("refuses to trash a folder twice, a stale version, and to restore one that is not in the trash", async () => {
+			const shelf = await folder("Twice");
+			const stale = await trash
+				.trashFolder({ id: shelf.id, expectedVersion: shelf.version - 1 })
+				.catch((error) => error);
+			expect(stale).toMatchObject({ code: "conflict", serverVersion: shelf.version });
+			await expect(store.restoreFolder({ id: shelf.id })).rejects.toMatchObject({ code: "invalid_status" });
+			await expect(store.folderRestoreEntries({ id: shelf.id })).rejects.toMatchObject({ code: "not_found" });
+
+			await trash.trashFolder({ id: shelf.id });
+			await expect(trash.trashFolder({ id: shelf.id })).rejects.toMatchObject({ code: "not_found" });
+		});
+
+		it("counts the entries it took, not one already in the trash", async () => {
+			const shelf = await folder("Counted");
+			const early = await draft("Already gone", shelf.id);
+			await store.trashEntry({ id: early.id, expectedVersion: early.version });
+			await draft("Taken", shelf.id);
+			const outcome = await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			expect(outcome).toMatchObject({ entries: 1 });
+		});
+
+		it("gives each entry the next version, and names the entries it brought back", async () => {
+			const shelf = await folder("Versions");
+			const entry = await draft("Versioned", shelf.id);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			const trashed = await store.getEntry(entry.id);
+
+			const outcome = await store.restoreFolder({ id: shelf.id });
+
+			expect(outcome.entryIds).toEqual([entry.id]);
+			expect((await store.getEntry(entry.id)).version).toBe(trashed.version + 1);
+		});
+
+		it("leaves a subfolder trashed before it in the trash when the folder is restored", async () => {
+			const shelf = await folder("Parent shelf");
+			const sub = await folder("Earlier sub", shelf.id);
+			await trash.trashFolder({ id: sub.id, expectedVersion: sub.version });
+			await trash.trashFolder({ id: shelf.id });
+
+			await trash.restore([{ type: "folder", id: shelf.id }]);
+
+			expect(await stampOf("folders", shelf.id)).toBeNull();
+			expect(await stampOf("folders", sub.id)).not.toBeNull();
+		});
+
+		it.skipIf(!secondLocale)("leaves a translation in the trash while its source stays there", async () => {
+			const source = await draft(unique("Outside source"));
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			const shelf = await folder("Translation shelf");
+			await moveTo(translation, shelf.id);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			await store.trashEntry({ id: source.id, expectedVersion: (await store.getEntry(source.id)).version });
+
+			const outcome = await store.restoreFolder({ id: shelf.id });
+
+			expect(outcome.entryIds).toEqual([]);
+			expect(await statusOf(translation.id)).toBe("trashed");
+		});
+
+		it.skipIf(!secondLocale)("brings a source and its translation back together", async () => {
+			const shelf = await folder("Pair shelf");
+			const source = await draft(unique("Paired source"), shelf.id);
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+			const outcome = await store.restoreFolder({ id: shelf.id });
+
+			expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
+			expect(await statusOf(translation.id)).toBe("draft");
+		});
+
+		it.skipIf(!secondLocale)("brings a translation back when its source is live outside the folder", async () => {
+			const source = await draft(unique("Live source"));
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			const shelf = await folder("Lone translation");
+			await moveTo(translation, shelf.id);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+			const outcome = await store.restoreFolder({ id: shelf.id });
+
+			expect(outcome.entryIds).toEqual([translation.id]);
+			expect(await statusOf(translation.id)).toBe("draft");
+		});
+
+		it("merges two levels into live folders of the same names, and moves what is left of a merged subfolder to the top of the trash", async () => {
+			const top = `Two levels ${unique("t")}`;
+			const old = await folderNamed(top);
+			const oldSub = await folderNamed("Inner", old.id);
+			const early = await draft("Earlier inside", oldSub.id);
+			await store.trashEntry({ id: early.id, expectedVersion: early.version });
+			const inside = await draft("Inside inner", oldSub.id);
+			await trash.trashFolder({ id: old.id, expectedVersion: old.version });
+			const fresh = await folderNamed(top);
+			const freshSub = await folderNamed("Inner", fresh.id);
+
+			await trash.restore([{ type: "folder", id: old.id }]);
+
+			expect(await store.getEntry(inside.id)).toMatchObject({ status: "draft", folderId: freshSub.id });
+			// The old top folder is empty once its subfolder moved out, so it goes.
+			expect((await pool.query(`SELECT 1 FROM "${schema}".folders WHERE id = $1`, [old.id])).rowCount).toBe(0);
+			// The old subfolder keeps the entry trashed earlier, now under the live folder, as a unit of its own.
+			expect(unitOf(await topUnits(), oldSub.id)).toMatchObject({ type: "folder", entries: 1, path: [top] });
+		});
+
+		it("keeps a merged folder that still holds both a subfolder and an entry", async () => {
+			const name = `Both left ${unique("b")}`;
+			const old = await folderNamed(name);
+			const earlySub = await folder("Earlier sub", old.id);
+			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
+			const earlyEntry = await draft("Earlier entry", old.id);
+			await store.trashEntry({ id: earlyEntry.id, expectedVersion: earlyEntry.version });
+			await draft("Comes back", old.id);
+			await trash.trashFolder({ id: old.id });
+			await folderNamed(name);
+
+			await trash.restore([{ type: "folder", id: old.id }]);
+
+			expect(unitOf(await topUnits(), old.id)).toMatchObject({ type: "folder", entries: 1 });
+		});
+
+		it("stamps a folder after an entry in it that was trashed within the same millisecond", async () => {
+			const shelf = await folder("Same moment");
+			const early = await draft("Trashed a moment before", shelf.id);
+			await store.trashEntry({ id: early.id, expectedVersion: early.version });
+			// Two actions within one millisecond: the entry's stamp is not before the folder's moment.
+			const ahead = new Date(Date.now() + 60_000);
+			await pool.query(`UPDATE "${schema}".entries SET deleted_at = $2 WHERE id = $1`, [early.id, ahead]);
+
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			expect((await stampOf("folders", shelf.id))?.getTime()).toBeGreaterThan(ahead.getTime());
+			await trash.restore([{ type: "folder", id: shelf.id }]);
+			expect(await statusOf(early.id)).toBe("trashed");
+		});
+
+		it("stamps a folder after a subfolder that was trashed within the same millisecond", async () => {
+			const shelf = await folder("Same moment, sub");
+			const earlySub = await folder("Sub trashed a moment before", shelf.id);
+			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
+			const ahead = new Date(Date.now() + 60_000);
+			await pool.query(`UPDATE "${schema}".folders SET deleted_at = $2 WHERE id = $1`, [earlySub.id, ahead]);
+
+			await trash.trashFolder({ id: shelf.id });
+			expect((await stampOf("folders", shelf.id))?.getTime()).toBeGreaterThan(ahead.getTime());
+			await trash.restore([{ type: "folder", id: shelf.id }]);
+			expect(await stampOf("folders", earlySub.id)).toEqual(ahead);
+		});
+
+		it("takes the stamp from the database clock, not the server's", async () => {
+			const shelf = await folder("Database clock");
+			vi.useFakeTimers({ toFake: ["Date"], now: new Date("2001-01-01T00:00:00.000Z") });
+			try {
+				await store.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			} finally {
+				vi.useRealTimers();
+			}
+			const { rows } = await pool.query<{ now: Date }>("SELECT now() AS now");
+			const stamp = (await stampOf("folders", shelf.id)) as Date;
+			expect(Math.abs(stamp.getTime() - (rows[0] as { now: Date }).now.getTime())).toBeLessThan(60_000);
+		});
 	});
 
 	describe("a media folder", () => {
@@ -384,6 +573,48 @@ describe("trash", () => {
 				(await store.listFolders({ collection: "media" })).find((item) => item.id === record?.folderId)?.name,
 			).toBe(stills.name);
 		});
+
+		it("stamps a media folder after a file in it that was trashed within the same millisecond", async () => {
+			const pictures = await folder("Same moment pictures", null, "media");
+			const early = await readyMedia(`${unique("early")}.png`, pictures.id);
+			await trash.trashMedia([early.id]);
+			const ahead = new Date(Date.now() + 60_000);
+			await pool.query(`UPDATE "${schema}".media_assets SET deleted_at = $2 WHERE id = $1`, [early.id, ahead]);
+
+			await trash.trashFolder({ id: pictures.id, expectedVersion: pictures.version });
+
+			expect((await stampOf("folders", pictures.id))?.getTime()).toBeGreaterThan(ahead.getTime());
+		});
+
+		it("stamps a media folder after a subfolder that was trashed within the same millisecond", async () => {
+			const pictures = await folder("Same moment pictures, sub", null, "media");
+			const earlySub = await folder("Early sub pictures", pictures.id, "media");
+			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
+			const ahead = new Date(Date.now() + 60_000);
+			await pool.query(`UPDATE "${schema}".folders SET deleted_at = $2 WHERE id = $1`, [earlySub.id, ahead]);
+
+			await trash.trashFolder({ id: pictures.id });
+
+			expect((await stampOf("folders", pictures.id))?.getTime()).toBeGreaterThan(ahead.getTime());
+		});
+
+		it("keeps a merged media folder that still holds a subfolder and a file", async () => {
+			const name = `Pictures left ${unique("p")}`;
+			const old = await folderNamed(name, null, "media");
+			const earlySub = await folder("Earlier pictures", old.id, "media");
+			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
+			const earlyFile = await readyMedia(`${unique("earlier")}.png`, old.id);
+			await trash.trashMedia([earlyFile.id]);
+			await readyMedia(`${unique("comes back")}.png`, old.id);
+			await trash.trashFolder({ id: old.id });
+			const fresh = await folderNamed(name, null, "media");
+
+			const [result] = await trash.restore([{ type: "folder", id: old.id }]);
+
+			expect(result).toMatchObject({ ok: true, folderId: fresh.id });
+			expect(await stampOf("folders", old.id)).not.toBeNull();
+			expect(unitOf(await topUnits(), old.id)).toMatchObject({ type: "folder" });
+		});
 	});
 
 	// --- media files ------------------------------------------------------------------------------------------------
@@ -413,6 +644,22 @@ describe("trash", () => {
 				{ type: "media", id: free.id, ok: true, folderId: null, recreated: false },
 			]);
 			expect((await store.getMediaAsset(free.id))?.status).toBe("ready");
+		});
+
+		it("trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
+			expect(await store.trashMedia({ ids: [] })).toEqual({ trashed: [], kept: [] });
+			const file = await readyMedia(`${unique("once")}.png`);
+			await store.trashMedia({ ids: [file.id] });
+			const stamp = await stampOf("media_assets", file.id);
+
+			expect(await store.trashMedia({ ids: [file.id] })).toEqual({ trashed: [], kept: [] });
+			expect(await stampOf("media_assets", file.id)).toEqual(stamp);
+		});
+
+		it("refuses to restore a file that is not in the trash, or not there at all", async () => {
+			const file = await readyMedia(`${unique("not trashed")}.png`);
+			await expect(store.restoreMedia({ id: file.id })).rejects.toMatchObject({ code: "invalid_status" });
+			await expect(store.restoreMedia({ id: randomUUID() })).rejects.toMatchObject({ code: "not_found" });
 		});
 	});
 
@@ -534,6 +781,23 @@ describe("trash", () => {
 					.catch(() => undefined);
 			},
 		);
+
+		it("gives the purge the version of each entry and folder, and none for a file", async () => {
+			const entry = await draft(unique("Unit entry"));
+			const trashedEntry = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
+			const shelf = await folder("Unit shelf");
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			const file = await readyMedia(`${unique("unit")}.png`);
+			await trash.trashMedia([file.id]);
+
+			const units = await store.listTrashUnits();
+			const unit = (id: string) => units.find((candidate) => candidate.id === id);
+
+			expect(unit(entry.id)).toMatchObject({ type: "entry", expectedVersion: trashedEntry.version });
+			expect(unit(shelf.id)).toMatchObject({ type: "folder", expectedVersion: shelf.version + 1 });
+			expect(unit(file.id)).toMatchObject({ type: "media" });
+			expect(unit(file.id)).not.toHaveProperty("expectedVersion");
+		});
 	});
 
 	describe("a translation", () => {
@@ -707,7 +971,7 @@ describe("trash", () => {
 			expect((await store.getMediaAsset(late.id))?.status).toBe("trashed");
 		});
 
-		it("deletes a source with its translations, and refuses a stale version", async () => {
+		it("refuses a stale version", async () => {
 			const source = await draft(unique("Versioned"));
 			const trashedSource = await trashed(source);
 			const [stale] = await trash.delete([
@@ -716,6 +980,181 @@ describe("trash", () => {
 			expect(stale).toMatchObject({ ok: false, error: "conflict" });
 			const [fresh] = await trash.delete([{ type: "entry", id: source.id, expectedVersion: trashedSource.version }]);
 			expect(fresh).toMatchObject({ ok: true });
+		});
+
+		it("refuses an entry, a folder or a file that is not in the trash, and deletes nothing", async () => {
+			const entry = await draft(unique("Live"));
+			const shelf = await folder("Live shelf");
+			const file = await readyMedia(`${unique("live")}.png`);
+
+			const results = await trash.delete([
+				{ type: "entry", id: entry.id },
+				{ type: "folder", id: shelf.id },
+				{ type: "media", id: file.id },
+			]);
+
+			expect(results.map((result) => (result.ok ? "ok" : result.error))).toEqual([
+				"invalid_status",
+				"invalid_status",
+				"invalid_status",
+			]);
+			expect(await statusOf(entry.id)).toBe("draft");
+			expect((await store.getMediaAsset(file.id))?.status).toBe("ready");
+			expect(deletedFiles).not.toContain(file.storageKey);
+		});
+
+		it("refuses a trashed folder that holds an entry out of the trash", async () => {
+			const shelf = await folder("Mixed shelf");
+			const entry = await draft(unique("Still live"), shelf.id);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			// No write of the store leaves a live entry in a trashed folder; the data is set by hand to see that deleting
+			// the folder for good still refuses, rather than taking a live entry with it.
+			await pool.query(`UPDATE "${schema}".entries SET status = 'draft', deleted_at = NULL WHERE id = $1`, [entry.id]);
+
+			const [result] = await trash.delete([{ type: "folder", id: shelf.id }]);
+
+			expect(result).toMatchObject({ ok: false, error: "invalid_status" });
+			expect(await statusOf(entry.id)).toBe("draft");
+		});
+
+		it("refuses a trashed media folder while an entry uses a file in it", async () => {
+			const pictures = await folder("Used pictures", null, "media");
+			const file = await readyMedia(`${unique("used")}.png`, pictures.id);
+			await trash.trashFolder({ id: pictures.id, expectedVersion: pictures.version });
+			// A reference saved to the file while its folder was in the trash.
+			const user = await point(await draft(unique("Uses the file")), [
+				{ kind: "media", targetId: file.id, type: "body" },
+			]);
+
+			const [result] = await trash.delete([{ type: "folder", id: pictures.id }]);
+
+			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: user.id, trashed: false }] });
+			expect((await store.getMediaAsset(file.id))?.status).toBe("trashed");
+			expect(deletedFiles).not.toContain(file.storageKey);
+		});
+
+		it.skipIf(!secondLocale)("deletes a source with a translation that was trashed on its own", async () => {
+			const source = await draft(unique("Source"));
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			await trashed(translation);
+			await trashed(source);
+
+			const [result] = await trash.delete([{ type: "entry", id: source.id }]);
+
+			expect(result).toMatchObject({ ok: true });
+			await expect(store.getEntry(source.id)).rejects.toMatchObject({ code: "not_found" });
+			await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
+			expect(await eventKinds(translation.id)).toContain("deleted");
+		});
+
+		it("answers not_found for a file that is not there, and goes on after an error it did not expect", async () => {
+			const missing = randomUUID();
+			const file = await readyMedia(`${unique("after")}.png`);
+			await trash.trashMedia([file.id]);
+
+			const results = await trash.delete([
+				{ type: "media", id: missing },
+				{ type: "media", id: "not-a-uuid" },
+				{ type: "media", id: file.id },
+			]);
+
+			expect(results).toStrictEqual([
+				{ type: "media", id: missing, ok: false, error: "not_found" },
+				{ type: "media", id: "not-a-uuid", ok: false, error: "internal" },
+				{ type: "media", id: file.id, ok: true },
+			]);
+		});
+
+		it("names the entries that point at a file it refuses to delete", async () => {
+			const file = await readyMedia(`${unique("named")}.png`);
+			await trash.trashMedia([file.id]);
+			const user = await point(await draft(unique("Names the file")), [
+				{ kind: "media", targetId: file.id, type: "body" },
+			]);
+			const [result] = await trash.delete([{ type: "media", id: file.id }]);
+			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: user.id, trashed: false }] });
+		});
+
+		it("names the entries it deleted, for what runs after the commit, and none for a file", async () => {
+			const file = await readyMedia(`${unique("no entry")}.png`);
+			await trash.trashMedia([file.id]);
+			expect((await store.deleteTrashed({ targets: [{ type: "media", id: file.id }] })).entryIds).toEqual([]);
+			const lone = await draft(unique("No file"));
+			await trashed(lone);
+			expect(await store.deleteTrashed({ targets: [{ type: "entry", id: lone.id }] })).toMatchObject({
+				files: [],
+				entryIds: [lone.id],
+			});
+
+			const shelf = await folder("Named shelf");
+			const first = await draft(unique("First"), shelf.id);
+			const second = await draft(unique("Second"), shelf.id);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
+			expect([...outcome.entryIds].sort()).toEqual([first.id, second.id].sort());
+		});
+
+		it.skipIf(!secondLocale)("deletes a folder with a source whose translation was trashed outside it", async () => {
+			const shelf = await folder("Source and translation");
+			const source = await draft(unique("Shelved"), shelf.id);
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			await moveToTop(translation);
+			await trashed(translation);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
+
+			expect(outcome.results).toEqual([{ type: "folder", id: shelf.id, ok: true }]);
+			expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
+			await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
+		});
+
+		it.skipIf(!secondLocale)("names each entry once when a source and its translation are in the folder", async () => {
+			const shelf = await folder("Both inside");
+			const source = await draft(unique("Inside source"), shelf.id);
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
+
+			expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
+		});
+
+		it("leaves an unfinished upload in a media folder unfiled, for the upload cleanup, and deletes the rest", async () => {
+			const pictures = await folder("Half uploaded", null, "media");
+			const done = await readyMedia(`${unique("done")}.png`, pictures.id);
+			const unfinished = await store.createMediaAsset({
+				filename: `${unique("unfinished")}.png`,
+				mimeType: "image/png",
+				byteSize: 10,
+				stagingKey: `staging/${unique("unfinished")}`,
+				folderId: pictures.id,
+			});
+			await trash.trashFolder({ id: pictures.id, expectedVersion: pictures.version });
+
+			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: pictures.id }] });
+
+			expect(outcome.files.map(({ media }) => media.id)).toEqual([done.id]);
+			expect(await store.getMediaAsset(unfinished.id)).toMatchObject({ status: "pending", folderId: null });
+		});
+
+		it.skipIf(!secondLocale)("holds a source back while a translation of it is out of the trash", async () => {
+			const shelf = await folder("Source shelf");
+			const source = await draft(unique("Shelved source"), shelf.id);
+			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
+			// The translation lives outside the folder, so trashing the folder leaves it where it is.
+			await moveToTop(translation);
+			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+			const [result] = await trash.delete([{ type: "folder", id: shelf.id }]);
+
+			expect(result).toMatchObject({ ok: false, error: "has_translations" });
+			expect(await statusOf(source.id)).toBe("trashed");
+			expect(await statusOf(translation.id)).toBe("draft");
 		});
 	});
 
@@ -791,6 +1230,66 @@ describe("trash", () => {
 			clock = new Date(clock.getTime() + 2 * PURGE_EVERY_MS);
 			await trash.list({});
 			expect(unitOf(await topUnits(), again.id)).toBeUndefined();
+		});
+
+		it.skipIf(!secondLocale)(
+			"counts a translation deleted with its source as deleted, whichever comes first",
+			async () => {
+				for (const order of ["source first", "translation first"] as const) {
+					const source = await draft(unique(`Source, ${order}`));
+					const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+						.entry;
+					const trashedTranslation = await store.trashEntry({
+						id: translation.id,
+						expectedVersion: translation.version,
+					});
+					const trashedSource = await store.trashEntry({ id: source.id, expectedVersion: source.version });
+					const units = [
+						{ type: "entry" as const, id: source.id, expectedVersion: trashedSource.version },
+						{ type: "entry" as const, id: translation.id, expectedVersion: trashedTranslation.version },
+					];
+
+					const results = await trash.delete(order === "source first" ? units : [...units].reverse());
+
+					expect(results.map((result) => result.ok)).toEqual([true, true]);
+					await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
+				}
+			},
+		);
+
+		it("counts a subfolder and a file deleted with their folder as deleted", async () => {
+			const shelf = await folder("Whole shelf");
+			const sub = await folder("Sub shelf", shelf.id);
+			await trash.trashFolder({ id: sub.id, expectedVersion: sub.version });
+			await trash.trashFolder({ id: shelf.id });
+			const pictures = await folder("Whole pictures", null, "media");
+			const file = await readyMedia(`${unique("whole")}.png`, pictures.id);
+			await trash.trashMedia([file.id]);
+			await trash.trashFolder({ id: pictures.id });
+
+			const results = await trash.delete([
+				{ type: "folder", id: shelf.id },
+				{ type: "folder", id: sub.id },
+				{ type: "folder", id: pictures.id },
+				{ type: "media", id: file.id },
+			]);
+
+			expect(results.map((result) => result.ok)).toEqual([true, true, true, true]);
+			// The file's stored file is deleted once, with its folder.
+			expect(deletedFiles.filter((key) => key === file.storageKey)).toHaveLength(1);
+		});
+
+		it("deletes the stored file once when a file is asked for twice", async () => {
+			const file = await readyMedia(`${unique("twice")}.png`);
+			await trash.trashMedia([file.id]);
+
+			const results = await trash.delete([
+				{ type: "media", id: file.id },
+				{ type: "media", id: file.id },
+			]);
+
+			expect(results.map((result) => result.ok)).toEqual([true, true]);
+			expect(deletedFiles.filter((key) => key === file.storageKey)).toHaveLength(1);
 		});
 
 		it.skipIf(!relation)("empties the trash and keeps what an entry points at", async () => {
@@ -886,5 +1385,64 @@ describe("trash", () => {
 			expect(result).toMatchObject({ ok: true });
 			expect(await statusOf(tag)).toBe("published");
 		});
+	});
+});
+
+/** An item collection (tags, say) is public as soon as it is saved, so a folder of items that comes back from the trash publishes them again. */
+describe("trash: a folder of items", () => {
+	const config = testConfig as unknown as { collections: Record<string, Record<string, unknown>> };
+	const probe = createSite(testConfig);
+	const items = probe.COLLECTIONS.find((name) => probe.isItemCollection(name));
+	const site = createSite({
+		...testConfig,
+		collections: {
+			...config.collections,
+			...(items ? { [items]: { ...config.collections[items], folders: true } } : {}),
+		},
+	} as typeof testConfig);
+	let pool: Pool;
+	let schema: string;
+	let store: ContentStore;
+	let content: ReturnType<typeof createContentService>;
+	let trash: ReturnType<typeof createTrashService>;
+
+	beforeAll(async () => {
+		({ pool, schemaName: schema } = await createIsolatedTestPool());
+		await migrateContentStore(pool, { site, schema });
+		store = createContentStore(pool, { site, schema });
+		content = createContentService(store, { site, formats: async () => createFormatRegistry([paragraphsFormat]) });
+		trash = createTrashService({
+			site,
+			store: () => store,
+			mediaStore: () => ({}) as never,
+			media: () => ({}) as never,
+			content: () => content,
+		});
+	});
+
+	afterAll(async () => {
+		if (pool && schema) await dropIsolatedTestPool(pool, schema);
+	});
+
+	it.skipIf(!items)("publishes the items again when their folder comes back", async () => {
+		const collection = items as string;
+		const shelf = await store.createFolder({ collection, parentId: null, name: "Item shelf", position: 0 });
+		const item = (
+			await content.createDraft({
+				collection,
+				slug: `item-${randomUUID().slice(0, 8)}`,
+				metadata: await requiredMetadata(collection, "An item", async () => randomUUID()),
+				format: "paragraphs",
+				body: "",
+				folderId: shelf.id,
+			} as never)
+		).entry;
+		expect(item.status).toBe("published");
+		await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+
+		const [result] = await trash.restore([{ type: "folder", id: shelf.id }]);
+
+		expect(result).toMatchObject({ ok: true });
+		expect(await store.getEntry(item.id)).toMatchObject({ status: "published", folderId: shelf.id });
 	});
 });

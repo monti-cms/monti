@@ -261,6 +261,8 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 	interface UnitRemoval {
 		readonly files: MediaAssetRecord[];
 		readonly entryIds: string[];
+		/** Every entry, folder and media file the removal took, so a unit that went with an earlier one is not tried again. */
+		readonly gone: string[];
 	}
 
 	/** Deletes one trashed unit inside the transaction. Throws `in_use` (with the entries) when something outside it points at it. */
@@ -270,7 +272,8 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 				id: target.id,
 				expectedVersion: target.expectedVersion,
 			});
-			return { files: [], entryIds: removed.map((entry) => entry.id) };
+			const entryIds = removed.map((entry) => entry.id);
+			return { files: [], entryIds, gone: entryIds };
 		}
 		if (target.type === "media") {
 			const row = await trx
@@ -287,7 +290,7 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 			if (usages.length > 0) throw new CmsError("Entries still use this file", "in_use", { details: { usages } });
 			// The row stays (still `trashed`) until the stored files are deleted, out of its folder so the folder can go.
 			await trx.updateTable("media_assets").set({ folder_id: null }).where("id", "=", target.id).execute();
-			return { files: [mapMediaRow({ ...row, folder_id: null })], entryIds: [] };
+			return { files: [mapMediaRow({ ...row, folder_id: null })], entryIds: [], gone: [target.id] };
 		}
 		const root = await lockFolder(trx, target.id, target.expectedVersion);
 		if (root.deleted_at === null)
@@ -350,9 +353,11 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 			.where("id", "=", anyOf(stored.filter((file) => file.status === "ready").map((file) => file.id)))
 			.execute();
 		await trx.deleteFrom("folders").where("id", "=", inFolders).execute();
+		const removedIds = removed.map((entry) => entry.id);
 		return {
 			files: stored.map((file) => mapMediaRow({ ...file, status: "trashed", folder_id: null })),
-			entryIds: removed.map((entry) => entry.id),
+			entryIds: removedIds,
+			gone: [...folderIds, ...removedIds, ...stored.map((file) => file.id)],
 		};
 	};
 
@@ -617,12 +622,18 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 			const results = new Map<number, TrashDeleteResult>();
 			const files: { index: number; media: MediaAssetRecord }[] = [];
 			const entryIds: string[] = [];
+			// A unit that an earlier one took with it (a translation with its source, a subfolder or a file with its folder) is deleted too.
+			const gone = new Set<string>();
 			let pending = params.targets.map((_, index) => index);
 			while (pending.length > 0) {
 				const blocked: number[] = [];
 				let progressed = false;
 				for (const index of pending) {
 					const target = params.targets[index] as TrashTarget;
+					if (gone.has(target.id)) {
+						results.set(index, { type: target.type, id: target.id, ok: true });
+						continue;
+					}
 					try {
 						const removal = await withTrx(ctx, (trx, client) => removeUnit(trx, client, target), {
 							mapError: mapEntryWriteError,
@@ -630,6 +641,7 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 						results.set(index, { type: target.type, id: target.id, ok: true });
 						for (const media of removal.files) files.push({ index, media });
 						entryIds.push(...removal.entryIds);
+						for (const id of removal.gone) gone.add(id);
 						progressed = true;
 					} catch (error) {
 						results.set(index, resultOf(target, error));
