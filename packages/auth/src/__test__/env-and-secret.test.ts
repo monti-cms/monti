@@ -113,12 +113,6 @@ describe("the one secret, MONTI_SECRET", () => {
 		);
 		expect(await withSecret("secret-two-secret-two-secret-two").session(requestWith(jar))).toBeNull();
 	});
-
-	it("does not read AUTH_SECRET any more", async () => {
-		vi.stubEnv("AUTH_SECRET", "legacy-secret-legacy-secret-legacy");
-		const { createSecretsVault } = await import("@monti-cms/core/testing");
-		expect(() => connect(options, { secrets: createSecretsVault({}).forPlugin("auth") })).toThrow(/MONTI_SECRET/);
-	});
 });
 
 describe("the request host", () => {

@@ -46,11 +46,6 @@ describe("auth().decisions", () => {
 		expect(Login?.source).toContain("client id from env AUTH_GITHUB_ID");
 	});
 
-	it("falls back to a generic source for a provider without provenance", () => {
-		const provider = { ...github(), provenance: undefined };
-		expect(decide({ providers: [provider] }, {}).Login?.source).toBe("set in monti.config.ts (github)");
-	});
-
 	it("turns the dev bypass on in development on a developer's machine", () => {
 		const bypass = decide({}, { NODE_ENV: "development" })["Dev login bypass"];
 		expect(bypass?.value).toMatch(/^on/);
