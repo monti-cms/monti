@@ -82,6 +82,7 @@ describe("MDX that cannot become a document", () => {
 describe("MDX with front matter", () => {
 	it("preserves frontmatter bytes, draft is allowed, but produces frontmatter_present issue making it not ready", async () => {
 		const mdx = "---\ntitle: test\n---\nHello";
+		const created: Parameters<StorePort["createEntryWithReferences"]>[0][] = [];
 		const storePort: StorePort = {
 			getWorkingReferences: vi.fn(),
 			archiveEntry: vi.fn(),
@@ -90,14 +91,18 @@ describe("MDX with front matter", () => {
 			publishEntry: vi.fn(),
 			checkPublishEntry: vi.fn(),
 			getWorking: vi.fn(),
-			createEntryWithReferences: vi.fn().mockResolvedValue(undefined),
+			createEntryWithReferences: vi.fn(async (input) => {
+				created.push(input);
+				return undefined as never;
+			}),
 			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
 		};
 		const service = createContentService(storePort, { site: testSite, formats });
 
 		await service.createDraft(mdxInput(mdx) as unknown as ServiceInput);
 
-		const callArg = vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0];
+		expect(created).toHaveLength(1);
+		const callArg = created[0] as (typeof created)[number];
 		expect(callArg.snapshot.doc.content).toEqual([
 			expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: mdx } }),
 		]);

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { AdminComponentsProvider, CmsApiError, useAdminComponents, useFormat } from "@monti-cms/admin";
+import { AdminComponentsProvider, useAdminComponents, useFormat } from "@monti-cms/admin";
 import { defineSite } from "@monti-cms/core";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
 import { createSite, SiteProvider, useSite } from "@monti-cms/core/site";
@@ -8,6 +8,7 @@ import type { Root } from "mdast";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { visit } from "unist-util-visit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type FakeApi, failure, fakeApi } from "../../../admin/src/test/fake-api";
 import { testConfig, testSite } from "../../../core/test/site";
 import { mdx } from "../plugin";
 import type { SyntaxExtension } from "../syntax";
@@ -17,24 +18,12 @@ import { mdxSourceMessages } from "./messages";
 import { mdxComponents } from "./provider";
 import { lineOfBlock, MdxSourcePanel } from "./source-panel";
 
-const mocks = vi.hoisted(() => ({ adminFetch: vi.fn() }));
-
-// The lookups of the entries a link points to go through the admin API (`fetch`); the panel reads the answers the test gives: a resolved
-// value is the entry, a `CmsApiError` is the error answer the server sends.
+// The lookups of the entries a link points to go through the admin API, answered by the admin's fake of it. An entry no test names is not found.
+let api: FakeApi;
 beforeEach(() => {
-	vi.stubGlobal("fetch", async (input: string) => {
-		try {
-			const body = await mocks.adminFetch(input);
-			return { ok: true, status: 200, json: async () => body };
-		} catch (error) {
-			const failure = error as { status?: number; code?: string; message?: string };
-			return {
-				ok: false,
-				status: failure.status ?? 500,
-				json: async () => ({ error: { code: failure.code, message: failure.message } }),
-			};
-		}
-	});
+	api = fakeApi()
+		.on("GET /v1/entries/:id", () => failure("not_found", "not found"))
+		.install();
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -173,22 +162,21 @@ describe("internal links in the source text", () => {
 	let ID = "";
 	const linked = () => docOf(testSite, `앞 [상세 글](entry:${ID}) 뒤\n`);
 	const answerFound = () =>
-		mocks.adminFetch.mockResolvedValue({
+		api.on("GET /v1/entries/:id", () => ({
 			id: ID,
 			collection: COLLECTION,
-			status: "published",
+			status: "published" as const,
 			locale: testSite.DEFAULT_LOCALE,
+			version: 1,
+			folderId: null,
 			workingSlug: "details",
 			publishedSlug: "details",
-			working: { metadata: { title: "상세" } },
-		});
-	const answerMissing = () =>
-		mocks.adminFetch.mockRejectedValue(new CmsApiError(404, "not_found", "not found", [], { code: "not_found" }));
+			working: { metadata: { title: "상세" }, doc: unparsedDocument("") },
+		}));
 
 	beforeEach(() => {
 		counter += 1;
 		ID = `6f1c0b0e-3c1d-4a0e-9f5a-${String(counter).padStart(12, "0")}`;
-		mocks.adminFetch.mockReset();
 	});
 
 	it("are written with the entry's address once it is looked up, not as entry:<id>", async () => {
@@ -199,9 +187,8 @@ describe("internal links in the source text", () => {
 	});
 
 	it("keep entry:<id> when the entry cannot be resolved", async () => {
-		answerMissing();
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
-		await waitFor(() => expect(mocks.adminFetch).toHaveBeenCalled());
+		await waitFor(() => expect(api.sent("GET /v1/entries/:id").length).toBeGreaterThan(0));
 		expect(textarea().value).toContain(`(entry:${ID})`);
 	});
 
