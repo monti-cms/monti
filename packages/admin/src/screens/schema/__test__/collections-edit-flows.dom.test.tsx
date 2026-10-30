@@ -143,9 +143,9 @@ const removeField = async (name: string) =>
 const openPreview = async () => {
 	const toggle = await screen.findByRole("button", { name: tFields("layout.previewTitle") });
 	if (toggle.getAttribute("aria-pressed") !== "true") fireEvent.click(toggle);
-	return screen.findByTestId("layout-preview");
+	return screen.findByRole("complementary", { name: tProblem("preview.label") });
 };
-const bar = () => screen.getByTestId("save-bar");
+const bar = () => screen.getByRole("region", { name: t("bar.label") });
 const saveButton = () => within(bar()).getByRole("button", { name: t("bar.save") }) as HTMLButtonElement;
 
 describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (steps 07-10)", () => {

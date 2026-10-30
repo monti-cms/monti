@@ -125,7 +125,7 @@ const open = () =>
 
 /** The count of the changes group in the title row. */
 const hasChangeCount = (count: number) =>
-	within(screen.getByTestId("save-bar")).queryByLabelText(t("bar.count", { count })) !== null;
+	within(screen.getByRole("region", { name: t("bar.label") })).queryByLabelText(t("bar.count", { count })) !== null;
 
 describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 	it("creates a collection from the sheet, adds a field to it and saves it", async () => {
@@ -133,7 +133,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		await screen.findByTestId("collection-nav-post");
 
 		// 01: "+ 새 컬렉션" under the list opens a sheet (not a dialog in the middle) with focus in the name.
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const sheet = await screen.findByRole("dialog", { name: tCollection("collection.createTitle") });
 		const name = within(sheet).getByRole("textbox", { name: tCollection("collection.newName") });
@@ -245,7 +245,9 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(hasChangeCount(1)).toBe(true);
 
 		// 06: saved, the file gets the collection with its address and its three fields.
-		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.save") }));
+		fireEvent.click(
+			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
+		);
 		const review = await screen.findByRole("dialog");
 		fireEvent.click(await within(review).findByRole("button", { name: tReview("review.save") }));
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
@@ -284,7 +286,9 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(within(sheet).queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 		fireEvent.click(createButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.save") }));
+		fireEvent.click(
+			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
+		);
 		const review = await screen.findByRole("dialog");
 		await within(review).findByRole("button", { name: tReview("review.save") });
 		const body = lastPreview()?.body?.schema as { collections: Record<string, Record<string, unknown>> };
@@ -335,7 +339,9 @@ describe("flow 4 · 필드 시트", () => {
 		fireEvent.click(within(sheet).getByRole("button", { name: tFields("sheet.save") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		expect(hasChangeCount(1)).toBe(true);
-		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.list") }));
+		fireEvent.click(
+			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.list") }),
+		);
 		expect(await screen.findByRole("menuitem", { name: /^Title/ })).toBeInTheDocument();
 	});
 });
@@ -364,7 +370,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 			tCollection("collection.count", { entries: 23, trashed: 2, folders: 2, kind: "document" }),
 		);
 		expect(inList("memo")).toBe(true);
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 16: pressed, the collection leaves the list at once and the editor shows the first one left; the changes count goes up.
 		await pressDelete();
@@ -372,7 +378,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		expect(inList("post")).toBe(true);
 		expect(screen.getByTestId("collection-nav-post").querySelector("[aria-current]")).toBeInTheDocument();
 		expect(within(screen.getByTestId("collection-delete")).getByText("Post")).toBeInTheDocument();
-		const bar = screen.getByTestId("save-bar");
+		const bar = screen.getByRole("region", { name: t("bar.label") });
 		expect(within(bar).getByLabelText(t("bar.count", { count: 1 }))).toBeInTheDocument();
 
 		// The toast says so and takes it back.
@@ -387,18 +393,20 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		expect(row.textContent).toContain(t("bar.undo"));
 		fireEvent.click(row);
 		await waitFor(() => expect(inList("memo")).toBe(true));
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// The toast's undo does the same.
 		await pressDelete();
 		expect(inList("memo")).toBe(false);
 		toastUndo().onClick();
 		await waitFor(() => expect(inList("memo")).toBe(true));
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 17: deleted again, saved: the review names what goes and what is cut, and it is sent without the collection.
 		await pressDelete();
-		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.save") }));
+		fireEvent.click(
+			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
+		);
 		const sheet = await screen.findByRole("dialog");
 		const change = await within(sheet).findByTestId(`impact-${KEY}`);
 		expect(lastPreview()?.body?.dropCollections).toEqual(["memo"]);
@@ -435,7 +443,9 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 	it("leaves the review without deleting anything: Cancel keeps the collection out of the list, and nothing is sent", async () => {
 		open();
 		await pressDelete();
-		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.save") }));
+		fireEvent.click(
+			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
+		);
 		const sheet = await screen.findByRole("dialog");
 		await within(sheet).findByTestId(`impact-${KEY}`);
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
