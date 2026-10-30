@@ -64,6 +64,12 @@ const PATTERNS = [
 	{ name: "own-module-mock", why: "replaces a module of the package itself", regex: /vi\.mock\(\s*["']\.\.?\//g },
 	{ name: "mock-call-args", why: "reads the arguments of a mock call by position", regex: /\.mock\.calls\[/g },
 	{
+		name: "fetch-stub",
+		why: "replaces fetch by hand, so a response shaped unlike the real one still passes",
+		regex:
+			/\bglobal(?:This)?\.fetch\s*=|vi\.stubGlobal\(\s*["']fetch["']|spyOn\(\s*global(?:This)?\s*,\s*["']fetch["']/g,
+	},
+	{
 		name: "korean-copy",
 		why: "finds an element by Korean text written in the test instead of the message dictionary (Korean test data is not counted)",
 		regex:
@@ -121,6 +127,12 @@ const EXEMPT = [
 		file: "packages/core/src/render/__test__/render-css.int.test.ts",
 		count: 1,
 		why: "reads the shipped `render.css`: the stylesheet is the product, not source code",
+	},
+	{
+		pattern: "fetch-stub",
+		file: "packages/core/src/text-check/__test__/remote.test.ts",
+		count: 3,
+		why: "a client of a remote checking service: fetch is the network edge it talks to, the one place a stub belongs",
 	},
 	{
 		pattern: "own-module-mock",
