@@ -154,6 +154,8 @@ export function createRestoreOps(ctx: StoreContext) {
 					}
 				}
 
+				// An entry deleted for good keeps its published address as `deleted` (no entry), so the address is not reused for other content. The backup
+				// brings that content back to that address, so its row takes the kept one's place; any other address already taken still fails.
 				for (const address of plan.addresses) {
 					await trx
 						.insertInto("content_addresses")
@@ -164,6 +166,12 @@ export function createRestoreOps(ctx: StoreContext) {
 							entry_id: address.entryId,
 							type: address.type as "current",
 						})
+						.onConflict((conflict) =>
+							conflict
+								.columns(["collection", "locale", "slug"])
+								.doUpdateSet((eb) => ({ entry_id: eb.ref("excluded.entry_id"), type: eb.ref("excluded.type") }))
+								.where("content_addresses.type", "=", "deleted"),
+						)
 						.execute();
 				}
 
