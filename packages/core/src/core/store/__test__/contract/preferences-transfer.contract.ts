@@ -236,6 +236,36 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect((err as CmsError).code).toBe("conflict");
 		});
 
+		it("restores its own backup into a site whose entries were deleted for good, at the addresses they kept", async () => {
+			const site = await factory.create();
+			try {
+				fillRequiredMetadata(site.store);
+				const created = await seedEntry(site.store, {
+					collection: contentCollection,
+					slug: "kept-address",
+					metadata: { title: "Kept address" },
+					text: "# Body",
+				});
+				const published = await publishDraft(testSite, site.store, {
+					id: created.id,
+					expectedVersion: created.version,
+				});
+				const snapshot = await site.store.readExportSnapshot();
+				// Deleting a published entry for good keeps its address, so the address is not reused for other content. The post goes first, then what
+				// `fillRequiredMetadata` made for its required fields.
+				for (const entry of [published, ...snapshot.entries.filter((item) => item.id !== published.id)]) {
+					const trashed = await site.store.trashEntry({ id: entry.id, expectedVersion: entry.version });
+					await site.store.deleteTrashed({ targets: [{ type: "entry", id: trashed.id }] });
+				}
+				expect(await site.store.countSiteContent()).toEqual({ entries: 0, folders: 0, media: 0 });
+
+				await site.store.restoreArchive(snapshot);
+				expect((await site.store.readExportSnapshot()).addresses).toEqual(snapshot.addresses);
+			} finally {
+				await site.close();
+			}
+		});
+
 		it("restores a folder that the backup lists before its parent", async () => {
 			const source = await factory.create();
 			const target = await factory.create();
