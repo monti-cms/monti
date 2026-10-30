@@ -77,7 +77,7 @@ describe("BulkBar", () => {
 				<button type="button">폴더로</button>
 			</BulkBar>,
 		);
-		expect(screen.getByRole("toolbar", { name: "2개 선택" })).toBeTruthy();
+		expect(screen.getByRole("toolbar", { name: "2개 선택" })).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: "요청" }));
 		expect(onRequest).toHaveBeenCalledOnce();
 		fireEvent.click(screen.getByRole("button", { name: "선택 해제" }));
@@ -176,7 +176,7 @@ describe("Empty", () => {
 				<EmptyStep href="/data">쓰던 글 가져오기</EmptyStep>
 			</Empty>,
 		);
-		expect(screen.getByRole("button", { name: /첫 글 쓰기/ })).toBeTruthy();
+		expect(screen.getByRole("button", { name: /첫 글 쓰기/ })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /쓰던 글 가져오기/ }).getAttribute("href")).toBe("/data");
 	});
 });

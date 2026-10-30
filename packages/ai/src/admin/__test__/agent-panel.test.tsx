@@ -153,12 +153,12 @@ describe("assistant panel — conversation", () => {
 		renderPanel();
 		await ask("How many posts?");
 
-		expect(await screen.findByText("You have one post.")).toBeTruthy();
-		expect(screen.getByText("How many posts?")).toBeTruthy();
+		expect(await screen.findByText("You have one post.")).toBeInTheDocument();
+		expect(screen.getByText("How many posts?")).toBeInTheDocument();
 		// The line names the operation (not the tool name the model used) and says it is done.
 		const line = screen.getByRole("button", { name: /entries\.list/ });
-		expect(within(line).getByText(t("tool.done"))).toBeTruthy();
-		expect(screen.getByText(t("usage.tokens", { count: "150" }))).toBeTruthy();
+		expect(within(line).getByText(t("tool.done"))).toBeInTheDocument();
+		expect(screen.getByText(t("usage.tokens", { count: "150" }))).toBeInTheDocument();
 	});
 
 	it("opens a tool line to show the input and the result", async () => {
@@ -170,8 +170,8 @@ describe("assistant panel — conversation", () => {
 		const line = await screen.findByRole("button", { name: /entries\.list/ });
 		expect(screen.queryByText(t("tool.input"))).toBeNull();
 		fireEvent.click(line);
-		expect(await screen.findByText(t("tool.input"))).toBeTruthy();
-		expect(screen.getByText(t("tool.result"))).toBeTruthy();
+		expect(await screen.findByText(t("tool.input"))).toBeInTheDocument();
+		expect(screen.getByText(t("tool.result"))).toBeInTheDocument();
 		const shown = document.body.textContent ?? "";
 		expect(shown).toContain('"collection": "post"');
 		expect(shown).toContain('"total": 7');
@@ -192,7 +192,7 @@ describe("assistant panel — conversation", () => {
 		await ask("try");
 		await screen.findByText("Neither worked.");
 		for (const name of [/entries\.get/, /media\.list/]) {
-			expect(within(screen.getByRole("button", { name })).getByText(t("tool.failed"))).toBeTruthy();
+			expect(within(screen.getByRole("button", { name })).getByText(t("tool.failed"))).toBeInTheDocument();
 		}
 	});
 
@@ -240,7 +240,7 @@ describe("assistant panel — conversation", () => {
 
 	it("says which connection and model it runs on", async () => {
 		renderPanel();
-		expect(await screen.findByText(t("model.use", { model: "big-model", connection: "Main" }))).toBeTruthy();
+		expect(await screen.findByText(t("model.use", { model: "big-model", connection: "Main" }))).toBeInTheDocument();
 	});
 });
 
@@ -281,7 +281,7 @@ describe("assistant panel — past conversations", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("history.label") }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "An old question" }));
 
-		expect(await screen.findByText("An old answer")).toBeTruthy();
+		expect(await screen.findByText("An old answer")).toBeInTheDocument();
 		await ask("and then?");
 		await screen.findByText("continued");
 		expect(agentRequests()[0].runId).toBe("old-run");
@@ -291,7 +291,7 @@ describe("assistant panel — past conversations", () => {
 	it("says so when there are none", async () => {
 		renderPanel();
 		fireEvent.click(await screen.findByRole("button", { name: t("history.label") }));
-		expect(await screen.findByText(t("history.empty"))).toBeTruthy();
+		expect(await screen.findByText(t("history.empty"))).toBeInTheDocument();
 	});
 
 	it("picks up the conversation the admin left on the last screen", async () => {
@@ -304,7 +304,7 @@ describe("assistant panel — past conversations", () => {
 		first.unmount();
 
 		renderPanel();
-		expect(await screen.findByText("An old answer")).toBeTruthy();
+		expect(await screen.findByText("An old answer")).toBeInTheDocument();
 	});
 
 	it("does not replace what the admin already asked with the conversation it was still loading", async () => {
@@ -330,7 +330,7 @@ describe("assistant panel — past conversations", () => {
 		await screen.findByText("fresh answer");
 		release();
 		await new Promise((resolve) => setTimeout(resolve, 50));
-		expect(screen.getByText("a new question")).toBeTruthy();
+		expect(screen.getByText("a new question")).toBeInTheDocument();
 		expect(screen.queryByText("An old answer")).toBeNull();
 	});
 
@@ -368,7 +368,7 @@ describe("assistant panel — editor tools", () => {
 		);
 		renderPanel({ context: { screen: "entry", collection: "post", entryId: "e1" }, editor: editor() });
 		await ask("what is this?");
-		expect(await screen.findByText("Your title is unsaved.")).toBeTruthy();
+		expect(await screen.findByText("Your title is unsaved.")).toBeInTheDocument();
 
 		expect(agentRequests()).toHaveLength(2);
 		const [, followUp] = agentRequests();
@@ -401,7 +401,7 @@ describe("assistant panel — editor tools", () => {
 		);
 		renderPanel({ context: { screen: "entry", entryId: "e1" } });
 		await ask("read it");
-		expect(await screen.findByText("I could not read it.")).toBeTruthy();
+		expect(await screen.findByText("I could not read it.")).toBeInTheDocument();
 		const part = agentRequests()[1]
 			.messages.at(-1)
 			.parts.find((item: { type: string }) => item.type === "tool-editor_read");
@@ -451,7 +451,7 @@ describe("assistant panel — when it cannot run", () => {
 		server.agent.push(() => stream(answer(text("fine"))));
 		renderPanel();
 		await ask("hi");
-		expect(await screen.findByText("fine")).toBeTruthy();
+		expect(await screen.findByText("fine")).toBeInTheDocument();
 		expect(screen.queryByRole("link", { name: t("unavailable.link") })).toBeNull();
 	});
 
@@ -460,7 +460,7 @@ describe("assistant panel — when it cannot run", () => {
 		renderPanel();
 		await ask("hi");
 		expect(await findAlertText()).toContain(t("unavailable.noTools", { model: "big-model" }));
-		expect(link()).toBeTruthy();
+		expect(link()).toBeInTheDocument();
 	});
 
 	it("learns there is no connection from the server's refusal (`service_unavailable`)", async () => {
@@ -481,9 +481,9 @@ describe("assistant panel — when it cannot run", () => {
 		);
 		renderPanel();
 		await ask("hi");
-		expect(await screen.findByText(t("error.failed"))).toBeTruthy();
+		expect(await screen.findByText(t("error.failed"))).toBeInTheDocument();
 		expect(screen.queryByRole("link", { name: t("unavailable.link") })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("error.retry") }));
-		expect(await screen.findByText("back again")).toBeTruthy();
+		expect(await screen.findByText("back again")).toBeInTheDocument();
 	});
 });

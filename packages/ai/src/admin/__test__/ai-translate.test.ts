@@ -177,7 +177,7 @@ describe("translation units and replacement", () => {
 			if (!unit) throw new Error("No unit found.");
 			expect(applyTranslation(testSite, format, current, unit, "Second paragraph", pos)).toBe("replaced");
 			const at = findBlock(current.state.doc, id);
-			expect(at).toBeDefined();
+			expect(at).toEqual(expect.any(Number));
 			expect(current.state.doc.nodeAt(at as number)?.textContent).toBe("Second paragraph");
 		});
 

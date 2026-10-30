@@ -48,6 +48,6 @@ describe("AI result checks", () => {
 			t("check.maxLength", { max: 5 }),
 		);
 		expect(checkText(testSite, [on({ kind: "pattern", pattern: "^요약" })], "요약입니다")).toBeNull();
-		expect(checkText(testSite, [], "  ")).toBeTruthy();
+		expect(checkText(testSite, [], "  ")).toEqual(expect.any(String));
 	});
 });

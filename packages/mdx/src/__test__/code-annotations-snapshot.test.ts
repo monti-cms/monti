@@ -84,7 +84,7 @@ describe("code annotations the text cannot keep", () => {
 	it("warns about each one (not an error), with the block, so the body still saves and publishes", async () => {
 		const snapshot = await prepare({ format: "mdx", body: pastTheEnd });
 		const block = snapshot.doc.content[0]?.id;
-		expect(block).toBeDefined();
+		expect(block).toMatch(/\S/);
 		const warnings = (snapshot.warnings ?? []).filter((warning) => warning.code === "code_annotation_out_of_range");
 		expect(warnings.map((warning) => warning.message).sort()).toEqual(["minus", "plus"]);
 		for (const warning of warnings) expect(warning.position).toEqual({ blockId: block });

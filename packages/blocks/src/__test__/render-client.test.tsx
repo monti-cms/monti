@@ -71,6 +71,6 @@ describe("public page client components", () => {
 		document.body.innerHTML = '<div id="root"></div>';
 		render(<CodeRef to="없음">그냥 글자</CodeRef>, { container: document.getElementById("root") as HTMLElement });
 		await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
-		expect(screen.getByText("그냥 글자")).toBeTruthy();
+		expect(screen.getByText("그냥 글자")).toBeInTheDocument();
 	});
 });

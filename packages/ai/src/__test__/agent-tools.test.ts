@@ -128,7 +128,7 @@ describe("the tools of the agent", () => {
 		expect(closed.editor_selection).toBeUndefined();
 		const open = await createAgentTools({ cms, auth: admin, entryId: "e1" });
 		for (const name of ["editor_read", "editor_selection"]) {
-			expect(open[name]?.description).toBeTruthy();
+			expect(open[name]?.description).toMatch(/\S/);
 			expect(open[name]?.execute).toBeUndefined();
 		}
 		expect(open.editor_read?.description).toMatch(/unsaved/i);

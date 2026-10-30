@@ -103,8 +103,8 @@ describe("editor preview", () => {
 			</AdminComponentsProvider>,
 		);
 		// The first load of the renderer module is slow, so extend the wait.
-		await waitFor(() => expect(screen.getByText("mermaid: MermaidPreview")).toBeTruthy(), { timeout: 15_000 });
-		await waitFor(() => expect(screen.getByText("chart: ChartPreview")).toBeTruthy(), { timeout: 15_000 });
+		await waitFor(() => expect(screen.getByText("mermaid: MermaidPreview")).toBeInTheDocument(), { timeout: 15_000 });
+		await waitFor(() => expect(screen.getByText("chart: ChartPreview")).toBeInTheDocument(), { timeout: 15_000 });
 	}, 30_000);
 
 	it("a preview the site registers under the same name (inner provider) wins", async () => {
@@ -120,6 +120,6 @@ describe("editor preview", () => {
 				</Site>
 			</AdminComponentsProvider>,
 		);
-		await waitFor(() => expect(screen.getByText("chart: SitePreview")).toBeTruthy());
+		await waitFor(() => expect(screen.getByText("chart: SitePreview")).toBeInTheDocument());
 	});
 });

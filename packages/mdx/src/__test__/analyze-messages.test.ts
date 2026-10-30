@@ -23,7 +23,7 @@ describe("MDX analysis errors carry a code and values, and the message comes fro
 	it("a body rejected by the parser carries the parser's message as is", () => {
 		const [error] = analyze(testSite, "<div>\n").errors;
 		expect(error?.code).toBe("mdx_syntax");
-		expect(error?.message).toBeTruthy();
+		expect(error?.message).toMatch(/\S/);
 		expect(error?.position).toEqual({ line: 1, column: 1 });
 	});
 

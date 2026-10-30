@@ -18,7 +18,7 @@ describe("AI registry of a site", () => {
 		// The other site turns the media caption action off, so its action list differs from the blog's.
 		expect(Object.keys(aiRegistryOf(second).actions)).not.toEqual(Object.keys(aiRegistryOf(first).actions));
 		expect(aiRegistryOf(second).actionDefinition("imageCaption")).toBeUndefined();
-		expect(aiRegistryOf(first).actionDefinition("imageCaption")).toBeDefined();
+		expect(Object.keys(aiRegistryOf(first).actions)).toContain("imageCaption");
 	});
 
 	it("resolves the actions, the prompt snippets and the site description from the AI plugin options of that site", () => {

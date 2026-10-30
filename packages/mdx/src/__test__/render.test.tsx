@@ -61,7 +61,7 @@ describe("renderMdx", () => {
 		const { html, toc } = await renderFixture("## Getting started\n\ntext\n\n## 시작하기\n\n### Deep dive\n");
 		expect(toc.length).toBe(3);
 		for (const item of toc) {
-			expect(item.id).toBeTruthy();
+			expect(item.id).toMatch(/\S/);
 			expect(item.href).toBe(`#${item.id}`);
 			expect(html).toContain(`id="${item.id}"`);
 		}

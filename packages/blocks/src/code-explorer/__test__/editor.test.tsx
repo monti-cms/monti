@@ -72,7 +72,9 @@ const mount = async (source: string, expectBlock = true) => {
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
 	if (expectBlock)
-		await waitFor(() => expect(document.querySelector('[data-monti-container-node="cmsCodeExplorer"]')).not.toBeNull());
+		await waitFor(() =>
+			expect(document.querySelector('[data-monti-container-node="cmsCodeExplorer"]')).toBeInTheDocument(),
+		);
 	return editor as unknown as Editor;
 };
 
@@ -99,7 +101,7 @@ const cursorTitle = (editor: Editor) => {
 describe("code explorer editing view", () => {
 	it("shows the label and a file list built from the code blocks' titles, folders included", async () => {
 		const editor = await mount(SOURCE);
-		expect(screen.getByText("코드 탐색기")).toBeDefined();
+		expect(screen.getByText("코드 탐색기")).toBeInTheDocument();
 		expect(fileButtons().map((button) => button.textContent)).toEqual(["a.ts", "src/b.ts", "docs/"]);
 		// Every file is an ordinary code block below the list (the same node view as everywhere else).
 		expect(
@@ -142,7 +144,7 @@ describe("code explorer editing view", () => {
 		const editor = await mount(SOURCE.replace("</CodeExplorer>", "아래 설명\n\n</CodeExplorer>"));
 		expect(fileButtons()).toHaveLength(3);
 		expect(editor.state.doc.firstChild?.lastChild?.type.name).toBe("paragraph");
-		expect(screen.getByText("아래 설명")).toBeDefined();
+		expect(screen.getByText("아래 설명")).toBeInTheDocument();
 		const explorer = editor.state.doc.firstChild;
 		const children = Array.from({ length: explorer?.childCount ?? 0 }, (_, index) => ({
 			index,
@@ -246,7 +248,7 @@ describe("code explorer editing view", () => {
 	it("the slash menu inserts the block with one code block `src/index.ts`, not an empty paragraph", async () => {
 		const editor = await mount("첫 문단", false);
 		const action = blockInsertActions(site)["code-explorer"];
-		expect(action).toBeDefined();
+		expect(action).toEqual(expect.any(Function));
 		act(() => {
 			editor.commands.setTextSelection(editor.state.doc.content.size - 1);
 			editor.commands.insertContent("/");
@@ -256,7 +258,6 @@ describe("code explorer editing view", () => {
 		const block = [...Array(editor.state.doc.childCount).keys()]
 			.map((index) => editor.state.doc.child(index))
 			.find((child) => child.type.name === "cmsCodeExplorer");
-		expect(block).toBeDefined();
 		expect(block?.childCount).toBe(1);
 		expect(block?.firstChild?.type.name).toBe("codeBlock");
 		expect(block?.firstChild?.attrs).toMatchObject({ language: "ts", meta: 'title="src/index.ts"' });

@@ -77,7 +77,7 @@ describe("code explorer view", () => {
 		expect(item("page.tsx").getAttribute("aria-selected")).toBe("false");
 		expect(document.querySelectorAll("[data-code-explorer-panel]")).toHaveLength(3);
 		expect(panelOf("page();").hidden).toBe(true);
-		expect(screen.getByRole("tree", { name: "Files" })).toBeTruthy();
+		expect(screen.getByRole("tree", { name: "Files" })).toBeInTheDocument();
 	});
 
 	it("switches the file when a file in the tree is clicked and does nothing for a file with no code", () => {
@@ -99,10 +99,10 @@ describe("code explorer view", () => {
 		expect(lib.getAttribute("aria-expanded")).toBe("false");
 		expect(screen.queryByRole("treeitem", { name: "db.ts" })).toBeNull();
 		// The code of the closed folder's file is still in the page.
-		expect(panelOf("db();")).toBeTruthy();
+		expect(panelOf("db();")).toBeInTheDocument();
 		expect(shownCode()).toEqual(["page();"]);
 		fireEvent.click(lib);
-		expect(item("db.ts")).toBeTruthy();
+		expect(item("db.ts")).toBeInTheDocument();
 	});
 
 	it("has one tab stop that follows the last focused item", () => {
@@ -186,7 +186,7 @@ describe("code explorer view", () => {
 
 	it("renders only the tree, with no button, when no file has code", () => {
 		mount([{ path: "a.ts" }, { path: "src/" }], null);
-		expect(screen.getByRole("tree")).toBeTruthy();
+		expect(screen.getByRole("tree")).toBeInTheDocument();
 		expect(document.querySelector("[data-code-explorer-panel]")).toBeNull();
 		expect(screen.queryByRole("button")).toBeNull();
 		fireEvent.click(item("a.ts"));

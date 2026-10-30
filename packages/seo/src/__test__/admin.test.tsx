@@ -78,8 +78,10 @@ describe("SEO extension admin UI", () => {
 		expect((await valueButton(title.field.label)).textContent).toBe("Search value");
 		expect(
 			screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.description).field.label}`) }),
-		).toBeTruthy();
-		expect(screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.image).field.label}`) })).toBeTruthy();
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.image).field.label}`) }),
+		).toBeInTheDocument();
 		expect(screen.queryByRole("region", { name: /미리보기|preview/i })).toBeNull();
 		expect(screen.queryAllByRole("textbox")).toEqual([]);
 	});
@@ -101,7 +103,7 @@ describe("SEO extension admin UI", () => {
 		const input = (await screen.findByRole("textbox", { name: title.field.label })) as HTMLInputElement;
 		expect(input.placeholder).toBe("Entry title");
 		const limit = title.field.kind === "text" ? (title.field.max ?? title.field.inputOptions?.limit) : undefined;
-		expect(screen.getByText(`11/${limit}`)).toBeTruthy();
+		expect(screen.getByText(`11/${limit}`)).toBeInTheDocument();
 		if (summaryField) {
 			fireEvent.keyDown(input, { key: "Escape" });
 			fireEvent.click(await valueButton(field(SEO_ROLES.description).field.label));

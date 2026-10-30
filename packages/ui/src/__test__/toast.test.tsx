@@ -29,9 +29,9 @@ describe("toast", () => {
 		act(() => {
 			id = toast("Uploading 10%", { id: "upload" });
 		});
-		expect(await screen.findByText("Uploading 10%")).toBeTruthy();
+		expect(await screen.findByText("Uploading 10%")).toBeInTheDocument();
 		act(() => void toast("Uploaded", { id }));
-		expect(await screen.findByText("Uploaded")).toBeTruthy();
+		expect(await screen.findByText("Uploaded")).toBeInTheDocument();
 		expect(screen.queryByText("Uploading 10%")).toBeNull();
 	});
 

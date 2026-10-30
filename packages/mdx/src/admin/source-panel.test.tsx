@@ -87,7 +87,7 @@ describe("the MDX source panel", () => {
 		expect(doc.content[0]).toMatchObject({ type: "unparsed", attrs: { source: broken } });
 		expect(issues.length).toBeGreaterThan(0);
 		expect(issues[0]?.code).toBe("mdx_error");
-		expect(issues[0]?.position).toBeDefined();
+		expect(issues[0]?.position).toMatchObject({ line: expect.any(Number) });
 		expect(textarea().getAttribute("aria-invalid")).toBe("true");
 	});
 

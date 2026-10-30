@@ -66,7 +66,7 @@ describe("menus", () => {
 		);
 		fireEvent.change(screen.getByPlaceholderText("태그 찾기"), { target: { value: "css" } });
 		expect(screen.queryByText("리액트")).toBeNull();
-		expect(screen.getByText("CSS")).toBeTruthy();
+		expect(screen.getByText("CSS")).toBeInTheDocument();
 		// The footer action is found by what it says, like the rows above it.
 		fireEvent.change(screen.getByPlaceholderText("태그 찾기"), { target: { value: "새 태그" } });
 		fireEvent.click(screen.getByText("새 태그 만들기"));

@@ -216,6 +216,7 @@ describe("block extension components of the JSON renderer", () => {
 			"```chart\nchart bar\nx a\nseries v | v | chart-1\n\ndata\na | v\n1 | 2\n```",
 			':tooltip[t]{content="c"} :code-ref[r]{to="c1"} :color[x]{fg="#dc2626"}',
 		].join("\n\n");
-		await expect(renderDocument(fromMdx(source), { site, strict: true })).resolves.toBeDefined();
+		// Strict rendering throws on any block or mark it cannot render.
+		await renderDocument(fromMdx(source), { site, strict: true });
 	});
 });

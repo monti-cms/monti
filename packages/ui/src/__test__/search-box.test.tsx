@@ -40,14 +40,14 @@ describe("SearchToggle", () => {
 		expect(document.activeElement).toBe(field);
 		fireEvent.keyDown(field, { key: "Escape" });
 		expect(screen.queryByRole("searchbox")).toBeNull();
-		expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
 	});
 
 	it("stays a box while it holds words, even when left; the × empties it and keeps it open with the field focused", () => {
 		render(<Toggle initial="react" />);
 		const field = screen.getByRole("searchbox", { name: "Search words" });
 		fireEvent.blur(field);
-		expect(screen.getByRole("searchbox", { name: "Search words" })).toBeTruthy();
+		expect(screen.getByRole("searchbox", { name: "Search words" })).toBeInTheDocument();
 		const clear = screen.getByRole("button", { name: /clear|지우기/i });
 		fireEvent.focus(clear);
 		fireEvent.click(clear);
