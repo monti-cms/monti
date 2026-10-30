@@ -43,6 +43,21 @@ const readAll = (zip: Uint8Array) => {
 	};
 };
 
+/** The fixture with two more entries in the collection of its first: several entries of one collection as well as entries of another. */
+const withMoreEntries = () => {
+	const fixture = makeSnapshot();
+	const [first] = fixture.entries;
+	if (!first) throw new Error("the fixture has no entry");
+	const more = ["33333333-3333-4333-8333-333333333333", "99999999-9999-4999-8999-999999999999"].map((id, index) => ({
+		...first,
+		id,
+		translationGroupId: id,
+		workingSlug: `more-${index}`,
+		publishedSlug: `more-${index}`,
+	}));
+	return { fixture, entries: [...fixture.entries, ...more] };
+};
+
 describe("export archive builder", () => {
 	it("the admin archive contains drafts, published copies, relations and settings", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), {
@@ -189,18 +204,7 @@ describe("export archive builder", () => {
 	});
 
 	it("gives the same bytes whatever order the store lists the entries in", () => {
-		const fixture = makeSnapshot();
-		const [first] = fixture.entries;
-		if (!first) throw new Error("the fixture has no entry");
-		// Several entries of one collection as well as entries of another, so the order is decided both between and within collections.
-		const more = ["33333333-3333-4333-8333-333333333333", "99999999-9999-4999-8999-999999999999"].map((id, index) => ({
-			...first,
-			id,
-			translationGroupId: id,
-			workingSlug: `more-${index}`,
-			publishedSlug: `more-${index}`,
-		}));
-		const entries = [...fixture.entries, ...more];
+		const { fixture, entries } = withMoreEntries();
 		const options = { site: testSite, scope: "admin", exportedAt: FIXED_TIME, archiveModifiedAt: FIXED_TIME } as const;
 		const bytes = (order: typeof entries) =>
 			Array.from(buildExportArchive({ ...fixture, entries: order }, options).zip);
@@ -209,6 +213,22 @@ describe("export archive builder", () => {
 		for (const order of [...rotations, ...rotations.map((rotation) => [...rotation].reverse())]) {
 			expect(bytes(order)).toEqual(listed);
 		}
+	});
+
+	it("lists the entries of the manifest by collection, then by id", () => {
+		const { fixture, entries } = withMoreEntries();
+		const { manifest } = buildExportArchive(
+			{ ...fixture, entries: [...entries].reverse() },
+			{ site: testSite, scope: "admin", exportedAt: FIXED_TIME },
+		);
+		const listed = manifest.entries.map(({ collection, id }) => ({ collection, id }));
+		const byCollectionThenId = [...listed].sort((left, right) =>
+			left.collection === right.collection
+				? left.id.localeCompare(right.id)
+				: left.collection.localeCompare(right.collection),
+		);
+		expect(listed).toHaveLength(entries.length);
+		expect(listed).toEqual(byCollectionThenId);
 	});
 
 	it("the digest is not affected by exportedAt and changes when the content changes", () => {
