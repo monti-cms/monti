@@ -22,7 +22,10 @@ test("an uploaded image is put in a post from the picker and shows where it is u
 	await page.keyboard.type("/이미지");
 	await page.keyboard.press("Enter");
 	const picker = page.getByRole("dialog", { name: "라이브러리" });
-	await picker.getByRole("button", { name: /flow-dot\.png/ }).first().click();
+	await picker
+		.getByRole("button", { name: /flow-dot\.png/ })
+		.first()
+		.click();
 	await picker.getByRole("button", { name: "넣기" }).click();
 	await expect(picker).toBeHidden();
 	await page.getByRole("button", { name: "저장", exact: true }).click();
