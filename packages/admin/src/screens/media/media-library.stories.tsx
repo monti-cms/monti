@@ -428,11 +428,12 @@ export const MovedToTrash: Story = {
 const trashesFolders = () => {
 	const backend = backendOf();
 	backend.onFolderDelete = (id) => {
+		const answer = backend.trashedFolder(id);
 		const gone = new Set([id]);
 		for (const folder of backend.folders) if (folder.parentId && gone.has(folder.parentId)) gone.add(folder.id);
 		backend.folders = backend.folders.filter((folder) => !gone.has(folder.id));
 		backend.items = backend.items.filter((item) => !gone.has(item.folderId ?? ""));
-		return { folder: { id }, entries: 0, folders: 0, files: 3, kept: 0 };
+		return answer;
 	};
 	return backend;
 };

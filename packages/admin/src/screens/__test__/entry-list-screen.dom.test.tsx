@@ -1,12 +1,15 @@
-import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { emptyStoredDocument } from "@monti-cms/core/document";
+import type { FolderListItem, ListEntriesItem, PreferencesBody } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import type { BulkItemResult, EntriesPage } from "../../api/entries";
 import { commonMessages } from "../../lib/common.messages";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, failure, fakeApi, type SentRequest } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
 import { toast } from "../../test/ui-toast";
+import type { EntryData } from "../entries/entry-form";
 import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
@@ -41,46 +44,47 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	deletedAt: null,
 	...fields,
 });
-const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 };
+const folder: FolderListItem = {
+	id: "f1",
+	collection: "post",
+	parentId: null,
+	name: "뉴스",
+	position: 0,
+	version: 1,
+	entryCount: 0,
+};
 
-type Handler = (url: URL, init: RequestInit | undefined) => unknown;
-
-/** Fake server. List requests read from `posts` and `trashed`, and tests accept more requests through `handle`. */
+/** Fake server. List requests read from `posts` and `trashed`; a test answers more routes with `api.on`. */
 const server = {
 	posts: [] as ListEntriesItem[],
 	trashed: [] as ListEntriesItem[],
-	folders: [] as Folder[],
-	preferences: {} as Record<string, unknown>,
-	handle: (() => undefined) as Handler,
+	folders: [] as FolderListItem[],
+	preferences: {} as PreferencesBody,
 };
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
+/** What the list route answers from `server`. */
+const listAnswer = ({ query }: SentRequest): EntriesPage => {
+	const collection = query.get("collection");
+	const trash = query.getAll("status").includes("trashed");
+	const items = collection !== "post" ? [] : trash ? server.trashed : server.posts;
+	return { items, total: items.length };
+};
 
 /** The requests for the list itself: the sidebar's trash count asks for the same collection with the trashed status. */
 const entryRequests = () =>
-	fetchMock.mock.calls
-		.map(([input]) => new URL(String(input), "http://localhost"))
-		.filter(
-			(url) =>
-				url.pathname === "/api/monti/v1/entries" &&
-				url.searchParams.get("collection") === "post" &&
-				!url.searchParams.getAll("status").includes("trashed"),
-		);
+	api
+		.sent("GET /v1/entries")
+		.map((request) => request.query)
+		.filter((query) => query.get("collection") === "post" && !query.getAll("status").includes("trashed"));
 /** The requests for the trash: the same list, asked for the trashed status. */
 const _trashRequests = () =>
-	fetchMock.mock.calls
-		.map(([input]) => new URL(String(input), "http://localhost"))
+	api
+		.sent("GET /v1/entries")
+		.map((request) => request.query)
 		.filter(
-			(url) =>
-				url.pathname === "/api/monti/v1/entries" &&
-				url.searchParams.get("collection") === "post" &&
-				url.searchParams.getAll("status").includes("trashed") &&
-				url.searchParams.has("sortField"),
+			(query) =>
+				query.get("collection") === "post" && query.getAll("status").includes("trashed") && query.has("sortField"),
 		);
-const calls = (method: string, path: string) =>
-	fetchMock.mock.calls.filter(
-		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,
-	);
-const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit | undefined)?.body));
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -89,23 +93,13 @@ beforeEach(() => {
 	server.trashed = [];
 	server.folders = [];
 	server.preferences = {};
-	server.handle = () => undefined;
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const handled = await server.handle(url, init);
-		if (handled !== undefined) return handled;
-		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/monti/v1/preferences") return json(method === "GET" ? server.preferences : {});
-		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return json(server.folders);
-		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
-			const collection = url.searchParams.get("collection");
-			const trash = url.searchParams.getAll("status").includes("trashed");
-			const items = collection !== "post" ? [] : trash ? server.trashed : server.posts;
-			return json({ items, total: items.length });
-		}
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.withEmptyRail()
+		.on("GET /v1/preferences", () => server.preferences)
+		.on("PUT /v1/preferences", ({ body }) => ({ preferences: body }))
+		.on("GET /v1/folders", () => server.folders)
+		.on("GET /v1/entries", listAnswer)
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -146,9 +140,9 @@ describe("list screen — list settings", () => {
 
 		await waitFor(() => {
 			const last = entryRequests().at(-1);
-			expect(last?.searchParams.get("pageSize")).toBe("50");
-			expect(last?.searchParams.get("sortField")).toBe("title");
-			expect(last?.searchParams.get("sortDirection")).toBe("asc");
+			expect(last?.get("pageSize")).toBe("50");
+			expect(last?.get("sortField")).toBe("title");
+			expect(last?.get("sortDirection")).toBe("asc");
 		});
 	});
 
@@ -159,9 +153,9 @@ describe("list screen — list settings", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// The trash badge asks for trashed rows too; the list itself is the request with a sort.
-		const listRequests = entryRequests().filter((url) => url.searchParams.has("sortField"));
+		const listRequests = entryRequests().filter((query) => query.has("sortField"));
 		expect(listRequests).toHaveLength(1);
-		expect(listRequests[0]?.searchParams.get("sortField")).toBe("title");
+		expect(listRequests[0]?.get("sortField")).toBe("title");
 	});
 
 	it("values written in the address take precedence over saved settings", async () => {
@@ -170,21 +164,18 @@ describe("list screen — list settings", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("pageSize")).toBe("100"));
+		await waitFor(() => expect(entryRequests().at(-1)?.get("pageSize")).toBe("100"));
 	});
 });
 
 describe("list screen — row menu and bulk actions", () => {
 	it("the Delete key moves all selected draft rows to the trash at once", async () => {
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
-				? json({
-						results: [
-							{ id: "가", ok: true, version: 4 },
-							{ id: "다", ok: true, version: 4 },
-						],
-					})
-				: undefined;
+		api.on("POST /v1/bulk", () => ({
+			results: [
+				{ id: "가", ok: true as const, version: 4 },
+				{ id: "다", ok: true as const, version: 4 },
+			],
+		}));
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -192,22 +183,20 @@ describe("list screen — row menu and bulk actions", () => {
 
 		fireEvent.keyDown(screen.getByRole("checkbox", { name: "다 선택" }), { key: "Delete" });
 
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/bulk")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/bulk")[0]).items.map((entry: { id: string }) => entry.id)).toEqual([
-			"가",
-			"다",
-		]);
+		await waitFor(() => expect(api.sent("POST /v1/bulk")).toHaveLength(1));
+		expect(api.sent("POST /v1/bulk")[0]?.body.items.map((entry: { id: string }) => entry.id)).toEqual(["가", "다"]);
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
 	it("actions are applied to the list first, and failed rows stay selected", async () => {
-		let respond: (value: unknown) => void = () => {};
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
-				? new Promise((resolve) => {
-						respond = resolve;
-					})
-				: undefined;
+		let respond: (value: { results: BulkItemResult[] }) => void = () => {};
+		api.on(
+			"POST /v1/bulk",
+			() =>
+				new Promise((resolve) => {
+					respond = resolve;
+				}),
+		);
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -222,14 +211,12 @@ describe("list screen — row menu and bulk actions", () => {
 		// The server could only not move `나`. The refetched list still has `나`, and it is still selected.
 		server.posts = [item("나"), item("다")];
 		await act(async () =>
-			respond(
-				json({
-					results: [
-						{ id: "가", ok: true, version: 4 },
-						{ id: "나", ok: false, error: "conflict" },
-					],
-				}),
-			),
+			respond({
+				results: [
+					{ id: "가", ok: true, version: 4 },
+					{ id: "나", ok: false, error: "conflict" },
+				],
+			}),
 		);
 
 		await waitFor(() =>
@@ -243,15 +230,12 @@ describe("list screen — row menu and bulk actions", () => {
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
-				? json({
-						results: [
-							{ id: "가", ok: true, version: 4 },
-							{ id: "나", ok: false, error: "conflict" },
-						],
-					})
-				: undefined;
+		api.on("POST /v1/bulk", () => ({
+			results: [
+				{ id: "가", ok: true as const, version: 4 },
+				{ id: "나", ok: false as const, error: "conflict" },
+			],
+		}));
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -271,15 +255,13 @@ describe("list screen — row menu and bulk actions", () => {
 
 	it("if the request itself fails, the list is rolled back before refetching", async () => {
 		let bulkFailed = false;
-		server.handle = (url, init) => {
-			if (url.pathname === "/api/monti/v1/bulk" && init?.method === "POST") {
+		api
+			.on("POST /v1/bulk", () => {
 				bulkFailed = true;
-				return json({ error: { code: "internal", message: "서버 오류" } }, 500);
-			}
+				return failure("internal_error", "서버 오류");
+			})
 			// The refetch after the failure never finishes. If the rows come back, it is thanks to the rollback.
-			if (bulkFailed && url.pathname === "/api/monti/v1/entries") return new Promise(() => {});
-			return undefined;
-		};
+			.on("GET /v1/entries", (request) => (bulkFailed ? new Promise<never>(() => {}) : listAnswer(request)));
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		await openRowMenu("가");
@@ -307,10 +289,7 @@ describe("list screen — a collection without folders", () => {
 	const blankArea = () => screen.queryByTestId("list-blank-area");
 	/** The sidebar counts folders of the other collections that use them; only this collection's folders are in question. */
 	const folderRequests = () =>
-		fetchMock.mock.calls.filter(([input]) => {
-			const url = new URL(String(input), "http://localhost");
-			return url.pathname.endsWith("/v1/folders") && url.searchParams.get("collection") === "post";
-		});
+		api.sent("GET /v1/folders").filter((request) => request.query.get("collection") === "post");
 	const openBlankMenu = async () => {
 		await act(async () => {
 			fireEvent.contextMenu(blankArea() as HTMLElement);
@@ -352,12 +331,12 @@ describe("list screen — a collection without folders", () => {
 
 		expect(folderRequests()).toHaveLength(0);
 		expect(entryRequests().length).toBeGreaterThan(0);
-		expect(entryRequests().every((url) => !url.searchParams.has("folderId"))).toBe(true);
+		expect(entryRequests().every((query) => !query.has("folderId"))).toBe(true);
 	});
 });
 
 describe("taxonomy edit panel — unsaved changes", () => {
-	const record = (id: string, title: string) => ({
+	const record = (id: string, title: string): EntryData => ({
 		id,
 		collection: "tag",
 		status: "published",
@@ -365,7 +344,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		folderId: null,
 		workingSlug: id,
 		publishedSlug: id,
-		working: { metadata: { title }, mdx: "" },
+		working: { metadata: { title }, doc: emptyStoredDocument() },
 	});
 	beforeEach(() => {
 		nav.setSearch("collection=tag");
@@ -373,13 +352,12 @@ describe("taxonomy edit panel — unsaved changes", () => {
 			item("t1", { collection: "tag", title: "리액트", status: "published" }),
 			item("t2", { collection: "tag", title: "뷰", status: "published" }),
 		];
-		server.handle = (url, init) => {
-			if (url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "tag" && !init?.method)
-				return json({ items: tags, total: tags.length });
-			if (url.pathname === "/api/monti/v1/entries/t1") return json(record("t1", "리액트"));
-			if (url.pathname === "/api/monti/v1/entries/t2") return json(record("t2", "뷰"));
-			return undefined;
-		};
+		const records: Record<string, EntryData> = { t1: record("t1", "리액트"), t2: record("t2", "뷰") };
+		api
+			.on("GET /v1/entries", (request) =>
+				request.query.get("collection") === "tag" ? { items: tags, total: tags.length } : listAnswer(request),
+			)
+			.on("GET /v1/entries/:id", ({ params }) => records[params.id ?? ""] ?? failure("not_found"));
 	});
 	const panelName = () => screen.findByRole("textbox", { name: /이름/ }) as Promise<HTMLInputElement>;
 

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { jsonResponse } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { AdminUiLabels } from "../../../ui/labels";
 import { uiMessages } from "../../../ui/messages";
@@ -14,12 +14,10 @@ const { render } = createTestRouter();
 const t = testSite.createTranslator(screensMessages);
 const tui = testSite.createTranslator(uiMessages);
 
+let api: FakeApi;
 beforeEach(() => {
 	window.localStorage.clear();
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () => jsonResponse({ items: [], total: 0, counts: { failed: 0, dead: 0 } })),
-	);
+	api = fakeApi().withEmptyRail().install();
 });
 afterEach(() => {
 	cleanup();
@@ -96,10 +94,11 @@ describe("folding the sidebar to its icons", () => {
 	});
 
 	it("names a folded row and its count in a tooltip", async () => {
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => jsonResponse({ items: [], total: 0, counts: { failed: 2, dead: 1 } })),
-		);
+		api.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 2, dead: 1, dismissed: 0 },
+		}));
 		renderFrame();
 		fireEvent.click(fold());
 		const tools = await within(rail()).findByRole("link", { name: new RegExp(t("sidebar.tools")) });

@@ -2,8 +2,9 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import type { CmsIssue } from "../../../api/error-message";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -13,7 +14,7 @@ import { statusBarMessages } from "../../shared/status-bar.messages";
 import { entryCompareMessages } from "../entry-compare.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { formFingerprint, formFromEntry } from "../entry-form";
+import { type EntryData, formFingerprint, formFromEntry } from "../entry-form";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -52,20 +53,7 @@ const EDIT_HREF = testSite.adminEntryEditHref("entry-1");
 const BODY = docOf("첫 문단\n\n![](a.png)\n\n![](b.png)");
 const imageIds = BODY.content.filter((node) => node.type === "image").map((node) => String(node.id));
 
-type Entry = {
-	id: string;
-	collection: string;
-	status: string;
-	version: number;
-	folderId: null;
-	workingSlug: string;
-	publishedSlug: string | null;
-	publishedAt?: string;
-	changedAt?: string;
-	working: { metadata: Record<string, unknown>; doc: StoredDocument };
-	published?: { metadata: Record<string, unknown>; doc: StoredDocument };
-};
-const draft: Entry = {
+const draft: EntryData = {
 	id: "entry-1",
 	collection: "post",
 	status: "draft",
@@ -78,59 +66,57 @@ const draft: Entry = {
 
 /** A server with one entry: it checks the version of a save and a publish, as the real one does. */
 class Server {
-	entry: Entry = structuredClone(draft);
-	checkAnswer: { issues: unknown[]; warnings: unknown[] } = { issues: [], warnings: [] };
-	requests: { method: string; url: string; body: Record<string, unknown> | undefined }[] = [];
+	entry: EntryData = structuredClone(draft);
+	checkAnswer: { issues: CmsIssue[]; warnings: CmsIssue[] } = { issues: [], warnings: [] };
+	publishRefusal: CmsIssue[] | null = null;
 	clock = "2026-10-26T01:41:00.000Z";
 
-	handle = async (input: string, init?: RequestInit) => {
-		const method = init?.method ?? "GET";
-		const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
-		this.requests.push({ method, url: input, body });
-		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
-		if (input.startsWith("/api/monti/v1/entries/search?")) return json({ items: [] });
-		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
-		if (input.endsWith("/check") && method === "POST") return json(this.checkAnswer);
-		if (input === "/api/monti/v1/entries/entry-1" && method === "GET") return json(structuredClone(this.entry));
-		if (input === "/api/monti/v1/entries/entry-1" && method === "PATCH") {
-			if (body?.expectedVersion !== this.entry.version) {
-				return json({ error: { code: "conflict", serverVersion: this.entry.version } }, 409);
-			}
-			this.entry = {
-				...this.entry,
-				version: this.entry.version + 1,
-				workingSlug: String(body.slug ?? this.entry.workingSlug),
-				working: { metadata: body.metadata as Entry["working"]["metadata"], doc: body.doc as StoredDocument },
-			};
-			return json({ entry: structuredClone(this.entry), warnings: [] });
-		}
-		if (input.endsWith("/publish") && method === "POST") {
-			if (this.publishRefusal)
-				return json({ error: { code: "publish_validation_failed", issues: this.publishRefusal } }, 422);
-			if (body?.expectedVersion !== this.entry.version) {
-				return json({ error: { code: "conflict", serverVersion: this.entry.version } }, 409);
-			}
-			this.entry = {
-				...this.entry,
-				status: "published",
-				version: this.entry.version + 1,
-				publishedSlug: this.entry.workingSlug,
-				publishedAt: body.resetPublishedAt || !this.entry.publishedAt ? this.clock : this.entry.publishedAt,
-				published: structuredClone(this.entry.working),
-			};
-			return json({ entry: structuredClone(this.entry), warnings: [] });
-		}
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	};
-	publishRefusal: unknown[] | null = null;
-	/** The requests of one kind, with their bodies. */
-	sent = (method: string, suffix = "") =>
-		this.requests.filter((request) => request.method === method && request.url.endsWith(suffix));
+	private conflict = () => failure("conflict", "Conflict", { details: { serverVersion: this.entry.version } });
+
+	/** Answers the routes of the editor through `api`. */
+	mount(api: FakeApi) {
+		const known = (id: string | undefined) => id === this.entry.id;
+		api
+			.on("GET /v1/entries/:id/relations", () => ({ incomingReferences: [] }))
+			.on("POST /v1/entries/:id/check", () => this.checkAnswer)
+			.on("GET /v1/entries/:id", ({ params }) =>
+				known(params.id) ? structuredClone(this.entry) : failure("not_found"),
+			)
+			.on("PATCH /v1/entries/:id", ({ params, body }) => {
+				if (!known(params.id)) return failure("not_found");
+				if (body?.expectedVersion !== this.entry.version) return this.conflict();
+				this.entry = {
+					...this.entry,
+					version: this.entry.version + 1,
+					workingSlug: String(body.slug ?? this.entry.workingSlug),
+					working: { metadata: body.metadata, doc: body.doc as StoredDocument },
+				};
+				return { entry: structuredClone(this.entry), warnings: [] };
+			})
+			.on("POST /v1/entries/:id/publish", ({ params, body }) => {
+				if (!known(params.id)) return failure("not_found");
+				if (this.publishRefusal)
+					return failure("publish_validation_failed", "publish_validation_failed", { issues: this.publishRefusal });
+				if (body?.expectedVersion !== this.entry.version) return this.conflict();
+				this.entry = {
+					...this.entry,
+					status: "published",
+					version: this.entry.version + 1,
+					publishedSlug: this.entry.workingSlug,
+					publishedAt: body.resetPublishedAt || !this.entry.publishedAt ? this.clock : this.entry.publishedAt,
+					published: structuredClone(this.entry.working),
+				};
+				return { entry: structuredClone(this.entry), warnings: [] };
+			});
+	}
 }
 
 let server: Server;
+let api: FakeApi;
+const saves = () => api.sent("PATCH /v1/entries/:id");
+const publishes = () => api.sent("POST /v1/entries/:id/publish");
 
-const told = (issue: { code: string; path?: string; message?: string; position?: { blockId: string } }) => ({
+const told = (issue: { code: string; path?: string; message?: string; position?: { blockId: string } }): CmsIssue => ({
 	...issue,
 	text: "서버 문구",
 	...(issue.path ? { where: issue.path } : {}),
@@ -151,10 +137,11 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	nav.setSearch("");
 	server = new Server();
+	api = fakeApi().install();
+	server.mount(api);
 	getLocalBackup.mockResolvedValue(null);
 	deleteLocalBackup.mockResolvedValue(undefined);
 	saveLocalBackup.mockResolvedValue(true);
-	vi.stubGlobal("fetch", vi.fn(server.handle));
 	vi.stubGlobal("open", vi.fn());
 });
 afterEach(() => {
@@ -173,8 +160,8 @@ describe("flow: write and publish (steps 09–15)", () => {
 		fireEvent.change(await title(), { target: { value: "고친 제목" } });
 		expect((await bar()).getByRole("button", { name: tEntries("save.dirty") })).toBeInTheDocument();
 		fireEvent.click(save);
-		await waitFor(() => expect(server.sent("PATCH")).toHaveLength(1));
-		expect(server.sent("PATCH")[0]?.body).toMatchObject({
+		await waitFor(() => expect(saves()).toHaveLength(1));
+		expect(saves()[0]?.body).toMatchObject({
 			expectedVersion: 4,
 			metadata: expect.objectContaining({ title: "고친 제목" }),
 		});
@@ -182,8 +169,8 @@ describe("flow: write and publish (steps 09–15)", () => {
 
 		fireEvent.change(await title(), { target: { value: "다시 고침" } });
 		pressSave();
-		await waitFor(() => expect(server.sent("PATCH")).toHaveLength(2));
-		expect(server.sent("PATCH")[1]?.body).toMatchObject({ expectedVersion: 5 });
+		await waitFor(() => expect(saves()).toHaveLength(2));
+		expect(saves()[1]?.body).toMatchObject({ expectedVersion: 5 });
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
 	});
 
@@ -249,10 +236,10 @@ describe("flow: write and publish (steps 09–15)", () => {
 		renderEdit();
 		fireEvent.change(await title(), { target: { value: "발행할 글" } });
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(server.sent("POST", "/publish")).toHaveLength(1));
+		await waitFor(() => expect(publishes()).toHaveLength(1));
 		// A publish saves the input first, and publishes the version that save made.
-		expect(server.sent("PATCH")).toHaveLength(1);
-		expect(server.sent("POST", "/publish")[0]?.body).toMatchObject({ expectedVersion: 5 });
+		expect(saves()).toHaveLength(1);
+		expect(publishes()[0]?.body).toMatchObject({ expectedVersion: 5 });
 
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("발행되었어요.", expect.anything()));
 		const options = toast.mock.calls.find(([message]) => message === "발행되었어요.")?.[1] as {
@@ -293,8 +280,8 @@ describe("flow: write and publish (steps 09–15)", () => {
 		]);
 
 		fireEvent.click(rows[1] as HTMLElement);
-		await waitFor(() => expect(server.sent("POST", "/publish")).toHaveLength(1));
-		expect(server.sent("POST", "/publish")[0]?.body).toMatchObject({ expectedVersion: 7, resetPublishedAt: true });
+		await waitFor(() => expect(publishes()).toHaveLength(1));
+		expect(publishes()[0]?.body).toMatchObject({ expectedVersion: 7, resetPublishedAt: true });
 		await waitFor(() => expect(status()).toBe("발행됨"));
 	});
 
@@ -311,8 +298,8 @@ describe("flow: write and publish (steps 09–15)", () => {
 		fireEvent.change(await title(), { target: { value: "날짜는 그대로" } });
 		await waitFor(() => expect(status()).toBe("수정 중"));
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(server.sent("POST", "/publish")).toHaveLength(1));
-		expect(server.sent("POST", "/publish")[0]?.body?.resetPublishedAt).toBeFalsy();
+		await waitFor(() => expect(publishes()).toHaveLength(1));
+		expect(publishes()[0]?.body?.resetPublishedAt).toBeFalsy();
 	});
 
 	it("shows the reason a preview cannot open in place, beside the button, not in a tooltip", async () => {
@@ -363,7 +350,7 @@ describe("flow: saved elsewhere first", () => {
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("서버 최신 제목"));
 		expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
-		expect(server.sent("PATCH")).toHaveLength(1);
+		expect(saves()).toHaveLength(1);
 	});
 
 	it("compares on a screen of its own: both entries side by side with the differences counted, the way back, and the status bar's cell", async () => {
@@ -401,8 +388,8 @@ describe("flow: saved elsewhere first", () => {
 		await conflicted();
 		act(() => nav.setSearch("compare=conflict"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("saveMine") }));
-		await waitFor(() => expect(server.sent("PATCH")).toHaveLength(2));
-		expect(server.sent("PATCH")[1]?.body).toMatchObject({
+		await waitFor(() => expect(saves()).toHaveLength(2));
+		expect(saves()[1]?.body).toMatchObject({
 			expectedVersion: 9,
 			metadata: expect.objectContaining({ title: "내 입력" }),
 		});
@@ -431,14 +418,14 @@ describe("flow: saved elsewhere first", () => {
 describe("flow: browser draft on reopening", () => {
 	const savedAt = Date.parse("2026-10-26T01:12:00.000Z");
 	function keepDraft(over: Record<string, unknown> = {}, baseVersion = 4) {
-		const base = formFromEntry(testSite, draft as never);
+		const base = formFromEntry(testSite, draft);
 		const snapshot = { ...base, title: "브라우저에 남은 제목", summary: "임시 소개", ...over };
 		getLocalBackup.mockResolvedValue({
 			key: `${ADMIN}:entry-1`,
 			entryId: "entry-1",
 			baseVersion,
 			baseFingerprint: formFingerprint(testSite, base),
-			localFingerprint: formFingerprint(testSite, snapshot as never),
+			localFingerprint: formFingerprint(testSite, snapshot),
 			snapshot,
 			changeSeq: 1,
 			savedAt,

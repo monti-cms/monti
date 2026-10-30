@@ -4,15 +4,16 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
-import { jsonResponse as json } from "../../test/fetch";
+import { fakeApi } from "../../test/fake-api";
 import { withSite } from "../../test/site";
+import type { EntryData } from "../entries/entry-form";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 
 const tScreens = testSite.createTranslator(screensMessages);
 const tCommon = testSite.createTranslator(commonMessages);
 
-const tag = {
+const tag: EntryData = {
 	id: "tag-1",
 	collection: "tag",
 	status: "published",
@@ -20,24 +21,19 @@ const tag = {
 	folderId: null,
 	workingSlug: "react",
 	publishedSlug: "react",
-	working: { metadata: { title: "리액트", translations: { en: { title: "React" } } }, mdx: "" },
+	working: { metadata: { title: "리액트", translations: { en: { title: "React" } } }, doc: emptyStoredDocument() },
 };
 
-let fetchMock: ReturnType<typeof vi.fn>;
-const calls = (method: string) => fetchMock.mock.calls.filter(([, init]) => init?.method === method);
-const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit).body));
+let api: ReturnType<typeof fakeApi>;
+const calls = (method: "PATCH" | "POST") => api.requests.filter((request) => request.method === method);
 
 beforeEach(() => {
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		if (input === "/api/monti/v1/entries/tag-1" && !init?.method) return json(tag);
-		if (input === "/api/monti/v1/entries/tag-1" && init?.method === "PATCH")
-			return json({ entry: { ...tag, version: 4 }, warnings: [] });
-		if (input === "/api/monti/v1/entries" && init?.method === "POST")
-			return json({ entry: { ...tag, id: "tag-2" }, warnings: [] }, 201);
-		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
-		throw new Error(`Unexpected fetch ${init?.method ?? "GET"} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("GET /v1/entries/:id", () => tag)
+		.on("PATCH /v1/entries/:id", () => ({ entry: { ...tag, version: 4 }, warnings: [] }))
+		.on("POST /v1/entries", () => ({ entry: { ...tag, id: "tag-2" }, warnings: [] }))
+		.on("GET /v1/entries", () => ({ items: [], total: 0 }))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -76,7 +72,7 @@ describe("taxonomy edit panel", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
-		expect(bodyOf(calls("PATCH")[0])).toEqual({
+		expect(calls("PATCH")[0]?.body).toEqual({
 			expectedVersion: 3,
 			slug: "react",
 			metadata: { title: "리액트", translations: { en: { title: "React" }, ja: { title: "リアクト" } } },
@@ -101,7 +97,7 @@ describe("taxonomy edit panel", () => {
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 
 		await waitFor(() => expect(calls("POST")).toHaveLength(1));
-		expect(bodyOf(calls("POST")[0])).toEqual({
+		expect(calls("POST")[0]?.body).toEqual({
 			collection: "tag",
 			slug: null,
 			metadata: { title: "Vue" },
@@ -123,7 +119,7 @@ describe("taxonomy edit panel", () => {
 		fireEvent.change(screen.getByDisplayValue("React!"), { target: { value: "React!!" } });
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(2));
-		expect(bodyOf(calls("PATCH")[1]).expectedVersion).toBe(4);
+		expect(calls("PATCH")[1]?.body.expectedVersion).toBe(4);
 	});
 
 	it("with unsaved changes, asks whether to discard before closing", async () => {

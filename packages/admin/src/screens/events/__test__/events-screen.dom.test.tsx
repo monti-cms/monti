@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { jsonResponse as json } from "../../../test/fetch";
+import type { EventCounts, EventDeliveryItem, EventsList } from "../../../api/events";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -14,13 +15,13 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
 
-const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
+const counts: EventCounts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (
 	eventId: string,
 	subscriber: string | null,
 	state: "failed" | "dead" | "delivered" | "pending" | "recorded",
-	kind = "published",
-) => ({
+	kind: EventDeliveryItem["change"]["kind"] = "published",
+): EventDeliveryItem => ({
 	change: {
 		eventId,
 		kind,
@@ -37,25 +38,26 @@ const item = (
 	nextAttemptAt: state === "failed" ? "2026-01-02T00:00:00.000Z" : null,
 });
 
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
+/** Answers every list request with `list`. */
+const listing = (list: (query: URLSearchParams) => EventsList) => api.on("GET /v1/events", ({ query }) => list(query));
 
 // The filter and page live in the address, so every test gets an address of its own.
 let render: ReturnType<typeof createTestRouter>["render"];
 beforeEach(() => {
 	render = createTestRouter().render;
 	vi.clearAllMocks();
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const method = init?.method ?? "GET";
-		if (method === "GET" && input.startsWith("/api/monti/v1/events?"))
-			return json({
-				items: [item("e1", "search-index", "failed"), item("e2", "webhook", "dead", "deleted")],
-				total: 2,
-				counts,
-			});
-		if (method === "POST") return json({ counts });
-		throw new Error(`Unexpected fetch ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("GET /v1/events", () => ({
+			items: [item("e1", "search-index", "failed"), item("e2", "webhook", "dead", "deleted")],
+			total: 2,
+			counts,
+		}))
+		// The rail's count of the trash.
+		.on("GET /v1/trash", () => ({ items: [], total: 0, kinds: {} }))
+		.on("POST /v1/events/:id/retry", () => ({ counts }))
+		.on("POST /v1/events/:id/dismiss", () => ({ counts }))
+		.install();
 });
 
 afterEach(() => {
@@ -71,9 +73,7 @@ const renderScreen = () =>
 	);
 
 const posts = () =>
-	fetchMock.mock.calls
-		.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST")
-		.map(([url, init]) => [url, JSON.parse(String((init as RequestInit).body))]);
+	api.requests.filter((request) => request.method === "POST").map((request) => [request.path, request.body]);
 
 describe("EventsScreen", () => {
 	it("lists failed and dead deliveries with subscriber and state", async () => {
@@ -111,9 +111,7 @@ describe("EventsScreen", () => {
 	});
 
 	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
-		fetchMock.mockImplementation(async () =>
-			json({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }),
-		);
+		listing(() => ({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }));
 		renderScreen();
 
 		const row = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
@@ -129,7 +127,7 @@ describe("EventsScreen", () => {
 			await screen.findByRole("button", { name: t("action.retryLabel", { subscriber: "search-index" }) }),
 		);
 
-		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/e1/retry", { subscriber: "search-index" }]]));
+		await waitFor(() => expect(posts()).toEqual([["/v1/events/e1/retry", { subscriber: "search-index" }]]));
 	});
 
 	it("asks before dismissing, then posts", async () => {
@@ -140,24 +138,24 @@ describe("EventsScreen", () => {
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: t("action.dismiss") }));
 
-		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
+		await waitFor(() => expect(posts()).toEqual([["/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
 	});
 
 	it("retries everything due", async () => {
 		let retried = false;
-		fetchMock.mockImplementation(async (_input: string, init?: RequestInit) => {
-			if (init?.method === "POST") {
-				retried = true;
-				return json({ delivered: 1, failed: 0, dead: 0, counts });
-			}
-			return retried
-				? json({ items: [], total: 0, counts: { ...counts, failed: 0 } })
-				: json({ items: [item("e1", "search-index", "failed")], total: 1, counts });
+		api.on("POST /v1/events/retry", () => {
+			retried = true;
+			return { delivered: 1, failed: 0, dead: 0, counts };
 		});
+		listing(() =>
+			retried
+				? { items: [], total: 0, counts: { ...counts, failed: 0 } }
+				: { items: [item("e1", "search-index", "failed")], total: 1, counts },
+		);
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
 
-		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
+		await waitFor(() => expect(posts()).toEqual([["/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeInTheDocument();
 		// Nothing pending or failed is left to retry.
@@ -165,13 +163,11 @@ describe("EventsScreen", () => {
 	});
 
 	it("opens on all recent events, not only the failed ones", async () => {
-		fetchMock.mockImplementation(async () =>
-			json({
-				items: [item("e3", "search-index", "delivered", "saved"), item("e1", "webhook", "failed")],
-				total: 2,
-				counts,
-			}),
-		);
+		listing(() => ({
+			items: [item("e3", "search-index", "delivered", "saved"), item("e1", "webhook", "failed")],
+			total: 2,
+			counts,
+		}));
 		renderScreen();
 
 		const deliveredRow = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
@@ -181,29 +177,25 @@ describe("EventsScreen", () => {
 		expect(within(deliveredRow).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
 		expect(within(failedRow).getAllByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toHaveLength(2);
-		const url = new URL(
-			String(fetchMock.mock.calls.map(([input]) => input).find((input) => String(input).includes("state="))),
-			"http://localhost",
-		);
-		expect(url.searchParams.getAll("state")).toEqual(
-			expect.arrayContaining(["pending", "delivered", "failed", "dead"]),
-		);
+		const list = api.sent("GET /v1/events").find((request) => request.query.has("state"));
+		expect(list?.query.getAll("state")).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead"]));
 	});
 
 	it("filters by delivery status and returns to all from the empty state", async () => {
 		// The sidebar's failed-delivery count is a request without a state; the list is the one that names states.
 		const requested = () =>
-			fetchMock.mock.calls
-				.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"))
+			api
+				.sent("GET /v1/events")
+				.map((request) => request.query.getAll("state"))
 				.filter((states) => states.length > 0);
-		fetchMock.mockImplementation(async (input: string) => {
-			const states = new URL(input, "http://localhost").searchParams.getAll("state");
+		listing((query) => {
+			const states = query.getAll("state");
 			const onlyFailed = states.length === 2 && states.includes("failed");
-			return json({
+			return {
 				items: onlyFailed ? [] : [item("e3", "search-index", "delivered")],
 				total: onlyFailed ? 0 : 1,
 				counts,
-			});
+			};
 		});
 		renderScreen();
 		await screen.findByText("search-index");
@@ -218,9 +210,9 @@ describe("EventsScreen", () => {
 	});
 
 	it("pages through the events", async () => {
-		fetchMock.mockImplementation(async (input: string) => {
-			const offset = Number(new URL(input, "http://localhost").searchParams.get("offset"));
-			return json({ items: [item(`e${offset}`, "webhook", "delivered")], total: 60, counts });
+		listing((query) => {
+			const offset = Number(query.get("offset"));
+			return { items: [item(`e${offset}`, "webhook", "delivered")], total: 60, counts };
 		});
 		renderScreen();
 		await screen.findByText("slug-e0");

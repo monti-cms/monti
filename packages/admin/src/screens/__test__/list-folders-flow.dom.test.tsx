@@ -1,8 +1,8 @@
-import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import type { FolderContents, FolderListItem, FolderTrashResult, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { EntryListScreen } from "../entry-list-screen";
@@ -25,55 +25,48 @@ const tf = testSite.createTranslator(sharedMessages);
 const td = testSite.createTranslator(deleteMessages);
 const postsLabel = testSite.COLLECTION_DEFINITIONS.post.label;
 
-const folder = (id: string, name: string, parentId: string | null = null, version = 1): Folder => ({
+const folder = (id: string, name: string, parentId: string | null = null, version = 1): FolderListItem => ({
 	id,
 	collection: "post",
 	parentId,
 	name,
 	position: 0,
 	version,
+	entryCount: 0,
 });
 
-const item = (id: string, folderId: string | null = null): ListEntriesItem =>
-	({
-		id,
-		collection: "post",
-		locale: "ko",
-		translationGroupId: id,
-		title: id,
-		slug: id,
-		status: "draft",
-		version: 3,
-		folderId,
-		relations: {},
-		values: {},
-		hasUnpublishedChanges: false,
-		publishedAt: null,
-		createdAt: new Date("2026-01-01T00:00:00Z"),
-		updatedAt: new Date("2026-01-01T00:00:00Z"),
-		deletedAt: null,
-	}) as unknown as ListEntriesItem;
+const item = (id: string, folderId: string | null = null): ListEntriesItem => ({
+	id,
+	collection: "post",
+	locale: "ko",
+	translationGroupId: id,
+	title: id,
+	slug: id,
+	status: "draft",
+	version: 3,
+	folderId,
+	relations: {},
+	values: {},
+	hasUnpublishedChanges: false,
+	publishedAt: null,
+	createdAt: new Date("2026-01-01T00:00:00Z"),
+	updatedAt: new Date("2026-01-01T00:00:00Z"),
+	deletedAt: null,
+});
 
 const NEWS = folder("f1", "뉴스");
 const SERIES = folder("f2", "연재", "f1");
 
 const server = {
 	posts: [] as ListEntriesItem[],
-	folders: [] as Folder[],
-	contents: { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 },
-	/** What a folder write answers: a status of 400 or more makes it fail. */
-	writeStatus: 200,
+	folders: [] as FolderListItem[],
+	contents: { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 } as FolderContents,
+	/** Whether a folder write is refused, as the server refuses a name already taken in the same place. */
+	refuseWrites: false,
 };
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
-const calls = (method: string, path: string) =>
-	fetchMock.mock.calls.filter(
-		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,
-	);
-const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit | undefined)?.body));
-const FOLDERS = "/api/monti/v1/folders";
-const entryQueries = () =>
-	calls("GET", "/api/monti/v1/entries").map(([input]) => new URL(String(input), "http://x").searchParams);
+const entryQueries = () => api.sent("GET /v1/entries").map((request) => request.query);
 const lastEntryQuery = () => entryQueries().at(-1) as URLSearchParams;
 
 beforeEach(() => {
@@ -82,42 +75,57 @@ beforeEach(() => {
 	server.posts = [item("가"), item("나")];
 	server.folders = [NEWS, SERIES];
 	server.contents = { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 };
-	server.writeStatus = 200;
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const method = init?.method ?? "GET";
-		const path = url.pathname;
-		if (path === "/api/monti/v1/preferences") return json({});
-		if (path === FOLDERS && method === "GET") return json(server.folders);
-		if (path === FOLDERS && method === "POST") {
-			if (server.writeStatus >= 400) return json({ error: { code: "conflict" } }, server.writeStatus);
-			const body = JSON.parse(String(init?.body)) as { collection: string; name: string; parentId: string | null };
-			const created = { ...folder("new", body.name, body.parentId), collection: body.collection };
+	server.refuseWrites = false;
+	api = fakeApi()
+		.withEmptyRail()
+		.on("GET /v1/preferences", () => ({}))
+		.on("GET /v1/folders", () => server.folders)
+		.on("POST /v1/folders", ({ body }) => {
+			if (server.refuseWrites) return failure("folder_name_conflict");
+			const input = body as { collection: string; name: string; parentId: string | null };
+			const created = { ...folder("new", input.name, input.parentId), collection: input.collection };
 			server.folders = [...server.folders, created];
-			return json(created);
-		}
-		if (path.startsWith(`${FOLDERS}/`) && path.endsWith("/contents")) return json(server.contents);
-		if (path.startsWith(`${FOLDERS}/`) && method === "PATCH") {
-			if (server.writeStatus >= 400) return json({ error: { code: "conflict" } }, server.writeStatus);
-			const id = path.split("/").at(-1);
-			const body = JSON.parse(String(init?.body)) as { name?: string };
+			return created;
+		})
+		.on("GET /v1/folders/:id/contents", () => server.contents)
+		.on("PATCH /v1/folders/:id", ({ params, body }) => {
+			if (server.refuseWrites) return failure("folder_name_conflict");
+			const input = body as { name?: string };
 			server.folders = server.folders.map((entry) =>
-				entry.id === id ? { ...entry, name: body.name ?? entry.name, version: entry.version + 1 } : entry,
+				entry.id === params.id ? { ...entry, name: input.name ?? entry.name, version: entry.version + 1 } : entry,
 			);
-			return json(server.folders.find((entry) => entry.id === id));
-		}
-		if (path.startsWith(`${FOLDERS}/`) && method === "DELETE") {
-			const id = path.split("/").at(-1);
-			server.folders = server.folders.filter((entry) => entry.id !== id);
-			return json({ folder: {}, entries: server.contents.entries, folders: 0, files: 0, kept: 0 });
-		}
-		if (path === "/api/monti/v1/entries" && method === "GET") {
-			const items = url.searchParams.get("collection") === "post" ? server.posts : [];
-			return json({ items, total: items.length });
-		}
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+			return server.folders.find((entry) => entry.id === params.id);
+		})
+		.on("DELETE /v1/folders/:id", ({ params }): FolderTrashResult => {
+			const gone = server.folders.find((entry) => entry.id === params.id);
+			server.folders = server.folders.filter((entry) => entry.id !== params.id);
+			return {
+				folder: gone
+					? {
+							type: "folder",
+							id: gone.id,
+							collection: gone.collection,
+							name: gone.name,
+							version: gone.version + 1,
+							deletedAt: new Date("2026-01-02T00:00:00Z"),
+							expiresAt: null,
+							path: [],
+							entries: server.contents.entries,
+							folders: 0,
+							files: 0,
+						}
+					: null,
+				entries: server.contents.entries,
+				folders: 0,
+				files: 0,
+				kept: 0,
+			};
+		})
+		.on("GET /v1/entries", ({ query }) => {
+			const items = query.get("collection") === "post" ? server.posts : [];
+			return { items, total: items.length };
+		})
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -170,8 +178,8 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			type(nameField(), "원고");
 			press(nameField(), "Enter");
 
-			await waitFor(() => expect(calls("POST", FOLDERS)).toHaveLength(1));
-			expect(bodyOf(calls("POST", FOLDERS)[0])).toEqual({ collection: "post", name: "원고", parentId: null });
+			await waitFor(() => expect(api.sent("POST /v1/folders")).toHaveLength(1));
+			expect(api.sent("POST /v1/folders")[0]?.body).toEqual({ collection: "post", name: "원고", parentId: null });
 			await waitFor(() => expect(screen.queryByRole("textbox", NAME_FIELD)).toBeNull());
 			// Focus is on the new folder, and no notice repeats what the row shows.
 			await waitFor(() => expect(document.activeElement).toBe(folderLink("원고")));
@@ -180,7 +188,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 
 		it("tells the person when the server refuses the name, and the row goes", async () => {
 			await renderList();
-			server.writeStatus = 409;
+			server.refuseWrites = true;
 			pressAddFolder();
 			press(nameField(), "Enter");
 
@@ -195,8 +203,8 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(follows(screen.getByRole("button", { name: ts("list.folderUp") }), nameField())).toBe(true);
 			press(nameField(), "Enter");
 
-			await waitFor(() => expect(calls("POST", FOLDERS)).toHaveLength(1));
-			expect(bodyOf(calls("POST", FOLDERS)[0])).toMatchObject({ name: tf("folder.newName"), parentId: "f1" });
+			await waitFor(() => expect(api.sent("POST /v1/folders")).toHaveLength(1));
+			expect(api.sent("POST /v1/folders")[0]?.body).toMatchObject({ name: tf("folder.newName"), parentId: "f1" });
 		});
 	});
 
@@ -269,8 +277,9 @@ describe("flow: folders in the list (steps 01–06)", () => {
 
 			type(field, "속보");
 			press(field, "Enter");
-			await waitFor(() => expect(calls("PATCH", `${FOLDERS}/f1`)).toHaveLength(1));
-			expect(bodyOf(calls("PATCH", `${FOLDERS}/f1`)[0])).toEqual({ name: "속보", expectedVersion: 1 });
+			await waitFor(() => expect(api.sent("PATCH /v1/folders/:id")).toHaveLength(1));
+			expect(api.sent("PATCH /v1/folders/:id")[0]?.params.id).toBe("f1");
+			expect(api.sent("PATCH /v1/folders/:id")[0]?.body).toEqual({ name: "속보", expectedVersion: 1 });
 			// The row shows the new name as a folder again, with focus on it.
 			await waitFor(() => expect(document.activeElement).toBe(folderLink("속보")));
 		});
@@ -307,7 +316,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 				</AdminQueryProvider>,
 			);
 			await screen.findByRole("button", { name: "delete viewed" });
-			await waitFor(() => expect(calls("GET", FOLDERS).length).toBeGreaterThan(0));
+			await waitFor(() => expect(api.sent("GET /v1/folders").length).toBeGreaterThan(0));
 		};
 
 		it("returns to the folder it was in when it was a subfolder", async () => {

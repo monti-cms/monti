@@ -22,7 +22,7 @@ const asCheck = process.argv.includes("--check");
  * The most uses a package whose tests were overhauled may have, all patterns together: the count it was left with. CI fails above it, so a new use
  * is either fixed or written into `EXEMPT` with its reason. Lower it when uses are fixed; a package joins once its tests are overhauled.
  */
-const CEILING = { core: 2, admin: 589 };
+const CEILING = { core: 2, admin: 545 };
 
 /** What each pattern says about a test. `regex` is matched per line (global), so a line can count more than once. */
 const PATTERNS = [
@@ -127,6 +127,12 @@ const EXEMPT = [
 		file: "packages/core/src/render/__test__/render-css.int.test.ts",
 		count: 1,
 		why: "reads the shipped `render.css`: the stylesheet is the product, not source code",
+	},
+	{
+		pattern: "fetch-stub",
+		file: "packages/admin/src/test/fake-api.ts",
+		count: 1,
+		why: "the one fake of the admin API: it answers in the shapes `src/api` declares, so screen tests never stub fetch themselves",
 	},
 	{
 		pattern: "fetch-stub",

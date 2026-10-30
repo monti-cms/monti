@@ -10,6 +10,7 @@ import {
 	useEntryEditorContext,
 	useField,
 } from "../../../hooks/public";
+import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
 import {
 	ENTRY,
@@ -27,12 +28,8 @@ import {
 
 beforeEach(() => {
 	// The editor talks to the injected client only. A real request would be a bug.
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(() => {
-			throw new Error("The editor must use the injected client, not fetch");
-		}),
-	);
+	// The editor must use the injected client: a fake that answers nothing fails the test on any request.
+	fakeApi().install();
 });
 afterEach(() => {
 	cleanup();

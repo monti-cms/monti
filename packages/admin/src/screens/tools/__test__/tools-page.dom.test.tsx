@@ -5,7 +5,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import type { AdminServer } from "../../../host/server";
-import { jsonResponse } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { renderInRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -15,17 +15,17 @@ import { toolsTabs } from "../tools-tabs";
 
 vi.mock("../../require-admin", () => ({ requireAdminPage: async () => undefined }));
 
+let api: FakeApi;
 beforeEach(() => {
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: string) =>
-			jsonResponse(
-				input.includes("/events")
-					? { items: [], total: 0, counts: { pending: 0, failed: 3, dead: 1, delivered: 0, recorded: 0 } }
-					: { items: [], total: 0 },
-			),
-		),
-	);
+	api = fakeApi()
+		.withEmptyRail()
+		// The failed deliveries the tabs count: 3 failed and 1 dead.
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 3, dead: 1, dismissed: 0 },
+		}))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -97,6 +97,21 @@ describe("the tools page", () => {
 	});
 
 	it("counts the failed deliveries on the activity log tab", async () => {
+		// The Data tab's own body: the export formats, whether the site is empty, and the export summary.
+		api
+			.on("GET /v1/meta", () => ({ formats: [] }))
+			.on("GET /v1/import/restore", () => ({ empty: false, entries: 1, folders: 0, media: 0 }))
+			.on("POST /v1/export/summary", ({ body }) => ({
+				scope: body.scope,
+				entries: 0,
+				addedByTranslations: 0,
+				notPublished: 0,
+				notFound: 0,
+				templates: 0,
+				folders: 0,
+				addresses: 0,
+				media: 0,
+			}));
 		await open("data");
 		const events = within(tabs()).getByRole("link", { name: new RegExp(t("tab.events")) });
 		await waitFor(() => expect(within(events).getByLabelText(t("failedCount", { count: 4 }))).toBeInTheDocument());

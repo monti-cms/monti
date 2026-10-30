@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import type { ExportSummary } from "../../../api/export";
 import type { ImportPreview, ImportRun } from "../../../api/import";
-import type { RestoreCounts, RestorePreview, RestoreRun } from "../../../api/restore";
+import type { RestoreCounts, RestorePreview, RestoreRun, RestoreState } from "../../../api/restore";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse } from "../../../test/fetch";
+import { type FakeApi, failure, fakeApi, type Reply } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
@@ -148,11 +149,18 @@ function serve({
 	restoreRunStatus = 200,
 	importRun,
 }: Server = {}) {
-	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = String(input);
-		if (url === "/api/monti/v1/meta") return jsonResponse({ formats: [], limits: limit ? { importBytes: limit } : {} });
-		if (url === "/api/monti/v1/export/summary") {
-			return jsonResponse({
+	const api = fakeApi()
+		// The rail's counts: the trash and the failed deliveries.
+		.on("GET /v1/trash", () => ({ items: [], total: 0, kinds: {} }))
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 0, dead: 0, dismissed: 0 },
+		}))
+		.on("GET /v1/meta", () => ({ formats: [], limits: limit ? { importBytes: limit } : {} }))
+		.on(
+			"POST /v1/export/summary",
+			(): ExportSummary => ({
 				scope: "admin",
 				entries: 0,
 				addedByTranslations: 0,
@@ -162,47 +170,33 @@ function serve({
 				folders: 0,
 				addresses: 0,
 				media: 0,
-			});
-		}
-		if (url === "/api/monti/v1/import/restore") {
-			if (init?.method !== "POST") return jsonResponse({ empty, entries: empty ? 0 : 3, folders: 0, media: 0 });
-			const form = init.body as FormData;
-			if (form.get("mode") === "run") {
-				return restoreRunStatus >= 400
-					? jsonResponse(
-							{ error: { code: "conflict", message: "A backup can only be restored into an empty site." } },
-							restoreRunStatus,
-						)
-					: jsonResponse(RESTORE_RUN);
-			}
-			return jsonResponse(restorePreview);
-		}
-		if (url === "/api/monti/v1/import/entries") {
-			const form = init?.body as FormData;
-			if (form.get("mode") === "run") {
+			}),
+		)
+		// The import and restore routes are not in `AdminRoutes`; the answers keep the types `src/api/import.ts` and `src/api/restore.ts` read.
+		.on("GET /v1/import/restore", (): RestoreState => ({ empty, entries: empty ? 0 : 3, folders: 0, media: 0 }))
+		.on("POST /v1/import/restore", ({ body }): RestorePreview | RestoreRun | Reply => {
+			if ((body as FormData).get("mode") !== "run") return restorePreview;
+			return restoreRunStatus >= 400
+				? failure("conflict", "A backup can only be restored into an empty site.")
+				: RESTORE_RUN;
+		})
+		.on("POST /v1/import/entries", async ({ body }): Promise<ImportPreview | ImportRun | Reply> => {
+			if ((body as FormData).get("mode") === "run") {
 				await importRun;
-				return jsonResponse(IMPORT_RUN);
+				return IMPORT_RUN;
 			}
-			if (importPreviewStatus >= 400) {
-				return jsonResponse(
-					{ error: { code: "invalid_input", message: "This file isn't a zip archive that can be read." } },
-					importPreviewStatus,
-				);
-			}
-			return jsonResponse(importPreview);
-		}
-		throw new Error(`Unexpected fetch: ${url}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
-	return fetchMock;
+			if (importPreviewStatus >= 400)
+				return failure("invalid_input", "This file isn't a zip archive that can be read.");
+			return importPreview;
+		})
+		.install();
+	return api;
 }
 
-const sent = (fetchMock: ReturnType<typeof vi.fn>, path: string) =>
-	fetchMock.mock.calls
-		.filter(([input, init]) => String(input) === path && init?.method === "POST")
-		.map(([, init]) => (init?.body as FormData).get("mode"));
-const importModes = (fetchMock: ReturnType<typeof vi.fn>) => sent(fetchMock, "/api/monti/v1/import/entries");
-const restoreModes = (fetchMock: ReturnType<typeof vi.fn>) => sent(fetchMock, "/api/monti/v1/import/restore");
+const sent = (api: FakeApi, route: "POST /v1/import/entries" | "POST /v1/import/restore") =>
+	api.sent(route).map((request) => (request.body as FormData).get("mode"));
+const importModes = (api: FakeApi) => sent(api, "POST /v1/import/entries");
+const restoreModes = (api: FakeApi) => sent(api, "POST /v1/import/restore");
 
 const renderData = () =>
 	createTestRouter().render(
@@ -227,27 +221,27 @@ afterEach(() => {
 
 describe("Data page: choosing a zip", () => {
 	it("opens the import sheet for the file once it is read, and writes nothing", async () => {
-		const fetchMock = serve();
+		const api = serve();
 		renderData();
 		choose();
 
 		const sheet = await importSheet();
 		expect(sheet.textContent).toContain("blog-export.zip");
 		expect(within(sheet).getByText(ti("summary.found", { count: 2 }))).toBeInTheDocument();
-		expect(importModes(fetchMock)).toEqual(["preview"]);
+		expect(importModes(api)).toEqual(["preview"]);
 		// A site with entries never reads the zip as a backup to restore.
-		expect(restoreModes(fetchMock)).toEqual([]);
+		expect(restoreModes(api)).toEqual([]);
 	});
 
 	it("refuses a file over the size the server takes, before sending it", async () => {
-		const fetchMock = serve({ limit: 10 });
+		const api = serve({ limit: 10 });
 		renderData();
-		await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/monti/v1/meta", expect.anything()));
+		await waitFor(() => expect(api.sent("GET /v1/meta").length).toBeGreaterThan(0));
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		choose(new File([new Uint8Array(2048)], "big.zip"));
 		expect(await screen.findByText(ti("file.tooLarge", { limit: "1 KB" }))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
-		expect(importModes(fetchMock)).toEqual([]);
+		expect(importModes(api)).toEqual([]);
 	});
 
 	it("says on the page that a zip cannot be read, and opens no sheet", async () => {
@@ -261,14 +255,14 @@ describe("Data page: choosing a zip", () => {
 
 describe("Import sheet", () => {
 	it("imports from its pill and shows the result in the same sheet, with a link to the list", async () => {
-		const fetchMock = serve();
+		const api = serve();
 		renderData();
 		choose();
 		const sheet = await importSheet();
 
 		fireEvent.click(within(sheet).getByRole("button", { name: ti("action.import", { count: 1 }) }));
 		expect(await within(sheet).findByRole("heading", { name: ti("result.title") })).toBeInTheDocument();
-		expect(importModes(fetchMock)).toEqual(["preview", "run"]);
+		expect(importModes(api)).toEqual(["preview", "run"]);
 		expect(toast).toHaveBeenCalledWith(ti("toast.done", { count: 1 }));
 		const entry = within(sheet).getAllByRole("link", { name: "First" })[0];
 		expect(entry?.getAttribute("href")).toBe(testSite.adminEntryEditHref("11111111-1111-4111-8111-111111111111"));
@@ -306,7 +300,7 @@ describe("Import sheet", () => {
 
 describe("Restore sheet", () => {
 	it("opens for a full backup on an empty site, and restores from its pill with the result in the sheet", async () => {
-		const fetchMock = serve({ empty: true });
+		const api = serve({ empty: true });
 		renderData();
 		choose(new File(["zip"], "monti-backup.zip", { type: "application/zip" }));
 
@@ -314,12 +308,12 @@ describe("Restore sheet", () => {
 		expect(sheet.textContent).toContain("monti-backup.zip");
 		expect(within(sheet).getByText(tr("summary.entries", { count: 6 }))).toBeInTheDocument();
 		// Reading it wrote nothing, and it was not read as an import.
-		expect(restoreModes(fetchMock)).toEqual(["preview"]);
-		expect(importModes(fetchMock)).toEqual([]);
+		expect(restoreModes(api)).toEqual(["preview"]);
+		expect(importModes(api)).toEqual([]);
 
 		fireEvent.click(within(sheet).getByRole("button", { name: tr("action.restore") }));
 		expect(await within(sheet).findByRole("heading", { name: tr("result.title") })).toBeInTheDocument();
-		expect(restoreModes(fetchMock)).toEqual(["preview", "run"]);
+		expect(restoreModes(api)).toEqual(["preview", "run"]);
 		expect(toast).toHaveBeenCalledWith(tr("toast.done", { count: 6 }));
 		// The site is no longer empty, yet the result stays where it is, with the way to the list.
 		expect(
@@ -332,7 +326,7 @@ describe("Restore sheet", () => {
 	});
 
 	it("is the import sheet instead when the zip on an empty site is not a full backup", async () => {
-		const fetchMock = serve({
+		const api = serve({
 			empty: true,
 			restorePreview: {
 				...RESTORE_PREVIEW,
@@ -345,8 +339,8 @@ describe("Restore sheet", () => {
 		choose();
 		await importSheet();
 		expect(screen.queryByRole("dialog", { name: new RegExp(tr("title")) })).toBeNull();
-		expect(restoreModes(fetchMock)).toEqual(["preview"]);
-		expect(importModes(fetchMock)).toEqual(["preview"]);
+		expect(restoreModes(api)).toEqual(["preview"]);
+		expect(importModes(api)).toEqual(["preview"]);
 	});
 
 	it("lists the problems and keeps its pill off while any is left", async () => {

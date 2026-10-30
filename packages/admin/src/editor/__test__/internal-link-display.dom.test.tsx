@@ -1,9 +1,12 @@
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
+import type { EntryData } from "../../screens/entries/entry-form";
+import { type FakeApi, failure, fakeApi } from "../../test/fake-api";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { storedDoc, text } from "../../test/stored-doc";
@@ -37,19 +40,20 @@ const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
 /** The id of the entry a link points to: the translation group id, which is the source entry's id. */
 const TARGET = "6f1c0b0e-3c1d-4a0e-9f5a-0d9c2f1e7a11";
 
-const entryRow = (changes: Record<string, unknown> = {}) => ({
+const entryRow = (changes: Partial<EntryData> = {}): EntryData => ({
 	id: TARGET,
 	collection: COLLECTION,
 	status: "published",
 	locale: DEFAULT_LOCALE,
+	version: 1,
+	folderId: null,
 	workingSlug: "hello-draft",
 	publishedSlug: "hello",
-	working: { metadata: { title: "안녕하세요" } },
+	working: { metadata: { title: "안녕하세요" }, doc: emptyStoredDocument() },
 	...changes,
 });
 
-const respond = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
 // jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
 beforeAll(() => {
@@ -65,8 +69,9 @@ beforeAll(() => {
 const editors: Editor[] = [];
 beforeEach(() => {
 	resetLinkTargets(testSite);
-	fetchMock = vi.fn(async () => respond(entryRow()));
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("GET /v1/entries/:id", () => entryRow())
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -110,13 +115,13 @@ describe("where an internal link goes, shown in the editor", () => {
 		const path = localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello") as string);
 		expect(link.textContent).toContain(path);
 		expect(link.getAttribute("href")).toBe(path);
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(String(fetchMock.mock.calls[0]?.[0])).toContain(`/v1/entries/${TARGET}`);
+		expect(api.requests).toHaveLength(1);
+		expect(api.requests[0]?.path).toBe(`/v1/entries/${TARGET}`);
 	});
 
 	it("shows and opens the address with the locale prefix the site gives the entry's language", async () => {
 		const locale = PREFIXED_LOCALES[0] ?? DEFAULT_LOCALE;
-		fetchMock.mockImplementation(async () => respond(entryRow({ locale })));
+		api.on("GET /v1/entries/:id", () => entryRow({ locale }));
 		renderBubble(openOnDocument());
 		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
 		const expected = localizePath(locale, contentPath(COLLECTION, "hello") as string);
@@ -125,7 +130,7 @@ describe("where an internal link goes, shown in the editor", () => {
 	});
 
 	it("opens the entry in the admin while it is not published, and says so", async () => {
-		fetchMock.mockImplementation(async () => respond(entryRow({ status: "draft", publishedSlug: null })));
+		api.on("GET /v1/entries/:id", () => entryRow({ status: "draft", publishedSlug: null }));
 		const editor = openOnDocument();
 		renderBubble(editor);
 
@@ -136,14 +141,14 @@ describe("where an internal link goes, shown in the editor", () => {
 	});
 
 	it("says so when the entry is gone, and when it cannot be looked up", async () => {
-		fetchMock.mockImplementation(async () => respond({ code: "not_found" }, 404));
+		api.on("GET /v1/entries/:id", () => failure("not_found"));
 		const editor = openOnDocument();
 		const { unmount } = renderBubble(editor);
 		expect(await screen.findByText(t("link.targetMissing"))).toBeInTheDocument();
 		unmount();
 
 		resetLinkTargets(testSite);
-		fetchMock.mockImplementation(async () => {
+		api.on("GET /v1/entries/:id", () => {
 			throw new TypeError("Failed to fetch");
 		});
 		renderBubble(editor);
@@ -153,10 +158,10 @@ describe("where an internal link goes, shown in the editor", () => {
 	it("looks an entry up once however many places show it, and not again for a link just inserted", async () => {
 		requestLinkTarget(testSite, TARGET);
 		requestLinkTarget(testSite, TARGET);
-		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(api.requests).toHaveLength(1));
 
 		resetLinkTargets(testSite);
-		fetchMock.mockClear();
+		const looked = api.requests.length;
 		const element = document.createElement("div");
 		document.body.append(element);
 		const editor = new Editor({ element, extensions: buildEditorExtensions(testSite), content: "<p>[[</p>" });
@@ -172,7 +177,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		renderBubble(editor);
 		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "방금 고른 글" }) });
 		expect(link.getAttribute("href")).toBe(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "picked") as string));
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(api.requests).toHaveLength(looked);
 	});
 
 	it("shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {
@@ -218,6 +223,6 @@ describe("where an internal link goes, shown in the editor", () => {
 		editor.view.focus();
 		renderBubble(editor);
 		expect(screen.getByRole("link", { name: "https://example.com" }).getAttribute("href")).toBe("https://example.com");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(api.requests).toHaveLength(0);
 	});
 });

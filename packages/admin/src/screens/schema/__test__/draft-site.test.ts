@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { adminFetch } from "../../../api/client";
+import { fakeApi } from "../../../test/fake-api";
 import { isSandboxSite } from "../../shared/preview-sandbox";
 import { draftSiteOf } from "../draft-site";
 import type { Obj } from "../schema-model";
@@ -32,16 +33,25 @@ describe("draft site", () => {
 	});
 
 	it("refuses to write, but reads", async () => {
-		const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [] }) }));
-		vi.stubGlobal("fetch", fetchMock);
+		const api = fakeApi()
+			.on("GET /v1/entries", () => ({ items: [], total: 0 }))
+			.on("POST /v1/references/unlink", () => ({ entries: 0 }))
+			.on("PATCH /v1/media/:id", () => undefined)
+			.install();
 		const site = draftSiteOf(testSite, draft(), []);
 		expect(site && isSandboxSite(site)).toBe(true);
 		if (!site) return;
-		await expect(adminFetch(site, "/api/x", { method: "POST", json: {} })).rejects.toMatchObject({ code: "preview" });
-		await expect(adminFetch(site, "/api/x", { method: "PATCH", json: {} })).rejects.toMatchObject({ code: "preview" });
-		expect(fetchMock).not.toHaveBeenCalled();
-		await expect(adminFetch(site, "/api/x")).resolves.toEqual({ items: [] });
+		await expect(adminFetch(site, "/v1/references/unlink", { method: "POST", json: {} })).rejects.toMatchObject({
+			code: "preview",
+		});
+		await expect(adminFetch(site, "/v1/media/m1", { method: "PATCH", json: {} })).rejects.toMatchObject({
+			code: "preview",
+		});
+		expect(api.requests).toHaveLength(0);
+		await expect(adminFetch(site, "/v1/entries?collection=page")).resolves.toEqual({ items: [], total: 0 });
 		// The running site is not affected.
-		await expect(adminFetch(testSite, "/api/x", { method: "POST", json: {} })).resolves.toEqual({ items: [] });
+		await expect(adminFetch(testSite, "/v1/references/unlink", { method: "POST", json: {} })).resolves.toEqual({
+			entries: 0,
+		});
 	});
 });

@@ -4,7 +4,7 @@ import { testSite } from "../../../../../core/test/site";
 import { NoticeError } from "../../../api/client";
 import { commonMessages } from "../../../lib/common.messages";
 import { writePreference } from "../../../lib/utils/site-storage";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { deleteMessages } from "../../shared/delete.messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -48,7 +48,7 @@ const td = testSite.createTranslator(deleteMessages);
 
 let nav: ReturnType<typeof createTestRouter>;
 let backend: MediaBackend;
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
 const blog = folderItem("blog", "Blog Assets", null, 4);
 const covers = folderItem("covers", "covers", "blog", 2);
@@ -77,13 +77,15 @@ beforeEach(() => {
 	window.localStorage.clear();
 	writePreference(testSite, "media-view", "grid");
 	backend = new MediaBackend([desk, cafe, seoul, notes, react, cache, old], [blog, covers, wall]);
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-		const answer = backend.handle(url, init?.method ?? "GET", body);
-		return answer ? json(answer.body, answer.status) : json({ items: [], total: 0 });
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = backend
+		.mount(fakeApi().install())
+		// The sidebar's counts: nothing in the trash, no failed deliveries.
+		.on("GET /v1/trash", () => ({ items: [], total: 0, kinds: {} }))
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 0, dead: 0, dismissed: 0 },
+		}));
 	upload.prepareUpload.mockImplementation(async (_site: unknown, file: File) => ({ file, optimized: false }));
 	upload.uploadImageFile.mockResolvedValue({ mediaId: "up-1" });
 	upload.uploadAttachment.mockResolvedValue({ mediaId: "up-1" });
@@ -101,9 +103,14 @@ const renderLibrary = async (ready: RegExp | string = /^desk-morning\.jpg/) => {
 	);
 	await screen.findByRole("button", { name: ready });
 };
-const lastList = () => backend.lists.filter((q) => q.get("pageSize") !== "1").at(-1) as URLSearchParams;
+/** The list queries the library asked for, in order. */
+const lists = () => api.sent("GET /v1/media").map((request) => request.query);
+const lastList = () =>
+	lists()
+		.filter((q) => q.get("pageSize") !== "1")
+		.at(-1) as URLSearchParams;
 const written = (method: string, path: string) =>
-	backend.writes.filter((w) => w.method === method && w.path === path).map((w) => w.body);
+	api.requests.filter((request) => request.method === method && request.path === `/v1${path}`).map((r) => r.body);
 const tile = (name: RegExp | string) =>
 	screen.getByRole("button", { name: typeof name === "string" ? new RegExp(`^${name}`) : name });
 const openMenu = async (target: HTMLElement) => {
@@ -148,12 +155,12 @@ describe("flow: upload (올리기)", () => {
 		expect(upload.uploadImageFile).toHaveBeenCalledTimes(1);
 		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toEqual({ folderId: "blog" });
 
-		const listsBefore = backend.lists.length;
+		const listsBefore = lists().length;
 		act(() => finish[0]?.());
 		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalledTimes(2));
 		act(() => finish[1]?.());
 		await waitFor(() => expect(screen.queryByRole("button", { name: /^hero/ })).toBeNull());
-		expect(backend.lists.length).toBeGreaterThan(listsBefore);
+		expect(lists().length).toBeGreaterThan(listsBefore);
 	});
 
 	it("uploads a drop on a folder tile into that folder", async () => {
@@ -464,7 +471,7 @@ describe("flow: alt text (대체 텍스트)", () => {
 		expect(all.getAttribute("aria-checked")).toBe("mixed");
 		fireEvent.click(all);
 		await screen.findByRole("toolbar", { name: t("bulk.count", { count: 3 }) });
-		expect(backend.lists.some((q) => q.get("alt") === "none" && q.get("pageSize") === "100")).toBe(true);
+		expect(lists().some((q) => q.get("alt") === "none" && q.get("pageSize") === "100")).toBe(true);
 	});
 });
 

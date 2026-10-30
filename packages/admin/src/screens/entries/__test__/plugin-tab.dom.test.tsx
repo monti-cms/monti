@@ -5,6 +5,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
+import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { InspectorPanel } from "../inspector-panel";
@@ -19,10 +20,7 @@ const t = testSite.createTranslator(entriesMessages);
  */
 
 beforeEach(() => {
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) })),
-	);
+	fakeApi().install();
 });
 afterEach(() => {
 	cleanup();

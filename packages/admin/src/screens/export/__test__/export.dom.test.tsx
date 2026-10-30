@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { jsonResponse } from "../../../test/fetch";
+import type { ExportFormat, ExportScope, ExportSummary } from "../../../api/export";
+import type { RestoreState } from "../../../api/restore";
+import { type FakeApi, failure, fakeApi, raw } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { renderWithSite as render, withSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
@@ -22,7 +24,7 @@ type Summary = Partial<
 		number
 	>
 >;
-const summaryOf = (scope: string, counts: Summary) => ({
+const summaryOf = (scope: ExportScope, counts: Summary): ExportSummary => ({
 	scope,
 	entries: 0,
 	addedByTranslations: 0,
@@ -41,34 +43,39 @@ const scopeRadio = (scope: "admin" | "public") =>
 
 const MDX = { name: "mdx", label: "MDX", mimeType: "text/mdx", extension: "mdx", canImport: true };
 
-/** The admin API as the export screens use it. `summaries` answers by scope; the archive answers with the headers the server sets. */
-function serve(options: { formats?: unknown[]; summaries?: Record<string, Summary>; notWritten?: number } = {}) {
-	const { formats = [MDX], summaries = {}, notWritten = 0 } = options;
-	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = String(input);
-		if (url === "/api/monti/v1/meta") return jsonResponse({ formats });
-		if (url === "/api/monti/v1/export/summary") {
-			const { scope } = JSON.parse(String(init?.body));
-			return jsonResponse(summaryOf(scope, summaries[scope] ?? {}));
-		}
-		if (url === "/api/monti/v1/export") {
-			return new Response(new Blob(["zip bytes"]), {
-				status: 200,
-				headers: {
-					"Content-Type": "application/zip",
-					"Content-Disposition": 'attachment; filename="monti-export-admin-2026.zip"',
-					"X-Monti-Export-Not-Written": String(notWritten),
-				},
-			});
-		}
-		throw new Error(`Unexpected fetch: ${url}`);
+/** The archive `POST /v1/export` answers with, and the headers the server sets on it. */
+const archive = (notWritten: number) =>
+	new Response(new Blob(["zip bytes"]), {
+		status: 200,
+		headers: {
+			"Content-Type": "application/zip",
+			"Content-Disposition": 'attachment; filename="monti-export-admin-2026.zip"',
+			"X-Monti-Export-Not-Written": String(notWritten),
+		},
 	});
-	vi.stubGlobal("fetch", fetchMock);
-	return fetchMock;
+
+/** The admin API as the export screens use it. `summaries` answers by scope; the archive answers with the headers the server sets. */
+function serve(options: { formats?: ExportFormat[]; summaries?: Record<string, Summary>; notWritten?: number } = {}) {
+	const { formats = [MDX], summaries = {}, notWritten = 0 } = options;
+	const api = fakeApi()
+		// The rail's counts: the trash and the failed deliveries.
+		.on("GET /v1/trash", () => ({ items: [], total: 0, kinds: {} }))
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 0, dead: 0, dismissed: 0 },
+		}))
+		.on("GET /v1/meta", () => ({ formats }))
+		.on("POST /v1/export/summary", ({ body }) => summaryOf(body.scope, summaries[body.scope] ?? {}))
+		// The Data page also asks whether the site is empty (a backup can be restored); `getRestoreState` reads a `RestoreState`.
+		.on("GET /v1/import/restore", (): RestoreState => ({ empty: false, entries: 1, folders: 0, media: 0 }))
+		.on("POST /v1/export", () => raw(archive(notWritten)))
+		.install();
+	return api;
 }
 
-const bodiesTo = (fetchMock: ReturnType<typeof vi.fn>, url: string) =>
-	fetchMock.mock.calls.filter(([input]) => String(input) === url).map(([, init]) => JSON.parse(String(init?.body)));
+const bodiesTo = (api: FakeApi, route: "POST /v1/export" | "POST /v1/export/summary") =>
+	api.sent(route).map((request) => request.body);
 
 let saved: { href: string; download: string }[];
 beforeEach(() => {
@@ -102,7 +109,7 @@ describe("the export dialog", () => {
 	});
 
 	it("asks for the picked ids only, and counts again when the scope changes", async () => {
-		const fetchMock = serve({
+		const api = serve({
 			summaries: { admin: { entries: 3 }, public: { entries: 1, notPublished: 2 } },
 		});
 		open();
@@ -110,14 +117,14 @@ describe("the export dialog", () => {
 		fireEvent.click(scopeRadio("public"));
 		// The public archive leaves out what is not published, and says so.
 		expect(await screen.findByText(t("note.notPublished", { count: 2 }))).toBeInTheDocument();
-		expect(bodiesTo(fetchMock, "/api/monti/v1/export/summary")).toEqual([
+		expect(bodiesTo(api, "POST /v1/export/summary")).toEqual([
 			{ scope: "admin", ids: ["a", "b", "c"] },
 			{ scope: "public", ids: ["a", "b", "c"] },
 		]);
 	});
 
 	it("downloads the archive with the ids, the scope and the format, then toasts", async () => {
-		const fetchMock = serve({ summaries: { admin: { entries: 3 } } });
+		const api = serve({ summaries: { admin: { entries: 3 } } });
 		const onOpenChange = vi.fn();
 		open({ onOpenChange });
 		await screen.findByTestId("export-headline");
@@ -125,9 +132,7 @@ describe("the export dialog", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("action.selected") }));
 
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("toast.done", { name: "monti-export-admin-2026.zip" })));
-		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([
-			{ scope: "admin", ids: ["a", "b", "c"], format: "mdx" },
-		]);
+		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin", ids: ["a", "b", "c"], format: "mdx" }]);
 		expect(saved).toEqual([{ href: "blob:test", download: "monti-export-admin-2026.zip" }]);
 		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 	});
@@ -160,36 +165,33 @@ describe("the Data page", () => {
 		);
 
 	it("hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
-		const fetchMock = serve({ formats: [], summaries: { admin: { entries: 1 } } });
+		const api = serve({ formats: [], summaries: { admin: { entries: 1 } } });
 		renderData();
 		expect(await screen.findByTestId("export-no-formats")).toBeInTheDocument();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
 		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([{ scope: "admin" }]);
+		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin" }]);
 	});
 
 	it("exports everything in the chosen scope and format, and toasts the bodies kept as JSON only", async () => {
-		const fetchMock = serve({ summaries: { admin: { entries: 1 } }, notWritten: 1 });
+		const api = serve({ summaries: { admin: { entries: 1 } }, notWritten: 1 });
 		renderData();
 		await screen.findByRole("checkbox", { name: /MDX/ });
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
 		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([{ scope: "admin", format: "mdx" }]);
+		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin", format: "mdx" }]);
 		expect(String(toast.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 1 }));
 		expect(saved).toHaveLength(1);
 	});
 
 	it("toasts a failed export", async () => {
-		const fetchMock = serve({ summaries: { admin: { entries: 1 } } });
-		fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-			const url = String(input);
-			if (url === "/api/monti/v1/export")
-				return jsonResponse({ error: { code: "internal", message: "no archive" } }, 500);
-			if (url === "/api/monti/v1/meta") return jsonResponse({ formats: [] });
-			return jsonResponse(summaryOf(JSON.parse(String(init?.body)).scope, { entries: 1 }));
-		});
+		const api = serve({ summaries: { admin: { entries: 1 } } });
+		api
+			.on("GET /v1/meta", () => ({ formats: [] }))
+			.on("POST /v1/export/summary", ({ body }) => summaryOf(body.scope, { entries: 1 }))
+			.on("POST /v1/export", () => failure("internal_error", "no archive"));
 		renderData();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));

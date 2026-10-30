@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import type { SavedSchema, SchemaEditPreview, SchemaScreenState } from "../../../api/schema";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { exportMessages } from "../../export/messages";
@@ -40,7 +41,7 @@ const collection = (label: string) => ({
 	fields: { title: { ...field("Title"), required: true }, slug: { kind: "slug", label: "Address", from: "title" } },
 });
 
-const state = {
+const state: SchemaScreenState = {
 	access: { writable: true },
 	file: "monti.schema.ts",
 	hash: "hash-1",
@@ -60,12 +61,12 @@ const state = {
 	siteUrl: { url: null, from: "none" },
 };
 
-let requests: { method: string; url: string; body?: Record<string, unknown> }[];
+let api: FakeApi;
 /** What the server answers to the preview and to the save; a walk sets what it needs. */
-let preview: Record<string, unknown>;
-let saved: Record<string, unknown>;
+let preview: SchemaEditPreview;
+let saved: SavedSchema;
 
-const emptyPreview = {
+const emptyPreview: SchemaEditPreview = {
 	valid: true,
 	issues: [],
 	changed: true,
@@ -76,7 +77,7 @@ const emptyPreview = {
 	baseline: "applied",
 	bodiesRead: 0,
 };
-const emptySaved = {
+const emptySaved: SavedSchema = {
 	saved: true,
 	file: "monti.schema.ts",
 	hash: "hash-2",
@@ -85,26 +86,19 @@ const emptySaved = {
 	reloaded: true,
 	conflicts: 0,
 	dropped: [],
+	trashed: [],
 };
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	window.history.replaceState(null, "", "/admin/settings/collections?collection=post");
-	requests = [];
 	preview = emptyPreview;
 	saved = emptySaved;
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: string, init?: RequestInit) => {
-			const method = init?.method ?? "GET";
-			const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
-			requests.push({ method, url: input, body });
-			if (input === "/api/monti/v1/schema" && method === "GET") return json(state);
-			if (input === "/api/monti/v1/schema/preview") return json(preview);
-			if (input === "/api/monti/v1/schema" && method === "PUT") return json(saved);
-			throw new Error(`Unexpected fetch ${method} ${input}`);
-		}),
-	);
+	api = fakeApi()
+		.on("GET /v1/schema", () => state)
+		.on("POST /v1/schema/preview", () => preview)
+		.on("PUT /v1/schema", () => saved)
+		.install();
 });
 
 afterEach(() => {
@@ -112,7 +106,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
+const lastPreview = () => api.sent("POST /v1/schema/preview").at(-1);
 const inList = (name: string) => screen.queryByTestId(`collection-nav-${name}`) !== null;
 const toastUndo = () =>
 	(toast.mock.calls.at(-1) as [string, { action: { label: string; onClick: () => void } }])[1].action;
@@ -251,8 +245,8 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		const review = await screen.findByRole("dialog");
 		fireEvent.click(await within(review).findByRole("button", { name: tReview("review.save") }));
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
-		const put = requests.find((request) => request.method === "PUT");
-		const schema = put?.body?.schema as {
+		const put = api.sent("PUT /v1/schema")[0];
+		const schema = put?.body.schema as {
 			collections: Record<string, { path?: string; kind: string; fields: object }>;
 		};
 		expect(Object.keys(schema.collections)).toEqual(["post", "memo", "note"]);
@@ -291,14 +285,14 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		);
 		const review = await screen.findByRole("dialog");
 		await within(review).findByRole("button", { name: tReview("review.save") });
-		const body = lastPreview()?.body?.schema as { collections: Record<string, Record<string, unknown>> };
+		const body = lastPreview()?.body.schema as { collections: Record<string, Record<string, unknown>> };
 		expect(body.collections.tag).toMatchObject({ kind: "item", label: "태그" });
 		expect(body.collections.tag?.path).toBeUndefined();
 	});
 });
 
 const KEY = "collection_removed:memo";
-const removal = {
+const removal: SchemaEditPreview["impacts"][number] = {
 	change: { kind: "collection_removed", collection: "memo", handledBy: "drop-memo" },
 	key: KEY,
 	entries: 23,
@@ -409,8 +403,8 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		);
 		const sheet = await screen.findByRole("dialog");
 		const change = await within(sheet).findByTestId(`impact-${KEY}`);
-		expect(lastPreview()?.body?.dropCollections).toEqual(["memo"]);
-		expect(Object.keys((lastPreview()?.body?.schema as { collections: object }).collections)).toEqual(["post"]);
+		expect(lastPreview()?.body.dropCollections).toEqual(["memo"]);
+		expect(Object.keys((lastPreview()?.body.schema as { collections: object }).collections)).toEqual(["post"]);
 		// Nothing to resolve first: no button that cuts the links, no identifier to type, and the apply is on from the start.
 		expect(within(sheet).queryByRole("button", { name: /연결 끊기|Unlink/ })).toBeNull();
 		expect(within(sheet).queryByRole("textbox")).toBeNull();
@@ -419,6 +413,20 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		// The links that point in are plain text with a link to the first entry; the copy to take first is the existing collection export.
 		expect(change.textContent).toContain(tReview("drop.pointing", { count: 4 }));
 		expect(change.textContent).toContain(tReview("drop.pointing.then"));
+		// The export dialog asks for the formats and for what the collection's export would hold.
+		api
+			.on("GET /v1/meta", () => ({ formats: [] }))
+			.on("POST /v1/export/summary", ({ body }) => ({
+				scope: body.scope,
+				entries: 23,
+				addedByTranslations: 0,
+				notPublished: 0,
+				notFound: 0,
+				templates: 0,
+				folders: 2,
+				addresses: 31,
+				media: 0,
+			}));
 		fireEvent.click(within(change).getByRole("button", { name: tReview("drop.export") }));
 		expect(
 			await screen.findByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Memo" }) }),
@@ -431,13 +439,13 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		// 18: applied, the save names the collection to delete and the reviewed change; the page reloads with the toast that says what went.
 		fireEvent.click(apply);
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
-		const put = requests.find((request) => request.method === "PUT");
+		const put = api.sent("PUT /v1/schema")[0];
 		expect(put?.body).toMatchObject({ baseHash: "hash-1", dropCollections: ["memo"], acknowledged: [KEY] });
-		expect(Object.keys((put?.body?.schema as { collections: object }).collections)).toEqual(["post"]);
+		expect(Object.keys((put?.body.schema as { collections: object }).collections)).toEqual(["post"]);
 		// The toast after the save says the save, not one of its changes.
 		expect(reload.rememberSaved).toHaveBeenCalledWith(t("save.done"));
 		// Nothing but the schema was sent: the links are cut by the apply, not by a request of the screen.
-		expect(requests.some((request) => request.url.includes("/references/"))).toBe(false);
+		expect(api.requests.some((request) => request.path.includes("/references/"))).toBe(false);
 	});
 
 	it("leaves the review without deleting anything: Cancel keeps the collection out of the list, and nothing is sent", async () => {
@@ -450,7 +458,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		await within(sheet).findByTestId(`impact-${KEY}`);
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(requests.some((request) => request.method === "PUT")).toBe(false);
+		expect(api.requests.some((request) => request.method === "PUT")).toBe(false);
 		expect(inList("memo")).toBe(false);
 	});
 });

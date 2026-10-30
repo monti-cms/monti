@@ -2,8 +2,9 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { type ComponentProps, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import type { SavedSchema, SchemaEditPreview, SchemaScreenState, SuggestedTransform } from "../../../api/schema";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -48,7 +49,10 @@ const post = (fields: Record<string, unknown>) => ({
 	},
 });
 
-const stateOf = (collections: Record<string, unknown>, locales: unknown[] = [{ code: "ko", name: "한국어" }]) => ({
+const stateOf = (
+	collections: Record<string, unknown>,
+	locales: unknown[] = [{ code: "ko", name: "한국어" }],
+): SchemaScreenState => ({
 	access: { writable: true },
 	file: "monti.schema.ts",
 	hash: "hash-1",
@@ -66,11 +70,14 @@ const stateOf = (collections: Record<string, unknown>, locales: unknown[] = [{ c
 	siteUrl: { url: null, from: "none" },
 });
 
-const sample = [
+type Impact = SchemaEditPreview["impacts"][number];
+type Decision = SchemaEditPreview["decisions"][number];
+
+const sample: Impact["sample"] = [
 	{ id: "e-1", title: "첫 번째 글", collection: "post", locale: "ko", status: "published" },
 	{ id: "e-2", title: "발행 후 고친 글", collection: "post", locale: "ko", status: "published" },
 ];
-const preview = (over: Record<string, unknown> = {}) => ({
+const preview = (over: Partial<SchemaEditPreview> = {}): SchemaEditPreview => ({
 	valid: true,
 	issues: [],
 	changed: true,
@@ -83,15 +90,13 @@ const preview = (over: Record<string, unknown> = {}) => ({
 	...over,
 });
 
-type Sent = { method: string; url: string; body?: Record<string, unknown> };
-let requests: Sent[];
-let state: ReturnType<typeof stateOf>;
-let previewOf: () => unknown;
-let saved: Record<string, unknown>;
+let api: FakeApi;
+let state: SchemaScreenState;
+let previewOf: () => SchemaEditPreview;
+let saved: SavedSchema;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	requests = [];
 	previewOf = () => preview();
 	saved = {
 		saved: true,
@@ -102,19 +107,13 @@ beforeEach(() => {
 		reloaded: true,
 		conflicts: 0,
 		dropped: [],
+		trashed: [],
 	};
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: string, init?: RequestInit) => {
-			const method = init?.method ?? "GET";
-			const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
-			requests.push({ method, url: input, body });
-			if (input === "/api/monti/v1/schema" && method === "GET") return json(state);
-			if (input === "/api/monti/v1/schema/preview") return json(previewOf());
-			if (input === "/api/monti/v1/schema" && method === "PUT") return json(saved);
-			throw new Error(`Unexpected fetch ${method} ${input}`);
-		}),
-	);
+	api = fakeApi()
+		.on("GET /v1/schema", () => state)
+		.on("POST /v1/schema/preview", () => previewOf())
+		.on("PUT /v1/schema", () => saved)
+		.install();
 });
 
 afterEach(() => {
@@ -122,8 +121,8 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
-const put = () => requests.find((request) => request.method === "PUT");
+const lastPreview = () => api.sent("POST /v1/schema/preview").at(-1);
+const put = () => api.sent("PUT /v1/schema")[0];
 const names = (buttons: HTMLElement[]) => buttons.map((button) => button.textContent);
 
 const open = (tab: "collections" | "locales" = "collections") =>
@@ -229,7 +228,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		// The title row's pill is off while the draft has a problem.
 		expect(saveButton().disabled).toBe(true);
 		fireEvent.click(saveButton());
-		expect(requests.some((request) => request.url.endsWith("/preview"))).toBe(false);
+		expect(api.sent("POST /v1/schema/preview")).toHaveLength(0);
 
 		// The row says what is missing, in the danger color.
 		const row = screen.getByTestId("field-format");
@@ -291,10 +290,9 @@ const footerNames = (dialog: HTMLElement) =>
 const SUMMARY = "field_removed:post:summary";
 const SUBTITLE = "field_removed:post:subtitle";
 const FORMAT = "field_added:post:format";
-const change = (kind: string, rest: object) => ({ kind, collection: "post", ...rest });
-const rename = { op: "renameField", collection: "post", from: "summary", to: "excerpt" };
-const dropSubtitle = { op: "dropField", collection: "post", field: "subtitle" };
-const fill = (value: string) => ({ op: "setDefault", collection: "post", field: "format", value });
+const rename: SuggestedTransform = { op: "renameField", collection: "post", from: "summary", to: "excerpt" };
+const dropSubtitle: SuggestedTransform = { op: "dropField", collection: "post", field: "subtitle" };
+const fill = (value: string): SuggestedTransform => ({ op: "setDefault", collection: "post", field: "format", value });
 
 const fieldsDraft = {
 	collections: {
@@ -311,10 +309,18 @@ const fieldsDraft = {
 	},
 };
 const fieldsSaved = { collections: { post: post({ summary: field("요약"), subtitle: field("부제") }) } };
+const subtitleDecision: Decision = {
+	key: SUBTITLE,
+	change: { kind: "field_removed", collection: "post", field: "subtitle", fieldKind: "text" },
+	entries: 132,
+	sample,
+	suggestions: [dropSubtitle],
+	chosen: null,
+};
 const fieldChanges = preview({
 	impacts: [
 		{
-			change: change("field_renamed", { from: "summary", to: "excerpt" }),
+			change: { kind: "field_renamed", collection: "post", from: "summary", to: "excerpt" },
 			key: "field_renamed:post:summary:excerpt",
 			entries: 148,
 			sample,
@@ -322,7 +328,7 @@ const fieldChanges = preview({
 			checked: true,
 		},
 		{
-			change: change("field_removed", { field: "subtitle", fieldKind: "text" }),
+			change: { kind: "field_removed", collection: "post", field: "subtitle", fieldKind: "text" },
 			key: SUBTITLE,
 			entries: 132,
 			sample,
@@ -330,7 +336,7 @@ const fieldChanges = preview({
 			checked: true,
 		},
 		{
-			change: change("field_added", { field: "format", fieldKind: "select", required: true }),
+			change: { kind: "field_added", collection: "post", field: "format", fieldKind: "select", required: true },
 			key: FORMAT,
 			entries: 148,
 			sample,
@@ -341,23 +347,16 @@ const fieldChanges = preview({
 	decisions: [
 		{
 			key: SUMMARY,
-			change: change("field_removed", { field: "summary", fieldKind: "text" }),
+			change: { kind: "field_removed", collection: "post", field: "summary", fieldKind: "text" },
 			entries: 148,
 			sample,
 			suggestions: [rename, { op: "dropField", collection: "post", field: "summary" }],
 			chosen: rename,
 		},
-		{
-			key: SUBTITLE,
-			change: change("field_removed", { field: "subtitle", fieldKind: "text" }),
-			entries: 132,
-			sample,
-			suggestions: [dropSubtitle],
-			chosen: null,
-		},
+		subtitleDecision,
 		{
 			key: FORMAT,
-			change: change("field_added", { field: "format", fieldKind: "select", required: true }),
+			change: { kind: "field_added", collection: "post", field: "format", fieldKind: "select", required: true },
 			entries: 148,
 			sample,
 			suggestions: [fill("note"), fill("essay"), fill("review")],
@@ -383,26 +382,26 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 	it("11 what is chosen is what the apply sends: the transforms, in the PUT", async () => {
 		const dialog = await review();
 		// The first request had no picks: the server's own defaults.
-		expect(lastPreview()?.body?.transforms).toBeUndefined();
+		expect(lastPreview()?.body.transforms).toBeUndefined();
 
 		// Start the renamed field empty, and fill the required one with nothing: both leave their transforms out of the request.
 		await choose(dialog, new RegExp(tReview("choice.blank")));
 		await choose(dialog, new RegExp(tReview("choice.leave")));
-		await waitFor(() => expect(lastPreview()?.body?.transforms).toEqual([]));
+		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([]));
 		await choose(dialog, new RegExp(tReview("choice.move")));
 		await choose(dialog, new RegExp(tReview("choice.erase")));
-		await waitFor(() => expect(lastPreview()?.body?.transforms).toEqual([rename, dropSubtitle]));
+		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([rename, dropSubtitle]));
 		await choose(dialog, new RegExp(tReview("choice.fill", { count: "148편", kind: "document" })));
-		await waitFor(() => expect(lastPreview()?.body?.transforms).toEqual([rename, dropSubtitle, fill("note")]));
+		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([rename, dropSubtitle, fill("note")]));
 
 		fireEvent.click(apply(dialog, tReview("drop.apply")));
-		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
+		await waitFor(() => expect(api.requests.map((request) => request.method)).toContain("PUT"));
 		expect(put()?.body).toMatchObject({
 			baseHash: "hash-1",
 			transforms: [rename, dropSubtitle, fill("note")],
 			renames: [{ kind: "field", collection: "post", from: "summary", to: "excerpt" }],
 		});
-		expect(put()?.body?.acknowledged).toEqual(["field_renamed:post:summary:excerpt", SUBTITLE, FORMAT]);
+		expect(put()?.body.acknowledged).toEqual(["field_renamed:post:summary:excerpt", SUBTITLE, FORMAT]);
 	});
 
 	it("12 choosing to delete the values turns the apply into the red 지우고 적용, and choosing keep turns it back", async () => {
@@ -430,7 +429,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
 		await choose(dialog, new RegExp(tReview("choice.moveTo")));
 		const move = { op: "renameField", collection: "post", from: "subtitle", to: "excerpt" };
-		await waitFor(() => expect(lastPreview()?.body?.transforms).toContainEqual(move));
+		await waitFor(() => expect(lastPreview()?.body.transforms).toContainEqual(move));
 		// Moving the values deletes nothing and says nothing about being lost.
 		expect(apply(dialog).className).not.toContain("danger");
 		expect(removed.textContent).not.toContain(tReview("note.kept"));
@@ -440,7 +439,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		previewOf = () =>
 			preview({
 				...fieldChanges,
-				decisions: [{ ...(fieldChanges.decisions as object[])[1], entries: 0 }],
+				decisions: [{ ...subtitleDecision, entries: 0 }],
 				impacts: [],
 			});
 		mount({ draft: fieldsDraft, saved: fieldsSaved });
@@ -453,13 +452,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 
 	it("when the file changed since the screen opened, the sheet says so, offers a reload and cannot apply", async () => {
 		const dialog = await review();
-		const fetcher = vi.mocked(fetch);
-		const answer = fetcher.getMockImplementation();
-		fetcher.mockImplementation(async (input, init) =>
-			init?.method === "PUT"
-				? (json({ error: { code: "schema_conflict", message: "conflict" } }, 409) as never)
-				: ((await answer?.(input, init)) as never),
-		);
+		api.on("PUT /v1/schema", () => failure("schema_conflict", "conflict"));
 		fireEvent.click(apply(dialog));
 		const alert = await within(dialog).findByRole("alert");
 		expect(alert.textContent).toContain(tReview("save.conflict.title"));
@@ -476,13 +469,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		mount({ draft: fieldsDraft, saved: fieldsSaved, onApplyFailed });
 		const dialog = await sheet();
 		await within(dialog).findByTestId(`impact-${SUMMARY}`);
-		const fetcher = vi.mocked(fetch);
-		const answer = fetcher.getMockImplementation();
-		fetcher.mockImplementation(async (input, init) =>
-			init?.method === "PUT"
-				? (json({ error: { code: "schema_apply_failed", message: "connect ECONNREFUSED" } }, 500) as never)
-				: ((await answer?.(input, init)) as never),
-		);
+		api.on("PUT /v1/schema", () => failure("schema_apply_failed", "connect ECONNREFUSED"));
 		fireEvent.click(apply(dialog));
 		await waitFor(() => expect(onApplyFailed).toHaveBeenCalledWith("connect ECONNREFUSED"));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -499,7 +486,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 			preview({
 				impacts: [
 					{
-						change: change("collection_path_changed", { from: "/posts/:slug", to: "/blog/:slug" }),
+						change: { kind: "collection_path_changed", collection: "post", from: "/posts/:slug", to: "/blog/:slug" },
 						key: KEY,
 						entries: 148,
 						sample: [],
@@ -526,7 +513,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 
 		// It needs no acknowledgement of its own beyond the key the preview named, and the apply sends the PUT.
 		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
+		await waitFor(() => expect(api.requests.map((request) => request.method)).toContain("PUT"));
 		expect(put()?.body).toMatchObject({ baseHash: "hash-1", acknowledged: [KEY] });
 		expect(Object.keys(put()?.body ?? {})).not.toContain("redirects");
 	});
@@ -603,13 +590,7 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 		fireEvent.click(saveButton());
 		const dialog = await sheet();
 		await waitFor(() => expect(apply(dialog).disabled).toBe(false));
-		const fetcher = vi.mocked(fetch);
-		const answer = fetcher.getMockImplementation();
-		fetcher.mockImplementation(async (input, init) =>
-			init?.method === "PUT"
-				? (json({ error: { code: "schema_apply_failed", message: "connect ECONNREFUSED" } }, 500) as never)
-				: ((await answer?.(input, init)) as never),
-		);
+		api.on("PUT /v1/schema", () => failure("schema_apply_failed", "connect ECONNREFUSED"));
 		fireEvent.click(apply(dialog));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		const alert = await screen.findByRole("alert");
@@ -622,7 +603,7 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 
 describe("flow 11 · 언어 빼기 (step 08)", () => {
 	const KEY = "locale_removed:en";
-	const decision = {
+	const decision: Decision = {
 		key: KEY,
 		change: { kind: "locale_removed", locale: "en" },
 		entries: 12,
@@ -667,7 +648,7 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 				.map((radio) => radio.getAttribute("aria-checked")),
 		).toEqual(["true", "false"]);
 		expect(block.textContent).toContain(tReview("note.locale"));
-		expect(lastPreview()?.body?.trashLocales).toBeUndefined();
+		expect(lastPreview()?.body.trashLocales).toBeUndefined();
 		// Keeping them is not deleting anything: the apply is not red.
 		expect(apply(dialog).className).not.toContain("danger");
 	});
@@ -675,15 +656,15 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 	it("08 moving them to the trash sends trashLocales, in the check and in the save", async () => {
 		const dialog = await removeEnglish();
 		await choose(dialog, new RegExp(tReview("choice.trash")));
-		await waitFor(() => expect(lastPreview()?.body?.trashLocales).toEqual(["en"]));
+		await waitFor(() => expect(lastPreview()?.body.trashLocales).toEqual(["en"]));
 		// A pick for a language is not a transform of the data.
-		expect(lastPreview()?.body?.transforms).toEqual([]);
+		expect(lastPreview()?.body.transforms).toEqual([]);
 		expect(apply(dialog).className).not.toContain("danger");
 
 		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
-		expect(put()?.body?.trashLocales).toEqual(["en"]);
-		expect(put()?.body?.transforms).toEqual([]);
+		await waitFor(() => expect(api.requests.map((request) => request.method)).toContain("PUT"));
+		expect(put()?.body.trashLocales).toEqual(["en"]);
+		expect(put()?.body.transforms).toEqual([]);
 		expect(toast).not.toHaveBeenCalled();
 	});
 });

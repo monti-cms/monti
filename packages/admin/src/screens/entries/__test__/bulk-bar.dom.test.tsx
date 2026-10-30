@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import type { BulkParams } from "../../../api/entries";
 import { commonMessages } from "../../../lib/common.messages";
+import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { deleteMessages } from "../../shared/delete.messages";
 import { BulkBar, bulkActionsFor } from "../bulk-bar";
@@ -57,25 +58,19 @@ const CATEGORIES = [{ id: "cat-1", title: "개발", slug: "dev", status: "publis
 
 /** The entries the menus search (`/entries/search`), and what the export dialog asks for. */
 function stubApi() {
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: RequestInfo | URL) => {
-			const url = new URL(String(input), "http://localhost");
-			const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
-			if (url.pathname === "/api/monti/v1/entries/search") {
-				const all = url.searchParams.get("collection") === "category" ? CATEGORIES : TAGS;
-				const ids = url.searchParams.getAll("id");
-				const query = url.searchParams.get("query") ?? "";
-				return ok({
-					items:
-						ids.length > 0
-							? all.filter((item) => ids.includes(item.id))
-							: all.filter((item) => item.title.includes(query)),
-				});
-			}
-			throw new Error(`Unexpected fetch: ${url}`);
-		}),
-	);
+	fakeApi()
+		.on("GET /v1/entries/search", ({ query }) => {
+			const all = query.get("collection") === "category" ? CATEGORIES : TAGS;
+			const ids = query.getAll("id");
+			const text = query.get("query") ?? "";
+			return {
+				items:
+					ids.length > 0
+						? all.filter((item) => ids.includes(item.id))
+						: all.filter((item) => item.title.includes(text)),
+			};
+		})
+		.install();
 }
 
 type Run = (op: BulkOp, label: string, targets: ReturnType<typeof toSelection>[], params?: BulkParams) => Promise<void>;

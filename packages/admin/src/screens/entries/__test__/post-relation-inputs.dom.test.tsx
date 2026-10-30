@@ -2,7 +2,7 @@ import type { RelationField } from "@monti-cms/core";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM } from "../entry-form";
 import { EntryPicker, type FieldInputProps, OrderedEntryList } from "../field-inputs";
@@ -20,29 +20,23 @@ const POSTS = [
 	{ id: "self", title: "지금 글", status: "published" },
 ];
 
-/** The search requests the pickers sent (the server search is `GET /v1/entries/search`). */
-let searches: URL[] = [];
+let api: FakeApi;
+/** The queries of the search requests the pickers sent (the server search is `GET /v1/entries/search`). */
+const searches = () => api.sent("GET /v1/entries/search").map((request) => request.query);
 
 beforeEach(() => {
-	searches = [];
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: RequestInfo | URL) => {
-			const url = new URL(String(input), "http://localhost");
-			if (url.pathname === "/api/monti/v1/entries/search") {
-				searches.push(url);
-				const ids = url.searchParams.getAll("id");
-				const query = (url.searchParams.get("query") ?? "").toLowerCase();
-				const items = POSTS.filter((post) =>
-					ids.length > 0 ? ids.includes(post.id) : post.title.toLowerCase().includes(query),
-				)
-					.filter((post) => url.searchParams.get("publishedOnly") !== "true" || post.status === "published")
-					.map((post) => ({ ...post, slug: post.id }));
-				return json({ items });
-			}
-			throw new Error(`Unexpected fetch ${url}`);
-		}),
-	);
+	api = fakeApi()
+		.on("GET /v1/entries/search", ({ query: params }) => {
+			const ids = params.getAll("id");
+			const query = (params.get("query") ?? "").toLowerCase();
+			const items = POSTS.filter((post) =>
+				ids.length > 0 ? ids.includes(post.id) : post.title.toLowerCase().includes(query),
+			)
+				.filter((post) => params.get("publishedOnly") !== "true" || post.status === "published")
+				.map((post) => ({ ...post, slug: post.id }));
+			return { items };
+		})
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -98,32 +92,32 @@ describe("relation picker search on the server", () => {
 	it("asks the server for the typed text after a pause, instead of loading the whole list", async () => {
 		render(<EntryPicker {...props(field, null)} />);
 		const input = await openList("최신 글");
-		await waitFor(() => expect(searches.length).toBeGreaterThan(0));
+		await waitFor(() => expect(searches().length).toBeGreaterThan(0));
 		// The first request is the first posts of the collection: no text, no paging through everything.
-		expect(searches[0]?.searchParams.get("collection")).toBe("post");
-		expect(searches[0]?.searchParams.has("query")).toBe(false);
+		expect(searches()[0]?.get("collection")).toBe("post");
+		expect(searches()[0]?.has("query")).toBe(false);
 
 		fireEvent.input(input, { target: { value: "둘째" }, inputType: "insertText" });
-		await waitFor(() => expect(searches.at(-1)?.searchParams.get("query")).toBe("둘째"));
+		await waitFor(() => expect(searches().at(-1)?.get("query")).toBe("둘째"));
 		await waitFor(async () => expect(await optionNames()).toEqual([`둘째 글${t("entry.unpublished")}`]));
 	});
 
 	it("sends one request for a burst of typing", async () => {
 		render(<EntryPicker {...props(field, null)} />);
 		const input = await openList("최신 글");
-		await waitFor(() => expect(searches.length).toBeGreaterThan(0));
-		const before = searches.length;
+		await waitFor(() => expect(searches().length).toBeGreaterThan(0));
+		const before = searches().length;
 		for (const text of ["첫", "첫 ", "첫 글"])
 			fireEvent.input(input, { target: { value: text }, inputType: "insertText" });
-		await waitFor(() => expect(searches.at(-1)?.searchParams.get("query")).toBe("첫 글"));
-		expect(searches.length - before).toBe(1);
+		await waitFor(() => expect(searches().at(-1)?.get("query")).toBe("첫 글"));
+		expect(searches().length - before).toBe(1);
 	});
 
 	it("only asks for published posts when the field says so", async () => {
 		render(<EntryPicker {...props({ ...field, publishedOnly: true }, null)} />);
 		await openList("최신 글");
 		await waitFor(async () => expect(await optionNames()).toEqual(["첫 글", "셋째 글"]));
-		expect(searches.every((url) => url.searchParams.get("publishedOnly") === "true")).toBe(true);
+		expect(searches().every((query) => query.get("publishedOnly") === "true")).toBe(true);
 	});
 
 	it("keeps the picked post visible when the search does not return it", async () => {
@@ -131,7 +125,7 @@ describe("relation picker search on the server", () => {
 		const input = (await screen.findByRole("combobox", { name: "최신 글" })) as HTMLInputElement;
 		await waitFor(() => expect(input.value).toBe(`둘째 글${t("entry.unpublished")}`));
 		// It was looked up by id, once, whatever the text says.
-		expect(searches.some((url) => url.searchParams.getAll("id").join() === "p2")).toBe(true);
+		expect(searches().some((query) => query.getAll("id").join() === "p2")).toBe(true);
 		fireEvent.mouseDown(input);
 		fireEvent.input(input, { target: { value: "셋째" }, inputType: "insertText" });
 		await waitFor(async () => expect(await optionNames()).toEqual(["셋째 글"]));
