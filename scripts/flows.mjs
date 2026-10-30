@@ -77,6 +77,8 @@ const copyExample = ({ dir, login }) => {
 	cpSync(example, dir, { recursive: true, filter: (source) => !skip.has(path.basename(source)) });
 	cpSync(path.join(root, "flows/overlay"), dir, { recursive: true });
 	rmSync(path.join(dir, ".flows-files"), { recursive: true, force: true });
+	// The last run's build cache was made from the schema that run left; `next dev` on it reloads the page over and over.
+	rmSync(path.join(dir, ".next"), { recursive: true, force: true });
 	const config = path.join(dir, "monti.config.ts");
 	const text = diskStorageConfig(readFileSync(config, "utf8"));
 	writeFileSync(config, login ? loginConfig(text) : text);
