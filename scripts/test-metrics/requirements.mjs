@@ -6,6 +6,7 @@
  *
  *   node scripts/test-metrics/requirements.mjs          # each requirement with the tests that carry it, by layer
  *   node scripts/test-metrics/requirements.mjs --check  # fails on a requirement with no test at its layer, or a test with an unknown ID (CI)
+ *   node scripts/test-metrics/requirements.mjs --inverted  # the requirements with more tests in a layer above their own: to review, not a gate
  *
  * Tests are found by reading the test files for titles that start with an ID, so nothing has to run. The layer of a test comes from its file
  * name, as `docs/testing.md` names them.
@@ -16,6 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const asCheck = process.argv.includes("--check");
+const asInverted = process.argv.includes("--inverted");
 
 const ID = /^[A-Z]+-[A-Z]+\d+$/;
 const LAYERS = ["L1", "L2", "L3", "L4"];
@@ -99,7 +101,30 @@ for (const requirement of requirements.values()) {
 	}
 }
 
-if (!asCheck) {
+/**
+ * Tests thin out going up from a requirement's own layer: that layer checks every case, each layer above checks only that the pieces are joined.
+ * A requirement with more tests in a layer above its own is either written at the wrong layer or has upper tests re-checking cases. It is a
+ * question for a person (`docs/testing/triage.md`, "뒤집힌 약속"), never a CI failure: a count is not the goal.
+ */
+const inverted = (requirement) => {
+	const own = LAYERS.indexOf(requirement.layer);
+	if (own < 0) return false;
+	const count = (layer) => requirement.tests.filter((test) => test.layer === layer).length;
+	return LAYERS.slice(own + 1).some((layer) => count(layer) > count(requirement.layer));
+};
+
+if (asInverted) {
+	const rows = [...requirements.values()].filter(inverted);
+	for (const requirement of rows) {
+		const byLayer = LAYERS.map(
+			(layer) => `${layer} ${requirement.tests.filter((test) => test.layer === layer).length}`,
+		).join("  ");
+		console.log(
+			`${requirement.importance} ${requirement.id.padEnd(10)} at ${requirement.layer.padEnd(2)}   ${byLayer}`,
+		);
+	}
+	console.log(`\n${rows.length} of ${requirements.size} requirements have more tests above their own layer`);
+} else if (!asCheck) {
 	for (const requirement of requirements.values()) {
 		const byLayer = LAYERS.map(
 			(layer) => `${layer} ${requirement.tests.filter((test) => test.layer === layer).length}`,
