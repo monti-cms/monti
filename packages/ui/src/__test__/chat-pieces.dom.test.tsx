@@ -5,7 +5,7 @@ import { ChatMessage } from "../chat-message";
 import { ToolCallLine } from "../tool-call-line";
 
 describe("ChatMessage", () => {
-	it("is busy while the answer is arriving", () => {
+	it("UI-A1 is busy while the answer is arriving", () => {
 		const { rerender } = render(<ChatMessage author="user">Hello</ChatMessage>);
 		expect(screen.getByText("Hello").getAttribute("aria-busy")).toBeNull();
 		rerender(
@@ -23,7 +23,7 @@ describe("ToolCallLine", () => {
 		{ label: "Result", value: '{ "b": 2 }' },
 	];
 
-	it("is a plain line without details, and opens to the details with them", () => {
+	it("UI-A2 is a plain line without details, and opens to the details with them", () => {
 		const { rerender } = render(
 			<ToolCallLine status="done" statusLabel="Done">
 				x
@@ -66,7 +66,7 @@ describe("ChatInput", () => {
 	};
 	const box = () => screen.getByRole("textbox", { name: "Message" });
 
-	it("sends the trimmed text from the button and from Enter, but not from Shift+Enter", () => {
+	it("UI-K5 sends the trimmed text from the button and from Enter, but not from Shift+Enter", () => {
 		const { onSubmit } = setup();
 		fireEvent.click(screen.getByRole("button", { name: "Send" }));
 		fireEvent.keyDown(box(), { key: "Enter" });
@@ -75,27 +75,28 @@ describe("ChatInput", () => {
 		expect(onSubmit).toHaveBeenCalledWith("hello");
 	});
 
-	it("reports typing", () => {
+	it("UI-S2 reports typing", () => {
 		const { onValueChange } = setup({ value: "" });
 		fireEvent.change(box(), { target: { value: "x" } });
 		expect(onValueChange).toHaveBeenCalledWith("x");
 	});
 
-	it("sends nothing while blank or off", () => {
+	it("UI-S1 sends nothing while blank", () => {
 		const blank = setup({ value: "   " });
 		expect(screen.getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(true);
 		fireEvent.keyDown(box(), { key: "Enter" });
 		expect(blank.onSubmit).not.toHaveBeenCalled();
 	});
 
-	it("is off as a whole when disabled", () => {
+	it("UI-S1 is off as a whole when disabled", () => {
 		const off = setup({ disabled: true });
 		expect(box().hasAttribute("disabled")).toBe(true);
 		expect(screen.getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(true);
+		fireEvent.keyDown(box(), { key: "Enter" });
 		expect(off.onSubmit).not.toHaveBeenCalled();
 	});
 
-	it("turns the send button into a stop button while busy, and does not send", () => {
+	it("UI-S1 turns the send button into a stop button while busy, and does not send", () => {
 		const { onStop, onSubmit } = setup({ busy: true });
 		expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Stop" }));

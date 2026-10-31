@@ -70,6 +70,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The L3 tests that need layout, focus or the editor run in Chromium (Vitest browser mode, `*.browser.test.tsx`); headless needs only the shell.
+      # `pnpm test:run` takes every `packages/*/vitest.browser.config.ts` (admin's and ui's) from the root `vitest.config.ts`.
       - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm test:run --shard=${{ matrix.shard }}/3
 

@@ -10,7 +10,7 @@ import { FolderTile, Tile } from "../tile";
 afterEach(cleanup);
 
 describe("list rows", () => {
-	it("reports a change of the row check", () => {
+	it("UI-S2 reports a change of the row check", () => {
 		const onCheckedChange = vi.fn();
 		render(
 			<Table container="none">
@@ -33,7 +33,7 @@ describe("list rows", () => {
 describe("BulkBar", () => {
 	const inTable = (bar: React.ReactNode) => render(<table>{bar}</table>);
 
-	it("shows the select-all as mixed while some are picked and picks the page when pressed", () => {
+	it("UI-A5 shows the select-all as mixed while some are picked and picks the page when pressed", () => {
 		const onChange = vi.fn();
 		const bar = (state: "none" | "some" | "all") => (
 			<BulkBar
@@ -53,7 +53,7 @@ describe("BulkBar", () => {
 		expect(screen.getByRole("checkbox", { name: "모두 선택" }).getAttribute("aria-checked")).toBe("true");
 	});
 
-	it("lists the count, the request, the two actions, the rest in ⋯ and the way to let go", async () => {
+	it("UI-S3 runs the request, the action in ⋯ and the way to let go", async () => {
 		const onRequest = vi.fn();
 		const onClear = vi.fn();
 		const onTrash = vi.fn();
@@ -91,7 +91,7 @@ describe("BulkBar", () => {
 describe("Tile", () => {
 	const preview = <span>미리보기</span>;
 
-	it("runs the action of a failed upload", () => {
+	it("UI-S3 runs the action of a failed upload", () => {
 		const retry = vi.fn();
 		render(
 			<Tile
@@ -106,7 +106,7 @@ describe("Tile", () => {
 		expect(retry).toHaveBeenCalledOnce();
 	});
 
-	it("adds a check that reports a change", () => {
+	it("UI-S2 adds a check that reports a change", () => {
 		const onSelectedChange = vi.fn();
 		render(
 			<Tile
@@ -124,7 +124,7 @@ describe("Tile", () => {
 });
 
 describe("FolderTile", () => {
-	it("keeps the ⋯ beside the folder button, not inside it", () => {
+	it("UI-A2 keeps the ⋯ beside the folder button, not inside it", () => {
 		render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
 		const folder = screen.getByRole("button", { name: /^covers\s*6/ });
 		const action = screen.getByRole("button", { name: "more" });
@@ -133,7 +133,7 @@ describe("FolderTile", () => {
 });
 
 describe("RenameField", () => {
-	it("opens with the name selected, keeps it once on Enter, and drops it on Escape", async () => {
+	it("UI-K2 opens with the name selected and keeps it once on Enter", async () => {
 		const onCommit = vi.fn();
 		const onCancel = vi.fn();
 		render(
@@ -154,7 +154,7 @@ describe("RenameField", () => {
 		expect(onCancel).not.toHaveBeenCalled();
 	});
 
-	it("cancels on Escape without keeping the name when it loses focus afterwards", () => {
+	it("UI-K2 cancels on Escape without keeping the name when it loses focus afterwards", () => {
 		const onCommit = vi.fn();
 		const onCancel = vi.fn();
 		render(
@@ -169,7 +169,7 @@ describe("RenameField", () => {
 });
 
 describe("Empty", () => {
-	it("makes a step with an address a link, and one without a button", () => {
+	it("UI-A2 makes a step with an address a link, and one without a button", () => {
 		render(
 			<Empty title="아직 글이 없어요." description="어디서부터 시작할까요?">
 				<EmptyStep number="01">첫 글 쓰기</EmptyStep>

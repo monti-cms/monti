@@ -62,7 +62,7 @@ Do not commit shots made this way: the CI runner has another CPU architecture th
 ## Development
 
 ```bash
-pnpm --filter @monti-cms/ui test:run
+pnpm --filter @monti-cms/ui test:run   # the code, the parts in jsdom, and the pointer and focus tests in Chromium
 pnpm gen:tokens   # after editing tokens/tokens.json
 ```
 

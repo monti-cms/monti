@@ -39,7 +39,7 @@
 동작이 그중 어느 것에도 기대지 않는 컴포넌트(메뉴의 항목, 폼의 검증)에는 괜찮다. 위치, 크기, 포커스 이동, 편집기가 필요한 테스트는
 `*.browser.test.tsx`로 간다. jsdom을 넘기려고 크기를 지어내거나 브라우저 API를 스텁하는 테스트도 그쪽에 속한다.
 브라우저 테스트는 Vitest 브라우저 모드로 Chromium에서 돈다(Playwright, 1440 × 900, UTC). 처음 한 번 `pnpm exec playwright install chromium`으로
-브라우저를 받고, admin은 `pnpm --filter @monti-cms/admin test:browser`로 돌린다. 브라우저에서는 Node 모듈을 읽을 수 없으므로, 브라우저 테스트가 쓰는
+브라우저를 받고, admin은 `pnpm --filter @monti-cms/admin test:browser`, ui는 `pnpm --filter @monti-cms/ui test:browser`로 돌린다. 브라우저에서는 Node 모듈을 읽을 수 없으므로, 브라우저 테스트가 쓰는
 도우미는 서버 코드를 끌어오지 않는다(`@monti-cms/core/testing` 대신 그 모듈을 직접 가져온다). 서버 코드가 꼭 필요한 검사(가짜 API의 경로가
 코어에 있는지)는 Node에서 도는 브라우저 명령(`commands`)으로 테스트가 끝난 뒤 한다. 단축키는 `userEvent.keyboard`(`vitest/browser`)로
 실제 키를 누르고, `Mod`는 `ControlOrMeta`로 적는다. 편집기의 `Mod`는 Mac에서 ⌘, 다른 곳에서 Ctrl이다.
@@ -130,7 +130,7 @@
 - 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
   더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
 - 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.ts(x)`와 `.browser.test.ts(x)`(L3). 확장자 `.tsx`는
-  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`, `admin (browser)`), 한 층만 따로 돌릴 수 있다.
+  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`, `admin (browser)`, ui는 `ui`, `ui (dom)`, `ui (browser)`), 한 층만 따로 돌릴 수 있다.
 - 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
 
 ## 재기와 지키기
@@ -197,7 +197,7 @@ core 전체의 변이 점수는 재지 않는다. 한 번 재는 데 두 시간�
 ## 아직 없는 것
 
 - 7 목록 정리의 태그 합치기 L4. 합치기 기능이 생기면(#323) `flows/list.flow.ts`에 더한다.
-- core와 admin 밖의 층별 Vitest 프로젝트.
+- core, admin, ui 밖의 층별 Vitest 프로젝트.
 - 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).
 - 다른 패키지의 CI 관문(core는 `pnpm check:tests`로 막는다).
 

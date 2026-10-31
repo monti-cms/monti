@@ -11,7 +11,7 @@ const renderSplit = (props: Partial<Parameters<typeof SplitButton>[0]> = {}) =>
 	);
 
 describe("SplitButton", () => {
-	it("fires onClick from the main half only", () => {
+	it("UI-S3 fires onClick from the main half only", () => {
 		const onClick = vi.fn();
 		renderSplit({ onClick });
 		fireEvent.click(screen.getByRole("button", { name: "Publish options" }));
@@ -20,7 +20,7 @@ describe("SplitButton", () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
-	it("is two buttons, both in the tab order, and opens the menu from the trigger", async () => {
+	it("UI-K8 is two buttons, both in the tab order, and opens the menu from the trigger", async () => {
 		renderSplit();
 		for (const name of ["Publish", "Publish options"])
 			expect(screen.getByRole("button", { name }).getAttribute("tabindex")).not.toBe("-1");
@@ -30,7 +30,7 @@ describe("SplitButton", () => {
 		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeInTheDocument();
 	});
 
-	it("disables both halves together, and while loading", () => {
+	it("UI-S1 disables both halves together, and while loading", () => {
 		const { rerender } = renderSplit({ disabled: true });
 		expect(screen.getByRole("button", { name: "Publish" }).hasAttribute("disabled")).toBe(true);
 		expect(screen.getByRole("button", { name: "Publish options" }).hasAttribute("disabled")).toBe(true);
