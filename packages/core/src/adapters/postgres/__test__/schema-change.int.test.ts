@@ -215,7 +215,7 @@ describe("schema changes", () => {
 	};
 
 	describe("the baseline", () => {
-		it("records the schema without touching any entry (an extracted schema file applied with no transforms is a no-op)", async () => {
+		it("SCHEMA-C1 records the schema without touching any entry (an extracted schema file applied with no transforms is a no-op)", async () => {
 			const store = storeFor(siteBefore);
 			const plan = await planSchemaChange({ site: siteBefore, store, migrations: [] });
 			expect(plan.applied).toBeNull();
@@ -240,7 +240,7 @@ describe("schema changes", () => {
 	});
 
 	describe("the plan and the impact check", () => {
-		it("lists what changed, with the transforms that handle each change", async () => {
+		it("SCHEMA-C1 lists what changed, with the transforms that handle each change", async () => {
 			await baseline();
 			const store = storeFor(siteAfter);
 			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
@@ -267,7 +267,7 @@ describe("schema changes", () => {
 			expect(handled["field_removed:legacy2"]).toBeUndefined();
 		});
 
-		it("counts the entries each change touches, with a sample, and reads without writing", async () => {
+		it("SCHEMA-F4 counts the entries each change touches, with a sample, and reads without writing", async () => {
 			await baseline();
 			const store = storeFor(siteAfter);
 			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
@@ -324,7 +324,7 @@ describe("schema changes", () => {
 	});
 
 	describe("applying", () => {
-		it("a dry run reports what would happen and changes nothing", async () => {
+		it("SCHEMA-C1 a dry run reports what would happen and changes nothing", async () => {
 			await baseline();
 			const rowsBefore = await rows();
 			const recordedBefore = await recorded();
@@ -343,7 +343,7 @@ describe("schema changes", () => {
 			expect(await state()).toEqual(stateBefore);
 		});
 
-		it("rejects a transform that does not fit the schema, and changes nothing", async () => {
+		it("SCHEMA-F6 rejects a transform that does not fit the schema, and changes nothing", async () => {
 			await baseline();
 			const rowsBefore = await rows();
 			const wrong: SchemaMigration[] = [
@@ -365,7 +365,7 @@ describe("schema changes", () => {
 			expect(await recorded()).toEqual([]);
 		});
 
-		it("runs the transforms through the write rules: values, hashes, references, versions", async () => {
+		it("SCHEMA-F5 runs the transforms through the write rules: values, hashes, references, versions", async () => {
 			await baseline();
 			const entriesBefore = new Map((await entryRows()).map((row) => [row.id as string, row]));
 			const rowsBefore = await rows();
@@ -436,7 +436,7 @@ describe("schema changes", () => {
 			expect(await recorded()).toEqual(migrations.map((item) => `schema:${item.id}`).sort());
 		});
 
-		it("reads as the new schema does: no warnings for what was transformed, a warning for the orphan", async () => {
+		it("SCHEMA-F5 reads as the new schema does: no warnings for what was transformed, a warning for the orphan", async () => {
 			await baselineThenApply();
 			const service = serviceFor(siteAfter);
 			const working = await storeFor(siteAfter).getWorking({ entryId: ids.c });
@@ -448,7 +448,7 @@ describe("schema changes", () => {
 			expect(warnings.map((warning) => `${warning.code}:${warning.path}`)).toEqual(["orphaned_metadata_key:legacy2"]);
 		});
 
-		it("is idempotent: a second apply runs nothing and changes nothing", async () => {
+		it("SCHEMA-F5 is idempotent: a second apply runs nothing and changes nothing", async () => {
 			await baselineThenApply();
 			const rowsBefore = await rows();
 			const recordedBefore = await recorded();
@@ -463,7 +463,7 @@ describe("schema changes", () => {
 			expect(plan.diff.changes).toEqual([]);
 		});
 
-		it("two applies at once run each transform once", async () => {
+		it("SCHEMA-F5 two applies at once run each transform once", async () => {
 			await baselineThenApply();
 			const extra: SchemaMigration[] = [
 				...migrations,
@@ -482,7 +482,7 @@ describe("schema changes", () => {
 	});
 
 	describe("a rename onto a field that holds a value", () => {
-		it("keeps both values and says so: nothing is overwritten", async () => {
+		it("SCHEMA-F1 keeps both values and says so: nothing is overwritten", async () => {
 			await baselineThenApply();
 			const service = serviceFor(siteBefore);
 			const draft = (
@@ -515,7 +515,7 @@ describe("schema changes", () => {
 	});
 
 	describe("the hash", () => {
-		it("a save of the same content is not an edit: the hash and the entry version stay", async () => {
+		it("SCHEMA-F5 a save of the same content is not an edit: the hash and the entry version stay", async () => {
 			const entry = await storeFor(siteAfter).getEntry(ids.category);
 			const saved = (
 				await serviceFor(siteAfter).saveDraft(ids.category, {
@@ -530,7 +530,7 @@ describe("schema changes", () => {
 			expect(saved.working.contentHash).toBe(entry.working.contentHash);
 		});
 
-		it("an edit changes the hash to the one of its content", async () => {
+		it("SCHEMA-F5 an edit changes the hash to the one of its content", async () => {
 			const entry = await storeFor(siteAfter).getEntry(ids.category);
 			const saved = (
 				await serviceFor(siteAfter).saveDraft(ids.category, {
@@ -546,7 +546,7 @@ describe("schema changes", () => {
 		});
 	});
 
-	it("keeps the Postgres-recorded schema equal to the site's snapshot", async () => {
+	it("SCHEMA-C3 keeps the Postgres-recorded schema equal to the site's snapshot", async () => {
 		await baselineThenApply();
 		const row = await state();
 		expect(Object.keys((row?.schema as { collections: object }).collections).sort()).toEqual(["category", "post"]);

@@ -50,7 +50,7 @@ const post = (): Obj => ({
 });
 
 describe("schema model", () => {
-	it("puts a new property of a field where the format has it, not at the end", () => {
+	it("SCHEMA-F13 puts a new property of a field where the format has it, not at the end", () => {
 		const field = { kind: "text", label: "Title", max: 10, placeholder: "x" };
 		expect(Object.keys(setProp(field, "required", true, FIELD_KEY_ORDER))).toEqual([
 			"kind",
@@ -73,14 +73,14 @@ describe("schema model", () => {
 		});
 	});
 
-	it("renames a field in place and follows it in the layout and a slug's source", () => {
+	it("SCHEMA-F1 renames a field in place and follows it in the layout and a slug's source", () => {
 		const renamed = renameField(post(), {}, "title", "heading");
 		expect(Object.keys(fieldsOf(renamed))).toEqual(["heading", "slug", "summary", "status"]);
 		expect((renamed.layout as { fields: string[] }[])[0]?.fields).toEqual(["heading", "summary"]);
 		expect((fieldsOf(renamed).slug as Obj).from).toBe("heading");
 	});
 
-	it("keeps the title field the title when it is renamed: the field named title gets the title role", () => {
+	it("SCHEMA-F1 keeps the title field the title when it is renamed: the field named title gets the title role", () => {
 		expect(titleFieldName(post())).toBe("title");
 		const renamed = renameField(post(), {}, "title", "headline");
 		expect(fieldsOf(renamed).headline).toEqual({ kind: "text", label: "Title", required: true, role: "title" });
@@ -90,20 +90,20 @@ describe("schema model", () => {
 		expect(fieldsOf(renameField(post(), {}, "summary", "blurb")).blurb).not.toHaveProperty("role");
 	});
 
-	it("moves the title role to another text field", () => {
+	it("SCHEMA-S2 moves the title role to another text field", () => {
 		const moved = setTitleField(renameField(post(), {}, "title", "headline"), "summary");
 		expect(titleFieldName(moved)).toBe("summary");
 		expect(fieldsOf(moved).headline).not.toHaveProperty("role");
 		expect(fieldsOf(moved).summary).toMatchObject({ role: "title" });
 	});
 
-	it("removes a field and the places that named it", () => {
+	it("SCHEMA-F9 removes a field and the places that named it", () => {
 		const removed = removeField(post(), {}, "summary");
 		expect(Object.keys(fieldsOf(removed))).toEqual(["title", "slug", "status"]);
 		expect((removed.layout as { fields: string[] }[])[0]?.fields).toEqual(["title"]);
 	});
 
-	it("adds and moves fields, inside a conditional branch too", () => {
+	it("SCHEMA-N4 adds and moves fields, inside a conditional branch too", () => {
 		const added = addField(post(), {}, "rating", { kind: "text", label: "Rating" });
 		expect(Object.keys(fieldsOf(added)).at(-1)).toBe("rating");
 		expect(Object.keys(fieldsOf(moveField(added, {}, "rating", -2)))).toEqual([
@@ -127,7 +127,7 @@ describe("schema model", () => {
 		expect((fieldsOf(branch).policy as { values: Obj }).values).toEqual({ b: { why: { kind: "text", label: "Why" } } });
 	});
 
-	it("keeps the options of a select in order, with its default pointing at one of them", () => {
+	it("SCHEMA-N4 keeps the options of a select in order, with its default pointing at one of them", () => {
 		const status = fieldsOf(post()).status as Obj;
 		const added = addOption(status, "later", "Later");
 		expect(Object.keys(added.options as Obj)).toEqual(["draft", "live", "later"]);
@@ -138,7 +138,7 @@ describe("schema model", () => {
 		expect(removed.defaultValue).toBe("live");
 	});
 
-	it("moves a conditional branch along with its option", () => {
+	it("SCHEMA-N4 moves a conditional branch along with its option", () => {
 		const field: Obj = {
 			kind: "conditional",
 			label: "P",
@@ -149,7 +149,7 @@ describe("schema model", () => {
 		expect((removeOption(field, "b").values as Obj).b).toBeUndefined();
 	});
 
-	it("changes the kind of a field and keeps what still applies", () => {
+	it("SCHEMA-N4 changes the kind of a field and keeps what still applies", () => {
 		const text = { kind: "text", label: "Rating", required: true, description: "How good", max: 5 };
 		const select = withKind(text, "select", []);
 		expect(select).toMatchObject({
@@ -163,7 +163,7 @@ describe("schema model", () => {
 		expect(withKind(text, "view", [])).not.toHaveProperty("required");
 	});
 
-	it("writes the body as the format does", () => {
+	it("SCHEMA-F13 writes the body as the format does", () => {
 		const doc: Obj = { label: "Post", kind: "document", fields: {} };
 		expect(hasBody(doc)).toBe(true);
 		expect(withBody(doc, true, {})).toEqual(doc);
@@ -175,7 +175,7 @@ describe("schema model", () => {
 		expect(hasBody({ label: "Tag", kind: "item", fields: {} })).toBe(false);
 	});
 
-	it("adds a collection with the title and slug fields every collection starts with, and the address when there is one", () => {
+	it("SCHEMA-N2 adds a collection with the title and slug fields every collection starts with, and the address when there is one", () => {
 		const file = addCollection({ collections: {} }, "tag", "item");
 		expect(file).toEqual({
 			collections: {
@@ -193,7 +193,7 @@ describe("schema model", () => {
 		expect(Object.keys(withPath)).toEqual(["label", "kind", "path", "fields"]);
 	});
 
-	it("on a site with several locales, a new collection's title is per locale, and a document's slug starts from the source locale's", () => {
+	it("SCHEMA-N2 on a site with several locales, a new collection's title is per locale, and a document's slug starts from the source locale's", () => {
 		const locales = [
 			{ code: "ko", name: "한국어" },
 			{ code: "en", name: "English" },
@@ -208,7 +208,7 @@ describe("schema model", () => {
 		expect(fieldsOf(single).title?.localized).toBeUndefined();
 	});
 
-	it("says what a field still needs before it can be added", () => {
+	it("SCHEMA-F9 says what a field still needs before it can be added", () => {
 		const names = ["post", "tag"];
 		expect(fieldProblems(newField("text", "A"), post(), names)).toEqual([]);
 		expect(fieldProblems(newField("relation", "A", names), post(), names)).toEqual([]);
@@ -223,7 +223,7 @@ describe("schema model", () => {
 		expect(fieldProblems(filled, post(), names)).toEqual([]);
 	});
 
-	it("blocks deleting the title field, and the slug field while the address uses :slug", () => {
+	it("SCHEMA-F9 blocks deleting the title field, and the slug field while the address uses :slug", () => {
 		expect(removeBlock(withPath(), {}, "title")).toBe("title");
 		expect(removeBlock(withPath(), {}, "slug")).toBe("slug");
 		expect(removeBlock(withPath(), {}, "summary")).toBeNull();
@@ -232,7 +232,7 @@ describe("schema model", () => {
 		expect(removeBlock(renameField(withPath(), {}, "title", "headline"), {}, "headline")).toBe("title");
 	});
 
-	it("checks names", () => {
+	it("SCHEMA-F9 checks names", () => {
 		expect(nameProblem("", [])).toBe("empty");
 		expect(nameProblem("my field", [])).toBe("pattern");
 		expect(nameProblem("translations", [])).toBe("reserved");
@@ -240,14 +240,14 @@ describe("schema model", () => {
 		expect(nameProblem("ok_name-2", ["title"])).toBeNull();
 	});
 
-	it("checks collection names against the reserved collection names, not the field-key ones", () => {
+	it("SCHEMA-N1 checks collection names against the reserved collection names, not the field-key ones", () => {
 		expect(collectionNameProblem("media", [])).toBe("reserved");
 		expect(collectionNameProblem("translations", [])).toBeNull();
 		expect(nameProblem("media", [])).toBeNull();
 		expect(collectionNameProblem("post", ["post"])).toBe("taken");
 	});
 
-	it("tracks renames: a chain is one rename, and renaming back cancels it", () => {
+	it("SCHEMA-F8 tracks renames: a chain is one rename, and renaming back cancels it", () => {
 		const first = recordRename([], { kind: "field", collection: "post", from: "a", to: "b" });
 		const chain = recordRename(first, { kind: "field", collection: "post", from: "b", to: "c" });
 		expect(chain).toEqual([{ kind: "field", collection: "post", from: "a", to: "c" }]);
@@ -256,7 +256,7 @@ describe("schema model", () => {
 });
 
 describe("reorderField", () => {
-	it("puts a field where the one it is dropped on is, and keeps the others in order", () => {
+	it("SCHEMA-N5 puts a field where the one it is dropped on is, and keeps the others in order", () => {
 		const collection = post();
 		const order = Object.keys(fieldsOf(collection));
 		const moved = reorderField(collection, {}, order[0] as string, order[2] as string);
@@ -265,7 +265,7 @@ describe("reorderField", () => {
 		expect(Object.keys(fieldsOf(back))).toEqual([order[0], order[1], order[2], ...order.slice(3)]);
 	});
 
-	it("leaves the list alone for the same field or a name that is not in it", () => {
+	it("SCHEMA-N5 leaves the list alone for the same field or a name that is not in it", () => {
 		const collection = post();
 		const first = Object.keys(fieldsOf(collection))[0] as string;
 		expect(reorderField(collection, {}, first, first)).toEqual(collection);
@@ -279,12 +279,12 @@ describe("changedAreas", () => {
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",
 	});
-	it("marks nothing for an untouched draft", () => {
+	it("SCHEMA-F8 marks nothing for an untouched draft", () => {
 		const areas = changedAreas(file(), file());
 		expect(Object.values(areas.tabs).some(Boolean)).toBe(false);
 		expect(areas.collections).toEqual({});
 	});
-	it("marks the tab and the collection part that changed, and only those", () => {
+	it("SCHEMA-F8 marks the tab and the collection part that changed, and only those", () => {
 		const edited = file();
 		edited.collections = { post: { ...post(), label: "Article" }, tag: post() };
 		const areas = changedAreas(file(), edited);
@@ -293,14 +293,14 @@ describe("changedAreas", () => {
 		expect(Object.keys(areas.collections)).toEqual(["post"]);
 		expect(areas.collections.post).toEqual({ basics: true, fields: false, editor: false });
 	});
-	it("marks each settings tab by its own settings", () => {
+	it("SCHEMA-F8 marks each settings tab by its own settings", () => {
 		const edited = file();
 		edited.site = { name: "Mine" };
 		edited.timeZone = "Asia/Seoul";
 		const { tabs } = changedAreas(file(), edited);
 		expect(tabs).toEqual({ site: true, locales: true, collections: false, admin: false });
 	});
-	it("marks the collections tab when a collection is removed or the order changes", () => {
+	it("SCHEMA-F8 marks the collections tab when a collection is removed or the order changes", () => {
 		const removed = file();
 		removed.collections = { post: post() };
 		expect(changedAreas(file(), removed).tabs.collections).toBe(true);
@@ -315,14 +315,14 @@ describe("collection reordering", () => {
 		collections: { post: post(), memo: post(), tag: post() },
 	});
 
-	it("reorders collections to a specified order", () => {
+	it("SCHEMA-N5 reorders collections to a specified order", () => {
 		const reordered = reorderCollections(file(), ["tag", "post", "memo"]);
 		expect(Object.keys(collectionsOf(reordered))).toEqual(["tag", "post", "memo"]);
 	});
 });
 
 describe("adding a field", () => {
-	it("names a link after its target and any other field after its label, never with a taken name", () => {
+	it("SCHEMA-N4 names a link after its target and any other field after its label, never with a taken name", () => {
 		expect(suggestedFieldName({ kind: "relation", to: "category" }, [])).toBe("categoryId");
 		expect(suggestedFieldName({ kind: "relation", to: "tag", many: true }, [])).toBe("tagIds");
 		expect(suggestedFieldName({ kind: "text", label: "Reading time" }, [])).toBe("readingTime");
@@ -331,7 +331,7 @@ describe("adding a field", () => {
 		expect(suggestedFieldName({ kind: "conditional", label: "" }, [])).toBe("select");
 	});
 
-	it("keeps whether unpublished targets can be picked and hold back publishing as one choice", () => {
+	it("SCHEMA-N4 keeps whether unpublished targets can be picked and hold back publishing as one choice", () => {
 		for (const choice of ["hidden", "blocking", "allowed"] as const) {
 			expect(unpublishedTargetsOf(withUnpublishedTargets({ kind: "relation", to: "tag" }, choice))).toBe(choice);
 		}
@@ -342,7 +342,7 @@ describe("adding a field", () => {
 		});
 	});
 
-	it("shows a many link on its target as a backlink, and takes it away again", () => {
+	it("SCHEMA-N4 shows a many link on its target as a backlink, and takes it away again", () => {
 		const start = {
 			collections: {
 				post: { label: "Post", kind: "document", fields: { tagIds: { kind: "relation", to: "tag", many: true } } },
@@ -360,7 +360,7 @@ describe("adding a field", () => {
 		expect(withOpposite(shown, "post", "tagIds", "tag", false)).toEqual(start);
 	});
 
-	it("turns a choice into one with fields per option and back, keeping its options", () => {
+	it("SCHEMA-N4 turns a choice into one with fields per option and back, keeping its options", () => {
 		const select = {
 			kind: "select",
 			label: "Format",
@@ -378,7 +378,7 @@ describe("adding a field", () => {
 		expect(withOptionFields(withFields, false)).toEqual(select);
 	});
 
-	it("brings a slug along with a public address when the collection has none", () => {
+	it("SCHEMA-N4 brings a slug along with a public address when the collection has none", () => {
 		const item = { kind: "item", fields: { title: { kind: "text", label: "Name" } } };
 		expect(fieldsOf(withPublicPath(item, "/tags/:slug", true)).slug).toEqual({
 			kind: "slug",

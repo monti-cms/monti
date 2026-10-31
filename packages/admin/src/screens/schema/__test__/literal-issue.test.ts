@@ -37,7 +37,7 @@ const SAMPLE: Record<SchemaLiteralIssueCode, Record<string, string>> = {
 describe("describeLiteralIssue", () => {
 	it.each(
 		Object.entries(SAMPLE),
-	)("words %s in the admin language, with its line and the names it mentions", (code, params) => {
+	)("SCHEMA-F12 words %s in the admin language, with its line and the names it mentions", (code, params) => {
 		const text = describeLiteralIssue(t, { code: code as SchemaLiteralIssueCode, params, line: 7, column: 1 });
 		// The line is named, and no placeholder is left unfilled.
 		expect(text).toContain("7");
@@ -46,7 +46,7 @@ describe("describeLiteralIssue", () => {
 	});
 
 	it.runIf(testSite.ADMIN_LANGUAGE === "ko")(
-		"does not show the English sentence of the server in a Korean admin",
+		"SCHEMA-F12 does not show the English sentence of the server in a Korean admin",
 		() => {
 			const text = describeLiteralIssue(t, { code: "second_import", params: {}, line: 2, column: 1 });
 			expect(text).not.toMatch(/a second import|Line 2|line 2/);

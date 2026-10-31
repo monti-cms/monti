@@ -7,7 +7,7 @@ const post = (fields: Record<string, unknown>) => ({
 });
 
 describe("collectionProblems", () => {
-	it("has none for a draft whose fields are complete", () => {
+	it("SCHEMA-F9 has none for a draft whose fields are complete", () => {
 		const file = post({
 			title: { kind: "text", label: "Title", required: true },
 			slug: { kind: "slug", label: "Address", from: "title" },
@@ -16,7 +16,7 @@ describe("collectionProblems", () => {
 		expect(collectionProblems(file)).toEqual([]);
 	});
 
-	it("names a select without options at the path of the field, with the collection and field", () => {
+	it("SCHEMA-F9 names a select without options at the path of the field, with the collection and field", () => {
 		const file = post({ format: { kind: "select", label: "Format", options: {} } });
 		expect(collectionProblems(file)).toEqual([
 			{
@@ -29,13 +29,13 @@ describe("collectionProblems", () => {
 		]);
 	});
 
-	it("names a relation to a collection that does not exist, unless the code defines it", () => {
+	it("SCHEMA-F9 names a relation to a collection that does not exist, unless the code defines it", () => {
 		const file = post({ author: { kind: "relation", label: "Author", to: "person" } });
 		expect(collectionProblems(file).map((problem) => problem.code)).toEqual(["target"]);
 		expect(collectionProblems(file, ["person"])).toEqual([]);
 	});
 
-	it("finds the problems of fields inside a conditional field, at their own path", () => {
+	it("SCHEMA-F9 finds the problems of fields inside a conditional field, at their own path", () => {
 		const file = post({
 			kind: {
 				kind: "conditional",
@@ -55,20 +55,20 @@ describe("collectionProblems", () => {
 		]);
 	});
 
-	it("does not stop a saved file whose slug has no source (core accepts it)", () => {
+	it("SCHEMA-F9 does not stop a saved file whose slug has no source (core accepts it)", () => {
 		expect(
 			collectionProblems(post({ title: { kind: "text", label: "T" }, slug: { kind: "slug", label: "A" } })),
 		).toEqual([]);
 	});
 
-	it("names a slug made from a field that is not there", () => {
+	it("SCHEMA-F9 names a slug made from a field that is not there", () => {
 		const file = post({ slug: { kind: "slug", label: "Address", from: "missing" } });
 		expect(collectionProblems(file).map((problem) => problem.code)).toEqual(["slugFrom"]);
 	});
 });
 
 describe("draftProblems", () => {
-	it("collects the problems of the site and of the collections", () => {
+	it("SCHEMA-F9 collects the problems of the site and of the collections", () => {
 		const file = {
 			...post({ format: { kind: "select", label: "Format", options: {} } }),
 			site: { aliases: ["nope nope"] },
@@ -81,7 +81,7 @@ describe("draftProblems", () => {
 });
 
 describe("placeOfProblem", () => {
-	it("opens a top-level field in place and a branch field in its branch", () => {
+	it("SCHEMA-F9 opens a top-level field in place and a branch field in its branch", () => {
 		expect(
 			placeOfProblem({
 				area: "collections",

@@ -46,7 +46,7 @@ const config = defineSite({
 const site = createSite(config);
 
 describe("the groups of the properties panel", () => {
-	it("follow the layout, then the fields it does not list, then what plugins place in their own tab", () => {
+	it("SCHEMA-N5 follow the layout, then the fields it does not list, then what plugins place in their own tab", () => {
 		expect(site.panelGroupsOf("page")).toEqual([
 			{ fields: ["slug", "intro", "hero"], tab: DEFAULT_TAB },
 			{ group: "Accessibility", collapsed: true, tab: "Extra", fields: ["alt"] },
@@ -55,13 +55,13 @@ describe("the groups of the properties panel", () => {
 		]);
 	});
 
-	it("leave the title of a document out, and keep the title of an item (the record panel draws it)", () => {
+	it("SCHEMA-N5 leave the title of a document out, and keep the title of an item (the record panel draws it)", () => {
 		expect(isPanelField(page, "title")).toBe(false);
 		expect(isPanelField(plain, "title")).toBe(true);
 		expect(site.panelGroupsOf("plain")[0]?.fields).toEqual(["title", "slug", "note"]);
 	});
 
-	it("without a layout are one run in declaration order, and the plugin's fields still get their tab", () => {
+	it("SCHEMA-N5 without a layout are one run in declaration order, and the plugin's fields still get their tab", () => {
 		expect(site.panelGroupsOf("plain")).toEqual([
 			{ fields: ["title", "slug", "note"], tab: DEFAULT_TAB },
 			{ group: "Search", tab: "Search", fields: ["metaTitle"], placedBy: "finder" },
@@ -69,7 +69,7 @@ describe("the groups of the properties panel", () => {
 		expect(site.panelTabsOf("plain")).toEqual([DEFAULT_TAB, "Search"]);
 	});
 
-	it("list the tabs, default first, then in order of first appearance, and find the tab of a field", () => {
+	it("SCHEMA-N5 list the tabs, default first, then in order of first appearance, and find the tab of a field", () => {
 		expect(site.panelTabsOf("page")).toEqual([DEFAULT_TAB, "Extra", "Search"]);
 		expect(site.panelTabOf("page", "alt")).toBe("Extra");
 		expect(site.panelTabOf("page", "metaTitle")).toBe("Search");
@@ -77,7 +77,7 @@ describe("the groups of the properties panel", () => {
 		expect(site.panelTabOf("page", "title")).toBe(DEFAULT_TAB);
 	});
 
-	it("let a plugin's placement win over the layout, and never draw a field twice", () => {
+	it("SCHEMA-N5 let a plugin's placement win over the layout, and never draw a field twice", () => {
 		const schema = { ...page, layout: [{ tab: "Mine", fields: ["metaTitle", "intro", "intro"] }] };
 		const groups = panelGroupsOf(schema, placementsOf([searchPlugin]));
 		expect(groups.flatMap((group) => group.fields).sort()).toEqual(
@@ -87,19 +87,19 @@ describe("the groups of the properties panel", () => {
 		expect(groups.find((group) => group.tab === "Mine")?.fields).toEqual(["intro"]);
 	});
 
-	it("keep a tab a person added before it has a field", () => {
+	it("SCHEMA-N5 keep a tab a person added before it has a field", () => {
 		const schema = { ...plain, layout: [{ fields: [], tab: "Later" }] };
 		expect(panelTabsOf(panelGroupsOf(schema))).toEqual([DEFAULT_TAB, "Later"]);
 	});
 
-	it("tell the default tab by its id, so a tab named like its translation is a different tab", () => {
+	it("SCHEMA-N5 tell the default tab by its id, so a tab named like its translation is a different tab", () => {
 		const schema = { ...plain, layout: [{ group: "Mine", tab: "Properties", fields: ["note"] }] };
 		const groups = panelGroupsOf(schema);
 		expect(panelTabsOf(groups)).toEqual([DEFAULT_TAB, "Properties"]);
 		expect(DEFAULT_TAB).toBe("");
 	});
 
-	it("read nothing from a plugin that places nothing", () => {
+	it("SCHEMA-N5 read nothing from a plugin that places nothing", () => {
 		const none: NamedPlacement[] = placementsOf([definePlugin({ name: "quiet", options: {} })]);
 		expect(none).toEqual([]);
 	});

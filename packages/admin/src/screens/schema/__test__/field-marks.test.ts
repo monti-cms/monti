@@ -18,7 +18,7 @@ const saved: Obj = {
 };
 
 describe("what the list of fields marks", () => {
-	it("marks a rename with its old name, a new field, and keeps the removed one where it was", () => {
+	it("SCHEMA-F8 marks a rename with its old name, a new field, and keeps the removed one where it was", () => {
 		let draft = setCollection(saved, "post", (c) => renameField(c, {}, "summary", "excerpt"));
 		draft = setCollection(draft, "post", (c) => removeField(c, {}, "subtitle"));
 		draft = setCollection(draft, "post", (c) => addField(c, {}, "format", newField("select", "Format")));
@@ -28,7 +28,7 @@ describe("what the list of fields marks", () => {
 		expect(gone).toEqual([{ name: "subtitle", label: "Subtitle", after: "excerpt" }]);
 	});
 
-	it("marks an edited field and puts a removed first field at the start", () => {
+	it("SCHEMA-F8 marks an edited field and puts a removed first field at the start", () => {
 		let draft = setCollection(saved, "post", (c) => ({
 			...c,
 			fields: { ...(c.fields as Obj), cover: { kind: "media", label: "Image" } },
@@ -39,7 +39,7 @@ describe("what the list of fields marks", () => {
 		expect(gone).toEqual([{ name: "title", label: "Title", after: null }]);
 	});
 
-	it("is empty for the saved file", () => {
+	it("SCHEMA-F8 is empty for the saved file", () => {
 		expect(fieldMarks(saved, saved, [], "post")).toEqual({ marks: {}, gone: [] });
 	});
 });

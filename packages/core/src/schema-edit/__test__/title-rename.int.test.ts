@@ -96,7 +96,7 @@ describe("renaming the title field", () => {
 			}),
 		);
 
-	it("moves the stored titles, keeps the title role on the new name, and the list, sort and search follow", async () => {
+	it("SCHEMA-F1 moves the stored titles, keeps the title role on the new name, and the list, sort and search follow", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const before = cms();
 		await before.migrate({ log: () => undefined });
@@ -152,7 +152,7 @@ describe("renaming the title field", () => {
 		expect(hits.map((hit) => hit.title)).toEqual(["Pear"]);
 	});
 
-	it("tells the writer who forgot the title role: a schema with no title field is invalid", async () => {
+	it("SCHEMA-S2 tells the writer who forgot the title role: a schema with no title field is invalid", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		// The file after a rename of `title` to `headline`, which carries the title role.
 		const { title, ...rest } = schema.collections.post.fields;

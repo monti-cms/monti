@@ -17,7 +17,7 @@ function problems(edit: (schema: EditableSchema) => void): ConfigIssue[] {
 }
 
 describe("parseSchemaFile", () => {
-	it("accepts a schema with every field kind and returns a copy", () => {
+	it("SCHEMA-F14 accepts a schema with every field kind and returns a copy", () => {
 		const parsed = parseSchemaFile(blogSchema);
 		expect(parsed.collections.post?.fields.policy?.kind).toBe("conditional");
 		expect(parsed.locales.map((locale) => locale.code)).toEqual(["ko", "en"]);
@@ -26,13 +26,13 @@ describe("parseSchemaFile", () => {
 		expect(parsed.collections).not.toBe(blogSchema.collections);
 	});
 
-	it("accepts the object form of `body` with allowed blocks, marks and heading levels", () => {
+	it("SCHEMA-F14 accepts the object form of `body` with allowed blocks, marks and heading levels", () => {
 		const schema = cloneSchema();
 		schema.collections.post.body = { blocks: ["callout", "table"], marks: ["bold"], headings: [2, 3] };
 		expect(parseSchemaFile(schema).collections.post?.body).toEqual(schema.collections.post.body);
 	});
 
-	it("names the path of a problem in the allowed list of a body", () => {
+	it("SCHEMA-F14 names the path of a problem in the allowed list of a body", () => {
 		const keys = problems((schema) => {
 			schema.collections.post.body = { block: ["callout"] };
 		});
@@ -44,7 +44,7 @@ describe("parseSchemaFile", () => {
 		expect(level[0]?.path).toMatch(/^collections\.post\.body/);
 	});
 
-	it("names the path of a field with an unknown kind", () => {
+	it("SCHEMA-F14 names the path of a field with an unknown kind", () => {
 		const [issue] = problems((schema) => {
 			schema.collections.post.fields.title.kind = "date";
 		});
@@ -52,7 +52,7 @@ describe("parseSchemaFile", () => {
 		expect(issue?.message).toContain("text, slug, relation, select, media, conditional, backlink or view");
 	});
 
-	it("names the key of an option the format does not have, so a misspelling or a retired option is caught", () => {
+	it("SCHEMA-F14 names the key of an option the format does not have, so a misspelling or a retired option is caught", () => {
 		const [issue] = problems((schema) => {
 			schema.collections.post.fields.title.maxLength = 10;
 		});
@@ -64,7 +64,7 @@ describe("parseSchemaFile", () => {
 		expect(typo?.message).toContain('did you mean "required"');
 	});
 
-	it("has no retired aliases: `workflow`, `list` and a string `required` are errors like any unknown or wrong value", () => {
+	it("SCHEMA-F14 has no retired aliases: `workflow`, `list` and a string `required` are errors like any unknown or wrong value", () => {
 		const old = problems((schema) => {
 			schema.collections.post.workflow = "publish";
 			schema.collections.post.list = { columns: ["title"] };
@@ -81,7 +81,7 @@ describe("parseSchemaFile", () => {
 		expect(kind?.path).toBe("collections.post.kind");
 	});
 
-	it("checks the shape of values, with paths into arrays", () => {
+	it("SCHEMA-F14 checks the shape of values, with paths into arrays", () => {
 		expect(
 			problems((schema) => {
 				schema.admin.templates = "no";
@@ -114,7 +114,7 @@ describe("parseSchemaFile", () => {
 		).toMatch(/^seed\.templates\[0\]/);
 	});
 
-	it("leaves what a value means to defineSite: a select default, a locale code, a time zone", () => {
+	it("SCHEMA-F14 leaves what a value means to defineSite: a select default, a locale code, a time zone", () => {
 		expect(() =>
 			parseSchemaFile({
 				...cloneSchema(),
@@ -124,14 +124,14 @@ describe("parseSchemaFile", () => {
 		).not.toThrow();
 	});
 
-	it("checks a dependent field of a conditional field is a field that stores a value", () => {
+	it("SCHEMA-F14 checks a dependent field of a conditional field is a field that stores a value", () => {
 		const dependent = problems((schema) => {
 			schema.collections.post.fields.policy.values.deprecated.nested = { kind: "view", view: "x" };
 		});
 		expect(dependent[0]?.message).toContain("a dependent field must be a text, relation, select or media field");
 	});
 
-	it("reports every problem in one error that lists the paths", () => {
+	it("SCHEMA-F14 reports every problem in one error that lists the paths", () => {
 		const schema = cloneSchema();
 		schema.locales[0].name = 1;
 		schema.collections.post.fields.cover.accept = "video";
@@ -146,12 +146,12 @@ describe("parseSchemaFile", () => {
 		}
 	});
 
-	it("rejects something that is not an object", () => {
+	it("SCHEMA-F14 rejects something that is not an object", () => {
 		expect(() => parseSchemaFile([])).toThrow(/\(root\): must be an object/);
 		expect(() => parseSchemaFile(null, "x.ts")).toThrow(/x\.ts is not valid/);
 	});
 
-	it("quotes a key that is not a plain name in the path", () => {
+	it("SCHEMA-F14 quotes a key that is not a plain name in the path", () => {
 		const [issue] = problems((schema) => {
 			schema.collections["my.posts"] = { label: "X", kind: "document", fields: { title: { kind: "nope" } } };
 		});

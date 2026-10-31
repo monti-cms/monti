@@ -41,7 +41,7 @@ describe("extract -> load round trip", () => {
 		["the reference blog", blog],
 		["the other site (different fields, tabs and list columns)", otherSite],
 	] as const) {
-		it(`loads ${name} back to the same site`, async () => {
+		it(`SCHEMA-S4 loads ${name} back to the same site`, async () => {
 			const { schema } = extractSchemaData(config as CmsConfig);
 			// Through text and an import, the way the file is written and read.
 			const file = (await importSchemaText(schemaFileText(schema))) as never;
@@ -68,7 +68,7 @@ describe("extract -> load round trip", () => {
 		});
 	}
 
-	it("writes the defineSchema import first, and omits a body flag that is the default", () => {
+	it("SCHEMA-S4 writes the defineSchema import first, and omits a body flag that is the default", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const text = schemaFileText(schema);
 		expect(text.startsWith('import { defineSchema } from "@monti-cms/core";\n\nexport default defineSchema({\n')).toBe(
@@ -94,7 +94,7 @@ describe("extract -> load round trip", () => {
 		expect(extractSchemaData(withBody).schema.collections.note?.body).toBe(true);
 	});
 
-	it("writes the allowed list of a body as the object form of `body`, and loads it back as the same list", async () => {
+	it("SCHEMA-S4 writes the allowed list of a body as the object form of `body`, and loads it back as the same list", async () => {
 		const allowed = { blocks: ["table"], marks: ["bold", "link"], headings: [2, 3] } as const;
 		const limited = defineSite({
 			collections: {
@@ -114,14 +114,14 @@ describe("extract -> load round trip", () => {
 		expect(loaded.collections.memo).toMatchObject({ body: true, allowed });
 	});
 
-	it("writes the labels plugins provide in the language asked for, else in the admin language of the site", () => {
+	it("SCHEMA-S4 writes the labels plugins provide in the language asked for, else in the admin language of the site", () => {
 		const labelOf = (locale?: string) =>
 			extractSchemaData(blog as CmsConfig, { locale }).schema.collections.post?.fields.seoTitle?.label;
 		expect(labelOf()).toBe("SEO 제목"); // cms-allow-korean: the reference blog's admin language is Korean
 		expect(labelOf("en")).toBe("SEO title");
 	});
 
-	it("keeps the plugin-provided fields (seoFields) as plain fields of the collection", () => {
+	it("SCHEMA-S4 keeps the plugin-provided fields (seoFields) as plain fields of the collection", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const post = schema.collections.post;
 		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle" });
@@ -129,7 +129,7 @@ describe("extract -> load round trip", () => {
 });
 
 describe("what stays in code", () => {
-	it("lists blocks, site.url and what else needs code, and nothing about data", () => {
+	it("SCHEMA-S4 lists blocks, site.url and what else needs code, and nothing about data", () => {
 		const { stays } = extractSchemaData(blog as CmsConfig);
 		expect(stays.map((item) => item.what)).toEqual(["site.url", "plugins", "blocks"]);
 		// The SEO fields are data in the schema; the plugin that places them in their tab stays in code.
@@ -139,7 +139,7 @@ describe("what stays in code", () => {
 		for (const block of blocks) expect(stays[2]?.detail).toContain(block.name);
 	});
 
-	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {
+	it("SCHEMA-S4 lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {
 		const plugin = definePlugin({ name: "my-plugin", options: {} });
 		// `defineSite` refuses an option that is not JSON, so the config is written by hand: the extraction still has to say what cannot move.
 		const note = defineCollection({
@@ -174,7 +174,7 @@ describe("what stays in code", () => {
 		expect(schema.admin?.messages).toEqual({ "cms-admin.entries": { publish: "Ship it" } });
 	});
 
-	it("says nothing needs to stay in code for a config that is all data", () => {
+	it("SCHEMA-S4 says nothing needs to stay in code for a config that is all data", () => {
 		const config = defineSite({
 			collections: {
 				note: defineCollection({
@@ -242,7 +242,7 @@ describe("monti schema:extract", () => {
 		};
 	}
 
-	it("writes the schema file, and reports what stays in code and how to load the schema", async () => {
+	it("SCHEMA-S4 writes the schema file, and reports what stays in code and how to load the schema", async () => {
 		const { dir } = site();
 		const report = await extractSchema({ cwd: dir, load });
 		expect(report).toMatchObject({ schema: "monti.schema.ts", collections: 1, locales: 1 });
@@ -255,7 +255,7 @@ describe("monti schema:extract", () => {
 		expect(text).toContain('import schema from "./monti.schema";');
 	});
 
-	it("does not replace an existing schema file unless asked, and writes next to a config in src/", async () => {
+	it("SCHEMA-S4 does not replace an existing schema file unless asked, and writes next to a config in src/", async () => {
 		const { dir } = site();
 		await extractSchema({ cwd: dir, load });
 		await expect(extractSchema({ cwd: dir, load })).rejects.toThrow(
@@ -270,7 +270,7 @@ describe("monti schema:extract", () => {
 		expect(report.schema).toBe("src/monti.schema.ts");
 	});
 
-	it("says what is wrong with a missing or wrong config file", async () => {
+	it("SCHEMA-S4 says what is wrong with a missing or wrong config file", async () => {
 		const { dir } = site();
 		const empty = tempDir();
 		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/Cannot find monti\.config\.ts.*--config/);
@@ -282,7 +282,7 @@ describe("monti schema:extract", () => {
 		).rejects.toThrow(/must export the site config/);
 	});
 
-	it("is a command: schema:extract through the command line reports failures with exit code 1", async () => {
+	it("SCHEMA-S4 is a command: schema:extract through the command line reports failures with exit code 1", async () => {
 		const { run } = site();
 		const missing = await run("schema:extract", "--config", "missing.config.ts");
 		expect(missing.code).toBe(1);

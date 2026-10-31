@@ -20,7 +20,7 @@ const issuesOf = (run: () => unknown): ConfigIssue[] => {
 const fileSchema = (edit: EditableSchema = cloneSchema()): SchemaTypes => edit as SchemaTypes;
 
 describe("defineSite with a schema file", () => {
-	it("builds the config from the file: normalized collections, locales, default locale, time zone, site, admin and seed", () => {
+	it("SCHEMA-S1 builds the config from the file: normalized collections, locales, default locale, time zone, site, admin and seed", () => {
 		const config = defineSite({ schema: fileSchema() });
 		expect(Object.keys(config.collections)).toEqual(["post", "category", "tag", "series"]);
 		expect(config.collections.post).toMatchObject({ kind: "document", body: true, path: "/posts/:slug" });
@@ -34,7 +34,7 @@ describe("defineSite with a schema file", () => {
 		expect(config).not.toHaveProperty("schema");
 	});
 
-	it("does not touch the file's content, and two configs from the same content share nothing", () => {
+	it("SCHEMA-S1 does not touch the file's content, and two configs from the same content share nothing", () => {
 		const schema = cloneSchema();
 		const before = JSON.stringify(schema);
 		const a = defineSite({ schema: fileSchema(schema) });
@@ -44,7 +44,7 @@ describe("defineSite with a schema file", () => {
 		expect(a.collections.post).not.toBe(b.collections.post);
 	});
 
-	it("adds what needs code: plugins and settings of the code config", () => {
+	it("SCHEMA-S1 adds what needs code: plugins and settings of the code config", () => {
 		const plugin = definePlugin({ name: "extra", options: {} });
 		const config = defineSite({
 			schema: fileSchema(),
@@ -55,14 +55,14 @@ describe("defineSite with a schema file", () => {
 		expect(config.media).toEqual({ maxImageBytes: 1000 });
 	});
 
-	it("reads the admin options that hide templates and the translation UI, and code can turn them back on", () => {
+	it("SCHEMA-S1 reads the admin options that hide templates and the translation UI, and code can turn them back on", () => {
 		const file = cloneSchema();
 		file.admin = { ...file.admin, templates: false, translations: false };
 		expect(defineSite({ schema: fileSchema(file) }).admin).toMatchObject({ templates: false, translations: false });
 		expect(defineSite({ schema: fileSchema(file), admin: { templates: true } }).admin?.templates).toBe(true);
 	});
 
-	it("lets code override site and admin keys one by one, and keeps the file's value for a key left undefined", () => {
+	it("SCHEMA-S1 lets code override site and admin keys one by one, and keeps the file's value for a key left undefined", () => {
 		const config = defineSite({
 			schema: fileSchema(),
 			site: { url: "https://example.com", name: "Renamed", previewPath: undefined },
@@ -83,7 +83,7 @@ describe("defineSite with a schema file", () => {
 		expect(same.timeZone).toBe("Asia/Seoul");
 	});
 
-	it("lets code add collections next to the file's, and refuses a name in both", () => {
+	it("SCHEMA-S1 lets code add collections next to the file's, and refuses a name in both", () => {
 		const note = defineCollection({
 			label: "Note",
 			kind: "item",
@@ -96,7 +96,7 @@ describe("defineSite with a schema file", () => {
 		]);
 	});
 
-	it("appends the code's seed templates to the file's", () => {
+	it("SCHEMA-S1 appends the code's seed templates to the file's", () => {
 		const config = defineSite({
 			schema: fileSchema(),
 			seed: {
@@ -106,7 +106,7 @@ describe("defineSite with a schema file", () => {
 		expect(config.seed?.templates?.map((template) => template.name)).toEqual(["General post", "Text"]);
 	});
 
-	it("keeps locales and the default locale in the file only", () => {
+	it("SCHEMA-S1 keeps locales and the default locale in the file only", () => {
 		expect(
 			issuesOf(() => defineSite({ schema: fileSchema(), locales: [{ code: "en", name: "English" }] as never })),
 		).toEqual([expect.objectContaining({ path: "locales", code: "set-twice" })]);
@@ -115,7 +115,7 @@ describe("defineSite with a schema file", () => {
 		]);
 	});
 
-	it("rejects an invalid schema with the path of the value, and a relation to a collection that does not exist", () => {
+	it("SCHEMA-F14 rejects an invalid schema with the path of the value, and a relation to a collection that does not exist", () => {
 		const broken = cloneSchema();
 		broken.collections.post.fields.title.kind = "date";
 		expect(issuesOf(() => defineSite({ schema: fileSchema(broken) }))).toContainEqual(
@@ -133,7 +133,7 @@ describe("defineSite with a schema file", () => {
 		);
 	});
 
-	it("checks what the values of the file mean: locale codes, the default locale, the time zone, select defaults", () => {
+	it("SCHEMA-F14 checks what the values of the file mean: locale codes, the default locale, the time zone, select defaults", () => {
 		const check = (edit: (schema: EditableSchema) => void) => {
 			const schema = cloneSchema();
 			edit(schema);
@@ -186,7 +186,7 @@ describe("defineSite with a schema file", () => {
 		});
 	});
 
-	it("still checks plugin validation against the file's collections", () => {
+	it("SCHEMA-S1 still checks plugin validation against the file's collections", () => {
 		const strict = definePlugin({
 			name: "strict",
 			options: {},
@@ -223,7 +223,7 @@ describe("two schema files in one process", () => {
 		return (await response.json()) as { collections: string[] };
 	};
 
-	it("each instance holds the site of its own file", async () => {
+	it("SCHEMA-S1 each instance holds the site of its own file", async () => {
 		const blog = fakeCms({ config: defineSite({ schema: fileSchema() }) });
 		const other = fakeCms({ config: defineSite({ schema: fileSchema(otherSchema) }) });
 		expect(blog.site.COLLECTIONS).toEqual(["post", "category", "tag", "series"]);

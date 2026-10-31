@@ -58,7 +58,7 @@ const schema = defineSchema({
 describe("defineSite({ schema }) types", () => {
 	const config = defineSite({ schema });
 
-	it("keeps collection names, locale codes and the shape of each collection's metadata", () => {
+	it("SCHEMA-S1 keeps collection names, locale codes and the shape of each collection's metadata", () => {
 		expectTypeOf<CollectionName<typeof config>>().toEqualTypeOf<"post" | "tag">();
 		expectTypeOf(config.defaultLocale).toEqualTypeOf<"ko" | "en">();
 		type Post = MetadataFor<"post", typeof config>;
@@ -71,7 +71,7 @@ describe("defineSite({ schema }) types", () => {
 		expect(config.collections.post.kind).toBe("document");
 	});
 
-	it("types the same as the config written in code", () => {
+	it("SCHEMA-S1 types the same as the config written in code", () => {
 		const post = defineCollection({
 			label: "Post",
 			kind: "document",
@@ -98,14 +98,14 @@ describe("defineSite({ schema }) types", () => {
 		expectTypeOf<FromSchema["tagIds"]>().toEqualTypeOf<FromCode["tagIds"]>();
 	});
 
-	it("reaches the instance (`cms.read`) and the component table of the site", () => {
+	it("SCHEMA-S1 reaches the instance (`cms.read`) and the component table of the site", () => {
 		type Instance = Cms<typeof config>;
 		expectTypeOf<Parameters<Instance["read"]["getEntry"]>[0]["collection"]>().toEqualTypeOf<"post" | "tag">();
 		const components = {} satisfies DocumentComponentsFor<typeof config>;
 		expect(components).toEqual({});
 	});
 
-	it("adds code collections to the types of the file's", () => {
+	it("SCHEMA-S1 adds code collections to the types of the file's", () => {
 		const note = defineCollection({
 			label: "Note",
 			kind: "item",
@@ -117,18 +117,18 @@ describe("defineSite({ schema }) types", () => {
 });
 
 describe("defineSchema types", () => {
-	it("is the identity at run time", () => {
+	it("SCHEMA-S1 is the identity at run time", () => {
 		const given = { collections: {}, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
 		expect(defineSchema(given)).toBe(given);
 	});
 
-	it("keeps names as literal types, and the schema it returns is the type of its argument", () => {
+	it("SCHEMA-S1 keeps names as literal types, and the schema it returns is the type of its argument", () => {
 		expectTypeOf(schema.defaultLocale).toEqualTypeOf<"ko">();
 		expectTypeOf(schema.collections.post.kind).toEqualTypeOf<"document">();
 		expectTypeOf(schema.locales[0].code).toEqualTypeOf<"ko">();
 	});
 
-	it("reports a wrong kind or a wrong option as a type error", () => {
+	it("SCHEMA-S1 reports a wrong kind or a wrong option as a type error", () => {
 		const base = { locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
 		defineSchema({
 			...base,

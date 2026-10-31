@@ -138,7 +138,7 @@ describe("removing a language with its translations", () => {
 		await closeGlobalPool();
 	});
 
-	it("is a change handled by the transform: the review counts the live translations that move, the trashed ones are not counted", async () => {
+	it("SCHEMA-C2 is a change handled by the transform: the review counts the live translations that move, the trashed ones are not counted", async () => {
 		const store = storeFor(siteAfter);
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [trash] });
 		expect(plan.problems).toEqual([]);
@@ -157,12 +157,12 @@ describe("removing a language with its translations", () => {
 		});
 	});
 
-	it("rejects a trash while the schema still lists the language", async () => {
+	it("SCHEMA-C2 rejects a trash while the schema still lists the language", async () => {
 		const plan = await planSchemaChange({ site: siteBefore, store: storeFor(siteBefore), migrations: [trash] });
 		expect(plan.problems.map((problem) => problem.id)).toEqual(["trash-en"]);
 	});
 
-	it("leaves the translations as they are when the schema drops the language without the transform", async () => {
+	it("SCHEMA-C2 leaves the translations as they are when the schema drops the language without the transform", async () => {
 		const was = await rows();
 		const done = await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations: [] });
 		expect(done.result.trashed).toEqual([]);
@@ -171,7 +171,7 @@ describe("removing a language with its translations", () => {
 		expect(statusOf(was, "bEn")).toBe("draft");
 	});
 
-	it("rolls back the moves with the rest when the apply fails after them in the transaction", async () => {
+	it("SCHEMA-C2 rolls back the moves with the rest when the apply fails after them in the transaction", async () => {
 		const store = storeFor(siteAfter);
 		const was = await rows();
 		// The same id twice: the moves run, then recording the transform fails on the second insert.
@@ -189,7 +189,7 @@ describe("removing a language with its translations", () => {
 		expect(await count("cms_migrations", "name = 'schema:trash-en'")).toBe(0);
 	});
 
-	it("moves every live translation in that language to the trash, in every collection, and nothing else", async () => {
+	it("SCHEMA-C2 moves every live translation in that language to the trash, in every collection, and nothing else", async () => {
 		const was = await rows();
 		const trashedEvents = () => count("cms_events", "kind = 'trashed' AND entry_id = ANY($1::uuid[])", [everyId()]);
 		const eventsBefore = await trashedEvents();
@@ -222,7 +222,7 @@ describe("removing a language with its translations", () => {
 		expect(await count("cms_migrations", "name = 'schema:trash-en'")).toBe(1);
 	});
 
-	it("runs once: applying again moves nothing and the plan has nothing left", async () => {
+	it("SCHEMA-C2 runs once: applying again moves nothing and the plan has nothing left", async () => {
 		const store = storeFor(siteAfter);
 		await applySchemaChange({ site: siteAfter, store, migrations: [trash] });
 		const was = await rows();
@@ -234,7 +234,7 @@ describe("removing a language with its translations", () => {
 		expect((await planSchemaChange({ site: siteAfter, store, migrations: [trash] })).changed).toBe(false);
 	});
 
-	it("restores one of them from the trash like any translation", async () => {
+	it("SCHEMA-C2 restores one of them from the trash like any translation", async () => {
 		await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations: [trash] });
 		const service = serviceFor(siteAfter);
 		const trashed = (await rows()).get(ids.bEn);

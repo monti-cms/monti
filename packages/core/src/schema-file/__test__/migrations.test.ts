@@ -18,7 +18,7 @@ const issues = (edit: (schema: EditableSchema) => void) => {
 };
 
 describe("migrations in the schema file", () => {
-	it("accepts the six transforms", () => {
+	it("SCHEMA-F6 accepts the six transforms", () => {
 		const schema = cloneSchema();
 		schema.migrations = [
 			{ id: "a", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
@@ -32,7 +32,7 @@ describe("migrations in the schema file", () => {
 		expect(parsed.migrations).toEqual(schema.migrations);
 	});
 
-	it("keeps a trashLocale to a language: a collection is not part of it", () => {
+	it("SCHEMA-C2 keeps a trashLocale to a language: a collection is not part of it", () => {
 		expect(
 			issues((schema) => {
 				schema.migrations = [{ id: "a", op: "trashLocale", collection: "post", locale: "ja" }];
@@ -45,12 +45,12 @@ describe("migrations in the schema file", () => {
 		).toMatch(/^migrations\[0\]\.locale:/);
 	});
 
-	it("does not need them: a file without transforms is valid", () => {
+	it("SCHEMA-F6 does not need them: a file without transforms is valid", () => {
 		const parsed = parseSchemaFile(cloneSchema());
 		expect(parsed.migrations).toBeUndefined();
 	});
 
-	it("names the path of a bad transform", () => {
+	it("SCHEMA-F6 names the path of a bad transform", () => {
 		expect(
 			issues((schema) => {
 				schema.migrations = [{ id: "a", op: "moveField", collection: "post" }];
@@ -68,7 +68,7 @@ describe("migrations in the schema file", () => {
 		).toMatch(/^migrations\[0\]\.id:/);
 	});
 
-	it("rejects an id used twice", () => {
+	it("SCHEMA-F6 rejects an id used twice", () => {
 		expect(
 			issues((schema) => {
 				schema.migrations = [
@@ -87,7 +87,7 @@ describe("defineSite with a schema file", () => {
 		return schema as SchemaTypes;
 	};
 
-	it("leaves the transforms out of the config", () => {
+	it("SCHEMA-S1 leaves the transforms out of the config", () => {
 		const config = defineSite({
 			schema: fromFile((schema) => {
 				schema.migrations = [{ id: "a", op: "dropField", collection: "post", field: "legacy" }];

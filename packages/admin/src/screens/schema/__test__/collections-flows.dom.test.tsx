@@ -122,7 +122,7 @@ const hasChangeCount = (count: number) =>
 	within(screen.getByRole("region", { name: t("bar.label") })).queryByLabelText(t("bar.count", { count })) !== null;
 
 describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
-	it("creates a collection from the sheet, adds a field to it and saves it", async () => {
+	it("SCHEMA-N3 creates a collection from the sheet, adds a field to it and saves it", async () => {
 		open();
 		await screen.findByTestId("collection-nav-post");
 
@@ -261,7 +261,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(reload.rememberSaved).toHaveBeenCalled();
 	});
 
-	it("hides the address box for an item", async () => {
+	it("SCHEMA-N2 hides the address box for an item", async () => {
 		open();
 		await screen.findByTestId("collection-nav-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
@@ -304,7 +304,7 @@ const pressDelete = async () => {
 };
 
 describe("flow 4 · 필드 시트", () => {
-	it("renames a field on Save: the name is taken when the input is left, and the rename joins the changes as one", async () => {
+	it("SCHEMA-F1 renames a field on Save: the name is taken when the input is left, and the rename joins the changes as one", async () => {
 		open();
 		const editor = await screen.findByTestId("collection-post");
 		fireEvent.click(within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
@@ -338,7 +338,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		};
 	});
 
-	it("takes it out of the list at once, brings it back from the changes menu or the toast, reviews what goes and deletes", async () => {
+	it("SCHEMA-D1 takes it out of the list at once, brings it back from the changes menu or the toast, reviews what goes and deletes", async () => {
 		open();
 
 		// 15: the block at the bottom of the basics tab, with what the collection holds.
@@ -431,7 +431,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		expect(api.requests.some((request) => request.path.includes("/references/"))).toBe(false);
 	});
 
-	it("leaves the review without deleting anything: Cancel keeps the collection out of the list, and nothing is sent", async () => {
+	it("SCHEMA-D1 leaves the review without deleting anything: Cancel keeps the collection out of the list, and nothing is sent", async () => {
 		open();
 		await pressDelete();
 		fireEvent.click(

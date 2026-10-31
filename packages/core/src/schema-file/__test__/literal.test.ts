@@ -12,13 +12,13 @@ const refusal = (text: string) => {
 };
 
 describe("parseSchemaLiteral: a file that is plain data", () => {
-	it("accepts what the printer writes, with the same data and no comments", () => {
+	it("SCHEMA-F13 accepts what the printer writes, with the same data and no comments", () => {
 		const result = parseSchemaLiteral(printSchemaFile(blogSchema));
 		expect(result).toMatchObject({ ok: true, comments: false });
 		expect(result.ok && result.value).toEqual(blogSchema);
 	});
 
-	it("accepts a hand-formatted literal: comments, single quotes, trailing commas, odd spacing, quoted and numeric keys", () => {
+	it("SCHEMA-F12 accepts a hand-formatted literal: comments, single quotes, trailing commas, odd spacing, quoted and numeric keys", () => {
 		const text = `// The schema of my blog.
 import { defineSchema } from '@monti-cms/core'
 
@@ -49,7 +49,7 @@ export default defineSchema(
 		});
 	});
 
-	it("tells comments from slashes inside strings", () => {
+	it("SCHEMA-F12 tells comments from slashes inside strings", () => {
 		const result = parseSchemaLiteral(file('{ url: "http://example.com/*x*/" }'));
 		expect(result).toMatchObject({ ok: true, comments: false, value: { url: "http://example.com/*x*/" } });
 	});
@@ -87,7 +87,7 @@ describe("parseSchemaLiteral: a file that has code", () => {
 		["an unclosed string", file('{ a: "oops }'), /never closed/],
 		["an unclosed comment", `${IMPORT}\n/* oops\nexport default defineSchema({});`, /comment that is never closed/],
 		["an empty file", "", /expected `import/],
-	])("refuses %s", (_name, text, expected) => {
+	])("SCHEMA-F12 refuses %s", (_name, text, expected) => {
 		expect(refusal(text)).toMatch(expected);
 	});
 
@@ -100,11 +100,11 @@ describe("parseSchemaLiteral: a file that has code", () => {
 		["a duplicate key", file("{ a: 1, a: 2 }"), "duplicate_key", { name: "a" }],
 		["code after the schema", `${file("{}")}\nconsole.log("x");\n`, "code_after", {}],
 		["a missing comma", file("{ defaultLocale: 1 + 1 }"), "expected_token", { what: "`,` or `}`" }],
-	])("gives %s a code and the names it mentions, for the screen to translate", (_name, text, code, params) => {
+	])("SCHEMA-F12 gives %s a code and the names it mentions, for the screen to translate", (_name, text, code, params) => {
 		expect(parseSchemaLiteral(text)).toMatchObject({ ok: false, code, params: expect.objectContaining(params) });
 	});
 
-	it("names the line the code is on", () => {
+	it("SCHEMA-F12 names the line the code is on", () => {
 		const text = file("{\n\tdefaultLocale: 1,\n\tlocales: [...more],\n}");
 		const result = parseSchemaLiteral(text);
 		expect(result).toMatchObject({ ok: false, line: 5 });
