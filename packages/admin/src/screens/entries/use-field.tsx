@@ -14,6 +14,7 @@ import {
 } from "../../hooks/store";
 import type { SlotApplyMode, SlotRequest } from "../../slots/registry";
 import { isSandboxSite } from "../shared/preview-sandbox";
+import type { BacklinkChange } from "./backlink-changes";
 import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue, formTitle } from "./entry-form";
 
 /**
@@ -103,6 +104,18 @@ export interface EntryFormValue {
 	readonly entry?: EntryData | null;
 	/** Translation editing: fields shared by the translation group show `values` (the original's) read-only, with `note` beside them. */
 	readonly locked?: { readonly values: EntryForm; readonly note: ReactNode };
+	/**
+	 * The backlink picks (a post's series) the next save writes, from the entry editor. Without it a backlink field only shows its records: there is no
+	 * save to write a pick with.
+	 */
+	readonly backlinks?: BacklinkPicks;
+}
+
+/** A form owner's unsaved backlink picks by field name, why the last save could not write one, and the call that changes a field's picks. */
+export interface BacklinkPicks {
+	readonly changes: Readonly<Record<string, BacklinkChange>>;
+	readonly errors: Readonly<Record<string, string>>;
+	readonly set: (name: string, change: BacklinkChange | null) => void;
 }
 
 /** What the fields read. A store, so a field subscribes to its own slice. */
@@ -116,11 +129,12 @@ interface EntryFormState {
 	locale: string | undefined;
 	entry: EntryData | null;
 	locked: { readonly values: EntryForm; readonly note: ReactNode } | undefined;
+	backlinks: BacklinkPicks | undefined;
 	/** Writes values the assistant produced: like `setForm`, then marks the keys as the assistant's until they are edited or the entry is saved. */
 	fillForm: (patch: EntryFormPatch) => void;
 	/** The keys the assistant filled and nobody has edited since. Owned by the provider, not by the form owner. */
 	assisted: ReadonlySet<string>;
-	/** Marks a value that is not in the form (a series the post was added to) as the assistant's, or takes the mark off. */
+	/** Marks a value that is not in the form (a series the assistant picked) as the assistant's, or takes the mark off. */
 	setAssisted: (name: string, on: boolean) => void;
 }
 
@@ -175,6 +189,7 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 			locale: value.locale,
 			entry: value.entry ?? null,
 			locked: value.locked,
+			backlinks: value.backlinks,
 		});
 		return { store, setFormRef, version: 0, notified: 0 };
 	});
@@ -194,6 +209,7 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 		locale: value.locale,
 		entry: value.entry ?? null,
 		locked: value.locked,
+		backlinks: value.backlinks,
 	});
 	if (changed) holder.version += 1;
 

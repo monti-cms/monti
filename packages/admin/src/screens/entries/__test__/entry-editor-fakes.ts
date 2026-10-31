@@ -30,13 +30,14 @@ export const invalidError = (issues: CmsIssue[] = []) =>
 	new CmsApiError(400, "invalid_input", "title is too long", issues, { code: "invalid_input" });
 
 /**
- * A server with one entry. `update` checks the version like the real one (409 `conflict` when it is behind); every method is a spy, so a test can
- * make the next call fail with `mockRejectedValueOnce`.
+ * A server with one entry, and the other records a backlink pick writes to (`records`, by id). `update` checks the version like the real one (409
+ * `conflict` when it is behind); every method is a spy, so a test can make the next call fail with `mockRejectedValueOnce`.
  */
-export function fakeClient(initial: EntryData = ENTRY) {
+export function fakeClient(initial: EntryData = ENTRY, records: Record<string, EntryData> = {}) {
 	const server = { current: initial };
+	const others = structuredClone(records);
 	const client = {
-		get: vi.fn(async (_id: string) => structuredClone(server.current)),
+		get: vi.fn(async (id: string) => structuredClone(others[id] ?? server.current)),
 		create: vi.fn(async (input: Parameters<EntryEditorClient["create"]>[0]): Promise<EntryWriteResult> => {
 			server.current = {
 				...ENTRY,
@@ -44,7 +45,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				collection: input.collection,
 				version: 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, doc: input.doc },
+				working: { metadata: input.metadata, doc: input.doc ?? server.current.working.doc },
 			};
 			// Like the real server, a write answers with the translation group; a fresh entry is its only member.
 			server.current.translations = [
@@ -59,13 +60,19 @@ export function fakeClient(initial: EntryData = ENTRY) {
 			];
 			return { entry: structuredClone(server.current), warnings: [] };
 		}),
-		update: vi.fn(async (_id: string, input: Parameters<EntryEditorClient["update"]>[1]): Promise<EntryWriteResult> => {
+		update: vi.fn(async (id: string, input: Parameters<EntryEditorClient["update"]>[1]): Promise<EntryWriteResult> => {
+			const other = others[id];
+			if (other) {
+				if (input.expectedVersion !== other.version) throw conflictError();
+				others[id] = { ...other, version: other.version + 1, working: { ...other.working, metadata: input.metadata } };
+				return { entry: structuredClone(others[id]), warnings: [] };
+			}
 			if (input.expectedVersion !== server.current.version) throw conflictError();
 			server.current = {
 				...server.current,
 				version: server.current.version + 1,
 				workingSlug: input.slug,
-				working: { metadata: input.metadata, doc: input.doc },
+				working: { metadata: input.metadata, doc: input.doc ?? server.current.working.doc },
 			};
 			return { entry: structuredClone(server.current), warnings: [] };
 		}),
@@ -87,7 +94,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 		remove: vi.fn(async (_id: string, _input: { expectedVersion: number }) => undefined),
 		relations: vi.fn(async (_id: string) => ({ incomingReferences: [] })),
 	} satisfies EntryEditorClient;
-	return { client, server };
+	return { client, server, records: others };
 }
 
 /** A recovery store in memory. `put` can be made to fail (private browsing) with `available.current = false`. */

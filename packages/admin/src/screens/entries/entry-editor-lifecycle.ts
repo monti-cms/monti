@@ -28,7 +28,7 @@ export interface LifecycleDeps {
 }
 
 export function createLifecycle(ctx: EditorContext, deps: LifecycleDeps) {
-	const { site, adminId, client, recoveryStore, t, tc, callbacks, m, state, commit } = ctx;
+	const { site, adminId, client, recoveryStore, t, tc, callbacks, m, state, commit, unsaved } = ctx;
 	const { fillFromBody, save, fetchAndApply, recovery } = deps;
 
 	const publish = async (options: { resetPublishedAt?: boolean } = {}): Promise<EditorResult<PublishOutcome>> => {
@@ -76,7 +76,7 @@ export function createLifecycle(ctx: EditorContext, deps: LifecycleDeps) {
 		const entry = current.entry;
 		if (!entry) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 		if (current.busy) return editorFailure("invalid_state", t("editor.busy"));
-		if (action !== "restore" && m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
+		if (action !== "restore" && unsaved()) return editorFailure("invalid_state", t("editor.unsaved"));
 		commit({ busy: "status" });
 		try {
 			const before = m.version;
@@ -99,7 +99,7 @@ export function createLifecycle(ctx: EditorContext, deps: LifecycleDeps) {
 		const current = state();
 		if (current.saveStatus === "conflict") return editorFailure("conflict", t("editor.conflict"));
 		const id = m.entryId;
-		if (!id || m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
+		if (!id || unsaved()) return editorFailure("invalid_state", t("editor.unsaved"));
 		try {
 			const copy = await client.duplicate(id, {
 				title: copyTitle(site, current.collection, formTitle(site, current.collection, current.form)),

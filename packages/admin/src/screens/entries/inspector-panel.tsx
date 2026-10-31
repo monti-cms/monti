@@ -18,7 +18,8 @@ const tabFor = (site: Site, collection: string, path: string) =>
 interface InspectorPanelProps {
 	incomingReferences: IncomingReferenceItem[];
 	isLoadingIncomingReferences: boolean;
-	onRefreshIncomingReferences: () => void;
+	/** Reads the usages again; resolves once they are read. */
+	onRefreshIncomingReferences: () => Promise<void> | void;
 	onSlugChange: (slug: string) => void;
 	onRegenerateSlug: () => void;
 	/** Opens this field for editing (jump to a publish problem). Calls `onFocused` once opened. */

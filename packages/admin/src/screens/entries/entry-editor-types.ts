@@ -6,6 +6,7 @@ import type { EditorError, EditorResult } from "../../hooks/result";
 import type { StateStore } from "../../hooks/store";
 import type { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
+import type { BacklinkChange } from "./backlink-changes";
 import type { RecoveryRecord, RecoveryStore } from "./entry-editor-client";
 import type { EntryData, EntryForm, EntryFormPatch, TranslationSource, translationStateFromForm } from "./entry-form";
 import type { entriesMessages } from "./messages";
@@ -148,6 +149,8 @@ export interface EntryEditorState {
 	bodyWarnings: readonly CmsIssue[];
 	recovery: RecoveryOffer | null;
 	conflict: ConflictInfo | null;
+	backlinks: Readonly<Record<string, BacklinkChange>>;
+	backlinkErrors: Readonly<Record<string, string>>;
 	slugTouched: boolean;
 }
 
@@ -185,7 +188,7 @@ export interface EntryEditor {
 	readonly saveStatus: SaveStatus;
 	/** Why the last save did not go through, until the next save succeeds. */
 	readonly saveError: EditorError | null;
-	/** The form differs from what the server last saved. */
+	/** The form, or a backlink pick, differs from what the server last saved. */
 	readonly hasUnsavedChanges: boolean;
 	/** False when the browser could not keep a recovery copy (private browsing, storage quota). */
 	readonly recoveryCopyAvailable: boolean;
@@ -204,6 +207,13 @@ export interface EntryEditor {
 	readonly conflict: ConflictInfo | null;
 	/** The slug was edited by hand, so changing its source field no longer regenerates it. */
 	readonly slug: { readonly touched: boolean };
+	/**
+	 * Backlink picks (a post's series) the server does not have yet, by field name. A backlink is stored on the other record, so the save writes
+	 * those records after the entry. No recovery copy keeps them; leaving the page asks first, like any unsaved change.
+	 */
+	readonly backlinks: Readonly<Record<string, BacklinkChange>>;
+	/** Why the last save could not write a field's backlink pick, by field name. That pick is dropped, so the field shows the server's records again. */
+	readonly backlinkErrors: Readonly<Record<string, string>>;
 	/** The translation source flow. `null` unless the entry is a translation that received the original's body. */
 	readonly translation: TranslationView | null;
 
@@ -214,6 +224,8 @@ export interface EntryEditor {
 	setSlug(slug: string): void;
 	/** Recomputes the slug from the field its definition names and un-touches it. */
 	regenerateSlug(): void;
+	/** Sets a backlink field's unsaved picks (`null`: none). Local only, like `setForm`; the next save writes them. */
+	setBacklink(name: string, change: BacklinkChange | null): void;
 	/** The body from the body editor or a source panel: the stored document (with block ids), which the next save sends. */
 	setBody(doc: StoredDocument): void;
 	/** IME guard: a save waits (up to {@link COMPOSITION_WAIT_MS}) until composition ends. */
@@ -221,7 +233,7 @@ export interface EntryEditor {
 	/** Fills the empty `fillFromBody` fields from the body. Fails with `validation` (a `missing_field` issue) when a field has no body to come from. `publish` does this itself. */
 	fillFromBody(): EditorResult<readonly FilledField[]>;
 
-	/** Saves the form to the server (POST for a new entry, PATCH with the version otherwise). One request runs at a time. */
+	/** Saves the form to the server (POST for a new entry, PATCH with the version otherwise), then the backlink picks. One request runs at a time. */
 	save(): Promise<EditorResult<EntrySaveOutcome>>;
 	/** Checks the server's version first, then saves. For a failed, local-only or session-expired entry. */
 	retry(): Promise<EditorResult<EntrySaveOutcome>>;
@@ -310,4 +322,6 @@ export interface EditorContext {
 	readonly m: EditorMutable;
 	readonly state: () => EntryEditorState;
 	readonly commit: (patch: Partial<EntryEditorState>) => void;
+	/** The form or a backlink pick is not on the server yet. */
+	readonly unsaved: () => boolean;
 }

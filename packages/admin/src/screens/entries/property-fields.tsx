@@ -25,21 +25,25 @@ import {
 	useState,
 } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
+import { getEntry } from "../../api/entries";
 import { fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
+import { type BacklinkChange, backlinkChangeTo, backlinkShown } from "./backlink-changes";
+import type { EntryData } from "./entry-form";
 import {
 	BacklinkInput,
 	backlinkMembers,
-	changeBacklinkRecord,
 	type FieldInputProps,
 	type IncomingReference,
+	useWrittenPick,
 } from "./field-inputs";
 import { FieldView } from "./field-views";
 import { MediaValue } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { PropertyEditContext, usePropertyEdit } from "./property-edit";
+import { optionOf } from "./record-create-sheet";
 import { DefaultInput, useRegisteredInput } from "./schema-fields";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
@@ -95,7 +99,7 @@ interface FocusRequest {
 export interface SchemaFieldsReferences {
 	items: readonly IncomingReference[];
 	loading: boolean;
-	refresh: () => void;
+	refresh: () => Promise<void> | void;
 }
 
 interface ShellProps {
@@ -505,35 +509,50 @@ const BacklinkProperty = memo(function BacklinkProperty({
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const entryId = useEntryFormSelector((state) => state.entryId);
 	const groupId = useEntryFormSelector((state) => state.entry?.translationGroupId);
+	const backlinks = useEntryFormSelector((state) => state.backlinks);
 	const field = site.schemaOf(collection).fields[name] as BacklinkField;
 	const marked = useField(name);
 	// On a translation, the original's value is only shown (relations point to the original).
 	const targetId = groupId ?? entryId;
 	const shared = targetId === entryId && references ? references : undefined;
-	const names = shared ? backlinkMembers(shared.items, field, tc("untitled")).map((member) => member.title) : [];
-	const refresh = shared?.refresh;
-	// The assistant picks a series: the post goes into it at once (saved apart from the draft), and the row reads it in the assistant's blue until it is changed.
+	// The properties list stays while the input opens and closes, so it is the one that reads the usages again after the save wrote a pick.
+	const change = useWrittenPick(
+		backlinks && { change: backlinks.changes[name], error: backlinks.errors[name] },
+		shared?.refresh,
+	);
+	const server = shared ? backlinkMembers(shared.items, field, tc("untitled")) : [];
+	const names = backlinkShown(server, change).map((member) => member.title);
+	const set = backlinks?.set;
+	const pick = useMemo(
+		() =>
+			set
+				? { change, error: backlinks.errors[name], set: (next: BacklinkChange | null) => set(name, next) }
+				: undefined,
+		[backlinks, set, change, name],
+	);
+	// The assistant picks a series: like a pick of the person's, the post's save writes it, and the row reads it in the assistant's blue until it is changed.
 	const request = marked.slotRequest;
+	const serverKey = server.map((member) => member.id).join(",");
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `server` is keyed by its ids
 	const slot = useMemo(
 		() =>
-			request && targetId
+			request && targetId && set
 				? {
 						...request,
 						filled: names.length > 0,
 						apply: async (id: string) => {
-							await changeBacklinkRecord(
-								site,
-								field,
-								id,
-								(ids) => (ids.includes(targetId) ? ids : [...ids, targetId]),
-								tc("saveFailed"),
+							const record = await getEntry<EntryData>(site, id);
+							const titles = new Map(backlinkShown(server, change).map((member) => [member.id, member.title]));
+							titles.set(id, optionOf(site, tc("untitled"), field.from, record).title);
+							set(
+								name,
+								backlinkChangeTo(server, [...titles.keys()], (picked) => titles.get(picked) ?? tc("untitled")),
 							);
 							store.getState().setAssisted(name, true);
-							refresh?.();
 						},
 					}
 				: null,
-		[request, targetId, names.length, site, field, tc, store, name, refresh],
+		[request, targetId, set, names.length, serverKey, change, site, field, tc, store, name],
 	);
 	return (
 		<PropertyShell
@@ -549,6 +568,7 @@ const BacklinkProperty = memo(function BacklinkProperty({
 					targetId={targetId}
 					disabled={disabled || Boolean(locked)}
 					shared={shared ? { references: shared.items, loading: shared.loading, refresh: shared.refresh } : undefined}
+					pick={pick}
 					onChange={() => store.getState().setAssisted(name, false)}
 				/>
 			}

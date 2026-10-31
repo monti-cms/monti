@@ -6,12 +6,13 @@ import {
 	issueText,
 	sourceHasChanged,
 } from "@monti-cms/core/site";
-import { CmsApiError, isConflict } from "../../api/client";
+import { CmsApiError, errorText, isConflict } from "../../api/client";
 import type { CmsIssue } from "../../api/error-message";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore } from "../../hooks/store";
 import { commonMessages } from "../../lib/common.messages";
 import { nounVars } from "../shared/noun.messages";
+import { type BacklinkChange, writeBacklink } from "./backlink-changes";
 import { createLifecycle } from "./entry-editor-lifecycle";
 import { createRecovery } from "./entry-editor-recovery-state";
 import { failed, failureOf, keepTranslationGroup, wait } from "./entry-editor-results";
@@ -103,6 +104,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		bodyWarnings: [],
 		recovery: null,
 		conflict: null,
+		backlinks: {},
+		backlinkErrors: {},
 		slugTouched: target.mode === "edit",
 	});
 	const state = () => store.getState();
@@ -125,10 +128,17 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		generation: 0,
 	};
 
-	/** Writes a partial state. A write that changes nothing does not notify. `hasUnsavedChanges` always follows the sequence numbers. */
+	const hasBacklinks = (backlinks = state().backlinks) => Object.keys(backlinks).length > 0;
+	/** The form or a backlink pick is not on the server yet. */
+	const unsaved = () => m.changeSeq > m.ackSeq || hasBacklinks();
+
+	/** Writes a partial state. A write that changes nothing does not notify. `hasUnsavedChanges` always follows the sequence numbers and the backlink picks. */
 	const commit = (patch: Partial<EntryEditorState>) => {
 		const current = state();
-		const next: Partial<EntryEditorState> = { ...patch, hasUnsavedChanges: m.changeSeq > m.ackSeq };
+		const next: Partial<EntryEditorState> = {
+			...patch,
+			hasUnsavedChanges: m.changeSeq > m.ackSeq || hasBacklinks(patch.backlinks ?? current.backlinks),
+		};
 		for (const key of Object.keys(next) as (keyof EntryEditorState)[]) {
 			if (!Object.is(current[key], next[key])) {
 				store.setState(next);
@@ -150,6 +160,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		m,
 		state,
 		commit,
+		unsaved,
 	};
 	const recovery = createRecovery(ctx);
 	const { settle, persistBackup, cancelPendingBackup, flushPendingBackup, scheduleBackup, discardBackup } = recovery;
@@ -211,7 +222,10 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		const keepsStatus = current.saveStatus === "conflict" || current.saveStatus === "session-expired";
 		if (!m.inflight && fingerprint === m.serverFingerprint) {
 			m.ackSeq = m.changeSeq;
-			commit({ form: next, ...(keepsStatus ? {} : { saveStatus: m.entryId ? "saved" : "new" }) });
+			commit({
+				form: next,
+				...(keepsStatus ? {} : { saveStatus: hasBacklinks() ? "dirty" : m.entryId ? "saved" : "new" }),
+			});
 			void discardBackup(backupKey(adminId, m.entryId, current.collection));
 			return;
 		}
@@ -228,6 +242,57 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		return { ...patch, slug: site.slugFromValues(collection, { ...form, ...patch }) };
 	};
 
+	// ---- backlinks
+
+	/** Sets a backlink field's unsaved picks. Like a form change, it touches only this editor until the next save. */
+	const setBacklink = (name: string, change: BacklinkChange | null) => {
+		const current = state();
+		const backlinks = { ...current.backlinks };
+		if (change && (change.add.length > 0 || change.remove.length > 0)) backlinks[name] = change;
+		else delete backlinks[name];
+		const { [name]: _, ...backlinkErrors } = current.backlinkErrors;
+		const keepsStatus = ["conflict", "session-expired", "saving"].includes(current.saveStatus);
+		const dirty = m.changeSeq > m.ackSeq || hasBacklinks(backlinks);
+		commit({
+			backlinks,
+			backlinkErrors,
+			...(keepsStatus ? {} : { saveStatus: dirty ? "dirty" : m.entryId ? "saved" : "new" }),
+		});
+	};
+
+	/**
+	 * Writes the backlink picks to the other records, after the entry is saved. A pick that fails is dropped and its field gets the reason, so it shows the
+	 * server's records again. A pick made while this runs stays for the next save.
+	 */
+	const writeBacklinks = async () => {
+		const picks = state().backlinks;
+		const { collection, entry } = state();
+		// Relations point to the original: a translation's picks change the original's membership.
+		const targetId = entry?.translationGroupId ?? m.entryId;
+		if (!targetId || !hasBacklinks(picks) || !site.isCollection(collection)) return;
+		const errors: Record<string, string> = {};
+		for (const [name, change] of Object.entries(picks)) {
+			const field = site.schemaOf(collection).fields[name];
+			if (field?.kind !== "backlink") continue;
+			const writes = [
+				...change.add.map(({ id }) => ({ id, into: true })),
+				...change.remove.map((id) => ({ id, into: false })),
+			];
+			for (const { id, into } of writes) {
+				try {
+					await writeBacklink(client, field, id, targetId, into);
+				} catch (caught) {
+					const failure = t(into ? "backlink.addFailed" : "backlink.removeFailed", { label: field.label });
+					errors[name] = errorText(site, caught, failure);
+				}
+			}
+		}
+		const left = Object.fromEntries(
+			Object.entries(state().backlinks).filter(([name, change]) => picks[name] !== change),
+		);
+		commit({ backlinks: left, backlinkErrors: errors });
+	};
+
 	// ---- save
 
 	const performSave = (): Promise<EditorResult<EntrySaveOutcome>> => {
@@ -237,8 +302,24 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			return Promise.resolve(editorFailure("read_only", t("editor.readOnly", nounVars(site, current.collection))));
 		if (current.saveStatus === "conflict") return Promise.resolve(editorFailure("conflict", t("editor.conflict")));
 		if (m.entryId && m.changeSeq <= m.ackSeq && current.entry) {
-			if (current.saveStatus !== "session-expired") commit({ saveStatus: "saved" });
-			return Promise.resolve({ ok: true, value: { entry: current.entry, changed: false } });
+			const entry = current.entry;
+			if (!hasBacklinks()) {
+				if (current.saveStatus !== "session-expired") commit({ saveStatus: "saved" });
+				return Promise.resolve({ ok: true, value: { entry, changed: false } });
+			}
+			// Only backlink picks: the entry itself is not sent again.
+			commit({ saveStatus: "saving" });
+			const request = (async (): Promise<EditorResult<EntrySaveOutcome>> => {
+				try {
+					await writeBacklinks();
+					commit({ saveStatus: unsaved() ? "dirty" : "saved" });
+					return { ok: true, value: { entry, changed: true } };
+				} finally {
+					m.inflight = null;
+				}
+			})();
+			m.inflight = request;
+			return request;
 		}
 		// Saving during composition drops characters. The save paths (`save`, `retry`) first wait for composition to end.
 		if (m.composing) {
@@ -287,10 +368,11 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 					bodyWarnings: warnings,
 				});
 				callbacks().onSaved?.(merged, { created: isNew });
+				await writeBacklinks();
 
 				if (formFingerprint(site, state().form) === m.serverFingerprint) {
 					m.ackSeq = m.changeSeq;
-					commit({ saveStatus: "saved" });
+					commit({ saveStatus: hasBacklinks() ? "dirty" : "saved" });
 					await settle(discardBackup(backupKey(adminId, m.entryId, collection)));
 				} else {
 					commit({ saveStatus: "dirty" });
@@ -343,13 +425,13 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				changed = true;
 			}
 			const entry = state().entry;
-			if (m.entryId && m.changeSeq <= m.ackSeq && entry) return { ok: true, value: { entry, changed } };
+			if (m.entryId && !unsaved() && entry) return { ok: true, value: { entry, changed } };
 			const result = await performSave();
 			if (!result.ok) return result;
 			changed = changed || result.value.changed;
 		}
 		const entry = state().entry;
-		if (m.entryId && m.changeSeq <= m.ackSeq && entry) return { ok: true, value: { entry, changed } };
+		if (m.entryId && !unsaved() && entry) return { ok: true, value: { entry, changed } };
 		return failed(state().saveError ?? { code: "failed", message: tc("saveFailed"), retryable: true });
 	};
 
@@ -424,7 +506,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			const loaded = await fetchAndApply(id);
 			if (!loaded) return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
 			m.recoveryRecord = null;
-			commit({ recovery: null });
+			commit({ recovery: null, backlinks: {}, backlinkErrors: {} });
 			await discardBackup(backupKey(adminId, loaded.id, loaded.collection));
 			return { ok: true, value: loaded };
 		} catch (caught) {
@@ -458,7 +540,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		saveError: state().saveError,
 		entryId: m.entryId,
 		version: m.version,
-		hasUnsavedChanges: m.changeSeq > m.ackSeq,
+		hasUnsavedChanges: unsaved(),
 	});
 
 	const commands = {
@@ -473,6 +555,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			applyForm({ slug: site.isCollection(collection) ? site.slugFromValues(collection, form) : "" });
 		},
 		setBody: (doc: StoredDocument) => applyForm({ doc }),
+		setBacklink,
 		setComposing,
 		fillFromBody,
 		save,

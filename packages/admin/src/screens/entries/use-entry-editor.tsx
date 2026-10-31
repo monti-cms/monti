@@ -133,6 +133,8 @@ export function EntryEditorProvider({
 				: undefined,
 		[entry?.source, collection, lockedNote, site],
 	);
+	const { backlinks: changes, backlinkErrors: errors, setBacklink: set } = editor;
+	const backlinks = useMemo(() => ({ changes, errors, set }), [changes, errors, set]);
 	// The warnings of the latest save or publish that point to a block are shown next to that block (`BlockFrame`).
 	const blockIssues = useMemo<BlockIssueTexts>(() => {
 		const byBlock = new Map<string, string[]>();
@@ -159,6 +161,7 @@ export function EntryEditorProvider({
 							locale: entry?.locale,
 							entry,
 							locked,
+							backlinks,
 						}}
 					>
 						{children}

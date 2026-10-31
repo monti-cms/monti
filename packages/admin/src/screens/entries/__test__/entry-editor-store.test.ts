@@ -30,13 +30,16 @@ function setup({
 	records = [] as ReturnType<typeof recoveryCopy>[],
 	target,
 	callbacks = {},
+	others = {},
 }: {
 	server?: EntryData;
 	records?: ReturnType<typeof recoveryCopy>[];
 	target?: EntryEditorTarget;
 	callbacks?: EntryEditorCallbacks;
+	/** Other records on the server, by id: the series a backlink pick writes to. */
+	others?: Record<string, EntryData>;
 } = {}) {
-	const fake = fakeClient(server);
+	const fake = fakeClient(server, others);
 	const recovery = fakeRecoveryStore(records);
 	const onSaved = vi.fn();
 	const core = createEntryEditor({
@@ -952,5 +955,101 @@ describe("translation source flow", () => {
 				translation: expect.objectContaining({ version: 4, baseDoc: translation.source?.doc }),
 			}),
 		);
+	});
+});
+
+describe("backlink picks", () => {
+	// The reference blog's post has a `series` backlink: a series (`collection`) lists its posts in `itemIds`.
+	const series = (id: string, itemIds: string[]): EntryData => ({
+		...ENTRY,
+		id,
+		collection: "collection",
+		version: 1,
+		workingSlug: id,
+		working: { metadata: { title: id, itemIds }, doc: ENTRY.working.doc },
+	});
+	const pick = { add: [{ id: "s2", title: "s2" }], remove: ["s1"] };
+	const withSeries = () => opened({ others: { s1: series("s1", ["other", "entry-1"]), s2: series("s2", ["other"]) } });
+
+	it("WRITE-W7 a pick is an unsaved change: dirty, and nothing is sent until the save", async () => {
+		const { editor, client } = await withSeries();
+		editor().setBacklink("series", pick);
+		expect(editor().saveStatus).toBe("dirty");
+		expect(editor().hasUnsavedChanges).toBe(true);
+		expect(editor().getSnapshot().hasUnsavedChanges).toBe(true);
+		expect(client.update).not.toHaveBeenCalled();
+		// Taking the pick back leaves nothing to save.
+		editor().setBacklink("series", null);
+		expect(editor().saveStatus).toBe("saved");
+		expect(editor().hasUnsavedChanges).toBe(false);
+	});
+
+	it("WRITE-W7 the save writes the picks to the series after the entry, and a save with only picks does not send the entry", async () => {
+		const { editor, client, records } = await withSeries();
+		editor().setForm({ title: "가" });
+		editor().setBacklink("series", pick);
+		expect((await editor().save()).ok).toBe(true);
+		expect(client.update.mock.calls.map(([id]) => id)).toEqual(["entry-1", "s2", "s1"]);
+		// Added to the end of one series; taken out of the other.
+		expect(records.s2?.working.metadata.itemIds).toEqual(["other", "entry-1"]);
+		expect(records.s1?.working.metadata.itemIds).toEqual(["other"]);
+		expect(editor().backlinks).toEqual({});
+		expect(editor().saveStatus).toBe("saved");
+
+		client.update.mockClear();
+		editor().setBacklink("series", { add: [], remove: ["s2"] });
+		const result = await editor().save();
+		expect(result.ok && result.value.changed).toBe(true);
+		expect(client.update.mock.calls.map(([id]) => id)).toEqual(["s2"]);
+		expect(editor().hasUnsavedChanges).toBe(false);
+	});
+
+	it("WRITE-W7 a pick the save could not write is dropped with its reason, and the entry stays saved", async () => {
+		const { editor, client } = await withSeries();
+		editor().setForm({ title: "가" });
+		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		const write = client.update.getMockImplementation();
+		client.update.mockImplementation(async (id, input) => {
+			if (id === "s2" || !write) throw serverError();
+			return write(id, input);
+		});
+		expect((await editor().save()).ok).toBe(true);
+		expect(editor().backlinks).toEqual({});
+		expect(editor().backlinkErrors.series).toBe("server error");
+		expect(editor().saveStatus).toBe("saved");
+		// A new pick clears the reason.
+		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		expect(editor().backlinkErrors).toEqual({});
+	});
+
+	it("WRITE-W7 a retry after a failed save writes the picks with the entry", async () => {
+		const { editor, client, records } = await withSeries();
+		editor().setForm({ title: "가" });
+		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		client.update.mockRejectedValueOnce(serverError());
+		expect((await editor().save()).ok).toBe(false);
+		expect(editor().backlinks.series).toBeDefined();
+		expect((await editor().retry()).ok).toBe(true);
+		expect(records.s2?.working.metadata.itemIds).toEqual(["other", "entry-1"]);
+		expect(editor().hasUnsavedChanges).toBe(false);
+	});
+
+	it("WRITE-W7 a translation's pick puts the original into the series", async () => {
+		const translation = { ...ENTRY, id: "entry-en", translationGroupId: "entry-1" };
+		const { editor, records } = await opened({ server: translation, others: { s2: series("s2", []) } });
+		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		await editor().save();
+		expect(records.s2?.working.metadata.itemIds).toEqual(["entry-1"]);
+	});
+
+	it("WRITE-W7 a status change waits for unsaved picks, and reload drops them", async () => {
+		const { editor, client } = await withSeries();
+		editor().setBacklink("series", pick);
+		const archived = await editor().changeStatus("archive");
+		expect(!archived.ok && archived.error.code).toBe("invalid_state");
+		await editor().reload();
+		expect(editor().backlinks).toEqual({});
+		expect(editor().hasUnsavedChanges).toBe(false);
+		expect(client.update).not.toHaveBeenCalled();
 	});
 });
