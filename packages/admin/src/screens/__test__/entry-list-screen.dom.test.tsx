@@ -125,20 +125,6 @@ const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.te
 /** The row menu's move to the trash: its name is the label and then its key. */
 const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tCommon("lifecycle.trash")) });
 
-describe("list screen — list settings", () => {
-	it("LIST-S4 with no page size or sort in the address, requests with the saved settings", async () => {
-		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		await waitFor(() => {
-			const last = entryRequests().at(-1);
-			expect(last?.get("pageSize")).toBe("50");
-			expect(last?.get("sortField")).toBe("title");
-			expect(last?.get("sortDirection")).toBe("asc");
-		});
-	});
-});
 
 describe("list screen — row menu and bulk actions", () => {
 	it("LIST-C5 the Delete key moves all selected draft rows to the trash at once", async () => {

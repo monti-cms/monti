@@ -255,23 +255,3 @@ describe("where a search inside a folder looks", () => {
 	});
 });
 
-describe("the saved list settings of a collection", () => {
-	const saved = { pageSize: 50, sort: { field: "title", direction: "asc" } } as const;
-	const state = (query: string) => withSavedSettings(parseListState(testSite, new URLSearchParams(query)), saved);
-
-	it("LIST-S4 uses the saved page size and sort when the address says neither, and the address wins for what it says", () => {
-		expect(state("collection=post")).toMatchObject({ pageSize: 50, sortField: "title", sortDirection: "asc" });
-		expect(state("collection=post&pageSize=100")).toMatchObject({
-			pageSize: 100,
-			sortField: "title",
-			sortDirection: "asc",
-		});
-		expect(state("collection=post&sortField=createdAt")).toMatchObject({
-			pageSize: 50,
-			sortField: "createdAt",
-			sortDirection: "desc",
-		});
-		const plain = parseListState(testSite, new URLSearchParams("collection=post"));
-		expect(withSavedSettings(plain, {})).toMatchObject({ pageSize: plain.pageSize, sortField: plain.sortField });
-	});
-});

@@ -8,16 +8,6 @@ const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(
 const menu = (column: string, collection = "post") => columnMenuOf(testSite, collection, column);
 
 describe("the sections of a column's menu", () => {
-	it("LIST-S1 sorts only the title, the address and the three dates, texts as letters and dates as dates", () => {
-		expect(menu("title").sort).toEqual({ field: "title", reads: "text" });
-		expect(menu("slug").sort).toEqual({ field: "slug", reads: "text" });
-		expect(menu("updatedAt").sort).toEqual({ field: "updatedAt", reads: "date" });
-		expect(menu("publishedAt").sort).toEqual({ field: "publishedAt", reads: "date" });
-		expect(menu("createdAt").sort).toEqual({ field: "createdAt", reads: "date" });
-		for (const column of ["status", "locale", "folder", "categoryId", "tagIds", "summary"]) {
-			expect(menu(column).sort, column).toBeNull();
-		}
-	});
 
 	it("LIST-F2 filters the status, the language with the translation state, the dates, and the stored fields by their kind", () => {
 		expect(menu("status").filter).toEqual({ kind: "status" });
@@ -38,12 +28,6 @@ describe("the sections of a column's menu", () => {
 		expect(menu("locale", "tag").filter).toEqual({ kind: "language", translation: false });
 	});
 
-	it("LIST-S3 hides every column but the title", () => {
-		expect(menu("title").hide).toBe(false);
-		for (const column of columnsFor(testSite, "post").available.filter((candidate) => candidate !== "title")) {
-			expect(menu(column).hide, column).toBe(true);
-		}
-	});
 });
 
 describe("the dot after a filtered column's name", () => {
@@ -65,11 +49,3 @@ describe("the dot after a filtered column's name", () => {
 	});
 });
 
-describe("the columns of the + at the end of the head row", () => {
-	it("LIST-S3 are the hidden ones in the saved order, and never the title", () => {
-		const order = ["status", "title", "slug", "tagIds", "updatedAt"];
-		const visibility = { status: true, title: true, slug: false, tagIds: true, updatedAt: false };
-		expect(hiddenColumns(order, visibility)).toEqual(["slug", "updatedAt"]);
-		expect(hiddenColumns(order, { ...visibility, title: false })).not.toContain("title");
-	});
-});

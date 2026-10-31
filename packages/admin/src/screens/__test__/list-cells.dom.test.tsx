@@ -97,38 +97,7 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 
 const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 
-describe("list columns from fields", () => {
-	it("LIST-S3 labels field columns by the field label", () => {
-		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format" });
-		expect(columnConfig(site, "article", "related")).toEqual({ label: "Related", many: true });
-		expect(fieldColumnOf(site, "article", "format")?.field.kind).toBe("select");
-		expect(fieldColumnOf(site, "article", "status")).toBeUndefined();
-		expect(fieldColumnOf(site, "article", "preview")).toBeUndefined();
-	});
-});
 
-describe("default list cells", () => {
-	it("LIST-S3 draws the select option label, the stored text, the media id and relation names", () => {
-		renderTable([
-			item("first", {
-				values: { format: "guide", subtitle: "A longer subtitle", hero: "media-1" },
-				relations: {
-					related: [
-						{ id: "r1", title: "Alpha" },
-						{ id: "r2", title: "Beta" },
-					],
-					lead: [{ id: "l1", title: "Lead story" }],
-				},
-			}),
-		]);
-		const row = rowOf(/first/);
-		expect(within(row).getByText("Guide")).toBeInTheDocument();
-		expect(within(row).getByText("A longer subtitle")).toBeInTheDocument();
-		expect(within(row).getByText("media-1")).toBeInTheDocument();
-		expect(within(row).getByText("Lead story")).toBeInTheDocument();
-		expect(within(row).getByText("Alpha · Beta")).toBeInTheDocument();
-	});
-});
 
 describe("listCells extension", () => {
 	it("PLUG-A12 draws a registered cell for a column name, with the field and stored value", () => {

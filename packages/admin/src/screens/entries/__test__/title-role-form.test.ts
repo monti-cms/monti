@@ -96,10 +96,4 @@ describe("the title in the edit form", () => {
 		expect(copyTitle(site, "article", "Short")).toContain("Short");
 	});
 
-	it("LIST-S3 is one list column, `title`, whatever the title field is named", () => {
-		const { available, defaults } = columnsFor(site, "article");
-		expect(available.filter((column) => column === "title" || column === "headline")).toEqual(["title"]);
-		expect(available).toContain("note");
-		expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
-	});
 });

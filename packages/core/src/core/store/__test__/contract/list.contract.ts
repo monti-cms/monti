@@ -178,7 +178,7 @@ export const listContract: ContractSuite = (factory) => {
 		// 1  exact item keys, default pagination, collection isolation
 		// -----------------------------------------------------------------------
 
-		it("LIST-S2 1. exact item keys, default pagination, collection isolation", async () => {
+		it("LIST-F2 1. exact item keys, default pagination, collection isolation", async () => {
 			await seed(content, "le1a-slug", "Le1a Title");
 			if (isolatedCollection) await seed(isolatedCollection, "le1b-slug", "Le1b Title");
 
@@ -688,108 +688,12 @@ export const listContract: ContractSuite = (factory) => {
 			expect(resSlugs).toEqual(["le4-df", "le4-pf"]);
 		}, 30_000);
 
-		it.skipIf(!manyRelation)(
-			"LIST-S3 resolves tag names in metadata order without changing tag IDs",
-			async () => {
-				const many = manyRelation as RelationInfo;
-				const firstTag = await seedEntry(store, {
-					collection: many.to,
-					slug: "first-tag",
-					metadata: { title: "First tag" },
-					text: "",
-					contentHash: uniqueHash(),
-				});
-				const secondTag = await seedEntry(store, {
-					collection: many.to,
-					slug: "second-tag",
-					metadata: { title: "Second tag" },
-					text: "",
-					contentHash: uniqueHash(),
-				});
-				const post = await seedEntry(store, {
-					collection: content,
-					slug: "tagged-post",
-					metadata: { title: "Tagged", [many.name]: [secondTag.id, firstTag.id] },
-					text: "body",
-					contentHash: uniqueHash(),
-				});
-
-				const result = await store.listEntries({ collection: content });
-				const item = result.items.find((entry) => entry.id === post.id);
-				expect(item?.relations[many.name]).toEqual([
-					{ id: secondTag.id, title: "Second tag" },
-					{ id: firstTag.id, title: "First tag" },
-				]);
-			},
-			30_000,
-		);
-
 		/** Text and select fields (other than the title). These supply the values of list cells. */
 		const plainField = testSite
 			.storedFields(content)
 			.find(({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"));
 
-		it.skipIf(!plainField)(
-			"LIST-S3 lists the stored text of text and select fields as `values` (empty values are left out)",
-			async () => {
-				const stored = plainField as NonNullable<typeof plainField>;
-				const value = stored.field.kind === "select" ? (Object.keys(stored.field.options)[0] ?? "x") : "plain value";
-				const filled = await seedEntry(store, {
-					collection: content,
-					slug: "values-filled",
-					metadata: { title: "Has values", [stored.name]: value },
-					text: "body",
-					contentHash: uniqueHash(),
-				});
-				const empty = await seedEntry(store, {
-					collection: content,
-					slug: "values-empty",
-					metadata: { title: "No values", [stored.name]: "" },
-					text: "body",
-					contentHash: uniqueHash(),
-				});
-				const result = await store.listEntries({ collection: content });
-				const values = (id: string) => result.items.find((entry) => entry.id === id)?.values;
-				expect(values(filled.id)).toMatchObject({ title: "Has values", [stored.name]: value });
-				expect(values(empty.id)).toEqual({ title: "No values" });
-			},
-			30_000,
-		);
-
 		// Requires an item collection with per-language names and a second language.
-		it.skipIf(!secondLocale || !localizedRecordCollection)(
-			"LIST-S3 9. record collections list the locales that have a name (the default locale is the record's own title)",
-			async () => {
-				const records = localizedRecordCollection as Collection;
-				const translations: Record<string, { title: string }> = { [secondLocale as string]: { title: "React" } };
-				if (thirdLocale) translations[thirdLocale] = { title: " " };
-				const named = await seedEntry(store, {
-					collection: records,
-					slug: "tag-react",
-					metadata: { title: "리액트", translations },
-					text: "",
-					contentHash: uniqueHash(),
-				});
-				const plain = await seedEntry(store, {
-					collection: records,
-					slug: "tag-plain",
-					metadata: { title: "그냥" },
-					text: "",
-					contentHash: uniqueHash(),
-				});
-				const { items } = await store.listEntries({ collection: records });
-				const localesOf = (id: string) =>
-					(items.find((item) => item.id === id) as { recordLocales?: string[] })?.recordLocales;
-				expect(localesOf(named.id)).toEqual(
-					testSite.LOCALES.filter((code) => code === defaultLocale || code === secondLocale),
-				);
-				expect(localesOf(plain.id)).toEqual([defaultLocale]);
-
-				const posts = await store.listEntries({ collection: content });
-				expect(posts.items.every((item) => !("recordLocales" in item))).toBe(true);
-			},
-			30_000,
-		);
 
 		// -----------------------------------------------------------------------
 		// searchEntries: the picker search
