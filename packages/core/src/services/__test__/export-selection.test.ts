@@ -80,7 +80,7 @@ const makeSnapshot = (): ExportSnapshot => {
 const idsOf = (snapshot: ExportSnapshot) => snapshot.entries.map((entry) => entry.id).sort();
 
 describe("planExport", () => {
-	it("without ids, a backup is the whole site and the summary counts all of it", () => {
+	it("DATA-B1 without ids, a backup is the whole site and the summary counts all of it", () => {
 		const snapshot = makeSnapshot();
 		const plan = planExport(snapshot, { scope: "admin" });
 
@@ -96,7 +96,7 @@ describe("planExport", () => {
 		});
 	});
 
-	it("a selection is always expanded to the whole translation groups of the entries", () => {
+	it("DATA-B4 a selection is always expanded to the whole translation groups of the entries", () => {
 		const plan = planExport(makeSnapshot(), { scope: "admin", ids: [TRANSLATION_ID] });
 
 		// Asking for a translation brings the source and every other member of the group, and nothing of other groups.
@@ -106,7 +106,7 @@ describe("planExport", () => {
 		expect(plan.selection).toEqual([TRANSLATION_ID]);
 	});
 
-	it("a selection that is a whole group adds nothing, and repeated ids count once", () => {
+	it("DATA-B4 a selection that is a whole group adds nothing, and repeated ids count once", () => {
 		const plan = planExport(makeSnapshot(), {
 			scope: "admin",
 			ids: [POST_ID, TRANSLATION_ID, DRAFT_TRANSLATION_ID, POST_ID],
@@ -116,7 +116,7 @@ describe("planExport", () => {
 		expect(plan.selection).toEqual([POST_ID, TRANSLATION_ID, DRAFT_TRANSLATION_ID]);
 	});
 
-	it("a selection holds only what its entries use, and no templates or preferences", () => {
+	it("DATA-B4 a selection holds only what its entries use, and no templates or preferences", () => {
 		const plan = planExport(makeSnapshot(), { scope: "admin", ids: [POST_ID] });
 
 		// The folder the post sits in, with its parent; not the folder of nobody.
@@ -134,13 +134,13 @@ describe("planExport", () => {
 		expect(plan.summary).toMatchObject({ templates: 0, folders: 2, addresses: 2, media: 2 });
 	});
 
-	it("a selection of an entry that uses nothing holds no folders, addresses or media", () => {
+	it("DATA-B4 a selection of an entry that uses nothing holds no folders, addresses or media", () => {
 		const plan = planExport(makeSnapshot(), { scope: "admin", ids: [ARCHIVED_ID] });
 
 		expect(plan.summary).toMatchObject({ entries: 1, folders: 0, addresses: 0, media: 0, templates: 0 });
 	});
 
-	it("ids that match no entry are counted, not hidden", () => {
+	it("DATA-B4 ids that match no entry are counted, not hidden", () => {
 		const plan = planExport(makeSnapshot(), {
 			scope: "admin",
 			ids: [DRAFT_ID, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"],
@@ -149,7 +149,7 @@ describe("planExport", () => {
 		expect(plan.summary).toMatchObject({ entries: 1, notFound: 1 });
 	});
 
-	it("a public selection holds the published members of the groups only, and says what it left out", () => {
+	it("DATA-B3 a public selection holds the published members of the groups only, and says what it left out", () => {
 		const plan = planExport(makeSnapshot(), { scope: "public", ids: [DRAFT_TRANSLATION_ID] });
 
 		expect(idsOf(plan.snapshot)).toEqual([POST_ID, TRANSLATION_ID].sort());
@@ -166,13 +166,13 @@ describe("planExport", () => {
 		expect(plan.summary.media).toBe(2);
 	});
 
-	it("a public selection of a draft holds nothing, and says why", () => {
+	it("DATA-B3 a public selection of a draft holds nothing, and says why", () => {
 		const plan = planExport(makeSnapshot(), { scope: "public", ids: [DRAFT_ID] });
 
 		expect(plan.summary).toMatchObject({ entries: 0, notPublished: 1, media: 0 });
 	});
 
-	it("the public export of the whole site counts the entries it leaves out", () => {
+	it("DATA-B3 the public export of the whole site counts the entries it leaves out", () => {
 		const snapshot = makeSnapshot();
 		const plan = planExport(snapshot, { scope: "public" });
 
@@ -193,13 +193,13 @@ describe("an archive of a selection", () => {
 		});
 	};
 
-	it("records the selection in the manifest, and null for the whole site", () => {
+	it("DATA-B4 records the selection in the manifest, and null for the whole site", () => {
 		expect(build([POST_ID]).manifest.selection).toEqual({ ids: [POST_ID] });
 		expect(build(undefined).manifest.selection).toBeNull();
 		expect(build(undefined).manifest.notWritten).toEqual([]);
 	});
 
-	it("holds the group's entries and the files its summary counted", () => {
+	it("DATA-B4 holds the group's entries and the files its summary counted", () => {
 		const plan = planExport(makeSnapshot(), { scope: "admin", ids: [TRANSLATION_ID] });
 		const archive = build([TRANSLATION_ID]);
 		const paths = readZipArchive(archive.zip).map((item) => item.path);
@@ -219,7 +219,7 @@ describe("an archive of a selection", () => {
 		});
 	});
 
-	it("a public selection agrees with its summary", () => {
+	it("DATA-B4 a public selection agrees with its summary", () => {
 		const plan = planExport(makeSnapshot(), { scope: "public", ids: [POST_ID] });
 		const archive = build([POST_ID], "public");
 

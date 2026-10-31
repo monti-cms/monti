@@ -87,7 +87,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		it("reflects entries with their working and published bodies", async () => {
+		it("DATA-B1 reflects entries with their working and published bodies", async () => {
 			const draft = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "export-draft",
@@ -135,7 +135,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect(exportedLive?.working.contentHash).not.toBe(exportedLive?.published?.contentHash);
 		});
 
-		it("reflects folders, media assets, templates and preferences created through the port", async () => {
+		it("DATA-B1 reflects folders, media assets, templates and preferences created through the port", async () => {
 			const folder = await store.createFolder({ collection: contentCollection, parentId: null, name: "Export folder" });
 			const filename = `export-${randomUUID()}.png`;
 			const media = await store.createMediaAsset({
@@ -171,7 +171,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect(snapshot.preferences.find((candidate) => candidate.userId === userId)?.updatedAt).toBeInstanceOf(Date);
 		});
 
-		it("reads the same snapshot, with the same entry order, while the data does not change", async () => {
+		it("DATA-B2 reads the same snapshot, with the same entry order, while the data does not change", async () => {
 			for (const slug of ["export-order-a", "export-order-b", "export-order-c"]) {
 				await seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, text: `# ${slug}` });
 			}
@@ -200,7 +200,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			await into.close();
 		});
 
-		it("puts a snapshot into an empty store as it was, and refuses a second restore", async () => {
+		it("DATA-R1 puts a snapshot into an empty store as it was, and refuses a second restore", async () => {
 			const created = await seedEntry(from.store, {
 				collection: contentCollection,
 				slug: "restore-live",
@@ -236,7 +236,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect((err as CmsError).code).toBe("conflict");
 		});
 
-		it("restores its own backup into a site whose entries were deleted for good, at the addresses they kept", async () => {
+		it("DATA-R1 restores its own backup into a site whose entries were deleted for good, at the addresses they kept", async () => {
 			const site = await factory.create();
 			try {
 				fillRequiredMetadata(site.store);
@@ -266,7 +266,7 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			}
 		});
 
-		it("restores a folder that the backup lists before its parent", async () => {
+		it("DATA-R1 restores a folder that the backup lists before its parent", async () => {
 			const source = await factory.create();
 			const target = await factory.create();
 			try {

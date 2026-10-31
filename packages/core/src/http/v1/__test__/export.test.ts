@@ -72,20 +72,20 @@ describe("GET/POST /api/monti/v1/export", () => {
 		mockReadExportSnapshot.mockResolvedValue(makeExportFixtureSnapshot());
 	});
 
-	it("returns 401 for an unauthenticated request", async () => {
+	it("DATA-B6 returns 401 for an unauthenticated request", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(401);
 		expect((await res.json()).error.code).toBe("unauthorized");
 	});
 
-	it("returns 400 for an invalid scope", async () => {
+	it("DATA-B4 returns 400 for an invalid scope", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?scope=everything"), { cms });
 		expect(res.status).toBe(400);
 		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
-	it("default (admin) export returns a ZIP with a digest header and includes draft bodies", async () => {
+	it("DATA-B1 default (admin) export returns a ZIP with a digest header and includes draft bodies", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("application/zip");
@@ -107,7 +107,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		});
 	});
 
-	it("an export with ?format= also writes every body as text in that format", async () => {
+	it("DATA-B5 an export with ?format= also writes every body as text in that format", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?format=paragraphs"), { cms });
 		expect(res.status).toBe(200);
 
@@ -121,7 +121,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect(manifest.files).toContain(DRAFT_WORKING_TEXT);
 	});
 
-	it("a public export with a format holds the published text only, with no draft text in it", async () => {
+	it("DATA-B3 a public export with a format holds the published text only, with no draft text in it", async () => {
 		const res = await POST(
 			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
@@ -141,7 +141,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect(decoder.decode(zip)).not.toContain("draft secret body");
 	});
 
-	it("an export in a format nobody provides is a 400 unknown_format, and no archive", async () => {
+	it("DATA-B5 an export in a format nobody provides is a 400 unknown_format, and no archive", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?format=hugo"), { cms });
 		expect(res.status).toBe(400);
 		expect((await res.json()).error.code).toBe("unknown_format");
@@ -151,7 +151,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect((await bad.json()).error.code).toBe("invalid_input");
 	});
 
-	it("public export excludes drafts and does not include working values", async () => {
+	it("DATA-B3 public export excludes drafts and does not include working values", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?scope=public"), { cms });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("x-monti-export-scope")).toBe("public");
@@ -168,7 +168,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect(decoder.decode(zip)).not.toContain("draft secret body");
 	});
 
-	it("POST blocks cross-origin requests with 403", async () => {
+	it("DATA-B6 POST blocks cross-origin requests with 403", async () => {
 		const res = await POST(
 			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
@@ -180,7 +180,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect(res.status).toBe(403);
 	});
 
-	it("POST accepts scope from the same origin and creates an archive", async () => {
+	it("DATA-B1 POST accepts scope from the same origin and creates an archive", async () => {
 		const res = await POST(
 			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
@@ -193,7 +193,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 		expect(res.headers.get("x-monti-export-scope")).toBe("public");
 	});
 
-	it("maps a store error to 500 and does not expose the digest header", async () => {
+	it("DATA-B6 maps a store error to 500 and does not expose the digest header", async () => {
 		mockReadExportSnapshot.mockRejectedValue(new Error("db down"));
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(500);
@@ -213,7 +213,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 				{ cms },
 			);
 
-		it("limits the archive to those entries (a comma list in the query), templates and preferences left out", async () => {
+		it("DATA-B4 limits the archive to those entries (a comma list in the query), templates and preferences left out", async () => {
 			const res = await GET(request(`http://localhost/api/monti/v1/export?ids=${POST_ID}`), { cms });
 			expect(res.status).toBe(200);
 
@@ -225,7 +225,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 			expect(decoder.decode(zip)).not.toContain("draft secret body");
 		});
 
-		it("takes an array in a POST body, and with the public scope holds published members only", async () => {
+		it("DATA-B4 takes an array in a POST body, and with the public scope holds published members only", async () => {
 			const res = await post({ ids: [POST_ID, DRAFT], scope: "public" });
 			expect(res.status).toBe(200);
 
@@ -234,7 +234,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 			expect(manifest.entries.map((entry: { id: string }) => entry.id)).toEqual([POST_ID]);
 		});
 
-		it("rejects ids that are empty or not IDs", async () => {
+		it("DATA-B4 rejects ids that are empty or not IDs", async () => {
 			for (const ids of ["", "not-an-id", `${POST_ID},nope`]) {
 				const res = await GET(request(`http://localhost/api/monti/v1/export?ids=${ids}`), { cms });
 				expect(res.status, ids).toBe(400);
@@ -242,7 +242,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 			expect((await post({ ids: [] })).status).toBe(400);
 		});
 
-		it("a whole-site export records no selection", async () => {
+		it("DATA-B4 a whole-site export records no selection", async () => {
 			const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 			const manifest = JSON.parse(findFile(new Uint8Array(await res.arrayBuffer()), "manifest.json"));
 			expect(manifest.selection).toBeNull();
@@ -250,7 +250,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 	});
 
 	describe("a body the format cannot write", () => {
-		it("keeps the body's JSON, skips its text, records it, and still exports the rest", async () => {
+		it("DATA-B5 keeps the body's JSON, skips its text, records it, and still exports the rest", async () => {
 			const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 			const res = await GET(request("http://localhost/api/monti/v1/export?format=flaky"), { cms });
 			quiet.mockRestore();
@@ -273,7 +273,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 			expect(decoder.decode(zip)).not.toContain("cannot write this one");
 		});
 
-		it("an export where every body was written says 0 and lists nothing", async () => {
+		it("DATA-B5 an export where every body was written says 0 and lists nothing", async () => {
 			const res = await GET(request("http://localhost/api/monti/v1/export?format=paragraphs"), { cms });
 			expect(res.headers.get("x-monti-export-not-written")).toBe("0");
 			const manifest = JSON.parse(findFile(new Uint8Array(await res.arrayBuffer()), "manifest.json"));
@@ -293,12 +293,12 @@ describe("GET/POST /api/monti/v1/export/summary", () => {
 		mockReadExportSnapshot.mockResolvedValue(makeExportFixtureSnapshot());
 	});
 
-	it("is admin-only", async () => {
+	it("DATA-B6 is admin-only", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 		expect((await SUMMARY(request(base), { cms })).status).toBe(401);
 	});
 
-	it("counts what the export would hold, and agrees with the archive's manifest", async () => {
+	it("DATA-B4 counts what the export would hold, and agrees with the archive's manifest", async () => {
 		const summary = await (await SUMMARY(request(base), { cms })).json();
 		const archive = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		const manifest = JSON.parse(findFile(new Uint8Array(await archive.arrayBuffer()), "manifest.json"));
@@ -314,7 +314,7 @@ describe("GET/POST /api/monti/v1/export/summary", () => {
 		});
 	});
 
-	it("takes scope, ids and format like the export, and public counts the entries it leaves out", async () => {
+	it("DATA-B4 takes scope, ids and format like the export, and public counts the entries it leaves out", async () => {
 		const res = await SUMMARY(request(`${base}?scope=public&ids=${POST_ID},${DRAFT}&format=paragraphs`), { cms });
 		expect(await res.json()).toMatchObject({ scope: "public", entries: 1, notPublished: 1, templates: 0, folders: 0 });
 
@@ -329,7 +329,7 @@ describe("GET/POST /api/monti/v1/export/summary", () => {
 		expect(await byPost.json()).toMatchObject({ entries: 1, templates: 0 });
 	});
 
-	it("takes a collection as the selection of all its entries, and an empty one exports nothing instead of the whole site", async () => {
+	it("DATA-B4 takes a collection as the selection of all its entries, and an empty one exports nothing instead of the whole site", async () => {
 		const snapshot = makeExportFixtureSnapshot();
 		const inCollection = snapshot.entries.filter((entry) => entry.collection === FIXTURE_CONTENT_COLLECTION).length;
 		expect(inCollection).toBeGreaterThan(0);
@@ -341,7 +341,7 @@ describe("GET/POST /api/monti/v1/export/summary", () => {
 		expect(none).toMatchObject({ entries: 0 });
 	});
 
-	it("rejects a format nobody provides and bad options", async () => {
+	it("DATA-B4 rejects a format nobody provides and bad options", async () => {
 		const unknown = await SUMMARY(request(`${base}?format=hugo`), { cms });
 		expect(unknown.status).toBe(400);
 		expect((await unknown.json()).error.code).toBe("unknown_format");
