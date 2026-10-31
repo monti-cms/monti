@@ -1,7 +1,7 @@
 import type { CmsNode } from "@monti-cms/core/document";
 import { renderHook, waitFor } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { buildEditorExtensions } from "../../../editor/extensions";
 import { storedToTiptap } from "../../../editor/tiptap-content";
@@ -42,7 +42,6 @@ const editors: Editor[] = [];
 afterEach(() => {
 	for (const editor of editors.splice(0)) editor.destroy();
 	document.body.innerHTML = "";
-	vi.restoreAllMocks();
 });
 
 const editorOf = (content: CmsNode[], element?: HTMLElement) => {
@@ -206,14 +205,6 @@ describe("collapsible boxes in the source", () => {
 });
 
 describe("useSourceSync", () => {
-	/** Lays every element out (jsdom has no layout): each block is shown, at a top that follows document order. */
-	const layOut = () => {
-		vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
-			() => [new DOMRect(0, 0, 100, 20)] as unknown as DOMRectList,
-		);
-		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() => new DOMRect(0, 0, 100, 20));
-	};
-
 	const mount = (translationContent: CmsNode[], sourceContent: CmsNode[]) => {
 		const scroller = document.createElement("div");
 		const pane = document.createElement("aside");
@@ -244,7 +235,6 @@ describe("useSourceSync", () => {
 	};
 
 	it("TRANS-S3 marks the block under the cursor and its source block, by link", async () => {
-		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("둘째 번역"), "t1", "b"), block(para("첫째 번역"), "t2", "a")],
 			[block(para("첫째"), "a"), block(para("둘째"), "b")],
@@ -257,7 +247,6 @@ describe("useSourceSync", () => {
 	});
 
 	it("TRANS-S3 marks the innermost paired block inside a box", async () => {
-		layOut();
 		const { source, marked, putCursorIn } = mount(
 			[block(quote(block(para("밖 번역"), "t2", "w"), block(para("안 번역"), "t3", "x")), "t1", "k")],
 			[block(quote(block(para("밖"), "w"), block(para("안"), "x")), "k")],
@@ -267,7 +256,6 @@ describe("useSourceSync", () => {
 	});
 
 	it("TRANS-S3 keeps the mark on the first part of a split block and leaves the source where it is", async () => {
-		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("첫째 번역"), "t1", "a"), block(para("둘째 번역"), "t2", "b")],
 			[block(para("첫째"), "a"), block(para("둘째"), "b")],
@@ -284,7 +272,6 @@ describe("useSourceSync", () => {
 	});
 
 	it("TRANS-S3 marks nothing for a block with no pair", async () => {
-		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("번역"), "t1", "a"), block(para("새 문단"), "t2")],
 			[block(para("원문"), "a")],

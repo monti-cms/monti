@@ -1,21 +1,11 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { CmsEditor } from "../tiptap-editor";
 
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 afterEach(cleanup);
 
 const text = (editor: Editor) => editor.getText({ blockSeparator: "|" }).replace(/\|+$/, "");

@@ -23,7 +23,7 @@
 |---|---|---|---|---|
 | L1 로직 | 코드뿐 | `foo.test.ts`, JSX가 필요하면 `foo.test.tsx`(서버에서 HTML로 렌더하기 등) | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
 | L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.int.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
-| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`(JSX가 없으면 `foo.dom.test.ts`); 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
+| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`(JSX가 없으면 `foo.dom.test.ts`); 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx`(JSX가 없으면 `foo.browser.test.ts`) | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
 | L4 흐름 | 묶은 패키지로 설치한 예제 앱, 그 데이터베이스, 브라우저 | `flows/<flow>.flow.ts` | Playwright (`pnpm flows`) | 글을 쓰고, 발행하고, 사이트에서 보기 |
 
 **동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
@@ -38,6 +38,11 @@
 **jsdom이냐 실제 브라우저냐.** jsdom은 아무것도 그리지 않는다. 모든 상자는 0 × 0이고, 캐럿에는 위치가 없으며, 포커스와 타이머는 브라우저처럼 움직이지 않는다.
 동작이 그중 어느 것에도 기대지 않는 컴포넌트(메뉴의 항목, 폼의 검증)에는 괜찮다. 위치, 크기, 포커스 이동, 편집기가 필요한 테스트는
 `*.browser.test.tsx`로 간다. jsdom을 넘기려고 크기를 지어내거나 브라우저 API를 스텁하는 테스트도 그쪽에 속한다.
+브라우저 테스트는 Vitest 브라우저 모드로 Chromium에서 돈다(Playwright, 1440 × 900, UTC). 처음 한 번 `pnpm exec playwright install chromium`으로
+브라우저를 받고, admin은 `pnpm --filter @monti-cms/admin test:browser`로 돌린다. 브라우저에서는 Node 모듈을 읽을 수 없으므로, 브라우저 테스트가 쓰는
+도우미는 서버 코드를 끌어오지 않는다(`@monti-cms/core/testing` 대신 그 모듈을 직접 가져온다). 서버 코드가 꼭 필요한 검사(가짜 API의 경로가
+코어에 있는지)는 Node에서 도는 브라우저 명령(`commands`)으로 테스트가 끝난 뒤 한다. 단축키는 `userEvent.keyboard`(`vitest/browser`)로
+실제 키를 누르고, `Mod`는 `ControlOrMeta`로 적는다. 편집기의 `Mod`는 Mac에서 ⌘, 다른 곳에서 Ctrl이다.
 
 ## 프런트엔드
 
@@ -124,8 +129,8 @@
 
 - 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
   더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
-- 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.ts(x)`와 `.browser.test.tsx`(L3). 확장자 `.tsx`는
-  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`), 한 층만 따로 돌릴 수 있다.
+- 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.ts(x)`와 `.browser.test.ts(x)`(L3). 확장자 `.tsx`는
+  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`, `admin (browser)`), 한 층만 따로 돌릴 수 있다.
 - 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
 
 ## 재기와 지키기
@@ -156,6 +161,8 @@ incremental 모드라서 결과를 패키지의 `reports/mutation/stryker-increm
 - 패키지 하나의 실행은 그 패키지의 테스트만 돌린다. 다른 패키지의 테스트가 쓰는 코드(core의 번역 구조 검사를 `mdx`가 쓰는 것처럼)는
   살아남은 바꿈을 손으로 넣어 그 패키지의 테스트로 확인한다.
 - 살아남은 바꿈에 테스트를 더했으면, 그 바꿈을 손으로 넣어 새 테스트가 실패하는지 본다. 넣어 봐도 실패하지 않으면 결과가 같은 바꿈이다.
+- Stryker는 브라우저 테스트(`*.browser.test.tsx`)를 돌리지 못한다. 그 테스트만 지키는 코드에서 살아남은 바꿈은 손으로 넣어
+  `test:browser`로 확인한다.
 
 CI는 먼저 재고 나중에 막는다. 숫자가 안정되면 관문이 된다. 순서는 금지 패턴, 그다음 불안정한 테스트 격리다.
 금지 패턴은 정비를 마친 패키지부터 막는다(`pnpm check:tests`). 그 패키지가 정비 뒤에 남긴 개수가 상한이고, 늘면 실패한다.
@@ -189,7 +196,6 @@ core 전체의 변이 점수는 재지 않는다. 한 번 재는 데 두 시간�
 
 ## 아직 없는 것
 
-- Vitest 브라우저 모드와 `*.browser.test.tsx`.
 - 7 목록 정리의 태그 합치기 L4. 합치기 기능이 생기면(#323) `flows/list.flow.ts`에 더한다.
 - core와 admin 밖의 층별 Vitest 프로젝트.
 - 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).

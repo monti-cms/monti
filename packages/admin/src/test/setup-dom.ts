@@ -8,7 +8,7 @@ configure({ asyncUtilTimeout: 10_000 });
 
 /**
  * Browser APIs missing from jsdom. The shadcn Sidebar (`useIsMobile`) uses matchMedia; cmdk and Base UI popups use ResizeObserver.
- * If a test defines them itself, that value is left as is.
+ * If a test defines them itself, that value is left as is. In a real browser (`*.browser.test.tsx`) they all exist and nothing is filled.
  */
 if (typeof window !== "undefined") {
 	if (typeof window.matchMedia !== "function") {

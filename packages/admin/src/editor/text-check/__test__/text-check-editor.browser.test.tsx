@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { Editor } from "@tiptap/core";
 import type { PluginKey } from "@tiptap/pm/state";
 import { useMemo } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
 import { docOf } from "../../../test/mdx";
@@ -20,17 +20,6 @@ const t = testSite.createTranslator(textCheckMessages);
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-
-// jsdom has no coordinates for text ranges.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 afterEach(() => {
 	cleanup();

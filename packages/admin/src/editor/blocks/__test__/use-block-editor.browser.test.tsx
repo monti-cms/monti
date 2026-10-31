@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useState } from "react";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
@@ -15,17 +15,6 @@ import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 
 afterEach(cleanup);
-
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the scroll position after the cursor moves.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 function Harness({
 	doc,

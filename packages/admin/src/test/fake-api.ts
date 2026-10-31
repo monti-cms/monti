@@ -9,8 +9,10 @@ import type {
 	MediaTrashResult,
 	PreferencesBody,
 } from "@monti-cms/core/site";
-import { type ErrorCode, errorResponse, matchRoute } from "@monti-cms/core/testing";
 import { afterEach, vi } from "vitest";
+// From its own module, not the `@monti-cms/core/testing` barrel: the barrel brings the server (Postgres, AsyncLocalStorage), which cannot load in the
+// browser tests (`*.browser.test.tsx`).
+import { type ErrorCode, errorResponse } from "../../../core/src/http/v1/error-handler";
 import type {
 	BulkItemResult,
 	EntriesPage,
@@ -27,6 +29,7 @@ import type { RestorePreview, RestoreRun, RestoreState } from "../api/restore";
 import type { SavedSchema, SchemaEditPreview, SchemaScreenState } from "../api/schema";
 import type { TrashDeleteOutcome, TrashEmptyOutcome, TrashPage, TrashRestoreOutcome } from "../api/trash";
 import type { EntryData } from "../screens/entries/entry-form";
+import { assertCoreServes } from "./core-routes";
 
 /**
  * What the admin client reads from each route, as `src/api` declares it. A handler must answer in this shape, so a fake answer that the screen code would
@@ -137,17 +140,6 @@ interface Route {
 const parse = (route: string): { method: Method; segments: string[] } => {
 	const [method, path = ""] = route.split(" ");
 	return { method: method as Method, segments: path.replace(/^\/v1/, "").split("/").filter(Boolean) };
-};
-
-/**
- * Refuses a route the core API does not serve with that method. The screen and this fake both name routes as text, so without it a route renamed or
- * removed in core would still pass every screen test and break only the real app.
- */
-const assertCoreServes = (route: string) => {
-	const { method, segments } = parse(route);
-	const core = matchRoute(["v1", ...segments.map((segment) => (segment.startsWith(":") ? "x" : segment))]);
-	if (!core) throw new Error(`fake API: the core API has no route ${route}`);
-	if (!(method in core.module)) throw new Error(`fake API: the core API answers no ${route}`);
 };
 
 /** The params of `segments` (`:id`) when the path matches, and how many segments were literal (more wins). */

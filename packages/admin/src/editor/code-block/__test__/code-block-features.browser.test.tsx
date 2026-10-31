@@ -4,7 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { withoutIds } from "../../../test/stored-doc";
@@ -38,17 +39,6 @@ const SiteTree = ({ children }: { children: ReactNode }) => <SiteProvider site={
 
 beforeEach(() => configure({}));
 afterEach(cleanup);
-
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure position after the cursor moves.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
@@ -188,7 +178,11 @@ describe("code block tools turned off in the site config", () => {
 	});
 
 	describe("text style shortcuts", () => {
-		const bold = (editor: Editor) => fireEvent.keyDown(editor.view.dom, { key: "b", ctrlKey: true });
+		/** ⌘B on a Mac and Ctrl+B elsewhere, as real keys. */
+		const bold = async (editor: Editor) => {
+			act(() => editor.view.focus());
+			await userEvent.keyboard("{ControlOrMeta>}b{/ControlOrMeta}");
+		};
 		const WITH_PARAGRAPH = `${CODE}\n\nbody`;
 
 		it("EDIT-C2 do not add a text style inside code when text styles are off", async () => {
@@ -197,9 +191,7 @@ describe("code block tools turned off in the site config", () => {
 			act(() => {
 				editor.commands.setTextSelection({ from: 2, to: 7 });
 			});
-			act(() => {
-				bold(editor);
-			});
+			await bold(editor);
 			expect(editor.isActive("bold")).toBe(false);
 		});
 
@@ -210,9 +202,7 @@ describe("code block tools turned off in the site config", () => {
 				editor.commands.setTextSelection({ from: 1, to: 5 });
 			});
 			expect(editor.isActive("bold")).toBe(true);
-			act(() => {
-				bold(editor);
-			});
+			await bold(editor);
 			expect(editor.isActive("bold")).toBe(false);
 		});
 	});
