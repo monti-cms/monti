@@ -6,12 +6,12 @@ import { bodyFromMdx, readSamples, renderFixture } from "../testing";
 describe("renderMdx: sample posts", () => {
 	const samples = readSamples().filter(({ mdx }) => bodyFromMdx(testSite, mdx).doc);
 
-	it("has posts that are stored as documents", () => {
+	it("FMT-P2 has posts that are stored as documents", () => {
 		expect(samples.length).toBeGreaterThan(0);
 	});
 
 	for (const { name, mdx } of samples) {
-		it(`${name} renders, and its table of contents links to its headings`, async () => {
+		it(`FMT-P2 ${name} renders, and its table of contents links to its headings`, async () => {
 			const rendered = await renderFixture(mdx, { site: testSite });
 			// A block the site draws with its own component (a diagram) has no component here and is reported as unknown; nothing else may be.
 			for (const node of rendered.unknown) expect(node.type).toBe("codeBlock");

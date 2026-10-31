@@ -3,7 +3,7 @@ import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";
 
 describe("MDX Image Component Roundtrip & Conversion", () => {
-	it("parses <Image mediaId='123' alt='Test' width='60%' align='center' caption='Cap' /> into image node and serializes both mediaId and src", () => {
+	it("FMT-R2 parses <Image mediaId='123' alt='Test' width='60%' align='center' caption='Cap' /> into image node and serializes both mediaId and src", () => {
 		const mdx = `<Image mediaId="123e4567-e89b-12d3-a456-426614174000" src="https://media.example.com/pic.png" alt="Test Image" width="60%" align="center" caption="My caption" />\n`;
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);
@@ -26,7 +26,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized).toContain('caption="My caption"');
 	});
 
-	it("preserves standard markdown image ![alt](src) when no extra props exist", () => {
+	it("FMT-R2 preserves standard markdown image ![alt](src) when no extra props exist", () => {
 		const mdx = `![Simple alt](https://example.com/pic.png)\n`;
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);
@@ -40,7 +40,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized.trim()).toBe("![Simple alt](https://example.com/pic.png)");
 	});
 
-	it("round-trips the crop and rotate attributes of an Image element", () => {
+	it("FMT-R2 round-trips the crop and rotate attributes of an Image element", () => {
 		const mdx = '<Image crop="10,20,50,40" rotate="90" src="https://example.com/pic.png" />\n';
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);
@@ -55,7 +55,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized).toContain('rotate="90"');
 	});
 
-	it("does not store default values (rotate=0, full crop)", () => {
+	it("FMT-R2 does not store default values (rotate=0, full crop)", () => {
 		const mdx = '<Image crop="0,0,100,100" rotate="0" src="https://example.com/pic.png" />\n';
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);
@@ -67,7 +67,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		expect(serialized.trim()).toBe("![](https://example.com/pic.png)");
 	});
 
-	it("keeps the title in the directive and round-trips it when crop/rotate is applied to an image with a title", () => {
+	it("FMT-R2 keeps the title in the directive and round-trips it when crop/rotate is applied to an image with a title", () => {
 		const mdx = '![설명](https://example.com/pic.png "내 제목")\n';
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);

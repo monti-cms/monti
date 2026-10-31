@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { normalizeChartDsl, parseChartDsl } from "../dsl";
 
 describe("parseChartDsl", () => {
-	it("parses and normalizes bar chart DSL", () => {
+	it("BLOCK-R2 parses and normalizes bar chart DSL", () => {
 		const source = [
 			"chart bar",
 			"x month",
@@ -56,7 +56,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("hides the legend for a single-series line chart", () => {
+	it("BLOCK-R2 hides the legend for a single-series line chart", () => {
 		const source = [
 			"chart line",
 			"x month",
@@ -88,7 +88,7 @@ describe("parseChartDsl", () => {
 		).toBe(false);
 	});
 
-	it("parses pie chart DSL and assigns colors automatically", () => {
+	it("BLOCK-R2 parses pie chart DSL and assigns colors automatically", () => {
 		const source = [
 			"chart pie",
 			"label browser",
@@ -116,12 +116,12 @@ describe("parseChartDsl", () => {
 		]);
 	});
 
-	it("returns an error for an unknown chart type", () => {
+	it("BLOCK-R2 returns an error for an unknown chart type", () => {
 		const parsed = parseChartDsl(["chart radar", "data", "a", "b"].join("\n"));
 		expect(parsed.errors).toEqual([{ line: 1, code: "unsupported_type", values: { type: "radar" } }]);
 	});
 
-	it("returns an error when a series color token is out of the allowed range", () => {
+	it("BLOCK-R2 returns an error when a series color token is out of the allowed range", () => {
 		const parsed = parseChartDsl(
 			["chart area", "x month", "series views | 조회수 | blue", "", "data", "month | views", "Jan | 1200"].join("\n"),
 		);
@@ -129,7 +129,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "series_color" }]);
 	});
 
-	it("returns a normalization error when the data header and series keys do not match", () => {
+	it("BLOCK-R2 returns a normalization error when the data header and series keys do not match", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart bar", "x month", "series views | 조회수 | chart-1", "", "data", "month | likes", "Jan | 1200"].join(
@@ -141,7 +141,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 6, code: "series_header_keys" }]);
 	});
 
-	it("includes y-range in the normalized result", () => {
+	it("BLOCK-R2 includes y-range in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -165,7 +165,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("includes hide-grid in the normalized result", () => {
+	it("BLOCK-R2 includes hide-grid in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -189,7 +189,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("includes hide-y-axis in the normalized result", () => {
+	it("BLOCK-R2 includes hide-y-axis in the normalized result", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[
@@ -213,7 +213,7 @@ describe("parseChartDsl", () => {
 		});
 	});
 
-	it("returns an error when a numeric field has a non-numeric value", () => {
+	it("BLOCK-R2 returns an error when a numeric field has a non-numeric value", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart pie", "label browser", "value visitors", "", "data", "browser | visitors", "Chrome | many"].join("\n"),
@@ -223,7 +223,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_invalid", values: { field: "visitors" } }]);
 	});
 
-	it("returns an error for an empty numeric cell in a cartesian chart", () => {
+	it("BLOCK-R2 returns an error for an empty numeric cell in a cartesian chart", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart bar", "x month", "series views | 조회수 | chart-1", "", "data", "month | views", "Jan | "].join("\n"),
@@ -233,7 +233,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_empty", values: { field: "views" } }]);
 	});
 
-	it("returns an error for an empty numeric cell in a pie chart", () => {
+	it("BLOCK-R2 returns an error for an empty numeric cell in a pie chart", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				["chart pie", "label browser", "value visitors", "", "data", "browser | visitors", "Chrome | "].join("\n"),
@@ -243,7 +243,7 @@ describe("parseChartDsl", () => {
 		expect(normalized.errors).toEqual([{ line: 7, code: "number_empty", values: { field: "visitors" } }]);
 	});
 
-	it("returns an error for invalid y-range syntax", () => {
+	it("BLOCK-R2 returns an error for invalid y-range syntax", () => {
 		const parsed = parseChartDsl(
 			["chart bar", "x month", "y-range low high", "series views | 조회수 | chart-1", "", "data", "month | views"].join(
 				"\n",
@@ -253,7 +253,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "y_range_number" }]);
 	});
 
-	it("returns an error when the y-range min/max order is wrong", () => {
+	it("BLOCK-R2 returns an error when the y-range min/max order is wrong", () => {
 		const parsed = parseChartDsl(
 			["chart bar", "x month", "y-range 10 0", "series views | 조회수 | chart-1", "", "data", "month | views"].join(
 				"\n",
@@ -263,7 +263,7 @@ describe("parseChartDsl", () => {
 		expect(parsed.errors).toEqual([{ line: 3, code: "y_range_order" }]);
 	});
 
-	it("returns an error when a pie chart uses cartesian-only options", () => {
+	it("BLOCK-R2 returns an error when a pie chart uses cartesian-only options", () => {
 		const normalized = normalizeChartDsl(
 			parseChartDsl(
 				[

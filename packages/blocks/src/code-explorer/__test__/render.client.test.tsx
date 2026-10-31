@@ -70,7 +70,7 @@ const shownCode = () =>
 	);
 
 describe("code explorer view", () => {
-	it("shows the initial file, marks it selected, and keeps every panel in the DOM", () => {
+	it("BLOCK-R2 shows the initial file, marks it selected, and keeps every panel in the DOM", () => {
 		mount(FILES, 1);
 		expect(shownCode()).toEqual(["db();"]);
 		expect(item("db.ts").getAttribute("aria-selected")).toBe("true");
@@ -80,7 +80,7 @@ describe("code explorer view", () => {
 		expect(screen.getByRole("tree", { name: "Files" })).toBeInTheDocument();
 	});
 
-	it("switches the file when a file in the tree is clicked and does nothing for a file with no code", () => {
+	it("BLOCK-R2 switches the file when a file in the tree is clicked and does nothing for a file with no code", () => {
 		mount(FILES);
 		fireEvent.click(item("package.json"));
 		expect(shownCode()).toEqual(["{}"]);
@@ -91,7 +91,7 @@ describe("code explorer view", () => {
 		expect(item("notes.txt").hasAttribute("aria-selected")).toBe(false);
 	});
 
-	it("opens and closes folders with a click without changing the shown file", () => {
+	it("BLOCK-R2 opens and closes folders with a click without changing the shown file", () => {
 		mount(FILES);
 		const lib = item("lib");
 		expect(lib.getAttribute("aria-expanded")).toBe("true");
@@ -105,7 +105,7 @@ describe("code explorer view", () => {
 		expect(item("db.ts")).toBeInTheDocument();
 	});
 
-	it("has one tab stop that follows the last focused item", () => {
+	it("BLOCK-R2 has one tab stop that follows the last focused item", () => {
 		mount(FILES);
 		const stops = () => screen.getAllByRole("treeitem").filter((node) => node.tabIndex === 0);
 		expect(stops().map((node) => node.getAttribute("data-path"))).toEqual(["src/app/page.tsx"]);
@@ -113,7 +113,7 @@ describe("code explorer view", () => {
 		expect(stops().map((node) => node.getAttribute("data-path"))).toEqual(["package.json"]);
 	});
 
-	it("moves with Up, Down, Home and End over the visible items, skipping the inside of closed folders", () => {
+	it("BLOCK-R2 moves with Up, Down, Home and End over the visible items, skipping the inside of closed folders", () => {
 		mount(FILES);
 		act(() => item("page.tsx").focus());
 		const press = (key: string) => fireEvent.keyDown(document.activeElement as Element, { key });
@@ -138,7 +138,7 @@ describe("code explorer view", () => {
 		expect(document.activeElement).toBe(item("package.json"));
 	});
 
-	it("opens a folder and goes into it with Right, and closes it or goes to its folder with Left", () => {
+	it("BLOCK-R2 opens a folder and goes into it with Right, and closes it or goes to its folder with Left", () => {
 		mount(FILES);
 		const press = (key: string) => fireEvent.keyDown(document.activeElement as Element, { key });
 		act(() => item("app").focus());
@@ -162,7 +162,7 @@ describe("code explorer view", () => {
 		expect(item("app").getAttribute("aria-expanded")).toBe("false");
 	});
 
-	it("picks a file with Enter and Space and toggles a folder with them; a file with no code is skipped", () => {
+	it("BLOCK-R2 picks a file with Enter and Space and toggles a folder with them; a file with no code is skipped", () => {
 		mount(FILES);
 		const press = (key: string) => fireEvent.keyDown(document.activeElement as Element, { key });
 		act(() => item("db.ts").focus());
@@ -184,7 +184,7 @@ describe("code explorer view", () => {
 		expect(handled).toBe(true);
 	});
 
-	it("renders only the tree, with no button, when no file has code", () => {
+	it("BLOCK-R2 renders only the tree, with no button, when no file has code", () => {
 		mount([{ path: "a.ts" }, { path: "src/" }], null);
 		expect(screen.getByRole("tree")).toBeInTheDocument();
 		expect(document.querySelector("[data-code-explorer-panel]")).toBeNull();
@@ -193,7 +193,7 @@ describe("code explorer view", () => {
 		expect(document.querySelector("[data-code-explorer-panel]")).toBeNull();
 	});
 
-	it("shows the current path on the narrow screen button, which opens the list and closes it when a file is picked", () => {
+	it("BLOCK-R2 shows the current path on the narrow screen button, which opens the list and closes it when a file is picked", () => {
 		mount(FILES);
 		const toggle = screen.getByRole("button", { name: "src/app/page.tsx" });
 		const root = toggle.closest(".monti-block-code-explorer") as HTMLElement;
@@ -209,7 +209,7 @@ describe("code explorer view", () => {
 	});
 
 	describe("reveal", () => {
-		it("shows the file of the element a `cms:reveal` event comes from, and opens the folders above it", () => {
+		it("BLOCK-R2 shows the file of the element a `cms:reveal` event comes from, and opens the folders above it", () => {
 			mount(FILES);
 			fireEvent.click(item("lib"));
 			fireEvent.click(item("app"));
@@ -226,7 +226,7 @@ describe("code explorer view", () => {
 			expect(item("app").getAttribute("aria-expanded")).toBe("false");
 		});
 
-		it("is applied before the dispatch returns, so a scroll right after lands on a visible line", () => {
+		it("BLOCK-R2 is applied before the dispatch returns, so a scroll right after lands on a visible line", () => {
 			mount(FILES);
 			const line = screen.getByText("{}", { selector: ".line" });
 			expect(line.closest<HTMLElement>("[data-code-explorer-panel]")?.hidden).toBe(true);
@@ -234,7 +234,7 @@ describe("code explorer view", () => {
 			expect(line.closest<HTMLElement>("[data-code-explorer-panel]")?.hidden).toBe(false);
 		});
 
-		it("ignores events from outside the panels", () => {
+		it("BLOCK-R2 ignores events from outside the panels", () => {
 			mount(FILES);
 			act(() => {
 				item("package.json").dispatchEvent(new CustomEvent("cms:reveal", { bubbles: true }));
@@ -242,7 +242,7 @@ describe("code explorer view", () => {
 			expect(shownCode()).toEqual(["page();"]);
 		});
 
-		it("lets a code link switch to the file of its line (revealLines through the real link)", () => {
+		it("BLOCK-R2 lets a code link switch to the file of its line (revealLines through the real link)", () => {
 			vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(function (this: HTMLElement) {
 				// jsdom has no layout: a line is "rendered" only while its panel is shown.
 				return (this.closest("[hidden]") ? [] : [{}]) as unknown as DOMRectList;
@@ -273,7 +273,7 @@ describe("code explorer view", () => {
 			expect(scrolledTo).toEqual([{ text: "b();", hidden: false }]);
 		});
 
-		it("lets revealLines and revealRefText on raw elements switch the panel too", () => {
+		it("BLOCK-R2 lets revealLines and revealRefText on raw elements switch the panel too", () => {
 			HTMLElement.prototype.scrollIntoView = vi.fn();
 			mount(
 				[

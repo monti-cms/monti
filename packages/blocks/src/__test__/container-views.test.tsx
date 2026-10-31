@@ -91,7 +91,7 @@ const TABS =
 	'<Tabs defaultValue="둘">\n\n<Tab label="하나">\n\n첫째\n\n</Tab>\n\n<Tab label="둘">\n\n둘째\n\n</Tab>\n\n</Tabs>';
 
 describe("container NodeView (public look + in-place editing)", () => {
-	it("shows only the initial tab, and clicking another tab moves the cursor into its body", async () => {
+	it("BLOCK-E1 shows only the initial tab, and clicking another tab moves the cursor into its body", async () => {
 		const editor = await mount(TABS);
 		const tabs = await screen.findAllByRole("tab");
 		expect(tabs.map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
@@ -103,7 +103,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 		expect(editor.state.selection.$from.parent.textContent).toBe("첫째");
 	});
 
-	it("updates the tab name as you type and reverts on Escape", async () => {
+	it("BLOCK-E1 updates the tab name as you type and reverts on Escape", async () => {
 		const editor = await mount(TABS);
 		fireEvent.click(screen.getByRole("button", { name: tTabs("rename") }));
 		const input = await screen.findByRole("textbox", { name: tTabs("tab.name.label") });
@@ -115,7 +115,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe(tiptapToMdx(mdxToTiptap(TABS)));
 	});
 
-	it("omits the tab name when it is cleared", async () => {
+	it("BLOCK-E1 omits the tab name when it is cleared", async () => {
 		const editor = await mount(TABS);
 		fireEvent.click(screen.getByRole("button", { name: tTabs("rename") }));
 		const input = await screen.findByRole("textbox", { name: tTabs("tab.name.label") });
@@ -124,7 +124,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 		expect(tiptapToMdx(editor.getJSON())).toContain('label="둘"');
 	});
 
-	it("adds a column and removes the one with the cursor (minimum 2 columns)", async () => {
+	it("BLOCK-E1 adds a column and removes the one with the cursor (minimum 2 columns)", async () => {
 		const editor = await mount(
 			"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
 		);
@@ -138,7 +138,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 		expect(editor.state.doc.firstChild?.textContent).toBe("왼쪽오른쪽");
 	});
 
-	it("removes the callout title attribute when it is cleared", async () => {
+	it("BLOCK-E1 removes the callout title attribute when it is cleared", async () => {
 		const source = '<Callout variant="tip" title="제목">\n\n본문\n\n</Callout>';
 		const editor = await mount(source);
 		const input = screen.getByRole("textbox", { name: tCallout("title.aria") });
@@ -148,21 +148,21 @@ describe("container NodeView (public look + in-place editing)", () => {
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("title=");
 	});
 
-	it("changes the callout variant from the toolbar menu", async () => {
+	it("BLOCK-E1 changes the callout variant from the toolbar menu", async () => {
 		const editor = await mount('<Callout variant="tip">\n\n본문\n\n</Callout>');
 		fireEvent.click(screen.getByRole("button", { name: /콜아웃 종류/ }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: tCallout("option.warning") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "warning" }));
 	});
 
-	it("toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
+	it("BLOCK-E1 toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
 		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		fireEvent.click(await screen.findByRole("switch", { name: tCollapsible("defaultOpen.label") }));
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain("defaultOpen"));
 	});
 
-	it("starts closed per defaultOpen, and expanding with the arrow moves the cursor into the body", async () => {
+	it("BLOCK-E1 starts closed per defaultOpen, and expanding with the arrow moves the cursor into the body", async () => {
 		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
 		const toggle = screen.getByRole("button", { name: tCollapsible("toggle.open") });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -180,7 +180,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 });
 
 describe("column widths", () => {
-	it("equal split clears the stored widths, and adding a column resets widths to equal", async () => {
+	it("BLOCK-E1 equal split clears the stored widths, and adding a column resets widths to equal", async () => {
 		const source =
 			'<Columns widths="70,30">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>';
 		const editor = await mount(source);

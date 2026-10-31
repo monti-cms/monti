@@ -9,11 +9,11 @@ const roundTrip = (data: Record<string, CmsJsonValue>) => {
 };
 
 describe("front matter YAML", () => {
-	it("reads a flow list as a list, not as a string", () => {
+	it("FMT-R5 reads a flow list as a list, not as a string", () => {
 		expect(parseYamlMapping("tags: [a, b]\nempty: []")).toEqual({ tags: ["a", "b"], empty: [] });
 	});
 
-	it("reads block lists, nested maps, block scalars, quoted keys and anchors", () => {
+	it("FMT-R5 reads block lists, nested maps, block scalars, quoted keys and anchors", () => {
 		const raw = [
 			"tags:",
 			"  - a",
@@ -39,11 +39,11 @@ describe("front matter YAML", () => {
 		});
 	});
 
-	it("keeps dates as plain strings", () => {
+	it("FMT-R5 keeps dates as plain strings", () => {
 		expect(parseYamlMapping("date: 2026-10-07")).toEqual({ date: "2026-10-07" });
 	});
 
-	it("round-trips lists, nested maps, multi-line strings, dates and awkward strings", () => {
+	it("FMT-R5 round-trips lists, nested maps, multi-line strings, dates and awkward strings", () => {
 		const data: Record<string, CmsJsonValue> = {
 			title: "Hello: world",
 			tags: ["a", "b c", "[x]"],
@@ -57,7 +57,7 @@ describe("front matter YAML", () => {
 		expect(roundTrip(data)).toEqual(data);
 	});
 
-	it("writes simple values the way it always did", () => {
+	it("FMT-R5 writes simple values the way it always did", () => {
 		expect(serializeFrontmatter({ title: "Hello", draft: false, tags: ["a", "b"], n: 3 })).toBe(
 			"---\ntitle: Hello\ndraft: false\ntags:\n  - a\n  - b\nn: 3\n---\n",
 		);

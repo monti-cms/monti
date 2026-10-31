@@ -44,13 +44,13 @@ const type = (value: string) => fireEvent.change(textarea(), { target: { value }
 describe("the MDX source panel", () => {
 	const body = docOf(testSite, "첫째 문단\n\n둘째 문단\n");
 
-	it("shows the document as MDX text", () => {
+	it("FMT-P2 shows the document as MDX text", () => {
 		render(<MdxSourcePanel doc={body} onChange={() => {}} />);
 		expect(textarea().value).toBe(mdxOfDoc(body));
 		expect(textarea().value).toBe("첫째 문단\n\n둘째 문단\n");
 	});
 
-	it("parses what is typed in the browser and hands the document back, its blocks keeping the ids of the blocks they pair with", () => {
+	it("FMT-P2 parses what is typed in the browser and hands the document back, its blocks keeping the ids of the blocks they pair with", () => {
 		const onChange = vi.fn();
 		render(<MdxSourcePanel doc={body} onChange={onChange} />);
 		type("첫째 문단\n\n둘째 문단 고침\n\n셋째\n");
@@ -65,7 +65,7 @@ describe("the MDX source panel", () => {
 		expect(body.content.map((block) => block.id)).not.toContain(doc.content[2]?.id);
 	});
 
-	it("hands back a text it cannot read as a document that holds the text, with what was found", () => {
+	it("FMT-P2 hands back a text it cannot read as a document that holds the text, with what was found", () => {
 		const onChange = vi.fn();
 		render(<MdxSourcePanel doc={body} onChange={onChange} />);
 		const broken = "첫째 문단\n\n<Component>";
@@ -80,7 +80,7 @@ describe("the MDX source panel", () => {
 		expect(textarea().getAttribute("aria-invalid")).toBe("true");
 	});
 
-	it("keeps the text as typed while the document it hands back comes round again", () => {
+	it("FMT-P2 keeps the text as typed while the document it hands back comes round again", () => {
 		function Host() {
 			const [doc, setDoc] = useState(body);
 			return <MdxSourcePanel doc={doc} onChange={setDoc} />;
@@ -93,13 +93,13 @@ describe("the MDX source panel", () => {
 		expect(textarea().value).toBe("첫째 문단\n\n둘째 **굵게**\n");
 	});
 
-	it("shows another document when the body changes from outside (a template, the visual editor)", () => {
+	it("FMT-P2 shows another document when the body changes from outside (a template, the visual editor)", () => {
 		const { rerender } = render(<MdxSourcePanel doc={body} onChange={() => {}} />);
 		rerender(<MdxSourcePanel doc={docOf(testSite, "## 회고\n")} onChange={() => {}} />);
 		expect(textarea().value).toBe("## 회고\n");
 	});
 
-	it("reports what is wrong with a body that could not be read when it opens, without changing the body", () => {
+	it("FMT-P2 reports what is wrong with a body that could not be read when it opens, without changing the body", () => {
 		const onChange = vi.fn();
 		const unreadable = unparsedDocument("# 제목\n\n<Component>", null, "mdx");
 		render(<MdxSourcePanel doc={unreadable} onChange={onChange} />);
@@ -111,7 +111,7 @@ describe("the MDX source panel", () => {
 		expect(issues[0]?.code).toBe("mdx_error");
 	});
 
-	it("does not edit a body that cannot be edited, and tells the screen about IME composition", () => {
+	it("FMT-P2 does not edit a body that cannot be edited, and tells the screen about IME composition", () => {
 		const onComposing = vi.fn();
 		render(<MdxSourcePanel doc={body} onChange={() => {}} readOnly onComposing={onComposing} />);
 		expect(textarea().readOnly).toBe(true);
@@ -120,7 +120,7 @@ describe("the MDX source panel", () => {
 		expect(onComposing.mock.calls).toEqual([[true], [false]]);
 	});
 
-	it("brings the caret to the start of a block when asked", async () => {
+	it("FMT-P2 brings the caret to the start of a block when asked", async () => {
 		const { rerender } = render(<MdxSourcePanel doc={body} onChange={() => {}} />);
 		rerender(<MdxSourcePanel doc={body} onChange={() => {}} focusBlock={body.content[1]?.id} />);
 		await waitFor(() => expect(document.activeElement).toBe(textarea()));
@@ -128,7 +128,7 @@ describe("the MDX source panel", () => {
 	});
 
 	describe("lineOfBlock", () => {
-		it("is the line of the text a top-level block starts on, and for a block inside another, the line of the one that holds it", () => {
+		it("FMT-P2 is the line of the text a top-level block starts on, and for a block inside another, the line of the one that holds it", () => {
 			const doc = docOf(testSite, "# 제목\n\n> 인용\n> 둘째 줄\n\n마지막\n");
 			const lines = mdxOfDoc(doc).split("\n");
 			for (const block of doc.content) {
@@ -147,7 +147,7 @@ describe("the MDX source panel", () => {
 			);
 		});
 
-		it("is null for a block the document does not have, and the first line for a body that could not be read", () => {
+		it("FMT-P2 is null for a block the document does not have, and the first line for a body that could not be read", () => {
 			expect(lineOfBlock(docOf(testSite, "문단"), "zzzzzzzz", mdxBrowserFormat)).toBeNull();
 			expect(lineOfBlock(unparsedDocument("<A>", null, "mdx"), "zzzzzzzz", mdxBrowserFormat)).toBe(1);
 		});
@@ -179,20 +179,20 @@ describe("internal links in the source text", () => {
 		ID = `6f1c0b0e-3c1d-4a0e-9f5a-${String(counter).padStart(12, "0")}`;
 	});
 
-	it("are written with the entry's address once it is looked up, not as entry:<id>", async () => {
+	it("FMT-P2 are written with the entry's address once it is looked up, not as entry:<id>", async () => {
 		answerFound();
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
 		await waitFor(() => expect(textarea().value).toContain(`[상세 글](${PATH})`));
 		expect(textarea().value).not.toContain("entry:");
 	});
 
-	it("keep entry:<id> when the entry cannot be resolved", async () => {
+	it("FMT-P2 keep entry:<id> when the entry cannot be resolved", async () => {
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
 		await waitFor(() => expect(api.sent("GET /v1/entries/:id").length).toBeGreaterThan(0));
 		expect(textarea().value).toContain(`(entry:${ID})`);
 	});
 
-	it("an address typed for the entry already linked stays that link; any other typed path stays an href for the server", async () => {
+	it("FMT-P2 an address typed for the entry already linked stays that link; any other typed path stays an href for the server", async () => {
 		answerFound();
 		const onChange = vi.fn();
 		render(<MdxSourcePanel doc={linked()} onChange={onChange} />);
@@ -235,21 +235,21 @@ describe("registering the source panel and the format", () => {
 		</SiteWrapper>
 	);
 
-	it("the mdx admin components register one source panel for mdx, which is MdxSourcePanel", () => {
+	it("FMT-P2 the mdx admin components register one source panel for mdx, which is MdxSourcePanel", () => {
 		const { result } = renderHook(() => useAdminComponents(), { wrapper: MdxWrapper });
 		const panels = result.current.sourcePanels?.filter((panel) => panel.format === "mdx") ?? [];
 		expect(panels).toHaveLength(1);
 		expect(panels[0]?.Panel).toBe(MdxSourcePanel);
 	});
 
-	it("the mdx admin components register the mdx format, found by name and absent without the provider", () => {
+	it("FMT-P2 the mdx admin components register the mdx format, found by name and absent without the provider", () => {
 		expect(renderHook(() => useFormat("mdx"), { wrapper: SiteWrapper }).result.current).toBeUndefined();
 		const { result } = renderHook(() => useFormat("mdx"), { wrapper: MdxWrapper });
 		expect(result.current?.name).toBe("mdx");
 		expect(renderHook(() => useFormat("markdown"), { wrapper: MdxWrapper }).result.current).toBeUndefined();
 	});
 
-	it("the registered format reads with the syntax extensions of mdx({ syntax })", () => {
+	it("FMT-P2 the registered format reads with the syntax extensions of mdx({ syntax })", () => {
 		const syntaxSite = createSite(defineSite({ ...testConfig, plugins: [mdx({ syntax: [atNotation] })] } as never));
 		const Wrapper = ({ children }: { children: ReactNode }) => (
 			<SiteProvider site={syntaxSite}>
@@ -265,7 +265,7 @@ describe("registering the source panel and the format", () => {
 		expect(JSON.stringify(plain.ok ? plain.doc : null)).toContain("@@word@@");
 	});
 
-	it("adds its panel to the ones other providers registered", () => {
+	it("FMT-P2 adds its panel to the ones other providers registered", () => {
 		const Other = () => null;
 		const { result } = renderHook(() => useAdminComponents(), {
 			wrapper: ({ children }) => (

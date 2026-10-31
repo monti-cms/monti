@@ -70,7 +70,7 @@ describe("AI connection settings", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("saves a typed key into the key store, keeps only its id in the connection, and gives the screen the last four characters", async () => {
+	it("KEY-A1 saves a typed key into the key store, keeps only its id in the connection, and gives the screen the last four characters", async () => {
 		const store = memoryStore();
 		const view = await addAiProvider(testSite, store, 0, chat());
 		expect(JSON.stringify(await storedValue(store))).not.toContain("sk-chat");
@@ -119,7 +119,7 @@ describe("AI connection settings", () => {
 		expect((await store.cms.apiKeys.list())[0]?.uses).toEqual([]);
 	});
 
-	it("names a second typed key after its connection with a number when the name is taken, and lets connections share a saved key", async () => {
+	it("KEY-A2 names a second typed key after its connection with a number when the name is taken, and lets connections share a saved key", async () => {
 		const store = memoryStore();
 		await addAiProvider(testSite, store, 0, chat());
 		const second = await addAiProvider(
@@ -141,7 +141,7 @@ describe("AI connection settings", () => {
 		expect((await store.cms.apiKeys.get(firstKey))?.uses).toHaveLength(2);
 	});
 
-	it("keeps several connections, keeps the key when none is sent, and does not carry the key to a different URL", async () => {
+	it("KEY-A2 keeps several connections, keeps the key when none is sent, and does not carry the key to a different URL", async () => {
 		const store = memoryStore();
 		await addAiProvider(testSite, store, 0, chat());
 		const added = await addAiProvider(
@@ -170,7 +170,7 @@ describe("AI connection settings", () => {
 		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "conflict" });
 	});
 
-	it("removes a key it just saved when the connection cannot be saved (version conflict)", async () => {
+	it("KEY-A2 removes a key it just saved when the connection cannot be saved (version conflict)", async () => {
 		const store = memoryStore();
 		await addAiProvider(testSite, store, 0, chat());
 		await expect(
@@ -181,7 +181,7 @@ describe("AI connection settings", () => {
 		expect(await store.cms.apiKeys.list()).toHaveLength(1);
 	});
 
-	it("deleting a connection frees its key's usage; the key itself stays in the store", async () => {
+	it("KEY-A2 deleting a connection frees its key's usage; the key itself stays in the store", async () => {
 		const store = memoryStore();
 		const view = await addAiProvider(testSite, store, 0, chat());
 		await removeAiProvider(testSite, store, 1, view.providers[0]?.id ?? "");
@@ -225,7 +225,7 @@ describe("AI connection settings", () => {
 		expect((await getAiSettingsView(testSite, store)).providers[0]?.key).toBeNull();
 	});
 
-	it("replacing a key's value changes what every connection that uses it sends", async () => {
+	it("KEY-A2 replacing a key's value changes what every connection that uses it sends", async () => {
 		const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => Response.json({ answers: {} }));
 		vi.stubGlobal("fetch", fetchMock);
 		const store = memoryStore();
@@ -271,7 +271,7 @@ describe("AI connection settings", () => {
 		expect(runtime.decider?.name).toBe("fake");
 	});
 
-	it("refuses to save a typed key when the instance has no secret, and says how to fix it", async () => {
+	it("KEY-A3 refuses to save a typed key when the instance has no secret, and says how to fix it", async () => {
 		const store = memoryStore(fakeCms());
 		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "secret_not_configured" });
 	});

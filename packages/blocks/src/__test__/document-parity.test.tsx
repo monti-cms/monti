@@ -20,7 +20,7 @@ const expectRenders = async (
 };
 
 describe("rendering of block extensions", () => {
-	it("renders every sample post without unknown nodes", async () => {
+	it("BLOCK-R1 renders every sample post without unknown nodes", async () => {
 		const samples = readSamples();
 		expect(samples.length).toBeGreaterThan(0);
 		for (const { name, mdx } of samples) {
@@ -29,7 +29,7 @@ describe("rendering of block extensions", () => {
 		}
 	});
 
-	it("renders the component showcase in every locale", async () => {
+	it("BLOCK-R1 renders the component showcase in every locale", async () => {
 		const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.mdx"), "utf8");
 		for (const locale of [undefined, "ko", "en"]) {
 			const rendered = await expectRenders(source, `showcase ${locale}`, { locale });
@@ -116,7 +116,7 @@ describe("rendering of block extensions", () => {
 	};
 
 	for (const [name, source] of Object.entries(cases)) {
-		it(`renders ${name}`, async () => {
+		it(`BLOCK-R1 renders ${name}`, async () => {
 			expect(bodyFromMdx(site, source, syntax).doc, name).not.toBeNull();
 			await expectRenders(source, name);
 		});

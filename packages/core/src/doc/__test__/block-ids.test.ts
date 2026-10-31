@@ -88,7 +88,7 @@ const idOf = (doc: StoredDocument, text: string, type = "paragraph") =>
 	blocks(doc).find((block) => block.type === type && block.text === text)?.id;
 
 describe("block ids", () => {
-	it("gives every block, and only blocks, a unique id", () => {
+	it("TRANS-B1 gives every block, and only blocks, a unique id", () => {
 		const doc = sample();
 		const all = blocks(doc);
 		expect(all.map((block) => block.type)).toEqual([
@@ -117,21 +117,21 @@ describe("block ids", () => {
 		expect(JSON.stringify(doc)).not.toMatch(/"id":"[^"]+","text"|"id":"[^"]+","type":"text"/);
 	});
 
-	it("do not change the content hash", () => {
+	it("TRANS-B1 do not change the content hash", () => {
 		const body = sample();
 		const again = sample();
 		expect(again).not.toEqual(body);
 		expect(computeContentHash({}, again)).toBe(computeContentHash({}, body));
 	});
 
-	it("are inherited from the previous version when the same content is read again", () => {
+	it("TRANS-B1 are inherited from the previous version when the same content is read again", () => {
 		const first = sample();
 		expect(sample({}, first)).toEqual(first);
 		const text = docOf("# Title\n\nOne.\n\n- a\n- b\n");
 		expect(docOf("# Title\n\nOne.\n\n- a\n- b\n", text)).toEqual(text);
 	});
 
-	it("survive an edited paragraph, an inserted block and a removed block", () => {
+	it("TRANS-B1 survive an edited paragraph, an inserted block and a removed block", () => {
 		const first = sample();
 		const edited = sample(
 			{ first: "First paragraph, edited.", afterCentered: "New paragraph.", withoutSecondItem: true },
@@ -145,7 +145,7 @@ describe("block ids", () => {
 		expect(known.has(idOf(edited, "New paragraph.") as string)).toBe(false);
 	});
 
-	it("keep the id on the first part of a split paragraph", () => {
+	it("TRANS-B1 keep the id on the first part of a split paragraph", () => {
 		const first = docOf("Alpha beta.\n\nGamma.\n");
 		const split = docOf("Alpha\n\nbeta.\n\nGamma.\n", first);
 		expect(idOf(split, "Alpha")).toBe(idOf(first, "Alpha beta."));
@@ -153,14 +153,14 @@ describe("block ids", () => {
 		expect(idOf(split, "Gamma.")).toBe(idOf(first, "Gamma."));
 	});
 
-	it("follow a moved block", () => {
+	it("TRANS-B1 follow a moved block", () => {
 		const first = docOf("One.\n\nTwo.\n\nThree.\n\nFour.\n");
 		const moved = docOf("Four.\n\nOne.\n\nTwo.\n\nThree.\n", first);
 		expect(idOf(moved, "Four.")).toBe(idOf(first, "Four."));
 		expect(idOf(moved, "Three.")).toBe(idOf(first, "Three."));
 	});
 
-	it("follow a code block moved from the middle to the front, as a paragraph does", () => {
+	it("TRANS-B1 follow a code block moved from the middle to the front, as a paragraph does", () => {
 		const first = docOf("One.\n\nTwo.\n\n```ts\nconst a = 1;\n```\n\nThree.\n");
 		const moved = docOf("```ts\nconst a = 1;\n```\n\nOne.\n\nTwo.\n\nThree.\n", first);
 		expect(idOf(moved, "const a = 1;", "codeBlock")).toBe(idOf(first, "const a = 1;", "codeBlock"));
@@ -214,7 +214,7 @@ describe("block ids", () => {
 			["reversed with others of its kind", ["B1", "B2", "B3"], ["B3", "B2", "B1"]],
 		];
 
-		it.each(reorders)("follow the block when it is %s", (_name, before, after) => {
+		it.each(reorders)("TRANS-B1 follow the block when it is %s", (_name, before, after) => {
 			const first = read(kind, before);
 			const moved = read(kind, after, first);
 			const idByLabel = (nodes: CmsNode[], labels: string[]) =>
@@ -222,7 +222,7 @@ describe("block ids", () => {
 			expect(idByLabel(moved, after)).toEqual(idByLabel(first, before));
 		});
 
-		it("give a new block a new id, and keep the others", () => {
+		it("TRANS-B1 give a new block a new id, and keep the others", () => {
 			const first = read(kind, ["P1", "B1", "P2"]);
 			const added = read(kind, ["B2", "P1", "B1", "P2"], first);
 			expect(added.slice(1).map((node) => node.id)).toEqual(first.map((node) => node.id));
@@ -231,7 +231,7 @@ describe("block ids", () => {
 		});
 	});
 
-	it("give a copy of a block a new id: the first block with an id keeps it", () => {
+	it("TRANS-B1 give a copy of a block a new id: the first block with an id keeps it", () => {
 		const first = docOf("One.\n\nTwo.\n");
 		const [one] = first.content as CmsNode[];
 		const pasted = assignBlockIds([...first.content, { ...(one as CmsNode) }]);
@@ -241,7 +241,7 @@ describe("block ids", () => {
 		expect(new Set(ids).size).toBe(3);
 	});
 
-	it("are kept from a stored document, and inherited when it has none", () => {
+	it("TRANS-B1 are kept from a stored document, and inherited when it has none", () => {
 		const first = sample();
 		expect(assignBlockIds(first.content, [first.content])).toEqual(first.content);
 		const bare = withoutBlockIds(first.content);
@@ -250,13 +250,13 @@ describe("block ids", () => {
 		expect(blocks({ ...first, content: fresh }).every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
 	});
 
-	it("replace an id that is not a valid block id", () => {
+	it("TRANS-B1 replace an id that is not a valid block id", () => {
 		const first = docOf("One.\n");
 		const odd = [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }];
 		expect(assignBlockIds(odd)[0]?.id).toMatch(BLOCK_ID_PATTERN);
 	});
 
-	it("are all new when a body is copied into another: nothing of the copy's ids is kept", () => {
+	it("TRANS-B1 are all new when a body is copied into another: nothing of the copy's ids is kept", () => {
 		const original = sample();
 		const copy = { ...original, content: regenerateBlockIds(original.content) };
 
@@ -285,7 +285,7 @@ describe("source links", () => {
 		return links;
 	};
 
-	it("link every block of a new translation, nested ones too, to its source block, with ids of its own", () => {
+	it("TRANS-B1 link every block of a new translation, nested ones too, to its source block, with ids of its own", () => {
 		const source = sample();
 		const translation = translationOf(source);
 		expect(linksOf(translation)).toEqual(blocks(source).map((block) => block.id));
@@ -296,7 +296,7 @@ describe("source links", () => {
 		});
 	});
 
-	it("are not part of the content and are dropped with the ids", () => {
+	it("TRANS-B1 are not part of the content and are dropped with the ids", () => {
 		const source = sample();
 		const translation = translationOf(source);
 		const unlinked = translation.map(({ sourceId: _sourceId, ...node }) => node);
@@ -305,7 +305,7 @@ describe("source links", () => {
 		expect(linksOf(withoutBlockIds(translation)).every((link) => link === undefined)).toBe(true);
 	});
 
-	it("are inherited with the id when the translation is read again as text", () => {
+	it("TRANS-B1 are inherited with the id when the translation is read again as text", () => {
 		const source = docOf("One.\n\nTwo.\n");
 		const translation = translationOf(source);
 		const edited = assignBlockIds([paragraph("One, edited."), paragraph("New."), paragraph("Two.")], [translation]);
@@ -316,14 +316,14 @@ describe("source links", () => {
 		]);
 	});
 
-	it("are not given to a copy of a linked block", () => {
+	it("TRANS-B1 are not given to a copy of a linked block", () => {
 		const translation = translationOf(docOf("One.\n"));
 		const [one] = translation;
 		const pasted = assignBlockIds([...translation, { ...(one as CmsNode) }]);
 		expect(pasted.map((node) => node.sourceId)).toEqual([one?.sourceId, undefined]);
 	});
 
-	it("are copied with the ids onto the same document read back", () => {
+	it("TRANS-B1 are copied with the ids onto the same document read back", () => {
 		const translation = translationOf(docOf("One.\n\nTwo.\n"));
 		expect(copyBlockIds(withoutBlockIds(translation), translation)).toEqual(translation);
 	});

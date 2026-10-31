@@ -23,7 +23,7 @@ const registry = createFormatRegistry([paragraphsFormat]);
 const options = { locale: defaultLocale };
 
 describe("importText", () => {
-	it("reads a text with the format that is named, and gives every block an id", async () => {
+	it("FMT-P1 reads a text with the format that is named, and gives every block an id", async () => {
 		const imported = await importText(testSite, registry, "paragraphs", "One\n\nTwo", options);
 
 		expect(imported.issues).toEqual([]);
@@ -31,7 +31,7 @@ describe("importText", () => {
 		for (const block of imported.doc.content) expect(block.id).toMatch(/^[0-9a-z]{8}$/);
 	});
 
-	it("pairs the blocks with the body it replaces, so they keep their ids", async () => {
+	it("FMT-P1 pairs the blocks with the body it replaces, so they keep their ids", async () => {
 		const first = await importText(testSite, registry, "paragraphs", "One\n\nTwo\n\nThree", options);
 		const second = await importText(testSite, registry, "paragraphs", "One\n\nTwo, edited\n\nThree", {
 			...options,
@@ -41,7 +41,7 @@ describe("importText", () => {
 		expect(second.doc.content.map((block) => block.id)).toEqual(first.doc.content.map((block) => block.id));
 	});
 
-	it("ignores the ids a format puts in the document it returns: ids are core's", async () => {
+	it("FMT-P1 ignores the ids a format puts in the document it returns: ids are core's", async () => {
 		const greedy = createFormatRegistry([
 			defineFormat({
 				name: "greedy",
@@ -61,14 +61,14 @@ describe("importText", () => {
 		expect(new Set(ids).size).toBe(2);
 	});
 
-	it("fails with unknown_format for a format nobody provides", async () => {
+	it("FMT-P1 fails with unknown_format for a format nobody provides", async () => {
 		await expect(importText(testSite, registry, "hugo", "x", options)).rejects.toMatchObject({
 			code: "unknown_format",
 			issues: [expect.objectContaining({ params: { format: "hugo" } })],
 		});
 	});
 
-	it("fails with format_not_importable for a format that only writes", async () => {
+	it("FMT-P1 fails with format_not_importable for a format that only writes", async () => {
 		const oneWay = createFormatRegistry([
 			defineFormat({ name: "oneway", label: "One way", mimeType: "text/plain", extension: "txt", export: () => "x" }),
 		]);
@@ -78,7 +78,7 @@ describe("importText", () => {
 		});
 	});
 
-	it("keeps a text the format rejects as an unparsed document, with the format's findings", async () => {
+	it("FMT-P1 keeps a text the format rejects as an unparsed document, with the format's findings", async () => {
 		const imported = await importText(testSite, registry, "paragraphs", "Bad <<< text", options);
 
 		expect(imported.issues).toEqual([
@@ -89,7 +89,7 @@ describe("importText", () => {
 		]);
 	});
 
-	it("throws the findings instead when the place cannot hold such a text", async () => {
+	it("FMT-P1 throws the findings instead when the place cannot hold such a text", async () => {
 		await expect(
 			importText(testSite, registry, "paragraphs", "Bad <<< text", { ...options, strict: true }),
 		).rejects.toMatchObject({
@@ -98,7 +98,7 @@ describe("importText", () => {
 		});
 	});
 
-	it("fails with format_import_failed when the format throws, without the plugin's own message", async () => {
+	it("FMT-P1 fails with format_import_failed when the format throws, without the plugin's own message", async () => {
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const broken = createFormatRegistry([
 			defineFormat({
@@ -120,7 +120,7 @@ describe("importText", () => {
 		quiet.mockRestore();
 	});
 
-	it("fails with format_import_failed when the format returns something that is not a stored document", async () => {
+	it("FMT-P1 fails with format_import_failed when the format returns something that is not a stored document", async () => {
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const wrong = createFormatRegistry([
 			defineFormat({
@@ -139,7 +139,7 @@ describe("importText", () => {
 		quiet.mockRestore();
 	});
 
-	it("rejects a text over the size limit, whatever the format", async () => {
+	it("FMT-P1 rejects a text over the size limit, whatever the format", async () => {
 		await expect(
 			importText(testSite, registry, "paragraphs", "a".repeat(2 * 1024 * 1024 + 1), options),
 		).rejects.toMatchObject({
@@ -147,7 +147,7 @@ describe("importText", () => {
 		});
 	});
 
-	it("puts the document a format returns in the canonical form every body is stored in", async () => {
+	it("FMT-P1 puts the document a format returns in the canonical form every body is stored in", async () => {
 		const uneven = createFormatRegistry([
 			defineFormat({
 				name: "uneven",
@@ -179,7 +179,7 @@ describe("importText", () => {
 });
 
 describe("exportText", () => {
-	it("gives the format links and media already resolved, as lookups it can call synchronously", async () => {
+	it("FMT-P1 gives the format links and media already resolved, as lookups it can call synchronously", async () => {
 		const source = doc(
 			{
 				type: "paragraph",
@@ -203,7 +203,7 @@ describe("exportText", () => {
 		expect(warnings).toEqual([]);
 	});
 
-	it("accepts the lookups as plain records too (what a read already holds)", async () => {
+	it("FMT-P1 accepts the lookups as plain records too (what a read already holds)", async () => {
 		const source = doc({
 			type: "paragraph",
 			content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { entryId: ENTRY_ID } }] }],
@@ -218,7 +218,7 @@ describe("exportText", () => {
 		expect(text).toBe("[x](/posts/x)");
 	});
 
-	it("returns what the format reported as warnings, and says what the text is for", async () => {
+	it("FMT-P1 returns what the format reported as warnings, and says what the text is for", async () => {
 		const seen: string[] = [];
 		const reporting = createFormatRegistry([
 			defineFormat({
@@ -244,7 +244,7 @@ describe("exportText", () => {
 		expect(seen).toEqual(["sync", "en"]);
 	});
 
-	it("fails with unknown_format, and with format_export_failed when the format throws", async () => {
+	it("FMT-P1 fails with unknown_format, and with format_export_failed when the format throws", async () => {
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const refs = { links: new Map(), media: new Map() };
 		await expect(
@@ -279,7 +279,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 	const input = (body: string, format = "paragraphs") =>
 		({ collection: contentCollection, slug: "an-entry", metadata: { title: "An entry" }, body, format }) as never;
 
-	it("is read, normalised by core (a path becomes an id, a media URL becomes a media id) and prepared like any body", async () => {
+	it("FMT-P1 is read, normalised by core (a path becomes an id, a media URL becomes a media id) and prepared like any body", async () => {
 		const pipeline = createWritePipeline({
 			site: testSite,
 			formats: async () => registry,
@@ -311,7 +311,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		expect(snapshot.contentHash).toBe(computeContentHash(snapshot.metadata, snapshot.doc));
 	});
 
-	it("cannot get anything past core: a text it rejects is kept as an unparsed draft that cannot be published", async () => {
+	it("FMT-P1 cannot get anything past core: a text it rejects is kept as an unparsed draft that cannot be published", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
 		const { snapshot } = await pipeline.run({
@@ -324,7 +324,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		expect(snapshot.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining(["bad_marker", "unparsed_body"]));
 	});
 
-	it("fails the write when the format is not installed", async () => {
+	it("FMT-P1 fails the write when the format is not installed", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
 		await expect(
@@ -334,7 +334,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		});
 	});
 
-	it("gives the format the language of the entry and the entry being written", async () => {
+	it("FMT-P1 gives the format the language of the entry and the entry being written", async () => {
 		const seen: { locale: string; entryId?: string }[] = [];
 		const spying = createFormatRegistry([
 			defineFormat({
@@ -356,7 +356,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		expect(seen).toEqual([{ locale: "en", entryId: ENTRY_ID }]);
 	});
 
-	it("keeps block ids across saves: the text replaces the draft's body and its blocks pair up", async () => {
+	it("FMT-P1 keeps block ids across saves: the text replaces the draft's body and its blocks pair up", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 		const first = await pipeline.run({ operation: "create", locale: defaultLocale, input: input("One\n\nTwo") });
 
@@ -373,7 +373,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		);
 	});
 
-	it("hands the findings of a text it could read, such as warnings, to the write", async () => {
+	it("FMT-P1 hands the findings of a text it could read, such as warnings, to the write", async () => {
 		const warning = createFormatRegistry([
 			defineFormat({
 				name: "warning",

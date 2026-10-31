@@ -9,7 +9,7 @@ afterEach(cleanup);
 const selected = (tab: HTMLElement | undefined) => tab?.getAttribute("aria-selected") === "true";
 
 describe("public page client components", () => {
-	it("tabs switch with click and arrow/Home/End keys, and only the selected tab body is shown", () => {
+	it("BLOCK-R1 tabs switch with click and arrow/Home/End keys, and only the selected tab body is shown", () => {
 		render(
 			<TabsView
 				labels={["A", "B", "C"]}
@@ -40,7 +40,7 @@ describe("public page client components", () => {
 		expect(panel?.getAttribute("aria-labelledby")).toBe(tabs[1]?.id);
 	});
 
-	it("tooltip opens on focus and closes with Esc", () => {
+	it("BLOCK-R1 tooltip opens on focus and closes with Esc", () => {
 		render(<Tooltip content="뜻풀이">용어</Tooltip>);
 		const wrapper = screen.getByText("용어").closest(".monti-block-tooltip") as HTMLElement;
 		const trigger = screen.getByText("용어");
@@ -52,7 +52,7 @@ describe("public page client components", () => {
 		expect(document.getElementById(trigger.getAttribute("aria-describedby") ?? "")?.textContent).toBe("뜻풀이");
 	});
 
-	it("code ref highlights the linked code line on focus and restores it on blur", async () => {
+	it("BLOCK-R1 code ref highlights the linked code line on focus and restores it on blur", async () => {
 		document.body.innerHTML = `<pre><code><span class="line" data-anchor="c1 c2">a</span><span class="line">b</span></code></pre><div id="root"></div>`;
 		const line = document.querySelector(".line") as HTMLElement;
 		const pre = document.querySelector("pre") as HTMLElement;
@@ -67,7 +67,7 @@ describe("public page client components", () => {
 		expect(pre.hasAttribute("data-code-focus")).toBe(false);
 	});
 
-	it("without a linked code line it appears as plain text", async () => {
+	it("BLOCK-R1 without a linked code line it appears as plain text", async () => {
 		document.body.innerHTML = '<div id="root"></div>';
 		render(<CodeRef to="없음">그냥 글자</CodeRef>, { container: document.getElementById("root") as HTMLElement });
 		await waitFor(() => expect(screen.queryByRole("button")).toBeNull());

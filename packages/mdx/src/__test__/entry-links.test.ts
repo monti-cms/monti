@@ -35,7 +35,7 @@ const docOf = (mdx: string): StoredDocument => {
 
 /** How MDX reads and writes the links of a stored document. What a link is in the document is tested in core. */
 describe("links of a stored document in MDX", () => {
-	it("an internal link is read as { entryId } and an external one as { href, title? }", () => {
+	it("FMT-R7 an internal link is read as { entryId } and an external one as { href, title? }", () => {
 		const doc = docOf(`[in](${entryLinkHref(ID)}) and [out](https://example.com/a "Title")`);
 
 		expect(linkMarks(doc).map((mark) => mark.attrs)).toEqual([
@@ -45,7 +45,7 @@ describe("links of a stored document in MDX", () => {
 		expect(doc.version).toBe(STORED_DOCUMENT_VERSION);
 	});
 
-	it("an entry link is written to MDX with the id, and reads back as the same document", () => {
+	it("FMT-R7 an entry link is written to MDX with the id, and reads back as the same document", () => {
 		const body = bodyFromMdx(testSite, `See [the post](${entryLinkHref(ID)}).`);
 
 		expect(body.mdx).toContain(`(entry:${ID})`);
@@ -55,13 +55,13 @@ describe("links of a stored document in MDX", () => {
 		);
 	});
 
-	it("only the form entry:<uuid> names an entry; anything else stays an address", () => {
+	it("FMT-R7 only the form entry:<uuid> names an entry; anything else stays an address", () => {
 		const doc = docOf("[x](entry:not-an-id)");
 
 		expect(linkMarks(doc).map((mark) => mark.attrs)).toEqual([{ href: "entry:not-an-id" }]);
 	});
 
-	it("the editor can give an entry link an address to show in the source, and the id is still what is stored", () => {
+	it("FMT-R7 the editor can give an entry link an address to show in the source, and the id is still what is stored", () => {
 		const doc = docOf(`[x](${entryLinkHref(ID)})`);
 		const working = fromStoredDocument(testSite, doc);
 		for (const node of working.content?.[0]?.content ?? []) {
@@ -89,7 +89,7 @@ describe("links of a stored document in MDX", () => {
 		expect(linkMarks(canonicalDocument(testSite, given)).map((mark) => mark.attrs)).toEqual([{ entryId: ID }]);
 	});
 
-	it("collectRefs lists the entries a document read from MDX links to, each once, in order, wherever the link sits", () => {
+	it("FMT-R7 collectRefs lists the entries a document read from MDX links to, each once, in order, wherever the link sits", () => {
 		const OTHER = "123e4567-e89b-42d3-a456-426614174001";
 		const doc = docOf(
 			[

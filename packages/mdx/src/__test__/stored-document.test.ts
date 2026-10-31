@@ -25,7 +25,7 @@ const stored = (mdx: string): StoredDocument => {
 };
 
 describe("stored document", () => {
-	it("stores a block under its definition name with only its values", () => {
+	it("FMT-R2 stores a block under its definition name with only its values", () => {
 		const doc = stored('<TextAlign align="center">\n\nHi\n\n</TextAlign>\n');
 		expect(doc.content[0]).toEqual({
 			attrs: { align: "center" },
@@ -34,7 +34,7 @@ describe("stored document", () => {
 		});
 	});
 
-	it("keeps JSX no definition describes as raw JSX with its attribute list", () => {
+	it("FMT-R2 keeps JSX no definition describes as raw JSX with its attribute list", () => {
 		const doc = stored('A<br data-x="1" />B\n');
 		const paragraph = doc.content[0];
 		expect(paragraph?.content?.[1]).toEqual({
@@ -43,13 +43,13 @@ describe("stored document", () => {
 		});
 	});
 
-	it("drops the derived annotation document of a code block", () => {
+	it("FMT-R2 drops the derived annotation document of a code block", () => {
 		const doc = stored('```ts title="a.ts"\nconst a = 1;\n```\n');
 		expect(doc.content[0]?.attrs).not.toHaveProperty("codeDocument");
 		expect(fromStoredDocument(testSite, doc).content?.[0]?.attrs).toHaveProperty("codeDocument");
 	});
 
-	it("has no stored document for a body with front matter", () => {
+	it("FMT-R2 has no stored document for a body with front matter", () => {
 		expect(
 			toStoredDocument(testSite, toDocument(testSite, analyze(testSite, "---\ntitle: A\n---\n\nHi\n"))),
 		).toBeNull();
@@ -59,18 +59,18 @@ describe("stored document", () => {
 		});
 	});
 
-	it("keeps a body that does not parse as given, without a document", () => {
+	it("FMT-R2 keeps a body that does not parse as given, without a document", () => {
 		const body = bodyFromMdx(testSite, "<Nope>\n");
 		expect(body.doc).toBeNull();
 		expect(body.mdx).toBe("<Nope>\n");
 	});
 
-	it("writes the MDX from the document", () => {
+	it("FMT-R2 writes the MDX from the document", () => {
 		expect(bodyFromMdx(testSite, "_a_ and __b__\n").mdx).toBe("*a* and **b**\n");
 		expect(bodyFromMdx(testSite, "Hi\n\n<br />\n").mdx).toBe("Hi\n");
 	});
 
-	it("reads only stored documents of a known version", () => {
+	it("FMT-R2 reads only stored documents of a known version", () => {
 		const doc = stored("Hi\n");
 		expect(readStoredDocument(JSON.parse(JSON.stringify(doc)))).toEqual(doc);
 		expect(readStoredDocument({ ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBeUndefined();
@@ -82,7 +82,7 @@ describe("stored document", () => {
 		expect(readStoredDocument("Hi")).toBeUndefined();
 	});
 
-	it("round-trips every sample post: MDX → document → MDX → document, whatever the key order", () => {
+	it("FMT-R2 round-trips every sample post: MDX → document → MDX → document, whatever the key order", () => {
 		// Some samples use directive syntax, which this site does not read; `@monti-cms/syntax-directive` covers those.
 		const samples = readSamples().filter(({ mdx }) => analyze(testSite, mdx).errors.length === 0);
 		expect(samples.length).toBeGreaterThan(3);

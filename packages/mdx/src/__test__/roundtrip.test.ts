@@ -76,7 +76,7 @@ const CODE_ANNOTATION_FENCE = [
 
 describe("MDX round trip: analyze → toDocument → serialize → analyze", () => {
 	describe("code fences and annotation metadata", () => {
-		it("language, title, lnum and the content, whitespace and ranges of @char/@line annotations are kept without loss", () => {
+		it("FMT-R2 language, title, lnum and the content, whitespace and ranges of @char/@line annotations are kept without loss", () => {
 			const { secondDoc } = fullRoundtrip(CODE_ANNOTATION_FENCE);
 			const text = JSON.stringify(secondDoc);
 			expect(text).toContain("라인 범위 annotation 예시");
@@ -88,7 +88,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(text).toContain("lnum");
 		});
 
-		it("overlapping annotation emphasis (two @char) does not disappear either", () => {
+		it("FMT-R2 overlapping annotation emphasis (two @char) does not disappear either", () => {
 			const mdx = [
 				"```ts",
 				'// @char Tooltip {0-7} content="첫째"',
@@ -103,13 +103,13 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(text).toContain("둘째");
 		});
 
-		it("plain code fence content is preserved and not changed into editor-only syntax", () => {
+		it("FMT-R2 plain code fence content is preserved and not changed into editor-only syntax", () => {
 			const mdx = "```ts\nconst a = 1\n```";
 			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
 			expect(text).toContain("const a = 1");
 		});
 
-		it("the meaning of whitespace and indentation inside code is kept", () => {
+		it("FMT-R2 the meaning of whitespace and indentation inside code is kept", () => {
 			const mdx = ["```ts", "  const indented = true", "\tconst tabbed = true", "```"].join("\n");
 			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
 			expect(text).toContain("indented");
@@ -118,29 +118,32 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 	});
 
 	describe("nested JSX components", () => {
-		it.skipIf(!groups[0])("group > child > code fence > annotation keeps the meaning of the nested structure", () => {
-			const [group] = groups;
-			if (!group) return;
-			const { block: tabs, child: tab } = group;
-			const nested = [
-				open(tabs),
-				`  ${openChild(tab, "robots.txt")}`,
-				'    ```text title="src/app/robots.txt"',
-				"    User-Agent: *",
-				"    ```",
-				`  ${close(tab)}`,
-				`  ${openChild(tab, "sitemap.ts")}`,
-				"    sitemap.ts 문단은 펜스 뒤에도 온다.",
-				`  ${close(tab)}`,
-				close(tabs),
-			].join("\n");
-			const text = JSON.stringify(fullRoundtrip(nested).secondDoc);
-			expect(text).toContain("robots.txt");
-			expect(text).toContain("sitemap.ts");
-			expect(text).toContain("User-Agent: *");
-		});
+		it.skipIf(!groups[0])(
+			"FMT-R2 group > child > code fence > annotation keeps the meaning of the nested structure",
+			() => {
+				const [group] = groups;
+				if (!group) return;
+				const { block: tabs, child: tab } = group;
+				const nested = [
+					open(tabs),
+					`  ${openChild(tab, "robots.txt")}`,
+					'    ```text title="src/app/robots.txt"',
+					"    User-Agent: *",
+					"    ```",
+					`  ${close(tab)}`,
+					`  ${openChild(tab, "sitemap.ts")}`,
+					"    sitemap.ts 문단은 펜스 뒤에도 온다.",
+					`  ${close(tab)}`,
+					close(tabs),
+				].join("\n");
+				const text = JSON.stringify(fullRoundtrip(nested).secondDoc);
+				expect(text).toContain("robots.txt");
+				expect(text).toContain("sitemap.ts");
+				expect(text).toContain("User-Agent: *");
+			},
+		);
 
-		it.skipIf(!bodyBlock)("container > code fence and a container inside a container are also kept", () => {
+		it.skipIf(!bodyBlock)("FMT-R2 container > code fence and a container inside a container are also kept", () => {
 			if (!bodyBlock) return;
 			const mdx = [
 				open(bodyBlock, "note"),
@@ -159,7 +162,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 		});
 
 		it.skipIf(!bodyBlock || groups.length < 2)(
-			"Tabs inside Callout and Callout inside Columns are not lost either",
+			"FMT-R2 Tabs inside Callout and Callout inside Columns are not lost either",
 			() => {
 				const [first, second] = groups;
 				if (!bodyBlock || !first || !second) return;
@@ -196,21 +199,24 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			},
 		);
 
-		it.skipIf(!booleanBlock || !booleanAttribute)("literal attributes such as defaultOpen={true} are kept", () => {
-			if (!booleanBlock || !booleanAttribute) return;
-			const mdx = [
-				`<${booleanBlock.component} ${booleanAttribute}={true}>`,
-				"펼친 상태로 저장된다.",
-				close(booleanBlock),
-			].join("\n");
-			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
-			expect(text).toContain(booleanAttribute);
-			expect(text).toContain("true");
-		});
+		it.skipIf(!booleanBlock || !booleanAttribute)(
+			"FMT-R2 literal attributes such as defaultOpen={true} are kept",
+			() => {
+				if (!booleanBlock || !booleanAttribute) return;
+				const mdx = [
+					`<${booleanBlock.component} ${booleanAttribute}={true}>`,
+					"펼친 상태로 저장된다.",
+					close(booleanBlock),
+				].join("\n");
+				const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
+				expect(text).toContain(booleanAttribute);
+				expect(text).toContain("true");
+			},
+		);
 
 		// Reference blog setup: tabs group (2 to 8) and column layout (2 to 4).
 		it.skipIf(groups.length === 0)(
-			"group child count boundary: min-1 and max+1 are blocked as errors, min and max are allowed",
+			"FMT-R2 group child count boundary: min-1 and max+1 are blocked as errors, min and max are allowed",
 			() => {
 				for (const { block, child, min, max } of groups) {
 					const groupOf = (count: number) =>
@@ -233,14 +239,14 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			"B | O(n log n) | 하한 경계",
 		].join("\n");
 
-		it("cell text and column structure are not lost", () => {
+		it("FMT-R2 cell text and column structure are not lost", () => {
 			const text = JSON.stringify(fullRoundtrip(TABLE).secondDoc);
 			expect(text).toContain("행렬");
 			expect(text).toContain("O(n log n)");
 			expect(text).toContain("하한 경계");
 		});
 
-		it("a | inside a code block is not interpreted as a table", () => {
+		it("FMT-R2 a | inside a code block is not interpreted as a table", () => {
 			const mdx = ["```ts", 'if (a) { return "|" }', "```", "", "행렬 | 값", "--- | ---", "x | 1"].join("\n");
 			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
 			// JSON.stringify escapes quotes inside the fence value (`return \"|\"`).
@@ -252,7 +258,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 	});
 
 	describe("block math", () => {
-		it("the content of a $$...$$ block math is not lost", () => {
+		it("FMT-R2 the content of a $$...$$ block math is not lost", () => {
 			const mdx = [
 				"태스크 큐는 <u>비동기 작업이 완료된 후</u> 순서대로 실행된다.",
 				"",
@@ -265,7 +271,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(text).toContain("매크로태스크 큐");
 		});
 
-		it("SQL as $$ inside a code fence is not turned into block math", () => {
+		it("FMT-R2 SQL as $$ inside a code fence is not turned into block math", () => {
 			const mdx = ["```sql", "language plpgsql", "as $$", "begin return query; end;", "$$;", "```"].join("\n");
 			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
 			expect(text).toContain("$");
@@ -274,7 +280,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 	});
 
 	describe("raw source toggle", () => {
-		it("toggling view only does not call serialize and the raw source bytes are kept", () => {
+		it("FMT-R2 toggling view only does not call serialize and the raw source bytes are kept", () => {
 			for (const name of readdirSync(SAMPLES_DIR)) {
 				const source = readSample(name);
 				const analysis = analyze(testSite, source);
@@ -282,14 +288,14 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			}
 		});
 
-		it("analyze.source of arbitrary raw source also equals the original string", () => {
+		it("FMT-R2 analyze.source of arbitrary raw source also equals the original string", () => {
 			const mdx = "## 주제\n\n문단이다.\n";
 			expect(analyze(testSite, mdx, "toggle").source).toBe(mdx);
 		});
 	});
 
 	describe("unsupported syntax and errors", () => {
-		it("a spread attribute shows the error position and does not delete the source", () => {
+		it("FMT-R4 a spread attribute shows the error position and does not delete the source", () => {
 			const box = bodyBlock?.component ?? "TextAlign";
 			const mdx = ["# 미지원", "", `<${box} {...props}>내용</${box}>`].join("\n");
 			const analysis = analyze(testSite, mdx, "spread-props");
@@ -302,7 +308,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(analysis.source).toContain("내용");
 		});
 
-		it("a function call attribute is rejected and the source is preserved", () => {
+		it("FMT-R4 a function call attribute is rejected and the source is preserved", () => {
 			const [group] = groups;
 			const mdx = group
 				? [
@@ -317,7 +323,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(analysis.source).toContain("onChange={handle}");
 		});
 
-		it("a document with unsupported syntax is not lost in the visual conversion", () => {
+		it("FMT-R4 a document with unsupported syntax is not lost in the visual conversion", () => {
 			const mdx = "<TemplateImport value={{a: 1}}>x</TemplateImport>";
 			const analysis = analyze(testSite, mdx, "unsupported-doc");
 			const firstDoc = toDocument(testSite, analysis);
@@ -325,7 +331,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			expect(JSON.stringify(firstDoc)).toContain("x");
 		});
 
-		it("an unknown code language keeps its content", () => {
+		it("FMT-R2 an unknown code language keeps its content", () => {
 			const mdx = "```madeup\nabstract sealed class Thing\n```";
 			const text = JSON.stringify(fullRoundtrip(mdx).secondDoc);
 			expect(text).toContain("sealed class");
@@ -350,7 +356,7 @@ describe("MDX round trip: analyze → toDocument → serialize → analyze", () 
 			"본문이다.",
 		].join("\n");
 
-		it("frontmatter values are not lost in the round trip", () => {
+		it("FMT-R5 frontmatter values are not lost in the round trip", () => {
 			const text = JSON.stringify(fullRoundtrip(FRONT).secondDoc);
 			expect(text).toContain("loadFile");
 			expect(text).toContain("typescript");

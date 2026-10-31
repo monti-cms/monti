@@ -23,7 +23,7 @@ const reorderKeys = (value: unknown): unknown => {
 
 /** The model of a stored document. How a text becomes one (and back) belongs to a format, and `@monti-cms/mdx` tests the MDX one. */
 describe("stored document", () => {
-	it("reads only stored documents of a known version", () => {
+	it("FMT-R2 reads only stored documents of a known version", () => {
 		const doc = docOf("Hi\n");
 		expect(readStoredDocument(JSON.parse(JSON.stringify(doc)))).toEqual(doc);
 		expect(readStoredDocument({ ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBeUndefined();
@@ -35,7 +35,7 @@ describe("stored document", () => {
 		expect(readStoredDocument("Hi")).toBeUndefined();
 	});
 
-	it("reads the same document whatever the key order of the stored value", () => {
+	it("FMT-R2 reads the same document whatever the key order of the stored value", () => {
 		const doc = docOf(
 			'# Title\n\nSome **bold** and a [link](https://example.com).\n\n- one\n- two\n\n```ts title="a.ts"\nconst a = 1;\n```\n',
 		);
@@ -46,7 +46,7 @@ describe("stored document", () => {
 		expect(canonicalDocument(testSite, reread as StoredDocument)).toEqual(doc);
 	});
 
-	it("keeps a text no format could read as an unparsed document, and knows it", () => {
+	it("FMT-R2 keeps a text no format could read as an unparsed document, and knows it", () => {
 		const doc = unparsedDocument("Words <Open", null, "paragraphs");
 
 		expect(doc.content).toEqual([

@@ -49,7 +49,7 @@ const SAMPLE = [
 
 /** The block ids of a document read from MDX: the part of the block id behavior that depends on how a text is read and written. */
 describe("block ids and MDX", () => {
-	it("give every block, and only blocks, a unique id", () => {
+	it("TRANS-B1 give every block, and only blocks, a unique id", () => {
 		const all = blocks(docOf(SAMPLE));
 		for (const block of all) expect(block.id).toMatch(BLOCK_ID_PATTERN);
 		expect(new Set(all.map((block) => block.id)).size).toBe(all.length);
@@ -57,7 +57,7 @@ describe("block ids and MDX", () => {
 		expect(JSON.stringify(docOf(SAMPLE))).not.toMatch(/"id":"[^"]+","text"|"id":"[^"]+","type":"text"/);
 	});
 
-	it("are not written to MDX and do not change the content hash", () => {
+	it("TRANS-B1 are not written to MDX and do not change the content hash", () => {
 		const body = bodyFromMdx(testSite, SAMPLE);
 		for (const { id } of blocks(body.doc as StoredDocument)) expect(body.mdx).not.toContain(id);
 		const again = bodyFromMdx(testSite, SAMPLE);
@@ -67,12 +67,12 @@ describe("block ids and MDX", () => {
 		);
 	});
 
-	it("are inherited from the previous version when the same MDX is read again", () => {
+	it("TRANS-B1 are inherited from the previous version when the same MDX is read again", () => {
 		const first = docOf(SAMPLE);
 		expect(docOf(SAMPLE, first)).toEqual(first);
 	});
 
-	it("survive an edited paragraph, an inserted block and a removed block", () => {
+	it("TRANS-B1 survive an edited paragraph, an inserted block and a removed block", () => {
 		const first = docOf(SAMPLE);
 		const edited = docOf(
 			SAMPLE.replace("First paragraph.", "First paragraph, edited.")

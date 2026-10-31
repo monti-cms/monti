@@ -11,7 +11,7 @@ const renderPublic = async (source: string): Promise<string> =>
 	renderToStaticMarkup((await renderMdx(source, { site, syntax })).content);
 
 describe("directive render equivalence — directive notation vs. standard notation", () => {
-	it("directives render the same as the standard MDX notation of the same content", async () => {
+	it("BLOCK-R1 directives render the same as the standard MDX notation of the same content", async () => {
 		const pairs: [string, string][] = [
 			[
 				':::callout{variant="tip" title="제목"}\n본문 **굵게**\n:::',
@@ -45,7 +45,7 @@ describe("directive render equivalence — directive notation vs. standard notat
 });
 
 describe("directive render (core default components)", () => {
-	it("renders a forced line break as :br[] (a form that stays safe when Korean text follows)", async () => {
+	it("BLOCK-R1 renders a forced line break as :br[] (a form that stays safe when Korean text follows)", async () => {
 		// A name swallows the characters that follow it. Hangul counts as name characters too, so `:br둘째` becomes the name `br둘째`,
 		// is treated as unregistered, and the `:br` text is output as is. So serialization always adds an empty label.
 		const safe = await renderPublic("첫 줄:br[]둘째 줄");
@@ -57,7 +57,7 @@ describe("directive render (core default components)", () => {
 		expect(ambiguous).not.toContain("<br/>");
 	});
 
-	it("an unresolvable image leaves only a neutral placeholder and the caption", async () => {
+	it("BLOCK-R1 an unresolvable image leaves only a neutral placeholder and the caption", async () => {
 		const unresolved = await renderPublic(
 			'::image{mediaId="00000000-0000-0000-0000-000000000000" alt="대체텍스트" caption="캡션"}',
 		);
@@ -76,7 +76,7 @@ describe("directive render (core default components)", () => {
 		expect(noCaption).not.toContain("<figcaption");
 	});
 
-	it("an unregistered name stays as body text, and an unregistered container is kept as source but not drawn", async () => {
+	it("BLOCK-R1 an unregistered name stays as body text, and an unregistered container is kept as source but not drawn", async () => {
 		const inline = await renderPublic("openai/gpt-oss-120b:free를 쓴다.");
 		const container = await renderPublic(":::unknown\n안쪽 :free를 그대로\n:::");
 

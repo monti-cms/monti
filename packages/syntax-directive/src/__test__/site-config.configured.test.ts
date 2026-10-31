@@ -13,17 +13,17 @@ const DIRECTIVES = ':::text-align{align="center"}\n가운데 :u[밑줄]\n:::\n\n
 const syntax = configuredSyntax(testSite);
 
 describe("directive syntax configured in the site config", () => {
-	it("is listed in the plugin options of the site config", () => {
+	it("FMT-S1 is listed in the plugin options of the site config", () => {
 		expect(syntax.length).toBeGreaterThan(0);
 	});
 
-	it("is read by the parser", () => {
+	it("FMT-S1 is read by the parser", () => {
 		const analysis = analyze(testSite, DIRECTIVES, undefined, syntax);
 		expect(analysis.errors).toEqual([]);
 		expect(toDocument(testSite, analysis).content?.map((node) => node.type)).toEqual(["TextAlign", "image"]);
 	});
 
-	it("is written by the serializer, except line breaks", () => {
+	it("FMT-S1 is written by the serializer, except line breaks", () => {
 		expect(serialize(testSite, toDocument(testSite, analyze(testSite, DIRECTIVES, undefined, syntax)), syntax)).toBe(
 			DIRECTIVES,
 		);
@@ -32,7 +32,7 @@ describe("directive syntax configured in the site config", () => {
 		);
 	});
 
-	it("is read by the public render, which defaults to the configured syntax", async () => {
+	it("FMT-S1 is read by the public render, which defaults to the configured syntax", async () => {
 		const markup = renderToStaticMarkup((await renderMdx(DIRECTIVES, { site: testSite })).content);
 		expect(markup).toContain('class="monti-align-center"');
 		expect(markup).toContain("<u>밑줄</u>");

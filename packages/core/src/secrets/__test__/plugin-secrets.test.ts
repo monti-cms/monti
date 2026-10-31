@@ -8,7 +8,7 @@ const vault = (secret: string | undefined, previousSecrets?: readonly string[]) 
 	createSecretsVault({ secret, previousSecrets });
 
 describe("plugin secrets: one key per plugin", () => {
-	it("encrypts and decrypts with the plugin's own key, and never stores the plain text", () => {
+	it("KEY-S1 encrypts and decrypts with the plugin's own key, and never stores the plain text", () => {
 		const ai = vault("master").forPlugin("ai");
 		const stored = ai.encrypt("sk-live-1234");
 		expect(stored).not.toContain("sk-live");
@@ -17,7 +17,7 @@ describe("plugin secrets: one key per plugin", () => {
 		expect(ai.encrypt("sk-live-1234")).not.toBe(stored);
 	});
 
-	it("gives two plugins different keys from the same master secret", () => {
+	it("KEY-S1 gives two plugins different keys from the same master secret", () => {
 		const secrets = vault("master");
 		const ai = secrets.forPlugin("ai");
 		const seo = secrets.forPlugin("seo");
@@ -29,21 +29,21 @@ describe("plugin secrets: one key per plugin", () => {
 		expect(ai.encrypt("x").split(":")[1]).not.toBe(seo.encrypt("x").split(":")[1]);
 	});
 
-	it("keeps a plugin from decrypting another plugin's value, and a value from another master secret", () => {
+	it("KEY-S1 keeps a plugin from decrypting another plugin's value, and a value from another master secret", () => {
 		const secrets = vault("master");
 		const stored = secrets.forPlugin("ai").encrypt("sk-live-1234");
 		expect(secrets.forPlugin("seo").decrypt(stored)).toBeNull();
 		expect(vault("other").forPlugin("ai").decrypt(stored)).toBeNull();
 	});
 
-	it("does not decrypt a value whose key id was edited to match another plugin's key", () => {
+	it("KEY-S1 does not decrypt a value whose key id was edited to match another plugin's key", () => {
 		const secrets = vault("master");
 		const [prefix, , iv, tag, body] = secrets.forPlugin("ai").encrypt("x").split(":");
 		const seoId = secrets.forPlugin("seo").encrypt("x").split(":")[1];
 		expect(secrets.forPlugin("seo").decrypt([prefix, seoId, iv, tag, body].join(":"))).toBeNull();
 	});
 
-	it("returns null for corrupted or foreign text instead of throwing", () => {
+	it("KEY-S1 returns null for corrupted or foreign text instead of throwing", () => {
 		const ai = vault("master").forPlugin("ai");
 		const stored = ai.encrypt("x");
 		expect(ai.decrypt(`${stored.slice(0, -4)}AAAA`)).toBeNull();
@@ -52,7 +52,7 @@ describe("plugin secrets: one key per plugin", () => {
 		expect(ai.decrypt("")).toBeNull();
 	});
 
-	it("refuses to encrypt or derive keys without a secret, and rejects an invalid plugin name", () => {
+	it("KEY-S3 refuses to encrypt or derive keys without a secret, and rejects an invalid plugin name", () => {
 		const ai = vault(undefined).forPlugin("ai");
 		expect(ai.available).toBe(false);
 		expect(() => ai.encrypt("x")).toThrow(/secret/);
@@ -63,7 +63,7 @@ describe("plugin secrets: one key per plugin", () => {
 });
 
 describe("plugin secrets: rotation", () => {
-	it("decrypts values made with a previous secret and tells that they are not current", () => {
+	it("KEY-S2 decrypts values made with a previous secret and tells that they are not current", () => {
 		const old = vault("old-secret").forPlugin("ai").encrypt("sk-live-1234");
 		const rotated = vault("new-secret", ["old-secret"]).forPlugin("ai");
 		expect(rotated.decrypt(old)).toBe("sk-live-1234");
@@ -75,13 +75,13 @@ describe("plugin secrets: rotation", () => {
 		expect(vault("new-secret").forPlugin("ai").decrypt(upgraded)).toBe("sk-live-1234");
 	});
 
-	it("cannot read values of a secret that is neither current nor listed", () => {
+	it("KEY-S2 cannot read values of a secret that is neither current nor listed", () => {
 		const old = vault("old-secret").forPlugin("ai").encrypt("x");
 		expect(vault("new-secret").forPlugin("ai").decrypt(old)).toBeNull();
 		expect(vault("new-secret", ["unrelated"]).forPlugin("ai").decrypt(old)).toBeNull();
 	});
 
-	it("reads through several rotations, and still keeps plugins apart", () => {
+	it("KEY-S2 reads through several rotations, and still keeps plugins apart", () => {
 		const first = vault("first").forPlugin("ai").encrypt("a");
 		const second = vault("second", ["first"]).forPlugin("ai").encrypt("b");
 		const third = vault("third", ["second", "first"]).forPlugin("ai");
@@ -89,7 +89,7 @@ describe("plugin secrets: rotation", () => {
 		expect(vault("third", ["second", "first"]).forPlugin("seo").decrypt(first)).toBeNull();
 	});
 
-	it("an instance without a current secret can still read values of its previous secrets", () => {
+	it("KEY-S2 an instance without a current secret can still read values of its previous secrets", () => {
 		const old = vault("old").forPlugin("ai").encrypt("x");
 		const readOnly = vault(undefined, ["old"]).forPlugin("ai");
 		expect(readOnly.decrypt(old)).toBe("x");
@@ -105,7 +105,7 @@ describe("the CMS instance does not hand out the master secret", () => {
 		previousSecrets: ["older-secret"],
 	} as unknown as CmsServerConfig;
 
-	it("has no raw secret on the instance or in its server config view", () => {
+	it("KEY-S3 has no raw secret on the instance or in its server config view", () => {
 		const cms = createCms({ config: testConfig, server });
 		expect("secret" in cms).toBe(false);
 		expect(JSON.stringify(Object.keys(cms.server))).not.toMatch(/secret/i);
@@ -113,7 +113,7 @@ describe("the CMS instance does not hand out the master secret", () => {
 		expect(Object.values(cms.server)).not.toContain("older-secret");
 	});
 
-	it("gives each plugin its own key and honors previousSecrets", () => {
+	it("KEY-S2 gives each plugin its own key and honors previousSecrets", () => {
 		const before = createCms({
 			config: testConfig,
 			server: { ...server, secret: "older-secret", previousSecrets: undefined },

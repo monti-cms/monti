@@ -103,7 +103,7 @@ const cursorTitle = (editor: Editor) => {
 };
 
 describe("code explorer editing view", () => {
-	it("shows the label and a file list built from the code blocks' titles, folders included", async () => {
+	it("BLOCK-E1 shows the label and a file list built from the code blocks' titles, folders included", async () => {
 		const editor = await mount(SOURCE);
 		expect(screen.getByText(tCodeExplorer("label"))).toBeInTheDocument();
 		expect(fileButtons().map((button) => button.textContent)).toEqual(["a.ts", "src/b.ts", "docs/"]);
@@ -116,7 +116,7 @@ describe("code explorer editing view", () => {
 		expect(editor.state.doc.firstChild?.childCount).toBe(3);
 	});
 
-	it("clicking a path moves the cursor into that code block, and the file holding the cursor is marked", async () => {
+	it("BLOCK-E1 clicking a path moves the cursor into that code block, and the file holding the cursor is marked", async () => {
 		const editor = await mount(SOURCE);
 		expect(fileButtons().some((button) => button.getAttribute("aria-current") === "true")).toBe(false);
 		fireEvent.click(fileButtons()[1] as HTMLElement);
@@ -131,7 +131,7 @@ describe("code explorer editing view", () => {
 		);
 	});
 
-	it("follows a path edited in the code block's own title (the list is derived, not stored)", async () => {
+	it("BLOCK-E1 follows a path edited in the code block's own title (the list is derived, not stored)", async () => {
 		const editor = await mount(SOURCE);
 		const pos = 1;
 		const node = editor.state.doc.firstChild?.firstChild;
@@ -144,7 +144,7 @@ describe("code explorer editing view", () => {
 		await waitFor(() => expect(fileButtons()[0]?.textContent).toBe("src/app/a.ts"));
 	});
 
-	it("lists only code blocks; a paragraph child is shown in the body but is not a file", async () => {
+	it("BLOCK-E1 lists only code blocks; a paragraph child is shown in the body but is not a file", async () => {
 		const editor = await mount(SOURCE.replace("</CodeExplorer>", "아래 설명\n\n</CodeExplorer>"));
 		expect(fileButtons()).toHaveLength(3);
 		expect(editor.state.doc.firstChild?.lastChild?.type.name).toBe("paragraph");
@@ -158,7 +158,7 @@ describe("code explorer editing view", () => {
 		expect(filesOf(children).map((file) => file.index)).toEqual([0, 1, 2]);
 	});
 
-	it("adds a file at the end with a unique placeholder path and moves the cursor into it", async () => {
+	it("BLOCK-E1 adds a file at the end with a unique placeholder path and moves the cursor into it", async () => {
 		const editor = await mount(SOURCE);
 		fireEvent.click(screen.getByRole("button", { name: tCodeExplorer("add.file") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(4));
@@ -182,7 +182,7 @@ describe("code explorer editing view", () => {
 		expect(saved).toContain('```ts title="src/new-file-2.ts"');
 	});
 
-	it("adds a folder (a title ending in `/`)", async () => {
+	it("BLOCK-E1 adds a folder (a title ending in `/`)", async () => {
 		const editor = await mount(SOURCE);
 		fireEvent.click(screen.getByRole("button", { name: "폴더 추가" }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(4));
@@ -191,7 +191,7 @@ describe("code explorer editing view", () => {
 		await waitFor(() => expect(editor.state.doc.firstChild?.lastChild?.attrs.meta).toBe('title="src/new-folder-2/"'));
 	});
 
-	it("picks the file shown first from the file paths (folders are not offered)", async () => {
+	it("BLOCK-E1 picks the file shown first from the file paths (folders are not offered)", async () => {
 		const editor = await mount(SOURCE);
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		const trigger = await openTrigger();
@@ -203,7 +203,7 @@ describe("code explorer editing view", () => {
 		expect(tiptapToMdx(editor.getJSON())).toContain('open="a.ts"');
 	});
 
-	it("choosing the first file clears the setting", async () => {
+	it("BLOCK-E1 choosing the first file clears the setting", async () => {
 		const editor = await mount(SOURCE);
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		fireEvent.click(await openTrigger());
@@ -212,7 +212,7 @@ describe("code explorer editing view", () => {
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("open=");
 	});
 
-	it("falls back to a text input for the open file while there is no file to pick", async () => {
+	it("BLOCK-E1 falls back to a text input for the open file while there is no file to pick", async () => {
 		const editor = await mount('<CodeExplorer open="x.ts" />');
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
 		const input = (await screen.findByDisplayValue("x.ts")) as HTMLInputElement;
@@ -221,7 +221,7 @@ describe("code explorer editing view", () => {
 		expect(editor.state.doc.firstChild?.attrs.values).toEqual({ open: "y.ts" });
 	});
 
-	it("deletes the block from the toolbar", async () => {
+	it("BLOCK-E1 deletes the block from the toolbar", async () => {
 		const editor = await mount(`첫 문단\n\n${SOURCE}`);
 		fireEvent.click(screen.getByRole("button", { name: tCodeExplorer("delete") }));
 		await waitFor(() => expect(editor.state.doc.childCount).toBe(1));
@@ -229,7 +229,7 @@ describe("code explorer editing view", () => {
 		expect(tiptapToMdx(editor.getJSON())).toContain("첫 문단");
 	});
 
-	it("has no toolbar when the editor is read-only", async () => {
+	it("BLOCK-E1 has no toolbar when the editor is read-only", async () => {
 		let editor: Editor | null = null;
 		render(
 			<WithSite>
@@ -249,7 +249,7 @@ describe("code explorer editing view", () => {
 		await waitFor(() => expect(screen.queryByRole("toolbar", { name: tCodeExplorer("toolbar") })).toBeNull());
 	});
 
-	it("the slash menu inserts the block with one code block `src/index.ts`, not an empty paragraph", async () => {
+	it("BLOCK-E1 the slash menu inserts the block with one code block `src/index.ts`, not an empty paragraph", async () => {
 		const editor = await mount("첫 문단", false);
 		const action = blockInsertActions(site)["code-explorer"];
 		expect(action).toEqual(expect.any(Function));
@@ -271,7 +271,7 @@ describe("code explorer editing view", () => {
 });
 
 describe("uniquePath", () => {
-	it("returns the plain path first, then numbers from 2 and skips taken numbers", () => {
+	it("BLOCK-E1 returns the plain path first, then numbers from 2 and skips taken numbers", () => {
 		expect(uniquePath([], "src/new-file", ".ts")).toBe("src/new-file.ts");
 		expect(uniquePath(["src/new-file.ts"], "src/new-file", ".ts")).toBe("src/new-file-2.ts");
 		expect(uniquePath(["src/new-file.ts", "src/new-file-2.ts"], "src/new-file", ".ts")).toBe("src/new-file-3.ts");

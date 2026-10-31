@@ -44,7 +44,7 @@ describe("link and image serialization escapes", () => {
 		expect(linkAttrs(reparse(linkDoc(href)))).toEqual({ href });
 	});
 
-	it("round-trips a link title with quotes, backslashes and entity-like text", () => {
+	it("FMT-R1 round-trips a link title with quotes, backslashes and entity-like text", () => {
 		const title = 'say "hi" \\ &amp; (x)';
 		expect(linkAttrs(reparse(linkDoc("https://example.com", title)))).toEqual({
 			href: "https://example.com",
@@ -52,12 +52,12 @@ describe("link and image serialization escapes", () => {
 		});
 	});
 
-	it("round-trips a link with both an awkward href and an awkward title", () => {
+	it("FMT-R1 round-trips a link with both an awkward href and an awkward title", () => {
 		const attrs = { href: "https://example.com/a b)", title: 'a "b"' };
 		expect(linkAttrs(reparse(linkDoc(attrs.href, attrs.title)))).toEqual(attrs);
 	});
 
-	it("writes plain destinations unchanged", () => {
+	it("FMT-R1 writes plain destinations unchanged", () => {
 		expect(serialize(testSite, linkDoc("https://example.com/a(b)c", "T")).trim()).toBe(
 			'[label](https://example.com/a(b)c "T")',
 		);
@@ -70,7 +70,7 @@ describe("link and image serialization escapes", () => {
 		expect(reparse(imageDoc(src, "alt")).content?.[0]?.attrs).toEqual({ src, alt: "alt" });
 	});
 
-	it("round-trips an image title with quotes", () => {
+	it("FMT-R1 round-trips an image title with quotes", () => {
 		const title = 'a "b" c';
 		expect(reparse(imageDoc("/p.png", "alt", title)).content?.[0]?.attrs).toEqual({ src: "/p.png", alt: "alt", title });
 	});
@@ -81,7 +81,7 @@ describe("link and image serialization escapes", () => {
 		["balanced brackets", "a [b] c"],
 		["a backslash", "a\\b"],
 		["emphasis characters", "*a* _b_"],
-	])("round-trips image alt text with %s", (_name, alt) => {
+	])("FMT-R1 round-trips image alt text with %s", (_name, alt) => {
 		expect(reparse(imageDoc("/p.png", alt)).content?.[0]?.attrs).toEqual({ src: "/p.png", alt });
 	});
 
@@ -92,7 +92,7 @@ describe("link and image serialization escapes", () => {
 		["a trailing bracket", "see [1]"],
 		["a backslash", "a\\b"],
 		["emphasis characters", "*a* _b_"],
-	])("round-trips link text with %s", (_name, text) => {
+	])("FMT-R1 round-trips link text with %s", (_name, text) => {
 		const doc = reparse(linkDoc("https://example.com", undefined, text));
 		const paragraph = doc.content?.[0];
 		expect(doc.content).toHaveLength(1);
@@ -101,7 +101,7 @@ describe("link and image serialization escapes", () => {
 		]);
 	});
 
-	it("keeps link text with a bracket idempotent", () => {
+	it("FMT-R1 keeps link text with a bracket idempotent", () => {
 		const once = serialize(testSite, linkDoc("/x", undefined, "a]b"));
 		expect(serialize(testSite, toDocument(testSite, analyze(testSite, once)))).toBe(once);
 	});

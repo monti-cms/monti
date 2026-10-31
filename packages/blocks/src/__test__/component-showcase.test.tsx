@@ -12,7 +12,7 @@ const source = readFileSync(path.join(__dirname, "fixtures/component-showcase.md
 
 /** Checks that the editor and the public page agree on the same content. The public page renders with the default components provided by the core and the block extensions. */
 describe("CMS component showcase", () => {
-	it("passes validation and keeps the same document through the editor", () => {
+	it("BLOCK-E1 passes validation and keeps the same document through the editor", () => {
 		expect(analyze(site, source).errors).toEqual([]);
 		const editorDocument = mdxToTiptap(source);
 		expect(editorDocument.content?.length).toBeGreaterThan(30);
@@ -23,7 +23,7 @@ describe("CMS component showcase", () => {
 		expect(tiptapToMdx(mdxToTiptap(written))).toBe(written);
 	});
 
-	it("the public page renders every section with the library default look", async () => {
+	it("BLOCK-E1 the public page renders every section with the library default look", async () => {
 		const html = renderToStaticMarkup((await renderMdx(source, { site })).content);
 
 		for (const text of [

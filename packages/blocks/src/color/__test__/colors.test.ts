@@ -13,7 +13,7 @@ const brand: PaletteColor = {
 };
 
 describe("text color list", () => {
-	it("reports an invalid list immediately", () => {
+	it("BLOCK-R1 reports an invalid list immediately", () => {
 		expect(checkTextPalette(DEFAULT_TEXT_PALETTE)).toEqual([]);
 		expect(checkTextPalette([brand, brand])).toEqual([
 			expect.objectContaining({ path: "plugins.color.palette[1].id", code: "id" }),

@@ -30,7 +30,7 @@ const prepare = (mdx: string) =>
 	});
 
 describe("block ids of body positions", () => {
-	it("names the block of a missing image alt and an invalid block attribute", async () => {
+	it("FMT-R2 names the block of a missing image alt and an invalid block attribute", async () => {
 		const snapshot = await prepare(
 			`First paragraph.\n\n<Image mediaId="${MEDIA_ID}" />\n\n<TextAlign align="bogus">\n\nAligned.\n\n</TextAlign>\n`,
 		);
@@ -40,7 +40,7 @@ describe("block ids of body positions", () => {
 		expect(describeBlock(snapshot.doc, attribute?.position?.blockId)).toBe("text-align: Aligned.");
 	});
 
-	it("names the block of a reference occurrence and of an image source", async () => {
+	it("FMT-R2 names the block of a reference occurrence and of an image source", async () => {
 		const snapshot = await prepare(
 			`Intro.\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n\n![outside](https://example.com/a.png)\n\ntext ![inline](https://example.com/b.png) text\n`,
 		);
@@ -60,7 +60,7 @@ describe("block ids of body positions", () => {
 		]);
 	});
 
-	it("names the block of footnote issues", async () => {
+	it("FMT-R2 names the block of footnote issues", async () => {
 		const snapshot = await prepare("Cites[^gone] a note.\n\n[^spare]: Nobody cites me.\n");
 		const byCode = (code: string) => snapshot.warnings?.find((warning) => warning.code === code);
 		expect(describeBlock(snapshot.doc, byCode("footnote_definition_missing")?.position?.blockId)).toBe(
@@ -71,13 +71,13 @@ describe("block ids of body positions", () => {
 		);
 	});
 
-	it("names the block of an untranslated notice", async () => {
+	it("FMT-R2 names the block of an untranslated notice", async () => {
 		const snapshot = await prepare("Done.\n\n<Untranslated>Source text</Untranslated>\n");
 		const untranslated = snapshot.issues.find((issue) => issue.code === "untranslated_text");
 		expect(describeBlock(snapshot.doc, untranslated?.position?.blockId)).toMatch(/^paragraph: .*Source text/);
 	});
 
-	it("names the block of a Table span warning", async () => {
+	it("FMT-R2 names the block of a Table span warning", async () => {
 		const snapshot = await prepare(
 			"<Table>\n<TableRow>\n<TableCell>a</TableCell>\n<TableCell>b</TableCell>\n</TableRow>\n<TableRow>\n<TableCell>c</TableCell>\n</TableRow>\n</Table>\n",
 		);
@@ -85,7 +85,7 @@ describe("block ids of body positions", () => {
 		expect(describeBlock(snapshot.doc, span?.position?.blockId)).toBe("table: abc");
 	});
 
-	it("names the unparsed block for a body that could not become a document, and reads no references from it", async () => {
+	it("FMT-R2 names the unparsed block for a body that could not become a document, and reads no references from it", async () => {
 		const snapshot = await prepare(`---\ntitle: x\n---\n\n<Image mediaId="${MEDIA_ID}" />\n`);
 		const unparsed = snapshot.issues.find((issue) => issue.code === "unparsed_body");
 		expect(snapshot.doc.content).toHaveLength(1);
@@ -99,7 +99,7 @@ describe("block ids of body positions", () => {
 		expect(snapshot.references.flatMap((reference) => reference.occurrences)).toEqual([]);
 	});
 
-	it("gives the same occurrences when the same body is prepared again with the document it replaces", async () => {
+	it("FMT-R2 gives the same occurrences when the same body is prepared again with the document it replaces", async () => {
 		const mdx = `# Title\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n\nText.\n`;
 		const first = await prepare(mdx);
 		const again = await prepareSnapshot(
@@ -116,7 +116,7 @@ describe("block ids of body positions", () => {
 		expect(fromDoc.references).toEqual(first.references);
 	});
 
-	it("keeps the block id of a previous reference carried over as stale when the body is unparsed", async () => {
+	it("FMT-R2 keeps the block id of a previous reference carried over as stale when the body is unparsed", async () => {
 		const previousReferences = [
 			{
 				kind: "media" as const,
@@ -140,7 +140,7 @@ describe("block ids of body positions", () => {
 		expect(carried).toEqual({ ...previousReferences[0], isStale: true });
 	});
 
-	it("carries the stored block id into the issues validation makes from occurrences", async () => {
+	it("FMT-R2 carries the stored block id into the issues validation makes from occurrences", async () => {
 		const snapshot = await prepare(`Intro.\n\n<Image mediaId="${MEDIA_ID}" alt="a" />\n`);
 		const result = validateForPublish(testSite, snapshot, { targets: [], media: [] });
 		const unresolved = result.issues.find((issue) => issue.code === "unresolved_media");

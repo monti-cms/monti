@@ -13,11 +13,11 @@ const SHIKI = "```ts\nconst a = 1\nconst b = 2 // [!code focus]\nconst c = 3 // 
 const syntax = configuredSyntax(testSite);
 
 describe("Shiki notation configured in the site config", () => {
-	it("is listed in the plugin options of the site config", () => {
+	it("FMT-S2 is listed in the plugin options of the site config", () => {
 		expect(syntax.length).toBeGreaterThan(0);
 	});
 
-	it("is read by the parser and stored as Monti annotations, focus as the site's focus effect", () => {
+	it("FMT-S2 is read by the parser and stored as Monti annotations, focus as the site's focus effect", () => {
 		expect(analyze(testSite, SHIKI, undefined, syntax).errors).toEqual([]);
 		const body = bodyFromMdx(testSite, SHIKI, syntax);
 		expect(body.mdx).toBe(
@@ -26,7 +26,7 @@ describe("Shiki notation configured in the site config", () => {
 		expect(body.mdx).not.toContain("[!code");
 	});
 
-	it("is read by the public render, so unsaved Shiki notation renders", async () => {
+	it("FMT-S2 is read by the public render, so unsaved Shiki notation renders", async () => {
 		const markup = renderToStaticMarkup((await renderMdx(SHIKI, { site: testSite })).content);
 		expect(markup).not.toContain("[!code");
 		expect(markup).toContain("line-focus");

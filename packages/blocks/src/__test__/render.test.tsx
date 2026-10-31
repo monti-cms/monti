@@ -7,7 +7,7 @@ const html = async (source: string, locale?: string) =>
 	renderToStaticMarkup((await renderMdx(source, { site, locale })).content);
 
 describe("block extension public components", () => {
-	it("callout renders variant, title and body, and uses the variant name when there is no title", async () => {
+	it("BLOCK-R1 callout renders variant, title and body, and uses the variant name when there is no title", async () => {
 		const markup = await html('<Callout variant="warning" title="주의">\n\n본문 **굵게**\n\n</Callout>');
 		expect(markup).toContain('class="monti-block-callout"');
 		expect(markup).toContain('data-variant="warning"');
@@ -23,7 +23,7 @@ describe("block extension public components", () => {
 		expect(unknown).not.toContain("monti-block-callout-body");
 	});
 
-	it("collapsible renders as details and follows title, initially open and default title", async () => {
+	it("BLOCK-R1 collapsible renders as details and follows title, initially open and default title", async () => {
 		const markup = await html('<Collapsible title="더 보기" defaultOpen>\n\n숨은 내용\n\n</Collapsible>');
 		expect(markup).toContain("<details");
 		expect(markup).toContain(" open");
@@ -36,7 +36,7 @@ describe("block extension public components", () => {
 		expect(await html("<Collapsible>\n\n내용\n\n</Collapsible>", "en")).toContain(">Show more</summary>");
 	});
 
-	it("tabs render the tab label row and each tab body with roles", async () => {
+	it("BLOCK-R1 tabs render the tab label row and each tab body with roles", async () => {
 		const markup = await html(
 			'<Tabs defaultValue="둘째">\n\n<Tab label="첫째">\n\n첫 내용\n\n</Tab>\n\n<Tab label="둘째">\n\n둘째 내용\n\n</Tab>\n\n</Tabs>',
 		);
@@ -54,14 +54,14 @@ describe("block extension public components", () => {
 		expect(markup.match(/tabindex="0"/g)).toHaveLength(1);
 	});
 
-	it("the initially open tab falls back to the first tab when missing or invalid", async () => {
+	it("BLOCK-R1 the initially open tab falls back to the first tab when missing or invalid", async () => {
 		const markup = await html(
 			'<Tabs defaultValue="없음">\n\n<Tab label="A">\n\na\n\n</Tab>\n\n<Tab label="B">\n\nb\n\n</Tab>\n\n</Tabs>',
 		);
 		expect(markup).toMatch(/aria-selected="true"[^>]*>A/);
 	});
 
-	it("columns convert column widths into grid columns", async () => {
+	it("BLOCK-R1 columns convert column widths into grid columns", async () => {
 		const markup = await html(
 			'<Columns widths="60,40">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>',
 		);
@@ -76,7 +76,7 @@ describe("block extension public components", () => {
 		expect(equal).toContain("--monti-columns:repeat(2, minmax(0, 1fr))");
 	});
 
-	it("text color accepts only hex values", async () => {
+	it("BLOCK-R1 text color accepts only hex values", async () => {
 		const markup = await html('<Color fg="#DC2626" fgDark="#f87171" bg="#fee2e2">빨강</Color>');
 		expect(markup).toContain('class="monti-color"');
 		expect(markup).toContain("data-fg");
@@ -92,7 +92,7 @@ describe("block extension public components", () => {
 		expect(bad).toContain("나쁨");
 	});
 
-	it("tooltip renders the text and description as keyboard-reachable elements", async () => {
+	it("BLOCK-R1 tooltip renders the text and description as keyboard-reachable elements", async () => {
 		const markup = await html('<Tooltip content="뜻풀이">용어</Tooltip>');
 		expect(markup).toContain('class="monti-block-tooltip"');
 		expect(markup).toContain("용어");
@@ -102,7 +102,7 @@ describe("block extension public components", () => {
 		expect(markup).toMatch(/tabindex="0"[^>]*aria-describedby=/);
 	});
 
-	it("code ref renders as labeled, pressable text", async () => {
+	it("BLOCK-R1 code ref renders as labeled, pressable text", async () => {
 		const markup = await html('<CodeRef to="c1">이 줄</CodeRef>');
 		expect(markup).toContain('data-code-ref="c1"');
 		expect(markup).toContain('role="button"');
@@ -110,14 +110,14 @@ describe("block extension public components", () => {
 		expect(markup).toContain("이 줄");
 	});
 
-	it("Mermaid shows the source on the server (the diagram is drawn in the browser)", async () => {
+	it("BLOCK-R1 Mermaid shows the source on the server (the diagram is drawn in the browser)", async () => {
 		const markup = await html("```mermaid\ngraph TD\n  A --> B\n```");
 		expect(markup).toContain('class="monti-block-mermaid"');
 		expect(markup).toContain('data-state="loading"');
 		expect(markup).toContain('<pre class="monti-block-mermaid-source"><code>graph TD\n  A --&gt; B</code></pre>');
 	});
 
-	it("chart shows the source on the server and reports an error per line when the syntax is wrong", async () => {
+	it("BLOCK-R1 chart shows the source on the server and reports an error per line when the syntax is wrong", async () => {
 		const source = [
 			"chart bar",
 			"x month",
@@ -149,7 +149,7 @@ describe("block extension public components", () => {
 		expect(japanese).not.toBe(korean);
 	});
 
-	it("a component the site passes under the same name wins", async () => {
+	it("BLOCK-R1 a component the site passes under the same name wins", async () => {
 		const { content } = await renderMdx("<Callout>\n\n내용\n\n</Callout>", {
 			site,
 			components: {

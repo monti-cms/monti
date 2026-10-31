@@ -9,13 +9,13 @@ import { renderSite as site } from "../test/render-config";
 const { DIRECTIVES } = directivesOf(site);
 
 describe("block definitions", () => {
-	it("survives a JSON round trip unchanged — no functions or components, except the server-only `validate`", () => {
+	it("BLOCK-R4 survives a JSON round trip unchanged — no functions or components, except the server-only `validate`", () => {
 		// `validate` is a function the browser never receives; everything else in a definition is data.
 		const data = site.BLOCKS.map(({ validate: _validate, ...block }) => block);
 		expect(JSON.parse(JSON.stringify(site.BLOCKS))).toEqual(data);
 	});
 
-	it("has no duplicate names and child/parent blocks actually exist", () => {
+	it("BLOCK-R4 has no duplicate names and child/parent blocks actually exist", () => {
 		expect(new Set(site.BLOCKS.map((block) => block.name)).size).toBe(site.BLOCKS.length);
 		for (const block of site.BLOCKS) {
 			for (const child of ("children" in block ? block.children?.blocks : undefined) ?? []) {
@@ -25,7 +25,7 @@ describe("block definitions", () => {
 		}
 	});
 
-	it("has implementations in the editor NodeView registry", () => {
+	it("BLOCK-R4 has implementations in the editor NodeView registry", () => {
 		for (const block of site.BLOCKS) {
 			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
@@ -34,7 +34,7 @@ describe("block definitions", () => {
 		}
 	});
 
-	it("keeps options and defaults consistent, and finds attributes outside the options", () => {
+	it("BLOCK-R4 keeps options and defaults consistent, and finds attributes outside the options", () => {
 		for (const block of site.BLOCKS) {
 			for (const [name, attribute] of Object.entries(block.attributes)) {
 				if (attribute.options && typeof attribute.defaultValue === "string") {
@@ -47,7 +47,7 @@ describe("block definitions", () => {
 		expect(callout && invalidOptionAttributes(callout, { variant: "tip", title: "x" })).toEqual([]);
 	});
 
-	it("every registered directive round-trips parse -> document -> serialize, and renders without unknown nodes", async () => {
+	it("BLOCK-R4 every registered directive round-trips parse -> document -> serialize, and renders without unknown nodes", async () => {
 		// The directive notation is opt-in (`mdx.syntax`), so the extension is passed explicitly.
 		const syntax = [directiveSyntax()];
 		const blockOf = (name: string) => site.BLOCK_BY_NAME.get(name);

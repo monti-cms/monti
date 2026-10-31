@@ -24,7 +24,7 @@ const summary = (changes: SourceChange[] | null) =>
 	);
 
 describe("comparing two source versions with footnotes", () => {
-	it("treats a footnote definition as one unit and compares it like other blocks", () => {
+	it("TRANS-S2 treats a footnote definition as one unit and compares it like other blocks", () => {
 		const before = "본문[^a]\n\n[^a]: 첫 각주\n";
 		const after = "본문[^a]\n\n[^a]: 고친 각주\n";
 		expect(summary(diffText(before, after))).toEqual([["changed", "[^a]: 첫 각주", "[^a]: 고친 각주"]]);
@@ -33,7 +33,7 @@ describe("comparing two source versions with footnotes", () => {
 		expect(change?.kind === "changed" && change.after.auto).toBe(false);
 	});
 
-	it("finds added and removed footnote definitions", () => {
+	it("TRANS-S2 finds added and removed footnote definitions", () => {
 		const base = "본문[^a]\n\n[^a]: 하나\n";
 		const extended = "본문[^a][^b]\n\n[^a]: 하나\n\n[^b]: 둘\n";
 		expect(summary(diffText(base, extended))).toEqual([
@@ -46,7 +46,7 @@ describe("comparing two source versions with footnotes", () => {
 		]);
 	});
 
-	it("does not pair a footnote definition with a paragraph", () => {
+	it("TRANS-S2 does not pair a footnote definition with a paragraph", () => {
 		expect(summary(diffText("본문[^a]\n\n[^a]: 하나\n", "본문[^a]\n\n[^a]: 하나\n\n마지막 문단\n"))).toEqual([
 			["added", "마지막 문단"],
 		]);

@@ -15,7 +15,7 @@ const paragraph = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", cont
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 describe("collectRefs", () => {
-	it("lists the media of images and files wherever they sit, each once, in document order", () => {
+	it("WRITE-P1 lists the media of images and files wherever they sit, each once, in document order", () => {
 		const document = doc(
 			{ type: "image", attrs: { mediaId: ID_A, alt: "a" } },
 			paragraph(text("Text with an inline "), { type: "image", attrs: { mediaId: ID_B, alt: "b" } }, text(" image.")),
@@ -30,7 +30,7 @@ describe("collectRefs", () => {
 		expect(collectRefs(document).media).toEqual([ID_A, ID_B, ID_C]);
 	});
 
-	it("does not list an outer address or a media id that only appears in text", () => {
+	it("WRITE-P1 does not list an outer address or a media id that only appears in text", () => {
 		const document = doc(
 			{ type: "image", attrs: { src: "https://example.com/a.png", alt: "outer" } },
 			paragraph(text(`The id ${ID_D} is only text.`)),
@@ -39,7 +39,7 @@ describe("collectRefs", () => {
 		expect(collectRefs(document).media).toEqual([]);
 	});
 
-	it("has nothing for a missing document", () => {
+	it("WRITE-P1 has nothing for a missing document", () => {
 		expect(collectRefs(null).media).toEqual([]);
 		expect(collectRefs(undefined).media).toEqual([]);
 	});
@@ -75,7 +75,7 @@ describe("resolvePublicMedia", () => {
 		mediaStore: () => ({ getPublicUrl: (key: string) => `https://cdn.test/${key}` }) as never,
 	};
 
-	it("gives a ready file its URL and size, and any other media the reason it has none", async () => {
+	it("SITE-R4 gives a ready file its URL and size, and any other media the reason it has none", async () => {
 		const resolved = await resolvePublicMedia(deps, [ID_A, ID_B, ID_C, ID_D, "00000000-0000-4000-8000-0000000000ff"]);
 
 		expect(resolved.get(ID_A)).toMatchObject({ url: `https://cdn.test/media/${ID_A}.png`, width: 4, height: 3 });
@@ -89,7 +89,7 @@ describe("resolvePublicMedia", () => {
 		expect(resolved.has("00000000-0000-4000-8000-0000000000ff")).toBe(false);
 	});
 
-	it("asks for nothing when there is nothing to resolve, and resolves nothing without a database or storage", async () => {
+	it("SITE-R4 asks for nothing when there is nothing to resolve, and resolves nothing without a database or storage", async () => {
 		lookups.length = 0;
 		expect((await resolvePublicMedia(deps, [])).size).toBe(0);
 		expect(lookups).toEqual([]);
@@ -112,7 +112,7 @@ describe("resolvePublicMedia", () => {
 describe("imageResolverFromRefs", () => {
 	const refs = { media: { [ID_A]: { url: "https://cdn.test/a.png", width: 4, height: 3 } } };
 
-	it("looks a registered media id up in the refs, and an id that is not there is unresolved", () => {
+	it("SITE-R4 looks a registered media id up in the refs, and an id that is not there is unresolved", () => {
 		const resolve = imageResolverFromRefs(refs);
 
 		expect(resolve({ mediaId: ID_A })).toEqual({ url: "https://cdn.test/a.png", width: 4, height: 3 });
@@ -120,7 +120,7 @@ describe("imageResolverFromRefs", () => {
 		expect(imageResolverFromRefs(EMPTY_REFS)({ mediaId: ID_A })).toEqual({ failure: "unresolved" });
 	});
 
-	it("keeps the allow rules for an outer address", () => {
+	it("SITE-R4 keeps the allow rules for an outer address", () => {
 		const resolve = imageResolverFromRefs(refs);
 
 		expect(resolve({ src: "/images/a.png" })).toEqual({ url: "/images/a.png" });

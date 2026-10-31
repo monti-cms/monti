@@ -20,11 +20,13 @@ describe("CmsLink href handling", () => {
 		expect(render(href)).toBe(`<a href="${href}">x</a>`);
 	});
 
-	it("SITE-R2 keeps external http(s) links opening in a new window", () => {
+	it("SITE-R2 keeps external http(s) links opening in a new window, which cannot reach back to the page", () => {
 		const markup = render("https://example.com/a");
 		expect(markup).toContain('href="https://example.com/a"');
 		expect(markup).toContain('target="_blank"');
+		expect(markup).toContain('rel="noreferrer noopener"');
 		expect(markup).toContain('class="monti-link-external"');
+		expect(render("http://example.com/a")).toContain('rel="noreferrer noopener"');
 	});
 
 	it("SITE-R2 does not add a target to mailto and tel links", () => {

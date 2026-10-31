@@ -26,7 +26,7 @@ const run = (body: string): Root => {
 };
 
 describe("public render of code fence blocks", () => {
-	it("converts the language of an added block to its renderer and passes the code as `source`", () => {
+	it("FMT-R2 converts the language of an added block to its renderer and passes the code as `source`", () => {
 		// Language names are case-insensitive.
 		const lang = `${fenceLang.charAt(0).toUpperCase()}${fenceLang.slice(1)}`;
 		const [node] = run(`\`\`\`${lang}\ngraph TD\n  A --> B\n\`\`\`\n`).children;
@@ -38,12 +38,12 @@ describe("public render of code fence blocks", () => {
 		});
 	});
 
-	it("leaves code blocks of other languages as they are", () => {
+	it("FMT-R2 leaves code blocks of other languages as they are", () => {
 		const [node] = run("```ts\nconst a = 1;\n```\n").children;
 		expect(node).toMatchObject({ type: "code", lang: "ts" });
 	});
 
-	it("also accepts the renderer name of an added block as body JSX", () => {
+	it("FMT-R2 also accepts the renderer name of an added block as body JSX", () => {
 		expect(analyze(testSite, `<${fenceBlock.component} source="chart bar" />\n`).errors).toEqual([]);
 		expect(analyze(testSite, "<Unknown />\n").errors.map(({ code, params }) => ({ code, params }))).toEqual([
 			{ code: "disallowed_jsx_element", params: { name: "Unknown" } },
@@ -52,7 +52,7 @@ describe("public render of code fence blocks", () => {
 });
 
 describe("child count of added blocks", () => {
-	it.skipIf(!group)("blocks counts outside the definition's minimum and maximum", () => {
+	it.skipIf(!group)("FMT-R2 blocks counts outside the definition's minimum and maximum", () => {
 		if (!group) return;
 		const { block, child, min, max } = group;
 		// Fill in only the required text attributes (e.g. the tab name).

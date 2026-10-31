@@ -19,14 +19,14 @@ const errorCodes = (source: string) =>
  * React handles DOM attribute names case-insensitively, so lowercase handlers must be rejected too.
  */
 describe("rejects JSX event handler attributes", () => {
-	it("rejects event handler attributes regardless of case", () => {
+	it("FMT-R4 rejects event handler attributes regardless of case", () => {
 		expect(errorCodes(`<${Box} onClick="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} onclick="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} onerror="x">a</${Box}>`)).toBe("event_handler_attribute");
 		expect(errorCodes(`<${Box} ONERROR="x">a</${Box}>`)).toBe("event_handler_attribute");
 	});
 
-	it("lets attributes that are not event handlers through", () => {
+	it("FMT-R4 lets attributes that are not event handlers through", () => {
 		expect(errorCodes(`<${Box} title="t">a</${Box}>`)).toBe("");
 	});
 });

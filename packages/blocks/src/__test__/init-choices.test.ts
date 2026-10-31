@@ -15,7 +15,7 @@ import { tooltip } from "../tooltip";
 const PLUGINS = { callout, collapsible, tabs, columns, codeExplorer, mermaid, chart, tooltip, codeRef, color };
 
 describe("the blocks `monti init` offers", () => {
-	it("are exactly the block plugins of the package, each by the function and the name it lists", () => {
+	it("BLOCK-R4 are exactly the block plugins of the package, each by the function and the name it lists", () => {
 		expect(BLOCK_CHOICES.map((choice) => choice.fn).sort()).toEqual(Object.keys(PLUGINS).sort());
 		for (const choice of BLOCK_CHOICES) {
 			const plugin = PLUGINS[choice.fn as keyof typeof PLUGINS]();
@@ -23,7 +23,7 @@ describe("the blocks `monti init` offers", () => {
 		}
 	});
 
-	it("name the package a heavy block needs", () => {
+	it("BLOCK-R4 name the package a heavy block needs", () => {
 		expect(BLOCK_CHOICES.filter((choice) => choice.needs).map((choice) => choice.id)).toEqual(["mermaid", "chart"]);
 	});
 });

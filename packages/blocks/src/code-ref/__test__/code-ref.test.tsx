@@ -41,7 +41,7 @@ function mount(code: string, texts: readonly string[] = ["the text"]) {
 }
 
 describe("findAnchorLines", () => {
-	it("returns only the lines of the first code block that has the label", () => {
+	it("BLOCK-R3 returns only the lines of the first code block that has the label", () => {
 		document.body.innerHTML =
 			block(line("a", "c1") + line("b") + line("c", "c1")) + block(line("x", "c1") + line("y", "c1"));
 		const found = findAnchorLines("c1");
@@ -50,7 +50,7 @@ describe("findAnchorLines", () => {
 		expect(findAnchorLines("c1")[0]?.closest("pre")).toBe(document.querySelector("pre"));
 	});
 
-	it("skips code blocks without the label and rejects ids that cannot be anchors", () => {
+	it("BLOCK-R3 skips code blocks without the label and rejects ids that cannot be anchors", () => {
 		document.body.innerHTML = block(line("a", "c2")) + block(line("b", "c1"));
 		expect(findAnchorLines("c1").map((item) => item.textContent)).toEqual(["b"]);
 		expect(findAnchorLines('c1"]')).toEqual([]);
@@ -58,7 +58,7 @@ describe("findAnchorLines", () => {
 });
 
 describe("reveal events", () => {
-	it("dispatches a bubbling `cms:reveal` on each line before scrolling, so a block that hides them can show them", () => {
+	it("BLOCK-R3 dispatches a bubbling `cms:reveal` on each line before scrolling, so a block that hides them can show them", () => {
 		document.body.innerHTML = block(line("a", "c1") + line("b", "c1"));
 		const order: string[] = [];
 		const lines = findAnchorLines("c1");
@@ -71,7 +71,7 @@ describe("reveal events", () => {
 		expect(order).toEqual(["reveal a", "reveal b", "scroll"]);
 	});
 
-	it("dispatches it on the text before scrolling to a text that points to the label", () => {
+	it("BLOCK-R3 dispatches it on the text before scrolling to a text that points to the label", () => {
 		document.body.innerHTML = '<p><span data-code-ref="c1">the text</span></p>';
 		const text = document.querySelector("span") as HTMLElement;
 		const order: string[] = [];
@@ -83,7 +83,7 @@ describe("reveal events", () => {
 });
 
 describe("addBackLink", () => {
-	it("adds one labeled button to the first line, once, and removes it on cleanup", () => {
+	it("BLOCK-R3 adds one labeled button to the first line, once, and removes it on cleanup", () => {
 		document.body.innerHTML = block(line("a", "c1") + line("b", "c1"));
 		const lines = findAnchorLines("c1");
 		const onClick = vi.fn();
@@ -103,7 +103,7 @@ describe("addBackLink", () => {
 		expect(document.querySelectorAll("button[data-code-ref-back]")).toHaveLength(0);
 	});
 
-	it("the button text is not part of the line preview", () => {
+	it("BLOCK-R3 the button text is not part of the line preview", () => {
 		document.body.innerHTML = block(line("  const a = 1;", "c1") + line("  return a;", "c1"), "src/add.ts");
 		addBackLink(findAnchorLines("c1"), () => {}, BACK);
 		expect(previewLines(findAnchorLines("c1"), 8)).toEqual({
@@ -115,7 +115,7 @@ describe("addBackLink", () => {
 });
 
 describe("CodeRef back link", () => {
-	it("the first text of a label owns one button, clicking it highlights that text, and unmounting removes it", () => {
+	it("BLOCK-R3 the first text of a label owns one button, clicking it highlights that text, and unmounting removes it", () => {
 		vi.useFakeTimers();
 		const scroll = vi.fn();
 		vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scroll);
@@ -137,14 +137,14 @@ describe("CodeRef back link", () => {
 		expect(document.querySelectorAll("button[data-code-ref-back]")).toHaveLength(0);
 	});
 
-	it("adds no button when the label is not found", () => {
+	it("BLOCK-R3 adds no button when the label is not found", () => {
 		mount(block(line("a", "c2")));
 		expect(document.querySelectorAll("button[data-code-ref-back]")).toHaveLength(0);
 	});
 });
 
 describe("CodeRef hover preview", () => {
-	it("shows the linked lines and the code block title next to the text while they are off screen, and hides on leave", () => {
+	it("BLOCK-R3 shows the linked lines and the code block title next to the text while they are off screen, and hides on leave", () => {
 		stubLayout(false);
 		mount(block(line("const a = 1;", "c1") + line("return a;", "c1") + line("other"), "src/add.ts"));
 		const ref = screen.getByRole("button", { name: "the text" });
@@ -161,7 +161,7 @@ describe("CodeRef hover preview", () => {
 		expect(ref.hasAttribute("aria-describedby")).toBe(false);
 	});
 
-	it("shows on keyboard focus, hides on Esc and blur, and caps long ranges with an ellipsis line", () => {
+	it("BLOCK-R3 shows on keyboard focus, hides on Esc and blur, and caps long ranges with an ellipsis line", () => {
 		stubLayout(false);
 		const many = Array.from({ length: 12 }, (_, index) => line(`l${index}`, "c1")).join("");
 		mount(block(many));
@@ -189,7 +189,7 @@ describe("CodeRef hover preview", () => {
 		expect(screen.queryByRole("tooltip")).toBeNull();
 	});
 
-	it("shows no preview when the lines are on screen, but still highlights them in place", () => {
+	it("BLOCK-R3 shows no preview when the lines are on screen, but still highlights them in place", () => {
 		stubLayout(true);
 		mount(block(line("a", "c1") + line("b")));
 		const ref = screen.getByRole("button", { name: "the text" });
@@ -198,7 +198,7 @@ describe("CodeRef hover preview", () => {
 		expect(document.querySelector(".line")?.hasAttribute("data-focused")).toBe(true);
 	});
 
-	it("pressing the text hides the preview and scrolls to the lines", () => {
+	it("BLOCK-R3 pressing the text hides the preview and scrolls to the lines", () => {
 		stubLayout(false);
 		const scroll = vi.fn();
 		vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scroll);

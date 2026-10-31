@@ -30,7 +30,7 @@ const paragraph = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", cont
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
 describe("links in a stored document", () => {
-	it("only the form entry:<uuid> names an entry; anything else stays an address", () => {
+	it("FMT-R7 only the form entry:<uuid> names an entry; anything else stays an address", () => {
 		expect(entryIdOfHref(`entry:${ID.toUpperCase()}`)).toBe(ID);
 		for (const href of ["entry:abc", `entry:${ID}/x`, `/entry:${ID}`, `xentry:${ID}`, ""]) {
 			expect(entryIdOfHref(href)).toBeUndefined();
@@ -39,7 +39,7 @@ describe("links in a stored document", () => {
 		expect(linkMarks(stored).map((mark) => mark.attrs)).toEqual([{ href: "entry:not-an-id" }]);
 	});
 
-	it("an internal link is { entryId } and an external one { href, title? }: the address of an entry link is dropped", () => {
+	it("FMT-R7 an internal link is { entryId } and an external one { href, title? }: the address of an entry link is dropped", () => {
 		const stored = canonicalDocument(
 			testSite,
 			doc(
@@ -59,7 +59,7 @@ describe("links in a stored document", () => {
 		expect(stored.version).toBe(STORED_DOCUMENT_VERSION);
 	});
 
-	it("collectRefs lists the entries a document links to, each once, in order, wherever the link sits", () => {
+	it("FMT-R7 collectRefs lists the entries a document links to, each once, in order, wherever the link sits", () => {
 		const document = doc(
 			paragraph(
 				link("a", { entryId: ID }),

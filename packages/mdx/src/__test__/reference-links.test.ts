@@ -5,7 +5,7 @@ import { analyze, serialize, toDocument } from "../format";
 const roundTrip = (mdx: string) => serialize(testSite, toDocument(testSite, analyze(testSite, mdx))).trim();
 
 describe("reference-style links and images", () => {
-	it("turns a full reference link into an inline link and drops the definition", () => {
+	it("FMT-R3 turns a full reference link into an inline link and drops the definition", () => {
 		const mdx = '[Shiki][1]\n\n[1]: https://shiki.style "T"\n';
 		const doc = toDocument(testSite, analyze(testSite, mdx));
 		const paragraph = doc.content?.[0];
@@ -18,25 +18,25 @@ describe("reference-style links and images", () => {
 		expect(serialize(testSite, doc).trim()).toBe('[Shiki](https://shiki.style "T")');
 	});
 
-	it("resolves collapsed and shortcut references", () => {
+	it("FMT-R3 resolves collapsed and shortcut references", () => {
 		expect(roundTrip("[Shiki][] and [Vite]\n\n[shiki]: https://shiki.style\n[vite]: https://vite.dev\n")).toBe(
 			"[Shiki](https://shiki.style) and [Vite](https://vite.dev)",
 		);
 	});
 
-	it("matches labels case-insensitively and with collapsed whitespace", () => {
+	it("FMT-R3 matches labels case-insensitively and with collapsed whitespace", () => {
 		expect(roundTrip("[a][Foo   Bar]\n\n[foo bar]: /x\n")).toBe("[a](/x)");
 	});
 
-	it("keeps inline marks inside a reference link", () => {
+	it("FMT-R3 keeps inline marks inside a reference link", () => {
 		expect(roundTrip("[**bold** text][a]\n\n[a]: /x\n")).toBe("[**bold** text](/x)");
 	});
 
-	it("resolves a definition that appears before its use and inside nested blocks", () => {
+	it("FMT-R3 resolves a definition that appears before its use and inside nested blocks", () => {
 		expect(roundTrip("[a]: /x\n\n> see [a]\n\n- item [a][]\n")).toBe("> see [a](/x)\n\n- item [a](/x)");
 	});
 
-	it("turns a full, collapsed and shortcut image reference into an image", () => {
+	it("FMT-R3 turns a full, collapsed and shortcut image reference into an image", () => {
 		const mdx = '![Alt][i]\n\n![i][]\n\n![i]\n\n[i]: https://example.com/p.png "Pic"\n';
 		const doc = toDocument(testSite, analyze(testSite, mdx));
 		expect(doc.content).toHaveLength(3);
@@ -49,7 +49,7 @@ describe("reference-style links and images", () => {
 		expect(serialize(testSite, doc).split("\n\n")[0]).toBe('![Alt](https://example.com/p.png "Pic")');
 	});
 
-	it("resolves an image reference inside a paragraph", () => {
+	it("FMT-R3 resolves an image reference inside a paragraph", () => {
 		expect(roundTrip("before ![A][i] after\n\n[i]: /p.png\n")).toBe("before ![A](/p.png) after");
 	});
 });

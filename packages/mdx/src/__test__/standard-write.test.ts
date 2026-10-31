@@ -21,7 +21,7 @@ const DIRECTIVE_NOTATION = /^:{2,}[a-z]|[^\\]:[a-z-]+\[/m;
 
 describe("standard MDX output", () => {
 	describe("line breaks", () => {
-		it("are always written as <br /> whichever way they were read", () => {
+		it("FMT-R1 are always written as <br /> whichever way they were read", () => {
 			const written = "첫 줄<br />\n둘째 줄\n";
 			expect(write("첫 줄\\\n둘째 줄")).toBe(written);
 			expect(write("첫 줄  \n둘째 줄")).toBe(written);
@@ -29,14 +29,14 @@ describe("standard MDX output", () => {
 			expect(write(written)).toBe(written);
 		});
 
-		it("are one node in the document whichever way they were spelled", () => {
+		it("FMT-R1 are one node in the document whichever way they were spelled", () => {
 			const spellings = ["가<br />나", "가<br/>나", "가\\\n나", "가  \n나", "가<br />\n나"];
 			const documents = spellings.map((source) => toDocument(testSite, analyze(testSite, source)));
 			for (const document of documents) expect(document).toEqual(documents[0]);
 			expect(documents[0]?.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
 		});
 
-		it("have the same content hash whichever way they were spelled", () => {
+		it("FMT-R1 have the same content hash whichever way they were spelled", () => {
 			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(testSite, source));
 			expect(hash("가<br />나")).toBe(hash("가\\\n나"));
 			expect(hash("**가<br />나**")).toBe(hash("**가\\\n나**"));
@@ -44,25 +44,25 @@ describe("standard MDX output", () => {
 			expect(hash("**가<br />나**")).toBe(hash(write("**가<br />나**")));
 		});
 
-		it("do not change what the body means", () => {
+		it("FMT-R1 do not change what the body means", () => {
 			expect(meaning("가<br />나")).toBe(meaning("가<br />\n나"));
 			expect(meaning("가\\\n나")).toBe(meaning(write("가\\\n나")));
 		});
 
-		it("stay inline in headings and table cells", () => {
+		it("FMT-R1 stay inline in headings and table cells", () => {
 			expect(write("## 제목<br />둘째").trimEnd()).toBe("## 제목<br />둘째");
 			expect(write("| a | b |\n| - | - |\n| x<br />y | z |\n").trimEnd()).toBe(
 				"| a | b |\n| --- | --- |\n| x<br />y | z |",
 			);
 		});
 
-		it("keep a continuation line indented inside a list item", () => {
+		it("FMT-R1 keep a continuation line indented inside a list item", () => {
 			const written = write("- 첫 줄\\\n  둘째 줄\n- 다음");
 			expect(written).toBe("- 첫 줄<br />\n  둘째 줄\n- 다음\n");
 			expect(write(written)).toBe(written);
 		});
 
-		it("keep text that starts a line from being read as another block", () => {
+		it("FMT-R1 keep text that starts a line from being read as another block", () => {
 			for (const next of ["# 제목", "- 항목", "1. 항목", "> 인용", "---", "```"]) {
 				const written = write(`가\\\n\\${next}`);
 				expect(written, next).toContain("<br />\n\\");
@@ -71,17 +71,17 @@ describe("standard MDX output", () => {
 			}
 		});
 
-		it("never leave a line of only <br />, which would be read as a block", () => {
+		it("FMT-R1 never leave a line of only <br />, which would be read as a block", () => {
 			const written = write("가<br /><br />나");
 			expect(written).toBe("가<br /><br />\n나\n");
 			expect(meaning(written)).toBe(meaning("가<br /><br />나"));
 		});
 
-		it("do not drop the content of a br element that holds some", () => {
+		it("FMT-R1 do not drop the content of a br element that holds some", () => {
 			expect(write("앞 <br>안쪽</br> 뒤")).toContain("안쪽");
 		});
 
-		it("do not drop the attributes of a br element, which is not a plain break", () => {
+		it("FMT-R1 do not drop the attributes of a br element, which is not a plain break", () => {
 			const written = write('앞<br className="x" />뒤');
 			expect(written).toContain('className="x"');
 			expect(write(written)).toBe(written);
@@ -101,7 +101,7 @@ describe("standard MDX output", () => {
 			);
 		const withBlankLines = (count: number) => `앞\n\n${"<br />\n\n".repeat(count)}뒤\n`;
 
-		it("are empty paragraphs in the document: a line of only <br /> is one", () => {
+		it("FMT-R1 are empty paragraphs in the document: a line of only <br /> is one", () => {
 			expect(toDocument(testSite, analyze(testSite, "앞\n\n<br />\n\n뒤")).content).toEqual([
 				{ type: "paragraph", content: [{ type: "text", text: "앞" }] },
 				{ type: "paragraph", content: [] },
@@ -109,14 +109,14 @@ describe("standard MDX output", () => {
 			]);
 		});
 
-		it.each([1, 2, 3, 5])("keep %i blank lines between blocks through every save", (count) => {
+		it.each([1, 2, 3, 5])("FMT-R1 keep %i blank lines between blocks through every save", (count) => {
 			const written = withBlankLines(count);
 			expect(lines(written)).toEqual(["앞", ...Array.from({ length: count }, () => ""), "뒤"]);
 			expect(write(written)).toBe(written);
 			expect(write(write(written))).toBe(written);
 		});
 
-		it("are written as one <br /> line per empty paragraph, from a document the editor made", () => {
+		it("FMT-R1 are written as one <br /> line per empty paragraph, from a document the editor made", () => {
 			const paragraph = (text?: string): CmsNode => ({
 				type: "paragraph",
 				content: text ? [{ type: "text", text }] : [],
@@ -126,7 +126,7 @@ describe("standard MDX output", () => {
 			expect(toDocument(testSite, analyze(testSite, serialize(testSite, doc)))).toEqual(doc);
 		});
 
-		it("do not change the content hash when a body is re-saved", () => {
+		it("FMT-R1 do not change the content hash when a body is re-saved", () => {
 			const hash = (source: string) => computeContentHash({ title: "t" }, docOf(testSite, source));
 			const written = withBlankLines(3);
 			expect(hash(write(written))).toBe(hash(written));
@@ -134,7 +134,7 @@ describe("standard MDX output", () => {
 			expect(hash(withBlankLines(2))).not.toBe(hash(withBlankLines(3)));
 		});
 
-		it("keep a paragraph of only line breaks as blank lines, one per break", () => {
+		it("FMT-R1 keep a paragraph of only line breaks as blank lines, one per break", () => {
 			const doc: CmsNode = {
 				type: "doc",
 				content: [
@@ -146,7 +146,7 @@ describe("standard MDX output", () => {
 			expect(serialize(testSite, doc)).toBe(withBlankLines(1));
 		});
 
-		it("are not written at the end of a document, where the editor keeps one after a last block that is not a paragraph", () => {
+		it("FMT-R1 are not written at the end of a document, where the editor keeps one after a last block that is not a paragraph", () => {
 			const empty = { type: "paragraph", content: [] } satisfies CmsNode;
 			const text = { type: "paragraph", content: [{ type: "text", text: "끝" }] } satisfies CmsNode;
 			expect(serialize(testSite, { type: "doc", content: [text, empty, empty] })).toBe("끝\n");
@@ -155,7 +155,7 @@ describe("standard MDX output", () => {
 			expect(write("끝\n\n<br />\n")).toBe("끝\n");
 		});
 
-		it("keep blank lines inside lists, quotes and containers", () => {
+		it("FMT-R1 keep blank lines inside lists, quotes and containers", () => {
 			const container = testSite.ADDED_BLOCKS.find(
 				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
 			);
@@ -174,7 +174,7 @@ describe("standard MDX output", () => {
 			}
 		});
 
-		it("do not turn the empty placeholder of an empty container into a blank line", () => {
+		it("FMT-R1 do not turn the empty placeholder of an empty container into a blank line", () => {
 			const container = testSite.ADDED_BLOCKS.find(
 				(block) => block.syntax.kind === "container" && !block.children && !block.parent,
 			);
@@ -192,17 +192,17 @@ describe("standard MDX output", () => {
 	});
 
 	describe("text marks and core blocks", () => {
-		it("writes underline, superscript, subscript and the untranslated hint as elements", () => {
+		it("FMT-R1 writes underline, superscript, subscript and the untranslated hint as elements", () => {
 			const body = "<u>밑줄</u> <sup>위</sup> <sub>아래</sub> <Untranslated>원문</Untranslated>\n";
 			expect(write(body)).toBe(body);
 		});
 
-		it("writes text alignment as an element", () => {
+		it("FMT-R1 writes text alignment as an element", () => {
 			const body = '<TextAlign align="center">\n\n가운데\n\n</TextAlign>\n';
 			expect(write(body)).toBe(body);
 		});
 
-		it("writes a media image or an image with extras as an element and a plain image as Markdown", () => {
+		it("FMT-R1 writes a media image or an image with extras as an element and a plain image as Markdown", () => {
 			expect(write('<Image mediaId="uuid-1" alt="설명" />\n')).toBe('<Image mediaId="uuid-1" alt="설명" />\n');
 			expect(write('<Image src="/a.png" alt="설명" width="60%" caption="캡션" />\n')).toBe(
 				'<Image src="/a.png" alt="설명" width="60%" caption="캡션" />\n',
@@ -211,12 +211,12 @@ describe("standard MDX output", () => {
 			expect(write('![설명](/a.png "제목")\n')).toBe('![설명](/a.png "제목")\n');
 		});
 
-		it("writes a file card as an element", () => {
+		it("FMT-R1 writes a file card as an element", () => {
 			const body = '<File mediaId="uuid-2" label="자료" />\n';
 			expect(write(body)).toBe(body);
 		});
 
-		it("writes a table GFM cannot express as elements and any other table as GFM", () => {
+		it("FMT-R1 writes a table GFM cannot express as elements and any other table as GFM", () => {
 			const merged = [
 				"<Table>",
 				"<TableRow>",
@@ -235,7 +235,7 @@ describe("standard MDX output", () => {
 			expect(write(gfm)).toBe(gfm);
 		});
 
-		it("keeps `:name` text as ordinary text, with no `\\:` escape", () => {
+		it("FMT-R1 keeps `:name` text as ordinary text, with no `\\:` escape", () => {
 			const body = "시각 12:30 과 :u 와 :::callout 은 그냥 글자다\n";
 			expect(write(body)).toBe(body);
 			expect(write("글자 :u[괄호] 와 ::image 예문")).not.toContain("\\:");
@@ -267,21 +267,21 @@ describe("standard MDX output", () => {
 			return child && block.syntax.kind === "container" ? [{ block, child }] : [];
 		})[0];
 
-		it.skipIf(!container)("writes a container block as an element holding its body", () => {
+		it.skipIf(!container)("FMT-R1 writes a container block as an element holding its body", () => {
 			if (!container) return;
 			const body = `<${open(container)}>\n\n본문 <u>밑줄</u>\n\n</${container.component}>\n`;
 			expect(analyze(testSite, body).errors).toEqual([]);
 			expect(write(body)).toBe(body);
 		});
 
-		it.skipIf(!mark)("writes a text block as an element around the text", () => {
+		it.skipIf(!mark)("FMT-R1 writes a text block as an element around the text", () => {
 			if (!mark) return;
 			const body = `앞 <${open(mark)}>라벨</${mark.component}> 뒤\n`;
 			expect(analyze(testSite, body).errors).toEqual([]);
 			expect(write(body)).toBe(body);
 		});
 
-		it.skipIf(!group || !container)("nests containers without any delimiter counting", () => {
+		it.skipIf(!group || !container)("FMT-R1 nests containers without any delimiter counting", () => {
 			if (!group || !container) return;
 			const { block, child } = group;
 			const body = [
@@ -310,7 +310,7 @@ describe("standard MDX output", () => {
 			expect(write(body)).toBe(body);
 		});
 
-		it("writes no directive notation for any block", () => {
+		it("FMT-R1 writes no directive notation for any block", () => {
 			const blocks = [container, mark, group?.block].filter((block): block is BlockDefinition => Boolean(block));
 			for (const block of blocks) {
 				const source =
@@ -322,7 +322,7 @@ describe("standard MDX output", () => {
 			}
 		});
 
-		it("omits a false boolean attribute and writes a true one bare", () => {
+		it("FMT-R1 omits a false boolean attribute and writes a true one bare", () => {
 			const boolean = testSite.ADDED_BLOCKS.find(
 				(block) =>
 					block.syntax.kind === "container" &&
@@ -344,7 +344,7 @@ describe("standard MDX output", () => {
 	});
 
 	describe("writing again", () => {
-		it("gives the same string", () => {
+		it("FMT-R1 gives the same string", () => {
 			const samples = [
 				"가<br />\n나 **굵게** <u>밑줄</u>\n\n- 목록<br />\n  이어짐\n\n> 인용\n",
 				'<TextAlign align="right">\n\n오른쪽<br />\n줄바꿈\n\n</TextAlign>\n',
