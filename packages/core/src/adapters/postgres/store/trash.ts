@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { currentActor } from "../../../core/actor";
 import { MEDIA_FOLDER_SCOPE } from "../../../core/collections";
 import { assertFoldersEnabled } from "../../../core/domain/folders";
-import { assertRestoreSnapshot, restorePublishesAgain } from "../../../core/domain/lifecycle";
+import { assertRestoreSnapshot, blockingTranslations, restorePublishesAgain } from "../../../core/domain/lifecycle";
 import {
 	blockingMediaUsages,
 	entriesToTrash,
@@ -322,7 +322,8 @@ export function createTrashOps(ctx: StoreContext, publishing: Publishing) {
 					.execute()
 			: [];
 		const outsideMembers = elsewhere.filter((member) => !inside.has(member.id));
-		const alive = outsideMembers.filter((member) => member.status !== "trashed");
+		const blocking = new Set(blockingTranslations(outsideMembers));
+		const alive = outsideMembers.filter((member) => blocking.has(member.id));
 		if (alive.length > 0) {
 			throw new CmsError("Delete the translations first", "has_translations", {
 				details: { translations: alive.map(({ id, locale }) => ({ id, locale })) },

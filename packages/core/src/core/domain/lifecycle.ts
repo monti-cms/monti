@@ -115,6 +115,6 @@ export function membersToRestore(members: readonly GroupMember[]): string[] {
  * Deleting a source deletes its translations too, so a translation outside the trash blocks it (it would lose its shared values).
  * Returns the blocking translations' IDs, empty when the delete may go on.
  */
-export function blockingTranslations(members: readonly GroupMember[]): string[] {
-	return idsOf(members.filter((member) => member.status !== "trashed"));
+export function blockingTranslations(members: readonly Pick<GroupMember, "id" | "status">[]): string[] {
+	return members.filter((member) => member.status !== "trashed").map((member) => member.id);
 }
