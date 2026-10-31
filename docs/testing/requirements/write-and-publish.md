@@ -34,6 +34,7 @@
 | WRITE-P7 | 발행본과 같은 내용을 다시 발행하면 발행본을 바꾸지 않는다 | 바뀐 것 없이 고친 날짜와 알림이 생긴다 | 코드 | L1 |
 | WRITE-P8 | 읽을 수 없는 본문은 발행하지 않고, 편집기는 그 본문을 원문 보기로만 연다 | 편집기가 읽지 못한 본문을 빈 본문으로 덮어쓴다 | 코드 | L2 |
 | WRITE-P9 | 대표 이미지도 대체 텍스트가 없으면(꾸밈용이 아니면) 본문의 그림과 함께 할 일이 된다 | 대체 텍스트 없는 대표 이미지가 그대로 발행된다 | 흐름 1·10 · #373 | — |
+| WRITE-P10 | 빈 요약은 발행을 막는 할 일("요약 쓰기")이다. 발행이 본문에서 저절로 채우지 않는다 | 쓰지 않은 요약이 사이트와 검색 결과에 나간다 | 소유자 결정 (2026-10-31) · #375 | — |
 
 ## 편집 충돌 🔴
 
@@ -128,6 +129,6 @@
 보드는 지금 코드보다 앞서 있다. 그때까지 지금의 동작을 지키는 테스트는 그 이슈가 들어올 때 함께 바꾼다.
 
 - 대표 이미지의 대체 텍스트는 검사하지 않는다(WRITE-P9, #373).
-- 빈 요약: 보드는 "요약 쓰기"를 할 일로 띄워 발행을 막는다. 코드는 `fillFromBody` 필드를 본문에서 채우고 알린다(`entry-editor-store.test.ts`의 "WRITE-P1 fills an empty body-filled field from the body"). **소유자가 정할 것.**
+- 빈 요약: 보드는 "요약 쓰기"를 할 일로 띄워 발행을 막고, 코드는 `fillFromBody` 필드를 본문에서 채운다. 소유자가 보드대로 정했다(2026-10-31, WRITE-P10, #375). 그때 `entry-editor-store.test.ts`의 "WRITE-P1 fills an empty body-filled field from the body, and says which"와 `entry-editor-shell.dom.test.tsx`의 "WRITE-P1 does not publish when a body-filled field has nothing to fill from"을 바꾼다.
 - 저장하면 보드는 상태 칸만 "저장됨"이 되고, 코드는 "저장했어요." 알림도 띄운다("WRITE-S1 keeps the save button in the header…"). 새 글의 미리보기 옆에 코드만 "저장하면 미리볼 수 있어요"를 적는다. 속성 패널에 보드의 "발행일" 줄이 없다. 셋 다 #280.
 - 서식 카드의 "✦ 요청"과 할 일 줄의 "채우기"는 #278, #313이 만든다.
