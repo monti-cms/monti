@@ -60,43 +60,44 @@
 
 ## 시험 조각: 글 편집기 화면 (2026-10-31)
 
-`packages/admin/src/screens/entries/__test__/entry-editor-shell.dom.test.tsx`의 ID 없는 테스트 30개를 판정했다. 아직 아무것도 고치거나
-지우지 않았다. 겹침은 변이 테스트로 확인하기 전의 판정이다.
+`packages/admin/src/screens/entries/__test__/entry-editor-shell.dom.test.tsx`의 ID 없는 테스트 30개를 판정했다. 붙임과 새 줄은 ID를 달았고, 고칠 것은 고쳤고, 작음 둘은 지웠다.
+겹침 7개는 변이 테스트(`entry-editor-shell.tsx`의 해당 줄, `language-tabs.tsx`, `source-change-dialog.tsx`, 배너, 옆 패널, 295개 바꿈)로 쟀다.
+그 테스트만 잡는 바꿈이 없는 4개를 지우고, 있는 3개는 남겼다. 이 파일의 테스트는 모두 ID를 단다(46개 → 40개).
 
 | 줄 | 테스트 | 판정 | 대상 | 고칠 것 |
 |---|---|---|---|---|
-| 357 | tells a missing entry how to find it again | 질문 | 글을 찾지 못했을 때의 안내가 약속인가 | |
-| 431 | fills the slot in the source editor, after the to-do cell | 새 줄 🟡 | 플러그인 API: 상태 줄의 칸 | |
-| 445 | fills the slot in the translation editor too | 새 줄 🟡 | 같은 줄(번역 편집기에서도) | |
+| 357 | tells a missing entry how to find it again | 작음 | 안내 문구는 ⚪로 정했다. 지웠다 | |
+| 431 | fills the slot in the source editor, after the to-do cell | 새 줄 🟡 | PLUG-A4 | |
+| 445 | fills the slot in the translation editor too | 새 줄 🟡 | PLUG-A4 | |
 | 580 | switches only the body to the source panel and keeps the title | 붙임 | FMT-P2 (위 층, 이어짐) | |
 | 621 | shows the toggle of the registered panel under its label | 붙임 | FMT-P1 (위 층, 이어짐) | |
-| 631 | takes the body the panel hands back as the body, which the next save sends | 새 줄 🔴 | 원문 패널에서 고친 본문이 저장된다. 틀리면 원문 패널에서 쓴 것을 잃는다 | |
-| 645 | opens a body that could not be read in the panel | 겹침 | 555줄의 WRITE-P8 | |
-| 659 | tells the panel which block an issue is in | 겹침 | 527줄의 WRITE-P1 | |
-| 679 | adds categories and tags through the add panel | 새 줄 🟡 | 관계 필드에서 없는 이름으로 새 글을 만들어 고른다 | 10초 시간 제한 넷, 될 때까지 다시 입력하는 고리 |
+| 631 | takes the body the panel hands back as the body, which the next save sends | 새 줄 🔴 | FMT-R8 | |
+| 645 | opens a body that could not be read in the panel | 겹침 | 555줄의 WRITE-P8. 변이: 이 테스트만 잡는 바꿈 0. 지웠다 | |
+| 659 | tells the panel which block an issue is in | 붙임 | WRITE-P1. 변이: 이 테스트만 잡는 바꿈 5(블록으로 간 뒤 다시 묻지 않기). 남겼다 | |
+| 679 | adds categories and tags through the add panel | 새 줄 🟡 | WRITE-W5 | 10초 시간 제한 넷, 될 때까지 다시 입력하는 고리 |
 | 780 | exports this entry from the more menu | 붙임 | DATA-B4 (위 층, 이어짐) | 테스트 id(`export-headline`) |
 | 808 | unarchives and restores at once without asking | 붙임 | TRASH-R1 (위 층, 이어짐) | |
 | 827 | reports header action failures as a toast | 붙임 | WRITE-P2 (위 층, 이어짐) | 아무 오류에나 통과하는 `toast.error` 호출 검사 |
-| 836 | sends record collections to their explicit-save form | 질문 | 항목 컬렉션을 목록의 작은 폼으로 여는 것 | 아무것도 검사하지 않는 `EMPTY_FORM.slug` |
-| 861 | shows one tab per member above the title | 질문 | 언어 탭의 표시가 🟡인가 ⚪인가 | DOM 순서 |
-| 877 | moves to another language by its link | 겹침 | 861줄 | |
+| 836 | sends record collections to their explicit-save form | 새 줄 🟡 | WRITE-W6 | 아무것도 검사하지 않는 `EMPTY_FORM.slug` |
+| 861 | shows one tab per member above the title | 새 줄 🟡 | TRANS-L2 | DOM 순서 |
+| 877 | moves to another language by its link | 겹침 | 861줄. 변이: 0. 지웠다 | |
 | 887 | creates a translation from the missing-language button | 붙임 | TRANS-N1 (위 층, 이어짐) | |
 | 899 | blocks translation creation while there are unsaved changes | 붙임 | WRITE-S6 | 아무 오류에나 통과하는 `toast.error` 호출 검사 |
 | 926 | moves a draft translation at once… the toast's undo restores it | 붙임 | TRASH-T6 | 위치로 읽는 mock 인자 |
 | 949 | asks first when the translation is published | 붙임 | TRASH-T3 (위 층, 이어짐) | |
-| 973 | hides the language tabs of the editor | 질문 | 관리자 옵션(번역 끄기)이 🟡 표에 들어가는가 | |
+| 973 | hides the language tabs of the editor | 작음 | 기능을 끄는 관리자 옵션은 ⚪로 정했다. 지웠다 | |
 | 1023 | shows the full source beside only a translation | 붙임 | TRANS-S3 | |
 | 1043 | when the source changes, notifies, and confirm makes a change that Save sends | 붙임 | TRANS-S1 (위 층, 이어짐) | 저장 요청의 내용을 보지 않는다 |
-| 1054 | with no translation state or a malformed one | 겹침 | L1의 TRANS-N9 | |
+| 1054 | with no translation state or a malformed one | 겹침 | L1의 TRANS-N9. 변이: 0. 지웠다 | |
 | 1060 | the comparison lists changed blocks as before and now | 붙임 | TRANS-S2 (위 층, 이어짐) | |
-| 1071 | the comparison shows a block that moved as moved | 겹침 | L1의 TRANS-S2 | |
-| 1083 | an unparseable source is reported as not comparable | 겹침 | L1의 TRANS-S2 "compares nothing when either body is unparsed" | |
-| 1121 | opens from the header and shows the plugin's component | 새 줄 🟡 | 플러그인 API: 옆 패널 | |
-| 1130 | publishes the screen, the collection and the open entry | 새 줄 🟡 | 같은 줄(패널이 아는 곳) | |
-| 1137 | reads the entry as the form holds it, with the changes that are not saved | 새 줄 🟡 | 같은 줄(저장 안 된 값) | |
-| 1145 | reads the selected text and the block the selection is in | 새 줄 🟡 | 같은 줄(선택과 블록) | |
+| 1071 | the comparison shows a block that moved as moved | 붙임 | TRANS-S2. 변이: 이 테스트만 잡는 바꿈 2(창이 옮김과 옮기고 고침을 가르는 곳은 L1이 아니라 창에 있다). 남겼다 | |
+| 1083 | an unparseable source is reported as not comparable | 붙임 | TRANS-S2. 변이: 이 테스트만 잡는 바꿈 1(비교할 수 없다는 문장). 남겼다 | |
+| 1121 | opens from the header and shows the plugin's component | 겹침 | `side-panel-slot.dom.test.tsx`의 PLUG-A5 "opens and closes from the button in the header…" | |
+| 1130 | publishes the screen, the collection and the open entry | 새 줄 🟡 | PLUG-A5 | |
+| 1137 | reads the entry as the form holds it, with the changes that are not saved | 새 줄 🟡 | PLUG-A5 | |
+| 1145 | reads the selected text and the block the selection is in | 새 줄 🟡 | PLUG-A5 | |
 
-합: 붙임 12, 새 줄 8(🔴 1, 🟡 7), 겹침 6, 질문 4. 고칠 것이 있는 테스트 8.
+합: 붙임 12, 새 줄 9(🔴 1, 🟡 8), 겹침 7, 작음 2. 처음에는 질문이 4개였고, 등급을 제안대로 정해 새 줄 2와 작음 2가 됐다. 1121줄은 플러그인 표를 쓰고 보니 다른 파일의 테스트와 겹쳤다. 고칠 것이 있는 테스트 8.
 
 배운 것:
 
@@ -104,3 +105,4 @@
 - 플러그인에게 공개한 훅은 세부가 아니다. `use-field.dom.test.tsx`는 훅을 따로 렌더하지만 `useField`는 공개 API다.
 - 약속 없는 테스트 가운데에도 🔴가 있었다(631줄). 지울 후보만 찾는 일이 아니다.
 - 금지 패턴은 ID를 단 테스트에도 남아 있다. 판정과 따로 "고칠 것"으로 모은다.
+- 겹침 판정의 절반 가까이가 틀렸다(7개 중 3개). 판정만으로 지우면 안 되고, 변이 테스트가 꼭 필요하다. 화면이 낮은 층의 판단을 다시 가르는 곳(창의 표시 규칙)은 위 층에만 있다.

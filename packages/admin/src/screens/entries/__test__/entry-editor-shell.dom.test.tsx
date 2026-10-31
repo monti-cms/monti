@@ -35,7 +35,7 @@ import { StatusCellsProvider, useStatusBarContext } from "../../shared/status-ba
 import { statusBarMessages } from "../../shared/status-bar.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { type EntryData, type TranslationMember } from "../entry-form";
+import type { EntryData, TranslationMember } from "../entry-form";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -634,21 +634,7 @@ describe("entry editor shell", () => {
 			expect(JSON.stringify(sent.doc)).toContain("패널에서 쓴 본문");
 		});
 
-		it("opens a body that could not be read in the panel, and shows the visual editor's box when there is none", async () => {
-			serve({ ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
-			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
-			expect(await screen.findByLabelText("블록 수")).toBeInTheDocument();
-			expect(screen.queryByLabelText("시각 본문")).toBeNull();
-			cleanup();
-
-			serve({ ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
-			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
-			await screen.findByLabelText("시각 본문");
-			// There is no panel to edit it in, so no note that says to.
-			expect(screen.queryByText(/원문 모드로만 편집해요/)).toBeNull();
-		});
-
-		it("tells the panel which block an issue is in", async () => {
+		it("WRITE-P1 tells the panel which block an issue is in", async () => {
 			const body = docOf("첫째 문단\n\n둘째 문단\n");
 			api.on("POST /v1/entries/:id/publish", () =>
 				failure("publish_validation_failed", undefined, {
@@ -861,16 +847,6 @@ describe("language tabs", () => {
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
 	});
 
-	it("moves to another language by its link, and has no tab list without panels", async () => {
-		serve(source);
-		renderEdit();
-		const link = await screen.findByRole("link", { name: "영어 · 초안" });
-		expect(link.getAttribute("href")).toBe("/admin/entries/entry-en/edit");
-		expect(
-			within(screen.getByRole("navigation", { name: tScreens("column.locale") })).queryByRole("tablist"),
-		).toBeNull();
-	});
-
 	it("TRANS-N1 creates a translation from the missing-language button and opens it", async () => {
 		api.on("POST /v1/entries/:id/translations", ({ params }) =>
 			params.id === "entry-1" ? { entry: { id: "entry-ja" } } : failure("not_found"),
@@ -1019,12 +995,6 @@ describe("translation source pane", () => {
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 	});
 
-	it("with no translation state or a malformed one, nothing is treated as confirmed", async () => {
-		serve(translationWith(null));
-		renderEdit();
-		expect(await screen.findByText(tEntryEditorShell("sourceChanged"))).toBeInTheDocument();
-	});
-
 	it("TRANS-S2 the comparison lists changed blocks as before and now", async () => {
 		serve(translationWith("첫 문단 옛\n\n둘째 문단\n\n지운 문단\n"));
 		renderEdit();
@@ -1036,7 +1006,7 @@ describe("translation source pane", () => {
 		await waitFor(() => expect(dialog.textContent).toContain("첫 문단 옛"));
 	});
 
-	it("the comparison shows a block that moved as moved when both versions have documents", async () => {
+	it("TRANS-S2 the comparison shows a block that moved as moved when both versions have documents", async () => {
 		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
 		const [first, second, third] = before.content;
 		const current = { ...before, content: [third, first, second] } as StoredDocument;
@@ -1048,7 +1018,7 @@ describe("translation source pane", () => {
 		await waitFor(() => expect(dialog.textContent).toContain("다"));
 	});
 
-	it("an unparseable source is reported as not comparable", async () => {
+	it("TRANS-S2 an unparseable source is reported as not comparable", async () => {
 		serve(translationWith("", { base: unparsedDocument("<Callout>닫히지 않음") }));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryEditorShell("compare") }));
@@ -1085,15 +1055,6 @@ describe("side panel over the editor", () => {
 	const readOut = (label: string) => JSON.parse(screen.getByLabelText(label).textContent ?? "null");
 
 	beforeEach(() => window.localStorage.clear());
-
-	it("opens from the header and shows the plugin's component next to the editor", async () => {
-		renderWithPanel();
-		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeInTheDocument();
-		// The properties panel and the editor are still there.
-		expect(screen.getByRole("textbox", { name: TITLE_LABEL })).toBeInTheDocument();
-	});
 
 	it("PLUG-A5 publishes the screen, the collection and the open entry", async () => {
 		renderWithPanel();
