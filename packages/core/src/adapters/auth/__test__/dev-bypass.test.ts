@@ -19,13 +19,15 @@ describe("loopback host names", () => {
 		}
 	});
 
-	it("AUTH-L7 rejects every other name, including ones that merely contain localhost", () => {
+	it("AUTH-L7 rejects every other name, including ones that merely contain localhost or a loopback address", () => {
 		for (const name of [
 			"example.com",
 			"localhost.example.com",
 			"10.0.0.5",
 			"192.168.1.2",
 			"128.0.0.1",
+			"127.0.0.1.example.com",
+			"x127.0.0.1",
 			"",
 			"0.0.0.0",
 		]) {

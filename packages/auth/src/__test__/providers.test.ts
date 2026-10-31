@@ -87,6 +87,15 @@ describe("a second provider through the same interface", () => {
 		expect((await cmsAuth.session(requestWith(jar)))?.user?.accountId).toBe("gitlab:77");
 	});
 
+	it("AUTH-L5 an admin listed in auth() for one provider is not an admin of another provider with the same id", () => {
+		const cmsAuth = connect({
+			providers: [github({ clientId: "id", clientSecret: "secret" }), gitlab()],
+			admins: ["gitlab:7"],
+		});
+		expect(cmsAuth.isAdmin("gitlab:7")).toBe(true);
+		expect(cmsAuth.isAdmin("github:7")).toBe(false);
+	});
+
 	it("AUTH-C1 a provider can refuse an account", async () => {
 		stubOAuthServers(gitlabServer);
 		vi.spyOn(console, "error").mockImplementation(() => {});

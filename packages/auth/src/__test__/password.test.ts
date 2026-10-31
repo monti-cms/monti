@@ -74,6 +74,46 @@ describe("the first admin", () => {
 		expect((await Promise.all([accounts.hasAny()]))[0]).toBe(true);
 	});
 
+	it("AUTH-A1 stays open when writing the first account fails, so it can be tried again", async () => {
+		const memory = createMemoryPluginStorage();
+		let failNext = true;
+		// The first write of an account fails once, as a full disk or a dropped connection would.
+		const storage: typeof memory.storage = (plugin) =>
+			new Proxy(memory.storage(plugin), {
+				get: (target, key, receiver) =>
+					key !== "collection"
+						? Reflect.get(target, key, receiver)
+						: (name: string) => {
+								const collection = target.collection(name);
+								if (name !== "password-accounts") return collection;
+								return new Proxy(collection, {
+									get: (inner, property, innerReceiver) =>
+										property === "set" && failNext
+											? async () => {
+													failNext = false;
+													throw new Error("the write failed");
+												}
+											: Reflect.get(inner, property, innerReceiver),
+								});
+							},
+			});
+		const accounts = connectWithEnv({ providers: [password()] }, { storage }).accounts;
+		await expect(accounts?.createFirst({ email: "mina@example.com", password: GOOD })).rejects.toThrow(
+			"the write failed",
+		);
+		expect(await accounts?.hasAny()).toBe(false);
+		expect(await accounts?.createFirst({ email: "mina@example.com", password: GOOD })).toEqual({ ok: true });
+	});
+
+	it("AUTH-A3 takes a password of exactly the shortest length", async () => {
+		const { accounts } = setup();
+		expect(
+			await accounts.createFirst({ email: "mina@example.com", password: "x".repeat(MIN_PASSWORD_LENGTH) }),
+		).toEqual({
+			ok: true,
+		});
+	});
+
 	it("AUTH-A3 refuses an email that is not one and a short password, and stays open", async () => {
 		const { accounts } = setup();
 		expect(await accounts.createFirst({ email: "mina", password: GOOD })).toEqual({ ok: false, reason: "email" });
