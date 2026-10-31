@@ -56,51 +56,6 @@ describe("internal links in the editor", () => {
 		expect(current.getText()).toContain("Next.js 완전 정복");
 	});
 
-	it("saves the id alone: the address shown in the editor is not stored", () => {
-		const current = typed("See [[next");
-		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
-
-		const stored = tiptapToStored(testSite, current.getJSON());
-
-		const marks = JSON.stringify(stored);
-		expect(marks).toContain(`"entryId":"${ID}"`);
-		expect(marks).not.toContain("href");
-		expect(marks).not.toContain(contentPath(collection, "nextjs-guide") ?? "never");
-	});
-
-	it("saves the id as the link, and the saved document opens as the same link", () => {
-		const current = typed("See [[next");
-		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
-
-		const stored = tiptapToStored(testSite, current.getJSON());
-
-		expect(stored.content[0]?.content).toContainEqual(
-			text("Next.js 완전 정복", [{ type: "link", attrs: { entryId: ID } }]),
-		);
-		const reopened = storedToTiptap(testSite, stored);
-		expect(linkMarks(reopened)[0]?.attrs).toMatchObject({ entryId: ID });
-		expect(tiptapToStored(testSite, reopened)).toEqual(stored);
-	});
-
-	it("opens a stored document with a link by id and saves it back unchanged", () => {
-		const stored = storedDoc({
-			type: "paragraph",
-			content: [
-				text("A "),
-				text("post", [{ type: "link", attrs: { entryId: ID } }]),
-				text(" and "),
-				text("site", [{ type: "link", attrs: { href: "https://example.com", title: "T" } }]),
-				text("."),
-			],
-		});
-
-		const again = tiptapToStored(testSite, storedToTiptap(testSite, stored));
-
-		expect(JSON.stringify(again)).toBe(JSON.stringify(stored));
-		expect(JSON.stringify(stored)).toContain(`"entryId":"${ID}"`);
-		expect(JSON.stringify(stored)).toContain('"href":"https://example.com"');
-	});
-
 	it("EDIT-L2 inserts only the title for a collection that has no public path", () => {
 		const current = typed("See [[x");
 

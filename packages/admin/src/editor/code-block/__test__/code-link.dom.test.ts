@@ -76,7 +76,7 @@ describe("linking body text to code (editor)", () => {
 		expect(anchorIdsOf(output)).toEqual(["c1"]);
 	});
 
-	it("does not link if there is no body text or no line is picked, and Esc or cancel backs out", () => {
+	it("EDIT-C4 does not link if there is no body text or no line is picked, and Esc or cancel backs out", () => {
 		const instance = mount();
 		startLinkFromText(instance.view, ...(Object.values(wordRange(instance)) as [number, number]));
 		expect(commitLink(testSite, instance.view)).toBe(false);

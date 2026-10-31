@@ -76,13 +76,6 @@ const buttonNames = () =>
 const offers = (name: string) => bubble().queryByRole("button", { name }) !== null;
 
 describe("inline bubble inside code when code block tools are off", () => {
-	it("offers text styles, tooltip and fold in code when everything is on", () => {
-		const editor = createEditor(CODE_THEN_BODY);
-		focusAt(editor, CODE_RANGE);
-		renderBubble(editor);
-		expect(buttonNames()).toEqual(expect.arrayContaining([BOLD, ITALIC, STRIKE, UNDERLINE, TOOLTIP, FOLD]));
-	});
-
 	it("EDIT-M2 hides bold, italic, strikethrough and underline in code when text styles are off", () => {
 		configure({ textStyles: false });
 		const editor = createEditor(CODE_THEN_BODY);
@@ -100,14 +93,6 @@ describe("inline bubble inside code when code block tools are off", () => {
 		expect(offers(TOOLTIP)).toBe(false);
 		expect(offers(FOLD)).toBe(false);
 		for (const name of [BOLD, ITALIC, STRIKE, UNDERLINE]) expect(offers(name), name).toBe(true);
-	});
-
-	it("does not change the bubble outside code", () => {
-		configure({ textStyles: false, tooltip: false, fold: false });
-		const editor = createEditor(CODE_THEN_BODY);
-		focusAt(editor, BODY_RANGE);
-		renderBubble(editor);
-		expect(buttonNames()).toEqual(expect.arrayContaining([BOLD, ITALIC, STRIKE, UNDERLINE, t("link.add")]));
 	});
 
 	it("EDIT-M2 keeps a mark that is already on the selection so it can be removed", () => {

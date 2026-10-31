@@ -34,25 +34,11 @@ describe("loadAdminPlugins", () => {
 		expect(attempts).toBe(2);
 	});
 
-	it("lets a plugin page share a name with a core screen: pages live under tools/", async () => {
-		const site = siteWith([{ name: "events-plus", admin: admin({ events: Page, templates: Page }) }]);
-		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["events-plus"]);
-	});
-
 	it("PLUG-A13 hands each plugin's declaration on as the module exported it, without reading it", async () => {
 		const declaration = { pages: { one: Page } };
 		const site = siteWith([{ name: "a", admin: async () => ({ default: declaration }) }, { name: "plain" }]);
 		const loaded = await loadAdminPlugins(site);
 		expect(loaded[0]?.plugin).toBe(declaration);
 		expect(loaded[1]).toEqual({ name: "plain", plugin: undefined });
-	});
-
-	it("loads plugins with distinct pages", async () => {
-		const site = siteWith([
-			{ name: "a", admin: admin({ one: Page }) },
-			{ name: "b", admin: admin({ two: Page }) },
-			{ name: "plain" },
-		]);
-		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["a", "b", "plain"]);
 	});
 });

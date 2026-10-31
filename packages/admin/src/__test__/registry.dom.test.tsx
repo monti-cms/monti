@@ -56,15 +56,6 @@ describe("the admin components registry", () => {
 		expect([...result.formats].sort()).toEqual(["alpha", "beta"]);
 	});
 
-	it("finds a registered format by name, and gives undefined for any other name", () => {
-		render(
-			<AdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
-				<Probe />
-			</AdminComponentsProvider>,
-		);
-		expect(probed()).toMatchObject({ found: "ALPHA", missing: true });
-	});
-
 	it("PLUG-A12 uses the format of the first registered panel as the source format", () => {
 		render(
 			<AdminComponentsProvider

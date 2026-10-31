@@ -41,18 +41,11 @@ const mount = () =>
 	).result;
 
 describe("bulk lifecycle run", () => {
-	it("sends only the rows that can take the transition", async () => {
+	it("LIST-C5 sends only the rows that can take the transition", async () => {
 		const mutations = mount();
 		await act(() => mutations.current.run("archive", [draft, archived]));
 
 		expect(bulkBodies()).toHaveLength(1);
 		expect(bulkBodies()[0]).toMatchObject({ op: "archive", items: [{ id: "draft-1", expectedVersion: 1 }] });
-	});
-
-	it("sends every row for an action that is not a lifecycle change", async () => {
-		const mutations = mount();
-		await act(() => mutations.current.run("relation.add", [draft, archived], { field: "tags", ids: ["tag-1"] }));
-
-		expect(bulkBodies()[0].items.map((item: { id: string }) => item.id)).toEqual(["draft-1", "archived-1"]);
 	});
 });

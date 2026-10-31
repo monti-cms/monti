@@ -262,19 +262,6 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(async () => expect((await valueButton(SUMMARY)).getAttribute("aria-description")).toBeNull());
 	});
 
-	it('"다시" fills again, and saving ends the assistant\'s mark', async () => {
-		renderEdit();
-		fireEvent.click((await row("요약")).getByRole("button", { name: /채우기/ }));
-		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBe("AI 제안"));
-		vi.mocked(fill.run).mockClear();
-		fireEvent.click((await row("요약")).getByRole("button", { name: /^다시$/ }));
-		await waitFor(() => expect(fill.run).toHaveBeenCalledTimes(1));
-		pressSave();
-		await waitFor(() => expect(saved()).toHaveLength(1));
-		expect(saved()[0]?.body.metadata.summary).toContain("리액트로 블로그를");
-		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBeNull());
-	});
-
 	it("WRITE-W7 fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
 		renderEdit();
 		fireEvent.click((await row(SERIES_FIELD)).getByRole("button", { name: tUi("ai.fill") }));

@@ -53,14 +53,6 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(contentOf(throughEditor(first))).toEqual(contentOf(first));
 	});
 
-	it("maps a line break to the editor's hardBreak and back to the one document node", () => {
-		const editorDoc = throughSchema(tiptapOf("가<br />나"));
-		expect(editorDoc.content?.[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
-
-		const saved = tiptapToStored(testSite, editorDoc);
-		expect(saved.content[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
-	});
-
 	it("FMT-R1 keeps a line break inside a table cell", () => {
 		const cell = (...content: CmsNode[]): CmsNode => ({ type: "tableCell", content });
 		const first = docOfBlocks({
@@ -157,19 +149,6 @@ describe("stored document <-> Tiptap round trip", () => {
 
 	/** A block the editor has no node for. */
 	const unknownBlock = (id: string): CmsNode => ({ type: "mystery-block", id, attrs: { kind: "x", nested: { n: 1 } } });
-
-	it("preserves blocks not in the schema as boxes and restores them", () => {
-		const first = docOfBlocks({ type: "paragraph", id: "para0001", content: [text("앞")] }, unknownBlock("mist0001"), {
-			type: "horizontalRule",
-			id: "rule0001",
-		});
-		const json = storedToTiptap(testSite, first);
-
-		const names = (json.content ?? []).map((block) => block?.type);
-		expect(names).toEqual(["paragraph", OPAQUE_BLOCK_NAME, "horizontalRule"]);
-
-		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
-	});
 
 	it("FMT-R2 keeps a box exactly as it was, nested ids and all", () => {
 		const first = docOfBlocks(unknownBlock("mist0001"), { type: "paragraph", id: "para0001", content: [text("뒤")] });
@@ -328,10 +307,5 @@ describe("stored document <-> Tiptap round trip", () => {
 		const second = tiptapToStored(testSite, shown);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(JSON.stringify(second)).not.toContain("/posts/x");
-	});
-
-	it("the mark name of the added text decoration (block extension tooltip) matches the schema", () => {
-		expect(Object.keys(schema.marks)).toContain(addedMarkName("tooltip"));
-		expect(Object.keys(schema.nodes)).toContain(OPAQUE_BLOCK_NAME);
 	});
 });

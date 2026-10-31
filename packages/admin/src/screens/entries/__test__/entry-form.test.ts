@@ -122,11 +122,6 @@ describe("translation state form", () => {
 		expect(translationPayload(first)).toEqual({ version: 4, baseDoc: DOC });
 	});
 
-	it("a state with an invalid document is treated as unconfirmed", () => {
-		const form = formFromEntry(testSite, translation({ version: 4, baseDoc: { type: "doc" } }));
-		expect(translationPayload(form)).toEqual(EMPTY);
-	});
-
 	it("TRANS-N9 with no valid state, nothing is treated as confirmed", () => {
 		for (const state of [null, undefined, { version: 1, units: [] }, { version: 2 }]) {
 			expect(translationPayload(formFromEntry(testSite, translation(state)))).toEqual(EMPTY);

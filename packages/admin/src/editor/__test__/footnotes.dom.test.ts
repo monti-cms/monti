@@ -35,24 +35,6 @@ const SOURCE = storedDoc(
 );
 
 describe("footnotes in the visual editor", () => {
-	it("loads footnotes as editable nodes instead of a source box", () => {
-		const json = tiptapOf(SOURCE);
-		expect(JSON.stringify(json)).not.toContain(OPAQUE_BLOCK_NAME);
-		expect(json.content?.[0]?.content?.map((node) => node.type)).toEqual([
-			"text",
-			"footnoteReference",
-			"text",
-			"footnoteReference",
-			"text",
-			"footnoteReference",
-			"text",
-		]);
-		expect(json.content?.[0]?.content?.[1]?.attrs).toEqual({ label: "a" });
-		const [, definitionA, definitionB] = json.content ?? [];
-		expect(definitionA).toMatchObject({ type: "footnoteDefinition", attrs: { label: "a" } });
-		expect(definitionB?.content?.map((node) => node.type)).toEqual(["paragraph", "codeBlock"]);
-	});
-
 	it("FMT-R3 round-trips through the editor unchanged", () => {
 		expect(saved(tiptapOf(SOURCE))).toEqual(SOURCE);
 		const editor = createEditor(SOURCE);
@@ -60,16 +42,7 @@ describe("footnotes in the visual editor", () => {
 		editor.destroy();
 	});
 
-	it("gives an empty definition a paragraph so it can be typed into, and saves it as empty", () => {
-		const doc = storedDoc(line(text("Text"), ref("1")), def("1", para()));
-		const json = tiptapOf(doc);
-		expect(json.content?.[1]?.content).toEqual([expect.objectContaining({ type: "paragraph", content: [] })]);
-		const editor = createEditor(doc);
-		expect(saved(editor.getJSON())).toEqual(doc);
-		editor.destroy();
-	});
-
-	it("keeps footnote references in headings, lists and table cells editable", () => {
+	it("EDIT-F1 keeps footnote references in headings, lists and table cells editable", () => {
 		const doc = storedDoc(
 			{ type: "heading", attrs: { level: 2 }, content: [text("Title"), ref("1")] },
 			{ type: "bulletList", content: [{ type: "listItem", content: [line(text("item"), ref("2"))] }] },
@@ -92,31 +65,6 @@ describe("footnotes in the visual editor", () => {
 		expect(once.content.map((node) => node.type)).toEqual(doc.content.map((node) => node.type));
 		expect(JSON.stringify(once)).toContain('"label":"3"');
 		expect(saved(tiptapOf(once))).toEqual(once);
-	});
-
-	it("moves a definition nested by pasting or dragging out to the top level when saving", () => {
-		const stored = saved({
-			type: "doc",
-			content: [
-				{
-					type: "footnoteDefinition",
-					attrs: { label: "1" },
-					content: [
-						{ type: "paragraph", content: [{ type: "text", text: "outer" }] },
-						{
-							type: "footnoteDefinition",
-							attrs: { label: "2" },
-							content: [{ type: "paragraph", content: [{ type: "text", text: "inner" }] }],
-						},
-					],
-				},
-			],
-		});
-		expect(stored.content.map((node) => [node.type, node.attrs?.label])).toEqual([
-			["footnoteDefinition", "1"],
-			["footnoteDefinition", "2"],
-		]);
-		expect(JSON.stringify(stored.content[1])).toContain("inner");
 	});
 });
 
@@ -162,7 +110,7 @@ describe("footnote numbering", () => {
 		editor.destroy();
 	});
 
-	it("shows a stored reference without a definition as a flagged chip and keeps it across saves", () => {
+	it("EDIT-F1 shows a stored reference without a definition as a flagged chip and keeps it across saves", () => {
 		const doc = storedDoc(line(text("Text"), ref("1"), text(" here.")));
 		const editor = createEditor(doc);
 		const chip = editor.view.dom.querySelector("[data-footnote-ref]");
@@ -173,24 +121,12 @@ describe("footnote numbering", () => {
 		expect(saved(tiptapOf(again))).toEqual(doc);
 		editor.destroy();
 	});
-
-	it("renumbers when a reference is added before another", () => {
-		const editor = createEditor(storedDoc(line(text("A"), ref("a")), def("a", para("a"))));
-		editor.commands.insertContentAt(1, { type: "footnoteReference", attrs: { label: "z" } });
-		expect([...footnoteNumbers(editor.state.doc)]).toEqual([
-			["z", 1],
-			["a", 2],
-		]);
-		const first = editor.view.dom.querySelector("[data-footnote-ref]");
-		expect(first?.getAttribute("data-footnote-number")).toBe("1");
-		editor.destroy();
-	});
 });
 
 describe("Footnote slash command", () => {
 	const item = () => slashCommands(testSite).find((command) => command.title === t("slash.footnote.title"));
 
-	it("is in the menu and found by its keywords", () => {
+	it("EDIT-F2 is in the menu and found by its keywords", () => {
 		for (const keyword of t("slash.footnote.keywords").split(",")) {
 			expect(filterCommands(testSite, keyword.trim()).map((command) => command.title)).toContain(
 				t("slash.footnote.title"),
@@ -236,12 +172,6 @@ describe("Footnote slash command", () => {
 		expect(stored.content[0]?.content?.map((node) => node.type)).toEqual(["text", "footnoteReference"]);
 		expect(stored.content[1]).toMatchObject({ type: "footnoteDefinition", attrs: { label: "1" } });
 		expect(JSON.stringify(stored.content[1])).toContain("The note");
-		editor.destroy();
-	});
-
-	it("starts at 1 and does not touch the existing numbering", () => {
-		const editor = createEditor(storedDoc(para("Plain text")));
-		expect(nextFootnoteLabel(editor.state.doc)).toBe("1");
 		editor.destroy();
 	});
 

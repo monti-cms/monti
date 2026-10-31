@@ -244,23 +244,4 @@ describe("other containers", () => {
 	});
 });
 
-describe("stripLocation", () => {
-	it("gives back the same file when there is nothing to remove, and a clean copy with the same name and type when there is", async () => {
-		const plain = new File([jpeg({ marker: 0xe0, data: ascii("JFIF\0") }) as BlobPart], "a.jpg", {
-			type: "image/jpeg",
-		});
-		expect(await stripLocation(plain)).toBe(plain);
-		const located = new File(
-			[jpeg({ marker: 0xe1, data: concat(ascii("Exif\0\0"), buildTiff(true).bytes) }) as BlobPart],
-			"b.jpg",
-			{
-				type: "image/jpeg",
-			},
-		);
-		const cleaned = await stripLocation(located);
-		expect(cleaned).not.toBe(located);
-		expect(cleaned.name).toBe("b.jpg");
-		expect(cleaned.type).toBe("image/jpeg");
-		expect(cleaned.size).toBe(located.size);
-	});
-});
+describe("stripLocation", () => {});

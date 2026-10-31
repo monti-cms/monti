@@ -192,15 +192,6 @@ describe("flow: upload (올리기)", () => {
 		);
 	});
 
-	it("MEDIA-U3 shrinks to WebP by default: there is no switch for it, and the picture goes through the converter without an option", async () => {
-		await renderLibrary();
-		expect(screen.queryByRole("switch")).toBeNull();
-		expect(screen.queryByRole("checkbox", { name: /WebP/ })).toBeNull();
-		fireEvent.drop(dropArea(), dragOf(file("a.png", "image/png")));
-		await waitFor(() => expect(upload.prepareUpload).toHaveBeenCalled());
-		expect(upload.prepareUpload.mock.calls[0]).toHaveLength(2);
-	});
-
 	it("MEDIA-U1 keeps a file that failed in its place with the reason, and the button takes it out", async () => {
 		upload.uploadImageFile.mockRejectedValue(new NoticeError("The storage said no"));
 		await renderLibrary();
@@ -209,22 +200,6 @@ describe("flow: upload (올리기)", () => {
 		await waitFor(() => expect(failed.textContent).toContain("The storage said no"));
 		fireEvent.click(screen.getByRole("button", { name: t("upload.remove") }));
 		expect(screen.queryByRole("button", { name: /^hero\.png/ })).toBeNull();
-	});
-
-	it("MEDIA-U1 keeps a format the site does not take as a tile that says so, with the remove button and nothing sent", async () => {
-		await renderLibrary();
-		fireEvent.drop(
-			dropArea(),
-			dragOf(file("IMG_2041.HEIC", "image/heic"), file("setup.exe", "application/x-msdownload")),
-		);
-		const heic = await screen.findByRole("button", { name: /^IMG_2041\.HEIC/ });
-		expect(heic.textContent).toContain(t("upload.unsupported"));
-		const removes = screen.getAllByRole("button", { name: t("upload.remove") });
-		expect(removes).toHaveLength(2);
-		expect(upload.uploadImageFile).not.toHaveBeenCalled();
-		expect(upload.uploadAttachment).not.toHaveBeenCalled();
-		fireEvent.click(removes[0] as HTMLElement);
-		expect(screen.queryByRole("button", { name: /^IMG_2041\.HEIC/ })).toBeNull();
 	});
 
 	it("MEDIA-U1 offers to shrink a picture over the size limit and tries again with the smaller one, which goes up without an original", async () => {

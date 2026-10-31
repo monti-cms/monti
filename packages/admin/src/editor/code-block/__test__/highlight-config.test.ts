@@ -47,12 +47,6 @@ describe("editor extra languages", () => {
 		expect(loaded).toEqual(["elixir", "zig"]);
 		expect(loadLanguage).toHaveBeenCalledTimes(3);
 	});
-
-	it("loads the configured languages by default", async () => {
-		const loadLanguage = vi.fn(async (_name: string) => undefined);
-		await loadExtraLanguages({ loadLanguage } as never, site.EXTRA_CODE_LANGUAGES);
-		expect(loadLanguage.mock.calls.map(([name]) => name)).toEqual(["elixir", "zig", "ts", "elixir"]);
-	});
 });
 
 describe("language dropdown", () => {

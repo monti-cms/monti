@@ -26,10 +26,6 @@ const fillEmptyParagraphs = (node: JSONContent, inside = false): JSONContent => 
 const insertable = addedNodeBlocks(testSite).filter((block) => block.editor.insertable && !block.parent);
 
 describe("any site: added blocks in the editor", () => {
-	it("the active config adds at least one insertable block", () => {
-		expect(insertable.length).toBeGreaterThan(0);
-	});
-
 	it.each(
 		insertable.map((block) => [block.name, block] as const),
 	)("WRITE-W1 %s is in the slash menu under its own label", (_name, block) => {

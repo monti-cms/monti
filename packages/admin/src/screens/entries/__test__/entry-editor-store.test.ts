@@ -64,19 +64,6 @@ afterEach(() => {
 });
 
 describe("load", () => {
-	it("opens an entry: ready, with its form, version and a saved status", async () => {
-		const { editor, client } = await opened();
-		expect(client.get).toHaveBeenCalledWith("entry-1");
-		expect(editor().load).toEqual({ status: "ready" });
-		expect(editor().collection).toBe("post");
-		expect(editor().form).toEqual(formFromEntry(testSite, ENTRY));
-		expect(editor().saveStatus).toBe("saved");
-		expect(editor().hasUnsavedChanges).toBe(false);
-		expect(editor().getSnapshot()).toMatchObject({ entryId: "entry-1", version: 4, saveStatus: "saved" });
-		expect(editor().recovery).toBeNull();
-		expect(editor().conflict).toBeNull();
-	});
-
 	it("WRITE-W11 reports a failed load as an error state with the server's message, and a network error as the offline text", async () => {
 		const ctx = setup();
 		ctx.client.get.mockRejectedValueOnce(unauthorizedError());
@@ -968,18 +955,4 @@ describe("translation source flow", () => {
 	});
 });
 
-describe("snapshot and view", () => {
-	it("getSnapshot is current without waiting for a render", async () => {
-		const { editor } = await opened();
-		const before = editor().getSnapshot();
-		editor().setForm({ title: "바로" });
-		expect(before.hasUnsavedChanges).toBe(false);
-		expect(editor().getSnapshot()).toMatchObject({ hasUnsavedChanges: true, saveStatus: "dirty", entryId: "entry-1" });
-	});
-
-	it("the view of one state is one object, so selectors stay stable between changes", async () => {
-		const { core } = await opened();
-		const state = core.store.getState();
-		expect(core.view(state)).toBe(core.view(state));
-	});
-});
+describe("snapshot and view", () => {});

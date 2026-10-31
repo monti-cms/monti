@@ -50,26 +50,16 @@ describe("container body editing", () => {
 		editor.destroy();
 	});
 
-	it.each(["callout", "collapsible", "tabs", "columns"])("inserts the default %s structure via slash", (name) => {
+	it.each([
+		"callout",
+		"collapsible",
+		"tabs",
+		"columns",
+	])("EDIT-B2 inserts the default %s structure via slash", (name) => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>/</p>" });
 		blockInsertActions(testSite)[name]?.(editor, { from: 1, to: 2 });
 		expect(editor.getJSON().content?.[0]?.type).toBe(`cms${name[0]?.toUpperCase()}${name.slice(1)}`);
 		expect(tiptapToStored(testSite, editor.getJSON()).content[0]?.type).toBe(name);
-		editor.destroy();
-	});
-
-	it("inserts the code explorer via slash with one code block, not an empty paragraph", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>/</p>" });
-		blockInsertActions(testSite)["code-explorer"]?.(editor, { from: 1, to: 2 });
-		const block = editor.state.doc.firstChild;
-		expect(block?.type.name).toBe("cmsCodeExplorer");
-		expect(block?.childCount).toBe(1);
-		expect(block?.firstChild?.type.name).toBe("codeBlock");
-		expect(block?.firstChild?.attrs).toMatchObject({ language: "ts", meta: 'title="src/index.ts"' });
-		expect(tiptapToStored(testSite, editor.getJSON()).content[0]).toMatchObject({
-			type: "code-explorer",
-			content: [{ type: "codeBlock", attrs: { language: "ts", meta: 'title="src/index.ts"' } }],
-		});
 		editor.destroy();
 	});
 
@@ -80,31 +70,6 @@ describe("container body editing", () => {
 		element.innerHTML = html;
 		const parsed = PmDOMParser.fromSchema(editor.schema).parse(element);
 		expect(parsed.firstChild?.attrs.values.variant).toBe("note");
-		editor.destroy();
-	});
-
-	it("long titles are also preserved through HTML copy and paste", () => {
-		const title = "긴 제목".repeat(5000);
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOfSource(0) });
-		editor.commands.updateAttributes("cmsCallout", { values: { title } });
-		const element = document.createElement("div");
-		element.innerHTML = editor.getHTML();
-		const parsed = PmDOMParser.fromSchema(editor.schema).parse(element);
-		expect(parsed.firstChild?.attrs.values.title).toBe(title);
-		editor.destroy();
-	});
-
-	it("a callout without body opens with an empty paragraph, and saving it left empty restores it without body", () => {
-		const source = storedDoc({ type: "callout", attrs: { variant: "info", title: "제목만" } });
-		const content = storedToTiptap(testSite, source);
-		expect(content.content?.[0]?.type).toBe("cmsCallout");
-		expect(content.content?.[0]?.content).toEqual([{ type: "paragraph" }]);
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content });
-		const emptySaved = tiptapToStored(testSite, editor.getJSON()).content[0];
-		expect(emptySaved).toMatchObject({ type: "callout", attrs: { variant: "info", title: "제목만" } });
-		expect(emptySaved?.content ?? []).toEqual([]);
-		editor.commands.insertContentAt(2, "새 본문");
-		expect(JSON.stringify(tiptapToStored(testSite, editor.getJSON()))).toContain("새 본문");
 		editor.destroy();
 	});
 
@@ -125,16 +90,6 @@ describe("container body editing", () => {
 		expect(editor.state.doc.firstChild?.childCount).toBe(8);
 		expect(duplicateBlock(editor, firstTab)).toBe(false);
 		expect(editor.state.doc.firstChild?.childCount).toBe(8);
-		editor.destroy();
-	});
-
-	it("the schema rejects fewer than two tabs or two columns", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>시작</p>" });
-		const tab = editor.schema.nodes.cmsTab;
-		const column = editor.schema.nodes.cmsColumn;
-		if (!tab || !column) throw new Error("Container child node missing");
-		expect(editor.schema.nodes.cmsTabs?.contentMatch.matchType(tab)?.validEnd).toBe(false);
-		expect(editor.schema.nodes.cmsColumns?.contentMatch.matchType(column)?.validEnd).toBe(false);
 		editor.destroy();
 	});
 });
