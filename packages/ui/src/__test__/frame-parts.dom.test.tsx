@@ -106,4 +106,13 @@ describe("TodoItem", () => {
 		await waitFor(() => expect(document.activeElement).not.toBe(action));
 		expect(document.activeElement).toBe(screen.getByRole("dialog"));
 	});
+
+	it("UI-A3 the list is a dialog named by its group", async () => {
+		render(
+			<StatusBarList defaultOpen label="할 일" count={2} trigger={<StatusBarCell>할 일 2</StatusBarCell>}>
+				<TodoItem title="제목이 비어 있어요" />
+			</StatusBarList>,
+		);
+		expect(await screen.findByRole("dialog", { name: "할 일" })).toBeInTheDocument();
+	});
 });
