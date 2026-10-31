@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { handleApiError } from "../../http/v1/error-handler";
 import { SetupError } from "../problem";
 import { CmsError } from "../store/errors";
-import { ServiceError } from "../types";
 
 /**
  * An error made by another copy of the package (the bundled one and the installed one in a Next app): same class name and brand, different prototype

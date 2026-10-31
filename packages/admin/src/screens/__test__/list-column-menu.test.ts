@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { columnMenuOf, hiddenColumns, isColumnFiltered } from "../list-column-menu";
-import { columnsFor } from "../list-columns";
+import { columnMenuOf, isColumnFiltered } from "../list-column-menu";
 import { parseListState } from "../list-state";
 
 const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(query));
 const menu = (column: string, collection = "post") => columnMenuOf(testSite, collection, column);
 
 describe("the sections of a column's menu", () => {
-
 	it("LIST-F2 filters the status, the language with the translation state, the dates, and the stored fields by their kind", () => {
 		expect(menu("status").filter).toEqual({ kind: "status" });
 		expect(menu("locale").filter).toEqual({ kind: "language", translation: true });
@@ -27,7 +25,6 @@ describe("the sections of a column's menu", () => {
 	it("LIST-F2 leaves the translation state out of an item collection's language menu", () => {
 		expect(menu("locale", "tag").filter).toEqual({ kind: "language", translation: false });
 	});
-
 });
 
 describe("the dot after a filtered column's name", () => {
@@ -48,4 +45,3 @@ describe("the dot after a filtered column's name", () => {
 		expect(filtered("collection=post&translation=changed", "locale")).toBe(true);
 	});
 });
-

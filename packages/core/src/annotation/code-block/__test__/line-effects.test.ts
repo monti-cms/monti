@@ -1,48 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
-import { createTranslator } from "../../../i18n";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
-import { checkCodeBlockConfig, DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects } from "../line-effects";
-import { codeBlockMessages } from "../messages";
-import type { AnnotationConfigItem } from "../types";
-
-/** The annotation config before switching to a definition list (checks the public view classes stay the same), plus `focus`, added later. */
-const BEFORE: AnnotationConfigItem[] = [
-	{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char", "document"] },
-	{ name: "strong", kind: "render", source: "mdx-text", render: "strong", scopes: ["char", "document"] },
-	{ name: "em", kind: "render", source: "mdx-text", render: "em", scopes: ["char", "document"] },
-	{ name: "del", kind: "render", source: "mdx-text", render: "del", scopes: ["char", "document"] },
-	{ name: "u", kind: "render", source: "mdx-text", render: "u", scopes: ["char", "document"] },
-	{ name: "fold", kind: "render", source: "mdx-text", render: "fold", scopes: ["char", "document"] },
-	{
-		name: "plus",
-		kind: "class",
-		class:
-			"inline-block w-full anno-mark-base anno-mark:content-['+'] anno-mark:text-gray-400 bg-green-400/10 shadow-[inset_2px_0_0_0_rgba(74,222,128,1)]",
-		scopes: ["line"],
-	},
-	{
-		name: "minus",
-		kind: "class",
-		class:
-			"inline-block w-full anno-mark-base anno-mark:content-['-'] anno-mark:text-gray-400 bg-red-400/10 shadow-[inset_2px_0_0_0_rgba(239,68,68,1)]",
-		scopes: ["line"],
-	},
-	{ name: "highlight", kind: "class", class: "inline-block w-full anno-mark-base bg-gray-400/20", scopes: ["line"] },
-	{ name: "focus", kind: "class", class: "code-focus", scopes: ["line"] },
-	{ name: "warning", kind: "class", class: "underline decoration-wavy decoration-yellow-400/80", scopes: ["line"] },
-	{ name: "error", kind: "class", class: "underline decoration-wavy decoration-red-500", scopes: ["line"] },
-	{ name: "collapse", kind: "render", render: "collapse", scopes: ["line"] },
-	{ name: "anchor", kind: "class", class: "code-anchor", scopes: ["line"] },
-];
-
-const byName = (items: readonly AnnotationConfigItem[] | undefined) =>
-	Object.fromEntries((items ?? []).map((item) => [item.name, item]));
+import { checkCodeBlockConfig, resolveCodeLineEffects } from "../line-effects";
 
 describe("code line effect definitions", () => {
-
 	it("FMT-C2 a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
 			{ name: "highlight", label: "강조", class: "my-highlight" },

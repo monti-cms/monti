@@ -2,7 +2,6 @@ import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
-import { columnsFor } from "../../list-columns";
 import {
 	copyTitle,
 	type EntryData,
@@ -95,5 +94,4 @@ describe("the title in the edit form", () => {
 		expect(copyTitle(site, "article", "A very long headline indeed")).toHaveLength(20);
 		expect(copyTitle(site, "article", "Short")).toContain("Short");
 	});
-
 });

@@ -13,7 +13,6 @@ import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { copyTitle, type EntryData } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
 import { EntryListScreen } from "../entry-list-screen";
-import { columnLabel, columnsFor } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
@@ -79,7 +78,6 @@ afterEach(() => {
 });
 
 describe("any site: list screen", () => {
-
 	it("WRITE-W10 duplicates a row with a copy title made by the admin", async () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];

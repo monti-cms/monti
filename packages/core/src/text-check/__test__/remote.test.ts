@@ -40,7 +40,6 @@ describe("remoteTextChecker", () => {
 		const checker = remoteTextChecker({ id: "remote", label: "원격", url: "/x" });
 		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow("Too much text");
 	});
-
 });
 
 describe("server check route", () => {

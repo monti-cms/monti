@@ -15,5 +15,4 @@ describe("time zone of date-time input", () => {
 		expect(testSite.formatDateTimeInput(null)).toBe("");
 		expect(testSite.formatDateTimeInput("not a date")).toBe("");
 	});
-
 });

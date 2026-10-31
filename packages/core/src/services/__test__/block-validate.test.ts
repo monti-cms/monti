@@ -177,5 +177,4 @@ describe("block validate", () => {
 			error.mockRestore();
 		}
 	});
-
 });

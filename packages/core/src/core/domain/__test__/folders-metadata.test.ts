@@ -33,7 +33,6 @@ describe("folders", () => {
 });
 
 describe("metadata", () => {
-
 	it("WRITE-S7 accepts an object with no prototype and a key named __proto__ as plain data", () => {
 		const input = JSON.parse('{"__proto__": {"x": 1}, "constructor": "c"}');
 		const normalized = normalizeMetadata(input);

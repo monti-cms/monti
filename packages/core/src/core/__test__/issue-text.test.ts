@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
-import { issueMessages, issueText, tellIssues } from "../issue-text";
+import { issueMessages, issueText } from "../issue-text";
 
 const t = testSite.createTranslator(issueMessages);
 
@@ -51,5 +51,4 @@ describe("issueText", () => {
 			expect(issueText(testSite, { code, message: "Invalid input" }).text).toBe(t("invalid_value"));
 		}
 	});
-
 });

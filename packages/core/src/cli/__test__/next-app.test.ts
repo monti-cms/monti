@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gitignoreCoverage, hasSuppressHydrationWarning, montiNextFilePath, montiNextFiles } from "../next-app";
+import { gitignoreCoverage, montiNextFilePath, montiNextFiles } from "../next-app";
 
 describe("suppressHydrationWarning on <html>", () => {
 	it("INIT-K5 says what a .gitignore keeps out of git: .env.local and the .monti/ folder, in any of the usual spellings", () => {

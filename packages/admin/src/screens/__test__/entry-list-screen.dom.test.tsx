@@ -71,13 +71,6 @@ const listAnswer = ({ query }: SentRequest): EntriesPage => {
 	const items = collection !== "post" ? [] : trash ? server.trashed : server.posts;
 	return { items, total: items.length };
 };
-
-/** The requests for the list itself: the sidebar's trash count asks for the same collection with the trashed status. */
-const entryRequests = () =>
-	api
-		.sent("GET /v1/entries")
-		.map((request) => request.query)
-		.filter((query) => query.get("collection") === "post" && !query.getAll("status").includes("trashed"));
 /** The requests for the trash: the same list, asked for the trashed status. */
 const _trashRequests = () =>
 	api
@@ -124,7 +117,6 @@ const openRowMenu = async (title: string) => {
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
 /** The row menu's move to the trash: its name is the label and then its key. */
 const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tCommon("lifecycle.trash")) });
-
 
 describe("list screen — row menu and bulk actions", () => {
 	it("LIST-C5 the Delete key moves all selected draft rows to the trash at once", async () => {

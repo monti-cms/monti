@@ -41,5 +41,4 @@ describe("monti help", () => {
 		const accepted = [...Object.keys(command.options), ...(command.app ? Object.keys(APP_OPTIONS) : [])];
 		for (const option of accepted) expect(text).toMatch(new RegExp(`^ +--${option}(?:[ ,]|$)`, "m"));
 	});
-
 });

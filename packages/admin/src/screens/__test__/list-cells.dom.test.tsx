@@ -13,7 +13,6 @@ import {
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
-import { columnConfig, fieldColumnOf } from "../list-columns";
 import { parseListState } from "../list-state";
 
 // A site with select, text, media and relation fields, which the writer can show as list columns.
@@ -96,8 +95,6 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 }
 
 const rowOf = (name: RegExp) => screen.getByRole("row", { name });
-
-
 
 describe("listCells extension", () => {
 	it("PLUG-A12 draws a registered cell for a column name, with the field and stored value", () => {

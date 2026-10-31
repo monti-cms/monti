@@ -11,7 +11,6 @@ import {
 	listStateToSearchParams,
 	parseListState,
 	searchScopeChoice,
-	withSavedSettings,
 } from "../list-state";
 
 const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
@@ -254,4 +253,3 @@ describe("where a search inside a folder looks", () => {
 		expect(searchScopeChoice(state("collection=post&search=a"))).toBe(false);
 	});
 });
-

@@ -3,7 +3,6 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
-import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { CmsError } from "../../../core/store";
@@ -75,18 +74,6 @@ interface ExtendedContentStore {
 /** Document collection under test for lists (the reference blog's posts). */
 const content = contentCollection;
 
-type RelationInfo = { name: string; to: Collection; many: boolean };
-/** A non-conditional relation field that points at an item collection. */
-const itemRelations: RelationInfo[] = testSite
-	.storedFields(content)
-	.flatMap(({ name, field, when }) =>
-		!when && field.kind === "relation" && testSite.isItemCollection(field.to)
-			? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
-			: [],
-	);
-/** A single-select relation (the reference blog's category) and a multi-select relation (the reference blog's tags). */
-const singleRelation = itemRelations.find((relation) => !relation.many);
-const manyRelation = itemRelations.find((relation) => relation.many);
 const relationTargetTitle = (to: Collection) => `List test ${to}`;
 
 // ---------------------------------------------------------------------------
@@ -352,5 +339,4 @@ describe("listEntries in Postgres", () => {
 	// -----------------------------------------------------------------------
 	// 7  List authority
 	// -----------------------------------------------------------------------
-
 });

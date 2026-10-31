@@ -3,7 +3,6 @@ import type { Cms } from "../../cms";
 import { defineCollection, defineSite, fields } from "../../index";
 import { createSite } from "../../site";
 import { prepareSnapshot } from "../snapshot";
-import { type Issue, ServiceError } from "../types";
 
 /** What a developer sends to the write services (`createDraft`, `saveDraft`) and what comes back when it is wrong. */
 
@@ -31,7 +30,6 @@ const config = defineSite({
 	defaultLocale: "en",
 });
 const site = createSite(config);
-
 
 describe("metadata the caller sends", () => {
 	const input = (metadata: Record<string, unknown>) =>

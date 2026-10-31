@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	contentCollection,
-	defaultLocale,
 	otherContentCollection,
 	recordCollection,
 	requiredFields,
@@ -65,12 +64,6 @@ const isolatedCollection =
 const collectionWithoutFilledRelation = filledRelation
 	? testSite.COLLECTIONS.find((name) => name !== content && !testSite.storedField(name, filledRelation.name))
 	: undefined;
-/** Item collection whose name (`title`) is a per-language value (the reference blog's tags). */
-const localizedRecordCollection = testSite.COLLECTIONS.find(
-	(name) => testSite.isItemCollection(name) && testSite.recordLocalizedFields(name).includes("title"),
-);
-/** A language that is neither the default nor the second one (if any). An empty name is not included in the language list. */
-const thirdLocale = testSite.LOCALES.find((code) => code !== defaultLocale && code !== secondLocale);
 const relationTargetTitle = (to: Collection) => `List test ${to}`;
 
 // ---------------------------------------------------------------------------
@@ -687,11 +680,6 @@ export const listContract: ContractSuite = (factory) => {
 			const resSlugs = res.items.map((i) => i.slug).sort();
 			expect(resSlugs).toEqual(["le4-df", "le4-pf"]);
 		}, 30_000);
-
-		/** Text and select fields (other than the title). These supply the values of list cells. */
-		const plainField = testSite
-			.storedFields(content)
-			.find(({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"));
 
 		// Requires an item collection with per-language names and a second language.
 

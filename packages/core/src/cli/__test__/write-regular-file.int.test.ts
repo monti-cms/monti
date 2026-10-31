@@ -54,5 +54,4 @@ describe("preview script file writes", () => {
 		expect(existsSync(target)).toBe(false);
 		expect(readFileSync(file, "utf8")).toBe("A=1\n");
 	});
-
 });

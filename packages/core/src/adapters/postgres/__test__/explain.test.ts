@@ -74,5 +74,4 @@ describe("explainDatabaseError", () => {
 		expect(explain(new Error("something else"))).toBeUndefined();
 		expect(explain("text")).toBeUndefined();
 	});
-
 });

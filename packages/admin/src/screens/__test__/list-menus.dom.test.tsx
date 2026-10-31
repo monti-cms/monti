@@ -3,12 +3,10 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import type { EntrySearchResponse, ListCountsResponse } from "../../api/entries";
-import { commonMessages } from "../../lib/common.messages";
 import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { AdminUiLabels } from "../../ui/labels";
-import { uiMessages } from "../../ui/messages";
 import { describeBulkFailure } from "../entries/bulk-bar";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
@@ -28,8 +26,6 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 );
 
 const t = testSite.createTranslator(screensMessages);
-const tc = testSite.createTranslator(commonMessages);
-const tu = testSite.createTranslator(uiMessages);
 const statusName = (status: "draft" | "published" | "archived") => statusLabels(testSite)[status];
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
@@ -136,7 +132,6 @@ const listRequests = () =>
 			(request) => request.query.get("collection") === "post" && !request.query.getAll("status").includes("trashed"),
 		);
 const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
-const saved = () => api.sent("PUT /v1/preferences").map((request) => request.body);
 
 const renderList = async () => {
 	render(
@@ -161,13 +156,8 @@ const closeMenu = async () => {
 	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 	await menuClosed();
 };
-/** The pager's names are the UI labels the admin gives the design system. */
-const PAGER = tu("pagination.label");
-const NEXT = tu("pagination.nextPage");
 /** A value of the open menu, by the start of its name (the count follows it). */
 const valueBox = (label: string) => screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${label}`) });
-
-
 
 describe("flow: filter by value", () => {
 	it("LIST-F2 ticks 'editing' and 'draft' on the status menu, which stays open with them ticked, until they are unticked", async () => {
@@ -313,4 +303,3 @@ describe("flow: change the relations of the picked rows", () => {
 		);
 	});
 });
-

@@ -55,7 +55,6 @@ describe("sub-path (Next basePath)", () => {
 		expect(normalizeBasePath("blog/")).toBe("/blog");
 		expect(normalizeBasePath("/a/b//")).toBe("/a/b");
 	});
-
 });
 
 describe("locale addresses (site.localePrefix)", () => {

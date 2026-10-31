@@ -1,6 +1,6 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
 import { formatInitReport } from "../init-report";
 import { fakeHost, fixtureApp, listFiles, read } from "./init-helpers";

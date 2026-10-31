@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import { withActor } from "../../../core/actor";
-import { publishDraft, seedEntry, seedSave } from "../../../core/store/__test__/seed";
+import { seedEntry, seedSave } from "../../../core/store/__test__/seed";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -49,5 +49,4 @@ describe("who made the latest change of an entry (Postgres)", () => {
 		expect(read.changedBy).toBe("Mina");
 		expect(read.changedAt?.getTime()).toBe(saved.changedAt?.getTime());
 	});
-
 });

@@ -3,7 +3,6 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { type CmsIssue, issueLine } from "../../../api/error-message";
 import {
 	EntryFormProvider,
 	type EntryFormValue,

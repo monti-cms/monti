@@ -5,7 +5,6 @@ const decide = (options: Parameters<typeof postgres>[0], env: Record<string, str
 	Object.fromEntries((postgres(options).inspector?.decisions(env) ?? []).map((item) => [item.topic, item]));
 
 describe("postgres decisions", () => {
-
 	it("DOC-R5 reports a URL from the environment", () => {
 		const { Database } = decide({}, { DATABASE_URL: "postgres://u:pw@localhost:5432/monti" });
 		expect(Database?.value).toBe("localhost:5432/monti");

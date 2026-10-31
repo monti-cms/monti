@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import { unparsedDocument } from "../../doc/stored-document";
 import { documentText, SEARCH_TEXT } from "../body-text";
 import { bodyExcerpt, toPlainText } from "../plain-text";
 
@@ -21,7 +20,6 @@ describe("body plain text and automatic summary", () => {
 		expect(excerpt("```js\nonly();\n```")).toBe("");
 		expect(excerpt("")).toBe("");
 	});
-
 });
 
 describe("body search text", () => {

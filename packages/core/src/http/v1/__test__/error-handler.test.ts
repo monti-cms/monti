@@ -7,7 +7,6 @@ import { CmsError, cmsErrorText, type ErrorBody, handleApiError } from "../error
 afterEach(() => vi.restoreAllMocks());
 
 describe("API error responses", () => {
-
 	it("ADMIN-E2 keeps an unknown error as a 500", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
 		const error = new Error("boom");
