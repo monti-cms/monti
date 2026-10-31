@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe("side panel in the admin shell", () => {
-	it("opens and closes from the button in the header, and the pane shows the plugin's component", () => {
+	it("PLUG-A5 opens and closes from the button in the header, and the pane shows the plugin's component", () => {
 		renderShell("media");
 		expect(screen.queryByRole("complementary")).toBeNull();
 		fireEvent.click(toggle());

@@ -70,7 +70,7 @@ describe("properties panel: the tab a plugin places fields in", () => {
 		expect(value.textContent).toBe("Tab value");
 	});
 
-	it("a view field renders the registered view (`fieldViews`) in the list, and renders nothing when none is registered", async () => {
+	it("PLUG-A2 a view field renders the registered view (`fieldViews`) in the list, and renders nothing when none is registered", async () => {
 		const collections = testConfig.collections as Record<string, { fields: object }>;
 		const site = createSite({
 			...testConfig,

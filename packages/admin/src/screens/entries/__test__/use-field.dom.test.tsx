@@ -63,7 +63,7 @@ function Owner({
 }
 
 describe("useField in a preview", () => {
-	it("has no slot actions on a draft site, where nothing may reach a service", () => {
+	it("PLUG-A3 has no slot actions on a draft site, where nothing may reach a service", () => {
 		const draft = draftSiteOf(
 			testSite,
 			{
@@ -85,7 +85,7 @@ describe("useField in a preview", () => {
 });
 
 describe("useField", () => {
-	it("returns the value, definition, label, ids and the change function of one field", () => {
+	it("PLUG-A6 returns the value, definition, label, ids and the change function of one field", () => {
 		const setForm = vi.fn();
 		const { result } = renderHook(() => useField<string>("title"), {
 			wrapper: providerWith(baseValue({ form: { ...EMPTY_FORM, title: "Hello" }, setForm })),
@@ -129,7 +129,7 @@ describe("useField", () => {
 		expect(setForm).not.toHaveBeenCalled();
 	});
 
-	it("on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
+	it("PLUG-A6 on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
 		const setForm = vi.fn();
 		const locked = {
 			values: { ...EMPTY_FORM, title: "Original title", categoryId: "cat-1" },
@@ -269,7 +269,7 @@ describe("subscription of one field", () => {
 });
 
 describe("orphaned values", () => {
-	it("a change patches the field only, so values of removed fields stay in the form", () => {
+	it("PLUG-A6 a change patches the field only, so values of removed fields stay in the form", () => {
 		const patches: EntryFormPatch[] = [];
 		let latest: EntryForm = EMPTY_FORM;
 		function Capture() {

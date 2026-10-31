@@ -19,7 +19,7 @@ function UpperInput({ id, value, onChange }: FieldInputProps) {
 }
 
 describe("site-registered field input", () => {
-	it("an input registered under the field's `input` name renders instead of the built-in input, and stays open in the list", () => {
+	it("PLUG-A2 an input registered under the field's `input` name renders instead of the built-in input, and stays open in the list", () => {
 		const onChange = vi.fn();
 		render(
 			<AdminComponentsProvider components={{ fieldInputs: { "seo-title": UpperInput } }}>

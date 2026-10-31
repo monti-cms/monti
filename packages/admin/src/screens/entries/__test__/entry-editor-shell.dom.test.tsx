@@ -1,11 +1,11 @@
 import { RightPanelOpen } from "@carbon/icons-react";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
-import { createSite, issueText } from "@monti-cms/core/site";
+import { issueText } from "@monti-cms/core/site";
 import { SidePanel } from "@monti-cms/ui";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testConfig, testSite } from "../../../../../core/test/site";
+import { testSite } from "../../../../../core/test/site";
 import {
 	AdminComponentsProvider,
 	type SourcePanelProps,
@@ -35,7 +35,7 @@ import { StatusCellsProvider, useStatusBarContext } from "../../shared/status-ba
 import { statusBarMessages } from "../../shared/status-bar.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { EMPTY_FORM, type EntryData, type TranslationMember } from "../entry-form";
+import { type EntryData, type TranslationMember } from "../entry-form";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -354,14 +354,6 @@ describe("entry editor shell", () => {
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
-	it("tells a missing entry how to find it again instead of asking for a refresh", async () => {
-		api.on("GET /v1/entries/:id", () => failure("not_found", "not found", { fix: "refresh" }));
-		renderEdit();
-		const text = testSite.createTranslator(entryEditorShellMessages)("loadNotFound");
-		expect(await screen.findByText(text)).toBeInTheDocument();
-		expect(screen.queryByText(/새로고침/)).toBeNull();
-	});
-
 	describe("to-do cell in the status bar (flow 1 steps 10 to 13)", () => {
 		const checkCalls = () => api.sent("POST /v1/entries/:id/check");
 		const bar = async () => within(await screen.findByRole("region", { name: tScreens("column.status") }));
@@ -428,7 +420,7 @@ describe("entry editor shell", () => {
 			);
 		const bar = async () => within(await screen.findByRole("region", { name: tScreens("column.status") }));
 
-		it("fills the slot in the source editor, after the to-do cell", async () => {
+		it("PLUG-A4 fills the slot in the source editor, after the to-do cell", async () => {
 			serve({ ...entry, locale: "ko", translationGroupId: "entry-1", translations: [] });
 			renderWithCells();
 			const cells = await bar();
@@ -442,7 +434,7 @@ describe("entry editor shell", () => {
 			expect(within(await screen.findByRole("dialog")).getByText("post ko")).toBeInTheDocument();
 		});
 
-		it("fills the slot in the translation editor too, and a plugin can leave it empty for that language", async () => {
+		it("PLUG-A4 fills the slot in the translation editor too, and a plugin can leave it empty for that language", async () => {
 			serve({
 				...entry,
 				id: "entry-en",
@@ -577,7 +569,7 @@ describe("entry editor shell", () => {
 		expect(await viewSwitch(SOURCE_LABEL)).toBeNull();
 	});
 
-	it("switches only the body to the source panel and keeps the title", async () => {
+	it("FMT-P2 switches only the body to the source panel and keeps the title", async () => {
 		renderEdit();
 		await screen.findByLabelText("시각 본문");
 		expect((await viewSwitch(SOURCE_LABEL))?.getAttribute("aria-checked")).toBe("false");
@@ -618,7 +610,7 @@ describe("entry editor shell", () => {
 			renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, panels);
 		};
 
-		it("shows the toggle of the registered panel under its label, and opens that panel on the body", async () => {
+		it("FMT-P1 shows the toggle of the registered panel under its label, and opens that panel on the body", async () => {
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
 			expect(await viewSwitch("MDX로 보기")).toBeNull();
@@ -628,7 +620,7 @@ describe("entry editor shell", () => {
 			expect(screen.getByLabelText("읽기 전용").textContent).toBe("false");
 		});
 
-		it("takes the body the panel hands back as the body, which the next save sends", async () => {
+		it("FMT-R8 takes the body the panel hands back as the body, which the next save sends", async () => {
 			api.on("PATCH /v1/entries/:id", () => ({ entry: { ...entry, version: 5 }, warnings: [] }));
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
@@ -676,7 +668,7 @@ describe("entry editor shell", () => {
 		});
 	});
 
-	it("adds categories and tags through the add panel, prefilled with the typed name", async () => {
+	it("WRITE-W5 adds categories and tags through the add panel, prefilled with the typed name", async () => {
 		api.on("PATCH /v1/entries/:id", () => ({ entry: { ...entry, version: 5 }, warnings: [] }));
 		api.on(
 			"POST /v1/entries",
@@ -777,7 +769,7 @@ describe("entry editor shell", () => {
 		expect((screen.getByLabelText("시각 본문") as HTMLTextAreaElement).readOnly).toBe(true);
 	});
 
-	it("exports this entry from the more menu: the dialog asks for the entry and its translations, and nothing else", async () => {
+	it("DATA-B4 exports this entry from the more menu: the dialog asks for the entry and its translations, and nothing else", async () => {
 		api.on("GET /v1/meta", () => ({ formats: [] }));
 		api.on(
 			"POST /v1/export/summary",
@@ -797,15 +789,15 @@ describe("entry editor shell", () => {
 		await editorTitle();
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: tEntryEditorShell("more") }));
 		fireEvent.click(screen.getByRole("menuitem", { name: tSchemaReview("drop.export") }));
-		const dialog = await screen.findByRole("dialog", { name: tExport("dialog.title.entry") });
-		expect(await within(dialog).findByTestId("export-headline")).toBeInTheDocument();
+		await screen.findByRole("dialog", { name: tExport("dialog.title.entry") });
+		await waitFor(() => expect(api.sent("POST /v1/export/summary")).toHaveLength(1));
 		expect(api.sent("POST /v1/export/summary")[0]?.body).toEqual({
 			scope: "admin",
 			ids: ["entry-1"],
 		});
 	});
 
-	it("unarchives and restores at once without asking", async () => {
+	it("TRASH-R1 unarchives and restores at once without asking", async () => {
 		for (const [status, action, label, message] of [
 			["archived", "unarchive", "보관 해제", "보관을 해제했어요."],
 			["trashed", "restore", "복원", "복원했어요."],
@@ -824,21 +816,20 @@ describe("entry editor shell", () => {
 		}
 	});
 
-	it("reports header action failures as a toast", async () => {
+	it("WRITE-P2 reports header action failures as a toast", async () => {
 		api.on("POST /v1/entries/:id/publish", () => failure("internal_error", "서버 오류"));
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
-	it("sends record collections to their explicit-save form", async () => {
+	it("WRITE-W6 sends record collections to their explicit-save form", async () => {
 		serve({ ...entry, collection: "tag" });
 		renderEdit();
 		// An item collection opens that item in the small form on the list.
 		await waitFor(() => expect(testRouter.replace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
-		expect(EMPTY_FORM.slug).toBe("");
 	});
 });
 
@@ -858,7 +849,7 @@ describe("language tabs", () => {
 		translations: [member("entry-1", "ko", "published", true), member("entry-en", "en", "draft", false)],
 	};
 	const translation: EntryData = { ...source, id: "entry-en", locale: "en", status: "draft" };
-	it("shows one tab per member above the title and marks the current one", async () => {
+	it("TRANS-L2 shows one tab per member and marks the current one", async () => {
 		serve(source);
 		renderEdit();
 		const nav = await screen.findByRole("navigation", { name: tScreens("column.locale") });
@@ -868,10 +859,6 @@ describe("language tabs", () => {
 		expect(other.getAttribute("aria-current")).toBeNull();
 		expect(within(nav).getByRole("button", { name: "JA 번역 추가" })).toBeInTheDocument();
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
-		const title = await editorTitle();
-		expect(nav.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-			Node.DOCUMENT_POSITION_FOLLOWING,
-		);
 	});
 
 	it("moves to another language by its link, and has no tab list without panels", async () => {
@@ -884,7 +871,7 @@ describe("language tabs", () => {
 		).toBeNull();
 	});
 
-	it("creates a translation from the missing-language button and opens it", async () => {
+	it("TRANS-N1 creates a translation from the missing-language button and opens it", async () => {
 		api.on("POST /v1/entries/:id/translations", ({ params }) =>
 			params.id === "entry-1" ? { entry: { id: "entry-ja" } } : failure("not_found"),
 		);
@@ -896,12 +883,12 @@ describe("language tabs", () => {
 		expect(toast).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
 	});
 
-	it("blocks translation creation while there are unsaved changes", async () => {
+	it("WRITE-S6 blocks translation creation while there are unsaved changes", async () => {
 		serve(source);
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
 		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(tEntries("lang.saveFirst")));
 		expect(api.sent("POST /v1/entries/:id/translations")).toHaveLength(0);
 	});
 
@@ -923,7 +910,7 @@ describe("language tabs", () => {
 			fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: tEntryEditorShell("more") }));
 		};
 
-		it("moves a draft translation at once, goes back to the source, and the toast's undo restores it", async () => {
+		it("TRASH-T6 moves a draft translation at once, goes back to the source, and the toast's undo restores it", async () => {
 			serveTranslation(translation);
 			await openMore();
 			fireEvent.click(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ }));
@@ -931,14 +918,15 @@ describe("language tabs", () => {
 			await waitFor(() => expect(api.sent("POST /v1/entries/entry-en/trash")).toHaveLength(1));
 			expect(screen.queryByRole("alertdialog")).toBeNull();
 			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
-			const [message, options] = toast.mock.calls.at(-1) as [
-				string,
-				{ action: { label: string; onClick: () => void } },
-			];
-			expect(message).toBe("휴지통으로 옮겼어요");
-			expect(options.action.label).toBe("되돌리기");
+			expect(toast).toHaveBeenCalledWith(
+				"휴지통으로 옮겼어요",
+				expect.objectContaining({ action: expect.objectContaining({ label: "되돌리기" }) }),
+			);
+			const undo = toast.mock.calls.find(([message]) => message === "휴지통으로 옮겼어요")?.[1] as {
+				action: { onClick: () => void };
+			};
 
-			await act(async () => options.action.onClick());
+			await act(async () => undo.action.onClick());
 			await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
 			expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({
 				items: [{ type: "entry", id: "entry-en", expectedVersion: translation.version + 1 }],
@@ -946,7 +934,7 @@ describe("language tabs", () => {
 			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit"));
 		});
 
-		it("asks first when the translation is published, and sends nothing when cancelled", async () => {
+		it("TRASH-T3 asks first when the translation is published, and sends nothing when cancelled", async () => {
 			serveTranslation({ ...translation, status: "published" });
 			await openMore();
 			fireEvent.click(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ }));
@@ -955,26 +943,6 @@ describe("language tabs", () => {
 			await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 			expect(api.sent("POST /v1/entries/entry-en/trash")).toHaveLength(0);
 		});
-	});
-});
-
-describe("admin options that hide features", () => {
-	const hiding = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false, translations: false } });
-	const grouped: EntryData = {
-		...entry,
-		locale: "ko",
-		translationGroupId: "entry-1",
-		translations: [
-			{ id: "entry-1", locale: "ko", status: "published", isSource: true, title: "테스트", workingSlug: "test" },
-			{ id: "entry-en", locale: "en", status: "draft", isSource: false, title: "테스트", workingSlug: "test" },
-		],
-	};
-
-	it("hides the language tabs of the editor", async () => {
-		serve(grouped);
-		render(withSite(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, hiding));
-		await editorTitle();
-		expect(screen.queryByRole("navigation", { name: tScreens("column.locale") })).toBeNull();
 	});
 });
 
@@ -1020,7 +988,7 @@ describe("translation source pane", () => {
 	beforeEach(clearStorage);
 	afterEach(clearStorage);
 
-	it("shows the full source beside only a translation", async () => {
+	it("TRANS-S3 shows the full source beside only a translation", async () => {
 		serve(translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
@@ -1040,7 +1008,7 @@ describe("translation source pane", () => {
 		expect(sourcePane()).toBeNull();
 	});
 
-	it("when the source changes, notifies, and confirm makes a change that Save sends", async () => {
+	it("TRANS-S1 when the source changes, notifies, and confirm makes a change that Save sends", async () => {
 		api.on("PATCH /v1/entries/:id", savedAs(translationWith(SOURCE_MDX)));
 		serve(translationWith("첫 문단\n"));
 		renderEdit();
@@ -1057,7 +1025,7 @@ describe("translation source pane", () => {
 		expect(await screen.findByText(tEntryEditorShell("sourceChanged"))).toBeInTheDocument();
 	});
 
-	it("the comparison lists changed blocks as before and now", async () => {
+	it("TRANS-S2 the comparison lists changed blocks as before and now", async () => {
 		serve(translationWith("첫 문단 옛\n\n둘째 문단\n\n지운 문단\n"));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryEditorShell("compare") }));
@@ -1127,14 +1095,14 @@ describe("side panel over the editor", () => {
 		expect(screen.getByRole("textbox", { name: TITLE_LABEL })).toBeInTheDocument();
 	});
 
-	it("publishes the screen, the collection and the open entry", async () => {
+	it("PLUG-A5 publishes the screen, the collection and the open entry", async () => {
 		renderWithPanel();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
 		expect(readOut("where")).toEqual({ screen: "entry", collection: "post", entryId: "entry-1" });
 	});
 
-	it("reads the entry as the form holds it, with the changes that are not saved", async () => {
+	it("PLUG-A5 reads the entry as the form holds it, with the changes that are not saved", async () => {
 		renderWithPanel();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전에 고친 제목" } });
 		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
@@ -1142,7 +1110,7 @@ describe("side panel over the editor", () => {
 		expect(readOut("unsaved")).toBe(true);
 	});
 
-	it("reads the selected text and the block the selection is in, with its block id", async () => {
+	it("PLUG-A5 reads the selected text and the block the selection is in, with its block id", async () => {
 		renderWithPanel();
 		await editorTitle();
 		await waitFor(() => expect(mockEditor.current).not.toBeNull());

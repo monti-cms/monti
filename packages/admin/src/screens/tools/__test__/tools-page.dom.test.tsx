@@ -73,7 +73,7 @@ describe("the tools page", () => {
 		}
 	});
 
-	it("shows a plugin's page as the last tab, under the same title", async () => {
+	it("PLUG-A1 shows a plugin's page as the last tab, under the same title", async () => {
 		await open("stats");
 		expect(screen.getByText("stats page body")).toBeInTheDocument();
 		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("the tools page", () => {
 		expect(current?.textContent?.trim()).toBe("Post stats");
 	});
 
-	it("says what is missing for a plugin page the plugin does not draw", async () => {
+	it("PLUG-A1 says what is missing for a plugin page the plugin does not draw", async () => {
 		await open("quiet");
 		expect(
 			screen.getByText((text) => text.includes('"quiet"') && text.includes("defineAdminPlugin")),

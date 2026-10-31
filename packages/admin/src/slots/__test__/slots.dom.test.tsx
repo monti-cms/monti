@@ -50,7 +50,7 @@ describe("the fill action of a slot", () => {
 		expect(screen.getByTestId("trigger").childElementCount).toBe(0);
 	});
 
-	it("one press runs the action with the current context and puts the result in at once, with no result panel", async () => {
+	it("PLUG-A3 one press runs the action with the current context and puts the result in at once, with no result panel", async () => {
 		const { apply, getContext } = renderSlot([() => [action()]]);
 		fireEvent.click(screen.getByRole("button"));
 		await waitFor(() => expect(apply).toHaveBeenCalledWith("react-query", "replace"));
@@ -86,7 +86,7 @@ describe("the fill action of a slot", () => {
 		await waitFor(() => expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull());
 	});
 
-	it("a failed run leaves one error line and writes nothing", async () => {
+	it("PLUG-A3 a failed run leaves one error line and writes nothing", async () => {
 		const run = vi.fn(async () => {
 			throw new NoticeError("No connection is ready.");
 		});
@@ -96,7 +96,7 @@ describe("the fill action of a slot", () => {
 		expect(apply).not.toHaveBeenCalled();
 	});
 
-	it("an empty result says so instead of writing", async () => {
+	it("PLUG-A3 an empty result says so instead of writing", async () => {
 		const { apply } = renderSlot([() => [action({ run: async () => ({ kind: "candidates", items: [] }) })]]);
 		fireEvent.click(screen.getByRole("button"));
 		expect((await screen.findByRole("alert")).textContent).toContain(t("nothingToApply"));
