@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 // Flow 3 (🔴): a published Korean post gets an English translation from the editor's language tabs, which is written, published, and served by the site.
 // The cases (a changed source, the fields that follow the source, translating many posts) are checked below this layer.
 // It makes its own category: the flows share one database, and another flow makes "개발".
-test("an English translation is added to a published post, published, and served by the site", async ({ page }) => {
+test("TRANS-N4 an English translation is added to a published post, published, and served by the site", async ({
+	page,
+}) => {
 	// The Korean source, published with its category.
 	await page.goto("/studio");
 	await page.getByRole("button", { name: "새 글 쓰기" }).click();

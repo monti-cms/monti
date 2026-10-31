@@ -41,7 +41,7 @@ export const translationsContract: ContractSuite = (factory) => {
 		const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 		describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
-			it("shares the source slug, and the body starts from a frame that wraps the source text in a translation notice", async () => {
+			it("TRANS-N2 shares the source slug, and the body starts from a frame that wraps the source text in a translation notice", async () => {
 				const source = await createPost("copy-source");
 				expect(source.locale).toBe(defaultLocale);
 				expect(source.translationGroupId).toBe(source.id);
@@ -70,7 +70,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				]);
 			});
 
-			it("allows only one translation per language and rejects a language not in the config", async () => {
+			it("TRANS-N1 allows only one translation per language and rejects a language not in the config", async () => {
 				const source = await createPost("unique-source");
 				await service.createTranslation({ sourceId: source.id, locale: second });
 				await expect(service.createTranslation({ sourceId: source.id, locale: second })).rejects.toMatchObject({
@@ -84,7 +84,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it("keeps the locale when duplicating a source in a non-default locale", async () => {
+			it("TRANS-N1 keeps the locale when duplicating a source in a non-default locale", async () => {
 				const original = await seedEntry(store, {
 					collection: contentCollection,
 					slug: "locale-copy-source",
@@ -101,7 +101,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(copy.working.translation ?? null).toBeNull();
 			});
 
-			it("refuses to duplicate a translation", async () => {
+			it("TRANS-N1 refuses to duplicate a translation", async () => {
 				const source = await createPost("duplicate-translation-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await expect(duplicateDraft(testSite, store, { id: translation.id })).rejects.toMatchObject({
@@ -109,14 +109,14 @@ export const translationsContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it.skipIf(!thirdLocale)("creates a translation of a translation from the source", async () => {
+			it.skipIf(!thirdLocale)("TRANS-N1 creates a translation of a translation from the source", async () => {
 				const source = await createPost("nested-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				const nested = (await service.createTranslation({ sourceId: translation.id, locale: thirdLocale ?? "" })).entry;
 				expect(nested.translationGroupId).toBe(source.id);
 			});
 
-			it.skipIf(!relation && !commonSelect)("rejects saving a shared field on a translation", async () => {
+			it.skipIf(!relation && !commonSelect)("TRANS-N3 rejects saving a shared field on a translation", async () => {
 				const source = await createPost("common-source");
 				const [commonKey] = testSite.commonFieldKeys(contentCollection, source.working.metadata);
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
@@ -132,7 +132,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				).rejects.toMatchObject({ code: "invalid_input" });
 			});
 
-			it("publishes a translation only when the source is published, and public reads merge it with the source's shared values", async () => {
+			it("TRANS-N4 publishes a translation only when the source is published, and public reads merge it with the source's shared values", async () => {
 				const source = await createPost("merge-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				const saved = (
@@ -199,7 +199,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(afterArchive.status).toBe("not_found");
 			});
 
-			it("stores the translation status only on translations, and keeps the stored value when it is not sent", async () => {
+			it("TRANS-N9 stores the translation status only on translations, and keeps the stored value when it is not sent", async () => {
 				const source = await createPost("state-source");
 				const base = {
 					collection: contentCollection,
@@ -258,7 +258,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(contentOf(ignored.working.translation?.baseDoc)).toEqual(contentOf(docOf("바뀐 기준")));
 			});
 
-			it("keeps slugs separate per language", async () => {
+			it("TRANS-N7 keeps slugs separate per language", async () => {
 				const first = await createPost("shared-slug");
 				await service.createTranslation({ sourceId: first.id, locale: second });
 				await expect(createPost("shared-slug")).rejects.toMatchObject({ code: "slug_conflict" });
@@ -268,7 +268,7 @@ export const translationsContract: ContractSuite = (factory) => {
 			const versionOf = async (id: string) => (await store.getEntry(id)).version;
 
 			it.skipIf(!thirdLocale)(
-				"trashing the source trashes its translations too, and restoring brings back only the translations trashed together",
+				"TRASH-R2 trashing the source trashes its translations too, and restoring brings back only the translations trashed together",
 				async () => {
 					const source = await createPost("trash-group-source");
 					const together = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
@@ -295,7 +295,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				},
 			);
 
-			it("applies archiving and unarchiving the source to its translations too", async () => {
+			it("TRANS-N8 applies archiving and unarchiving the source to its translations too", async () => {
 				const source = await createPost("archive-group-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				const archived = await store.archiveEntry({ id: source.id, expectedVersion: source.version });
@@ -308,7 +308,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(await statusOf(source.id)).toBe("draft");
 			});
 
-			it("group-view lists attach per-language content to one source row, and search and language filters look at the whole group", async () => {
+			it("TRANS-L1 group-view lists attach per-language content to one source row, and search and language filters look at the whole group", async () => {
 				const source = await createPost("group-list-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 				await service.saveDraft(translation.id, {
@@ -398,7 +398,7 @@ export const translationsContract: ContractSuite = (factory) => {
 						})
 					).items.map((item) => item.id);
 
-				it("tells a group with no translation, one that is behind its source and one that is up to date apart", async () => {
+				it("TRANS-L1 tells a group with no translation, one that is behind its source and one that is up to date apart", async () => {
 					const alone = await createPost("tf-alone");
 					const behind = await group("tf-behind");
 					await editSource(behind, "A new paragraph of the source");
@@ -423,7 +423,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					]);
 				});
 
-				it("does not count a change to the block ids alone as a change of the source", async () => {
+				it("TRANS-S1 does not count a change to the block ids alone as a change of the source", async () => {
 					const source = await group("tf-ids-only");
 					const current = await store.getEntry(source.id);
 					await service.saveDraft(source.id, {
@@ -440,7 +440,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					expect(await idsFor(["changed"])).not.toContain(source.id);
 				});
 
-				it("takes several as OR", async () => {
+				it("TRANS-L1 takes several as OR", async () => {
 					const alone = await createPost("tf-or-alone");
 					const behind = await group("tf-or-behind");
 					await editSource(behind, "Edited");
@@ -451,14 +451,14 @@ export const translationsContract: ContractSuite = (factory) => {
 					expect(ids).not.toContain(current.id);
 				});
 
-				it("does not count a trashed translation", async () => {
+				it("TRANS-L1 does not count a trashed translation", async () => {
 					const source = await createPost("tf-trashed");
 					const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 					await store.trashEntry({ id: translation.id, expectedVersion: translation.version });
 					expect(await idsFor(["none"])).toContain(source.id);
 				});
 
-				it("counts the groups of each state", async () => {
+				it("TRANS-L1 counts the groups of each state", async () => {
 					const ask = () =>
 						store.countListValues({ collection: contentCollection, facet: "translation", groupTranslations: true });
 					const before = await ask();
@@ -473,7 +473,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					expect([grew("none"), grew("changed"), grew("current")]).toEqual([2, 1, 1]);
 				});
 
-				it("is refused for a collection without translations", async () => {
+				it("TRANS-L1 is refused for a collection without translations", async () => {
 					if (!localizedRecord) return;
 					await expect(
 						store.listEntries({ collection: localizedRecord, translations: ["none"] }),
@@ -482,7 +482,7 @@ export const translationsContract: ContractSuite = (factory) => {
 			});
 
 			it.skipIf(!relation)(
-				"filters lists by language and shows the source's values for a translation's tags and categories",
+				"TRANS-N3 filters lists by language and shows the source's values for a translation's tags and categories",
 				async () => {
 					if (!relation) return;
 					const source = await createPost("list-source");
@@ -503,7 +503,7 @@ export const translationsContract: ContractSuite = (factory) => {
 			);
 
 			it.skipIf(!localizedRecord)(
-				"keeps per-language names inside a single record for a record collection",
+				"TRANS-N3 keeps per-language names inside a single record for a record collection",
 				async () => {
 					if (!localizedRecord) return;
 					const names = testSite.recordLocalizedFields(localizedRecord);

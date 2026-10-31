@@ -6,7 +6,7 @@ import { unparsedDocument } from "../../../doc/stored-document";
 import { compareStructure as compareDocumentStructure, readableAttributesByType } from "../skeleton";
 
 describe("translation structure check", () => {
-	it("human-readable attributes are decided by the block definition", () => {
+	it("TRANS-N6 human-readable attributes are decided by the block definition", () => {
 		const card = defineBlock({
 			name: "card",
 			label: "카드",
@@ -47,21 +47,21 @@ describe("translation structure check", () => {
 });
 
 describe("structure check of documents", () => {
-	it("compares the stored documents of the source and the translation", () => {
+	it("TRANS-N6 compares the stored documents of the source and the translation", () => {
 		expect(compareDocumentStructure(testSite, docOf("첫 문단\n\n## 제목"), docOf("First\n\n## Title"))).toEqual({
 			ok: true,
 		});
 		expect(compareDocumentStructure(testSite, docOf("첫 문단"), docOf("First\n\nSecond")).ok).toBe(false);
 	});
 
-	it("ignores block ids", () => {
+	it("TRANS-N6 ignores block ids", () => {
 		const source = docOf("가\n\n나");
 		const translated = docOf("a\n\nb");
 		expect(source.content[0]?.id).not.toBe(translated.content[0]?.id);
 		expect(compareDocumentStructure(testSite, source, translated)).toEqual({ ok: true });
 	});
 
-	it("fails for a translation or a source that is an unparsed body", () => {
+	it("TRANS-N6 fails for a translation or a source that is an unparsed body", () => {
 		expect(compareDocumentStructure(testSite, docOf("a"), unparsedDocument("<Box"))).toMatchObject({
 			ok: false,
 			code: "mdx_error",

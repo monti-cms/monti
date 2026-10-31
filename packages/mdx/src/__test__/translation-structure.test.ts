@@ -54,7 +54,7 @@ const SOURCE = [
 ].join("\n");
 
 describe("translation structure check", () => {
-	it("passes when only text and human-readable attributes change", () => {
+	it("TRANS-N6 passes when only text and human-readable attributes change", () => {
 		const translated = [
 			`<${Box}${kindProp} ${titleName}="Things to note">`,
 			"Use `useQuery` after reading the [official docs](/posts/react-query) of **React Query**.",
@@ -64,7 +64,7 @@ describe("translation structure check", () => {
 		expect(compareStructure(SOURCE, translated)).toEqual({ ok: true });
 	});
 
-	it("fails when link addresses, inline code or non-human-readable attributes change", () => {
+	it("TRANS-N6 fails when link addresses, inline code or non-human-readable attributes change", () => {
 		expect(compareStructure(SOURCE, SOURCE.replace("/posts/react-query", "/posts/other")).ok).toBe(false);
 		expect(compareStructure(SOURCE, SOURCE.replace("`useQuery`", "`useQueries`")).ok).toBe(false);
 		const align = '<TextAlign align="center">\n가운데\n</TextAlign>';
@@ -75,12 +75,12 @@ describe("translation structure check", () => {
 		}
 	});
 
-	it("fails when formatting is removed or a paragraph is split", () => {
+	it("TRANS-N6 fails when formatting is removed or a paragraph is split", () => {
 		expect(compareStructure(SOURCE, SOURCE.replace("**React Query**", "React Query")).ok).toBe(false);
 		expect(compareStructure("첫 문단입니다.", "First paragraph.\n\nSecond paragraph.").ok).toBe(false);
 	});
 
-	it("code blocks and image addresses must stay the same, while alt and captions may change", () => {
+	it("TRANS-N6 code blocks and image addresses must stay the same, while alt and captions may change", () => {
 		const code = "```ts\nconst a = 1;\n```";
 		expect(compareStructure(code, code).ok).toBe(true);
 		expect(compareStructure(code, "```ts\nconst b = 1;\n```").ok).toBe(false);
@@ -88,7 +88,7 @@ describe("translation structure check", () => {
 		expect(compareStructure("![설정 화면](/a.png)", "![Settings screen](/b.png)").ok).toBe(false);
 	});
 
-	it("footnote labels must stay the same while the definition text may be translated", () => {
+	it("TRANS-N6 footnote labels must stay the same while the definition text may be translated", () => {
 		const source = "본문[^a] 그리고[^2]\n\n[^a]: 첫째 각주\n\n[^2]: 둘째 각주\n";
 		const translated = "Body[^a] and[^2]\n\n[^a]: First note\n\n[^2]: Second note\n";
 		expect(compareStructure(source, translated)).toEqual({ ok: true });
@@ -99,14 +99,14 @@ describe("translation structure check", () => {
 		expect(compareStructure(source, "Body[^a] and[^2]\n\n[^a]: First note\n").ok).toBe(false);
 	});
 
-	it("fails when a translation drops a footnote reference or changes the blocks inside a definition", () => {
+	it("TRANS-N6 fails when a translation drops a footnote reference or changes the blocks inside a definition", () => {
 		const source = "본문[^a]\n\n[^a]: 하나\n\n    둘\n";
 		expect(compareStructure(source, "Body[^a]\n\n[^a]: One\n\n    Two\n")).toEqual({ ok: true });
 		expect(compareStructure(source, "Body\n\n[^a]: One\n\n    Two\n").ok).toBe(false);
 		expect(compareStructure(source, "Body[^a]\n\n[^a]: One Two\n").ok).toBe(false);
 	});
 
-	it.skipIf(!markBlock)("tooltip descriptions may change", () => {
+	it.skipIf(!markBlock)("TRANS-N6 tooltip descriptions may change", () => {
 		if (!markBlock) return;
 		const [name] = stringAttributes(markBlock, true)[0] ?? [];
 		const mark = (text: string, note: string) =>
@@ -114,7 +114,7 @@ describe("translation structure check", () => {
 		expect(compareStructure(mark("가", "설명"), mark("A", "Note")).ok).toBe(true);
 	});
 
-	it("file names and link titles may change", () => {
+	it("TRANS-N6 file names and link titles may change", () => {
 		expect(compareStructure('<File mediaId="m1" label="보고서" />', '<File mediaId="m1" label="Report" />').ok).toBe(
 			true,
 		);
@@ -124,7 +124,7 @@ describe("translation structure check", () => {
 		expect(compareStructure('[글](/a "제목")', '[Text](/a "Title")').ok).toBe(true);
 	});
 
-	it.skipIf(!labeledGroup)("tab names and the default tab may be translated together", () => {
+	it.skipIf(!labeledGroup)("TRANS-N6 tab names and the default tab may be translated together", () => {
 		if (!labeledGroup) return;
 		const { block, child, label, pointer } = labeledGroup;
 		const tabs = (first: string, second: string, a: string, b: string) =>
@@ -137,14 +137,14 @@ describe("translation structure check", () => {
 		expect(compareStructure(tabs("하나", "둘", "가", "나"), tabs("One", "Two", "A", "B")).ok).toBe(true);
 	});
 
-	it("fails when hint text remains or the MDX is broken", () => {
+	it("TRANS-N5 fails when hint text remains or the MDX is broken", () => {
 		expect(compareStructure("가나다", "<Untranslated>가나다</Untranslated>").ok).toBe(false);
 		expect(compareStructure("가나다", `<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx(`<${Box}>열고 닫지 않음`).ok).toBe(false);
 		expect(readableMdx("정상 문단").ok).toBe(true);
 	});
 
-	it("site blocks may change only their translatable attributes", () => {
+	it("TRANS-N6 site blocks may change only their translatable attributes", () => {
 		// In the example config the callout has `title` as a translatable attribute; the quote card in another site config has `author`.
 		const box = (props: string, title: string, body: string) =>
 			`<${Box} ${[props, `${titleName}="${title}"`].filter(Boolean).join(" ")}>\n\n${body}\n\n</${Box}>`;
@@ -156,7 +156,7 @@ describe("translation structure check", () => {
 		}
 	});
 
-	it.skipIf(!plainBlock)("site block attributes that are not translatable must stay the same", () => {
+	it.skipIf(!plainBlock)("TRANS-N6 site block attributes that are not translatable must stay the same", () => {
 		if (!plainBlock) return;
 		// `url` of the user block `embed` in the example config.
 		const [name] = stringAttributes(plainBlock, false).find(([, attribute]) => !attribute.options) ?? [];
@@ -170,7 +170,7 @@ describe("translation structure check", () => {
 });
 
 describe("structure check failure reasons", () => {
-	it("returns both the reason code and the reason text built from the dictionary", async () => {
+	it("TRANS-N6 returns both the reason code and the reason text built from the dictionary", async () => {
 		const { translationMessages } = await import("../../../core/src/core/translation/messages");
 		const t = testSite.createTranslator(translationMessages);
 		expect(compareStructure("a\n\n`x`", "a\n\n`y`")).toEqual({

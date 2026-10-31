@@ -14,7 +14,7 @@ const texts = (nodes: readonly CmsNode[]): CmsNode[] =>
 describe("translation hints", () => {
 	const source = docOf("# 제목\n\n**굵은** 문장과 `code` 입니다.\n\n```ts\nconst a = 1;\n```\n");
 
-	it("marks every text of the source as untranslated and nothing else", () => {
+	it("TRANS-N5 marks every text of the source as untranslated and nothing else", () => {
 		const hinted = withTranslationHints(testSite, source);
 		const marked = texts(hinted.content).filter((node) => node.text?.trim());
 		expect(marked.length).toBeGreaterThan(0);
@@ -23,7 +23,7 @@ describe("translation hints", () => {
 		expect(hinted.content.at(-1)).toMatchObject({ type: "codeBlock", attrs: { code: "const a = 1;" } });
 	});
 
-	it("keeps the structure of the source: only the notes make it differ, and it passes once they are gone", () => {
+	it("TRANS-N5 keeps the structure of the source: only the notes make it differ, and it passes once they are gone", () => {
 		const hinted = withTranslationHints(testSite, source);
 		expect(compareStructure(testSite, source, hinted).ok).toBe(false);
 		const strip = (nodes: readonly CmsNode[]): CmsNode[] =>
@@ -39,13 +39,13 @@ describe("translation hints", () => {
 		expect(compareStructure(testSite, source, { ...hinted, content: strip(hinted.content) })).toEqual({ ok: true });
 	});
 
-	it("hides the notes from the excerpt and keeps them for search", () => {
+	it("TRANS-N2 hides the notes from the excerpt and keeps them for search", () => {
 		const hinted = withTranslationHints(testSite, source);
 		expect(documentText(testSite, hinted, EXCERPT_TEXT)).toBe("");
 		expect(documentText(testSite, hinted, SEARCH_TEXT)).toContain("제목");
 	});
 
-	it("gives the translation blocks of its own, each linked to the source block it was made from", () => {
+	it("TRANS-N2 gives the translation blocks of its own, each linked to the source block it was made from", () => {
 		const hinted = withTranslationHints(testSite, source);
 		const links: (string | undefined)[] = [];
 		forEachBlock(hinted.content, (block) => {
@@ -60,13 +60,13 @@ describe("translation hints", () => {
 		expect(links).toEqual(sourceIds);
 	});
 
-	it("does not change the document it is given", () => {
+	it("TRANS-N2 does not change the document it is given", () => {
 		const before = JSON.stringify(source);
 		withTranslationHints(testSite, source);
 		expect(JSON.stringify(source)).toBe(before);
 	});
 
-	it("returns a source that is not a document as it is, without ids", () => {
+	it("TRANS-N2 returns a source that is not a document as it is, without ids", () => {
 		const unparsed = unparsedDocument("열리지 않은 <Box");
 		const hinted = withTranslationHints(testSite, unparsed);
 		expect(hinted.content).toEqual([{ attrs: { format: "mdx", source: "열리지 않은 <Box" }, type: "unparsed" }]);

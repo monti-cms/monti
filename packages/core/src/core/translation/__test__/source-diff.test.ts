@@ -90,11 +90,11 @@ const summary = (changes: SourceChange[] | null) =>
 	);
 
 describe("comparing two source versions", () => {
-	it("nothing changed when equal", () => {
+	it("TRANS-S2 nothing changed when equal", () => {
 		expect(diffText("하나\n\n둘\n", "하나\n\n둘\n")).toEqual([]);
 	});
 
-	it("finds changed, added and removed blocks in document order", () => {
+	it("TRANS-S2 finds changed, added and removed blocks in document order", () => {
 		expect(summary(diffText("하나\n\n둘\n\n셋\n\n넷\n", "하나 고침\n\n둘\n\n새 문단\n\n넷\n\n## 새 제목\n"))).toEqual([
 			["changed", "하나", "하나 고침"],
 			["changed", "셋", "새 문단"],
@@ -103,13 +103,13 @@ describe("comparing two source versions", () => {
 		expect(summary(diffText("하나\n\n둘\n\n셋\n", "하나\n\n셋\n"))).toEqual([["removed", "둘"]]);
 	});
 
-	it("blocks inside a box are compared separately", () => {
+	it("TRANS-S2 blocks inside a box are compared separately", () => {
 		const before = documentOf([alignBox("center", "안쪽", "그대로")]);
 		const after = documentOf([alignBox("center", "안쪽 고침", "그대로")]);
 		expect(summary(diffSources(testSite, before, after))).toEqual([["changed", "안쪽", "안쪽 고침"]]);
 	});
 
-	it.skipIf(!titledBox || !titleAttribute)("blocks and the title inside a box are compared separately", () => {
+	it.skipIf(!titledBox || !titleAttribute)("TRANS-S2 blocks and the title inside a box are compared separately", () => {
 		if (!titledBox || !titleAttribute) return;
 		expect(summary(diffSources(testSite, titled("알림", "안쪽"), titled("주의", "안쪽 고침")))).toEqual([
 			["changed", JSON.stringify({ title: "알림" }), JSON.stringify({ title: "주의" })],
@@ -117,7 +117,7 @@ describe("comparing two source versions", () => {
 		]);
 	});
 
-	it.skipIf(!labeledGroup)("tab names are gathered into one tab group header line for comparison", () => {
+	it.skipIf(!labeledGroup)("TRANS-S2 tab names are gathered into one tab group header line for comparison", () => {
 		if (!labeledGroup) return;
 		const { block, child, label } = labeledGroup;
 		const tabs = (second: string) =>
@@ -135,7 +135,7 @@ describe("comparing two source versions", () => {
 		]);
 	});
 
-	it("null when either body is unparsed", () => {
+	it("TRANS-S2 null when either body is unparsed", () => {
 		expect(diffSources(testSite, unparsedDocument("본문 <TextAlign>닫히지 않음"), docOf("하나"))).toBeNull();
 		expect(diffSources(testSite, docOf("하나"), unparsedDocument("본문 <TextAlign>닫히지 않음"))).toBeNull();
 	});
@@ -180,16 +180,16 @@ const withoutIds = (from: Version): Version => ({
 describe("comparing two source versions by block id", () => {
 	const base = version("가\n\n나\n\n다\n\n라\n");
 
-	it("nothing changed when equal", () => {
+	it("TRANS-S2 nothing changed when equal", () => {
 		expect(compare(base, version(base.mdx, base.doc))).toEqual([]);
 	});
 
-	it("an edited block stays the same block", () => {
+	it("TRANS-S2 an edited block stays the same block", () => {
 		const after = version("가\n\n나 고침\n\n다\n\n라\n", base.doc);
 		expect(summary(compare(base, after))).toEqual([["changed", "나", "나 고침"]]);
 	});
 
-	it("finds an added and a removed block", () => {
+	it("TRANS-S2 finds an added and a removed block", () => {
 		expect(summary(compare(base, version("가\n\n나\n\n새 문단\n\n다\n\n라\n", base.doc)))).toEqual([
 			["added", "새 문단"],
 		]);
@@ -201,7 +201,7 @@ describe("comparing two source versions by block id", () => {
 		]);
 	});
 
-	it("lists a removed block after the block that preceded it", () => {
+	it("TRANS-S2 lists a removed block after the block that preceded it", () => {
 		const after = reorder(base, [0, 2, 3], { 2: "다 고침" });
 		expect(summary(compare(base, after))).toEqual([
 			["removed", "나"],
@@ -210,14 +210,14 @@ describe("comparing two source versions by block id", () => {
 		expect(summary(compare(base, version("나\n\n다\n\n라\n", base.doc)))).toEqual([["removed", "가"]]);
 	});
 
-	it("a block that moved is moved, not removed and added", () => {
+	it("TRANS-S2 a block that moved is moved, not removed and added", () => {
 		const after = reorder(base, [3, 0, 1, 2]);
 		expect(after.mdx).toBe("라\n\n가\n\n나\n\n다");
 		expect(summary(compare(base, after))).toEqual([["moved", "라", "라"]]);
 		expect(summary(compare(base, reorder(base, [1, 2, 3, 0])))).toEqual([["moved", "가", "가"]]);
 	});
 
-	it("reports as few moved blocks as the new order needs", () => {
+	it("TRANS-S2 reports as few moved blocks as the new order needs", () => {
 		// Reversed: only one block can stay.
 		expect(compare(base, reorder(base, [3, 2, 1, 0]))?.map((change) => change.kind)).toEqual([
 			"moved",
@@ -228,12 +228,12 @@ describe("comparing two source versions by block id", () => {
 		expect(compare(base, reorder(base, [0, 2, 1, 3]))?.map((change) => change.kind)).toEqual(["moved"]);
 	});
 
-	it("a block that moved and was edited is moved and edited", () => {
+	it("TRANS-S2 a block that moved and was edited is moved and edited", () => {
 		const after = reorder(base, [3, 0, 1, 2], { 3: "라 고침" });
 		expect(summary(compare(base, after))).toEqual([["moved+edited", "라", "라 고침"]]);
 	});
 
-	it("a move does not hide an edit or an added block elsewhere", () => {
+	it("TRANS-S2 a move does not hide an edit or an added block elsewhere", () => {
 		const moved = reorder(base, [3, 0, 1, 2], { 1: "나 고침" });
 		const after = version(`${moved.mdx}\n\n마`, moved.doc);
 		expect(summary(compare(base, after))).toEqual([
@@ -243,7 +243,7 @@ describe("comparing two source versions by block id", () => {
 		]);
 	});
 
-	it("blocks inside a box are paired by id and moved inside it", () => {
+	it("TRANS-S2 blocks inside a box are paired by id and moved inside it", () => {
 		const box = versionOf([alignBox("center", "안쪽 하나", "안쪽 둘"), paragraph("바깥")]);
 		const inside = box.doc.content[0];
 		if (!inside?.content) throw new Error("fixture");
@@ -257,7 +257,7 @@ describe("comparing two source versions by block id", () => {
 		expect(summary(compare(box, edited))).toEqual([["changed", "안쪽 둘", "안쪽 둘 고침"]]);
 	});
 
-	it("a block moved into another box is moved though its position among the blocks is the same", () => {
+	it("TRANS-S2 a block moved into another box is moved though its position among the blocks is the same", () => {
 		const before = versionOf([alignBox("center", "하나"), alignBox("right", "둘")]);
 		const [left, right] = before.doc.content;
 		const one = left?.content?.[0];
@@ -273,7 +273,7 @@ describe("comparing two source versions by block id", () => {
 		expect(summary(compare(before, after))).toEqual([["moved", "하나", "하나"]]);
 	});
 
-	it.skipIf(!titledBox || !titleAttribute)("the title of a box is paired by the box's id", () => {
+	it.skipIf(!titledBox || !titleAttribute)("TRANS-S2 the title of a box is paired by the box's id", () => {
 		if (!titledBox || !titleAttribute) return;
 		const before = { mdx: "", doc: titled("알림", "안쪽") };
 		const after = { mdx: "", doc: titled("주의", "안쪽 고침", before.doc) };
@@ -283,7 +283,7 @@ describe("comparing two source versions by block id", () => {
 		]);
 	});
 
-	it("blocks without an id are paired by kind and content as before", () => {
+	it("TRANS-S2 blocks without an id are paired by kind and content as before", () => {
 		const before = withoutIds(base);
 		const after = withoutIds(version("가\n\n나 고침\n\n다\n\n마\n"));
 		expect(summary(compare(before, after))).toEqual(summary(diffText(before.mdx, after.mdx)));
@@ -298,7 +298,7 @@ describe("comparing two source versions by block id", () => {
 		]);
 	});
 
-	it("a block with an id and one without are each paired their own way", () => {
+	it("TRANS-S2 a block with an id and one without are each paired their own way", () => {
 		const after = version("가\n\n나 고침\n\n다\n\n라\n", base.doc);
 		const [first, second, ...rest] = after.doc.content;
 		if (!first || !second) throw new Error("fixture");
@@ -313,7 +313,7 @@ describe("comparing two source versions by block id", () => {
 		expect(summary(compare(base, repeated))).toEqual([["changed", "나", "가"]]);
 	});
 
-	it("compares nothing when either body is unparsed", () => {
+	it("TRANS-S2 compares nothing when either body is unparsed", () => {
 		const unparsed = { mdx: "<Box", doc: unparsedDocument("<Box") };
 		expect(compare(base, unparsed)).toBeNull();
 		expect(compare(unparsed, base)).toBeNull();

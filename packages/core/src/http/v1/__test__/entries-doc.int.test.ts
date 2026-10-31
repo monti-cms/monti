@@ -184,7 +184,7 @@ describe("entry API with a stored document", () => {
 		expect(row.doc).toEqual(doc);
 	});
 
-	it("keeps the block ids of a document sent with a patch, and gives a block sent without one its own", async () => {
+	it("TRANS-B1 keeps the block ids of a document sent with a patch, and gives a block sent without one its own", async () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
 		const parsed = sampleDoc();
 		const [heading, paragraph, list] = parsed.content;
@@ -204,7 +204,7 @@ describe("entry API with a stored document", () => {
 		expect((await storedRow(entry.id)).doc).toEqual(saved.working.doc);
 	});
 
-	it("keeps the block ids of the draft when a patch sends edited text", async () => {
+	it("TRANS-B1 keeps the block ids of the draft when a patch sends edited text", async () => {
 		const entry = await created({ format: "paragraphs", body: "One\n\nTwo" });
 
 		const res = await patch(entry.id, {

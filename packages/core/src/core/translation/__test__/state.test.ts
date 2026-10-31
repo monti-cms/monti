@@ -7,15 +7,15 @@ import { documentKeyHash } from "../state-hash";
 const doc = docOf("하나\n\n둘\n");
 
 describe("translation state", () => {
-	it("null is a source", () => {
+	it("TRANS-N9 null is a source", () => {
 		expect(parseTranslationState(null)).toBeNull();
 	});
 
-	it("reads version 4 as it is", () => {
+	it("TRANS-N9 reads version 4 as it is", () => {
 		expect(parseTranslationState({ version: 4, baseDoc: doc })).toEqual({ version: 4, baseDoc: doc });
 	});
 
-	it("sorts the keys of the document as a stored document is", () => {
+	it("TRANS-N9 sorts the keys of the document as a stored document is", () => {
 		const reordered = {
 			version: STORED_DOCUMENT_VERSION,
 			type: "doc",
@@ -27,7 +27,7 @@ describe("translation state", () => {
 		);
 	});
 
-	it("rejects a state with an invalid document", () => {
+	it("TRANS-N9 rejects a state with an invalid document", () => {
 		for (const baseDoc of [
 			{ type: "doc" },
 			{ type: "doc", version: 999, content: [] },
@@ -41,7 +41,7 @@ describe("translation state", () => {
 		}
 	});
 
-	it("rejects a wrong shape", () => {
+	it("TRANS-N9 rejects a wrong shape", () => {
 		for (const value of [
 			undefined,
 			"state",
@@ -57,7 +57,7 @@ describe("translation state", () => {
 		}
 	});
 
-	it("limits the size of the whole state", () => {
+	it("TRANS-N9 limits the size of the whole state", () => {
 		const big = {
 			type: "doc",
 			version: 3,
@@ -66,7 +66,7 @@ describe("translation state", () => {
 		expect(parseTranslationState({ version: 4, baseDoc: big })).toBeUndefined();
 	});
 
-	it("confirming a source keeps its document", () => {
+	it("TRANS-N9 confirming a source keeps its document", () => {
 		expect(confirmedSourceState(doc)).toEqual({ version: 4, baseDoc: doc });
 		const unparsed = unparsedDocument("원문 <Box");
 		expect(parseTranslationState(confirmedSourceState(unparsed))).toEqual({ version: 4, baseDoc: unparsed });
@@ -74,16 +74,16 @@ describe("translation state", () => {
 });
 
 describe("whether the source changed since a translation was confirmed", () => {
-	it("is false for the same text, even when the block ids differ", () => {
+	it("TRANS-S1 is false for the same text, even when the block ids differ", () => {
 		const withIds = { ...doc, content: doc.content.map((node, index) => ({ ...node, id: `block00${index}` })) };
 		expect(sourceHasChanged(doc, withIds)).toBe(false);
 	});
 
-	it("is true when the text changed", () => {
+	it("TRANS-S1 is true when the text changed", () => {
 		expect(sourceHasChanged(docOf("하나\n\n셋\n"), doc)).toBe(true);
 	});
 
-	it("is true when a block was added", () => {
+	it("TRANS-S1 is true when a block was added", () => {
 		expect(sourceHasChanged(docOf("하나\n\n둘\n\n셋\n"), doc)).toBe(true);
 	});
 });
@@ -102,11 +102,11 @@ describe("the stored hash of a document for the translation filter", () => {
 		["another document", docOf("전혀 다른 글\n"), doc],
 	];
 
-	it.each(pairs)("agrees with sourceHasChanged for %s", (_name, source, confirmed) => {
+	it.each(pairs)("TRANS-S1 agrees with sourceHasChanged for %s", (_name, source, confirmed) => {
 		expect(documentKeyHash(source) !== documentKeyHash(confirmed)).toBe(sourceHasChanged(source, confirmed));
 	});
 
-	it("is the same text of 64 hex characters for documents that read the same", () => {
+	it("TRANS-S1 is the same text of 64 hex characters for documents that read the same", () => {
 		expect(documentKeyHash(doc)).toMatch(/^[0-9a-f]{64}$/);
 		expect(documentKeyHash(withIds(doc))).toBe(documentKeyHash(doc));
 	});

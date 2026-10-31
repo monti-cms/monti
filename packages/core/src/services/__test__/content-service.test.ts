@@ -1130,7 +1130,7 @@ describe("ContentService Contract", () => {
 		};
 		const idsOf = (doc: StoredDocument) => doc.content.map((block) => block.id);
 
-		it("saveDraft reads the current draft and pairs the new text with its document, so blocks keep their ids", async () => {
+		it("TRANS-B1 saveDraft reads the current draft and pairs the new text with its document, so blocks keep their ids", async () => {
 			const current = docOf("One\n\nTwo\n\nThree\n");
 			const storePort = portWith(current);
 
@@ -1140,7 +1140,7 @@ describe("ContentService Contract", () => {
 			expect(idsOf(savedDoc(storePort))).toEqual(idsOf(current));
 		});
 
-		it("saveDraft gives new ids when the current draft has no document", async () => {
+		it("TRANS-B1 saveDraft gives new ids when the current draft has no document", async () => {
 			const storePort = portWith(null);
 
 			await saveWith(storePort, { format: "paragraphs", body: "One\n\nTwo\n" });
@@ -1151,7 +1151,7 @@ describe("ContentService Contract", () => {
 			expect(new Set(ids).size).toBe(2);
 		});
 
-		it("saveDraft keeps the ids of a document it is sent, not those of the current draft", async () => {
+		it("TRANS-B1 saveDraft keeps the ids of a document it is sent, not those of the current draft", async () => {
 			const current = docOf("One\n\nTwo\n");
 			const sent: StoredDocument = {
 				...current,
@@ -1164,7 +1164,7 @@ describe("ContentService Contract", () => {
 			expect(idsOf(savedDoc(storePort))).toEqual(["sent0000", "sent0001"]);
 		});
 
-		it("createDraft gives every block of the body an id of its own", async () => {
+		it("TRANS-B1 createDraft gives every block of the body an id of its own", async () => {
 			const storePort = portWith(null);
 
 			await createContentService(storePort).createDraft({

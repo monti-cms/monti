@@ -33,13 +33,13 @@ const typeAt = (current: Editor, pos: number, text: string) => {
 };
 
 describe("editing untranslated notice text", () => {
-	it("typing in a block with notice text clears the notice text and enters the input", () => {
+	it("TRANS-N5 typing in a block with notice text clears the notice text and enters the input", () => {
 		const current = open(untranslated("첫 문단"), untranslated("둘째 문단"));
 		typeAt(current, 3, "F");
 		expect(tiptapToStored(testSite, current.getJSON()).content).toMatchObject([plain("F"), untranslated("둘째 문단")]);
 	});
 
-	it("pressing clear removes the block's notice text at once", () => {
+	it("TRANS-N5 pressing clear removes the block's notice text at once", () => {
 		const current = open(untranslated("첫 문단"));
 		current.commands.setTextSelection(4);
 		const { view } = current;
@@ -47,7 +47,7 @@ describe("editing untranslated notice text", () => {
 		expect(JSON.stringify(tiptapToStored(testSite, current.getJSON()))).not.toContain('"text"');
 	});
 
-	it("a block without notice text accepts input as usual", () => {
+	it("TRANS-N5 a block without notice text accepts input as usual", () => {
 		const current = open(plain("번역 끝"));
 		typeAt(current, 2, "X");
 		const written = JSON.stringify(tiptapToStored(testSite, current.getJSON()));
