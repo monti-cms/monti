@@ -20,18 +20,7 @@ export const englishCoreText: CoreText = (key, vars) => translate(coreMessages, 
  * `translation` is block translation in the translation editor (block menu and `Translate all`), `selection` is the menu shown when selecting text in the body
  * (e.g. style polish, replaces the selected text), and `insert` is the slash (`/`) menu and the empty document (e.g. draft writing, inserts at the cursor).
  * `block` is a button beside the handle of one body block (e.g. a Mermaid diagram). It sends the block source and replaces the block with the changed one.
- * @internal The contract test checks the lists against the types.
  */
-export const AI_SLOTS = [
-	"field",
-	"image",
-	"codeRules",
-	"media",
-	"translation",
-	"selection",
-	"insert",
-	"block",
-] as const;
 export type { AiSlot } from "@monti-cms/core/ai-contract";
 
 /**
@@ -46,32 +35,18 @@ export const slotsAsk = (attach: readonly { readonly slot: AiSlot }[]): boolean 
 /**
  * Mode. In `generate`, a chat model (LLM) answers with text. In `decide`, a decision model (System One, e.g. Jev)
  * rates the probability that each given choice fits, and only choices above the threshold become candidates. The decision model does not write text.
- * @internal The contract test checks the lists against the types.
  */
-export const AI_ENGINES = ["generate", "decide"] as const;
-export type { AiEngine } from "@monti-cms/core/ai-contract";
-
 /**
  * In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`).
- * @internal The contract test checks the lists against the types.
  */
-export const AI_PICKS = ["one", "many"] as const;
-export type { AiPick } from "@monti-cms/core/ai-contract";
-
 /**
  * Result shape. `candidates` is several candidates to click, `text` is one long text, `mdx` is one body fragment (MDX),
  * `note` is a display-only note.
- * @internal The contract test checks the lists against the types.
  */
-export const AI_RESULTS = ["candidates", "text", "mdx", "note"] as const;
-export type { AiResult } from "@monti-cms/core/ai-contract";
-
 /**
  * How the result is applied. `append` adds to a list value (tags, regex rules).
- * @internal The contract test checks the lists against the types.
  */
-export const AI_APPLIES = ["replace", "append", "none"] as const;
-export type { AiApply } from "@monti-cms/core/ai-contract";
+export type { AiApply, AiEngine, AiPick, AiResult } from "@monti-cms/core/ai-contract";
 
 /**
  * Result checks. Set per action as a list (all shown in the action editor); candidates that do not pass are discarded.

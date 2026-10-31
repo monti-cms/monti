@@ -216,9 +216,8 @@ ai({
 ## 개발
 
 ```bash
-pnpm --filter @monti-cms/ai test:run        # 예시 블로그 설정 + 다른 사이트 설정
-pnpm --filter @monti-cms/ai test:other-site # 다른 사이트 설정(`test/other-site.config.ts`)만
+pnpm --filter @monti-cms/ai test:run
 ```
 
-다른 사이트 설정은 AI 필드 기능을 그 사이트의 필드 이름(`excerpt`·`topicIds`·`authorId`·`metaTitle`…)에 붙인다. 설정과 상관없는
-확인은 `src/__test__/any-site.test.ts`다(필드 기능이 맞는 종류의 필드에 붙는지, 자리 입력으로 실행되는지).
+테스트는 API 키 저장의 확인(`src/__test__/settings.test.ts`의 `KEY-A1`~`KEY-A3`)뿐이다. 나머지는 2026-11-01에 지웠다. 이 패키지는
+에이전트 중심으로 다시 짜고 있고(#312), 새 코드는 제 테스트와 함께 들어온다.
