@@ -55,6 +55,27 @@ export default defineSchema(
 	});
 });
 
+describe("parseSchemaLiteral: the escapes of a string", () => {
+	it.each([
+		["hex and unicode escapes", String.raw`"\x41\u0042\u{1F600}"`, "AB😀"],
+		["the short escapes", String.raw`"a\tb\nc\\d\"e"`, 'a\tb\nc\\d"e'],
+		["a line continuation", '"one \\\ntwo"', "one two"],
+		["an escaped quote in single quotes", String.raw`'it\'s'`, "it's"],
+	])("SCHEMA-F13 reads %s as the text they stand for", (_name, literal, value) => {
+		expect(parseSchemaLiteral(file(`{ a: ${literal} }`))).toMatchObject({ ok: true, value: { a: value } });
+	});
+
+	it.each([
+		["a hex escape with one digit", String.raw`"\x4"`],
+		["a unicode escape with three digits", String.raw`"\u004"`],
+		["a code point past the last one", String.raw`"\u{110000}"`],
+		["a braced escape that is not closed", String.raw`"\u{41"`],
+		["a unicode escape that is not hex", String.raw`"\uZZZZ"`],
+	])("SCHEMA-F12 refuses %s", (_name, literal) => {
+		expect(parseSchemaLiteral(file(`{ a: ${literal} }`))).toMatchObject({ ok: false, code: "escape_malformed" });
+	});
+});
+
 describe("parseSchemaLiteral: a file that has code", () => {
 	it.each([
 		["a second import", file("{}", 'import { other } from "./other";'), /second import|line 2/],

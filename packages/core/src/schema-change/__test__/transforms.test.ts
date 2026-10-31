@@ -160,6 +160,18 @@ describe("checkTransforms", () => {
 		]);
 	});
 
+	it("SCHEMA-F6 takes a text default up to the field's length, counted in characters, and refuses a longer one", () => {
+		const setDefault = (value: string): SchemaMigration => ({
+			id: "1",
+			op: "setDefault",
+			collection: "post",
+			field: "excerpt",
+			value,
+		});
+		expect(problems([setDefault("가나다라마")])).toEqual([]);
+		expect(problems([setDefault("가나다라마바")])[0]).toMatch(/5 characters at most/);
+	});
+
 	it("SCHEMA-F6 rejects a transform that would be wrong", () => {
 		expect(problems([{ id: "1", op: "dropField", collection: "post", field: "excerpt" }])[0]).toMatch(/still a field/);
 		expect(problems([{ id: "1", op: "renameField", collection: "post", from: "excerpt", to: "level" }])[0]).toMatch(

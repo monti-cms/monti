@@ -448,6 +448,31 @@ describe("schema changes", () => {
 			expect(warnings.map((warning) => `${warning.code}:${warning.path}`)).toEqual(["orphaned_metadata_key:legacy2"]);
 		});
 
+		it("SCHEMA-F5 reaches every entry when there are more bodies than one batch of the apply", async () => {
+			await baseline();
+			const service = serviceFor(siteBefore);
+			// More than the 200 bodies the apply reads at a time, so it has to read a second batch.
+			const many = await Promise.all(
+				Array.from(
+					{ length: 205 },
+					async (_, index) =>
+						(
+							await service.createDraft({
+								collection: "post",
+								slug: `many-${index}`,
+								metadata: { title: `Many ${index}`, summary: `Summary ${index}` },
+								doc: docOf(""),
+							} as never)
+						).entry.id,
+				),
+			);
+			await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
+			const after = await rows();
+			const renamed = many.filter((id) => after.get(`${id}/working`)?.metadata.excerpt !== undefined);
+			expect(renamed).toHaveLength(many.length);
+			expect(many.some((id) => "summary" in (after.get(`${id}/working`)?.metadata ?? {}))).toBe(false);
+		});
+
 		it("SCHEMA-F5 is idempotent: a second apply runs nothing and changes nothing", async () => {
 			await baselineThenApply();
 			const rowsBefore = await rows();
