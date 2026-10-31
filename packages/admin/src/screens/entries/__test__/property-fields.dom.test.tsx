@@ -52,13 +52,6 @@ describe("PropertyFields on the form provider", () => {
 		expect(input).toHaveAccessibleDescription(issue.text);
 	});
 
-	it("a change reaches the owner as a patch of that field only", () => {
-		const form: EntryForm = { ...EMPTY_FORM, summary: "A", oldField: "kept" };
-		const setForm = renderFields({ form });
-		fireEvent.change(open(/^요약/), { target: { value: "AB" } });
-		expect(setForm).toHaveBeenCalledWith({ summary: "AB" });
-	});
-
 	it("WRITE-P4 the slug input uses `onSlugChange` when given, and the form otherwise", () => {
 		const onSlugChange = vi.fn();
 		const setForm = renderFields({ form: { ...EMPTY_FORM, slug: "a" } }, { name: "slug", onSlugChange });

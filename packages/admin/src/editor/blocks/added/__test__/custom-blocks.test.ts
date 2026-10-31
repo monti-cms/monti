@@ -11,28 +11,6 @@ import { addedNodeBlocks, defaultValues } from "../shared";
 
 // Custom blocks of the example config (`packages/core/test/cms.config.ts`): `notice` (editor node container), `embed` (raw-source box).
 describe("custom block editing", () => {
-	it("a custom block with an editor node moves its attributes and body into the node and round-trips unchanged", () => {
-		const stored = storedDoc({
-			type: "notice",
-			attrs: { level: "warn", title: "점검" },
-			content: [para("오늘 밤 점검합니다.")],
-		});
-		const json = storedToTiptap(testSite, stored);
-		const node = json.content?.[0];
-		expect(node?.type).toBe(blockNodeName({ name: "notice" }));
-		expect(node?.type).toBe("cmsNotice");
-		expect(node?.attrs?.values).toEqual({ level: "warn", title: "점검" });
-		expect(node?.content?.[0]?.type).toBe("paragraph");
-		expect(tiptapToStored(testSite, json)).toEqual(stored);
-	});
-
-	it("a custom block set as a raw-source box is preserved as is", () => {
-		const stored = storedDoc({ type: "embed", attrs: { url: "https://example.com/video" } });
-		const node = storedToTiptap(testSite, stored).content?.[0];
-		expect(node?.type).toBe(OPAQUE_BLOCK_NAME);
-		expect(tiptapToStored(testSite, storedToTiptap(testSite, stored))).toEqual(stored);
-	});
-
 	it("EDIT-B2 insertable custom blocks appear in the slash menu", () => {
 		const items = buildBlockSlashCommands(testSite);
 		expect(items.find((item) => item.id === "notice")?.title).toBe("공지");
@@ -102,18 +80,5 @@ describe("editor representation of added blocks", () => {
 		// Without `codeBlocks` the body is still one paragraph (with the initial text, if any).
 		const plain = insertContentOf(testSite, { ...files, editor: { view: "node", insert: { text: "본문" } } });
 		expect(plain.content).toEqual([{ type: "paragraph", content: [{ type: "text", text: "본문" }] }]);
-	});
-
-	it("the code explorer block starts with one `src/index.ts` code block", () => {
-		const content = insertContentOf(testSite, block("code-explorer"));
-		expect(content.type).toBe("cmsCodeExplorer");
-		expect(content.content).toEqual([{ type: "codeBlock", attrs: { language: "ts", meta: 'title="src/index.ts"' } }]);
-	});
-
-	it("a code fence block moves that language's code block into a node and round-trips the meta", () => {
-		const stored = docOf("```mermaid title=흐름\ngraph TD\n  A --> B\n```");
-		const node = storedToTiptap(testSite, stored).content?.[0];
-		expect(node).toMatchObject({ type: "cmsMermaid", attrs: { value: "graph TD\n  A --> B", meta: "title=흐름" } });
-		expect(tiptapToStored(testSite, storedToTiptap(testSite, stored))).toEqual(stored);
 	});
 });

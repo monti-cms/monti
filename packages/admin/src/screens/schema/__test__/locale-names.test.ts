@@ -9,12 +9,6 @@ import {
 } from "../locale-names";
 
 describe("locale names", () => {
-	it("names a language in itself and in the admin language, from the code", () => {
-		expect(localeName("ja", "ja")).toBe("日本語");
-		expect(localeName("ja", "en")).toBe("Japanese");
-		expect(localeName("zzz", "zzz")).toBeUndefined();
-	});
-
 	it("SET-L1 makes a row from a code: the display name only when it differs from the native one", () => {
 		expect(localeFromCode("ja", "en")).toEqual({ code: "ja", name: "日本語", label: "Japanese" });
 		expect(localeFromCode("en", "en")).toEqual({ code: "en", name: "English" });

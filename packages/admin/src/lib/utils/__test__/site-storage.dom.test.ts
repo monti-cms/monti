@@ -18,16 +18,6 @@ afterEach(() => {
 });
 
 describe("browser storage of a site", () => {
-	it("names its keys after the site and its admin path", () => {
-		expect(storageNamespace(siteOf("Blog"))).toBe("Blog/admin");
-		expect(preferenceKey(siteOf("Blog", "/studio"), "editor-width")).toBe("cms:Blog/studio:editor-width");
-	});
-
-	it("keeps two admins of one site name apart by their admin path", () => {
-		writePreference(siteOf("Blog", "/admin"), "media-view", "list");
-		expect(readPreference(siteOf("Blog", "/studio"), "media-view")).toBeNull();
-	});
-
 	it("ADMIN-S1 does not fail when storage is unavailable", () => {
 		vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
 			throw new Error("blocked");

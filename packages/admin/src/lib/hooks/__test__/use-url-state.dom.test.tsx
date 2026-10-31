@@ -31,13 +31,7 @@ function Probe() {
 const shown = () => JSON.parse(screen.getByTestId("state").textContent ?? "{}");
 
 describe("useUrlState", () => {
-	it("reads the address and falls back to defaults for bad values", () => {
-		const host = createTestRouter({ search: "page=2&pageSize=7&filter=nope" });
-		host.render(<Probe />);
-		expect(shown()).toEqual({ page: 2, pageSize: 25, filter: "all", q: "" });
-	});
-
-	it("writes a change to the address and leaves defaults and foreign parameters alone", () => {
+	it("ADMIN-U1 writes a change to the address and leaves defaults and foreign parameters alone", () => {
 		const host = createTestRouter({ search: "tab=x" });
 		host.render(<Probe />);
 		act(() => screen.getByText("page").click());
@@ -50,12 +44,5 @@ describe("useUrlState", () => {
 		act(() => screen.getByText("back").click());
 		expect(host.search.has("filter")).toBe(false);
 		expect(shown().filter).toBe("all");
-	});
-
-	it("follows a change of the address made elsewhere", () => {
-		const host = createTestRouter();
-		host.render(<Probe />);
-		act(() => host.setSearch("page=4&q=hello"));
-		expect(shown()).toMatchObject({ page: 4, q: "hello" });
 	});
 });

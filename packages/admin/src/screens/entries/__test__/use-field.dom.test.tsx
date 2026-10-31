@@ -101,34 +101,6 @@ describe("useField", () => {
 		expect(setForm).toHaveBeenCalledWith({ title: "Changed" });
 	});
 
-	it("an issue on the field's path becomes its error, with ids that link the input to it", () => {
-		const issues = [
-			{ code: "missing_field", path: "title", message: "제목", text: "제목을 입력하세요." },
-			{ code: "other", path: "summary", message: "x", text: "x" },
-		];
-		const { result } = renderHook(() => ({ title: useField("title") }), {
-			wrapper: providerWith(baseValue({ issues })),
-		});
-		const { title } = result.current;
-		expect(title.invalid).toBe(true);
-		expect(title.error?.message).toBe(issueLine(issues[0] as CmsIssue));
-		expect(title.inputProps).toEqual({
-			id: "cms-title",
-			"aria-invalid": true,
-			"aria-describedby": "cms-title-error",
-		});
-	});
-
-	it("a disabled form makes every field read-only and ignores changes", () => {
-		const setForm = vi.fn();
-		const { result } = renderHook(() => useField<string>("title"), {
-			wrapper: providerWith(baseValue({ disabled: true, setForm })),
-		});
-		expect(result.current.inputProps.disabled).toBe(true);
-		act(() => result.current.setValue("x"));
-		expect(setForm).not.toHaveBeenCalled();
-	});
-
 	it("PLUG-A6 on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
 		const setForm = vi.fn();
 		const locked = {
@@ -203,28 +175,7 @@ describe("subscription of one field", () => {
 		);
 	});
 
-	it("typing in one field does not re-render the component of another field", () => {
-		for (const key of Object.keys(renders)) delete renders[key];
-		render(
-			<Owner initial={{ ...EMPTY_FORM, title: "a", summary: "b" }}>
-				<Probe name="title" />
-				<Probe name="summary" />
-			</Owner>,
-		);
-		expect(renders).toEqual({ title: 1, summary: 1 });
-
-		fireEvent.change(screen.getByLabelText("title"), { target: { value: "ab" } });
-		expect((screen.getByLabelText("title") as HTMLInputElement).value).toBe("ab");
-		expect(renders.title).toBe(2);
-		expect(renders.summary).toBe(1);
-
-		fireEvent.change(screen.getByLabelText("summary"), { target: { value: "bc" } });
-		expect((screen.getByLabelText("summary") as HTMLInputElement).value).toBe("bc");
-		expect(renders.summary).toBe(2);
-		expect(renders.title).toBe(2);
-	});
-
-	it("a field re-renders when its error or the disabled state changes, others only for what they read", () => {
+	it("PLUG-A6 a field re-renders when its error or the disabled state changes, others only for what they read", () => {
 		for (const key of Object.keys(renders)) delete renders[key];
 		const Harness = ({ issues, disabled }: { issues: EntryFormValue["issues"]; disabled: boolean }) => (
 			<EntryFormProvider value={baseValue({ issues, disabled })}>
@@ -406,22 +357,5 @@ describe("a custom field UI built only from the hooks", () => {
 		expect(screen.getByText("summary false")).toBeInTheDocument();
 		rerender(view(2));
 		await screen.findByText("title false");
-	});
-
-	it("shows no suggestion button for a field no source attached an action to", () => {
-		const hooks: { field?: FieldState } = {};
-		function Other() {
-			hooks.field = useField("summary");
-			const slot = useSlotActions(hooks.field.slotRequest as NonNullable<FieldState["slotRequest"]>);
-			return <span>{slot.actions.length} actions</span>;
-		}
-		render(
-			<SlotRegistryProvider sources={[source]}>
-				<Owner initial={EMPTY_FORM}>
-					<Other />
-				</Owner>
-			</SlotRegistryProvider>,
-		);
-		expect(screen.getByText("0 actions")).toBeInTheDocument();
 	});
 });

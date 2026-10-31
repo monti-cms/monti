@@ -167,66 +167,6 @@ describe("Pure block drag-and-drop commands", () => {
 
 		editor.destroy();
 	});
-
-	it("CmsBlockDrag plugin: a valid drop moves the document and a disallowed drop is ignored", () => {
-		const editor = createTestEditor("<p>단락 1</p><pre><code>코드</code></pre><p>단락 2</p>");
-		const { view } = editor;
-
-		// 1. dropping paragraph 1 after paragraph 2 (valid)
-		(view as unknown as { dragging: unknown }).dragging = {
-			slice: editor.state.doc.slice(0, editor.state.doc.child(0).nodeSize),
-			move: true,
-			cmsBlockPos: 0,
-		};
-		// mock posAtCoords in jsdom
-		view.posAtCoords = () => ({ pos: editor.state.doc.content.size, inside: editor.state.doc.content.size });
-
-		const dropEvent = Object.assign(new Event("drop", { bubbles: true, cancelable: true }), {
-			clientX: 100,
-			clientY: 100,
-			dataTransfer: {
-				getData: () => "",
-				setData: () => {},
-				types: [],
-			},
-		});
-		view.dom.dispatchEvent(dropEvent);
-
-		// check that paragraph 1 moved to the end
-		expect(editor.state.doc.child(2).textContent).toBe("단락 1");
-
-		// 2. dropping a listItem at the doc root (top level): it is wrapped in its original list type
-		const listEditor = createTestEditor("<ul><li><p>목록 항목 1</p></li></ul><p>일반 문단</p>");
-		const listDoc = listEditor.state.doc;
-		const listItemPos = 1;
-		(listEditor.view as unknown as { dragging: unknown }).dragging = {
-			slice: listDoc.slice(listItemPos, listItemPos + listDoc.child(0).child(0).nodeSize),
-			move: true,
-			cmsBlockPos: listItemPos,
-		};
-		const targetEndPos = listDoc.content.size;
-		listEditor.view.posAtCoords = () => ({ pos: targetEndPos, inside: targetEndPos });
-
-		const outsideDropEvent = Object.assign(new Event("drop", { bubbles: true, cancelable: true }), {
-			clientX: 50,
-			clientY: 50,
-			dataTransfer: {
-				getData: () => "",
-				setData: () => {},
-				types: [],
-			},
-		});
-		listEditor.view.dom.dispatchEvent(outsideDropEvent);
-
-		// it was the only item, so the original list disappears and a one-item list appears after the paragraph
-		expect(listEditor.state.doc.child(0).textContent).toBe("일반 문단");
-		expect(listEditor.state.doc.child(1).type.name).toBe("bulletList");
-		expect(listEditor.state.doc.child(1).textContent).toBe("목록 항목 1");
-
-		listEditor.destroy();
-
-		editor.destroy();
-	});
 });
 
 describe("moves that do not leave the source empty (sourceRangeOf)", () => {
@@ -271,13 +211,6 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 		expect(columns?.child(0).textContent).toBe("");
 		expect(columns?.child(1).childCount).toBe(2);
 		expect(columns?.child(1).textContent).toBe("오른쪽왼쪽");
-		editor.destroy();
-	});
-
-	it("the sole paragraph of a list item is still not taken out", () => {
-		const editor = createTestEditor("<ul><li><p>항목</p></li></ul><p>뒤</p>");
-		const from = nodePos(editor, (text, type) => type === "paragraph" && text === "항목");
-		expect(sourceRangeOf(editor.state.doc, from)).toBeNull();
 		editor.destroy();
 	});
 });

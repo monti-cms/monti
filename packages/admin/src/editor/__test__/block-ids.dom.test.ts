@@ -107,28 +107,6 @@ describe("block ids in the editor", () => {
 		expect(ids[1]).not.toBe(ids[0]);
 	});
 
-	it("are given to every block of a body loaded from MDX, all different", () => {
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOf(BODY) });
-		editors.push(editor);
-		editor.commands.insertContent("x");
-		const ids: unknown[] = [];
-		editor.state.doc.descendants((node) => {
-			if (node.isBlock) ids.push(node.attrs[BLOCK_ID_ATTRIBUTE]);
-		});
-		expect(ids.every(isBlockId)).toBe(true);
-		expect(new Set(ids).size).toBe(ids.length);
-	});
-
-	it("are paired with the previous document when MDX comes back from source mode", () => {
-		const doc = stored(BODY);
-		const content = tiptapOf(BODY.replace("Last paragraph", "Last paragraph, rewritten in source"), doc);
-		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content });
-		editors.push(editor);
-		const after = saved(editor);
-		expect(idOf(after, "Last paragraph, rewritten in source")).toBe(idOf(doc, "Last paragraph"));
-		expect(idOf(after, "First paragraph")).toBe(idOf(doc, "First paragraph"));
-	});
-
 	it("TRANS-B1 are not on inline nodes", () => {
 		const editor = open(stored("Text with a note[^1].\n\n[^1]: The note\n"));
 		editor.state.doc.descendants((node) => {

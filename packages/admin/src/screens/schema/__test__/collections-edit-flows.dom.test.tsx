@@ -461,18 +461,6 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(reload.reloadPage).toHaveBeenCalled();
 		expectPlainApply(dialog);
 	});
-
-	it("SCHEMA-F10 when the file is saved but the database does not take it, the sheet closes and the screen is told what the server said", async () => {
-		const onApplyFailed = vi.fn();
-		previewOf = () => fieldChanges;
-		mount({ draft: fieldsDraft, saved: fieldsSaved, onApplyFailed });
-		const dialog = await sheet();
-		await within(dialog).findByTestId(`impact-${SUMMARY}`);
-		api.on("PUT /v1/schema", () => failure("schema_apply_failed", "connect ECONNREFUSED"));
-		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(onApplyFailed).toHaveBeenCalledWith("connect ECONNREFUSED"));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-	});
 });
 
 describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {

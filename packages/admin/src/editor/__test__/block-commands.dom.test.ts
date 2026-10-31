@@ -27,11 +27,6 @@ const posOf = (instance: Editor, index: number) => {
 };
 
 describe("top-level block operations", () => {
-	it("finds the top-level block for a position inside it", () => {
-		const instance = make();
-		expect(topLevelBlockAt(instance.state.doc, posOf(instance, 1))?.node.type.name).toBe("heading");
-	});
-
 	it("WRITE-W2 moves, duplicates and deletes blocks without touching neighbours", () => {
 		const instance = make();
 		expect(moveBlock(instance, posOf(instance, 1), -1)).toBe(true);

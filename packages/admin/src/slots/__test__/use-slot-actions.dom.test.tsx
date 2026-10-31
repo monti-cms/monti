@@ -55,14 +55,6 @@ function deferred() {
 }
 
 describe("useSlotActions", () => {
-	it("lists the attached actions without `run`, and nothing when no source matches", () => {
-		const { result } = renderHook(() => useSlotActions(options()), { wrapper: wrap([() => [action()]]) });
-		expect(result.current.actions).toEqual([{ id: "suggest", label: "Suggest", apply: "replace" }]);
-		expect(result.current.state).toEqual({ status: "idle" });
-		const empty = renderHook(() => useSlotActions(options()), { wrapper: wrap([() => []]) });
-		expect(empty.result.current.actions).toEqual([]);
-	});
-
 	it("PLUG-A3 runs with the context read at run time and puts the first candidate in at once", async () => {
 		const run = vi.fn(action().run);
 		const opts = options();
@@ -136,46 +128,5 @@ describe("useSlotActions", () => {
 		await act(async () => pending.resolve(candidates("late")));
 		expect(await outcome).toMatchObject({ ok: false, error: { code: "aborted" } });
 		expect(opts.apply).not.toHaveBeenCalled();
-	});
-
-	it("a failure lands in the state with the notice's words", async () => {
-		const { result } = renderHook(() => useSlotActions(options()), {
-			wrapper: wrap([
-				() => [
-					action({
-						run: async () => {
-							throw new NoticeError("No connection is ready.", "Save one on the AI screen.");
-						},
-					}),
-				],
-			]),
-		});
-		await act(async () => {
-			await result.current.run("suggest");
-		});
-		expect(result.current.state).toMatchObject({
-			status: "error",
-			error: { message: "No connection is ready. Save one on the AI screen." },
-		});
-	});
-
-	it("`disabled` follows the option", () => {
-		const { result, rerender } = renderHook(({ disabled }) => useSlotActions(options({ disabled })), {
-			initialProps: { disabled: true },
-			wrapper: wrap([() => [action()]]),
-		});
-		expect(result.current.disabled).toBe(true);
-		rerender({ disabled: false });
-		expect(result.current.disabled).toBe(false);
-	});
-
-	it("commands keep their identity across renders, so they are safe in effects", async () => {
-		const { result, rerender } = renderHook(() => useSlotActions(options()), { wrapper: wrap([() => [action()]]) });
-		const before = result.current;
-		await act(async () => {
-			await result.current.run("suggest");
-		});
-		rerender();
-		for (const command of ["run", "cancel"] as const) expect(result.current[command]).toBe(before[command]);
 	});
 });

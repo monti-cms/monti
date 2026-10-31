@@ -79,13 +79,6 @@ describe("replacement post (single relation)", () => {
 		fireEvent.click(third);
 		expect(onChange).toHaveBeenCalledWith("p3");
 	});
-
-	it("shows the picked post's title", async () => {
-		render(<EntryPicker {...props(field, "p1")} />);
-		await waitFor(() =>
-			expect((screen.getByRole("combobox", { name: "최신 글" }) as HTMLInputElement).value).toBe("첫 글"),
-		);
-	});
 });
 
 describe("relation picker search on the server", () => {

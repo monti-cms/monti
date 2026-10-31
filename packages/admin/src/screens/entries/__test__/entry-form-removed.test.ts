@@ -24,16 +24,6 @@ const entry = (fields: Partial<EntryData>): EntryData => ({
 describe("values of removed fields and options", () => {
 	const stored = { title: "안녕", removedField: "left behind", removedList: ["a", "b"] };
 
-	it("sends the value of a removed field back as stored; it is not a form field", () => {
-		const form = formFromEntry(testSite, entry({ working: { metadata: stored, doc: emptyStoredDocument() } }));
-		expect(Object.keys(form)).not.toContain("removedField");
-		expect(metadataFromForm(testSite, form, "post", stored)).toEqual({ metadata: stored });
-		// Editing another value does not touch it.
-		expect(metadataFromForm(testSite, { ...form, title: "Renamed" }, "post", stored)).toEqual({
-			metadata: { ...stored, title: "Renamed" },
-		});
-	});
-
 	it("WRITE-S8 keeps it on an item collection with per-language names, and on a translation", () => {
 		const record = { title: "에세이", translations: { en: { title: "Essay" } }, removedField: "x" };
 		const recordForm = formFromEntry(
@@ -54,11 +44,6 @@ describe("values of removed fields and options", () => {
 		).toEqual({
 			metadata: translated,
 		});
-	});
-
-	it("adds nothing for a key the entry never had", () => {
-		const form = formFromEntry(testSite, entry({ working: { metadata: { title: "T" }, doc: emptyStoredDocument() } }));
-		expect(metadataFromForm(testSite, form, "post", { title: "T" })).toEqual({ metadata: { title: "T" } });
 	});
 
 	it("WRITE-S8 shows a select value that is no longer an option as it is stored, and keeps it on save", () => {

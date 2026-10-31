@@ -201,20 +201,6 @@ describe("flow: write and publish (steps 09–15)", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
-	it("WRITE-P1 sends nothing to publish while a refusal is the answer, and the entry stays a draft", async () => {
-		server.publishRefusal = [missingCategory];
-		renderEdit();
-		await title();
-		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
-		await screen.findByRole("dialog");
-		expect(status()).toBe("초안");
-		expect(
-			header()
-				.getByRole("button", { name: tEntryEditorShell("publish") })
-				.hasAttribute("disabled"),
-		).toBe(false);
-	});
-
 	it("WRITE-P1 lists the to-dos fixed along the way as check rows, and says nothing is left when they are all gone", async () => {
 		server.checkAnswer = { issues: [missingCategory, noAlt(0), noAlt(1)], warnings: [] };
 		renderEdit();

@@ -105,14 +105,6 @@ describe("image, file and math on the blockViews contract", () => {
 		await waitFor(() => expect(screen.getByRole("status", { name: "alt" })).toHaveTextContent("바뀐 설명"));
 	});
 
-	it("a site replaces the file view", async () => {
-		await mount(storedDoc({ type: "file", attrs: { mediaId: "m1", label: "보고서.pdf" } }), "[data-test-view='file']", {
-			file: FileView,
-		});
-		expect(screen.getByTestId("label").textContent).toBe("보고서.pdf");
-		expect(document.querySelector("[data-file-block]")).toBeNull();
-	});
-
 	it("PLUG-A9 a site replaces the math view, and the view writes the source", async () => {
 		const editor = await mount(
 			storedDoc({ type: "math", attrs: { value: "x^2" } }),

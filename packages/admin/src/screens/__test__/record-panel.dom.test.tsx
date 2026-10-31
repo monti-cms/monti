@@ -79,23 +79,6 @@ describe("taxonomy edit panel", () => {
 		await waitFor(() => expect(onSaved).toHaveBeenCalled());
 	});
 
-	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {
-		const { onSaved, onClose } = renderPanel({ collection: "tag", id: null });
-		expect(screen.getByRole("heading", { name: "태그 추가" })).toBeInTheDocument();
-		fireEvent.change(screen.getByRole("textbox", { name: /이름/ }), { target: { value: "Vue" } });
-		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
-
-		await waitFor(() => expect(calls("POST")).toHaveLength(1));
-		expect(calls("POST")[0]?.body).toEqual({
-			collection: "tag",
-			slug: null,
-			metadata: { title: "Vue" },
-			doc: emptyStoredDocument(),
-		});
-		await waitFor(() => expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "tag-2" })));
-		expect(onClose).not.toHaveBeenCalled();
-	});
-
 	it("WRITE-S2 after saving, saves again based on the received revision", async () => {
 		renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });

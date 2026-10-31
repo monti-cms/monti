@@ -68,7 +68,7 @@ describe("grouping to-dos", () => {
 		expect(rows[1]?.onOpen).toBeUndefined();
 	});
 
-	it("groups by a key that stays the same while the group has the same kind of problem", () => {
+	it("WRITE-P1 groups by a key that stays the same while the group has the same kind of problem", () => {
 		const keys = (issues: CmsIssue[]) => groupIssues(issues).map((group) => group.key);
 		expect(keys([noAlt("b1")])).toEqual(keys([noAlt("b1"), noAlt("b2")]));
 		expect(keys([missing("summary", "요약")])).not.toEqual(keys([missing("cover", "대표")]));

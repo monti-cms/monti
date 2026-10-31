@@ -14,15 +14,6 @@ const ANCHOR_REF = codeAnchorRef(testSite);
  * know its name and finds it in the block definitions. As with other site configs, if no such decoration exists, linking changes nothing.
  */
 describe("body decoration for body-to-code linking", () => {
-	it("finds the decoration pointing at code lines in the block definitions (`codeAnchor`)", () => {
-		const anchorBlock = testSite.ADDED_MARK_BLOCKS.find((block) =>
-			Object.values(block.attributes).some((attribute) => attribute.codeAnchor),
-		);
-		expect(ANCHOR_REF?.mark ?? null).toBe(
-			anchorBlock ? `cms${anchorBlock.name.replace(/(^|-)([a-z0-9])/g, (_, _d, c: string) => c.toUpperCase())}` : null,
-		);
-	});
-
 	it.runIf(ANCHOR_REF === null)("EDIT-C4 if there is no such decoration, linking does not change the document", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(testSite),

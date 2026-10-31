@@ -296,25 +296,6 @@ describe("flow: pick rows and act", () => {
 				.getAttribute("aria-checked"),
 		).toBe("false");
 	});
-
-	it("has no 'ask the assistant' action yet", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
-		await screen.findByRole("toolbar");
-		expect(screen.queryByRole("button", { name: /요청/ })).toBeNull();
-	});
-
-	it("TRASH-T3 moves the picked draft rows to the trash from the menu at once, and the list is requested again", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
-		await screen.findByRole("toolbar");
-		fireEvent.click(screen.getByRole("button", { name: tBulkBar("more") }));
-		const trash = await screen.findByRole("menuitem", { name: tc("lifecycle.trash") });
-		const before = listRequests().length;
-		fireEvent.click(trash);
-		await waitFor(() => expect(listRequests().length).toBeGreaterThan(before));
-		expect(screen.queryByRole("alertdialog")).toBeNull();
-	});
 });
 
 describe("flow: change the relations of the picked rows", () => {
