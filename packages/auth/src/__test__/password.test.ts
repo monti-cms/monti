@@ -26,21 +26,21 @@ const setup = () => {
 };
 
 describe("hashing", () => {
-	it("verifies the password a hash was made from, and no other", async () => {
+	it("AUTH-L1 verifies the password a hash was made from, and no other", async () => {
 		const hash = await hashPassword(GOOD);
 		expect(await verifyPassword(GOOD, hash)).toBe(true);
 		expect(await verifyPassword(`${GOOD}!`, hash)).toBe(false);
 		expect(await verifyPassword("", hash)).toBe(false);
 	});
 
-	it("uses a salt per hash and does not contain the password", async () => {
+	it("AUTH-L1 uses a salt per hash and does not contain the password", async () => {
 		const [a, b] = await Promise.all([hashPassword(GOOD), hashPassword(GOOD)]);
 		expect(a).not.toBe(b);
 		expect(a).not.toContain(GOOD);
 		expect(await verifyPassword(GOOD, b)).toBe(true);
 	});
 
-	it("never matches a stored value that is not one of its hashes", async () => {
+	it("AUTH-L1 never matches a stored value that is not one of its hashes", async () => {
 		for (const stored of ["", GOOD, "scrypt$x", "scrypt$0$0$0$a$b", "bcrypt$1$2$3$4$5"]) {
 			expect(await verifyPassword(GOOD, stored)).toBe(false);
 		}
@@ -48,14 +48,14 @@ describe("hashing", () => {
 });
 
 describe("the first admin", () => {
-	it("is created while no account exists, and the screen's check says so", async () => {
+	it("AUTH-A1 is created while no account exists, and the screen's check says so", async () => {
 		const { accounts } = setup();
 		expect(await accounts.hasAny()).toBe(false);
 		expect(await accounts.createFirst({ email: "Mina@Example.com ", password: GOOD })).toEqual({ ok: true });
 		expect(await accounts.hasAny()).toBe(true);
 	});
 
-	it("is refused for a second attempt, even with another email", async () => {
+	it("AUTH-A1 is refused for a second attempt, even with another email", async () => {
 		const { accounts } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		expect(await accounts.createFirst({ email: "other@example.com", password: GOOD })).toEqual({
@@ -64,7 +64,7 @@ describe("the first admin", () => {
 		});
 	});
 
-	it("lets only one of two simultaneous attempts through", async () => {
+	it("AUTH-A1 lets only one of two simultaneous attempts through", async () => {
 		const { accounts } = setup();
 		const results = await Promise.all([
 			accounts.createFirst({ email: "a@example.com", password: GOOD }),
@@ -74,7 +74,47 @@ describe("the first admin", () => {
 		expect((await Promise.all([accounts.hasAny()]))[0]).toBe(true);
 	});
 
-	it("refuses an email that is not one and a short password, and stays open", async () => {
+	it("AUTH-A1 stays open when writing the first account fails, so it can be tried again", async () => {
+		const memory = createMemoryPluginStorage();
+		let failNext = true;
+		// The first write of an account fails once, as a full disk or a dropped connection would.
+		const storage: typeof memory.storage = (plugin) =>
+			new Proxy(memory.storage(plugin), {
+				get: (target, key, receiver) =>
+					key !== "collection"
+						? Reflect.get(target, key, receiver)
+						: (name: string) => {
+								const collection = target.collection(name);
+								if (name !== "password-accounts") return collection;
+								return new Proxy(collection, {
+									get: (inner, property, innerReceiver) =>
+										property === "set" && failNext
+											? async () => {
+													failNext = false;
+													throw new Error("the write failed");
+												}
+											: Reflect.get(inner, property, innerReceiver),
+								});
+							},
+			});
+		const accounts = connectWithEnv({ providers: [password()] }, { storage }).accounts;
+		await expect(accounts?.createFirst({ email: "mina@example.com", password: GOOD })).rejects.toThrow(
+			"the write failed",
+		);
+		expect(await accounts?.hasAny()).toBe(false);
+		expect(await accounts?.createFirst({ email: "mina@example.com", password: GOOD })).toEqual({ ok: true });
+	});
+
+	it("AUTH-A3 takes a password of exactly the shortest length", async () => {
+		const { accounts } = setup();
+		expect(
+			await accounts.createFirst({ email: "mina@example.com", password: "x".repeat(MIN_PASSWORD_LENGTH) }),
+		).toEqual({
+			ok: true,
+		});
+	});
+
+	it("AUTH-A3 refuses an email that is not one and a short password, and stays open", async () => {
 		const { accounts } = setup();
 		expect(await accounts.createFirst({ email: "mina", password: GOOD })).toEqual({ ok: false, reason: "email" });
 		expect(
@@ -88,7 +128,7 @@ describe("the first admin", () => {
 });
 
 describe("signing in with email and password", () => {
-	it("the right password gives a session of an admin, whatever the case of the email", async () => {
+	it("AUTH-L2 the right password gives a session of an admin, whatever the case of the email", async () => {
 		const { cmsAuth, accounts, signIn } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		const { response, jar } = await signIn("MINA@example.com", GOOD);
@@ -99,7 +139,7 @@ describe("signing in with email and password", () => {
 		expect(cmsAuth.isAdmin(session?.user?.accountId)).toBe(true);
 	});
 
-	it("a wrong password gives no session and sends the browser back to the login screen with an error", async () => {
+	it("AUTH-L2 a wrong password gives no session and sends the browser back to the login screen with an error", async () => {
 		const { cmsAuth, accounts, signIn } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		const { response, jar } = await signIn("mina@example.com", "not the password");
@@ -108,7 +148,7 @@ describe("signing in with email and password", () => {
 		expect(await cmsAuth.session(requestWith(jar))).toBeNull();
 	});
 
-	it("an unknown email is refused the same way", async () => {
+	it("AUTH-L2 an unknown email is refused the same way", async () => {
 		const { cmsAuth, accounts, signIn } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		const { response, jar } = await signIn("someone@example.com", GOOD);
@@ -116,7 +156,7 @@ describe("signing in with email and password", () => {
 		expect(await cmsAuth.session(requestWith(jar))).toBeNull();
 	});
 
-	it("refuses an email after repeated failures, even with the right password", async () => {
+	it("AUTH-L3 refuses an email after repeated failures, even with the right password", async () => {
 		const { cmsAuth, accounts, signIn } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		for (let attempt = 0; attempt < 5; attempt++) await signIn("mina@example.com", "wrong password");
@@ -124,20 +164,20 @@ describe("signing in with email and password", () => {
 		expect(await cmsAuth.session(requestWith(locked.jar))).toBeNull();
 	});
 
-	it("an account id that no one signed in as is not an admin", () => {
+	it("AUTH-L5 an account id that no one signed in as is not an admin", () => {
 		const { cmsAuth } = setup();
 		expect(cmsAuth.isAdmin("password:not-an-email")).toBe(false);
 		expect(cmsAuth.isAdmin("github:1")).toBe(false);
 	});
 
-	it("is listed as a form login, and has no admin warning", () => {
+	it("AUTH-C1 is listed as a form login, and has no admin warning", () => {
 		const { cmsAuth } = setup();
 		expect(cmsAuth.providers).toEqual([expect.objectContaining({ id: "password", credentials: true })]);
 	});
 });
 
 describe("resetting a password", () => {
-	it("replaces the password: the old one stops working and the new one signs in", async () => {
+	it("AUTH-L11 replaces the password: the old one stops working and the new one signs in", async () => {
 		const { cmsAuth, accounts, signIn } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		expect(await accounts.resetPassword({ email: "MINA@example.com", password: "a brand new password" })).toEqual({
@@ -148,7 +188,7 @@ describe("resetting a password", () => {
 		expect((await cmsAuth.session(requestWith(fresh.jar)))?.user?.accountId).toBe("password:mina@example.com");
 	});
 
-	it("is refused for an email without an account and for a short password", async () => {
+	it("AUTH-L11 is refused for an email without an account and for a short password", async () => {
 		const { accounts } = setup();
 		await accounts.createFirst({ email: "mina@example.com", password: GOOD });
 		expect(await accounts.resetPassword({ email: "nobody@example.com", password: GOOD })).toEqual({
@@ -163,13 +203,13 @@ describe("resetting a password", () => {
 });
 
 describe("emails", () => {
-	it("are trimmed and lower cased, and must look like an email", () => {
+	it("AUTH-A3 are trimmed and lower cased, and must look like an email", () => {
 		expect(normalizeEmail("  Mina@Example.COM ")).toBe("mina@example.com");
 		for (const bad of ["", "mina", "mina@", "@example.com", "a b@example.com"]) expect(normalizeEmail(bad)).toBeNull();
 	});
 });
 
-it("builds with the provider alone and no admin list", () => {
+it("AUTH-C1 builds with the provider alone and no admin list", () => {
 	expect(() => auth({ providers: [password()] })).not.toThrow();
 });
 
@@ -190,14 +230,14 @@ describe("limiting failed sign-ins", () => {
 		for (let attempt = 0; attempt < times; attempt++) await accounts.authorize(email, "wrong password", ip);
 	};
 
-	it("is shared by every instance that uses the same storage", async () => {
+	it("AUTH-L3 is shared by every instance that uses the same storage", async () => {
 		const { memory, accounts, clock } = await make();
 		await fail(accounts, 5);
 		const other = passwordAccounts(memory.storage, () => clock.now);
 		expect(await other.authorize(MINA, GOOD)).toBeNull();
 	});
 
-	it("lets the email in again once the window is over, and a right password clears the count", async () => {
+	it("AUTH-L3 lets the email in again once the window is over, and a right password clears the count", async () => {
 		const { accounts, clock } = await make();
 		await fail(accounts, 5);
 		expect(await accounts.authorize(MINA, GOOD)).toBeNull();
@@ -209,7 +249,7 @@ describe("limiting failed sign-ins", () => {
 		expect(await accounts.authorize(MINA, GOOD)).toBe(MINA);
 	});
 
-	it("counts a client address on its own, so many emails from one address are stopped", async () => {
+	it("AUTH-L3 counts a client address on its own, so many emails from one address are stopped", async () => {
 		const { accounts } = await make();
 		for (let attempt = 0; attempt < 20; attempt++)
 			await accounts.authorize(`guess${attempt}@example.com`, "x", "203.0.113.9");
@@ -217,14 +257,14 @@ describe("limiting failed sign-ins", () => {
 		expect(await accounts.authorize(MINA, GOOD, "203.0.113.10")).toBe(MINA);
 	});
 
-	it("keeps one counter for all the emails that have no account, so guessing emails does not grow the storage", async () => {
+	it("AUTH-L3 keeps one counter for all the emails that have no account, so guessing emails does not grow the storage", async () => {
 		const { accounts, memory } = await make();
 		for (let attempt = 0; attempt < 30; attempt++) await accounts.authorize(`guess${attempt}@example.com`, "x");
 		const keys = (await memory.storage("auth").collection("password-attempts").list()).map((item) => item.key);
 		expect(keys).toEqual(["email:*"]);
 	});
 
-	it("drops the counters whose window is over when it starts a new one", async () => {
+	it("AUTH-L3 drops the counters whose window is over when it starts a new one", async () => {
 		const { accounts, memory, clock } = await make();
 		await fail(accounts, 1, MINA, "203.0.113.1");
 		clock.now += 61_000;
@@ -233,14 +273,14 @@ describe("limiting failed sign-ins", () => {
 		expect(keys.sort()).toEqual(["email:mina@example.com", "ip:203.0.113.2"]);
 	});
 
-	it("a password reset clears the email's count", async () => {
+	it("AUTH-L3 a password reset clears the email's count", async () => {
 		const { accounts } = await make();
 		await fail(accounts, 5);
 		await accounts.resetPassword({ email: MINA, password: "a brand new password" });
 		expect(await accounts.authorize(MINA, "a brand new password")).toBe(MINA);
 	});
 
-	it("password() reads the address from the configured header only", async () => {
+	it("AUTH-L3 password() reads the address from the configured header only", async () => {
 		const memory = createMemoryPluginStorage();
 		const cmsAuth = connectWithEnv(
 			{ providers: [password({ clientIpHeader: "x-forwarded-for" })] },

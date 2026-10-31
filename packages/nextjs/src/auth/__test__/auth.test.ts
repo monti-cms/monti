@@ -24,11 +24,11 @@ afterEach(() => {
 });
 
 describe("Next.js side of the login", () => {
-	it("has no request headers outside a request (a command-line tool, a build)", async () => {
+	it("AUTH-C2 has no request headers outside a request (a command-line tool, a build)", async () => {
 		expect(await nextHost.requestHeaders?.()).toBeNull();
 	});
 
-	it("passes the host's request headers to the login connection, and needs no rethrow", () => {
+	it("AUTH-C2 passes the host's request headers to the login connection, and needs no rethrow", () => {
 		const connection = auth({
 			providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })],
 			host: nextHost,

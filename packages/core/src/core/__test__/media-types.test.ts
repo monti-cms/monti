@@ -33,7 +33,7 @@ const siteWith = (media: Parameters<typeof defineSite>[0]["media"]) =>
 	).api;
 
 describe("the media type table", () => {
-	it("splits supported types into images and files, with no type in both", () => {
+	it("MEDIA-U2 splits supported types into images and files, with no type in both", () => {
 		expect(SUPPORTED_IMAGE_MIME_TYPES).toContain("image/png");
 		expect(SUPPORTED_FILE_MIME_TYPES).toContain("application/pdf");
 		const files = new Set<string>(SUPPORTED_FILE_MIME_TYPES);
@@ -41,7 +41,7 @@ describe("the media type table", () => {
 		expect(SUPPORTED_IMAGE_MIME_TYPES.length + SUPPORTED_FILE_MIME_TYPES.length).toBe(Object.keys(MEDIA_TYPES).length);
 	});
 
-	it("gives every type an extension for its file key, and no two types share an extension", () => {
+	it("MEDIA-U5 gives every type an extension for its file key, and no two types share an extension", () => {
 		const seen = new Map<string, string>();
 		for (const [mime, entry] of Object.entries(MEDIA_TYPES)) {
 			expect(extensionFor(mime as keyof typeof MEDIA_TYPES)).toBe(entry.extensions[0]);
@@ -52,7 +52,7 @@ describe("the media type table", () => {
 		}
 	});
 
-	it("finds an attachment type by file name, case-insensitively, including code files stored as text", () => {
+	it("MEDIA-U5 finds an attachment type by file name, case-insensitively, including code files stored as text", () => {
 		expect(fileTypeByExtension("Report.PDF")).toBe("application/pdf");
 		expect(fileTypeByExtension("notes.markdown")).toBe("text/markdown");
 		expect(fileTypeByExtension("main.ts")).toBe("text/plain");
@@ -61,7 +61,7 @@ describe("the media type table", () => {
 		expect(fileTypeByExtension("a.exe")).toBeNull();
 	});
 
-	it("checks an attachment's bytes against its declared type", () => {
+	it("MEDIA-U5 checks an attachment's bytes against its declared type", () => {
 		expect(sniffFile(text("%PDF-1.7"), "application/pdf")).toBe(true);
 		expect(sniffFile(text("not a pdf"), "application/pdf")).toBe(false);
 		expect(sniffFile(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), "application/zip")).toBe(true);
@@ -79,7 +79,7 @@ describe("the media type table", () => {
 describe("image fact and upload policy", () => {
 	const narrowed = siteWith({ imageTypes: ["image/png"], fileTypes: ["application/pdf"] });
 
-	it("isImageType says what a type is, whatever the site accepts", () => {
+	it("MEDIA-U2 isImageType says what a type is, whatever the site accepts", () => {
 		for (const mime of SUPPORTED_IMAGE_MIME_TYPES) expect(isImageType(mime)).toBe(true);
 		expect(isImageType("application/pdf")).toBe(false);
 		expect(isImageType("image/svg+xml")).toBe(false);
@@ -91,7 +91,7 @@ describe("image fact and upload policy", () => {
 		expect(narrowed.isImageType("application/pdf")).toBe(false);
 	});
 
-	it("isAllowedImage follows the site's media.imageTypes", () => {
+	it("MEDIA-U2 isAllowedImage follows the site's media.imageTypes", () => {
 		expect(narrowed.isAllowedImage("image/png")).toBe(true);
 		expect(narrowed.isAllowedImage("image/jpeg")).toBe(false);
 		expect(narrowed.isAllowedImage("application/pdf")).toBe(false);

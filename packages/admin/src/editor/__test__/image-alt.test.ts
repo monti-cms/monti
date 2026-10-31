@@ -23,7 +23,7 @@ const open = (...content: object[]) => {
 };
 
 describe("images that still need alt text", () => {
-	it("lists the images without text in document order, leaving out decorative images and images still going up", () => {
+	it("MEDIA-E2 lists the images without text in document order, leaving out decorative images and images still going up", () => {
 		const { state } = open(
 			image("aaaaaaaa"),
 			image("bbbbbbbb", { alt: "with text" }),
@@ -34,7 +34,7 @@ describe("images that still need alt text", () => {
 		expect(imagesWithoutAlt(state.doc)).toEqual(["aaaaaaaa", "eeeeeeee"]);
 	});
 
-	it("goes to the next image without text after this one, then round to the first, and to none when no other image needs text", () => {
+	it("MEDIA-E2 goes to the next image without text after this one, then round to the first, and to none when no other image needs text", () => {
 		const { state } = open(image("aaaaaaaa"), image("bbbbbbbb", { alt: "x" }), image("cccccccc"));
 		expect(nextImageWithoutAlt(state.doc, "aaaaaaaa")).toBe("cccccccc");
 		expect(nextImageWithoutAlt(state.doc, "cccccccc")).toBe("aaaaaaaa");
@@ -46,7 +46,7 @@ describe("images that still need alt text", () => {
 });
 
 describe("an image that is still going up", () => {
-	it("is not part of the stored document until the upload has given it its media", () => {
+	it("MEDIA-E1 is not part of the stored document until the upload has given it its media", () => {
 		const { getJSON } = open(image("aaaaaaaa", { mediaId: null, uploadId: "u1" }), image("bbbbbbbb"));
 		const stored = tiptapToStored(testSite, getJSON.call(editor));
 		expect(stored.content.filter((node) => node.type === "image")).toHaveLength(1);
@@ -58,7 +58,7 @@ describe("the folder list of the picker", () => {
 	const folder = (id: string, parentId: string | null, position: number) =>
 		({ id, name: id, parentId, position, collection: "media", version: 1, entryCount: 0 }) as const;
 
-	it("lists each top folder with what is inside it right after it, by position", () => {
+	it("MEDIA-P1 lists each top folder with what is inside it right after it, by position", () => {
 		const list = folderNav([
 			folder("wall", null, 1),
 			folder("diagrams", "blog", 1),

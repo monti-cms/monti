@@ -99,14 +99,14 @@ const post = (over: Partial<Working> = {}): Working => ({
 });
 
 describe("Bulk metadata ops contract", () => {
-	it("rejects unknown op for the whole request", async () => {
+	it("LIST-C3 rejects unknown op for the whole request", async () => {
 		const bulk = createBulkService(newFakeStore({}) as never, { site: testSite });
 		await expect(bulk.run({ op: "nope", items: [] } as never)).rejects.toThrowError(
 			expect.objectContaining({ code: "unknown_op" }),
 		);
 	});
 
-	it("rejects more than 100 items", async () => {
+	it("LIST-C3 rejects more than 100 items", async () => {
 		const bulk = createBulkService(newFakeStore({}) as never, { site: testSite });
 		const items = Array.from({ length: 101 }, (_, i) => ({ id: `e-${i}`, expectedVersion: 1 }));
 		await expect(
@@ -114,14 +114,14 @@ describe("Bulk metadata ops contract", () => {
 		).rejects.toThrowError(expect.objectContaining({ code: "too_many_items" }));
 	});
 
-	it("returns empty results for empty items", async () => {
+	it("LIST-C2 returns empty results for empty items", async () => {
 		const bulk = createBulkService(newFakeStore({}) as never, { site: testSite });
 		await expect(
 			bulk.run({ op: "relation.add", field: many, items: [], ids: ["55555555-5555-4555-8555-555555555555"] }),
 		).resolves.toEqual({ results: [] });
 	});
 
-	it("relation.add merges and dedupes, bumping version", async () => {
+	it("LIST-C1 relation.add merges and dedupes, bumping version", async () => {
 		const store = newFakeStore({ e1: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -138,7 +138,7 @@ describe("Bulk metadata ops contract", () => {
 		]);
 	});
 
-	it("relation.remove filters; removing absent tag is still ok", async () => {
+	it("LIST-C1 relation.remove filters; removing absent tag is still ok", async () => {
 		const store = newFakeStore({ e1: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -151,7 +151,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(store.entries.get("e1")?.metadata[many]).toEqual(["44444444-4444-4444-8444-444444444444"]);
 	});
 
-	it("a conflict on one item does not touch the others", async () => {
+	it("LIST-C2 a conflict on one item does not touch the others", async () => {
 		const store = newFakeStore({ e1: post(), e2: post({ version: 5 }) });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -173,7 +173,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(store.entries.get("e2")?.metadata[many]).not.toContain("55555555-5555-4555-8555-555555555555");
 	});
 
-	it("missing entry is a per-item error", async () => {
+	it("LIST-C2 missing entry is a per-item error", async () => {
 		const store = newFakeStore({ e1: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -189,7 +189,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(out.results[1]).toEqual({ id: "e1", ok: true, version: 4 });
 	});
 
-	it("malformed expectedVersion is a per-item error", async () => {
+	it("LIST-C2 malformed expectedVersion is a per-item error", async () => {
 		const store = newFakeStore({ e1: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -202,7 +202,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(out.results[1]).toEqual({ id: "e1", ok: true, version: 4 });
 	});
 
-	it("relation.set replaces; null clears", async () => {
+	it("LIST-C1 relation.set replaces; null clears", async () => {
 		const store = newFakeStore({ e1: post(), e2: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		await bulk.run({
@@ -216,7 +216,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(store.entries.get("e2")?.metadata[single]).toBeUndefined();
 	});
 
-	it("folder.move sets folderId; null moves to root", async () => {
+	it("LIST-C5 folder.move sets folderId; null moves to root", async () => {
 		const store = newFakeStore({ e1: post({ folderId: "f-1" }), e2: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		await bulk.run({ op: "folder.move", items: [{ id: "e1", expectedVersion: 3 }], folderId: "f-2" });
@@ -225,7 +225,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(store.entries.get("e2")?.folderId).toBeNull();
 	});
 
-	it("relation op on a collection without the field is a per-item error", async () => {
+	it("LIST-C3 relation op on a collection without the field is a per-item error", async () => {
 		const store = newFakeStore({
 			c1: {
 				collection: collectionWithoutMany,
@@ -246,7 +246,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(out).toEqual({ results: [{ id: "c1", ok: false, error: "invalid_input" }] });
 	});
 
-	it("relation ops reject a non-relation field and a many/single mismatch", async () => {
+	it("LIST-C3 relation ops reject a non-relation field and a many/single mismatch", async () => {
 		const store = newFakeStore({ e1: post(), e2: post(), e3: post() });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -272,7 +272,7 @@ describe("Bulk metadata ops contract", () => {
 		expect(manyOut.results).toEqual([{ id: "e3", ok: false, error: "invalid_input" }]);
 	});
 
-	it("relation ops need a field and values for the whole request", async () => {
+	it("LIST-C3 relation ops need a field and values for the whole request", async () => {
 		const bulk = createBulkService(newFakeStore({}) as never, { site: testSite });
 		await expect(bulk.run({ op: "relation.add", items: [], ids: [] })).rejects.toThrowError(
 			expect.objectContaining({ code: "invalid_input" }),

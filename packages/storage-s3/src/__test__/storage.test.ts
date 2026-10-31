@@ -24,24 +24,24 @@ const ALL = [...Object.keys(S3), "S3_ENDPOINT", "S3_FORCE_PATH_STYLE"];
 afterEach(() => vi.unstubAllEnvs());
 
 describe("environment configuration", () => {
-	it("creating the adapter reads nothing, so empty variables do not fail a build", () => {
+	it("MEDIA-U8 creating the adapter reads nothing, so empty variables do not fail a build", () => {
 		for (const key of ALL) vi.stubEnv(key, "");
 		expect(() => s3Storage()).not.toThrow();
 	});
 
-	it("works with no arguments: AWS S3 from S3_*", () => {
+	it("MEDIA-U8 works with no arguments: AWS S3 from S3_*", () => {
 		setEnv(S3);
 		expect(s3Storage().createStore().getPublicUrl("a.png")).toBe("https://cdn.example.com/a.png");
 	});
 
-	it("Cloudflare R2 is the same function: S3_ENDPOINT and S3_REGION=auto", () => {
+	it("MEDIA-U8 Cloudflare R2 is the same function: S3_ENDPOINT and S3_REGION=auto", () => {
 		setEnv(R2);
 		const adapter = s3Storage();
 		expect(adapter.name).toBe("s3");
 		expect(adapter.createStore().getPublicUrl("media/a.png")).toBe("https://cdn.example.com/media/a.png");
 	});
 
-	it("there is no r2Storage and R2_* is not read", async () => {
+	it("MEDIA-U8 there is no r2Storage and R2_* is not read", async () => {
 		expect(await import("../index")).not.toHaveProperty("r2Storage");
 		for (const key of ALL) vi.stubEnv(key, "");
 		setEnv({
@@ -54,7 +54,7 @@ describe("environment configuration", () => {
 		expect(() => s3Storage().createStore()).toThrow("S3_ENDPOINT");
 	});
 
-	it("options override the variables, one by one or all", () => {
+	it("MEDIA-U8 options override the variables, one by one or all", () => {
 		setEnv(S3);
 		expect(s3Storage({ publicBaseUrl: "https://other.example.com" }).createStore().getPublicUrl("a.png")).toBe(
 			"https://other.example.com/a.png",
@@ -73,7 +73,7 @@ describe("environment configuration", () => {
 
 	it.each(
 		Object.keys(S3).filter((key) => key !== "S3_REGION"),
-	)("names the missing %s, where to set it and how", (key) => {
+	)("MEDIA-U8 names the missing %s, where to set it and how", (key) => {
 		setEnv(S3);
 		vi.stubEnv(key, "");
 		const message = (() => {
@@ -89,7 +89,7 @@ describe("environment configuration", () => {
 		expect(message).toContain("Fix:");
 	});
 
-	it("needs a region or an endpoint, and names the endpoint variable", () => {
+	it("MEDIA-U8 needs a region or an endpoint, and names the endpoint variable", () => {
 		setEnv({ ...S3, S3_REGION: "" });
 		expect(() => s3Storage().createStore()).toThrow(/S3_ENDPOINT.*Where:.*s3Storage\(\{ endpoint \}\).*Fix:/s);
 		expect(() => s3Storage({ endpoint: "http://localhost:9000", forcePathStyle: true }).createStore()).not.toThrow();

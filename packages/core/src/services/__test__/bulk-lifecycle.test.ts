@@ -84,7 +84,7 @@ const newFakeLifecycleStore = (seed: Record<string, EntryState>) => {
 };
 
 describe("Bulk lifecycle ops contract", () => {
-	it("archive bumps version per item", async () => {
+	it("LIST-C5 archive bumps version per item", async () => {
 		const store = newFakeLifecycleStore({ e1: { version: 2, status: "draft" } });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({ op: "archive", items: [{ id: "e1", expectedVersion: 2 }] });
@@ -92,7 +92,7 @@ describe("Bulk lifecycle ops contract", () => {
 		expect(store.entries.get("e1")?.status).toBe("archived");
 	});
 
-	it("unarchive and trash dispatch to their own primitives", async () => {
+	it("LIST-C5 unarchive and trash dispatch to their own primitives", async () => {
 		const store = newFakeLifecycleStore({
 			e1: { version: 1, status: "archived" },
 			e2: { version: 4, status: "draft" },
@@ -108,7 +108,7 @@ describe("Bulk lifecycle ops contract", () => {
 		expect(store.entries.get("e2")?.status).toBe("trashed");
 	});
 
-	it("conflict and missing entries are per-item errors", async () => {
+	it("LIST-C2 conflict and missing entries are per-item errors", async () => {
 		const store = newFakeLifecycleStore({ e1: { version: 2, status: "draft" } });
 		const bulk = createBulkService(store as never, { site: testSite });
 		const out = await bulk.run({
@@ -128,7 +128,7 @@ describe("Bulk lifecycle ops contract", () => {
 		});
 	});
 
-	it("publish passes validation failures through per item", async () => {
+	it("LIST-C2 publish passes validation failures through per item", async () => {
 		const store = newFakeLifecycleStore({
 			e1: { version: 2, status: "draft" },
 			e2: { version: 2, status: "draft", brokenRef: true },
@@ -151,7 +151,7 @@ describe("Bulk lifecycle ops contract", () => {
 });
 
 describe("bulk permanentDelete", () => {
-	it("deletes only trashed, unreferenced items and names the blocking usages per item", async () => {
+	it("TRASH-D2 deletes only trashed, unreferenced items and names the blocking usages per item", async () => {
 		const usage = { entryId: "p9", title: "참조하는 글", collection: contentCollection, state: "working" };
 		const store = newFakeLifecycleStore({
 			gone: { version: 3, status: "trashed" },
@@ -177,7 +177,7 @@ describe("bulk permanentDelete", () => {
 		expect(store.entries.has("live")).toBe(true);
 	});
 
-	it("reports a stale version as a per-item conflict", async () => {
+	it("TRASH-D9 reports a stale version as a per-item conflict", async () => {
 		const store = newFakeLifecycleStore({ t1: { version: 5, status: "trashed" } });
 		const out = await createBulkService(store as never, { site: testSite }).run({
 			op: "permanentDelete",
@@ -187,7 +187,7 @@ describe("bulk permanentDelete", () => {
 		expect(store.entries.has("t1")).toBe(true);
 	});
 
-	it("treats an item already removed earlier in the same request as deleted (source took its translations)", async () => {
+	it("TRASH-E2 treats an item already removed earlier in the same request as deleted (source took its translations)", async () => {
 		const store = newFakeLifecycleStore({ source: { version: 2, status: "trashed" } });
 		const out = await createBulkService(store as never, { site: testSite }).run({
 			op: "permanentDelete",

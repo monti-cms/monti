@@ -16,7 +16,7 @@ import {
 const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
 
 describe("admin list state", () => {
-	it("round-trips filters through the URL", () => {
+	it("LIST-F5 round-trips filters through the URL", () => {
 		const url = new URLSearchParams(
 			"collection=post&folder=f1&descendants=1&search=리액트&status=published&status=editing&status=draft&field=tagIds:empty&field=tagIds:is:t1&field=summary:empty&translation=changed&translation=none&updated=last30&published=2026-03-01..2026-03-05&created=last7&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
 		);
@@ -47,7 +47,7 @@ describe("admin list state", () => {
 		});
 	});
 
-	it("drops the locale and translation filters when translations are off, since their controls are hidden", () => {
+	it("LIST-F5 drops the locale and translation filters when translations are off, since their controls are hidden", () => {
 		const url = new URLSearchParams(`locale=${testSite.LOCALES[0]}&translation=none`);
 		const withTranslations = Object.create(testSite, { ADMIN_TRANSLATIONS: { value: true } });
 		const without = Object.create(testSite, { ADMIN_TRANSLATIONS: { value: false } });
@@ -58,7 +58,7 @@ describe("admin list state", () => {
 		expect(parseListState(without, url)).toMatchObject({ locales: [], translations: [] });
 	});
 
-	it("ignores invalid values instead of sending them to the API", () => {
+	it("LIST-F5 ignores invalid values instead of sending them to the API", () => {
 		const state = parseListState(
 			testSite,
 			new URLSearchParams(
@@ -75,7 +75,7 @@ describe("admin list state", () => {
 		});
 	});
 
-	it("keeps only conditions a field of the collection takes", () => {
+	it("LIST-F5 keeps only conditions a field of the collection takes", () => {
 		// A memo has no category field and a title is not a filterable field. A relation has no "filled", a text has no "is", malformed values go too.
 		const state = parseListState(
 			testSite,
@@ -86,7 +86,7 @@ describe("admin list state", () => {
 		expect(state.fields).toEqual({ tagIds: [{ kind: "is", value: "t1" }] });
 	});
 
-	it("keeps the four states of the status column as one list, and no longer reads a separate unpublished-changes flag", () => {
+	it("LIST-F2 keeps the four states of the status column as one list, and no longer reads a separate unpublished-changes flag", () => {
 		const state = parseListState(
 			testSite,
 			new URLSearchParams("collection=post&status=editing&status=draft&status=editing&changes=1"),
@@ -99,7 +99,7 @@ describe("admin list state", () => {
 		expect(listStateToSearchParams(state).has("changes")).toBe(false);
 	});
 
-	it("sends the created date as a range like the updated and published dates, for an item collection too", () => {
+	it("LIST-F4 sends the created date as a range like the updated and published dates, for an item collection too", () => {
 		const state = parseListState(testSite, new URLSearchParams("collection=tag&created=2026-03-01..2026-03-05"));
 		const query = listStateToApiQuery(testSite, state, { now: NOW });
 		expect(query.get("createdFrom")).toBe("2026-02-28T15:00:00.000Z");
@@ -107,12 +107,12 @@ describe("admin list state", () => {
 		expect(listStateToSearchParams(state).get("created")).toBe("2026-03-01..2026-03-05");
 	});
 
-	it("has no published date on an item collection", () => {
+	it("LIST-F4 has no published date on an item collection", () => {
 		const state = parseListState(testSite, new URLSearchParams("collection=tag&updated=today&published=today"));
 		expect(state).toMatchObject({ updated: { kind: "preset", preset: "today" }, published: null });
 	});
 
-	it("builds the API query with repeated conditions and Seoul day boundaries", () => {
+	it("LIST-F4 builds the API query with repeated conditions and Seoul day boundaries", () => {
 		const state = parseListState(
 			testSite,
 			new URLSearchParams(
@@ -128,7 +128,7 @@ describe("admin list state", () => {
 		expect(query.get("publishedTo")).toBe("2026-03-01T14:59:59.999Z");
 	});
 
-	it("resolves a preset against today in the site's time zone each time the query is built", () => {
+	it("LIST-F4 resolves a preset against today in the site's time zone each time the query is built", () => {
 		const state = parseListState(testSite, new URLSearchParams("collection=post&updated=last7"));
 		const monday = listStateToApiQuery(testSite, state, { now: NOW });
 		expect(monday.get("updatedFrom")).toBe("2026-10-21T15:00:00.000Z");
@@ -137,13 +137,13 @@ describe("admin list state", () => {
 		expect(later.get("updatedFrom")).toBe("2026-10-28T15:00:00.000Z");
 	});
 
-	it("shows folders only when no search or filter narrows the list", () => {
+	it("LIST-F6 shows folders only when no search or filter narrows the list", () => {
 		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post")))).toBe(true);
 		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post&search=a")))).toBe(false);
 		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post&descendants=1")))).toBe(false);
 	});
 
-	it("browses the root like a file explorer and flattens only when asked", () => {
+	it("LIST-F6 browses the root like a file explorer and flattens only when asked", () => {
 		const q = (search: string) => listStateToApiQuery(testSite, parseListState(testSite, new URLSearchParams(search)));
 		// Top-level browse: only items outside folders.
 		expect(q("collection=memo").get("folderId")).toBe("null");
@@ -156,7 +156,7 @@ describe("admin list state", () => {
 		expect(q("collection=memo&folder=f1&search=a").get("includeDescendants")).toBe("true");
 	});
 
-	it("asks for the statuses the list is filtered by, in the folder it is in", () => {
+	it("LIST-F3 asks for the statuses the list is filtered by, in the folder it is in", () => {
 		const state = parseListState(
 			testSite,
 			new URLSearchParams("collection=post&folder=f1&status=draft&status=archived"),
@@ -166,7 +166,7 @@ describe("admin list state", () => {
 		expect(list.get("folderId")).toBe("f1");
 	});
 
-	it("tells what narrows the list, the status among it, and clears only that", () => {
+	it("LIST-F5 tells what narrows the list, the status among it, and clears only that", () => {
 		const narrowed = parseListState(
 			testSite,
 			new URLSearchParams("collection=post&folder=f1&status=draft&field=tagIds:empty&updated=today&pageSize=50"),
@@ -187,12 +187,12 @@ describe("list state for a collection without folders", () => {
 	const on = siteWithFolders("post", true);
 	const params = `collection=post&folder=${folderId}`;
 
-	it("ignores ?folder= in the address, but keeps it where the collection has folders", () => {
+	it("LIST-F6 ignores ?folder= in the address, but keeps it where the collection has folders", () => {
 		expect(parseListState(off, new URLSearchParams(params)).folder).toBe("all");
 		expect(parseListState(on, new URLSearchParams(params)).folder).toBe(folderId);
 	});
 
-	it("asks for no folder filter, so entries filed before folders were turned off stay listed", () => {
+	it("LIST-F6 asks for no folder filter, so entries filed before folders were turned off stay listed", () => {
 		const query = (site: typeof on) =>
 			listStateToApiQuery(site, parseListState(site, new URLSearchParams("collection=post")));
 		expect(query(off).has("folderId")).toBe(false);
@@ -200,7 +200,7 @@ describe("list state for a collection without folders", () => {
 		expect(query(on).get("folderId")).toBe("null");
 	});
 
-	it("sends no folder even when a state still carries one", () => {
+	it("LIST-F6 sends no folder even when a state still carries one", () => {
 		const state = { ...parseListState(on, new URLSearchParams(params)) };
 		expect(listStateToApiQuery(on, state).get("folderId")).toBe(folderId);
 		expect(listStateToApiQuery(off, state).has("folderId")).toBe(false);
@@ -211,21 +211,21 @@ describe("the query for the numbers beside a column menu's values", () => {
 	const q = (search: string, facet: Parameters<typeof listStateToCountsQuery>[2]) =>
 		listStateToCountsQuery(testSite, parseListState(testSite, new URLSearchParams(search)), facet);
 
-	it("asks for one field, for the translation filter or for the status, grouped by translation like the list", () => {
+	it("LIST-F3 asks for one field, for the translation filter or for the status, grouped by translation like the list", () => {
 		expect(q("collection=post", { field: "tagIds" }).toString()).toBe("collection=post&field=tagIds&group=translation");
 		expect(q("collection=post", "translation").get("facet")).toBe("translation");
 		expect(q("collection=post", "status").get("facet")).toBe("status");
 		expect(q("collection=tag", { field: "title" }).has("group")).toBe(false);
 	});
 
-	it("counts the current folder with its subfolders, and not the status that is picked", () => {
+	it("LIST-F3 counts the current folder with its subfolders, and not the status that is picked", () => {
 		const query = q("collection=post&folder=f1&status=published", { field: "tagIds" });
 		expect(query.get("folderId")).toBe("f1");
 		expect(query.get("includeDescendants")).toBe("true");
 		expect(query.has("status")).toBe(false);
 	});
 
-	it("counts everything at the top level, and ignores the other filters", () => {
+	it("LIST-F3 counts everything at the top level, and ignores the other filters", () => {
 		const query = q("collection=post&field=tagIds:empty&updated=today&search=a", { field: "tagIds" });
 		expect(query.has("folderId")).toBe(false);
 		for (const key of ["updatedFrom", "search", "field:tagIds"]) expect(query.has(key)).toBe(false);
@@ -237,7 +237,7 @@ describe("where a search inside a folder looks", () => {
 	const state = (query: string) => parseListState(testSite, new URLSearchParams(query));
 	const api = (query: string) => listStateToApiQuery(testSite, state(query));
 
-	it("looks in the folder and the folders below it, unless widened to all folders", () => {
+	it("LIST-F6 looks in the folder and the folders below it, unless widened to all folders", () => {
 		const here = api("collection=post&folder=f1&search=a");
 		expect([here.get("folderId"), here.get("includeDescendants")]).toEqual(["f1", "true"]);
 		const everywhere = api("collection=post&folder=f1&search=a&scope=all");
@@ -246,7 +246,7 @@ describe("where a search inside a folder looks", () => {
 		expect(everywhere.get("search")).toBe("a");
 	});
 
-	it("offers the choice only for words typed in a folder", () => {
+	it("LIST-F6 offers the choice only for words typed in a folder", () => {
 		expect(searchScopeChoice(state("collection=post&folder=f1&search=a"))).toBe(true);
 		expect(searchScopeChoice(state("collection=post&folder=f1"))).toBe(false);
 		expect(searchScopeChoice(state("collection=post&folder=f1&search=%20"))).toBe(false);

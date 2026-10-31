@@ -42,14 +42,14 @@ const folders = [
 ];
 
 describe("what the list asks for", () => {
-	it("looks into the open folder only, and at the top asks for the files in no folder", () => {
+	it("MEDIA-B1 looks into the open folder only, and at the top asks for the files in no folder", () => {
 		expect(mediaListParams(state()).get("folderId")).toBe("null");
 		const inside = mediaListParams(state({ folder: "blog" }));
 		expect(inside.get("folderId")).toBe("blog");
 		expect(inside.has("includeDescendants")).toBe(false);
 	});
 
-	it("searches the open folder with what is inside it, and widens to everywhere on request", () => {
+	it("MEDIA-B1 searches the open folder with what is inside it, and widens to everywhere on request", () => {
 		for (const patch of [{ search: " cover " }, { alt: "none" }] as const) {
 			const here = mediaListParams(state({ folder: "blog", ...patch }));
 			expect(here.get("folderId")).toBe("blog");
@@ -61,7 +61,7 @@ describe("what the list asks for", () => {
 		expect(mediaListParams(state({ search: " cover " })).get("search")).toBe("cover");
 	});
 
-	it("keeps looking into the open folder only while the type or the use narrows it", () => {
+	it("MEDIA-B2 keeps looking into the open folder only while the type or the use narrows it", () => {
 		for (const patch of [{ kind: "file" }, { used: "unused" }] as const) {
 			const params = mediaListParams(state({ folder: "blog", ...patch }));
 			expect(params.get("folderId")).toBe("blog");
@@ -75,7 +75,7 @@ describe("what the list asks for", () => {
 		expect(hasScope(state({ folder: "blog", alt: "none" }))).toBe(true);
 	});
 
-	it("sends the conditions that are on and leaves the others out", () => {
+	it("MEDIA-B2 sends the conditions that are on and leaves the others out", () => {
 		const params = mediaListParams(state({ alt: "none", kind: "image", used: "used", page: 2, pageSize: 50 }));
 		expect(Object.fromEntries(params)).toMatchObject({
 			alt: "none",
@@ -87,13 +87,13 @@ describe("what the list asks for", () => {
 		expect(mediaListParams(state()).has("alt")).toBe(false);
 	});
 
-	it("sends the order unless it is the newest upload first", () => {
+	it("MEDIA-B6 sends the order unless it is the newest upload first", () => {
 		expect(mediaListParams(state()).has("sort")).toBe(false);
 		expect(mediaListParams(state({ sort: "size" })).get("sort")).toBe("size");
 		expect(mediaCountsParams(state({ sort: "size" })).has("sort")).toBe(false);
 	});
 
-	it("offers the place to look only inside a folder with something on", () => {
+	it("MEDIA-B1 offers the place to look only inside a folder with something on", () => {
 		expect(hasScope(state({ search: "x" }))).toBe(false);
 		expect(hasScope(state({ folder: "blog" }))).toBe(false);
 		expect(hasScope(state({ folder: "blog", alt: "has" }))).toBe(true);
@@ -102,7 +102,7 @@ describe("what the list asks for", () => {
 });
 
 describe("what the counts ask for", () => {
-	it("count in the place a filter looks in, with the search and usage but without the type and alt text conditions", () => {
+	it("MEDIA-B2 count in the place a filter looks in, with the search and usage but without the type and alt text conditions", () => {
 		const params = mediaCountsParams(
 			state({ folder: "blog", search: "cover", kind: "file", alt: "none", used: "used" }),
 		);
@@ -119,25 +119,25 @@ describe("what the counts ask for", () => {
 });
 
 describe("kind", () => {
-	it("is a box each: pressing one sets it, pressing again or the other one means no condition", () => {
+	it("MEDIA-B2 is a box each: pressing one sets it, pressing again or the other one means no condition", () => {
 		expect(toggleKind("all", "file")).toBe("file");
 		expect(toggleKind("file", "file")).toBe("all");
 		expect(toggleKind("file", "image")).toBe("all");
 	});
 
-	it("drops the alt text condition when the kind is files, since a file has none", () => {
+	it("MEDIA-B2 drops the alt text condition when the kind is files, since a file has none", () => {
 		expect(withKind("file")).toEqual({ kind: "file", alt: "all" });
 		expect(withKind("image")).toEqual({ kind: "image" });
 	});
 });
 
 describe("folders", () => {
-	it("gives the way down to a folder and a path for a file", () => {
+	it("MEDIA-B1 gives the way down to a folder and a path for a file", () => {
 		expect(folderTrail(folders, "covers").map((f) => f.name)).toEqual(["Blog Assets", "covers"]);
 		expect(folderTrail(folders, "")).toEqual([]);
 	});
 
-	it("writes where a file is from the open folder: nothing in it, the way down below it, the whole path elsewhere", () => {
+	it("MEDIA-B1 writes where a file is from the open folder: nothing in it, the way down below it, the whole path elsewhere", () => {
 		expect(folderPathBelow(folders, "blog", "blog", "none")).toBeNull();
 		expect(folderPathBelow(folders, null, null, "none")).toBeNull();
 		expect(folderPathBelow(folders, "blog", "covers", "none")).toBe("covers");
@@ -146,7 +146,7 @@ describe("folders", () => {
 		expect(folderPathBelow(folders, "blog", null, "none")).toBe("none");
 	});
 
-	it("lists the choices in tree order with their depth, leaving out the file's own folder", () => {
+	it("MEDIA-B3 lists the choices in tree order with their depth, leaving out the file's own folder", () => {
 		expect(folderChoices(folders).map((c) => [c.folder.name, c.depth])).toEqual([
 			["Blog Assets", 0],
 			["covers", 1],
@@ -157,7 +157,7 @@ describe("folders", () => {
 });
 
 describe("select all", () => {
-	it("reads the pick against what matches", () => {
+	it("MEDIA-B2 reads the pick against what matches", () => {
 		expect(selectAllState(0, 3)).toBe("none");
 		expect(selectAllState(2, 3)).toBe("some");
 		expect(selectAllState(3, 3)).toBe("all");

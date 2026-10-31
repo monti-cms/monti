@@ -135,7 +135,7 @@ const moreButton = (panel: HTMLElement) => within(panel).getByRole("button", { n
 const pick = (name: string) => fireEvent.click(screen.getByRole("checkbox", { name: t("tile.select", { name }) }));
 
 describe("flow: upload (올리기)", () => {
-	it("uploads a drop on the library into the open folder, one at a time, with a progress tile by name and the next one waiting", async () => {
+	it("MEDIA-U3 uploads a drop on the library into the open folder, one at a time, with a progress tile by name and the next one waiting", async () => {
 		const finish: (() => void)[] = [];
 		let report: (percent: number) => void = () => {};
 		upload.uploadImageFile.mockImplementation(
@@ -162,14 +162,14 @@ describe("flow: upload (올리기)", () => {
 		expect(lists().length).toBeGreaterThan(listsBefore);
 	});
 
-	it("uploads a drop on a folder tile into that folder", async () => {
+	it("MEDIA-U3 uploads a drop on a folder tile into that folder", async () => {
 		await renderLibrary();
 		fireEvent.drop(folderTile("covers"), dragOf(file("a.png", "image/png")));
 		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalled());
 		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toEqual({ folderId: "covers" });
 	});
 
-	it("shrinks to WebP by default: there is no switch for it, and the picture goes through the converter without an option", async () => {
+	it("MEDIA-U3 shrinks to WebP by default: there is no switch for it, and the picture goes through the converter without an option", async () => {
 		await renderLibrary();
 		expect(screen.queryByRole("switch")).toBeNull();
 		expect(screen.queryByRole("checkbox", { name: /WebP/ })).toBeNull();
@@ -178,7 +178,7 @@ describe("flow: upload (올리기)", () => {
 		expect(upload.prepareUpload.mock.calls[0]).toHaveLength(2);
 	});
 
-	it("keeps a file that failed in its place with the reason, and the button takes it out", async () => {
+	it("MEDIA-U1 keeps a file that failed in its place with the reason, and the button takes it out", async () => {
 		upload.uploadImageFile.mockRejectedValue(new NoticeError("The storage said no"));
 		await renderLibrary();
 		fireEvent.drop(dropArea(), dragOf(file("hero.png", "image/png")));
@@ -188,7 +188,7 @@ describe("flow: upload (올리기)", () => {
 		expect(screen.queryByRole("button", { name: /^hero\.png/ })).toBeNull();
 	});
 
-	it("keeps a format the site does not take as a tile that says so, with the remove button and nothing sent", async () => {
+	it("MEDIA-U1 keeps a format the site does not take as a tile that says so, with the remove button and nothing sent", async () => {
 		await renderLibrary();
 		fireEvent.drop(
 			dropArea(),
@@ -204,7 +204,7 @@ describe("flow: upload (올리기)", () => {
 		expect(screen.queryByRole("button", { name: /^IMG_2041\.HEIC/ })).toBeNull();
 	});
 
-	it("offers to shrink a picture over the size limit and tries again with the smaller one, which goes up without an original", async () => {
+	it("MEDIA-U1 offers to shrink a picture over the size limit and tries again with the smaller one, which goes up without an original", async () => {
 		const big = file("panorama.jpg", "image/jpeg", testSite.api.MAX_MEDIA_BYTES + 4_000_000);
 		const small = new File(["y"], "panorama.webp", { type: "image/webp" });
 		upload.shrinkForUpload.mockResolvedValue({ file: small, optimized: true });
@@ -218,7 +218,7 @@ describe("flow: upload (올리기)", () => {
 		expect(upload.uploadImageFile.mock.calls[0]?.[1]).toEqual({ file: small, optimized: true });
 	});
 
-	it("says it when even the smallest version does not fit, and keeps the tile", async () => {
+	it("MEDIA-U1 says it when even the smallest version does not fit, and keeps the tile", async () => {
 		upload.shrinkForUpload.mockResolvedValue(null);
 		await renderLibrary();
 		fireEvent.drop(dropArea(), dragOf(file("panorama.jpg", "image/jpeg", testSite.api.MAX_MEDIA_BYTES + 1)));
@@ -232,7 +232,7 @@ describe("flow: upload (올리기)", () => {
 });
 
 describe("flow: browsing (둘러보기)", () => {
-	it("shows the open folder: the path above the title, the way up, its folders and its files", async () => {
+	it("MEDIA-B1 shows the open folder: the path above the title, the way up, its folders and its files", async () => {
 		await renderLibrary();
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Blog Assets");
 		const trail = screen.getByRole("navigation", { name: t("trail.label") });
@@ -247,7 +247,7 @@ describe("flow: browsing (둘러보기)", () => {
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t("title"));
 	});
 
-	it("searches the open folder and what is inside it, shows each result's folder path, and widens to all folders with the toggle", async () => {
+	it("MEDIA-B1 searches the open folder and what is inside it, shows each result's folder path, and widens to all folders with the toggle", async () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: t("head.search") }));
 		fireEvent.change(screen.getByRole("searchbox", { name: t("head.searchLabel") }), { target: { value: "cover" } });
@@ -265,7 +265,7 @@ describe("flow: browsing (둘러보기)", () => {
 		expect(wider.textContent).toContain(t("result.noFolder"));
 	});
 
-	it("saves the name, folder and descriptions together from the panel's one button", async () => {
+	it("MEDIA-B4 saves the name, folder and descriptions together from the panel's one button", async () => {
 		await renderLibrary();
 		fireEvent.click(tile("desk-morning.jpg"));
 		const panel = await screen.findByRole("complementary", { name: "desk-morning.jpg" });
@@ -291,7 +291,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		return screen.findByRole("complementary", { name });
 	};
 
-	it("asks with the number of places that use the file, then uploads the new file, replaces it in the same id and tells so", async () => {
+	it("MEDIA-R5 asks with the number of places that use the file, then uploads the new file, replaces it in the same id and tells so", async () => {
 		upload.uploadImageFile.mockResolvedValue({ mediaId: "new-file" });
 		await renderLibrary();
 		const panel = await openPanel();
@@ -312,7 +312,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		expect(screen.getByRole("complementary", { name: "desk-morning.jpg" })).toBeInTheDocument();
 	});
 
-	it("does not send anything when cancelled", async () => {
+	it("MEDIA-R5 does not send anything when cancelled", async () => {
 		await renderLibrary();
 		const panel = await openPanel();
 		fireEvent.click(moreButton(panel));
@@ -327,7 +327,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		expect(written("POST", "/media/desk-morning/replace")).toHaveLength(0);
 	});
 
-	it("says a picture can only be replaced by a picture and does not let the replace go on", async () => {
+	it("MEDIA-R2 says a picture can only be replaced by a picture and does not let the replace go on", async () => {
 		await renderLibrary();
 		const panel = await openPanel();
 		fireEvent.click(moreButton(panel));
@@ -344,7 +344,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 });
 
 describe("flow: moving many (여러 개 옮기기)", () => {
-	it("lists the top level, the folders and a new folder in the to-folder menu, and moves every picked file to the one chosen", async () => {
+	it("MEDIA-B3 lists the top level, the folders and a new folder in the to-folder menu, and moves every picked file to the one chosen", async () => {
 		await renderLibrary();
 		pick("desk-morning.jpg");
 		pick("cafe-window.jpg");
@@ -407,7 +407,7 @@ describe("flow: moving many by dragging", () => {
 		fireEvent.drop(target, { dataTransfer });
 	};
 
-	it("takes every picked file with the one dragged to a sidebar folder", async () => {
+	it("MEDIA-B3 takes every picked file with the one dragged to a sidebar folder", async () => {
 		await renderLibrary();
 		pick("desk-morning.jpg");
 		pick("cafe-window.jpg");
@@ -425,7 +425,7 @@ describe("flow: alt text (대체 텍스트)", () => {
 		return screen.findAllByRole("menuitemcheckbox");
 	};
 
-	it("shows the picked condition as a chip with a remove button, asks the server for it, and offers the place to look", async () => {
+	it("MEDIA-B2 shows the picked condition as a chip with a remove button, asks the server for it, and offers the place to look", async () => {
 		await renderLibrary();
 		const items = await openFilter(t("filter.alt"));
 		fireEvent.click(items[0] as HTMLElement);
@@ -442,7 +442,7 @@ describe("flow: alt text (대체 텍스트)", () => {
 		await waitFor(() => expect(lastList().has("alt")).toBe(false));
 	});
 
-	it("selects every file that matches, not only the ones on the page", async () => {
+	it("MEDIA-B2 selects every file that matches, not only the ones on the page", async () => {
 		nav.setSearch("folder=blog&alt=none");
 		await renderLibrary(/^cafe-window\.jpg/);
 		pick("cafe-window.jpg");
@@ -456,7 +456,7 @@ describe("flow: alt text (대체 텍스트)", () => {
 });
 
 describe("flow: filtering by kind (종류로 거르기)", () => {
-	it("offers images and files with their counts, applies a pick as a chip and sends it", async () => {
+	it("MEDIA-B2 offers images and files with their counts, applies a pick as a chip and sends it", async () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${t("filter.kind")}`) }));
 		const items = await screen.findAllByRole("menuitemcheckbox");
@@ -535,7 +535,7 @@ describe("flow: deleting (지우기)", () => {
 });
 
 describe("flow: exceptions (예외)", () => {
-	it("keeps the title with the upload button off and says there is no storage, with a link on how to connect", () => {
+	it("MEDIA-U6 keeps the title with the upload button off and says there is no storage, with a link on how to connect", () => {
 		nav.render(
 			<AdminQueryProvider>
 				<MediaNotConfigured />

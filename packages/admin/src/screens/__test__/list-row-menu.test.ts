@@ -38,21 +38,21 @@ const select = (actions: MenuAction[], ...path: string[]) => {
 describe("row menu target", () => {
 	const rows = [item("a"), item("b"), item("c")];
 
-	it("pressing one of the selected rows targets all selected rows", () => {
+	it("LIST-C5 pressing one of the selected rows targets all selected rows", () => {
 		expect(actionTargets(rows[1] as ListEntriesItem, rows, new Set(["a", "b"])).map((row) => row.id)).toEqual([
 			"a",
 			"b",
 		]);
 	});
 
-	it("an unselected row, or the only selected row, targets just that row", () => {
+	it("LIST-C5 an unselected row, or the only selected row, targets just that row", () => {
 		expect(actionTargets(rows[2] as ListEntriesItem, rows, new Set(["a", "b"])).map((row) => row.id)).toEqual(["c"]);
 		expect(actionTargets(rows[0] as ListEntriesItem, rows, new Set(["a"])).map((row) => row.id)).toEqual(["a"]);
 	});
 });
 
 describe("row menu items", () => {
-	it("offers moving to a folder only where the list has folders", () => {
+	it("LIST-C5 offers moving to a folder only where the list has folders", () => {
 		const move = testSite.createTranslator(screensMessages)("menu.moveToFolder");
 		const withFolders = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
 		const without = labels(rowMenuActions(testSite, [item("a")], { ...context, folders: null }, handlers()));
@@ -62,7 +62,7 @@ describe("row menu items", () => {
 		expect(labels(rowMenuActions(testSite, [item("a")], { ...context, folders: [] }, handlers()))).toContain(move);
 	});
 
-	it("a single post row offers open and duplicate, the folder and each relation field it can change, archive and the trash", () => {
+	it("LIST-C5 a single post row offers open and duplicate, the folder and each relation field it can change, archive and the trash", () => {
 		const list = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
 		for (const label of ["열기", "복제", "폴더로", "카테고리", "태그", "보관", "휴지통으로"]) {
 			expect(list).toContain(label);
@@ -74,21 +74,21 @@ describe("row menu items", () => {
 		expect(list.at(-1)).toBe("휴지통으로");
 	});
 
-	it("offers only the relation fields a bulk change can reach: not a backlink, not a field inside a conditional branch", () => {
+	it("LIST-C4 offers only the relation fields a bulk change can reach: not a backlink, not a field inside a conditional branch", () => {
 		const fields = rowMenuActions(testSite, [item("a")], context, handlers()).filter(
 			(action) => action.kind === "choice",
 		);
 		expect(labels(fields)).toEqual(["카테고리", "태그"]);
 	});
 
-	it("multiple rows show the item count first and have no open or duplicate", () => {
+	it("LIST-C5 multiple rows show the item count first and have no open or duplicate", () => {
 		const list = labels(rowMenuActions(testSite, [item("a"), item("b")], context, handlers()));
 		expect(list[0]).toBe("2개 항목");
 		expect(list).not.toContain("열기");
 		expect(list).not.toContain("복제");
 	});
 
-	it("several rows list publish, archive, the folder, the fields, export and the trash in that order, with the fields at the second level", () => {
+	it("LIST-C5 several rows list publish, archive, the folder, the fields, export and the trash in that order, with the fields at the second level", () => {
 		const list = labels(rowMenuActions(testSite, [item("a"), item("b")], context, handlers()));
 		expect(list.filter((label) => label !== "—")).toEqual([
 			"2개 항목",
@@ -103,14 +103,14 @@ describe("row menu items", () => {
 		expect(list).not.toContain("바꾸기");
 	});
 
-	it("leaves publish out when every row is published without changes, and keeps it for a published row with changes", () => {
+	it("LIST-C5 leaves publish out when every row is published without changes, and keeps it for a published row with changes", () => {
 		const published = [item("a", "published"), item("b", "published")];
 		expect(labels(rowMenuActions(testSite, published, context, handlers()))).not.toContain("발행");
 		const editing = [item("a", "published"), item("b", "published", true)];
 		expect(labels(rowMenuActions(testSite, editing, context, handlers()))).toContain("발행");
 	});
 
-	it("publish asks, and export opens the export of the rows", () => {
+	it("LIST-C5 publish asks, and export opens the export of the rows", () => {
 		const on = handlers();
 		const actions = rowMenuActions(testSite, [item("a"), item("b")], context, on);
 		select(actions, "발행");
@@ -122,14 +122,14 @@ describe("row menu items", () => {
 		expect(on.exportEntries).toHaveBeenCalledWith(["a", "b"]);
 	});
 
-	it("several archived rows offer to take the archive off instead", () => {
+	it("LIST-C5 several archived rows offer to take the archive off instead", () => {
 		const list = labels(rowMenuActions(testSite, [item("a", "archived"), item("b", "archived")], context, handlers()));
 		expect(list).toContain("보관 해제");
 		expect(list).not.toContain("보관");
 		expect(list).not.toContain("발행");
 	});
 
-	it("rows that are all archived offer unarchive", () => {
+	it("LIST-C5 rows that are all archived offer unarchive", () => {
 		const on = handlers();
 		select(rowMenuActions(testSite, [item("a", "archived")], context, on), "보관 해제");
 		expect(on.bulk).toHaveBeenCalledWith("unarchive", "보관 해제", [
@@ -137,7 +137,7 @@ describe("row menu items", () => {
 		]);
 	});
 
-	it("archive asks for confirmation instead of acting right away", () => {
+	it("LIST-C5 archive asks for confirmation instead of acting right away", () => {
 		const on = handlers();
 		select(rowMenuActions(testSite, [item("a")], context, on), "보관");
 		expect(on.confirmArchive).toHaveBeenCalledWith([
@@ -146,7 +146,7 @@ describe("row menu items", () => {
 		expect(on.bulk).not.toHaveBeenCalled();
 	});
 
-	it("a taxonomy item opens as a small form and has no archive", () => {
+	it("LIST-C5 a taxonomy item opens as a small form and has no archive", () => {
 		const on = handlers();
 		const actions = rowMenuActions(testSite, [item("a")], { ...context, isRecord: true, isContent: false }, on);
 		const list = labels(actions);
@@ -156,7 +156,7 @@ describe("row menu items", () => {
 		expect(on.openRecord).toHaveBeenCalledWith(item("a"));
 	});
 
-	it("the folder submenu calls the bulk action with the chosen targets and folder", () => {
+	it("LIST-C5 the folder submenu calls the bulk action with the chosen targets and folder", () => {
 		const on = handlers();
 		const actions = rowMenuActions(testSite, [item("a"), item("b")], context, on);
 		const targets = [

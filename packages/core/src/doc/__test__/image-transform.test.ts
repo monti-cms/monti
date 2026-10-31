@@ -13,7 +13,7 @@ import {
 
 describe("image-transform pure functions", () => {
 	describe("parseCrop & isValidCrop", () => {
-		it("parses a valid x,y,w,h percent string", () => {
+		it("MEDIA-W1 parses a valid x,y,w,h percent string", () => {
 			expect(parseCrop("10,20,50.5,40.25")).toEqual({
 				x: 10,
 				y: 20,
@@ -23,7 +23,7 @@ describe("image-transform pure functions", () => {
 			expect(isValidCrop("10,20,50,40")).toBe(true);
 		});
 
-		it("parses even when whitespace is mixed in", () => {
+		it("MEDIA-W1 parses even when whitespace is mixed in", () => {
 			expect(parseCrop("  0,  0 , 100 , 100 ")).toEqual({
 				x: 0,
 				y: 0,
@@ -32,7 +32,7 @@ describe("image-transform pure functions", () => {
 			});
 		});
 
-		it("returns null for a crop that is out of range or malformed", () => {
+		it("MEDIA-W1 returns null for a crop that is out of range or malformed", () => {
 			expect(parseCrop("invalid")).toBeNull();
 			expect(parseCrop("-1,0,50,50")).toBeNull();
 			expect(parseCrop("0,0,0,50")).toBeNull(); // width <= 0
@@ -46,7 +46,7 @@ describe("image-transform pure functions", () => {
 			expect(isValidCrop("")).toBe(true);
 		});
 
-		it("checks the behavior of formatCrop and isFullCrop", () => {
+		it("MEDIA-W1 checks the behavior of formatCrop and isFullCrop", () => {
 			const crop = { x: 12.345, y: 0.1, width: 45.678, height: 80 };
 			expect(formatCrop(crop)).toBe("12.35,0.1,45.68,80");
 			expect(isFullCrop({ x: 0, y: 0, width: 100, height: 100 })).toBe(true);
@@ -56,13 +56,13 @@ describe("image-transform pure functions", () => {
 	});
 
 	describe("parseRotate & isValidRotate", () => {
-		it("parses rotate values 90, 180 and 270 correctly", () => {
+		it("MEDIA-W1 parses rotate values 90, 180 and 270 correctly", () => {
 			expect(parseRotate("90")).toBe(90);
 			expect(parseRotate(180)).toBe(180);
 			expect(parseRotate("270")).toBe(270);
 		});
 
-		it("returns null (no rotation) for 0 or missing", () => {
+		it("MEDIA-W1 returns null (no rotation) for 0 or missing", () => {
 			expect(parseRotate("0")).toBeNull();
 			expect(parseRotate(0)).toBeNull();
 			expect(parseRotate("")).toBeNull();
@@ -70,14 +70,14 @@ describe("image-transform pure functions", () => {
 			expect(parseRotate(undefined)).toBeNull();
 		});
 
-		it("returns null for an invalid rotate value", () => {
+		it("MEDIA-W1 returns null for an invalid rotate value", () => {
 			expect(parseRotate("45")).toBeNull();
 			expect(parseRotate("360")).toBeNull();
 			expect(parseRotate("foo")).toBeNull();
 			expect(parseRotate("90deg")).toBeNull();
 		});
 
-		it("isValidRotate validation", () => {
+		it("MEDIA-W1 isValidRotate validation", () => {
 			expect(isValidRotate("90")).toBe(true);
 			expect(isValidRotate(180)).toBe(true);
 			expect(isValidRotate("0")).toBe(true);
@@ -87,19 +87,19 @@ describe("image-transform pure functions", () => {
 	});
 
 	describe("computeImageTransform", () => {
-		it("no transform when crop and rotate are both missing or full", () => {
+		it("MEDIA-W1 no transform when crop and rotate are both missing or full", () => {
 			const result = computeImageTransform({});
 			expect(result.isTransformed).toBe(false);
 			expect(result.wrapperStyle).toEqual({});
 			expect(result.imageStyle).toEqual({});
 		});
 
-		it("ignores invalid crop and rotate", () => {
+		it("MEDIA-W1 ignores invalid crop and rotate", () => {
 			const result = computeImageTransform({ crop: "invalid", rotate: "invalid" });
 			expect(result.isTransformed).toBe(false);
 		});
 
-		it("computes the correct CSS style when only crop is applied", () => {
+		it("MEDIA-W1 computes the correct CSS style when only crop is applied", () => {
 			const result = computeImageTransform({
 				crop: "20,10,50,40",
 				aspectRatio: 2, // 1000x500
@@ -116,7 +116,7 @@ describe("image-transform pure functions", () => {
 			expect(result.imageStyle.transform).toContain("translate(-50%, -50%)");
 		});
 
-		it("the aspect ratio is swapped when rotate 90/270 is applied", () => {
+		it("MEDIA-W1 the aspect ratio is swapped when rotate 90/270 is applied", () => {
 			const result90 = computeImageTransform({
 				crop: "0,0,100,100",
 				rotate: "90",
@@ -136,7 +136,7 @@ describe("image-transform pure functions", () => {
 			expect(result270.imageStyle.transform).toContain("rotate(270deg)");
 		});
 
-		it("the aspect ratio is kept with rotate 180 and rotate(180deg) is included", () => {
+		it("MEDIA-W1 the aspect ratio is kept with rotate 180 and rotate(180deg) is included", () => {
 			const result = computeImageTransform({
 				rotate: 180,
 				aspectRatio: 1.6,
@@ -149,7 +149,7 @@ describe("image-transform pure functions", () => {
 });
 
 describe("intrinsicDisplayWidth", () => {
-	it("a transformed image with no width set shows the original width of the visible area", () => {
+	it("MEDIA-W1 a transformed image with no width set shows the original width of the visible area", () => {
 		const natural = { width: 400, height: 200 };
 		expect(intrinsicDisplayWidth({ crop: { x: 0, y: 0, width: 50, height: 100 }, rotate: null }, natural)).toBe(200);
 		expect(intrinsicDisplayWidth({ crop: { x: 0, y: 0, width: 100, height: 50 }, rotate: 90 }, natural)).toBe(100);
@@ -157,7 +157,7 @@ describe("intrinsicDisplayWidth", () => {
 		expect(intrinsicDisplayWidth({ crop: null, rotate: 90 }, null)).toBeNull();
 	});
 
-	it("the crop area does not exceed the right and bottom edges even on a rounding tie", () => {
+	it("MEDIA-W1 the crop area does not exceed the right and bottom edges even on a rounding tie", () => {
 		const crop = roundCropBox({ x: 12.125, y: 12.125, width: 87.875, height: 87.875 });
 		expect(crop).toEqual({ x: 12.13, y: 12.13, width: 87.87, height: 87.87 });
 		expect(parseCrop(`${crop.x},${crop.y},${crop.width},${crop.height}`)).toEqual(crop);

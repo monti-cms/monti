@@ -86,7 +86,7 @@ describe("Media Upload API Endpoints", () => {
 		mockVerifyAdmin.mockResolvedValue({ id: "admin-1", email: "admin@example.com" });
 	});
 
-	it("POST /media/uploads rejects unauthenticated calls with 401", async () => {
+	it("MEDIA-U7 POST /media/uploads rejects unauthenticated calls with 401", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 
 		const req = new Request("http://localhost/api/monti/v1/media/uploads", {
@@ -107,7 +107,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(res.status).toBe(401);
 	});
 
-	it("POST /media/uploads rejects files larger than 10MiB (10485760 bytes)", async () => {
+	it("MEDIA-U2 POST /media/uploads rejects files larger than 10MiB (10485760 bytes)", async () => {
 		const req = new Request("http://localhost/api/monti/v1/media/uploads", {
 			method: "POST",
 			headers: {
@@ -128,7 +128,7 @@ describe("Media Upload API Endpoints", () => {
 		expect((await res.json()).error).toMatchObject(notice("media.upload.size", { limit }));
 	});
 
-	it("POST /media/uploads rejects disallowed MIME types (SVG, PDF, text)", async () => {
+	it("MEDIA-U2 POST /media/uploads rejects disallowed MIME types (SVG, PDF, text)", async () => {
 		const req = new Request("http://localhost/api/monti/v1/media/uploads", {
 			method: "POST",
 			headers: {
@@ -149,7 +149,7 @@ describe("Media Upload API Endpoints", () => {
 		expect((await res.json()).error).toMatchObject(notice("media.upload.type", { types }));
 	});
 
-	it("POST /media/uploads creates pending asset and returns presigned PUT URL", async () => {
+	it("MEDIA-U3 POST /media/uploads creates pending asset and returns presigned PUT URL", async () => {
 		mockPrepareUpload.mockResolvedValue({
 			url: "https://r2.example.com/staging/test?sig=123",
 			method: "PUT",
@@ -187,7 +187,7 @@ describe("Media Upload API Endpoints", () => {
 		);
 	});
 
-	it("POST /media/:id/complete returns 404 for nonexistent media asset", async () => {
+	it("MEDIA-U2 POST /media/:id/complete returns 404 for nonexistent media asset", async () => {
 		mockGetMediaAsset.mockResolvedValue(null);
 
 		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-0000-0000-000000000000/complete", {
@@ -206,7 +206,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(res.status).toBe(404);
 	});
 
-	it("POST /media/:id/complete returns 409 if file not yet uploaded to staging", async () => {
+	it("MEDIA-U2 POST /media/:id/complete returns 409 if file not yet uploaded to staging", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "00000000-0000-4000-8000-000000000009",
 			status: "pending",
@@ -231,7 +231,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(res.status).toBe(409);
 	});
 
-	it("POST /media/:id/complete verifies magic bytes, promotes to finalKey, and marks ready", async () => {
+	it("MEDIA-U2 POST /media/:id/complete verifies magic bytes, promotes to finalKey, and marks ready", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "00000000-0000-4000-8000-000000000009",
 			status: "pending",
@@ -293,7 +293,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockCompleteMediaAsset).toHaveBeenCalled();
 	});
 
-	it("POST /media/:id/complete rejects images over 40 megapixels and marks the upload failed", async () => {
+	it("MEDIA-U2 POST /media/:id/complete rejects images over 40 megapixels and marks the upload failed", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "00000000-0000-4000-8000-000000000010",
 			status: "pending",
@@ -321,7 +321,110 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
 
-	it("POST /media/uploads passes the declared size of each file to the upload ticket", async () => {
+	describe("completing an upload", () => {
+		const id = "00000000-0000-4000-8000-000000000011";
+		const png = () => {
+			const bytes = new Uint8Array(24);
+			bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52], 0);
+			bytes[18] = 0x01; // width 256
+			bytes[22] = 0x01; // height 256
+			return bytes;
+		};
+		const complete = () =>
+			handleComplete(
+				new Request(`http://localhost/api/monti/v1/media/${id}/complete`, {
+					method: "POST",
+					headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+				}),
+				{ params: Promise.resolve({ id }), cms },
+			);
+		const pending = (extra: Record<string, unknown> = {}) =>
+			mockGetMediaAsset.mockResolvedValue({
+				id,
+				status: "pending",
+				stagingKey: `staging/${id}/pic.png`,
+				filename: "pic.png",
+				mimeType: "image/png",
+				byteSize: 24,
+				...extra,
+			});
+
+		beforeEach(() => {
+			mockHeadFile.mockImplementation(async ({ key }: { key: string }) => ({
+				key,
+				contentType: "image/png",
+				contentLength: 24,
+				etag: `etag-${key}`,
+			}));
+			mockPromoteFile.mockResolvedValue({});
+			mockCompleteMediaAsset.mockImplementation(async (input: Record<string, unknown>) => ({
+				...input,
+				status: "ready",
+			}));
+		});
+
+		it("MEDIA-U2 refuses bytes that are not an image the site takes, marks the upload failed and promotes nothing", async () => {
+			pending();
+			mockReadFile.mockResolvedValue(new TextEncoder().encode("<svg xmlns='http://www.w3.org/2000/svg'/>"));
+			const res = await complete();
+			expect(res.status).toBe(415);
+			expect((await res.json()).error.code).toBe("unsupported_media_type");
+			expect(mockFailMediaAsset).toHaveBeenCalledWith(id);
+			expect(mockPromoteFile).not.toHaveBeenCalled();
+		});
+
+		it("MEDIA-U3 promotes the original next to the web file and records it with its size", async () => {
+			pending({ original: { stagingKey: `staging/${id}/pic-original.png`, mimeType: "image/png", byteSize: 24 } });
+			mockReadFile.mockResolvedValue(png());
+			expect((await complete()).status).toBe(200);
+			expect(mockPromoteFile).toHaveBeenCalledWith(
+				expect.objectContaining({ stagingKey: `staging/${id}/pic-original.png`, finalKey: `media/${id}-original.png` }),
+			);
+			expect(mockCompleteMediaAsset).toHaveBeenCalledWith(
+				expect.objectContaining({
+					original: {
+						storageKey: `media/${id}-original.png`,
+						mimeType: "image/png",
+						byteSize: 24,
+						width: 256,
+						height: 256,
+					},
+				}),
+			);
+		});
+
+		it("MEDIA-U2 refuses to complete an upload that already failed, and touches nothing", async () => {
+			pending({ status: "failed" });
+			const res = await complete();
+			expect(res.status).toBe(409);
+			expect(mockReadFile).not.toHaveBeenCalled();
+			expect(mockPromoteFile).not.toHaveBeenCalled();
+			expect(mockCompleteMediaAsset).not.toHaveBeenCalled();
+		});
+	});
+
+	it("MEDIA-U3 POST /media/uploads creates the file in the folder it was dropped on", async () => {
+		mockPrepareUpload.mockResolvedValue({
+			url: "https://r2/upload",
+			method: "PUT",
+			requiredHeaders: {},
+			expiresAt: new Date(),
+		});
+		mockCreateMediaAsset.mockResolvedValue({});
+		const folderId = "00000000-0000-4000-8000-0000000000f1";
+		const res = await handleUploads(
+			new Request("http://localhost/api/monti/v1/media/uploads", {
+				method: "POST",
+				headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+				body: JSON.stringify({ filename: "photo.png", mimeType: "image/png", byteSize: 1000, folderId }),
+			}),
+			{ cms },
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateMediaAsset).toHaveBeenCalledWith(expect.objectContaining({ folderId }));
+	});
+
+	it("MEDIA-U2 POST /media/uploads passes the declared size of each file to the upload ticket", async () => {
 		mockPrepareUpload.mockResolvedValue({
 			url: "https://r2/upload",
 			method: "PUT",
@@ -347,7 +450,7 @@ describe("Media Upload API Endpoints", () => {
 	it.each([
 		["the file", { byteSize: 10, original: undefined }],
 		["the original", { byteSize: 24, original: { stagingKey: "staging/o-original.png", byteSize: 10 } }],
-	])("POST /media/:id/complete fails the upload when the stored object is larger than the declared size of %s", async (_name, row) => {
+	])("MEDIA-U2 POST /media/:id/complete fails the upload when the stored object is larger than the declared size of %s", async (_name, row) => {
 		const id = "00000000-0000-4000-8000-000000000011";
 		mockGetMediaAsset.mockResolvedValue({
 			id,
@@ -379,7 +482,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
 
-	it("POST /media/:id/complete keeps an upload smaller than declared pending, so the client can finish it", async () => {
+	it("MEDIA-U2 POST /media/:id/complete keeps an upload smaller than declared pending, so the client can finish it", async () => {
 		const id = "00000000-0000-4000-8000-000000000012";
 		mockGetMediaAsset.mockResolvedValue({
 			id,
@@ -405,7 +508,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockFailMediaAsset).not.toHaveBeenCalled();
 	});
 
-	it("POST /media/uploads prepares a second upload ticket for the original when optimised", async () => {
+	it("MEDIA-U3 POST /media/uploads prepares a second upload ticket for the original when optimised", async () => {
 		mockPrepareUpload.mockResolvedValue({
 			url: "https://r2/upload",
 			method: "PUT",
@@ -442,7 +545,7 @@ describe("Media Upload API Endpoints", () => {
 
 	// --- Contract Tests ---
 
-	it("GET /media returns list of media items with references join", async () => {
+	it("MEDIA-B1 GET /media returns list of media items with references join", async () => {
 		mockListMediaAssets.mockResolvedValue({
 			items: [
 				{
@@ -492,7 +595,7 @@ describe("Media Upload API Endpoints", () => {
 		expect(json.items[0].references[0].title).toBe("First Post");
 	});
 
-	it("GET /media passes alt, folderId and includeDescendants to the store as typed values, and answers the counts", async () => {
+	it("MEDIA-B2 GET /media passes alt, folderId and includeDescendants to the store as typed values, and answers the counts", async () => {
 		const folderId = "00000000-0000-4000-8000-0000000000f1";
 		mockListMediaAssets.mockResolvedValue({
 			items: [],
@@ -573,7 +676,7 @@ describe("attachment upload", () => {
 		});
 	});
 
-	it("accepts PDF, zip, and text files up to 50MiB, and rejects a type that differs from the extension or an oversized file", async () => {
+	it("MEDIA-U5 accepts PDF, zip, and text files up to 50MiB, and rejects a type that differs from the extension or an oversized file", async () => {
 		const upload = (body: unknown) => handleUploads(post("http://localhost/api/monti/v1/media/uploads", body), { cms });
 		expect((await upload({ filename: "보고서.pdf", mimeType: "application/pdf", byteSize: 30_000_000 })).status).toBe(
 			201,
@@ -599,7 +702,7 @@ describe("attachment upload", () => {
 		);
 	});
 
-	it("on completion, verifies the actual content and stores it to download under the original name", async () => {
+	it("MEDIA-U5 on completion, verifies the actual content and stores it to download under the original name", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "00000000-0000-4000-8000-000000000101",
 			status: "pending",
@@ -639,7 +742,7 @@ describe("attachment upload", () => {
 		expect(mockCompleteMediaAsset).toHaveBeenCalledWith(expect.objectContaining({ width: null, height: null }));
 	});
 
-	it("makes a binary uploaded as a text file unusable", async () => {
+	it("MEDIA-U5 makes a binary uploaded as a text file unusable", async () => {
 		mockGetMediaAsset.mockResolvedValue({
 			id: "00000000-0000-4000-8000-000000000102",
 			status: "pending",
@@ -686,12 +789,12 @@ describe("attachment upload", () => {
 			mockUpdateMediaMetadata.mockResolvedValue({ id, filename: "sunset.PNG" });
 		});
 
-		it("renames to a plain name that keeps the extension, ignoring the case of the extension", async () => {
+		it("MEDIA-B4 renames to a plain name that keeps the extension, ignoring the case of the extension", async () => {
 			expect((await rename("sunset.png")).status).toBe(200);
 			expect(mockUpdateMediaMetadata).toHaveBeenCalledWith({ id, filename: "sunset.png" });
 		});
 
-		it("rejects a name that changes the extension, so the stored type cannot drift", async () => {
+		it("MEDIA-B4 rejects a name that changes the extension, so the stored type cannot drift", async () => {
 			const res = await rename("sunset.pdf");
 			expect(res.status).toBe(400);
 			const { error } = await res.json();
@@ -707,24 +810,24 @@ describe("attachment upload", () => {
 			["..", "media.rename.slash"],
 			[".png", "media.rename.empty"],
 			["  .png", "media.rename.empty"],
-		] as const)("rejects the name %j as it is not one plain name, and says why", async (name, key) => {
+		] as const)("MEDIA-B4 rejects the name %j as it is not one plain name, and says why", async (name, key) => {
 			const res = await rename(name);
 			expect(res.status).toBe(400);
 			expect((await res.json()).error).toMatchObject(notice(key));
 			expect(mockUpdateMediaMetadata).not.toHaveBeenCalled();
 		});
 
-		it("says a file without an extension cannot get one", () => {
+		it("MEDIA-B4 says a file without an extension cannot get one", () => {
 			expect(renameProblem("README", "README.md")).toEqual({ key: "media.rename.no_extension" });
 			expect(renameProblem("README", "NOTES")).toBeNull();
 		});
 
-		it("answers 404 for a file that does not exist", async () => {
+		it("MEDIA-B4 answers 404 for a file that does not exist", async () => {
 			mockGetMediaAsset.mockResolvedValue(null);
 			expect((await rename("sunset.png")).status).toBe(404);
 		});
 
-		it("leaves the default description edits alone: they do not read the file name", async () => {
+		it("MEDIA-B4 leaves the default description edits alone: they do not read the file name", async () => {
 			const res = await handlePatchMedia(
 				new Request(`http://localhost/api/monti/v1/media/${id}`, {
 					method: "PATCH",
@@ -784,7 +887,7 @@ describe("POST /media/:id/replace", () => {
 		mockDeleteFile.mockResolvedValue(undefined);
 	});
 
-	it("moves the new file into the target, deletes the files it gave up, and answers like a completed upload", async () => {
+	it("MEDIA-R4 moves the new file into the target, deletes the files it gave up, and answers like a completed upload", async () => {
 		const res = await replace();
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({
@@ -802,7 +905,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDeleteFile.mock.calls.map(([arg]) => arg.key)).toEqual([`media/${id}.png`, `media/${id}-original.png`]);
 	});
 
-	it("does not delete a file the target did not have", async () => {
+	it("MEDIA-R4 does not delete a file the target did not have", async () => {
 		mockReplaceMediaFile.mockResolvedValue({
 			media: { id, status: "ready", storageKey: "media/new.webp", mimeType: "image/webp" },
 			released: { storageKey: `media/${id}.png`, originalStorageKey: null },
@@ -811,7 +914,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDeleteFile).toHaveBeenCalledTimes(1);
 	});
 
-	it("still answers 200 when deleting an old file fails", async () => {
+	it("MEDIA-R4 still answers 200 when deleting an old file fails", async () => {
 		mockDeleteFile.mockRejectedValue(new Error("storage down"));
 		const res = await replace();
 		expect(res.status).toBe(200);
@@ -819,7 +922,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDeleteFile).toHaveBeenCalledTimes(2);
 	});
 
-	it("answers 404 for a target or a replacement that does not exist or is not ready", async () => {
+	it("MEDIA-R3 answers 404 for a target or a replacement that does not exist or is not ready", async () => {
 		const other = "00000000-0000-4000-8000-0000000000a3";
 		expect((await replace({ fromId }, other)).status).toBe(404);
 		expect((await replace({ fromId: other })).status).toBe(404);
@@ -835,7 +938,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 
-	it("takes the replacement out of the library when the replace fails, so it does not stay as a file of its own", async () => {
+	it("MEDIA-R3 takes the replacement out of the library when the replace fails, so it does not stay as a file of its own", async () => {
 		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
 			assetId === id ? asset(id, "image/png") : asset(fromId, "application/pdf"),
 		);
@@ -860,14 +963,14 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDiscardUnusedMedia).toHaveBeenCalledWith(fromId);
 	});
 
-	it("keeps the replacement when the replace worked, and never discards the file itself", async () => {
+	it("MEDIA-R3 keeps the replacement when the replace worked, and never discards the file itself", async () => {
 		expect((await replace()).status).toBe(200);
 		expect(mockDiscardUnusedMedia).not.toHaveBeenCalled();
 		expect((await replace({ fromId: id })).status).toBe(400);
 		expect(mockDiscardUnusedMedia).not.toHaveBeenCalled();
 	});
 
-	it("answers 400 for the same file, or a body without a valid fromId", async () => {
+	it("MEDIA-R2 answers 400 for the same file, or a body without a valid fromId", async () => {
 		const same = await replace({ fromId: id });
 		expect(same.status).toBe(400);
 		expect((await same.json()).error.code).toBe("invalid_input");
@@ -876,7 +979,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
 	});
 
-	it("answers 415 with a notice when an image would be replaced by a file or the other way round", async () => {
+	it("MEDIA-R2 answers 415 with a notice when an image would be replaced by a file or the other way round", async () => {
 		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
 			assetId === id ? asset(id, "image/png") : asset(fromId, "application/pdf"),
 		);
@@ -892,7 +995,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 
-	it("answers 415 with a notice when a file would be replaced by a file of another type", async () => {
+	it("MEDIA-R2 answers 415 with a notice when a file would be replaced by a file of another type", async () => {
 		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
 			assetId === id ? asset(id, "application/pdf") : asset(fromId, "text/markdown"),
 		);
@@ -902,7 +1005,7 @@ describe("POST /media/:id/replace", () => {
 		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
 	});
 
-	it("replaces a file by a file of the same type", async () => {
+	it("MEDIA-R2 replaces a file by a file of the same type", async () => {
 		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
 			assetId === id ? asset(id, "application/pdf") : asset(fromId, "application/pdf"),
 		);
@@ -910,13 +1013,13 @@ describe("POST /media/:id/replace", () => {
 		expect(mockReplaceMediaFile).toHaveBeenCalledWith({ id, fromId });
 	});
 
-	it("keeps the old files when the store refuses, and shows its error", async () => {
+	it("MEDIA-R3 keeps the old files when the store refuses, and shows its error", async () => {
 		mockReplaceMediaFile.mockRejectedValue(new CmsError("The replacement media asset is in use", "conflict"));
 		expect((await replace()).status).toBe(409);
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 
-	it("rejects unauthenticated calls with 401", async () => {
+	it("MEDIA-U7 rejects unauthenticated calls with 401", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 		expect((await replace()).status).toBe(401);
 		expect(mockReplaceMediaFile).not.toHaveBeenCalled();

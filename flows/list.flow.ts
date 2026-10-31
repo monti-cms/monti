@@ -18,7 +18,7 @@ async function writePost(page: Page, title: string, newTag?: string) {
 
 // Flow 7 (🔴): change several posts at once from the list. The cases (a partial failure, filters, sorting) are checked below this layer.
 // The flow's other half, merging two tags, is not built yet; #323 adds it here when it is ("Tag list and merge").
-test("posts picked in the list get a tag together", async ({ page }) => {
+test("LIST-C1 posts picked in the list get a tag together", async ({ page }) => {
 	await writePost(page, "정리 글 가", "React");
 	await writePost(page, "정리 글 나", "리액트");
 	await writePost(page, "정리 글 다");

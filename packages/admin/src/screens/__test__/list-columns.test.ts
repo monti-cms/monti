@@ -53,26 +53,26 @@ const site = createSite(
 );
 
 describe("list columns", () => {
-	it("finds the slug column by field kind, not by name", () => {
+	it("LIST-S3 finds the slug column by field kind, not by name", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(available).toContain("slug");
 		expect(defaults).not.toContain("slug");
 	});
 
-	it("offers every other stored field as a column, hidden until the writer shows it", () => {
+	it("LIST-S3 offers every other stored field as a column, hidden until the writer shows it", () => {
 		const { available, defaults } = columnsFor(site, "note");
 		expect(available).toContain("subtitle");
 		expect(defaults).not.toContain("subtitle");
 		expect(available.filter((column) => column === "title")).toHaveLength(1);
 	});
 
-	it("has no slug column without a slug field, and always has a title column", () => {
+	it("LIST-S3 has no slug column without a slug field, and always has a title column", () => {
 		const { available } = columnsFor(site, "note");
 		expect(available).not.toContain("slug");
 		expect(available).toContain("title");
 	});
 
-	it("until the writer chooses columns the default ones are used: documents get status, title, taxonomy fields, locale and the updated date; items get status, title, locale, updated date and keep the slug beside the title", () => {
+	it("LIST-S3 until the writer chooses columns the default ones are used: documents get status, title, taxonomy fields, locale and the updated date; items get status, title, locale, updated date and keep the slug beside the title", () => {
 		for (const collection of ["story", "topic"]) {
 			const defaults = defaultListColumns(site, collection);
 			expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
@@ -104,11 +104,11 @@ describe("locale column and the translation UI option", () => {
 	const one = [{ code: "en", name: "English" }];
 	const two = [...one, { code: "ko", name: "Korean" }];
 
-	it("has a locale column on a site with several locales", () => {
+	it("LIST-S3 has a locale column on a site with several locales", () => {
 		expect(columnsFor(make(two), "story").available).toContain("locale");
 	});
 
-	it("has no locale column on a single-locale site, and the other columns stay in order", () => {
+	it("LIST-S3 has no locale column on a single-locale site, and the other columns stay in order", () => {
 		const { available, defaults } = columnsFor(make(one), "story");
 		expect(available).not.toContain("locale");
 		expect(defaults).not.toContain("locale");
@@ -116,13 +116,13 @@ describe("locale column and the translation UI option", () => {
 		expect(available.indexOf("topicId")).toBe(available.indexOf("status") + 1);
 	});
 
-	it("has no locale column on a multi-locale site that turns the translation UI off", () => {
+	it("LIST-S3 has no locale column on a multi-locale site that turns the translation UI off", () => {
 		const site = make(two, { translations: false });
 		expect(columnsFor(site, "story").available).not.toContain("locale");
 		expect(columnsFor(site, "topic").defaults).not.toContain("locale");
 	});
 
-	it("has no locale column on an item collection without a per-locale field", () => {
+	it("LIST-S3 has no locale column on an item collection without a per-locale field", () => {
 		const site = make(two);
 		expect(columnsFor(site, "label").available).not.toContain("locale");
 		expect(columnsFor(site, "label").defaults).not.toContain("locale");

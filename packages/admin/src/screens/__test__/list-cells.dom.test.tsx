@@ -98,7 +98,7 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 
 describe("list columns from fields", () => {
-	it("labels field columns by the field label", () => {
+	it("LIST-S3 labels field columns by the field label", () => {
 		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format" });
 		expect(columnConfig(site, "article", "related")).toEqual({ label: "Related", many: true });
 		expect(fieldColumnOf(site, "article", "format")?.field.kind).toBe("select");
@@ -108,7 +108,7 @@ describe("list columns from fields", () => {
 });
 
 describe("default list cells", () => {
-	it("draws the select option label, the stored text, the media id and relation names", () => {
+	it("LIST-S3 draws the select option label, the stored text, the media id and relation names", () => {
 		renderTable([
 			item("first", {
 				values: { format: "guide", subtitle: "A longer subtitle", hero: "media-1" },
@@ -129,7 +129,7 @@ describe("default list cells", () => {
 		expect(within(row).getByText("Alpha · Beta")).toBeInTheDocument();
 	});
 
-	it("leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {
+	it("LIST-S3 leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {
 		renderTable([item("empty"), item("stale", { values: { format: "retired" } })]);
 		expect(within(rowOf(/empty/)).queryByText("—")).toBeNull();
 		expect(within(rowOf(/stale/)).getByText("retired")).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe("default list cells", () => {
 });
 
 describe("listCells extension", () => {
-	it("draws a registered cell for a column name, with the field and stored value", () => {
+	it("LIST-S3 draws a registered cell for a column name, with the field and stored value", () => {
 		const Format = ({ column, field, value, entry }: ListCellProps) => (
 			<span data-testid="cell">{`${column}/${field?.kind}/${value}/${entry.id}`}</span>
 		);
@@ -146,7 +146,7 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).queryByText("Guide")).toBeNull();
 	});
 
-	it("falls back to the field's `input` name, and the column name wins over it", () => {
+	it("LIST-S3 falls back to the field's `input` name, and the column name wins over it", () => {
 		const Swatch = ({ value }: ListCellProps) => <span data-testid="swatch">{value}</span>;
 		const Named = () => <span data-testid="named">named</span>;
 		renderTable([item("first", { values: { accent: "#f00" } })], { listCells: { color: Swatch } });
@@ -157,7 +157,7 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).queryByTestId("swatch")).toBeNull();
 	});
 
-	it("can replace a system column cell, and inner providers add to outer ones", () => {
+	it("LIST-S3 can replace a system column cell, and inner providers add to outer ones", () => {
 		const Status = ({ entry }: ListCellProps) => <span data-testid="status">{`state:${entry.status}`}</span>;
 		const Format = () => <span data-testid="format">fmt</span>;
 		renderTable([item("first")], { listCells: { status: Status } });

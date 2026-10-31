@@ -69,7 +69,7 @@ function renderRows(
 const rowOf = (name: RegExp | string) => screen.getByRole("row", { name });
 
 describe("a row of the list", () => {
-	it("says the languages as a code and how many others there are", () => {
+	it("LIST-S3 says the languages as a code and how many others there are", () => {
 		renderRows([
 			item("one"),
 			item("with-translations", {
@@ -83,7 +83,7 @@ describe("a row of the list", () => {
 		expect(within(rowOf(/with-translations/)).getByText("KO +1")).toBeInTheDocument();
 	});
 
-	it("has its check and its ⋯ in the row, named for the entry", () => {
+	it("LIST-S3 has its check and its ⋯ in the row, named for the entry", () => {
 		renderRows([item("first", { title: "첫 번째 글" })]);
 		const row = rowOf(/첫 번째 글/);
 		expect(

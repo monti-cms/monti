@@ -39,7 +39,7 @@ const show = async (cms: ReturnType<typeof passwordCms>, query: Record<string, s
 	render(await AdminLoginPage({ cms, server, searchParams: Promise.resolve(query) }));
 
 describe("the login screen of the email and password login", () => {
-	it("shows the create-the-first-admin form while no admin exists, posting to the first-admin route", async () => {
+	it("AUTH-A4 shows the create-the-first-admin form while no admin exists, posting to the first-admin route", async () => {
 		const { container } = await show(passwordCms(false));
 		expect(screen.getByText(t("firstAdminTitle"))).toBeInTheDocument();
 		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/first-admin");
@@ -49,7 +49,7 @@ describe("the login screen of the email and password login", () => {
 		expect(screen.queryByText(t("signInSubmit"), { selector: "button" })).toBeNull();
 	});
 
-	it("shows the sign-in form, not the first-admin form, once an admin exists", async () => {
+	it("AUTH-A4 shows the sign-in form, not the first-admin form, once an admin exists", async () => {
 		const { container } = await show(passwordCms(true));
 		expect(screen.queryByText(t("firstAdminTitle"))).toBeNull();
 		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/sign-in/password");
@@ -58,7 +58,7 @@ describe("the login screen of the email and password login", () => {
 		expect(screen.getByText(t("signInSubmit"), { selector: "button" })).toBeInTheDocument();
 	});
 
-	it("says why the last attempt did not work", async () => {
+	it("AUTH-A4 says why the last attempt did not work", async () => {
 		await show(passwordCms(true), { error: "CredentialsSignin" });
 		expect(screen.getByRole("alert").textContent).toBe(t("errorCredentials"));
 		cleanup();
@@ -69,7 +69,7 @@ describe("the login screen of the email and password login", () => {
 		expect(screen.getByRole("alert").textContent).toBe(t("errorClosed"));
 	});
 
-	it("keeps the plain button for a login that sends people to another service", async () => {
+	it("AUTH-A4 keeps the plain button for a login that sends people to another service", async () => {
 		const cms = fakeCms({
 			config: testConfig,
 			auth: { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] },
@@ -83,7 +83,7 @@ describe("the login screen of the email and password login", () => {
 describe("the header of the login screen", () => {
 	const github = { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] };
 
-	it("titles the screen with the site name and says it is managed with Monti, on sign-in and on first-admin", async () => {
+	it("AUTH-C3 titles the screen with the site name and says it is managed with Monti, on sign-in and on first-admin", async () => {
 		const name = testConfig.site?.name ?? "";
 		expect(name).not.toBe("");
 		for (const cms of [passwordCms(true), passwordCms(false)]) {
@@ -94,7 +94,7 @@ describe("the header of the login screen", () => {
 		}
 	});
 
-	it("falls back to Monti when the site has no name", async () => {
+	it("AUTH-C3 falls back to Monti when the site has no name", async () => {
 		const cms = fakeCms({ config: { ...testConfig, site: { ...testConfig.site, name: undefined } }, auth: github });
 		await show(cms as never);
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Monti");

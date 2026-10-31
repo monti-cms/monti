@@ -68,7 +68,7 @@ describe("bulk operations on a real store", () => {
 	});
 
 	it.skipIf(!relationItem)(
-		"keeps an item published and makes a bulk relation change public with the save",
+		"LIST-C1 keeps an item published and makes a bulk relation change public with the save",
 		async () => {
 			const { collection, field, to } = relationItem as NonNullable<typeof relationItem>;
 			const created = await service.createDraft({
@@ -98,7 +98,7 @@ describe("bulk operations on a real store", () => {
 		30_000,
 	);
 
-	it("answers a bulk folder.move into a collection without folders with invalid_input per item", async () => {
+	it("LIST-C5 answers a bulk folder.move into a collection without folders with invalid_input per item", async () => {
 		if (testSite.foldersEnabled(recordCollection)) return;
 		const record = await service.createDraft({
 			collection: recordCollection,

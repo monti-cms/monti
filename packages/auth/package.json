@@ -13,6 +13,7 @@
 	"scripts": {
 		"test": "vitest",
 		"test:run": "vitest run",
+		"test:mutation": "stryker run",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},

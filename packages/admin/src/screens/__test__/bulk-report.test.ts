@@ -68,11 +68,11 @@ describe("bulkReport", () => {
 			results: [refused("a")],
 			want: { tone: "error", message: [t("bulk.failed", { label: LABEL }), line("a")].join("\n") },
 		},
-	] as const)("$case", ({ op, results, want }) => {
+	] as const)("LIST-C2 $case", ({ op, results, want }) => {
 		expect(bulkReport(testSite, op, LABEL, results, items)).toEqual(want);
 	});
 
-	it("names a failed row with no title as untitled", () => {
+	it("LIST-C2 names a failed row with no title as untitled", () => {
 		expect(bulkReport(testSite, "archive", LABEL, [refused("x")], [])?.message).toBe(
 			[t("bulk.failed", { label: LABEL }), `${tc("untitled")} — ${tb("failure.conflict")}`].join("\n"),
 		);
@@ -80,7 +80,7 @@ describe("bulkReport", () => {
 });
 
 describe("selectionAfter", () => {
-	it("keeps the failed rows picked, and leaves the selection alone after a change of a relation", () => {
+	it("LIST-C2 keeps the failed rows picked, and leaves the selection alone after a change of a relation", () => {
 		expect(selectionAfter("trash", [done("a"), refused("b"), refused("c")])).toEqual(new Set(["b", "c"]));
 		expect(selectionAfter("archive", [done("a")])).toEqual(new Set());
 		expect(selectionAfter("relation.add", [refused("a")])).toBeNull();

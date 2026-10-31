@@ -1740,7 +1740,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			expect(new Set(ids).size).toBe(ids.length);
 		};
 
-		it("gives every block of a new body its own id", async () => {
+		it("TRANS-B1 gives every block of a new body its own id", async () => {
 			const draft = await createDraft({ text: BODY });
 
 			expectUniqueIds(draft.working.doc);
@@ -1751,7 +1751,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		});
 
 		describe("saving text", () => {
-			it("editing one paragraph keeps the ids of the others and of the edited one", async () => {
+			it("TRANS-B1 editing one paragraph keeps the ids of the others and of the edited one", async () => {
 				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 				const blocksBefore = idList(draft.working.doc);
@@ -1769,7 +1769,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(await storedDoc(draft.id, "working")).toEqual(saved.working.doc);
 			});
 
-			it("editing text inside a list item keeps the ids of the list, its items and the other blocks", async () => {
+			it("TRANS-B1 editing text inside a list item keeps the ids of the list, its items and the other blocks", async () => {
 				const draft = await createDraft({ doc: listDoc("two") });
 				expect(idList(draft.working.doc)).toHaveLength(7);
 
@@ -1778,7 +1778,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(idList(saved.working.doc)).toEqual(idList(draft.working.doc));
 			});
 
-			it("adding a paragraph keeps the other ids and gives the new block an id nobody has", async () => {
+			it("TRANS-B1 adding a paragraph keeps the other ids and gives the new block an id nobody has", async () => {
 				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 
@@ -1794,7 +1794,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expectUniqueIds(saved.working.doc);
 			});
 
-			it("moving a paragraph keeps its id", async () => {
+			it("TRANS-B1 moving a paragraph keeps its id", async () => {
 				const draft = await createDraft({ text: BODY });
 				const before = idsByText(draft.working.doc);
 
@@ -1808,7 +1808,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				}
 			});
 
-			it("a body that stops parsing and is fixed again gets new ids: the unparsed draft it replaces has no blocks to pair with", async () => {
+			it("TRANS-B1 a body that stops parsing and is fixed again gets new ids: the unparsed draft it replaces has no blocks to pair with", async () => {
 				const draft = await createDraft({ text: BODY });
 				const broken = await save(draft, { text: "Words\n\n<<<Unclosed" });
 				expect(broken.working.doc.content[0]?.type).toBe("unparsed");
@@ -1828,7 +1828,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				content: doc.content.map((block, index) => ({ ...block, id: ids[index] ?? "zzzzzzzz" })),
 			});
 
-			it("a draft saved with a document keeps the ids the client sent", async () => {
+			it("TRANS-B1 a draft saved with a document keeps the ids the client sent", async () => {
 				const draft = await createDraft({ text: BODY });
 				const ids = ["clientaa", "clientbb", "clientcc", "clientdd", "clientee"];
 
@@ -1841,7 +1841,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(docOf(await storedDoc(draft.id, "working")).content.map((block) => block.id)).toEqual(ids);
 			});
 
-			it("a block sent without an id gets one, and a repeated id is given a new one to the later block", async () => {
+			it("TRANS-B1 a block sent without an id gets one, and a repeated id is given a new one to the later block", async () => {
 				const draft = await createDraft({ text: "One\n\nTwo\n\nThree" });
 				const doc = docOf(draft.working.doc);
 				const [first, second, third] = doc.content;
@@ -1859,7 +1859,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expectUniqueIds(saved.working.doc);
 			});
 
-			it("a document created with ids keeps them", async () => {
+			it("TRANS-B1 a document created with ids keeps them", async () => {
 				const first = await createDraft({ text: BODY });
 				const ids = ["newaaaaa", "newbbbbb", "newccccc", "newddddd", "neweeeee"];
 
@@ -1870,7 +1870,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		});
 
 		describe("publishing", () => {
-			it("copies the ids to the published body", async () => {
+			it("TRANS-B1 copies the ids to the published body", async () => {
 				const draft = await createDraft({ text: BODY });
 
 				const published = await publish(draft);
@@ -1880,7 +1880,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expectUniqueIds(published.published?.doc);
 			});
 
-			it("a later save changes the working ids only, and the next publish copies them", async () => {
+			it("TRANS-B1 a later save changes the working ids only, and the next publish copies them", async () => {
 				const published = await publish(await createDraft({ text: BODY }));
 				const publishedIds = idList(published.published?.doc);
 
@@ -1895,7 +1895,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		});
 
 		describe("duplicating", () => {
-			it("keeps the ids of the copy, unique within it, and leaves the original as it was", async () => {
+			it("TRANS-B1 keeps the ids of the copy, unique within it, and leaves the original as it was", async () => {
 				const original = await createDraft({ text: BODY });
 				const before = await store.getEntry(original.id);
 
@@ -1907,7 +1907,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(await store.getEntry(original.id)).toEqual(before);
 			});
 
-			it("the copy and the original do not affect each other's ids when one is edited", async () => {
+			it("TRANS-B1 the copy and the original do not affect each other's ids when one is edited", async () => {
 				const original = await createDraft({ text: BODY });
 				const copy = await duplicateDraft(testSite, store, { id: original.id });
 
@@ -1919,7 +1919,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		});
 
 		describe("changes that leave the body alone", () => {
-			it("a bulk move to another folder keeps every id", async () => {
+			it("TRANS-B1 a bulk move to another folder keeps every id", async () => {
 				const entry = await createDraft({ text: BODY });
 				const folder = await store.createFolder({
 					collection: contentCollection,
@@ -1937,7 +1937,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect((await store.getEntry(entry.id)).working.doc).toEqual(entry.working.doc);
 			});
 
-			it("editing a template keeps the ids of the blocks that stay", async () => {
+			it("TRANS-B1 editing a template keeps the ids of the blocks that stay", async () => {
 				const template = await store.createTemplate({ name: unique("Template"), doc: docOfText(BODY) });
 				const updated = await store.updateTemplate({
 					id: template.id,
@@ -1978,7 +1978,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 					(reference) => reference.kind === "media" && reference.targetId === mediaId,
 				);
 
-			it("stores the block id of the image an occurrence is in", async () => {
+			it("TRANS-B1 stores the block id of the image an occurrence is in", async () => {
 				const mediaId = await withMedia();
 				const draft = await createDraft({ doc: imageBody(mediaId) });
 
@@ -1986,7 +1986,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(reference?.occurrences).toEqual([{ type: "body", blockId: imageBlockId(draft.working.doc) }]);
 			});
 
-			it("saving the same body again, with or without its ids, keeps the occurrences and the version", async () => {
+			it("TRANS-B1 saving the same body again, with or without its ids, keeps the occurrences and the version", async () => {
 				const mediaId = await withMedia();
 				const draft = await createDraft({ doc: imageBody(mediaId) });
 				const before = await store.getWorkingReferences({ entryId: draft.id });
@@ -2001,7 +2001,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 				expect(await store.getWorkingReferences({ entryId: draft.id })).toEqual(before);
 			});
 
-			it("editing another block keeps the block id of the occurrence", async () => {
+			it("TRANS-B1 editing another block keeps the block id of the occurrence", async () => {
 				const mediaId = await withMedia();
 				const draft = await createDraft({ doc: imageBody(mediaId) });
 

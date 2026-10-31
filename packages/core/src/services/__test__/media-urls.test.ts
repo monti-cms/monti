@@ -8,7 +8,7 @@ const BASE = "https://cdn.test/assets";
 const mediaStore = (): MediaStore => ({ getPublicUrl: (key: string) => `${BASE}/${key}` }) as unknown as MediaStore;
 
 describe("mediaUrlResolver", () => {
-	it("finds the registered file a public URL belongs to: the key is what follows the store's base", async () => {
+	it("MEDIA-B7 finds the registered file a public URL belongs to: the key is what follows the store's base", async () => {
 		const find = vi.fn(async () => [{ id: MEDIA_ID, storageKey: "media/photo.png" }]);
 		const resolve = mediaUrlResolver(() => ({ findReadyMediaByStorageKeys: find }), mediaStore);
 
@@ -19,7 +19,7 @@ describe("mediaUrlResolver", () => {
 		expect(find).toHaveBeenCalledWith({ keys: ["media/photo.png"] });
 	});
 
-	it("leaves out a URL no ready file holds, and asks the store once for all of them", async () => {
+	it("MEDIA-B7 leaves out a URL no ready file holds, and asks the store once for all of them", async () => {
 		const find = vi.fn(async () => [{ id: MEDIA_ID, storageKey: "media/a.png" }]);
 		const resolve = mediaUrlResolver(() => ({ findReadyMediaByStorageKeys: find }), mediaStore);
 
@@ -29,7 +29,7 @@ describe("mediaUrlResolver", () => {
 		expect(find).toHaveBeenCalledTimes(1);
 	});
 
-	it("does not ask the store for URLs that are not its own", async () => {
+	it("MEDIA-B7 does not ask the store for URLs that are not its own", async () => {
 		const find = vi.fn(async () => []);
 		const resolve = mediaUrlResolver(() => ({ findReadyMediaByStorageKeys: find }), mediaStore);
 
@@ -37,7 +37,7 @@ describe("mediaUrlResolver", () => {
 		expect(find).not.toHaveBeenCalled();
 	});
 
-	it("finds nothing, and does not fail, without a media store or a database", async () => {
+	it("MEDIA-B7 finds nothing, and does not fail, without a media store or a database", async () => {
 		const noStore = mediaUrlResolver(
 			() => ({ findReadyMediaByStorageKeys: async () => [] }),
 			() => {

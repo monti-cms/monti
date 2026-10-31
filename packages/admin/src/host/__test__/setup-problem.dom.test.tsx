@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe("setupProblemOf", () => {
-	it("returns the message of the login that cannot start, and logs it once", () => {
+	it("AUTH-L10 returns the message of the login that cannot start, and logs it once", () => {
 		const cms = brokenCms();
 		expect(setupProblemOf(cms)).toBe(BROKEN);
 		expect(setupProblemOf(cms)).toBe(BROKEN);
@@ -57,34 +57,34 @@ describe("setupProblemOf", () => {
 		expect(String(errors.mock.calls[0]?.[0])).toContain(BROKEN);
 	});
 
-	it("returns undefined and logs nothing when the login works", () => {
+	it("AUTH-L10 returns undefined and logs nothing when the login works", () => {
 		expect(setupProblemOf(fakeCms())).toBeUndefined();
 		expect(errors).not.toHaveBeenCalled();
 	});
 });
 
 describe("SetupProblemScreen", () => {
-	it("shows the English text that points to monti doctor", () => {
+	it("AUTH-L10 shows the English text that points to monti doctor", () => {
 		render(<SetupProblemScreen cms={fakeCms()} />);
 		expect(screen.getByText("Not set up yet")).toBeInTheDocument();
 		expect(screen.getByText(/monti doctor/)).toBeInTheDocument();
 	});
 
-	it("shows the Korean text for a Korean admin", () => {
+	it("AUTH-L10 shows the Korean text for a Korean admin", () => {
 		const cms = { site: createSite({ ...testConfig, admin: { ...testConfig.admin, locale: "ko" } }) };
 		render(<SetupProblemScreen cms={cms as never} />);
 		expect(screen.getByText(cms.site.createTranslator(layoutMessages)("setupTitle"))).toBeInTheDocument();
 		expect(screen.getByText(/monti doctor/)).toBeInTheDocument();
 	});
 
-	it("does not show the error message to the visitor", () => {
+	it("AUTH-L10 does not show the error message to the visitor", () => {
 		render(<SetupProblemScreen cms={fakeCms()} />);
 		expect(document.body.textContent).not.toContain("MONTI_SECRET");
 	});
 });
 
 describe("AdminLayout when the login is not set up", () => {
-	it("renders the not-set-up screen instead of the admin, and logs the full message", async () => {
+	it("AUTH-L10 renders the not-set-up screen instead of the admin, and logs the full message", async () => {
 		const cms = brokenCms();
 		render(await AdminLayout({ cms, themeProvider: false, toaster: false, children: <p>the admin</p> }));
 		expect(screen.getByText("Not set up yet")).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("AdminLayout when the login is not set up", () => {
 		expect(String(errors.mock.calls[0]?.[0])).toContain(BROKEN);
 	});
 
-	it("renders the admin as before when the login works", async () => {
+	it("AUTH-L10 renders the admin as before when the login works", async () => {
 		render(await AdminLayout({ cms: fakeCms(), themeProvider: false, toaster: false, children: <p>the admin</p> }));
 		expect(screen.getByText("the admin")).toBeInTheDocument();
 		expect(screen.queryByText("Not set up yet")).toBeNull();

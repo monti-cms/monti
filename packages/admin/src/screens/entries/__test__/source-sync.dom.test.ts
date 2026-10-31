@@ -68,14 +68,14 @@ const partnersOf = (translation: readonly SyncBlock[], source: readonly SyncBloc
 };
 
 describe("pairing translation blocks with source blocks", () => {
-	it("pairs by the stored link before kind", () => {
+	it("TRANS-S3 pairs by the stored link before kind", () => {
 		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
 		// By kind alone the paragraph would take B, the first paragraph of the source.
 		const translation = blocksOf(block(heading("A'"), "t1", "a"), block(para("C'"), "t2", "c"));
 		expect(partnersOf(translation, source)).toEqual([id("a"), id("c")]);
 	});
 
-	it("pairs blocks without a link by kind between the linked ones", () => {
+	it("TRANS-S3 pairs blocks without a link by kind between the linked ones", () => {
 		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
 		const translation = blocksOf(
 			block(heading("A'"), "t1", "a"),
@@ -85,7 +85,7 @@ describe("pairing translation blocks with source blocks", () => {
 		expect(partnersOf(translation, source)).toEqual([id("a"), id("b"), id("c")]);
 	});
 
-	it("leaves a block added between two linked blocks unpaired", () => {
+	it("TRANS-S3 leaves a block added between two linked blocks unpaired", () => {
 		const source = blocksOf(block(para("A"), "a"), block(para("B"), "b"));
 		// The second part of a split paragraph, and a new paragraph, carry no link.
 		const translation = blocksOf(
@@ -97,20 +97,20 @@ describe("pairing translation blocks with source blocks", () => {
 		expect(partnersOf(translation, source)).toEqual([id("a"), null, null, id("b")]);
 	});
 
-	it("leaves a source block unpaired once its translation block is deleted", () => {
+	it("TRANS-S3 leaves a source block unpaired once its translation block is deleted", () => {
 		const source = blocksOf(block(para("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
 		const translation = blocksOf(block(para("A'"), "t1", "a"), block(para("C'"), "t3", "c"));
 		const pairs = pairSyncBlocks(translation, source);
 		expect([...pairs.values()].map((partner) => partner.id)).not.toContain(id("b"));
 	});
 
-	it("falls back to kind when a link no longer matches a source block", () => {
+	it("TRANS-S3 falls back to kind when a link no longer matches a source block", () => {
 		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b2"));
 		const translation = blocksOf(block(heading("A'"), "t1", "a"), block(para("B'"), "t2", "b"));
 		expect(partnersOf(translation, source)).toEqual([id("a"), id("b2")]);
 	});
 
-	it("pairs the blocks inside paired boxes, by link and then by kind", () => {
+	it("TRANS-S3 pairs the blocks inside paired boxes, by link and then by kind", () => {
 		const source = blocksOf(
 			block(callout(block(para("X"), "x"), block(heading("Y"), "y"), block(para("Z"), "z")), "k"),
 			block(para("after"), "p"),
@@ -125,7 +125,7 @@ describe("pairing translation blocks with source blocks", () => {
 		]);
 	});
 
-	it("treats lists and tables as one block, and boxes whose body is blocks as boxes", () => {
+	it("TRANS-S3 treats lists and tables as one block, and boxes whose body is blocks as boxes", () => {
 		const [first, second] = blocksOf(list("one", "two"), callout(para("inside")));
 		expect(first?.children).toBeNull();
 		expect(second?.children?.map((child) => child.kind)).toEqual(["paragraph"]);
@@ -133,7 +133,7 @@ describe("pairing translation blocks with source blocks", () => {
 });
 
 describe("the block the cursor is in", () => {
-	it("is the innermost block holding the position, inside boxes", () => {
+	it("TRANS-S3 is the innermost block holding the position, inside boxes", () => {
 		const blocks = blocksOf(para("before"), callout(para("first"), para("second")));
 		const box = blocks[1] as SyncBlock;
 		const inner = box.children?.[1] as SyncBlock;
@@ -141,7 +141,7 @@ describe("the block the cursor is in", () => {
 		expect(blockPathAt(blocks, (blocks[0] as SyncBlock).pos + 1)).toEqual([blocks[0]]);
 	});
 
-	it("stops at a list: a list is anchored as a whole", () => {
+	it("TRANS-S3 stops at a list: a list is anchored as a whole", () => {
 		const blocks = blocksOf(list("one", "two"));
 		expect(blockPathAt(blocks, (blocks[0] as SyncBlock).pos + 6)).toEqual([blocks[0]]);
 	});
@@ -154,24 +154,24 @@ describe("following the translation's middle line", () => {
 		...(inner ? { inner: () => inner } : {}),
 	});
 
-	it("puts the same share of the paired source block on the line", () => {
+	it("TRANS-S3 puts the same share of the paired source block on the line", () => {
 		const pairs = [pair([100, 200], [300, 350]), pair([200, 400], [350, 450])];
 		// The line is halfway down the second translation block: halfway down its source block.
 		expect(sourceLineAt(pairs, 300)).toBe(400);
 	});
 
-	it("keeps the distance to the nearest block above the first and below the last", () => {
+	it("TRANS-S3 keeps the distance to the nearest block above the first and below the last", () => {
 		const pairs = [pair([100, 200], [300, 350]), pair([200, 400], [350, 450])];
 		expect(sourceLineAt(pairs, 70)).toBe(270);
 		expect(sourceLineAt(pairs, 500)).toBe(550);
 	});
 
-	it("goes inside a box to the inner pair holding the line", () => {
+	it("TRANS-S3 goes inside a box to the inner pair holding the line", () => {
 		const pairs = [pair([100, 500], [100, 300], [pair([150, 250], [120, 160]), pair([250, 450], [160, 280])])];
 		expect(sourceLineAt(pairs, 350)).toBe(220);
 	});
 
-	it("is null with no pairs", () => {
+	it("TRANS-S3 is null with no pairs", () => {
 		expect(sourceLineAt([], 100)).toBeNull();
 	});
 });
@@ -188,7 +188,7 @@ describe("collapsible boxes in the source", () => {
 		return { root, body };
 	};
 
-	it("collapse and open as the paired translation box does", () => {
+	it("TRANS-S3 collapse and open as the paired translation box does", () => {
 		const source = view(false);
 		followCollapsed(view(true).root, source.root);
 		expect(source.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(true);
@@ -196,7 +196,7 @@ describe("collapsible boxes in the source", () => {
 		expect(source.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(false);
 	});
 
-	it("follow only their own body, not a box nested inside", () => {
+	it("TRANS-S3 follow only their own body, not a box nested inside", () => {
 		const nested = view(false);
 		const source = view(false, nested.root);
 		followCollapsed(view(true, view(false).root).root, source.root);
@@ -243,7 +243,7 @@ describe("useSourceSync", () => {
 		return { translation, source, marked, putCursorIn };
 	};
 
-	it("marks the block under the cursor and its source block, by link", async () => {
+	it("TRANS-S3 marks the block under the cursor and its source block, by link", async () => {
 		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("둘째 번역"), "t1", "b"), block(para("첫째 번역"), "t2", "a")],
@@ -256,7 +256,7 @@ describe("useSourceSync", () => {
 		await waitFor(() => expect(marked(source)).toEqual(["둘째"]));
 	});
 
-	it("marks the innermost paired block inside a box", async () => {
+	it("TRANS-S3 marks the innermost paired block inside a box", async () => {
 		layOut();
 		const { source, marked, putCursorIn } = mount(
 			[block(quote(block(para("밖 번역"), "t2", "w"), block(para("안 번역"), "t3", "x")), "t1", "k")],
@@ -266,7 +266,7 @@ describe("useSourceSync", () => {
 		await waitFor(() => expect(marked(source)).toEqual(["안"]));
 	});
 
-	it("keeps the mark on the first part of a split block and leaves the source where it is", async () => {
+	it("TRANS-S3 keeps the mark on the first part of a split block and leaves the source where it is", async () => {
 		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("첫째 번역"), "t1", "a"), block(para("둘째 번역"), "t2", "b")],
@@ -283,7 +283,7 @@ describe("useSourceSync", () => {
 		expect(marked(source)).toEqual(["첫째"]);
 	});
 
-	it("marks nothing for a block with no pair", async () => {
+	it("TRANS-S3 marks nothing for a block with no pair", async () => {
 		layOut();
 		const { translation, source, marked, putCursorIn } = mount(
 			[block(para("번역"), "t1", "a"), block(para("새 문단"), "t2")],

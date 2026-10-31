@@ -9,7 +9,7 @@ afterEach(cleanup);
 const bodyText = () => document.querySelector(".ProseMirror")?.textContent ?? "";
 
 describe("DocPreview", () => {
-	it("shows a stored document as the post would show it, read-only", async () => {
+	it("TRANS-S3 shows a stored document as the post would show it, read-only", async () => {
 		render(<DocPreview doc={docOf("## 제목\n\n본문 **굵게**\n")} />);
 		await waitFor(() => expect(bodyText()).toContain("본문 굵게"));
 		expect(bodyText()).toContain("제목");
@@ -17,7 +17,7 @@ describe("DocPreview", () => {
 		expect(document.querySelector(".ProseMirror strong")?.textContent).toBe("굵게");
 	});
 
-	it("shows the new document when it changes", async () => {
+	it("TRANS-S3 shows the new document when it changes", async () => {
 		const { rerender } = render(<DocPreview doc={docOf("처음 본문")} />);
 		await waitFor(() => expect(bodyText()).toContain("처음 본문"));
 		rerender(<DocPreview doc={docOf("바뀐 본문")} />);
@@ -25,7 +25,7 @@ describe("DocPreview", () => {
 		expect(bodyText()).not.toContain("처음 본문");
 	});
 
-	it("does not start over for a document that says the same, with other block ids", async () => {
+	it("TRANS-S3 does not start over for a document that says the same, with other block ids", async () => {
 		const first = docOf("같은 본문");
 		const { rerender } = render(<DocPreview doc={first} />);
 		await waitFor(() => expect(bodyText()).toContain("같은 본문"));
@@ -36,7 +36,7 @@ describe("DocPreview", () => {
 });
 
 describe("SourcePane", () => {
-	it("shows the source document under its title, and closes", async () => {
+	it("TRANS-S3 shows the source document under its title, and closes", async () => {
 		const onClose = vi.fn();
 		render(
 			<SourcePane doc={docOf("원문 첫 문단\n\n원문 둘째 문단\n")} locale="ko" title="원문 제목" onClose={onClose} />,

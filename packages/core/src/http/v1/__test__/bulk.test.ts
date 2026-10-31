@@ -75,7 +75,7 @@ describe("Bulk route contract", () => {
 		workingMetadata = await requiredMetadata(contentCollection, "Hello", async () => CAT_1);
 	});
 
-	it("returns per-item results with partial success", async () => {
+	it("LIST-C2 returns per-item results with partial success", async () => {
 		const res = await postBulk(
 			postReq({
 				op: "relation.add",
@@ -99,7 +99,7 @@ describe("Bulk route contract", () => {
 		});
 	});
 
-	it("rejects more than 100 items with 400", async () => {
+	it("LIST-C3 rejects more than 100 items with 400", async () => {
 		const res = await postBulk(
 			postReq({
 				op: "relation.add",
@@ -115,17 +115,17 @@ describe("Bulk route contract", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("rejects non-UUID item IDs with 400", async () => {
+	it("LIST-C3 rejects non-UUID item IDs with 400", async () => {
 		const res = await postBulk(postReq({ op: "archive", items: [{ id: "e1", expectedVersion: 1 }] }), { cms });
 		expect(res.status).toBe(400);
 	});
 
-	it("rejects unknown op with 400", async () => {
+	it("LIST-C3 rejects unknown op with 400", async () => {
 		const res = await postBulk(postReq({ op: "nope", items: [] }), { cms });
 		expect(res.status).toBe(400);
 	});
 
-	it("dispatches lifecycle ops per item", async () => {
+	it("LIST-C5 dispatches lifecycle ops per item", async () => {
 		const res = await postBulk(
 			postReq({
 				op: "archive",

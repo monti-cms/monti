@@ -8,7 +8,7 @@ const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(
 const menu = (column: string, collection = "post") => columnMenuOf(testSite, collection, column);
 
 describe("the sections of a column's menu", () => {
-	it("sorts only the title, the address and the three dates, texts as letters and dates as dates", () => {
+	it("LIST-S1 sorts only the title, the address and the three dates, texts as letters and dates as dates", () => {
 		expect(menu("title").sort).toEqual({ field: "title", reads: "text" });
 		expect(menu("slug").sort).toEqual({ field: "slug", reads: "text" });
 		expect(menu("updatedAt").sort).toEqual({ field: "updatedAt", reads: "date" });
@@ -19,7 +19,7 @@ describe("the sections of a column's menu", () => {
 		}
 	});
 
-	it("filters the status, the language with the translation state, the dates, and the stored fields by their kind", () => {
+	it("LIST-F2 filters the status, the language with the translation state, the dates, and the stored fields by their kind", () => {
 		expect(menu("status").filter).toEqual({ kind: "status" });
 		expect(menu("locale").filter).toEqual({ kind: "language", translation: true });
 		expect(menu("updatedAt").filter).toEqual({ kind: "date", key: "updated" });
@@ -30,15 +30,15 @@ describe("the sections of a column's menu", () => {
 		expect(menu("summary").filter).toMatchObject({ kind: "field", field: { name: "summary", kind: "text" } });
 	});
 
-	it("has no values to filter by on the title, the address and the folder: they are found by search or in the sidebar", () => {
+	it("LIST-F2 has no values to filter by on the title, the address and the folder: they are found by search or in the sidebar", () => {
 		for (const column of ["title", "slug", "folder"]) expect(menu(column).filter, column).toBeNull();
 	});
 
-	it("leaves the translation state out of an item collection's language menu", () => {
+	it("LIST-F2 leaves the translation state out of an item collection's language menu", () => {
 		expect(menu("locale", "tag").filter).toEqual({ kind: "language", translation: false });
 	});
 
-	it("hides every column but the title", () => {
+	it("LIST-S3 hides every column but the title", () => {
 		expect(menu("title").hide).toBe(false);
 		for (const column of columnsFor(testSite, "post").available.filter((candidate) => candidate !== "title")) {
 			expect(menu(column).hide, column).toBe(true);
@@ -49,7 +49,7 @@ describe("the sections of a column's menu", () => {
 describe("the dot after a filtered column's name", () => {
 	const filtered = (query: string, column: string) => isColumnFiltered(testSite, "post", column, stateOf(query));
 
-	it("is on the column whose filter is on, and on no other", () => {
+	it("LIST-F2 is on the column whose filter is on, and on no other", () => {
 		expect(filtered("collection=post&status=draft", "status")).toBe(true);
 		expect(filtered("collection=post&status=draft", "tagIds")).toBe(false);
 		expect(filtered("collection=post&field=tagIds:empty", "tagIds")).toBe(true);
@@ -59,14 +59,14 @@ describe("the dot after a filtered column's name", () => {
 		expect(filtered("collection=post&updated=today", "createdAt")).toBe(false);
 	});
 
-	it("is on the language column for the language and for the translation state", () => {
+	it("LIST-F2 is on the language column for the language and for the translation state", () => {
 		expect(filtered(`collection=post&locale=${testSite.LOCALES[0]}`, "locale")).toBe(true);
 		expect(filtered("collection=post&translation=changed", "locale")).toBe(true);
 	});
 });
 
 describe("the columns of the + at the end of the head row", () => {
-	it("are the hidden ones in the saved order, and never the title", () => {
+	it("LIST-S3 are the hidden ones in the saved order, and never the title", () => {
 		const order = ["status", "title", "slug", "tagIds", "updatedAt"];
 		const visibility = { status: true, title: true, slug: false, tagIds: true, updatedAt: false };
 		expect(hiddenColumns(order, visibility)).toEqual(["slug", "updatedAt"]);

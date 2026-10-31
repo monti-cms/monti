@@ -16,7 +16,7 @@ const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(
 const picker = () => screen.queryByRole("button", { name: new RegExp(`, ${t("toolbar.target")}$`) });
 
 describe("search box", () => {
-	it("turns body search on and off with the picker in front of the box", async () => {
+	it("LIST-F1 turns body search on and off with the picker in front of the box", async () => {
 		const onChange = vi.fn();
 		render(withSite(<ListSearch state={stateOf("collection=post")} onChange={onChange} />));
 		// The header shows the "Search" button; pressed, the box opens with its picker.
@@ -26,7 +26,7 @@ describe("search box", () => {
 		expect(onChange).toHaveBeenLastCalledWith({ includeBody: true });
 	});
 
-	it("has no picker for an item collection or where body search is not allowed", () => {
+	it("LIST-F1 has no picker for an item collection or where body search is not allowed", () => {
 		render(withSite(<ListSearch state={stateOf("collection=tag")} onChange={vi.fn()} />));
 		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()).toBeNull();

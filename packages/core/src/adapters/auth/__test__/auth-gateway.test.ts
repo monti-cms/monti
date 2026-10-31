@@ -42,7 +42,7 @@ describe("AuthGateway Contract", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("isAllowedAdminId compares canonical decimal GitHub IDs", () => {
+	it("AUTH-L5 isAllowedAdminId compares canonical decimal GitHub IDs", () => {
 		expect(isAllowedAdminId("12345678", [ADMIN_ID])).toBe(true);
 		expect(isAllowedAdminId("0012345678", [ADMIN_ID])).toBe(true);
 		expect(isAllowedAdminId("87654321", [ADMIN_ID])).toBe(false);
@@ -54,24 +54,24 @@ describe("AuthGateway Contract", () => {
 		expect(isAllowedAdminId("abc", ["abc"])).toBe(false);
 	});
 
-	it("throws unauthorized when no session exists", async () => {
+	it("AUTH-L5 throws unauthorized when no session exists", async () => {
 		await expectAuthError(gatewayOf(fakeAuth(null)).verifyAdmin(), "unauthorized");
 	});
 
-	it("throws unauthorized when session user has no accountId", async () => {
+	it("AUTH-L5 throws unauthorized when session user has no accountId", async () => {
 		await expectAuthError(gatewayOf(fakeAuth({ user: { id: "x" } })).verifyAdmin(), "unauthorized");
 	});
 
-	it("throws forbidden when session user accountId is not an admin", async () => {
+	it("AUTH-L5 throws forbidden when session user accountId is not an admin", async () => {
 		await expectAuthError(gatewayOf(fakeAuth({ user: { accountId: "99999999" } })).verifyAdmin(), "forbidden");
 	});
 
-	it("returns AuthContext when session user accountId is an admin", async () => {
+	it("AUTH-L5 returns AuthContext when session user accountId is an admin", async () => {
 		const result = await gatewayOf(fakeAuth({ user: { id: ADMIN_ID, accountId: ADMIN_ID } })).verifyAdmin();
 		expect(result).toEqual({ userId: ADMIN_ID, accountId: ADMIN_ID, isAdmin: true });
 	});
 
-	it("carries the name the login method gave, and leaves it out when there is none", async () => {
+	it("AUTH-C1 carries the name the login method gave, and leaves it out when there is none", async () => {
 		const named = await gatewayOf(
 			fakeAuth({ user: { id: ADMIN_ID, accountId: ADMIN_ID, name: " Mina Park " } }),
 		).verifyAdmin();
@@ -80,21 +80,21 @@ describe("AuthGateway Contract", () => {
 		expect(unnamed).not.toHaveProperty("name");
 	});
 
-	it("isDevAuthBypassEnabled is on by default in development, and can be turned off", () => {
+	it("AUTH-L7 isDevAuthBypassEnabled is on by default in development, and can be turned off", () => {
 		const development = { NODE_ENV: "development" };
 		expect(isDevAuthBypassEnabled(undefined, development)).toBe(true);
 		expect(isDevAuthBypassEnabled(true, development)).toBe(true);
 		expect(isDevAuthBypassEnabled(false, development)).toBe(false);
 	});
 
-	it("isDevAuthBypassEnabled is never on outside development, whatever is asked (fail-closed)", () => {
+	it("AUTH-L7 isDevAuthBypassEnabled is never on outside development, whatever is asked (fail-closed)", () => {
 		for (const env of [{ NODE_ENV: "production" }, { NODE_ENV: "test" }, {}]) {
 			expect(isDevAuthBypassEnabled(undefined, env)).toBe(false);
 			expect(isDevAuthBypassEnabled(true, env)).toBe(false);
 		}
 	});
 
-	it("isDevAuthBypassEnabled is off in a development-mode process that looks deployed", () => {
+	it("AUTH-L7 isDevAuthBypassEnabled is off in a development-mode process that looks deployed", () => {
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", VERCEL: "1" })).toBe(false);
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", KUBERNETES_SERVICE_HOST: "10.0.0.1" })).toBe(false);
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", AUTH_URL: "https://staging.example.com" })).toBe(
@@ -105,7 +105,7 @@ describe("AuthGateway Contract", () => {
 		expect(isDevAuthBypassEnabled(true, { NODE_ENV: "development", AUTH_URL: "http://localhost:3000" })).toBe(true);
 	});
 
-	it("assertDevBypassSafe refuses a deployed-looking development process and only warns in other modes", () => {
+	it("AUTH-L7 assertDevBypassSafe refuses a deployed-looking development process and only warns in other modes", () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "development", VERCEL: "1" })).toThrow(/Refusing to start/);
 		expect(() => assertDevBypassSafe(true, { NODE_ENV: "development" })).not.toThrow();
@@ -118,14 +118,14 @@ describe("AuthGateway Contract", () => {
 		warn.mockRestore();
 	});
 
-	it("verifyAdmin bypasses session check for a localhost request when dev bypass is enabled", async () => {
+	it("AUTH-L7 verifyAdmin bypasses session check for a localhost request when dev bypass is enabled", async () => {
 		const auth = fakeAuth(null, { devBypass: true });
 		const result = await gatewayOf(auth).verifyAdmin();
 		expect(result).toEqual({ userId: ADMIN_ID, accountId: ADMIN_ID, isAdmin: true });
 		expect(auth.session).not.toHaveBeenCalled();
 	});
 
-	it("verifyAdmin falls back to the normal login for a request that does not come from localhost", async () => {
+	it("AUTH-L7 verifyAdmin falls back to the normal login for a request that does not come from localhost", async () => {
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		const remote: RequestHeaders[] = [
 			async () => new Headers({ host: "staging.example.com" }),
@@ -141,7 +141,7 @@ describe("AuthGateway Contract", () => {
 		}
 	});
 
-	it("an admin session still works when the bypass is skipped", async () => {
+	it("AUTH-L7 an admin session still works when the bypass is skipped", async () => {
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		const auth = fakeAuth({ user: { id: ADMIN_ID, accountId: ADMIN_ID } }, { devBypass: true });
 		const result = await gatewayOf(auth, async () => new Headers({ host: "staging.example.com" })).verifyAdmin();
