@@ -37,17 +37,37 @@ const BLOG_FIXTURE_TESTS = [
 	"src/editor/__test__/converters.test.ts",
 	"src/editor/__test__/slash-and-tooltip.dom.test.ts",
 	"src/editor/__test__/tiptap-content.test.ts",
-	"src/editor/drag/__test__/block-refine.dom.test.ts",
+	"src/editor/drag/__test__/block-refine.browser.test.ts",
 	"src/editor/drag/__test__/drag-commands.dom.test.ts",
 	"src/editor/blocks/added/__test__/containers.dom.test.ts",
 	"src/editor/blocks/added/__test__/custom-block-view.dom.test.tsx",
 	"src/editor/blocks/added/__test__/custom-blocks.test.ts",
 	// A custom tabs view over the reference blog's tabs block (children, min and max).
-	"src/editor/blocks/__test__/use-block-editor.dom.test.tsx",
+	"src/editor/blocks/__test__/use-block-editor.browser.test.tsx",
 	// Linking body text to code needs text decorations that point at code lines (the block extension's code link). When absent, see `code-link-absent.test.ts`.
 	"src/editor/code-block/__test__/code-link.dom.test.ts",
 	"src/editor/code-block/__test__/anchor-dedupe.dom.test.ts",
 ];
+
+/** The config-sensitive test files: this project runs those that need no browser, `vitest.othersite-browser.config.ts` the browser ones. */
+export const otherSiteTests = configSensitiveTests({
+	packageDir: import.meta.dirname,
+	siteFile: path.resolve(import.meta.dirname, "../core/test/site.ts"),
+	// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
+	transitive: false,
+	// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
+	also: [
+		"src/editor/__test__/internal-link-display.browser.test.tsx",
+		"src/editor/__test__/internal-link-search.dom.test.tsx",
+	],
+	skip: (file) =>
+		BLOG_FIXTURE_TESTS.includes(
+			path
+				.relative(import.meta.dirname, file)
+				.split(path.sep)
+				.join("/"),
+		),
+});
 
 export default packageTests({
 	dir: import.meta.dirname,
@@ -55,22 +75,5 @@ export default packageTests({
 	site: "other-site",
 	environment: "jsdom",
 	dom: true,
-	include: configSensitiveTests({
-		packageDir: import.meta.dirname,
-		siteFile: path.resolve(import.meta.dirname, "../core/test/site.ts"),
-		// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
-		transitive: false,
-		// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
-		also: [
-			"src/editor/__test__/internal-link-display.dom.test.tsx",
-			"src/editor/__test__/internal-link-search.dom.test.tsx",
-		],
-		skip: (file) =>
-			BLOG_FIXTURE_TESTS.includes(
-				path
-					.relative(import.meta.dirname, file)
-					.split(path.sep)
-					.join("/"),
-			),
-	}),
+	include: otherSiteTests,
 });

@@ -9,20 +9,6 @@ import { SetupProblemScreen, setupProblemOf } from "../setup-problem";
 
 const REPORTED = Symbol.for("monti.admin.setup-problem.reported");
 
-// next-themes reads matchMedia for the system theme; jsdom does not provide it.
-if (!window.matchMedia) {
-	window.matchMedia = ((query: string) => ({
-		matches: false,
-		media: query,
-		addEventListener: () => {},
-		removeEventListener: () => {},
-		addListener: () => {},
-		removeListener: () => {},
-		dispatchEvent: () => false,
-		onchange: null,
-	})) as typeof window.matchMedia;
-}
-
 const BROKEN = "[cms-auth] MONTI_SECRET is not set, so login sessions cannot be signed";
 /** The words of the not-set-up screen on a site whose admin is in English (the default of `fakeCms`). */
 const tEnglish = fakeCms().site.createTranslator(layoutMessages);

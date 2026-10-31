@@ -1,5 +1,5 @@
 import { cleanup, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
@@ -14,27 +14,9 @@ beforeEach(() => {
 	window.localStorage.clear();
 	fakeApi().withEmptyRail().install();
 });
-afterEach(() => {
-	cleanup();
-	vi.unstubAllGlobals();
-});
-
-/** Makes the window narrow (or wide) for `matchMedia`, which jsdom does not have. */
-const stubWidth = (narrow: boolean) => {
-	Object.defineProperty(window, "innerWidth", { value: narrow ? 500 : 1280, configurable: true });
-	vi.stubGlobal("matchMedia", (query: string) => ({
-		matches: narrow && query.includes("max-width"),
-		media: query,
-		addEventListener: () => undefined,
-		removeEventListener: () => undefined,
-		addListener: () => undefined,
-		removeListener: () => undefined,
-	}));
-};
+afterEach(cleanup);
 
 describe("the side panel dock", () => {
-	beforeEach(() => stubWidth(false));
-
 	it("PLUG-A5 draws a panel that a screen opens outside that screen, beside the whole page, and takes it away when the screen closes it", () => {
 		const view = (open: boolean) => (
 			<AdminQueryProvider>

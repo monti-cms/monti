@@ -1,7 +1,7 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import type { EntryData } from "../../screens/entries/entry-form";
@@ -39,17 +39,6 @@ const entryRow = (changes: Partial<EntryData> = {}): EntryData => ({
 });
 
 let api: FakeApi;
-
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 const editors: Editor[] = [];
 beforeEach(() => {

@@ -2,7 +2,8 @@ import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import type { BodyAllowed, BodyTemplate } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { pressOption } from "../../test/base-ui";
@@ -18,19 +19,6 @@ import { CmsEditor } from "../tiptap-editor";
 
 const t = testSite.createTranslator(editorMessages);
 const tc = testSite.createTranslator(commonMessages);
-
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-	// The table plugin asks which cell the pointer is over.
-	document.elementFromPoint ??= () => null;
-});
 
 const heading = (value: string): CmsNode => ({ type: "heading", attrs: { level: 2 }, content: [text(value)] });
 const stamp = new Date("2026-10-20T00:00:00Z");
@@ -365,13 +353,14 @@ describe("flow: write (steps 02–05)", () => {
 				editor.commands.setTextSelection(1);
 				editor.view.focus();
 			});
-			press(editor, "ArrowDown", { altKey: true });
+			// Real keys: ⌘ on a Mac and Ctrl elsewhere, as the editor's own shortcuts read them.
+			await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["나", "가"]));
-			press(editor, "ArrowUp", { altKey: true });
+			await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나"]));
-			press(editor, "d", { ctrlKey: true, metaKey: false, shiftKey: true });
+			await userEvent.keyboard("{Shift>}{ControlOrMeta>}d{/ControlOrMeta}{/Shift}");
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "가", "나"]));
-			press(editor, "Backspace", { ctrlKey: true, shiftKey: true });
+			await userEvent.keyboard("{Shift>}{ControlOrMeta>}{Backspace}{/ControlOrMeta}{/Shift}");
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나"]));
 		});
 

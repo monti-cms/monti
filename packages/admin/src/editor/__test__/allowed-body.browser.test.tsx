@@ -2,7 +2,7 @@ import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import type { BodyAllowed } from "@monti-cms/core/site";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
@@ -16,20 +16,6 @@ import { CmsEditor } from "../tiptap-editor";
  * A body that limits its blocks and marks: what the editor offers and accepts, and that a body written before the list changed opens and saves as it is.
  */
 const t = testSite.createTranslator(editorMessages);
-
-beforeAll(() => {
-	// jsdom has no clipboard events; ProseMirror makes one to paste HTML.
-	(globalThis as { ClipboardEvent?: unknown }).ClipboardEvent ??= class extends Event {
-		clipboardData = null;
-	};
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 afterEach(() => {
 	cleanup();

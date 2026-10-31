@@ -3,7 +3,7 @@ import { type FolderListItem, formatFileSize } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import type { MediaItem } from "../../api/media";
 import type { FieldInputProps } from "../../screens/entries/field-inputs";
@@ -148,24 +148,12 @@ const finishStorage = () => {
 	});
 };
 
-beforeAll(() => {
-	// jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position.
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 beforeEach(() => {
 	vi.clearAllMocks();
 	FakeXhr.all = [];
 	api = mount(fakeApi().install());
 	// The bytes go to the storage URL with XMLHttpRequest, not to the API.
 	vi.stubGlobal("XMLHttpRequest", FakeXhr);
-	// jsdom has no hit testing; ProseMirror asks where a drop landed.
-	document.elementFromPoint = () => null;
 });
 afterEach(async () => {
 	cleanup();
@@ -200,6 +188,12 @@ const imageNodes = (editor: Editor) => blocks(editor).filter((node) => node.type
 const uploadsPosted = () => api.sent("POST /v1/media/uploads");
 
 const pngFile = () => new File(["x"], "pasted.png", { type: "image/png" });
+/** What a paste or a drop carries: the file. */
+const holding = (file: File) => {
+	const data = new DataTransfer();
+	data.items.add(file);
+	return data;
+};
 /**
  * Pastes a file the way a browser does. A paste without text sends ProseMirror to its capture box, and it focuses the body again on a timer:
  * the clock runs that timer, so the paste is over before the test goes on (and before the editor goes).
@@ -207,14 +201,7 @@ const pngFile = () => new File(["x"], "pasted.png", { type: "image/png" });
 const paste = (file: File) => {
 	const box = screen.getByRole("textbox", { name: /./ });
 	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-	fireEvent.paste(box, {
-		clipboardData: {
-			items: [{ kind: "file", type: file.type, getAsFile: () => file }],
-			files: [file],
-			types: ["Files"],
-			getData: () => "",
-		},
-	});
+	box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: holding(file), bubbles: true, cancelable: true }));
 	act(() => vi.runOnlyPendingTimers());
 	vi.useRealTimers();
 };
@@ -265,9 +252,23 @@ describe("flow: upload in the editor (05–06)", () => {
 
 	it("MEDIA-E1 takes a dropped image the same way, and takes the image away again with the reason when the upload fails", async () => {
 		const editor = await withCursorBetween();
-		const file = pngFile();
-		fireEvent.drop(screen.getByRole("textbox", { name: /./ }), { dataTransfer: { files: [file], items: [] } });
+		// Dropped on the empty paragraph between the two others.
+		const at = editor.view.coordsAtPos(editor.state.selection.from);
+		act(() => {
+			screen.getByRole("textbox", { name: /./ }).dispatchEvent(
+				new DragEvent("drop", {
+					dataTransfer: holding(pngFile()),
+					clientX: at.left,
+					clientY: (at.top + at.bottom) / 2,
+					bubbles: true,
+					cancelable: true,
+				}),
+			);
+		});
 		await waitFor(() => expect(imageNodes(editor)).toHaveLength(1));
+		const kinds = blocks(editor).map((node) => node.type);
+		expect(kinds.indexOf("image")).toBeGreaterThan(0);
+		expect(kinds.indexOf("image")).toBeLessThan(kinds.length - 1);
 		await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
 		act(() => FakeXhr.all[0]?.onerror?.());
 		await waitFor(() => expect(imageNodes(editor)).toHaveLength(0));
@@ -323,8 +324,9 @@ describe("flow: pick in the editor (29–30)", () => {
 		const lastList = () => api.sent("GET /v1/media").at(-1);
 		fireEvent.click(await within(nav).findByRole("button", { name: /covers/ }));
 		await waitFor(() => expect(lastList()?.query.get("folderId")).toBe(COVERS));
-		await within(dialog).findByRole("button", { name: /cover-react/ });
-		expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull();
+		// cover-react is in both lists: the folder's list has come once desk-morning is gone.
+		await waitFor(() => expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull());
+		expect(within(dialog).getByRole("button", { name: /cover-react/ })).toBeInTheDocument();
 		expect(
 			within(nav)
 				.getByRole("button", { name: /covers/ })

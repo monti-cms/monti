@@ -6,20 +6,6 @@ import { ADMIN_THEME_STORAGE_KEY, AdminThemeProvider } from "../admin-theme-prov
 const SITE_THEME_KEY = "theme";
 const html = document.documentElement;
 
-// next-themes reads matchMedia for the system theme; jsdom does not provide it.
-if (!window.matchMedia) {
-	window.matchMedia = ((query: string) => ({
-		matches: false,
-		media: query,
-		addEventListener: () => {},
-		removeEventListener: () => {},
-		addListener: () => {},
-		removeListener: () => {},
-		dispatchEvent: () => false,
-		onchange: null,
-	})) as typeof window.matchMedia;
-}
-
 beforeEach(() => {
 	localStorage.clear();
 });

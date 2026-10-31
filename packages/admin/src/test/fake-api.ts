@@ -9,8 +9,10 @@ import type {
 	MediaTrashResult,
 	PreferencesBody,
 } from "@monti-cms/core/site";
-import { type ErrorCode, errorResponse } from "@monti-cms/core/testing";
 import { afterEach, vi } from "vitest";
+// From its own module, not the `@monti-cms/core/testing` barrel: the barrel brings the server (Postgres, AsyncLocalStorage), which cannot load in the
+// browser tests (`*.browser.test.tsx`).
+import { type ErrorCode, errorResponse } from "../../../core/src/http/v1/error-handler";
 import type {
 	BulkItemResult,
 	EntriesPage,

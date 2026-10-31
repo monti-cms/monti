@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { findBlockDOM, refineBlock } from "../../drag";
@@ -17,17 +17,6 @@ const t = testSite.createTranslator(codeBlockMessages);
 const HIGHLIGHT_LABEL = testSite.CODE_LINE_EFFECTS.find((effect) => effect.name === "highlight")?.label ?? "";
 
 afterEach(cleanup);
-
-// jsdom has no coordinates for text ranges. ProseMirror uses them to measure position after the cursor moves.
-beforeAll(() => {
-	const empty = () =>
-		({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-	const rect = () => new DOMRect(0, 0, 0, 0);
-	for (const proto of [Range.prototype, Text.prototype] as unknown as Record<string, unknown>[]) {
-		proto.getClientRects ??= empty;
-		proto.getBoundingClientRect ??= rect;
-	}
-});
 
 function Harness({ source, onReady }: { source: string; onReady: (editor: Editor) => void }) {
 	const editor = useEditor({
