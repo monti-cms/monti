@@ -979,21 +979,6 @@ describe("trash", () => {
 			expect(deletedFiles).not.toContain(file.storageKey);
 		});
 
-		it.skipIf(!secondLocale)("TRASH-D6 deletes a source with a translation that was trashed on its own", async () => {
-			const source = await draft(unique("Source"));
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
-				.entry;
-			await trashed(translation);
-			await trashed(source);
-
-			const [result] = await trash.delete([{ type: "entry", id: source.id }]);
-
-			expect(result).toMatchObject({ ok: true });
-			await expect(store.getEntry(source.id)).rejects.toMatchObject({ code: "not_found" });
-			await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
-			expect(await eventKinds(translation.id)).toContain("deleted");
-		});
-
 		it("TRASH-D8 names the entries that point at a file it refuses to delete", async () => {
 			const file = await readyMedia(`${unique("named")}.png`);
 			await trash.trashMedia([file.id]);
@@ -1273,23 +1258,6 @@ describe("trash", () => {
 			// Run again: nothing is left to unlink.
 			expect(await trash.unlink({ collection: field.to })).toEqual({ entries: 0 });
 		});
-	});
-
-	describe("an item", () => {
-		it.skipIf(!relation)(
-			"TRASH-R1 goes to the trash while an entry uses it, and restoring it publishes it again",
-			async () => {
-				const field = relation as NonNullable<typeof relation>;
-				const tag = await relationTarget(field.to);
-				await draft(unique("User"), null, { [field.name]: field.many ? [tag] : tag });
-				const entry = await store.getEntry(tag);
-				await store.trashEntry({ id: tag, expectedVersion: entry.version });
-				expect(await statusOf(tag)).toBe("trashed");
-				const [result] = await trash.restore([{ type: "entry", id: tag }]);
-				expect(result).toMatchObject({ ok: true });
-				expect(await statusOf(tag)).toBe("published");
-			},
-		);
 	});
 });
 

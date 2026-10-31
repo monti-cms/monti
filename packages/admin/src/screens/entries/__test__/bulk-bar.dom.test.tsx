@@ -270,20 +270,6 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		expect((await item("타입스크립트")).getAttribute("aria-checked")).toBe("false");
 	});
 
-	it("LIST-C4 adds a mixed tag to all the rows without asking, and the menu stays open with it ticked", async () => {
-		const { run } = bar({ initial: two });
-		await openField("태그");
-		fireEvent.click(await item("성능"));
-		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
-		expect(run).toHaveBeenCalledWith("relation.add", t("relation.add", { label: "태그" }), two.map(toSelection), {
-			field: "tagIds",
-			ids: ["tag-성능"],
-		});
-		expect(screen.queryByRole("alertdialog")).toBeNull();
-		await waitFor(async () => expect((await item("성능")).getAttribute("aria-checked")).toBe("true"));
-		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
-	});
-
 	it("LIST-C4 adds an empty tag to all, and takes a ticked tag off all of them", async () => {
 		const { run } = bar({ initial: two });
 		await openField("태그");

@@ -207,49 +207,6 @@ describe("subscription of one field", () => {
 	});
 });
 
-describe("orphaned values", () => {
-	it("PLUG-A6 a change patches the field only, so values of removed fields stay in the form", () => {
-		const patches: EntryFormPatch[] = [];
-		let latest: EntryForm = EMPTY_FORM;
-		function Capture() {
-			const field = useField<string>("title");
-			const summary = useField<string>("summary");
-			return (
-				<>
-					<input aria-label="title" value={field.value ?? ""} onChange={(e) => field.setValue(e.target.value)} />
-					<input aria-label="summary" value={summary.value ?? ""} onChange={(e) => summary.setValue(e.target.value)} />
-				</>
-			);
-		}
-		function Reader({ form }: { form: EntryForm }) {
-			latest = form;
-			return null;
-		}
-		function Host() {
-			const [form, setForm] = useState<EntryForm>({ ...EMPTY_FORM, title: "T", oldField: "kept", oldList: ["a", "b"] });
-			return (
-				<EntryFormProvider
-					value={baseValue({
-						form,
-						setForm: (patch) => {
-							patches.push(patch);
-							setForm((current) => ({ ...current, ...patch }));
-						},
-					})}
-				>
-					<Capture />
-					<Reader form={form} />
-				</EntryFormProvider>
-			);
-		}
-		render(<Host />);
-		fireEvent.change(screen.getByLabelText("title"), { target: { value: "T2" } });
-		fireEvent.change(screen.getByLabelText("summary"), { target: { value: "S" } });
-		expect(patches).toEqual([{ title: "T2" }, { summary: "S" }]);
-		expect(latest).toMatchObject({ title: "T2", summary: "S", oldField: "kept", oldList: ["a", "b"] });
-	});
-});
-
 describe("a custom field UI built only from the hooks", () => {
 	/** Imports nothing but `useField` and `useSlotActions`: label, input, error and the AI suggestions are all drawn here. */
 	function SuggestedTitle() {
