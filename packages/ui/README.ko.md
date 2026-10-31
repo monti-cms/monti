@@ -62,7 +62,7 @@ pnpm test:visual:docker --baselines /tmp/shots --update   # 이미지를 내가 
 ## 개발
 
 ```bash
-pnpm --filter @monti-cms/ui test:run
+pnpm --filter @monti-cms/ui test:run   # 코드, jsdom에 렌더한 부품, Chromium에서 도는 포인터와 포커스 테스트
 pnpm gen:tokens   # tokens/tokens.json을 고친 뒤
 ```
 

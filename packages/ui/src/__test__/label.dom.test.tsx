@@ -4,7 +4,7 @@ import { FormFieldLabel } from "../field";
 import { Input } from "../input";
 
 describe("a required field label", () => {
-	it("keeps its star out of the field's name, and leaves the requirement to the control", () => {
+	it("UI-A6 keeps its star out of the field's name, and leaves the requirement to the control", () => {
 		render(
 			<>
 				<FormFieldLabel htmlFor="name" required>

@@ -9,7 +9,7 @@ const themed = (namespace: string) =>
 	[...themeCss.matchAll(new RegExp(`--${namespace}-monti-([\\w-]+):`, "g"))].map((match) => match[1]);
 
 describe("cn", () => {
-	it("lets a type scale role replace a component's own font size, with the same variant", () => {
+	it("UI-T1 lets a type scale role replace a component's own font size, with the same variant", () => {
 		const classes = cn("text-monti-title md:text-monti-body", "text-monti-display md:text-monti-display").split(" ");
 		expect(classes).toContain("text-monti-display");
 		expect(classes).toContain("md:text-monti-display");
@@ -21,14 +21,14 @@ describe("cn", () => {
 		expect(beside).toContain("text-monti-muted");
 	});
 
-	it("lets a caller's color role replace a component's, and keeps the floating shadow beside a shadow color reset", () => {
+	it("UI-T1 lets a caller's color role replace a component's, and keeps the floating shadow beside a shadow color reset", () => {
 		expect(cn("bg-monti-page text-monti-default", "bg-monti-tool text-monti-muted")).toBe(
 			"bg-monti-tool text-monti-muted",
 		);
 		expect(cn("shadow-none", "shadow-monti-floating")).toBe("shadow-monti-floating");
 	});
 
-	it("merges every name of the generated theme with the others of its kind, and the spacing scale beside Tailwind's numbers", () => {
+	it("UI-T1 merges every name of the generated theme with the others of its kind, and the spacing scale beside Tailwind's numbers", () => {
 		expect(cn("px-2.5", "px-monti-8")).toBe("px-monti-8");
 		const families: [string, string[]][] = [
 			["p", themed("spacing")],

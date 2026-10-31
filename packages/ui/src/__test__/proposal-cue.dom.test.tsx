@@ -30,7 +30,7 @@ describe("proposal state, in words", () => {
 	};
 
 	for (const [name, control] of Object.entries(controls)) {
-		it(`describes a ${name} the assistant filled, and only that one`, () => {
+		it(`UI-A4 describes a ${name} the assistant filled, and only that one`, () => {
 			const { rerender } = render(control(true));
 			expect(screen.getByLabelText("field").getAttribute("aria-description")).toBe("AI suggestion");
 			rerender(control(false));
@@ -38,7 +38,7 @@ describe("proposal state, in words", () => {
 		});
 	}
 
-	it("takes the words from the app's labels, and a chip (which is not a control) says it in text only while it is proposed", () => {
+	it("UI-A4 takes the words from the app's labels, and a chip (which is not a control) says it in text only while it is proposed", () => {
 		const { rerender } = render(
 			<UiLabelsProvider labels={{ proposal: "AI 제안" }}>
 				<Input aria-label="field" proposal />

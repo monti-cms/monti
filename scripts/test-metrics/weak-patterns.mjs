@@ -28,7 +28,7 @@ const CEILING = {
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
-	ui: 22,
+	ui: 4,
 	seo: 1,
 	nextjs: 0,
 	"storage-s3": 0,
@@ -134,6 +134,12 @@ const EXEMPT = [
 		file: "packages/blocks/src/__test__/light-barrel.test.ts",
 		count: 2,
 		why: "checks what the light entry loads and the published exports: a lint rule cannot tell type-only and dynamic imports from the ones that load",
+	},
+	{
+		pattern: "source-read",
+		file: "packages/ui/src/__test__/cn.test.ts",
+		count: 1,
+		why: "reads the names the generated theme defines, as the cases to merge: a list of data, not source text checked for a rule",
 	},
 	{
 		pattern: "korean-copy",

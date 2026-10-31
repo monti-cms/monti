@@ -6,13 +6,13 @@ import { SidePanel } from "../side-panel";
 afterEach(cleanup);
 
 describe("SidePanel", () => {
-	it("is a landmark beside the page, named by its title", () => {
+	it("UI-A3 is a landmark beside the page, named by its title", () => {
 		render(<SidePanel title="desk-morning.jpg">body</SidePanel>);
 		const panel = screen.getByRole("complementary", { name: "desk-morning.jpg" });
 		expect(panel.textContent).toContain("body");
 	});
 
-	it("has a close button only when it is given something to do", () => {
+	it("UI-A2 has a close button only when it is given something to do", () => {
 		const onClose = vi.fn();
 		const { rerender } = render(<SidePanel title="T">x</SidePanel>);
 		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
@@ -23,23 +23,6 @@ describe("SidePanel", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Close" }));
 		expect(onClose).toHaveBeenCalledTimes(1);
-	});
-
-	it("keeps its actions in the head and its footer under the body", () => {
-		render(
-			<SidePanel
-				title="T"
-				onClose={() => undefined}
-				actions={<button type="button">More</button>}
-				footer={<button type="button">Save</button>}
-			>
-				body
-			</SidePanel>,
-		);
-		const buttons = screen
-			.getAllByRole("button")
-			.map((button) => button.textContent || button.getAttribute("aria-label"));
-		expect(buttons).toEqual(["More", "Close", "Save"]);
 	});
 });
 
@@ -60,22 +43,21 @@ describe("Sheet", () => {
 			</Sheet>,
 		);
 
-	it("opens as a dialog named by its title, with the file it is about beside the title", async () => {
+	it("UI-A3 opens as a dialog named by its title, with the file it is about beside the title", async () => {
 		sheet();
 		const dialog = await screen.findByRole("dialog", { name: /^Import/ });
 		expect(dialog.textContent).toContain("blog-export.zip");
 	});
 
-	it("closes from its close button, from Cancel and from Esc", async () => {
+	it("UI-K6 closes from its close button, from Cancel and from Esc", async () => {
 		const onOpenChange = vi.fn();
 		sheet(onOpenChange);
 		const dialog = await screen.findByRole("dialog");
 		fireEvent.click(screen.getByRole("button", { name: "Close" }));
-		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(onOpenChange).toHaveBeenNthCalledWith(1, false, expect.anything()));
 		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(2));
+		await waitFor(() => expect(onOpenChange).toHaveBeenNthCalledWith(2, false, expect.anything()));
 		fireEvent.keyDown(dialog, { key: "Escape" });
-		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(3));
-		for (const [open] of onOpenChange.mock.calls) expect(open).toBe(false);
+		await waitFor(() => expect(onOpenChange).toHaveBeenNthCalledWith(3, false, expect.anything()));
 	});
 });

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,7 +12,7 @@ const read = (file: string) => readFileSync(path.join(packageDir, file), "utf8")
 const script = pathToFileURL(path.resolve(packageDir, "../../scripts/gen-tokens.mjs")).href;
 
 describe("design tokens", () => {
-	it("are what the generator writes from tokens.json (run `pnpm gen:tokens` after editing it)", async () => {
+	it("UI-T2 are what the generator writes from tokens.json (run `pnpm gen:tokens` after editing it)", async () => {
 		const { generate } = await import(/* @vite-ignore */ script);
 		const generated = generate();
 		expect(read("styles/tokens.css")).toBe(generated.tokens);

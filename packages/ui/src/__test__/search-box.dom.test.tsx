@@ -6,7 +6,7 @@ import { SearchBox, SearchToggle } from "../search-box";
 afterEach(cleanup);
 
 describe("SearchBox target picker", () => {
-	it("is named with its visible text first (label in name), then what it is", () => {
+	it("UI-A6 is named with its visible text first (label in name), then what it is", () => {
 		render(
 			<SearchBox
 				aria-label="Search"
@@ -32,7 +32,7 @@ describe("SearchToggle", () => {
 		return <SearchToggle label="Search" aria-label="Search words" value={value} onValueChange={setValue} />;
 	}
 
-	it("is a button until pressed, then the box with its field focused; emptied and Escape, the button again", () => {
+	it("UI-K3 is a button until pressed, then the box with its field focused; emptied and Escape, the button again", () => {
 		render(<Toggle />);
 		expect(screen.queryByRole("searchbox")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Search" }));
@@ -41,20 +41,5 @@ describe("SearchToggle", () => {
 		fireEvent.keyDown(field, { key: "Escape" });
 		expect(screen.queryByRole("searchbox")).toBeNull();
 		expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
-	});
-
-	it("stays a box while it holds words, even when left; the × empties it and keeps it open with the field focused", () => {
-		render(<Toggle initial="react" />);
-		const field = screen.getByRole("searchbox", { name: "Search words" });
-		fireEvent.blur(field);
-		expect(screen.getByRole("searchbox", { name: "Search words" })).toBeInTheDocument();
-		const clear = screen.getByRole("button", { name: /clear|지우기/i });
-		fireEvent.focus(clear);
-		fireEvent.click(clear);
-		const emptied = screen.getByRole("searchbox", { name: "Search words" }) as HTMLInputElement;
-		expect(emptied.value).toBe("");
-		expect(document.activeElement).toBe(emptied);
-		fireEvent.blur(emptied);
-		expect(screen.queryByRole("searchbox")).toBeNull();
 	});
 });

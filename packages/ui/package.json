@@ -13,7 +13,9 @@
 	},
 	"scripts": {
 		"test": "vitest",
-		"test:run": "vitest run",
+		"test:run": "vitest run && vitest run -c vitest.dom.config.ts && vitest run -c vitest.browser.config.ts",
+		"test:dom": "vitest run -c vitest.dom.config.ts",
+		"test:browser": "vitest run -c vitest.browser.config.ts",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs",
 		"storybook": "storybook dev -p 6006 --no-open",

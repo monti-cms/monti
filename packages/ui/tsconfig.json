@@ -13,5 +13,5 @@
 		"jsx": "react-jsx",
 		"types": ["node", "vitest/globals", "@testing-library/jest-dom"]
 	},
-	"include": ["src", "visual", "vitest.config.ts", ".storybook"]
+	"include": ["src", "visual", "vitest.config.ts", "vitest.dom.config.ts", "vitest.browser.config.ts", ".storybook"]
 }

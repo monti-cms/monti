@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Toaster as SiteToaster, toast as siteToast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Toaster, toast } from "../toast";
@@ -14,7 +14,7 @@ describe("toast", () => {
 			"an error toast",
 			(action: { label: string; onClick: () => void }) => toast.error("Moved to the trash", { action }),
 		],
-	])("calls the action of %s back and closes it", async (_name, show) => {
+	])("UI-S5 calls the action of %s back and closes it", async (_name, show) => {
 		const onClick = vi.fn();
 		render(<Toaster />);
 		act(() => void show({ label: "Undo", onClick }));
@@ -23,7 +23,7 @@ describe("toast", () => {
 		await waitFor(() => expect(screen.queryByText("Moved to the trash")).toBeNull());
 	});
 
-	it("replaces the message of an open toast shown again with the same id", async () => {
+	it("UI-S5 replaces the message of an open toast shown again with the same id", async () => {
 		render(<Toaster duration={Number.POSITIVE_INFINITY} />);
 		let id: string | number = "";
 		act(() => {
@@ -35,7 +35,7 @@ describe("toast", () => {
 		expect(screen.queryByText("Uploading 10%")).toBeNull();
 	});
 
-	it("is shown once beside a toaster of the site's own, and shows none of the site's toasts", async () => {
+	it("UI-S6 is shown once beside a toaster of the site's own, and shows none of the site's toasts", async () => {
 		render(
 			<>
 				<Toaster />
@@ -52,8 +52,12 @@ describe("toast", () => {
 			expect(await screen.findAllByText(message)).toHaveLength(1);
 		// Each toaster has its own list; the site's one holds only the site's toast.
 		const lists = screen.getAllByRole("list");
-		const [admin, site] = lists.map((list) => list.textContent);
-		expect(admin).not.toContain("From the site");
-		expect(site).toBe("From the site");
+		const site = lists.find((list) => within(list).queryByText("From the site"));
+		const admin = lists.find((list) => within(list).queryByText("Saved"));
+		expect(site).not.toBe(admin);
+		for (const message of ["Saved", "Could not save", "Drop in Trips"]) {
+			expect(within(admin as HTMLElement).getByText(message)).toBeInTheDocument();
+			expect(within(site as HTMLElement).queryByText(message)).toBeNull();
+		}
 	});
 });
