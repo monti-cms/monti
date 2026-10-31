@@ -58,7 +58,7 @@ function StatusBarList({
 						)}
 					>
 						<div data-slot="status-bar-list-head" className={MENU_LABEL}>
-							<span>{label}</span>
+							<PopoverPrimitive.Title render={<span />}>{label}</PopoverPrimitive.Title>
 							{count > 0 && <Count tone={countTone}>{count}</Count>}
 						</div>
 						{children}
