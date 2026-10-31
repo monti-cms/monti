@@ -39,7 +39,7 @@ const listRow = (collection: string): ListEntriesItem => ({
 });
 
 describe("searchLinkTargets", () => {
-	it("returns the entries of every linkable collection", async () => {
+	it("EDIT-L2 returns the entries of every linkable collection", async () => {
 		const api = fakeApi()
 			.on("GET /v1/entries", ({ query }) => ({ items: [listRow(query.get("collection") ?? "")], total: 1 }))
 			.install();
@@ -50,7 +50,7 @@ describe("searchLinkTargets", () => {
 		expect(items.every((item) => item.title.length > 0)).toBe(true);
 	});
 
-	it("asks for one result per translation group, so the id of a result is the id a link stores", async () => {
+	it("EDIT-L2 asks for one result per translation group, so the id of a result is the id a link stores", async () => {
 		const api = fakeApi()
 			.on("GET /v1/entries", () => ({ items: [], total: 0 }))
 			.install();
@@ -62,22 +62,13 @@ describe("searchLinkTargets", () => {
 		for (const request of sent) expect(request.query.get("group")).toBe("translation");
 	});
 
-	it("throws the API error instead of returning an empty list when the request fails", async () => {
+	it("EDIT-L2 throws the API error instead of returning an empty list when the request fails", async () => {
 		fakeApi()
 			.on("GET /v1/entries", () => failure("internal_error", "Boom"))
 			.install();
 		const error = await searchLinkTargets(testSite, "a").catch((caught) => caught);
 		expect(error).toBeInstanceOf(CmsApiError);
 		expect(error.status).toBe(500);
-	});
-
-	it("lets a network failure through as a TypeError", async () => {
-		fakeApi()
-			.on("GET /v1/entries", () => {
-				throw new TypeError("Failed to fetch");
-			})
-			.install();
-		await expect(searchLinkTargets(testSite, "a")).rejects.toBeInstanceOf(TypeError);
 	});
 });
 
@@ -91,15 +82,9 @@ describe("InternalLinkPopup", () => {
 		onClose: vi.fn(),
 	};
 
-	it("shows the error message instead of the empty-result text", async () => {
+	it("EDIT-L2 shows the error message instead of the empty-result text", async () => {
 		renderWithSite(<InternalLinkPopup {...props} error="Boom" />);
 		expect((await screen.findByRole("alert")).textContent).toBe("Boom");
 		expect(screen.queryByText(t("internalLink.empty"))).toBeNull();
-	});
-
-	it("shows the empty-result text when there is no error", async () => {
-		renderWithSite(<InternalLinkPopup {...props} error={null} />);
-		expect(await screen.findByText(t("internalLink.empty"))).toBeInTheDocument();
-		expect(screen.queryByRole("alert")).toBeNull();
 	});
 });

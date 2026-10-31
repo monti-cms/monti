@@ -6,7 +6,7 @@ import { apiErrorMessages } from "../error-message.messages";
 const network = testSite.createTranslator(apiErrorMessages)("network");
 
 describe("what the screen tells about an error", () => {
-	it("tells the server's text, its fix, and keeps the detail apart", () => {
+	it("ADMIN-E1 tells the server's text, its fix, and keeps the detail apart", () => {
 		const error = apiErrorOf(
 			testSite,
 			503,
@@ -28,7 +28,7 @@ describe("what the screen tells about an error", () => {
 		expect(errorText(testSite, error, "failed")).toBe("Key refused. Check the key.");
 	});
 
-	it("leaves out the fix of the code when the message lists issues", () => {
+	it("ADMIN-E1 leaves out the fix of the code when the message lists issues", () => {
 		const error = apiErrorOf(
 			testSite,
 			400,
@@ -45,19 +45,19 @@ describe("what the screen tells about an error", () => {
 		expect(errorNotice(testSite, error, "failed").fix).toBeUndefined();
 	});
 
-	it("never shows the words of an unexpected error", () => {
+	it("ADMIN-E2 never shows the words of an unexpected error", () => {
 		const notice = errorNotice(testSite, new SyntaxError("Unexpected token < in JSON at position 0"), "failed");
 		expect(notice.message).toBe("failed");
 		expect(notice.detail).toContain("Unexpected token");
 	});
 
-	it("shows text the screen wrote for the person", () => {
+	it("ADMIN-E1 shows text the screen wrote for the person", () => {
 		expect(errorText(testSite, new NoticeError("Too large.", "Pick a smaller file."), "failed")).toBe(
 			"Too large. Pick a smaller file.",
 		);
 	});
 
-	it("tells a network failure as being offline", () => {
+	it("ADMIN-E2 tells a network failure as being offline", () => {
 		expect(errorNotice(testSite, new TypeError("Failed to fetch"), "failed").message).toBe(network);
 	});
 });

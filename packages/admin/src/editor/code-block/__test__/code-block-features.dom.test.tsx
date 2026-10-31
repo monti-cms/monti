@@ -74,7 +74,8 @@ const mount = async (source: string) => {
 			/>
 		</SiteTree>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
+	// Every code block view has the copy tool.
+	await waitFor(() => expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -105,7 +106,7 @@ describe("code block tools turned off in the site config", () => {
 			expect(within(menu).getByRole("menuitemcheckbox", { name: labelOf("minus") })).toBeInTheDocument();
 		});
 
-		it("keeps an omitted effect that is already on the picked line so it can be turned off", async () => {
+		it("EDIT-C2 keeps an omitted effect that is already on the picked line so it can be turned off", async () => {
 			configure({ omit: ["plus"] });
 			const editor = await mount("```ts\n// @line plus {0-0}\nconst a = 1;\nconst b = 2;\n```");
 			expect((block(editor).attrs.lineEffects as CodeLineEffect[]).map((effect) => effect.name)).toEqual(["plus"]);
@@ -123,7 +124,7 @@ describe("code block tools turned off in the site config", () => {
 			expect(block(editor).attrs.lineEffects).toEqual([]);
 		});
 
-		it("hides Collapse when fold is off, but an existing fold can still be opened and removed", async () => {
+		it("EDIT-C2 hides Collapse when fold is off, but an existing fold can still be opened and removed", async () => {
 			configure({ features: { fold: false } });
 			const editor = await mount("```ts\n// @line collapse {0-1}\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```");
 			const withFold = await openLineMenu(0);
@@ -139,7 +140,7 @@ describe("code block tools turned off in the site config", () => {
 	});
 
 	describe("block header", () => {
-		it("keeps the rules panel for a block that has rules, where they can be removed but not added", async () => {
+		it("EDIT-C2 keeps the rules panel for a block that has rules, where they can be removed but not added", async () => {
 			configure({ features: { rules: false } });
 			const editor = await mount(RULE_CODE);
 			expect(block(editor).attrs.rawMode).toBe(false);
@@ -179,7 +180,7 @@ describe("code block tools turned off in the site config", () => {
 			"```",
 		].join("\n");
 
-		it("loads, edits and saves a body that uses turned-off tools exactly as before", async () => {
+		it("EDIT-C1 loads, edits and saves a body that uses turned-off tools exactly as before", async () => {
 			const before = tiptapToStored(site, tiptapOf(SOURCE));
 			configure({
 				omit: ["plus"],
@@ -211,7 +212,7 @@ describe("code block tools turned off in the site config", () => {
 		const bold = (editor: Editor) => fireEvent.keyDown(editor.view.dom, { key: "b", ctrlKey: true });
 		const WITH_PARAGRAPH = `${CODE}\n\nbody`;
 
-		it("do not add a text style inside code when text styles are off", async () => {
+		it("EDIT-C2 do not add a text style inside code when text styles are off", async () => {
 			configure({ features: { textStyles: false } });
 			const editor = await mount(WITH_PARAGRAPH);
 			act(() => {
@@ -223,7 +224,7 @@ describe("code block tools turned off in the site config", () => {
 			expect(editor.isActive("bold")).toBe(false);
 		});
 
-		it("still remove a text style that is already on the selection when text styles are off", async () => {
+		it("EDIT-C2 still remove a text style that is already on the selection when text styles are off", async () => {
 			configure({ features: { textStyles: false } });
 			const editor = await mount("```ts\n// @char strong {0-4}\nconst a\n```");
 			act(() => {

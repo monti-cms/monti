@@ -54,7 +54,7 @@ describe("save cell (flow 1 step 09)", () => {
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it("leads to signing in, in a new tab, when the session expired", () => {
+	it("WRITE-S5 leads to signing in, in a new tab, when the session expired", () => {
 		show(props({ save: { status: "session-expired", savedAt: null, backupAvailable: true, onSave: () => {} } }));
 		const link = bar().getByRole("link", { name: tStatusBar("save.session-expired") });
 		expect(link.getAttribute("href")).toContain("/login");
@@ -141,7 +141,7 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 		expect(list.getByRole("button", { name: "모두 고치기" })).toBeInTheDocument();
 	});
 
-	it("tells the plugin where it is: the language of the entry and the text findings", () => {
+	it("PLUG-A4 tells the plugin where it is: the language of the entry and the text findings", () => {
 		const Where = () => {
 			const { locale, collection, textIssues } = useStatusBarContext();
 			return locale === "ko" ? (

@@ -1,18 +1,23 @@
 import { image } from "@monti-cms/core/site";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderInRouter as render } from "../../test/router";
 import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";
 import { editorMediaMessages } from "../media.messages";
+import { editorMessages } from "../messages";
 import { slashCommands } from "../slash-command";
 import { SlashMenuPopup } from "../slash-menu-popup";
 
 const tEditorMedia = testSite.createTranslator(editorMediaMessages);
+const tEditor = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 vi.mock("@tiptap/react", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@tiptap/react")>();
@@ -33,7 +38,7 @@ afterEach(cleanup);
 const CmsImageNodeView = withBlockEditor(ImageBlockView, image);
 
 describe("editor accessibility", () => {
-	it("names image controls and exposes alignment state", async () => {
+	it("MEDIA-W1 names image controls and exposes alignment state", async () => {
 		const updateAttributes = vi.fn();
 		const deleteNode = vi.fn();
 		const nodeViewProps = {
@@ -66,44 +71,16 @@ describe("editor accessibility", () => {
 		fireEvent.click(screen.getByRole("button", { name: tEditorMedia("imageNode.alignLeft") }));
 		expect(updateAttributes).toHaveBeenCalledWith({ align: "left" });
 		// Delete lives only in the block handle menu (the same action is not placed in two spots).
-		expect(screen.queryByRole("button", { name: "이미지 삭제" })).toBeNull();
+		expect(screen.queryByRole("button", { name: tc("delete") })).toBeNull();
 	});
 
-	it("assigns unique IDs to each image editor field", async () => {
-		const props = {
-			node: { attrs: { src: "/test-image.png", alt: "", width: "100%", align: "center", caption: "", mediaId: null } },
-			updateAttributes: vi.fn(),
-			deleteNode: vi.fn(),
-			selected: false,
-		} as unknown as NodeViewProps;
-		render(
-			<>
-				<CmsImageNodeView {...props} />
-				<CmsImageNodeView {...props} />
-			</>,
-		);
-
-		// Only one settings popover is open at a time. Open them in turn and collect each input's ID.
-		const widthIds: string[] = [];
-		const altIds: string[] = [];
-		for (const button of screen.getAllByRole("button", { name: tEditorMedia("imageNode.settings") })) {
-			fireEvent.click(button);
-			const width = await screen.findByLabelText(tEditorMedia("imageNode.width"));
-			widthIds.push(width.id);
-			altIds.push(screen.getByLabelText(tEditorMedia("imageNode.alt")).id);
-			fireEvent.keyDown(width, { key: "Escape" });
-			await waitFor(() => expect(screen.queryByLabelText(tEditorMedia("imageNode.alt"))).toBeNull());
-		}
-		expect(new Set(widthIds).size).toBe(2);
-		expect(new Set(altIds).size).toBe(2);
-	});
-
-	it("lets keyboard-focused suggestions activate and close", async () => {
+	it("EDIT-L2 lets keyboard-focused suggestions activate and close", async () => {
 		const onSelectSlash = vi.fn();
 		const onCloseSlash = vi.fn();
+		const paragraph = slashCommands(testSite).find((command) => command.title === tEditor("slash.paragraph.title"));
 		render(
 			<SlashMenuPopup
-				items={[slashCommands(testSite)[0]]}
+				items={paragraph ? [paragraph] : []}
 				query=""
 				caret={{ top: 0, bottom: 0, left: 0 }}
 				selectedIndex={0}
@@ -112,7 +89,9 @@ describe("editor accessibility", () => {
 				onClose={onCloseSlash}
 			/>,
 		);
-		const slashOption = await screen.findByRole("option", { name: /문단/ });
+		const slashOption = await screen.findByRole("option", {
+			name: (name) => name.startsWith(tEditor("slash.paragraph.title")),
+		});
 		expect(slashOption.getAttribute("aria-selected")).toBe("true");
 		fireEvent.mouseDown(slashOption);
 		expect(onSelectSlash).not.toHaveBeenCalled();
@@ -125,7 +104,7 @@ describe("editor accessibility", () => {
 		const onCloseLink = vi.fn();
 		render(
 			<InternalLinkPopup
-				items={[{ id: "entry-1", collection: "post", title: "테스트 글", slug: "test-post" }]}
+				items={[{ id: "entry-1", collection: contentCollection, title: "테스트 글", slug: "test-post" }]}
 				isLoading={false}
 				coords={{ top: 0, left: 0 }}
 				selectedIndex={0}

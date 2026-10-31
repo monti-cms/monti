@@ -227,7 +227,7 @@ describe("admin CSS confinement", () => {
 		}, 120_000);
 
 		for (const pkg of STYLE_PACKAGES) {
-			it(`${pkg}: no unscoped selector, no global custom property, no layer, no foreign keyframes`, () => {
+			it(`ADMIN-H1 ${pkg}: no unscoped selector, no global custom property, no layer, no foreign keyframes`, () => {
 				const css = built.get(pkg) ?? "";
 				expect(css.length).toBeGreaterThan(0);
 				const root = postcss.parse(css);
@@ -276,7 +276,7 @@ describe("admin CSS confinement", () => {
 			});
 		}
 
-		it("no selector is defined in more than one bundle", () => {
+		it("ADMIN-H1 no selector is defined in more than one bundle", () => {
 			// Bundles load one after another (admin first). A second copy of `.prose` or another shared utility in a plugin's file would load later and
 			// reset what the admin's dark variant had set, so a file defines only rules of its own.
 			const owner = new Map<string, string>();
@@ -300,11 +300,11 @@ describe("admin CSS confinement", () => {
 			expect(duplicates).toEqual([]);
 		});
 
-		it("no bundle reads Tailwind's own --tw-* variables under their original name", () => {
+		it("ADMIN-H1 no bundle reads Tailwind's own --tw-* variables under their original name", () => {
 			for (const pkg of STYLE_PACKAGES) expect(built.get(pkg) ?? "").not.toMatch(/(?<![\w-])--tw-/);
 		});
 
-		it("every utility the admin and the first-party plugins use is in the admin CSS", () => {
+		it("ADMIN-H2 every utility the admin and the first-party plugins use is in the admin CSS", () => {
 			const cwd = path.join(packagesDir, "admin");
 			const out = execFileSync("node", [buildScript, "--missing"], {
 				cwd,
@@ -315,15 +315,33 @@ describe("admin CSS confinement", () => {
 			expect(JSON.parse(out) as string[]).toEqual([]);
 		});
 
-		it("admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
+		it("ADMIN-H1 admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
 			const css = built.get("admin") ?? "";
-			const selectors = selectorsOf(postcss.parse(css));
+			const root = postcss.parse(css);
+			const selectors = selectorsOf(root);
 			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).
 			expect(selectors).toContain(":where(html:has(.monti-admin)) button");
-			expect(css).toContain(":where(html:has(.monti-admin)){color-scheme:light;--monti-gray-1:");
-			expect(css).toContain(
-				":where(html:is(.dark,[data-theme=dark]):has(.monti-admin)){color-scheme:dark;--monti-gray-1:",
-			);
+			/** The declarations of each rule with exactly this selector. */
+			const blocks = (selector: string) => {
+				const found: Map<string, string>[] = [];
+				root.walkRules((rule) => {
+					if (rule.selector !== selector) return;
+					const decls = new Map<string, string>();
+					rule.walkDecls((decl) => {
+						decls.set(decl.prop, decl.value);
+					});
+					found.push(decls);
+				});
+				return found;
+			};
+			// Each mode's token block sets its color scheme beside the tokens.
+			for (const [selector, scheme] of [
+				[":where(html:has(.monti-admin))", "light"],
+				[":where(html:is(.dark,[data-theme=dark]):has(.monti-admin))", "dark"],
+			] as const)
+				expect(
+					blocks(selector).some((decls) => decls.get("color-scheme") === scheme && decls.has("--monti-gray-1")),
+				).toBe(true);
 			expect(css).toContain(".katex");
 			expect(css).toContain("KaTeX_Main");
 			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.

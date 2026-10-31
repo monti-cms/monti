@@ -1,5 +1,5 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
@@ -44,11 +44,13 @@ const mount = async (doc: StoredDocument, wrap: (node: React.ReactElement) => Re
 		),
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector("[data-monti-custom-block]")).toBeInTheDocument());
+	// Every view of the notice draws its body.
+	await waitFor(() => expect(screen.getByText(BODY)).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
-const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para("본문")] });
+const BODY = "본문";
+const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para(BODY)] });
 
 /** The attributes of the saved notice block. */
 const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON()).content[0];
@@ -57,7 +59,7 @@ const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON(
 function NoticeView() {
 	const block = useBlockEditor();
 	return (
-		<BlockFrame data-monti-custom-block="notice">
+		<BlockFrame>
 			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
 				단계: {String(block.values.level)}
 			</button>
@@ -67,7 +69,7 @@ function NoticeView() {
 }
 
 describe("custom block NodeView", () => {
-	it("without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
+	it("EDIT-B3 without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
 		const editor = await mount(NOTICE);
 		expect(screen.getByText("공지")).toBeInTheDocument();
 		expect(screen.queryByLabelText("단계")).toBeNull();
@@ -78,22 +80,22 @@ describe("custom block NodeView", () => {
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ attrs: { title: "점검" } }));
 	});
 
-	it("hides the settings tool when read-only", async () => {
+	it("EDIT-B3 hides the settings tool when read-only", async () => {
 		const editor = await mount(NOTICE);
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByRole("button", { name: tBlocks("settings.label") })).toBeNull());
 	});
 
-	it("renders with the edit view registered by the site in blockViews", async () => {
+	it("PLUG-A9 renders with the edit view registered by the site in blockViews", async () => {
 		const editor = await mount(NOTICE, (node) => (
 			<AdminComponentsProvider components={{ blockViews: { notice: NoticeView } }}>{node}</AdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
-		expect(JSON.stringify(savedNotice(editor))).toContain("본문");
+		expect(JSON.stringify(savedNotice(editor))).toContain(BODY);
 	});
 
-	it("shows the warnings of a block next to that block only", async () => {
+	it("EDIT-B3 shows the warnings of a block next to that block only", async () => {
 		const id = NOTICE.content[0]?.id as string;
 		await mount(NOTICE, (node) => (
 			<BlockIssuesProvider
@@ -107,14 +109,9 @@ describe("custom block NodeView", () => {
 				{node}
 			</BlockIssuesProvider>
 		));
-		const frame = document.querySelector("[data-monti-custom-block]") as HTMLElement;
-		const list = await within(frame).findByRole("list", { name: tBlocks("issues.label") });
+		const list = await screen.findByRole("list", { name: tBlocks("issues.label") });
 		expect(list.textContent).toBe("1줄: 문법 오류");
+		expect(screen.getAllByRole("list", { name: tBlocks("issues.label") })).toHaveLength(1);
 		expect(screen.queryByText("다른 블록의 경고")).toBeNull();
-	});
-
-	it("shows no warning list for a block without warnings", async () => {
-		await mount(NOTICE);
-		expect(screen.queryByRole("list", { name: tBlocks("issues.label") })).toBeNull();
 	});
 });

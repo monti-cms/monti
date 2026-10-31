@@ -7,7 +7,7 @@ import { para, storedDoc, text } from "../../../../test/stored-doc";
 import { deleteBlock, duplicateBlock } from "../../../block-commands";
 import { blockInsertActions } from "../../../block-inserts";
 import { buildEditorExtensions } from "../../../extensions";
-import { storedToTiptap, tiptapToStored } from "../../../tiptap-content";
+import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../../../tiptap-content";
 
 const tab = (label: string, body: string): CmsNode => ({ type: "tab", attrs: { label }, content: [para(body)] });
 const column = (body: string): CmsNode => ({ type: "column", content: [para(body)] });
@@ -40,7 +40,7 @@ describe("container body editing", () => {
 		["cmsCallout", "cmsCollapsible", "cmsTabs", "cmsColumns", "cmsColumns", "cmsCodeExplorer"].map(
 			(expected, index) => [index, expected] as const,
 		),
-	)("stored document -> Tiptap schema -> stored document round trip: block %i", (index, expected) => {
+	)("FMT-R2 stored document -> Tiptap schema -> stored document round trip: block %i", (index, expected) => {
 		const source = docOfSource(index);
 		const content = storedToTiptap(testSite, source);
 		expect(content.content?.[0]?.type).toBe(expected);
@@ -73,7 +73,7 @@ describe("container body editing", () => {
 		editor.destroy();
 	});
 
-	it("HTML copy and paste also keep container attributes", () => {
+	it("EDIT-B1 HTML copy and paste also keep container attributes", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOfSource(0) });
 		const html = editor.getHTML();
 		const element = document.createElement("div");
@@ -108,34 +108,23 @@ describe("container body editing", () => {
 		editor.destroy();
 	});
 
-	it("empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
-		const empty = storedToTiptap(testSite, storedDoc({ type: "collapsible", attrs: { title: "a" } }));
-		expect(empty.content?.[0]?.type).not.toBe("cmsCollapsible");
-		const orphan = storedToTiptap(testSite, storedDoc(tab("a", "본문")));
-		expect(orphan.content?.[0]?.type).not.toBe("cmsTab");
-		const loneColumn = storedToTiptap(testSite, storedDoc(column("본문")));
-		expect(loneColumn.content?.[0]?.type).not.toBe("cmsColumn");
-		const invalid = storedToTiptap(testSite, storedDoc({ type: "callout", content: [tab("a", "본문")] }));
-		expect(invalid.content?.[0]?.type).not.toBe("cmsCallout");
+	it("FMT-R2 empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
+		const boxed = (node: CmsNode) => storedToTiptap(testSite, storedDoc(node)).content?.[0]?.type;
+		expect(boxed({ type: "collapsible", attrs: { title: "a" } })).toBe(OPAQUE_BLOCK_NAME);
+		expect(boxed(tab("a", "본문"))).toBe(OPAQUE_BLOCK_NAME);
+		expect(boxed(column("본문"))).toBe(OPAQUE_BLOCK_NAME);
+		expect(boxed({ type: "callout", content: [tab("a", "본문")] })).toBe(OPAQUE_BLOCK_NAME);
 	});
 
-	it("handle commands cannot bypass the minimum and maximum Tab count", () => {
+	it("EDIT-B1 handle commands cannot bypass the minimum and maximum Tab count", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOfSource(2) });
-		expect(deleteBlock(editor, 1)).toBe(false);
-		let pos = 0;
-		for (let i = 0; i < 6; i++) {
-			const tab = editor.state.doc.firstChild?.child(i);
-			if (!tab) break;
-			pos =
-				1 +
-				Array.from({ length: i }, (_, idx) => editor.state.doc.firstChild?.child(idx).nodeSize ?? 0).reduce(
-					(a, b) => a + b,
-					0,
-				);
-			expect(duplicateBlock(editor, pos)).toBe(i < 6);
-		}
+		// The first tab starts right inside the tabs block. Two tabs is the minimum, eight the maximum.
+		const firstTab = 1;
+		expect(deleteBlock(editor, firstTab)).toBe(false);
+		for (let count = 2; count < 8; count += 1) expect(duplicateBlock(editor, firstTab)).toBe(true);
 		expect(editor.state.doc.firstChild?.childCount).toBe(8);
-		expect(duplicateBlock(editor, 1)).toBe(false);
+		expect(duplicateBlock(editor, firstTab)).toBe(false);
+		expect(editor.state.doc.firstChild?.childCount).toBe(8);
 		editor.destroy();
 	});
 

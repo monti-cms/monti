@@ -19,7 +19,7 @@ const item = (overrides: Partial<InternalLinkItem> = {}): InternalLinkItem => ({
 });
 
 describe("Internal Link ([[) Trigger Contract", () => {
-	it("detects [[ trigger correctly", () => {
+	it("EDIT-L2 detects [[ trigger correctly", () => {
 		expect(parseInternalLinkTrigger("Hello world [[").active).toBe(true);
 		expect(parseInternalLinkTrigger("Hello world [[").query).toBe("");
 
@@ -45,7 +45,7 @@ describe("internal links in the editor", () => {
 			(block.content ?? []).flatMap((node) => (node.marks ?? []).filter((mark) => mark.type === "link")),
 		);
 
-	it("inserts a link to the entry, showing the address of its path", () => {
+	it("EDIT-L2 inserts a link to the entry, showing the address of its path", () => {
 		const current = typed("See [[next");
 
 		insertInternalLink(testSite, current, { from: 5, to: 11 }, item());
@@ -101,7 +101,7 @@ describe("internal links in the editor", () => {
 		expect(JSON.stringify(stored)).toContain('"href":"https://example.com"');
 	});
 
-	it("inserts only the title for a collection that has no public path", () => {
+	it("EDIT-L2 inserts only the title for a collection that has no public path", () => {
 		const current = typed("See [[x");
 
 		insertInternalLink(testSite, current, { from: 5, to: 8 }, item({ collection: "no-such-collection" }));

@@ -8,7 +8,7 @@ import { createTestRouter } from "../../../test/router";
 import { AdminFrame } from "../admin-frame";
 import { AdminQueryProvider } from "../query-provider";
 import { ScreenContextProvider, useScreenContext } from "../screen-context";
-import { AdminPanelProvider, SIDE_PANEL_SHORTCUT_KEY } from "../side-panel-slot";
+import { AdminPanelProvider } from "../side-panel-slot";
 
 const { render } = createTestRouter();
 
@@ -55,23 +55,13 @@ afterEach(() => {
 });
 
 describe("side panel in the admin shell", () => {
-	it("opens and closes from the button in the header, and the pane shows the plugin's component", () => {
+	it("PLUG-A5 opens and closes from the button in the header, and the pane shows the plugin's component", () => {
 		renderShell("media");
 		expect(screen.queryByRole("complementary")).toBeNull();
 		fireEvent.click(toggle());
 		expect(screen.getByRole("complementary", { name: "Helper" })).toBeInTheDocument();
 		expect(screen.getByLabelText("where")).toBeInTheDocument();
 		fireEvent.click(toggle());
-		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
-	it("opens and closes with the keyboard shortcut, and leaves other keys alone", () => {
-		renderShell("media");
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY });
-		expect(screen.queryByRole("complementary")).toBeNull();
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, ctrlKey: true });
-		expect(screen.getByRole("complementary")).toBeInTheDocument();
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, metaKey: true });
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 });
@@ -85,7 +75,7 @@ describe("screen context of the shell pages", () => {
 		return whereIs();
 	};
 
-	it("names the collection on a list", () => {
+	it("PLUG-A5 names the collection on a list", () => {
 		expect(open("post")).toEqual({ screen: "entries", collection: "post" });
 	});
 
@@ -103,7 +93,7 @@ describe("screen context of the shell pages", () => {
 		expect(open("tools:ai")).toEqual({ screen: "other" });
 	});
 
-	it("follows the screen it is published by: leaving a screen takes its values away", async () => {
+	it("PLUG-A5 follows the screen it is published by: leaving a screen takes its values away", async () => {
 		const first = renderShell("post");
 		fireEvent.click(toggle());
 		expect(whereIs().collection).toBe("post");

@@ -15,25 +15,25 @@ describe("locale names", () => {
 		expect(localeName("zzz", "zzz")).toBeUndefined();
 	});
 
-	it("makes a row from a code: the display name only when it differs from the native one", () => {
+	it("SET-L1 makes a row from a code: the display name only when it differs from the native one", () => {
 		expect(localeFromCode("ja", "en")).toEqual({ code: "ja", name: "日本語", label: "Japanese" });
 		expect(localeFromCode("en", "en")).toEqual({ code: "en", name: "English" });
 		expect(localeFromCode("zzz", "en")).toBeUndefined();
 	});
 
-	it("normalizes the language part of a typed code", () => {
+	it("SET-L1 normalizes the language part of a typed code", () => {
 		expect(normalizeLocaleCode(" ZH_Hans ")).toBe("zh-Hans");
 		expect(normalizeLocaleCode("pt-BR")).toBe("pt-BR");
 	});
 
-	it("finds codes in the code and in both names, and leaves out the listed ones", () => {
+	it("SET-L1 finds codes in the code and in both names, and leaves out the listed ones", () => {
 		expect(findLocaleCodes("zh", [], "en")).toEqual(["zh-Hans", "zh-Hant", "zh-HK"]);
 		expect(findLocaleCodes("japan", [], "en")).toEqual(["ja"]);
 		expect(findLocaleCodes("ja", ["ja"], "en")).toEqual([]);
 		expect(findLocaleCodes("", ["ko", "en"], "en")).not.toContain("ko");
 	});
 
-	it("offers 'type it yourself' only for a usable code that is not listed or taken", () => {
+	it("SET-L1 offers 'type it yourself' only for a usable code that is not listed or taken", () => {
 		const listed = findLocaleCodes("zh", [], "en");
 		expect(customLocaleCode("zh", [], listed)).toBe("zh");
 		expect(customLocaleCode("zh-Hans", [], listed)).toBeUndefined();
@@ -43,7 +43,7 @@ describe("locale names", () => {
 		expect(customLocaleCode("", [], [])).toBeUndefined();
 	});
 
-	it("puts the source first and keeps the rest in order", () => {
+	it("SET-L2 puts the source first and keeps the rest in order", () => {
 		const list = [
 			{ code: "ko", name: "한국어" },
 			{ code: "en", name: "English" },

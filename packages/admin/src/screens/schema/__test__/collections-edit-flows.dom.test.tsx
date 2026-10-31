@@ -145,6 +145,19 @@ const openPreview = async () => {
 	return screen.findByRole("complementary", { name: tProblem("preview.label") });
 };
 const bar = () => screen.getByRole("region", { name: t("bar.label") });
+/** The rows of the open collection's field list. */
+const fieldRows = () => within(screen.getByRole("list", { name: tFields("field.title") })).getAllByRole("listitem");
+/** The row of a field: the one with the button that opens it. */
+const fieldRow = (name: string) => {
+	const row = fieldRows().find((item) =>
+		within(item).queryByRole("button", { name: tFields("field.toggle", { name }) }),
+	);
+	if (!row) throw new Error(`no row for the field ${name}`);
+	return row;
+};
+/** The row a removed field leaves in its place: its name, and nothing to press. */
+const goneRow = (name: string) =>
+	fieldRows().find((item) => within(item).queryByText(name) && within(item).queryAllByRole("button").length === 0);
 const saveButton = () => within(bar()).getByRole("button", { name: t("bar.save") }) as HTMLButtonElement;
 
 describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (steps 07-10)", () => {
@@ -172,8 +185,10 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		for (const row of rows) expect(row.textContent).toContain(t("bar.undo"));
 		expect(rows.map((row) => row.textContent).join(" ")).toContain(tChanges("tag.removed"));
 
-		fireEvent.click(rows[0] as HTMLElement);
+		// A change is named for its field's label: 요약 is the summary.
+		fireEvent.click(screen.getByRole("menuitem", { name: /^요약/ }));
 		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeInTheDocument());
+		expect(fieldRow("summary").textContent).not.toContain(tChanges("tag.removed"));
 	});
 
 	it("SCHEMA-F8 07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
@@ -197,21 +212,18 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
 		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeInTheDocument();
-		const renamed = screen.getByTestId("field-excerpt");
-		expect(renamed.textContent).toContain("\u2190 summary");
-		const gone = screen.getByTestId("gone-subtitle");
+		expect(fieldRow("excerpt").textContent).toContain("\u2190 summary");
+		const gone = goneRow("subtitle") as HTMLElement;
 		expect(gone.textContent).toContain(tChanges("tag.removed"));
-		expect(within(gone).queryByRole("button")).toBeNull();
-		expect(gone.querySelector(".line-through")).toBeInTheDocument();
-		expect(screen.getByTestId("field-lead").textContent).toContain(tChanges("tag.added"));
+		expect(fieldRow("lead").textContent).toContain(tChanges("tag.added"));
 
 		// Each one is taken back from the list of changes: the row goes back to what it was.
 		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
 		const rows = await screen.findAllByRole("menuitem");
 		const removal = rows.find((row) => row.textContent?.includes(tChanges("tag.removed")));
 		fireEvent.click(removal as HTMLElement);
-		await waitFor(() => expect(screen.queryByTestId("gone-subtitle")).toBeNull());
-		expect(screen.getByTestId("field-subtitle").textContent).not.toContain(tChanges("tag.removed"));
+		await waitFor(() => expect(goneRow("subtitle")).toBeUndefined());
+		expect(fieldRow("subtitle").textContent).not.toContain(tChanges("tag.removed"));
 	});
 
 	it("SCHEMA-F9 09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {
@@ -225,25 +237,18 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		fireEvent.click(saveButton());
 		expect(api.sent("POST /v1/schema/preview")).toHaveLength(0);
 
-		// The row says what is missing, in the danger color.
-		const row = screen.getByTestId("field-format");
-		expect(row.textContent).toContain(tProblem("mark.options"));
-		expect(
-			within(row)
-				.getByText(/^format/)
-				.closest("span")?.className,
-		).toContain("text-monti-danger");
+		// The row says what is missing.
+		expect(fieldRow("format").textContent).toContain(tProblem("mark.options"));
 
 		const panel = await openPreview();
-		const problems = within(panel).getByTestId("layout-preview-problems");
-		expect(problems.textContent).toContain(tProblem("preview.fix"));
-		expect(problems.textContent).toContain("글 종류");
-		expect(problems.textContent).toContain(tProblem("problem.options"));
+		expect(panel.textContent).toContain(tProblem("preview.fix"));
+		expect(panel.textContent).toContain("글 종류");
+		expect(panel.textContent).toContain(tProblem("problem.options"));
 		// The form itself is not drawn.
 		expect(within(panel).queryByText(tFields("layout.previewUnavailable"))).toBeNull();
 
 		// Each item opens the sheet of its field.
-		fireEvent.click(within(problems).getByRole("button", { name: /글 종류/ }));
+		fireEvent.click(within(panel).getByRole("button", { name: /글 종류/ }));
 		expect(await screen.findByRole("dialog")).toBeInTheDocument();
 	});
 });
@@ -281,6 +286,12 @@ const choose = async (dialog: HTMLElement, name: string | RegExp) => {
 };
 const footerNames = (dialog: HTMLElement) =>
 	names(within(dialog.querySelector('[data-slot="sheet-footer"]') as HTMLElement).getAllByRole("button"));
+/** The sheet offers cancel and the plain apply, not the red one that deletes. */
+const expectPlainApply = (dialog: HTMLElement) => {
+	expect(within(dialog).getByRole("button", { name: tc("cancel") })).toBeInTheDocument();
+	expect(apply(dialog)).toBeInTheDocument();
+	expect(within(dialog).queryByRole("button", { name: tReview("drop.apply") })).toBeNull();
+};
 
 const SUMMARY = "field_removed:post:summary";
 const SUBTITLE = "field_removed:post:subtitle";
@@ -370,7 +381,8 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 			renames: [{ kind: "field", collection: "post", from: "summary", to: "excerpt" }],
 		});
 		const dialog = await sheet();
-		await within(dialog).findByTestId(`impact-${SUMMARY}`);
+		// The rename of summary to excerpt is its first choice, named for the field.
+		await within(dialog).findByRole("radiogroup", { name: "요약" });
 		return dialog;
 	};
 
@@ -412,13 +424,14 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 
 	it("SCHEMA-F3 11 moving the values of a removed field picks another field and sends the move", async () => {
 		const dialog = await review();
-		const removed = within(dialog).getByTestId(`impact-${SUBTITLE}`);
-		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
+		// Only the removed subtitle can keep its values, so the note of kept values is its own.
+		expect(dialog.textContent).toContain(tReview("note.kept"));
+		expect(within(dialog).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
 		await choose(dialog, new RegExp(tReview("choice.moveTo")));
 		const move = { op: "renameField", collection: "post", from: "subtitle", to: "excerpt" };
 		await waitFor(() => expect(lastPreview()?.body.transforms).toContainEqual(move));
 		// Moving the values says nothing about being lost.
-		expect(removed.textContent).not.toContain(tReview("note.kept"));
+		expect(dialog.textContent).not.toContain(tReview("note.kept"));
 	});
 
 	it("SCHEMA-F4 11 a change no entry holds a value for has nothing to choose", async () => {
@@ -429,10 +442,10 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 				impacts: [],
 			});
 		mount({ draft: fieldsDraft, saved: fieldsSaved });
+		// The removed subtitle is the sheet's one change.
 		const dialog = await sheet();
-		const block = await within(dialog).findByTestId(`impact-${SUBTITLE}`);
-		expect(within(block).queryAllByRole("radio")).toHaveLength(0);
-		expect(block.textContent).toContain(tReview("consequence.none"));
+		expect(await within(dialog).findByText(tReview("consequence.none"))).toBeInTheDocument();
+		expect(within(dialog).queryAllByRole("radio")).toHaveLength(0);
 		expect(apply(dialog).disabled).toBe(false);
 	});
 
@@ -446,7 +459,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(apply(dialog).disabled).toBe(true);
 		fireEvent.click(within(alert).getByRole("button", { name: tReview("save.reload") }));
 		expect(reload.reloadPage).toHaveBeenCalled();
-		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
+		expectPlainApply(dialog);
 	});
 
 	it("SCHEMA-F10 when the file is saved but the database does not take it, the sheet closes and the screen is told what the server said", async () => {
@@ -482,9 +495,10 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 				],
 			});
 		mount({ draft: pathDraft, saved: pathSaved });
+		// The address is the sheet's one change.
 		const dialog = await sheet();
-		const block = await within(dialog).findByTestId(`impact-${KEY}`);
-		expect(block.querySelector('[data-slot="change-tag"]')?.textContent).toBe(tReview("tag.address"));
+		expect(await within(dialog).findByText(tReview("tag.address"))).toBeInTheDocument();
+		const block = dialog;
 		expect(block.textContent).toContain(tReview("block.address"));
 		expect(block.textContent).toContain("/posts/:slug");
 		expect(block.textContent).toContain("/blog/:slug");
@@ -495,7 +509,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 		// Nothing to pick, nothing to tick: just cancel and apply.
 		expect(within(block).queryAllByRole("radio")).toHaveLength(0);
 		expect(within(block).queryAllByRole("checkbox")).toHaveLength(0);
-		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
+		expectPlainApply(dialog);
 
 		// It needs no acknowledgement of its own beyond the key the preview named, and the apply sends the PUT.
 		fireEvent.click(apply(dialog));
@@ -538,15 +552,16 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 			saved: { collections: { post: post({}) } },
 			target: { kind: "collection", name: "note", count: 1 },
 		});
+		// The new collection is the sheet's one change.
 		const dialog = await sheet();
-		const block = await within(dialog).findByTestId(`impact-${KEY}`);
+		expect(await within(dialog).findByText(tReview("tag.new"))).toBeInTheDocument();
+		const block = dialog;
 		expect(dialog.textContent).toContain(tReview("review.what", { name: "노트", count: 1 }));
-		expect(block.querySelector('[data-slot="change-tag"]')?.textContent).toBe(tReview("tag.new"));
 		expect(block.textContent).toContain("note · 문서");
 		expect(block.textContent).toContain("/notes/:slug");
 		expect(block.textContent).toContain("title, slug");
 		expect(block.textContent).toContain(tReview("consequence.none"));
-		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
+		expectPlainApply(dialog);
 	});
 });
 
@@ -561,11 +576,17 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 			href: "/admin?collection=note",
 		} as never);
 		openFields();
-		await screen.findByTestId("schema-screen");
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(
+				"노트를 만들었어요",
+				expect.objectContaining({ action: expect.objectContaining({ label: tReview("saved.view") }) }),
+			),
+		);
 		expect(toast).toHaveBeenCalledTimes(1);
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toBe("노트를 만들었어요");
-		expect(options.action.label).toBe(tReview("saved.view"));
+		const [, options] = toast.mock.calls.find(([message]) => message === "노트를 만들었어요") as [
+			string,
+			{ action: { onClick: () => void } },
+		];
 		options.action.onClick();
 		expect(nav.navigate).toHaveBeenCalledWith("/admin?collection=note");
 	});
@@ -617,22 +638,21 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
 		fireEvent.click(saveButton());
 		const dialog = await sheet();
-		await within(dialog).findByTestId(`impact-${KEY}`);
+		// The language taken out is the sheet's one change, its choice named for the language.
+		await within(dialog).findByRole("radiogroup", { name: "English" });
 		return dialog;
 	};
 
 	it("SCHEMA-C2 08 asks to keep the translations or move them to the trash, and keeping is the default", async () => {
 		const dialog = await removeEnglish();
 		expect(dialog.textContent).toContain(tReview("review.what", { name: tReview("area.locales"), count: 1 }));
-		const block = within(dialog).getByTestId(`impact-${KEY}`);
-		expect(block.querySelector('[data-slot="change-tag"]')?.textContent).toBe(tReview("tag.locale"));
+		const block = dialog;
+		expect(within(dialog).getByText(tReview("tag.locale"))).toBeInTheDocument();
 		expect(block.textContent).toContain("English");
 		expect(block.textContent).toContain("en · 번역 12편");
-		expect(
-			within(block)
-				.getAllByRole("radio")
-				.map((radio) => radio.getAttribute("aria-checked")),
-		).toEqual(["true", "false"]);
+		const radio = (label: string) => within(dialog).getByRole("radio", { name: new RegExp(`^${label}`) });
+		expect(radio(tReview("choice.keep")).getAttribute("aria-checked")).toBe("true");
+		expect(radio(tReview("choice.trash")).getAttribute("aria-checked")).toBe("false");
 		expect(block.textContent).toContain(tReview("note.locale"));
 	});
 

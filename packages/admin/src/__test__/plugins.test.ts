@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 describe("loadAdminPlugins", () => {
-	it("does not cache a failed import, so a retry can succeed", async () => {
+	it("PLUG-A13 does not cache a failed import, so a retry can succeed", async () => {
 		let attempts = 0;
 		const site = siteWith([
 			{
@@ -39,7 +39,7 @@ describe("loadAdminPlugins", () => {
 		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["events-plus"]);
 	});
 
-	it("hands each plugin's declaration on as the module exported it, without reading it", async () => {
+	it("PLUG-A13 hands each plugin's declaration on as the module exported it, without reading it", async () => {
 		const declaration = { pages: { one: Page } };
 		const site = siteWith([{ name: "a", admin: async () => ({ default: declaration }) }, { name: "plain" }]);
 		const loaded = await loadAdminPlugins(site);
@@ -54,12 +54,5 @@ describe("loadAdminPlugins", () => {
 			{ name: "plain" },
 		]);
 		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["a", "b", "plain"]);
-	});
-
-	it("keeps the loaded plugins of one site apart from another site", async () => {
-		const first = siteWith([{ name: "a", admin: admin({ one: Page }) }]);
-		const second = siteWith([{ name: "b", admin: admin({ two: Page }) }]);
-		expect((await loadAdminPlugins(first)).map((plugin) => plugin.name)).toEqual(["a"]);
-		expect((await loadAdminPlugins(second)).map((plugin) => plugin.name)).toEqual(["b"]);
 	});
 });

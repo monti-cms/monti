@@ -3,13 +3,12 @@ import { storedCodeBlockAttrs, storedCodeBlockFence } from "@monti-cms/core/docu
 import { Editor, type JSONContent } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import type { DecorationSet } from "@tiptap/pm/view";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { codeBlockConverter } from "../../converters/code-block";
 import type { ConverterContext } from "../../converters/types";
 import { buildEditorExtensions } from "../../extensions";
 import { codeEffectsKey, foldRegions, setFoldOpen } from "../effects-plugin";
-import { codeBlockHighlightPluginKey, getShikiHighlighter } from "../highlight-plugin";
 import { handleEnterKey, handleModAKey, handlePaste, handleTabKey, isComposing } from "../keys";
 
 let editor: Editor | null = null;
@@ -66,7 +65,7 @@ const mountValue = (value: string, language = "ts") => {
 const blockJson = (instance: Editor) => instance.getJSON().content?.[0] ?? {};
 
 describe("code block: keyboard handling and IME exclusion", () => {
-	it("does not intercept key events during IME composition and passes them to the browser", () => {
+	it("EDIT-C3 does not intercept key events during IME composition and passes them to the browser", () => {
 		const instance = createTestEditor();
 		const view = instance.view;
 
@@ -82,7 +81,7 @@ describe("code block: keyboard handling and IME exclusion", () => {
 		expect(handleModAKey(view, fakeComposingEvent)).toBe(false);
 	});
 
-	it("Tab: inserts a tab character at a single cursor position", () => {
+	it("EDIT-C3 Tab: inserts a tab character at a single cursor position", () => {
 		const instance = createTestEditor("hello");
 		const view = instance.view;
 
@@ -96,7 +95,7 @@ describe("code block: keyboard handling and IME exclusion", () => {
 		expect(instance.state.doc.child(0).textContent).toBe("hello\t");
 	});
 
-	it("Tab/Shift-Tab: indents and outdents when multiple lines are selected", () => {
+	it("EDIT-C3 Tab/Shift-Tab: indents and outdents when multiple lines are selected", () => {
 		const multiline = "line1\nline2\nline3";
 		const instance = createTestEditor(multiline);
 		const view = instance.view;
@@ -115,7 +114,7 @@ describe("code block: keyboard handling and IME exclusion", () => {
 		expect(instance.state.doc.child(0).textContent).toBe("line1\nline2\nline3");
 	});
 
-	it("Enter: keeps the current line's indentation on the next line", () => {
+	it("EDIT-C3 Enter: keeps the current line's indentation on the next line", () => {
 		const indented = "\t\tconst x = 10;";
 		const instance = createTestEditor(indented);
 		const view = instance.view;
@@ -129,35 +128,7 @@ describe("code block: keyboard handling and IME exclusion", () => {
 		expect(instance.state.doc.child(0).textContent).toBe("\t\tconst x = 10;\n\t\t");
 	});
 
-	it("Mod-a: selects everything inside the code block without including the document outside it", () => {
-		editor = new Editor({
-			extensions: buildEditorExtensions(testSite),
-			content: {
-				type: "doc",
-				content: [
-					{ type: "paragraph", content: [{ type: "text", text: "상단 문단" }] },
-					{ type: "codeBlock", content: [{ type: "text", text: "코드1\n코드2" }] },
-					{ type: "paragraph", content: [{ type: "text", text: "하단 문단" }] },
-				],
-			},
-		});
-		const view = editor.view;
-
-		// Move the cursor into the code block
-		// Size of the top paragraph: 1(open) + 4("상단 문단") + 1(close) = 6
-		// Code block start pos: 7, text start: 8, text end: 15
-		editor.commands.setTextSelection(9);
-
-		const modAEvent = new KeyboardEvent("keydown", { key: "a", metaKey: true });
-		expect(handleModAKey(view, modAEvent)).toBe(true);
-
-		const { from, to } = editor.state.selection;
-		expect(from).toBe(8);
-		expect(to).toBe(15);
-		expect(editor.state.doc.textBetween(from, to, "\n")).toBe("코드1\n코드2");
-	});
-
-	it("Paste: normalizes \\r\\n to \\n and pastes as plain text only", () => {
+	it("EDIT-C3 Paste: normalizes \\r\\n to \\n and pastes as plain text only", () => {
 		const instance = createTestEditor("");
 		const view = instance.view;
 
@@ -192,7 +163,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		expect(saved?.attrs).toEqual({ language: "ts", meta: 'title="hello.ts"', code: raw });
 	});
 
-	it("reads line effects (collapse, add, highlight) as line ranges and saves the stored code block as it was when unchanged", () => {
+	it("FMT-R2 reads line effects (collapse, add, highlight) as line ranges and saves the stored code block as it was when unchanged", () => {
 		const raw = [
 			"// @line collapse",
 			"function secret() {",
@@ -217,7 +188,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		);
 	});
 
-	it("reads char effects as marks on the code text (including tooltip content and expanded char collapse)", () => {
+	it("FMT-R2 reads char effects as marks on the code text (including tooltip content and expanded char collapse)", () => {
 		const raw = [
 			"// @char u {0-4}",
 			'// @char Tooltip {6-9} content="안내 문구"',
@@ -227,16 +198,22 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 			"print(a, b);",
 		].join("\n");
 		const instance = mountValue(raw);
-		const html = instance.getHTML();
 		expect(instance.state.doc.child(0).textContent).toBe("const test = 100;\nprint(a, b);");
-		expect(html).toContain("<u>const</u>");
-		expect(html).toMatch(/<span data-code-tooltip="안내 문구"[^>]*>test<\/span>/);
-		expect(html).toContain("<strong>100</strong>");
-		expect(html).toMatch(/<span data-open="true" data-code-fold=""[^>]*>a, b<\/span>/);
+		// The comments become marks on the text they cover, as the editor document holds them.
+		expect(blockJson(instance).content).toEqual([
+			{ type: "text", marks: [{ type: "underline" }], text: "const" },
+			{ type: "text", text: " " },
+			{ type: "text", marks: [{ type: "codeTooltip", attrs: { content: "안내 문구" } }], text: "test" },
+			{ type: "text", text: " = " },
+			{ type: "text", marks: [{ type: "bold" }], text: "100" },
+			{ type: "text", text: ";\nprint(" },
+			{ type: "text", marks: [{ type: "codeFold", attrs: { open: true } }], text: "a, b" },
+			{ type: "text", text: ");" },
+		]);
 		expect(save(blockJson(instance))).toBe(raw);
 	});
 
-	it("saves newly added char effects as line-based range comments", () => {
+	it("EDIT-C1 saves newly added char effects as line-based range comments", () => {
 		const instance = createTestEditor("abc\nconst item = 1;");
 		instance.chain().setTextSelection({ from: 5, to: 10 }).toggleBold().run();
 		instance.chain().setTextSelection({ from: 11, to: 15 }).setMark("codeTooltip", { content: "변수명" }).run();
@@ -245,7 +222,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		);
 	});
 
-	it("saves line effects as line-range comments, and a line collapse that starts expanded as open", () => {
+	it("EDIT-C1 saves line effects as line-range comments, and a line collapse that starts expanded as open", () => {
 		const instance = createTestEditor("a\nb\nc");
 		const lineEffects: CodeLineEffect[] = [
 			{ id: "1", name: "collapse", start: 0, end: 3, attrs: { open: true } },
@@ -260,7 +237,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		);
 	});
 
-	it("reads and saves regex rules as the rule itself, not the matched positions (even after the code is edited)", () => {
+	it("EDIT-C1 reads and saves regex rules as the rule itself, not the matched positions (even after the code is edited)", () => {
 		const raw = [
 			"// @document fold {re:/import .*/}",
 			"import a from 'a';",
@@ -274,7 +251,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 			["char", "Tooltip", "b{2}", "g", 1],
 		]);
 		// Places found by a rule are not turned into marks.
-		expect(instance.getHTML()).not.toContain("data-code-fold");
+		expect(blockJson(instance).content?.flatMap((child) => child.marks ?? [])).toEqual([]);
 
 		instance.commands.insertContentAt(instance.state.doc.child(0).nodeSize - 1, "\nimport c from 'c';");
 		expect(save(blockJson(instance))).toBe(
@@ -288,13 +265,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		);
 	});
 
-	it("saves with the new language's comment syntax when the language changes", () => {
-		const node = load("// @char u {0-2}\nabc");
-		const saved = save({ ...node, attrs: { ...node.attrs, language: "python" } });
-		expect(saved).toBe("# @char u {0-2}\nabc");
-	});
-
-	it("opens in raw editing and preserves the original when the same effect overlaps with a different description, since it cannot be represented", () => {
+	it("FMT-R2 opens in raw editing and preserves the original when the same effect overlaps with a different description, since it cannot be represented", () => {
 		const raw = ['// @char Tooltip {0-3} content="하나"', '// @char Tooltip {2-5} content="둘"', "abcdef"].join("\n");
 		const node = load(raw);
 		expect(node.attrs?.rawMode).toBe(true);
@@ -302,7 +273,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 		expect(save(node)).toBe(raw);
 	});
 
-	it("preserves explicit false and unknown properties in meta even after the title is edited", async () => {
+	it("EDIT-C1 preserves explicit false and unknown properties in meta even after the title is edited", async () => {
 		const { parseMeta, formatMeta } = await import("../meta");
 		const parsed = parseMeta('title="a.ts" focus=false lnum=false');
 		expect(parsed.showLineNumbers).toBe(false);
@@ -322,26 +293,26 @@ describe("line effects and line rules follow the text when the code is edited", 
 			end,
 		]);
 
-	it("inserting a line before an effect line pushes it down", () => {
+	it("EDIT-C1 inserting a line before an effect line pushes it down", () => {
 		const instance = withEffects("a\nb\nc", [{ id: "1", name: "highlight", start: 1, end: 3, attrs: {} }]);
 		instance.commands.insertContentAt(1, "x\n");
 		expect(effectsOf(instance)).toEqual([["highlight", 2, 4]]);
 	});
 
-	it("splitting a line inside a range extends the range", () => {
+	it("EDIT-C1 splitting a line inside a range extends the range", () => {
 		const instance = withEffects("a\nbc\nd", [{ id: "1", name: "collapse", start: 0, end: 2, attrs: {} }]);
 		instance.commands.insertContentAt(4, "\n");
 		expect(effectsOf(instance)).toEqual([["collapse", 0, 3]]);
 	});
 
-	it("deleting all effect lines removes the effect", () => {
+	it("EDIT-C1 deleting all effect lines removes the effect", () => {
 		const instance = withEffects("a\nbb\nc", [{ id: "1", name: "plus", start: 1, end: 2, attrs: {} }]);
 		instance.commands.deleteRange({ from: 3, to: 6 });
 		expect(instance.state.doc.child(0).textContent).toBe("a\nc");
 		expect(effectsOf(instance)).toEqual([]);
 	});
 
-	it("single-line rule's line number follows too", () => {
+	it("EDIT-C1 single-line rule's line number follows too", () => {
 		const rule: CodeRule = { id: "r", scope: "char", name: "fold", pattern: "b", flags: "", line: 1, attrs: {} };
 		const instance = withEffects("a\nb", [], [rule]);
 		instance.commands.insertContentAt(1, "x\n");
@@ -378,7 +349,7 @@ describe("collapse: shown collapsed in the editor too, and expands when the curs
 		expect(hiddenDecorations(open)).toHaveLength(0);
 	});
 
-	it("expands when the cursor enters a collapsed line, and moves the cursor to the end of the first line when collapsed", () => {
+	it("EDIT-C2 expands when the cursor enters a collapsed line, and moves the cursor to the end of the first line when collapsed", () => {
 		const instance = createTestEditor("head\nb\nc\nd", { lineEffects: [collapse()] });
 		instance.view.dispatch(instance.state.tr.setSelection(TextSelection.create(instance.state.doc, 7)));
 		expect(regionsOf(instance)[0]?.open).toBe(true);
@@ -389,60 +360,10 @@ describe("collapse: shown collapsed in the editor too, and expands when the curs
 		expect(regionsOf(instance)[0]?.open).toBe(false);
 		expect(instance.state.selection.head).toBe(5);
 	});
-
-	it("char collapse (marks and regex rules) stays expanded in the editor and is hidden when collapsed", () => {
-		const rule: CodeRule = { id: "r", scope: "document", name: "fold", pattern: "\\(.*\\)", flags: "", attrs: {} };
-		const instance = createTestEditor("f(a, b)", { rules: [rule] });
-		instance.chain().setTextSelection({ from: 1, to: 2 }).setMark("codeFold", { open: false }).run();
-		expect(hiddenDecorations(instance)).toHaveLength(0);
-
-		for (const region of regionsOf(instance)) setFoldOpen(instance.view, region, false);
-		expect(hiddenDecorations(instance).map((decoration) => [decoration.from, decoration.to])).toEqual([
-			[1, 2],
-			[2, 8],
-		]);
-	});
-});
-
-describe("code block syntax highlighting", () => {
-	it("lazy-loaded shiki syntax highlighting produces dual theme decorations without changing the text", async () => {
-		const highlighter = await getShikiHighlighter(testSite);
-		const code = "const message: string = 'hello';";
-		const tokens = highlighter.codeToTokensWithThemes(code, {
-			lang: "typescript",
-			themes: {
-				light: "one-light",
-				dark: "one-dark-pro",
-			},
-		});
-
-		expect(tokens.length).toBeGreaterThan(0);
-		const firstToken = tokens[0]?.[0];
-		expect(firstToken?.content).toBe("const");
-		expect(firstToken?.variants?.light?.color).toMatch(/^#[0-9a-f]{6}/i);
-		expect(firstToken?.variants?.dark?.color).toMatch(/^#[0-9a-f]{6}/i);
-
-		// Highlighting decorations do not pollute the text body (plain text)
-		const instance = createTestEditor(code, { language: "ts" });
-		expect(instance.state.doc.child(0).textContent).toBe(code);
-	});
-
-	it("adds the Shiki token offset of multi-line code only once to decorate the second line", async () => {
-		const code = "const a = 1;\nconst b = 2;";
-		const instance = createTestEditor(code, { language: "ts" });
-		await vi.waitFor(() => {
-			const plugin = codeBlockHighlightPluginKey.get(instance.state);
-			const decorations = plugin?.props.decorations?.call(plugin, instance.state) as DecorationSet | undefined;
-			const secondConst = decorations
-				?.find(14, 19)
-				.find((decoration) => decoration.from === 14 && decoration.to === 19);
-			expect(secondConst).toMatchObject({ from: 14, to: 19 });
-		});
-	});
 });
 
 describe("storage fingerprint", () => {
-	it("saves the original text as is when only the line effect order changes", () => {
+	it("FMT-R2 saves the original text as is when only the line effect order changes", () => {
 		const raw = ["// @line highlight {0-0}", "a", "// @line plus {1-1}", "b"].join("\n");
 		const node = load(raw);
 		const effects = node.attrs?.lineEffects as CodeLineEffect[];

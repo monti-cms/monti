@@ -29,7 +29,7 @@ const entry = (fields: Partial<EntryData>): EntryData => ({
 });
 
 describe("translation form", () => {
-	it("a translation handles only per-language values as the form and metadata", () => {
+	it("TRANS-N3 a translation handles only per-language values as the form and metadata", () => {
 		const translation = entry({
 			id: "33333333-3333-4333-8333-333333333333",
 			translationGroupId: SOURCE,
@@ -50,7 +50,7 @@ describe("translation form", () => {
 		).toEqual({ metadata: { title: "Hello", summary: "Sum" } });
 	});
 
-	it("the original also handles shared values", () => {
+	it("TRANS-N3 the original also handles shared values", () => {
 		const form = formFromEntry(
 			testSite,
 			entry({ working: { metadata: { title: "안녕", categoryId: CATEGORY }, doc: emptyStoredDocument() } }),
@@ -61,7 +61,7 @@ describe("translation form", () => {
 });
 
 describe("record per-language names", () => {
-	it("reads other-language names as form keys and does not save emptied languages", () => {
+	it("TRANS-N3 reads other-language names as form keys and does not save emptied languages", () => {
 		const form = formFromEntry(
 			testSite,
 			entry({
@@ -103,14 +103,14 @@ describe("translation state form", () => {
 	} as const;
 	const EMPTY = { version: 4, baseDoc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] } };
 
-	it("a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
+	it("TRANS-N9 a translation form holds the confirmed source as JSON with fixed key order and sends it in the save request", () => {
 		// The server (JSONB) returns keys reordered.
 		const form = formFromEntry(testSite, translation({ baseDoc: DOC, version: 4 }));
 		expect(form[TRANSLATION_FORM_KEY]).toBe(stringifyTranslation({ version: 4, baseDoc: DOC } as never));
 		expect(translationPayload(form)).toEqual({ version: 4, baseDoc: DOC });
 	});
 
-	it("the confirmed document keeps one key order however the server ordered it", () => {
+	it("TRANS-N9 the confirmed document keeps one key order however the server ordered it", () => {
 		const reordered = {
 			type: "doc",
 			content: [{ content: [{ text: "원문", type: "text" }], id: "aaaaaaaa", type: "paragraph" }],
@@ -127,7 +127,7 @@ describe("translation state form", () => {
 		expect(translationPayload(form)).toEqual(EMPTY);
 	});
 
-	it("with no valid state, nothing is treated as confirmed", () => {
+	it("TRANS-N9 with no valid state, nothing is treated as confirmed", () => {
 		for (const state of [null, undefined, { version: 1, units: [] }, { version: 2 }]) {
 			expect(translationPayload(formFromEntry(testSite, translation(state)))).toEqual(EMPTY);
 		}
@@ -135,7 +135,7 @@ describe("translation state form", () => {
 		expect(translationStateFromForm(undefined)).toEqual(EMPTY);
 	});
 
-	it("the original does not send translation state", () => {
+	it("TRANS-N9 the original does not send translation state", () => {
 		expect(translationPayload(formFromEntry(testSite, entry({ translationGroupId: SOURCE })))).toBeUndefined();
 	});
 });

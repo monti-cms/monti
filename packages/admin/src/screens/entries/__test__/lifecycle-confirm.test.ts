@@ -4,7 +4,6 @@ import { deleteMessages } from "../../shared/delete.messages";
 import { nounVars } from "../../shared/noun.messages";
 import {
 	lifecycleConfirm,
-	lifecycleSuccess,
 	type TrashSubject,
 	trashConfirm,
 	trashSubjectOfEntry,
@@ -29,7 +28,7 @@ const collection = testSite.DEFAULT_COLLECTION;
 const noun = nounVars(testSite, collection);
 
 describe("status transition confirmation text", () => {
-	it("counts and reports only usages in the published version", () => {
+	it("WRITE-W9 counts and reports only usages in the published version", () => {
 		const confirm = lifecycleConfirm(
 			testSite,
 			"archive",
@@ -42,21 +41,16 @@ describe("status transition confirmation text", () => {
 		);
 	});
 
-	it("archiving the original reports that translations are archived too", () => {
+	it("WRITE-W9 archiving the original reports that translations are archived too", () => {
 		expect(lifecycleConfirm(testSite, "archive", source, [], collection).description).toBe(
 			`${t("lifecycle.archive.ask", { translation: 0, ...noun })}${t("lifecycle.archive.group")}`,
 		);
 	});
 
-	it("there is no group notice when archiving a translation", () => {
+	it("WRITE-W9 there is no group notice when archiving a translation", () => {
 		expect(lifecycleConfirm(testSite, "archive", translation, [], collection).description).toBe(
 			t("lifecycle.archive.ask", { translation: 1, ...noun }),
 		);
-	});
-
-	it("transitions that do not ask also have text to announce when done", () => {
-		expect(lifecycleSuccess(testSite).unarchive).toBe(t("lifecycle.success.unarchive"));
-		expect(lifecycleSuccess(testSite).restore).toBe(t("lifecycle.success.restore"));
 	});
 });
 

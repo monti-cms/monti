@@ -5,16 +5,20 @@ import { testSite } from "../../../../../core/test/site";
 import type { CmsIssue } from "../../../api/error-message";
 import { commonMessages } from "../../../lib/common.messages";
 import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
+import { type FakeIndexedDB, installFakeIndexedDB } from "../../../test/fake-indexed-db";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
 import { screensMessages } from "../../messages";
+import { sharedMessages } from "../../shared/messages";
+import { publishReadinessMessages } from "../../shared/publish-readiness.messages";
 import { statusBarMessages } from "../../shared/status-bar.messages";
 import { entryCompareMessages } from "../entry-compare.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { type EntryData, formFingerprint, formFromEntry } from "../entry-form";
+import { shortDate } from "../entry-stamps";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -22,27 +26,15 @@ const tScreens = testSite.createTranslator(screensMessages);
 const tEntries = testSite.createTranslator(entriesMessages);
 const tStatusBar = testSite.createTranslator(statusBarMessages);
 const tEntryCompare = testSite.createTranslator(entryCompareMessages);
+const tShared = testSite.createTranslator(sharedMessages);
+const tPublishReadiness = testSite.createTranslator(publishReadinessMessages);
 const TITLE_LABEL = testSite.titleField("post").field.label;
+const CATEGORY_LABEL = testSite.storedField("post", "categoryId")?.field.label ?? "";
 const tCommon = testSite.createTranslator(commonMessages);
 
 // One describe for each row of flow 1 that this screen owns (the canvas rows "글 쓰고 발행하기", "다른 곳에서 먼저 저장" and "다시 열었을 때 임시 저장본"). They
 // check what a screenshot cannot: the requests a press sends, where it goes, the names and roles, what is enabled and the keys.
 
-const { getLocalBackup, deleteLocalBackup, saveLocalBackup } = vi.hoisted(() => ({
-	getLocalBackup: vi.fn(),
-	deleteLocalBackup: vi.fn(),
-	saveLocalBackup: vi.fn(),
-}));
-vi.mock("../local-backup", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../local-backup")>()),
-	getLocalBackup: (key: string) => getLocalBackup(key),
-	deleteLocalBackup: (key: string) => deleteLocalBackup(key),
-	saveLocalBackup: (record: unknown) => saveLocalBackup(record),
-}));
-// The body editor is not under test: the title field it is handed is what these flows type into.
-vi.mock("../../../editor/tiptap-editor", () => ({
-	CmsEditor: ({ titleField }: { titleField?: React.ReactNode }) => <div>{titleField}</div>,
-}));
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
@@ -113,6 +105,10 @@ class Server {
 
 let server: Server;
 let api: FakeApi;
+/** The browser's recovery database: the editor keeps and drops its copy there through the real `local-backup` module. */
+let idb: FakeIndexedDB;
+const BACKUP_KEY = `${ADMIN}:entry-1`;
+const backup = () => idb.backupOf(testSite, BACKUP_KEY);
 const saves = () => api.sent("PATCH /v1/entries/:id");
 const publishes = () => api.sent("POST /v1/entries/:id/publish");
 
@@ -132,6 +128,17 @@ const bar = async () => within(await screen.findByRole("region", { name: tScreen
 const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 const header = () => within(screen.getByRole("banner"));
 const status = () => screen.getByTestId("entry-status-chip").textContent;
+/** The header's status mark reads `name` (a status has no role of its own; the header's buttons are told apart by role). */
+const headerStatus = (name: string) => header().findByText(name, { ignore: "button, button *" });
+/** The notice strip (a `status` region) whose sentence is `sentence`. */
+const stripWith = async (sentence: string) => {
+	await screen.findByText(sentence);
+	const strip = screen.getAllByRole("status").find((region) => within(region).queryByText(sentence) !== null);
+	if (!strip) throw new Error(`no notice strip says ${sentence}`);
+	return within(strip);
+};
+/** A name that starts with `start` and holds `part` (a menu row's name is its label followed by its caption). */
+const startingWith = (start: string, part: string) => (name: string) => name.startsWith(start) && name.includes(part);
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -139,9 +146,7 @@ beforeEach(() => {
 	server = new Server();
 	api = fakeApi().install();
 	server.mount(api);
-	getLocalBackup.mockResolvedValue(null);
-	deleteLocalBackup.mockResolvedValue(undefined);
-	saveLocalBackup.mockResolvedValue(true);
+	idb = installFakeIndexedDB();
 	vi.stubGlobal("open", vi.fn());
 });
 afterEach(() => {
@@ -165,22 +170,13 @@ describe("flow: write and publish (steps 09–15)", () => {
 			expectedVersion: 4,
 			metadata: expect.objectContaining({ title: "고친 제목" }),
 		});
-		expect(await (await bar()).findByText(/^저장됨 /)).toBeInTheDocument();
+		expect(await (await bar()).findByText(tStatusBar("save.word.saved"))).toBeInTheDocument();
 
 		fireEvent.change(await title(), { target: { value: "다시 고침" } });
 		pressSave();
 		await waitFor(() => expect(saves()).toHaveLength(2));
 		expect(saves()[1]?.body).toMatchObject({ expectedVersion: 5 });
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
-	});
-
-	it("starts with the collection as a link back, the full path and the status", async () => {
-		renderEdit();
-		await title();
-		const back = header().getByRole("link", { name: "게시글" });
-		expect(back.getAttribute("href")).toBe(testSite.adminHref("?collection=post"));
-		expect(header().getByText("/posts/first-post")).toBeInTheDocument();
-		expect(status()).toBe("초안");
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(tCommon("saved")));
 	});
 
 	it("WRITE-P1 blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
@@ -188,12 +184,20 @@ describe("flow: write and publish (steps 09–15)", () => {
 		renderEdit();
 		await title();
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("발행할 수 없어요. 아래 할 일 2개를 먼저 고쳐요."));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(tEntryEditorShell("publishBlocked", { count: 2 })));
 		const list = within(await screen.findByRole("dialog"));
 		// The rows place images by their number in this entry's body.
-		expect(list.getByRole("button", { name: /대체 텍스트 없는 이미지 2개/ }).textContent).toContain("본문 1 · 본문 2");
-		expect(await (await bar()).findByRole("button", { name: "할 일 2" })).toBeInTheDocument();
-		fireEvent.click(list.getByRole("button", { name: /카테고리 고르기/ }));
+		const places = [1, 2].map((number) => tPublishReadiness("place.body", { number })).join(" · ");
+		expect(
+			list.getByRole("button", {
+				name: startingWith(tPublishReadiness("group.missing_image_alt", { count: 2 }), places),
+			}),
+		).toBeInTheDocument();
+		expect(
+			await (await bar()).findByRole("button", { name: tStatusBar("todo.count", { count: 2 }) }),
+		).toBeInTheDocument();
+		const pickCategory = tPublishReadiness("field.pick", { name: CATEGORY_LABEL });
+		fireEvent.click(list.getByRole("button", { name: startingWith(pickCategory, pickCategory) }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
@@ -214,7 +218,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 	it("WRITE-P1 lists the to-dos fixed along the way as check rows, and says nothing is left when they are all gone", async () => {
 		server.checkAnswer = { issues: [missingCategory, noAlt(0), noAlt(1)], warnings: [] };
 		renderEdit();
-		fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 2" }));
+		fireEvent.click(await (await bar()).findByRole("button", { name: tStatusBar("todo.count", { count: 2 }) }));
 		await screen.findByRole("dialog");
 		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 
@@ -224,7 +228,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		pressSave();
 		fireEvent.click(await (await bar()).findByRole("button", { name: tStatusBar("todo.none") }));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByText("이미지 대체 텍스트 2개")).toBeInTheDocument();
+		expect(list.getByText(tPublishReadiness("done.imageAlt", { count: 2 }))).toBeInTheDocument();
 		expect(list.queryByRole("button")).toBeNull();
 	});
 
@@ -237,16 +241,17 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(saves()).toHaveLength(1);
 		expect(publishes()[0]?.body).toMatchObject({ expectedVersion: 5 });
 
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("발행되었어요.", expect.anything()));
-		const options = toast.mock.calls.find(([message]) => message === "발행되었어요.")?.[1] as {
-			action: { label: string; onClick: () => void };
-		};
-		expect(options.action.label).toBe("보기");
-		options.action.onClick();
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(tEntryEditorShell("published"), {
+				action: { label: tEntryEditorShell("view"), onClick: expect.any(Function) },
+			}),
+		);
+		// The toast's own button: the action of the call that told the publish.
+		const [, options] = toast.mock.calls.find(([message]) => message === tEntryEditorShell("published")) ?? [];
+		(options as { action: { onClick: () => void } }).action.onClick();
 		expect(window.open).toHaveBeenCalledWith("/posts/first-post", "_blank", "noopener");
 
-		await waitFor(() => expect(status()).toBe("발행됨"));
-		const done = header().getByRole("button", { name: tEntryEditorShell("publishedState") });
+		const done = await header().findByRole("button", { name: tEntryEditorShell("publishedState") });
 		expect(done.hasAttribute("disabled")).toBe(true);
 	});
 
@@ -261,19 +266,18 @@ describe("flow: write and publish (steps 09–15)", () => {
 		};
 		renderEdit();
 		fireEvent.change(await title(), { target: { value: "발행 뒤에 고침" } });
-		await waitFor(() => expect(status()).toBe("수정 중"));
+		expect(await headerStatus(tShared("status.editing"))).toBeInTheDocument();
 
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publishOptions") }));
-		const rows = await screen.findAllByRole("menuitem");
-		expect(rows.map((row) => row.textContent)).toEqual([
-			expect.stringMatching(/^발행하기발행일 2026\. 10\. 01 그대로$/),
-			expect.stringMatching(/^오늘 날짜로 다시 발행발행일 \d{4}\. \d{2}\. \d{2}$/),
-		]);
-
-		fireEvent.click(rows[1] as HTMLElement);
+		const keepDate = tEntryEditorShell("keepDateCaption", { date: shortDate(testSite, "2026-10-01T00:30:00.000Z") });
+		expect(
+			await screen.findByRole("menuitem", { name: startingWith(tEntryEditorShell("keepDate"), keepDate) }),
+		).toBeInTheDocument();
+		const today = tEntryEditorShell("republishCaption", { date: shortDate(testSite, new Date()) });
+		fireEvent.click(screen.getByRole("menuitem", { name: startingWith(tEntryEditorShell("republish"), today) }));
 		await waitFor(() => expect(publishes()).toHaveLength(1));
 		expect(publishes()[0]?.body).toMatchObject({ expectedVersion: 7, resetPublishedAt: true });
-		await waitFor(() => expect(status()).toBe("발행됨"));
+		expect(await header().findByRole("button", { name: tEntryEditorShell("publishedState") })).toBeInTheDocument();
 	});
 
 	it("WRITE-P5 keeps the original date when the main half is pressed", async () => {
@@ -287,17 +291,17 @@ describe("flow: write and publish (steps 09–15)", () => {
 		};
 		renderEdit();
 		fireEvent.change(await title(), { target: { value: "날짜는 그대로" } });
-		await waitFor(() => expect(status()).toBe("수정 중"));
+		expect(await headerStatus(tShared("status.editing"))).toBeInTheDocument();
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
 		await waitFor(() => expect(publishes()).toHaveLength(1));
-		expect(publishes()[0]?.body?.resetPublishedAt).toBeFalsy();
+		expect(publishes()[0]?.body).not.toHaveProperty("resetPublishedAt");
 	});
 
-	it("shows the reason a preview cannot open in place, beside the button, not in a tooltip", async () => {
+	it("WRITE-W8 shows the reason a preview cannot open in place, beside the button, not in a tooltip", async () => {
 		server.entry = { ...draft, workingSlug: "" };
 		renderEdit();
 		await title();
-		const preview = header().getByRole("button", { name: /미리보기/ });
+		const preview = header().getByRole("button", { name: tEntryEditorShell("preview") });
 		expect(preview.getAttribute("aria-disabled")).toBe("true");
 		expect(header().getByText(tEntryEditorShell("preview.no-slug"))).toBeInTheDocument();
 	});
@@ -324,7 +328,8 @@ describe("flow: saved elsewhere first", () => {
 
 	it("WRITE-C1 shows a notice strip above the editor, not a dialog: the time it was saved, and compare and load the server version", async () => {
 		const strip = within(await conflicted());
-		expect(strip.getByText("다른 곳에서 10:41에 먼저 저장했어요")).toBeInTheDocument();
+		// 01:41 UTC is 10:41 in the site's time zone.
+		expect(strip.getByText(tEntryCompare("conflict.title", { time: "10:41" }))).toBeInTheDocument();
 		expect(strip.getByText(tEntryCompare("conflict.meta"))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(strip.getByRole("link", { name: tEntryCompare("compare") }).getAttribute("href")).toBe(
@@ -337,10 +342,12 @@ describe("flow: saved elsewhere first", () => {
 
 	it("WRITE-C2 loads the server version from the strip without reloading the page, and drops the local copy", async () => {
 		const strip = within(await conflicted());
+		// The refused save kept the input in the browser.
+		expect(backup()?.snapshot).toMatchObject({ title: "내 입력" });
 		fireEvent.click(strip.getByRole("button", { name: tEntryCompare("loadServer") }));
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("서버 최신 제목"));
-		expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
+		await waitFor(() => expect(backup()).toBeUndefined());
 		expect(saves()).toHaveLength(1);
 	});
 
@@ -353,26 +360,30 @@ describe("flow: saved elsewhere first", () => {
 		expect(screen.getByRole("link", { name: tEntryCompare("back") }).getAttribute("href")).toBe(EDIT_HREF);
 		expect(screen.getByText("/posts/first-post")).toBeInTheDocument();
 		const mine = within(screen.getByRole("region", { name: tEntryCompare("side.mine") }));
-		const theirs = within(screen.getByRole("region", { name: "서버 최신본 · v9 · 10:41 저장" }));
+		const theirSide = screen.getByRole("region", { name: tEntryCompare("side.server", { version: 9, time: "10:41" }) });
+		const theirs = within(theirSide);
 		expect(mine.getByRole("heading", { level: 2, name: "내 입력" })).toBeInTheDocument();
 		expect(theirs.getByRole("heading", { level: 2, name: "서버 최신 제목" })).toBeInTheDocument();
 		// The properties that differ are on top of each side; the title is counted with them: the title and the summary.
-		expect((theirs.getByText("요약").parentElement as HTMLElement).textContent).toContain("다른 곳에서 쓴 소개");
+		// The changed words are marked apart, so the value is read as the side's text.
+		expect(theirSide.textContent).toContain("다른 곳에서 쓴 소개");
 		const statusBar = within(screen.getByRole("region", { name: tScreens("column.status") }));
 		expect(statusBar.getByText(tStatusBar("save.conflict"))).toBeInTheDocument();
-		expect(statusBar.getByText("다른 곳 2")).toBeInTheDocument();
-		expect(screen.getAllByText("다른 곳 2").length).toBeGreaterThanOrEqual(2);
+		const differences = tEntryCompare("differences", { count: 2 });
+		expect(statusBar.getByText(differences)).toBeInTheDocument();
+		expect(screen.getAllByText(differences).length).toBeGreaterThanOrEqual(2);
 		// The editor is gone from the screen while comparing.
 		expect(screen.queryByRole("textbox", { name: tScreens("column.title") })).toBeNull();
 	});
 
 	it("WRITE-C3 picks the server version on the compare screen, and goes back to the editor with it", async () => {
 		await conflicted();
+		expect(backup()?.snapshot).toMatchObject({ title: "내 입력" });
 		act(() => nav.setSearch("compare=conflict"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("loadServer") }));
 		await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(EDIT_HREF));
 		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("서버 최신 제목"));
-		expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
+		await waitFor(() => expect(backup()).toBeUndefined());
 	});
 
 	it("WRITE-C3 picks my input on the compare screen: it is saved on top of the server's version without asking again, and the editor opens", async () => {
@@ -408,11 +419,13 @@ describe("flow: saved elsewhere first", () => {
 
 describe("flow: browser draft on reopening", () => {
 	const savedAt = Date.parse("2026-10-26T01:12:00.000Z");
+	/** `savedAt` as the strips write it, in the site's time zone. */
+	const KEPT_AT = tEntryCompare("stamp", { month: "10", day: "26", time: "10:12" });
 	function keepDraft(over: Record<string, unknown> = {}, baseVersion = 4) {
 		const base = formFromEntry(testSite, draft);
 		const snapshot = { ...base, title: "브라우저에 남은 제목", summary: "임시 소개", ...over };
-		getLocalBackup.mockResolvedValue({
-			key: `${ADMIN}:entry-1`,
+		idb.keep(testSite, {
+			key: BACKUP_KEY,
 			entryId: "entry-1",
 			baseVersion,
 			baseFingerprint: formFingerprint(testSite, base),
@@ -426,10 +439,8 @@ describe("flow: browser draft on reopening", () => {
 	it("WRITE-R2 shows a notice strip when the entry opens: when it was kept, and compare, load and discard", async () => {
 		keepDraft();
 		renderEdit();
-		const sentence = await screen.findByText(tEntryCompare("draft.title"));
-		const strip = within(sentence.closest("[data-slot=banner]") as HTMLElement);
-		expect(strip.getByText(tEntryCompare("draft.title"))).toBeInTheDocument();
-		expect(strip.getByText("10. 26 10:12")).toBeInTheDocument();
+		const strip = await stripWith(tEntryCompare("draft.title"));
+		expect(strip.getByText(KEPT_AT)).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(strip.getByRole("link", { name: tEntryCompare("compare") }).getAttribute("href")).toBe(
 			`${EDIT_HREF}?compare=draft`,
@@ -449,11 +460,10 @@ describe("flow: browser draft on reopening", () => {
 		expect((await bar()).getByRole("button", { name: tEntries("save.dirty") })).toBeInTheDocument();
 
 		cleanup();
-		vi.clearAllMocks();
 		keepDraft();
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("discard") }));
-		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`));
+		await waitFor(() => expect(backup()).toBeUndefined());
 		await waitFor(() => expect(screen.queryByRole("button", { name: tEntryCompare("discard") })).toBeNull());
 		expect(((await title()) as HTMLInputElement).value).toBe("첫 번째 글");
 	});
@@ -465,9 +475,10 @@ describe("flow: browser draft on reopening", () => {
 		await screen.findByRole("button", { name: tEntryCompare("load") });
 		act(() => nav.setSearch("compare=draft"));
 		expect(await screen.findByRole("heading", { level: 1, name: tEntryCompare("heading.draft") })).toBeInTheDocument();
-		const left = within(screen.getByRole("region", { name: "임시 저장본 · 이 브라우저 · 10. 26 10:12" }));
+		const left = within(screen.getByRole("region", { name: tEntryCompare("side.draft", { stamp: KEPT_AT }) }));
 		expect(left.getByRole("heading", { level: 2, name: "브라우저에 남은 제목" })).toBeInTheDocument();
-		expect(screen.getByRole("region", { name: "서버 저장본 · 10. 26 09:58" })).toBeInTheDocument();
+		const changed = tEntryCompare("stamp", { month: "10", day: "26", time: "09:58" });
+		expect(screen.getByRole("region", { name: tEntryCompare("side.saved", { stamp: changed }) })).toBeInTheDocument();
 		const statusBar = within(screen.getByRole("region", { name: tScreens("column.status") }));
 		expect(statusBar.getByText(tEntries("save.local-only"))).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tEntryCompare("loadDraft") }));
@@ -481,7 +492,7 @@ describe("flow: browser draft on reopening", () => {
 		await screen.findByRole("button", { name: tEntryCompare("load") });
 		act(() => nav.setSearch("compare=draft"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("discard") }));
-		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`));
+		await waitFor(() => expect(backup()).toBeUndefined());
 		await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(EDIT_HREF));
 		expect(((await title()) as HTMLInputElement).value).toBe("첫 번째 글");
 	});

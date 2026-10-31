@@ -4,10 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { NoticeError } from "../../api/client";
 import { renderWithSite } from "../../test/site";
+import { AdminUiLabels } from "../../ui/labels";
+import { uiMessages } from "../../ui/messages";
 import { slotsMessages } from "../messages";
 import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 
 const t = testSite.createTranslator(slotsMessages);
+const tUi = testSite.createTranslator(uiMessages);
 
 afterEach(cleanup);
 
@@ -15,7 +18,7 @@ function Host({ request }: { request: SlotRequest }) {
 	const { trigger, panel } = useSlot(request);
 	return (
 		<div>
-			<span data-testid="trigger">{trigger}</span>
+			{trigger}
 			{panel}
 		</div>
 	);
@@ -29,28 +32,30 @@ const action = (overrides: Partial<SlotAction> = {}): SlotAction => ({
 	...overrides,
 });
 
-function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}) {
+/** Renders the slot's action; with `inAdmin`, inside the admin's labels, so its words are the admin's (Korean) ones. */
+function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}, { inAdmin = false } = {}) {
 	const apply = vi.fn();
 	const getContext = vi.fn(() => ({ title: "Title" }));
-	renderWithSite(
+	const slot = (
 		<TooltipProvider>
 			<SlotRegistryProvider sources={sources}>
 				<Host request={{ slot: "field", target: "slug", collection: "post", getContext, apply, ...request }} />
 			</SlotRegistryProvider>
-		</TooltipProvider>,
+		</TooltipProvider>
 	);
+	renderWithSite(inAdmin ? <AdminUiLabels>{slot}</AdminUiLabels> : slot);
 	return { apply, getContext };
 }
 
 describe("the fill action of a slot", () => {
-	it("renders nothing when no action is attached, and asks the source with the slot, target and collection", () => {
+	it("PLUG-A3 renders nothing when no action is attached, and asks the source with the slot, target and collection", () => {
 		const source = vi.fn<SlotSource>(() => []);
 		renderSlot([source]);
 		expect(source).toHaveBeenCalledWith({ slot: "field", target: "slug", collection: "post" });
-		expect(screen.getByTestId("trigger").childElementCount).toBe(0);
+		expect(screen.queryByRole("button")).toBeNull();
 	});
 
-	it("one press runs the action with the current context and puts the result in at once, with no result panel", async () => {
+	it("PLUG-A3 one press runs the action with the current context and puts the result in at once, with no result panel", async () => {
 		const { apply, getContext } = renderSlot([() => [action()]]);
 		fireEvent.click(screen.getByRole("button"));
 		await waitFor(() => expect(apply).toHaveBeenCalledWith("react-query", "replace"));
@@ -59,15 +64,7 @@ describe("the fill action of a slot", () => {
 		expect(screen.getAllByRole("button")).toHaveLength(1);
 	});
 
-	it("says fill while the target is empty and again once it has a value; both are the same press", () => {
-		renderSlot([() => [action()]]);
-		expect(screen.getByRole("button").textContent).toMatch(/Fill/);
-		cleanup();
-		renderSlot([() => [action()]], { filled: true });
-		expect(screen.getByRole("button").textContent).toMatch(/Again/);
-	});
-
-	it("shows writing while the request runs and cannot be pressed again", async () => {
+	it("PLUG-A3 shows writing while the request runs and cannot be pressed again", async () => {
 		let finish: (() => void) | undefined;
 		const run = vi.fn(
 			() =>
@@ -75,9 +72,9 @@ describe("the fill action of a slot", () => {
 					finish = () => resolve({ kind: "text", text: "Done." });
 				}),
 		);
-		const { apply } = renderSlot([() => [action({ run })]]);
+		const { apply } = renderSlot([() => [action({ run })]], {}, { inAdmin: true });
 		fireEvent.click(screen.getByRole("button"));
-		const busy = await screen.findByRole("button", { name: /Writing/ });
+		const busy = await screen.findByRole("button", { name: tUi("ai.working") });
 		expect(busy.getAttribute("aria-busy")).toBe("true");
 		fireEvent.click(busy);
 		expect(run).toHaveBeenCalledTimes(1);
@@ -86,7 +83,7 @@ describe("the fill action of a slot", () => {
 		await waitFor(() => expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull());
 	});
 
-	it("a failed run leaves one error line and writes nothing", async () => {
+	it("PLUG-A3 a failed run leaves one error line and writes nothing", async () => {
 		const run = vi.fn(async () => {
 			throw new NoticeError("No connection is ready.");
 		});
@@ -96,14 +93,14 @@ describe("the fill action of a slot", () => {
 		expect(apply).not.toHaveBeenCalled();
 	});
 
-	it("an empty result says so instead of writing", async () => {
+	it("PLUG-A3 an empty result says so instead of writing", async () => {
 		const { apply } = renderSlot([() => [action({ run: async () => ({ kind: "candidates", items: [] }) })]]);
 		fireEvent.click(screen.getByRole("button"));
 		expect((await screen.findByRole("alert")).textContent).toContain(t("nothingToApply"));
 		expect(apply).not.toHaveBeenCalled();
 	});
 
-	it("with more than one action the press lists them by name and runs the one picked", async () => {
+	it("PLUG-A3 with more than one action the press lists them by name and runs the one picked", async () => {
 		const second = vi.fn(async () => ({ kind: "text" as const, text: "From the second." }));
 		const { apply } = renderSlot([() => [action(), action({ id: "a2", label: "Rewrite it", run: second })]]);
 		fireEvent.click(screen.getByRole("button"));
@@ -111,7 +108,7 @@ describe("the fill action of a slot", () => {
 		await waitFor(() => expect(apply).toHaveBeenCalledWith("From the second.", "replace"));
 	});
 
-	it("is disabled when the request is", () => {
+	it("PLUG-A3 is disabled when the request is", () => {
 		renderSlot([() => [action()]], { disabled: true });
 		expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
 	});

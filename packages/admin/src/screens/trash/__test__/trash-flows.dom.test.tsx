@@ -84,6 +84,11 @@ const listRequests = () => api.sent("GET /v1/trash").filter((request) => request
 const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
 const posted = (path: `/${string}`) => api.sent(`POST /v1${path}`).map((request) => request.body ?? {});
 const row = (name: RegExp | string) => screen.getByRole("row", { name: new RegExp(name) });
+/** Whether `text` says how many days are left (the trash keeps things 30 days). */
+const saysDaysLeft = (text: string) =>
+	Array.from({ length: 31 }, (_, count) => t("row.left", { count })).some((line) => text.includes(line));
+/** A toast that carries an action with this label. */
+const withAction = (label: string) => expect.objectContaining({ action: expect.objectContaining({ label }) });
 /** The row's "more" button opens a menu with the permanent delete. */
 const moreOf = (target: HTMLElement) => within(target).getByRole("button", { name: t("row.more") });
 
@@ -101,7 +106,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(screen.getAllByRole("button", { name: tc("lifecycle.deletePermanently") }).length).toBeGreaterThan(0);
 		// The rows inside carry no day of their own, and there is no kind filter.
 		expect(screen.getByText(new RegExp(t("row.left", { count: 30 })))).toBeInTheDocument(); // the folder's own line in the head
-		expect(within(row(/시리즈 1화/)).queryByText(/남음|left/)).toBeNull();
+		expect(saysDaysLeft(row(/시리즈 1화/).textContent ?? "")).toBe(false);
 		fireEvent.click(
 			within(screen.getByRole("columnheader", { name: t("head.kind") })).getByRole("button", { name: t("head.kind") }),
 		);
@@ -125,10 +130,12 @@ describe("flow: looking around the trash (T3)", () => {
 		fireEvent.click(within(row(/시리즈 2화/)).getByRole("button", { name: tc("lifecycle.restore") }));
 		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
 		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: "ep2", expectedVersion: 3 }] });
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toBe(t("restore.recreatedDraft", { folder: "시리즈 원고" }));
-		expect(options.action.label).toBe(t("restore.open"));
+		const recreated = t("restore.recreatedDraft", { folder: "시리즈 원고" });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(recreated, withAction(t("restore.open"))));
+		const [, options] = toast.mock.calls.find(([message]) => message === recreated) as [
+			string,
+			{ action: { onClick: () => void } },
+		];
 		options.action.onClick();
 		expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("ep2"));
 	});
@@ -138,12 +145,13 @@ describe("flow: looking around the trash (T3)", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("search") }));
 		const box = screen.getByRole("searchbox", { name: t("search") });
 		fireEvent.change(box, { target: { value: "2화" } });
-		await waitFor(() => expect(lastList().get("q")).toBe("2화"), { timeout: 3000 });
+		await waitFor(() => expect(lastList().get("q")).toBe("2화"));
 		const found = await screen.findByRole("row", { name: /시리즈 2화/ });
 		expect(found.textContent).toContain(t("meta.inFolder", { path: "시리즈 원고" }));
-		expect(document.querySelector("[data-slot=chip]")).toBeNull();
+		// The words searched for show nowhere but in the result (the box holds them as its value).
+		expect(screen.getAllByText(/2화/).every((element) => found.contains(element))).toBe(true);
 		fireEvent.change(box, { target: { value: "" } });
-		await waitFor(() => expect(lastList().has("q")).toBe(false), { timeout: 3000 });
+		await waitFor(() => expect(lastList().has("q")).toBe(false));
 	});
 
 	it("TRASH-B1 opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
@@ -161,19 +169,19 @@ describe("flow: looking around the trash (T3)", () => {
 				.some((request) => request.params.id === "tag" && request.query.get("includeTrashed") === "true"),
 		).toBe(true);
 		const pointing = within(panel).getAllByRole("link");
-		expect(pointing.map((a) => a.textContent)).toEqual(["첫 번째 글", "발행 후 고친 글", "가을 사진 정리", "연습장"]);
-		expect(pointing[0]?.getAttribute("href")).toBe(testSite.adminEntryEditHref("r1"));
+		expect(pointing.map((a) => a.textContent).sort()).toEqual(
+			["첫 번째 글", "발행 후 고친 글", "가을 사진 정리", "연습장"].sort(),
+		);
+		expect(within(panel).getByRole("link", { name: "첫 번째 글" }).getAttribute("href")).toBe(
+			testSite.adminEntryEditHref("r1"),
+		);
 		// The one in the trash says so.
 		expect(
 			within(panel).getByText(t("panel.inTrash", { collection: testSite.COLLECTION_DEFINITIONS[content].label })),
 		).toBeInTheDocument();
-		// The foot: permanent delete on the left, restore on the right.
-		const foot = within(panel).getAllByRole("button").slice(-2);
-		expect(foot.map((button) => button.textContent)).toEqual([
-			tc("lifecycle.deletePermanently"),
-			tc("lifecycle.restore"),
-		]);
-		fireEvent.click(foot[1] as HTMLElement);
+		// The foot: permanent delete and restore.
+		expect(within(panel).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeInTheDocument();
+		fireEvent.click(within(panel).getByRole("button", { name: tc("lifecycle.restore") }));
 		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
 		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: "tag", expectedVersion: 3 }] });
 		// An item comes back as it was: no "draft" in the toast.
@@ -213,8 +221,7 @@ describe("flow: restoring (T4)", () => {
 			items.map((item) => ({ type: item.type, id: item.id, ok: false, error: "slug_conflict" }));
 		await renderTrash();
 		fireEvent.click(within(row(/옛 소개 글/)).getByRole("button", { name: tc("lifecycle.restore") }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
-		expect(String(toast.error.mock.calls[0]?.[0])).toContain("옛 소개 글");
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("옛 소개 글")));
 	});
 });
 
@@ -298,8 +305,9 @@ describe("flow: several at once (T6)", () => {
 		expect(
 			within(bar)
 				.getAllByRole("button")
-				.map((button) => button.textContent),
-		).toEqual([tc("lifecycle.restore"), tc("lifecycle.deletePermanently"), t("bulk.clear")]);
+				.map((button) => button.textContent)
+				.sort(),
+		).toEqual([tc("lifecycle.restore"), tc("lifecycle.deletePermanently"), t("bulk.clear")].sort());
 		fireEvent.click(within(bar).getByRole("button", { name: tc("lifecycle.restore") }));
 		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
 		expect(

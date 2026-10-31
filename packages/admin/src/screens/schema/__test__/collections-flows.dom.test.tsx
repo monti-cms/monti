@@ -107,9 +107,20 @@ afterEach(() => {
 });
 
 const lastPreview = () => api.sent("POST /v1/schema/preview").at(-1);
-const inList = (name: string) => screen.queryByTestId(`collection-nav-${name}`) !== null;
-const toastUndo = () =>
-	(toast.mock.calls.at(-1) as [string, { action: { label: string; onClick: () => void } }])[1].action;
+/** Whether the list of collections has the one labelled `label`: each has a handle named for it. */
+const inList = (label: string) =>
+	screen.queryByRole("button", { name: t("collection.drag", { name: label }) }) !== null;
+/** The collection open in the editor: its link in the list is the current page. */
+const openInList = () => screen.getByRole("button", { current: "page" });
+/** The block at the bottom of the open collection's basics, with its delete button. */
+const deleteBlock = () => screen.findByRole("region", { name: tCollection("collection.dangerTitle") });
+/** The action of the toast that said the collection was deleted. */
+const deletedToastAction = (name: string) => {
+	const call = toast.mock.calls.findLast(([message]) => message === tCollection("collection.deleted", { name })) as
+		| [string, { action: { label: string; onClick: () => void } }]
+		| undefined;
+	return call?.[1].action;
+};
 const open = () =>
 	render(
 		<AdminQueryProvider>
@@ -124,7 +135,7 @@ const hasChangeCount = (count: number) =>
 describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 	it("SCHEMA-N3 creates a collection from the sheet, adds a field to it and saves it", async () => {
 		open();
-		await screen.findByTestId("collection-nav-post");
+		await screen.findByRole("button", { name: t("collection.drag", { name: "Post" }) });
 
 		// 01: "+ 새 컬렉션" under the list opens a sheet (not a dialog in the middle) with focus in the name.
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
@@ -173,17 +184,14 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		// 03: created, the sheet closes, the new collection is open on its fields (title and slug) and the title row counts one change.
 		fireEvent.click(createButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(screen.getByTestId("collection-nav-note").querySelector("[aria-current]")).toBeInTheDocument();
-		const editor = screen.getByTestId("collection-note");
-		expect(within(editor).getByTestId("field-title")).toBeInTheDocument();
-		expect(within(editor).getByTestId("field-slug")).toBeInTheDocument();
+		expect(openInList().textContent).toContain("Notes");
+		expect(screen.getByRole("button", { name: tFields("field.toggle", { name: "title" }) })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: tFields("field.toggle", { name: "slug" }) })).toBeInTheDocument();
 		expect(hasChangeCount(1)).toBe(true);
-		expect(
-			within(screen.getByTestId("collection-nav-note")).getByRole("img", { name: t("changed") }),
-		).toBeInTheDocument();
+		expect(within(openInList()).getByRole("img", { name: t("changed") })).toBeInTheDocument();
 
 		// 04: "+ 필드 추가" opens the sheet of kinds, with the collection's name in its title and the basic and advanced tabs.
-		fireEvent.click(within(editor).getByRole("button", { name: `+ ${tFields("field.add")}` }));
+		fireEvent.click(screen.getByRole("button", { name: `+ ${tFields("field.add")}` }));
 		const adding = await screen.findByRole("dialog", { name: new RegExp(tFields("field.addTitle")) });
 		expect(adding.textContent).toContain("Notes");
 		const kindList = within(adding).getByRole("listbox", { name: tFields("field.kind") });
@@ -234,7 +242,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(addButton.disabled).toBe(false);
 		fireEvent.click(addButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(within(screen.getByTestId("collection-note")).getByTestId("field-summary")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: tFields("field.toggle", { name: "summary" }) })).toBeInTheDocument();
 		// A new collection is one change, whatever it holds.
 		expect(hasChangeCount(1)).toBe(true);
 
@@ -263,7 +271,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 
 	it("SCHEMA-N2 hides the address box for an item", async () => {
 		open();
-		await screen.findByTestId("collection-nav-post");
+		await screen.findByRole("button", { name: t("collection.drag", { name: "Post" }) });
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const sheet = await screen.findByRole("dialog", { name: tCollection("collection.createTitle") });
 		fireEvent.change(within(sheet).getByRole("textbox", { name: tCollection("collection.newName") }), {
@@ -298,7 +306,7 @@ const removal: SchemaEditPreview["impacts"][number] = {
 
 /** Presses the delete button in the block of the open collection. */
 const pressDelete = async () => {
-	const block = await screen.findByTestId("collection-delete");
+	const block = await deleteBlock();
 	fireEvent.click(within(block).getByRole("button", { name: tCollection("collection.delete") }));
 	return block;
 };
@@ -306,9 +314,8 @@ const pressDelete = async () => {
 describe("flow 4 · 필드 시트", () => {
 	it("SCHEMA-F1 renames a field on Save: the name is taken when the input is left, and the rename joins the changes as one", async () => {
 		open();
-		const editor = await screen.findByTestId("collection-post");
-		fireEvent.click(within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
-		fireEvent.click(await within(editor).findByRole("button", { name: tFields("field.toggle", { name: "title" }) }));
+		fireEvent.click(await screen.findByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
+		fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: "title" }) }));
 		const sheet = await screen.findByRole("dialog");
 		const name = within(sheet).getByRole("textbox", { name: tFields("field.name") });
 		fireEvent.change(name, { target: { value: "heading" } });
@@ -342,41 +349,42 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		open();
 
 		// 15: the block at the bottom of the basics tab, with what the collection holds.
-		const block = await screen.findByTestId("collection-delete");
+		const block = await deleteBlock();
 		expect(block.textContent).toContain(
 			tCollection("collection.count", { entries: 23, trashed: 2, folders: 2, kind: "document" }),
 		);
-		expect(inList("memo")).toBe(true);
+		expect(inList("Memo")).toBe(true);
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 16: pressed, the collection leaves the list at once and the editor shows the first one left; the changes count goes up.
 		await pressDelete();
-		expect(inList("memo")).toBe(false);
-		expect(inList("post")).toBe(true);
-		expect(screen.getByTestId("collection-nav-post").querySelector("[aria-current]")).toBeInTheDocument();
-		expect(within(screen.getByTestId("collection-delete")).getByText("Post")).toBeInTheDocument();
+		expect(inList("Memo")).toBe(false);
+		expect(inList("Post")).toBe(true);
+		expect(openInList().textContent).toContain("Post");
+		expect(within(await deleteBlock()).getByText("Post")).toBeInTheDocument();
 		const bar = screen.getByRole("region", { name: t("bar.label") });
 		expect(within(bar).getByLabelText(t("bar.count", { count: 1 }))).toBeInTheDocument();
 
 		// The toast says so and takes it back.
 		expect(toast).toHaveBeenCalledTimes(1);
-		const [message] = toast.mock.calls[0] as [string];
-		expect(message).toBe(tCollection("collection.deleted", { name: "Memo" }));
-		expect(toastUndo().label).toBe(tCollection("collection.deleteUndo"));
+		expect(toast).toHaveBeenCalledWith(
+			tCollection("collection.deleted", { name: "Memo" }),
+			expect.objectContaining({ action: expect.objectContaining({ label: tCollection("collection.deleteUndo") }) }),
+		);
 
 		// The menu of changes lists the collection with its tag, and its undo brings it back: nothing to save any more.
 		fireEvent.click(within(bar).getByRole("button", { name: t("bar.list") }));
 		const row = await screen.findByRole("menuitem", { name: new RegExp(`^Memo ${t("bar.removed")}`) });
 		expect(row.textContent).toContain(t("bar.undo"));
 		fireEvent.click(row);
-		await waitFor(() => expect(inList("memo")).toBe(true));
+		await waitFor(() => expect(inList("Memo")).toBe(true));
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// The toast's undo does the same.
 		await pressDelete();
-		expect(inList("memo")).toBe(false);
-		toastUndo().onClick();
-		await waitFor(() => expect(inList("memo")).toBe(true));
+		expect(inList("Memo")).toBe(false);
+		deletedToastAction("Memo")?.onClick();
+		await waitFor(() => expect(inList("Memo")).toBe(true));
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 17: deleted again, saved: the review names what goes and what is cut, and it is sent without the collection.
@@ -384,12 +392,19 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		fireEvent.click(
 			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
 		);
+		// The collection that goes is the sheet's one change.
 		const sheet = await screen.findByRole("dialog");
-		const change = await within(sheet).findByTestId(`impact-${KEY}`);
+		const change = sheet;
+		await within(sheet).findByText(tReview("drop.tag"));
 		expect(lastPreview()?.body.dropCollections).toEqual(["memo"]);
 		expect(Object.keys((lastPreview()?.body.schema as { collections: object }).collections)).toEqual(["post"]);
-		// Nothing to resolve first: no button that cuts the links, no identifier to type, and the apply is on from the start.
-		expect(within(sheet).queryByRole("button", { name: /연결 끊기|Unlink/ })).toBeNull();
+		// Nothing to resolve first: the sheet's only buttons (besides its close) are the export, cancel and the apply, no identifier to type,
+		// and the apply is on from the start.
+		const actions = within(sheet)
+			.getAllByRole("button")
+			.map((button) => button.textContent)
+			.filter(Boolean);
+		expect(actions.sort()).toEqual([tReview("drop.export"), tc("cancel"), tReview("drop.apply")].sort());
 		expect(within(sheet).queryByRole("textbox")).toBeNull();
 		const apply = within(sheet).getByRole("button", { name: tReview("drop.apply") }) as HTMLButtonElement;
 		expect(apply.disabled).toBe(false);
@@ -438,10 +453,10 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
 		);
 		const sheet = await screen.findByRole("dialog");
-		await within(sheet).findByTestId(`impact-${KEY}`);
+		await within(sheet).findByText(tReview("drop.tag"));
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		expect(api.requests.some((request) => request.method === "PUT")).toBe(false);
-		expect(inList("memo")).toBe(false);
+		expect(inList("Memo")).toBe(false);
 	});
 });

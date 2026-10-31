@@ -88,12 +88,12 @@ describe("block converter registry", () => {
 			() => docOf('```Chart title="sales"\npie\n  "Apple": 40\n  "Banana": 60\n```'),
 		],
 		["math", () => storedDoc({ type: "math", attrs: { value: "x^2 + y^2 = z^2" } })],
-	])("round-trips %s through the editor", (_, build) => {
+	])("FMT-R2 round-trips %s through the editor", (_, build) => {
 		const doc = build();
 		expect(tiptapToStored(testSite, storedToTiptap(testSite, doc))).toEqual(doc);
 	});
 
-	it("saves a preview block with its new value after it changes", () => {
+	it("FMT-R2 saves a preview block with its new value after it changes", () => {
 		const firstBlock = (doc: ReturnType<typeof tiptapToStored>, index = 0): CmsNode | undefined => doc.content[index];
 
 		// Mermaid

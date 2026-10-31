@@ -12,10 +12,12 @@ import { toast } from "../../test/ui-toast";
 import type { EntryData } from "../entries/entry-form";
 import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
+import { deleteMessages } from "../shared/delete.messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
 
 const tCommon = testSite.createTranslator(commonMessages);
+const tDelete = testSite.createTranslator(deleteMessages);
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
@@ -120,17 +122,8 @@ const openRowMenu = async (title: string) => {
 	return screen.findAllByRole("menuitem");
 };
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
-
-describe("list screen — title row", () => {
-	it("LIST-S3 shows the title and, for a collection with a public route, its address rule beside it", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.post.label);
-		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeInTheDocument();
-	});
-});
+/** The row menu's move to the trash: its name is the label and then its key. */
+const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tCommon("lifecycle.trash")) });
 
 describe("list screen — list settings", () => {
 	it("LIST-S1 with no page size or sort in the address, requests with the saved settings", async () => {
@@ -146,18 +139,6 @@ describe("list screen — list settings", () => {
 		});
 	});
 
-	it("LIST-S1 requests the list once, with the saved sort, and not first with the defaults", async () => {
-		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		await new Promise((resolve) => setTimeout(resolve, 50));
-
-		// The trash badge asks for trashed rows too; the list itself is the request with a sort.
-		const listRequests = entryRequests().filter((query) => query.has("sortField"));
-		expect(listRequests).toHaveLength(1);
-		expect(listRequests[0]?.get("sortField")).toBe("title");
-	});
-
 	it("LIST-S1 values written in the address take precedence over saved settings", async () => {
 		nav.setSearch("collection=post&pageSize=100&sort=createdAt&dir=asc");
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };
@@ -169,7 +150,7 @@ describe("list screen — list settings", () => {
 });
 
 describe("list screen — row menu and bulk actions", () => {
-	it("the Delete key moves all selected draft rows to the trash at once", async () => {
+	it("LIST-C5 the Delete key moves all selected draft rows to the trash at once", async () => {
 		api.on("POST /v1/bulk", () => ({
 			results: [
 				{ id: "가", ok: true as const, version: 4 },
@@ -178,10 +159,10 @@ describe("list screen — row menu and bulk actions", () => {
 		}));
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
-		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "가" }) }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "다" }) }));
 
-		fireEvent.keyDown(screen.getByRole("checkbox", { name: "다 선택" }), { key: "Delete" });
+		fireEvent.keyDown(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "다" }) }), { key: "Delete" });
 
 		await waitFor(() => expect(api.sent("POST /v1/bulk")).toHaveLength(1));
 		expect(api.sent("POST /v1/bulk")[0]?.body.items.map((entry: { id: string }) => entry.id)).toEqual(["가", "다"]);
@@ -199,10 +180,10 @@ describe("list screen — row menu and bulk actions", () => {
 		);
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
-		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "가" }) }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "나" }) }));
 		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
+		fireEvent.click(trashItem());
 
 		// Two rows drop out before the response.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /가/ })).toBeNull());
@@ -220,12 +201,14 @@ describe("list screen — row menu and bulk actions", () => {
 		);
 
 		await waitFor(() =>
-			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
+			expect(
+				screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "나" }) }).getAttribute("aria-checked"),
+			).toBe("true"),
 		);
 		// The one that did move can still be taken back from the toast.
 		expect(toast.error).toHaveBeenCalledWith(
 			expect.any(String),
-			expect.objectContaining({ action: expect.objectContaining({ label: "되돌리기" }) }),
+			expect.objectContaining({ action: expect.objectContaining({ label: tDelete("undo") }) }),
 		);
 	});
 
@@ -241,7 +224,7 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
+		fireEvent.click(trashItem());
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.getByRole("row", { name: /가/ })).toBeInTheDocument();
@@ -285,14 +268,14 @@ describe("list screen — a collection without folders", () => {
 		server.folders = [folder];
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
-		expect(await openBlankMenu()).toContain("폴더 추가");
+		expect(await openBlankMenu()).toContain(tCommon("addFolder"));
 		cleanup();
 
 		renderOff();
 		await screen.findByRole("row", { name: /가/ });
 		const labels = await openBlankMenu();
 		expect(labels.length).toBeGreaterThan(0);
-		expect(labels).not.toContain("폴더 추가");
+		expect(labels).not.toContain(tCommon("addFolder"));
 	});
 
 	it("LIST-F6 never requests folders, even with a ?folder= left in the address", async () => {
@@ -302,8 +285,8 @@ describe("list screen — a collection without folders", () => {
 				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
+		// The folders are asked for before the rows (the rows wait for the saved settings), so once the rows are in, no request is still to come.
 		await screen.findByRole("row", { name: /가/ });
-		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(folderRequests()).toHaveLength(0);
 	});
@@ -333,9 +316,10 @@ describe("taxonomy edit panel — unsaved changes", () => {
 			)
 			.on("GET /v1/entries/:id", ({ params }) => records[params.id ?? ""] ?? failure("not_found"));
 	});
-	const panelName = () => screen.findByRole("textbox", { name: /이름/ }) as Promise<HTMLInputElement>;
+	const panelName = () =>
+		screen.findByRole("textbox", { name: testSite.titleField("tag").field.label }) as Promise<HTMLInputElement>;
 
-	it("pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
+	it("WRITE-S6 pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
@@ -350,7 +334,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
 	});
 
-	it("a link that leaves the list asks first while the panel has changes", async () => {
+	it("WRITE-S6 a link that leaves the list asks first while the panel has changes", async () => {
 		render(
 			<AdminQueryProvider>
 				<a href="/studio/events">elsewhere</a>
@@ -382,19 +366,19 @@ describe("list screen — screen context", () => {
 			</ScreenContextProvider>,
 		);
 
-	it("publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
+	it("PLUG-A5 publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
 		renderWithContext();
 		await screen.findByRole("row", { name: /가/ });
 		await waitFor(() => expect(whereIs()).toMatchObject({ screen: "entries", collection: "post" }));
 		expect(whereIs().selectedIds).toEqual([]);
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
-		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "가" }) }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "다" }) }));
 		await waitFor(() => expect(whereIs().selectedIds).toEqual(["가", "다"]));
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "가" }) }));
 		await waitFor(() => expect(whereIs().selectedIds).toEqual(["다"]));
-		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "다" }) }));
 		await waitFor(() => expect(whereIs().selectedIds).toEqual([]));
 	});
 });

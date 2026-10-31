@@ -1,5 +1,7 @@
 import { Editor } from "@tiptap/core";
-import { CellSelection, cellAround } from "@tiptap/pm/tables";
+import { history, undo } from "@tiptap/pm/history";
+import { type Command, EditorState, type Transaction } from "@tiptap/pm/state";
+import { CellSelection, cellAround, mergeCells } from "@tiptap/pm/tables";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
@@ -50,7 +52,7 @@ const createTableEditor = (content: ReturnType<typeof storedToTiptap>) => {
 };
 
 describe("editor table cell merge and split", () => {
-	it("loading a merged table preserves colspan/rowspan in the Tiptap schema", () => {
+	it("FMT-R2 loading a merged table preserves colspan/rowspan in the Tiptap schema", () => {
 		const source = mergedTable();
 
 		const instance = createTableEditor(storedToTiptap(testSite, source));
@@ -69,7 +71,7 @@ describe("editor table cell merge and split", () => {
 		expect(withoutIds(tiptapToStored(testSite, json))).toEqual(withoutIds(source));
 	});
 
-	it("merging cells (mergeCells) in a GFM table saves a table with a merged cell", () => {
+	it("FMT-R2 merging cells (mergeCells) in a GFM table saves a table with a merged cell", () => {
 		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
 
 		// set the cell selection (CellSelection)
@@ -117,7 +119,7 @@ describe("editor table cell merge and split", () => {
 		).toContain(2);
 	});
 
-	it("splitting a merged cell (splitCell) returns the table to GFM", () => {
+	it("FMT-R2 splitting a merged cell (splitCell) returns the table to GFM", () => {
 		const source = storedDoc(
 			table([[{ attrs: { header: true, colspan: 2 }, content: [text("제목")] }], [[text("1")], [text("2")]]], {
 				align: ["left", "center"],
@@ -158,13 +160,7 @@ describe("editor table cell merge and split", () => {
 		expect(JSON.stringify(cells[0])).toContain("제목");
 	});
 
-	it("mergeCells and splitCell must be unavailable when the selection is not a CellSelection", () => {
-		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
-		// default cursor selection (TextSelection)
-		expect(instance.state.selection instanceof CellSelection).toBe(false);
-	});
-
-	it("undoing a merge does not turn a first-column header layout into a first-row header", () => {
+	it("FMT-R2 undoing a merge does not turn a first-column header layout into a first-row header", () => {
 		const source = storedDoc(
 			table([
 				[
@@ -177,7 +173,35 @@ describe("editor table cell merge and split", () => {
 				],
 			]),
 		);
-		const saved = tiptapToStored(testSite, storedToTiptap(testSite, source));
+		// The editor here is not mounted and runs no plugins, so the undo history runs on a state built from its document.
+		const instance = createTableEditor(storedToTiptap(testSite, source));
+		let state = EditorState.create({ schema: instance.schema, doc: instance.state.doc, plugins: [history()] });
+		const run = (command: Command) => {
+			let next = state;
+			const dispatch = (tr: Transaction) => {
+				next = state.apply(tr);
+			};
+			expect(command(state, dispatch)).toBe(true);
+			state = next;
+		};
+		// Merge the two cells of the second column, then undo.
+		const cells: number[] = [];
+		state.doc.descendants((node, pos) => {
+			if (node.type.name === "tableHeader" || node.type.name === "tableCell") cells.push(pos);
+		});
+		const [, top, , bottom] = cells;
+		if (top === undefined || bottom === undefined) throw new Error("The table has no second column.");
+		state = state.apply(state.tr.setSelection(CellSelection.create(state.doc, top, bottom)));
+		run(mergeCells);
+		const merged = tiptapToStored(testSite, state.doc.toJSON());
+		expect(
+			cellsOf(merged)
+				.flat()
+				.map((cell) => cell.attrs?.rowspan),
+		).toContain(2);
+		run(undo);
+
+		const saved = tiptapToStored(testSite, state.doc.toJSON());
 		expect(withoutIds(saved)).toEqual(withoutIds(source));
 		expect(cellsOf(saved).map((row) => row.map((cell) => cell.attrs?.header))).toEqual([
 			[true, false],
@@ -185,7 +209,7 @@ describe("editor table cell merge and split", () => {
 		]);
 	});
 
-	it("loads column widths as cell colwidth and saves adjusted widths as widths", () => {
+	it("FMT-R2 loads column widths as cell colwidth and saves adjusted widths as widths", () => {
 		const source = storedDoc(
 			table([[{ attrs: { header: true, colspan: 2 }, content: [text("합친 머리글")] }], [[text("a")], [text("b")]]], {
 				widths: [80, 160],

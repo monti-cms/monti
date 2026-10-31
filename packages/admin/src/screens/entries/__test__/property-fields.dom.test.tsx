@@ -36,7 +36,7 @@ const open = (label: RegExp) => {
 };
 
 describe("PropertyFields on the form provider", () => {
-	it("shows a publish problem under its value and links the opened input to it", () => {
+	it("WRITE-P1 shows a publish problem under its value and links the opened input to it", () => {
 		const issue = {
 			code: "missing_field",
 			path: "summary",
@@ -46,10 +46,10 @@ describe("PropertyFields on the form provider", () => {
 		};
 		renderFields({ issues: [issue] });
 		// The field already says where the problem is, so its key is not part of the text.
-		expect(document.getElementById("cms-summary-error")?.textContent).toBe(issue.text);
+		expect(screen.getByText(issue.text)).toBeInTheDocument();
 		const input = open(/^요약/);
 		expect(input.getAttribute("aria-invalid")).toBe("true");
-		expect(input.getAttribute("aria-describedby")).toBe("cms-summary-error");
+		expect(input).toHaveAccessibleDescription(issue.text);
 	});
 
 	it("a change reaches the owner as a patch of that field only", () => {
@@ -59,7 +59,7 @@ describe("PropertyFields on the form provider", () => {
 		expect(setForm).toHaveBeenCalledWith({ summary: "AB" });
 	});
 
-	it("the slug input uses `onSlugChange` when given, and the form otherwise", () => {
+	it("WRITE-P4 the slug input uses `onSlugChange` when given, and the form otherwise", () => {
 		const onSlugChange = vi.fn();
 		const setForm = renderFields({ form: { ...EMPTY_FORM, slug: "a" } }, { name: "slug", onSlugChange });
 		fireEvent.change(open(/^주소/), { target: { value: "ab" } });
@@ -72,14 +72,14 @@ describe("PropertyFields on the form provider", () => {
 		expect(plain).toHaveBeenCalledWith({ slug: "ac" });
 	});
 
-	it("a disabled form shows the value but does not open it", () => {
+	it("TRASH-T7 a disabled form shows the value but does not open it", () => {
 		const setForm = renderFields({ form: { ...EMPTY_FORM, summary: "S" }, disabled: true });
 		expect(screen.queryByRole("button", { name: /^요약/ })).toBeNull();
 		expect(screen.getByText("S")).toBeInTheDocument();
 		expect(setForm).not.toHaveBeenCalled();
 	});
 
-	it("fills a field from the body when its button is pressed while the field is open", () => {
+	it("WRITE-W12 fills a field from the body when its button is pressed while the field is open", () => {
 		const doc = {
 			type: "doc" as const,
 			version: 1,

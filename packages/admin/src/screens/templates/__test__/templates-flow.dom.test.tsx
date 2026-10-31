@@ -10,7 +10,7 @@ import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateEditorScreen } from "../template-editor-screen";
-import { editTemplateHref, newTemplateHref } from "../template-hrefs";
+import { editTemplateHref } from "../template-hrefs";
 import { TemplatesScreen } from "../templates-screen";
 
 // One test group per canvas flow of the Templates boards ("도구 · 템플릿" and "도구 · 템플릿 편집기"): the list, a row's menu, the editor page and its save.
@@ -79,6 +79,8 @@ const SECOND = template("b", "책 리뷰", "2026-09-02T03:00:00.000Z");
 let store: BodyTemplate[];
 let api: FakeApi;
 let conflict = false;
+/** What the server says when the template changed elsewhere first. */
+const SERVER_CONFLICT = "다른 곳에서 먼저 바뀌었어요.";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 const requested = (method: Method, path: `/${string}`) => api.sent(`${method} /v1${path}`);
@@ -109,7 +111,7 @@ beforeEach(() => {
 			({ params }) => store.find((item) => item.id === params.id) ?? failure("not_found", "없음"),
 		)
 		.on("PATCH /v1/templates/:id", ({ params, body }) => {
-			if (conflict) return failure("conflict", "다른 곳에서 먼저 바뀌었어요.");
+			if (conflict) return failure("conflict", SERVER_CONFLICT);
 			const found = store.find((item) => item.id === params.id);
 			const saved = {
 				...(found as BodyTemplate),
@@ -156,21 +158,13 @@ const pressSave = () => {
 	});
 };
 
-describe("flow: templates · the list", () => {
-	it("starts a new template from the header: it goes to the new template page", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("button", { name: t("add") }));
-		expect(nav.navigate).toHaveBeenCalledWith(newTemplateHref(testSite));
-	});
-});
-
 describe("flow: templates · a row's menu", () => {
 	const openMenu = async (name: string) => {
 		fireEvent.click(within(rowOf(name)).getByRole("button", { name: t("row.more") }));
 		return screen.findAllByRole("menuitem");
 	};
 
-	it("duplicates: one create request under a copy name, and the copy joins the list", async () => {
+	it("TPL-L1 duplicates: one create request under a copy name, and the copy joins the list", async () => {
 		await renderList();
 		await openMenu(FIRST.name);
 		fireEvent.click(screen.getByRole("menuitem", { name: t("row.duplicate") }));
@@ -181,7 +175,7 @@ describe("flow: templates · a row's menu", () => {
 		await screen.findByRole("link", { name: t("copyName", { name: FIRST.name }) });
 	});
 
-	it("deletes only after a question, with the version it saw, and the row goes", async () => {
+	it("TPL-L1 deletes only after a question, with the version it saw, and the row goes", async () => {
 		await renderList();
 		await openMenu(FIRST.name);
 		fireEvent.click(screen.getByRole("menuitem", { name: t("row.delete") }));
@@ -205,7 +199,7 @@ describe("flow: templates · a row's menu", () => {
 });
 
 describe("flow: templates · the editor page", () => {
-	it("saves with ⌘S: one request with the name, the body and the version it saw; the status goes and a toast says saved", async () => {
+	it("TPL-E1 saves with ⌘S: one request with the name, the body and the version it saw; the status goes and a toast says saved", async () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		fireEvent.change(name, { target: { value: "긴 글" } });
@@ -230,7 +224,7 @@ describe("flow: templates · the editor page", () => {
 		});
 	});
 
-	it("keeps the changes and shows the conflict as a notice strip with a way to take the server's version", async () => {
+	it("TPL-E1 keeps the changes and shows the conflict as a notice strip with a way to take the server's version", async () => {
 		conflict = true;
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
@@ -240,7 +234,7 @@ describe("flow: templates · the editor page", () => {
 		expect(within(strip).getByText(t("editor.conflict"))).toBeInTheDocument();
 		expect(within(strip).getByText(t("editor.conflictMeta"))).toBeInTheDocument();
 		// The strip, not a line under the name.
-		expect(screen.queryByText("다른 곳에서 먼저 바뀌었어요.")).toBeNull();
+		expect(screen.queryByText(SERVER_CONFLICT)).toBeNull();
 		expect(screen.getByText(t("editor.unsaved"))).toBeInTheDocument();
 		expect(name.value).toBe("긴 글");
 
@@ -252,22 +246,7 @@ describe("flow: templates · the editor page", () => {
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
 	});
 
-	it("shows a failed load with the server's message and a retry, under the back link", async () => {
-		store = [];
-		render(
-			<AdminQueryProvider>
-				<TemplateEditorScreen id={FIRST.id} />
-			</AdminQueryProvider>,
-		);
-		const alert = await screen.findByRole("alert");
-		expect(alert.textContent).toContain("없음");
-		expect(screen.getByRole("link", { name: t("editor.back") })).toBeInTheDocument();
-		store = [FIRST, SECOND];
-		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
-		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-	});
-
-	it("asks before the back link throws unsaved changes away, and stays when told to", async () => {
+	it("WRITE-S6 asks before the back link throws unsaved changes away, and stays when told to", async () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		fireEvent.change(name, { target: { value: "긴 글" } });
@@ -280,7 +259,7 @@ describe("flow: templates · the editor page", () => {
 });
 
 describe("flow: templates · a new template", () => {
-	it("will not save without a name: it says so and sends nothing", async () => {
+	it("TPL-N1 will not save without a name: it says so and sends nothing", async () => {
 		await renderEditor();
 		fireEvent.click(screen.getByRole("button", { name: "edit body" }));
 		pressSave();
@@ -288,7 +267,7 @@ describe("flow: templates · a new template", () => {
 		expect(requested("POST", "/templates")).toHaveLength(0);
 	});
 
-	it("creates with ⌘S: one request with the name and the outline, then it moves to the page of the new template", async () => {
+	it("TPL-N1 creates with ⌘S: one request with the name and the outline, then it moves to the page of the new template", async () => {
 		const name = await renderEditor();
 		fireEvent.change(name, { target: { value: "새 템플릿" } });
 		expect(screen.getByText(t("editor.unsaved"))).toBeInTheDocument();

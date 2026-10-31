@@ -12,7 +12,7 @@ const dragEvent = (type: string) => {
 };
 
 describe("drop position indicator", () => {
-	it("shows only positions where a drop is possible and blocks the default Dropcursor during block drag", () => {
+	it("EDIT-D1 shows only positions where a drop is possible and blocks the default Dropcursor during block drag", () => {
 		const host = document.createElement("div");
 		document.body.appendChild(host);
 		const editor = new Editor({

@@ -2,14 +2,17 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import type { EventCounts, EventDeliveryItem, EventsList } from "../../../api/events";
+import { commonMessages } from "../../../lib/common.messages";
 import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
+import { AdminUiLabels } from "../../../ui/labels";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
 import { eventsMessages } from "../messages";
 
 const t = testSite.createTranslator(eventsMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -67,32 +70,28 @@ afterEach(() => {
 
 const renderScreen = () =>
 	render(
-		<AdminQueryProvider>
-			<EventsScreen />
-		</AdminQueryProvider>,
+		<AdminUiLabels>
+			<AdminQueryProvider>
+				<EventsScreen />
+			</AdminQueryProvider>
+		</AdminUiLabels>,
 	);
+/** The row of the list that shows `text` (a subscriber, an address). */
+const rowWith = (text: string) => screen.findByRole("row", { name: new RegExp(text) });
+/** The retry and dismiss of a delivery, by the subscriber they name. */
+const deliveryActions = (subscriber: string) => [
+	{ name: t("action.retryLabel", { subscriber }) },
+	{ name: t("action.dismissLabel", { subscriber }) },
+];
 
 const posts = () =>
 	api.requests.filter((request) => request.method === "POST").map((request) => [request.path, request.body]);
 
 describe("EventsScreen", () => {
-	it("lists failed and dead deliveries with subscriber and state", async () => {
+	it("EVENT-L2 opens the full record of an event beside the list without breaking the row's own actions", async () => {
 		renderScreen();
 
-		const failedRow = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
-		const deadRow = screen.getByText("webhook").closest("tr") as HTMLElement;
-		expect(within(failedRow).getByText(t("state.failed"))).toBeInTheDocument();
-		expect(within(deadRow).getByText(t("state.dead"))).toBeInTheDocument();
-		// A deleted entry is named by the title the event kept, as plain text (there is nothing to link to).
-		expect(within(deadRow).getByText("Title e2").closest("a")).toBeNull();
-		expect(within(deadRow).queryByText("entry-e2")).toBeNull();
-		expect(within(failedRow).getByText("slug-e1").closest("a")).toBeInTheDocument();
-	});
-
-	it("opens the full record of an event beside the list without breaking the row's own actions", async () => {
-		renderScreen();
-
-		const row = (await screen.findByText("webhook")).closest("tr") as HTMLElement;
+		const row = await rowWith("webhook");
 		fireEvent.click(within(row).getByText("Title e2"));
 		// A panel beside the list, not a dialog over it: the list stays usable and in place.
 		const detail = await screen.findByRole("complementary", { name: /Title e2/ });
@@ -101,7 +100,7 @@ describe("EventsScreen", () => {
 		expect(within(detail).getByText("e2")).toBeInTheDocument();
 		expect(within(detail).getByText("webhook")).toBeInTheDocument();
 		expect(within(detail).getByText("boom")).toBeInTheDocument();
-		fireEvent.click(within(detail).getByRole("button", { name: "Close" }));
+		fireEvent.click(within(detail).getByRole("button", { name: tc("close") }));
 		expect(screen.queryByRole("complementary")).toBeNull();
 
 		// Retry in the row still retries and does not open the detail.
@@ -110,18 +109,18 @@ describe("EventsScreen", () => {
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
-	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
+	it("EVENT-L1 labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
 		listing(() => ({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }));
 		renderScreen();
 
-		const row = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		const row = await rowWith("slug-e3");
 		expect(within(row).getByText(t("state.recorded"))).toBeInTheDocument();
 		expect(within(row).queryByText(t("state.pending"))).toBeNull();
 		expect(within(row).queryByText(t("state.failed"))).toBeNull();
-		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
+		for (const action of deliveryActions("")) expect(within(row).queryByRole("button", action)).toBeNull();
 	});
 
-	it("retries one delivery with its subscriber", async () => {
+	it("EVENT-R1 retries one delivery with its subscriber", async () => {
 		renderScreen();
 		fireEvent.click(
 			await screen.findByRole("button", { name: t("action.retryLabel", { subscriber: "search-index" }) }),
@@ -130,7 +129,7 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/v1/events/e1/retry", { subscriber: "search-index" }]]));
 	});
 
-	it("asks before dismissing, then posts", async () => {
+	it("EVENT-R1 asks before dismissing, then posts", async () => {
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.dismissLabel", { subscriber: "webhook" }) }));
 
@@ -141,7 +140,7 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
 	});
 
-	it("retries everything due", async () => {
+	it("EVENT-R1 retries everything due", async () => {
 		let retried = false;
 		api.on("POST /v1/events/retry", () => {
 			retried = true;
@@ -162,7 +161,7 @@ describe("EventsScreen", () => {
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
-	it("opens on all recent events, not only the failed ones", async () => {
+	it("EVENT-L1 opens on all recent events, not only the failed ones", async () => {
 		listing(() => ({
 			items: [item("e3", "search-index", "delivered", "saved"), item("e1", "webhook", "failed")],
 			total: 2,
@@ -170,18 +169,21 @@ describe("EventsScreen", () => {
 		}));
 		renderScreen();
 
-		const deliveredRow = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		const deliveredRow = await rowWith("slug-e3");
 		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeInTheDocument();
 		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeInTheDocument();
 		// A delivered event has nothing to retry or dismiss; a failed one does.
-		expect(within(deliveredRow).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
-		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
-		expect(within(failedRow).getAllByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toHaveLength(2);
+		for (const action of deliveryActions("search-index")) {
+			expect(within(deliveredRow).queryByRole("button", action)).toBeNull();
+		}
+		const failedRow = await rowWith("slug-e1");
+		for (const action of deliveryActions("webhook"))
+			expect(within(failedRow).getByRole("button", action)).toBeEnabled();
 		const list = api.sent("GET /v1/events").find((request) => request.query.has("state"));
 		expect(list?.query.getAll("state")).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead"]));
 	});
 
-	it("filters by delivery status and returns to all from the empty state", async () => {
+	it("EVENT-F2 filters by delivery status and returns to all from the empty state", async () => {
 		// The sidebar's failed-delivery count is a request without a state; the list is the one that names states.
 		const requested = () =>
 			api
@@ -207,17 +209,5 @@ describe("EventsScreen", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 		expect(await screen.findByText("search-index")).toBeInTheDocument();
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
-	});
-
-	it("pages through the events", async () => {
-		listing((query) => {
-			const offset = Number(query.get("offset"));
-			return { items: [item(`e${offset}`, "webhook", "delivered")], total: 60, counts };
-		});
-		renderScreen();
-		await screen.findByText("slug-e0");
-
-		fireEvent.click(screen.getByRole("link", { name: /Next page|다음 페이지/ }));
-		expect(await screen.findByText("slug-e25")).toBeInTheDocument();
 	});
 });

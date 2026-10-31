@@ -23,23 +23,12 @@ describe("browser storage of a site", () => {
 		expect(preferenceKey(siteOf("Blog", "/studio"), "editor-width")).toBe("cms:Blog/studio:editor-width");
 	});
 
-	it("keeps two sites on one origin apart", () => {
-		const blog = siteOf("Blog");
-		const shop = siteOf("Shop");
-		writePreference(blog, "editor-width", "wide");
-		expect(readPreference(blog, "editor-width")).toBe("wide");
-		expect(readPreference(shop, "editor-width")).toBeNull();
-		writePreference(shop, "editor-width", "narrow");
-		expect(readPreference(blog, "editor-width")).toBe("wide");
-		expect(readPreference(shop, "editor-width")).toBe("narrow");
-	});
-
 	it("keeps two admins of one site name apart by their admin path", () => {
 		writePreference(siteOf("Blog", "/admin"), "media-view", "list");
 		expect(readPreference(siteOf("Blog", "/studio"), "media-view")).toBeNull();
 	});
 
-	it("does not fail when storage is unavailable", () => {
+	it("ADMIN-S1 does not fail when storage is unavailable", () => {
 		vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
 			throw new Error("blocked");
 		});

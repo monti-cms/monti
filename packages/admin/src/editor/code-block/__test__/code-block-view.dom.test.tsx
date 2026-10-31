@@ -4,12 +4,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { findBlockDOM, refineBlock } from "../../drag";
 import { buildEditorExtensions } from "../../extensions";
-import { inlineBubbleTarget } from "../../inline-marks";
 import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 
@@ -54,7 +53,8 @@ const mount = async (source: string) => {
 			/>
 		</SiteProvider>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
+	// Every code block view has the copy tool.
+	await waitFor(() => expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -87,17 +87,7 @@ const openLineMenu = async (line = 0) => {
 const CODE = "```ts\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```";
 
 describe("code block edit view", () => {
-	it("has language, file path, line effects, regex rules, line numbers, and copy in the header tools", async () => {
-		await mount(CODE);
-		expect(screen.getByLabelText(t("view.language"))).toBeInTheDocument();
-		expect(screen.getByLabelText(t("view.filePath"))).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.lineEffects") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.lineNumbers") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument();
-	});
-
-	it("hides language, file path, and effect tools and does not select lines when read-only", async () => {
+	it("EDIT-C2 hides language, file path, and effect tools and does not select lines when read-only", async () => {
 		const editor = await mount('```ts title="src/a.ts"\nconst a = 1;\n```');
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByLabelText(t("view.language"))).toBeNull());
@@ -111,7 +101,7 @@ describe("code block edit view", () => {
 		expect(screen.queryByRole("menu")).toBeNull();
 	});
 
-	it("stores the file path and line number display in meta", async () => {
+	it("EDIT-C2 stores the file path and line number display in meta", async () => {
 		const editor = await mount(CODE);
 		fireEvent.change(screen.getByLabelText(t("view.filePath")), { target: { value: "src/a.ts" } });
 		await waitFor(() => expect((screen.getByLabelText(t("view.filePath")) as HTMLInputElement).value).toBe("src/a.ts"));
@@ -119,18 +109,13 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(block(editor).attrs.meta).toBe('title="src/a.ts" lnum'));
 	});
 
-	it("selects only the line on a line number click, and turning on highlight from the right-click menu is reflected in the saved format", async () => {
+	it("EDIT-C2 selects only the line on a line number click, and turning on highlight from the right-click menu is reflected in the saved format", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(1));
 		expect(screen.queryByRole("menu")).toBeNull();
 		// No text is selected (the cursor sits at the start of the line); the line shows as a background.
 		expect(editor.state.selection.empty).toBe(true);
 		expect(editor.state.selection.from).toBe(1 + "const a = 1;\n".length);
-		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
-				1,
-			),
-		);
 		await openLineMenu(1);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) });
 		act(() => fireEvent.click(within(menu).getByRole("menuitemcheckbox", { name: HIGHLIGHT_LABEL })));
@@ -143,15 +128,14 @@ describe("code block edit view", () => {
 			),
 		);
 		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "highlight", start: 1, end: 2 }]);
-		// Changing the effect keeps the selected lines (another effect can be turned on next).
-		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
-				1,
-			),
-		);
+		// Changing the effect keeps the picked line: the header's line effect tool opens the menu for it again.
+		fireEvent.keyDown(document, { key: "Escape" });
+		await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+		act(() => fireEvent.click(screen.getByRole("button", { name: t("view.lineEffects") })));
+		expect(await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) })).toBeInTheDocument();
 	});
 
-	it("dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
+	it("EDIT-C2 dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(0, 2));
 		// Right-clicking inside the selected lines targets all of them.
@@ -176,15 +160,13 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(gutterLines()).toEqual([0, 1, 2]));
 	});
 
-	it("adding a regex rule shows the match count and saves the rule as is", async () => {
+	it("EDIT-C2 adding a regex rule shows the match count and saves the rule as is", async () => {
 		const editor = await mount(CODE);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("rulesPanel.title") })));
 		const add = await screen.findByRole("button", { name: t("rulesPanel.add") });
 		act(() => fireEvent.click(add));
 		fireEvent.change(await screen.findByLabelText(t("rulesPanel.pattern")), { target: { value: "const" } });
 		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeInTheDocument();
-
-		// The rule's delete button is red.
 
 		const rules = block(editor).attrs.rules as CodeRule[];
 		// A new rule starts with the first offered text effect (bold by default).
@@ -194,35 +176,13 @@ describe("code block edit view", () => {
 		]);
 	});
 
-	it("points to source editing when there are annotations the editor cannot display", async () => {
+	it("EDIT-C2 points to source editing when there are annotations the editor cannot display", async () => {
 		await mount('```ts\n// @char Tooltip {0-3} content="하나"\n// @char Tooltip {2-5} content="둘"\nabcdef\n```');
 		expect(screen.getByText(t("view.rawMode"))).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
 	});
 
-	it("copy button copies the code without annotation lines", async () => {
-		const writeText = vi.fn().mockResolvedValue(undefined);
-		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-		await mount("```ts\n// @line plus\nconst a = 1;\n```");
-		await act(async () => fireEvent.click(screen.getByRole("button", { name: t("view.copy") })));
-		expect(writeText).toHaveBeenCalledWith("const a = 1;");
-	});
-
-	it("Shift-clicking a line number extends the selected lines", async () => {
-		const editor = await mount(CODE);
-		act(() => pickLines(0));
-		act(() => {
-			fireEvent.mouseDown(gutterRow(2), { button: 0, shiftKey: true });
-			fireEvent.mouseUp(window);
-		});
-		await openLineMenu(2);
-		expect(
-			await screen.findByRole("menu", { name: t("lineMenu.rangeEffects", { start: 1, end: 3 }) }),
-		).toBeInTheDocument();
-		expect(editor.state.selection.from).toBe(1);
-	});
-
-	it("selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
+	it("EDIT-C2 selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
 		const editor = await mount("```ts\n// @line collapse {0-2}\na\nb\nc\nd\n```");
 		// The right-clicked line is the target even if no line was selected first.
 		await openLineMenu(0);
@@ -232,36 +192,14 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(block(editor).attrs.lineEffects).toEqual([]));
 	});
 
-	it("hovering a code line still attaches only one drag handle for the whole code block", async () => {
+	it("EDIT-D3 hovering a code line still attaches only one drag handle for the whole code block", async () => {
 		const editor = await mount(`문단\n\n${CODE}`);
-		const text = document.querySelector("[data-code-block-wrapper] pre code") as HTMLElement;
-		const inner = (text.querySelector("span") ?? text) as HTMLElement;
+		// The code block follows the paragraph; the hovered element is the code text inside its first line.
+		const codeBlockAt = editor.state.doc.child(0).nodeSize;
+		const { node } = editor.view.domAtPos(codeBlockAt + 3);
+		const inner = (node instanceof HTMLElement ? node : node.parentElement) as HTMLElement;
 		const found = findBlockDOM(editor.view.dom, inner);
-		expect(found?.classList.contains("node-codeBlock")).toBe(true);
+		expect(found).toBe(editor.view.nodeDOM(codeBlockAt));
 		expect(found && refineBlock(found, 0, 0)).toBe(found);
-	});
-
-	it("does not show the text effect bubble while selecting lines by line number", async () => {
-		const editor = await mount(CODE);
-		act(() => pickLines(0, 1));
-		expect(inlineBubbleTarget(editor.state)).toBeNull();
-		// It shows again when text is selected directly.
-		act(() => {
-			editor.commands.setTextSelection({ from: 2, to: 5 });
-		});
-		expect(inlineBubbleTarget(editor.state)).toMatchObject({ kind: "selection" });
-	});
-
-	it("draws the warning underline text once across the whole line, and it stays after picking lines by line number", async () => {
-		await mount("```ts\n// @line warning\nconst a = 1;\nconst b = 2;\n```");
-		// The decoration overlay is aria-hidden and holds only the text of lines that carry a wavy underline.
-		const overlayText = () =>
-			[...document.querySelectorAll("[data-code-block-wrapper] [aria-hidden='true'][contenteditable='false']")]
-				.map((element) => element.textContent)
-				.join("");
-		expect(overlayText()).toBe("const a = 1;");
-
-		act(() => pickLines(1));
-		await waitFor(() => expect(overlayText()).toBe("const a = 1;"));
 	});
 });

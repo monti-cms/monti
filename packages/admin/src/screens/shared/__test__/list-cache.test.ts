@@ -28,7 +28,7 @@ const state: OptimisticContext["state"] = { statuses: [], folder: "all", include
 const ids = (...values: string[]) => new Set(values);
 
 describe("optimistic list update", () => {
-	it("trash move, permanent delete and restore remove the row right away and reduce the total", () => {
+	it("LIST-C2 trash move, permanent delete and restore remove the row right away and reduce the total", () => {
 		for (const op of ["trash", "permanentDelete", "restore"] as const) {
 			const next = applyOptimistic(page([row("a"), row("b"), row("c")], 30), op, ids("a", "c"), { state });
 			expect(next.items.map((item) => item.id)).toEqual(["b"]);
@@ -36,14 +36,14 @@ describe("optimistic list update", () => {
 		}
 	});
 
-	it("rows leaving the status filter are removed, and remaining rows only change status", () => {
+	it("LIST-C2 rows leaving the status filter are removed, and remaining rows only change status", () => {
 		const items = [row("a"), row("b")];
 		expect(applyOptimistic(page(items), "archive", ids("a"), { state }).items[0]?.status).toBe("archived");
 		const filtered = applyOptimistic(page(items), "archive", ids("a"), { state: { ...state, statuses: ["draft"] } });
 		expect(filtered.items.map((item) => item.id)).toEqual(["b"]);
 	});
 
-	it("a row moved to another folder leaves the current folder view", () => {
+	it("LIST-C2 a row moved to another folder leaves the current folder view", () => {
 		const items = [row("a", { folderId: "f1" }), row("b", { folderId: "f1" })];
 		const inFolder = { ...state, folder: "f1" };
 		expect(
@@ -54,7 +54,7 @@ describe("optimistic list update", () => {
 		).toBe("f2");
 	});
 
-	it("relation fields add, remove and replace, filling in names too", () => {
+	it("LIST-C2 relation fields add, remove and replace, filling in names too", () => {
 		const options = { tagIds: [{ id: "t1", title: "React" }], categoryId: [{ id: "c1", title: "개발" }] };
 		const added = applyOptimistic(page([row("a")]), "relation.add", ids("a"), {
 			state,

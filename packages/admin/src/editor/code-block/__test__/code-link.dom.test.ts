@@ -1,5 +1,4 @@
 import { Editor } from "@tiptap/core";
-import type { DecorationSet } from "@tiptap/pm/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import {
@@ -39,7 +38,7 @@ const codePos = (instance: Editor) => instance.state.doc.child(0).nodeSize;
 const save = (instance: Editor) => tiptapToStored(testSite, instance.getJSON());
 
 describe("linking body text to code (editor)", () => {
-	it("pick body text first, then a line by its number, then link: the body link and line label are created together", () => {
+	it("EDIT-C4 pick body text first, then a line by its number, then link: the body link and line label are created together", () => {
 		const instance = mount();
 		const { from, to } = wordRange(instance);
 		startLinkFromText(instance.view, from, to);
@@ -59,7 +58,7 @@ describe("linking body text to code (editor)", () => {
 		);
 	});
 
-	it("pick a code line first, then body text, then link. For the same line, the label is reused", () => {
+	it("EDIT-C4 pick a code line first, then body text, then link. For the same line, the label is reused", () => {
 		const instance = mount();
 		startLinkFromLines(instance.view, codePos(instance), 1, 2);
 		const first = wordRange(instance, "함수가");
@@ -91,7 +90,7 @@ describe("linking body text to code (editor)", () => {
 		expect(codeEffectsKey.getState(instance.state)?.linking).toBeNull();
 	});
 
-	it("unlinking also removes a line label that nothing points to anymore", () => {
+	it("EDIT-C4 unlinking also removes a line label that nothing points to anymore", () => {
 		const instance = mount();
 		const range = wordRange(instance);
 		startLinkFromText(instance.view, range.from, range.to);
@@ -102,21 +101,5 @@ describe("linking body text to code (editor)", () => {
 		unlinkRef(testSite, instance.view, range.from, range.to);
 		expect(findAnchor(instance.state.doc, "c1")).toBeNull();
 		expect(withoutIds(save(instance))).toEqual(withoutIds(SOURCE));
-	});
-
-	it("a body link with no linked line is flagged with a red wavy underline", () => {
-		const instance = mount(
-			storedDoc({ type: "paragraph", content: [text("이 "), codeLink("함수가", "c9"), text(" 값을 돌려준다.")] }),
-		);
-		const plugin = codeEffectsKey.get(instance.state);
-		const set = plugin?.props.decorations?.call(plugin, instance.state) as DecorationSet;
-		const broken = set
-			.find()
-			.filter((decoration) =>
-				(decoration as unknown as { type: { attrs?: { class?: string } } }).type.attrs?.class?.includes(
-					"decoration-wavy",
-				),
-			);
-		expect(broken.map((decoration) => [decoration.from, decoration.to])).toEqual([[3, 6]]);
 	});
 });

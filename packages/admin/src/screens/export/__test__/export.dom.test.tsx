@@ -41,6 +41,11 @@ const summaryOf = (scope: ExportScope, counts: Summary): ExportSummary => ({
 const scopeRadio = (scope: "admin" | "public") =>
 	screen.getByRole("radio", { name: (name) => name.startsWith(t(`scope.${scope}`)) });
 
+/** What the server says when it cannot build the archive. */
+const NO_ARCHIVE = "no archive";
+/** The file name the server gives the archive. */
+const ARCHIVE_NAME = "monti-export-admin-2026.zip";
+
 const MDX = { name: "mdx", label: "MDX", mimeType: "text/mdx", extension: "mdx", canImport: true };
 
 /** The archive `POST /v1/export` answers with, and the headers the server sets on it. */
@@ -49,7 +54,7 @@ const archive = (notWritten: number) =>
 		status: 200,
 		headers: {
 			"Content-Type": "application/zip",
-			"Content-Disposition": 'attachment; filename="monti-export-admin-2026.zip"',
+			"Content-Disposition": `attachment; filename="${ARCHIVE_NAME}"`,
 			"X-Monti-Export-Not-Written": String(notWritten),
 		},
 	});
@@ -100,10 +105,11 @@ describe("the export dialog", () => {
 	it("DATA-B4 says what goes in: the entries picked and the translations that come with them", async () => {
 		serve({ summaries: { admin: { entries: 5, addedByTranslations: 2, folders: 1, addresses: 4, media: 3 } } });
 		open();
-		const headline = await screen.findByTestId("export-headline");
-		expect(headline.textContent).toBe(
-			`${t("summary.entries", { count: 3, noun: "글" })} + ${t("summary.translations", { count: 2 })}`,
-		);
+		expect(
+			await screen.findByText(
+				`${t("summary.entries", { count: 3, noun: "글" })} + ${t("summary.translations", { count: 2 })}`,
+			),
+		).toBeInTheDocument();
 		expect(screen.getByText(t("note.translations"))).toBeInTheDocument();
 		expect(screen.getByText(t("note.media"))).toBeInTheDocument();
 	});
@@ -113,7 +119,7 @@ describe("the export dialog", () => {
 			summaries: { admin: { entries: 3 }, public: { entries: 1, notPublished: 2 } },
 		});
 		open();
-		await screen.findByTestId("export-headline");
+		await screen.findByText(t("summary.entries", { count: 3, noun: "글" }));
 		fireEvent.click(scopeRadio("public"));
 		// The public archive leaves out what is not published, and says so.
 		expect(await screen.findByText(t("note.notPublished", { count: 2 }))).toBeInTheDocument();
@@ -127,20 +133,20 @@ describe("the export dialog", () => {
 		const api = serve({ summaries: { admin: { entries: 3 } } });
 		const onOpenChange = vi.fn();
 		open({ onOpenChange });
-		await screen.findByTestId("export-headline");
+		await screen.findByText(t("summary.entries", { count: 3, noun: "글" }));
 		await screen.findByRole("checkbox", { name: /MDX/ });
 		fireEvent.click(screen.getByRole("button", { name: t("action.selected") }));
 
-		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("toast.done", { name: "monti-export-admin-2026.zip" })));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("toast.done", { name: ARCHIVE_NAME })));
 		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin", ids: ["a", "b", "c"], format: "mdx" }]);
-		expect(saved).toEqual([{ href: "blob:test", download: "monti-export-admin-2026.zip" }]);
+		expect(saved).toEqual([{ href: "blob:test", download: ARCHIVE_NAME }]);
 		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 	});
 
 	it("DATA-B4 notes that unsaved changes of the open entry are not in the archive", async () => {
 		serve({ summaries: { admin: { entries: 1 } } });
 		open({ kind: "entry", ids: ["a"], unsaved: true });
-		expect(await screen.findByTestId("export-unsaved")).toBeInTheDocument();
+		expect(await screen.findByText(t("note.unsaved"))).toBeInTheDocument();
 		expect(screen.getByRole("dialog", { name: t("dialog.title.entry") })).toBeInTheDocument();
 	});
 });
@@ -158,10 +164,10 @@ describe("the Data page", () => {
 	it("DATA-B5 hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
 		const api = serve({ formats: [], summaries: { admin: { entries: 1 } } });
 		renderData();
-		expect(await screen.findByTestId("export-no-formats")).toBeInTheDocument();
-		await screen.findByTestId("export-summary");
+		expect(await screen.findByText(t("formats.none"))).toBeInTheDocument();
+		await screen.findByText(t("note.media"));
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("toast.done", { name: ARCHIVE_NAME })));
 		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin" }]);
 	});
 
@@ -169,11 +175,12 @@ describe("the Data page", () => {
 		const api = serve({ summaries: { admin: { entries: 1 } }, notWritten: 1 });
 		renderData();
 		await screen.findByRole("checkbox", { name: /MDX/ });
-		await screen.findByTestId("export-summary");
+		await screen.findByText(t("note.media"));
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(expect.stringContaining(t("toast.notWritten", { count: 1 }))),
+		);
 		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin", format: "mdx" }]);
-		expect(String(toast.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 1 }));
 		expect(saved).toHaveLength(1);
 	});
 
@@ -182,11 +189,11 @@ describe("the Data page", () => {
 		api
 			.on("GET /v1/meta", () => ({ formats: [] }))
 			.on("POST /v1/export/summary", ({ body }) => summaryOf(body.scope, { entries: 1 }))
-			.on("POST /v1/export", () => failure("internal_error", "no archive"));
+			.on("POST /v1/export", () => failure("internal_error", NO_ARCHIVE));
 		renderData();
-		await screen.findByTestId("export-summary");
+		await screen.findByText(t("note.media"));
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(NO_ARCHIVE));
 		expect(toast).not.toHaveBeenCalled();
 	});
 });

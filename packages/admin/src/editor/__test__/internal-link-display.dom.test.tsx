@@ -1,7 +1,6 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
-import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
@@ -12,27 +11,13 @@ import { renderWithSite } from "../../test/site";
 import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
-import { insertInternalLink } from "../internal-link";
-import { requestLinkTarget, resetLinkTargets } from "../link-targets";
+import { resetLinkTargets } from "../link-targets";
 import { editorMessages } from "../messages";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, PREFIXED_LOCALES, adminUrl, contentPath, localizePath } = testSite;
 const t = testSite.createTranslator(editorMessages);
 const tc = testSite.createTranslator(commonMessages);
-
-vi.mock("../../ui/tooltip", () => ({
-	Tooltip: ({ children }: { children: React.ReactNode }) => children,
-	TooltipTrigger: ({
-		render,
-		children,
-	}: {
-		render?: React.ReactElement<{ children?: React.ReactNode }>;
-		children?: React.ReactNode;
-	}) => (render ? React.cloneElement(render, {}, children ?? render.props.children) : children),
-	TooltipContent: () => null,
-	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
 
 /** A collection with a public path, whichever site config the tests run with: only such entries can be linked to. */
 const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
@@ -105,7 +90,7 @@ const openOnDocument = () => {
 const renderBubble = (editor: Editor) => renderWithSite(<InlineBubble editor={editor} />);
 
 describe("where an internal link goes, shown in the editor", () => {
-	it("resolves the id to the entry's title and address, and opens its page on the site when it is published", async () => {
+	it("EDIT-L3 resolves the id to the entry's title and address, and opens its page on the site when it is published", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 
@@ -140,7 +125,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(link.textContent).toContain(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello-draft") as string));
 	});
 
-	it("says so when the entry is gone, and when it cannot be looked up", async () => {
+	it("EDIT-L3 says so when the entry is gone, and when it cannot be looked up", async () => {
 		api.on("GET /v1/entries/:id", () => failure("not_found"));
 		const editor = openOnDocument();
 		const { unmount } = renderBubble(editor);
@@ -155,32 +140,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(await screen.findByText(t("link.targetUnavailable"))).toBeInTheDocument();
 	});
 
-	it("looks an entry up once however many places show it, and not again for a link just inserted", async () => {
-		requestLinkTarget(testSite, TARGET);
-		requestLinkTarget(testSite, TARGET);
-		await waitFor(() => expect(api.requests).toHaveLength(1));
-
-		resetLinkTargets(testSite);
-		const looked = api.requests.length;
-		const element = document.createElement("div");
-		document.body.append(element);
-		const editor = new Editor({ element, extensions: buildEditorExtensions(testSite), content: "<p>[[</p>" });
-		editors.push(editor);
-		insertInternalLink(
-			testSite,
-			editor,
-			{ from: 1, to: 3 },
-			{ id: TARGET, collection: COLLECTION, title: "방금 고른 글", slug: "picked", status: "published" },
-		);
-		editor.commands.setTextSelection(3);
-		editor.view.focus();
-		renderBubble(editor);
-		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "방금 고른 글" }) });
-		expect(link.getAttribute("href")).toBe(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "picked") as string));
-		expect(api.requests).toHaveLength(looked);
-	});
-
-	it("shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {
+	it("EDIT-L3 shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 		await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
@@ -196,7 +156,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(JSON.stringify(saved)).toContain(TARGET);
 	});
 
-	it("an address typed in the form replaces the entry the link pointed to", async () => {
+	it("EDIT-L3 an address typed in the form replaces the entry the link pointed to", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 		await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });

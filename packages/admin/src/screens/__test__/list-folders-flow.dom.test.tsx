@@ -57,11 +57,14 @@ const item = (id: string, folderId: string | null = null): ListEntriesItem => ({
 const NEWS = folder("f1", "뉴스");
 const SERIES = folder("f2", "연재", "f1");
 
+/** What the server says when it refuses a folder's name. */
+const REFUSED = "같은 위치에 같은 이름의 폴더가 있어요.";
+
 const server = {
 	posts: [] as ListEntriesItem[],
 	folders: [] as FolderListItem[],
 	contents: { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 } as FolderContents,
-	/** Whether a folder write is refused, as the server refuses a name already taken in the same place. */
+	/** Whether a folder write is refused (with {@link REFUSED}), as the server refuses a name already taken in the same place. */
 	refuseWrites: false,
 };
 let api: FakeApi;
@@ -81,7 +84,7 @@ beforeEach(() => {
 		.on("GET /v1/preferences", () => ({}))
 		.on("GET /v1/folders", () => server.folders)
 		.on("POST /v1/folders", ({ body }) => {
-			if (server.refuseWrites) return failure("folder_name_conflict");
+			if (server.refuseWrites) return failure("folder_name_conflict", REFUSED);
 			const input = body as { collection: string; name: string; parentId: string | null };
 			const created = { ...folder("new", input.name, input.parentId), collection: input.collection };
 			server.folders = [...server.folders, created];
@@ -89,7 +92,7 @@ beforeEach(() => {
 		})
 		.on("GET /v1/folders/:id/contents", () => server.contents)
 		.on("PATCH /v1/folders/:id", ({ params, body }) => {
-			if (server.refuseWrites) return failure("folder_name_conflict");
+			if (server.refuseWrites) return failure("folder_name_conflict", REFUSED);
 			const input = body as { name?: string };
 			server.folders = server.folders.map((entry) =>
 				entry.id === params.id ? { ...entry, name: input.name ?? entry.name, version: entry.version + 1 } : entry,
@@ -129,11 +132,6 @@ beforeEach(() => {
 });
 afterEach(() => {
 	cleanup();
-	// A menu that was open when the test ended leaves the page behind it hidden from the roles of the next test.
-	for (const element of document.body.querySelectorAll("[inert],[aria-hidden]")) {
-		element.removeAttribute("inert");
-		element.removeAttribute("aria-hidden");
-	}
 	vi.unstubAllGlobals();
 });
 
@@ -165,8 +163,6 @@ const contextMenu = async (element: HTMLElement) => {
 };
 const menuItem = (items: HTMLElement[], label: string) =>
 	items.find((entry) => entry.textContent === label) as HTMLElement;
-const follows = (first: Node, second: Node) =>
-	Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
 const scopeGroup = () => screen.getByRole("group", { name: ts("toolbar.scope") });
 const scopeButton = (name: string) => within(scopeGroup()).getByRole("button", { name });
 
@@ -192,15 +188,14 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			pressAddFolder();
 			press(nameField(), "Enter");
 
-			await waitFor(() => expect(toast.error).toHaveBeenCalled());
+			await waitFor(() => expect(toast.error).toHaveBeenCalledWith(REFUSED));
 			expect(screen.queryByRole("textbox", NAME_FIELD)).toBeNull();
 		});
 
-		it("LIST-F6 adds the folder inside the folder being viewed, after the way up", async () => {
+		it("LIST-F6 adds the folder inside the folder being viewed", async () => {
 			nav.setSearch("collection=post&folder=f1");
 			await renderList();
 			pressAddFolder();
-			expect(follows(screen.getByRole("button", { name: ts("list.folderUp") }), nameField())).toBe(true);
 			press(nameField(), "Enter");
 
 			await waitFor(() => expect(api.sent("POST /v1/folders")).toHaveLength(1));

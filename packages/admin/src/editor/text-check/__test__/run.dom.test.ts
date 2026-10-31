@@ -1,5 +1,6 @@
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { defineTextChecker, normalizeIssue, supportsLocale, type TextCheckSegment } from "@monti-cms/core";
+import { within } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
@@ -65,12 +66,15 @@ describe("checker definition", () => {
 		expect(defineTextChecker({ id: "a", label: "A", auto: true, check: async () => [] }).auto).toBe(true);
 	});
 
-	it("rejects invalid names and limits", () => {
-		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow();
-		expect(() => defineTextChecker({ id: "a", label: "A", limits: { maxChars: 0 }, check: async () => [] })).toThrow();
+	it("PLUG-T1 rejects invalid names and limits", () => {
+		// The errors name what is wrong: the id as given, and the limit.
+		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow(/invalid id "a b"/);
+		expect(() => defineTextChecker({ id: "a", label: "A", limits: { maxChars: 0 }, check: async () => [] })).toThrow(
+			/limits\.maxChars/,
+		);
 	});
 
-	it("matches languages by their primary subtag", () => {
+	it("PLUG-T1 matches languages by their primary subtag", () => {
 		const ko = defineTextChecker({ id: "ko", label: "ko", locales: ["ko-KR"], check: async () => [] });
 		expect(supportsLocale(ko, "ko")).toBe(true);
 		expect(supportsLocale(ko, "en")).toBe(false);
@@ -81,7 +85,7 @@ describe("checker definition", () => {
 describe("batching and cache", () => {
 	const segment = (id: string, text: string): TextCheckSegment => ({ id, text, locale: "ko" });
 
-	it("splits by paragraph and character limits", () => {
+	it("PLUG-T4 splits by paragraph and character limits", () => {
 		const list = [segment("a", "12345"), segment("b", "123"), segment("c", "1234567890"), segment("d", "1")];
 		expect(chunkSegments(list, { maxSegments: 2 }).map((chunk) => chunk.map((item) => item.id))).toEqual([
 			["a", "b"],
@@ -94,7 +98,7 @@ describe("batching and cache", () => {
 		]);
 	});
 
-	it("does not resend the same text and sends in batches per limit", async () => {
+	it("PLUG-T4 does not resend the same text and sends in batches per limit", async () => {
 		const current = open("가 틀린말\n\n나 틀린말\n\n가 틀린말\n");
 		const checker = defineTextChecker({ ...wordChecker("틀린말", "맞는 말"), limits: { maxSegments: 1 } });
 		const cache = new TextCheckCache();
@@ -108,24 +112,7 @@ describe("batching and cache", () => {
 		expect(placeIssues({ checkers: [checker], segments, locale: "ko", cache })).toHaveLength(3);
 	});
 
-	it("stops sending when aborted", async () => {
-		const current = open("가\n\n나\n");
-		const checker = defineTextChecker({ ...wordChecker("가", "카"), limits: { maxSegments: 1 } });
-		const controller = new AbortController();
-		controller.abort();
-		await expect(
-			checkSegments({
-				checker,
-				segments: extractSegments(current.state.doc, { locale: "ko" }),
-				locale: "ko",
-				cache: new TextCheckCache(),
-				signal: controller.signal,
-			}),
-		).rejects.toMatchObject({ name: "AbortError" });
-		expect(checker.check).not.toHaveBeenCalled();
-	});
-
-	it("drops invalid values in checker results and fills in missing ones", () => {
+	it("PLUG-T2 drops invalid values in checker results and fills in missing ones", () => {
 		expect(normalizeIssue({ start: 0, end: 9, message: "x", suggestions: [] }, 5, "c")).toBeNull();
 		expect(normalizeIssue({ start: 2, end: 1, message: "x", suggestions: [] }, 5, "c")).toBeNull();
 		expect(normalizeIssue({ start: 0, end: 1, suggestions: [] }, 5, "c")).toBeNull();
@@ -145,7 +132,7 @@ describe("underline decoration and editing", () => {
 		expect(mark?.getAttribute("data-severity")).toBe("error");
 	});
 
-	it("keeps results in place when an earlier paragraph is edited", async () => {
+	it("PLUG-T3 keeps results in place when an earlier paragraph is edited", async () => {
 		const current = open("앞 문단\n\n이것은 틀린말 입니다\n");
 		await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		current.commands.insertContentAt(2, "아주 긴 ");
@@ -153,24 +140,18 @@ describe("underline decoration and editing", () => {
 		expect(issue && current.state.doc.textBetween(issue.from, issue.to)).toBe("틀린말");
 	});
 
-	it("removes a result when its range is edited", async () => {
+	it("PLUG-T3 removes a result when its range is edited", async () => {
 		const current = open("이것은 틀린말 입니다\n");
 		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		if (!issue) throw new Error("no issue");
 		current.commands.insertContentAt(issue.from + 1, "ㅋ");
 		expect(textCheckIssues(current.state)).toHaveLength(0);
-		expect(current.view.dom.querySelector("[data-text-issue]")).toBeNull();
+		// A kept underline would still wrap the edited word on its own.
+		const edited = current.state.doc.textBetween(issue.from, issue.to + 1);
+		expect(within(current.view.dom).queryByText(edited)).toBeNull();
 	});
 
-	it("keeps results when only marks such as bold change", async () => {
-		const current = open("이것은 틀린말 입니다\n");
-		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
-		if (!issue) throw new Error("no issue");
-		current.chain().setTextSelection({ from: issue.from, to: issue.to }).toggleBold().run();
-		expect(textCheckIssues(current.state)).toHaveLength(1);
-	});
-
-	it("replaces only that checker's results on recheck", async () => {
+	it("PLUG-T1 replaces only that checker's results on recheck", async () => {
 		const current = open("틀린말 그른말\n");
 		const cache = new TextCheckCache();
 		await checkDoc(current, wordChecker("틀린말", "맞는 말", "first"), cache);

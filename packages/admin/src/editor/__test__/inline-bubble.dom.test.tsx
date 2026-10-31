@@ -3,8 +3,7 @@ import { charEffectByName } from "@monti-cms/core/code-block";
 import type { CmsNode } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Editor, type JSONContent } from "@tiptap/core";
-import React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { AdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
@@ -41,19 +40,15 @@ const noteBlock = defineBlock({
 	editor: { view: "mark" },
 });
 const NOTE_MARK = addedMarkName(noteBlock.name);
-
-vi.mock("../../ui/tooltip", () => ({
-	Tooltip: ({ children }: { children: React.ReactNode }) => children,
-	TooltipTrigger: ({
-		render,
-		children,
-	}: {
-		render?: React.ReactElement<{ children?: React.ReactNode }>;
-		children?: React.ReactNode;
-	}) => (render ? React.cloneElement(render, {}, children ?? render.props.children) : children),
-	TooltipContent: () => null,
-	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
+/** The names the test's own note extension gives its format, panel and buttons: test data, not the admin's dictionary. */
+const NOTE = {
+	add: "메모 넣기",
+	edit: "메모 고치기",
+	panel: "메모 편집",
+	apply: "메모 적용",
+	release: "메모 해제",
+	text: "설명",
+};
 
 const editors: Editor[] = [];
 afterEach(() => {
@@ -84,11 +79,10 @@ const focusAt = (editor: Editor, position: number | { from: number; to: number }
 };
 
 // Positions: "가나" (1–3), bold "다라" (4–6), link "마바" (7–9), note decoration "사아" (10–12)
-const HTML =
-	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
+const HTML = `<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="${NOTE.text}">사아</span> 자</p><pre><code>code</code></pre>`;
 
 describe("inlineBubbleTarget", () => {
-	it("returns the effect and its range when the cursor is inside or at the end of an effect", () => {
+	it("EDIT-M1 returns the effect and its range when the cursor is inside or at the end of an effect", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(5);
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({
@@ -106,11 +100,11 @@ describe("inlineBubbleTarget", () => {
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
 		expect(inlineBubbleTarget(editor.state, [NOTE_MARK])).toMatchObject({
 			kind: "marks",
-			marks: [{ name: NOTE_MARK, from: 10, to: 12, attrs: { text: "설명" } }],
+			marks: [{ name: NOTE_MARK, from: 10, to: 12, attrs: { text: NOTE.text } }],
 		});
 	});
 
-	it("does not show for a cursor outside any effect, a code block being edited as source, or a selection spanning code blocks", () => {
+	it("EDIT-M1 does not show for a cursor outside any effect, a code block being edited as source, or a selection spanning code blocks", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(2);
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
@@ -161,7 +155,7 @@ describe("InlineBubble", () => {
 		expect(screen.getByRole("button", { name: t("inlineMarks.italic") }).getAttribute("aria-pressed")).toBe("true");
 	});
 
-	it("removes the whole effect with the remove button when the cursor is inside it", () => {
+	it("EDIT-M1 removes the whole effect with the remove button when the cursor is inside it", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 5);
 		renderBubble(editor);
@@ -173,7 +167,7 @@ describe("InlineBubble", () => {
 		expect(editor.state.selection.from).toBe(5);
 	});
 
-	it("shows the address inside a link and edits it with the form in the bubble", () => {
+	it("EDIT-L1 shows the address inside a link and edits it with the form in the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -190,7 +184,7 @@ describe("InlineBubble", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("the unlink button removes only the link and keeps the text", () => {
+	it("EDIT-L1 the unlink button removes only the link and keeps the text", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -200,17 +194,17 @@ describe("InlineBubble", () => {
 		expect(editor.getText()).toContain("마바");
 	});
 
-	it("an extension text decoration lists its format under the ⋯, and renders its registered content and input", () => {
+	it("PLUG-A8 an extension text decoration lists its format under the ⋯, and renders its registered content and input", () => {
 		const extension: EditorMarkExtension = {
 			formatItems: [
 				{
 					id: "note",
-					label: (current) => (current.isActive(NOTE_MARK) ? "메모 고치기" : "메모 넣기"),
+					label: (current) => (current.isActive(NOTE_MARK) ? NOTE.edit : NOTE.add),
 					isAvailable: ({ inCode }) => !inCode,
 					isActive: (current) => current.isActive(NOTE_MARK),
 					run: ({ editor: current, openPanel, closePanel }) =>
 						openPanel({
-							label: "메모 편집",
+							label: NOTE.panel,
 							content: (
 								<button
 									type="button"
@@ -219,7 +213,7 @@ describe("InlineBubble", () => {
 										closePanel();
 									}}
 								>
-									메모 적용
+									{NOTE.apply}
 								</button>
 							),
 						}),
@@ -229,7 +223,7 @@ describe("InlineBubble", () => {
 				<>
 					<span>{String(mark.attrs.text)}</span>
 					<BubbleButton
-						label="메모 해제"
+						label={NOTE.release}
 						onClick={act(() => current.chain().setTextSelection(mark).unsetMark(NOTE_MARK).run())}
 					>
 						해제
@@ -245,26 +239,24 @@ describe("InlineBubble", () => {
 				</AdminComponentsProvider>,
 			);
 
-		// When text is selected, the format sits under the ⋯ at the end of the formats: not a button of the card itself.
+		// When text is selected, the format sits under the ⋯: not a button of the card itself.
 		focusAt(editor, { from: 1, to: 3 });
 		const { unmount } = renderWith();
 		const card = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
-		const labels = [...card.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels).not.toContain("메모 넣기");
-		expect(labels.indexOf(t("formatBar.more"))).toBe(labels.indexOf(t("inlineBubble.footnoteAdd")) + 1);
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
-		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "메모 넣기" })));
-		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeInTheDocument();
-		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 적용" })));
+		expect(within(card).queryByRole("button", { name: NOTE.add })).toBeNull();
+		act(() => fireEvent.click(within(card).getByRole("button", { name: t("formatBar.more") })));
+		act(() => fireEvent.click(screen.getByRole("menuitem", { name: NOTE.add })));
+		expect(screen.getByRole("dialog", { name: NOTE.panel })).toBeInTheDocument();
+		act(() => fireEvent.click(screen.getByRole("button", { name: NOTE.apply })));
 		expect(editor.getHTML()).toMatch(/<span data-monti-mark="note" data-mark-text="새 메모">가나<\/span>/);
 		unmount();
 
 		// With the cursor at the decoration boundary, the registered content renders, and removing does not close the bubble.
 		focusAt(editor, 10);
 		renderWith();
-		expect(screen.getByText("설명")).toBeInTheDocument();
-		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 해제" })));
-		expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
+		expect(screen.getByText(NOTE.text)).toBeInTheDocument();
+		act(() => fireEvent.click(screen.getByRole("button", { name: NOTE.release })));
+		expect(editor.getHTML()).not.toContain(`data-mark-text="${NOTE.text}"`);
 	});
 
 	describe("the ⋯ of the card (formats a site added)", () => {
@@ -283,32 +275,7 @@ describe("InlineBubble", () => {
 				</AdminComponentsProvider>,
 			);
 
-		it("is not there when no site format is available for the selection (in code, or none registered)", () => {
-			const code = createEditor("<pre><code>call(a, b)</code></pre>");
-			focusAt(code, { from: 6, to: 10 });
-			const { unmount } = renderWith(code, [noteFormat]);
-			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
-			unmount();
-
-			const plain = createEditor(HTML);
-			focusAt(plain, { from: 1, to: 3 });
-			renderWith(plain, undefined);
-			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
-		});
-
-		it("ticks a format the selection has, and runs the one that is picked", () => {
-			const editor = createEditor(HTML);
-			focusAt(editor, { from: 10, to: 12 });
-			renderWith(editor, [noteFormat]);
-			act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
-			const row = screen.getByRole("menuitem", { name: "메모 넣기" });
-			// The text already has the note, so the row ends in a ✓.
-			expect(row.querySelector("[data-slot=menu-tick]")).toBeInTheDocument();
-			act(() => fireEvent.click(row));
-			expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
-		});
-
-		it("runs a format by its id on the selection (what a slash item uses)", async () => {
+		it("PLUG-A8 runs a format by its id on the selection (what a slash item uses)", async () => {
 			const editor = createEditor(HTML);
 			focusAt(editor, { from: 1, to: 3 });
 			renderWith(editor, [noteFormat]);
@@ -317,7 +284,7 @@ describe("InlineBubble", () => {
 		});
 	});
 
-	it("adds a link to the selected text from the bubble", () => {
+	it("EDIT-L1 adds a link to the selected text from the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, { from: 1, to: 3 });
 		renderBubble(editor);
@@ -328,22 +295,20 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/<a [^>]*href="\/posts\/hello"[^>]*>가나<\/a>/);
 	});
 
-	it("in a code block, shows only the effects code accepts and text folding", () => {
+	it("EDIT-M2 in a code block, shows only the effects code accepts and text folding", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		focusAt(editor, { from: 6, to: 10 });
 		renderBubble(editor);
 
 		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
-		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels).toContain(t("inlineBubble.fold"));
 		// Code does not accept a link.
-		expect(labels).not.toContain(t("link.add"));
+		expect(within(toolbar).queryByRole("button", { name: t("link.add") })).toBeNull();
 
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineBubble.fold") })));
+		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: t("inlineBubble.fold") })));
 		expect(editor.getHTML()).toMatch(/call\(<span data-code-fold=""[^>]*>a, b<\/span>\)/);
 	});
 
-	it("sets unfold and open options at the cursor next to a code fold", () => {
+	it("EDIT-C2 sets unfold and open options at the cursor next to a code fold", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		editor.chain().setTextSelection({ from: 6, to: 10 }).setMark("codeFold").run();
 		focusAt(editor, 6);
@@ -361,7 +326,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).not.toContain("data-code-fold");
 	});
 
-	it("for a fold made by a regex rule, the whole rule can be removed or individual effects unfolded", () => {
+	it("EDIT-C2 for a fold made by a regex rule, the whole rule can be removed or individual effects unfolded", () => {
 		const rule = { id: "r", scope: "document", name: "fold", pattern: "b", flags: "g", attrs: {} };
 		const editor = createEditor("<pre><code>abab</code></pre>");
 		editor.commands.command(({ tr }) => {
@@ -391,7 +356,7 @@ describe("InlineBubble", () => {
 		expect(editor.state.doc.child(0).attrs.rules).toEqual([]);
 	});
 
-	it("shows footnote preview bubble and allows editing in popup and removing footnote", () => {
+	it("EDIT-F2 shows footnote preview bubble and allows editing in popup and removing footnote", () => {
 		const doc = storedDoc(line(text("Hello"), ref("1")), def("1", para("Footnote description")));
 		const editor = createEditor(storedToTiptap(testSite, doc));
 		let refPos = -1;

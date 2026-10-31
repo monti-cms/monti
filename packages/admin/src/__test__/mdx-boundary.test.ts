@@ -53,7 +53,7 @@ describe("the admin does not import the MDX package", () => {
 		expect(found).toEqual([]);
 	});
 
-	it("the manifest does not list it in any dependency field", () => {
+	it("FMT-P1 the manifest does not list it in any dependency field", () => {
 		const manifest = JSON.parse(readFileSync(path.join(ADMIN_ROOT, "package.json"), "utf8")) as Record<string, unknown>;
 		for (const field of ["dependencies", "peerDependencies", "devDependencies", "optionalDependencies"]) {
 			expect(

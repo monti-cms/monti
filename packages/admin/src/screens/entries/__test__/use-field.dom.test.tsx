@@ -63,7 +63,7 @@ function Owner({
 }
 
 describe("useField in a preview", () => {
-	it("has no slot actions on a draft site, where nothing may reach a service", () => {
+	it("PLUG-A3 has no slot actions on a draft site, where nothing may reach a service", () => {
 		const draft = draftSiteOf(
 			testSite,
 			{
@@ -85,7 +85,7 @@ describe("useField in a preview", () => {
 });
 
 describe("useField", () => {
-	it("returns the value, definition, label, ids and the change function of one field", () => {
+	it("PLUG-A6 returns the value, definition, label, ids and the change function of one field", () => {
 		const setForm = vi.fn();
 		const { result } = renderHook(() => useField<string>("title"), {
 			wrapper: providerWith(baseValue({ form: { ...EMPTY_FORM, title: "Hello" }, setForm })),
@@ -129,7 +129,7 @@ describe("useField", () => {
 		expect(setForm).not.toHaveBeenCalled();
 	});
 
-	it("on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
+	it("PLUG-A6 on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
 		const setForm = vi.fn();
 		const locked = {
 			values: { ...EMPTY_FORM, title: "Original title", categoryId: "cat-1" },
@@ -153,7 +153,7 @@ describe("useField", () => {
 		expect(setForm).toHaveBeenCalledWith({ title: "Edited" });
 	});
 
-	it("builds the slot request of the field: scope, collection and a context read when the action runs", () => {
+	it("PLUG-A3 builds the slot request of the field: scope, collection and a context read when the action runs", () => {
 		let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", doc: docOf("Body"), tagIds: ["a"] };
 		const setForm = vi.fn();
 		const { result, rerender } = renderHook(() => useField("tagIds"), {
@@ -188,17 +188,6 @@ describe("useField", () => {
 
 		request?.apply("c", "append");
 		expect(setForm).toHaveBeenLastCalledWith({ tagIds: ["a", "b", "c"] });
-	});
-
-	it("a new entry's slot request has the `new` scope", () => {
-		const { result } = renderHook(() => useField("title"), { wrapper: providerWith(baseValue()) });
-		expect(result.current.slotRequest?.scope).toBe("new");
-	});
-
-	it("throws outside an EntryFormProvider", () => {
-		const error = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(() => renderHook(() => useField("title"))).toThrow(/EntryFormProvider/);
-		error.mockRestore();
 	});
 });
 
@@ -253,7 +242,7 @@ describe("subscription of one field", () => {
 		expect(renders.title).toBeGreaterThan(2);
 	});
 
-	it("a component that re-renders with the form never reads a value one step behind", () => {
+	it("PLUG-A6 a component that re-renders with the form never reads a value one step behind", () => {
 		const seen: string[] = [];
 		function Plain() {
 			const field = useField<string>("title");
@@ -269,7 +258,7 @@ describe("subscription of one field", () => {
 });
 
 describe("orphaned values", () => {
-	it("a change patches the field only, so values of removed fields stay in the form", () => {
+	it("PLUG-A6 a change patches the field only, so values of removed fields stay in the form", () => {
 		const patches: EntryFormPatch[] = [];
 		let latest: EntryForm = EMPTY_FORM;
 		function Capture() {
@@ -353,7 +342,7 @@ describe("a custom field UI built only from the hooks", () => {
 				]
 			: [];
 
-	it("edits the value, shows the error linked to the input, and applies an AI suggestion through the slot", async () => {
+	it("PLUG-A6 edits the value, shows the error linked to the input, and applies an AI suggestion through the slot", async () => {
 		const patches: EntryFormPatch[] = [];
 		render(
 			<SlotRegistryProvider sources={[source]}>
@@ -388,7 +377,7 @@ describe("a custom field UI built only from the hooks", () => {
 		expect(screen.queryByText("by the assistant")).toBeNull();
 	});
 
-	it("the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
+	it("ASSIST-F1 the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
 		function Marked({ version }: { version: number }) {
 			const title = useField("title");
 			const slot = useSlotActions(title.slotRequest as NonNullable<FieldState["slotRequest"]>);

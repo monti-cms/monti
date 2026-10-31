@@ -131,8 +131,20 @@ const dragOf = (...files: File[]) => ({
 	dataTransfer: { types: ["Files"], files, items: files.map(() => ({ kind: "file" })) },
 });
 /** The panel's ⋯, named "More: <what it holds>". */
-const moreButton = (panel: HTMLElement) => within(panel).getByRole("button", { name: /^(More|더보기):/ });
+const moreButton = (panel: HTMLElement) =>
+	within(panel).getByRole("button", { name: (name) => name.startsWith(t("panel.more", { items: "" })) });
 const pick = (name: string) => fireEvent.click(screen.getByRole("checkbox", { name: t("tile.select", { name }) }));
+/** The prepared upload of the file called `name`, as the upload is handed it. */
+const preparedFile = (name: string) => expect.objectContaining({ file: expect.objectContaining({ name }) });
+/** A toast that carries an action with this label. */
+const withAction = (label: string) => expect.objectContaining({ action: expect.objectContaining({ label }) });
+/** Presses the action of the toast that said `message`. */
+const pressToastAction = (message: string) => {
+	const call = toast.mock.calls.find(([text]) => text === message) as
+		| [string, { action?: { onClick: () => void } }]
+		| undefined;
+	call?.[1]?.action?.onClick();
+};
 
 describe("flow: upload (올리기)", () => {
 	it("MEDIA-U3 uploads a drop on the library into the open folder, one at a time, with a progress tile by name and the next one waiting", async () => {
@@ -152,7 +164,12 @@ describe("flow: upload (올리기)", () => {
 		await waitFor(() => expect(hero.textContent).toContain(t("upload.progress", { percent: 64 })));
 		expect(screen.getByRole("button", { name: /^hero-dark\.png/ }).textContent).toContain(t("upload.waiting"));
 		expect(upload.uploadImageFile).toHaveBeenCalledTimes(1);
-		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toEqual({ folderId: "blog" });
+		expect(upload.uploadImageFile).toHaveBeenCalledWith(
+			expect.anything(),
+			preparedFile("hero.png"),
+			expect.any(Function),
+			{ folderId: "blog" },
+		);
 
 		const listsBefore = lists().length;
 		act(() => finish[0]?.());
@@ -165,8 +182,14 @@ describe("flow: upload (올리기)", () => {
 	it("MEDIA-U3 uploads a drop on a folder tile into that folder", async () => {
 		await renderLibrary();
 		fireEvent.drop(folderTile("covers"), dragOf(file("a.png", "image/png")));
-		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalled());
-		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toEqual({ folderId: "covers" });
+		await waitFor(() =>
+			expect(upload.uploadImageFile).toHaveBeenCalledWith(
+				expect.anything(),
+				preparedFile("a.png"),
+				expect.any(Function),
+				{ folderId: "covers" },
+			),
+		);
 	});
 
 	it("MEDIA-U3 shrinks to WebP by default: there is no switch for it, and the picture goes through the converter without an option", async () => {
@@ -213,9 +236,15 @@ describe("flow: upload (올리기)", () => {
 		await screen.findByRole("button", { name: /^panorama\.jpg/ });
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("button", { name: t("upload.shrink") }));
-		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalled());
-		expect(upload.shrinkForUpload.mock.calls[0]?.[1]).toBe(big);
-		expect(upload.uploadImageFile.mock.calls[0]?.[1]).toEqual({ file: small, optimized: true });
+		await waitFor(() =>
+			expect(upload.uploadImageFile).toHaveBeenCalledWith(
+				expect.anything(),
+				{ file: small, optimized: true },
+				expect.any(Function),
+				{ folderId: "blog" },
+			),
+		);
+		expect(upload.shrinkForUpload).toHaveBeenCalledWith(expect.anything(), big);
 	});
 
 	it("MEDIA-U1 says it when even the smallest version does not fit, and keeps the tile", async () => {
@@ -251,7 +280,7 @@ describe("flow: browsing (둘러보기)", () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: t("head.search") }));
 		fireEvent.change(screen.getByRole("searchbox", { name: t("head.searchLabel") }), { target: { value: "cover" } });
-		await waitFor(() => expect(lastList().get("search")).toBe("cover"), { timeout: 3000 });
+		await waitFor(() => expect(lastList().get("search")).toBe("cover"));
 		const found = await screen.findByRole("button", { name: /^cover-react\.jpg/ });
 		// A file from a folder inside the open one adds its path below it, ahead of its usual line (the size stays).
 		expect(found.textContent).toMatch(/covers · \d+×\d+/);
@@ -306,7 +335,12 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: t("replace.confirm") }));
 		await waitFor(() => expect(written("POST", "/media/desk-morning/replace")).toHaveLength(1));
 		expect(written("POST", "/media/desk-morning/replace")[0]).toEqual({ fromId: "new-file" });
-		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toBeUndefined();
+		// The new file goes up in no folder of its own: it only replaces the old one.
+		expect(upload.uploadImageFile).toHaveBeenCalledWith(
+			expect.anything(),
+			preparedFile("desk-morning-v2.jpg"),
+			expect.any(Function),
+		);
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("replace.done")));
 		// The same file stays open: its id did not change.
 		expect(screen.getByRole("complementary", { name: "desk-morning.jpg" })).toBeInTheDocument();
@@ -355,15 +389,12 @@ describe("flow: moving many (여러 개 옮기기)", () => {
 		expect(names(await screen.findAllByRole("menuitem"))).toEqual([t("bulk.newFolder")]);
 		// The folder the picked files are in now is the one that is ticked.
 		expect(places.map((place) => place.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "false"]);
-		fireEvent.click(places[1] as HTMLElement);
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 50));
-		});
-		expect(written("PATCH", "/media/desk-morning")).toHaveLength(0);
+		// Picking the folder they are in moves nothing: the one move written below is the move to covers.
+		fireEvent.click(screen.getByRole("menuitemradio", { name: "Blog Assets" }));
 		fireEvent.click(within(bar).getByRole("button", { name: new RegExp(t("bulk.toFolder")) }));
-		fireEvent.click((await screen.findAllByRole("menuitemradio"))[2] as HTMLElement);
+		fireEvent.click(await screen.findByRole("menuitemradio", { name: "covers" }));
 		await waitFor(() => expect(written("PATCH", "/media/desk-morning")).toHaveLength(1));
-		expect(written("PATCH", "/media/desk-morning")[0]).toEqual({ folderId: "covers" });
+		expect(written("PATCH", "/media/desk-morning")).toEqual([{ folderId: "covers" }]);
 		expect(written("PATCH", "/media/cafe-window")[0]).toEqual({ folderId: "covers" });
 		await waitFor(() =>
 			expect(toast).toHaveBeenCalledWith(
@@ -430,10 +461,8 @@ describe("flow: alt text (대체 텍스트)", () => {
 		const items = await openFilter(t("filter.alt"));
 		fireEvent.click(items[0] as HTMLElement);
 		await waitFor(() => expect(lastList().get("alt")).toBe("none"));
-		const chip = await screen.findByText(t("chip.alt", { value: t("alt.none") }));
-		expect(
-			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("filter.remove") }),
-		).toBeInTheDocument();
+		expect(await screen.findByText(t("chip.alt", { value: t("alt.none") }))).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("filter.remove") })).toBeInTheDocument();
 		await screen.findByRole("button", { name: /^cafe-window\.jpg/ });
 		expect(screen.queryByRole("button", { name: /^desk-morning\.jpg/ })).toBeNull();
 		expect(screen.getByRole("group", { name: t("scope.label") })).toBeInTheDocument();
@@ -462,18 +491,16 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 		const items = await screen.findAllByRole("menuitemcheckbox");
 		// The type only narrows the open folder's own files (the files of covers are not counted).
 		expect(names(items)).toEqual([`${t("kind.image")}3`, `${t("kind.file")}1`]);
-		fireEvent.click(items[1] as HTMLElement);
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("kind.file")}`) }));
 		await waitFor(() => expect(lastList().get("kind")).toBe("file"));
 		// The folder stays browsable: its folders and the way up stay.
 		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeInTheDocument();
 		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: t("head.folder") })).toBeInTheDocument();
-		const chip = await screen.findByText(t("chip.kind", { value: t("kind.value.file") }));
+		expect(await screen.findByText(t("chip.kind", { value: t("kind.value.file") }))).toBeInTheDocument();
 		await screen.findByRole("button", { name: /^notes-scan\.pdf/ });
 		expect(screen.queryByRole("button", { name: /^desk-morning\.jpg/ })).toBeNull();
-		fireEvent.click(
-			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("filter.remove") }),
-		);
+		fireEvent.click(screen.getByRole("button", { name: t("filter.remove") }));
 		await waitFor(() => expect(lastList().has("kind")).toBe(false));
 	});
 });
@@ -486,49 +513,42 @@ describe("flow: deleting (지우기)", () => {
 		await waitFor(() => expect(written("POST", "/media/trash")).toHaveLength(1));
 		expect(written("POST", "/media/trash")[0]).toEqual({ ids: ["cafe-window"] });
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toBe(td("media.done.one", { name: "cafe-window.jpg" }));
-		expect(options.action.label).toBe(td("undo"));
-		options.action.onClick();
+		const done = td("media.done.one", { name: "cafe-window.jpg" });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(done, withAction(td("undo"))));
+		pressToastAction(done);
 		await waitFor(() => expect(written("POST", "/trash/restore")).toHaveLength(1));
 		expect(written("POST", "/trash/restore")[0]).toEqual({ items: [{ type: "media", id: "cafe-window" }] });
 	});
 
-	it("keeps a file that is in use and says so, with a view of the ones that stayed", async () => {
+	it("TRASH-T5 keeps a file that is in use and says so, with a view of the ones that stayed", async () => {
 		backend.onTrash = (ids) => ({ trashed: ids.filter((id) => id !== "desk-morning"), kept: ["desk-morning"] });
 		await renderLibrary();
 		pick("desk-morning.jpg");
 		pick("cafe-window.jpg");
 		const bar = await screen.findByRole("toolbar", { name: t("bulk.count", { count: 2 }) });
 		fireEvent.click(within(bar).getByRole("button", { name: t("bulk.trash") }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toBe(td("media.partial", { moved: 1, kept: 1 }));
-		expect(options.action.label).toBe(td("view"));
-		act(() => options.action.onClick());
+		const partial = td("media.partial", { moved: 1, kept: 1 });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(partial, withAction(td("view"))));
+		act(() => pressToastAction(partial));
 		await waitFor(() => expect(lastList().get("used")).toBe("used"));
 		expect(lastList().get("folderId")).toBe("blog");
 	});
 
 	it("TRASH-T5 moves a folder to the trash with its files, no question, with an undo; one with files in use keeps those and offers to view them", async () => {
 		await renderLibrary();
-		const items = await openMenu(folderTile("covers"));
-		fireEvent.click(items[3] as HTMLElement);
+		await openMenu(folderTile("covers"));
+		fireEvent.click(screen.getByRole("menuitem", { name: td("folder.menu.delete") }));
 		await waitFor(() => expect(written("DELETE", "/folders/covers")).toHaveLength(1));
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect((toast.mock.calls[0]?.[1] as { action: { label: string } }).action.label).toBe(td("undo"));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.any(String), withAction(td("undo"))));
 
 		toast.mockClear();
 		backend.onFolderDelete = () => ({ folder: null, entries: 0, folders: 0, files: 2, kept: 4 });
-		const again = await openMenu(folderTile("covers"));
-		fireEvent.click(again[3] as HTMLElement);
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toContain("4");
-		expect(options.action.label).toBe(td("view"));
-		act(() => options.action.onClick());
+		await openMenu(folderTile("covers"));
+		fireEvent.click(screen.getByRole("menuitem", { name: td("folder.menu.delete") }));
+		const partial = td("folder.partial", { name: "covers", moved: 2, kept: 4 });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(partial, withAction(td("view"))));
+		act(() => pressToastAction(partial));
 		await waitFor(() => expect(lastList().get("used")).toBe("used"));
 		expect(lastList().get("folderId")).toBe("covers");
 	});

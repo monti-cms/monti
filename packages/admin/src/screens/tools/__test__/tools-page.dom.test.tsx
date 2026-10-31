@@ -13,8 +13,6 @@ import { toolsMessages } from "../messages";
 import ToolsPage from "../page";
 import { toolsTabs } from "../tools-tabs";
 
-vi.mock("../../require-admin", () => ({ requireAdminPage: async () => undefined }));
-
 let api: FakeApi;
 beforeEach(() => {
 	api = fakeApi()
@@ -46,6 +44,8 @@ const site = createSite({
 	],
 } as CmsConfig);
 const t = site.createTranslator(toolsMessages);
+/** The CMS the page is handed: the site, and the auth gateway (the edge) letting the admin in. */
+const cms = { site, authGateway: { verifyAdmin: async () => ({}) } } as unknown as Cms;
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {
 		throw new Error(`redirect:${href}`);
@@ -55,25 +55,25 @@ const server = (): AdminServer => ({
 	}),
 });
 const open = async (path: string | undefined) => {
-	const element = await ToolsPage({ cms: { site } as unknown as Cms, server: server(), path });
+	const element = await ToolsPage({ cms, server: server(), path });
 	return renderInRouter(withSite(<AdminQueryProvider>{element}</AdminQueryProvider>, site));
 };
 const tabs = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
 describe("the tools page", () => {
-	it("goes to the first tab from the bare tools address", async () => {
-		await expect(ToolsPage({ cms: { site } as unknown as Cms, server: server(), path: undefined })).rejects.toThrow(
+	it("ADMIN-U1 goes to the first tab from the bare tools address", async () => {
+		await expect(ToolsPage({ cms, server: server(), path: undefined })).rejects.toThrow(
 			`redirect:${toolsTabs(site)[0]?.href}`,
 		);
 	});
 
-	it("is a 404 for a path that is neither a built-in tab nor a plugin page", async () => {
+	it("ADMIN-U1 is a 404 for a path that is neither a built-in tab nor a plugin page", async () => {
 		for (const path of ["nope", "settings", "media"]) {
 			await expect(open(path)).rejects.toThrow("not-found");
 		}
 	});
 
-	it("shows a plugin's page as the last tab, under the same title", async () => {
+	it("PLUG-A1 shows a plugin's page as the last tab, under the same title", async () => {
 		await open("stats");
 		expect(screen.getByText("stats page body")).toBeInTheDocument();
 		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeInTheDocument();
@@ -82,14 +82,14 @@ describe("the tools page", () => {
 		expect(current?.textContent?.trim()).toBe("Post stats");
 	});
 
-	it("says what is missing for a plugin page the plugin does not draw", async () => {
+	it("PLUG-A1 says what is missing for a plugin page the plugin does not draw", async () => {
 		await open("quiet");
 		expect(
 			screen.getByText((text) => text.includes('"quiet"') && text.includes("defineAdminPlugin")),
 		).toBeInTheDocument();
 	});
 
-	it("counts the failed deliveries on the activity log tab", async () => {
+	it("EVENT-F1 counts the failed deliveries on the activity log tab", async () => {
 		// The Data tab's own body: the export formats, whether the site is empty, and the export summary.
 		api
 			.on("GET /v1/meta", () => ({ formats: [] }))

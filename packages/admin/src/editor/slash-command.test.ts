@@ -8,7 +8,7 @@ const t = testSite.createTranslator(editorMessages);
 const firstKeyword = (key: Parameters<typeof t>[0]) => t(key).split(",")[0] ?? "";
 
 describe("Slash Menu Commands & Filter Contract", () => {
-	it("filters accurately with English queries", () => {
+	it("WRITE-W1 filters accurately with English queries", () => {
 		const h2Results = filterCommands(testSite, "h2");
 		expect(h2Results.map((c) => c.title)).toContain(t("slash.h2.title"));
 		// The post title is H1, so heading insertion in the body starts at H2.
@@ -23,14 +23,16 @@ describe("Slash Menu Commands & Filter Contract", () => {
 		expect(codeResults.some((c) => c.title.includes(t("slash.code.title").split(" ")[0] ?? ""))).toBe(true);
 	});
 
-	it("filters accurately with Korean queries", () => {
-		const titleResults = filterCommands(testSite, firstKeyword("slash.heading.keywords"));
-		expect(titleResults.length).toBeGreaterThanOrEqual(3); // H2, H3, H4
+	it("WRITE-W1 filters accurately with Korean queries", () => {
+		const titleResults = filterCommands(testSite, firstKeyword("slash.heading.keywords")).map((c) => c.title);
+		expect(titleResults).toEqual(
+			expect.arrayContaining([t("slash.h2.title"), t("slash.h3.title"), t("slash.h4.title")]),
+		);
 
 		const quoteResults = filterCommands(testSite, firstKeyword("slash.quote.keywords"));
 		expect(quoteResults.some((c) => c.title.includes(t("slash.quote.title")))).toBe(true);
 
-		const listResults = filterCommands(testSite, firstKeyword("slash.bullet.keywords"));
-		expect(listResults.length).toBeGreaterThanOrEqual(2); // Bullet, Ordered
+		const listResults = filterCommands(testSite, firstKeyword("slash.bullet.keywords")).map((c) => c.title);
+		expect(listResults).toEqual(expect.arrayContaining([t("slash.bullet.title"), t("slash.ordered.title")]));
 	});
 });

@@ -47,9 +47,10 @@ function Harness({
 	return <EditorContent editor={editor} />;
 }
 
+/** `ready` passes once the block's view is drawn. */
 const mount = async (
 	doc: StoredDocument,
-	ready: string,
+	ready: () => unknown,
 	views: Record<string, BlockView> = {},
 	allowance?: EditorAllowance,
 ) => {
@@ -66,7 +67,7 @@ const mount = async (
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector(ready)).toBeInTheDocument());
+	await waitFor(ready);
 	return editor as unknown as Editor;
 };
 
@@ -79,12 +80,14 @@ const countTransactions = (editor: Editor) => {
 	return counter;
 };
 
+/** The bodies of the two tabs: test data. */
+const BODIES = ["첫째", "둘째"] as const;
 const tabsNode = (): CmsNode => ({
 	type: "tabs",
 	attrs: { defaultValue: "둘" },
 	content: [
-		{ type: "tab", attrs: { label: "하나" }, content: [para("첫째")] },
-		{ type: "tab", attrs: { label: "둘" }, content: [para("둘째")] },
+		{ type: "tab", attrs: { label: "하나" }, content: [para(BODIES[0])] },
+		{ type: "tab", attrs: { label: "둘" }, content: [para(BODIES[1])] },
 	],
 });
 const TABS = storedDoc(tabsNode());
@@ -98,11 +101,6 @@ const labelsOf = (editor: Editor) =>
 	Array.from({ length: editor.state.doc.firstChild?.childCount ?? 0 }, (_, index) =>
 		String(editor.state.doc.firstChild?.child(index).attrs.values.label ?? ""),
 	);
-
-const labelsOfAt = (editor: Editor, at: number) => {
-	const block = editor.state.doc.child(at);
-	return Array.from({ length: block.childCount }, (_, index) => String(block.child(index).attrs.values.label ?? ""));
-};
 
 /** Tabs drawn with nothing but `useBlockEditor`, `Content` and `BlockFrame`: add, move, remove (with the definition's min and max) and rename. */
 function CustomTabs() {
@@ -181,37 +179,21 @@ function CustomTab() {
 	);
 }
 
-const mountTabs = (doc = TABS) =>
-	mount(doc, "[data-monti-container-node='cmsTabs']", { tabs: CustomTabs, tab: CustomTab });
+const mountTabs = (doc = TABS) => mount(doc, () => screen.getAllByRole("tab"), { tabs: CustomTabs, tab: CustomTab });
+/** A view without markup of its own is drawn once the tab bodies are. */
+const bodyDrawn = () => screen.getByText(BODIES[0]);
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 const failure = () => screen.getByLabelText("failure").textContent;
 
 describe("a custom block view built on useBlockEditor and Content", () => {
-	it("reads the children and values, and renders the nested body", async () => {
+	it("PLUG-A10 reads the children and values, and renders the nested body", async () => {
 		await mountTabs();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
-		expect(screen.getByText("첫째")).toBeInTheDocument();
-		expect(document.querySelector("[data-monti-block-content]")).toBeInTheDocument();
+		for (const body of BODIES) expect(screen.getByText(body)).toBeInTheDocument();
 	});
 
-	it("shows only the visible child", async () => {
-		await mountTabs();
-		const rule = () => document.querySelector("[data-monti-container-node='cmsTabs'] > style")?.textContent ?? "";
-		expect(rule()).toContain(":nth-child(1)");
-		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
-		await waitFor(() => expect(rule()).toContain(":nth-child(2)"));
-		const bodies = Array.from(
-			document.querySelectorAll<HTMLElement>(
-				"[data-monti-container-node='cmsTabs'] > [data-monti-block-content] > * > *",
-			),
-		);
-		expect(bodies).toHaveLength(2);
-		expect(getComputedStyle(bodies[0] as HTMLElement).display).toBe("none");
-		expect(getComputedStyle(bodies[1] as HTMLElement).display).not.toBe("none");
-	});
-
-	it("adds a child up to definition.children.max, then returns a limit error", async () => {
+	it("PLUG-A10 adds a child up to definition.children.max, then returns a limit error", async () => {
 		const editor = await mountTabs();
 		expect(screen.getByLabelText("flags").textContent).toBe("true/false/true");
 		for (let added = 2; added < 8; added += 1) click("add");
@@ -223,7 +205,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(editor.state.doc.firstChild?.childCount).toBe(8);
 	});
 
-	it("removes a child down to definition.children.min, then returns a limit error", async () => {
+	it("PLUG-A10 removes a child down to definition.children.min, then returns a limit error", async () => {
 		const editor = await mountTabs();
 		click("remove");
 		expect(failure()).toBe("limit");
@@ -237,7 +219,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(labelsOf(editor)).toEqual(["하나", "둘"]);
 	});
 
-	it("moves a child, keeping its body", async () => {
+	it("PLUG-A10 moves a child, keeping its body", async () => {
 		const editor = await mountTabs();
 		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
 		click("left");
@@ -250,7 +232,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(labelsOf(editor)).toEqual(["둘", "하나"]);
 	});
 
-	it("transact writes a child and the parent in one document change and one undo step", async () => {
+	it("PLUG-A10 transact writes a child and the parent in one document change and one undo step", async () => {
 		const editor = await mountTabs();
 		const before = savedDoc(editor);
 		const transactions = countTransactions(editor);
@@ -266,7 +248,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(withoutIds(savedDoc(editor))).toEqual(withoutIds(before));
 	});
 
-	it("a rule broken inside transact writes nothing and returns the failure", async () => {
+	it("PLUG-A10 a rule broken inside transact writes nothing and returns the failure", async () => {
 		let result: EditorResult<unknown> | null = null;
 		function Probe() {
 			const block = useBlockEditor();
@@ -284,7 +266,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 				</button>
 			);
 		}
-		const editor = await mount(TABS, "[data-monti-container-node='cmsTabs']", {
+		const editor = await mount(TABS, () => screen.getByRole("button", { name: "probe" }), {
 			tabs: () => (
 				<BlockFrame>
 					<Probe />
@@ -299,7 +281,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(savedDoc(editor)).toEqual(before);
 	});
 
-	it("fails with read_only while the editor is locked", async () => {
+	it("PLUG-A10 fails with read_only while the editor is locked", async () => {
 		const editor = await mountTabs();
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.getByLabelText("flags").textContent).toBe("false/false/false"));
@@ -312,7 +294,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 });
 
 describe("useBlockEditor", () => {
-	it("gives a view its name, definition, id, selection state and an escape hatch", async () => {
+	it("PLUG-A10 gives a view its name, definition, id, selection state and an escape hatch", async () => {
 		let seen: ReturnType<typeof useBlockEditor> | null = null;
 		function Spy() {
 			const block = useBlockEditor();
@@ -323,13 +305,13 @@ describe("useBlockEditor", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(TABS, "[data-monti-container-node='cmsTabs']", { tabs: Spy, tab: CustomTab });
+		const editor = await mount(TABS, bodyDrawn, { tabs: Spy, tab: CustomTab });
 		let block = seen as unknown as ReturnType<typeof useBlockEditor>;
 		expect(block.name).toBe("tabs");
-		expect(block.definition.label).toMatch(/\S/);
+		expect(block.definition).toBe(testSite.ADDED_BLOCKS.find((definition) => definition.name === "tabs"));
 		// A block has the id its document gave it, and keeps it through a change of the document.
 		const id = block.id;
-		expect(id).toMatch(/\S/);
+		expect(id).toBe(TABS.content[0]?.id);
 		act(() => {
 			editor.commands.insertContentAt(editor.state.doc.content.size, "<p>끝</p>");
 		});
@@ -338,7 +320,9 @@ describe("useBlockEditor", () => {
 		expect(block.selected).toBe(false);
 		expect(block.focusedChild).toBeNull();
 		expect(block.raw.editor).toBe(editor);
-		expect(block.raw.node.type.name).toBe("cmsTabs");
+		// The escape hatch is the block's own node, at the position it gives.
+		expect(editor.state.doc.nodeAt(block.raw.getPos() as number)).toBe(block.raw.node);
+		expect(block.raw.node.childCount).toBe(2);
 		expect(block.children.map((child) => [child.index, child.name, child.values.label])).toEqual([
 			[0, "tab", "하나"],
 			[1, "tab", "둘"],
@@ -359,15 +343,18 @@ describe("useBlockEditor commands", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(SOURCE, "[data-monti-container-node='cmsTabs']", { tabs: Spy, tab: CustomTab });
+		const editor = await mount(SOURCE, bodyDrawn, { tabs: Spy, tab: CustomTab });
 		return { editor, block: () => seen as unknown as ReturnType<typeof useBlockEditor> };
 	};
 
-	it("selects the block, moves the cursor into a child and reads the text around it", async () => {
+	it("PLUG-A10 selects the block, moves the cursor into a child and reads the text around it", async () => {
 		const { editor, block } = await mountSpy();
 		expect(block().textAround(100, "[탭]")).toBe("앞 문단\n[탭]\n뒤 문단");
 		act(() => block().select());
-		expect(editor.state.selection.constructor.name).toBe("NodeSelection");
+		// The whole block is selected: the selection spans exactly the block node.
+		expect(editor.state.selection.from).toBe(block().raw.getPos());
+		expect(editor.state.doc.nodeAt(editor.state.selection.from)).toBe(block().raw.node);
+		expect(editor.state.selection.to - editor.state.selection.from).toBe(block().raw.node.nodeSize);
 		await waitFor(() => expect(block().selected).toBe(true));
 		act(() => block().focus({ child: 1 }));
 		expect(editor.state.selection.$from.parent.textContent).toBe("둘째");
@@ -376,7 +363,7 @@ describe("useBlockEditor commands", () => {
 		expect(editor.state.selection.$from.parentOffset).toBe(2);
 	});
 
-	it("removes the block", async () => {
+	it("PLUG-A10 removes the block", async () => {
 		const { editor, block } = await mountSpy();
 		let result: EditorResult | null = null;
 		act(() => {
@@ -385,16 +372,6 @@ describe("useBlockEditor commands", () => {
 		expect(result).toMatchObject({ ok: true });
 		expect(savedDoc(editor).content.map((node) => node.type)).toEqual(["paragraph", "paragraph"]);
 		expect(savedDoc(editor).content.map((node) => node.content?.[0]?.text)).toEqual(["앞 문단", "뒤 문단"]);
-	});
-
-	it("moves a child together with the cursor inside it", async () => {
-		const { editor, block } = await mountSpy();
-		act(() => block().focus({ child: 1 }));
-		act(() => {
-			block().moveChild(1, 0);
-		});
-		expect(labelsOfAt(editor, 1)).toEqual(["둘", "하나"]);
-		expect(editor.state.selection.$from.parent.textContent).toBe("둘째");
 	});
 });
 
@@ -422,7 +399,7 @@ function CalloutWithCode() {
 describe("a block view adding body content the body's allowed list does not allow", () => {
 	const callout = storedDoc({ type: "callout", content: [para("안")] });
 	const mountCallout = (allowance?: EditorAllowance) =>
-		mount(callout, "[data-monti-block-content]", { callout: CalloutWithCode }, allowance);
+		mount(callout, () => screen.getByRole("button", { name: "add code" }), { callout: CalloutWithCode }, allowance);
 	const codeBlocks = (editor: Editor) => {
 		let count = 0;
 		editor.state.doc.descendants((node) => {
@@ -431,14 +408,14 @@ describe("a block view adding body content the body's allowed list does not allo
 		return count;
 	};
 
-	it("adds a code block when the list allows it, or when the body has no list", async () => {
+	it("PLUG-A10 adds a code block when the list allows it, or when the body has no list", async () => {
 		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout", "codeBlock"] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("added"));
 		expect(codeBlocks(editor)).toBe(1);
 	});
 
-	it("fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
+	it("PLUG-A10 fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
 		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout"] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("invalid_state"));

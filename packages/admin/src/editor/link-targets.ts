@@ -201,14 +201,6 @@ export function resetLinkTargets(site: Site): void {
 }
 
 /**
- * Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated.
- * @internal For tests; the editor asks through the link view.
- */
-export function requestLinkTarget(site: Site, id: string): void {
-	storeOf(site).request(id);
-}
-
-/**
  * Where the link to this entry goes, looked up on first use and kept for the session. `null` for a link that is not to an entry.
  */
 export function useLinkTarget(entryId: string | null | undefined): LinkTargetState | null {
