@@ -167,7 +167,7 @@ describe("public site reading (cms.read)", () => {
 		},
 	);
 
-	it("SITE-R5 one entry: resolves relations to the published targets' titles and URLs, and an old URL reports a redirect", async () => {
+	it("SITE-R5 one entry: resolves relations to the published targets' titles and URLs", async () => {
 		const target = relation ? await relationTarget(relation.to) : undefined;
 		const published = await publish(
 			"read-detail",
@@ -188,16 +188,19 @@ describe("public site reading (cms.read)", () => {
 				expect.objectContaining({ id: target, collection: relation.to, title: expect.any(String) }),
 			]);
 		}
+	});
 
+	it("SITE-A1 an old URL of a published entry reports a redirect to its new URL", async () => {
+		const published = await publish("read-moved", {});
 		const renamed = await seedSave(store, published.id, {
 			expectedVersion: published.version,
-			slug: "read-detail-renamed",
+			slug: "read-moved-renamed",
 			metadata: published.working.metadata,
 			doc: published.working.doc,
 		});
 		await publishDraft(testSite, store, { id: published.id, expectedVersion: renamed.version });
-		const old = await getEntry({ collection: contentCollection, slug: "read-detail" });
-		expect(old).toMatchObject({ status: "redirect", slug: "read-detail-renamed" });
+		const old = await getEntry({ collection: contentCollection, slug: "read-moved" });
+		expect(old).toMatchObject({ status: "redirect", slug: "read-moved-renamed" });
 		expect(await getEntry({ collection: contentCollection, slug: "no-such-entry" })).toEqual({ status: "not_found" });
 	});
 
