@@ -6,7 +6,7 @@ import { assertCms } from "../assert-cms";
 
 /** A Next file that got no CMS instance (a wrong import) says so and how to fix it, instead of "Cannot read properties of undefined". */
 describe("a missing CMS instance", () => {
-	it("is named by the file that was given nothing, with where and how to fix", () => {
+	it("SITE-N1 is named by the file that was given nothing, with where and how to fix", () => {
 		const message = (() => {
 			try {
 				createRouteHandler(undefined as never);
@@ -21,7 +21,7 @@ describe("a missing CMS instance", () => {
 		expect(message).toContain("monti doctor");
 	});
 
-	it("accepts an instance, and names the wrong type it got", () => {
+	it("SITE-N1 accepts an instance, and names the wrong type it got", () => {
 		expect(() => assertCms({}, "x")).not.toThrow();
 		expect(() => assertCms(Promise.resolve(), "<CmsAdminPage cms={cms}>")).not.toThrow();
 		expect(() => assertCms("cms", "<CmsAdminPage cms={cms}>")).toThrow(/got string instead of the CMS instance/);

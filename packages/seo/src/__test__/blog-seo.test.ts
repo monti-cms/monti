@@ -9,7 +9,7 @@ const AI_ACTIONS = aiRegistryOf(site).actions;
 
 /** Example blog config (`seoFields({ keys })`): stored field names and value shapes are the same as before the SEO extension. */
 describe("blog SEO fields", () => {
-	it("field names and storage format are the same as before (only the share image is a media field)", () => {
+	it("SITE-N2 field names and storage format are the same as before (only the share image is a media field)", () => {
 		for (const collection of ["post", "memo"] as const) {
 			expect(site.COLLECTION_DEFINITIONS[collection].fields).toMatchObject({
 				seoTitle: "string",
@@ -25,7 +25,7 @@ describe("blog SEO fields", () => {
 		}
 	});
 
-	it("search title and description suggestions attach to the same fields and collections as before", () => {
+	it("SITE-N2 search title and description suggestions attach to the same fields and collections as before", () => {
 		expect(AI_ACTIONS.seoTitle).toMatchObject({
 			attach: [{ slot: "field", field: "seoTitle", collections: ["post", "memo"] }],
 		});
@@ -34,7 +34,7 @@ describe("blog SEO fields", () => {
 		});
 	});
 
-	it("the public page helper reads the blog fields by role", () => {
+	it("SITE-N2 the public page helper reads the blog fields by role", () => {
 		expect(
 			seoOf(site.schemaOf("post"), { title: "글", summary: "요약", seoRobots: "noindex", canonicalUrl: "/posts/a" }),
 		).toEqual({ title: "글", description: "요약", canonical: "/posts/a", noindex: true });

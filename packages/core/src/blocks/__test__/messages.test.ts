@@ -9,13 +9,13 @@ const t = createTranslator(blockMessages, "en");
 const siteT = testSite.createTranslator(blockMessages);
 
 describe("core block label dictionary", () => {
-	it("every Korean key exists in English, and English has every key", () => {
+	it("SITE-D4 every Korean key exists in English, and English has every key", () => {
 		const en = Object.keys(blockMessages.messages.en);
 		expect(Object.keys(blockMessages.messages.ko ?? {}).filter((key) => !en.includes(key))).toEqual([]);
 		expect(en.filter((key) => !(key in (blockMessages.messages.ko ?? {})))).toEqual([]);
 	});
 
-	it("block and attribute labels and descriptions come from the dictionary (the key is not shown as is)", () => {
+	it("SITE-D4 block and attribute labels and descriptions come from the dictionary (the key is not shown as is)", () => {
 		for (const block of BUILTIN_BLOCKS as readonly BlockDefinition[]) {
 			expect(block.label).toBe(t(`${block.name}.label` as never));
 			expect(block.label).not.toBe(`${block.name}.label`);
@@ -32,7 +32,7 @@ describe("core block label dictionary", () => {
 		}
 	});
 
-	it("a definition serializes to JSON with the label as a value", () => {
+	it("SITE-D4 a definition serializes to JSON with the label as a value", () => {
 		const image = JSON.parse(JSON.stringify(BUILTIN_BLOCKS.find((block) => block.name === "image")));
 		expect(image.label).toBe(t("image.label"));
 		expect(image.attributes.alt.label).toBe(t("image.alt.label"));
@@ -40,7 +40,7 @@ describe("core block label dictionary", () => {
 		expect(image.editor.keywords).toContain("image");
 	});
 
-	it("the blocks of a site carry the labels in its admin language", () => {
+	it("SITE-D4 the blocks of a site carry the labels in its admin language", () => {
 		const image = JSON.parse(JSON.stringify(testSite.BLOCKS.find((block) => block.name === "image")));
 		expect(image.label).toBe(siteT("image.label"));
 		expect(image.attributes.alt.label).toBe(siteT("image.alt.label"));
@@ -48,7 +48,7 @@ describe("core block label dictionary", () => {
 		expect(image.editor.keywords).toContain("image");
 	});
 
-	it("uses the phrases the site overrode first", () => {
+	it("SITE-D4 uses the phrases the site overrode first", () => {
 		expect(translate(blockMessages, "en", "image.label", undefined, { "cms.blocks": { "image.label": "Photo" } })).toBe(
 			"Photo",
 		);

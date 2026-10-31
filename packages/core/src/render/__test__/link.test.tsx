@@ -16,18 +16,18 @@ describe("CmsLink href handling", () => {
 		"page.html",
 		"?page=2",
 		"relative/with:colon",
-	])("keeps the href of %s", (href) => {
+	])("SITE-R2 keeps the href of %s", (href) => {
 		expect(render(href)).toBe(`<a href="${href}">x</a>`);
 	});
 
-	it("keeps external http(s) links opening in a new window", () => {
+	it("SITE-R2 keeps external http(s) links opening in a new window", () => {
 		const markup = render("https://example.com/a");
 		expect(markup).toContain('href="https://example.com/a"');
 		expect(markup).toContain('target="_blank"');
 		expect(markup).toContain('class="monti-link-external"');
 	});
 
-	it("does not add a target to mailto and tel links", () => {
+	it("SITE-R2 does not add a target to mailto and tel links", () => {
 		expect(render("mailto:me@example.com")).not.toContain("target=");
 		expect(render("tel:+821012345678")).not.toContain("target=");
 	});
@@ -51,11 +51,11 @@ describe("CmsLink href handling", () => {
 		"\\\\evil.example",
 		"\t//evil.example",
 		" https://example.com",
-	])("drops the href of %j", (href) => {
+	])("SITE-R2 drops the href of %j", (href) => {
 		expect(render(href)).toBe("<a>x</a>");
 	});
 
-	it("renders an empty href without an href attribute", () => {
+	it("SITE-R2 renders an empty href without an href attribute", () => {
 		expect(render("")).toBe("<a>x</a>");
 	});
 });

@@ -17,7 +17,7 @@ const outline = (hast: { children: unknown[] }) => {
 };
 
 describe("highlight line wrapper integration", () => {
-	it("injects line wrapper into highlighted hast", () => {
+	it("SITE-D2 injects line wrapper into highlighted hast", () => {
 		const hast = highlight(
 			"const a = 1\nconst b = 2",
 			"ts",
@@ -31,7 +31,7 @@ describe("highlight line wrapper integration", () => {
 		expect(outline(hast)).toEqual([["Callout", "const a = 1\nconst b = 2"]]);
 	});
 
-	it("renders without a line count mismatch even when decorations and a line wrapper are used together", () => {
+	it("SITE-D2 renders without a line count mismatch even when decorations and a line wrapper are used together", () => {
 		const hast = highlight(
 			"const a = 1\nconst b = 2",
 			"ts",
@@ -64,7 +64,7 @@ describe("highlight line wrapper integration", () => {
 		expect(lines[0]?.children[0]).toMatchObject({ tagName: "Tooltip", properties: { content: "const" } });
 	});
 
-	it("applies up to EOF even when the line wrapper range end exceeds the line count", () => {
+	it("SITE-D2 applies up to EOF even when the line wrapper range end exceeds the line count", () => {
 		const hast = highlight(
 			"const a = 1\nconst b = 2",
 			"ts",

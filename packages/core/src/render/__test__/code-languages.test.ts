@@ -21,26 +21,26 @@ const textOf = (node: unknown): string => {
 };
 
 describe("code in a language that is not loaded", () => {
-	it("is shown as plain text instead of failing", () => {
+	it("SITE-D2 is shown as plain text instead of failing", () => {
 		const hast = highlight("let x = 1", "no-such-language", {});
 		expect(textOf(hast)).toBe("let x = 1");
 	});
 
-	it("still highlights a loaded language and an alias", () => {
+	it("SITE-D2 still highlights a loaded language and an alias", () => {
 		for (const lang of ["ts", "js", "json"]) {
 			const hast = highlight("const a = 1;", lang, {});
 			expect(JSON.stringify(hast)).toContain("--shiki-dark");
 		}
 	});
 
-	it("does not fail a page that has it", async () => {
+	it("SITE-D2 does not fail a page that has it", async () => {
 		const { content } = await renderDocument(codeDoc("no-such-language", "let x = 1"), { site: testSite });
 		expect(renderToStaticMarkup(content)).toContain("let x = 1");
 	});
 });
 
 describe("focus lines", () => {
-	it("carry the class the public styles dim the other lines by", async () => {
+	it("SITE-D2 carry the class the public styles dim the other lines by", async () => {
 		const { content } = await renderDocument(
 			codeDoc("ts", "const a = 1;\n// @line focus\nconst b = 2;\nconst c = 3;"),
 			{ site: testSite },

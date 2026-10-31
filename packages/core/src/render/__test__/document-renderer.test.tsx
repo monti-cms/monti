@@ -60,20 +60,20 @@ const footnoteDoc = (): StoredDocument =>
 	});
 
 describe("renderDocument: the result", () => {
-	it("returns the content, the table of contents and the unknown nodes", async () => {
+	it("SITE-R1 returns the content, the table of contents and the unknown nodes", async () => {
 		const rendered = await renderDocument(doc(heading(2, "제목"), paragraph(text("본문"))), { site: testSite });
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain('<h2 id="제목">');
 		expect(rendered.toc).toEqual([{ value: "제목", id: "제목", href: "#제목", level: 2, depth: 0 }]);
 		expect(rendered.unknown).toEqual([]);
 	});
 
-	it("renders a server component with CmsContent", async () => {
+	it("SITE-R1 renders a server component with CmsContent", async () => {
 		const stored = doc(paragraph(text("안녕")));
 		const element = await CmsContent({ cms: { site: testSite }, doc: stored });
 		expect(renderToStaticMarkup(element as ReactNode)).toBe("<p>안녕</p>");
 	});
 
-	it("renders an empty body for something that is not a stored document, and never throws", async () => {
+	it("SITE-R1 renders an empty body for something that is not a stored document, and never throws", async () => {
 		const error = vi.spyOn(console, "error").mockImplementation(() => {});
 		try {
 			for (const value of [
@@ -91,7 +91,7 @@ describe("renderDocument: the result", () => {
 		}
 	});
 
-	it("renders without compiling MDX: it is a pure function of the stored document", async () => {
+	it("SITE-R1 renders without compiling MDX: it is a pure function of the stored document", async () => {
 		const stored = docOf("## 제목\n\n본문 **굵게**\n\n```ts\nconst a = 1;\n```");
 		const first = await html(stored);
 		const second = await html(JSON.parse(JSON.stringify(stored)) as StoredDocument);
@@ -109,7 +109,7 @@ describe("heading anchors and the table of contents", () => {
 		{ type: "bulletList", content: [{ type: "listItem", content: [heading(2, "목록 안")] }] },
 	);
 
-	it("gives repeated headings -1, -2 in document order, as rehype-slug did", async () => {
+	it("SITE-D3 gives repeated headings -1, -2 in document order, as rehype-slug did", async () => {
 		const markup = await html(stored);
 		expect(markup.match(/<h\d id="[^"]*"/g)).toEqual([
 			'<h1 id="제목"',
@@ -121,7 +121,7 @@ describe("heading anchors and the table of contents", () => {
 		]);
 	});
 
-	it("lists levels 2 and 3 by default, counted from the first level", async () => {
+	it("SITE-D3 lists levels 2 and 3 by default, counted from the first level", async () => {
 		const { toc } = await renderDocument(stored, { site: testSite });
 		expect(toc.map(({ value, id, level, depth }) => [value, id, level, depth])).toEqual([
 			["개요", "개요", 2, 0],
@@ -132,7 +132,7 @@ describe("heading anchors and the table of contents", () => {
 		expect(toc.map((item) => item.href)).toEqual(toc.map((item) => `#${item.id}`));
 	});
 
-	it("tableOfContents is the same list without React, for any range", () => {
+	it("SITE-D3 tableOfContents is the same list without React, for any range", () => {
 		expect(tableOfContents(stored).map((item) => item.id)).toEqual(["개요", "개요-1", "개요-2", "목록-안"]);
 		const range = tableOfContents(stored, { min: 1, max: 4 });
 		expect(range.map((item) => [item.level, item.depth])).toEqual([
@@ -146,7 +146,7 @@ describe("heading anchors and the table of contents", () => {
 		expect(tableOfContents(null as never)).toEqual([]);
 	});
 
-	it("takes the text of a heading from everything inside it", () => {
+	it("SITE-D3 takes the text of a heading from everything inside it", () => {
 		const marked = doc({
 			type: "heading",
 			attrs: { level: 2 },
@@ -157,7 +157,7 @@ describe("heading anchors and the table of contents", () => {
 		]);
 	});
 
-	it("does not list the footnote heading, and gives it no anchor", async () => {
+	it("SITE-D3 does not list the footnote heading, and gives it no anchor", async () => {
 		const markup = await html(footnoteDoc());
 		expect(markup).toContain('<h2 class="sr-only" id="footnote-label">Footnotes</h2>');
 		expect(tableOfContents(footnoteDoc()).map((item) => item.value)).toEqual(["제목"]);
@@ -165,7 +165,7 @@ describe("heading anchors and the table of contents", () => {
 });
 
 describe("component overrides", () => {
-	it("passes plain props and the context to a heading component", async () => {
+	it("SITE-D1 passes plain props and the context to a heading component", async () => {
 		const seen: { level: number; id: string; blockId?: string; ctx: RenderContext }[] = [];
 		const Heading = ({ level, id, blockId, ctx, children }: HeadingProps) => {
 			seen.push({ level, id, blockId, ctx });
@@ -183,7 +183,7 @@ describe("component overrides", () => {
 		expect(seen[0]?.ctx.labels.copyCode).toBe("Copy");
 	});
 
-	it("passes the resolved address and the kind of a link, and never the raw mark", async () => {
+	it("SITE-D1 passes the resolved address and the kind of a link, and never the raw mark", async () => {
 		const seen: LinkProps[] = [];
 		const Link = (props: LinkProps) => {
 			seen.push(props);
@@ -206,14 +206,14 @@ describe("component overrides", () => {
 		]);
 	});
 
-	it("overrides a mark with its own component", async () => {
+	it("SITE-D1 overrides a mark with its own component", async () => {
 		const markup = await html(doc(paragraph(text("굵게", [{ type: "bold" }]))), {
 			components: loose({ marks: { bold: ({ children }: { children: ReactNode }) => <b>{children}</b> } }),
 		});
 		expect(markup).toBe("<p><b>굵게</b></p>");
 	});
 
-	it("passes the list facts to a list component", async () => {
+	it("SITE-D1 passes the list facts to a list component", async () => {
 		const seen: ListProps[] = [];
 		const List = (props: ListProps) => {
 			seen.push(props);
@@ -245,7 +245,7 @@ describe("component overrides", () => {
 		]);
 	});
 
-	it("passes the facts of a table to its components", async () => {
+	it("SITE-D1 passes the facts of a table to its components", async () => {
 		const tables: TableProps[] = [];
 		const cells: TableCellProps[] = [];
 		await html(
@@ -339,7 +339,7 @@ describe("component overrides", () => {
 		]);
 	});
 
-	it("keeps the layers in order: core defaults, then the table of an extension, then the site", () => {
+	it("SITE-D1 keeps the layers in order: core defaults, then the table of an extension, then the site", () => {
 		const Base = () => <i />;
 		const Extension = () => <b />;
 		const Site = () => <u />;
@@ -357,7 +357,7 @@ describe("component overrides", () => {
 });
 
 describe("code blocks", () => {
-	it("passes the language, code, title, notes and annotations, and the highlighted pre as children", async () => {
+	it("SITE-D2 passes the language, code, title, notes and annotations, and the highlighted pre as children", async () => {
 		const seen: CodeBlockProps[] = [];
 		const CodeBlock = (props: CodeBlockProps) => {
 			seen.push(props);
@@ -385,7 +385,7 @@ describe("code blocks", () => {
 		expect(markup).toContain('data-line="1"');
 	});
 
-	it("keeps the stored code of a tooltip note for a site component", async () => {
+	it("SITE-D2 keeps the stored code of a tooltip note for a site component", async () => {
 		const seen: string[][] = [];
 		const stored = doc(codeBlock("ts", "", '// @char Tooltip {0-5} content="설명"\nconst a = 1;'));
 		await html(stored, {
@@ -400,7 +400,7 @@ describe("code blocks", () => {
 		expect(seen).toEqual([["설명"]]);
 	});
 
-	it("draws a render tag nobody provides as its text, and a provided one with its component", async () => {
+	it("SITE-D2 draws a render tag nobody provides as its text, and a provided one with its component", async () => {
 		const stored = doc(codeBlock("ts", "", '// @char Tooltip {0-5} content="설명"\nconst a = 1;'));
 		const without = await html(stored);
 		expect(without).not.toContain("<Tooltip");
@@ -411,7 +411,7 @@ describe("code blocks", () => {
 		expect(withTag).toContain("<mark>");
 	});
 
-	it("shows a language that is not loaded, and code that cannot be annotated, as plain text and never throws", async () => {
+	it("SITE-D2 shows a language that is not loaded, and code that cannot be annotated, as plain text and never throws", async () => {
 		const unknownLanguage = await html(doc(codeBlock("nolang", "", "some code")));
 		expect(unknownLanguage).toContain("some code");
 		// A stored block whose attributes are not what a fence makes.
@@ -419,7 +419,7 @@ describe("code blocks", () => {
 		expect(await html(odd)).toContain("<pre");
 	});
 
-	it("uses the code options of the site (a highlight function of its own)", async () => {
+	it("SITE-D2 uses the code options of the site (a highlight function of its own)", async () => {
 		const highlight = vi.fn(() => ({
 			type: "root" as const,
 			children: [
@@ -443,7 +443,7 @@ describe("code blocks", () => {
 		expect(markup).toContain('<pre class="mine"><code>X</code></pre>');
 	});
 
-	it("leaves a language the site ignores unhighlighted", async () => {
+	it("SITE-D2 leaves a language the site ignores unhighlighted", async () => {
 		const markup = await html(docOf("```ts\nconst a = 1;\n```"), { code: { ignoreLang: () => true } });
 		expect(markup).toContain("<pre><code>const a = 1;</code></pre>");
 		expect(markup).not.toContain("shiki");
@@ -453,7 +453,7 @@ describe("code blocks", () => {
 describe("images and files", () => {
 	const image = (attrs: Record<string, string | boolean>): CmsNode => ({ type: "image", attrs });
 
-	it("gives an image component the resolved address, the size and a checked width", async () => {
+	it("SITE-R4 gives an image component the resolved address, the size and a checked width", async () => {
 		const seen: ImageProps[] = [];
 		const Image = (props: ImageProps) => {
 			seen.push(props);
@@ -491,7 +491,7 @@ describe("images and files", () => {
 		expect(seen[1]).toMatchObject({ src: undefined, failure: "rejected", width: undefined, align: "center" });
 	});
 
-	it("tells an inline Markdown image from a block of its own", async () => {
+	it("SITE-R4 tells an inline Markdown image from a block of its own", async () => {
 		const seen: { inline: boolean; plain: boolean }[] = [];
 		await html(docOf("![a](/a.png)\n\n문장 ![b](/b.png) 속"), {
 			components: loose({
@@ -507,7 +507,7 @@ describe("images and files", () => {
 		]);
 	});
 
-	it("gives a file component the card facts", async () => {
+	it("SITE-R4 gives a file component the card facts", async () => {
 		const seen: FileProps[] = [];
 		await html(
 			doc(
@@ -543,7 +543,7 @@ describe("images and files", () => {
 });
 
 describe("math", () => {
-	it("passes the formula and the KaTeX output", async () => {
+	it("SITE-D3 passes the formula and the KaTeX output", async () => {
 		const seen: { value: string; html: string }[] = [];
 		await html(doc({ type: "math", attrs: { value: "x^2" } }), {
 			components: loose({
@@ -558,14 +558,14 @@ describe("math", () => {
 		expect(seen[0]?.html).toContain("<math");
 	});
 
-	it("shows a formula KaTeX cannot read, and never throws", async () => {
+	it("SITE-D3 shows a formula KaTeX cannot read, and never throws", async () => {
 		expect(await html(doc({ type: "math", attrs: { value: "\\frac{1" } }))).toContain("katex");
 		expect(await html(doc({ type: "math", attrs: { value: 5 as never } }))).toContain("katex");
 	});
 });
 
 describe("footnotes", () => {
-	it("numbers footnotes by first reference and passes the items to the footnotes component", async () => {
+	it("SITE-D3 numbers footnotes by first reference and passes the items to the footnotes component", async () => {
 		const seen: FootnotesProps[] = [];
 		const stored = doc(
 			paragraph(
@@ -599,7 +599,7 @@ describe("footnotes", () => {
 		]);
 	});
 
-	it("matches a reference to its definition without regard to case and spaces", async () => {
+	it("SITE-D3 matches a reference to its definition without regard to case and spaces", async () => {
 		const markup = await html(
 			doc(paragraph(text("a"), { type: "footnoteReference", attrs: { label: " Note  One " } }), {
 				type: "footnoteDefinition",
@@ -611,13 +611,13 @@ describe("footnotes", () => {
 		expect(markup).toContain("def");
 	});
 
-	it("writes a reference without a definition as the text it was", async () => {
+	it("SITE-D3 writes a reference without a definition as the text it was", async () => {
 		expect(
 			await html(doc(paragraph(text("정의 없는 참조"), { type: "footnoteReference", attrs: { label: "none" } }))),
 		).toContain("[^none]");
 	});
 
-	it("does not draw a definition nobody refers to, and uses the first of two", async () => {
+	it("SITE-D3 does not draw a definition nobody refers to, and uses the first of two", async () => {
 		const markup = await html(
 			doc(
 				paragraph(text("a"), { type: "footnoteReference", attrs: { label: "x" } }),
@@ -631,7 +631,7 @@ describe("footnotes", () => {
 		expect(markup).not.toContain("안 쓰임");
 	});
 
-	it("uses the labels of the site", async () => {
+	it("SITE-D3 uses the labels of the site", async () => {
 		const markup = await html(footnoteDoc(), {
 			labels: { footnotes: "각주", footnoteBack: "{ref}번 참조로" },
 		});
@@ -647,7 +647,7 @@ describe("blocks", () => {
 	const text_ = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "text");
 
 	it.skipIf(!container)(
-		"passes the attributes of a block as flat props with its children, items and node",
+		"SITE-D4 passes the attributes of a block as flat props with its children, items and node",
 		async () => {
 			const block = container as NonNullable<typeof container>;
 			const seen: Record<string, unknown>[] = [];
@@ -678,7 +678,7 @@ describe("blocks", () => {
 	);
 
 	it.skipIf(!container)(
-		"replaces a choice that is not allowed with the default, and never passes a missing boolean as undefined",
+		"SITE-D4 replaces a choice that is not allowed with the default, and never passes a missing boolean as undefined",
 		async () => {
 			const block = container as NonNullable<typeof container>;
 			const choice = Object.entries(block.attributes).find(
@@ -705,7 +705,7 @@ describe("blocks", () => {
 		},
 	);
 
-	it.skipIf(!text_)("passes the attributes of a text block to its mark component", async () => {
+	it.skipIf(!text_)("SITE-D4 passes the attributes of a text block to its mark component", async () => {
 		const block = text_ as NonNullable<typeof text_>;
 		const seen: Record<string, unknown>[] = [];
 		const Mark = (props: Record<string, unknown>) => {
@@ -722,7 +722,7 @@ describe("blocks", () => {
 
 	const fence = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
 
-	it.skipIf(!fence)("routes a code fence of a block to the block with the code as source", async () => {
+	it.skipIf(!fence)("SITE-D4 routes a code fence of a block to the block with the code as source", async () => {
 		if (fence?.syntax.kind !== "fence") throw new Error("the fence block has no fence syntax");
 		const seen: Record<string, unknown>[] = [];
 		await html(doc({ type: "codeBlock", attrs: { language: fence.syntax.lang, meta: "", code: "A -> B" } }), {
@@ -755,7 +755,7 @@ describe("unknown content: a fallback, never an error", () => {
 		"a list item at the top": { type: "listItem", content: [paragraph(text("항목"))] },
 	};
 
-	it.each(Object.entries(unknownCases))("renders %s through the fallback and lists it", async (_name, node) => {
+	it.each(Object.entries(unknownCases))("SITE-R1 renders %s through the fallback and lists it", async (_name, node) => {
 		const seen: UnknownProps[] = [];
 		const Fallback = (props: UnknownProps) => {
 			seen.push(props);
@@ -772,13 +772,13 @@ describe("unknown content: a fallback, never an error", () => {
 		expect(seen[0]?.ctx).toEqual({ locale: undefined, labels: DEFAULT_LABELS });
 	});
 
-	it("shows the content of an unknown container and nothing for an unknown leaf, by default", async () => {
+	it("SITE-R1 shows the content of an unknown container and nothing for an unknown leaf, by default", async () => {
 		expect(await html(doc(unknownCases["an unknown node"] as CmsNode))).toContain("안에");
 		expect(await html(doc(unknownCases["raw HTML"] as CmsNode))).not.toContain("<b>");
 		expect(await html(doc(unknownCases["an expression"] as CmsNode))).not.toContain("1 + 1");
 	});
 
-	it("marks an unknown node in development only, with a hidden element", async () => {
+	it("SITE-R1 marks an unknown node in development only, with a hidden element", async () => {
 		try {
 			vi.stubEnv("NODE_ENV", "development");
 			expect(await html(doc({ type: "mystery" }))).toContain('<span data-monti-unknown="mystery" hidden=""></span>');
@@ -789,14 +789,14 @@ describe("unknown content: a fallback, never an error", () => {
 		}
 	});
 
-	it("renders an unknown mark as plain text", async () => {
+	it("SITE-R1 renders an unknown mark as plain text", async () => {
 		const stored = doc(paragraph(text("글", [{ type: "mystery-mark" }, { type: "bold" }])));
 		const rendered = await renderDocument(stored, { site: testSite });
 		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("글");
 		expect(rendered.unknown.map((node) => node.type)).toEqual(["text"]);
 	});
 
-	it("tells the caller about each unknown node once, and lets strict mode throw", async () => {
+	it("SITE-R1 tells the caller about each unknown node once, and lets strict mode throw", async () => {
 		const onUnknown = vi.fn();
 		const stored = doc(
 			{ type: "mystery" },
@@ -814,7 +814,7 @@ describe("unknown content: a fallback, never an error", () => {
 	);
 
 	it.skipIf(!bareContainer)(
-		"falls back for a block of the config that has no component, and still shows its content",
+		"SITE-R1 falls back for a block of the config that has no component, and still shows its content",
 		async () => {
 			const block = bareContainer as NonNullable<typeof bareContainer>;
 			const stored = doc({ type: block.name, content: [paragraph(text("안에"))] });
@@ -833,7 +833,7 @@ describe("unknown content: a fallback, never an error", () => {
 			vi.restoreAllMocks();
 		});
 
-		it.skipIf(!block)("warns once per block name in development", async () => {
+		it.skipIf(!block)("SITE-R1 warns once per block name in development", async () => {
 			vi.stubEnv("NODE_ENV", "development");
 			resetMissingComponentWarnings();
 			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -843,7 +843,7 @@ describe("unknown content: a fallback, never an error", () => {
 			expect(warn).toHaveBeenCalledWith(expect.stringContaining(`"${block?.name}"`));
 		});
 
-		it.skipIf(!block)("stays silent in production and still renders the fallback", async () => {
+		it.skipIf(!block)("SITE-R1 stays silent in production and still renders the fallback", async () => {
 			vi.stubEnv("NODE_ENV", "production");
 			resetMissingComponentWarnings();
 			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -858,25 +858,28 @@ describe("unknown content: a fallback, never an error", () => {
 			candidate.syntax.kind === "container" && !candidate.parent && Object.keys(candidate.attributes).length > 0,
 	);
 
-	it.skipIf(!containerWithAttributes)("falls back for a block with an attribute of the wrong kind", async () => {
-		const block = containerWithAttributes as NonNullable<typeof containerWithAttributes>;
-		const [name] = Object.keys(block.attributes);
-		const component = vi.fn(() => <i />);
-		const stored = doc({
-			type: block.name,
-			attrs: { [name as string]: { nested: "object" } },
-			content: [paragraph(text("안에"))],
-		});
-		const rendered = await renderDocument(stored, {
-			site: testSite,
-			components: loose({ blocks: { [block.name]: component } }),
-		});
-		expect(component).not.toHaveBeenCalled();
-		expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
-		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
-	});
+	it.skipIf(!containerWithAttributes)(
+		"SITE-R1 falls back for a block with an attribute of the wrong kind",
+		async () => {
+			const block = containerWithAttributes as NonNullable<typeof containerWithAttributes>;
+			const [name] = Object.keys(block.attributes);
+			const component = vi.fn(() => <i />);
+			const stored = doc({
+				type: block.name,
+				attrs: { [name as string]: { nested: "object" } },
+				content: [paragraph(text("안에"))],
+			});
+			const rendered = await renderDocument(stored, {
+				site: testSite,
+				components: loose({ blocks: { [block.name]: component } }),
+			});
+			expect(component).not.toHaveBeenCalled();
+			expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
+			expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
+		},
+	);
 
-	it("never throws on content, whatever the attributes hold", async () => {
+	it("SITE-R1 never throws on content, whatever the attributes hold", async () => {
 		const weird: CmsNode[] = [
 			{ type: "image", attrs: { src: 5 as never, alt: { a: 1 } as never } },
 			{ type: "file", attrs: { mediaId: [] as never } },

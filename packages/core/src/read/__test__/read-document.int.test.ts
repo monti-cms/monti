@@ -142,7 +142,7 @@ describe("cms.read returns the document", () => {
 		content: [{ type: "text", text: value }],
 	});
 
-	it("one entry: returns the stored document and the resolved media of exactly that document", async () => {
+	it("SITE-R4 one entry: returns the stored document and the resolved media of exactly that document", async () => {
 		const published = await publish(
 			"doc-detail",
 			bodyWith(heading("Intro"), image(media.ready, "photo"), file(media.attachment, "Deck")),
@@ -169,7 +169,7 @@ describe("cms.read returns the document", () => {
 		expect(entry.refs.media).not.toHaveProperty(media.other);
 	});
 
-	it("a media that is not ready resolves to the reason, and an entry without media has empty refs", async () => {
+	it("SITE-R4 a media that is not ready resolves to the reason, and an entry without media has empty refs", async () => {
 		await publish("doc-pending", bodyWith(image(media.pending, "later")));
 		const pending = await cms.read.getEntry({ collection: contentCollection, slug: "doc-pending" });
 		if (pending.status !== "found") throw new Error("not found");
@@ -182,7 +182,7 @@ describe("cms.read returns the document", () => {
 		expect(plain.entry.doc).not.toBeNull();
 	});
 
-	it("a page renders the entry with CmsContent, with no image resolver", async () => {
+	it("SITE-R4 a page renders the entry with CmsContent, with no image resolver", async () => {
 		await publish("doc-render", bodyWith(heading("Heading"), image(media.ready, "the photo")));
 		const found = await cms.read.getEntry({ collection: contentCollection, slug: "doc-render", format: "paragraphs" });
 		if (found.status !== "found") throw new Error("not found");
@@ -197,7 +197,7 @@ describe("cms.read returns the document", () => {
 		expect(resolve({ mediaId: media.other })).toEqual({ failure: "unresolved" });
 	});
 
-	it("a list reads the document only with the body, and each item gets only the media its own document uses", async () => {
+	it("SITE-R5 a list reads the document only with the body, and each item gets only the media its own document uses", async () => {
 		const first = await publish("doc-list-1", bodyWith(image(media.ready, "one")));
 		const second = await publish("doc-list-2", bodyWith(image(media.other, "two")));
 
@@ -217,7 +217,7 @@ describe("cms.read returns the document", () => {
 		}
 	});
 
-	it("preview returns the draft document and its media, and a published read still shows the published one", async () => {
+	it("SITE-R6 preview returns the draft document and its media, and a published read still shows the published one", async () => {
 		const published = await publish("doc-preview", "Published text");
 		await service.saveDraft(published.id, {
 			collection: contentCollection,
@@ -244,7 +244,7 @@ describe("cms.read returns the document", () => {
 		expect(stillPublished.entry.refs).toEqual({ media: {}, links: {} });
 	});
 
-	it("a draft that could not become a document previews as an unparsed body, with no references", async () => {
+	it("SITE-R6 a draft that could not become a document previews as an unparsed body, with no references", async () => {
 		const unparsed = await seedEntry(store, {
 			collection: contentCollection,
 			slug: "doc-unparsed",
@@ -267,7 +267,7 @@ describe("cms.read returns the document", () => {
 	describe("with a format", () => {
 		const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
 
-		it("also writes the body as text: a link to a published entry is the real path of its target, an image is its public URL", async () => {
+		it("SITE-R7 also writes the body as text: a link to a published entry is the real path of its target, an image is its public URL", async () => {
 			const target = await publish("fmt-target", "Target body");
 			await publish(
 				"fmt-source",
@@ -310,7 +310,7 @@ describe("cms.read returns the document", () => {
 			expect(plain.entry).not.toHaveProperty("body");
 		});
 
-		it("follows the target when its address changes, with no change to the document that links to it", async () => {
+		it("SITE-R7 follows the target when its address changes, with no change to the document that links to it", async () => {
 			const target = await publish("fmt-moving", "Target body");
 			const source = await publish("fmt-follows", `[x](${pathOf("fmt-moving")})`);
 			const before = await cms.read.getEntry({
@@ -343,7 +343,7 @@ describe("cms.read returns the document", () => {
 			expect((await store.getEntry(source.id)).published?.doc).toEqual(before.entry.doc);
 		});
 
-		it("a link to an entry that is not published is not a link in the text, as it is not on the page", async () => {
+		it("SITE-R7 a link to an entry that is not published is not a link in the text, as it is not on the page", async () => {
 			const unpublished = await draft("fmt-unpublished", "Not yet");
 			await publish("fmt-dangling", `A [draft](${pathOf("fmt-unpublished")}) link.`);
 			void unpublished;
@@ -355,7 +355,7 @@ describe("cms.read returns the document", () => {
 			expect(found.entry.body?.text).not.toContain("fmt-unpublished");
 		});
 
-		it("lists and previews take the option too, and a list reads the text only with the body", async () => {
+		it("SITE-R7 lists and previews take the option too, and a list reads the text only with the body", async () => {
 			await publish("fmt-listed", "Listed body");
 
 			const withBody = await cms.read.listEntries({
@@ -382,7 +382,7 @@ describe("cms.read returns the document", () => {
 			expect(preview?.body?.text).toBe("Listed body");
 		});
 
-		it("an unknown format throws a ServiceError unknown_format, and no format means no text", async () => {
+		it("SITE-R7 an unknown format throws a ServiceError unknown_format, and no format means no text", async () => {
 			await publish("fmt-unknown", "Body");
 
 			await expect(

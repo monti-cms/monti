@@ -71,7 +71,7 @@ describe("SEO extension admin UI", () => {
 	/** The properties list opens on the SEO tab; a property is found by its label. */
 	const valueButton = async (label: string) => screen.findByRole("button", { name: new RegExp(`^${label}`) });
 
-	it("SEO fields gather in their tab as a read list, with no preview boxes", async () => {
+	it("SITE-N2 SEO fields gather in their tab as a read list, with no preview boxes", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", [title.name]: "Search value" });
 		expect((await valueButton(title.field.label)).textContent).toBe("Search value");
@@ -85,7 +85,7 @@ describe("SEO extension admin UI", () => {
 		expect(screen.queryAllByRole("textbox")).toEqual([]);
 	});
 
-	it("an empty value says what it follows: the title with its length, the summary, the default image", async () => {
+	it("SITE-N2 an empty value says what it follows: the title with its length, the summary, the default image", async () => {
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) });
 		const title = field(SEO_ROLES.title);
 		const limit = title.field.kind === "text" ? (title.field.max ?? title.field.inputOptions?.limit) : undefined;
@@ -95,7 +95,7 @@ describe("SEO extension admin UI", () => {
 		expect((await valueButton(field(SEO_ROLES.noindex).field.label)).textContent).toBe(t("option.index"));
 	});
 
-	it("an opened empty title shows the fallback as the hint and the character count", async () => {
+	it("SITE-N2 an opened empty title shows the fallback as the hint and the character count", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) });
 		fireEvent.click(await valueButton(title.field.label));
@@ -113,7 +113,7 @@ describe("SEO extension admin UI", () => {
 		}
 	});
 
-	it("hide from search is a select: picking the hiding option writes `noindex`", async () => {
+	it("SITE-N2 hide from search is a select: picking the hiding option writes `noindex`", async () => {
 		const noindex = field(SEO_ROLES.noindex);
 		const onChange = renderPanel({ ...EMPTY_FORM, title: "Entry" });
 		fireEvent.click(await valueButton(noindex.field.label));
@@ -121,7 +121,7 @@ describe("SEO extension admin UI", () => {
 		await waitFor(() => expect(onChange).toHaveBeenCalledWith({ [noindex.name]: "noindex" }));
 	});
 
-	it("actions next to the search title (AI and others) stay attached and receive the summary role value as `summary`", async () => {
+	it("SITE-N2 actions next to the search title (AI and others) stay attached and receive the summary role value as `summary`", async () => {
 		const inputs: Parameters<SlotAction["run"]>[0][] = [];
 		const run = vi.fn<SlotAction["run"]>(async (input) => {
 			inputs.push(input);
@@ -140,7 +140,7 @@ describe("SEO extension admin UI", () => {
 		await waitFor(() => expect(onChange).toHaveBeenCalledWith({ [field(SEO_ROLES.title).name]: "New" }));
 	});
 
-	it("a collection without an SEO tab has a single default tab", () => {
+	it("SITE-N2 a collection without an SEO tab has a single default tab", () => {
 		const plain = testSite.COLLECTIONS.find((name) => testSite.panelTabsOf(name).length === 1);
 		if (!plain) return;
 		render(

@@ -31,7 +31,7 @@ const textOf = (node: ElementContent): string =>
 
 describe("highlight indent guides integration", () => {
 	// The `indent` class is the render output contract: the public styles draw the indent guides by it.
-	it("renders indent tokens as indent class spans", () => {
+	it("SITE-D2 renders indent tokens as indent class spans", () => {
 		const hast = highlight("function f() {\n  console.log(1)\n    console.log(2)\n}", "ts", {}, {});
 		const pre = hast.children[0] as Element;
 		expect(pre).toMatchObject({ tagName: "pre", children: [{ tagName: "code" }] });
