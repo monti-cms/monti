@@ -46,7 +46,7 @@ const snapshot = (dir: string) => Object.fromEntries(listFiles(dir).map((file) =
 const index = (lines: readonly string[], needle: string) => lines.findIndex((line) => line.includes(needle));
 
 describe("monti init in a fresh create-next-app", () => {
-	it("writes only Monti's own new files with the defaults", async () => {
+	it("INIT-R1 writes only Monti's own new files with the defaults", async () => {
 		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, ...quiet() });
 
@@ -106,7 +106,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 	});
 
-	it("edits only next.config and the root layout, says so, and never touches the .env.local that is there", async () => {
+	it("INIT-K3 edits only next.config and the root layout, says so, and never touches the .env.local that is there", async () => {
 		const dir = fixtureApp({ ".gitignore": "node_modules\n.next\n", "tsconfig.json": '{ "compilerOptions": {} }' });
 		const before = snapshot(dir);
 		const report = await initProject({ cwd: dir, host: fakeHost(), setup: false });
@@ -132,7 +132,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(text.indexOf("Created:")).toBeLessThan(text.indexOf("Changed:"));
 	});
 
-	it("writes a .env.example that says what each variable is and where to get it, without secrets", async () => {
+	it("INIT-K5 writes a .env.example that says what each variable is and where to get it, without secrets", async () => {
 		const dir = fixtureApp();
 		await initProject({ cwd: dir, ...quiet() });
 		const example = read(dir, ".env.example");
@@ -157,7 +157,7 @@ describe("monti init in a fresh create-next-app", () => {
 		}
 	});
 
-	it("with --login github writes the GitHub provider, its variables with how to get them, and the OAuth app step", async () => {
+	it("INIT-R2 with --login github writes the GitHub provider, its variables with how to get them, and the OAuth app step", async () => {
 		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
 		const config = read(dir, "monti.config.ts");
@@ -177,7 +177,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(report.next.join("\n")).not.toContain("create the first admin");
 	});
 
-	it("writes mdx({ syntax: [directiveSyntax()] }) and installs the package by default, since blocks are installed", async () => {
+	it("INIT-R2 writes mdx({ syntax: [directiveSyntax()] }) and installs the package by default, since blocks are installed", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
@@ -188,7 +188,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(report.answers.directiveSyntax).toBe(true);
 	});
 
-	it("--no-directive-syntax, or no blocks, keeps plain mdx() and installs nothing extra", async () => {
+	it("INIT-R2 --no-directive-syntax, or no blocks, keeps plain mdx() and installs nothing extra", async () => {
 		for (const options of [{ directiveSyntax: false }, { blocks: "none" }]) {
 			const dir = fixtureApp();
 			const host = fakeHost();
@@ -207,7 +207,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(read(dir, "monti.config.ts")).toContain("mdx({ syntax: [directiveSyntax()] }),");
 	});
 
-	it("installs @monti-cms/auth for either login", async () => {
+	it("INIT-R2 installs @monti-cms/auth for either login", async () => {
 		for (const login of ["password", "github"] as const) {
 			const install = vi.fn();
 			await initProject({ cwd: fixtureApp(), host: fakeHost({ install }), login });
@@ -233,7 +233,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(example).toContain("MinIO");
 	});
 
-	it("lists only the human steps after the machine steps worked, each with exact content", async () => {
+	it("INIT-N1 lists only the human steps after the machine steps worked, each with exact content", async () => {
 		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, host: fakeHost() });
 		const next = report.next;
@@ -256,7 +256,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(text).toMatch(/\n {2}2\. Start the app/);
 	});
 
-	it("keeps the by-hand steps when the machine steps are turned off", async () => {
+	it("INIT-N1 keeps the by-hand steps when the machine steps are turned off", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host, setup: false });
@@ -295,7 +295,7 @@ describe("monti init in a fresh create-next-app", () => {
 });
 
 describe("monti init and the package install", () => {
-	it("installs the packages with the detected package manager when there is no prompt", async () => {
+	it("INIT-I1 installs the packages with the detected package manager when there is no prompt", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
@@ -322,7 +322,7 @@ describe("monti init and the package install", () => {
 		expect(report.next.join("\n")).not.toContain("Install the packages");
 	});
 
-	it("shows the exact command and asks, with yes as the default, before running it", async () => {
+	it("INIT-S1 shows the exact command and asks, with yes as the default, before running it", async () => {
 		const prompter = scriptedPrompter({ "Install the": true });
 		let initial: boolean | undefined;
 		const confirm = prompter.confirm.bind(prompter);
@@ -339,7 +339,7 @@ describe("monti init and the package install", () => {
 		expect(report.next.join("\n")).not.toContain("Install the packages");
 	});
 
-	it("a no runs nothing, records the step as skipped and keeps the command in the list", async () => {
+	it("INIT-S1 a no runs nothing, records the step as skipped and keeps the command in the list", async () => {
 		const prompter = scriptedPrompter({ "Install the": false });
 		const host = fakeHost();
 		const report = await initProject({ cwd: fixtureApp(), host, prompter, ...ANSWERED });
@@ -349,7 +349,7 @@ describe("monti init and the package install", () => {
 		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core /);
 	});
 
-	it("--no-install asks nothing, runs nothing and prints the command first in the list", async () => {
+	it("INIT-S1 --no-install asks nothing, runs nothing and prints the command first in the list", async () => {
 		const prompter = scriptedPrompter({});
 		const host = fakeHost();
 		const report = await initProject({ cwd: fixtureApp(), host, prompter, install: false, setup: false, ...ANSWERED });
@@ -373,7 +373,7 @@ describe("monti init and the package install", () => {
 		expect(formatInitReport(report)).toContain("Install packages: FAILED");
 	});
 
-	it("does not ask about the install when every package is already a dependency", async () => {
+	it("INIT-S1 does not ask about the install when every package is already a dependency", async () => {
 		const { packagesFor } = await import("../init-install");
 		const { collectAnswers } = await import("../init-prompts");
 		const { detectApp } = await import("../init-detect");
@@ -390,7 +390,7 @@ describe("monti init and the package install", () => {
 });
 
 describe("monti init tailors what is left to the app", () => {
-	it("a src/ app keeps the config in src and the Next files under src/app", async () => {
+	it("INIT-R2 a src/ app keeps the config in src and the Next files under src/app", async () => {
 		const dir = fixtureApp(SRC_APP);
 		const report = await initProject({ cwd: dir, ...quiet(), adminPath: "/cms/studio" });
 		expect(report.created).toEqual([
@@ -470,7 +470,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(text).not.toContain("Changed:\n  - next.config.ts");
 	});
 
-	it("without a next.config it creates next.config.ts with withCms, and lists it under Created", async () => {
+	it("INIT-R2 without a next.config it creates next.config.ts with withCms, and lists it under Created", async () => {
 		const dir = fixtureApp({ "next.config.ts": null });
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(report.created).toContain("next.config.ts");
@@ -480,7 +480,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(report.next.join("\n")).not.toContain("next.config");
 	});
 
-	it("is safe to run twice: the second run changes nothing and says it is already there", async () => {
+	it("INIT-K3 is safe to run twice: the second run changes nothing and says it is already there", async () => {
 		const dir = fixtureApp();
 		await initProject({ cwd: dir, ...quiet() });
 		const after = snapshot(dir);
@@ -563,7 +563,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(report.next.join("\n")).not.toMatch(/next\.config|suppressHydrationWarning/);
 	});
 
-	it("a missing .gitignore is created, and one that misses .env.local gets it; none of it is left to the person", async () => {
+	it("INIT-K5 a missing .gitignore is created, and one that misses .env.local gets it; none of it is left to the person", async () => {
 		const none = fixtureApp({ ".gitignore": null });
 		const report = await initProject({ cwd: none, ...quiet() });
 		expect(read(none, ".gitignore")).toBe(".env.local\n.monti/\n");
@@ -587,7 +587,7 @@ describe("monti init tailors what is left to the app", () => {
 		});
 	});
 
-	it("uses the package manager the lockfile names, or the one given", async () => {
+	it("INIT-I1 uses the package manager the lockfile names, or the one given", async () => {
 		const dir = fixtureApp({ "pnpm-lock.yaml": null, "yarn.lock": "" });
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
@@ -615,7 +615,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://example.com");
 	});
 
-	it("opts the admin page out of the instant validation only when next.config turns on cacheComponents", async () => {
+	it("INIT-R2 opts the admin page out of the instant validation only when next.config turns on cacheComponents", async () => {
 		const plain = fixtureApp();
 		await initProject({ cwd: plain, ...quiet() });
 		expect(read(plain, "app/studio/[[...path]]/page.tsx")).not.toContain("instant");
@@ -634,7 +634,7 @@ export default nextConfig;
 		expect(read(cached, "app/studio/[[...path]]/page.tsx")).toContain("export const instant = false;");
 	});
 
-	it("refuses an app that is not a Next App Router app, saying what to do", async () => {
+	it("INIT-K7 refuses an app that is not a Next App Router app, saying what to do", async () => {
 		await expect(initProject({ cwd: fixtureApp({ "package.json": '{ "name": "x" }' }), ...quiet() })).rejects.toThrow(
 			/`next` is not in the dependencies/,
 		);
@@ -656,7 +656,7 @@ export default nextConfig;
 });
 
 describe("monti init choices", () => {
-	it("an app with a content folder gets a post collection from its front matter", async () => {
+	it("INIT-C1 an app with a content folder gets a post collection from its front matter", async () => {
 		const dir = fixtureApp({
 			"content/posts/first.mdx": POST_MDX("first"),
 			"content/posts/second.md": POST_MDX("second"),
@@ -674,7 +674,7 @@ describe("monti init choices", () => {
 		expect(read(dir, "content/posts/first.mdx")).toBe(POST_MDX("first"));
 	});
 
-	it("every feature: the config has one line each and the packages follow", async () => {
+	it("INIT-R2 every feature: the config has one line each and the packages follow", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		await initProject({
@@ -708,7 +708,7 @@ describe("monti init choices", () => {
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://blog.example.com");
 	});
 
-	it("no blocks: a short config with just mdx", async () => {
+	it("INIT-R2 no blocks: a short config with just mdx", async () => {
 		const dir = fixtureApp();
 		await initProject({ cwd: dir, ...quiet(), blocks: "none" });
 		const config = read(dir, "monti.config.ts");
@@ -719,7 +719,7 @@ describe("monti init choices", () => {
 });
 
 describe("monti init and files that already exist", () => {
-	it("writes the computer's time zone to the schema and says so in the summary", async () => {
+	it("INIT-Q4 writes the computer's time zone to the schema and says so in the summary", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost({ systemTimeZone: () => "Asia/Seoul" });
 		const report = await initProject({ cwd: dir, host, install: false });
@@ -737,7 +737,7 @@ describe("monti init and files that already exist", () => {
 		expect(formatInitReport(report)).toContain("Time zone: UTC (this computer's time zone could not be read).");
 	});
 
-	it("an existing monti.config.ts is kept, its schema file is not written, and the skip is reported", async () => {
+	it("INIT-K1 an existing monti.config.ts is kept, its schema file is not written, and the skip is reported", async () => {
 		const dir = fixtureApp({ "monti.config.ts": "// mine\nexport const cms = {};\n" });
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(read(dir, "monti.config.ts")).toBe("// mine\nexport const cms = {};\n");
@@ -757,7 +757,7 @@ describe("monti init and files that already exist", () => {
 		expect(report.notes.join("\n")).toContain(".env.example already exists and was kept");
 	});
 
-	it("a changed file is kept unless --overwrite (or a yes in the prompts)", async () => {
+	it("INIT-K1 a changed file is kept unless --overwrite (or a yes in the prompts)", async () => {
 		const dir = fixtureApp({ "app/studio/layout.tsx": "// my layout\n" });
 		const kept = await initProject({ cwd: dir, ...quiet() });
 		expect(read(dir, "app/studio/layout.tsx")).toBe("// my layout\n");
@@ -777,7 +777,7 @@ describe("monti init and files that already exist", () => {
 });
 
 describe("monti init --dry-run", () => {
-	it("lists what it would do and writes and runs nothing, not even asking about the install", async () => {
+	it("INIT-K7 lists what it would do and writes and runs nothing, not even asking about the install", async () => {
 		const dir = fixtureApp();
 		const before = snapshot(dir);
 		const host = fakeHost();
@@ -796,7 +796,7 @@ describe("monti init --dry-run", () => {
 });
 
 describe("monti init when something goes wrong", () => {
-	it("a write that fails stops with the list of what was written before it", async () => {
+	it("INIT-K7 a write that fails stops with the list of what was written before it", async () => {
 		const dir = fixtureApp();
 		// The route file is written after the config, the schema and the admin files; a file where its folder should be makes that write fail.
 		writeFileSync(path.join(dir, "app/api"), "");
@@ -808,7 +808,7 @@ describe("monti init when something goes wrong", () => {
 		await expect(failure).rejects.toThrow(/Run `monti init` again to continue/);
 	});
 
-	it("cancelling a prompt writes nothing", async () => {
+	it("INIT-K7 cancelling a prompt writes nothing", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const prompter = scriptedPrompter({ "Default language of the site": "cancel" });
@@ -816,7 +816,7 @@ describe("monti init when something goes wrong", () => {
 		expect(listFiles(dir)).toEqual(before);
 	});
 
-	it("a wrong flag fails before anything is written, naming the flag", async () => {
+	it("INIT-K7 a wrong flag fails before anything is written, naming the flag", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const cases: [Record<string, string>, RegExp][] = [
@@ -838,7 +838,7 @@ describe("monti init when something goes wrong", () => {
 });
 
 describe("monti init writes only inside the project", () => {
-	it("ProjectWriter refuses absolute paths, .. and symlinks that lead out", () => {
+	it("INIT-K6 ProjectWriter refuses absolute paths, .. and symlinks that lead out", () => {
 		const dir = fixtureApp();
 		const outside = mkdtempSync(path.join(tmpdir(), "monti-outside-"));
 		symlinkSync(outside, path.join(dir, "link"), "dir");
@@ -852,7 +852,7 @@ describe("monti init writes only inside the project", () => {
 		expect(writer.written).toEqual(["inside/ok.txt"]);
 	});
 
-	it("an app folder that is a symlink out of the project stops the run before it writes there", async () => {
+	it("INIT-K6 an app folder that is a symlink out of the project stops the run before it writes there", async () => {
 		const outside = mkdtempSync(path.join(tmpdir(), "monti-outside-"));
 		const dir = fixtureApp({ "app/layout.tsx": null, "app/page.tsx": null, "app/globals.css": null });
 		symlinkSync(outside, path.join(dir, "app"), "dir");

@@ -26,7 +26,7 @@ describe("the sides of a plugin", () => {
 		expect((await plugin.render?.())?.default).toBe(renderSide);
 	});
 
-	it("refuses a module of another kind, or one without a default export", () => {
+	it("PLUG-S4 refuses a module of another kind, or one without a default export", () => {
 		const check = () => [
 			// @ts-expect-error a render module is not an admin module
 			definePlugin({ name: "a", admin: async () => ({ default: renderSide }) }),
@@ -40,7 +40,7 @@ describe("the sides of a plugin", () => {
 		expect(typeof check).toBe("function");
 	});
 
-	it("types `contributes` by the keys the receiving sides declare", () => {
+	it("PLUG-S4 types `contributes` by the keys the receiving sides declare", () => {
 		const plugin = definePlugin({
 			name: "contributing",
 			contributes: { layout: [{ tab: "Search", roles: ["seoTitle"] }], testSearch: { fields: ["title"] } },

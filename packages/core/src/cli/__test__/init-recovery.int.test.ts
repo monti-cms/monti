@@ -6,7 +6,7 @@ import { formatInitReport } from "../init-report";
 import { fakeHost, fixtureApp, listFiles, read } from "./init-helpers";
 
 describe("monti init when the install fails", () => {
-	it("does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
+	it("INIT-S1 does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
 		const report = await initProject({ cwd: dir, host });
@@ -39,7 +39,7 @@ describe("monti init when the install fails", () => {
 		expect(install).not.toHaveBeenCalled();
 	});
 
-	it("completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
+	it("INIT-K1 completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
 		const dir = fixtureApp();
 		const failed = await initProject({
 			cwd: dir,

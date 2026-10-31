@@ -11,7 +11,7 @@ describe("defaultCollectionPath", () => {
 		["blog-post", "/blog-posts/:slug"],
 		["blog-posts", "/blog-posts/:slug"],
 		["note", "/notes/:slug"],
-	])("%s -> %s", (id, path) => {
+	])("SCHEMA-N1 %s -> %s", (id, path) => {
 		expect(defaultCollectionPath(id)).toBe(path);
 	});
 });

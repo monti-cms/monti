@@ -42,14 +42,14 @@ afterEach(() => {
 });
 
 describe("defineConfig: one config, one instance", () => {
-	it("makes the CMS instance from the site options and the server options together", () => {
+	it("CONF-S1 makes the CMS instance from the site options and the server options together", () => {
 		const cms = defineConfig({ ...site, database, auth });
 		expect(Object.keys(cms.site.config.collections)).toEqual(Object.keys(testConfig.collections));
 		expect(cms.server.database).toBe(database);
 		expect(cms.isMediaConfigured).toBe(false);
 	});
 
-	it("takes any storage adapter as `storage`", () => {
+	it("CONF-S1 takes any storage adapter as `storage`", () => {
 		const storage = { name: "any-package", createStore: vi.fn() } as unknown as MediaAdapter;
 		const cms = defineConfig({ ...site, database, auth, storage });
 		expect(cms.isMediaConfigured).toBe(true);
@@ -60,7 +60,7 @@ describe("defineConfig: one config, one instance", () => {
 		expect(() => defineConfig({ ...site, auth } as never)).toThrow(/database.*postgres\(\)/);
 	});
 
-	it("boots without `auth`: the dev bypass lets this machine in, and production refuses everyone", async () => {
+	it("AUTH-L7 boots without `auth`: the dev bypass lets this machine in, and production refuses everyone", async () => {
 		const cms = defineConfig({ ...site, database });
 		hostOf(cms).attachHost({
 			requestHeaders: async () => new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" }),
@@ -83,12 +83,12 @@ describe("defineConfig: one config, one instance", () => {
 		expect(handled.status).toBe(404);
 	});
 
-	it("refuses to load in a browser bundle", () => {
+	it("CONF-S2 refuses to load in a browser bundle", () => {
 		vi.stubGlobal("window", {});
 		expect(() => defineConfig({ ...site, database, auth })).toThrow(/server-only/);
 	});
 
-	it("never hands the secrets to plugins through the public server config", () => {
+	it("KEY-S3 never hands the secrets to plugins through the public server config", () => {
 		const cms = defineConfig({ ...site, database, auth, secret: "s", previousSecrets: ["old"] });
 		expect(cms.server).not.toHaveProperty("secret");
 		expect(cms.server).not.toHaveProperty("previousSecrets");
@@ -96,7 +96,7 @@ describe("defineConfig: one config, one instance", () => {
 });
 
 describe("one secret, MONTI_SECRET", () => {
-	it("is read from the environment, and an explicit `secret` wins", () => {
+	it("KEY-S1 is read from the environment, and an explicit `secret` wins", () => {
 		vi.stubEnv("MONTI_SECRET", "from-env");
 		const stored = defineConfig({ ...site, database, auth })
 			.plugin("ai")
@@ -117,7 +117,7 @@ describe("one secret, MONTI_SECRET", () => {
 		expect(cms.plugin("auth").secrets.available).toBe(false);
 	});
 
-	it("derives the session key and every plugin's key from it, all different from each other", () => {
+	it("AUTH-L6 derives the session key and every plugin's key from it, all different from each other", () => {
 		const cms = defineConfig({ ...site, database, auth, secret: "master" });
 		const session = cms.plugin("auth").secrets.deriveKey("session");
 		expect(session).toHaveLength(32);
@@ -146,7 +146,7 @@ describe("one secret, MONTI_SECRET", () => {
 			).toBe("sk-live-1234");
 		});
 
-		it("decrypts when the old value is listed as a previous secret, and is current again after the next save", () => {
+		it("KEY-S2 decrypts when the old value is listed as a previous secret, and is current again after the next save", () => {
 			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
 			const secrets = defineConfig({ ...site, database, auth, previousSecrets: [OLD] }).plugin("ai").secrets;
 			expect(secrets.decrypt(stored)).toBe("sk-live-1234");
@@ -160,7 +160,7 @@ describe("one secret, MONTI_SECRET", () => {
 			).toBe("sk-live-1234");
 		});
 
-		it("accepts an unset environment variable in the list (`previousSecrets: [process.env.CMS_SECRET]`)", () => {
+		it("KEY-S2 accepts an unset environment variable in the list (`previousSecrets: [process.env.CMS_SECRET]`)", () => {
 			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
 			expect(
 				() => defineConfig({ ...site, database, auth, previousSecrets: [undefined] }).plugin("ai").secrets,
@@ -184,14 +184,14 @@ describe("trust host", () => {
 	const trusted = (options: { trustHost?: boolean } = {}) =>
 		hostOf(defineConfig({ ...site, database, auth, ...options })).isHostTrusted();
 
-	it("is detected on a known proxy platform in production", () => {
+	it("AUTH-L8 is detected on a known proxy platform in production", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		expect(trusted()).toBe(false);
 		vi.stubEnv("VERCEL", "1");
 		expect(trusted()).toBe(true);
 	});
 
-	it("lets an explicit option win either way", () => {
+	it("AUTH-L8 lets an explicit option win either way", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		vi.stubEnv("NETLIFY", "true");
 		expect(trusted({ trustHost: false })).toBe(false);
@@ -203,13 +203,13 @@ describe("trust host", () => {
 describe("site URL by convention, SITE_URL", () => {
 	const urlOf = (extra: object = {}) => defineConfig({ ...site, database, auth, ...extra }).site.config.site?.url;
 
-	it("is read from SITE_URL when nothing else says it", () => {
+	it("CONF-A2 is read from SITE_URL when nothing else says it", () => {
 		expect(urlOf()).toBeUndefined();
 		vi.stubEnv("SITE_URL", "https://env.example.com");
 		expect(urlOf()).toBe("https://env.example.com");
 	});
 
-	it("is overridden by an explicit site.url, and by the schema file's", () => {
+	it("CONF-A2 is overridden by an explicit site.url, and by the schema file's", () => {
 		vi.stubEnv("SITE_URL", "https://env.example.com");
 		expect(urlOf({ site: { url: "https://code.example.com", name: "n" } })).toBe("https://code.example.com");
 		const fromFile = defineConfig({
@@ -220,7 +220,7 @@ describe("site URL by convention, SITE_URL", () => {
 		expect(fromFile.site.config.site?.url).toBe("https://file.example.com");
 	});
 
-	it("keeps the other site settings when it fills the URL in", () => {
+	it("CONF-A2 keeps the other site settings when it fills the URL in", () => {
 		vi.stubEnv("SITE_URL", "https://env.example.com");
 		expect(defineConfig({ ...site, database, auth, site: { name: "Blog" } }).site.config.site).toEqual({
 			name: "Blog",
@@ -239,7 +239,7 @@ describe("keys the config does not have", () => {
 		return [];
 	};
 
-	it("names the closest key, among the site options and the server options alike", () => {
+	it("CONF-S1 names the closest key, among the site options and the server options alike", () => {
 		expect(issuesOf({ plugin: [] })).toEqual([
 			expect.objectContaining({ path: "plugin", code: "unknown-key", message: expect.stringContaining('"plugins"') }),
 		]);
@@ -260,7 +260,7 @@ describe("the host framework attaches itself to the instance", () => {
 		},
 	};
 
-	it("gives the login the attached host's headers, also when the login was created first", async () => {
+	it("AUTH-C2 gives the login the attached host's headers, also when the login was created first", async () => {
 		const cms = defineConfig({ ...site, database, auth: capturing });
 		cms.auth();
 		const host = seen.host;
@@ -272,7 +272,7 @@ describe("the host framework attaches itself to the instance", () => {
 		expect((await host?.requestHeaders?.())?.get("host")).toBe("localhost:3000");
 	});
 
-	it("lets the framework's signals through", () => {
+	it("AUTH-C2 lets the framework's signals through", () => {
 		const cms = defineConfig({ ...site, database, auth: capturing });
 		cms.auth();
 		hostOf(cms).attachHost({

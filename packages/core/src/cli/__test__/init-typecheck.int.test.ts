@@ -73,7 +73,10 @@ const host = {
 };
 
 describe("the project monti init writes", () => {
-	it.each(["password", "github"] as const)("type checks with every feature on and the %s login", async (login) => {
+	it.each([
+		"password",
+		"github",
+	] as const)("INIT-R1 type checks with every feature on and the %s login", async (login) => {
 		const dir = fixture();
 		const report = await initProject({
 			cwd: dir,

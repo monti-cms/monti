@@ -106,7 +106,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		mockVerifyAdmin.mockResolvedValue({ userId: "123", accountId: "123", isAdmin: true });
 	});
 
-	it("returns 401 when user is unauthorized", async () => {
+	it("API-G1 returns 401 when user is unauthorized", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Not logged in"));
 		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(401);
@@ -114,7 +114,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		expect(data.error.code).toBe("unauthorized");
 	});
 
-	it("returns 403 when user is forbidden", async () => {
+	it("API-G1 returns 403 when user is forbidden", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("forbidden", "Wrong admin id"));
 		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(403);
@@ -122,7 +122,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		expect(data.error.code).toBe("forbidden");
 	});
 
-	it("rejects cross-origin mutations with 403", async () => {
+	it("API-G2 rejects cross-origin mutations with 403", async () => {
 		const req = new Request("http://localhost/api/monti/v1/entries", {
 			method: "POST",
 			headers: {
@@ -206,7 +206,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const search = (query: string) =>
 			searchEntries(new Request(`http://localhost/api/monti/v1/entries/search?${query}`), { cms });
 
-		it("passes the query, locale, publishedOnly and limit to the store and answers the hits", async () => {
+		it("LIST-F7 passes the query, locale, publishedOnly and limit to the store and answers the hits", async () => {
 			mockStore.searchEntries.mockClear();
 			const res = await search(
 				`collection=${contentCollection}&query=hel&locale=${cms.site.DEFAULT_LOCALE}&publishedOnly=true&limit=5`,
@@ -222,7 +222,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			});
 		});
 
-		it("looks entries up by repeated id", async () => {
+		it("LIST-F7 looks entries up by repeated id", async () => {
 			mockStore.searchEntries.mockClear();
 			const ids = ["8a5fe1b2-6d7c-4a3b-9c1e-2f4d6b8a0c11", "1b2c3d4e-5f60-4718-9a2b-3c4d5e6f7a8b"];
 			await search(`collection=${contentCollection}&id=${ids[0]}&id=${ids[1]}`);
@@ -244,7 +244,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const list = (query: string) => listEntries(new Request(`http://localhost/api/monti/v1/entries?${query}`), { cms });
 		const TAG = "5c1e7a8e-2d0b-4f4b-9d57-3f6a1b9a0c11";
 
-		it("passes repeated field conditions and translation states to the store", async () => {
+		it("LIST-F2 passes repeated field conditions and translation states to the store", async () => {
 			mockStore.listEntries.mockClear();
 			const res = await list(
 				`collection=${contentCollection}&field=tags:empty&field=tags:is:${TAG}&field=summary:filled&translation=none&translation=changed`,
@@ -269,7 +269,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const count = (query: string) =>
 			countEntries(new Request(`http://localhost/api/monti/v1/entries/counts?${query}`), { cms });
 
-		it("asks the store to count one field in the folder given, and answers the counts", async () => {
+		it("LIST-F3 asks the store to count one field in the folder given, and answers the counts", async () => {
 			mockStore.countListValues.mockClear();
 			const res = await count(`collection=${contentCollection}&field=tags&group=translation&folderId=null`);
 			expect(res.status).toBe(200);
@@ -282,7 +282,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			});
 		});
 
-		it("asks for the counts of the entry states with facet=status", async () => {
+		it("LIST-F3 asks for the counts of the entry states with facet=status", async () => {
 			mockStore.countListValues.mockClear();
 			await count(`collection=${contentCollection}&facet=status`);
 			expect(mockStore.countListValues).toHaveBeenCalledWith(

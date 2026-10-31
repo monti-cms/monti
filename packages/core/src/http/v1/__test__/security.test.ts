@@ -15,7 +15,7 @@ describe("same-origin check", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("accepts only the same origin as Host", () => {
+	it("API-G2 accepts only the same origin as Host", () => {
 		expect(() =>
 			validateSameOrigin(cms, post("http://cms.local/api/monti/v1/x", { origin: "http://cms.local" })),
 		).not.toThrow();
@@ -24,7 +24,7 @@ describe("same-origin check", () => {
 		).toThrow(/Cross-origin/);
 	});
 
-	it("behind a trusted proxy that rewrites Host, matches X-Forwarded-Host (first value)", () => {
+	it("API-G2 behind a trusted proxy that rewrites Host, matches X-Forwarded-Host (first value)", () => {
 		const behindProxy = post("http://internal:3000/api/monti/v1/x", {
 			host: "internal:3000",
 			"x-forwarded-host": "www.example.com, edge.internal",
@@ -33,7 +33,7 @@ describe("same-origin check", () => {
 		expect(() => validateSameOrigin(cmsWith(true), behindProxy)).not.toThrow();
 	});
 
-	it("ignores a client-supplied X-Forwarded-Host unless the host is trusted", () => {
+	it("API-G2 ignores a client-supplied X-Forwarded-Host unless the host is trusted", () => {
 		const forged = () =>
 			post("http://cms.local/api/monti/v1/x", {
 				host: "cms.local",
@@ -61,7 +61,7 @@ describe("same-origin check", () => {
 		expect(() => validateSameOrigin(cms, behindProxy())).not.toThrow();
 	});
 
-	it.skipIf(!testConfig.site?.url)("also accepts the host of the site URL (site.url)", () => {
+	it.skipIf(!testConfig.site?.url)("API-G2 also accepts the host of the site URL (site.url)", () => {
 		const siteHost = new URL(testConfig.site?.url ?? "").host;
 		const request = post("http://internal:3000/api/monti/v1/x", {
 			host: "internal:3000",
@@ -70,7 +70,7 @@ describe("same-origin check", () => {
 		expect(() => validateSameOrigin(cms, request)).not.toThrow();
 	});
 
-	it("rejects when there is no origin signal, and does not check read requests", () => {
+	it("API-G2 rejects when there is no origin signal, and does not check read requests", () => {
 		expect(() => validateSameOrigin(cms, post("http://cms.local/api/monti/v1/x", {}))).toThrow(/Missing origin/);
 		expect(() => validateSameOrigin(cms, new Request("http://cms.local/api/monti/v1/x"))).not.toThrow();
 	});

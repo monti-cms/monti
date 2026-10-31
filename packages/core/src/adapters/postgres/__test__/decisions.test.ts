@@ -14,7 +14,7 @@ describe("postgres decisions", () => {
 		expect(Database?.source).toContain("set in monti.config.ts");
 	});
 
-	it("reports a URL from the environment", () => {
+	it("DOC-R5 reports a URL from the environment", () => {
 		const { Database } = decide({}, { DATABASE_URL: "postgres://u:pw@localhost:5432/monti" });
 		expect(Database?.value).toBe("localhost:5432/monti");
 		expect(Database?.source).toBe("from env DATABASE_URL");
@@ -43,7 +43,7 @@ describe("postgres decisions", () => {
 		});
 	});
 
-	it("never prints the password", () => {
+	it("CLI-P1 never prints the password", () => {
 		const text = JSON.stringify([
 			...(postgres({ connectionString: "postgres://user:s3cr3t-pw@db.test/shop" }).inspector?.decisions({}) ?? []),
 			...(postgres().inspector?.decisions({ DATABASE_URL: "postgres://user:s3cr3t-pw@db.test/shop" }) ?? []),

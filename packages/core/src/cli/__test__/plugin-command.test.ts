@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("monti <plugin>:<command>", () => {
-	it("runs the command of the named plugin with the instance and its options, and closes the instance", async () => {
+	it("PLUG-S2 runs the command of the named plugin with the instance and its options, and closes the instance", async () => {
 		const run = vi.fn(async ({ args }: { args: Record<string, unknown> }) => {
 			lines.push(`ran ${JSON.stringify(args)}`);
 		});
@@ -47,12 +47,12 @@ describe("monti <plugin>:<command>", () => {
 		expect(close).toHaveBeenCalledOnce();
 	});
 
-	it("exits with the code the command returns", async () => {
+	it("PLUG-S2 exits with the code the command returns", async () => {
 		appWith({ fail: { description: "Fails", run: async () => 3 } });
 		expect(await runCli(["demo:fail"], io)).toBe(3);
 	});
 
-	it("names the commands the app has when the plugin or command is unknown", async () => {
+	it("PLUG-S2 names the commands the app has when the plugin or command is unknown", async () => {
 		const close = appWith({ go: { description: "Goes", run: async () => undefined } });
 		expect(await runCli(["demo:nope"], io)).toBe(1);
 		expect(lines.join("\n")).toContain("Plugin commands of this app: demo:go");
@@ -60,7 +60,7 @@ describe("monti <plugin>:<command>", () => {
 		expect(close).toHaveBeenCalledTimes(2);
 	});
 
-	it("rejects an option the command does not declare, and prints help for --help", async () => {
+	it("PLUG-S2 rejects an option the command does not declare, and prints help for --help", async () => {
 		appWith({
 			go: {
 				description: "Goes",

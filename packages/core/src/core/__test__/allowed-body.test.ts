@@ -68,7 +68,7 @@ const input = (body: StoredDocument, collection = "memo") =>
 	({ collection, slug: "a", metadata: { title: "T" }, doc: body }) as never;
 
 describe("the allowed list of a body", () => {
-	it("names the core blocks and marks, and the blocks and marks the site adds, but not the children of a block", () => {
+	it("EDIT-A1 names the core blocks and marks, and the blocks and marks the site adds, but not the children of a block", () => {
 		const names = bodyVocabulary(site);
 		expect(names.blocks).toEqual(
 			expect.arrayContaining(["table", "taskList", "math", "codeBlock", "callout", "tabs", "columns"]),
@@ -80,12 +80,12 @@ describe("the allowed list of a body", () => {
 		expect(names.marks).not.toContain("callout");
 	});
 
-	it("is read from the object form of `body`, which also means the collection has a body", () => {
+	it("EDIT-A1 is read from the object form of `body`, which also means the collection has a body", () => {
 		expect(site.schemaOf("memo")).toMatchObject({ body: true, allowed: LIST });
 		expect(site.schemaOf("post").allowed).toBeUndefined();
 	});
 
-	it("rejects a name the site does not have, and a heading level that does not exist", () => {
+	it("CONF-A1 rejects a name the site does not have, and a heading level that does not exist", () => {
 		const issues = (body: unknown) => {
 			try {
 				config(body);
@@ -109,7 +109,7 @@ describe("the allowed list of a body", () => {
 		]);
 	});
 
-	it("allows everything when a key is left out", () => {
+	it("EDIT-A2 allows everything when a key is left out", () => {
 		const open = createSite(config({ marks: ["bold"] }));
 		const found = disallowedInDocument(open, open.schemaOf("memo").allowed, doc(tabs, columns, heading("h0000001", 5)));
 		expect(found).toEqual([]);
@@ -127,7 +127,7 @@ describe("what validation reports", () => {
 		{ id: "quote001", type: "blockquote", content: [paragraph("p0000005", text("q"))] },
 	);
 
-	it("warns about each block and mark that is not allowed, with the block id, and only warns", () => {
+	it("EDIT-A2 warns about each block and mark that is not allowed, with the block id, and only warns", () => {
 		const check = checkDocument(site, body, site.schemaOf("memo").allowed);
 		const warnings = check.warnings.filter((issue) => issue.code.startsWith("disallowed_"));
 		expect(warnings.map((issue) => [issue.code, issue.message, issue.position?.blockId])).toEqual([
@@ -146,7 +146,7 @@ describe("what validation reports", () => {
 		expect(check.warnings.filter((issue) => issue.code.startsWith("disallowed_"))).toEqual([]);
 	});
 
-	it("counts a checked list item as a task list, and the rows and cells of an allowed table as part of it", () => {
+	it("EDIT-A2 counts a checked list item as a task list, and the rows and cells of an allowed table as part of it", () => {
 		const tasks: CmsNode = {
 			id: "tasks001",
 			type: "bulletList",
@@ -167,7 +167,7 @@ describe("what a save does with content the list does not allow", () => {
 	const disallowed = (snapshot: { warnings?: readonly { code: string }[] }) =>
 		(snapshot.warnings ?? []).map((issue) => issue.code).filter((code) => code.startsWith("disallowed_"));
 
-	it("never rejects a write that adds a disallowed block, and warns about it with the block id", async () => {
+	it("WRITE-S10 never rejects a write that adds a disallowed block, and warns about it with the block id", async () => {
 		const snapshot = await prepareSnapshot(site, input(doc(columns)), { previousDoc: doc(callout) });
 		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["columns"]);
 		expect(snapshot.warnings?.filter((issue) => issue.code === "disallowed_block")).toMatchObject([
@@ -175,7 +175,7 @@ describe("what a save does with content the list does not allow", () => {
 		]);
 	});
 
-	it("never rejects a new body, and keeps what it holds as written with warnings", async () => {
+	it("WRITE-S10 never rejects a new body, and keeps what it holds as written with warnings", async () => {
 		const snapshot = await prepareSnapshot(site, input(held));
 		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["tabs", "paragraph"]);
 		expect(snapshot.doc.content[0]?.content?.[0]?.type).toBe("tab");
@@ -187,14 +187,14 @@ describe("what a save does with content the list does not allow", () => {
 		expect(disallowed(snapshot)).toEqual(["disallowed_block", "disallowed_mark"]);
 	});
 
-	it("does not limit a collection without a list", async () => {
+	it("EDIT-A2 does not limit a collection without a list", async () => {
 		const snapshot = await prepareSnapshot(site, input(doc(tabs, columns), "post"));
 		expect(disallowed(snapshot)).toEqual([]);
 	});
 });
 
 describe("the content service", () => {
-	it("creates a translation of an entry whose body holds a block that is not allowed", async () => {
+	it("WRITE-S10 creates a translation of an entry whose body holds a block that is not allowed", async () => {
 		const created: string[] = [];
 		const service = createContentService(
 			{

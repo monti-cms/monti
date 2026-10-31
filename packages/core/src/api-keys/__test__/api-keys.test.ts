@@ -21,7 +21,7 @@ const request = (method: string, path: string, body?: unknown) =>
 	});
 
 describe("api key store", () => {
-	it("keeps the value encrypted in storage and never returns it", async () => {
+	it("KEY-A1 keeps the value encrypted in storage and never returns it", async () => {
 		const cms = cmsWithSecret();
 		const view = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		expect(JSON.stringify(view)).not.toContain(VALUE);
@@ -33,18 +33,18 @@ describe("api key store", () => {
 		expect(await cms.apiKeys.read(view.id)).toBe(VALUE);
 	});
 
-	it("shows no tail for a value too short to show any of it", async () => {
+	it("KEY-A1 shows no tail for a value too short to show any of it", async () => {
 		const cms = cmsWithSecret();
 		expect((await cms.apiKeys.add({ name: "Short", value: "abcd1234" })).tail).toBe("");
 	});
 
-	it("refuses to save without a server secret and says how to fix it", async () => {
+	it("KEY-A3 refuses to save without a server secret and says how to fix it", async () => {
 		const cms = fakeCms();
 		expect(cms.apiKeys.available).toBe(false);
 		await expect(cms.apiKeys.add({ name: "X", value: VALUE })).rejects.toMatchObject({ code: "secret_not_configured" });
 	});
 
-	it("rejects a taken name, and picks a free one when the place chooses the name", async () => {
+	it("KEY-N1 rejects a taken name, and picks a free one when the place chooses the name", async () => {
 		const cms = cmsWithSecret();
 		await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await expect(cms.apiKeys.add({ name: "anthropic", value: VALUE })).rejects.toMatchObject({
@@ -55,7 +55,7 @@ describe("api key store", () => {
 		expect([second.name, third.name]).toEqual(["Anthropic 2", "Anthropic 3"]);
 	});
 
-	it("keeps names unique without regard to case, also when two keys are saved at the same moment", async () => {
+	it("KEY-N1 keeps names unique without regard to case, also when two keys are saved at the same moment", async () => {
 		const cms = cmsWithSecret();
 		const saved = await Promise.allSettled([
 			cms.apiKeys.add({ name: "Anthropic", value: VALUE }),
@@ -68,7 +68,7 @@ describe("api key store", () => {
 		expect(await cms.apiKeys.list()).toHaveLength(1);
 	});
 
-	it("frees a name when its key is renamed or deleted", async () => {
+	it("KEY-N1 frees a name when its key is renamed or deleted", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Old", value: VALUE });
 		const renamed = await cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "New" });
@@ -87,7 +87,7 @@ describe("api key store", () => {
 		expect((await cms.apiKeys.findOrAdd({ baseName: "GitHub", value: `${VALUE}2` })).name).toBe("GitHub 2");
 	});
 
-	it("refuses to delete a key that is used unless forced, and deletes the key with its uses together", async () => {
+	it("KEY-A4 refuses to delete a key that is used unless forced, and deletes the key with its uses together", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
@@ -102,7 +102,7 @@ describe("api key store", () => {
 		expect(await cms.apiKeys.get(key.id)).toBeNull();
 	});
 
-	it("renames and replaces the value under the same id, keeping the places that use it", async () => {
+	it("KEY-A2 renames and replaces the value under the same id, keeping the places that use it", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.setUses("text-check-speller", [{ ref: "key", keyId: key.id }]);
@@ -122,7 +122,7 @@ describe("api key store", () => {
 		});
 	});
 
-	it("tells which places use a key, replaces a plugin's places as a whole, and ignores a place that names no key", async () => {
+	it("KEY-A4 tells which places use a key, replaces a plugin's places as a whole, and ignores a place that names no key", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [
@@ -141,7 +141,7 @@ describe("api key store", () => {
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.plugin).sort()).toEqual(["ai", "mailer"]);
 	});
 
-	it("deleting a key forgets where it was used, and the value is gone", async () => {
+	it("KEY-A4 deleting a key forgets where it was used, and the value is gone", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
@@ -150,7 +150,7 @@ describe("api key store", () => {
 		expect(await cms.plugin("core-keys").storage.collection("assignments").list()).toEqual([]);
 	});
 
-	it("reports a value that cannot be decrypted any more as unreadable", async () => {
+	it("KEY-S2 reports a value that cannot be decrypted any more as unreadable", async () => {
 		const shared = fakeCms();
 		const storage = (plugin: string) => shared.plugin(plugin).storage;
 		const first = fakeCms({ server: { secret: "first-secret-first-secret" }, storage });
@@ -167,7 +167,7 @@ describe("api key store", () => {
 });
 
 describe("/v1/api-keys", () => {
-	it("creates, lists and renames keys without ever returning the value", async () => {
+	it("KEY-A1 creates, lists and renames keys without ever returning the value", async () => {
 		const cms = cmsWithSecret();
 		const created = await postKey(request("POST", "api-keys", { name: "Anthropic", value: VALUE }), { cms });
 		expect(created.status).toBe(201);
@@ -188,7 +188,7 @@ describe("/v1/api-keys", () => {
 		expect(((await patched.json()) as ApiKeyView).name).toBe("Claude");
 	});
 
-	it("answers 409 key_in_use with the places that would stop working, and deletes only when forced", async () => {
+	it("KEY-A4 answers 409 key_in_use with the places that would stop working, and deletes only when forced", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);

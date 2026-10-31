@@ -27,7 +27,7 @@ const COLOR: PluginId<"color", { readonly palette: readonly string[] }> = { name
 const AI: PluginId<"ai", { readonly model: string }> = { name: "ai" };
 
 describe("site.pluginOptions", () => {
-	it("returns the options of the plugin with that id's name, typed by the id", () => {
+	it("PLUG-S4 returns the options of the plugin with that id's name, typed by the id", () => {
 		const options = site.pluginOptions(COLOR);
 		expect(options).toEqual({ palette: ["red"] });
 		expectTypeOf(options).toEqualTypeOf<{ readonly palette: readonly string[] } | undefined>();
@@ -44,7 +44,7 @@ describe("site.pluginOptions", () => {
 		expect(bare.pluginOptions(COLOR)).toBeUndefined();
 	});
 
-	it("keeps the options of two sites apart", () => {
+	it("PLUG-S4 keeps the options of two sites apart", () => {
 		const other = createSite(
 			defineSite({
 				collections: { page },

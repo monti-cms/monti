@@ -51,7 +51,7 @@ describe("Folders in Postgres", () => {
 	// 8  Concurrency opposing moves
 	// -----------------------------------------------------------------------
 
-	it("8. Folder concurrency: concurrent opposing moves (A under B, B under A) fulfills one, rejects other with invalid_input, graph is acyclic", async () => {
+	it("LIST-F9 8. Folder concurrency: concurrent opposing moves (A under B, B under A) fulfills one, rejects other with invalid_input, graph is acyclic", async () => {
 		const lockId = randomBytes(4).readInt32BE();
 		const appName = `test8_${randomBytes(4).toString("hex")}`;
 		const funcName = `trig_func_${randomBytes(4).toString("hex")}`;

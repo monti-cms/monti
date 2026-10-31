@@ -44,7 +44,7 @@ describe("publish HTTP contract", () => {
 		});
 	});
 
-	it("returns warnings with a successful committed publish, each with its text and place", async () => {
+	it("WRITE-P2 returns warnings with a successful committed publish, each with its text and place", async () => {
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
 		publish.mockResolvedValue({
 			entry: { id: "00000000-0000-4000-8000-000000000011", version: 5, status: "published" },
@@ -71,7 +71,7 @@ describe("publish HTTP contract", () => {
 		expect(publish).not.toHaveBeenCalled();
 	});
 
-	it("does not publish when validation fails, and tells each issue with its text next to its position", async () => {
+	it("WRITE-P1 does not publish when validation fails, and tells each issue with its text next to its position", async () => {
 		const issues = [
 			{ code: "missing_field", path: "title", message: "제목" },
 			{ code: "missing_block_attribute", path: "body", message: "src", position: { blockId: "b1" } },
@@ -83,14 +83,14 @@ describe("publish HTTP contract", () => {
 		expect(await response.json()).toMatchObject({ error: { code: "publish_validation_failed", issues: told } });
 	});
 
-	it("tells a request value that does not check by its zod code, never in the library's words", async () => {
+	it("ADMIN-E1 tells a request value that does not check by its zod code, never in the library's words", async () => {
 		const response = await POST(request({ expectedVersion: "4" }), context);
 		const { error } = (await response.json()) as { error: { issues: { code: string; text: string }[] } };
 		expect(error.issues[0]?.code).toBe("invalid_type");
 		expect(error.issues[0]?.text).toBe(issueText(cms.site, { code: "invalid_type" }).text);
 	});
 
-	it("reports a failing hook with its own code and owner", async () => {
+	it("WRITE-H2 reports a failing hook with its own code and owner", async () => {
 		publish.mockRejectedValue(
 			new ServiceError("hook_failed", [{ code: "hook_failed", params: { hook: "transform", owner: "plugin:seo" } }]),
 		);

@@ -113,7 +113,7 @@ describe("a document and its text are one body", () => {
 		expect(fromDocument.doc.content).toHaveLength(1);
 	});
 
-	it("gives every block of a document an id, keeps the ones it has, and takes the ones of the draft it replaces", async () => {
+	it("TRANS-B1 gives every block of a document an id, keeps the ones it has, and takes the ones of the draft it replaces", async () => {
 		const first = await prepare({ format: "paragraphs", body: "One\n\nTwo" });
 		const sent = {
 			type: "doc",

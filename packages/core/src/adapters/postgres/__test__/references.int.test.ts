@@ -76,7 +76,7 @@ describe("ContentStore References", () => {
 		await closeGlobalPool();
 	});
 
-	it("create rollback: invalid/nonexistent entry target causes failure and leaves zero matching entry or reference rows", async () => {
+	it("WRITE-S11 create rollback: invalid/nonexistent entry target causes failure and leaves zero matching entry or reference rows", async () => {
 		const nonexistentId = randomUUID();
 		const ref1 = buildReference({ kind: "entry", targetId: nonexistentId });
 		const snapshot1 = buildSnapshot({ slug: "create-invalid-target", references: [ref1] });
@@ -140,7 +140,7 @@ describe("ContentStore References", () => {
 		expect(res.rows.length).toBeGreaterThanOrEqual(1);
 	});
 
-	it("DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
+	it("WRITE-S11 DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
 		const source = await seedEntry(store, {
 			collection: contentCollection,
 			slug: `source-${randomUUID()}`,
@@ -177,7 +177,7 @@ describe("ContentStore References", () => {
 		expect(res.rows[0].count).toBe("0");
 	});
 
-	it("media reference enforces DB identity via media_assets table, rejects invalid/mismatched targets, and roundtrips valid references", async () => {
+	it("WRITE-S11 media reference enforces DB identity via media_assets table, rejects invalid/mismatched targets, and roundtrips valid references", async () => {
 		const fkRes = await pool.query(
 			`
 			SELECT con.conname

@@ -49,7 +49,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await storage.collection("fresh").list()).toEqual([]);
 			});
 
-			it("creates an item at version 1 and reads back the same JSON value", async () => {
+			it("PLUG-D1 creates an item at version 1 and reads back the same JSON value", async () => {
 				const settings = storage.collection<{ endpoint: string; tags: string[]; nested: { on: boolean; none: null } }>(
 					"settings",
 				);
@@ -61,7 +61,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await settings.get("create")).toEqual(created);
 			});
 
-			it("keeps JSON semantics: scalars and arrays are values too, and a Date comes back as its JSON text", async () => {
+			it("PLUG-D1 keeps JSON semantics: scalars and arrays are values too, and a Date comes back as its JSON text", async () => {
 				const values = storage.collection("values");
 				await values.set("string", "text", { expectedVersion: 0 });
 				await values.set("number", 4.5, { expectedVersion: 0 });
@@ -75,7 +75,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect((await values.get("date"))?.value).toEqual({ at: "2026-01-02T03:04:05.000Z" });
 			});
 
-			it("replaces an item at the version it expects: the version grows, the creation date stays", async () => {
+			it("PLUG-D2 replaces an item at the version it expects: the version grows, the creation date stays", async () => {
 				const items = storage.collection<{ n: number }>("replace");
 				const first = await items.set("k", { n: 1 }, { expectedVersion: 0 });
 				const second = await items.set("k", { n: 2 }, { expectedVersion: 1 });
@@ -87,7 +87,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect((await items.get("k"))?.version).toBe(3);
 			});
 
-			it("fails with a conflict that carries the stored version when the expected one is wrong, and changes nothing", async () => {
+			it("PLUG-D2 fails with a conflict that carries the stored version when the expected one is wrong, and changes nothing", async () => {
 				const items = storage.collection<{ n: number }>("conflicts");
 				await items.set("k", { n: 1 }, { expectedVersion: 0 });
 				await items.set("k", { n: 2 }, { expectedVersion: 1 });
@@ -111,7 +111,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await items.get("never-created")).toBeNull();
 			});
 
-			it("of two writers that expect the same version, exactly one wins, whether they create or replace", async () => {
+			it("PLUG-D2 of two writers that expect the same version, exactly one wins, whether they create or replace", async () => {
 				const items = storage.collection<{ by: string }>("races");
 				const created = await Promise.all(
 					["a", "b", "c"].map((by) => failure(() => items.set("created", { by }, { expectedVersion: 0 }))),
@@ -129,7 +129,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect((await items.get("created"))?.version).toBe(2);
 			});
 
-			it("deletes at the expected version, so the item can be created again from version 0", async () => {
+			it("PLUG-D2 deletes at the expected version, so the item can be created again from version 0", async () => {
 				const items = storage.collection<{ n: number }>("deletes");
 				await items.set("k", { n: 1 }, { expectedVersion: 0 });
 				expect(await failure(() => items.delete("k", { expectedVersion: 5 }))).toEqual({
@@ -143,7 +143,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect((await items.set("k", { n: 2 }, { expectedVersion: 0 })).version).toBe(1);
 			});
 
-			it("lists items in key order, optionally only the ones whose key starts with a prefix", async () => {
+			it("PLUG-D3 lists items in key order, optionally only the ones whose key starts with a prefix", async () => {
 				const items = storage.collection<number>("listing");
 				for (const [index, key] of ["b/2", "a/1", "b/1", "c"].entries()) {
 					await items.set(key, index, { expectedVersion: 0 });
@@ -157,7 +157,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await items.list({ prefix: "1%" })).toEqual([]);
 			});
 
-			it("keeps collections apart, and plugins apart", async () => {
+			it("PLUG-D3 keeps collections apart, and plugins apart", async () => {
 				await storage.collection("one").set("same", "in one", { expectedVersion: 0 });
 				await storage.collection("two").set("same", "in two", { expectedVersion: 0 });
 				const other = session.storage("another-plugin").collection("one");
@@ -171,7 +171,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 		});
 
 		describe("what is rejected", () => {
-			it("refuses values that are not JSON", async () => {
+			it("PLUG-D1 refuses values that are not JSON", async () => {
 				const items = storage.collection("invalid-values");
 				const circular: Record<string, unknown> = {};
 				circular.self = circular;
@@ -206,7 +206,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 		});
 
 		describe("the migration hook", () => {
-			it("runs a step once even when called concurrently, and says whether it ran", async () => {
+			it("PLUG-S8 runs a step once even when called concurrently, and says whether it ran", async () => {
 				const owner = session.storage("once-owner");
 				let runs = 0;
 				const results = await Promise.all(
@@ -226,7 +226,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(runs).toBe(1);
 			});
 
-			it("keeps the writes of a step that finished, and none of a step that failed, which then runs again", async () => {
+			it("PLUG-S8 keeps the writes of a step that finished, and none of a step that failed, which then runs again", async () => {
 				const owner = session.storage("step-writes");
 				await expect(
 					owner.once("failing", async (migration) => {
@@ -244,7 +244,7 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect((await owner.collection("steps").get("done"))?.value).toBe("all done");
 			});
 
-			it("counts steps per plugin: the same name in two plugins is two steps", async () => {
+			it("PLUG-S8 counts steps per plugin: the same name in two plugins is two steps", async () => {
 				expect(await session.storage("first-plugin").once("shared-name", async () => {})).toBe(true);
 				expect(await session.storage("second-plugin").once("shared-name", async () => {})).toBe(true);
 				expect(await session.storage("first-plugin").once("shared-name", async () => {})).toBe(false);

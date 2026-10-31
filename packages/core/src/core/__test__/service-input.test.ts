@@ -52,18 +52,18 @@ describe("metadata the caller sends", () => {
 	const input = (metadata: Record<string, unknown>) =>
 		({ collection: "post", slug: "a", metadata, doc: { type: "doc", version: 3, content: [] } }) as never;
 
-	it("treats a field set to undefined as a field that is not set", async () => {
+	it("WRITE-S7 treats a field set to undefined as a field that is not set", async () => {
 		const snapshot = await prepareSnapshot(site, input({ title: "A", summary: undefined }));
 		expect(snapshot.metadata).toEqual({ title: "A" });
 	});
 
-	it("names the field that has the wrong kind of value", async () => {
+	it("WRITE-S7 names the field that has the wrong kind of value", async () => {
 		const error = await prepareSnapshot(site, input({ title: "A", summary: 3 })).catch((caught) => caught);
 		expect(error).toMatchObject({ code: "invalid_metadata_type", issues: [{ path: "summary" }] });
 		expect(error.message).toBe('invalid_metadata_type: The value of "summary" must be text, not number. (summary)');
 	});
 
-	it("names the field that does not exist, and the ones that do", async () => {
+	it("WRITE-S7 names the field that does not exist, and the ones that do", async () => {
 		const error = await prepareSnapshot(site, input({ title: "A", subtitle: "B" })).catch((caught) => caught);
 		expect(error).toMatchObject({ code: "invalid_metadata_key", issues: [{ path: "subtitle" }] });
 		expect(error.message).toContain('"subtitle" is not a field of post (its fields are: title, summary)');
@@ -71,7 +71,7 @@ describe("metadata the caller sends", () => {
 });
 
 describe("an item collection has no body", () => {
-	it("is written with the metadata only, and its document is empty", async () => {
+	it("WRITE-W6 is written with the metadata only, and its document is empty", async () => {
 		const snapshot = await prepareSnapshot(site, {
 			collection: "tag",
 			slug: "monti",
@@ -81,7 +81,7 @@ describe("an item collection has no body", () => {
 		expect(snapshot.metadata).toEqual({ title: "Monti" });
 	});
 
-	it("is still an error for a document collection to have none", async () => {
+	it("WRITE-S7 is still an error for a document collection to have none", async () => {
 		await expect(
 			prepareSnapshot(site, { collection: "post", slug: "a", metadata: { title: "A" } } as never),
 		).rejects.toMatchObject({ code: "invalid_input" });
@@ -89,7 +89,7 @@ describe("an item collection has no body", () => {
 });
 
 describe("types follow the config", () => {
-	it("the service of an instance knows its collections", () => {
+	it("SCHEMA-S1 the service of an instance knows its collections", () => {
 		type Service = ReturnType<Cms<typeof config>["contentService"]>;
 		type Input = Parameters<Service["createDraft"]>[0];
 		expectTypeOf<{ collection: "tag"; slug: null; metadata: { title: string } }>().toExtend<Input>();

@@ -30,7 +30,7 @@ describe("publish check HTTP contract", () => {
 		verifyAdmin.mockResolvedValue({ isAdmin: true });
 	});
 
-	it("answers the issues and warnings with their text and place", async () => {
+	it("WRITE-P1 answers the issues and warnings with their text and place", async () => {
 		const issues = [{ code: "missing_field", path: "title", message: "Title" }];
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
 		checkPublish.mockResolvedValue({ issues, warnings });

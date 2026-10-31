@@ -9,7 +9,7 @@ const seo = {
 };
 
 describe("field sets of plugins", () => {
-	it("reads the sets from the plugins' contributions and skips malformed ones", () => {
+	it("PLUG-A14 reads the sets from the plugins' contributions and skips malformed ones", () => {
 		const sets = fieldSetsOf([
 			// Malformed on purpose: a config written without types (or a snapshot) can hold anything.
 			{ name: "seo", contributes: { fieldSets: [seo, { id: 1 }, "x"] as never } },
@@ -20,12 +20,12 @@ describe("field sets of plugins", () => {
 		expect(sets[0]).toMatchObject({ id: "seo", plugin: "seo" });
 	});
 
-	it("knows a collection has the set when a field carries one of its roles", () => {
+	it("PLUG-A14 knows a collection has the set when a field carries one of its roles", () => {
 		expect(hasFieldSet(seo, { title: { kind: "text" } })).toBe(false);
 		expect(hasFieldSet(seo, { metaTitle: { kind: "text", role: "seoTitle" } })).toBe(true);
 	});
 
-	it("gives the added fields names the collection does not use yet", () => {
+	it("SCHEMA-N4 gives the added fields names the collection does not use yet", () => {
 		const added = freshSetFields(seo, { seoTitle: { kind: "text" }, seoTitle2: { kind: "text" } });
 		expect(Object.keys(added)).toEqual(["seoTitle3", "seoImage"]);
 		expect(added.seoTitle3).toEqual(seo.fields.seoTitle);

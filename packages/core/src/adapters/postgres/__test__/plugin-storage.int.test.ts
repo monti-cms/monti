@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
-import { runPluginStorageContract } from "../../../plugin/__test__/storage-contract";
+import { runPluginStorageContract } from "../../../plugin/__test__/storage.contract";
 import { migrateContentStore } from "../content-store";
 import { createPluginStorage, inPluginTransaction } from "../plugin-storage";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -33,7 +33,7 @@ describe("postgres plugin storage specifics", () => {
 		await closeGlobalPool();
 	});
 
-	it("keeps documents in the core migration's table, one row per plugin, collection and key", async () => {
+	it("PLUG-D3 keeps documents in the core migration's table, one row per plugin, collection and key", async () => {
 		const storage = createPluginStorage(pool, schemaName, "rows");
 		await storage.collection("things").set("a", { n: 1 }, { expectedVersion: 0 });
 		await createPluginStorage(pool, schemaName, "rows-two")
@@ -48,7 +48,7 @@ describe("postgres plugin storage specifics", () => {
 		]);
 	});
 
-	it("writes to several plugins' collections in one transaction: all kept, or none if the work throws", async () => {
+	it("PLUG-D4 writes to several plugins' collections in one transaction: all kept, or none if the work throws", async () => {
 		const failing = inPluginTransaction(pool, schemaName, async (tx) => {
 			await tx.pluginStorage("tx-a").collection("things").set("a", { n: 1 }, { expectedVersion: 0 });
 			await tx.pluginStorage("tx-b").collection("things").set("b", { n: 2 }, { expectedVersion: 0 });

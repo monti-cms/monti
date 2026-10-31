@@ -87,7 +87,7 @@ describe("any site: core content flow", () => {
 		await closeGlobalPool();
 	});
 
-	it("saves a record from its title alone and derives the slug", async () => {
+	it("WRITE-P4 saves a record from its title alone and derives the slug", async () => {
 		const record = (
 			await service.createDraft({
 				collection: recordCollection,
@@ -157,7 +157,7 @@ describe("any site: core content flow", () => {
 		);
 	});
 
-	it("duplicates with the title the caller gives and keeps it otherwise", async () => {
+	it("WRITE-W10 duplicates with the title the caller gives and keeps it otherwise", async () => {
 		const draft = await createContent("Original");
 		const copy = await duplicateDraft(testSite, store, { id: draft.id, title: "Original (copy)" });
 		expect(copy.working.metadata.title).toBe("Original (copy)");
@@ -204,7 +204,7 @@ describe("any site: core content flow", () => {
 			expect(media?.field.kind).toBe("media");
 		});
 
-		it("tracks the field value as a media reference: usage, the unused filter and the trash check", async () => {
+		it("MEDIA-B5 tracks the field value as a media reference: usage, the unused filter and the trash check", async () => {
 			if (!collection || !media) return;
 			const used = await readyMedia(`${unique("used")}.png`);
 			const spare = await readyMedia(`${unique("spare")}.png`);

@@ -50,7 +50,7 @@ const snapshot = (collection: string, patch: object = {}) =>
 	}) as never;
 
 describe("collection kind", () => {
-	it("the core reads the normalized `kind`", () => {
+	it("SCHEMA-S1 the core reads the normalized `kind`", () => {
 		expect((site.COLLECTION_DEFINITIONS as Record<string, { kind: string }>).label?.kind).toBe("item");
 		expect(site.schemaOf(c("label")).body).toBe(false);
 		expect(site.isItemCollection("label")).toBe(true);
@@ -70,14 +70,14 @@ describe("required fields (`required: true`)", () => {
 });
 
 describe("empty body check", () => {
-	it("only collections that use a body (`body`) reject it", () => {
+	it("WRITE-P1 only collections that use a body (`body`) reject it", () => {
 		expect(validateForPublish(site, snapshot("page"), { targets: [], media: [] }).issues).toEqual([]);
 		expect(validateForPublish(site, snapshot("note"), { targets: [], media: [] }).issues).toContainEqual(
 			expect.objectContaining({ code: "empty_body" }),
 		);
 	});
 
-	it("a different target collection is `invalid_reference_collection` even for relations that allow unpublished targets", () => {
+	it("WRITE-P1 a different target collection is `invalid_reference_collection` even for relations that allow unpublished targets", () => {
 		const target = "123e4567-e89b-12d3-a456-426614174001";
 		const result = validateForPublish(
 			site,
@@ -92,7 +92,7 @@ describe("empty body check", () => {
 });
 
 describe("filling from the body (`fillFromBody`)", () => {
-	it("uses `{ maxLength }` and does not exceed the field `max`", () => {
+	it("WRITE-W12 uses `{ maxLength }` and does not exceed the field `max`", () => {
 		const field = site.storedField(c("note"), "summary")?.field;
 		expect(field?.kind === "text" && fillFromBodyLength(field)).toBe(30);
 		expect(fillFromBodyLength({ kind: "text", label: "a", fillFromBody: true })).toBe(160);

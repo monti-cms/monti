@@ -71,7 +71,7 @@ afterEach(() => {
 });
 
 describe("createCms: an instance owns its server resources", () => {
-	it("connects to nothing until a resource is used", () => {
+	it("CONF-I1 connects to nothing until a resource is used", () => {
 		const { server, database } = serverFor("a");
 		const cms = createCms({ config: testConfig, server });
 		expect(database.createStore).not.toHaveBeenCalled();
@@ -80,7 +80,7 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(database.createStore).toHaveBeenCalledTimes(1);
 	});
 
-	it("creates each resource once per instance and reuses it", () => {
+	it("CONF-I1 creates each resource once per instance and reuses it", () => {
 		const cms = createCms({ config: testConfig, server: serverFor("a").server });
 		expect(cms.store()).toBe(cms.store());
 		expect(cms.contentService()).toBe(cms.contentService());
@@ -88,7 +88,7 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(cms.auth()).toBe(cms.auth());
 	});
 
-	it("two instances with different server configs live side by side in one process", async () => {
+	it("DB-C3 two instances with different server configs live side by side in one process", async () => {
 		const a = serverFor("a", { trustHost: true });
 		const b = serverFor("b", {
 			trustHost: false,
@@ -128,7 +128,7 @@ describe("createCms: an instance owns its server resources", () => {
 		expect((await cmsB.read.getTranslations({ translationGroupId: "g" }))[0]?.slug).toBe("slug-b");
 	});
 
-	it("runs only its own server config's hooks, also for the store's after-commit notifications", async () => {
+	it("CONF-I2 runs only its own server config's hooks, also for the store's after-commit notifications", async () => {
 		const a = serverFor("a");
 		const b = serverFor("b");
 		const cmsA = createCms({ config: testConfig, server: a.server });
@@ -158,7 +158,7 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
 	});
 
-	it("`migrate` and `close` act on its own database only", async () => {
+	it("DB-C3 `migrate` and `close` act on its own database only", async () => {
 		const a = serverFor("a");
 		const b = serverFor("b");
 		const logs: string[] = [];
@@ -186,7 +186,7 @@ describe("createCms: an instance owns its server resources", () => {
 });
 
 describe("createCms: a development reload does not leak connections", () => {
-	it("reuses the first database adapter of an instance when its module is evaluated again", () => {
+	it("CONF-I1 reuses the first database adapter of an instance when its module is evaluated again", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const first = serverFor("first");
 		const reloaded = serverFor("reloaded");
@@ -200,7 +200,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(after.plugin("ai").storage.plugin).toBe("first:ai");
 	});
 
-	it("rebuilds everything else from the new server config, so edits to hooks and options take effect", async () => {
+	it("CONF-I1 rebuilds everything else from the new server config, so edits to hooks and options take effect", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const first = serverFor("first");
 		const reloaded = serverFor("reloaded");
@@ -228,7 +228,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(create).toHaveBeenCalledTimes(1);
 	});
 
-	it("instances with different ids do not share connections", () => {
+	it("CONF-I1 instances with different ids do not share connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const one = serverFor("one");
 		const two = serverFor("two");
@@ -238,7 +238,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect((cmsTwo.store() as unknown as { tag: string }).tag).toBe("two");
 	});
 
-	it("outside development an instance owns its connections alone: a second instance never adopts them", () => {
+	it("DB-C3 outside development an instance owns its connections alone: a second instance never adopts them", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		const first = serverFor("first");
 		const second = serverFor("second");

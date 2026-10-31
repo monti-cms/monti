@@ -99,7 +99,7 @@ const rowClass = (name: string, range: Range, order: number, attributes: Annotat
 const line = (value: string, annotations: InlineAnnotation[] = []): Line => ({ value, annotations });
 
 describe("code-string converter", () => {
-	it("when converting a code fence to a document, parses lang/meta and tag-based annotations", () => {
+	it("FMT-R2 when converting a code fence to a document, parses lang/meta and tag-based annotations", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -160,7 +160,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("the order of same-range wrappers survives a round trip via code string line order", () => {
+	it("FMT-R2 the order of same-range wrappers survives a round trip via code string line order", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -182,7 +182,7 @@ describe("code-string converter", () => {
 		expect(output.value).toBe(input.value);
 	});
 
-	it("document -> code -> document round trip preserves lang/meta/annotations", () => {
+	it("FMT-R2 document -> code -> document round trip preserves lang/meta/annotations", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: { title: "roundtrip.ts", showLineNumbers: true },
@@ -205,7 +205,7 @@ describe("code-string converter", () => {
 		expect(output).toEqual(input);
 	});
 
-	it("code -> document -> code round trip preserves the canonical code fence", () => {
+	it("FMT-R2 code -> document -> code round trip preserves the canonical code fence", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -225,7 +225,7 @@ describe("code-string converter", () => {
 		expect(output).toEqual(input);
 	});
 
-	it("when converting a meta boolean that is false, excludes it on serialization", () => {
+	it("FMT-R2 when converting a meta boolean that is false, excludes it on serialization", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: { title: "meta.ts", showLineNumbers: false, collapsed: true },
@@ -241,7 +241,7 @@ describe("code-string converter", () => {
 		expect(parsed.meta).not.toHaveProperty("showLineNumbers");
 	});
 
-	it("document -> code serializes annotation attributes as JSON", () => {
+	it("FMT-R2 document -> code serializes annotation attributes as JSON", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -268,7 +268,7 @@ describe("code-string converter", () => {
 		expect(first).toContain("collapsed=null");
 	});
 
-	it("document -> code writes only the key for a true boolean attribute and omits a false one", () => {
+	it("FMT-R2 document -> code writes only the key for a true boolean attribute and omits a false one", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -304,7 +304,7 @@ describe("code-string converter", () => {
 		expect(inlineComment).not.toContain("collapsed");
 	});
 
-	it("document -> code preserves the indentation of the target code line in the annotation comment", () => {
+	it("FMT-R2 document -> code preserves the indentation of the target code line in the annotation comment", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},
@@ -334,7 +334,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("code -> document restores the JSON type of annotation attributes", () => {
+	it("FMT-R2 code -> document restores the JSON type of annotation attributes", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -382,7 +382,7 @@ describe("code-string converter", () => {
 		expect(inlineAttrs).toEqual([{ name: "showLineNumbers", value: true }]);
 	});
 
-	it("parses a rowWrap range with line marker syntax (@line name ... @line name end)", () => {
+	it("FMT-C1 parses a rowWrap range with line marker syntax (@line name ... @line name end)", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -411,7 +411,7 @@ describe("code-string converter", () => {
 		);
 	});
 
-	it("line marker syntax closes an unterminated rowWrap as a range up to EOF too", () => {
+	it("FMT-C1 line marker syntax closes an unterminated rowWrap as a range up to EOF too", () => {
 		const input: Code = {
 			type: "code",
 			lang: "ts",
@@ -430,7 +430,7 @@ describe("code-string converter", () => {
 		]);
 	});
 
-	it("a document scope inline annotation serializes as @document with an absolute range", () => {
+	it("FMT-R2 a document scope inline annotation serializes as @document with an absolute range", () => {
 		const input: CodeBlockDocument = {
 			lang: "ts",
 			meta: {},

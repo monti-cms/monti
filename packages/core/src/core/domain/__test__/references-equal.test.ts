@@ -19,7 +19,7 @@ describe("isReferencesEqual", () => {
 		expect(isReferencesEqual([base], [{ ...base, occurrences: [{ type: "body" }] }])).toBe(false);
 	});
 
-	it("reads the stored occurrences", () => {
+	it("MEDIA-B5 reads the stored occurrences", () => {
 		const stored = [
 			{ type: "metadata", path: "tagIds", ordinal: 1 },
 			{ type: "body", blockId: "bbbbbbbb" },

@@ -12,7 +12,7 @@ const explain = (error: unknown, schema?: string) =>
 	explainDatabaseError(error, { connectionString: URL_WITH_PASSWORD, schema });
 
 describe("explainDatabaseError", () => {
-	it("describes a connection without its user and password", () => {
+	it("DB-C4 describes a connection without its user and password", () => {
 		expect(describeConnection(URL_WITH_PASSWORD)).toBe("db.example.com:5432/blog");
 		expect(describeConnection("not a url")).toBeUndefined();
 		expect(describeConnection(undefined)).toBeUndefined();
@@ -32,7 +32,7 @@ describe("explainDatabaseError", () => {
 			"cannot be read",
 			"postgres://user:password@host",
 		],
-	])("explains %j", (driverError, kind, what, fix) => {
+	])("DB-C4 explains %j", (driverError, kind, what, fix) => {
 		const error = explain(driverError);
 		expect(error).toBeInstanceOf(SetupError);
 		expect(error?.kind).toBe(kind);
@@ -43,7 +43,7 @@ describe("explainDatabaseError", () => {
 		expect(error?.message).not.toContain("hunter2");
 	});
 
-	it("names the host the driver could not reach, also when the error is an AggregateError (localhost resolves to two addresses)", () => {
+	it("SETUP-E1 names the host the driver could not reach, also when the error is an AggregateError (localhost resolves to two addresses)", () => {
 		const aggregate = Object.assign(
 			new AggregateError([Object.assign(new Error("refused"), { code: "ECONNREFUSED" })]),
 			{ code: undefined },
@@ -53,7 +53,7 @@ describe("explainDatabaseError", () => {
 		expect(error?.message).toContain("db.example.com:5432/blog");
 	});
 
-	it("says `monti db:migrate` for tables that are missing or older than the code, and keeps the driver's code", () => {
+	it("SETUP-E1 says `monti db:migrate` for tables that are missing or older than the code, and keeps the driver's code", () => {
 		const missing = explain(
 			Object.assign(new Error('relation "monti.entries" does not exist'), { code: "42P01" }),
 			"monti",
@@ -72,7 +72,7 @@ describe("explainDatabaseError", () => {
 		expect(old?.message).toContain("`monti db:migrate`");
 	});
 
-	it("leaves an error that is not a setup problem alone", () => {
+	it("SETUP-E1 leaves an error that is not a setup problem alone", () => {
 		expect(explain(Object.assign(new Error("duplicate key"), { code: "23505" }))).toBeUndefined();
 		expect(explain(new Error("something else"))).toBeUndefined();
 		expect(explain("text")).toBeUndefined();
@@ -94,7 +94,7 @@ describe("postgres() at run time", () => {
 		await closeGlobalPool();
 	});
 
-	it("tells to run `monti db:migrate` when the tables are not there, as the first request of a new site meets it", async () => {
+	it("SETUP-E1 tells to run `monti db:migrate` when the tables are not there, as the first request of a new site meets it", async () => {
 		const adapter = postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: pool.schemaName });
 		const store = adapter.createStore({ site: testSite });
 		const error = await store.getPreferences({ userId: "u" }).then(
@@ -108,7 +108,7 @@ describe("postgres() at run time", () => {
 		await adapter.close?.();
 	});
 
-	it("names a schema name that cannot be used", async () => {
+	it("DB-C1 names a schema name that cannot be used", async () => {
 		const adapter = postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: "bad-name;" });
 		const failure = await adapter.migrate({ site: testSite }).then(
 			() => "",
@@ -120,7 +120,7 @@ describe("postgres() at run time", () => {
 		await adapter.close?.();
 	});
 
-	it("names an unreachable database when the connection is first used", async () => {
+	it("DB-C4 names an unreachable database when the connection is first used", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const adapter = postgres({ connectionString: "postgres://u:secret-password@127.0.0.1:1/none" });
 		const error = await adapter

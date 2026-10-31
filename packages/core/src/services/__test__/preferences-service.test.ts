@@ -21,7 +21,7 @@ describe("preferences service", () => {
 		expect(Object.keys(preferences.collections ?? {})).toEqual(["page"]);
 	});
 
-	it("merges what is sent into what is saved and keeps the rest", async () => {
+	it("LIST-S1 merges what is sent into what is saved and keeps the rest", async () => {
 		const { service } = setup();
 		await service.update("u", { collections: { page: { pageSize: 50 } } } as never);
 		const next = await service.update("u", { editor: { inspectorOpen: true } } as never);

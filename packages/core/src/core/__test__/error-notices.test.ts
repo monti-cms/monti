@@ -35,11 +35,11 @@ describe("core notice dictionary", () => {
 	const en = noticeMessages.messages.en;
 	const ko = noticeMessages.messages.ko ?? {};
 
-	it("has the same keys in English and Korean", () => {
+	it("ADMIN-E3 has the same keys in English and Korean", () => {
 		expect(Object.keys(ko).sort()).toEqual(Object.keys(en).sort());
 	});
 
-	it("shows the same values in both languages for every key, and leaves no {placeholder} unfilled", () => {
+	it("ADMIN-E3 shows the same values in both languages for every key, and leaves no {placeholder} unfilled", () => {
 		for (const key of Object.keys(en) as (keyof typeof en)[]) {
 			const names = [...new Set([...placeholdersOf(en[key]), ...placeholdersOf(ko[key])])];
 			const vars = Object.fromEntries(names.map((name) => [name, `<${name}>`]));
@@ -93,7 +93,7 @@ describe("notices of the domain rules", () => {
 		expect(noticeOf(() => assertDeletable("trashed", 1))).toBeUndefined();
 	});
 
-	it("every notice above has the text and a way out in the admin language", () => {
+	it("ADMIN-E1 every notice above has the text and a way out in the admin language", () => {
 		for (const key of ["entry.duplicate.trashed", "entry.delete.not_trashed", "entry.publish.trashed"] as const) {
 			const text = noticeText(testSite, { code: "invalid_status", notice: { key } });
 			expect(text.what).toBe(t(key));

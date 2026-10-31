@@ -59,7 +59,7 @@ const post = (path: string, init: { headers?: Record<string, string>; body?: unk
 	});
 
 describe("GET /v1/events", () => {
-	it("lists the failed and dead deliveries with the counts, and asks the store for them by default", async () => {
+	it("EVENT-L1 lists the failed and dead deliveries with the counts, and asks the store for them by default", async () => {
 		const store = storeOf();
 		const response = await list(new Request("http://localhost/api/monti/v1/events"), { cms: fakeCms({ store }) });
 		expect(response.status).toBe(200);
@@ -75,7 +75,7 @@ describe("GET /v1/events", () => {
 		expect(store.listEventDeliveries).toHaveBeenCalledWith({ states: undefined, limit: undefined, offset: undefined });
 	});
 
-	it("passes the state filter and the paging on, and rejects an unknown state", async () => {
+	it("EVENT-F2 passes the state filter and the paging on, and rejects an unknown state", async () => {
 		const store = storeOf();
 		const cms = fakeCms({ store });
 		await list(new Request("http://localhost/api/monti/v1/events?state=dead&state=failed&limit=10&offset=20"), { cms });
@@ -103,7 +103,7 @@ describe("POST /v1/events/retry", () => {
 			plugins: [{ name: "sync", on: { entry: { changed: [{ name: "push", run: () => undefined }] } } }],
 		});
 
-	it("takes an admin session and delivers what is due", async () => {
+	it("EVENT-R1 takes an admin session and delivers what is due", async () => {
 		const store = storeOf();
 		const response = await retryAll(post("events/retry", { body: {} }), { cms: subscribed(store) });
 		expect(response.status).toBe(200);
@@ -113,13 +113,13 @@ describe("POST /v1/events/retry", () => {
 		);
 	});
 
-	it("passes `all` and `limit` on", async () => {
+	it("EVENT-R1 passes `all` and `limit` on", async () => {
 		const store = storeOf();
 		await retryAll(post("events/retry?all=1&limit=7", { body: {} }), { cms: subscribed(store) });
 		expect(store.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ limit: 7, ignoreBackoff: true }));
 	});
 
-	it("takes the retry secret as a bearer token, without a session or a same-origin header", async () => {
+	it("API-G3 takes the retry secret as a bearer token, without a session or a same-origin header", async () => {
 		const store = storeOf();
 		const cms = fakeCms({
 			store,
@@ -137,7 +137,7 @@ describe("POST /v1/events/retry", () => {
 		expect((await response.json()).counts).toEqual(counts);
 	});
 
-	it("refuses a wrong token, and any token when no secret is configured", async () => {
+	it("API-G3 refuses a wrong token, and any token when no secret is configured", async () => {
 		const headers = { authorization: "Bearer guess" };
 		const wrong = await retryAll(post("events/retry", { headers }), {
 			cms: fakeCms({ store: storeOf(), server: { events: { retrySecret: "cron-secret" } } }),
@@ -166,7 +166,7 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 	const params = Promise.resolve({ id: failed.change.eventId });
 	const body = { subscriber: "plugin:mailer" };
 
-	it("retries one delivery and answers with the counts", async () => {
+	it("EVENT-R1 retries one delivery and answers with the counts", async () => {
 		const store = storeOf();
 		const response = await retryOne(post(`events/${failed.change.eventId}/retry`, { body }), {
 			cms: fakeCms({ store }),
@@ -178,7 +178,7 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 		);
 	});
 
-	it("dismisses one delivery", async () => {
+	it("EVENT-R1 dismisses one delivery", async () => {
 		const store = storeOf();
 		const response = await dismiss(post(`events/${failed.change.eventId}/dismiss`, { body }), {
 			cms: fakeCms({ store }),

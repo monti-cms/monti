@@ -63,7 +63,7 @@ describe("Duplicate API Route", () => {
 		expect(duplicateEntry).toHaveBeenLastCalledWith({ id: "00000000-0000-4000-8000-000000000001", title: undefined });
 	});
 
-	it("passes the caller's copy title to the service", async () => {
+	it("WRITE-W10 passes the caller's copy title to the service", async () => {
 		const res = await postDuplicate(
 			postReq(
 				"http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate",

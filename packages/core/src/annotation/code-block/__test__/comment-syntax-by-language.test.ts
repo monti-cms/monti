@@ -71,7 +71,7 @@ describe("comment syntax by language", () => {
 			expect(parse(group.lang, write(document).value)).toEqual(document);
 		});
 
-		it("round-trips indented annotations with attributes", () => {
+		it("FMT-R2 round-trips indented annotations with attributes", () => {
 			const indented = [
 				`\t${annotate(group, `@line plus {0-0} tone="info" dense`)}`,
 				"\tbody",
@@ -89,7 +89,7 @@ describe("comment syntax by language", () => {
 			expect(parse(group.lang, write(document).value)).toEqual(document);
 		});
 
-		it("reads old `//` annotations and writes the language's own syntax", () => {
+		it("FMT-R2 reads old `//` annotations and writes the language's own syntax", () => {
 			const legacy = ["// @line plus {0-0}", "first", `  // @char Tooltip {0-4} content="tip"`, "  second"].join("\n");
 			const document = parse(group.lang, legacy);
 
@@ -161,7 +161,7 @@ describe("comment syntax by language", () => {
 			expect(resolveParseCommentSyntaxes("ts").map((syntax) => syntax.prefix)).toEqual(["//"]);
 		});
 
-		it("does not consume a code line that merely contains `//`", () => {
+		it("FMT-R2 does not consume a code line that merely contains `//`", () => {
 			const value = ["echo http://x", "curl https://example.com/a // @line plus", "// plain comment", "ls"].join("\n");
 			const document = parse("bash", value);
 
@@ -169,7 +169,7 @@ describe("comment syntax by language", () => {
 			expect(document.annotations).toEqual([]);
 		});
 
-		it("does not consume `//` comments that are not a known scope or annotation", () => {
+		it("FMT-R2 does not consume `//` comments that are not a known scope or annotation", () => {
 			const value = ["// @unknown plus", "// @line missing", "// @linebreak plus", "x"].join("\n");
 			const document = parse("python", value);
 
@@ -177,7 +177,7 @@ describe("comment syntax by language", () => {
 			expect(document.annotations).toEqual([]);
 		});
 
-		it("does not read another language's syntax", () => {
+		it("FMT-R2 does not read another language's syntax", () => {
 			const value = ["-- @line plus", "x"].join("\n");
 
 			expect(parse("python", value).lines).toHaveLength(2);

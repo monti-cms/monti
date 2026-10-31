@@ -122,7 +122,7 @@ describe("two instances with different site configs", () => {
 		return { realBlog, realOther, cmsBlog, cmsOther };
 	};
 
-	it("each holds the site of its own config", () => {
+	it("CONF-I2 each holds the site of its own config", () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = cmsBlog.site;
 		const b = cmsOther.site;
@@ -151,7 +151,7 @@ describe("two instances with different site configs", () => {
 		expect([a.api.MAX_MEDIA_BYTES, b.api.MAX_MEDIA_BYTES]).toEqual([10 * 1024 * 1024, 1_000_000]);
 	});
 
-	it("hands its own site to its database adapter, for the store and for a migration", async () => {
+	it("DB-C3 hands its own site to its database adapter, for the store and for a migration", async () => {
 		const { realBlog, realOther, cmsBlog, cmsOther } = instances();
 		cmsBlog.store();
 		cmsOther.store();
@@ -164,7 +164,7 @@ describe("two instances with different site configs", () => {
 		expect(realOther.sites).toEqual([cmsOther.site]);
 	});
 
-	it("each /meta response lists its own collections, locales, blocks and limits", async () => {
+	it("CONF-I2 each /meta response lists its own collections, locales, blocks and limits", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = await metaOf(cmsBlog);
 		const b = await metaOf(cmsOther);
@@ -187,7 +187,7 @@ describe("two instances with different site configs", () => {
 		expect((await metaOf(a)).limits.mediaBytes).toBe(10 * 1024 * 1024);
 	});
 
-	it("the admin language of each site picks its own text", () => {
+	it("CONF-I2 the admin language of each site picks its own text", () => {
 		const { cmsBlog, cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", {
 			en: { hello: "Hello {name}" },
@@ -197,7 +197,7 @@ describe("two instances with different site configs", () => {
 		expect(cmsOther.site.createTranslator(bundle)("hello", { name: "A" })).toBe("Hello A");
 	});
 
-	it("an admin message override of one site does not reach the other", () => {
+	it("CONF-I2 an admin message override of one site does not reach the other", () => {
 		const { cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", { en: { hello: "Hello" } });
 		const overridden = createSite(
@@ -221,7 +221,7 @@ describe("two instances read their own stores and build their own public paths",
 		return { blogStore, otherStore, cmsBlog, cmsOther };
 	};
 
-	it("getEntry goes to the instance's store and returns the path of its URL rule", async () => {
+	it("CONF-I2 getEntry goes to the instance's store and returns the path of its URL rule", async () => {
 		const { blogStore, otherStore, cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello" });
 		const b = await cmsOther.read.getEntry({ collection: "article", slug: "hello" });
@@ -255,7 +255,7 @@ describe("two instances read their own stores and build their own public paths",
 		expect(b.items.map((item) => item.path)).toEqual(["/en/blog/hello/"]);
 	});
 
-	it("a collection of the other site is unknown to an instance", async () => {
+	it("CONF-I2 a collection of the other site is unknown to an instance", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		await expect(
 			// @ts-expect-error `article` is not a collection of the blog config
@@ -291,7 +291,7 @@ describe("renderDocument renders the same stored document with each site's own b
 		{ type: "quote-card", id: "blk00002", attrs: { author: "A" }, content: [paragraph("q")] },
 	);
 
-	it("draws the blocks the site defines and leaves the other site's as unknown content", async () => {
+	it("CONF-I2 draws the blocks the site defines and leaves the other site's as unknown content", async () => {
 		const a = await html(stored, siteBlog, components);
 		const b = await html(stored, siteOther, components);
 		expect(a.markup).toContain('data-block="notice"');
@@ -335,7 +335,7 @@ describe("a site snapshot crosses JSON and gives the same site", () => {
 	it.each([
 		["blog", blog],
 		["other site", other],
-	])("%s", (_name, config) => {
+	])("CONF-I2 %s", (_name, config) => {
 		const site = createSite(config);
 		const copy = createSite(JSON.parse(JSON.stringify(site.snapshot())));
 		expect(copy.COLLECTIONS).toEqual(site.COLLECTIONS);

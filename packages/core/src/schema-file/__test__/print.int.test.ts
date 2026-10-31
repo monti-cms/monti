@@ -59,7 +59,7 @@ describe("printSchemaFile", () => {
 		expect(printSchemaFile({ "a-b": 1, c: undefined })).not.toContain("c:");
 	});
 
-	it("keeps long lists and objects on several lines, and short ones on one", () => {
+	it("SCHEMA-F13 keeps long lists and objects on several lines, and short ones on one", () => {
 		const long = Array.from({ length: 30 }, (_, index) => `option-number-${index}`);
 		const text = printSchemaFile({ short: ["a", "b"], long, wide: { a: "x".repeat(90) } });
 		expect(text).toContain('\tshort: ["a", "b"],\n');
@@ -67,7 +67,7 @@ describe("printSchemaFile", () => {
 		expect(text).toContain('\twide: {\n\t\ta: "xxx');
 	});
 
-	it("refuses what a schema cannot hold", () => {
+	it("SCHEMA-F13 refuses what a schema cannot hold", () => {
 		expect(() => printSchemaFile({ a: Number.NaN })).toThrow(/cannot hold the number/);
 		expect(() => printSchemaFile({ a: () => 1 })).toThrow(/cannot hold a function/);
 		expect(() => printSchemaFile(JSON.parse('{"__proto__": {"x": 1}}'))).toThrow(/__proto__/);

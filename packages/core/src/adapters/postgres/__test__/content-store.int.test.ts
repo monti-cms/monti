@@ -62,7 +62,7 @@ describe("ContentStore (Postgres)", () => {
 		});
 	});
 
-	it("a transaction failure during publish leaves the prior published snapshot intact", async () => {
+	it("WRITE-P6 a transaction failure during publish leaves the prior published snapshot intact", async () => {
 		const entry = await seedEntry(store, {
 			collection: contentCollection,
 			slug: "rollback-test",

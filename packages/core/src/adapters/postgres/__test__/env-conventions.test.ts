@@ -34,7 +34,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("postgres() reads the conventional environment variables", () => {
-	it("works with no arguments: DATABASE_URL and DATABASE_SCHEMA", async () => {
+	it("DB-C1 works with no arguments: DATABASE_URL and DATABASE_SCHEMA", async () => {
 		vi.stubEnv("DATABASE_URL", "postgres://env/db");
 		vi.stubEnv("DATABASE_SCHEMA", "blog");
 		const adapter = postgres();
@@ -44,14 +44,14 @@ describe("postgres() reads the conventional environment variables", () => {
 		await adapter.close?.();
 	});
 
-	it("uses the public schema when neither the option nor DATABASE_SCHEMA is set", async () => {
+	it("DB-C1 uses the public schema when neither the option nor DATABASE_SCHEMA is set", async () => {
 		vi.stubEnv("DATABASE_URL", "postgres://env/db");
 		const adapter = postgres();
 		await adapter.migrate({ site: testSite });
 		expect(stores[0]).not.toHaveProperty("schema");
 	});
 
-	it("lets explicit values win over the environment", async () => {
+	it("DB-C1 lets explicit values win over the environment", async () => {
 		vi.stubEnv("DATABASE_URL", "postgres://env/db");
 		vi.stubEnv("DATABASE_SCHEMA", "from_env");
 		const adapter = postgres({ connectionString: "postgres://explicit/db", schema: "explicit" });
@@ -60,14 +60,14 @@ describe("postgres() reads the conventional environment variables", () => {
 		expect(stores[0]?.schema).toBe("explicit");
 	});
 
-	it("does not guess the connection string from any other variable", async () => {
+	it("DB-C1 does not guess the connection string from any other variable", async () => {
 		vi.stubEnv("CMS_DATABASE_URL", "postgres://old/name");
 		vi.stubEnv("POSTGRES_URL", "postgres://other/name");
 		await expect(postgres().migrate({ site: testSite })).rejects.toThrow(/DATABASE_URL/);
 		expect(pools).toEqual([]);
 	});
 
-	it("says which variable is missing, when the connection is first used and not before", async () => {
+	it("DB-C1 says which variable is missing, when the connection is first used and not before", async () => {
 		const adapter = postgres();
 		expect(() => adapter.createStore({ site: testSite })).not.toThrow();
 		const message = await adapter.migrate({ site: testSite }).then(

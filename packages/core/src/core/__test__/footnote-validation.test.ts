@@ -48,7 +48,7 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("warns about a reference without a definition", async () => {
+	it("EDIT-F1 warns about a reference without a definition", async () => {
 		const { warnings, snapshot } = await footnoteWarnings(
 			paragraph("Text[^1] and more[^gone]."),
 			definition("1", "one"),
@@ -65,7 +65,7 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("warns about a definition that no reference uses", async () => {
+	it("EDIT-F1 warns about a definition that no reference uses", async () => {
 		const { warnings, snapshot } = await footnoteWarnings(
 			paragraph("Text[^1]"),
 			definition("1", "one"),
@@ -96,7 +96,7 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		});
 	});
 
-	it("matches labels case-insensitively", async () => {
+	it("EDIT-F1 matches labels case-insensitively", async () => {
 		const { warnings } = await footnoteWarnings(paragraph("Text[^Note]"), definition("note", "one"));
 		expect(warnings).toEqual([]);
 	});

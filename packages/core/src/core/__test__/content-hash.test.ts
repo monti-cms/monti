@@ -29,7 +29,7 @@ describe("content hash v2", () => {
 			expect(hashOf("An *a* word")).toBe(hashOf("An _a_ word"));
 		});
 
-		it("attributes listed in a different order", () => {
+		it("WRITE-S3 attributes listed in a different order", () => {
 			const a = documentOf(block({ tone: "info", width: 50 }));
 			const b = documentOf(block({ width: 50, tone: "info" }));
 			expect(computeContentHash(metadata, a)).toBe(computeContentHash(metadata, b));
@@ -45,7 +45,7 @@ describe("content hash v2", () => {
 			expect(hashOf("Hello", { title: "A", summary: "B" })).toBe(hashOf("Hello", { summary: "B", title: "A" }));
 		});
 
-		it("a document of another version, because the version only changes how a link is written", () => {
+		it("WRITE-S3 a document of another version, because the version only changes how a link is written", () => {
 			const doc = docOf("Hello");
 			expect(computeContentHash(metadata, { ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBe(
 				computeContentHash(metadata, doc),
@@ -69,12 +69,12 @@ describe("content hash v2", () => {
 			expect(hashOf(changed)).not.toBe(hashOf(base));
 		});
 
-		it("an attribute value change", () => {
+		it("WRITE-S3 an attribute value change", () => {
 			const hash = (tone: string) => computeContentHash(metadata, documentOf(block({ tone })));
 			expect(hash("info")).not.toBe(hash("warning"));
 		});
 
-		it("the code of a code block", () => {
+		it("WRITE-S3 the code of a code block", () => {
 			expect(hashOf("```ts\nconst a = 1\n```")).not.toBe(hashOf("```ts\nconst a = 2\n```"));
 		});
 
@@ -95,7 +95,7 @@ describe("content hash v2", () => {
 		const broken = "<<<Open\n";
 		const unparsed = unparsedDocument(broken, null, "paragraphs");
 
-		it("is hashed from the raw string, tagged so it never collides with a parsed body", () => {
+		it("WRITE-S3 is hashed from the raw string, tagged so it never collides with a parsed body", () => {
 			const expected = createHash("sha256")
 				.update(JSON.stringify(["cms-snapshot-v3-raw", 1, metadata, broken]))
 				.digest("hex");

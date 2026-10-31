@@ -45,7 +45,7 @@ describe("problemText", () => {
 });
 
 describe("a setup mistake over HTTP", () => {
-	it("is a 503 that points at the server log, where the full message with the fix is printed", async () => {
+	it("SETUP-E1 is a 503 that points at the server log, where the full message with the fix is printed", async () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const response = handleApiError(
 			problemError(
@@ -67,7 +67,7 @@ describe("a setup mistake over HTTP", () => {
 });
 
 describe("errors of core", () => {
-	it("MONTI_SECRET missing when a plugin wants to encrypt", () => {
+	it("SETUP-E1 MONTI_SECRET missing when a plugin wants to encrypt", () => {
 		const secrets = fakeCms().plugin("demo").secrets;
 		const message = messageOf(() => secrets.encrypt("value"));
 		expect(message).toContain("MONTI_SECRET");
@@ -75,7 +75,7 @@ describe("errors of core", () => {
 		expect(message).toContain("openssl rand -base64 32");
 	});
 
-	it("a format no plugin provides names the plugin to add and the formats the site has", async () => {
+	it("SETUP-E1 a format no plugin provides names the plugin to add and the formats the site has", async () => {
 		const empty = await importText(testSite, createFormatRegistry([]), "mdx", "text", { locale: "en" }).catch(
 			(error: Error) => error,
 		);
@@ -90,7 +90,7 @@ describe("errors of core", () => {
 		expect((other as Error).message).toContain("add the plugin that provides it");
 	});
 
-	it("media storage not configured names the option and an example", () => {
+	it("SETUP-E1 media storage not configured names the option and an example", () => {
 		const cms = fakeCms();
 		const message = messageOf(() => cms.mediaStore());
 		expect(message).toContain("Media storage is not configured");
@@ -98,14 +98,14 @@ describe("errors of core", () => {
 		expect(message).toContain("storage: s3Storage()");
 	});
 
-	it("defineConfig without a database says what to add", () => {
+	it("SETUP-E1 defineConfig without a database says what to add", () => {
 		const noDatabase = messageOf(() => defineConfig({ auth: {} } as never));
 		expect(noDatabase).toContain("`database`");
 		expect(noDatabase).toContain("database: postgres()");
 		expect(noDatabase).toContain("DATABASE_URL");
 	});
 
-	it("a schema file with a wrong value lists the paths and ends with how to fix them", () => {
+	it("SETUP-E1 a schema file with a wrong value lists the paths and ends with how to fix them", () => {
 		const message = messageOf(() => parseSchemaFile({ collections: { post: { kind: "nope" } } }, "monti.schema.ts"));
 		expect(message).toContain("monti.schema.ts is not valid");
 		expect(message).toContain("collections.post");

@@ -15,7 +15,7 @@ describe("collection helpers", () => {
 		expect(testSite.isDocumentCollection("nope")).toBe(false);
 	});
 
-	it("classification fields are relation fields pointing to a classification (record) collection", () => {
+	it("LIST-F2 classification fields are relation fields pointing to a classification (record) collection", () => {
 		const first = recordRelationField(contentCollection);
 		if (first)
 			expect(testSite.taxonomyFieldsOf(contentCollection)[0]).toMatchObject({ name: first.name, to: first.to });

@@ -114,7 +114,7 @@ describe("afterCommit delivery", () => {
 	const save = (store: ContentStore, entry: Entry, title: string) =>
 		seedSave(store, entry.id, { expectedVersion: entry.version, metadata: { title }, text: `${title} 본문` });
 
-	it("delivers right after the write, in the same call, with the event id, version, content hash and a way to read the entry", async () => {
+	it("EVENT-D1 delivers right after the write, in the same call, with the event id, version, content hash and a way to read the entry", async () => {
 		const seen = recorder();
 		let read: Entry | null | undefined;
 		let event: ContentEvent | undefined;
@@ -150,7 +150,7 @@ describe("afterCommit delivery", () => {
 		expect(later?.version).toBeGreaterThan(event?.version ?? Number.POSITIVE_INFINITY);
 	});
 
-	it("reads null for an entry that was deleted", async () => {
+	it("EVENT-D1 reads null for an entry that was deleted", async () => {
 		let deletedEvent: ContentEvent | undefined;
 		const { store } = setup({
 			a: (event) => {
@@ -164,7 +164,7 @@ describe("afterCommit delivery", () => {
 		expect(await deletedEvent?.read()).toBeNull();
 	});
 
-	it("never undoes the write when a subscriber fails, and records the failure", async () => {
+	it("EVENT-D1 never undoes the write when a subscriber fails, and records the failure", async () => {
 		const seen = recorder(() => true);
 		const { store, events, name } = setup({ a: seen.handler });
 		const entry = await create(store, "delivery-failing");
@@ -189,7 +189,7 @@ describe("afterCommit delivery", () => {
 				throw new DeferDelivery(retryAt);
 			},
 		],
-	])("a subscriber that %s is rescheduled, not failed: no attempt used, not listed, no dead letter", async (_name, defer) => {
+	])("EVENT-D2 a subscriber that %s is rescheduled, not failed: no attempt used, not listed, no dead letter", async (_name, defer) => {
 		const tries: number[] = [];
 		const { store, events, name } = setup(
 			{
@@ -233,7 +233,7 @@ describe("afterCommit delivery", () => {
 		expect((await events.list()).items.filter((item) => item.change.entryId === entry.id)).toEqual([]);
 	});
 
-	it("keeps the order of an entry while one of its events is deferred", async () => {
+	it("EVENT-D3 keeps the order of an entry while one of its events is deferred", async () => {
 		const seen = recorder();
 		let defer = true;
 		const { store, events } = setup({
@@ -252,7 +252,7 @@ describe("afterCommit delivery", () => {
 		expect(seen.of(entry.id).map((item) => item.kind)).toEqual(["created", "saved"]);
 	});
 
-	it("retries a failed delivery with the same event id once its backoff passed, and not before", async () => {
+	it("EVENT-D2 retries a failed delivery with the same event id once its backoff passed, and not before", async () => {
 		const seen = recorder((event) => event.attempt < 2);
 		const { store, events } = setup({ a: seen.handler });
 		const entry = await create(store, "delivery-retry");
@@ -272,7 +272,7 @@ describe("afterCommit delivery", () => {
 		expect((await events.list()).items.some((item) => item.change.entryId === entry.id)).toBe(false);
 	});
 
-	it("skips the backoff with `all`", async () => {
+	it("EVENT-D2 skips the backoff with `all`", async () => {
 		const seen = recorder((event) => event.attempt < 2);
 		const { store, events } = setup({ a: seen.handler }, { backoffMs: () => 3600_000 });
 		const entry = await create(store, "delivery-all");
@@ -281,7 +281,7 @@ describe("afterCommit delivery", () => {
 		expect(seen.of(entry.id).map((item) => item.attempt)).toEqual([1, 2]);
 	});
 
-	it("dead-letters after the allowed tries and then stops, until someone retries it by hand", async () => {
+	it("EVENT-D2 dead-letters after the allowed tries and then stops, until someone retries it by hand", async () => {
 		let healthy = false;
 		const seen = recorder(() => !healthy);
 		const { store, events, name } = setup({ a: seen.handler }, { maxAttempts: 3 });
@@ -310,7 +310,7 @@ describe("afterCommit delivery", () => {
 		expect(await events.retryDelivery({ eventId: dead?.change.eventId ?? "", subscriber: name("a") })).toBe(false);
 	});
 
-	it("delivers an entry's events in commit order: a failing earlier event holds the later ones", async () => {
+	it("EVENT-D3 delivers an entry's events in commit order: a failing earlier event holds the later ones", async () => {
 		const seen = recorder((event) => event.kind === "created" && event.attempt === 1);
 		const { store, events } = setup({ a: seen.handler });
 		const entry = await create(store, "delivery-order");
@@ -331,7 +331,7 @@ describe("afterCommit delivery", () => {
 		expect(versions.slice(1)).toEqual([...versions.slice(1)].sort((a, b) => a - b));
 	});
 
-	it("does not let one entry's failure hold another entry's events", async () => {
+	it("EVENT-D3 does not let one entry's failure hold another entry's events", async () => {
 		const seen = recorder((event) => event.workingSlug === "delivery-bad");
 		const { store } = setup({ a: seen.handler });
 		const first = await create(store, "delivery-bad");
@@ -369,7 +369,7 @@ describe("afterCommit delivery", () => {
 			(event) =>
 				event.kind === "created" && event.workingSlug === slug ? handler(event) : undefined;
 
-		it("runs the work once however often the delivery is tried, also when the delivery fails after the work", async () => {
+		it("EVENT-D2 runs the work once however often the delivery is tried, also when the delivery fails after the work", async () => {
 			let effects = 0;
 			let first = true;
 			const ran: boolean[] = [];
@@ -393,7 +393,7 @@ describe("afterCommit delivery", () => {
 			expect(ran).toEqual([true, false]);
 		});
 
-		it("does not mark work that threw, so the retry does it again", async () => {
+		it("EVENT-D2 does not mark work that threw, so the retry does it again", async () => {
 			let effects = 0;
 			const { store, events } = setup({
 				a: onlyFor("once-throws", (event) =>
@@ -411,7 +411,7 @@ describe("afterCommit delivery", () => {
 			expect(effects).toBe(2);
 		});
 
-		it("keeps a mark per subscriber and per event", async () => {
+		it("EVENT-D2 keeps a mark per subscriber and per event", async () => {
 			const counts = { a: 0, b: 0 };
 			const { store } = setup({
 				a: onlyFor("once-apart", async (event) => {
@@ -466,7 +466,7 @@ describe("afterCommit delivery", () => {
 		});
 	});
 
-	it("keeps subscribers apart: one failing does not repeat or hold another", async () => {
+	it("EVENT-D3 keeps subscribers apart: one failing does not repeat or hold another", async () => {
 		const good = recorder();
 		const flaky = recorder((event) => event.attempt < 2);
 		const { store, events } = setup({ good: good.handler, flaky: flaky.handler });
@@ -477,7 +477,7 @@ describe("afterCommit delivery", () => {
 		expect(flaky.of(entry.id).map((item) => item.attempt)).toEqual([1, 2]);
 	});
 
-	it("dismissing a failed delivery stops its retries and frees the later events of the entry", async () => {
+	it("EVENT-D3 dismissing a failed delivery stops its retries and frees the later events of the entry", async () => {
 		const seen = recorder((event) => event.kind === "created");
 		const { store, events, name } = setup({ a: seen.handler });
 		const entry = await create(store, "delivery-dismiss");
@@ -491,7 +491,7 @@ describe("afterCommit delivery", () => {
 		expect((await events.list()).items.some((item) => item.change.entryId === entry.id)).toBe(false);
 	});
 
-	it("starts the retries that are due with the next write of the process", async () => {
+	it("EVENT-D2 starts the retries that are due with the next write of the process", async () => {
 		const seen = recorder((event) => event.attempt < 2);
 		const { store } = setup({ a: seen.handler });
 		const first = await create(store, "delivery-opportunistic-a");
@@ -505,7 +505,7 @@ describe("afterCommit delivery", () => {
 		expect(seen.of(other.id).map((item) => item.attempt)).toEqual([1]);
 	});
 
-	it("delivers events whose process stopped after the commit, on the next retry", async () => {
+	it("EVENT-D1 delivers events whose process stopped after the commit, on the next retry", async () => {
 		// The test clock is at the real time (every test starts there): the window for such events is counted back from the clock the dispatcher reads.
 		const seen = recorder();
 		const { events } = setup({ a: seen.handler });
@@ -516,7 +516,7 @@ describe("afterCommit delivery", () => {
 		expect(seen.of(entry.id).map((item) => item.kind)).toEqual(["created"]);
 	});
 
-	it("leaves no event for a write that fails", async () => {
+	it("EVENT-D1 leaves no event for a write that fails", async () => {
 		const seen = recorder();
 		const { store, events } = setup({ a: seen.handler });
 		const entry = await create(store, "delivery-rolled-back");
@@ -530,7 +530,7 @@ describe("afterCommit delivery", () => {
 	describe("bulk and restore", () => {
 		const formats = async () => createFormatRegistry([paragraphsFormat]);
 
-		it("a bulk change delivers one event per item, in each entry's order", async () => {
+		it("EVENT-D1 a bulk change delivers one event per item, in each entry's order", async () => {
 			const seen = recorder();
 			const { store } = setup({ a: seen.handler });
 			const bulk = createBulkService(store, { site: testSite, hooks: () => [], formats });
@@ -572,7 +572,7 @@ describe("afterCommit delivery", () => {
 		const logOf = async (events: ReturnType<typeof setup>["events"], entryId: string) =>
 			(await events.list({ states: ALL, limit: 200 })).items.filter((item) => item.change.entryId === entryId);
 
-		it("records every kind of change once, with entry, collection, locale, time and actor, and lists it as recorded", async () => {
+		it("EVENT-D4 records every kind of change once, with entry, collection, locale, time and actor, and lists it as recorded", async () => {
 			const { store, events } = setup({});
 			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
 			const entry = await withActor("Mina", () => create(store, "log-no-subscribers"));
@@ -598,7 +598,7 @@ describe("afterCommit delivery", () => {
 			expect((await events.list()).items.filter((item) => item.change.entryId === entry.id)).toEqual([]);
 		});
 
-		it("makes deliveries only for subscribers, and an event is recorded once either way", async () => {
+		it("EVENT-D4 makes deliveries only for subscribers, and an event is recorded once either way", async () => {
 			const seen = recorder();
 			const { store, events, name } = setup({ a: seen.handler });
 			const entry = await create(store, "log-with-subscriber");
@@ -607,7 +607,7 @@ describe("afterCommit delivery", () => {
 			expect(log[0]).toMatchObject({ subscriber: name("a"), state: "delivered" });
 		});
 
-		it("removes old finished and recorded events but keeps the ones a retry can still deliver", async () => {
+		it("EVENT-D4 removes old finished and recorded events but keeps the ones a retry can still deliver", async () => {
 			const subscribe = (handler: Handler) => [{ name: `keep${++counter}`, kinds: CONTENT_CHANGE_KINDS, handler }];
 			let subscribers: EventSubscriber[] = [];
 			const make = (now: () => Date) =>
@@ -638,7 +638,7 @@ describe("afterCommit delivery", () => {
 	});
 
 	describe("the retry secret", () => {
-		it("accepts only the configured secret", () => {
+		it("API-G3 accepts only the configured secret", () => {
 			const { events } = setup({}, { retrySecret: "s3cret" });
 			expect(events.acceptsRetryToken("s3cret")).toBe(true);
 			expect(events.acceptsRetryToken("s3cret ")).toBe(false);

@@ -223,7 +223,7 @@ describe("the format option of the admin API", () => {
 			expect((await res.json()).error.code).toBe("format_not_importable");
 		});
 
-		it("a format that throws is a 422 format_import_failed, without its own message", async () => {
+		it("FMT-P1 a format that throws is a 422 format_import_failed, without its own message", async () => {
 			const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
 			const res = await post({ format: "crashing", body: "Text" });
@@ -263,7 +263,7 @@ describe("the format option of the admin API", () => {
 			expect(res.status).toBe(400);
 		});
 
-		it("with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
+		it("FMT-P3 with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
 			const bare = fakeCms({
 				config: testConfig,
 				store,
@@ -298,7 +298,7 @@ describe("the format option of the admin API", () => {
 			expect(entry.working.doc.content).toEqual([]);
 		});
 
-		it("rejects a text over the size limit with 413 body_too_large", async () => {
+		it("WRITE-S7 rejects a text over the size limit with 413 body_too_large", async () => {
 			const res = await post({ format: "paragraphs", body: "a".repeat(2 * 1024 * 1024 + 1) });
 
 			expect(res.status).toBe(413);
@@ -307,7 +307,7 @@ describe("the format option of the admin API", () => {
 	});
 
 	describe("reading", () => {
-		it("?format= adds the body as text to the draft, written to be imported again", async () => {
+		it("FMT-P3 ?format= adds the body as text to the draft, written to be imported again", async () => {
 			const entry = await created({ format: "paragraphs", body: "One\n\nTwo" });
 
 			const { status, body } = await read(entry.id, "?format=paragraphs");
@@ -346,7 +346,7 @@ describe("the format option of the admin API", () => {
 		});
 
 		it.skipIf(!linkable)(
-			"writes an internal link as the real path of its target, which follows a change of the target's address",
+			"FMT-R7 writes an internal link as the real path of its target, which follows a change of the target's address",
 			async () => {
 				const slug = unique("moving");
 				const target = await publishedPost(slug);
@@ -430,7 +430,7 @@ describe("the format option of the admin API", () => {
 	});
 
 	describe("templates", () => {
-		it("takes a document, or a text with its format, and returns the document", async () => {
+		it("TPL-A1 takes a document, or a text with its format, and returns the document", async () => {
 			const fromDoc = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("from doc"),
@@ -489,7 +489,7 @@ describe("the format option of the admin API", () => {
 			expect((await notADoc.json()).error.code).toBe("invalid_input");
 		});
 
-		it("an unknown format is a 400, and a text the format rejects is a 422 with its findings (a template cannot hold unparsed text)", async () => {
+		it("FMT-P1 an unknown format is a 400, and a text the format rejects is a 422 with its findings (a template cannot hold unparsed text)", async () => {
 			const unknown = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("u"), format: "hugo", body: "x" }),
 				{ cms },
@@ -514,7 +514,7 @@ describe("the format option of the admin API", () => {
 			});
 		});
 
-		it("a patch with a text keeps the ids of the blocks that stay, and a patch without a body keeps the body", async () => {
+		it("TPL-A1 a patch with a text keeps the ids of the blocks that stay, and a patch without a body keeps the body", async () => {
 			const createdRes = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("patch"),
@@ -549,7 +549,7 @@ describe("the format option of the admin API", () => {
 			expect((await renamed.json()).doc).toEqual(next.doc);
 		});
 
-		it("?format= adds the text of each template to a list and to one template", async () => {
+		it("FMT-P3 ?format= adds the text of each template to a list and to one template", async () => {
 			const createdRes = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("text"),
@@ -584,7 +584,7 @@ describe("the format option of the admin API", () => {
 			expect((await unknown.json()).error.code).toBe("unknown_format");
 		});
 
-		it("deleting a template still needs its version", async () => {
+		it("TPL-A1 deleting a template still needs its version", async () => {
 			const createdRes = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("del") }),
 				{

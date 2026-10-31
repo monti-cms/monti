@@ -12,7 +12,7 @@ const store = { getPreferences: async () => null };
 const cms = fakeCms({ store, auth: { basePath: "/api/monti/auth", handlers } });
 
 describe("admin API route table", () => {
-	it("named segments match before [name] segments, and params are extracted", () => {
+	it("API-R1 named segments match before [name] segments, and params are extracted", () => {
 		expect(matchRoute(["v1", "entries"])?.params).toEqual({});
 		expect(matchRoute(["v1", "entries", "abc"])?.params).toEqual({ id: "abc" });
 		// `search` is its own route, not an entry id.
@@ -32,7 +32,7 @@ describe("admin API route table", () => {
 		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.includes("schedule"))).toBe(false);
 	});
 
-	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
+	it("API-R1 an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
 		const call = (method: "GET" | "DELETE", path: string) =>
 			cms.handle(
 				new Request(`http://localhost/api/monti/${path}`, { method, headers: { origin: "http://localhost" } }),
@@ -42,7 +42,7 @@ describe("admin API route table", () => {
 		expect((await call("GET", "v1/preferences")).status).toBe(200);
 	});
 
-	it("when the auth path is the default (`/api/monti/auth`), forwards `auth/*` to the auth handler", async () => {
+	it("AUTH-C3 when the auth path is the default (`/api/monti/auth`), forwards `auth/*` to the auth handler", async () => {
 		const call = (instance: typeof cms, method: "GET" | "POST" | "DELETE", path: string) =>
 			instance.handle(new Request(`http://localhost/api/monti/${path}`, { method }));
 		expect(await (await call(cms, "GET", "auth/session")).text()).toBe("auth-get");
@@ -66,14 +66,14 @@ describe("admin API route table", () => {
 		).toBe(405);
 	});
 
-	it("`handle` takes the path segments from the options when the host already split them", async () => {
+	it("API-R1 `handle` takes the path segments from the options when the host already split them", async () => {
 		const response = await cms.handle(new Request("http://localhost/mounted/anywhere"), {
 			path: ["v1", "preferences"],
 		});
 		expect(response.status).toBe(200);
 	});
 
-	it("the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
+	it("API-R1 the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/entries/a%20b?x=1"))).toEqual([
 			"v1",
 			"entries",

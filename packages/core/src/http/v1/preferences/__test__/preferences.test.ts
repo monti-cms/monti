@@ -42,7 +42,7 @@ describe("Preferences API — per-collection list preferences", () => {
 		state.stored = null;
 	});
 
-	it("stores page size, sort and columns per collection and merges partial updates", async () => {
+	it("LIST-S1 stores page size, sort and columns per collection and merges partial updates", async () => {
 		const initial = await (await getPreferences(getReq(), { cms })).json();
 		expect(initial.collections[FIRST]).toEqual({});
 

@@ -54,25 +54,25 @@ beforeEach(() => {
 });
 
 describe("plugin API route default authentication", () => {
-	it("when not logged in, does not call the plugin route and returns 401", async () => {
+	it("API-G1 when not logged in, does not call the plugin route and returns 401", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect((await call(instance(), "GET", "v1/example/private")).status).toBe(401);
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
 
-	it("rejects a cross-origin change request before the login check", async () => {
+	it("API-G2 rejects a cross-origin change request before the login check", async () => {
 		const response = await call(instance(), "POST", "v1/example/private", { origin: "https://evil.example.com" });
 		expect(response.status).toBe(403);
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
 
-	it("an admin reaches the plugin route", async () => {
+	it("PLUG-S1 an admin reaches the plugin route", async () => {
 		expect(await (await call(instance(), "POST", "v1/example/private", { origin: ORIGIN })).text()).toBe("private");
 		expect(mocks.verifyAdmin).toHaveBeenCalledTimes(1);
 	});
 
-	it("a plugin route gets the instance that serves it, so a plugin works with several instances at once", async () => {
+	it("PLUG-S1 a plugin route gets the instance that serves it, so a plugin works with several instances at once", async () => {
 		const cms = instance();
 		await call(cms, "GET", "v1/example/private");
 		expect(mocks.privateGet).toHaveBeenNthCalledWith(1, expect.objectContaining({ cms }));
@@ -81,7 +81,7 @@ describe("plugin API route default authentication", () => {
 		expect(mocks.privateGet).toHaveBeenNthCalledWith(2, expect.objectContaining({ cms: other }));
 	});
 
-	it("a `signed` route is not wrapped (the route checks for itself)", async () => {
+	it("PLUG-S1 a `signed` route is not wrapped (the route checks for itself)", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect(await (await call(instance(), "POST", "v1/example/hook")).text()).toBe("public");
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
@@ -89,14 +89,14 @@ describe("plugin API route default authentication", () => {
 });
 
 describe("plugin route access kinds", () => {
-	it("`public-read` needs no login, and refuses anything but a read", async () => {
+	it("API-G1 `public-read` needs no login, and refuses anything but a read", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect((await call(instance(), "GET", "v1/example/feed")).status).toBe(200);
 		expect((await call(instance(), "POST", "v1/example/feed")).status).toBe(405);
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
 	});
 
-	it("`same-origin-form` needs no login, but the router rejects a cross-origin post", async () => {
+	it("API-G2 `same-origin-form` needs no login, but the router rejects a cross-origin post", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect((await call(instance(), "POST", "v1/example/form", { origin: "https://evil.example" })).status).toBe(403);
 		expect((await call(instance(), "POST", "v1/example/form", { origin: ORIGIN })).status).toBe(200);
@@ -105,7 +105,7 @@ describe("plugin route access kinds", () => {
 });
 
 describe("plugin route collisions", () => {
-	it("a plugin route identical to a core route is an error naming both sides", async () => {
+	it("PLUG-S3 a plugin route identical to a core route is an error naming both sides", async () => {
 		const cms = instance({ plugin: "evil", routes: [{ pattern: "v1/meta", module: { GET: mocks.privateGet } }] });
 		await expect(call(cms, "GET", "v1/example/private")).rejects.toThrow(
 			/plugins\.evil\.routes\["v1\/meta"\]: collides with the core route "v1\/meta"/,

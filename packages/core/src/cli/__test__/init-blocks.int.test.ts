@@ -11,7 +11,7 @@ const run = async (blocks: string) => {
 };
 
 describe("monti init and the heavy blocks", () => {
-	it("the default blocks import from the barrel and install neither mermaid nor recharts", async () => {
+	it("INIT-R2 the default blocks import from the barrel and install neither mermaid nor recharts", async () => {
 		const { config, install } = await run("default");
 		expect(config).toContain('from "@monti-cms/blocks";');
 		expect(config).not.toContain("@monti-cms/blocks/chart");
@@ -21,7 +21,7 @@ describe("monti init and the heavy blocks", () => {
 		expect(install).not.toHaveBeenCalledWith(installing("mermaid"));
 	});
 
-	it("chart and mermaid come from their own entry points, and their libraries are installed only then", async () => {
+	it("INIT-R2 chart and mermaid come from their own entry points, and their libraries are installed only then", async () => {
 		const { config, install } = await run("default,chart,mermaid");
 		expect(config).toContain('import { chart } from "@monti-cms/blocks/chart";');
 		expect(config).toContain('import { mermaid } from "@monti-cms/blocks/mermaid";');
@@ -33,7 +33,7 @@ describe("monti init and the heavy blocks", () => {
 		expect(config).toContain("mermaid(),");
 	});
 
-	it("only the chosen heavy block brings its library", async () => {
+	it("INIT-R2 only the chosen heavy block brings its library", async () => {
 		const { config, install } = await run("default,chart");
 		expect(config).toContain('from "@monti-cms/blocks/chart"');
 		expect(config).not.toContain("@monti-cms/blocks/mermaid");

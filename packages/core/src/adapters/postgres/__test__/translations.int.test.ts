@@ -66,7 +66,7 @@ describe("translation groups (postgres storage)", () => {
 			expect(await statusOf(translation.id)).toBeUndefined();
 		});
 
-		it("records one named deleted event for the source and for each translation it deletes with it", async () => {
+		it("EVENT-D4 records one named deleted event for the source and for each translation it deletes with it", async () => {
 			const source = await createPost("delete-events");
 			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			const trashedTranslation = await store.trashEntry({

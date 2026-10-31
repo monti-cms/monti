@@ -16,7 +16,7 @@ function appWithCore(spec: string, field: "dependencies" | "devDependencies" = "
 }
 
 describe("installSpecs", () => {
-	it("gives each Monti package the core address with its own folder, and leaves other packages bare", () => {
+	it("INIT-I1 gives each Monti package the core address with its own folder, and leaves other packages bare", () => {
 		expect(installSpecs(["@monti-cms/admin", "@monti-cms/syntax-shiki", "next-themes"], GITHUB)).toEqual([
 			"@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin",
 			"@monti-cms/syntax-shiki@github:monti-cms/monti#release/v0.2.0-next.16&path:/syntax-shiki",
@@ -24,13 +24,13 @@ describe("installSpecs", () => {
 		]);
 	});
 
-	it("takes path:/core in any place of the address", () => {
+	it("INIT-I1 takes path:/core in any place of the address", () => {
 		expect(installSpecs(["@monti-cms/auth"], "github:monti-cms/monti&path:/core")).toEqual([
 			"@monti-cms/auth@github:monti-cms/monti&path:/auth",
 		]);
 	});
 
-	it("keeps bare names for a version range, a missing spec or an address without path:/core", () => {
+	it("INIT-I1 keeps bare names for a version range, a missing spec or an address without path:/core", () => {
 		const names = ["@monti-cms/admin", "next-themes"];
 		for (const spec of ["^0.2.0", "0.2.0-next.0", "latest", "workspace:*", "github:monti-cms/monti#main", undefined]) {
 			expect(installSpecs(names, spec)).toEqual(names);
@@ -39,7 +39,7 @@ describe("installSpecs", () => {
 });
 
 describe("monti init with a GitHub spec for core", () => {
-	it("installs the missing Monti packages from the same ref, in dependencies or devDependencies", async () => {
+	it("INIT-I1 installs the missing Monti packages from the same ref, in dependencies or devDependencies", async () => {
 		for (const field of ["dependencies", "devDependencies"] as const) {
 			const host = fakeHost();
 			await initProject({ cwd: appWithCore(GITHUB, field), host });
@@ -57,7 +57,7 @@ describe("monti init with a GitHub spec for core", () => {
 		}
 	});
 
-	it("installs @monti-cms/syntax-directive from the same ref when the directive syntax is on", async () => {
+	it("INIT-R2 installs @monti-cms/syntax-directive from the same ref when the directive syntax is on", async () => {
 		const host = fakeHost();
 		await initProject({ cwd: appWithCore(GITHUB), host, directiveSyntax: true });
 		expect(host.install).toHaveBeenCalledWith(
@@ -77,7 +77,7 @@ describe("monti init with a GitHub spec for core", () => {
 		expect(host.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("github:")));
 	});
 
-	it("prints the --no-install command with the same specs, quoted for a shell", async () => {
+	it("INIT-I1 prints the --no-install command with the same specs, quoted for a shell", async () => {
 		const dir = appWithCore(GITHUB);
 		const report = await initProject({ cwd: dir, host: fakeHost(), install: false });
 		const text = report.next.find((item) => item.startsWith("Install the packages:"))?.split("\n")[1] ?? "";
@@ -108,7 +108,7 @@ describe("the packages init installs", () => {
 			JSON.parse(readFileSync(path.join(PACKAGES, folder, "package.json"), "utf8")).peerDependencies ?? {},
 		).filter((name) => !name.startsWith("@monti-cms/") && name !== "react" && name !== "react-dom");
 
-	it("includes every library the admin and the AI plugin need as peers, also with no blocks", async () => {
+	it("INIT-R2 includes every library the admin and the AI plugin need as peers, also with no blocks", async () => {
 		for (const blocks of ["default", "none"]) {
 			const dir = fixtureApp();
 			const report = await initProject({ cwd: dir, host: fakeHost(), install: false, extras: "ai", blocks });

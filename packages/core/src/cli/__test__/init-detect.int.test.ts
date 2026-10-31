@@ -13,7 +13,7 @@ describe("detectAppDir", () => {
 		return dir;
 	};
 
-	it("prefers the folders that exist: src/app, then app", () => {
+	it("INIT-R2 prefers the folders that exist: src/app, then app", () => {
 		expect(detectAppDir(dirWith("src/app", "app"))).toMatchObject({ dir: "src/app", exists: true });
 		expect(detectAppDir(dirWith("app"))).toMatchObject({ dir: "app", exists: true });
 	});
@@ -23,14 +23,14 @@ describe("detectAppDir", () => {
 		expect(detectAppDir(dirWith())).toMatchObject({ dir: "app", exists: false });
 	});
 
-	it("is what detectApp reports, so init and doctor look in the same place", () => {
+	it("DOC-R4 is what detectApp reports, so init and doctor look in the same place", () => {
 		const cwd = fixtureApp({ ...SRC_APP });
 		expect(detectApp(cwd).appDir).toBe(detectAppDir(cwd).dir);
 	});
 });
 
 describe("detecting the app", () => {
-	it("reads a create-next-app project", () => {
+	it("INIT-R2 reads a create-next-app project", () => {
 		const app = detectApp(fixtureApp());
 		expect(app).toMatchObject({
 			packageName: "my-blog",
@@ -49,7 +49,7 @@ describe("detecting the app", () => {
 		});
 	});
 
-	it("finds src/app and the other package managers", () => {
+	it("INIT-I1 finds src/app and the other package managers", () => {
 		const pkg = JSON.stringify({
 			name: "x",
 			dependencies: { next: "16.0.0" },
@@ -72,7 +72,7 @@ describe("detecting the app", () => {
 		).toBe("yarn");
 	});
 
-	it("knows a JavaScript app, a pages-only app and a missing tsconfig", () => {
+	it("INIT-K7 knows a JavaScript app, a pages-only app and a missing tsconfig", () => {
 		const js = detectApp(fixtureApp({ "tsconfig.json": null, "package.json": '{"dependencies":{"next":"16"}}' }));
 		expect(js.typescript).toBe(false);
 		const pages = detectApp(
@@ -81,7 +81,7 @@ describe("detecting the app", () => {
 		expect(pages).toMatchObject({ hasAppRouter: false, pagesRouterOnly: true });
 	});
 
-	it("finds Markdown and MDX folders and the front matter keys, most common first", () => {
+	it("INIT-C1 finds Markdown and MDX folders and the front matter keys, most common first", () => {
 		const app = detectApp(
 			fixtureApp({
 				"content/posts/a.mdx": POST_MDX("a"),
@@ -116,7 +116,7 @@ describe("detecting the app", () => {
 		expect(detectApp(fixtureApp({ ...SRC_APP, "src/monti.config.ts": "" })).existingConfig).toBe("src/monti.config.ts");
 	});
 
-	it("reads the port from the dev script", () => {
+	it("INIT-N1 reads the port from the dev script", () => {
 		const pkg = (dev: string) => JSON.stringify({ dependencies: { next: "16" }, scripts: { dev } });
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev -p 4000") })).devPort).toBe(4000);
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev --turbopack --port=5000") })).devPort).toBe(5000);
@@ -130,7 +130,7 @@ describe("detecting the app", () => {
 });
 
 describe("front matter keys", () => {
-	it("types the top-level keys and ignores nested ones and the body", () => {
+	it("INIT-C1 types the top-level keys and ignores nested ones and the body", () => {
 		const keys = parseFrontMatterKeys(
 			'---\ntitle: "Hello: world"\ncount: 3\nok: true\nwhen: 2024-02-03T10:00:00Z\ntags: [a, b]\nauthors:\n  - name: x\nnested:\n  inner: 1\n---\nbody: not a key\n',
 		);

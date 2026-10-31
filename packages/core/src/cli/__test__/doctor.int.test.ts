@@ -57,7 +57,7 @@ describe("monti doctor on a healthy project", () => {
 			...extra,
 		});
 
-	it("passes every check, prints no warning, and exits 0", async () => {
+	it("DOC-R1 passes every check, prints no warning, and exits 0", async () => {
 		healthyEnv();
 		const dir = project();
 		expect(await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
@@ -104,7 +104,7 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "config/automatic").message).toMatch(/Trust host: on \(login links/);
 	});
 
-	it("says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
+	it("DOC-R2 says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
 		healthyEnv();
 		const dir = project();
 		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined });
@@ -124,7 +124,7 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "config/loads").status).toBe("ok");
 	});
 
-	it("says all migrations are pending, and that the schema is not there yet, for a database nobody migrated", async () => {
+	it("DOC-R2 says all migrations are pending, and that the schema is not there yet, for a database nobody migrated", async () => {
 		healthyEnv({ DATABASE_SCHEMA: `${schemaName}_none` });
 		const { report } = await doctor(project());
 		expect(byId(report, "database/schema")).toMatchObject({ status: "warn" });
@@ -139,7 +139,7 @@ describe("monti doctor on a healthy project", () => {
 });
 
 describe("monti doctor on a project with missing settings", () => {
-	it("fails with what, where and how to fix for every missing value, and exits 1", async () => {
+	it("DOC-R1 fails with what, where and how to fix for every missing value, and exits 1", async () => {
 		setEnv();
 		const { code, report } = await doctor(project());
 		expect(code).toBe(1);
@@ -181,7 +181,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "auth/github-id").message).toContain("no GitHub provider");
 	});
 
-	it("is stricter about the login when it runs as production", async () => {
+	it("DOC-R3 is stricter about the login when it runs as production", async () => {
 		setEnv({ NODE_ENV: "production" });
 		const { report } = await doctor(project());
 		expect(byId(report, "auth/github-id").status).toBe("fail");
@@ -192,7 +192,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "auth/trust-host").fix).toContain("AUTH_TRUST_HOST=true");
 	});
 
-	it("warns about a config with no login in development, and fails for production or a known platform, with how to add GitHub", async () => {
+	it("DOC-R3 warns about a config with no login in development, and fails for production or a known platform, with how to add GitHub", async () => {
 		const noAuth = configText().replace("\tauth: auth({ providers: [github()] }),\n", "");
 		expect(noAuth).not.toContain("auth: ");
 		setEnv({ MONTI_SECRET: STRONG_SECRET });
@@ -222,7 +222,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId((await doctor(project({ "monti.config.ts": noAuth }))).report, "auth/login").status).toBe("fail");
 	});
 
-	it("explains a database that cannot be reached, without printing the password", async () => {
+	it("CLI-P1 explains a database that cannot be reached, without printing the password", async () => {
 		setEnv({ DATABASE_URL: "postgres://monti:hunter2@127.0.0.1:1/blog", MONTI_SECRET: STRONG_SECRET });
 		const { report } = await doctor(project());
 		const connect = byId(report, "database/connect");
@@ -256,7 +256,7 @@ describe("monti doctor on a project with missing settings", () => {
 		}
 	});
 
-	it("warns about a weak MONTI_SECRET and never prints it", async () => {
+	it("CLI-P1 warns about a weak MONTI_SECRET and never prints it", async () => {
 		setEnv({ MONTI_SECRET: "changeme" });
 		const { report } = await doctor(project());
 		const secret = byId(report, "secrets/monti-secret");
@@ -265,7 +265,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(JSON.stringify(report)).not.toContain("changeme");
 	});
 
-	it("reports a config that does not load, and skips what needs it", async () => {
+	it("DOC-R4 reports a config that does not load, and skips what needs it", async () => {
 		setEnv();
 		const dir = project({ "monti.config.ts": 'import "this-package-does-not-exist";\nexport const cms = {};\n' });
 		const { code, report } = await doctor(dir);
@@ -280,14 +280,14 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "schema/file").status).toBe("ok");
 	});
 
-	it("reports a missing config file with what to do", async () => {
+	it("DOC-R4 reports a missing config file with what to do", async () => {
 		setEnv();
 		const { report } = await doctor(project({ "monti.config.ts": null }));
 		expect(byId(report, "config/file").status).toBe("fail");
 		expect(byId(report, "config/file").fix).toContain("monti init");
 	});
 
-	it("names the path of what is wrong in the schema file", async () => {
+	it("SCHEMA-F14 names the path of what is wrong in the schema file", async () => {
 		setEnv();
 		const dir = project();
 		writeFileSync(
@@ -302,7 +302,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(schema.fix).toContain("defineSchema");
 	});
 
-	it("reports a schema file that is valid but holds code: the admin cannot rewrite it", async () => {
+	it("DOC-R4 reports a schema file that is valid but holds code: the admin cannot rewrite it", async () => {
 		setEnv();
 		const dir = project();
 		writeFileSync(
@@ -319,7 +319,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(schema.message).toContain("read-only");
 	});
 
-	it("checks the three Next files and the admin path", async () => {
+	it("DOC-R4 checks the three Next files and the admin path", async () => {
 		setEnv();
 		const dir = project({
 			"app/studio/layout.tsx": null,
@@ -357,7 +357,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(again.report, "next/hydration").status).toBe("ok");
 	});
 
-	it("tells when the admin files sit at a different path than the config says", async () => {
+	it("DOC-R4 tells when the admin files sit at a different path than the config says", async () => {
 		setEnv();
 		const dir = project({
 			"app/studio/layout.tsx": null,
@@ -387,7 +387,7 @@ describe("monti doctor on the media storage", () => {
 		expect(byId(report, "config/storage").message).toContain("no `storage`");
 	});
 
-	it("fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
+	it("DOC-R4 fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
 		setEnv();
 		const dir = project({
 			"monti.config.ts": withStorage(
@@ -404,7 +404,7 @@ describe("monti doctor on the media storage", () => {
 		expect(code).toBe(1);
 	});
 
-	it("passes when the store can make public file addresses", async () => {
+	it("DOC-R4 passes when the store can make public file addresses", async () => {
 		setEnv();
 		const dir = project({
 			"monti.config.ts": withStorage(
@@ -418,7 +418,7 @@ describe("monti doctor on the media storage", () => {
 });
 
 describe("monti doctor --only", () => {
-	it("runs only the groups and checks it names", async () => {
+	it("DOC-R1 runs only the groups and checks it names", async () => {
 		setEnv();
 		const { report } = await doctor(project(), ["--only", "auth/admins,schema/file"]);
 		expect(report.checks.map((check) => check.id).sort()).toEqual(["auth/admins", "schema/file"]);
@@ -426,7 +426,7 @@ describe("monti doctor --only", () => {
 });
 
 describe("monti doctor --json and the text report", () => {
-	it("prints a stable JSON shape for tools", async () => {
+	it("DOC-R1 prints a stable JSON shape for tools", async () => {
 		setEnv();
 		const { report } = await doctor(project());
 		expect(Object.keys(report).sort()).toEqual(["checks", "cwd", "ok", "summary"]);

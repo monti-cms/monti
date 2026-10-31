@@ -31,7 +31,7 @@ describe("the recommended setup", () => {
 		QUESTIONS.directive,
 	];
 
-	it("asks the setup question first, then only the default language and the login", async () => {
+	it("INIT-Q1 asks the setup question first, then only the default language and the login", async () => {
 		const prompter = scriptedPrompter({
 			[QUESTIONS.setup]: "recommended",
 			[QUESTIONS.defaultLocale]: "ko",
@@ -44,7 +44,7 @@ describe("the recommended setup", () => {
 		expect(answers.locales).toEqual(["ko"]);
 	});
 
-	it("takes the same defaults as a run without a terminal for everything it does not ask", async () => {
+	it("INIT-Q1 takes the same defaults as a run without a terminal for everything it does not ask", async () => {
 		const prompter = scriptedPrompter({
 			[QUESTIONS.setup]: "recommended",
 			[QUESTIONS.defaultLocale]: "en",
@@ -55,7 +55,7 @@ describe("the recommended setup", () => {
 		expect(recommended).toEqual(defaults);
 	});
 
-	it("keeps the other languages found in the content, and still asks for the login when a flag skips the rest", async () => {
+	it("INIT-Q3 keeps the other languages found in the content, and still asks for the login when a flag skips the rest", async () => {
 		const found = detectApp(fixtureApp({ "content/ko/a.mdx": POST_MDX("a"), "content/ja/b.mdx": POST_MDX("b") }));
 		const prompter = scriptedPrompter({
 			[QUESTIONS.setup]: "recommended",
@@ -68,7 +68,7 @@ describe("the recommended setup", () => {
 		expect(prompter.asked).not.toContain(QUESTIONS.otherLocales);
 	});
 
-	it("is not asked when the flags already settle everything it would decide, and the login is still asked", async () => {
+	it("INIT-Q1 is not asked when the flags already settle everything it would decide, and the login is still asked", async () => {
 		const prompter = scriptedPrompter({ [QUESTIONS.login]: "password" });
 		await collectAnswers(
 			app(),
@@ -78,7 +78,7 @@ describe("the recommended setup", () => {
 		expect(prompter.asked).toEqual([QUESTIONS.login]);
 	});
 
-	it("never picks a login silently: without a flag the login is asked, only a run without a terminal defaults it", async () => {
+	it("INIT-Q2 never picks a login silently: without a flag the login is asked, only a run without a terminal defaults it", async () => {
 		const prompter = scriptedPrompter({
 			[QUESTIONS.setup]: "recommended",
 			[QUESTIONS.defaultLocale]: "en",
@@ -90,7 +90,7 @@ describe("the recommended setup", () => {
 });
 
 describe("the questions of monti init", () => {
-	it("asks in the order locales, storage, extras, blocks, admin path, login", async () => {
+	it("INIT-Q1 asks in the order locales, storage, extras, blocks, admin path, login", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter, () => "UTC");
 		expect(prompter.asked).toEqual([
@@ -134,10 +134,10 @@ describe("the questions of monti init", () => {
 		expect(single.locales).toEqual(["ja"]);
 	});
 
-	it("Other... asks for codes as text, for the default and for the others", async () => {
+	it("INIT-Q3 Other... asks for codes as text, for the default and for the others", async () => {
 		const prompter = scriptedPrompter({
 			...everything,
-			[QUESTIONS.defaultLocale]: "Other...",
+			[QUESTIONS.defaultLocale]: "INIT-Q3 Other...",
 			[QUESTIONS.otherLocales]: ["en", "Other..."],
 			[QUESTIONS.localesOther]: "pt-BR",
 		});
@@ -217,7 +217,7 @@ describe("the questions of monti init", () => {
 		expect(answers.blocks).toHaveLength(10);
 	});
 
-	it("the light set is what is offered first, and it leaves out the heavy blocks", async () => {
+	it("INIT-Q1 the light set is what is offered first, and it leaves out the heavy blocks", async () => {
 		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(answers.blocks).toEqual(["callout", "collapsible", "tabs", "code-ref", "color"]);
@@ -239,7 +239,7 @@ describe("the questions of monti init", () => {
 		expect(options.find((option) => option.value === "callout")?.hint).not.toMatch(/Heavy/);
 	});
 
-	it("asks how to sign in with the built-in email and password login first and GitHub second, and has no choice for no login", async () => {
+	it("INIT-Q2 asks how to sign in with the built-in email and password login first and GitHub second, and has no choice for no login", async () => {
 		let offered: readonly { value: string; label: string }[] = [];
 		let initial: string | undefined;
 		const prompter = scriptedPrompter(everything);
@@ -268,7 +268,7 @@ describe("the questions of monti init", () => {
 		expect(Object.keys(answers)).not.toContain("databaseSchema");
 	});
 
-	it("--login takes password or github, skips the question, and refuses anything else", async () => {
+	it("INIT-Q2 --login takes password or github, skips the question, and refuses anything else", async () => {
 		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
 		const flags = { locales: "en", storage: "none", blocks: "none", adminPath: "/studio", directiveSyntax: false };
 		expect((await collectAnswers(app(), { ...flags, login: "github" }, prompter)).login).toBe("github");
@@ -303,7 +303,7 @@ describe("the questions of monti init", () => {
 		});
 	});
 
-	it("the time zone follows this computer, is never asked, and --time-zone wins", async () => {
+	it("INIT-Q4 the time zone follows this computer, is never asked, and --time-zone wins", async () => {
 		const prompter = scriptedPrompter(everything);
 		const seoul = await collectAnswers(app(), {}, prompter, () => "Asia/Seoul");
 		expect(prompter.asked.some((question) => /time ?zone/i.test(question))).toBe(false);
@@ -312,7 +312,7 @@ describe("the questions of monti init", () => {
 		expect(flagged).toMatchObject({ timeZone: "Asia/Tokyo", timeZoneSource: "flag" });
 	});
 
-	it("a computer time zone that is missing or invalid becomes UTC, and says so", async () => {
+	it("INIT-Q4 a computer time zone that is missing or invalid becomes UTC, and says so", async () => {
 		for (const system of [undefined, "Not/AZone", ""]) {
 			const answers = await collectAnswers(app(), {}, undefined, () => system);
 			expect(answers).toMatchObject({ timeZone: "UTC", timeZoneSource: "fallback" });
@@ -320,7 +320,7 @@ describe("the questions of monti init", () => {
 		}
 	});
 
-	it("the time zone line names the zone, where it came from and what to change", async () => {
+	it("INIT-Q4 the time zone line names the zone, where it came from and what to change", async () => {
 		const answers = await collectAnswers(app(), {}, undefined, () => "Asia/Seoul");
 		expect(timeZoneNote(answers, "src/monti.schema.ts")).toBe(
 			"Time zone: Asia/Seoul (from this computer). Dates on your site and scheduled publishing use it; change `timeZone` in src/monti.schema.ts if your readers are elsewhere.",
@@ -330,7 +330,7 @@ describe("the questions of monti init", () => {
 		);
 	});
 
-	it("without a prompter every question takes its default", async () => {
+	it("INIT-Q1 without a prompter every question takes its default", async () => {
 		expect(await collectAnswers(app(), {}, undefined, () => "UTC")).toEqual({
 			siteUrl: "http://localhost:3000",
 			locales: ["en"],
@@ -382,7 +382,7 @@ describe("the questions of monti init", () => {
 		});
 	});
 
-	it("the locale list drops duplicates and keeps the first as the default", async () => {
+	it("INIT-Q3 the locale list drops duplicates and keeps the first as the default", async () => {
 		const answers = await collectAnswers(app(), { locales: "ko,en,ko" });
 		expect(answers.locales).toEqual(["ko", "en"]);
 	});

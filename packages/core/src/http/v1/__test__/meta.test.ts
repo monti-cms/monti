@@ -18,11 +18,11 @@ describe("GET /v1/meta features.media", () => {
 		expect((await readFeatures(fakeCms())).media).toBe(false);
 	});
 
-	it("is true when the server config has media storage", async () => {
+	it("MEDIA-U6 is true when the server config has media storage", async () => {
 		expect((await readFeatures(fakeCms({ mediaStore: {} }))).media).toBe(true);
 	});
 
-	it("puts plugin features under the plugin name, next to the core ones", async () => {
+	it("PLUG-S5 puts plugin features under the plugin name, next to the core ones", async () => {
 		const features = await readFeatures(
 			fakeCms({ plugins: [{ name: "ai", features: async () => ({ ready: true }) }] }),
 		);
@@ -58,7 +58,7 @@ describe("GET /v1/meta folders and templates", () => {
 		expect(meta.features.folders).toBe(some);
 	});
 
-	it("gives a collection its kind's default unless its schema says otherwise", async () => {
+	it("LIST-F6 gives a collection its kind's default unless its schema says otherwise", async () => {
 		const meta = await readMeta(fakeCms({ config: testConfig }));
 		for (const name of meta.collections as string[]) {
 			const explicit = meta.schemas[name].folders;

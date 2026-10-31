@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe("features", () => {
-	it("puts each plugin's features under its name and skips plugins without or with failing features", async () => {
+	it("PLUG-S5 puts each plugin's features under its name and skips plugins without or with failing features", async () => {
 		const plugins = serverPlugins([
 			{ name: "ai", server: async () => ({ default: { features: async () => ({ ready: true }) } }) },
 			{ name: "seo", server: async () => ({ default: {} }) },
@@ -30,7 +30,7 @@ describe("features", () => {
 		expect(await plugins.features()).toEqual({ ai: { ready: true } });
 	});
 
-	it("hands the instance to a plugin's features, so the plugin reads its own instance's data", async () => {
+	it("PLUG-S6 hands the instance to a plugin's features, so the plugin reads its own instance's data", async () => {
 		const first = fakeCms({ server: { trustHost: true } });
 		const second = fakeCms({ server: { trustHost: false } });
 		const plugin = {
@@ -60,7 +60,7 @@ describe("features", () => {
 });
 
 describe("load", () => {
-	it("does not cache a failed import, so a retry can succeed", async () => {
+	it("PLUG-S5 does not cache a failed import, so a retry can succeed", async () => {
 		let attempts = 0;
 		const plugins = serverPlugins([
 			{
@@ -80,7 +80,7 @@ describe("load", () => {
 		expect(attempts).toBe(2);
 	});
 
-	it("keeps what it loaded per set of plugins: two sites do not share loaded modules", async () => {
+	it("PLUG-S5 keeps what it loaded per set of plugins: two sites do not share loaded modules", async () => {
 		let loads = 0;
 		const plugin = {
 			name: "counted",
@@ -95,7 +95,7 @@ describe("load", () => {
 });
 
 describe("writeHooks", () => {
-	it("lists the checks before the save: the server config's lists first, then the plugins' in config order, each list in its order", async () => {
+	it("WRITE-H3 lists the checks before the save: the server config's lists first, then the plugins' in config order, each list in its order", async () => {
 		const ran: string[] = [];
 		const check = (name: string) => () => void ran.push(name);
 		const plugins = serverPlugins(
@@ -167,7 +167,7 @@ describe("plugin order", () => {
 });
 
 describe("eventSubscribers", () => {
-	it("makes each afterCommit entry its own subscriber, named <owner>:<name>, the server config's first and then the plugins' in order", async () => {
+	it("PLUG-S7 makes each afterCommit entry its own subscriber, named <owner>:<name>, the server config's first and then the plugins' in order", async () => {
 		const seen: string[] = [];
 		const subscriber = (name: string) => ({ name, run: () => void seen.push(name) });
 		const plugins = serverPlugins(
@@ -197,7 +197,7 @@ describe("eventSubscribers", () => {
 		expect(seen).toEqual(["revalidate", "index", "notify", "sync"]);
 	});
 
-	it("hands every afterCommit its scope: the instance, and a plugin's own context for a plugin's subscriber", async () => {
+	it("PLUG-S6 hands every afterCommit its scope: the instance, and a plugin's own context for a plugin's subscriber", async () => {
 		const calls: string[] = [];
 		const event = { eventId: "e1" } as never;
 		const subscriber = (name: string) => ({
@@ -216,7 +216,7 @@ describe("eventSubscribers", () => {
 		expect(calls).toEqual(["server:true:true:-", "inline:true:true:inline", "lazy:true:true:lazy"]);
 	});
 
-	it("refuses a subscriber name that is not valid or that its owner uses twice", async () => {
+	it("PLUG-S7 refuses a subscriber name that is not valid or that its owner uses twice", async () => {
 		const run = () => undefined;
 		await expect(
 			serverPlugins([], { entry: { changed: [{ name: "Sync Now", run }] } }).eventSubscribers(),
@@ -250,7 +250,7 @@ describe("eventSubscribers", () => {
 describe("events by kind", () => {
 	const run = () => undefined;
 
-	it("delivers a subscriber only the kind it is listed under, and a `changed` one every kind", async () => {
+	it("PLUG-S7 delivers a subscriber only the kind it is listed under, and a `changed` one every kind", async () => {
 		const plugins = serverPlugins([], {
 			entry: {
 				published: [{ name: "slack", run }],
@@ -273,7 +273,7 @@ describe("events by kind", () => {
 		]);
 	});
 
-	it("refuses one name under two kinds: a subscriber is one outbox key", async () => {
+	it("PLUG-S7 refuses one name under two kinds: a subscriber is one outbox key", async () => {
 		await expect(
 			serverPlugins([], {
 				entry: { saved: [{ name: "sync", run }], published: [{ name: "sync", run }] },
@@ -281,7 +281,7 @@ describe("events by kind", () => {
 		).rejects.toThrow(/the subscriber name "sync" is used twice/);
 	});
 
-	it("tells a plugin's keySlot.changed subscribers which slot changed, with the plugin's scope", async () => {
+	it("KEY-P1 tells a plugin's keySlot.changed subscribers which slot changed, with the plugin's scope", async () => {
 		const calls: string[] = [];
 		const plugins = serverPlugins([
 			{
@@ -309,7 +309,7 @@ describe("events by kind", () => {
 });
 
 describe("migrate", () => {
-	it("migrates each plugin that has migrations, in order, with its own context and the instance", async () => {
+	it("PLUG-S8 migrates each plugin that has migrations, in order, with its own context and the instance", async () => {
 		const order: string[] = [];
 		const plugins = serverPlugins([
 			{
@@ -332,7 +332,7 @@ describe("formats", () => {
 	const format = (name: string) =>
 		defineFormat({ name, label: name, mimeType: "text/plain", extension: name, export: () => name });
 
-	it("has no format with no plugins, and lists the formats of the plugins in the order of the plugins", async () => {
+	it("FMT-P1 has no format with no plugins, and lists the formats of the plugins in the order of the plugins", async () => {
 		const registry = await serverPlugins([
 			{ name: "one", server: async () => ({ default: { formats: async () => format("hugo") } }) },
 			{ name: "two", server: async () => ({ default: { formats: async () => [format("zola"), format("jekyll")] } }) },
@@ -354,7 +354,7 @@ describe("formats", () => {
 		expect(load).toHaveBeenCalledTimes(1);
 	});
 
-	it("fails when two formats have one name, and tries again on the next call", async () => {
+	it("PLUG-S5 fails when two formats have one name, and tries again on the next call", async () => {
 		let name = "same";
 		const plugins = serverPlugins([
 			{ name: "one", server: async () => ({ default: { formats: async () => format("same") } }) },

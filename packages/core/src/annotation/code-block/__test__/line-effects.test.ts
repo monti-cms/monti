@@ -62,7 +62,7 @@ describe("code line effect definitions", () => {
 		]);
 	});
 
-	it("a site definition replaces the same name in place and appends a new name", () => {
+	it("FMT-C2 a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
 			{ name: "highlight", label: "강조", class: "my-highlight" },
 			{ name: "info", label: "정보", icon: "star", class: "my-info", editor: { background: "bg-primary/10" } },
@@ -93,7 +93,7 @@ describe("code line effect definitions", () => {
 		expect(testSite.isLineEffectName("info")).toBe(false);
 	});
 
-	it("an invalid config is reported with the path of each value", () => {
+	it("CONF-A1 an invalid config is reported with the path of each value", () => {
 		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
 			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
 		expect(codes({ lineEffects: [{ name: "Focus", label: "Focus", class: "" }] })).toEqual([
@@ -118,14 +118,14 @@ describe("code line effect definitions", () => {
 });
 
 describe("code block options of the site config", () => {
-	it("are all on by default, with the default themes and every line effect offered", () => {
+	it("FMT-C2 are all on by default, with the default themes and every line effect offered", () => {
 		expect(testSite.CODE_BLOCK_FEATURES).toEqual({ rules: true, fold: true, tooltip: true, textStyles: true });
 		expect(testSite.OFFERED_LINE_EFFECTS).toEqual(testSite.CODE_LINE_EFFECTS);
 		expect(["strong", "em", "del", "u", "Tooltip", "fold"].every(testSite.offersCharEffect)).toBe(true);
 		expect(testSite.CODE_BLOCK_THEMES).toEqual({ light: "one-light", dark: "one-dark-pro" });
 	});
 
-	it("accept switches, omitted line effects, themes and languages", () => {
+	it("CONF-A1 accept switches, omitted line effects, themes and languages", () => {
 		expect(
 			checkCodeBlockConfig({
 				lineEffects: [{ name: "focus", label: "Focus", class: "a" }],
@@ -137,7 +137,7 @@ describe("code block options of the site config", () => {
 		).toEqual([]);
 	});
 
-	it("report a wrong value at startup", () => {
+	it("CONF-A1 report a wrong value at startup", () => {
 		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
 			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
 		expect(codes({ features: { comments: false } as never })).toEqual(["codeBlock.features.comments:unknown-key"]);

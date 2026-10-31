@@ -47,7 +47,7 @@ describe("suppressHydrationWarning on <html>", () => {
 		expect(findRootLayout(app({}))).toBeUndefined();
 	});
 
-	it("says what a .gitignore keeps out of git: .env.local and the .monti/ folder, in any of the usual spellings", () => {
+	it("INIT-K5 says what a .gitignore keeps out of git: .env.local and the .monti/ folder, in any of the usual spellings", () => {
 		expect(gitignoreCoverage("node_modules\n")).toEqual({ envLocal: false, montiFolder: false });
 		expect(gitignoreCoverage(".env*\n/.monti/\n")).toEqual({ envLocal: true, montiFolder: true });
 		expect(gitignoreCoverage(".env.local\r\n.monti\r\n")).toEqual({ envLocal: true, montiFolder: true });

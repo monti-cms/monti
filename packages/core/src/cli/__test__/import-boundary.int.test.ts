@@ -29,7 +29,7 @@ function app(files: Record<string, string>): string {
 }
 
 describe("import boundary: the config file stays out of client bundles", () => {
-	it("finds nothing in an app whose server files import the config and whose client files do not", () => {
+	it("DOC-B1 finds nothing in an app whose server files import the config and whose client files do not", () => {
 		const dir = app({
 			"app/admin/page.tsx": 'import { cms } from "../../monti.config";\nexport default () => cms;\n',
 			"app/api/route.ts": 'import { cms } from "@/monti.config";\nexport const GET = () => cms;\n',
@@ -40,7 +40,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		expect(formatBoundaryViolations([])).toBe("");
 	});
 
-	it("finds a client component that imports the config, by a relative path or the tsconfig alias", () => {
+	it("DOC-B1 finds a client component that imports the config, by a relative path or the tsconfig alias", () => {
 		const dir = app({
 			"components/a.tsx": '"use client";\nimport { cms } from "../monti.config";\nexport const A = () => cms;\n',
 			"components/b.tsx": "'use client'\nimport { cms } from '@/monti.config'\nexport const B = () => cms\n",
@@ -55,7 +55,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		expect(violations.every((violation) => violation.reaches === "config")).toBe(true);
 	});
 
-	it("follows the imports of a client component, and reports the chain", () => {
+	it("DOC-B1 follows the imports of a client component, and reports the chain", () => {
 		const dir = app({
 			"components/widget.tsx": '"use client";\nimport { read } from "@/lib/read";\nexport const W = () => read();\n',
 			"lib/read.ts": 'export * from "./cms";\n',
@@ -76,7 +76,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		expect(text).toContain("server-only");
 	});
 
-	it("also counts a dynamic import, and a client file that imports a server-only package", () => {
+	it("DOC-B1 also counts a dynamic import, and a client file that imports a server-only package", () => {
 		const dir = app({
 			"components/lazy.tsx": '"use client";\nexport const load = () => import("../monti.config");\n',
 			"components/auth.tsx": '"use client";\nimport { auth } from "@monti-cms/auth";\nexport const A = auth;\n',
@@ -95,7 +95,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		expect(violations.find((violation) => violation.client === "components/auth.tsx")?.reaches).toBe("@monti-cms/auth");
 	});
 
-	it("ignores type-only imports (the compiler erases them), comments, and files that are not client files", () => {
+	it("DOC-B1 ignores type-only imports (the compiler erases them), comments, and files that are not client files", () => {
 		const dir = app({
 			"components/types.tsx":
 				'"use client";\nimport type { cms } from "../monti.config";\nimport { type Cms } from "@monti-cms/core/server";\nexport type T = typeof cms | Cms;\n',
@@ -125,7 +125,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		).toEqual(["a", "mixed", "side-effect", "re-export", "lazy"]);
 	});
 
-	it("is the config/boundary check of `monti doctor`: exit 0 when clean, 1 with the chains when not", async () => {
+	it("DOC-B1 is the config/boundary check of `monti doctor`: exit 0 when clean, 1 with the chains when not", async () => {
 		const out: string[] = [];
 		const io = (cwd: string) => ({ cwd, log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) });
 		const only = ["doctor", "--only", "config/boundary"];

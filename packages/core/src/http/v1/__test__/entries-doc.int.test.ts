@@ -300,7 +300,7 @@ describe("entry API with a stored document", () => {
 	});
 
 	it.skipIf(!secondLocale)(
-		"returns the source's document with a translation, and keeps the confirmed document it is sent",
+		"TRANS-S1 returns the source's document with a translation, and keeps the confirmed document it is sent",
 		async () => {
 			const source = await created({ format: "paragraphs", body: "First\n\nSecond" });
 			expect(source.working.doc).not.toBeNull();
@@ -345,7 +345,7 @@ describe("entry API with a stored document", () => {
 		},
 	);
 
-	it("lists templates with their documents", async () => {
+	it("TPL-A1 lists templates with their documents", async () => {
 		const template = await store.createTemplate({
 			name: unique("doc template"),
 			doc: sampleDoc(),

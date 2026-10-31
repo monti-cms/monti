@@ -621,7 +621,7 @@ describe("Media Upload API Endpoints", () => {
 		expect((await get("?alt=maybe")).status).toBe(400);
 	});
 
-	it("POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
+	it("TRASH-T5 POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
 		mockTrashMedia.mockResolvedValue({
 			trashed: ["00000000-0000-4000-8000-000000000009"],
 			kept: ["00000000-0000-4000-8000-00000000000a"],
@@ -652,7 +652,7 @@ describe("Media Upload API Endpoints", () => {
 		expect((await handleTrashMedia(req, { cms })).status).toBe(400);
 	});
 
-	it("has no DELETE /media/:id: a file is deleted for good only from the trash", () => {
+	it("TRASH-D1 has no DELETE /media/:id: a file is deleted for good only from the trash", () => {
 		expect(Object.keys(mediaItemRoute)).not.toContain("DELETE");
 	});
 });

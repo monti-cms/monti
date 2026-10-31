@@ -50,7 +50,7 @@ const find = (decisions: readonly { topic: string; value: string; source: string
 	decisions.find((item) => item.topic === topic);
 
 describe("Cms.decisions", () => {
-	it("lists what the database and login adapters report, then the core decisions", () => {
+	it("DOC-R5 lists what the database and login adapters report, then the core decisions", () => {
 		const database: DatabaseAdapter = {
 			name: "fake",
 			createStore: vi.fn(),
@@ -86,7 +86,7 @@ describe("Cms.decisions", () => {
 		expect(find(decisions, "Schema hot reload")?.value).toBe("off");
 	});
 
-	it("auto-detects the schema file in the working directory", () => {
+	it("DOC-R5 auto-detects the schema file in the working directory", () => {
 		writeSchema();
 		const cms = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		const file = find(cms.decisions({ NODE_ENV: "production" }), "Schema file");
@@ -104,7 +104,7 @@ describe("Cms.decisions", () => {
 		expect(find(cms.decisions({ NODE_ENV: "production" }), "Schema file")?.source).toBe("set in monti.config.ts");
 	});
 
-	it("turns hot reload on only in development with a schema file", () => {
+	it("DOC-R5 turns hot reload on only in development with a schema file", () => {
 		writeSchema();
 		const cms = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		expect(find(cms.decisions({ NODE_ENV: "development" }), "Schema hot reload")?.value).toBe("on");
@@ -153,7 +153,7 @@ describe("SITE_URL source through defineConfig", () => {
 	};
 	const siteUrl = (cms: Cms) => find(hostOf(cms).decisions({ NODE_ENV: "production" }), "SITE_URL");
 
-	it("comes from site.url in the config first", () => {
+	it("CONF-A2 comes from site.url in the config first", () => {
 		vi.stubEnv("SITE_URL", "https://env.test");
 		const cms = defineConfig({ ...site, site: { url: "https://config.test" }, database, auth } as never);
 		expect(siteUrl(cms)).toEqual({
@@ -163,7 +163,7 @@ describe("SITE_URL source through defineConfig", () => {
 		});
 	});
 
-	it("comes from the schema file next", () => {
+	it("CONF-A2 comes from the schema file next", () => {
 		vi.stubEnv("SITE_URL", "https://env.test");
 		const cms = defineConfig({ schema: { ...schema, site: { url: "https://file.test" } }, database, auth } as never);
 		expect(siteUrl(cms)).toEqual({
@@ -173,7 +173,7 @@ describe("SITE_URL source through defineConfig", () => {
 		});
 	});
 
-	it("comes from env SITE_URL when nothing else says", () => {
+	it("CONF-A2 comes from env SITE_URL when nothing else says", () => {
 		vi.stubEnv("SITE_URL", "https://env.test");
 		const cms = defineConfig({ ...site, database, auth } as never);
 		expect(siteUrl(cms)).toEqual({ topic: "SITE_URL", value: "https://env.test", source: "from env SITE_URL" });

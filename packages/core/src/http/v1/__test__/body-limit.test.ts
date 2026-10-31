@@ -21,13 +21,13 @@ const streamed = (chunks: number, size: number, headers: Record<string, string> 
 };
 
 describe("request body reader", () => {
-	it("rejects a declared Content-Length over the cap with 413 before reading", async () => {
+	it("API-G4 rejects a declared Content-Length over the cap with 413 before reading", async () => {
 		const request = post("x", { "content-length": "100" });
 		await expect(readBodyText(request, 10)).rejects.toMatchObject({ code: "payload_too_large" });
 		expect(request.bodyUsed).toBe(false);
 	});
 
-	it("aborts a streamed body without Content-Length once it passes the cap", async () => {
+	it("API-G4 aborts a streamed body without Content-Length once it passes the cap", async () => {
 		const request = streamed(10, 100);
 		expect(request.headers.get("content-length")).toBeNull();
 		await expect(readBodyText(request, 250)).rejects.toMatchObject({ code: "payload_too_large" });
@@ -58,7 +58,7 @@ describe("request body reader", () => {
 });
 
 describe("public form route", () => {
-	it("refuses an oversized sign-in post with 413", async () => {
+	it("API-G4 refuses an oversized sign-in post with 413", async () => {
 		const cms = fakeCms({
 			config: testConfig,
 			auth: { providers: [{ id: "credentials", name: "Email", credentials: true }] as never },

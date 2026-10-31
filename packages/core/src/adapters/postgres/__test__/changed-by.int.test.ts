@@ -43,7 +43,7 @@ describe("who made the latest change of an entry (Postgres)", () => {
 		expect(entry.changedAt?.getTime()).toBe(entry.updatedAt.getTime());
 	});
 
-	it("records the admin who saved the draft, and the time of the save", async () => {
+	it("WRITE-W14 records the admin who saved the draft, and the time of the save", async () => {
 		const entry = await draft();
 		const before = Date.now();
 		const saved = await withActor("Mina", () =>

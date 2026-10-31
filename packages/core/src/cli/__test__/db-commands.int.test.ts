@@ -56,7 +56,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		return { code, lines, text: lines.join("\n") };
 	};
 
-	it("setup on an empty database creates the schema and the tables, and says where and how many", async () => {
+	it("DB-M1 setup on an empty database creates the schema and the tables, and says where and how many", async () => {
 		const schema = freshSchema("setup");
 		const result = await run(dbSetup, schema);
 		expect(result.code).toBe(0);
@@ -79,7 +79,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(result.text).not.toMatch(/@/);
 	});
 
-	it("setup on a database that is already set up changes nothing and points to db:migrate", async () => {
+	it("DB-M1 setup on a database that is already set up changes nothing and points to db:migrate", async () => {
 		const schema = freshSchema("again");
 		await run(dbSetup, schema);
 		const before = await tablesIn(schema);
@@ -94,7 +94,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect((await pool.query(`SELECT name FROM "${schema}".cms_migrations ORDER BY name`)).rows).toEqual(applied);
 	});
 
-	it("setup in a schema that has only other tables adds Monti's own, says so, and leaves the others alone", async () => {
+	it("DB-M1 setup in a schema that has only other tables adds Monti's own, says so, and leaves the others alone", async () => {
 		const schema = freshSchema("shared");
 		await pool.query(`CREATE SCHEMA "${schema}"`);
 		await pool.query(`CREATE TABLE "${schema}".orders (id int PRIMARY KEY)`);
@@ -109,7 +109,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect((await pool.query(`SELECT id FROM "${schema}".orders`)).rows).toEqual([{ id: 1 }]);
 	});
 
-	it("migrate on a database that was never set up points to db:setup, fails, and creates nothing", async () => {
+	it("DB-M2 migrate on a database that was never set up points to db:setup, fails, and creates nothing", async () => {
 		const schema = freshSchema("never");
 		const result = await run(dbMigrate, schema);
 		expect(result.code).toBe(1);
@@ -139,7 +139,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(refused.text).toContain("cannot be upgraded");
 	});
 
-	it("the command line returns 0 for both, and 1 for migrate before setup", async () => {
+	it("DB-M2 the command line returns 0 for both, and 1 for migrate before setup", async () => {
 		const schema = freshSchema("cli");
 		setEnv({ DATABASE_URL: DATABASE, DATABASE_SCHEMA: schema });
 		const io = (cwd: string) => ({ cwd, log: () => undefined, error: () => undefined });

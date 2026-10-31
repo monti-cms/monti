@@ -567,7 +567,7 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 			],
 		];
 
-		it.each(breaks)("%s", async (_, code, breakIt) => {
+		it.each(breaks)("DATA-R3 %s", async (_, code, breakIt) => {
 			const plan = structuredClone(readBackupArchive(backup).plan) as unknown as Rows;
 			expect(await validateRestorePlan(testSite, plan as unknown as Plan)).toEqual([]);
 			breakIt(plan);

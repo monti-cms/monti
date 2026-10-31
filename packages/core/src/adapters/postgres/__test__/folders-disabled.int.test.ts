@@ -47,7 +47,7 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 		expect(folders.find((f) => f.id === folder.id)).toMatchObject({ name: "Left over" });
 	}, 30_000);
 
-	it("rejects saving an entry into such a folder, but lets it leave the folder", async () => {
+	it("LIST-F6 rejects saving an entry into such a folder, but lets it leave the folder", async () => {
 		const folder = await on.createFolder({ collection: collection as string, parentId: null, name: "Old home" });
 		const entry = await seedEntry(on, {
 			collection: collection as string,

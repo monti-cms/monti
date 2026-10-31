@@ -24,7 +24,7 @@ const parse = (value: string) => {
 };
 
 describe("scope comment syntax", () => {
-	it("@line plus creates a line scope annotation on the 1 code line right below", () => {
+	it("FMT-C1 @line plus creates a line scope annotation on the 1 code line right below", () => {
 		const document = parse(["// @line plus", "const added = 1", "const untouched = 0"].join("\n"));
 
 		expect(document.lines.map((line) => line.value)).toEqual(["const added = 1", "const untouched = 0"]);
@@ -100,7 +100,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@document fold {0-4} applies the closed range [0,4] as an absolute inline range", () => {
+	it("FMT-R2 @document fold {0-4} applies the closed range [0,4] as an absolute inline range", () => {
 		const line = "hello world";
 		const document = parse(["// @document fold {0-4}", line].join("\n"));
 
@@ -115,7 +115,7 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@document fold applies to the whole code block when there is no selector", () => {
+	it("FMT-C1 @document fold applies to the whole code block when there is no selector", () => {
 		const firstLine = "const a = 1";
 		const secondLine = "return a";
 		const firstEnd = firstLine.length;

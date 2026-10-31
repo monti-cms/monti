@@ -97,7 +97,7 @@ describe("a collection whose title field is not named title", () => {
 		expect(site.titleOfValues("article", { headline: "A", title: "ignored" })).toBe("A");
 	});
 
-	it("makes the address from the title field and lists, sorts and searches by it", async () => {
+	it("SCHEMA-S2 makes the address from the title field and lists, sorts and searches by it", async () => {
 		const zebra = await article("Zebra crossing");
 		const apple = await article("Apple pie");
 		const mango = await article("Mango tree");
@@ -131,7 +131,7 @@ describe("a collection whose title field is not named title", () => {
 		expect(untitled.map((hit) => hit.title)).toEqual(["Zebra crossing"]);
 	});
 
-	it("shows the title of a related entry and of the translation group, whatever the key of its collection", async () => {
+	it("SCHEMA-S2 shows the title of a related entry and of the translation group, whatever the key of its collection", async () => {
 		const music = await topic("Music");
 		const post = await article("Related post", { topicIds: [music.id] });
 
@@ -151,7 +151,7 @@ describe("a collection whose title field is not named title", () => {
 		});
 	});
 
-	it("reads the title on the public side and sorts the public list by it", async () => {
+	it("SCHEMA-S2 reads the title on the public side and sorts the public list by it", async () => {
 		const beta = await publish(await article("Public beta"));
 		const alpha = await publish(await article("Public alpha"));
 
@@ -175,7 +175,7 @@ describe("a collection whose title field is not named title", () => {
 		if (one.status === "found") expect(one.entry.title).toBe("Public alpha");
 	});
 
-	it("sorts a record collection by the name of the display language", async () => {
+	it("SCHEMA-S2 sorts a record collection by the name of the display language", async () => {
 		await topic("Cat", { ko: { name: "나비" } });
 		await topic("Dog", { ko: { name: "가을" } });
 		await topic("Ant", { ko: { name: "다람쥐" } });
@@ -208,7 +208,7 @@ describe("a collection whose title field is not named title", () => {
 		).toEqual(["가을", "나비", "다람쥐"]);
 	});
 
-	it("duplicates an entry with a new title written to the title field", async () => {
+	it("SCHEMA-S2 duplicates an entry with a new title written to the title field", async () => {
 		const source = await article("Original");
 		const copy = (await service.duplicate({ id: source.id, title: "Original (copy)" })).entry;
 		expect(copy.working.metadata).toMatchObject({ headline: "Original (copy)" });

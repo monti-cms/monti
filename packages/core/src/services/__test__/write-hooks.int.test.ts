@@ -504,7 +504,7 @@ describe("write hook contract", () => {
 		const unavailable = new Set(secondLocale ? [] : ["translate"]);
 		/** One test per way of writing, skipped where the site cannot write that way. */
 		const eachRunner = (title: string, test: (name: string) => Promise<void>) => {
-			for (const name of names) it.skipIf(unavailable.has(name))(`${name}: ${title}`, () => test(name));
+			for (const name of names) it.skipIf(unavailable.has(name))(`WRITE-H3 ${name}: ${title}`, () => test(name));
 		};
 
 		eachRunner("WRITE-H3 a transform and both validations see it, with the operation", async (name) => {

@@ -25,7 +25,7 @@ const schemaOf = (extra: Record<string, unknown> = {}) =>
 afterEach(() => vi.unstubAllEnvs());
 
 describe("cms.plugin(name)", () => {
-	it("gives a plugin its own storage, secrets and the key store", () => {
+	it("PLUG-S6 gives a plugin its own storage, secrets and the key store", () => {
 		const cms = fakeCms({ server: { secret: "a-long-enough-test-secret" } });
 		const context = cms.plugin("my-plugin");
 		expect(context.name).toBe("my-plugin");
@@ -34,7 +34,7 @@ describe("cms.plugin(name)", () => {
 		expect(context.apiKeys).toBe(cms.apiKeys);
 	});
 
-	it("makes a value once per key and plugin", () => {
+	it("PLUG-S6 makes a value once per key and plugin", () => {
 		const cms = fakeCms();
 		const make = vi.fn(() => ({}));
 		const first = cms.plugin("a").once("store", make);
@@ -43,7 +43,7 @@ describe("cms.plugin(name)", () => {
 		expect(make).toHaveBeenCalledTimes(2);
 	});
 
-	it("starts again after a schema reload, so a value built from the site never keeps the old one", () => {
+	it("PLUG-S6 starts again after a schema reload, so a value built from the site never keeps the old one", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const cms = createCms({
 			config: defineSite({ schema: schemaOf() }),

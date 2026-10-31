@@ -43,7 +43,7 @@ const mockStore = {
 const cms = fakeCms({ config: testConfig, store: mockStore });
 
 describe("Folders HTTP API Contract", () => {
-	it("GET /folders returns list", async () => {
+	it("LIST-F6 GET /folders returns list", async () => {
 		const req = new Request(`http://localhost/api/monti/v1/folders?collection=${contentCollection}`);
 		const res = await getFolders(req, { cms });
 		expect(res.status).toBe(200);

@@ -36,12 +36,12 @@ describe("plugin storage rules", () => {
 		expect(codeOf(() => assertMigrationName("_start"))).toBe("invalid_input");
 	});
 
-	it("keys are any non-empty text", () => {
+	it("PLUG-D1 keys are any non-empty text", () => {
 		expect(codeOf(() => assertStorageKey("a/b c:ü"))).toBeNull();
 		expect(codeOf(() => assertStorageKey(""))).toBe("invalid_input");
 	});
 
-	it("an expected version is 0 or a whole number that was read, and a stored version starts at 1", () => {
+	it("PLUG-D2 an expected version is 0 or a whole number that was read, and a stored version starts at 1", () => {
 		expect(codeOf(() => assertExpectedVersionNumber(0))).toBeNull();
 		expect(codeOf(() => assertExpectedVersionNumber(12))).toBeNull();
 		for (const version of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
@@ -49,7 +49,7 @@ describe("plugin storage rules", () => {
 		}
 	});
 
-	it("stores values as JSON text, and rejects what JSON cannot hold", () => {
+	it("PLUG-D1 stores values as JSON text, and rejects what JSON cannot hold", () => {
 		expect(serializeStorageValue({ b: [1, null], a: "x" })).toBe('{"b":[1,null],"a":"x"}');
 		expect(serializeStorageValue(null)).toBe("null");
 		const circular: Record<string, unknown> = {};

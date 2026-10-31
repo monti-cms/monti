@@ -7,27 +7,27 @@ import { fakeHost, fixtureApp, POST_MDX, schemaOf, scriptedPrompter } from "./in
 const quiet = () => ({ host: fakeHost(), install: false });
 
 describe("languages found in the content files", () => {
-	it("reads suffixes like hello.ko.mdx, and puts first the language whose files have no pair", () => {
+	it("INIT-Q3 reads suffixes like hello.ko.mdx, and puts first the language whose files have no pair", () => {
 		const found = localesFromFileNames(["hello.en.mdx", "hello.ko.mdx", "about.ko.mdx", "tips.ko.mdx"]);
 		expect(found?.map((locale) => locale.code)).toEqual(["ko", "en"]);
 		expect(found?.[0]).toMatchObject({ files: 3, unpaired: 2 });
 		expect(found?.[1]).toMatchObject({ files: 1, unpaired: 0 });
 	});
 
-	it("takes the first language when every file has a pair", () => {
+	it("INIT-Q3 takes the first language when every file has a pair", () => {
 		expect(localesFromFileNames(["a.en.md", "a.ko.md", "b.en.md", "b.ko.md"])?.map((l) => l.code)).toEqual([
 			"en",
 			"ko",
 		]);
 	});
 
-	it("does not take a name for a language", () => {
+	it("INIT-Q3 does not take a name for a language", () => {
 		expect(localesFromFileNames(["release.notes.md", "api.min.md", "a.md"])).toBeUndefined();
 		// one file alone is more likely a name
 		expect(localesFromFileNames(["notes.it.md", "a.md"])).toBeUndefined();
 	});
 
-	it("a file with no suffix next to a suffixed one counts as its pair", () => {
+	it("INIT-Q3 a file with no suffix next to a suffixed one counts as its pair", () => {
 		const found = localesFromFileNames(["hello.mdx", "hello.ko.mdx", "bye.ko.mdx", "only.ko.mdx"]);
 		expect(found?.[0]).toMatchObject({ code: "ko", files: 3, unpaired: 2 });
 	});
@@ -46,7 +46,7 @@ describe("languages found in the content files", () => {
 		expect(folder?.locales?.map((locale) => locale.code)).toEqual(["ko", "en"]);
 	});
 
-	it("detectApp merges sibling language folders into one set of posts", () => {
+	it("INIT-Q3 detectApp merges sibling language folders into one set of posts", () => {
 		const app = detectApp(
 			fixtureApp({
 				"content/en/hello.mdx": POST_MDX("hello"),
@@ -60,7 +60,7 @@ describe("languages found in the content files", () => {
 		expect(folder?.locales?.map((locale) => locale.code)).toEqual(["ko", "en"]);
 	});
 
-	it("a single folder named like a language is left alone", () => {
+	it("INIT-Q3 a single folder named like a language is left alone", () => {
 		const app = detectApp(fixtureApp({ "content/it/pasta.mdx": POST_MDX("pasta") }));
 		expect(app.contentFolders.map((folder) => [folder.dir, folder.locales])).toEqual([["content/it", undefined]]);
 	});
@@ -73,7 +73,7 @@ describe("monti init and the languages of the content", () => {
 		"content/posts/about.ko.mdx": POST_MDX("about"),
 	};
 
-	it("with --yes (no prompts) the site languages are the ones found, the default being the unpaired one", async () => {
+	it("INIT-Q3 with --yes (no prompts) the site languages are the ones found, the default being the unpaired one", async () => {
 		const dir = fixtureApp(PAIR);
 		const report = await initProject({ cwd: dir, ...quiet() });
 		const schema = schemaOf(dir);
@@ -111,7 +111,7 @@ describe("monti init and the languages of the content", () => {
 		);
 	});
 
-	it("an explicit --locales wins, and the report says what the files would have given", async () => {
+	it("INIT-Q3 an explicit --locales wins, and the report says what the files would have given", async () => {
 		const dir = fixtureApp(PAIR);
 		const report = await initProject({ cwd: dir, ...quiet(), locales: "en" });
 		expect(report.answers.locales).toEqual(["en"]);

@@ -17,7 +17,7 @@ const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
 });
 
 describe("checks of a stored document (reference blog config)", () => {
-	it("counts a stretch of text that other marks split into several text nodes once", () => {
+	it("WRITE-P1 counts a stretch of text that other marks split into several text nodes once", () => {
 		const link = { type: "link", attrs: { href: "/posts/a" } };
 		const result = checkDocument(
 			site,
@@ -37,7 +37,7 @@ describe("checks of a stored document (reference blog config)", () => {
 		expect(result.internalLinks.every((item) => item.position.blockId === "aaaaaaaa")).toBe(true);
 	});
 
-	it("reads the labels and links of code from the stored annotations and the text marks of the block definitions", () => {
+	it("WRITE-P1 reads the labels and links of code from the stored annotations and the text marks of the block definitions", () => {
 		const code: CmsNode = {
 			id: "bbbbbbbb",
 			type: "codeBlock",

@@ -85,12 +85,12 @@ describe("Public JSON API", () => {
 		await closeGlobalPool();
 	});
 
-	it("is 404 when not configured", async () => {
+	it("SITE-J1 is 404 when not configured", async () => {
 		publicApi = undefined;
 		expect((await get("v1/public/entries")).status).toBe(404);
 	});
 
-	it("list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
+	it("SITE-R5 list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
 		publicApi = {
 			collections: [contentCollection],
 			filters: relation ? { related: relation.name } : {},
@@ -114,7 +114,7 @@ describe("Public JSON API", () => {
 		expect((await get("v1/public/entries?collection=nope")).status).toBe(400);
 	});
 
-	it("single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {
+	it("SITE-R5 single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const one = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(one.body).toMatchObject({ entry: { slug: "public-1" }, address: { isAlias: false } });
@@ -139,7 +139,7 @@ describe("Public JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);
 	});
 
-	it("single with ?format= also carries the body as text in that format, as { format, text }", async () => {
+	it("SITE-R7 single with ?format= also carries the body as text in that format, as { format, text }", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 
 		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=paragraphs`);
@@ -163,7 +163,7 @@ describe("Public JSON API", () => {
 		expect(one.cache).toBe("no-store");
 	});
 
-	it("hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
+	it("SITE-J1 hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
 		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry) => (entry.slug === "public-2" ? null : { s: entry.slug }),
@@ -173,7 +173,7 @@ describe("Public JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/public-2`)).status).toBe(404);
 	});
 
-	it("the site can set the response shape (toJson)", async () => {
+	it("SITE-J1 the site can set the response shape (toJson)", async () => {
 		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry, { body }) => ({ s: entry.slug, hasBody: body }),

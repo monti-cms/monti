@@ -40,7 +40,7 @@ const request = (body: unknown) =>
 	});
 
 describe("key slots", () => {
-	it("lists a plugin's declared slot as empty until a key is assigned", async () => {
+	it("KEY-P1 lists a plugin's declared slot as empty until a key is assigned", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		expect(await cms.apiKeys.slots()).toEqual([
 			{ plugin: "speller", slot: "key", label: "Spell check", service: "Speller", key: null },
@@ -48,7 +48,7 @@ describe("key slots", () => {
 		expect(await cms.apiKeys.slot("speller", "key").read()).toBeNull();
 	});
 
-	it("assigns a saved key, shows the slot among the key's uses, and the plugin reads the value through it", async () => {
+	it("KEY-P1 assigns a saved key, shows the slot among the key's uses, and the plugin reads the value through it", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").set(key.id);
@@ -60,7 +60,7 @@ describe("key slots", () => {
 		expect(await cms.apiKeys.slot("speller", "key").read()).toBe(VALUE);
 	});
 
-	it("saves a typed key together with the assignment, named after the slot", async () => {
+	it("KEY-P1 saves a typed key together with the assignment, named after the slot", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: `${VALUE}2` });
@@ -77,7 +77,7 @@ describe("key slots", () => {
 		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
 	});
 
-	it("keeps no orphan key when the assignment cannot be written", async () => {
+	it("KEY-P1 keeps no orphan key when the assignment cannot be written", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		await expect(cms.apiKeys.slot("speller", "nope").assign({ use: "new", value: VALUE })).rejects.toMatchObject({
 			code: "not_found",
@@ -85,7 +85,7 @@ describe("key slots", () => {
 		expect(await cms.apiKeys.list()).toEqual([]);
 	});
 
-	it("clears a slot, which leaves the key itself", async () => {
+	it("KEY-P1 clears a slot, which leaves the key itself", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").assign({ use: "none" });
@@ -95,7 +95,7 @@ describe("key slots", () => {
 		expect(key?.uses).toEqual([]);
 	});
 
-	it("deleting the assigned key empties the slot", async () => {
+	it("KEY-A4 deleting the assigned key empties the slot", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").set(key.id);
@@ -117,7 +117,7 @@ describe("key slots", () => {
 		expect((await cms.apiKeys.get(key.id))?.uses[0]?.label).toBe("맞춤법 검사");
 	});
 
-	it("works out a slot label from the site, in the admin language of the instance", async () => {
+	it("KEY-P1 works out a slot label from the site, in the admin language of the instance", async () => {
 		const messages = defineMessages("test.slot", { en: { key: "Spell check" }, ko: { key: "맞춤법 검사" } });
 		const plugin = definePlugin({
 			name: "speller",
@@ -148,7 +148,7 @@ describe("key slots", () => {
 		await expect(without.apiKeys.slot("speller", "key").set(key.id)).rejects.toMatchObject({ code: "not_found" });
 	});
 
-	it("lists slots and assigns through the routes", async () => {
+	it("KEY-P1 lists slots and assigns through the routes", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		const response = await assign(request({ plugin: "speller", slot: "key", key: { use: "new", value: VALUE } }), {
 			cms,
@@ -163,7 +163,7 @@ describe("key slots", () => {
 });
 
 describe("uses are stored as references", () => {
-	it("resolves each label when the keys are read, from the plugin, and does not show an item that is gone", async () => {
+	it("KEY-A4 resolves each label when the keys are read, from the plugin, and does not show an item that is gone", async () => {
 		const names = new Map([["connection:a", "Claude"]]);
 		const ai = definePlugin({
 			name: "ai",
@@ -198,7 +198,7 @@ describe("uses are stored as references", () => {
 });
 
 describe("cms.transaction", () => {
-	it("keeps a new key and the item that uses it together, or neither", async () => {
+	it("KEY-A2 keeps a new key and the item that uses it together, or neither", async () => {
 		const cms = fakeCms({ server: { secret: SECRET } });
 		const settings = () => cms.plugin("my-plugin").storage.collection<{ keyId: string | null }>("settings");
 		await expect(

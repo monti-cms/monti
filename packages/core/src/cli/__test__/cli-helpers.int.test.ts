@@ -24,7 +24,7 @@ const tempDir = (files: Record<string, string>) => {
 };
 
 describe("monti command helpers", () => {
-	it("env files do not override existing values (shell values and earlier files win)", () => {
+	it("DB-C2 env files do not override existing values (shell values and earlier files win)", () => {
 		const dir = tempDir({ ".env.local": "A=local\nB=local\n", ".env": "B=env\nC=env\n" });
 		const env: Record<string, string | undefined> = { A: "shell" };
 		expect(loadEnvFiles(dir, undefined, env)).toEqual([".env.local", ".env"]);
@@ -33,12 +33,12 @@ describe("monti command helpers", () => {
 		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/\.env\.missing.*does not exist.*Fix:/);
 	});
 
-	it("reads tsconfig with comments and trailing commas", () => {
+	it("DOC-B1 reads tsconfig with comments and trailing commas", () => {
 		expect(parseJsonc('{ // a\n "a": "x//y", /* b */ "c": [1,], }')).toEqual({ a: "x//y", c: [1] });
 		expect(parseJsonc("{ nope")).toBeUndefined();
 	});
 
-	it("finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
+	it("CLI-C1 finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
 		const root = tempDir({ "monti.config.ts": "", "src/monti.config.ts": "", "custom/config.ts": "" });
 		// The root file wins over the one in `src`.
 		expect(locateConfig(root, undefined, {})).toBe("monti.config.ts");
@@ -91,7 +91,7 @@ const appWith = (body: string) => {
 };
 
 describe("monti commands run against the instance the config file exports", () => {
-	it("`db:migrate` migrates through the instance, then closes it", async () => {
+	it("DB-M2 `db:migrate` migrates through the instance, then closes it", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
 				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
@@ -106,7 +106,7 @@ describe("monti commands run against the instance the config file exports", () =
 		expect(logs).toContain("migrating");
 	});
 
-	it("a failing migration throws (the runner turns it into exit code 1) and still closes the connection", async () => {
+	it("DB-M2 a failing migration throws (the runner turns it into exit code 1) and still closes the connection", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
 				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
@@ -119,7 +119,7 @@ describe("monti commands run against the instance the config file exports", () =
 		expect(calls).toEqual(["close"]);
 	});
 
-	it("a config file that does not export an instance is refused with the shape to use", async () => {
+	it("CLI-C1 a config file that does not export an instance is refused with the shape to use", async () => {
 		const { options } = appWith("export default { database: {}, auth: {} };");
 		await expect(dbMigrate(options)).rejects.toThrow(/must export the CMS instance.*defineConfig/);
 	});

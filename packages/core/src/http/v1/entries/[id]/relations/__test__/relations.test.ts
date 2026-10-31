@@ -40,7 +40,7 @@ describe("Relations API Contract", () => {
 		verifyAdmin.mockResolvedValue({ userId: "123", accountId: "123", isAdmin: true });
 	});
 
-	it("GET /entries/:id/relations returns incoming references for existing entry", async () => {
+	it("WRITE-W9 GET /entries/:id/relations returns incoming references for existing entry", async () => {
 		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000004/relations");
 		const res = await getRelations(req, {
 			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000004" }),

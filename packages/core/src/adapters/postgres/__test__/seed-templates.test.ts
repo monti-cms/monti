@@ -10,7 +10,7 @@ import { seedTemplateDocument } from "../store/seed-templates";
 const ID = "00000000-0000-4000-8000-0000000000aa";
 
 describe("seed templates", () => {
-	it("takes a template written as a document, checks it like any stored document and gives its blocks ids", async () => {
+	it("TPL-S1 takes a template written as a document, checks it like any stored document and gives its blocks ids", async () => {
 		const given = docWith({ type: "paragraph", content: [{ type: "text", text: "Seeded" }] });
 		const template: SeedTemplate = { id: ID, name: "Doc", doc: given };
 
@@ -25,7 +25,7 @@ describe("seed templates", () => {
 		expect(blocks).toBe(1);
 	});
 
-	it("rejects a document that is not a stored document, naming the template", async () => {
+	it("TPL-S1 rejects a document that is not a stored document, naming the template", async () => {
 		const template = { id: ID, name: "Broken", doc: { type: "doc", content: "nope" } } as unknown as SeedTemplate;
 
 		await expect(seedTemplateDocument(testSite, template, NO_FORMATS)).rejects.toThrow(
@@ -33,7 +33,7 @@ describe("seed templates", () => {
 		);
 	});
 
-	it("reads a template written as text with its format", async () => {
+	it("TPL-S1 reads a template written as text with its format", async () => {
 		const registry = createFormatRegistry([paragraphsFormat]);
 		const custom = await seedTemplateDocument(
 			testSite,
@@ -44,7 +44,7 @@ describe("seed templates", () => {
 		for (const block of custom.content) expect(isBlockId(block.id)).toBe(true);
 	});
 
-	it("stops the migration with a message that names the missing plugin when no installed plugin provides the format", async () => {
+	it("SETUP-E1 stops the migration with a message that names the missing plugin when no installed plugin provides the format", async () => {
 		await expect(
 			seedTemplateDocument(testSite, { id: ID, name: "Text", format: "hugo", body: "x" }, NO_FORMATS),
 		).rejects.toThrow(/template "Text" is written in the format "hugo", which no installed plugin provides/);
@@ -56,7 +56,7 @@ describe("seed templates", () => {
 		).rejects.toThrow(/install @monti-cms\/mdx/);
 	});
 
-	it("stops the migration for a seed text the format cannot read: a mistake in the config is not stored data", async () => {
+	it("TPL-S1 stops the migration for a seed text the format cannot read: a mistake in the config is not stored data", async () => {
 		const registry = createFormatRegistry([paragraphsFormat]);
 		await expect(
 			seedTemplateDocument(testSite, { id: ID, name: "Open", format: "paragraphs", body: "Words <<< open" }, registry),
