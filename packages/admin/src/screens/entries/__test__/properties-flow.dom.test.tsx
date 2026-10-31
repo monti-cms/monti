@@ -79,27 +79,42 @@ const series: EntryData = {
 	publishedSlug: "react-again",
 	working: { metadata: { title: "리액트 다시 만들기", itemIds: [] }, doc: emptyStoredDocument() },
 };
-const entries: Record<string, EntryData> = { "entry-1": entry, "series-1": series };
+let entries: Record<string, EntryData>;
+
+/** The series whose working list holds the post, the way the server reads the post's usages. */
+const usages = (id: string) =>
+	Object.values(entries)
+		.filter((other) => (other.working.metadata.itemIds as string[] | undefined)?.includes(id))
+		.map((other) => ({
+			state: "working" as const,
+			sourceId: other.id,
+			sourceCollection: other.collection,
+			sourceTitle: other.working.metadata.title as string,
+			sourceSlug: other.workingSlug,
+			sourceStatus: other.status,
+			kind: "entry" as const,
+			isStale: false,
+			occurrences: [{ type: "metadata" as const, path: "itemIds", ordinal: 0 }],
+		}));
 
 beforeEach(() => {
 	installFakeIndexedDB();
+	entries = { "entry-1": entry, "series-1": series };
 	api = fakeApi()
 		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
 		.on("PATCH /v1/entries/:id", ({ params, body }) => {
 			const current = entries[params.id];
 			if (!current) return failure("not_found");
-			return {
-				entry: {
-					...current,
-					version: current.version + 1,
-					working: { metadata: body.metadata, doc: body.doc ?? current.working.doc },
-				},
-				warnings: [],
+			entries[params.id] = {
+				...current,
+				version: current.version + 1,
+				working: { metadata: body.metadata, doc: body.doc ?? current.working.doc },
 			};
+			return { entry: entries[params.id], warnings: [] };
 		})
 		.on("GET /v1/entries/search", ({ query }) => ({ items: query.get("collection") === "collection" ? SERIES : [] }))
 		.on("GET /v1/entries", () => ({ items: [], total: 0 }))
-		.on("GET /v1/entries/:id/relations", () => ({ incomingReferences: [] }))
+		.on("GET /v1/entries/:id/relations", ({ params }) => ({ incomingReferences: usages(params.id) }))
 		.on("POST /v1/entries/:id/check", () => ({ issues: [], warnings: [] }))
 		.install();
 });
@@ -262,13 +277,19 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(async () => expect((await valueButton(SUMMARY)).getAttribute("aria-description")).toBeNull());
 	});
 
-	it("WRITE-W7 fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
+	it("WRITE-W7 fills the series row: the series the assistant picked is shown and marked as the assistant's, and the save writes it", async () => {
 		renderEdit();
 		fireEvent.click((await row(SERIES_FIELD)).getByRole("button", { name: tUi("ai.fill") }));
+		await waitFor(async () => expect((await valueButton(SERIES_FIELD)).textContent).toBe("리액트 다시 만들기"));
+		expect((await valueButton(SERIES_FIELD)).getAttribute("aria-description")).toBe(ASSISTED);
+		expect(api.sent("PATCH /v1/entries/series-1")).toHaveLength(0);
+		pressSave();
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/series-1")).toHaveLength(1));
 		expect(api.sent("PATCH /v1/entries/series-1")[0]?.body.metadata.itemIds).toEqual(["entry-1"]);
-		await waitFor(async () =>
-			expect((await valueButton(SERIES_FIELD)).getAttribute("aria-description")).toBe(ASSISTED),
-		);
+		// Only the series changed, so the post itself is not sent.
+		expect(api.sent("PATCH /v1/entries/entry-1")).toHaveLength(0);
+		// The row reads the series again and keeps showing the one it is in now.
+		await waitFor(() => expect(api.sent("GET /v1/entries/entry-1/relations")).toHaveLength(2));
+		expect((await valueButton(SERIES_FIELD)).textContent).toBe("리액트 다시 만들기");
 	});
 });

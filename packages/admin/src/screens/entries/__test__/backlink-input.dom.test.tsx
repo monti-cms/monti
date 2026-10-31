@@ -1,6 +1,7 @@
 import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
@@ -8,6 +9,7 @@ import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
 import { screensMessages } from "../../messages";
+import type { BacklinkChange } from "../backlink-changes";
 import type { EntryData } from "../entry-form";
 import { BacklinkInput } from "../field-inputs";
 import { entriesMessages } from "../messages";
@@ -42,6 +44,7 @@ const shared = {
 			sourceCollection: "collection",
 			sourceTitle: "시리즈 A",
 			sourceSlug: "a",
+			sourceStatus: "draft" as const,
 			kind: "entry" as const,
 			isStale: false,
 			occurrences: [{ type: "metadata" as const, path: "itemIds", ordinal: 0 }],
@@ -63,18 +66,13 @@ const collectionEntry = (id: string, metadata: Record<string, unknown>): EntryDa
 	working: { metadata, doc: emptyStoredDocument() },
 });
 
-/** Holds the save of collection `c2` until it is released with `release`; `api` keeps the requests. */
-function stubApi(patchStatus: number) {
-	let release: () => void = () => {};
-	const held = new Promise<void>((resolve) => {
-		release = resolve;
-	});
-	// Reads the kind each collection holds (default is post).
+/** The series the search finds; `api` keeps the requests. */
+function stubApi() {
 	const entries: Record<string, EntryData> = {
 		c1: { ...collectionEntry("c1", { title: "시리즈 A", itemIds: ["post-1"] }), workingSlug: "a" },
 		c2: { ...collectionEntry("c2", { title: "시리즈 B", itemIds: [] }), workingSlug: "b" },
 	};
-	const api = fakeApi()
+	return fakeApi()
 		.on("GET /v1/entries/search", () => ({
 			items: [
 				{ id: "c1", title: "시리즈 A", slug: "a", status: "draft" },
@@ -82,52 +80,85 @@ function stubApi(patchStatus: number) {
 			],
 		}))
 		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
-		.on("PATCH /v1/entries/:id", async ({ params, body }) => {
-			if (params.id !== "c2") return failure("not_found");
-			await held;
-			const saved = entries.c2 as EntryData;
-			return patchStatus < 400
-				? { entry: { ...saved, version: 2, working: { ...saved.working, metadata: body.metadata } }, warnings: [] }
-				: failure("internal_error", "실패");
-		})
 		.install();
-	return { release: () => release(), api };
 }
 
-const addSeriesB = async () => {
-	render(<BacklinkInput field={field} targetId="post-1" disabled={false} shared={shared} />);
+/** The input with its picks held the way the editor holds them; `set` records every change it asked for. */
+function Picking({
+	field: picked = field,
+	targetId = "post-1",
+	references = shared,
+	initial,
+	error,
+	set,
+}: {
+	field?: BacklinkField;
+	targetId?: string;
+	references?: typeof shared;
+	initial?: BacklinkChange;
+	error?: string;
+	set: (change: BacklinkChange | null) => void;
+}) {
+	const [change, setChange] = useState(initial);
+	return (
+		<BacklinkInput
+			field={picked}
+			targetId={targetId}
+			disabled={false}
+			shared={references}
+			pick={{
+				change,
+				error,
+				set: (next) => {
+					set(next);
+					setChange(next ?? undefined);
+				},
+			}}
+		/>
+	);
+}
+
+const enabledInput = async () => {
 	const input = await screen.findByRole("combobox", { name: "모음집" });
 	await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
-	fireEvent.input(input, { target: { value: "시리즈 B" }, inputType: "insertText" });
-	fireEvent.click(await screen.findByRole("option", { name: "시리즈 B" }));
+	return input;
 };
 
 describe("adding to a collection (inverse relation)", () => {
-	it("WRITE-W7 picking shows it right away without waiting for the save", async () => {
-		const { release, api } = stubApi(200);
-		await addSeriesB();
+	it("WRITE-W7 picking shows the series at once as an unsaved pick, and sends nothing", async () => {
+		const api = stubApi();
+		const set = vi.fn();
+		render(<Picking set={set} />);
+		const input = await enabledInput();
+		fireEvent.input(input, { target: { value: "시리즈 B" }, inputType: "insertText" });
+		fireEvent.click(await screen.findByRole("option", { name: "시리즈 B" }));
 		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
-		// The pick saves series B with this post among its items, before the save answers.
-		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
-		const [save] = api.sent("PATCH /v1/entries/:id");
-		expect(save?.params.id).toBe("c2");
-		expect(save?.body.metadata.itemIds).toEqual(["post-1"]);
-		release();
-		await waitFor(() => expect(shared.refresh).toHaveBeenCalled());
-		expect(screen.queryByRole("alert")).toBeNull();
+		expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c2", title: "시리즈 B" }], remove: [] });
+		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(0);
+	});
+
+	it("WRITE-W7 a pick the save could not write shows its reason below the input, not in a toast", async () => {
+		stubApi();
+		render(<Picking set={vi.fn()} error="실패" />);
+		expect((await screen.findByRole("alert")).textContent).toBe("실패");
 		expect(toast.error).not.toHaveBeenCalled();
 	});
 
-	it("WRITE-W7 if the save fails, reports below the input and reverts", async () => {
-		const { release } = stubApi(500);
-		await addSeriesB();
-		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
-		release();
-		// Reports right below the input like other relation inputs (not a toast).
-		expect((await screen.findByRole("alert")).textContent).toBe("실패");
-		expect(toast.error).not.toHaveBeenCalled();
-		await waitFor(() => expect(screen.queryByText("시리즈 B")).toBeNull());
-		expect(screen.getByText("시리즈 A")).toBeInTheDocument();
+	it("WRITE-W7 once the save wrote the picks, an input that reads its own usages reads them again", async () => {
+		const api = stubApi().on("GET /v1/entries/:id/relations", () => ({ incomingReferences: shared.references }));
+		const view = (change: BacklinkChange | undefined) => (
+			<BacklinkInput
+				field={field}
+				targetId="post-1"
+				disabled={false}
+				pick={{ change, error: undefined, set: vi.fn() }}
+			/>
+		);
+		const { rerender } = render(view({ add: [{ id: "c2", title: "시리즈 B" }], remove: [] }));
+		expect(await screen.findByText("시리즈 B")).toBeInTheDocument();
+		await waitFor(() => expect(api.sent("GET /v1/entries/:id/relations")).toHaveLength(1));
+		rerender(view(undefined));
+		await waitFor(() => expect(api.sent("GET /v1/entries/:id/relations")).toHaveLength(2));
 	});
 });
 
@@ -162,12 +193,9 @@ describe("adding a memo to a collection", () => {
 			}))
 			.install();
 	});
-	const openList = async () => {
-		render(
-			<BacklinkInput field={memoField} targetId="memo-1" disabled={false} shared={{ ...shared, references: [] }} />,
-		);
-		const input = await screen.findByRole("combobox", { name: "모음집" });
-		await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+	const openList = async (set = vi.fn()) => {
+		render(<Picking field={memoField} targetId="memo-1" references={{ ...shared, references: [] }} set={set} />);
+		const input = await enabledInput();
 		fireEvent.mouseDown(input);
 		return input;
 	};
@@ -179,8 +207,9 @@ describe("adding a memo to a collection", () => {
 		);
 	});
 
-	it("WRITE-W5 adding opens the add sheet for a memo-holding collection, and saving creates it as that collection", async () => {
-		const input = await openList();
+	it("WRITE-W5 adding opens the add sheet for a memo-holding collection, creates it as that collection, and picks it", async () => {
+		const set = vi.fn();
+		const input = await openList(set);
 		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
 		fireEvent.click(
 			await screen.findByRole("option", { name: tEntries("relation.create", { label: "새 메모 시리즈" }) }),
@@ -193,10 +222,15 @@ describe("adding a memo to a collection", () => {
 		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		fireEvent.click(within(panel).getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(api.sent("POST /v1/entries").length).toBeGreaterThan(0));
+		// The new series is made empty; putting the memo in it is a pick the memo's save writes.
 		expect(api.sent("POST /v1/entries")[0]?.body).toMatchObject({
 			collection: "collection",
-			metadata: { title: "새 메모 시리즈", itemKind: "memo", memoIds: ["memo-1"] },
+			metadata: { title: "새 메모 시리즈", itemKind: "memo" },
 			doc: emptyStoredDocument(),
 		});
+		expect(api.sent("POST /v1/entries")[0]?.body.metadata.memoIds).toBeUndefined();
+		await waitFor(() =>
+			expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c9", title: "새 메모 시리즈" }], remove: [] }),
+		);
 	});
 });

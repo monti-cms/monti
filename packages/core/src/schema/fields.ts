@@ -124,14 +124,14 @@ export interface ConditionalField<Option extends string = string> extends Omit<B
 /**
  * Reverse relation. Not stored on this content; it shows and changes which of another collection's (`from`) multiple relation fields (`via`)
  * point to this content. Example: the `Collection` in a post's properties panel edits the collection's `itemIds`.
- * The input saves to the other record immediately on click (separate from this content's draft and publish).
+ * A pick is an unsaved change of this content like any other field: the content's save writes it to the other record.
  */
 export interface BacklinkField extends Omit<BaseField, "required" | "localized"> {
 	readonly kind: "backlink";
 	/** Name of the other collection that has the relation field. */
 	readonly from: string;
 	readonly via: string;
-	/** Creates a missing target right away, already containing this content. */
+	/** Creates a missing target right away, empty, and picks it: this content's save puts it in. */
 	readonly createInline?: boolean;
 	readonly placeholder?: string;
 	readonly localized?: undefined;

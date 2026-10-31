@@ -53,6 +53,7 @@ import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
+import type { BacklinkChange } from "./backlink-changes";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import { BacklinkInput, EntryPicker, type FieldInputProps, multilineProps, OrderedEntryList } from "./field-inputs";
 import { FieldView } from "./field-views";
@@ -451,13 +452,26 @@ const BacklinkRow = memo(function BacklinkRow({ name }: RowProps) {
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const entryId = useEntryFormSelector((state) => state.entryId);
 	const groupId = useEntryFormSelector((state) => state.entry?.translationGroupId);
+	const backlinks = useEntryFormSelector((state) => state.backlinks);
 	const field = site.schemaOf(collection).fields[name] as BacklinkField;
 	// On a translation, the original's value is only shown (relations point to the original).
 	const readOnly = Boolean(locked);
 	const targetId = groupId ?? entryId;
+	const set = backlinks?.set;
+	const pick = useMemo(
+		() =>
+			set
+				? {
+						change: backlinks.changes[name],
+						error: backlinks.errors[name],
+						set: (change: BacklinkChange | null) => set(name, change),
+					}
+				: undefined,
+		[backlinks, set, name],
+	);
 	return (
 		<FieldRow id={`cms-${name}`} label={field.label} help={locked ? locked.note : field.description}>
-			<BacklinkInput field={field} targetId={targetId} disabled={disabled || readOnly} />
+			<BacklinkInput field={field} targetId={targetId} disabled={disabled || readOnly} pick={pick} />
 		</FieldRow>
 	);
 });

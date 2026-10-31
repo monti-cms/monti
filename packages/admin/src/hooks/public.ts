@@ -31,6 +31,7 @@ export {
 	useBlockEditor,
 } from "../editor/blocks/use-block-editor";
 export { useLinkPaths } from "../editor/link-targets";
+export type { BacklinkChange } from "../screens/entries/backlink-changes";
 export { localRecoveryStoreOf, type RecoveryRecord, type RecoveryStore } from "../screens/entries/entry-editor-client";
 export type {
 	ConflictInfo,
@@ -54,6 +55,7 @@ export {
 	useEntryEditorContext,
 } from "../screens/entries/use-entry-editor";
 export {
+	type BacklinkPicks,
 	EntryFormProvider,
 	type EntryFormValue,
 	type FieldError,

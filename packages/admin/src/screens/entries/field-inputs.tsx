@@ -15,12 +15,13 @@ import type { Collection } from "@monti-cms/core/site";
 import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { FormFieldError, Stack, Text } from "@monti-cms/ui";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { errorText, isConflict } from "../../api/client";
-import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { errorText } from "../../api/client";
+import { entriesKeys, getEntry, getEntryRelations } from "../../api/entries";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
 import type { TranslatorFor } from "../../translator";
+import { type BacklinkChange, backlinkChangeTo, backlinkShown } from "./backlink-changes";
 import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
@@ -244,39 +245,6 @@ export function backlinkMembers(
 }
 
 /**
- * Changes the other record's relation list (`field.via`) and saves it at once, apart from the draft and publish state of the post. For a record collection, saving is
- * publishing. If the versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
- */
-export async function changeBacklinkRecord(
-	site: Site,
-	field: BacklinkField,
-	recordId: string,
-	change: (ids: string[]) => string[],
-	failed: string,
-): Promise<void> {
-	for (let attempt = 0; attempt < 2; attempt++) {
-		const record = await getEntry<RecordEntry>(site, recordId);
-		const current = record.working.metadata[field.via];
-		const ids = Array.isArray(current) ? current.filter((id): id is string => typeof id === "string") : [];
-		try {
-			await updateEntry(
-				site,
-				recordId,
-				{
-					expectedVersion: record.version,
-					slug: record.workingSlug,
-					metadata: { ...record.working.metadata, [field.via]: change(ids) },
-				},
-				failed,
-			);
-			return;
-		} catch (saveError) {
-			if (!isConflict(saveError) || attempt === 1) throw saveError;
-		}
-	}
-}
-
-/**
  * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
  * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
  * Relations without a condition are not filtered.
@@ -314,9 +282,45 @@ function useRecordKind(field: BacklinkField, options: readonly { id: string }[])
 }
 
 /**
- * Inverse relation input. E.g. a post's `collection`. Saves the other record's (collection's) multi relation field (`itemIds`)
- * immediately on click, independent of this post's draft and publish. Adding appends to the end; removing removes every slot holding this post.
- * If versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
+ * The picks a backlink field shows. Once the save wrote them, the editor drops them, and `refresh` reads the server's records again: until that
+ * read is back the written picks stay on screen, so the field does not show the old records in between. A pick the save could not write (the
+ * field has a reason) is not kept. Without `refresh` nothing is read again (the caller reads them).
+ */
+export function useWrittenPick(
+	pick: { change: BacklinkChange | undefined; error: string | undefined } | undefined,
+	refresh: (() => unknown) | undefined,
+): BacklinkChange | undefined {
+	const change = pick?.change;
+	const error = pick?.error;
+	const [written, setWritten] = useState<BacklinkChange>();
+	const last = useRef<BacklinkChange>(undefined);
+	const mounted = useRef(true);
+	useEffect(
+		() => () => {
+			mounted.current = false;
+		},
+		[],
+	);
+	useEffect(() => {
+		if (change) {
+			last.current = change;
+			return;
+		}
+		const done = last.current;
+		last.current = undefined;
+		if (!done || !refresh) return;
+		if (!error) setWritten(done);
+		void Promise.resolve(refresh()).finally(() => {
+			if (mounted.current) setWritten(undefined);
+		});
+	}, [change, error, refresh]);
+	return change ?? written;
+}
+
+/**
+ * Inverse relation input. E.g. a post's `collection`. A pick is an unsaved change of the post like any other field: `pick` keeps it, and the post's save
+ * writes it to the other record's multi relation field (`itemIds`). Adding appends to the end; removing removes every slot holding this post. Without
+ * `pick` (a form with no entry save behind it) the input only shows the records.
  */
 export function BacklinkInput({
 	id,
@@ -324,6 +328,7 @@ export function BacklinkInput({
 	targetId,
 	disabled,
 	shared,
+	pick,
 	onChange,
 }: {
 	/** The id of the input, so a label (or the properties list) can point to it. */
@@ -333,7 +338,13 @@ export function BacklinkInput({
 	targetId: string | undefined;
 	disabled: boolean;
 	/** Usages of the same post loaded by the properties panel. If present, use them; after saving, reload with `refresh`. */
-	shared?: { references: readonly IncomingReference[]; loading: boolean; refresh: () => void };
+	shared?: { references: readonly IncomingReference[]; loading: boolean; refresh: () => Promise<void> | void };
+	/** The unsaved picks of this field, why the last save could not write them, and the call that changes them. */
+	pick?: {
+		change: BacklinkChange | undefined;
+		error: string | undefined;
+		set: (change: BacklinkChange | null) => void;
+	};
 	/** The person picked or removed a record. */
 	onChange?: () => void;
 }) {
@@ -351,15 +362,14 @@ export function BacklinkInput({
 	});
 	const creator = useRecordCreator();
 	const kind = useRecordKind(field, records.options ?? []);
-	/** Load/save failure. Shown right below the input like other relation inputs. */
-	const [error, setError] = useState<string | null>(null);
+	/** Records created here: their names, before a search lists them. */
+	const createdRef = useRef(new Map<string, string>());
 
 	const membersOf = useCallback(
 		(references: readonly IncomingReference[]) => backlinkMembers(references, field, tc("untitled")),
 		[field, tc],
 	);
 
-	const refreshShared = shared?.refresh;
 	// If the properties panel already loaded this post's usages, do not fetch separately.
 	const usesShared = Boolean(shared);
 	const relationsQuery = useQuery({
@@ -369,14 +379,7 @@ export function BacklinkInput({
 		enabled: Boolean(targetId) && !usesShared,
 		retry: false,
 	});
-	const load = useCallback(async () => {
-		if (!targetId) return;
-		if (refreshShared) {
-			refreshShared();
-			return;
-		}
-		await relationsQuery.refetch();
-	}, [targetId, refreshShared, relationsQuery.refetch]);
+	const refetch = relationsQuery.refetch;
 	const fetched = relationsQuery.data ? membersOf(relationsQuery.data.incomingReferences) : null;
 	const loadError = relationsQuery.error ? errorText(site, relationsQuery.error, t("entry.loadFailed")) : null;
 
@@ -386,48 +389,8 @@ export function BacklinkInput({
 			: membersOf(shared.references)
 		: fetched;
 
-	const update = (recordId: string, change: (ids: string[]) => string[]) =>
-		changeBacklinkRecord(site, field, recordId, change, tc("saveFailed"));
-
-	// On pick or remove, reflect on screen first (optimistic) and save in turn in the background. On failure, notify and revert only that change.
-	const [optimistic, setOptimistic] = useState<string[] | null>(null);
-	const pendingRef = useRef(0);
-	const queueRef = useRef<Promise<void>>(Promise.resolve());
-	const awaitingServerRef = useRef(false);
-	/** Collection just created with this post in it. Not saved again. */
-	const createdRef = useRef(new Set<string>());
-	const serverIds = useMemo(() => members?.map((member) => member.id) ?? [], [members]);
-	const serverKey = serverIds.join(",");
-	const serverIdsRef = useRef(serverIds);
-	serverIdsRef.current = serverIds;
-
-	// When saved server values arrive after all saves finish, drop the optimistic value.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the server ids
-	useEffect(() => {
-		if (awaitingServerRef.current && pendingRef.current === 0) {
-			awaitingServerRef.current = false;
-			setOptimistic(null);
-		}
-	}, [serverKey]);
-
-	const enqueue = (task: () => Promise<void>, failure: string, revert: (ids: string[]) => string[]) => {
-		pendingRef.current += 1;
-		queueRef.current = queueRef.current.then(async () => {
-			try {
-				await task();
-			} catch (taskError) {
-				setError(errorText(site, taskError, failure));
-				setOptimistic((current) => revert(current ?? serverIdsRef.current));
-			} finally {
-				pendingRef.current -= 1;
-				if (pendingRef.current === 0) {
-					awaitingServerRef.current = true;
-					await load();
-				}
-			}
-		});
-	};
-
+	// Without usages from the properties panel the input reads them itself, so it reads them again once the save wrote its picks.
+	const change = useWrittenPick(pick, shared ? undefined : refetch);
 	if (!targetId) {
 		return (
 			<Text as="p" variant="caption" tone="muted">
@@ -436,36 +399,25 @@ export function BacklinkInput({
 		);
 	}
 
-	const shown = optimistic ?? serverIds;
+	const shown = backlinkShown(members ?? [], change);
 	const options = (records.options ?? [])
 		.filter((option) => kind.accepts(option.id))
 		.map((option) => ({ value: option.id, label: option.title }));
 	// Names of the picked values, which a search may not return (a collection just created is not in the public list yet).
 	const known = [
 		...records.known.map((entry) => ({ value: entry.id, label: entry.title })),
-		...(members ?? []).map((member) => ({ value: member.id, label: member.title })),
+		...shown.map((member) => ({ value: member.id, label: member.title })),
 	];
+	const titleOf = (recordId: string) =>
+		createdRef.current.get(recordId) ??
+		[...options, ...known].find((option) => option.value === recordId)?.label ??
+		tc("untitled");
 
-	const change = (next: string[]) => {
-		setError(null);
+	const set = pick?.set;
+	const onValueChange = (next: string[]) => {
+		if (!set) return;
 		onChange?.();
-		const added = next.filter((id) => !shown.includes(id) && !createdRef.current.delete(id));
-		const removed = shown.filter((id) => !next.includes(id));
-		setOptimistic(next);
-		for (const recordId of added) {
-			enqueue(
-				() => update(recordId, (ids) => (ids.includes(targetId) ? ids : [...ids, targetId])),
-				t("backlink.addFailed", { label: field.label }),
-				(ids) => ids.filter((id) => id !== recordId),
-			);
-		}
-		for (const recordId of removed) {
-			enqueue(
-				() => update(recordId, (ids) => ids.filter((id) => id !== targetId)),
-				t("backlink.removeFailed", { label: field.label }),
-				(ids) => (ids.includes(recordId) ? ids : [...ids, recordId]),
-			);
-		}
+		set(backlinkChangeTo(members ?? [], next, titleOf));
 	};
 
 	return (
@@ -479,28 +431,24 @@ export function BacklinkInput({
 				known={known}
 				onSearch={records.search}
 				loading={records.loading || !kind.ready}
-				value={shown}
-				disabled={disabled || members === null || (records.options === null && !records.error)}
-				onValueChange={change}
+				value={shown.map((member) => member.id)}
+				disabled={!set || disabled || members === null || (records.options === null && !records.error)}
+				onValueChange={onValueChange}
 				onCreate={
-					field.createInline
+					field.createInline && set
 						? async (title) => {
-								// Open with this post already in the add field. After saving, reload the options so it shows up in the list right away.
-								const saved = await creator.create(field.from as Collection, title, {
-									...kind.createMetadata,
-									[field.via]: [targetId],
-								});
+								// The new record is made now, empty; putting this post in it is a pick like any other, written by the post's save.
+								const saved = await creator.create(field.from as Collection, title, kind.createMetadata);
 								if (!saved) return null;
-								createdRef.current.add(saved.id);
-								records.remember({ ...optionOf(site, tc("untitled"), field.from, saved), status: saved.status });
-								awaitingServerRef.current = true;
-								void load();
+								const option = optionOf(site, tc("untitled"), field.from, saved);
+								createdRef.current.set(saved.id, option.title);
+								records.remember({ ...option, status: saved.status });
 								return saved.id;
 							}
 						: undefined
 				}
 			/>
-			{(error ?? loadError) && <FormFieldError>{error ?? loadError}</FormFieldError>}
+			{(pick?.error ?? loadError) && <FormFieldError>{pick?.error ?? loadError}</FormFieldError>}
 			<SearchError failed={records.error} />
 			{creator.sheet}
 		</>

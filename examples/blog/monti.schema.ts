@@ -52,8 +52,7 @@ export default defineSchema({
 				series: {
 					kind: "backlink",
 					label: "Series",
-					description:
-						"Saved to the series at once, apart from the draft and publish state of the post. A new post goes to the end of the series.",
+					description: "Saved with the post. A new post goes to the end of the series.",
 					from: "collection",
 					via: "itemIds",
 					createInline: true,
@@ -251,7 +250,7 @@ export default defineSchema({
 					kind: "backlink",
 					label: "Series",
 					description:
-						"Saved to the series at once, apart from the draft and publish state of the memo. Only series that hold memos can be picked, and a new memo goes to the end.",
+						"Saved with the memo. Only series that hold memos can be picked, and a new memo goes to the end.",
 					from: "collection",
 					via: "memoIds",
 					createInline: true,

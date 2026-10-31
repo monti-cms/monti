@@ -214,7 +214,11 @@ export interface EntryEditorClient {
 	get(id: string): Promise<EntryData>;
 	/** A write answers the entry and, apart from it, the warnings the server found (a block's syntax check, for one). They never block. */
 	create(input: EntrySaveInput & { collection: string; folderId?: string }): Promise<EntryWriteResult>;
-	update(id: string, input: EntrySaveInput & { expectedVersion: number }): Promise<EntryWriteResult>;
+	/** Without `doc` the body stays as stored (a record's relation list, written by a post's backlink pick). */
+	update(
+		id: string,
+		input: Omit<EntrySaveInput, "doc"> & Partial<EntryBodyPayload> & { expectedVersion: number },
+	): Promise<EntryWriteResult>;
 	publish(id: string, input: { expectedVersion: number; resetPublishedAt?: boolean }): Promise<EntryWriteResult>;
 	changeStatus(id: string, action: EntryStatusAction, input: { expectedVersion: number }): Promise<void>;
 	duplicate(id: string, input: { title: string }): Promise<EntryWriteResult>;

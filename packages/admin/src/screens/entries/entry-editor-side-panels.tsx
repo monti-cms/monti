@@ -31,7 +31,7 @@ interface InspectorSidePanelProps {
 	editor: EntryEditor;
 	incomingItems: IncomingReferenceItem[];
 	isLoadingIncoming: boolean;
-	onRefreshIncoming: (entryId: string) => void;
+	onRefreshIncoming: (entryId: string) => Promise<void>;
 	focusPath: string | null;
 	onFocused: () => void;
 }
@@ -53,8 +53,8 @@ export function InspectorSidePanel({
 				<InspectorPanel
 					incomingReferences={incomingItems}
 					isLoadingIncomingReferences={isLoadingIncoming}
-					onRefreshIncomingReferences={() => {
-						if (entry) onRefreshIncoming(entry.id);
+					onRefreshIncomingReferences={async () => {
+						if (entry) await onRefreshIncoming(entry.id);
 					}}
 					onSlugChange={editor.setSlug}
 					onRegenerateSlug={editor.regenerateSlug}
