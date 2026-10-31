@@ -129,7 +129,7 @@ describe("load", () => {
 });
 
 describe("the form", () => {
-	it("a change is local: unsaved, dirty, and nothing is sent to the server", async () => {
+	it("WRITE-S1 a change is local: unsaved, dirty, and nothing is sent to the server", async () => {
 		const { editor, client } = await opened();
 		editor().setForm({ title: "가" });
 		expect(editor().form.title).toBe("가");
@@ -138,7 +138,7 @@ describe("the form", () => {
 		expect(client.update).not.toHaveBeenCalled();
 	});
 
-	it("going back to what the server has is saved again, and drops the recovery copy", async () => {
+	it("WRITE-R3 going back to what the server has is saved again, and drops the recovery copy", async () => {
 		const { editor, recovery } = await opened();
 		editor().setForm({ title: "가" });
 		editor().setForm({ title: "테스트" });
@@ -147,7 +147,7 @@ describe("the form", () => {
 		await vi.waitFor(() => expect(recovery.store.delete).toHaveBeenCalledWith(`${ADMIN}:entry-1`));
 	});
 
-	it("regenerates the slug from the title until it is touched by hand, and regenerateSlug starts it again", async () => {
+	it("WRITE-P4 regenerates the slug from the title until it is touched by hand, and regenerateSlug starts it again", async () => {
 		const { editor } = await opened({ target: { mode: "new", collection: "post" }, server: ENTRY });
 		expect(editor().slug.touched).toBe(false);
 		editor().setForm({ title: "Hello World" });
@@ -162,7 +162,7 @@ describe("the form", () => {
 		expect(editor().form.slug).not.toBe("mine");
 	});
 
-	it("an opened entry has a touched slug, so editing the title leaves it alone", async () => {
+	it("WRITE-P4 an opened entry has a touched slug, so editing the title leaves it alone", async () => {
 		const { editor } = await opened();
 		expect(editor().slug.touched).toBe(true);
 		editor().setForm({ title: "Different" });
@@ -181,7 +181,7 @@ describe("the form", () => {
 });
 
 describe("save", () => {
-	it("sends a PATCH with the expected version and the form's metadata, and the entry is saved", async () => {
+	it("WRITE-S1 sends a PATCH with the expected version and the form's metadata, and the entry is saved", async () => {
 		const { editor, client, onSaved } = await opened();
 		editor().setForm({ title: "수정" });
 		const result = await editor().save();
@@ -205,7 +205,7 @@ describe("save", () => {
 		expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-1", version: 5 }), { created: false });
 	});
 
-	it("keeps the warnings of the latest save and publish as state, replaced by the next one", async () => {
+	it("WRITE-P1 keeps the warnings of the latest save and publish as state, replaced by the next one", async () => {
 		const { editor, client } = await opened();
 		expect(editor().bodyWarnings).toEqual([]);
 		const warning = {
@@ -236,14 +236,14 @@ describe("save", () => {
 		expect(editor().bodyWarnings).toEqual([warning]);
 	});
 
-	it("a save with nothing to save sends nothing", async () => {
+	it("WRITE-S3 a save with nothing to save sends nothing", async () => {
 		const { editor, client } = await opened();
 		const result = await editor().save();
 		expect(result).toMatchObject({ ok: true, value: { changed: false } });
 		expect(client.update).not.toHaveBeenCalled();
 	});
 
-	it("sends one request at a time: a second save while one is running shares it", async () => {
+	it("WRITE-S4 sends one request at a time: a second save while one is running shares it", async () => {
 		const { editor, client } = await opened();
 		editor().setForm({ title: "수정" });
 		const [first, second] = await Promise.all([editor().save(), editor().save()]);
@@ -251,7 +251,7 @@ describe("save", () => {
 		expect(client.update).toHaveBeenCalledTimes(1);
 	});
 
-	it("input during a send is unsaved meanwhile, and goes out in the same save once that request ends", async () => {
+	it("WRITE-S4 input during a send is unsaved meanwhile, and goes out in the same save once that request ends", async () => {
 		const { editor, client } = await opened();
 		editor().setForm({ title: "첫째" });
 		const send = client.update.getMockImplementation() as NonNullable<
@@ -279,7 +279,7 @@ describe("save", () => {
 		expect(editor().hasUnsavedChanges).toBe(false);
 	});
 
-	it("shows the language a new entry was saved in as existing right after the first save", async () => {
+	it("WRITE-S1 shows the language a new entry was saved in as existing right after the first save", async () => {
 		const { editor } = await opened({ target: { mode: "new", collection: "post" } });
 		expect(editor().entry?.translations ?? []).toEqual([]);
 		editor().setForm({ title: "새 글" });
@@ -290,7 +290,7 @@ describe("save", () => {
 		expect(members.find((member) => member.id === "created-1")?.locale).toBe("ko");
 	});
 
-	it("creates a new entry with POST (with its folder), asks the UI to move to the edit URL, and drops the new-entry copy", async () => {
+	it("WRITE-S1 creates a new entry with POST (with its folder), asks the UI to move to the edit URL, and drops the new-entry copy", async () => {
 		const { editor, client, onSaved, recovery } = await opened({
 			target: { mode: "new", collection: "post", folderId: "folder-1" },
 		});
@@ -314,7 +314,7 @@ describe("save", () => {
 		expect(client.update).toHaveBeenCalledWith("created-1", expect.objectContaining({ expectedVersion: 1 }));
 	});
 
-	it("sends the document the body editor made, with its block ids", async () => {
+	it("WRITE-S1 sends the document the body editor made, with its block ids", async () => {
 		const doc: StoredDocument = {
 			type: "doc",
 			version: STORED_DOCUMENT_VERSION,
@@ -330,7 +330,7 @@ describe("save", () => {
 		expect(first).not.toHaveProperty("mdx");
 	});
 
-	it("a body that reads the same as the server's is not a change, whatever its block ids and the order of its keys", async () => {
+	it("WRITE-S3 a body that reads the same as the server's is not a change, whatever its block ids and the order of its keys", async () => {
 		const { editor } = await opened();
 		const server = editor().form.doc;
 		const sameContent = {
@@ -342,7 +342,7 @@ describe("save", () => {
 		expect(editor().saveStatus).toBe("saved");
 	});
 
-	it("sends a removed field's value back as stored (orphaned metadata round trip)", async () => {
+	it("WRITE-S8 sends a removed field's value back as stored (orphaned metadata round trip)", async () => {
 		const stored = { title: "테스트", removedField: "left behind", removedList: ["a", "b"] };
 		const { editor, client } = await opened({ server: { ...ENTRY, working: { metadata: stored, doc: docOf("") } } });
 		editor().setForm({ title: "Renamed" });
@@ -368,7 +368,7 @@ describe("save", () => {
 		expect(editor().entry?.version).toBe(5);
 	});
 
-	it("a trashed entry cannot be saved", async () => {
+	it("TRASH-T7 a trashed entry cannot be saved", async () => {
 		const { editor, client } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		expect(editor().readOnly).toBe(true);
 		editor().setForm({ title: "수정" });
@@ -379,7 +379,7 @@ describe("save", () => {
 });
 
 describe("failures are results", () => {
-	it("offline: an `offline` error, kept in the browser as local-only, retryable", async () => {
+	it("WRITE-S5 offline: an `offline` error, kept in the browser as local-only, retryable", async () => {
 		const { editor, client, recovery } = await opened();
 		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 		editor().setForm({ title: "오프라인" });
@@ -392,7 +392,20 @@ describe("failures are results", () => {
 		expect(recovery.records.get(`${ADMIN}:entry-1`)?.snapshot.title).toBe("오프라인");
 	});
 
-	it("offline without a recovery copy: failed, not local-only", async () => {
+	it("WRITE-S5 a retry that cannot reach the server keeps the changes in the browser and sends nothing", async () => {
+		const { editor, client } = await opened();
+		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+		editor().setForm({ title: "오프라인" });
+		await editor().save();
+		client.update.mockClear();
+		client.get.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+		expect(await editor().retry()).toMatchObject({ ok: false, error: { code: "offline" } });
+		expect(editor().saveStatus).toBe("local-only");
+		expect(editor().hasUnsavedChanges).toBe(true);
+		expect(client.update).not.toHaveBeenCalled();
+	});
+
+	it("WRITE-S5 offline without a recovery copy: failed, not local-only", async () => {
 		const { editor, client, recovery } = await opened();
 		recovery.available.current = false;
 		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
@@ -402,7 +415,7 @@ describe("failures are results", () => {
 		expect(editor().saveStatus).toBe("failed");
 	});
 
-	it("session expired: a `session_expired` error, and a retry after signing in sends the changes", async () => {
+	it("WRITE-S5 session expired: a `session_expired` error, and a retry after signing in sends the changes", async () => {
 		const { editor, client } = await opened();
 		client.update.mockRejectedValueOnce(unauthorizedError());
 		editor().setForm({ title: "만료" });
@@ -418,7 +431,7 @@ describe("failures are results", () => {
 		expect(client.update).toHaveBeenCalledTimes(2);
 	});
 
-	it("a refused save (4xx) is a `validation` error with its issues and is not retried on its own", async () => {
+	it("WRITE-S5 a refused save (4xx) is a `validation` error with its issues and is not retried on its own", async () => {
 		const { editor, client } = await opened();
 		const issues = [{ code: "too_long", path: "title", text: "제목이 너무 깁니다." }];
 		client.update.mockRejectedValueOnce(invalidError(issues));
@@ -429,7 +442,7 @@ describe("failures are results", () => {
 		expect(editor().saveError?.message).toBe("title is too long");
 	});
 
-	it("a server error (5xx) keeps the changes in the browser and says it can be retried", async () => {
+	it("WRITE-S5 a server error (5xx) keeps the changes in the browser and says it can be retried", async () => {
 		const { editor, client } = await opened();
 		client.update.mockRejectedValueOnce(serverError());
 		editor().setForm({ title: "서버 오류" });
@@ -438,7 +451,7 @@ describe("failures are results", () => {
 		expect(editor().saveStatus).toBe("local-only");
 	});
 
-	it("retry checks the server version first: a newer one is a conflict, nothing is sent", async () => {
+	it("WRITE-S5 retry checks the server version first: a newer one is a conflict, nothing is sent", async () => {
 		const { editor, client, server } = await opened();
 		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 		editor().setForm({ title: "내 수정" });
@@ -467,7 +480,7 @@ describe("conflict", () => {
 		return { ...ctx, result };
 	}
 
-	it("a 409 is a `conflict` error and state: the server's latest and what this editor holds", async () => {
+	it("WRITE-C1 a 409 is a `conflict` error and state: the server's latest and what this editor holds", async () => {
 		const { editor, result } = await conflicted();
 		expect(result).toMatchObject({ ok: false, error: { code: "conflict" } });
 		expect(editor().saveStatus).toBe("conflict");
@@ -475,7 +488,7 @@ describe("conflict", () => {
 		expect(editor().conflict?.local.title).toBe("내 수정");
 	});
 
-	it("nothing is sent while the conflict stands: save, retry and publish fail with `conflict`", async () => {
+	it("WRITE-C1 nothing is sent while the conflict stands: save, retry and publish fail with `conflict`", async () => {
 		const { editor, client } = await conflicted();
 		client.update.mockClear();
 		client.publish.mockClear();
@@ -485,7 +498,16 @@ describe("conflict", () => {
 		expect(client.publish).not.toHaveBeenCalled();
 	});
 
-	it("overwriteWithMine saves this editor's form on top of the server's version", async () => {
+	it("WRITE-C1 typing while the conflict stands keeps the conflict, and still sends nothing", async () => {
+		const { editor, client } = await conflicted();
+		client.update.mockClear();
+		editor().setForm({ title: "더 고침" });
+		expect(editor().saveStatus).toBe("conflict");
+		expect(await editor().save()).toMatchObject({ ok: false, error: { code: "conflict" } });
+		expect(client.update).not.toHaveBeenCalled();
+	});
+
+	it("WRITE-C3 overwriteWithMine saves this editor's form on top of the server's version", async () => {
 		const { editor, client, server } = await conflicted();
 		client.update.mockClear();
 		const result = await editor().overwriteWithMine();
@@ -500,7 +522,7 @@ describe("conflict", () => {
 		expect(editor().saveStatus).toBe("saved");
 	});
 
-	it("reload loads the server's version into the form and drops the local changes and their recovery copy, without a page reload", async () => {
+	it("WRITE-C2 reload loads the server's version into the form and drops the local changes and their recovery copy, without a page reload", async () => {
 		const { editor, client, recovery } = await conflicted();
 		client.get.mockClear();
 		const result = await editor().reload();
@@ -518,7 +540,7 @@ describe("conflict", () => {
 		expect(client.update).toHaveBeenLastCalledWith("entry-1", expect.objectContaining({ expectedVersion: 9 }));
 	});
 
-	it("a reload that fails changes nothing and says why", async () => {
+	it("WRITE-C2 a reload that fails changes nothing and says why", async () => {
 		const { editor, client } = await conflicted();
 		client.get.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 		const result = await editor().reload();
@@ -527,12 +549,12 @@ describe("conflict", () => {
 		expect(editor().form.title).toBe("내 수정");
 	});
 
-	it("overwriteWithMine and reload without a conflict fail with `invalid_state`", async () => {
+	it("WRITE-C3 overwriteWithMine and reload without a conflict fail with `invalid_state`", async () => {
 		const { editor } = await opened();
 		expect(await editor().overwriteWithMine()).toMatchObject({ ok: false, error: { code: "invalid_state" } });
 	});
 
-	it("a publish that meets a newer version is a conflict state, and the save status is left alone", async () => {
+	it("WRITE-C1 a publish that meets a newer version is a conflict state, and the save status is left alone", async () => {
 		const { editor, client, server } = await opened();
 		server.current = { ...ENTRY, version: 9 };
 		// The editor has nothing unsaved, so publish goes straight to the server with the stale version.
@@ -546,7 +568,7 @@ describe("conflict", () => {
 });
 
 describe("publish", () => {
-	it("saves first, then publishes at the saved version", async () => {
+	it("WRITE-P2 saves first, then publishes at the saved version", async () => {
 		const { editor, client, onSaved } = await opened();
 		editor().setForm({ title: "발행 전 수정" });
 		const result = await editor().publish();
@@ -563,7 +585,7 @@ describe("publish", () => {
 		expect(onSaved).toHaveBeenLastCalledWith(expect.objectContaining({ status: "published" }), { created: false });
 	});
 
-	it("is busy while it runs, and a second publish meanwhile fails with `invalid_state`", async () => {
+	it("WRITE-P2 is busy while it runs, and a second publish meanwhile fails with `invalid_state`", async () => {
 		const { editor, client } = await opened();
 		let release = () => {};
 		client.publish.mockImplementationOnce(
@@ -581,7 +603,7 @@ describe("publish", () => {
 		expect(editor().busy).toBeNull();
 	});
 
-	it("creates a new entry and publishes it", async () => {
+	it("WRITE-P2 creates a new entry and publishes it", async () => {
 		const { editor, client } = await opened({ target: { mode: "new", collection: "memo" } });
 		editor().setForm({ title: "바로 발행" });
 		const result = await editor().publish();
@@ -590,7 +612,7 @@ describe("publish", () => {
 		expect(client.publish).toHaveBeenCalledWith("created-1", { expectedVersion: 1 });
 	});
 
-	it("sends resetPublishedAt only when asked, and returns the warnings", async () => {
+	it("WRITE-P5 sends resetPublishedAt only when asked, and returns the warnings", async () => {
 		const { editor, client } = await opened();
 		client.publish.mockResolvedValueOnce({
 			entry: { ...ENTRY, version: 5, status: "published" },
@@ -601,7 +623,7 @@ describe("publish", () => {
 		expect(result.ok && result.value.warnings).toEqual([{ code: "seo_missing", text: "SEO" }]);
 	});
 
-	it("fills an empty body-filled field from the body, and says which", async () => {
+	it("WRITE-P1 fills an empty body-filled field from the body, and says which", async () => {
 		const server: EntryData = {
 			...ENTRY,
 			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
@@ -615,7 +637,7 @@ describe("publish", () => {
 		expect(editor().form.summary).toBe("소개 본문 첫 문장.");
 	});
 
-	it("does not publish when a body-filled field has no body to come from: a validation error naming the field", async () => {
+	it("WRITE-P1 does not publish when a body-filled field has no body to come from: a validation error naming the field", async () => {
 		const server: EntryData = {
 			...ENTRY,
 			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
@@ -632,7 +654,7 @@ describe("publish", () => {
 		expect(editor().busy).toBeNull();
 	});
 
-	it("a refusal with issues is a validation error and sets publishIssues; the next publish clears them", async () => {
+	it("WRITE-P1 a refusal with issues is a validation error and sets publishIssues; the next publish clears them", async () => {
 		const { editor, client } = await opened();
 		const issues = [{ code: "required", path: "categoryId", text: "카테고리를 입력하세요." }];
 		client.publish.mockRejectedValueOnce(invalidError(issues));
@@ -644,7 +666,7 @@ describe("publish", () => {
 		expect(editor().publishIssues).toEqual([]);
 	});
 
-	it("a save that fails stops the publish and returns that failure", async () => {
+	it("WRITE-P2 a save that fails stops the publish and returns that failure", async () => {
 		const { editor, client } = await opened();
 		client.update.mockRejectedValueOnce(unauthorizedError());
 		editor().setForm({ title: "수정" });
@@ -653,7 +675,7 @@ describe("publish", () => {
 		expect(client.publish).not.toHaveBeenCalled();
 	});
 
-	it("a trashed entry cannot be published", async () => {
+	it("TRASH-T7 a trashed entry cannot be published", async () => {
 		const { editor } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		expect(await editor().publish()).toMatchObject({ ok: false, error: { code: "read_only" } });
 	});
@@ -669,7 +691,7 @@ describe("status changes, duplicate and delete", () => {
 		expect(editor().busy).toBeNull();
 	});
 
-	it("trashing makes the entry read-only; restoring makes it editable again", async () => {
+	it("TRASH-T7 trashing makes the entry read-only; restoring makes it editable again", async () => {
 		const { editor } = await opened();
 		await editor().changeStatus("trash");
 		expect(editor().readOnly).toBe(true);
@@ -711,7 +733,7 @@ describe("status changes, duplicate and delete", () => {
 		expect(await editor().duplicate()).toMatchObject({ ok: false, error: { code: "invalid_state" } });
 	});
 
-	it("deletePermanently deletes at the version and removes the recovery copy", async () => {
+	it("WRITE-R3 deletePermanently deletes at the version and removes the recovery copy", async () => {
 		const { editor, client, recovery } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		const result = await editor().deletePermanently();
 		expect(result.ok).toBe(true);
@@ -719,7 +741,7 @@ describe("status changes, duplicate and delete", () => {
 		expect(recovery.store.delete).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
 	});
 
-	it("a delete the server refuses is an error result and keeps the recovery copy", async () => {
+	it("WRITE-R3 a delete the server refuses is an error result and keeps the recovery copy", async () => {
 		const { editor, client, recovery } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		client.remove.mockRejectedValueOnce(conflictError());
 		expect(await editor().deletePermanently()).toMatchObject({ ok: false, error: { code: "conflict" } });
@@ -732,7 +754,7 @@ describe("recovery copy", () => {
 		vi.useFakeTimers();
 	});
 
-	it("is kept once input pauses, only the last state, and is never sent to the server", async () => {
+	it("WRITE-R1 is kept once input pauses, only the last state, and is never sent to the server", async () => {
 		const ctx = await opened();
 		ctx.editor().setForm({ title: "가" });
 		await vi.advanceTimersByTimeAsync(RECOVERY_IDLE_MS - 1000);
@@ -754,7 +776,7 @@ describe("recovery copy", () => {
 		expect(ctx.client.create).not.toHaveBeenCalled();
 	});
 
-	it("flushRecovery writes the waiting copy right away (leaving the screen, hiding the tab), and stop does too", async () => {
+	it("WRITE-R1 flushRecovery writes the waiting copy right away (leaving the screen, hiding the tab), and stop does too", async () => {
 		const ctx = await opened();
 		ctx.editor().setForm({ title: "떠나기 전" });
 		expect(ctx.recovery.store.put).not.toHaveBeenCalled();
@@ -768,7 +790,7 @@ describe("recovery copy", () => {
 		expect(ctx.recovery.records.get(`${ADMIN}:entry-1`)?.snapshot.title).toBe("닫기 전");
 	});
 
-	it("a save writes the waiting copy first and removes it once the server has the changes", async () => {
+	it("WRITE-R3 a save writes the waiting copy first and removes it once the server has the changes", async () => {
 		const ctx = await opened();
 		ctx.editor().setForm({ title: "저장" });
 		const saving = ctx.editor().save();
@@ -782,7 +804,7 @@ describe("recovery copy", () => {
 		expect(ctx.recovery.records.size).toBe(0);
 	});
 
-	it("stalled browser storage does not hold up the server save", async () => {
+	it("WRITE-S4 stalled browser storage does not hold up the server save", async () => {
 		const ctx = await opened();
 		ctx.recovery.store.put.mockImplementation(() => new Promise<boolean>(() => {}));
 		ctx.editor().setForm({ title: "느린 저장소" });
@@ -792,7 +814,7 @@ describe("recovery copy", () => {
 		expect(ctx.client.update).toHaveBeenCalledTimes(1);
 	});
 
-	it("a save waits for IME composition to end; if no end ever comes it saves after the wait", async () => {
+	it("WRITE-S4 a save waits for IME composition to end; if no end ever comes it saves after the wait", async () => {
 		const ctx = await opened();
 		ctx.editor().setForm({ title: "조합" });
 		ctx.editor().setComposing(true);
@@ -817,7 +839,7 @@ describe("recovery copy", () => {
 });
 
 describe("recovery on open", () => {
-	it("offers a copy made at the server's version as `restore`, and restoring puts it into the form", async () => {
+	it("WRITE-R2 offers a copy made at the server's version as `restore`, and restoring puts it into the form", async () => {
 		const copy = recoveryCopy(ENTRY, { title: "임시 저장한 제목" });
 		const { editor } = await opened({ records: [copy] });
 		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt, form: copy.snapshot });
@@ -830,7 +852,7 @@ describe("recovery on open", () => {
 		expect(editor().slug.touched).toBe(true);
 	});
 
-	it("offers `conflict` when the server changed after the copy was made, with the server's entry", async () => {
+	it("WRITE-R2 offers `conflict` when the server changed after the copy was made, with the server's entry", async () => {
 		const copy = recoveryCopy(ENTRY, { title: "예전 제목" }, { baseVersion: 3 });
 		const { editor } = await opened({ records: [copy] });
 		expect(editor().recovery).toEqual({
@@ -841,7 +863,14 @@ describe("recovery on open", () => {
 		});
 	});
 
-	it("discardRecovery keeps the server's version and deletes the copy", async () => {
+	it("WRITE-R2 loading the server's version over a copy made before it takes the copy's notice away", async () => {
+		const { editor } = await opened({ records: [recoveryCopy(ENTRY, { title: "예전 제목" }, { baseVersion: 3 })] });
+		expect(editor().recovery).toMatchObject({ kind: "conflict" });
+		expect((await editor().reload()).ok).toBe(true);
+		expect(editor().recovery).toBeNull();
+	});
+
+	it("WRITE-R2 discardRecovery keeps the server's version and deletes the copy", async () => {
 		const { editor, recovery } = await opened({ records: [recoveryCopy(ENTRY, { title: "임시" })] });
 		await editor().discardRecovery();
 		expect(editor().recovery).toBeNull();
@@ -849,14 +878,14 @@ describe("recovery on open", () => {
 		expect(recovery.records.has(`${ADMIN}:entry-1`)).toBe(false);
 	});
 
-	it("a copy that already matches the server (a lost save response) is deleted without asking", async () => {
+	it("WRITE-R2 a copy that already matches the server (a lost save response) is deleted without asking", async () => {
 		const matching = recoveryCopy(ENTRY, {});
 		const { editor, recovery } = await opened({ records: [matching] });
 		expect(editor().recovery).toBeNull();
 		expect(recovery.records.has(`${ADMIN}:entry-1`)).toBe(false);
 	});
 
-	it("a copy that matches what the server has now (saved, but the response was lost) is dropped", async () => {
+	it("WRITE-R2 a copy that matches what the server has now (saved, but the response was lost) is dropped", async () => {
 		const saved: EntryData = {
 			...ENTRY,
 			version: 5,
@@ -869,7 +898,7 @@ describe("recovery on open", () => {
 		expect(editor().form.title).toBe("이미 저장됨");
 	});
 
-	it("a new entry offers the copy of its collection when it differs from its base", async () => {
+	it("WRITE-R2 a new entry offers the copy of its collection when it differs from its base", async () => {
 		const base = formFromEntry(testSite, { ...ENTRY, working: { metadata: {}, doc: docOf("") }, workingSlug: null });
 		const snapshot = { ...base, title: "쓰던 글" };
 		const record = {
@@ -891,7 +920,7 @@ describe("recovery on open", () => {
 		expect(ctx.editor().form.title).toBe("쓰던 글");
 	});
 
-	it("an unavailable store is the same as no copy: the editor still opens", async () => {
+	it("WRITE-R2 an unavailable store is the same as no copy: the editor still opens", async () => {
 		const ctx = setup();
 		ctx.recovery.store.get.mockRejectedValueOnce(new Error("blocked"));
 		ctx.core.start();

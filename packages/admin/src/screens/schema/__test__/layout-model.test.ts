@@ -59,7 +59,7 @@ const panel = (collection: Obj) =>
 const LEADING_RUN = [{ fields: ["slug", "summary"] }, { group: "Media", fields: ["cover"] }];
 
 describe("layout tree", () => {
-	it("pins the title, locks fields a plugin placed, and keeps the rest in one run", () => {
+	it("SCHEMA-N5 pins the title, locks fields a plugin placed, and keeps the rest in one run", () => {
 		const tree = read(post());
 		expect(tree.pinned).toEqual(["title"]);
 		expect(shape(tree)).toEqual([
@@ -70,7 +70,7 @@ describe("layout tree", () => {
 		expect(hasTabLevel(read({ ...post(), fields: { title: text("Title"), slug: text("Slug") } }))).toBe(false);
 	});
 
-	it("shows a run of fields in no group where the panel draws it: before, between and after groups", () => {
+	it("SCHEMA-N5 shows a run of fields in no group where the panel draws it: before, between and after groups", () => {
 		const collection = post([
 			{ fields: ["slug", "summary"] },
 			{ group: "Media", fields: ["cover"] },
@@ -81,12 +81,12 @@ describe("layout tree", () => {
 		expect(panel(collection)[0]).toEqual({ tab: DEFAULT, group: null, fields: ["slug", "summary"] });
 	});
 
-	it("puts fields that are in no layout group last in the default tab, after the groups", () => {
+	it("SCHEMA-N5 puts fields that are in no layout group last in the default tab, after the groups", () => {
 		const tree = read(post(LEADING_RUN));
 		expect(shape(tree)[0]?.blocks).toEqual([["slug", "summary"], ["Media", ["cover"]], ["body"]]);
 	});
 
-	it("reads groups into their tabs", () => {
+	it("SCHEMA-N5 reads groups into their tabs", () => {
 		const tree = read(
 			post([
 				{ group: "Media", fields: ["cover"], collapsed: true },
@@ -102,14 +102,14 @@ describe("layout tree", () => {
 		expect(tree.tabs[0]?.blocks[0]?.collapsed).toBe(true);
 	});
 
-	it("never puts the title or a locked field in a group", () => {
+	it("SCHEMA-N5 never puts the title or a locked field in a group", () => {
 		const tree = read(post([{ group: "A", fields: ["title", "seoTitle", "summary"] }]));
 		expect(tree.tabs[0]?.blocks[0]?.fields).toEqual(["summary"]);
 		expect(tree.pinned).toEqual(["title"]);
 		expect(tree.tabs[1]?.locked).toEqual(["seoTitle"]);
 	});
 
-	it("saves what it read without changing what the panel draws, whatever the layout looks like", () => {
+	it("SCHEMA-F13 saves what it read without changing what the panel draws, whatever the layout looks like", () => {
 		for (const layout of [
 			undefined,
 			LEADING_RUN,
@@ -134,7 +134,7 @@ describe("layout tree", () => {
 		}
 	});
 
-	it("leaves everything else where it is when one field moves", () => {
+	it("SCHEMA-N5 leaves everything else where it is when one field moves", () => {
 		const collection = post(LEADING_RUN);
 		const before = panel(collection);
 		const tree = read(collection);
@@ -146,7 +146,7 @@ describe("layout tree", () => {
 		expect(after[1]).toEqual({ tab: DEFAULT, group: "Media", fields: ["cover", "body"] });
 	});
 
-	it("saves the order of the fields and the layout together, and reads the same tree back", () => {
+	it("SCHEMA-N5 saves the order of the fields and the layout together, and reads the same tree back", () => {
 		const collection = post();
 		let tree = read(collection);
 		tree = addGroup(tree, 0, "Media");
@@ -168,7 +168,7 @@ describe("layout tree", () => {
 		expect(shape(roundTrip(collection, tree))).toEqual(shape(tree));
 	});
 
-	it("moves a field out of a group to just after it, and drops it between groups", () => {
+	it("SCHEMA-N5 moves a field out of a group to just after it, and drops it between groups", () => {
 		const collection = post([
 			{ group: "A", fields: ["summary", "cover"] },
 			{ group: "B", fields: ["slug"] },
@@ -191,7 +191,7 @@ describe("layout tree", () => {
 		]);
 	});
 
-	it("moves a field into another group and out to no group, and reorders within a group", () => {
+	it("SCHEMA-N5 moves a field into another group and out to no group, and reorders within a group", () => {
 		const collection = post([
 			{ group: "A", fields: ["summary", "cover"] },
 			{ group: "B", fields: ["slug"] },
@@ -209,7 +209,7 @@ describe("layout tree", () => {
 		expect(shape(tree)[0]?.blocks.at(-1)).toEqual(["body", "summary"]);
 	});
 
-	it("adds, renames, collapses and deletes a group; deleting leaves its fields in place, in no group", () => {
+	it("SCHEMA-N5 adds, renames, collapses and deletes a group; deleting leaves its fields in place, in no group", () => {
 		let tree = addGroup(read(post()), 0, "New");
 		tree = editGroup(tree, { tab: 0, block: 1 }, { title: "Renamed", collapsed: true });
 		expect(tree.tabs[0]?.blocks[1]).toEqual({ title: "Renamed", collapsed: true, fields: [] });
@@ -225,7 +225,7 @@ describe("layout tree", () => {
 		expect(shape(removeGroup(tree, { tab: 0, block: 1 }))[0]?.blocks).toEqual([["slug", "summary", "body", "cover"]]);
 	});
 
-	it("reorders groups with their fields, passing the runs between them", () => {
+	it("SCHEMA-N5 reorders groups with their fields, passing the runs between them", () => {
 		const collection = post([
 			{ group: "A", fields: ["summary"] },
 			{ group: "B", fields: ["cover"] },
@@ -245,7 +245,7 @@ describe("layout tree", () => {
 		expect(shape(roundTrip(collection, moved))).toEqual(shape(moved));
 	});
 
-	it("adds, renames, reorders and removes tabs; the default tab and a tab a plugin fills stay", () => {
+	it("SCHEMA-N5 adds, renames, reorders and removes tabs; the default tab and a tab a plugin fills stay", () => {
 		let tree = read({ ...post(), fields: { title: text("Title"), slug: text("Slug"), cover: text("Cover") } });
 		tree = addTab(tree, "More");
 		tree = addTab(tree, "Other");
@@ -270,7 +270,7 @@ describe("layout tree", () => {
 		expect(renameTab(seo, 1, "Other").tabs[1]?.name).toBe("SEO");
 	});
 
-	it("keeps an empty tab alive through the file", () => {
+	it("SCHEMA-N5 keeps an empty tab alive through the file", () => {
 		const base = { ...post(), fields: { title: text("Title"), slug: text("Slug") } };
 		const saved = withTree(base, addTab(read(base), "Later"));
 		expect(saved.layout).toEqual([{ fields: [], tab: "Later" }]);

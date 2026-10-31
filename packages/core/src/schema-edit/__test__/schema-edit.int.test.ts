@@ -116,7 +116,7 @@ describe("schema settings API", () => {
 			)
 		).rows[0]?.metadata;
 
-	it("reads the file in any mode, and says whether it can be written", async () => {
+	it("SCHEMA-F11 reads the file in any mode, and says whether it can be written", async () => {
 		write(schemaOf({}));
 		const cms = newCms();
 		const production = await (await call(cms, "GET", "schema")).json();
@@ -131,7 +131,7 @@ describe("schema settings API", () => {
 		expect(await (await call(cms, "GET", "schema")).json()).toMatchObject({ access: { writable: true } });
 	});
 
-	it("says where the site URL comes from, and that it is not set when no one set it", async () => {
+	it("SCHEMA-F11 says where the site URL comes from, and that it is not set when no one set it", async () => {
 		write(schemaOf({}));
 		const withUrl = (siteUrlSource: string | undefined, url: string | undefined) =>
 			createCms({
@@ -162,7 +162,7 @@ describe("schema settings API", () => {
 		});
 	});
 
-	it("refuses to write outside development: 403 from both write routes, and the file is untouched", async () => {
+	it("SCHEMA-F11 refuses to write outside development: 403 from both write routes, and the file is untouched", async () => {
 		write(schemaOf({}));
 		const before = text();
 		const cms = newCms();
@@ -177,7 +177,7 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("refuses to write on a server that runs in development mode but looks deployed", async () => {
+	it("SCHEMA-F11 refuses to write on a server that runs in development mode but looks deployed", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.stubEnv("VERCEL", "1");
 		write(schemaOf({}));
@@ -190,7 +190,7 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("also refuses a signed-in user who is not an admin, in development", async () => {
+	it("SCHEMA-F11 also refuses a signed-in user who is not an admin, in development", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));
 		const cms = newCms(false);
@@ -198,7 +198,7 @@ describe("schema settings API", () => {
 		expect((await call(cms, "PUT", "schema", { schema: schemaOf({}), baseHash: "x" })).status).toBe(403);
 	});
 
-	it("adds a field through the API: the whole file is printed again, a later load sees the field, and the running instance has it", async () => {
+	it("SCHEMA-F13 adds a field through the API: the whole file is printed again, a later load sees the field, and the running instance has it", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		// A hand-formatted file with comments: saving writes it again in the printer's form, in the key order of the data.
 		writeFileSync(
@@ -262,7 +262,7 @@ describe("schema settings API", () => {
 		return cms;
 	};
 
-	it("shows the entries a change touches, with a sample, before anything is saved", async () => {
+	it("SCHEMA-F4 shows the entries a change touches, with a sample, before anything is saved", async () => {
 		const cms = await withSummaries();
 		const { schema } = await read(cms);
 		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
@@ -280,7 +280,7 @@ describe("schema settings API", () => {
 		expect(preview.transforms).toEqual([]);
 	});
 
-	it("renames a field with a transform, then drops it only when the writer picks the drop: the values move and go, the transforms are recorded in order, the file follows", async () => {
+	it("SCHEMA-F2 renames a field with a transform, then drops it only when the writer picks the drop: the values move and go, the transforms are recorded in order, the file follows", async () => {
 		const cms = await withSummaries();
 		const { hash, schema } = await read(cms);
 		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
@@ -336,7 +336,7 @@ describe("schema settings API", () => {
 		expect(onDiskData().migrations.map((item: { op: string }) => item.op)).toEqual(["renameField", "dropField"]);
 	});
 
-	it("refuses a file that changed since the edit started", async () => {
+	it("SCHEMA-F10 refuses a file that changed since the edit started", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));
 		const cms = newCms();
@@ -349,7 +349,7 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("reports what is wrong with the path of the value, and writes nothing", async () => {
+	it("SCHEMA-F11 reports what is wrong with the path of the value, and writes nothing", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));
 		const cms = newCms();
@@ -373,7 +373,7 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("is read-only when the file holds code: the screen says why, both write routes answer 403, and the file is untouched", async () => {
+	it("SCHEMA-F11 is read-only when the file holds code: the screen says why, both write routes answer 403, and the file is untouched", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const withSpread = printSchemaFile(schemaOf({})).replace(
 			"export default defineSchema({\n",
@@ -408,13 +408,13 @@ describe("schema settings API", () => {
 		expect(text()).toBe(withSpread);
 	});
 
-	it("does not reload in production", async () => {
+	it("SCHEMA-F11 does not reload in production", async () => {
 		write(schemaOf({}));
 		const cms = newCms();
 		expect(cms.reloadSchema(schemaOf({}))).toEqual({ reloaded: false, reason: "production" });
 	});
 
-	it("reloads the instance in place with the schema it is given, and keeps the last good one for a schema that does not check", async () => {
+	it("SCHEMA-F11 reloads the instance in place with the schema it is given, and keeps the last good one for a schema that does not check", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));
 		const cms = newCms();
@@ -454,7 +454,7 @@ describe("schema settings API", () => {
 			return edited;
 		};
 
-		it("refuses to remove a field that stored entries hold, then saves it when the previewed impact keys are sent", async () => {
+		it("SCHEMA-F4 refuses to remove a field that stored entries hold, then saves it when the previewed impact keys are sent", async () => {
 			const cms = await withStoredEntry();
 			const { hash, schema } = await read(cms);
 			const edited = withoutSummary(schema);
@@ -477,7 +477,7 @@ describe("schema settings API", () => {
 			expect(Object.keys(onDiskData().collections.post.fields)).not.toContain("summary");
 		});
 
-		it("refuses to remove a locale that stored entries use, until the previewed impacts are acknowledged", async () => {
+		it("SCHEMA-C2 refuses to remove a locale that stored entries use, until the previewed impacts are acknowledged", async () => {
 			vi.stubEnv("NODE_ENV", "development");
 			write(
 				schemaOf(
@@ -514,7 +514,7 @@ describe("schema settings API", () => {
 			expect(saved.status).toBe(200);
 		});
 
-		it("moves the translations of a removed language to the trash only when the writer asks: the pick is never a default", async () => {
+		it("SCHEMA-C2 moves the translations of a removed language to the trash only when the writer asks: the pick is never a default", async () => {
 			vi.stubEnv("NODE_ENV", "development");
 			write(
 				schemaOf(
@@ -569,14 +569,14 @@ describe("schema settings API", () => {
 			expect((await cms.store().getEntry(source.id)).status).toBe("draft");
 		});
 
-		it("answers 400 when trashLocales is not a list of language codes", async () => {
+		it("SCHEMA-C2 answers 400 when trashLocales is not a list of language codes", async () => {
 			const cms = await withStoredEntry();
 			const { hash, schema } = await read(cms);
 			const res = await call(cms, "PUT", "schema", { schema, baseHash: hash, trashLocales: [1] });
 			expect(res.status).toBe(400);
 		});
 
-		it("refuses to remove a collection that stored entries belong to, until the previewed impacts are acknowledged", async () => {
+		it("SCHEMA-D2 refuses to remove a collection that stored entries belong to, until the previewed impacts are acknowledged", async () => {
 			const cms = await withStoredEntry();
 			const { hash, schema } = await read(cms);
 			const edited = structuredClone(schema) as unknown as Edit;
@@ -592,7 +592,7 @@ describe("schema settings API", () => {
 			expect(saved.status).toBe(200);
 		});
 
-		it("saves a change that touches no entries without any acknowledgement", async () => {
+		it("SCHEMA-F4 saves a change that touches no entries without any acknowledgement", async () => {
 			vi.stubEnv("NODE_ENV", "development");
 			write(schemaOf({}));
 			const cms = newCms();
@@ -607,7 +607,7 @@ describe("schema settings API", () => {
 			expect(await res.json()).toMatchObject({ saved: true });
 		});
 
-		it("answers 400 when acknowledged is not a list of strings", async () => {
+		it("SCHEMA-F4 answers 400 when acknowledged is not a list of strings", async () => {
 			const cms = await withStoredEntry();
 			const { hash, schema } = await read(cms);
 			for (const acknowledged of ["field_removed:post:summary", [1, 2], [{ key: "x" }]]) {
@@ -655,7 +655,7 @@ describe("schema settings API", () => {
 					.rows[0]?.n,
 			);
 
-		it("tells the screen what each collection holds", async () => {
+		it("SCHEMA-D3 tells the screen what each collection holds", async () => {
 			const { cms } = await withMemos();
 			const state = (await (await call(cms, "GET", "schema")).json()) as { footprints: Record<string, unknown> };
 			expect(state.footprints).toEqual({
@@ -664,7 +664,7 @@ describe("schema settings API", () => {
 			});
 		});
 
-		it("deletes the entries only when the writer asks for it: the pick is never a default", async () => {
+		it("SCHEMA-D2 deletes the entries only when the writer asks for it: the pick is never a default", async () => {
 			const { cms } = await withMemos();
 			const { schema } = await read(cms);
 			const edited = withoutMemo(schema);
@@ -690,7 +690,7 @@ describe("schema settings API", () => {
 			});
 		});
 
-		it("saves a deletion that other collections point at: it cuts those links and deletes everything", async () => {
+		it("SCHEMA-D4 saves a deletion that other collections point at: it cuts those links and deletes everything", async () => {
 			const { cms, first, reader } = await withMemos();
 			const { hash, schema } = await read(cms);
 			// The post still has the relation in the stored data: the edit changes the field, but its value is what points at the memo.
@@ -721,7 +721,7 @@ describe("schema settings API", () => {
 			expect(now.version).toBe(was.version + 1);
 		});
 
-		it("does not save a deletion nobody reviewed", async () => {
+		it("SCHEMA-D1 does not save a deletion nobody reviewed", async () => {
 			const { cms } = await withMemos();
 			const { hash, schema } = await read(cms);
 			const refused = await call(cms, "PUT", "schema", {
@@ -734,7 +734,7 @@ describe("schema settings API", () => {
 			expect(await memoRows()).toBe(2);
 		});
 
-		it("answers 400 when dropCollections is not a list of names", async () => {
+		it("SCHEMA-D2 answers 400 when dropCollections is not a list of names", async () => {
 			const { cms } = await withMemos();
 			const { hash, schema } = await read(cms);
 			const res = await call(cms, "PUT", "schema", { schema, baseHash: hash, dropCollections: [1] });

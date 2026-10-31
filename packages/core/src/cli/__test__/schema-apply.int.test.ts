@@ -81,7 +81,7 @@ describe("schema:diff and schema:apply", () => {
 		return res.rows[0];
 	};
 
-	it("applies a schema change in steps: baseline, diff, dry run, apply, apply again, then refuses a transform that does not fit", async () => {
+	it("SCHEMA-C1 applies a schema change in steps: baseline, diff, dry run, apply, apply again, then refuses a transform that does not fit", async () => {
 		// Baseline: it changes nothing, and writes nothing to the file.
 		{
 			writeFileSync(file, schema({ summary: { kind: "text", label: "Summary" } }));
@@ -187,7 +187,7 @@ describe("schema:diff and schema:apply", () => {
 		}
 	});
 
-	it("lists an added language as a change that touches no entry", async () => {
+	it("SCHEMA-C1 lists an added language as a change that touches no entry", async () => {
 		writeFileSync(file, schema({}));
 		expect((await schemaApply(options())).ok).toBe(true);
 		const both = [
@@ -199,7 +199,7 @@ describe("schema:diff and schema:apply", () => {
 		expect(diff.text.split("\n")).toContain('  - locale "ko" added');
 	});
 
-	it("moves the translations of a removed language to the trash when the file says so, and says so", async () => {
+	it("SCHEMA-C2 moves the translations of a removed language to the trash when the file says so, and says so", async () => {
 		const excerpt = { excerpt: { kind: "text", label: "Excerpt" } };
 		const both = [
 			{ code: "en", name: "English" },
@@ -236,7 +236,7 @@ describe("schema:diff and schema:apply", () => {
 		expect(await statusOf()).toBe("trashed");
 	});
 
-	it("runs through the monti command line", async () => {
+	it("SCHEMA-C1 runs through the monti command line", async () => {
 		writeFileSync(file, schema({}));
 		const lines: string[] = [];
 		// Without a server file the command reports it, like any command that needs the app.

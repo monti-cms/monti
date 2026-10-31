@@ -6,7 +6,7 @@ import { findTitleField, titleFieldOf, titleValue } from "../walk";
 const slug = fields.slug({ label: "Slug" });
 
 describe("the title field of a collection", () => {
-	it("is the field named title when no field has the title role, so existing schemas keep working", () => {
+	it("SCHEMA-S2 is the field named title when no field has the title role, so existing schemas keep working", () => {
 		const schema = defineCollection({
 			label: "Post",
 			kind: "document",
@@ -16,7 +16,7 @@ describe("the title field of a collection", () => {
 		expect(titleValue(schema, { title: "Hello", summary: "x" })).toBe("Hello");
 	});
 
-	it("is the field with the title role, whatever its name", () => {
+	it("SCHEMA-S2 is the field with the title role, whatever its name", () => {
 		const schema = defineCollection({
 			label: "Post",
 			kind: "document",
@@ -26,7 +26,7 @@ describe("the title field of a collection", () => {
 		expect(titleValue(schema, { headline: "Hello", title: "not this" })).toBe("Hello");
 	});
 
-	it("gives null for a title that is not a string, and nothing for a schema without a title field", () => {
+	it("SCHEMA-S2 gives null for a title that is not a string, and nothing for a schema without a title field", () => {
 		const schema = defineCollection({
 			label: "Post",
 			kind: "document",
@@ -43,7 +43,7 @@ describe("the title field of a collection", () => {
 		expect(() => titleFieldOf(untitled)).toThrow(/no title field/);
 	});
 
-	it("is never a field that is not text", () => {
+	it("SCHEMA-S2 is never a field that is not text", () => {
 		const schema = defineCollection({
 			label: "Post",
 			kind: "document",
@@ -73,7 +73,7 @@ describe("the title field is always required", () => {
 		}),
 	);
 
-	it("asks for a title whatever its `required` says, on a document and on an item", () => {
+	it("SCHEMA-S2 asks for a title whatever its `required` says, on a document and on an item", () => {
 		expect(site.missingRequiredIssues("post", { slug: "a", metadata: {} })).toEqual([
 			{ code: "missing_field", path: "headline", message: "Headline" },
 		]);
@@ -82,7 +82,7 @@ describe("the title field is always required", () => {
 		]);
 	});
 
-	it("is satisfied once the title has a value", () => {
+	it("SCHEMA-S2 is satisfied once the title has a value", () => {
 		expect(site.missingRequiredIssues("post", { slug: "a", metadata: { headline: "Hello" } })).toEqual([]);
 	});
 });

@@ -33,14 +33,14 @@ function Screen({ dirty, onNavigate }: { dirty: boolean; onNavigate: () => void 
 }
 
 describe("useUnsavedGuard", () => {
-	it("lets a click on an in-app link through while nothing is unsaved", () => {
+	it("WRITE-S6 lets a click on an in-app link through while nothing is unsaved", () => {
 		const onNavigate = vi.fn();
 		createTestRouter().render(<Screen dirty={false} onNavigate={onNavigate} />);
 		act(() => screen.getByText("media").click());
 		expect(onNavigate).toHaveBeenCalledOnce();
 	});
 
-	it("asks first when something is unsaved, and goes on only when the person discards", async () => {
+	it("WRITE-S6 asks first when something is unsaved, and goes on only when the person discards", async () => {
 		const onNavigate = vi.fn();
 		createTestRouter().render(<Screen dirty onNavigate={onNavigate} />);
 		act(() => screen.getByText("media").click());
@@ -50,7 +50,7 @@ describe("useUnsavedGuard", () => {
 		await waitFor(() => expect(onNavigate).toHaveBeenCalledOnce());
 	});
 
-	it("lets links inside an element marked as staying on the screen through without asking", () => {
+	it("WRITE-S6 lets links inside an element marked as staying on the screen through without asking", () => {
 		const onNavigate = vi.fn();
 		createTestRouter().render(<Screen dirty onNavigate={onNavigate} />);
 		act(() => screen.getByText("locales").click());
@@ -58,7 +58,7 @@ describe("useUnsavedGuard", () => {
 		expect(screen.queryByRole("button", { name: /버리기|Discard/ })).toBeNull();
 	});
 
-	it("stays when the person cancels", async () => {
+	it("WRITE-S6 stays when the person cancels", async () => {
 		const onNavigate = vi.fn();
 		createTestRouter().render(<Screen dirty onNavigate={onNavigate} />);
 		act(() => screen.getByText("media").click());
@@ -67,7 +67,7 @@ describe("useUnsavedGuard", () => {
 		expect(onNavigate).not.toHaveBeenCalled();
 	});
 
-	it("asks the browser before the page is closed while something is unsaved", () => {
+	it("WRITE-S6 asks the browser before the page is closed while something is unsaved", () => {
 		createTestRouter().render(<Screen dirty onNavigate={() => {}} />);
 		const event = new Event("beforeunload", { cancelable: true });
 		window.dispatchEvent(event);

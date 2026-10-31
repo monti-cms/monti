@@ -6,14 +6,14 @@ import { parseSchemaLiteral } from "../literal";
 import { printSchemaFile } from "../print";
 
 describe("printSchemaFile", () => {
-	it("prints the data so that importing the file gives the same data back", async () => {
+	it("SCHEMA-F13 prints the data so that importing the file gives the same data back", async () => {
 		const text = printSchemaFile(blogSchema);
 		expect(await importSchemaText(text)).toEqual(blogSchema);
 		// The file is valid schema content, not only equal data.
 		expect(() => parseSchemaFile(blogSchema)).not.toThrow();
 	});
 
-	it("round-trips awkward values: quotes, escapes, odd keys, unicode, numbers, null and empty containers", async () => {
+	it("SCHEMA-F13 round-trips awkward values: quotes, escapes, odd keys, unicode, numbers, null and empty containers", async () => {
 		const data = {
 			// biome-ignore lint/suspicious/noTemplateCurlyInString: the text holds a literal ${...} on purpose
 			note: 'He said "hi"\nthen\tleft \\   \u{1f600} `tick` ${not}',
@@ -27,7 +27,7 @@ describe("printSchemaFile", () => {
 		expect(literal.ok && literal.value).toEqual(data);
 	});
 
-	it("is deterministic: printing the data read back from the text gives the same text, and key order is kept", () => {
+	it("SCHEMA-F13 is deterministic: printing the data read back from the text gives the same text, and key order is kept", () => {
 		const text = printSchemaFile(blogSchema);
 		const literal = parseSchemaLiteral(text);
 		if (!literal.ok) throw new Error(literal.message);
@@ -40,7 +40,7 @@ describe("printSchemaFile", () => {
 		]);
 	});
 
-	it("writes the one import and the one export, with tabs, trailing commas and unquoted keys", () => {
+	it("SCHEMA-F13 writes the one import and the one export, with tabs, trailing commas and unquoted keys", () => {
 		const text = printSchemaFile({ defaultLocale: "en", collections: { post: { label: "Post", kind: "document" } } });
 		expect(text).toBe(
 			[

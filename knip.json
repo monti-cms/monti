@@ -14,7 +14,7 @@
 			"entry": ["visual/playwright.config.ts", "visual/audit.config.ts", "visual/*.spec.ts"]
 		},
 		"packages/admin": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"],
+			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "vitest.mutation.config.ts"],
 			"ignoreIssues": {
 				"src/ui/**": ["exports", "types"]
 			}

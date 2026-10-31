@@ -53,16 +53,16 @@ const dropSubtitle: SuggestedTransform = { op: "dropField", collection: "post", 
 const trash: SuggestedTransform = { op: "trashLocale", locale: "en" };
 
 describe("requestOf", () => {
-	it("leaves the transforms to the server until a pick is made", () => {
+	it("SCHEMA-F2 leaves the transforms to the server until a pick is made", () => {
 		expect(requestOf({}, [], undefined, [])).toEqual({ schema: {}, transforms: undefined, renames: [] });
 	});
 
-	it("sends the picks that are transforms, without the ones that are not picked", () => {
+	it("SCHEMA-F2 sends the picks that are transforms, without the ones that are not picked", () => {
 		const picks: Picks = { a: rename, b: null, c: dropSubtitle };
 		expect(requestOf({}, [], picks, []).transforms).toEqual([rename, dropSubtitle]);
 	});
 
-	it("sends the languages whose translations go to the trash as trashLocales, not as transforms", () => {
+	it("SCHEMA-C2 sends the languages whose translations go to the trash as trashLocales, not as transforms", () => {
 		const request = requestOf({}, [], { a: rename, b: trash }, ["memo"]);
 		expect(request.trashLocales).toEqual(["en"]);
 		expect(request.transforms).toEqual([rename]);
@@ -72,24 +72,24 @@ describe("requestOf", () => {
 });
 
 describe("deletesValues", () => {
-	it("is true for a collection deleted with its entries", () => {
+	it("SCHEMA-D2 is true for a collection deleted with its entries", () => {
 		expect(deletesValues({}, [], 1)).toBe(true);
 	});
 
-	it("is true when a dropped field has values in some entry and false when none has", () => {
+	it("SCHEMA-F2 is true when a dropped field has values in some entry and false when none has", () => {
 		const picks: Picks = { subtitle: dropSubtitle };
 		expect(deletesValues(picks, [{ key: "subtitle", entries: 132 }], 0)).toBe(true);
 		expect(deletesValues(picks, [{ key: "subtitle", entries: 0 }], 0)).toBe(false);
 	});
 
-	it("is false for keeping values, moving them, or sending translations to the trash", () => {
+	it("SCHEMA-F2 is false for keeping values, moving them, or sending translations to the trash", () => {
 		expect(deletesValues({ a: null, b: rename, c: trash }, [{ key: "a", entries: 5 }], 0)).toBe(false);
 		expect(deletesValues(undefined, [], 0)).toBe(false);
 	});
 });
 
 describe("initialPicks", () => {
-	it("starts from the pick the server made for each decision", () => {
+	it("SCHEMA-F2 starts from the pick the server made for each decision", () => {
 		expect(initialPicks([decision("a", {}, [], { chosen: rename }), decision("b", {}, [])] as never)).toEqual({
 			a: rename,
 			b: null,
@@ -124,7 +124,7 @@ describe("reviewBlocks", () => {
 	];
 	const types = (blocks: ReviewBlock[]) => blocks.map((block) => `${block.type}:${block.key}`);
 
-	it("makes one block of a rename: the added field and the removed one are not listed again", () => {
+	it("SCHEMA-F4 makes one block of a rename: the added field and the removed one are not listed again", () => {
 		const blocks = reviewBlocks({
 			preview: previewOf({
 				decisions: decisions.slice(0, 1),
@@ -145,7 +145,7 @@ describe("reviewBlocks", () => {
 		expect(types(blocks)).toEqual(["rename:field_removed:post:summary"]);
 	});
 
-	it("is a removal, offering the other fields of its kind but not the title, when the writer did not rename it", () => {
+	it("SCHEMA-F4 is a removal, offering the other fields of its kind but not the title, when the writer did not rename it", () => {
 		const blocks = reviewBlocks({
 			preview: previewOf({
 				decisions: [decisions[1]],
@@ -170,7 +170,7 @@ describe("reviewBlocks", () => {
 		expect(blocks[0]).toMatchObject({ type: "removed", field: "subtitle", targets: ["excerpt"] });
 	});
 
-	it("keeps the order: choices first, then addresses and new collections, deleted collections, settings", () => {
+	it("SCHEMA-F4 keeps the order: choices first, then addresses and new collections, deleted collections, settings", () => {
 		const blocks = reviewBlocks({
 			preview: previewOf({
 				decisions,
@@ -225,7 +225,7 @@ describe("reviewBlocks", () => {
 		]);
 	});
 
-	it("does not ask again about a collection the writer deleted, and lists a field made required that was there before", () => {
+	it("SCHEMA-F4 does not ask again about a collection the writer deleted, and lists a field made required that was there before", () => {
 		const blocks = reviewBlocks({
 			preview: previewOf({
 				decisions: [
@@ -245,7 +245,7 @@ describe("reviewBlocks", () => {
 		expect(types(blocks)).toEqual(["required:field_required_changed:post:title"]);
 	});
 
-	it("lists no block for a field that stopped being required", () => {
+	it("SCHEMA-F4 lists no block for a field that stopped being required", () => {
 		const blocks = reviewBlocks({
 			preview: previewOf({
 				impacts: [
@@ -272,7 +272,7 @@ describe("reviewLabels", () => {
 	const draft = { collections: { post: post({ title: field("제목") }) }, locales: [{ code: "ko", name: "한국어" }] };
 	const labels = reviewLabels(draft, saved);
 
-	it("reads names from the draft and falls back to the saved file for what the draft lost", () => {
+	it("SCHEMA-F4 reads names from the draft and falls back to the saved file for what the draft lost", () => {
 		expect(labels.collection("post")).toBe("게시글");
 		expect(labels.collection("memo")).toBe("메모");
 		expect(labels.field("memo", "gone")).toBe("사라진 필드");
@@ -280,7 +280,7 @@ describe("reviewLabels", () => {
 		expect(labels.locale("ko")).toBe("한국어");
 	});
 
-	it("falls back to the identifier and knows the kind of a collection", () => {
+	it("SCHEMA-F4 falls back to the identifier and knows the kind of a collection", () => {
 		expect(labels.collection("nothing")).toBe("nothing");
 		expect(labels.field("post", "nothing")).toBe("nothing");
 		expect(labels.locale("fr")).toBe("fr");
@@ -300,7 +300,7 @@ describe("reviewTarget", () => {
 			...over,
 		}) as ChangeItem;
 
-	it("names the collection when every change is inside one", () => {
+	it("SCHEMA-F4 names the collection when every change is inside one", () => {
 		expect(reviewTarget([item({ collection: "post" }), item({ id: "y", collection: "post" })])).toEqual({
 			kind: "collection",
 			name: "post",
@@ -308,7 +308,7 @@ describe("reviewTarget", () => {
 		});
 	});
 
-	it("names the deleted collections when nothing else changed", () => {
+	it("SCHEMA-F4 names the deleted collections when nothing else changed", () => {
 		const removed = item({
 			collection: "memo",
 			subject: { kind: "collection", name: "memo", label: "메모" },
@@ -317,7 +317,7 @@ describe("reviewTarget", () => {
 		expect(reviewTarget([removed])).toEqual({ kind: "removed", names: ["memo"] });
 	});
 
-	it("names the area for languages, site or admin changes", () => {
+	it("SCHEMA-F4 names the area for languages, site or admin changes", () => {
 		expect(reviewTarget([item({ area: "locales" })])).toEqual({ kind: "area", area: "locales", count: 1 });
 		expect(reviewTarget([item({ area: "site" }), item({ id: "y", area: "site" })])).toEqual({
 			kind: "area",
@@ -326,7 +326,7 @@ describe("reviewTarget", () => {
 		});
 	});
 
-	it("is only the number when the changes spread over several places", () => {
+	it("SCHEMA-F4 is only the number when the changes spread over several places", () => {
 		expect(reviewTarget([item({ collection: "post" }), item({ id: "y", area: "locales" })])).toEqual({
 			kind: "all",
 			count: 2,

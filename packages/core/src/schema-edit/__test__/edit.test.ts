@@ -5,14 +5,14 @@ import { readSchemaScreen } from "../edit";
 const appliedAt = new Date("2026-10-01T09:30:00.000Z");
 
 describe("readSchemaScreen applied", () => {
-	it("says when the schema the store holds was applied", async () => {
+	it("SCHEMA-C3 says when the schema the store holds was applied", async () => {
 		const cms = fakeCms({
 			store: { readSchemaState: async () => ({ schema: {}, appliedAt }), collectionFootprint: async () => ({}) },
 		});
 		expect((await readSchemaScreen(cms)).applied).toEqual({ appliedAt: appliedAt.toISOString() });
 	});
 
-	it("is null for a store that has no schema applied yet, or that cannot be read", async () => {
+	it("SCHEMA-C3 is null for a store that has no schema applied yet, or that cannot be read", async () => {
 		const none = fakeCms({ store: { readSchemaState: async () => null, collectionFootprint: async () => ({}) } });
 		const unreadable = fakeCms({
 			store: {

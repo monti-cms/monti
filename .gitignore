@@ -16,6 +16,8 @@ coverage
 # Mutation testing (`stryker run`): its work folder and reports
 .stryker-tmp
 **/reports/mutation
+# The setup files Stryker writes beside the config and leaves behind when a run is stopped
+**/stryker-setup-*.js
 
 # Bundle files installed by the example app (`pnpm example:pack`)
 examples/blog/vendor

@@ -5,7 +5,7 @@ import { ServiceError } from "../../core/types";
 import { exportBodyText } from "../export-body";
 
 describe("exportBodyText", () => {
-	it("writes a document through a format of the instance, for importing again", async () => {
+	it("DATA-B5 writes a document through a format of the instance, for importing again", async () => {
 		const cms = fakeCms({ formats: [paragraphsFormat] });
 		const document = doc(
 			{ type: "paragraph", content: [{ type: "text", text: "One" }] },
@@ -17,7 +17,7 @@ describe("exportBodyText", () => {
 		});
 	});
 
-	it("keeps the id of a link that cannot be resolved, and fails for a format the instance does not have", async () => {
+	it("DATA-B5 keeps the id of a link that cannot be resolved, and fails for a format the instance does not have", async () => {
 		const missing = "4a1f0b0e-6f3a-4c52-9d0e-1f2a3b4c5d6e";
 		const cms = fakeCms({
 			formats: [paragraphsFormat],

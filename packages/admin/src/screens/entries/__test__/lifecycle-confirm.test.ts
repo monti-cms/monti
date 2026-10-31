@@ -67,12 +67,12 @@ describe("when the trash asks", () => {
 		alongside,
 	});
 
-	it("does not ask for a draft, an archived entry or a trashed one", () => {
+	it("TRASH-T3 does not ask for a draft, an archived entry or a trashed one", () => {
 		for (const status of ["draft", "archived", "trashed"])
 			expect(trashConfirm(testSite, collection, [subject(status)])).toBeNull();
 	});
 
-	it("asks for a published entry, with or without changes after it, and says it goes off the site", () => {
+	it("TRASH-T3 asks for a published entry, with or without changes after it, and says it goes off the site", () => {
 		const ask = trashConfirm(testSite, collection, [subject("published")]);
 		expect(ask).toEqual({
 			title: td("trash.ask.title"),
@@ -82,7 +82,7 @@ describe("when the trash asks", () => {
 		});
 	});
 
-	it("names the translations that go with a published entry, by their language", () => {
+	it("TRASH-T3 names the translations that go with a published entry, by their language", () => {
 		const ask = trashConfirm(testSite, collection, [
 			subject("published", [
 				{ locale: "en", status: "draft" },
@@ -95,30 +95,30 @@ describe("when the trash asks", () => {
 		);
 	});
 
-	it("asks when only a translation is published, with the same two sentences", () => {
+	it("TRASH-T3 asks when only a translation is published, with the same two sentences", () => {
 		const ask = trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "published" }])]);
 		expect(ask?.description).toBe(
 			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages: testSite.localeLabel("en") })}`,
 		);
 	});
 
-	it("does not ask when a draft only has draft translations", () => {
+	it("TRASH-T3 does not ask when a draft only has draft translations", () => {
 		expect(trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "draft" }])])).toBeNull();
 	});
 
-	it("asks once for several rows when any is published, counting those that come down", () => {
+	it("TRASH-T3 asks once for several rows when any is published, counting those that come down", () => {
 		const ask = trashConfirm(testSite, collection, [subject("draft"), subject("published"), subject("published")]);
 		expect(ask?.description).toBe(td("trash.ask.many", { count: 2 }));
 		expect(trashConfirm(testSite, collection, [subject("draft"), subject("archived")])).toBeNull();
 	});
 
-	it("never asks for items such as tags, even though they are published records", () => {
+	it("TRASH-T3 never asks for items such as tags, even though they are published records", () => {
 		const items = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name));
 		expect(items).toEqual(expect.any(String));
 		expect(trashConfirm(testSite, items as string, [subject("published")])).toBeNull();
 	});
 
-	it("reads a list row as its title, its status and the other languages of its group", () => {
+	it("TRASH-T3 reads a list row as its title, its status and the other languages of its group", () => {
 		const row = {
 			id: "src",
 			title: "첫 글",
@@ -132,7 +132,7 @@ describe("when the trash asks", () => {
 		});
 	});
 
-	it("reads the open original as its group's other languages, and a translation as alone", () => {
+	it("TRASH-T3 reads the open original as its group's other languages, and a translation as alone", () => {
 		const original = {
 			...(source as object),
 			collection,

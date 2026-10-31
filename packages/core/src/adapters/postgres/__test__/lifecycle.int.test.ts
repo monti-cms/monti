@@ -45,7 +45,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	});
 
 	describe("2. Transactional Target Recheck & Published References Rollback", () => {
-		it("lets a trash wait for a concurrent draft reference save to the tag, then go through", async () => {
+		it("TRASH-T9 lets a trash wait for a concurrent draft reference save to the tag, then go through", async () => {
 			const tagDraft = await seedEntry(store, {
 				collection: record,
 				slug: `tag-race-${randomUUID()}`,
@@ -96,7 +96,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	});
 
 	describe("4. Timestamps", () => {
-		it("resets the publish time to now only when asked, even without changes", async () => {
+		it("WRITE-P5 resets the publish time to now only when asked, even without changes", async () => {
 			const original = new Date("2023-07-16T15:00:00Z");
 			const post = await seedEntry(store, {
 				collection: content,
@@ -144,7 +144,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 			expect(pub3.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
 		});
 
-		it("publishes with a publish time set beforehand (migrated drafts keep their original date)", async () => {
+		it("WRITE-P5 publishes with a publish time set beforehand (migrated drafts keep their original date)", async () => {
 			const post = await seedEntry(store, {
 				collection: content,
 				slug: "post-preset-date",

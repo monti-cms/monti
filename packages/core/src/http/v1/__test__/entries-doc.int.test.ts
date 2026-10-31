@@ -128,7 +128,7 @@ describe("entry API with a stored document", () => {
 			)
 		).rows[0];
 
-	it("creates an entry from a document, storing the document and no text", async () => {
+	it("WRITE-S1 creates an entry from a document, storing the document and no text", async () => {
 		const doc = sampleDoc();
 
 		const entry = await created({ doc });
@@ -138,7 +138,7 @@ describe("entry API with a stored document", () => {
 		expect(row.doc).toEqual(doc);
 	});
 
-	it("creates an entry from text with its format, and with no body it is empty", async () => {
+	it("WRITE-S1 creates an entry from text with its format, and with no body it is empty", async () => {
 		const fromText = await created({ format: "paragraphs", body: "One\n\nTwo" });
 		expect(contentOf(fromText.working.doc)).toEqual(contentOf(docOf("One\n\nTwo")));
 
@@ -146,13 +146,13 @@ describe("entry API with a stored document", () => {
 		expect(empty.working.doc.content).toEqual([]);
 	});
 
-	it("rejects a create that sends both a body and doc", async () => {
+	it("WRITE-S7 rejects a create that sends both a body and doc", async () => {
 		const res = await post({ format: "paragraphs", body: "Text", doc: sampleDoc() });
 		expect(res.status).toBe(400);
 		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
-	it("rejects a create with a document that is not a stored document", async () => {
+	it("WRITE-S7 rejects a create with a document that is not a stored document", async () => {
 		const doc = sampleDoc();
 		const invalid: unknown[] = [
 			{ ...(doc as object), version: 999 },
@@ -170,7 +170,7 @@ describe("entry API with a stored document", () => {
 		}
 	});
 
-	it("saves a document with a patch", async () => {
+	it("WRITE-S1 saves a document with a patch", async () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
 		const doc = sampleDoc();
 
@@ -220,7 +220,7 @@ describe("entry API with a stored document", () => {
 		);
 	});
 
-	it("keeps the body when a patch sends neither a body nor doc", async () => {
+	it("WRITE-S1 keeps the body when a patch sends neither a body nor doc", async () => {
 		const entry = await created({ doc: sampleDoc() });
 
 		const res = await patch(entry.id, { expectedVersion: entry.version, metadata: entry.working.metadata });
@@ -231,7 +231,7 @@ describe("entry API with a stored document", () => {
 		expect(saved.working.doc).toEqual(entry.working.doc);
 	});
 
-	it("rejects a patch that sends both a body and doc", async () => {
+	it("WRITE-S7 rejects a patch that sends both a body and doc", async () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
 
 		const res = await patch(entry.id, {
@@ -246,7 +246,7 @@ describe("entry API with a stored document", () => {
 		expect((await read(entry.id)).working.doc).toEqual(entry.working.doc);
 	});
 
-	it("rejects a patch with a document that is not a stored document, and changes nothing", async () => {
+	it("WRITE-S7 rejects a patch with a document that is not a stored document, and changes nothing", async () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
 		const doc = sampleDoc();
 
@@ -260,7 +260,7 @@ describe("entry API with a stored document", () => {
 		expect(after.working.doc).toEqual(entry.working.doc);
 	});
 
-	it("rejects a document larger than the limit with 413", async () => {
+	it("WRITE-S7 rejects a document larger than the limit with 413", async () => {
 		const doc = {
 			type: "doc",
 			version: 3,
@@ -271,7 +271,7 @@ describe("entry API with a stored document", () => {
 		expect((await res.json()).error.code).toBe("body_too_large");
 	});
 
-	it("accepts a document larger than the text limit", async () => {
+	it("WRITE-S7 accepts a document larger than the text limit", async () => {
 		// Above the text limit as JSON but within the document limit.
 		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the text limit.
 		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word ".repeat(72).trim() }] };
@@ -284,7 +284,7 @@ describe("entry API with a stored document", () => {
 		expect(res.status).toBe(201);
 	});
 
-	it("saves the document of a read back unchanged: no new version, nothing written", async () => {
+	it("WRITE-S3 saves the document of a read back unchanged: no new version, nothing written", async () => {
 		const entry = await created({ format: "paragraphs", body: "One\n\nTwo" });
 		const before = await storedRow(entry.id);
 		const loaded = await read(entry.id);

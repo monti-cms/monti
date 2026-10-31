@@ -97,7 +97,7 @@ describe("the export dialog", () => {
 	const open = (props: Partial<React.ComponentProps<typeof ExportDialog>> = {}) =>
 		render(<ExportDialog open onOpenChange={vi.fn()} kind="selected" ids={["a", "b", "c"]} noun="글" {...props} />);
 
-	it("says what goes in: the entries picked and the translations that come with them", async () => {
+	it("DATA-B4 says what goes in: the entries picked and the translations that come with them", async () => {
 		serve({ summaries: { admin: { entries: 5, addedByTranslations: 2, folders: 1, addresses: 4, media: 3 } } });
 		open();
 		const headline = await screen.findByTestId("export-headline");
@@ -108,7 +108,7 @@ describe("the export dialog", () => {
 		expect(screen.getByText(t("note.media"))).toBeInTheDocument();
 	});
 
-	it("asks for the picked ids only, and counts again when the scope changes", async () => {
+	it("DATA-B4 asks for the picked ids only, and counts again when the scope changes", async () => {
 		const api = serve({
 			summaries: { admin: { entries: 3 }, public: { entries: 1, notPublished: 2 } },
 		});
@@ -123,7 +123,7 @@ describe("the export dialog", () => {
 		]);
 	});
 
-	it("downloads the archive with the ids, the scope and the format, then toasts", async () => {
+	it("DATA-B4 downloads the archive with the ids, the scope and the format, then toasts", async () => {
 		const api = serve({ summaries: { admin: { entries: 3 } } });
 		const onOpenChange = vi.fn();
 		open({ onOpenChange });
@@ -137,7 +137,7 @@ describe("the export dialog", () => {
 		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 	});
 
-	it("notes that unsaved changes of the open entry are not in the archive", async () => {
+	it("DATA-B4 notes that unsaved changes of the open entry are not in the archive", async () => {
 		serve({ summaries: { admin: { entries: 1 } } });
 		open({ kind: "entry", ids: ["a"], unsaved: true });
 		expect(await screen.findByTestId("export-unsaved")).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe("the Data page", () => {
 			),
 		);
 
-	it("hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
+	it("DATA-B5 hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
 		const api = serve({ formats: [], summaries: { admin: { entries: 1 } } });
 		renderData();
 		expect(await screen.findByTestId("export-no-formats")).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe("the Data page", () => {
 		expect(bodiesTo(api, "POST /v1/export")).toEqual([{ scope: "admin" }]);
 	});
 
-	it("exports everything in the chosen scope and format, and toasts the bodies kept as JSON only", async () => {
+	it("DATA-B1 exports everything in the chosen scope and format, and toasts the bodies kept as JSON only", async () => {
 		const api = serve({ summaries: { admin: { entries: 1 } }, notWritten: 1 });
 		renderData();
 		await screen.findByRole("checkbox", { name: /MDX/ });
@@ -177,7 +177,7 @@ describe("the Data page", () => {
 		expect(saved).toHaveLength(1);
 	});
 
-	it("toasts a failed export", async () => {
+	it("DATA-B6 toasts a failed export", async () => {
 		const api = serve({ summaries: { admin: { entries: 1 } } });
 		api
 			.on("GET /v1/meta", () => ({ formats: [] }))

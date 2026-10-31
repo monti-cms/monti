@@ -151,7 +151,7 @@ describe("write hook contract", () => {
 	const server = (hooks: HookSource["hooks"]): HookSource[] => [{ owner: "server", hooks }];
 
 	describe("transformed data still goes through core", () => {
-		it("stores what the transform returns", async () => {
+		it("WRITE-H1 stores what the transform returns", async () => {
 			sources = server({
 				beforeValidate: ({ metadata, doc }) => ({
 					metadata: { ...metadata, title: String(metadata.title).toUpperCase() },
@@ -163,7 +163,7 @@ describe("write hook contract", () => {
 			expect((await store.getEntry(created.id)).working.metadata.title).toBe("SHOUTING");
 		});
 
-		it("gets the address of the entry, and may change it", async () => {
+		it("WRITE-H1 gets the address of the entry, and may change it", async () => {
 			const seen: (string | null)[] = [];
 			sources = server({
 				beforeValidate: ({ slug, metadata, doc }) => {
@@ -181,7 +181,7 @@ describe("write hook contract", () => {
 			expect(created.workingSlug).toBe("MIXED-CASE");
 		});
 
-		it("validates it: a key the schema does not have is rejected and nothing is stored", async () => {
+		it("WRITE-H1 validates it: a key the schema does not have is rejected and nothing is stored", async () => {
 			sources = server({ beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
 			const before = await entryCount();
 			await expect(service.createDraft(await postInput("Bad"))).rejects.toMatchObject({ code: "invalid_metadata_key" });
@@ -189,7 +189,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it("collects references from it: a media reference added to the body is indexed", async () => {
+		it("WRITE-H1 collects references from it: a media reference added to the body is indexed", async () => {
 			const { id: mediaId } = await store.createMediaAsset({
 				filename: "hook.png",
 				mimeType: "image/png",
@@ -208,7 +208,7 @@ describe("write hook contract", () => {
 			expect(created.working.doc).not.toBeNull();
 		});
 
-		it("applies at publish: the transformed draft is saved and published together, in one transaction", async () => {
+		it("WRITE-P6 applies at publish: the transformed draft is saved and published together, in one transaction", async () => {
 			const draft = await newPost("quiet");
 			sources = server({
 				beforeValidate: ({ metadata, doc }) => ({
@@ -222,7 +222,7 @@ describe("write hook contract", () => {
 			expect(entry.working.metadata.title).toBe("QUIET");
 		});
 
-		it("reports what happened to afterCommit: a saved change then a published one, and only a published one for a plain publish", async () => {
+		it("WRITE-H2 reports what happened to afterCommit: a saved change then a published one, and only a published one for a plain publish", async () => {
 			const changed = await newPost("quiet");
 			sources = server({
 				beforeValidate: ({ metadata, doc }) => ({
@@ -243,7 +243,7 @@ describe("write hook contract", () => {
 			expect(changes.map((change) => [change.kind, change.entryId])).toEqual([["published", plain.id]]);
 		});
 
-		it("leaves the draft and the publish as they were when it fails at publish", async () => {
+		it("WRITE-P6 leaves the draft and the publish as they were when it fails at publish", async () => {
 			const draft = await newPost("quiet");
 			sources = server({
 				beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }),
@@ -258,7 +258,7 @@ describe("write hook contract", () => {
 	});
 
 	describe("extra validation can only add failures", () => {
-		it("blocks a save with the failures it adds, and stores nothing", async () => {
+		it("WRITE-H1 blocks a save with the failures it adds, and stores nothing", async () => {
 			const draft = await newPost();
 			sources = server({ beforeSave: () => ({ issues: [{ code: "no_way", path: "title" }] }) });
 			const error = await service
@@ -271,7 +271,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it("passes warnings through with the result and does not block", async () => {
+		it("WRITE-H1 passes warnings through with the result and does not block", async () => {
 			sources = server({ beforeSave: () => ({ warnings: [{ code: "consider_this" }] }) });
 			const created = await service.createDraft(await postInput("Warned"));
 			expect(created.warnings).toEqual([{ code: "consider_this" }]);
@@ -281,7 +281,7 @@ describe("write hook contract", () => {
 			expect(published.entry.status).toBe("published");
 		});
 
-		it("does not stop the core checks of a publish: a draft that core rejects stays unpublished however the hooks answer", async () => {
+		it("WRITE-H1 does not stop the core checks of a publish: a draft that core rejects stays unpublished however the hooks answer", async () => {
 			// A body that does not parse can be saved as a draft (as an unparsed body), and core publish validation blocks it.
 			const draft = await newPost("Broken", "<<<Unclosed");
 			sources = server({
@@ -298,7 +298,7 @@ describe("write hook contract", () => {
 			expect((await store.getEntry(draft.id)).status).toBe("draft");
 		});
 
-		it("blocks a publish with the failures validatePublish adds, and a save of the same draft still works", async () => {
+		it("WRITE-H1 blocks a publish with the failures validatePublish adds, and a save of the same draft still works", async () => {
 			const draft = await newPost();
 			sources = server({ beforePublish: () => ({ issues: [{ code: "not_ready", path: "title" }] }) });
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
@@ -311,7 +311,7 @@ describe("write hook contract", () => {
 			expect(saved.status).toBe("draft");
 		});
 
-		it("calls validatePublish for a publish and for no other write", async () => {
+		it("WRITE-H1 calls validatePublish for a publish and for no other write", async () => {
 			const seen: WriteOperation[] = [];
 			sources = server({
 				beforePublish: ({ operation }) => {
@@ -344,7 +344,7 @@ describe("write hook contract", () => {
 		it.each([
 			"beforeValidate",
 			"beforeSave",
-		])("fails a create with hook_failed when %s throws: nothing is stored, nothing is sent", async (hook) => {
+		])("WRITE-H2 fails a create with hook_failed when %s throws: nothing is stored, nothing is sent", async (hook) => {
 			sources = [{ owner: "plugin:seo", hooks: failing[hook] }];
 			const before = await entryCount();
 			const error = await service.createDraft(await postInput("Never stored")).catch((e) => e);
@@ -356,7 +356,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it("fails a save the same way and keeps the draft as it was", async () => {
+		it("WRITE-H2 fails a save the same way and keeps the draft as it was", async () => {
 			const draft = await newPost();
 			sources = [{ owner: "server", hooks: failing.beforeValidate }];
 			await expect(
@@ -368,7 +368,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it("fails a publish the same way and keeps the entry a draft", async () => {
+		it("WRITE-H2 fails a publish the same way and keeps the entry a draft", async () => {
 			const draft = await newPost();
 			sources = [{ owner: "server", hooks: failing.beforePublish }];
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
@@ -383,7 +383,7 @@ describe("write hook contract", () => {
 	});
 
 	describe("a failure after the commit never undoes the write", () => {
-		it("keeps a created, saved and published entry when afterCommit throws", async () => {
+		it("WRITE-H2 keeps a created, saved and published entry when afterCommit throws", async () => {
 			afterCommitFails = true;
 			const created = (await service.createDraft(await postInput("Survives"))).entry;
 			expect((await store.getEntry(created.id)).version).toBe(created.version);
@@ -398,7 +398,7 @@ describe("write hook contract", () => {
 			expect(stored.working.metadata.title).toBe("Saved");
 		});
 
-		it("reports a committed publish once, and a blocked one never", async () => {
+		it("WRITE-H2 reports a committed publish once, and a blocked one never", async () => {
 			const draft = await newPost();
 			changes = [];
 			sources = server({ beforePublish: () => ({ issues: [{ code: "no" }] }) });
@@ -507,7 +507,7 @@ describe("write hook contract", () => {
 			for (const name of names) it.skipIf(unavailable.has(name))(`${name}: ${title}`, () => test(name));
 		};
 
-		eachRunner("a transform and both validations see it, with the operation", async (name) => {
+		eachRunner("WRITE-H3 a transform and both validations see it, with the operation", async (name) => {
 			const runner = await runners()[name]();
 			const seen: string[] = [];
 			sources = server({
@@ -529,7 +529,7 @@ describe("write hook contract", () => {
 			expect(seen).toEqual(expected);
 		});
 
-		eachRunner("a failure a hook adds blocks it and nothing is stored", async (name) => {
+		eachRunner("WRITE-H3 a failure a hook adds blocks it and nothing is stored", async (name) => {
 			const runner = await runners()[name]();
 			sources = server({
 				beforeSave: ({ operation }) => ({ issues: operation === runner.operation ? [{ code: "rule_broken" }] : [] }),
@@ -543,7 +543,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		eachRunner("without a failing hook it is committed and reported", async (name) => {
+		eachRunner("WRITE-H3 without a failing hook it is committed and reported", async (name) => {
 			const runner = await runners()[name]();
 			sources = server({ beforeSave: () => ({ issues: [] }) });
 			await runner.run();
@@ -552,7 +552,7 @@ describe("write hook contract", () => {
 	});
 
 	describe("bulk applies the hooks to every item", () => {
-		it("runs them per item and reports each item's own result", async () => {
+		it("WRITE-H3 runs them per item and reports each item's own result", async () => {
 			const drafts = [await newPost("one"), await newPost("two"), await newPost("three")];
 			const seen: (string | undefined)[] = [];
 			sources = server({
@@ -580,7 +580,7 @@ describe("write hook contract", () => {
 			expect((await store.getEntry(drafts[1].id)).status).toBe("draft");
 		});
 
-		it("reports a failing hook per item with hook_failed", async () => {
+		it("WRITE-H3 reports a failing hook per item with hook_failed", async () => {
 			const drafts = [await newPost(), await newPost()];
 			sources = [
 				{
@@ -607,7 +607,7 @@ describe("write hook contract", () => {
 			expect(results[1]).toMatchObject({ id: drafts[1].id, ok: true });
 		});
 
-		it("does not run hooks for a status change that is not a content change", async () => {
+		it("WRITE-H3 does not run hooks for a status change that is not a content change", async () => {
 			const draft = await newPost();
 			const hook = vi.fn();
 			sources = server({ beforeValidate: hook, beforeSave: hook, beforePublish: hook });
@@ -622,7 +622,7 @@ describe("write hook contract", () => {
 	});
 
 	describe("registration order", () => {
-		it("runs the server config's hooks before the plugins' and the plugins in order", async () => {
+		it("WRITE-H3 runs the server config's hooks before the plugins' and the plugins in order", async () => {
 			const order: string[] = [];
 			const tag = (owner: string): HookSource => ({
 				owner,
@@ -661,7 +661,7 @@ describe("write hook contract", () => {
 			}
 		};
 
-		it("runs validate and validatePublish with operation restore, and not transform", async () => {
+		it("TRASH-R7 runs validate and validatePublish with operation restore, and not transform", async () => {
 			const record = await trashedRecord();
 			const seen: string[] = [];
 			const transform = vi.fn();
@@ -680,7 +680,7 @@ describe("write hook contract", () => {
 			expect(transform).not.toHaveBeenCalled();
 		});
 
-		it("is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
+		it("TRASH-R7 is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
 			const record = await trashedRecord();
 			sources = server({ beforePublish: () => ({ issues: [{ code: "publishing_closed" }] }) });
 			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
@@ -693,7 +693,7 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it("is blocked by a validate failure too, and by a hook that throws", async () => {
+		it("WRITE-H1 is blocked by a validate failure too, and by a hook that throws", async () => {
 			const record = await trashedRecord();
 			sources = server({ beforeSave: () => ({ issues: [{ code: "no_restore" }] }) });
 			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
@@ -711,7 +711,7 @@ describe("write hook contract", () => {
 		});
 	});
 
-	it("keeps seeded drafts that bypass core preparation publishable only through the pipeline", async () => {
+	it("WRITE-H1 keeps seeded drafts that bypass core preparation publishable only through the pipeline", async () => {
 		// A raw seed stores values as given; publishing prepares them, so the transform sees the stored draft.
 		const seeded = await seedEntry(store, {
 			collection: contentCollection,

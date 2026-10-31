@@ -86,7 +86,7 @@ describe("schema change: collection path", () => {
 		await closeGlobalPool();
 	});
 
-	it("counts the published entries of the collection whose path changed: not drafts, not trashed ones, not other collections, an edited one once", async () => {
+	it("SCHEMA-A1 counts the published entries of the collection whose path changed: not drafts, not trashed ones, not other collections, an edited one once", async () => {
 		const store = storeFor(after);
 		await applySchemaChange({ site: before, store: storeFor(before), migrations: [] });
 		const plan = await planSchemaChange({ site: after, store, migrations: [] });

@@ -230,7 +230,7 @@ describe("the bar over picked rows", () => {
 		expect(run.mock.calls[0]?.slice(0, 3)).toEqual(["trash", tc("lifecycle.trash"), picked.map(toSelection)]);
 	});
 
-	it("asks before moving a published entry to the trash, and sends nothing when cancelled", async () => {
+	it("TRASH-T3 asks before moving a published entry to the trash, and sends nothing when cancelled", async () => {
 		const { run } = bar({ initial: [row("entry-1", { status: "published" })] });
 		await openMore();
 		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);

@@ -156,7 +156,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 	type Result = { key: string; id: string | null; outcome: string; target: string | null; locale: string };
 	const resultOf = (results: Result[], key: string) => results.find((result) => result.key === key) as Result;
 
-	it("a preview says what would happen and writes nothing", async () => {
+	it("DATA-I1 a preview says what would happen and writes nothing", async () => {
 		const { status, body } = await preview(await exportOf("paragraphs"));
 		expect(status).toBe(200);
 		expect(body.kind).toBe("export");
@@ -190,7 +190,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(body.targets.map((item: { name: string }) => item.name)).toEqual(["post", "memo"]);
 	});
 
-	it("brings the bodies in as text, so the links written as paths find the new entries, and groups the translation", async () => {
+	it("DATA-I4 brings the bodies in as text, so the links written as paths find the new entries, and groups the translation", async () => {
 		const { status, body } = await run(await exportOf("paragraphs"));
 		expect(status).toBe(200);
 		const first = resultOf(body.results, ids.first);
@@ -216,7 +216,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(body.counts).toMatchObject({ imported: 3, skipped: 1, failed: 0 });
 	});
 
-	it("without the choice, nothing is published; with it, only what was published in the archive", async () => {
+	it("DATA-I3 without the choice, nothing is published; with it, only what was published in the archive", async () => {
 		const zip = await exportOf("paragraphs");
 		const plain = await run(zip);
 		const statusOf = async (id: string) => (await target.store.getEntry(id)).status;
@@ -232,7 +232,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(resultOf(published.body.results, ids.first)).toMatchObject({ publish: { status: "done" } });
 	});
 
-	it("reads the stored documents when the archive has no text, and changes the ids of the links to the new ones", async () => {
+	it("DATA-I4 reads the stored documents when the archive has no text, and changes the ids of the links to the new ones", async () => {
 		const { body } = await run(await exportOf());
 		const first = resultOf(body.results, ids.first);
 		const second = resultOf(body.results, ids.second);
@@ -245,7 +245,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		});
 	});
 
-	it("leaves out an image that names a media file this site does not have, and counts it with the images that point elsewhere", async () => {
+	it("DATA-I7 leaves out an image that names a media file this site does not have, and counts it with the images that point elsewhere", async () => {
 		const foreignImage = {
 			type: "image",
 			attrs: { mediaId: "22222222-2222-4222-8222-222222222222", alt: "from another site" },
@@ -270,7 +270,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(doc.content.filter((node) => node.type === "image")).toHaveLength(1);
 	});
 
-	it("a link to an entry that is not imported stays as it was, and the result says so", async () => {
+	it("DATA-I4 a link to an entry that is not imported stays as it was, and the result says so", async () => {
 		await target.service.createDraft({
 			collection: "memo",
 			slug: "second",
@@ -288,7 +288,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(body.results.find((result: { key: string }) => result.key === ids.first).notes[0].code).toBe("links_kept");
 	});
 
-	it("skips an entry whose slug exists, never overwrites, and skips the translation of a skipped source", async () => {
+	it("DATA-I2 skips an entry whose slug exists, never overwrites, and skips the translation of a skipped source", async () => {
 		const zip = await exportOf("paragraphs");
 		await run(zip);
 		const before = await entriesOf(target);
@@ -312,7 +312,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		);
 	});
 
-	it("imports a collection into another one the person picks, or skips it", async () => {
+	it("DATA-I6 imports a collection into another one the person picks, or skips it", async () => {
 		const zip = await exportOf("paragraphs");
 		const moved = await preview(zip, { mapping: JSON.stringify({ memo: "post" }) });
 		expect(moved.body.collections.find((item: { name: string }) => item.name === "memo").target).toBe("post");
@@ -326,7 +326,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(refused.status).toBe(400);
 	});
 
-	it("a failure in a later step leaves the draft and says so", async () => {
+	it("DATA-I8 a failure in a later step leaves the draft and says so", async () => {
 		// A post needs a category before it can be published, and the import does not bring one.
 		const { body } = await run(await exportOf("paragraphs"), {
 			mapping: JSON.stringify({ memo: "post" }),
@@ -343,7 +343,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(body.counts).toMatchObject({ draft: 1, published: 0 });
 	});
 
-	it("reads a zip of .md and .mdx files with front matter, with an optional locale", async () => {
+	it("DATA-I5 reads a zip of .md and .mdx files with front matter, with an optional locale", async () => {
 		const zip = createZipArchive([
 			{
 				path: "memo/hello.md",
@@ -375,7 +375,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(english?.working.metadata.title).toBe("Hello in English");
 	});
 
-	it("refuses a text folder when no installed format reads its files", async () => {
+	it("DATA-I5 refuses a text folder when no installed format reads its files", async () => {
 		const noFormats = await makeSite([]);
 		try {
 			const zip = createZipArchive([{ path: "memo/hello.md", data: encode("---\ntitle: Hello\n---\n\nText\n") }]);
@@ -389,7 +389,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		}
 	});
 
-	it("keeps a text the format cannot read as it is and says so", async () => {
+	it("DATA-I4 keeps a text the format cannot read as it is and says so", async () => {
 		const zip = createZipArchive([
 			{ path: "memo/odd.md", data: encode("---\ntitle: Odd\n---\n\nthis has <<< in it\n") },
 		]);
@@ -401,7 +401,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(body.results[0].notes[0].code).toBe("body_unparsed");
 	});
 
-	it("refuses a file that is not a zip, a request without a file, and a different mode", async () => {
+	it("DATA-I9 refuses a file that is not a zip, a request without a file, and a different mode", async () => {
 		const notZip = await call(upload(encode("hello"), { mode: "preview" }), { cms: target.cms });
 		expect(notZip.status).toBe(400);
 		const noFile = new Request("http://localhost/api/monti/v1/import/entries", {
@@ -418,7 +418,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(badMode.status).toBe(400);
 	});
 
-	it("refuses an upload over the size limit with 413, before reading it", async () => {
+	it("DATA-I9 refuses an upload over the size limit with 413, before reading it", async () => {
 		const request = new Request("http://localhost/api/monti/v1/import/entries", {
 			method: "POST",
 			headers: {
@@ -436,7 +436,7 @@ describe("importing entries (POST /v1/import/entries)", () => {
 });
 
 describe("reading a zip", () => {
-	it("stops at the size the entries inflate to, so a small zip cannot expand without limit", () => {
+	it("DATA-I9 stops at the size the entries inflate to, so a small zip cannot expand without limit", () => {
 		const zip = createZipArchive([{ path: "big.txt", data: new Uint8Array(4 * 1024 * 1024) }]);
 		expect(zip.byteLength).toBeLessThan(64 * 1024);
 		expect(() => readZipArchive(zip, { maxTotalBytes: 1024 * 1024 })).toThrow(/limit/);

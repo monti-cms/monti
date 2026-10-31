@@ -172,7 +172,7 @@ describe("removing a collection with its entries", () => {
 		await closeGlobalPool();
 	});
 
-	it("is a change handled by the transform: a removed collection that deletes its entries", async () => {
+	it("SCHEMA-D4 is a change handled by the transform: a removed collection that deletes its entries", async () => {
 		const store = storeFor(siteAfter);
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
 		expect(plan.problems).toEqual([]);
@@ -190,12 +190,12 @@ describe("removing a collection with its entries", () => {
 		});
 	});
 
-	it("rejects a drop while the schema still has the collection", async () => {
+	it("SCHEMA-D4 rejects a drop while the schema still has the collection", async () => {
 		const plan = await planSchemaChange({ site: siteBefore, store: storeFor(siteBefore), migrations: [drop] });
 		expect(plan.problems.map((problem) => problem.id)).toEqual(["drop-memo"]);
 	});
 
-	it("counts what the removal deletes, with the trash, the translations, the folders and the old addresses", async () => {
+	it("SCHEMA-D3 counts what the removal deletes, with the trash, the translations, the folders and the old addresses", async () => {
 		const store = storeFor(siteAfter);
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
 		const rowsBefore = await memoEntries();
@@ -215,7 +215,7 @@ describe("removing a collection with its entries", () => {
 		expect(removal?.drop?.addresses).toBeGreaterThanOrEqual(2);
 	});
 
-	it("names the entries of other collections that point at it, with the first titles", async () => {
+	it("SCHEMA-D3 names the entries of other collections that point at it, with the first titles", async () => {
 		const store = storeFor(siteAfter);
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
 		const impact = await checkSchemaChange(store, plan.diff, { site: siteAfter, transforms: plan.pending });
@@ -224,7 +224,7 @@ describe("removing a collection with its entries", () => {
 		expect(removal?.drop?.unlinked.sample).toMatchObject([{ id: ids.p1, title: "Reads the memo", collection: "post" }]);
 	});
 
-	it("rolls back the unlink with the rest when the apply fails inside the transaction", async () => {
+	it("SCHEMA-D4 rolls back the unlink with the rest when the apply fails inside the transaction", async () => {
 		const store = storeFor(siteAfter);
 		await expect(
 			store.applySchemaChange({
@@ -242,7 +242,7 @@ describe("removing a collection with its entries", () => {
 		expect(await count("cms_migrations", "name = 'schema:drop-memo'")).toBe(0);
 	});
 
-	it("applies with entries pointing in: unlinks them, then deletes the entries (the trashed one and the translation too), the folders, the addresses and the references in one step", async () => {
+	it("SCHEMA-D4 applies with entries pointing in: unlinks them, then deletes the entries (the trashed one and the translation too), the folders, the addresses and the references in one step", async () => {
 		// p1 reads m1 from a relation field in its working and in its published body, and p4 reads the draft m2 in its working body only.
 		const service = serviceFor(siteBefore);
 		const p1 = await pool.query<{ version: number }>(`SELECT version FROM "${schemaName}".entries WHERE id = $1`, [
@@ -337,7 +337,7 @@ describe("removing a collection with its entries", () => {
 		expect(Object.keys(state.rows[0]?.schema.collections ?? {})).toEqual(["post"]);
 	});
 
-	it("runs once: applying again deletes nothing and the plan has nothing left", async () => {
+	it("SCHEMA-D4 runs once: applying again deletes nothing and the plan has nothing left", async () => {
 		const store = storeFor(siteAfter);
 		await applySchemaChange({ site: siteAfter, store, migrations: [drop] });
 		const again = await applySchemaChange({ site: siteAfter, store, migrations: [drop] });

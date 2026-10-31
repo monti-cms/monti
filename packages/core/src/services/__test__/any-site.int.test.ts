@@ -234,7 +234,7 @@ describe("any site: core content flow", () => {
 			expect(empty.working.metadata[media.name]).toBe("");
 		});
 
-		it("keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)", async () => {
+		it("TRASH-T5 keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)", async () => {
 			if (!collection || !media) return;
 			const legacy = await readyMedia(`${unique("legacy")}.png`);
 			const draft = await draftWith("Legacy share image", "");

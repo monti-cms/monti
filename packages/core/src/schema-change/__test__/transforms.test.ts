@@ -43,7 +43,7 @@ const run = (
 ) => applyTransforms(site, transforms, { collection: "post", ...body }, metadata);
 
 describe("applyTransforms", () => {
-	it("renames a field: the value moves, the rest stays, the input is not touched", () => {
+	it("SCHEMA-F1 renames a field: the value moves, the rest stays, the input is not touched", () => {
 		const input = { title: "T", summary: "S" };
 		const result = run([{ id: "r", op: "renameField", collection: "post", from: "summary", to: "excerpt" }], input);
 		expect(result.metadata).toEqual({ title: "T", excerpt: "S" });
@@ -56,7 +56,7 @@ describe("applyTransforms", () => {
 		).toEqual([]);
 	});
 
-	it("keeps both values and reports it when the new name already holds one", () => {
+	it("SCHEMA-F1 keeps both values and reports it when the new name already holds one", () => {
 		const result = run([{ id: "r", op: "renameField", collection: "post", from: "summary", to: "excerpt" }], {
 			summary: "old",
 			excerpt: "new",
@@ -73,7 +73,7 @@ describe("applyTransforms", () => {
 		).toEqual({ excerpt: "old" });
 	});
 
-	it("chains renames in order", () => {
+	it("SCHEMA-F1 chains renames in order", () => {
 		const result = run(
 			[
 				{ id: "1", op: "renameField", collection: "post", from: "a", to: "b" },
@@ -85,7 +85,7 @@ describe("applyTransforms", () => {
 		expect(result.changedBy).toEqual(["1", "2"]);
 	});
 
-	it("maps a select value, also in a list, without duplicates", () => {
+	it("SCHEMA-F3 maps a select value, also in a list, without duplicates", () => {
 		const map: SchemaMigration = {
 			id: "m",
 			op: "mapOption",
@@ -99,7 +99,7 @@ describe("applyTransforms", () => {
 		expect(run([map], { level: ["mid", "low", "high"] }).metadata).toEqual({ level: ["high", "low"] });
 	});
 
-	it("drops a field's values, only when asked", () => {
+	it("SCHEMA-F2 drops a field's values, only when asked", () => {
 		const drop: SchemaMigration = { id: "d", op: "dropField", collection: "post", field: "legacy" };
 		expect(run([drop], { title: "T", legacy: "x", other: "y" }).metadata).toEqual({ title: "T", other: "y" });
 		expect(run([drop], { title: "T", other: "y" }).changedBy).toEqual([]);
@@ -107,7 +107,7 @@ describe("applyTransforms", () => {
 		expect(run([], { title: "T", legacy: "x" }).metadata).toEqual({ title: "T", legacy: "x" });
 	});
 
-	it("sets a default where there is no value, in a branch only where it shows, and on a translation only for a per-language field", () => {
+	it("SCHEMA-F3 sets a default where there is no value, in a branch only where it shows, and on a translation only for a per-language field", () => {
 		const level: SchemaMigration = { id: "l", op: "setDefault", collection: "post", field: "level", value: "low" };
 		expect(run([level], { title: "T" }).metadata).toEqual({ title: "T", level: "low" });
 		expect(run([level], { title: "T", level: "" }).metadata).toEqual({ title: "T", level: "low" });
@@ -127,7 +127,7 @@ describe("applyTransforms", () => {
 		expect(run([replacement], { policy: "normal" }).changedBy).toEqual([]);
 	});
 
-	it("leaves the bodies of other collections alone", () => {
+	it("SCHEMA-F5 leaves the bodies of other collections alone", () => {
 		const drop: SchemaMigration = { id: "d", op: "dropField", collection: "post", field: "legacy" };
 		expect(run([drop], { legacy: "x" }, { collection: "tag" }).changedBy).toEqual([]);
 	});
@@ -137,7 +137,7 @@ describe("checkTransforms", () => {
 	const problems = (transforms: SchemaMigration[]) =>
 		checkTransforms(site, transforms).map((problem) => problem.message);
 
-	it("accepts transforms that fit the schema after the change", () => {
+	it("SCHEMA-F6 accepts transforms that fit the schema after the change", () => {
 		expect(
 			problems([
 				{ id: "1", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
@@ -148,7 +148,7 @@ describe("checkTransforms", () => {
 		).toEqual([]);
 	});
 
-	it("accepts a chain of renames, and rejects one that points nowhere", () => {
+	it("SCHEMA-F6 accepts a chain of renames, and rejects one that points nowhere", () => {
 		expect(
 			problems([
 				{ id: "1", op: "renameField", collection: "post", from: "a", to: "b" },
@@ -160,7 +160,19 @@ describe("checkTransforms", () => {
 		]);
 	});
 
-	it("rejects a transform that would be wrong", () => {
+	it("SCHEMA-F6 takes a text default up to the field's length, counted in characters, and refuses a longer one", () => {
+		const setDefault = (value: string): SchemaMigration => ({
+			id: "1",
+			op: "setDefault",
+			collection: "post",
+			field: "excerpt",
+			value,
+		});
+		expect(problems([setDefault("가나다라마")])).toEqual([]);
+		expect(problems([setDefault("가나다라마바")])[0]).toMatch(/5 characters at most/);
+	});
+
+	it("SCHEMA-F6 rejects a transform that would be wrong", () => {
 		expect(problems([{ id: "1", op: "dropField", collection: "post", field: "excerpt" }])[0]).toMatch(/still a field/);
 		expect(problems([{ id: "1", op: "renameField", collection: "post", from: "excerpt", to: "level" }])[0]).toMatch(
 			/still a field/,
@@ -193,7 +205,7 @@ describe("checkTransforms", () => {
 });
 
 describe("suggestTransforms", () => {
-	it("offers a drop and the renames that look right for a removed field", () => {
+	it("SCHEMA-F3 offers a drop and the renames that look right for a removed field", () => {
 		expect(
 			suggestTransforms(
 				{ kind: "field_removed", collection: "post", field: "summary", fieldKind: "text" },
@@ -205,7 +217,7 @@ describe("suggestTransforms", () => {
 		]);
 	});
 
-	it("offers each remaining option for a removed option, and a default for a field that became required", () => {
+	it("SCHEMA-F3 offers each remaining option for a removed option, and a default for a field that became required", () => {
 		expect(
 			suggestTransforms(
 				{ kind: "option_removed", collection: "post", field: "level", option: "mid" },
@@ -228,19 +240,19 @@ describe("suggestTransforms", () => {
 describe("dropCollection", () => {
 	const drop: SchemaMigration = { id: "drop-memo", op: "dropCollection", collection: "memo" };
 
-	it("is for a collection the schema no longer has: a collection that is still there is a problem", () => {
+	it("SCHEMA-D4 is for a collection the schema no longer has: a collection that is still there is a problem", () => {
 		expect(checkTransforms(site, [drop])).toEqual([]);
 		expect(checkTransforms(site, [{ ...drop, collection: "post" }])).toMatchObject([{ id: "drop-memo" }]);
 	});
 
-	it("rewrites no body: its rows are deleted by the store, not changed by a transform", () => {
+	it("SCHEMA-D4 rewrites no body: its rows are deleted by the store, not changed by a transform", () => {
 		const result = applyTransforms(site, [drop], { collection: "memo" }, { title: "T" });
 		expect(result).toMatchObject({ metadata: { title: "T" }, changedBy: [] });
 		expect(transformCollections([drop])).toEqual([]);
 		expect(droppedCollections([drop, { ...drop, id: "again" }])).toEqual(["memo"]);
 	});
 
-	it("is what a removed collection offers", () => {
+	it("SCHEMA-D4 is what a removed collection offers", () => {
 		expect(suggestTransforms({ kind: "collection_removed", collection: "memo" })).toEqual([
 			{ op: "dropCollection", collection: "memo" },
 		]);
@@ -250,21 +262,21 @@ describe("dropCollection", () => {
 describe("trashLocale", () => {
 	const trash: SchemaMigration = { id: "trash-ja", op: "trashLocale", locale: "ja" };
 
-	it("is for a language the schema no longer lists: a language that is still there is a problem", () => {
+	it("SCHEMA-C2 is for a language the schema no longer lists: a language that is still there is a problem", () => {
 		expect(checkTransforms(site, [trash])).toEqual([]);
 		for (const locale of site.config.locales.map((item) => item.code)) {
 			expect(checkTransforms(site, [{ ...trash, locale }])).toMatchObject([{ id: "trash-ja" }]);
 		}
 	});
 
-	it("rewrites no body: its rows change status in the store, not through a transform", () => {
+	it("SCHEMA-C2 rewrites no body: its rows change status in the store, not through a transform", () => {
 		const result = applyTransforms(site, [trash], { collection: "post", isTranslation: true }, { title: "T" });
 		expect(result).toMatchObject({ metadata: { title: "T" }, changedBy: [] });
 		expect(transformCollections([trash])).toEqual([]);
 		expect(trashedLocales([trash, { ...trash, id: "again" }])).toEqual(["ja"]);
 	});
 
-	it("is what a removed language offers", () => {
+	it("SCHEMA-C2 is what a removed language offers", () => {
 		expect(suggestTransforms({ kind: "locale_removed", locale: "ja" })).toEqual([{ op: "trashLocale", locale: "ja" }]);
 	});
 });

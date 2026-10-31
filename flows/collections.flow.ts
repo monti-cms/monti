@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 // Flow 4 (🔴): change a collection in the settings, save and apply it, and the editor uses the new schema. The schema screen writes `monti.schema.ts`
 // of the app (`flows/.app`, a copy); a field rename, a new address or a deleted collection are cases checked below this layer.
-test("a field renamed in the collection settings is applied and shown in the post editor", async ({ page }) => {
+test("SCHEMA-F1 a field renamed in the collection settings is applied and shown in the post editor", async ({
+	page,
+}) => {
 	await page.goto("/studio/settings/collections?section=fields");
 	await page.getByRole("button", { name: "summary 필드 편집" }).click();
 	const name = page.getByRole("textbox", { name: "표시 이름" });

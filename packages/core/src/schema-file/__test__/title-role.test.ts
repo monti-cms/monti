@@ -17,7 +17,7 @@ const renamed = () => {
 };
 
 describe("the title role in the schema file", () => {
-	it("is a field role the format reads, and the config built from the file names the title field by it", () => {
+	it("SCHEMA-S2 is a field role the format reads, and the config built from the file names the title field by it", () => {
 		const file = parseSchemaFile(renamed());
 		expect(file.collections.post?.fields.headline).toMatchObject({ kind: "text", role: "title" });
 		const config = defineSite({ schema: renamed() as SchemaTypes });
@@ -25,7 +25,7 @@ describe("the title role in the schema file", () => {
 		expect(createSite(config).titleField("tag").name).toBe("title");
 	});
 
-	it("survives schema:extract from a config in code", () => {
+	it("SCHEMA-S4 survives schema:extract from a config in code", () => {
 		const post = defineCollection({
 			label: "Post",
 			kind: "document",

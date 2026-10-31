@@ -11,7 +11,7 @@
 		"gen:tokens": "node scripts/gen-tokens.mjs",
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:design": "node scripts/check-design.mjs",
-		"check:tests": "node scripts/test-metrics/weak-patterns.mjs --check && node scripts/test-metrics/site-names.mjs --check",
+		"check:tests": "node scripts/test-metrics/weak-patterns.mjs --check && node scripts/test-metrics/site-names.mjs --check && node scripts/test-metrics/requirements.mjs --check",
 		"test:visual": "pnpm --filter @monti-cms/ui test:visual",
 		"test:visual:audit": "pnpm --filter @monti-cms/ui test:visual:audit",
 		"test:visual:update": "pnpm --filter @monti-cms/ui test:visual:update",

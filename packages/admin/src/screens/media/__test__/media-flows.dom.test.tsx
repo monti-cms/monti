@@ -373,7 +373,7 @@ describe("flow: moving many (여러 개 옮기기)", () => {
 		await waitFor(() => expect(screen.queryByRole("toolbar", { name: /./ })).toBeNull());
 	});
 
-	it("sends the picked files to the trash in one request", async () => {
+	it("TRASH-T5 sends the picked files to the trash in one request", async () => {
 		await renderLibrary();
 		pick("desk-morning.jpg");
 		pick("cafe-window.jpg");
@@ -479,7 +479,7 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 });
 
 describe("flow: deleting (지우기)", () => {
-	it("moves a file to the trash at once with the Del key and no question, and the toast's undo puts it back", async () => {
+	it("TRASH-T6 moves a file to the trash at once with the Del key and no question, and the toast's undo puts it back", async () => {
 		await renderLibrary();
 		// The Del key on the tile (the menu of the tile has no trash row).
 		fireEvent.keyDown(tile("cafe-window.jpg"), { key: "Delete" });
@@ -511,7 +511,7 @@ describe("flow: deleting (지우기)", () => {
 		expect(lastList().get("folderId")).toBe("blog");
 	});
 
-	it("moves a folder to the trash with its files, no question, with an undo; one with files in use keeps those and offers to view them", async () => {
+	it("TRASH-T5 moves a folder to the trash with its files, no question, with an undo; one with files in use keeps those and offers to view them", async () => {
 		await renderLibrary();
 		const items = await openMenu(folderTile("covers"));
 		fireEvent.click(items[3] as HTMLElement);

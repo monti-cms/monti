@@ -6,7 +6,7 @@ const parse = (query: string) => parseTrashState(new URLSearchParams(query));
 const DEFAULT_TRASH_STATE = parse("");
 
 describe("the trash's address", () => {
-	it("starts at every kind, the top, no search, newest first, the first page", () => {
+	it("TRASH-B5 starts at every kind, the top, no search, newest first, the first page", () => {
 		expect(DEFAULT_TRASH_STATE).toEqual({
 			kinds: [],
 			folder: null,
@@ -19,7 +19,7 @@ describe("the trash's address", () => {
 		expect(trashStateToSearchParams(DEFAULT_TRASH_STATE).toString()).toBe("");
 	});
 
-	it("writes only what differs from that and reads it back", () => {
+	it("TRASH-B5 writes only what differs from that and reads it back", () => {
 		const state = {
 			...DEFAULT_TRASH_STATE,
 			kinds: ["post", "media"],
@@ -33,12 +33,12 @@ describe("the trash's address", () => {
 		expect(parse(query)).toEqual(state);
 	});
 
-	it("keeps the way back out of nested folders", () => {
+	it("TRASH-B5 keeps the way back out of nested folders", () => {
 		const state = { ...DEFAULT_TRASH_STATE, folder: "c", trail: ["a", "b"] };
 		expect(parse(trashStateToSearchParams(state).toString())).toEqual(state);
 	});
 
-	it("asks the server for the kinds picked at the top, and for the inside of a folder with nothing else", () => {
+	it("TRASH-B3 asks the server for the kinds picked at the top, and for the inside of a folder with nothing else", () => {
 		expect(trashStateToParams({ ...DEFAULT_TRASH_STATE, kinds: ["media"], search: "x" })).toMatchObject({
 			kinds: ["media"],
 			search: "x",

@@ -220,7 +220,7 @@ afterEach(() => {
 });
 
 describe("Data page: choosing a zip", () => {
-	it("opens the import sheet for the file once it is read, and writes nothing", async () => {
+	it("DATA-I1 opens the import sheet for the file once it is read, and writes nothing", async () => {
 		const api = serve();
 		renderData();
 		choose();
@@ -233,7 +233,7 @@ describe("Data page: choosing a zip", () => {
 		expect(restoreModes(api)).toEqual([]);
 	});
 
-	it("refuses a file over the size the server takes, and opens no sheet", async () => {
+	it("DATA-I9 refuses a file over the size the server takes, and opens no sheet", async () => {
 		const api = serve({ limit: 10 });
 		renderData();
 		await waitFor(() => expect(api.sent("GET /v1/meta").length).toBeGreaterThan(0));
@@ -243,7 +243,7 @@ describe("Data page: choosing a zip", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("says on the page that a zip cannot be read, and opens no sheet", async () => {
+	it("DATA-I9 says on the page that a zip cannot be read, and opens no sheet", async () => {
 		serve({ importPreviewStatus: 400 });
 		renderData();
 		choose();
@@ -253,7 +253,7 @@ describe("Data page: choosing a zip", () => {
 });
 
 describe("Import sheet", () => {
-	it("imports from its pill and shows the result in the same sheet, with a link to the list", async () => {
+	it("DATA-I3 imports from its pill and shows the result in the same sheet, with a link to the list", async () => {
 		const api = serve();
 		renderData();
 		choose();
@@ -274,7 +274,7 @@ describe("Import sheet", () => {
 		expect(within(sheet).queryByRole("button", { name: tc("cancel") })).toBeNull();
 	});
 
-	it("cannot be left while it imports: no close button, and Escape does nothing", async () => {
+	it("DATA-I10 cannot be left while it imports: no close button, and Escape does nothing", async () => {
 		let finish: () => void = () => undefined;
 		const importRun = new Promise<void>((resolve) => {
 			finish = resolve;
@@ -298,7 +298,7 @@ describe("Import sheet", () => {
 });
 
 describe("Restore sheet", () => {
-	it("opens for a full backup on an empty site, and restores from its pill with the result in the sheet", async () => {
+	it("DATA-R1 opens for a full backup on an empty site, and restores from its pill with the result in the sheet", async () => {
 		const api = serve({ empty: true });
 		renderData();
 		choose(new File(["zip"], "monti-backup.zip", { type: "application/zip" }));
@@ -324,7 +324,7 @@ describe("Restore sheet", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
-	it("lists the problems and keeps its pill off while any is left", async () => {
+	it("DATA-R3 lists the problems and keeps its pill off while any is left", async () => {
 		serve({
 			empty: true,
 			restorePreview: {
@@ -354,7 +354,7 @@ describe("Restore sheet", () => {
 		).toBe(true);
 	});
 
-	it("shows the server's message when the restore is refused, and stays open", async () => {
+	it("DATA-R8 shows the server's message when the restore is refused, and stays open", async () => {
 		serve({ empty: true, restoreRunStatus: 409 });
 		renderData();
 		choose();

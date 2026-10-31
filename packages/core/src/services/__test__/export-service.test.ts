@@ -59,7 +59,7 @@ const withMoreEntries = () => {
 };
 
 describe("export archive builder", () => {
-	it("the admin archive contains drafts, published copies, relations and settings", () => {
+	it("DATA-B1 the admin archive contains drafts, published copies, relations and settings", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), {
 			site: testSite,
 			scope: "admin",
@@ -109,7 +109,7 @@ describe("export archive builder", () => {
 		expect(manifest.entries[0]?.files.length).toBeGreaterThan(0);
 	});
 
-	it("the public archive does not include draft bodies or admin-only values", () => {
+	it("DATA-B3 the public archive does not include draft bodies or admin-only values", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), {
 			site: testSite,
 			scope: "public",
@@ -148,7 +148,7 @@ describe("export archive builder", () => {
 		expect(archive.text("media.json")).not.toContain("working-only.png");
 	});
 
-	it("the public archive does not export the leftover published copy of archived/trashed items", () => {
+	it("DATA-B3 the public archive does not export the leftover published copy of archived/trashed items", () => {
 		const snapshot = makeSnapshot();
 		const archived = snapshot.entries.find((entry) => entry.status === "archived");
 		expect(archived?.published).toMatchObject({ contentHash: "hash-published-3" });
@@ -171,7 +171,7 @@ describe("export archive builder", () => {
 		}
 	});
 
-	it("the item digest changes even when only the references change", () => {
+	it("DATA-B2 the item digest changes even when only the references change", () => {
 		const snapshot = makeSnapshot();
 		const base = buildExportArchive(snapshot, { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 		const changedReferences = {
@@ -187,7 +187,7 @@ describe("export archive builder", () => {
 		expect(changed.digest).not.toBe(base.digest);
 	});
 
-	it("the same input and the same exportedAt give identical bytes", () => {
+	it("DATA-B2 the same input and the same exportedAt give identical bytes", () => {
 		const first = buildExportArchive(makeSnapshot(), {
 			site: testSite,
 			scope: "admin",
@@ -203,7 +203,7 @@ describe("export archive builder", () => {
 		expect(Array.from(first.zip)).toEqual(Array.from(second.zip));
 	});
 
-	it("gives the same bytes whatever order the store lists the entries in", () => {
+	it("DATA-B2 gives the same bytes whatever order the store lists the entries in", () => {
 		const { fixture, entries } = withMoreEntries();
 		const options = { site: testSite, scope: "admin", exportedAt: FIXED_TIME, archiveModifiedAt: FIXED_TIME } as const;
 		const bytes = (order: typeof entries) =>
@@ -215,7 +215,7 @@ describe("export archive builder", () => {
 		}
 	});
 
-	it("lists the entries of the manifest by collection, then by id", () => {
+	it("DATA-B2 lists the entries of the manifest by collection, then by id", () => {
 		const { fixture, entries } = withMoreEntries();
 		const { manifest } = buildExportArchive(
 			{ ...fixture, entries: [...entries].reverse() },
@@ -231,7 +231,7 @@ describe("export archive builder", () => {
 		expect(listed).toEqual(byCollectionThenId);
 	});
 
-	it("the digest is not affected by exportedAt and changes when the content changes", () => {
+	it("DATA-B2 the digest is not affected by exportedAt and changes when the content changes", () => {
 		const base = buildExportArchive(makeSnapshot(), { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 		const later = buildExportArchive(makeSnapshot(), {
 			site: testSite,
@@ -249,7 +249,7 @@ describe("export archive builder", () => {
 		);
 	});
 
-	it("the admin archive is format version 6 and writes the document, the only body", () => {
+	it("DATA-B1 the admin archive is format version 6 and writes the document, the only body", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), {
 			site: testSite,
 			scope: "admin",
@@ -282,7 +282,7 @@ describe("export archive builder", () => {
 		expect(manifest.counts.files).toBe(manifest.files.length);
 	});
 
-	it("every body has a document file, a body that could not become a document included (as an unparsed node)", () => {
+	it("DATA-B1 every body has a document file, a body that could not become a document included (as an unparsed node)", () => {
 		const snapshot = makeSnapshot();
 		const draft = snapshot.entries.find((entry) => entry.id === DRAFT_ID);
 		if (!draft) throw new Error("fixture");
@@ -304,7 +304,7 @@ describe("export archive builder", () => {
 		});
 	});
 
-	it("templates.json carries the document of each template, and no text", () => {
+	it("DATA-B1 templates.json carries the document of each template, and no text", () => {
 		const { zip } = buildExportArchive(makeSnapshot(), { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 		const templates = JSON.parse(readAll(zip).text("templates.json")) as { doc: unknown }[];
 
@@ -327,7 +327,7 @@ describe("export archive builder", () => {
 			notWritten: [],
 		};
 
-		it("the admin archive also holds each body as a file of that format, named by the format's extension", () => {
+		it("DATA-B5 the admin archive also holds each body as a file of that format, named by the format's extension", () => {
 			const { manifest, zip } = buildExportArchive(makeSnapshot(), {
 				site: testSite,
 				scope: "admin",
@@ -350,7 +350,7 @@ describe("export archive builder", () => {
 			expect(templates[0]).toMatchObject({ body: "template text", doc: fixtureDocument("## 문제") });
 		});
 
-		it("the public archive holds the published text of the published items only", () => {
+		it("DATA-B3 the public archive holds the published text of the published items only", () => {
 			const { zip } = buildExportArchive(makeSnapshot(), {
 				site: testSite,
 				scope: "public",
@@ -365,7 +365,7 @@ describe("export archive builder", () => {
 			for (const path of archive.paths) expect(archive.text(path)).not.toContain("working text");
 		});
 
-		it("the same documents give the same digest whether or not text files are added", () => {
+		it("DATA-B2 the same documents give the same digest whether or not text files are added", () => {
 			const plain = buildExportArchive(makeSnapshot(), { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 			const withText = buildExportArchive(makeSnapshot(), {
 				site: testSite,
@@ -380,7 +380,7 @@ describe("export archive builder", () => {
 		});
 	});
 
-	it("the admin digests change when only the document changes", () => {
+	it("DATA-B2 the admin digests change when only the document changes", () => {
 		const base = buildExportArchive(makeSnapshot(), { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 		const changeDoc = (state: "working" | "published") => {
 			const snapshot = makeSnapshot();
@@ -411,7 +411,7 @@ describe("export archive builder", () => {
 		);
 	});
 
-	it("the public archive carries the published document, and its digests depend on it", () => {
+	it("DATA-B3 the public archive carries the published document, and its digests depend on it", () => {
 		const options = { site: testSite, scope: "public", exportedAt: FIXED_TIME } as const;
 		const base = buildExportArchive(makeSnapshot(), options);
 		const archive = readAll(base.zip);
@@ -441,7 +441,7 @@ describe("export archive builder", () => {
 		expect(entryOf(without.manifest)?.publishedDigest).not.toBe(entryOf(base.manifest)?.publishedDigest);
 	});
 
-	it("the public projection schema rejects a mix of draft fields", () => {
+	it("DATA-B3 the public projection schema rejects a mix of draft fields", () => {
 		const valid = publicExportEntrySchema.safeParse({
 			id: "11111111-1111-4111-8111-111111111111",
 			collection: CONTENT,
@@ -468,10 +468,10 @@ describe("export archive builder", () => {
 		expect(withWorking.success).toBe(false);
 	});
 
-	it("canonicalJson does not depend on key order", () => {
+	it("DATA-B2 canonicalJson does not depend on key order", () => {
 		expect(canonicalJson({ b: 1, a: [2, { d: 3, c: 4 }] })).toBe(canonicalJson({ a: [2, { c: 4, d: 3 }], b: 1 }));
 	});
-	it("the public archive removes admin-only keys from nested metadata", () => {
+	it("DATA-B3 the public archive removes admin-only keys from nested metadata", () => {
 		const snapshot = makeSnapshot();
 		const withInternals = {
 			...snapshot,
@@ -502,7 +502,7 @@ describe("export archive builder", () => {
 		expect(JSON.parse(publicJson).metadata.title).toBe("게시글");
 	});
 
-	it("the archive digest changes even when only the settings change", () => {
+	it("DATA-B2 the archive digest changes even when only the settings change", () => {
 		const base = buildExportArchive(makeSnapshot(), { site: testSite, scope: "admin", exportedAt: FIXED_TIME });
 		const changedPreferences = {
 			...makeSnapshot(),
@@ -520,11 +520,11 @@ describe("export archive builder", () => {
 			buildExportArchive(changedFolders, { site: testSite, scope: "admin", exportedAt: FIXED_TIME }).digest,
 		).not.toBe(base.digest);
 	});
-	it("a collection without an allowlist fails in the public projection", () => {
+	it("DATA-B3 a collection without an allowlist fails in the public projection", () => {
 		expect(() => pickPublicMetadata(testSite, "unknown-collection", { title: "x" })).toThrow(/allowlist/);
 	});
 
-	it("public metadata keys are a subset of the collection allowlist", () => {
+	it("DATA-B3 public metadata keys are a subset of the collection allowlist", () => {
 		const archive = buildExportArchive(makeSnapshot(), { site: testSite, scope: "public", exportedAt: FIXED_TIME });
 		const { paths, text } = readAll(archive.zip);
 		const publishedPaths = paths.filter((path) => path.endsWith("published.json"));
@@ -540,19 +540,22 @@ describe("export archive builder", () => {
 		}
 	});
 
-	it.skipIf(Object.keys(FIXTURE_SEO_METADATA).length === 0)("the public archive exports SEO metadata as is", () => {
-		const { zip } = buildExportArchive(makeSnapshot(), { site: testSite, scope: "public", exportedAt: FIXED_TIME });
-		const archive = readAll(zip);
-		const parsed = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json"))) as {
-			metadata: Record<string, unknown>;
-		};
+	it.skipIf(Object.keys(FIXTURE_SEO_METADATA).length === 0)(
+		"DATA-B3 the public archive exports SEO metadata as is",
+		() => {
+			const { zip } = buildExportArchive(makeSnapshot(), { site: testSite, scope: "public", exportedAt: FIXED_TIME });
+			const archive = readAll(zip);
+			const parsed = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json"))) as {
+				metadata: Record<string, unknown>;
+			};
 
-		for (const [name, value] of Object.entries(FIXTURE_SEO_METADATA)) {
-			expect(parsed.metadata[name]).toBe(value);
-		}
-		// SEO keys must be in the collection allowlist and are not opened for item collections such as categories.
-		const seoKeys = Object.keys(FIXTURE_SEO_METADATA);
-		expect(publicMetadataKeys(testSite)[CONTENT]).toEqual(expect.arrayContaining(seoKeys));
-		for (const key of seoKeys) expect(publicMetadataKeys(testSite)[recordCollection]).not.toContain(key);
-	});
+			for (const [name, value] of Object.entries(FIXTURE_SEO_METADATA)) {
+				expect(parsed.metadata[name]).toBe(value);
+			}
+			// SEO keys must be in the collection allowlist and are not opened for item collections such as categories.
+			const seoKeys = Object.keys(FIXTURE_SEO_METADATA);
+			expect(publicMetadataKeys(testSite)[CONTENT]).toEqual(expect.arrayContaining(seoKeys));
+			for (const key of seoKeys) expect(publicMetadataKeys(testSite)[recordCollection]).not.toContain(key);
+		},
+	);
 });

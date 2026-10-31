@@ -159,7 +159,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		});
 	});
 
-	it("07 counts every changed field, 10 lists them with one undo each and takes one back", async () => {
+	it("SCHEMA-F8 07 counts every changed field, 10 lists them with one undo each and takes one back", async () => {
 		openFields();
 		await removeField("subtitle");
 		await removeField("summary");
@@ -176,7 +176,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeInTheDocument());
 	});
 
-	it("07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
+	it("SCHEMA-F8 07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
 		openFields();
 		// A rename: the name is taken from the field's sheet on Save.
 		fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: "summary" }) }));
@@ -214,7 +214,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		expect(screen.getByTestId("field-subtitle").textContent).not.toContain(tChanges("tag.removed"));
 	});
 
-	it("09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {
+	it("SCHEMA-F9 09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {
 		state = stateOf({
 			post: post({ subtitle: field("부제"), format: { kind: "select", label: "글 종류", options: {} } }),
 		});
@@ -374,7 +374,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		return dialog;
 	};
 
-	it("11 what is chosen is what the apply sends: the transforms, in the PUT", async () => {
+	it("SCHEMA-F2 11 what is chosen is what the apply sends: the transforms, in the PUT", async () => {
 		const dialog = await review();
 		await choose(dialog, new RegExp(tReview("choice.move")));
 		await choose(dialog, new RegExp(tReview("choice.erase")));
@@ -391,7 +391,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(put()?.body.acknowledged).toEqual(["field_renamed:post:summary:excerpt", SUBTITLE, FORMAT]);
 	});
 
-	it("12 choosing to delete the values turns the apply into the red 지우고 적용, and choosing keep turns it back", async () => {
+	it("SCHEMA-F2 12 choosing to delete the values turns the apply into the red 지우고 적용, and choosing keep turns it back", async () => {
 		const dialog = await review();
 		const button = apply(dialog);
 		expect(button.className).toContain("bg-monti-emphasis");
@@ -410,7 +410,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(apply(dialog).className).toContain("bg-monti-emphasis");
 	});
 
-	it("11 moving the values of a removed field picks another field and sends the move", async () => {
+	it("SCHEMA-F3 11 moving the values of a removed field picks another field and sends the move", async () => {
 		const dialog = await review();
 		const removed = within(dialog).getByTestId(`impact-${SUBTITLE}`);
 		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
@@ -421,7 +421,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(removed.textContent).not.toContain(tReview("note.kept"));
 	});
 
-	it("11 a change no entry holds a value for has nothing to choose", async () => {
+	it("SCHEMA-F4 11 a change no entry holds a value for has nothing to choose", async () => {
 		previewOf = () =>
 			preview({
 				...fieldChanges,
@@ -436,7 +436,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(apply(dialog).disabled).toBe(false);
 	});
 
-	it("when the file changed since the screen opened, the sheet says so, offers a reload and cannot apply", async () => {
+	it("SCHEMA-F10 when the file changed since the screen opened, the sheet says so, offers a reload and cannot apply", async () => {
 		const dialog = await review();
 		api.on("PUT /v1/schema", () => failure("schema_conflict", "conflict"));
 		fireEvent.click(apply(dialog));
@@ -449,7 +449,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
 	});
 
-	it("when the file is saved but the database does not take it, the sheet closes and the screen is told what the server said", async () => {
+	it("SCHEMA-F10 when the file is saved but the database does not take it, the sheet closes and the screen is told what the server said", async () => {
 		const onApplyFailed = vi.fn();
 		previewOf = () => fieldChanges;
 		mount({ draft: fieldsDraft, saved: fieldsSaved, onApplyFailed });
@@ -467,7 +467,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 	const pathDraft = { collections: { post: { ...post({}), path: "/blog/:slug" } } };
 	const pathSaved = { collections: { post: post({}) } };
 
-	it("14 shows the address before and after and the published entries that change, with no redirect to pick", async () => {
+	it("SCHEMA-A1 14 shows the address before and after and the published entries that change, with no redirect to pick", async () => {
 		previewOf = () =>
 			preview({
 				impacts: [
@@ -519,7 +519,7 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 	};
 	const KEY = "collection_added:note";
 
-	it("05 reviews the new collection as one block and says its stored data is not touched", async () => {
+	it("SCHEMA-N3 05 reviews the new collection as one block and says its stored data is not touched", async () => {
 		previewOf = () =>
 			preview({
 				impacts: [
@@ -555,7 +555,7 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 		state = stateOf({ post: post({ subtitle: field("부제") }) });
 	});
 
-	it("06 shows the line the save left, with 보기 opening the new collection's entries when it left a link", async () => {
+	it("SCHEMA-N3 06 shows the line the save left, with 보기 opening the new collection's entries when it left a link", async () => {
 		reload.takeSavedMessage.mockReturnValueOnce({
 			message: "노트를 만들었어요",
 			href: "/admin?collection=note",
@@ -570,7 +570,7 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 		expect(nav.navigate).toHaveBeenCalledWith("/admin?collection=note");
 	});
 
-	it("when the database does not take the saved file, the page says so with a way to reload", async () => {
+	it("SCHEMA-F10 when the database does not take the saved file, the page says so with a way to reload", async () => {
 		openFields();
 		await removeField("subtitle");
 		fireEvent.click(saveButton());
@@ -621,7 +621,7 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		return dialog;
 	};
 
-	it("08 asks to keep the translations or move them to the trash, and keeping is the default", async () => {
+	it("SCHEMA-C2 08 asks to keep the translations or move them to the trash, and keeping is the default", async () => {
 		const dialog = await removeEnglish();
 		expect(dialog.textContent).toContain(tReview("review.what", { name: tReview("area.locales"), count: 1 }));
 		const block = within(dialog).getByTestId(`impact-${KEY}`);
@@ -636,7 +636,7 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		expect(block.textContent).toContain(tReview("note.locale"));
 	});
 
-	it("08 moving them to the trash sends trashLocales, in the check and in the save", async () => {
+	it("SCHEMA-C2 08 moving them to the trash sends trashLocales, in the check and in the save", async () => {
 		const dialog = await removeEnglish();
 		await choose(dialog, new RegExp(tReview("choice.trash")));
 		await waitFor(() => expect(lastPreview()?.body.trashLocales).toEqual(["en"]));

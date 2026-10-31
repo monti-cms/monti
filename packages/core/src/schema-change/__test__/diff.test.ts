@@ -14,7 +14,7 @@ const changes = (edit: (schema: EditableSchema) => void, transforms?: readonly S
 };
 
 describe("diffSchema", () => {
-	it("finds nothing between a schema and itself, and ignores labels, layout and other non-data edits", () => {
+	it("SCHEMA-F7 finds nothing between a schema and itself, and ignores labels, layout and other non-data edits", () => {
 		expect(diffSchema(old as never, cloneSchema() as never)).toEqual({ changes: [], renameHints: [] });
 		expect(
 			changes((schema) => {
@@ -26,7 +26,7 @@ describe("diffSchema", () => {
 		).toEqual([]);
 	});
 
-	it("lists collections added and removed", () => {
+	it("SCHEMA-C1 lists collections added and removed", () => {
 		const found = changes((schema) => {
 			delete schema.collections.tag;
 			schema.collections.note = { label: "Note", kind: "item", fields: { title: { kind: "text", label: "Title" } } };
@@ -34,7 +34,7 @@ describe("diffSchema", () => {
 		expect(found.map(changeKey)).toEqual(["collection_removed:tag", "collection_added:note"]);
 	});
 
-	it("marks a removed collection that a dropCollection transform handles", () => {
+	it("SCHEMA-D4 marks a removed collection that a dropCollection transform handles", () => {
 		const found = changes(
 			(schema) => {
 				delete schema.collections.tag;
@@ -44,7 +44,7 @@ describe("diffSchema", () => {
 		expect(found).toEqual([{ kind: "collection_removed", collection: "tag", handledBy: "drop-tag" }]);
 	});
 
-	it("marks a removed language that a trashLocale transform handles", () => {
+	it("SCHEMA-C2 marks a removed language that a trashLocale transform handles", () => {
 		const found = changes(
 			(schema) => {
 				schema.locales = schema.locales.filter((locale: { code: string }) => locale.code !== "en");
@@ -54,7 +54,7 @@ describe("diffSchema", () => {
 		expect(found).toEqual([{ kind: "locale_removed", locale: "en", handledBy: "trash-en" }]);
 	});
 
-	it("lists a changed public path of a collection present on both sides", () => {
+	it("SCHEMA-A1 lists a changed public path of a collection present on both sides", () => {
 		const found = changes((schema) => {
 			schema.collections.post.path = "/blog/:slug";
 		});
@@ -67,7 +67,7 @@ describe("diffSchema", () => {
 		);
 	});
 
-	it("lists no path change when the path is equal, and none for an added or removed collection", () => {
+	it("SCHEMA-A1 lists no path change when the path is equal, and none for an added or removed collection", () => {
 		expect(
 			changes((schema) => {
 				schema.collections.post.path = "/posts/:slug";
@@ -80,7 +80,7 @@ describe("diffSchema", () => {
 		).not.toContain("collection_path_changed");
 	});
 
-	it("treats a missing and an empty path alike as no public path", () => {
+	it("SCHEMA-A1 treats a missing and an empty path alike as no public path", () => {
 		const found = changes((schema) => {
 			schema.collections.post.path = "";
 		});
@@ -97,7 +97,7 @@ describe("diffSchema", () => {
 		);
 	});
 
-	it("lists fields added and removed, and tells a required one", () => {
+	it("SCHEMA-C1 lists fields added and removed, and tells a required one", () => {
 		const found = changes((schema) => {
 			delete schema.collections.post.fields.cover;
 			schema.collections.post.fields.subtitle = { kind: "text", label: "Subtitle" };
@@ -110,7 +110,7 @@ describe("diffSchema", () => {
 		]);
 	});
 
-	it("sees fields inside a conditional field as fields of the collection, and a move between branches", () => {
+	it("SCHEMA-C1 sees fields inside a conditional field as fields of the collection, and a move between branches", () => {
 		const found = changes((schema) => {
 			const policy = schema.collections.post.fields.policy;
 			policy.values.deprecated.note = { kind: "text", label: "Note" };
@@ -125,7 +125,7 @@ describe("diffSchema", () => {
 		});
 	});
 
-	it("lists type, required and language changes", () => {
+	it("SCHEMA-C1 lists type, required and language changes", () => {
 		const found = changes((schema) => {
 			schema.collections.post.fields.summary = { kind: "select", label: "S", options: { a: "A" }, defaultValue: "a" };
 			schema.collections.post.fields.tagIds.many = false;
@@ -145,7 +145,7 @@ describe("diffSchema", () => {
 		);
 	});
 
-	it("lists select options added and removed", () => {
+	it("SCHEMA-C1 lists select options added and removed", () => {
 		const found = changes((schema) => {
 			const options = schema.collections.post.fields.policy.discriminant.options;
 			delete options.deprecated;
@@ -159,7 +159,7 @@ describe("diffSchema", () => {
 		]);
 	});
 
-	it("lists locales added and removed and a changed default", () => {
+	it("SCHEMA-C1 lists locales added and removed and a changed default", () => {
 		const found = changes((schema) => {
 			schema.locales = [
 				{ code: "en", name: "English" },
@@ -170,7 +170,7 @@ describe("diffSchema", () => {
 		expect(found.map(changeKey)).toEqual(["locale_added:ja", "locale_removed:ko", "default_locale_changed:ko:en"]);
 	});
 
-	it("lists a body gained or lost, a changed collection kind, and changes of the allowed blocks, marks and headings", () => {
+	it("SCHEMA-C1 lists a body gained or lost, a changed collection kind, and changes of the allowed blocks, marks and headings", () => {
 		const found = changes((schema) => {
 			schema.collections.tag.body = true;
 			schema.collections.category.kind = "document";
@@ -202,7 +202,7 @@ describe("diffSchema", () => {
 	});
 
 	describe("with transforms", () => {
-		it("tells a rename from a removal and an addition, and marks what a transform handles", () => {
+		it("SCHEMA-F7 tells a rename from a removal and an addition, and marks what a transform handles", () => {
 			const transforms: SchemaMigration[] = [
 				{ id: "rename", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
 				{ id: "drop", op: "dropField", collection: "post", field: "cover" },
@@ -248,7 +248,7 @@ describe("diffSchema", () => {
 			expect(found.some((change) => change.kind === "field_added" && change.field === "excerpt")).toBe(false);
 		});
 
-		it("a mapping to an option that already exists is a removal that a transform handles", () => {
+		it("SCHEMA-F7 a mapping to an option that already exists is a removal that a transform handles", () => {
 			const found = changes(
 				(schema) => {
 					const policy = schema.collections.post.fields.policy;
@@ -267,7 +267,7 @@ describe("diffSchema", () => {
 		});
 	});
 
-	it("points out a removed and an added thing that look like one rename, and applies nothing", () => {
+	it("SCHEMA-F7 points out a removed and an added thing that look like one rename, and applies nothing", () => {
 		const next = cloneSchema();
 		next.collections.post.fields.excerpt = next.collections.post.fields.summary;
 		delete next.collections.post.fields.summary;
@@ -285,7 +285,7 @@ describe("diffSchema", () => {
 		});
 	});
 
-	it("gives each change a stable key and an English description", () => {
+	it("SCHEMA-C1 gives each change a stable key and an English description", () => {
 		const found = changes((schema) => {
 			delete schema.collections.post.fields.cover;
 		});

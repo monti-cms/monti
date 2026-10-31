@@ -638,7 +638,7 @@ export const listContract: ContractSuite = (factory) => {
 			expect((await store.listEntries({ collection: content })).total).toBe(4);
 		}, 60_000);
 
-		it("sorts the trash by the day its entries were trashed, the last one first", async () => {
+		it("TRASH-B2 sorts the trash by the day its entries were trashed, the last one first", async () => {
 			const first = await seed(content, "tr-first", "Trashed first");
 			const second = await seed(content, "tr-second", "Trashed second");
 			await seed(content, "tr-kept", "Kept");

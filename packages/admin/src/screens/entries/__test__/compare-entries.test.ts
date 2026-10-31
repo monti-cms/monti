@@ -16,13 +16,13 @@ const withBody = (text: string, over: Partial<EntryForm> = {}): EntryForm => ({ 
 const compare = (left: EntryForm, right: EntryForm) => compareEntries(testSite, "post", left, right, labels);
 
 describe("diffText", () => {
-	it("marks nothing when the texts are the same", () => {
+	it("WRITE-C3 marks nothing when the texts are the same", () => {
 		const result = diffText("같은 글", "같은 글");
 		expect(marked(result.before)).toEqual([]);
 		expect(plain(result.after)).toBe("같은 글");
 	});
 
-	it("marks only the words that are not on the other side, keeping all the text", () => {
+	it("WRITE-C3 marks only the words that are not on the other side, keeping all the text", () => {
 		const result = diffText(
 			"목록에는 제목만 남겼다. 나머지는 꺼내 본다.",
 			"목록에는 제목만 남겼다. 설정 화면은 그대로 두었다.",
@@ -32,13 +32,13 @@ describe("diffText", () => {
 		expect(plain(result.before)).toBe("목록에는 제목만 남겼다. 나머지는 꺼내 본다.");
 	});
 
-	it("marks every word when one side is empty, and nothing on the empty side", () => {
+	it("WRITE-C3 marks every word when one side is empty, and nothing on the empty side", () => {
 		const result = diffText("", "새 글");
 		expect(result.before).toEqual([]);
 		expect(marked(result.after)).toEqual(["새 글"]);
 	});
 
-	it("keeps a shared word in the middle unmarked", () => {
+	it("WRITE-C3 keeps a shared word in the middle unmarked", () => {
 		const result = diffText("가 나 다", "라 나 마");
 		expect(
 			marked(result.before)
@@ -54,7 +54,7 @@ describe("diffText", () => {
 });
 
 describe("blockText", () => {
-	it("reads the words of a block, a new line at a hard break and between list items", () => {
+	it("WRITE-C3 reads the words of a block, a new line at a hard break and between list items", () => {
 		const [list] = docOf("- 하나\n- 둘").content;
 		expect(blockText(list as never)).toBe("하나\n둘");
 		const [paragraph] = docOf("앞<br />뒤").content;
@@ -63,14 +63,14 @@ describe("blockText", () => {
 });
 
 describe("comparing two entries", () => {
-	it("has no difference between the same entry", () => {
+	it("WRITE-C3 has no difference between the same entry", () => {
 		const result = compare(withBody("첫 문단"), withBody("첫 문단"));
 		expect(result.count).toBe(0);
 		expect(result.properties).toEqual([]);
 		expect(result.left.flatMap((block) => marked(block.segments))).toEqual([]);
 	});
 
-	it("lists only the properties that differ, the same on both sides, with the words that differ marked", () => {
+	it("WRITE-C3 lists only the properties that differ, the same on both sides, with the words that differ marked", () => {
 		const result = compare(
 			withBody("본문", { summary: "리액트로 다시 만들며 덜어낸 것." }),
 			withBody("본문", { summary: "" }),
@@ -81,7 +81,7 @@ describe("comparing two entries", () => {
 		expect(result.count).toBe(1);
 	});
 
-	it("compares the address and the title as well", () => {
+	it("WRITE-C3 compares the address and the title as well", () => {
 		const result = compare(withBody("본문", { slug: "a" }), withBody("본문", { slug: "b", title: "다른 제목" }));
 		expect(result.properties.map((property) => property.label)).toEqual(["주소"]);
 		expect(marked(result.title.left)).toEqual(["테스트"]);
@@ -89,7 +89,7 @@ describe("comparing two entries", () => {
 		expect(result.count).toBe(2);
 	});
 
-	it("marks the words of a block that changed in place, and a block that is only on one side as a whole", () => {
+	it("WRITE-C3 marks the words of a block that changed in place, and a block that is only on one side as a whole", () => {
 		const left = withBody("# 제목\n\n목록은 짧다. 나머지는 꺼내 본다.\n\n끝 문단");
 		const right = withBody(
 			"# 제목\n\n목록은 짧다. 설정 화면은 그대로 두었다.\n\n끝 문단\n\n## 남긴 것\n\n블록 손잡이는 그대로",
@@ -117,7 +117,7 @@ describe("comparing two entries", () => {
 		expect(result.count).toBe(3);
 	});
 
-	it("shows a body that could not be read as it is, marked whole when the other side differs", () => {
+	it("WRITE-C3 shows a body that could not be read as it is, marked whole when the other side differs", () => {
 		const unreadable = { ...base, doc: unparsedDocument("<<깨진 글") };
 		const result = compare(unreadable, withBody("멀쩡한 글"));
 		expect(result.left[0]?.kind).toBe("code");

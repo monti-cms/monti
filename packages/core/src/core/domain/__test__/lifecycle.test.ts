@@ -77,12 +77,12 @@ describe("lifecycle transitions", () => {
 		});
 	});
 
-	it("publishes a record again on restore; a content collection returns to draft", () => {
+	it("TRASH-R1 publishes a record again on restore; a content collection returns to draft", () => {
 		expect(restorePublishesAgain(testSite, recordCollection)).toBe(true);
 		expect(restorePublishesAgain(testSite, contentCollection)).toBe(false);
 	});
 
-	it("restoring a translation needs its source out of the trash", () => {
+	it("TRASH-R3 restoring a translation needs its source out of the trash", () => {
 		expect(codeOf(() => assertSourceNotTrashed("trashed", 4))).toEqual({ code: "source_trashed", serverVersion: 4 });
 		expect(codeOf(() => assertSourceNotTrashed("draft", 4))).toBeNull();
 		expect(codeOf(() => assertSourceNotTrashed(undefined, 4))).toBeNull();
@@ -93,7 +93,7 @@ describe("lifecycle transitions", () => {
 		expect(codeOf(() => assertRestoreSnapshot({}))).toBeNull();
 	});
 
-	it("deletes for good only a trashed entry", () => {
+	it("TRASH-D1 deletes for good only a trashed entry", () => {
 		for (const status of ALL) {
 			const result = codeOf(() => assertDeletable(status, 2));
 			if (status === "trashed") expect(result).toBeNull();
@@ -119,15 +119,15 @@ describe("what a source's transition does to its translations", () => {
 		expect(membersToUnarchive(group)).toEqual(["archived"]);
 	});
 
-	it("trashes every translation that is not in the trash yet", () => {
+	it("TRASH-T2 trashes every translation that is not in the trash yet", () => {
 		expect(membersToTrash(group)).toEqual(["draft", "published", "archived"]);
 	});
 
-	it("restores only the translations trashed together with the source (the same trash time)", () => {
+	it("TRASH-R2 restores only the translations trashed together with the source (the same trash time)", () => {
 		expect(membersToRestore(group)).toEqual(["trashed-with-source"]);
 	});
 
-	it("blocks deleting a source while a translation is outside the trash", () => {
+	it("TRASH-D6 blocks deleting a source while a translation is outside the trash", () => {
 		expect(blockingTranslations(group)).toEqual(["draft", "published", "archived"]);
 		expect(blockingTranslations(group.filter((member) => member.status === "trashed"))).toEqual([]);
 	});

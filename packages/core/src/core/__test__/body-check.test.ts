@@ -19,7 +19,7 @@ const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
 });
 
 describe("checks of a stored document", () => {
-	it("does not end a stretch of marked text at a line break or a footnote reference", () => {
+	it("WRITE-P1 does not end a stretch of marked text at a line break or a footnote reference", () => {
 		const note = { type: "untranslated" };
 		const result = checkDocument(
 			testSite,
@@ -38,7 +38,7 @@ describe("checks of a stored document", () => {
 		expect(issue?.params).toEqual({ count: 1 });
 	});
 
-	it("takes the block of a node without an id from the block around it", () => {
+	it("WRITE-P1 takes the block of a node without an id from the block around it", () => {
 		const result = checkDocument(
 			testSite,
 			doc({
@@ -52,7 +52,7 @@ describe("checks of a stored document", () => {
 		);
 	});
 
-	it("holds no references of a body it could not read, and says so", () => {
+	it("WRITE-P8 holds no references of a body it could not read, and says so", () => {
 		const result = checkDocument(
 			testSite,
 			doc({ id: "dddddddd", type: "unparsed", attrs: { format: "mdx", source: "<Open" } }),
@@ -65,7 +65,7 @@ describe("checks of a stored document", () => {
 		expect(result.mediaReferences).toEqual([]);
 	});
 
-	it("knows an empty document: no blocks, or only blank paragraphs", () => {
+	it("WRITE-P1 knows an empty document: no blocks, or only blank paragraphs", () => {
 		expect(isEmptyDocument(doc())).toBe(true);
 		expect(isEmptyDocument(doc(paragraph("aaaaaaaa"), paragraph("bbbbbbbb", text("  "))))).toBe(true);
 		expect(isEmptyDocument(doc(paragraph("aaaaaaaa", text("x"))))).toBe(false);
@@ -84,14 +84,14 @@ describe("a document and its text are one body", () => {
 			},
 		);
 
-	it("has the content hash of the text it was read from, whichever way it is sent", async () => {
+	it("WRITE-S3 has the content hash of the text it was read from, whichever way it is sent", async () => {
 		const written = "A bold and it with code and a [link](https://example.com).\n\nHeading";
 		const fromText = await prepare({ body: written, format: "paragraphs" });
 		const fromDocument = await prepare({ doc: fromText.doc });
 		expect(fromDocument.contentHash).toBe(fromText.contentHash);
 	});
 
-	it("puts a document built by hand in the form the text reads as: split text joined, trailing blank paragraphs dropped", async () => {
+	it("WRITE-S3 puts a document built by hand in the form the text reads as: split text joined, trailing blank paragraphs dropped", async () => {
 		const byHand = {
 			type: "doc",
 			version: 3,

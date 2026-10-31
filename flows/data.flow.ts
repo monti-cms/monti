@@ -35,7 +35,7 @@ async function deleteForGood(page: Page, title: string) {
 // Flow 9 (🔴): back the site up, lose everything, and restore the backup into the empty site. The cases (a refused restore, an import of loose files,
 // what a backup holds) are checked below this layer. Importing entries from a zip into a site that has some goes through the same file field and the
 // import sheet, and is not walked here.
-test("a full backup exported from the admin restores a deleted post into the emptied site", async ({
+test("DATA-R1 a full backup exported from the admin restores a deleted post into the emptied site", async ({
 	page,
 }, testInfo) => {
 	// A published post, with the category it needs.

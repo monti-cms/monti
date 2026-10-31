@@ -17,7 +17,7 @@ const at = (iso: string) => new Date(iso);
 const DAY = 24 * 60 * 60 * 1000;
 
 describe("what a folder trash takes", () => {
-	it("takes the folders and entries not in the trash yet, and leaves what was trashed earlier alone", () => {
+	it("TRASH-T4 takes the folders and entries not in the trash yet, and leaves what was trashed earlier alone", () => {
 		expect(
 			foldersToTrash([
 				{ id: "a", deletedAt: null },
@@ -35,7 +35,7 @@ describe("what a folder trash takes", () => {
 		).toEqual(["draft", "live", "old"]);
 	});
 
-	it("takes only ready media files", () => {
+	it("TRASH-T4 takes only ready media files", () => {
 		expect(
 			mediaToTrash([
 				{ id: "ready", status: "ready" },
@@ -48,13 +48,13 @@ describe("what a folder trash takes", () => {
 });
 
 describe("the stamp of a trash action", () => {
-	it("is the clock cut to the millisecond when nothing in the subtree is newer", () => {
+	it("TRASH-E3 is the clock cut to the millisecond when nothing in the subtree is newer", () => {
 		expect(nextTrashStamp(at("2030-01-01T00:00:00.123Z"), [null, at("2029-12-31T00:00:00Z")])).toEqual(
 			at("2030-01-01T00:00:00.123Z"),
 		);
 	});
 
-	it("never equals a stamp already in the subtree, so earlier trashing cannot come back with this one", () => {
+	it("TRASH-R4 never equals a stamp already in the subtree, so earlier trashing cannot come back with this one", () => {
 		const earlier = at("2030-01-01T00:00:00.123Z");
 		const stamp = nextTrashStamp(at("2030-01-01T00:00:00.123Z"), [earlier]);
 		expect(cameWith(earlier, stamp)).toBe(false);
@@ -65,7 +65,7 @@ describe("the stamp of a trash action", () => {
 describe("what comes back with a restore", () => {
 	const stamp = at("2030-02-01T10:00:00.000Z");
 
-	it("brings back only what carries the stamp of the same action", () => {
+	it("TRASH-R4 brings back only what carries the stamp of the same action", () => {
 		const items = [
 			{ id: "with", deletedAt: stamp },
 			{ id: "earlier", deletedAt: at("2030-01-15T10:00:00.000Z") },
@@ -76,7 +76,7 @@ describe("what comes back with a restore", () => {
 });
 
 describe("expiry", () => {
-	it("expires once it has been kept for the whole time", () => {
+	it("TRASH-E3 expires once it has been kept for the whole time", () => {
 		const trashed = at("2030-01-01T00:00:00Z");
 		expect(isTrashExpired(trashed, new Date(trashed.getTime() + (TRASH_DAYS - 1) * DAY))).toBe(false);
 		expect(isTrashExpired(trashed, new Date(trashed.getTime() + TRASH_DAYS * DAY))).toBe(true);
@@ -84,7 +84,7 @@ describe("expiry", () => {
 });
 
 describe("media folders with files in use", () => {
-	it("goes whole when nothing is in use, and otherwise takes only the unused files", () => {
+	it("TRASH-T5 goes whole when nothing is in use, and otherwise takes only the unused files", () => {
 		expect(planMediaFolderTrash(["a", "b"], new Set())).toEqual({ whole: true, trash: ["a", "b"], kept: [] });
 		expect(planMediaFolderTrash(["a", "b", "c"], new Set(["b"]))).toEqual({
 			whole: false,
@@ -103,7 +103,7 @@ describe("what blocks a permanent delete", () => {
 		occurrences: types.map((type) => ({ type })),
 	});
 
-	it("blocks on relation fields only, once per entry, and marks the ones in the trash", () => {
+	it("TRASH-D2 blocks on relation fields only, once per entry, and marks the ones in the trash", () => {
 		const usages = blockingUsages(
 			[row("b", ["metadata"]), row("a", ["metadata", "body"], true), row("a", ["body"]), row("c", ["body"])],
 			new Set(),
@@ -114,13 +114,13 @@ describe("what blocks a permanent delete", () => {
 		]);
 	});
 
-	it("does not count entries that are deleted along with the target", () => {
+	it("TRASH-D3 does not count entries that are deleted along with the target", () => {
 		expect(
 			blockingUsages([row("a", ["metadata"]), row("b", ["metadata"])], new Set(["a"])).map((u) => u.entryId),
 		).toEqual(["b"]);
 	});
 
-	it("blocks a media file by any reference to it", () => {
+	it("TRASH-D8 blocks a media file by any reference to it", () => {
 		expect(
 			blockingMediaUsages([row("a", ["body"]), row("b", ["metadata"])], new Set(["b"])).map((u) => u.entryId),
 		).toEqual(["a"]);

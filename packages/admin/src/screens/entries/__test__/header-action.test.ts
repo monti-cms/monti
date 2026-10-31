@@ -66,7 +66,7 @@ describe("primaryLifecycleAction", () => {
 			given: { status: "published", hasPublishDate: true, unpublished: true, submitting: true },
 			want: { action: "split", label: t("publish"), disabled: true },
 		},
-	] as const)("$case", ({ given, want }) => {
+	] as const)("WRITE-W4 $case", ({ given, want }) => {
 		expect(primaryLifecycleAction(testSite, { ...idle, ...given })).toEqual(want);
 	});
 });

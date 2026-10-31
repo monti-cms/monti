@@ -40,7 +40,7 @@ const topic = "topic";
 const { fillFromBodyFields, metadataReferences, missingRequiredIssues, roleField, roleValue, slugFromValues } = site;
 
 describe("field roles", () => {
-	it("finds fields by role, not by name", () => {
+	it("SCHEMA-S3 finds fields by role, not by name", () => {
 		expect(roleField(article, "summary")?.name).toBe("excerpt");
 		expect(roleField(article, "noindex")?.field.kind).toBe("select");
 		expect(roleField(article, "seoTitle")).toBeUndefined();
@@ -50,7 +50,7 @@ describe("field roles", () => {
 		expect(roleValue(topic, "summary", { summary: "x" })).toBe("");
 	});
 
-	it("lists fields filled from the body", () => {
+	it("SCHEMA-S3 lists fields filled from the body", () => {
 		expect(fillFromBodyFields(article).map((stored) => stored.name)).toEqual(["excerpt"]);
 		expect(fillFromBodyFields(topic)).toEqual([]);
 	});
@@ -60,7 +60,7 @@ describe("media fields", () => {
 	const MEDIA = "11111111-1111-4111-8111-111111111111";
 	const TOPIC = "22222222-2222-4222-8222-222222222222";
 
-	it("collects the media ID as a media reference next to relation references", () => {
+	it("SCHEMA-S3 collects the media ID as a media reference next to relation references", () => {
 		expect(metadataReferences(article, { topicId: TOPIC, hero: MEDIA })).toEqual([
 			{ kind: "entry", targetId: TOPIC, path: "topicId" },
 			{ kind: "media", targetId: MEDIA, path: "hero" },
@@ -68,7 +68,7 @@ describe("media fields", () => {
 		expect(metadataReferences(article, { hero: "" })).toEqual([]);
 	});
 
-	it("accepts a media ID or an empty value", () => {
+	it("SCHEMA-S3 accepts a media ID or an empty value", () => {
 		const hero = roleField(article, "heroImage")?.field;
 		if (!hero) throw new Error("hero");
 		expect(fieldValueError(hero, MEDIA)).toBeNull();
@@ -78,17 +78,17 @@ describe("media fields", () => {
 });
 
 describe("slug from", () => {
-	it("makes the slug from the field named by `from`", () => {
+	it("SCHEMA-S3 makes the slug from the field named by `from`", () => {
 		expect(slugFromValues(article, { title: "Ignored", headline: "Hello World" })).toBe("hello-world");
 	});
 
-	it("does not make a slug without `from`", () => {
+	it("SCHEMA-S3 does not make a slug without `from`", () => {
 		expect(slugFromValues(topic, { title: "Hello" })).toBe("");
 	});
 });
 
 describe("missing required fields", () => {
-	it("uses missing_field with the field label for every field, title included", () => {
+	it("SCHEMA-S3 uses missing_field with the field label for every field, title included", () => {
 		expect(missingRequiredIssues(article, { slug: null, metadata: { title: "" } })).toEqual([
 			{ code: "null_slug", path: "slug" },
 			{ code: "missing_field", path: "title", message: "Title" },
@@ -128,16 +128,16 @@ describe("required fields now", () => {
 			.sort((a, b) => a.order - b.order)
 			.map((field) => field.name);
 
-	it("lists a field of a conditional group while its condition holds, and `order` puts them in the order of the form", () => {
+	it("SCHEMA-S3 lists a field of a conditional group while its condition holds, and `order` puts them in the order of the form", () => {
 		expect(names({ kind: "link" })).toEqual(["title", "slug", "url"]);
 	});
 
-	it("leaves out a field whose condition is not met", () => {
+	it("SCHEMA-S3 leaves out a field whose condition is not met", () => {
 		expect(names({ kind: "text" })).toEqual(["title", "slug", "blurb"]);
 		expect(names({})).toEqual(["title", "slug"]);
 	});
 
-	it("is the list the publish check asks for: a field it lists is flagged when empty and the others are not", () => {
+	it("SCHEMA-S3 is the list the publish check asks for: a field it lists is flagged when empty and the others are not", () => {
 		const flagged = noteSite
 			.missingRequiredIssues("note", { slug: null, metadata: { kind: "link" } })
 			.map((issue) => issue.path)
