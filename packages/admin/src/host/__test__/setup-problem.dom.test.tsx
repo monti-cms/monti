@@ -24,6 +24,8 @@ if (!window.matchMedia) {
 }
 
 const BROKEN = "[cms-auth] MONTI_SECRET is not set, so login sessions cannot be signed";
+/** The words of the not-set-up screen on a site whose admin is in English (the default of `fakeCms`). */
+const tEnglish = fakeCms().site.createTranslator(layoutMessages);
 
 const brokenCms = () =>
 	fakeCms({
@@ -54,7 +56,7 @@ describe("setupProblemOf", () => {
 		expect(setupProblemOf(cms)).toBe(BROKEN);
 		expect(setupProblemOf(cms)).toBe(BROKEN);
 		expect(errors).toHaveBeenCalledTimes(1);
-		expect(String(errors.mock.calls[0]?.[0])).toContain(BROKEN);
+		expect(errors).toHaveBeenCalledWith(expect.stringContaining(BROKEN));
 	});
 
 	it("AUTH-L10 returns undefined and logs nothing when the login works", () => {
@@ -66,7 +68,7 @@ describe("setupProblemOf", () => {
 describe("SetupProblemScreen", () => {
 	it("AUTH-L10 shows the English text that points to monti doctor", () => {
 		render(<SetupProblemScreen cms={fakeCms()} />);
-		expect(screen.getByText("Not set up yet")).toBeInTheDocument();
+		expect(screen.getByText(tEnglish("setupTitle"))).toBeInTheDocument();
 		expect(screen.getByText(/monti doctor/)).toBeInTheDocument();
 	});
 
@@ -87,17 +89,17 @@ describe("AdminLayout when the login is not set up", () => {
 	it("AUTH-L10 renders the not-set-up screen instead of the admin, and logs the full message", async () => {
 		const cms = brokenCms();
 		render(await AdminLayout({ cms, themeProvider: false, toaster: false, children: <p>the admin</p> }));
-		expect(screen.getByText("Not set up yet")).toBeInTheDocument();
+		expect(screen.getByText(tEnglish("setupTitle"))).toBeInTheDocument();
 		expect(screen.queryByText("the admin")).toBeNull();
 		expect(document.body.textContent).not.toContain("MONTI_SECRET");
 		expect(errors).toHaveBeenCalledTimes(1);
-		expect(String(errors.mock.calls[0]?.[0])).toContain(BROKEN);
+		expect(errors).toHaveBeenCalledWith(expect.stringContaining(BROKEN));
 	});
 
 	it("AUTH-L10 renders the admin as before when the login works", async () => {
 		render(await AdminLayout({ cms: fakeCms(), themeProvider: false, toaster: false, children: <p>the admin</p> }));
 		expect(screen.getByText("the admin")).toBeInTheDocument();
-		expect(screen.queryByText("Not set up yet")).toBeNull();
+		expect(screen.queryByText(tEnglish("setupTitle"))).toBeNull();
 		expect(errors).not.toHaveBeenCalled();
 	});
 });

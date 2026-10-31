@@ -11,7 +11,14 @@ import { BlockFrame, type BlockView, useBlockEditor } from "../../../hooks/publi
 import { renderWithSite } from "../../../test/site";
 import { storedDoc } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
+import { editorMediaMessages } from "../../media.messages";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
+import { blocksMessages } from "../messages";
+
+const tMedia = testSite.createTranslator(editorMediaMessages);
+const tBlocks = testSite.createTranslator(blocksMessages);
+/** The default image view's tool row: there only when the core image view is drawn. */
+const imageTools = () => screen.queryByRole("toolbar", { name: tMedia("imageNode.toolbar") });
 
 afterEach(cleanup);
 
@@ -27,7 +34,8 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 	return <EditorContent editor={editor} />;
 }
 
-const mount = async (doc: StoredDocument, ready: string, views: Record<string, BlockView> = {}) => {
+/** `ready` is a selector or a check that passes once the view is drawn. */
+const mount = async (doc: StoredDocument, ready: string | (() => unknown), views: Record<string, BlockView> = {}) => {
 	let editor: Editor | null = null;
 	renderWithSite(
 		<AdminComponentsProvider components={{ blockViews: views }}>
@@ -40,7 +48,9 @@ const mount = async (doc: StoredDocument, ready: string, views: Record<string, B
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector(ready)).toBeInTheDocument());
+	await waitFor(() =>
+		typeof ready === "string" ? expect(document.querySelector(ready)).toBeInTheDocument() : ready(),
+	);
 	return editor as unknown as Editor;
 };
 
@@ -50,8 +60,8 @@ describe("image, file and math on the blockViews contract", () => {
 	function ImageView() {
 		const block = useBlockEditor();
 		return (
-			<BlockFrame data-test-view="image" framed={false}>
-				<span data-testid="alt">{String(block.values.alt)}</span>
+			<BlockFrame framed={false}>
+				<output aria-label="alt">{String(block.values.alt)}</output>
 				<button type="button" onClick={() => block.setValues({ alt: "바뀐 설명", width: "50%" })}>
 					set-alt
 				</button>
@@ -69,8 +79,8 @@ describe("image, file and math on the blockViews contract", () => {
 	function MathView() {
 		const block = useBlockEditor();
 		return (
-			<BlockFrame data-test-view="math" framed={false}>
-				<span data-testid="source">{block.source}</span>
+			<BlockFrame framed={false}>
+				<output aria-label="source">{block.source}</output>
 				<button type="button" onClick={() => block.setSource("y^2")}>
 					set-source
 				</button>
@@ -81,18 +91,18 @@ describe("image, file and math on the blockViews contract", () => {
 	it("PLUG-A9 a site replaces the image view, and the view reads and writes the image through useBlockEditor", async () => {
 		const editor = await mount(
 			storedDoc({ type: "image", attrs: { mediaId: "m1", alt: "고양이" } }),
-			"[data-test-view='image']",
+			() => screen.getByRole("button", { name: "set-alt" }),
 			{ image: ImageView },
 		);
-		expect(screen.getByTestId("alt").textContent).toBe("고양이");
-		expect(document.querySelector("[data-image-block]")).toBeNull();
+		expect(screen.getByRole("status", { name: "alt" })).toHaveTextContent("고양이");
+		expect(imageTools()).toBeNull();
 		click("set-alt");
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs).toMatchObject({ alt: "바뀐 설명", width: "50%" }));
 		expect(tiptapToStored(testSite, editor.getJSON()).content[0]).toMatchObject({
 			type: "image",
 			attrs: { alt: "바뀐 설명" },
 		});
-		await waitFor(() => expect(screen.getByTestId("alt").textContent).toBe("바뀐 설명"));
+		await waitFor(() => expect(screen.getByRole("status", { name: "alt" })).toHaveTextContent("바뀐 설명"));
 	});
 
 	it("a site replaces the file view", async () => {
@@ -104,10 +114,12 @@ describe("image, file and math on the blockViews contract", () => {
 	});
 
 	it("PLUG-A9 a site replaces the math view, and the view writes the source", async () => {
-		const editor = await mount(storedDoc({ type: "math", attrs: { value: "x^2" } }), "[data-test-view='math']", {
-			math: MathView,
-		});
-		expect(screen.getByTestId("source").textContent).toBe("x^2");
+		const editor = await mount(
+			storedDoc({ type: "math", attrs: { value: "x^2" } }),
+			() => screen.getByRole("button", { name: "set-source" }),
+			{ math: MathView },
+		);
+		expect(screen.getByRole("status", { name: "source" })).toHaveTextContent("x^2");
 		click("set-source");
 		await waitFor(() =>
 			expect(tiptapToStored(testSite, editor.getJSON()).content[0]).toMatchObject({
@@ -123,8 +135,9 @@ describe("image, file and math on the blockViews contract", () => {
 				{ type: "math", attrs: { value: "x^2" } },
 				{ type: "image", attrs: { alt: "설명", src: "/images/a.png" } },
 			),
-			"[data-fence-preview='math']",
+			// The math block opens selected (the cursor starts in it), so its source field is drawn.
+			() => screen.getByRole("textbox", { name: tBlocks("fence.sourceCode") }),
 		);
-		expect(document.querySelector("[data-image-block]")).toBeInTheDocument();
+		expect(imageTools()).toBeInTheDocument();
 	});
 });

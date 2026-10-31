@@ -48,22 +48,24 @@ describe("select value that is no longer an option", () => {
 			.map((stored) => ({ collection: name, ...stored })),
 	)[0];
 
+	/** `skipIf` below leaves out a config without such a select, so the test reads it as found. */
+	const select = found as NonNullable<typeof found>;
+
 	it.skipIf(!found)("WRITE-S8 shows the stored value marked as no longer an option instead of the default", () => {
-		if (!found) return;
 		render(
 			<TooltipProvider>
 				<EntryFormProvider
 					value={{
-						collection: found.collection,
-						form: { ...EMPTY_FORM, [found.name]: "removed-option" },
+						collection: select.collection,
+						form: { ...EMPTY_FORM, [select.name]: "removed-option" },
 						setForm: () => {},
 					}}
 				>
-					<PropertyFields include={(group) => group.fields.includes(found.name)} />
+					<PropertyFields include={(group) => group.fields.includes(select.name)} />
 				</EntryFormProvider>
 			</TooltipProvider>,
 		);
-		expect(screen.getByRole("button", { name: new RegExp(`^${found.field.label}`) }).textContent).toBe(
+		expect(screen.getByRole("button", { name: new RegExp(`^${select.field.label}`) }).textContent).toBe(
 			t("select.removedOption", { value: "removed-option" }),
 		);
 	});

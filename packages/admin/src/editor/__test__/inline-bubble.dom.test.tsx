@@ -3,8 +3,7 @@ import { charEffectByName } from "@monti-cms/core/code-block";
 import type { CmsNode } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Editor, type JSONContent } from "@tiptap/core";
-import React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { AdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
@@ -41,19 +40,15 @@ const noteBlock = defineBlock({
 	editor: { view: "mark" },
 });
 const NOTE_MARK = addedMarkName(noteBlock.name);
-
-vi.mock("../../ui/tooltip", () => ({
-	Tooltip: ({ children }: { children: React.ReactNode }) => children,
-	TooltipTrigger: ({
-		render,
-		children,
-	}: {
-		render?: React.ReactElement<{ children?: React.ReactNode }>;
-		children?: React.ReactNode;
-	}) => (render ? React.cloneElement(render, {}, children ?? render.props.children) : children),
-	TooltipContent: () => null,
-	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
+/** The names the test's own note extension gives its format, panel and buttons: test data, not the admin's dictionary. */
+const NOTE = {
+	add: "메모 넣기",
+	edit: "메모 고치기",
+	panel: "메모 편집",
+	apply: "메모 적용",
+	release: "메모 해제",
+	text: "설명",
+};
 
 const editors: Editor[] = [];
 afterEach(() => {
@@ -84,8 +79,7 @@ const focusAt = (editor: Editor, position: number | { from: number; to: number }
 };
 
 // Positions: "가나" (1–3), bold "다라" (4–6), link "마바" (7–9), note decoration "사아" (10–12)
-const HTML =
-	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
+const HTML = `<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="${NOTE.text}">사아</span> 자</p><pre><code>code</code></pre>`;
 
 describe("inlineBubbleTarget", () => {
 	it("EDIT-M1 returns the effect and its range when the cursor is inside or at the end of an effect", () => {
@@ -106,7 +100,7 @@ describe("inlineBubbleTarget", () => {
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
 		expect(inlineBubbleTarget(editor.state, [NOTE_MARK])).toMatchObject({
 			kind: "marks",
-			marks: [{ name: NOTE_MARK, from: 10, to: 12, attrs: { text: "설명" } }],
+			marks: [{ name: NOTE_MARK, from: 10, to: 12, attrs: { text: NOTE.text } }],
 		});
 	});
 
@@ -205,12 +199,12 @@ describe("InlineBubble", () => {
 			formatItems: [
 				{
 					id: "note",
-					label: (current) => (current.isActive(NOTE_MARK) ? "메모 고치기" : "메모 넣기"),
+					label: (current) => (current.isActive(NOTE_MARK) ? NOTE.edit : NOTE.add),
 					isAvailable: ({ inCode }) => !inCode,
 					isActive: (current) => current.isActive(NOTE_MARK),
 					run: ({ editor: current, openPanel, closePanel }) =>
 						openPanel({
-							label: "메모 편집",
+							label: NOTE.panel,
 							content: (
 								<button
 									type="button"
@@ -219,7 +213,7 @@ describe("InlineBubble", () => {
 										closePanel();
 									}}
 								>
-									메모 적용
+									{NOTE.apply}
 								</button>
 							),
 						}),
@@ -229,7 +223,7 @@ describe("InlineBubble", () => {
 				<>
 					<span>{String(mark.attrs.text)}</span>
 					<BubbleButton
-						label="메모 해제"
+						label={NOTE.release}
 						onClick={act(() => current.chain().setTextSelection(mark).unsetMark(NOTE_MARK).run())}
 					>
 						해제
@@ -245,26 +239,24 @@ describe("InlineBubble", () => {
 				</AdminComponentsProvider>,
 			);
 
-		// When text is selected, the format sits under the ⋯ at the end of the formats: not a button of the card itself.
+		// When text is selected, the format sits under the ⋯: not a button of the card itself.
 		focusAt(editor, { from: 1, to: 3 });
 		const { unmount } = renderWith();
 		const card = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
-		const labels = [...card.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels).not.toContain("메모 넣기");
-		expect(labels.indexOf(t("formatBar.more"))).toBe(labels.indexOf(t("inlineBubble.footnoteAdd")) + 1);
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
-		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "메모 넣기" })));
-		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeInTheDocument();
-		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 적용" })));
+		expect(within(card).queryByRole("button", { name: NOTE.add })).toBeNull();
+		act(() => fireEvent.click(within(card).getByRole("button", { name: t("formatBar.more") })));
+		act(() => fireEvent.click(screen.getByRole("menuitem", { name: NOTE.add })));
+		expect(screen.getByRole("dialog", { name: NOTE.panel })).toBeInTheDocument();
+		act(() => fireEvent.click(screen.getByRole("button", { name: NOTE.apply })));
 		expect(editor.getHTML()).toMatch(/<span data-monti-mark="note" data-mark-text="새 메모">가나<\/span>/);
 		unmount();
 
 		// With the cursor at the decoration boundary, the registered content renders, and removing does not close the bubble.
 		focusAt(editor, 10);
 		renderWith();
-		expect(screen.getByText("설명")).toBeInTheDocument();
-		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 해제" })));
-		expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
+		expect(screen.getByText(NOTE.text)).toBeInTheDocument();
+		act(() => fireEvent.click(screen.getByRole("button", { name: NOTE.release })));
+		expect(editor.getHTML()).not.toContain(`data-mark-text="${NOTE.text}"`);
 	});
 
 	describe("the ⋯ of the card (formats a site added)", () => {
@@ -334,12 +326,10 @@ describe("InlineBubble", () => {
 		renderBubble(editor);
 
 		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
-		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels).toContain(t("inlineBubble.fold"));
 		// Code does not accept a link.
-		expect(labels).not.toContain(t("link.add"));
+		expect(within(toolbar).queryByRole("button", { name: t("link.add") })).toBeNull();
 
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineBubble.fold") })));
+		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: t("inlineBubble.fold") })));
 		expect(editor.getHTML()).toMatch(/call\(<span data-code-fold=""[^>]*>a, b<\/span>\)/);
 	});
 

@@ -8,6 +8,7 @@ import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
+import { screensMessages } from "../messages";
 import { deleteMessages } from "../shared/delete.messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 
@@ -23,6 +24,7 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 
 const td = testSite.createTranslator(deleteMessages);
 const tc = testSite.createTranslator(commonMessages);
+const ts = testSite.createTranslator(screensMessages);
 
 /** A row of the list. */
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
@@ -111,11 +113,6 @@ beforeEach(() => {
 });
 afterEach(() => {
 	cleanup();
-	// A menu that was open when the test ended leaves the page behind it hidden from the roles of the next test.
-	for (const element of document.body.querySelectorAll("[inert],[aria-hidden]")) {
-		element.removeAttribute("inert");
-		element.removeAttribute("aria-hidden");
-	}
 	vi.unstubAllGlobals();
 });
 
@@ -134,10 +131,17 @@ const contextMenu = async (element: HTMLElement) => {
 	});
 	return screen.findAllByRole("menuitem");
 };
-const lastToast = () => {
-	const [message, options] = toast.mock.calls.at(-1) as [string, { action?: { label: string; onClick: () => void } }];
-	return { message, action: options?.action };
+/** What a toast carries when it offers to take the move back. */
+const withUndo = expect.objectContaining({ action: expect.objectContaining({ label: td("undo") }) });
+/** The undo of the toast that said `message`. */
+const undoOf = (message: string) => {
+	const call = toast.mock.calls.find(([text]) => text === message) as
+		| [string, { action?: { onClick: () => void } }]
+		| undefined;
+	return call?.[1]?.action?.onClick;
 };
+/** The row menu's move to the trash: its name is the label and then its key. */
+const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tc("lifecycle.trash")) });
 const bulkBodies = () => api.sent("POST /v1/bulk").map((request) => request.body);
 
 describe("flow: a folder of the list goes to the trash (T1)", () => {
@@ -147,26 +151,25 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 	};
 
 	it("TRASH-T6 moves a folder of drafts at once, and the toast's undo restores the folder", async () => {
-		const items = await openFolderMenu();
-		fireEvent.click(items.at(-1) as HTMLElement);
+		await openFolderMenu();
+		fireEvent.click(screen.getByRole("menuitem", { name: td("folder.menu.delete") }));
 
 		await waitFor(() => expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(1));
 		expect(api.sent("DELETE /v1/folders/:id")[0]?.params.id).toBe("f1");
 		expect(api.sent("DELETE /v1/folders/:id")[0]?.query.get("expectedVersion")).toBe("1");
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(lastToast().message).toBe(td("folder.done", { name: "뉴스", entries: 2 }));
-		expect(lastToast().action?.label).toBe(td("undo"));
+		const done = td("folder.done", { name: "뉴스", entries: 2 });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(done, withUndo));
 
-		await act(async () => lastToast().action?.onClick());
+		await act(async () => undoOf(done)?.());
 		await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
 		expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({ items: [{ type: "folder", id: "f1" }] });
 	});
 
 	it("TRASH-T3 asks first when the folder holds a published entry, and sends nothing when cancelled", async () => {
 		server.contents = { entries: 2, published: 1, folders: 0, files: 0, filesInUse: 0 };
-		const items = await openFolderMenu();
-		fireEvent.click(items.at(-1) as HTMLElement);
+		await openFolderMenu();
+		fireEvent.click(screen.getByRole("menuitem", { name: td("folder.menu.delete") }));
 
 		const dialog = await screen.findByRole("alertdialog", { name: td("folder.ask.title", { name: "뉴스" }) });
 		expect(within(dialog).getByText(td("folder.ask.body", { entries: 2, published: 1 }))).toBeInTheDocument();
@@ -177,8 +180,8 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 
 	it("TRASH-T3 moves the folder once the question is confirmed", async () => {
 		server.contents = { entries: 2, published: 1, folders: 0, files: 0, filesInUse: 0 };
-		const items = await openFolderMenu();
-		fireEvent.click(items.at(-1) as HTMLElement);
+		await openFolderMenu();
+		fireEvent.click(screen.getByRole("menuitem", { name: td("folder.menu.delete") }));
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
 		await waitFor(() => expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(1));
@@ -188,16 +191,15 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 describe("flow: rows go to the trash (T2)", () => {
 	it("TRASH-T6 moves a draft at once, and the toast's undo restores it at the version the trash made", async () => {
 		await renderList();
-		const items = await contextMenu(row("가"));
-		fireEvent.click(items.at(-1) as HTMLElement);
+		await contextMenu(row("가"));
+		fireEvent.click(trashItem());
 
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(bulkBodies()[0]).toMatchObject({ op: "trash", items: [{ id: "가", expectedVersion: 3 }] });
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(lastToast().action?.label).toBe(td("undo"));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(td("trash.done"), withUndo));
 
-		await act(async () => lastToast().action?.onClick());
+		await act(async () => undoOf(td("trash.done"))?.());
 		await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
 		expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({
 			items: [{ type: "entry", id: "가", expectedVersion: 4 }],
@@ -214,7 +216,8 @@ describe("flow: rows go to the trash (T2)", () => {
 	it("TRASH-T3 asks for a published entry, and sends nothing when cancelled", async () => {
 		server.posts = [item("가"), item("나", { status: "published" })];
 		await renderList();
-		fireEvent.click((await contextMenu(row("나"))).at(-1) as HTMLElement);
+		await contextMenu(row("나"));
+		fireEvent.click(trashItem());
 
 		const dialog = await screen.findByRole("alertdialog", { name: td("trash.ask.title") });
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
@@ -225,7 +228,8 @@ describe("flow: rows go to the trash (T2)", () => {
 	it("TRASH-T3 sends the move once the question is confirmed", async () => {
 		server.posts = [item("나", { status: "published" })];
 		await renderList();
-		fireEvent.click((await contextMenu(row("나"))).at(-1) as HTMLElement);
+		await contextMenu(row("나"));
+		fireEvent.click(trashItem());
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
@@ -239,14 +243,13 @@ describe("flow: rows go to the trash (T2)", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: /나/ }));
 		await screen.findByRole("toolbar");
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("more") }));
-		fireEvent.click((await screen.findAllByRole("menuitem")).at(-1) as HTMLElement);
+		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.trash") }));
 
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(bulkBodies()[0].items).toHaveLength(2);
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(lastToast().message).toBe(td("trash.done.count", { count: 2 }));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(td("trash.done.count", { count: 2 }), withUndo));
 	});
 });
 
@@ -259,14 +262,14 @@ describe("flow: moving rows to a folder can be undone", () => {
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("folder.move") }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "뉴스" }));
 		const dialog = await screen.findByRole("alertdialog");
-		fireEvent.click(within(dialog).getAllByRole("button").at(-1) as HTMLElement);
+		fireEvent.click(within(dialog).getByRole("button", { name: tBulkBar("folder.move") }));
 
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(bulkBodies()[0]).toMatchObject({ op: "folder.move", folderId: "f1" });
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(lastToast().action?.label).toBe(td("undo"));
+		const moved = ts("bulk.success", { count: 1, label: tBulkBar("folder.move") });
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(moved, withUndo));
 
-		await act(async () => lastToast().action?.onClick());
+		await act(async () => undoOf(moved)?.());
 		await waitFor(() => expect(bulkBodies()).toHaveLength(2));
 		expect(bulkBodies()[1]).toMatchObject({
 			op: "folder.move",

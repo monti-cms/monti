@@ -36,29 +36,6 @@ const render = (ui: ReactElement) => nav.render(withSite(ui));
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
-vi.mock("../entries/local-backup", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../entries/local-backup")>()),
-	// The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
-	getLocalBackup: (key: string) => backup.get(key),
-	deleteLocalBackup: (key: string) => backup.remove(key),
-	saveLocalBackup: (record: unknown) => backup.save(record),
-}));
-// The body editor is tested separately. Here only the place for the title slot is drawn.
-vi.mock("../../editor/tiptap-editor", () => ({
-	CmsEditor: ({ titleField, tools }: { titleField?: React.ReactNode; tools?: React.ReactNode }) => (
-		<>
-			<div role="toolbar" aria-label="문서 도구">
-				{tools}
-			</div>
-			{titleField}
-		</>
-	),
-}));
-vi.mock("../entries/ai-translate", () => ({
-	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
-}));
-
 let listed: ListEntriesItem[] = [];
 let api: FakeApi;
 
@@ -83,9 +60,6 @@ const item = (id: string, title: string): ListEntriesItem => ({
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	backup.get.mockResolvedValue(null);
-	backup.remove.mockResolvedValue(undefined);
-	backup.save.mockResolvedValue(true);
 	listed = [];
 	api = fakeApi()
 		.withEmptyRail()

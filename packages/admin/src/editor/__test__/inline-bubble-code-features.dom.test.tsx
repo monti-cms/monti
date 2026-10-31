@@ -1,8 +1,7 @@
 import { createSite, SiteProvider } from "@monti-cms/core/site";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
-import React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { tiptapOf } from "../../test/mdx";
 import { buildEditorExtensions } from "../extensions";
@@ -26,19 +25,6 @@ const renderBubble = (editor: Editor) =>
 			<InlineBubble editor={editor} />
 		</SiteProvider>,
 	);
-
-vi.mock("../../ui/tooltip", () => ({
-	Tooltip: ({ children }: { children: React.ReactNode }) => children,
-	TooltipTrigger: ({
-		render,
-		children,
-	}: {
-		render?: React.ReactElement<{ children?: React.ReactNode }>;
-		children?: React.ReactNode;
-	}) => (render ? React.cloneElement(render, {}, children ?? render.props.children) : children),
-	TooltipContent: () => null,
-	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
 
 const t = testSite.createTranslator(editorMessages);
 
@@ -80,10 +66,14 @@ const CODE_THEN_BODY = "```ts\nconst a\n```\n\nbody";
 const CODE_RANGE = { from: 1, to: 6 };
 const BODY_RANGE = { from: 10, to: 14 };
 
+const bubble = () => within(screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") }));
+/** The names of the buttons the bubble offers. */
 const buttonNames = () =>
-	[...screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") }).querySelectorAll("button")].map(
-		(button) => button.getAttribute("aria-label"),
-	);
+	bubble()
+		.getAllByRole("button")
+		.map((button) => button.getAttribute("aria-label"));
+/** Whether the bubble offers a button of that name. */
+const offers = (name: string) => bubble().queryByRole("button", { name }) !== null;
 
 describe("inline bubble inside code when code block tools are off", () => {
 	it("offers text styles, tooltip and fold in code when everything is on", () => {
@@ -98,9 +88,8 @@ describe("inline bubble inside code when code block tools are off", () => {
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, CODE_RANGE);
 		renderBubble(editor);
-		const names = buttonNames();
-		for (const name of [BOLD, ITALIC, STRIKE, UNDERLINE]) expect(names).not.toContain(name);
-		expect(names).toEqual(expect.arrayContaining([TOOLTIP, FOLD]));
+		for (const name of [BOLD, ITALIC, STRIKE, UNDERLINE]) expect(offers(name), name).toBe(false);
+		for (const name of [TOOLTIP, FOLD]) expect(offers(name), name).toBe(true);
 	});
 
 	it("EDIT-M2 hides the tooltip button in code when tooltip is off, and the fold button when fold is off", () => {
@@ -108,10 +97,9 @@ describe("inline bubble inside code when code block tools are off", () => {
 		const editor = createEditor(CODE_THEN_BODY);
 		focusAt(editor, CODE_RANGE);
 		renderBubble(editor);
-		const names = buttonNames();
-		expect(names).not.toContain(TOOLTIP);
-		expect(names).not.toContain(FOLD);
-		expect(names).toEqual(expect.arrayContaining([BOLD, ITALIC, STRIKE, UNDERLINE]));
+		expect(offers(TOOLTIP)).toBe(false);
+		expect(offers(FOLD)).toBe(false);
+		for (const name of [BOLD, ITALIC, STRIKE, UNDERLINE]) expect(offers(name), name).toBe(true);
 	});
 
 	it("does not change the bubble outside code", () => {
@@ -128,10 +116,8 @@ describe("inline bubble inside code when code block tools are off", () => {
 		expect(editor.state.doc.firstChild?.attrs.rawMode).toBe(false);
 		focusAt(editor, { from: 1, to: 5 });
 		renderBubble(editor);
-		const names = buttonNames();
-		expect(names).toContain(BOLD);
-		expect(names).not.toContain(ITALIC);
-		act(() => fireEvent.click(screen.getByRole("button", { name: BOLD })));
+		expect(offers(ITALIC)).toBe(false);
+		act(() => fireEvent.click(bubble().getByRole("button", { name: BOLD })));
 		expect(editor.isActive("bold")).toBe(false);
 	});
 

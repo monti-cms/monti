@@ -317,13 +317,31 @@ describe("admin CSS confinement", () => {
 
 		it("ADMIN-H1 admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
 			const css = built.get("admin") ?? "";
-			const selectors = selectorsOf(postcss.parse(css));
+			const root = postcss.parse(css);
+			const selectors = selectorsOf(root);
 			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).
 			expect(selectors).toContain(":where(html:has(.monti-admin)) button");
-			expect(css).toContain(":where(html:has(.monti-admin)){color-scheme:light;--monti-gray-1:");
-			expect(css).toContain(
-				":where(html:is(.dark,[data-theme=dark]):has(.monti-admin)){color-scheme:dark;--monti-gray-1:",
-			);
+			/** The declarations of each rule with exactly this selector. */
+			const blocks = (selector: string) => {
+				const found: Map<string, string>[] = [];
+				root.walkRules((rule) => {
+					if (rule.selector !== selector) return;
+					const decls = new Map<string, string>();
+					rule.walkDecls((decl) => {
+						decls.set(decl.prop, decl.value);
+					});
+					found.push(decls);
+				});
+				return found;
+			};
+			// Each mode's token block sets its color scheme beside the tokens.
+			for (const [selector, scheme] of [
+				[":where(html:has(.monti-admin))", "light"],
+				[":where(html:is(.dark,[data-theme=dark]):has(.monti-admin))", "dark"],
+			] as const)
+				expect(
+					blocks(selector).some((decls) => decls.get("color-scheme") === scheme && decls.has("--monti-gray-1")),
+				).toBe(true);
 			expect(css).toContain(".katex");
 			expect(css).toContain("KaTeX_Main");
 			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.

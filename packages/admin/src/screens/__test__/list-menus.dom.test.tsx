@@ -7,6 +7,9 @@ import { commonMessages } from "../../lib/common.messages";
 import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
+import { AdminUiLabels } from "../../ui/labels";
+import { uiMessages } from "../../ui/messages";
+import { describeBulkFailure } from "../entries/bulk-bar";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
@@ -26,6 +29,7 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 
 const t = testSite.createTranslator(screensMessages);
 const tc = testSite.createTranslator(commonMessages);
+const tu = testSite.createTranslator(uiMessages);
 const statusName = (status: "draft" | "published" | "archived") => statusLabels(testSite)[status];
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
@@ -136,9 +140,11 @@ const saved = () => api.sent("PUT /v1/preferences").map((request) => request.bod
 
 const renderList = async () => {
 	render(
-		<AdminQueryProvider>
-			<EntryListScreen />
-		</AdminQueryProvider>,
+		<AdminUiLabels>
+			<AdminQueryProvider>
+				<EntryListScreen />
+			</AdminQueryProvider>
+		</AdminUiLabels>,
 	);
 	await screen.findByRole("row", { name: /가/ });
 };
@@ -155,12 +161,11 @@ const closeMenu = async () => {
 	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 	await menuClosed();
 };
-/** The pager's names come from the UI labels, English until a provider says otherwise. */
-const PAGER = /Pagination|페이지 이동/;
-const NEXT = /Next page|다음 페이지/;
-const dotsIn = (column: string) =>
-	within(headRow()).getByRole("columnheader", { name: column, hidden: true }).querySelectorAll("[data-slot=column-dot]")
-		.length;
+/** The pager's names are the UI labels the admin gives the design system. */
+const PAGER = tu("pagination.label");
+const NEXT = tu("pagination.nextPage");
+/** A value of the open menu, by the start of its name (the count follows it). */
+const valueBox = (label: string) => screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${label}`) });
 
 describe("flow: sort from a column's menu", () => {
 	it("LIST-S1 picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
@@ -217,7 +222,7 @@ describe("flow: columns and page size", () => {
 });
 
 describe("flow: filter by value", () => {
-	it("LIST-F2 ticks 'editing' and 'draft' on the status menu, which stays open, and the dot says it until they are unticked", async () => {
+	it("LIST-F2 ticks 'editing' and 'draft' on the status menu, which stays open with them ticked, until they are unticked", async () => {
 		await renderList();
 		openColumn(t("column.status"));
 		const editing = await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
@@ -228,13 +233,15 @@ describe("flow: filter by value", () => {
 		await waitFor(() => expect(lastList().getAll("status")).toEqual(["editing", "draft"]));
 		expect(nav.search.getAll("status")).toEqual(["editing", "draft"]);
 		expect(menuOpen()).toBe(true);
-		expect(dotsIn(t("column.status"))).toBe(1);
+		expect(valueBox(t("filter.editing")).getAttribute("aria-checked")).toBe("true");
+		expect(valueBox(statusName("draft")).getAttribute("aria-checked")).toBe("true");
 		await closeMenu();
 		openColumn(t("column.status"));
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) }));
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
 		await waitFor(() => expect(lastList().has("status")).toBe(false));
-		expect(dotsIn(t("column.status"))).toBe(0);
+		expect(valueBox(t("filter.editing")).getAttribute("aria-checked")).toBe("false");
+		expect(valueBox(statusName("draft")).getAttribute("aria-checked")).toBe("false");
 	});
 
 	it("LIST-F7 narrows the items of a relation to what the search row types", async () => {
@@ -263,14 +270,13 @@ describe("flow: filter by date", () => {
 			.find((button) => button.textContent === n) as HTMLElement;
 
 	// jsdom moves focus out of the card once the days re-render, which a browser does not; that the calendar stays open is checked by the UpdatedRangeSet story.
-	it("LIST-F4 picks a period on the calendar: the first day starts it, the second sets it, and the dot says it", async () => {
+	it("LIST-F4 picks a period on the calendar: the first day starts it, the second sets it", async () => {
 		await openCalendar();
 		fireEvent.click(day("10"));
 		expect(nav.search.has("updated")).toBe(false);
 		fireEvent.click(day("20"));
 		await waitFor(() => expect(nav.search.get("updated")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
 		expect(lastList().get("updatedFrom")).not.toBeNull();
-		expect(dotsIn(t("column.updatedAt"))).toBe(1);
 	});
 });
 
@@ -326,7 +332,8 @@ describe("flow: pick rows and act", () => {
 		);
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
 		expect(head().getByRole("button", { name: t("column.title") })).toBeInTheDocument();
-		expect(dotsIn(t("column.status"))).toBe(1);
+		// Letting go of the rows keeps the filter.
+		expect(nav.search.getAll("status")).toEqual(["draft"]);
 		expect(
 			head()
 				.getByRole("checkbox", { name: t("list.selectAll") })
@@ -402,7 +409,8 @@ describe("flow: change the relations of the picked rows", () => {
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ }));
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
+		const reason = describeBulkFailure(testSite, { id: "가", ok: false, error: "conflict" });
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining(reason)));
 	});
 
 	it("LIST-C4 opens a field from the right-click menu of several picked rows, with what the picked rows hold", async () => {

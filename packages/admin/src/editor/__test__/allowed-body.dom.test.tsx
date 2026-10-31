@@ -160,10 +160,12 @@ describe("what the menus offer", () => {
 		] as const) {
 			expect(has(rows, t(key)), key).toBe(false);
 		}
-		// Images are allowed, and the components menu lists only the block the list keeps.
+		// Images are allowed, and of the site's blocks the menu lists only the one the list keeps.
 		expect(has(rows, t("slash.image.title"))).toBe(true);
-		const menu = screen.getByRole("listbox", { name: t("slashMenu.label") });
-		expect(within(menu).getAllByRole("option").length).toBeGreaterThan(0);
+		expect(has(rows, insertable[0]?.label ?? "")).toBe(true);
+		for (const block of insertable.slice(1)) {
+			expect(has(rows, block.label), block.name).toBe(false);
+		}
 	});
 });
 
@@ -188,8 +190,22 @@ describe("the slash menu", () => {
 	it("EDIT-A1 keeps the items that are not blocks (paragraph, lists, internal link)", () => {
 		const limited = filterCommands(testSite, "", [], [], editorAllowance(testSite, { blocks: [] }));
 		expect(limited.filter((item) => item.block !== undefined)).toEqual([]);
-		// Paragraph, the headings and the internal link are not blocks of the list.
-		expect(limited.length).toBeGreaterThanOrEqual(5);
+		// Paragraph, the headings, the lists and the internal link are not blocks of the list.
+		expect(limited.map((item) => item.title)).toEqual(
+			expect.arrayContaining(
+				(
+					[
+						"slash.paragraph.title",
+						"slash.h2.title",
+						"slash.h3.title",
+						"slash.h4.title",
+						"slash.bullet.title",
+						"slash.ordered.title",
+						"slash.internalLink.title",
+					] as const
+				).map((key) => t(key)),
+			),
+		);
 	});
 });
 
@@ -280,8 +296,8 @@ describe("a body that holds what the list no longer allows", () => {
 		const { editor } = await open(legacy, LIMITED);
 		const types = editor.getJSON().content?.map((node) => node.type);
 		expect(types).toEqual(["paragraph", "table", "paragraph", "heading"]);
-		expect(editor.view.dom.querySelector("table")).toBeInTheDocument();
-		expect(editor.view.dom.querySelector("h4")).toBeInTheDocument();
+		expect(screen.getByRole("table")).toHaveTextContent("kept cell");
+		expect(screen.getByRole("heading", { level: 4, name: "deep" })).toBeInTheDocument();
 	});
 
 	it("WRITE-S10 saves it unchanged after an edit elsewhere", async () => {
@@ -331,6 +347,6 @@ describe("a body that holds what the list no longer allows", () => {
 		const view = renderWithSite(<CmsEditor doc={docOf("plain")} {...props} />);
 		await waitFor(() => expect(editor).not.toBeNull());
 		view.rerender(<CmsEditor doc={legacy} {...props} />);
-		await waitFor(() => expect((editor as unknown as Editor).view.dom.querySelector("table")).toBeInTheDocument());
+		expect(await screen.findByRole("table")).toHaveTextContent("kept cell");
 	});
 });

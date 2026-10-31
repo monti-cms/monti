@@ -1,5 +1,6 @@
 import { Editor } from "@tiptap/core";
-import { TextSelection } from "@tiptap/pm/state";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { para, tiptapOfNodes } from "../../../test/stored-doc";
@@ -14,6 +15,26 @@ const createTestEditor = (content: string) => {
 	});
 };
 
+/** Applies a move the commands must allow: a refused move fails the test here instead of skipping the rest. */
+const apply = (editor: Editor, tr: Transaction | null) => {
+	if (!tr) throw new Error("the move was refused");
+	editor.view.dispatch(tr);
+};
+
+type Outline = string | { [type: string]: Outline[] };
+const p = (text: string): Outline => `paragraph: ${text}`;
+const li = (...content: Outline[]): Outline => ({ listItem: content });
+const ul = (...items: Outline[]): Outline => ({ bulletList: items });
+const ol = (...items: Outline[]): Outline => ({ orderedList: items });
+/** The document as node types and text, without the empty paragraph the trailing node extension adds at the end. */
+const outline = (editor: Editor): Outline[] => {
+	const shape = (node: PMNode): Outline =>
+		node.isTextblock ? `${node.type.name}: ${node.textContent}` : { [node.type.name]: node.children.map(shape) };
+	const blocks = editor.state.doc.children;
+	const last = blocks.at(-1);
+	return (last?.type.name === "paragraph" && last.content.size === 0 ? blocks.slice(0, -1) : blocks).map(shape);
+};
+
 describe("Pure block drag-and-drop commands", () => {
 	it("EDIT-D1 top-level block move: reorders paragraphs and is restored with a single undo", () => {
 		const editor = createTestEditor("<p>첫 번째</p><p>두 번째</p><p>세 번째</p>");
@@ -24,11 +45,7 @@ describe("Pure block drag-and-drop commands", () => {
 		// after the third block (end position)
 		const targetPos = state.doc.content.size;
 
-		const tr = moveBlockNode(state, fromPos, targetPos);
-		expect(tr).not.toBeNull();
-		if (!tr) return;
-
-		editor.view.dispatch(tr);
+		apply(editor, moveBlockNode(state, fromPos, targetPos));
 		expect(editor.state.doc.content.content.map((n) => n.textContent)).toEqual(["두 번째", "세 번째", "첫 번째"]);
 
 		// one drag = one undo
@@ -48,11 +65,7 @@ describe("Pure block drag-and-drop commands", () => {
 		const opaqueNodePos = p1.nodeSize;
 
 		// move the atom node to the very front
-		const tr = moveBlockNode(state, opaqueNodePos, 0);
-		expect(tr).not.toBeNull();
-		if (!tr) return;
-
-		editor.view.dispatch(tr);
+		apply(editor, moveBlockNode(state, opaqueNodePos, 0));
 		expect(editor.state.doc.child(0).type.name).toBe("cmsOpaqueBlock");
 		expect(editor.state.doc.child(1).textContent).toBe("앞 단락");
 		expect(editor.state.doc.child(2).textContent).toBe("뒤 단락");
@@ -72,11 +85,7 @@ describe("Pure block drag-and-drop commands", () => {
 
 		expect(canDropBlockNode(doc, item2Pos, item1Pos)).toBe(true);
 
-		const tr = moveBlockNode(editor.state, item2Pos, item1Pos);
-		expect(tr).not.toBeNull();
-		if (!tr) return;
-
-		editor.view.dispatch(tr);
+		apply(editor, moveBlockNode(editor.state, item2Pos, item1Pos));
 		const updatedList = editor.state.doc.child(0);
 		const texts = [
 			updatedList.child(0).textContent,
@@ -100,11 +109,7 @@ describe("Pure block drag-and-drop commands", () => {
 		const endPos = doc.content.size;
 		expect(canDropBlockNode(doc, p2Pos, endPos)).toBe(true);
 
-		const tr = moveBlockNode(editor.state, p2Pos, endPos);
-		expect(tr).not.toBeNull();
-		if (!tr) return;
-
-		editor.view.dispatch(tr);
+		apply(editor, moveBlockNode(editor.state, p2Pos, endPos));
 		const bq = editor.state.doc.child(0);
 		expect(bq.childCount).toBe(1);
 		expect(bq.child(0).textContent).toBe("인용 1");
@@ -241,11 +246,8 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 		const source = sourceRangeOf(editor.state.doc, from);
 		expect(editor.state.doc.nodeAt(source?.from ?? -1)?.type.name).toBe("bulletList");
 
-		const tr = moveBlockNode(editor.state, from, target);
-		expect(tr).not.toBeNull();
-		if (tr) editor.view.dispatch(tr);
-		// the empty paragraph at the end of the document is added by the trailing node extension.
-		expect(editor.getHTML()).toMatch(/^<ul><li><p>첫째<\/p><\/li><li><p>들여쓴<\/p><\/li><li><p>둘째<\/p><\/li><\/ul>/);
+		apply(editor, moveBlockNode(editor.state, from, target));
+		expect(outline(editor)).toEqual([ul(li(p("첫째")), li(p("들여쓴")), li(p("둘째")))]);
 		editor.destroy();
 	});
 
@@ -264,9 +266,7 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 		const target = right + (editor.state.doc.nodeAt(right)?.nodeSize ?? 0);
 		expect(sourceRangeOf(editor.state.doc, from)?.fill?.type.name).toBe("paragraph");
 
-		const tr = moveBlockNode(editor.state, from, target);
-		expect(tr).not.toBeNull();
-		if (tr) editor.view.dispatch(tr);
+		apply(editor, moveBlockNode(editor.state, from, target));
 		const columns = editor.state.doc.firstChild;
 		expect(columns?.child(0).textContent).toBe("");
 		expect(columns?.child(1).childCount).toBe(2);
@@ -291,13 +291,8 @@ describe("dragging a list item out of its list", () => {
 		});
 		return found;
 	};
-	const move = (editor: Editor, from: number, target: number) => {
-		const tr = moveBlockNode(editor.state, from, target);
-		expect(tr).not.toBeNull();
-		if (tr) editor.view.dispatch(tr);
-	};
-	// the empty paragraph at the end of the document is added by the trailing node extension.
-	const html = (editor: Editor) => editor.getHTML().replace(/<p><\/p>$/, "");
+	const move = (editor: Editor, from: number, target: number) =>
+		apply(editor, moveBlockNode(editor.state, from, target));
 
 	it("EDIT-D1 dropping between paragraphs makes a new list wrapped in the original list type, and the remaining items stay in the original list", () => {
 		const editor = createTestEditor("<ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>가</p><p>나</p>");
@@ -305,16 +300,16 @@ describe("dragging a list item out of its list", () => {
 		const target = posOf(editor, "paragraph", "나");
 		expect(calculateDropPosition(editor.state.doc, from, target + 1)).toBe(target);
 		move(editor, from, target);
-		expect(html(editor)).toBe("<ul><li><p>하나</p></li></ul><p>가</p><ul><li><p>둘</p></li></ul><p>나</p>");
+		expect(outline(editor)).toEqual([ul(li(p("하나"))), p("가"), ul(li(p("둘"))), p("나")]);
 		editor.commands.undo();
-		expect(html(editor)).toBe("<ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>가</p><p>나</p>");
+		expect(outline(editor)).toEqual([ul(li(p("하나")), li(p("둘"))), p("가"), p("나")]);
 		editor.destroy();
 	});
 
 	it("EDIT-D1 dragging out the only item leaves no empty list, and child items move along with it", () => {
 		const editor = createTestEditor("<p>가</p><ul><li><p>부모</p><ul><li><p>자식</p></li></ul></li></ul><p>나</p>");
 		move(editor, posOf(editor, "listItem", "부모자식"), 0);
-		expect(html(editor)).toBe("<ul><li><p>부모</p><ul><li><p>자식</p></li></ul></li></ul><p>가</p><p>나</p>");
+		expect(outline(editor)).toEqual([ul(li(p("부모"), ul(li(p("자식"))))), p("가"), p("나")]);
 		editor.destroy();
 	});
 
@@ -324,17 +319,13 @@ describe("dragging a list item out of its list", () => {
 		);
 		// placed after "가" (before the ordered list "삼"), it merges into that ordered list.
 		move(editor, posOf(editor, "listItem", "이"), posOf(editor, "orderedList", "삼"));
-		expect(html(editor)).toBe(
-			"<ol><li><p>일</p></li></ol><p>가</p><ol><li><p>이</p></li><li><p>삼</p></li></ol><ul><li><p>점</p></li></ul>",
-		);
+		expect(outline(editor)).toEqual([ol(li(p("일"))), p("가"), ol(li(p("이")), li(p("삼"))), ul(li(p("점")))]);
 		editor.destroy();
 
 		// placing an ordered item between a paragraph and a bullet list does not merge it with the following bullet list.
 		const mixed = createTestEditor("<ol><li><p>일</p></li><li><p>이</p></li></ol><p>가</p><ul><li><p>점</p></li></ul>");
 		move(mixed, posOf(mixed, "listItem", "이"), posOf(mixed, "bulletList", "점"));
-		expect(html(mixed)).toBe(
-			"<ol><li><p>일</p></li></ol><p>가</p><ol><li><p>이</p></li></ol><ul><li><p>점</p></li></ul>",
-		);
+		expect(outline(mixed)).toEqual([ol(li(p("일"))), p("가"), ol(li(p("이"))), ul(li(p("점")))]);
 		mixed.destroy();
 	});
 });
@@ -348,7 +339,6 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		});
 		return found;
 	};
-	const html = (editor: Editor) => editor.getHTML().replace(/<p><\/p>$/, "");
 	const select = (editor: Editor, positions: number[]) =>
 		editor.view.dispatch(setBlockSelection(editor.state.tr, positions));
 	const backspace = (editor: Editor) =>
@@ -365,7 +355,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		const editor = createTestEditor("<ol><li><p>하나</p></li><li><p>둘</p></li><li><p>셋</p></li></ol>");
 		select(editor, [posOf(editor, "listItem", "둘"), posOf(editor, "listItem", "셋")]);
 		backspace(editor);
-		expect(html(editor)).toBe("<ol><li><p>하나</p></li></ol>");
+		expect(outline(editor)).toEqual([ol(li(p("하나")))]);
 		expect(selectedBlocks(editor.state)).toBeNull();
 		editor.destroy();
 	});
@@ -374,10 +364,10 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		const editor = createTestEditor("<h2>제목</h2><ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>뒤</p>");
 		select(editor, [posOf(editor, "heading", "제목"), posOf(editor, "listItem", "하나")]);
 		backspace(editor);
-		expect(html(editor)).toBe("<ul><li><p>둘</p></li></ul><p>뒤</p>");
+		expect(outline(editor)).toEqual([ul(li(p("둘"))), p("뒤")]);
 		select(editor, [posOf(editor, "listItem", "둘")]);
 		backspace(editor);
-		expect(html(editor)).toBe("<p>뒤</p>");
+		expect(outline(editor)).toEqual([p("뒤")]);
 		editor.destroy();
 	});
 
@@ -403,14 +393,12 @@ describe("block selection (marquee): select, move and delete by line", () => {
 	it("EDIT-D2 moving a paragraph and some list items together wraps the items in a list, and the moved lines stay selected", () => {
 		const editor = createTestEditor("<p>가</p><ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>나</p>");
 		const rows = [0, posOf(editor, "listItem", "하나")];
-		const tr = moveBlockSet(editor.state, rows, editor.state.doc.content.size);
-		expect(tr).not.toBeNull();
-		if (tr) editor.view.dispatch(tr);
-		expect(html(editor)).toBe("<ul><li><p>둘</p></li></ul><p>나</p><p>가</p><ul><li><p>하나</p></li></ul>");
+		apply(editor, moveBlockSet(editor.state, rows, editor.state.doc.content.size));
+		expect(outline(editor)).toEqual([ul(li(p("둘"))), p("나"), p("가"), ul(li(p("하나")))]);
 		const moved = selectedBlocks(editor.state) ?? [];
 		expect(moved.map((pos) => editor.state.doc.nodeAt(pos)?.textContent)).toEqual(["가", "하나"]);
 		editor.commands.undo();
-		expect(html(editor)).toBe("<p>가</p><ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>나</p>");
+		expect(outline(editor)).toEqual([p("가"), ul(li(p("하나")), li(p("둘"))), p("나")]);
 		editor.destroy();
 	});
 
@@ -419,9 +407,8 @@ describe("block selection (marquee): select, move and delete by line", () => {
 			"<ul><li><p>a</p></li><li><p>b</p></li></ul><p>가</p><ul><li><p>x</p></li><li><p>y</p></li></ul>",
 		);
 		const rows = [posOf(editor, "listItem", "a"), posOf(editor, "listItem", "b")];
-		const tr = moveBlockSet(editor.state, rows, posOf(editor, "listItem", "y"));
-		if (tr) editor.view.dispatch(tr);
-		expect(html(editor)).toBe("<p>가</p><ul><li><p>x</p></li><li><p>a</p></li><li><p>b</p></li><li><p>y</p></li></ul>");
+		apply(editor, moveBlockSet(editor.state, rows, posOf(editor, "listItem", "y")));
+		expect(outline(editor)).toEqual([p("가"), ul(li(p("x")), li(p("a")), li(p("b")), li(p("y")))]);
 		editor.destroy();
 	});
 });

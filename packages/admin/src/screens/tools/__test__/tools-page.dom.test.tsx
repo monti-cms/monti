@@ -13,8 +13,6 @@ import { toolsMessages } from "../messages";
 import ToolsPage from "../page";
 import { toolsTabs } from "../tools-tabs";
 
-vi.mock("../../require-admin", () => ({ requireAdminPage: async () => undefined }));
-
 let api: FakeApi;
 beforeEach(() => {
 	api = fakeApi()
@@ -46,6 +44,8 @@ const site = createSite({
 	],
 } as CmsConfig);
 const t = site.createTranslator(toolsMessages);
+/** The CMS the page is handed: the site, and the auth gateway (the edge) letting the admin in. */
+const cms = { site, authGateway: { verifyAdmin: async () => ({}) } } as unknown as Cms;
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {
 		throw new Error(`redirect:${href}`);
@@ -55,14 +55,14 @@ const server = (): AdminServer => ({
 	}),
 });
 const open = async (path: string | undefined) => {
-	const element = await ToolsPage({ cms: { site } as unknown as Cms, server: server(), path });
+	const element = await ToolsPage({ cms, server: server(), path });
 	return renderInRouter(withSite(<AdminQueryProvider>{element}</AdminQueryProvider>, site));
 };
 const tabs = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
 describe("the tools page", () => {
 	it("ADMIN-U1 goes to the first tab from the bare tools address", async () => {
-		await expect(ToolsPage({ cms: { site } as unknown as Cms, server: server(), path: undefined })).rejects.toThrow(
+		await expect(ToolsPage({ cms, server: server(), path: undefined })).rejects.toThrow(
 			`redirect:${toolsTabs(site)[0]?.href}`,
 		);
 	});

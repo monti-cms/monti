@@ -12,7 +12,9 @@ function Probe({ id }: { id: string }) {
 	const [view, setView, reset] = usePreference("probe-view", enumCodec(["grid", "list"] as const), "grid");
 	return (
 		<div>
-			<output data-testid={id}>{view}</output>
+			<output aria-label={id} data-testid={id}>
+				{view}
+			</output>
 			<button type="button" onClick={() => setView("list")}>
 				set-{id}
 			</button>
@@ -42,7 +44,7 @@ describe("usePreference", () => {
 	it("ADMIN-S1 falls back to the default for a missing or invalid stored value", () => {
 		writePreference(testSite, "probe-view", "sideways");
 		render(wrap(<Probe id="a" />));
-		expect(screen.getByTestId("a").textContent).toBe("grid");
+		expect(screen.getByLabelText("a").textContent).toBe("grid");
 	});
 
 	it("keeps every component on one preference in step, and forgets it on reset", async () => {

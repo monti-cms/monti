@@ -168,10 +168,6 @@ beforeEach(() => {
 	document.elementFromPoint = () => null;
 });
 afterEach(async () => {
-	// ProseMirror focuses the view a moment after a paste or a drop: let that pass before the editor goes.
-	await act(async () => {
-		await new Promise((resolve) => setTimeout(resolve, 80));
-	});
 	cleanup();
 	vi.unstubAllGlobals();
 });
@@ -204,8 +200,13 @@ const imageNodes = (editor: Editor) => blocks(editor).filter((node) => node.type
 const uploadsPosted = () => api.sent("POST /v1/media/uploads");
 
 const pngFile = () => new File(["x"], "pasted.png", { type: "image/png" });
+/**
+ * Pastes a file the way a browser does. A paste without text sends ProseMirror to its capture box, and it focuses the body again on a timer:
+ * the clock runs that timer, so the paste is over before the test goes on (and before the editor goes).
+ */
 const paste = (file: File) => {
 	const box = screen.getByRole("textbox", { name: /./ });
+	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 	fireEvent.paste(box, {
 		clipboardData: {
 			items: [{ kind: "file", type: file.type, getAsFile: () => file }],
@@ -214,6 +215,8 @@ const paste = (file: File) => {
 			getData: () => "",
 		},
 	});
+	act(() => vi.runOnlyPendingTimers());
+	vi.useRealTimers();
 };
 /** The cursor in the empty paragraph between two paragraphs. */
 const withCursorBetween = async () => {
@@ -236,7 +239,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		expect(kinds.indexOf("image")).toBeGreaterThan(0);
 		expect(kinds.indexOf("image")).toBeLessThan(kinds.length - 1);
 		expect(imageNodes(editor)[0]?.uploadId).toEqual(expect.any(String));
-		expect(imageNodes(editor)[0]?.mediaId).toBeFalsy();
+		expect(imageNodes(editor)[0]?.mediaId).toBeNull();
 		const bar = await screen.findByRole("progressbar");
 		expect(bar.getAttribute("aria-label")).toBe(t("imageNode.uploadingPercent", { percent: 0 }));
 		// The bytes go to storage; the bar follows.
@@ -268,7 +271,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
 		act(() => FakeXhr.all[0]?.onerror?.());
 		await waitFor(() => expect(imageNodes(editor)).toHaveLength(0));
-		expect(toast.error).toHaveBeenCalled();
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining(t("imageNode.uploadFailed")));
 	});
 
 	it("MEDIA-E2 opens the image card with the alt text focused; typing sets the alt text and decorative clears it", async () => {

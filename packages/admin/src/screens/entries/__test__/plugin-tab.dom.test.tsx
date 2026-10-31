@@ -62,7 +62,9 @@ describe("properties panel: the tab a plugin places fields in", () => {
 	});
 
 	it("PLUG-A7 a field a plugin places renders in that tab, and not in the default tab, even without a layout entry", async () => {
-		if (!found || !testSite.isCollection(found.collection)) return;
+		// Both example configs place the SEO fields in a tab of their own; a config without such a field fails here instead of passing unseen.
+		if (!found || !testSite.isCollection(found.collection))
+			throw new Error("the config has no text field a plugin places");
 		renderPanel(found.collection, { ...EMPTY_FORM, title: "Title", [found.name]: "Tab value" });
 		expect(screen.queryByText(found.field.label)).toBeNull();
 		fireEvent.click(screen.getByRole("tab", { name: found.tab }));

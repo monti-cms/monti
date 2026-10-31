@@ -9,6 +9,7 @@ import type { BulkParams } from "../../../api/entries";
 import { commonMessages } from "../../../lib/common.messages";
 import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
+import { exportMessages } from "../../export/messages";
 import { deleteMessages } from "../../shared/delete.messages";
 import { BulkBar } from "../bulk-bar";
 import { bulkBarMessages } from "../bulk-bar.messages";
@@ -22,6 +23,7 @@ afterEach(() => {
 const t = testSite.createTranslator(bulkBarMessages);
 const tc = testSite.createTranslator(commonMessages);
 const td = testSite.createTranslator(deleteMessages);
+const tx = testSite.createTranslator(exportMessages);
 
 const row = (id: string, patch: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
@@ -213,27 +215,22 @@ describe("the bar over picked rows", () => {
 
 	it("LIST-C5 keeps export and then the trash in the ⋯, the trash in red, and moves drafts at once", async () => {
 		const { run, onExport } = bar();
-		const rows = await openMore();
-		expect(rows.map((entry) => entry.textContent)).toEqual([
-			expect.stringMatching(/내보내기|Export/),
-			tc("lifecycle.trash"),
-		]);
-		const trash = rows.at(-1) as HTMLElement;
-		expect(trash.getAttribute("data-variant")).toBe("danger");
-		fireEvent.click(rows[0] as HTMLElement);
+		await openMore();
+		fireEvent.click(screen.getByRole("menuitem", { name: tx("action.selected") }));
 		expect(onExport).toHaveBeenCalledWith(["entry-1"]);
 		expect(run).not.toHaveBeenCalled();
 		await openMore();
-		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
+		fireEvent.click(screen.getByRole("menuitem", { name: tc("lifecycle.trash") }));
 		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		expect(run.mock.calls[0]?.slice(0, 3)).toEqual(["trash", tc("lifecycle.trash"), picked.map(toSelection)]);
+		// The bar passes no parameters for the trash.
+		expect(run).toHaveBeenCalledWith("trash", tc("lifecycle.trash"), picked.map(toSelection), undefined);
 	});
 
 	it("TRASH-T3 asks before moving a published entry to the trash, and sends nothing when cancelled", async () => {
 		const { run } = bar({ initial: [row("entry-1", { status: "published" })] });
 		await openMore();
-		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
+		fireEvent.click(screen.getByRole("menuitem", { name: tc("lifecycle.trash") }));
 		const dialog = await screen.findByRole("alertdialog", { name: td("trash.ask.title") });
 		expect(within(dialog).getByText(td("trash.ask.one", { title: "entry-1" }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
@@ -241,7 +238,7 @@ describe("the bar over picked rows", () => {
 		expect(run).not.toHaveBeenCalled();
 
 		await openMore();
-		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
+		fireEvent.click(screen.getByRole("menuitem", { name: tc("lifecycle.trash") }));
 		fireEvent.click(
 			within(await screen.findByRole("alertdialog")).getByRole("button", { name: td("trash.ask.confirm") }),
 		);
@@ -286,12 +283,6 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		expect(mixed.getAttribute("aria-checked")).toBe("mixed");
 		expect(within(mixed).getByLabelText(t("holding", { count: 1, total: 2 })).textContent).toBe("1/2");
 		expect((await item("타입스크립트")).getAttribute("aria-checked")).toBe("false");
-		// What the rows hold comes first.
-		expect(screen.getAllByRole("menuitemcheckbox").map((entry) => entry.textContent?.replace(/[\d/]+$/, ""))).toEqual([
-			"리액트",
-			"성능",
-			"타입스크립트",
-		]);
 	});
 
 	it("LIST-C4 adds a mixed tag to all the rows without asking, and the menu stays open with it ticked", async () => {

@@ -1,5 +1,7 @@
 import { Editor } from "@tiptap/core";
-import { CellSelection, cellAround } from "@tiptap/pm/tables";
+import { history, undo } from "@tiptap/pm/history";
+import { type Command, EditorState, type Transaction } from "@tiptap/pm/state";
+import { CellSelection, cellAround, mergeCells } from "@tiptap/pm/tables";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
@@ -177,7 +179,35 @@ describe("editor table cell merge and split", () => {
 				],
 			]),
 		);
-		const saved = tiptapToStored(testSite, storedToTiptap(testSite, source));
+		// The editor here is not mounted and runs no plugins, so the undo history runs on a state built from its document.
+		const instance = createTableEditor(storedToTiptap(testSite, source));
+		let state = EditorState.create({ schema: instance.schema, doc: instance.state.doc, plugins: [history()] });
+		const run = (command: Command) => {
+			let next = state;
+			const dispatch = (tr: Transaction) => {
+				next = state.apply(tr);
+			};
+			expect(command(state, dispatch)).toBe(true);
+			state = next;
+		};
+		// Merge the two cells of the second column, then undo.
+		const cells: number[] = [];
+		state.doc.descendants((node, pos) => {
+			if (node.type.name === "tableHeader" || node.type.name === "tableCell") cells.push(pos);
+		});
+		const [, top, , bottom] = cells;
+		if (top === undefined || bottom === undefined) throw new Error("The table has no second column.");
+		state = state.apply(state.tr.setSelection(CellSelection.create(state.doc, top, bottom)));
+		run(mergeCells);
+		const merged = tiptapToStored(testSite, state.doc.toJSON());
+		expect(
+			cellsOf(merged)
+				.flat()
+				.map((cell) => cell.attrs?.rowspan),
+		).toContain(2);
+		run(undo);
+
+		const saved = tiptapToStored(testSite, state.doc.toJSON());
 		expect(withoutIds(saved)).toEqual(withoutIds(source));
 		expect(cellsOf(saved).map((row) => row.map((cell) => cell.attrs?.header))).toEqual([
 			[true, false],

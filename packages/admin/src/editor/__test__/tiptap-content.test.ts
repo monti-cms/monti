@@ -118,15 +118,20 @@ describe("stored document <-> Tiptap round trip", () => {
 		});
 
 		it("FMT-R2 keep a new, empty list item and an empty quote as they were", () => {
-			const typed = editorDoc({
-				type: "bulletList",
-				content: [
-					{ type: "listItem", content: [paragraph("하나")] },
-					{ type: "listItem", content: [paragraph()] },
-				],
-			});
+			const typed = editorDoc(
+				{
+					type: "bulletList",
+					content: [
+						{ type: "listItem", content: [paragraph("하나")] },
+						{ type: "listItem", content: [paragraph()] },
+					],
+				},
+				{ type: "blockquote", content: [paragraph()] },
+			);
 			const saved = tiptapToStored(testSite, typed);
 			expect(JSON.stringify(saved)).not.toContain("hardBreak");
+			expect(saved.content.map((block) => block.type)).toEqual(["bulletList", "blockquote"]);
+			expect(saved.content[0]?.content).toHaveLength(2);
 			expect(contentOf(throughEditor(saved))).toEqual(contentOf(saved));
 		});
 	});
@@ -166,26 +171,37 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("FMT-R2 keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
+	it("FMT-R2 keeps a box exactly as it was, nested ids and all", () => {
 		const first = docOfBlocks(unknownBlock("mist0001"), { type: "paragraph", id: "para0001", content: [text("뒤")] });
 		const json = throughSchema(storedToTiptap(testSite, first));
-		const box = json.content?.[0];
-		expect(box?.type).toBe(OPAQUE_BLOCK_NAME);
+		expect(json.content?.[0]?.type).toBe(OPAQUE_BLOCK_NAME);
 
 		const second = tiptapToStored(testSite, json);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(second.content[0]).toEqual(first.content[0]);
+	});
 
-		// A copy of the box gets a new id from the editor, and the saved node follows it.
+	it("TRANS-B1 gives a box the id the editor holds, so a copy of it is saved with the copy's id", () => {
+		const json = throughSchema(storedToTiptap(testSite, docOfBlocks(unknownBlock("mist0001"))));
+		const box = json.content?.[0];
 		const copied = { ...json, content: [{ ...box, attrs: { ...box?.attrs, blockId: "zzzzzzzz" } }] } as JSONContent;
-		expect(tiptapToStored(testSite, copied).content[0]?.id).toBe("zzzzzzzz");
+		expect(tiptapToStored(testSite, copied).content[0]).toEqual({ ...unknownBlock("mist0001"), id: "zzzzzzzz" });
 	});
 
 	it("EDIT-B5 shows a box's node written in the registered format, and as JSON when there is none", () => {
 		const doc = docOfBlocks(unknownBlock("mist0001"));
 		const plain = storedToTiptap(testSite, doc).content?.[0];
 		expect(plain?.type).toBe(OPAQUE_BLOCK_NAME);
+		// No preview text: the box shows the node it holds, as JSON.
 		expect(plain?.attrs?.preview).toBe("");
+		expect(JSON.parse(String(plain?.attrs?.node))).toEqual(doc.content[0]);
+		// A format that cannot write the node gives no preview either.
+		const failing = boxPreviewOf({
+			export: () => {
+				throw new Error("cannot write");
+			},
+		});
+		expect(storedToTiptap(testSite, doc, { boxPreview: failing }).content?.[0]?.attrs?.preview).toBe("");
 
 		// A format of its own: it writes each block as its type name.
 		const format = { export: (written: StoredDocument) => `<${written.content[0]?.type}>\n` };

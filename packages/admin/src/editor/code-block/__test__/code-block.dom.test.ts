@@ -227,12 +227,18 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 			"print(a, b);",
 		].join("\n");
 		const instance = mountValue(raw);
-		const html = instance.getHTML();
 		expect(instance.state.doc.child(0).textContent).toBe("const test = 100;\nprint(a, b);");
-		expect(html).toContain("<u>const</u>");
-		expect(html).toMatch(/<span data-code-tooltip="안내 문구"[^>]*>test<\/span>/);
-		expect(html).toContain("<strong>100</strong>");
-		expect(html).toMatch(/<span data-open="true" data-code-fold=""[^>]*>a, b<\/span>/);
+		// The comments become marks on the text they cover, as the editor document holds them.
+		expect(blockJson(instance).content).toEqual([
+			{ type: "text", marks: [{ type: "underline" }], text: "const" },
+			{ type: "text", text: " " },
+			{ type: "text", marks: [{ type: "codeTooltip", attrs: { content: "안내 문구" } }], text: "test" },
+			{ type: "text", text: " = " },
+			{ type: "text", marks: [{ type: "bold" }], text: "100" },
+			{ type: "text", text: ";\nprint(" },
+			{ type: "text", marks: [{ type: "codeFold", attrs: { open: true } }], text: "a, b" },
+			{ type: "text", text: ");" },
+		]);
 		expect(save(blockJson(instance))).toBe(raw);
 	});
 
@@ -274,7 +280,7 @@ describe("code block storage format (comment syntax) <-> editor", () => {
 			["char", "Tooltip", "b{2}", "g", 1],
 		]);
 		// Places found by a rule are not turned into marks.
-		expect(instance.getHTML()).not.toContain("data-code-fold");
+		expect(blockJson(instance).content?.flatMap((child) => child.marks ?? [])).toEqual([]);
 
 		instance.commands.insertContentAt(instance.state.doc.child(0).nodeSize - 1, "\nimport c from 'c';");
 		expect(save(blockJson(instance))).toBe(

@@ -139,6 +139,9 @@ interface Server {
 	importRun?: Promise<void>;
 }
 
+/** What the server says of a file that is not a zip it can read. */
+const NOT_A_ZIP = "This file isn't a zip archive that can be read.";
+
 /** The admin API as the Data page uses it. */
 function serve({
 	empty = false,
@@ -185,8 +188,7 @@ function serve({
 				await importRun;
 				return IMPORT_RUN;
 			}
-			if (importPreviewStatus >= 400)
-				return failure("invalid_input", "This file isn't a zip archive that can be read.");
+			if (importPreviewStatus >= 400) return failure("invalid_input", NOT_A_ZIP);
 			return importPreview;
 		})
 		.install();
@@ -234,10 +236,9 @@ describe("Data page: choosing a zip", () => {
 	});
 
 	it("DATA-I9 refuses a file over the size the server takes, and opens no sheet", async () => {
-		const api = serve({ limit: 10 });
+		serve({ limit: 10 });
 		renderData();
-		await waitFor(() => expect(api.sent("GET /v1/meta").length).toBeGreaterThan(0));
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		// Once the limit is in, a file over it is refused, even when it came before the limit and its reading was already asked for.
 		choose(new File([new Uint8Array(2048)], "big.zip"));
 		expect(await screen.findByText(ti("file.tooLarge", { limit: "1 KB" }))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
@@ -247,7 +248,7 @@ describe("Data page: choosing a zip", () => {
 		serve({ importPreviewStatus: 400 });
 		renderData();
 		choose();
-		expect(await screen.findByText(/isn't a zip archive that can be read/)).toBeInTheDocument();
+		expect(await screen.findByText(NOT_A_ZIP)).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 });

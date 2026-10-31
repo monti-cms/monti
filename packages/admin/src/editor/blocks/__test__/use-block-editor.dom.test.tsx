@@ -47,9 +47,10 @@ function Harness({
 	return <EditorContent editor={editor} />;
 }
 
+/** `ready` passes once the block's view is drawn. */
 const mount = async (
 	doc: StoredDocument,
-	ready: string,
+	ready: () => unknown,
 	views: Record<string, BlockView> = {},
 	allowance?: EditorAllowance,
 ) => {
@@ -66,7 +67,7 @@ const mount = async (
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector(ready)).toBeInTheDocument());
+	await waitFor(ready);
 	return editor as unknown as Editor;
 };
 
@@ -79,12 +80,14 @@ const countTransactions = (editor: Editor) => {
 	return counter;
 };
 
+/** The bodies of the two tabs: test data. */
+const BODIES = ["첫째", "둘째"] as const;
 const tabsNode = (): CmsNode => ({
 	type: "tabs",
 	attrs: { defaultValue: "둘" },
 	content: [
-		{ type: "tab", attrs: { label: "하나" }, content: [para("첫째")] },
-		{ type: "tab", attrs: { label: "둘" }, content: [para("둘째")] },
+		{ type: "tab", attrs: { label: "하나" }, content: [para(BODIES[0])] },
+		{ type: "tab", attrs: { label: "둘" }, content: [para(BODIES[1])] },
 	],
 });
 const TABS = storedDoc(tabsNode());
@@ -181,8 +184,9 @@ function CustomTab() {
 	);
 }
 
-const mountTabs = (doc = TABS) =>
-	mount(doc, "[data-monti-container-node='cmsTabs']", { tabs: CustomTabs, tab: CustomTab });
+const mountTabs = (doc = TABS) => mount(doc, () => screen.getAllByRole("tab"), { tabs: CustomTabs, tab: CustomTab });
+/** A view without markup of its own is drawn once the tab bodies are. */
+const bodyDrawn = () => screen.getByText(BODIES[0]);
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 const failure = () => screen.getByLabelText("failure").textContent;
@@ -191,8 +195,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 	it("PLUG-A10 reads the children and values, and renders the nested body", async () => {
 		await mountTabs();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
-		expect(screen.getByText("첫째")).toBeInTheDocument();
-		expect(document.querySelector("[data-monti-block-content]")).toBeInTheDocument();
+		for (const body of BODIES) expect(screen.getByText(body)).toBeInTheDocument();
 	});
 
 	it("shows only the visible child", async () => {
@@ -284,7 +287,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 				</button>
 			);
 		}
-		const editor = await mount(TABS, "[data-monti-container-node='cmsTabs']", {
+		const editor = await mount(TABS, () => screen.getByRole("button", { name: "probe" }), {
 			tabs: () => (
 				<BlockFrame>
 					<Probe />
@@ -323,13 +326,13 @@ describe("useBlockEditor", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(TABS, "[data-monti-container-node='cmsTabs']", { tabs: Spy, tab: CustomTab });
+		const editor = await mount(TABS, bodyDrawn, { tabs: Spy, tab: CustomTab });
 		let block = seen as unknown as ReturnType<typeof useBlockEditor>;
 		expect(block.name).toBe("tabs");
-		expect(block.definition.label).toMatch(/\S/);
+		expect(block.definition).toBe(testSite.ADDED_BLOCKS.find((definition) => definition.name === "tabs"));
 		// A block has the id its document gave it, and keeps it through a change of the document.
 		const id = block.id;
-		expect(id).toMatch(/\S/);
+		expect(id).toBe(TABS.content[0]?.id);
 		act(() => {
 			editor.commands.insertContentAt(editor.state.doc.content.size, "<p>끝</p>");
 		});
@@ -338,7 +341,9 @@ describe("useBlockEditor", () => {
 		expect(block.selected).toBe(false);
 		expect(block.focusedChild).toBeNull();
 		expect(block.raw.editor).toBe(editor);
-		expect(block.raw.node.type.name).toBe("cmsTabs");
+		// The escape hatch is the block's own node, at the position it gives.
+		expect(editor.state.doc.nodeAt(block.raw.getPos() as number)).toBe(block.raw.node);
+		expect(block.raw.node.childCount).toBe(2);
 		expect(block.children.map((child) => [child.index, child.name, child.values.label])).toEqual([
 			[0, "tab", "하나"],
 			[1, "tab", "둘"],
@@ -359,7 +364,7 @@ describe("useBlockEditor commands", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(SOURCE, "[data-monti-container-node='cmsTabs']", { tabs: Spy, tab: CustomTab });
+		const editor = await mount(SOURCE, bodyDrawn, { tabs: Spy, tab: CustomTab });
 		return { editor, block: () => seen as unknown as ReturnType<typeof useBlockEditor> };
 	};
 
@@ -367,7 +372,10 @@ describe("useBlockEditor commands", () => {
 		const { editor, block } = await mountSpy();
 		expect(block().textAround(100, "[탭]")).toBe("앞 문단\n[탭]\n뒤 문단");
 		act(() => block().select());
-		expect(editor.state.selection.constructor.name).toBe("NodeSelection");
+		// The whole block is selected: the selection spans exactly the block node.
+		expect(editor.state.selection.from).toBe(block().raw.getPos());
+		expect(editor.state.doc.nodeAt(editor.state.selection.from)).toBe(block().raw.node);
+		expect(editor.state.selection.to - editor.state.selection.from).toBe(block().raw.node.nodeSize);
 		await waitFor(() => expect(block().selected).toBe(true));
 		act(() => block().focus({ child: 1 }));
 		expect(editor.state.selection.$from.parent.textContent).toBe("둘째");
@@ -422,7 +430,7 @@ function CalloutWithCode() {
 describe("a block view adding body content the body's allowed list does not allow", () => {
 	const callout = storedDoc({ type: "callout", content: [para("안")] });
 	const mountCallout = (allowance?: EditorAllowance) =>
-		mount(callout, "[data-monti-block-content]", { callout: CalloutWithCode }, allowance);
+		mount(callout, () => screen.getByRole("button", { name: "add code" }), { callout: CalloutWithCode }, allowance);
 	const codeBlocks = (editor: Editor) => {
 		let count = 0;
 		editor.state.doc.descendants((node) => {

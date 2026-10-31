@@ -2,14 +2,17 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import type { EventCounts, EventDeliveryItem, EventsList } from "../../../api/events";
+import { commonMessages } from "../../../lib/common.messages";
 import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
+import { AdminUiLabels } from "../../../ui/labels";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
 import { eventsMessages } from "../messages";
 
 const t = testSite.createTranslator(eventsMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -67,10 +70,19 @@ afterEach(() => {
 
 const renderScreen = () =>
 	render(
-		<AdminQueryProvider>
-			<EventsScreen />
-		</AdminQueryProvider>,
+		<AdminUiLabels>
+			<AdminQueryProvider>
+				<EventsScreen />
+			</AdminQueryProvider>
+		</AdminUiLabels>,
 	);
+/** The row of the list that shows `text` (a subscriber, an address). */
+const rowWith = (text: string) => screen.findByRole("row", { name: new RegExp(text) });
+/** The retry and dismiss of a delivery, by the subscriber they name. */
+const deliveryActions = (subscriber: string) => [
+	{ name: t("action.retryLabel", { subscriber }) },
+	{ name: t("action.dismissLabel", { subscriber }) },
+];
 
 const posts = () =>
 	api.requests.filter((request) => request.method === "POST").map((request) => [request.path, request.body]);
@@ -92,7 +104,7 @@ describe("EventsScreen", () => {
 	it("EVENT-L2 opens the full record of an event beside the list without breaking the row's own actions", async () => {
 		renderScreen();
 
-		const row = (await screen.findByText("webhook")).closest("tr") as HTMLElement;
+		const row = await rowWith("webhook");
 		fireEvent.click(within(row).getByText("Title e2"));
 		// A panel beside the list, not a dialog over it: the list stays usable and in place.
 		const detail = await screen.findByRole("complementary", { name: /Title e2/ });
@@ -101,7 +113,7 @@ describe("EventsScreen", () => {
 		expect(within(detail).getByText("e2")).toBeInTheDocument();
 		expect(within(detail).getByText("webhook")).toBeInTheDocument();
 		expect(within(detail).getByText("boom")).toBeInTheDocument();
-		fireEvent.click(within(detail).getByRole("button", { name: "Close" }));
+		fireEvent.click(within(detail).getByRole("button", { name: tc("close") }));
 		expect(screen.queryByRole("complementary")).toBeNull();
 
 		// Retry in the row still retries and does not open the detail.
@@ -114,11 +126,11 @@ describe("EventsScreen", () => {
 		listing(() => ({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }));
 		renderScreen();
 
-		const row = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		const row = await rowWith("slug-e3");
 		expect(within(row).getByText(t("state.recorded"))).toBeInTheDocument();
 		expect(within(row).queryByText(t("state.pending"))).toBeNull();
 		expect(within(row).queryByText(t("state.failed"))).toBeNull();
-		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
+		for (const action of deliveryActions("")) expect(within(row).queryByRole("button", action)).toBeNull();
 	});
 
 	it("EVENT-R1 retries one delivery with its subscriber", async () => {
@@ -170,13 +182,16 @@ describe("EventsScreen", () => {
 		}));
 		renderScreen();
 
-		const deliveredRow = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		const deliveredRow = await rowWith("slug-e3");
 		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeInTheDocument();
 		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeInTheDocument();
 		// A delivered event has nothing to retry or dismiss; a failed one does.
-		expect(within(deliveredRow).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
-		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
-		expect(within(failedRow).getAllByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toHaveLength(2);
+		for (const action of deliveryActions("search-index")) {
+			expect(within(deliveredRow).queryByRole("button", action)).toBeNull();
+		}
+		const failedRow = await rowWith("slug-e1");
+		for (const action of deliveryActions("webhook"))
+			expect(within(failedRow).getByRole("button", action)).toBeEnabled();
 		const list = api.sent("GET /v1/events").find((request) => request.query.has("state"));
 		expect(list?.query.getAll("state")).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead"]));
 	});

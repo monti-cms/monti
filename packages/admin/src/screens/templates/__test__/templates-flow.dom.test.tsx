@@ -79,6 +79,8 @@ const SECOND = template("b", "책 리뷰", "2026-09-02T03:00:00.000Z");
 let store: BodyTemplate[];
 let api: FakeApi;
 let conflict = false;
+/** What the server says when the template changed elsewhere first. */
+const SERVER_CONFLICT = "다른 곳에서 먼저 바뀌었어요.";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 const requested = (method: Method, path: `/${string}`) => api.sent(`${method} /v1${path}`);
@@ -109,7 +111,7 @@ beforeEach(() => {
 			({ params }) => store.find((item) => item.id === params.id) ?? failure("not_found", "없음"),
 		)
 		.on("PATCH /v1/templates/:id", ({ params, body }) => {
-			if (conflict) return failure("conflict", "다른 곳에서 먼저 바뀌었어요.");
+			if (conflict) return failure("conflict", SERVER_CONFLICT);
 			const found = store.find((item) => item.id === params.id);
 			const saved = {
 				...(found as BodyTemplate),
@@ -240,7 +242,7 @@ describe("flow: templates · the editor page", () => {
 		expect(within(strip).getByText(t("editor.conflict"))).toBeInTheDocument();
 		expect(within(strip).getByText(t("editor.conflictMeta"))).toBeInTheDocument();
 		// The strip, not a line under the name.
-		expect(screen.queryByText("다른 곳에서 먼저 바뀌었어요.")).toBeNull();
+		expect(screen.queryByText(SERVER_CONFLICT)).toBeNull();
 		expect(screen.getByText(t("editor.unsaved"))).toBeInTheDocument();
 		expect(name.value).toBe("긴 글");
 

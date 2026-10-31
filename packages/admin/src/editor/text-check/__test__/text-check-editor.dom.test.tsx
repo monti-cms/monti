@@ -38,15 +38,22 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
-/** Fake checker that finds `틀린말` and suggests `맞는 말`. */
+/** The test's own data: what the fake checker flags, suggests and says, its name, and the harness toolbar's name. */
+const WRONG = "틀린말";
+const RIGHT = "맞는 말";
+const MESSAGE = "맞춤법이 틀렸습니다.";
+const LABEL = "가짜 검사";
+const TOOLBAR = "확장 도구";
+
+/** Fake checker that finds `WRONG` and suggests `RIGHT`. */
 const fakeChecker = (options: Partial<Pick<TextChecker, "auto" | "locales">> = {}) =>
 	defineTextChecker({
 		id: "fake",
-		label: "가짜 검사",
+		label: LABEL,
 		...options,
 		check: vi.fn(async (segments: readonly TextCheckSegment[]) =>
 			segments.flatMap((segment) => {
-				const start = segment.text.indexOf("틀린말");
+				const start = segment.text.indexOf(WRONG);
 				return start < 0
 					? []
 					: [
@@ -54,8 +61,8 @@ const fakeChecker = (options: Partial<Pick<TextChecker, "auto" | "locales">> = {
 								segmentId: segment.id,
 								start,
 								end: start + 3,
-								message: "맞춤법이 틀렸습니다.",
-								suggestions: ["맞는 말"],
+								message: MESSAGE,
+								suggestions: [RIGHT],
 								severity: "error" as const,
 							},
 						];
@@ -86,7 +93,7 @@ function Harness({
 	findings.current = extensions.textIssues;
 	return (
 		<>
-			<div role="toolbar" aria-label="확장 도구">
+			<div role="toolbar" aria-label={TOOLBAR}>
 				{extensions.menuItems.map((item) => (
 					<button key={item.key} type="button" aria-description={item.caption} onClick={item.onSelect}>
 						{item.label}
@@ -123,7 +130,7 @@ const renderEditor = async (content: string, checkers: readonly TextChecker[], l
 			/>
 		</AdminComponentsProvider>,
 	);
-	await screen.findByRole("toolbar", { name: "확장 도구" });
+	await screen.findByRole("toolbar", { name: TOOLBAR });
 	await waitFor(() => expect(editor).not.toBeNull());
 	return { editor: editor as unknown as Editor, onChange, findings };
 };
@@ -139,15 +146,30 @@ const issuesOf = (editor: Editor) => {
 };
 
 /** The checker's row of the ⋯ menu. Its name is the checker's `label`. */
-const checkButton = (name = "가짜 검사") =>
-	within(screen.getByRole("toolbar", { name: "확장 도구" })).queryByRole("button", { name });
+const checkButton = (name = LABEL) =>
+	within(screen.getByRole("toolbar", { name: TOOLBAR })).queryByRole("button", { name });
+
+/** Matches the segments a checker was sent, by their text, all in `locale`. */
+const segmentsOf = (texts: readonly string[], locale = "ko") =>
+	texts.map((text) => expect.objectContaining({ text, locale }));
+
+/** Matches a saved document that holds every one of `texts` and none of `without`. */
+const savedWith = (texts: readonly string[], without: readonly string[] = []) => ({
+	asymmetricMatch: (doc: unknown) => {
+		const json = JSON.stringify(doc);
+		return texts.every((text) => json.includes(text)) && without.every((text) => !json.includes(text));
+	},
+	toString: () =>
+		`a saved document with ${texts.join(", ")}${without.length ? ` and without ${without.join(", ")}` : ""}`,
+});
 
 /** Opens the result popup as if an underline was clicked (jsdom cannot locate a position from coordinates). */
 const clickIssue = (editor: Editor) => {
 	const [issue] = issuesOf(editor);
 	if (!issue) throw new Error("no issue");
 	const plugin = pluginKeyOf(editor)?.get(editor.state);
-	const target = editor.view.dom.querySelector(`[data-text-issue="${issue.key}"]`);
+	// The underline of the first result: the first element that wraps the flagged word on its own.
+	const [target] = within(editor.view.dom).getAllByText(editor.state.doc.textBetween(issue.from, issue.to));
 	act(() => {
 		plugin?.props.handleClick?.call(plugin, editor.view, issue.from + 1, {
 			button: 0,
@@ -173,7 +195,7 @@ describe("spellcheck button", () => {
 				</AdminComponentsProvider>
 			</AdminComponentsProvider>,
 		);
-		await screen.findByRole("toolbar", { name: "확장 도구" });
+		await screen.findByRole("toolbar", { name: TOOLBAR });
 		await waitFor(() => expect(checkButton()).not.toBeNull());
 		expect(checkButton("다른 검사")).not.toBeNull();
 	});
@@ -191,10 +213,9 @@ describe("spellcheck button", () => {
 
 		await waitFor(() => expect(issuesOf(editor)).toHaveLength(1));
 		expect(checker.check).toHaveBeenCalledTimes(1);
-		const [sent] = (checker.check as ReturnType<typeof vi.fn>).mock.calls[0] as [TextCheckSegment[]];
-		expect(sent.map((segment) => segment.text)).toEqual(["첫 문단은 틀린말 입니다", "둘째 문단"]);
-		expect(sent.every((segment) => segment.locale === "ko")).toBe(true);
-		expect(editor.view.dom.querySelector("[data-text-issue]")?.textContent).toBe("틀린말");
+		expect(checker.check).toHaveBeenCalledWith(segmentsOf(["첫 문단은 틀린말 입니다", "둘째 문단"]), expect.anything());
+		// The underline wraps the flagged word on its own; without it the word is only part of the paragraph's text.
+		expect(within(editor.view.dom).getByText(WRONG)).toBeInTheDocument();
 	});
 
 	it("PLUG-T1 checks only the selected paragraph when text is selected", async () => {
@@ -209,8 +230,8 @@ describe("spellcheck button", () => {
 		fireEvent.click(checkButton() as HTMLElement);
 
 		await waitFor(() => expect(issuesOf(editor)).toHaveLength(1));
-		const [sent] = (checker.check as ReturnType<typeof vi.fn>).mock.calls[0] as [TextCheckSegment[]];
-		expect(sent.map((segment) => segment.text)).toEqual(["둘째 틀린말"]);
+		expect(checker.check).toHaveBeenCalledTimes(1);
+		expect(checker.check).toHaveBeenCalledWith(segmentsOf(["둘째 틀린말"]), expect.anything());
 		const [issue] = issuesOf(editor);
 		expect(issue?.from).toBeGreaterThan(start);
 	});
@@ -222,11 +243,11 @@ describe("spellcheck button", () => {
 
 		clickIssue(editor);
 		const dialog = await screen.findByRole("dialog", { name: t("results") });
-		expect(within(dialog).getByText("맞춤법이 틀렸습니다.")).toBeInTheDocument();
-		expect(within(dialog).getByText("가짜 검사")).toBeInTheDocument();
-		fireEvent.click(within(dialog).getByRole("button", { name: "맞는 말" }));
+		expect(within(dialog).getByText(MESSAGE)).toBeInTheDocument();
+		expect(within(dialog).getByText(LABEL)).toBeInTheDocument();
+		fireEvent.click(within(dialog).getByRole("button", { name: RIGHT }));
 
-		await waitFor(() => expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));
+		await waitFor(() => expect(onChange).toHaveBeenCalledWith(savedWith(["이것은 맞는 말 입니다"])));
 		expect(issuesOf(editor)).toHaveLength(0);
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: t("results") })).toBeNull());
 	});
@@ -272,9 +293,8 @@ describe("findings for the status bar", () => {
 		fireEvent.click(checkButton() as HTMLElement);
 		await waitFor(() => expect(findings.current?.items).toHaveLength(2));
 		act(() => findings.current?.items[1]?.fix?.());
-		await waitFor(() => expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("둘째 맞는 말"));
+		await waitFor(() => expect(onChange).toHaveBeenCalledWith(savedWith(["첫 틀린말", "둘째 맞는 말"])));
 		expect(issuesOf(editor)).toHaveLength(1);
-		expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("첫 틀린말");
 	});
 
 	it("PLUG-T3 fixes every finding at once", async () => {
@@ -285,11 +305,7 @@ describe("findings for the status bar", () => {
 		await waitFor(() => expect(findings.current?.items).toHaveLength(3));
 		act(() => findings.current?.fixAll?.());
 		await waitFor(() => expect(issuesOf(editor)).toHaveLength(0));
-		const text = JSON.stringify(onChange.mock.lastCall?.[0]);
-		expect(text).toContain("첫 맞는 말 입니다");
-		expect(text).toContain("둘째 맞는 말");
-		expect(text).toContain("셋째 맞는 말");
-		expect(text).not.toContain("틀린말");
+		expect(onChange).toHaveBeenCalledWith(savedWith(["첫 맞는 말 입니다", "둘째 맞는 말", "셋째 맞는 말"], [WRONG]));
 	});
 
 	it("PLUG-T1 has no findings for a language no checker covers", async () => {
@@ -330,7 +346,6 @@ describe("automatic checking", () => {
 		});
 		await waitFor(() => expect(issuesOf(editor)).toHaveLength(1));
 		expect(checker.check).toHaveBeenCalledTimes(1);
-		const [sent] = (checker.check as ReturnType<typeof vi.fn>).mock.calls[0] as [TextCheckSegment[]];
-		expect(sent.map((segment) => segment.text)).toEqual(["고칠 문단 틀린말"]);
+		expect(checker.check).toHaveBeenCalledWith(segmentsOf(["고칠 문단 틀린말"]), expect.anything());
 	});
 });

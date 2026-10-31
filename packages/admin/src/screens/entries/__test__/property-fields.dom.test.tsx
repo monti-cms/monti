@@ -46,10 +46,10 @@ describe("PropertyFields on the form provider", () => {
 		};
 		renderFields({ issues: [issue] });
 		// The field already says where the problem is, so its key is not part of the text.
-		expect(document.getElementById("cms-summary-error")?.textContent).toBe(issue.text);
+		expect(screen.getByText(issue.text)).toBeInTheDocument();
 		const input = open(/^요약/);
 		expect(input.getAttribute("aria-invalid")).toBe("true");
-		expect(input.getAttribute("aria-describedby")).toBe("cms-summary-error");
+		expect(input).toHaveAccessibleDescription(issue.text);
 	});
 
 	it("a change reaches the owner as a patch of that field only", () => {

@@ -71,7 +71,7 @@ describe("useSlotActions", () => {
 		await act(async () => {
 			outcome = await result.current.run("suggest");
 		});
-		expect(run.mock.calls[0]?.[0]).toEqual({ title: "Hello" });
+		expect(run).toHaveBeenCalledWith({ title: "Hello" }, expect.any(AbortSignal));
 		expect(outcome).toEqual({ ok: true, value: candidates("alpha", "beta") });
 		expect(opts.apply).toHaveBeenCalledTimes(1);
 		expect(opts.apply).toHaveBeenCalledWith("alpha", "replace");
@@ -86,11 +86,13 @@ describe("useSlotActions", () => {
 		await act(async () => {
 			await append.result.current.run("suggest");
 		});
-		expect((opts.apply as ReturnType<typeof vi.fn>).mock.calls).toEqual([
-			["a", "append"],
-			["b", "append"],
-			["c", "append"],
-		]);
+		expect(opts.apply).toHaveBeenCalledTimes(3);
+		for (const [nth, value] of [
+			[1, "a"],
+			[2, "b"],
+			[3, "c"],
+		] as const)
+			expect(opts.apply).toHaveBeenNthCalledWith(nth, value, "append");
 
 		const text = options();
 		const written = renderHook(() => useSlotActions(text), {

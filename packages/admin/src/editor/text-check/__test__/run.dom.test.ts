@@ -1,5 +1,6 @@
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { defineTextChecker, normalizeIssue, supportsLocale, type TextCheckSegment } from "@monti-cms/core";
+import { within } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
@@ -66,8 +67,11 @@ describe("checker definition", () => {
 	});
 
 	it("PLUG-T1 rejects invalid names and limits", () => {
-		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow();
-		expect(() => defineTextChecker({ id: "a", label: "A", limits: { maxChars: 0 }, check: async () => [] })).toThrow();
+		// The errors name what is wrong: the id as given, and the limit.
+		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow(/invalid id "a b"/);
+		expect(() => defineTextChecker({ id: "a", label: "A", limits: { maxChars: 0 }, check: async () => [] })).toThrow(
+			/limits\.maxChars/,
+		);
 	});
 
 	it("PLUG-T1 matches languages by their primary subtag", () => {
@@ -159,7 +163,9 @@ describe("underline decoration and editing", () => {
 		if (!issue) throw new Error("no issue");
 		current.commands.insertContentAt(issue.from + 1, "ㅋ");
 		expect(textCheckIssues(current.state)).toHaveLength(0);
-		expect(current.view.dom.querySelector("[data-text-issue]")).toBeNull();
+		// A kept underline would still wrap the edited word on its own.
+		const edited = current.state.doc.textBetween(issue.from, issue.to + 1);
+		expect(within(current.view.dom).queryByText(edited)).toBeNull();
 	});
 
 	it("keeps results when only marks such as bold change", async () => {

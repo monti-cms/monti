@@ -57,7 +57,7 @@ function Bar() {
 			<button type="button" onClick={async () => setMessage(await editor.publish())}>
 				publish
 			</button>
-			{message && <p data-testid="result">{message}</p>}
+			{message && <output aria-label="result">{message}</output>}
 			{editor.saveError && <p role="alert">{`${editor.saveError.code}: ${editor.saveError.message}`}</p>}
 			{editor.conflict && (
 				<div role="dialog" aria-label="conflict">
@@ -118,7 +118,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(client.update).not.toHaveBeenCalled();
 
 		fireEvent.click(screen.getByText("save"));
-		await waitFor(() => expect(screen.getByTestId("result").textContent).toBe("ok"));
+		await waitFor(() => expect(screen.getByLabelText("result").textContent).toBe("ok"));
 		expect(status()).toBe("saved");
 		expect(client.update).toHaveBeenCalledWith("entry-1", expect.objectContaining({ expectedVersion: 4 }));
 	});
@@ -140,7 +140,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 
 		await screen.findByRole("dialog", { name: "conflict" });
 		expect(status()).toBe("conflict");
-		expect(screen.getByTestId("result").textContent).toBe("failed: conflict");
+		expect(screen.getByLabelText("result").textContent).toBe("failed: conflict");
 
 		fireEvent.click(screen.getByText("overwrite"));
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: "conflict" })).toBeNull());

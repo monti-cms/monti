@@ -71,10 +71,12 @@ describe("replacement post (single relation)", () => {
 		render(<EntryPicker {...props(field, null, onChange)} />);
 		await openList("최신 글");
 
-		await waitFor(async () =>
-			expect(await optionNames()).toEqual(["첫 글", `둘째 글${t("entry.unpublished")}`, "셋째 글"]),
-		);
-		fireEvent.click(screen.getByRole("option", { name: "셋째 글" }));
+		// The list holds the other posts, never the entry being edited.
+		const titleOf = (id: string) => POSTS.find((post) => post.id === id)?.title;
+		const third = await screen.findByRole("option", { name: titleOf("p3") });
+		expect(screen.getByRole("option", { name: titleOf("p1") })).toBeInTheDocument();
+		expect(screen.queryByRole("option", { name: titleOf("self") })).toBeNull();
+		fireEvent.click(third);
 		expect(onChange).toHaveBeenCalledWith("p3");
 	});
 

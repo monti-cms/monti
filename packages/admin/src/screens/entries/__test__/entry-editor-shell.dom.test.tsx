@@ -19,6 +19,7 @@ import { StatusBarPluginCell } from "../../../kit";
 import { commonMessages } from "../../../lib/common.messages";
 import type { AdminPanel } from "../../../plugins";
 import { type FakeApi, failure, fakeApi, type SentRequest } from "../../../test/fake-api";
+import { type FakeIndexedDB, installFakeIndexedDB } from "../../../test/fake-indexed-db";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -49,18 +50,9 @@ const tDelete = testSite.createTranslator(deleteMessages);
 const TITLE_LABEL = testSite.titleField("post").field.label;
 const tCommon = testSite.createTranslator(commonMessages);
 
-const { getLocalBackup, deleteLocalBackup, saveLocalBackup } = vi.hoisted(() => ({
-	getLocalBackup: vi.fn(),
-	deleteLocalBackup: vi.fn(),
-	saveLocalBackup: vi.fn(),
-}));
-// The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
-vi.mock("../local-backup", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../local-backup")>()),
-	getLocalBackup: (key: string) => getLocalBackup(key),
-	deleteLocalBackup: (key: string) => deleteLocalBackup(key),
-	saveLocalBackup: (record: unknown) => saveLocalBackup(record),
-}));
+/** The browser's recovery database: the shell keeps and drops its copies there through the real `local-backup` module. */
+let idb: FakeIndexedDB;
+const backupAt = (key: string) => idb.backupOf(testSite, key);
 vi.mock("../../../editor/tiptap-editor", async () => {
 	const React = await import("react");
 	const { Editor } = await import("@tiptap/core");
@@ -133,10 +125,6 @@ function MockEditor({
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-// AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
-vi.mock("../ai-translate", () => ({
-	useAiTranslate: () => ({ blockAction: null, menuItems: [], setEditor: () => {} }),
-}));
 const testRouter = createTestRouter();
 const { render } = testRouter;
 
@@ -230,9 +218,7 @@ const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 beforeEach(() => {
 	asked.length = 0;
 	vi.clearAllMocks();
-	getLocalBackup.mockResolvedValue(null);
-	deleteLocalBackup.mockResolvedValue(undefined);
-	saveLocalBackup.mockResolvedValue(true);
+	idb = installFakeIndexedDB();
 	checkAnswer = { issues: [], warnings: [] };
 	api = fakeApi()
 		.on("GET /v1/entries", () => ({ items: [], total: 0 }))
@@ -260,11 +246,9 @@ describe("entry editor shell", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "로컬에서 수정" } });
 		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
-		expect(saveLocalBackup).not.toHaveBeenCalled();
+		expect(backupAt(`${ADMIN}:entry-1`)).toBeUndefined();
 		window.dispatchEvent(new Event("pagehide"));
-		await waitFor(() =>
-			expect(saveLocalBackup).toHaveBeenCalledWith(expect.objectContaining({ key: `${ADMIN}:entry-1` })),
-		);
+		await waitFor(() => expect(backupAt(`${ADMIN}:entry-1`)?.snapshot).toMatchObject({ title: "로컬에서 수정" }));
 		expect(screen.getByTitle(tEntries("save.dirty"))).toBeInTheDocument();
 		pressSave();
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
@@ -343,14 +327,12 @@ describe("entry editor shell", () => {
 		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		fireEvent.change(await editorTitle(), { target: { value: "새 글" } });
 		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
-		expect(saveLocalBackup).not.toHaveBeenCalled();
+		expect(backupAt(`${ADMIN}:new:post`)).toBeUndefined();
 		window.dispatchEvent(new Event("pagehide"));
-		await waitFor(() =>
-			expect(saveLocalBackup).toHaveBeenCalledWith(expect.objectContaining({ key: `${ADMIN}:new:post` })),
-		);
+		await waitFor(() => expect(backupAt(`${ADMIN}:new:post`)?.snapshot).toMatchObject({ title: "새 글" }));
 		pressSave();
 		await waitFor(() => expect(api.sent("POST /v1/entries")).toHaveLength(1));
-		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:new:post`));
+		await waitFor(() => expect(backupAt(`${ADMIN}:new:post`)).toBeUndefined());
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
@@ -725,12 +707,7 @@ describe("entry editor shell", () => {
 		pressSave();
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 		await waitFor(() => expect(screen.getAllByText("브라우저에만 임시 저장됨").length).toBeGreaterThan(0));
-		expect(saveLocalBackup).toHaveBeenLastCalledWith(
-			expect.objectContaining({
-				key: `${ADMIN}:entry-1`,
-				snapshot: expect.objectContaining({ title: "오프라인 수정", summary: "요약" }),
-			}),
-		);
+		expect(backupAt(`${ADMIN}:entry-1`)?.snapshot).toMatchObject({ title: "오프라인 수정", summary: "요약" });
 	});
 
 	it("WRITE-P1 does not publish when a body-filled field has nothing to fill from, naming the field", async () => {

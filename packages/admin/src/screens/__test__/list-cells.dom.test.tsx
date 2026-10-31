@@ -139,29 +139,29 @@ describe("default list cells", () => {
 describe("listCells extension", () => {
 	it("PLUG-A12 draws a registered cell for a column name, with the field and stored value", () => {
 		const Format = ({ column, field, value, entry }: ListCellProps) => (
-			<span data-testid="cell">{`${column}/${field?.kind}/${value}/${entry.id}`}</span>
+			<span>{`${column}/${field?.kind}/${value}/${entry.id}`}</span>
 		);
 		renderTable([item("first", { values: { format: "guide" } })], { listCells: { format: Format } });
-		expect(within(rowOf(/first/)).getByTestId("cell").textContent).toBe("format/select/guide/first");
+		expect(within(rowOf(/first/)).getByText("format/select/guide/first")).toBeInTheDocument();
 		expect(within(rowOf(/first/)).queryByText("Guide")).toBeNull();
 	});
 
 	it("PLUG-A12 falls back to the field's `input` name, and the column name wins over it", () => {
-		const Swatch = ({ value }: ListCellProps) => <span data-testid="swatch">{value}</span>;
-		const Named = () => <span data-testid="named">named</span>;
+		const Swatch = ({ value }: ListCellProps) => <span>{`swatch:${value}`}</span>;
+		const Named = () => <span>named</span>;
 		renderTable([item("first", { values: { accent: "#f00" } })], { listCells: { color: Swatch } });
-		expect(within(rowOf(/first/)).getByTestId("swatch").textContent).toBe("#f00");
+		expect(within(rowOf(/first/)).getByText("swatch:#f00")).toBeInTheDocument();
 		cleanup();
 		renderTable([item("first", { values: { accent: "#f00" } })], { listCells: { color: Swatch, accent: Named } });
-		expect(within(rowOf(/first/)).getByTestId("named")).toBeInTheDocument();
-		expect(within(rowOf(/first/)).queryByTestId("swatch")).toBeNull();
+		expect(within(rowOf(/first/)).getByText("named")).toBeInTheDocument();
+		expect(within(rowOf(/first/)).queryByText("swatch:#f00")).toBeNull();
 	});
 
 	it("PLUG-A12 can replace a system column cell, and inner providers add to outer ones", () => {
-		const Status = ({ entry }: ListCellProps) => <span data-testid="status">{`state:${entry.status}`}</span>;
-		const Format = () => <span data-testid="format">fmt</span>;
+		const Status = ({ entry }: ListCellProps) => <span>{`state:${entry.status}`}</span>;
+		const Format = () => <span>fmt</span>;
 		renderTable([item("first")], { listCells: { status: Status } });
-		expect(within(rowOf(/first/)).getByTestId("status").textContent).toBe("state:draft");
+		expect(within(rowOf(/first/)).getByText("state:draft")).toBeInTheDocument();
 		cleanup();
 		render(
 			<AdminComponentsProvider components={{ listCells: { status: Status } }}>
@@ -170,11 +170,11 @@ describe("listCells extension", () => {
 				</AdminComponentsProvider>
 			</AdminComponentsProvider>,
 		);
-		expect(screen.getByTestId("keys").textContent).toBe("status,format");
+		expect(screen.getByText("keys:status,format")).toBeInTheDocument();
 	});
 });
 
 function Probe() {
 	const { listCells } = useAdminComponents();
-	return <span data-testid="keys">{Object.keys(listCells ?? {}).join(",")}</span>;
+	return <span>{`keys:${Object.keys(listCells ?? {}).join(",")}`}</span>;
 }

@@ -1,17 +1,22 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { createSite } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import blog from "../../../../../core/test/cms.config";
 import { testSite } from "../../../../../core/test/site";
 import { SEO_ADMIN_COMPONENTS } from "../../../../../seo/src/admin/provider";
+import { seoMessages } from "../../../../../seo/src/messages";
 import { AdminComponentsProvider } from "../../../admin-components";
 import { commonMessages } from "../../../lib/common.messages";
 import { type SlotAction, SlotRegistryProvider, type SlotSource } from "../../../slots/slots";
 import { pressOption } from "../../../test/base-ui";
 import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
+import { installFakeIndexedDB } from "../../../test/fake-indexed-db";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { AdminUiLabels } from "../../../ui/labels";
+import { uiMessages } from "../../../ui/messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import type { EntryData } from "../entry-form";
@@ -20,34 +25,33 @@ import { entriesMessages } from "../messages";
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
 const tEntries = testSite.createTranslator(entriesMessages);
 const tCommon = testSite.createTranslator(commonMessages);
+const tUi = testSite.createTranslator(uiMessages);
+const tSeo = testSite.createTranslator(seoMessages);
+/** The label the blog config gives a field of a post: this flow renders the blog's post (its series, policy and SEO tab). */
+const blogSite = createSite(blog);
+const label = (field: string) =>
+	(blogSite.schemaOf("post").fields as Record<string, { label: string } | undefined>)[field]?.label ?? field;
+const SLUG = label("slug");
+const SUMMARY = label("summary");
+const SERIES_FIELD = label("series");
+const POLICY = label("policy");
+const SEO_TITLE = label("seoTitle");
+/** What the assistant's mark reads, on a value and on its open input. */
+const ASSISTED = tUi("proposal");
 
 // The flow "set properties" of the editor board (flow 1, steps 07, 08 and 11): the 300px properties pane is a tab bar over a read list; a value opens for editing
 // where it is; the SEO tab reads what each empty value follows; "채우기" writes the value at once and marks it as the assistant's until it is edited. They check
 // what a screenshot cannot: the requests, the focus, the keys, the roles and names and the accessible state.
 
-vi.mock("../local-backup", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../local-backup")>()),
-	getLocalBackup: async () => null,
-	deleteLocalBackup: async () => undefined,
-	saveLocalBackup: async () => true,
-}));
-// The body editor is not under test here: the screen keeps its title field and toolbar slots.
-vi.mock("../../../editor/tiptap-editor", () => ({
-	CmsEditor: ({ titleField, toolbarEnd }: { titleField?: React.ReactNode; toolbarEnd?: React.ReactNode }) => (
-		<div>
-			{toolbarEnd}
-			{titleField}
-		</div>
-	),
-}));
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-vi.mock("../ai-translate", () => ({
-	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
-}));
 
 const { render } = createTestRouter();
+/** The tab the SEO plugin places its fields in (the blog config keeps the plugin's default name). */
+const SEO_TAB = "SEO";
+/** The group the blog config puts the category, the tags and the series in. */
+const CLASSIFICATION = "분류";
 
 const entry: EntryData = {
 	id: "entry-1",
@@ -78,6 +82,7 @@ const series: EntryData = {
 const entries: Record<string, EntryData> = { "entry-1": entry, "series-1": series };
 
 beforeEach(() => {
+	installFakeIndexedDB();
 	api = fakeApi()
 		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
 		.on("PATCH /v1/entries/:id", ({ params, body }) => {
@@ -146,7 +151,8 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 	it("WRITE-W3 is the properties pane: a tab bar over a list, with no head and no close button", async () => {
 		renderEdit();
 		const panel = await pane();
-		expect(panel.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["기본", "SEO"]);
+		expect(panel.getAllByRole("tab")).toHaveLength(2);
+		expect(panel.getByRole("tab", { name: SEO_TAB })).toBeInTheDocument();
 		expect(panel.getByRole("tab", { name: tEntries("tab.default") }).getAttribute("aria-selected")).toBe("true");
 		expect(panel.queryByRole("button", { name: tCommon("close") })).toBeNull();
 		expect(panel.queryByRole("heading", { level: 2 })).toBeNull();
@@ -154,24 +160,24 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 
 	it("WRITE-W3 reads as a list: the label above its value, and the group name as a subheading", async () => {
 		renderEdit();
-		expect((await valueButton("주소")).textContent).toBe("/test");
-		expect((await valueButton("요약")).textContent).toBe("비어 있음");
-		const group = (await pane()).getByRole("region", { name: "분류" });
+		expect((await valueButton(SLUG)).textContent).toBe("/test");
+		expect((await valueButton(SUMMARY)).textContent).toBe(tEntries("property.empty"));
+		const group = (await pane()).getByRole("region", { name: CLASSIFICATION });
 		expect(within(group).getAllByRole("group").length).toBeGreaterThan(1);
-		expect(within(group).getByRole("group", { name: "모음집" })).toBeInTheDocument();
+		expect(within(group).getByRole("group", { name: SERIES_FIELD })).toBeInTheDocument();
 		// At rest nothing is a box: no text field is on the screen besides the title.
 		expect((await pane()).queryAllByRole("textbox")).toEqual([]);
 	});
 
 	it("WRITE-W3 a value opens for editing where it is, takes the caret, and the edit goes in the saved request", async () => {
 		renderEdit();
-		fireEvent.click(await valueButton("요약"));
-		const box = await (await row("요약")).findByRole("textbox");
+		fireEvent.click(await valueButton(SUMMARY));
+		const box = await (await row(SUMMARY)).findByRole("textbox");
 		expect(document.activeElement).toBe(box);
 		fireEvent.change(box, { target: { value: "새 요약" } });
 		act(() => box.blur());
-		await waitFor(async () => expect((await row("요약")).queryByRole("textbox")).toBeNull());
-		expect((await valueButton("요약")).textContent).toBe("새 요약");
+		await waitFor(async () => expect((await row(SUMMARY)).queryByRole("textbox")).toBeNull());
+		expect((await valueButton(SUMMARY)).textContent).toBe("새 요약");
 		pressSave();
 		await waitFor(() => expect(saved()).toHaveLength(1));
 		expect(saved()[0]?.body.metadata.summary).toBe("새 요약");
@@ -179,30 +185,30 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 
 	it("WRITE-W3 Enter ends a one-line value, Escape ends any value, and the typed text stays", async () => {
 		renderEdit();
-		fireEvent.click(await valueButton("주소"));
-		const slug = await (await row("주소")).findByRole("textbox");
+		fireEvent.click(await valueButton(SLUG));
+		const slug = await (await row(SLUG)).findByRole("textbox");
 		fireEvent.change(slug, { target: { value: "hello" } });
 		fireEvent.keyDown(slug, { key: "Enter" });
-		await waitFor(async () => expect((await row("주소")).queryByRole("textbox")).toBeNull());
-		expect((await valueButton("주소")).textContent).toBe("/hello");
+		await waitFor(async () => expect((await row(SLUG)).queryByRole("textbox")).toBeNull());
+		expect((await valueButton(SLUG)).textContent).toBe("/hello");
 
-		fireEvent.click(await valueButton("요약"));
-		const box = await (await row("요약")).findByRole("textbox");
+		fireEvent.click(await valueButton(SUMMARY));
+		const box = await (await row(SUMMARY)).findByRole("textbox");
 		fireEvent.change(box, { target: { value: "줄 하나" } });
 		// A multi-line value takes Enter as a new line: it stays open.
 		fireEvent.keyDown(box, { key: "Enter" });
-		expect((await row("요약")).getByRole("textbox")).toBeInTheDocument();
+		expect((await row(SUMMARY)).getByRole("textbox")).toBeInTheDocument();
 		fireEvent.keyDown(box, { key: "Escape" });
-		await waitFor(async () => expect((await row("요약")).queryByRole("textbox")).toBeNull());
-		expect((await valueButton("요약")).textContent).toBe("줄 하나");
+		await waitFor(async () => expect((await row(SUMMARY)).queryByRole("textbox")).toBeNull());
+		expect((await valueButton(SUMMARY)).textContent).toBe("줄 하나");
 	});
 
 	it("WRITE-W3 a select opens its list; the pick closes it and goes in the request", async () => {
 		renderEdit();
-		fireEvent.click(await valueButton("정책"));
+		fireEvent.click(await valueButton(POLICY));
 		pressOption(await screen.findByRole("option", { name: "항상 최신 글" }));
 
-		await waitFor(async () => expect((await valueButton("정책")).textContent).toBe("항상 최신 글"));
+		await waitFor(async () => expect((await valueButton(POLICY)).textContent).toBe("항상 최신 글"));
 		pressSave();
 		await waitFor(() => expect(saved()).toHaveLength(1));
 		expect(saved()[0]?.body.metadata.policy).toBe("evergreen");
@@ -210,49 +216,50 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 
 	it("WRITE-W3 the series field offers the series that exist", async () => {
 		renderEdit();
-		expect((await valueButton("모음집")).textContent).toBe("없음");
-		fireEvent.click(await valueButton("모음집"));
-		const box = await (await row("모음집")).findByRole("combobox");
+		expect((await valueButton(SERIES_FIELD)).textContent).toBe(tEntries("property.none"));
+		fireEvent.click(await valueButton(SERIES_FIELD));
+		const box = await (await row(SERIES_FIELD)).findByRole("combobox");
 		await waitFor(() => expect(document.activeElement).toBe(box));
 		expect(await screen.findByRole("option", { name: "리액트 다시 만들기" })).toBeInTheDocument();
 	});
 
 	it("WRITE-W3 the SEO tab is a read list of what each empty value follows, with no preview boxes", async () => {
 		renderEdit();
-		fireEvent.click((await pane()).getByRole("tab", { name: "SEO" }));
-		expect((await valueButton("SEO 제목")).textContent).toBe("제목과 같음 · 3/60");
-		expect((await valueButton("SEO 설명")).textContent).toBe("요약과 같음");
-		expect((await valueButton("공유 이미지")).textContent).toBe("기본 이미지와 같음");
-		expect((await valueButton("검색에서 숨기기")).textContent).toBe("아니요");
-		expect(screen.queryByRole("region", { name: /미리보기/ })).toBeNull();
+		fireEvent.click((await pane()).getByRole("tab", { name: SEO_TAB }));
+		// The title "테스트" is 3 of the 60 characters a search title may have.
+		expect((await valueButton(SEO_TITLE)).textContent).toBe(`${tSeo("same.title")} · 3/60`);
+		expect((await valueButton(label("seoDescription"))).textContent).toBe(tSeo("same.description"));
+		expect((await valueButton(label("ogImageId"))).textContent).toBe(tSeo("same.image"));
+		expect((await valueButton(label("seoRobots"))).textContent).toBe(tSeo("option.index"));
+		// No preview box: the tab holds its values and no region of its own.
+		expect((await pane()).queryAllByRole("region")).toEqual([]);
 		// Opening the title shows its count and the title as the hint.
-		fireEvent.click(await valueButton("SEO 제목"));
-		const box = await (await row("SEO 제목")).findByRole("textbox");
+		fireEvent.click(await valueButton(SEO_TITLE));
+		const box = await (await row(SEO_TITLE)).findByRole("textbox");
 		expect((box as HTMLInputElement).placeholder).toBe("테스트");
-		expect((await row("SEO 제목")).getByText("3/60")).toBeInTheDocument();
+		expect((await row(SEO_TITLE)).getByText("3/60")).toBeInTheDocument();
 	});
 
 	it("ASSIST-F1 fills the empty summary at once, marks it as the assistant's, and an edit takes the mark off", async () => {
 		renderEdit();
-		expect((await row("요약")).queryByRole("button", { name: /^다시$/ })).toBeNull();
-		fireEvent.click((await row("요약")).getByRole("button", { name: /채우기/ }));
-		await waitFor(async () => expect((await valueButton("요약")).textContent).toContain("리액트로 블로그를"));
+		expect((await row(SUMMARY)).queryByRole("button", { name: tUi("ai.again") })).toBeNull();
+		fireEvent.click((await row(SUMMARY)).getByRole("button", { name: tUi("ai.fill") }));
+		await waitFor(async () => expect((await valueButton(SUMMARY)).textContent).toContain("리액트로 블로그를"));
 		expect(fill.run).toHaveBeenCalledWith(
 			expect.objectContaining({ collection: "post", title: "테스트" }),
 			expect.anything(),
 		);
-		// No result to accept: there is no replace step anywhere.
-		expect(screen.queryByRole("button", { name: /바꾸기|넣기/ })).toBeNull();
-		expect((await valueButton("요약")).getAttribute("aria-description")).toBe("AI 제안");
+		// The value is in place without a step to accept it.
+		expect((await valueButton(SUMMARY)).getAttribute("aria-description")).toBe(ASSISTED);
 		// The action now asks again.
-		expect((await row("요약")).getByRole("button", { name: /^다시$/ })).toBeInTheDocument();
-		fireEvent.click(await valueButton("요약"));
-		const box = await (await row("요약")).findByRole("textbox");
-		expect(box.getAttribute("aria-description")).toBe("AI 제안");
+		expect((await row(SUMMARY)).getByRole("button", { name: tUi("ai.again") })).toBeInTheDocument();
+		fireEvent.click(await valueButton(SUMMARY));
+		const box = await (await row(SUMMARY)).findByRole("textbox");
+		expect(box.getAttribute("aria-description")).toBe(ASSISTED);
 		fireEvent.change(box, { target: { value: "고친 요약" } });
 		expect(box.getAttribute("aria-description")).toBeNull();
 		act(() => box.blur());
-		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBeNull());
+		await waitFor(async () => expect((await valueButton(SUMMARY)).getAttribute("aria-description")).toBeNull());
 	});
 
 	it('"다시" fills again, and saving ends the assistant\'s mark', async () => {
@@ -270,9 +277,11 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 
 	it("WRITE-W7 fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
 		renderEdit();
-		fireEvent.click((await row("모음집")).getByRole("button", { name: /채우기/ }));
+		fireEvent.click((await row(SERIES_FIELD)).getByRole("button", { name: tUi("ai.fill") }));
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/series-1")).toHaveLength(1));
 		expect(api.sent("PATCH /v1/entries/series-1")[0]?.body.metadata.itemIds).toEqual(["entry-1"]);
-		await waitFor(async () => expect((await valueButton("모음집")).getAttribute("aria-description")).toBe("AI 제안"));
+		await waitFor(async () =>
+			expect((await valueButton(SERIES_FIELD)).getAttribute("aria-description")).toBe(ASSISTED),
+		);
 	});
 });

@@ -9,6 +9,7 @@ import { AdminEntriesTable } from "../admin-entries-table";
 import { columnsFor } from "../list-columns";
 import { parseListState } from "../list-state";
 import { screensMessages } from "../messages";
+import { ENTRY_DRAG_TYPE } from "../shared/entry-drag";
 
 afterEach(cleanup);
 
@@ -80,7 +81,7 @@ describe("admin entry list", () => {
 		expect(onSelect).toHaveBeenCalledTimes(1);
 		await waitFor(() => expect(screen.queryByRole("menuitem", { name: "보관" })).toBeNull());
 
-		fireEvent.click(within(row).getByRole("button", { name: "draft 작업" }));
+		fireEvent.click(within(row).getByRole("button", { name: t("list.rowActions", { title: "draft" }) }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "보관" }));
 		expect(onSelect).toHaveBeenCalledTimes(2);
 	});
@@ -156,12 +157,24 @@ describe("admin entry list", () => {
 	});
 
 	describe("row drag", () => {
-		const dataTransfer = () => ({
-			setData: vi.fn(),
-			setDragImage: vi.fn(),
-			effectAllowed: "",
-			types: [] as string[],
-		});
+		// Keeps what the row wrote by format, and the image it set, so a test reads them by meaning.
+		const dataTransfer = () => {
+			const transfer = {
+				data: new Map<string, string>(),
+				dragImage: null as Element | null,
+				setData: vi.fn((format: string, value: string) => {
+					transfer.data.set(format, value);
+				}),
+				setDragImage: vi.fn((image: Element) => {
+					transfer.dragImage = image;
+				}),
+				effectAllowed: "",
+				types: [] as string[],
+			};
+			return transfer;
+		};
+		const draggedEntries = (transfer: ReturnType<typeof dataTransfer>) =>
+			JSON.parse(transfer.data.get(ENTRY_DRAG_TYPE) ?? "null");
 
 		it("LIST-C5 dragging one row uses a small drag image holding only that row's title", () => {
 			renderTable();
@@ -169,9 +182,8 @@ describe("admin entry list", () => {
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
 
 			expect(transfer.setDragImage).toHaveBeenCalledTimes(1);
-			const [image] = transfer.setDragImage.mock.calls[0] as [HTMLElement];
-			expect(image.textContent).toBe("draft");
-			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toEqual([{ id: "draft", expectedVersion: 1 }]);
+			expect(transfer.dragImage?.textContent).toBe("draft");
+			expect(draggedEntries(transfer)).toEqual([{ id: "draft", expectedVersion: 1 }]);
 		});
 
 		it("LIST-C5 dragging selected rows shows the item count and moves all selected rows", () => {
@@ -179,9 +191,11 @@ describe("admin entry list", () => {
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
 
-			const [image] = transfer.setDragImage.mock.calls[0] as [HTMLElement];
-			expect(image.textContent).toBe("2개 항목");
-			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toHaveLength(2);
+			expect(transfer.dragImage?.textContent).toBe(t("list.itemsCount", { count: 2 }));
+			expect(draggedEntries(transfer)).toEqual([
+				{ id: "published", expectedVersion: 1 },
+				{ id: "draft", expectedVersion: 1 },
+			]);
 		});
 
 		it("LIST-C5 the drag image is removed from the page after the drag starts", async () => {
@@ -226,9 +240,8 @@ describe("admin entry list", () => {
 		it("LIST-F5 says nothing matches when filtered, and clears the search and filters", () => {
 			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
 			const props = renderTable({ items: [], total: 0, state });
-			expect(emptyTitle()).toBe(t("list.emptyNoMatch"));
-			const empty = document.querySelector<HTMLElement>('[data-slot="empty"]') as HTMLElement;
-			fireEvent.click(within(empty).getByRole("button", { name: t("list.clearFilters") }));
+			expect(screen.getByText(t("list.emptyNoMatch"))).toBeInTheDocument();
+			fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 			expect(props.onStateChange).toHaveBeenCalledWith(expect.objectContaining({ search: "", statuses: [] }));
 		});
 	});

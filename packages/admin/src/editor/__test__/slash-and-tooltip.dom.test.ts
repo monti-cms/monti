@@ -17,39 +17,35 @@ const SLASH_COMMANDS = slashCommands(testSite);
 const textOf = (node: unknown): string => JSON.stringify(node);
 const tooltip = (content: string) => [{ type: "tooltip", attrs: { content } }];
 
+/** A block of the reference blog's config, by name (this file runs only with that config). */
+const block = (name: string) => {
+	const found = testSite.BLOCKS.find((candidate) => candidate.name === name);
+	if (!found) throw new Error(`the reference blog config has no "${name}" block`);
+	return found;
+};
+/** The blocks whose insert is a fenced source block (a preview of code). */
+const SOURCE_BLOCKS = ["mermaid", "chart", "math"];
+
 describe("slash menu insertion driven by block definitions", () => {
 	it("WRITE-W1 builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
 		const commands = buildBlockSlashCommands(testSite);
 
-		// mermaid, chart and math must be included.
+		// mermaid, chart and math must be included, and the insertable node blocks with them.
 		const titles = commands.map((c) => c.title);
-		expect(titles).toContain("다이어그램");
-		expect(titles).toContain("차트");
-		expect(titles).toContain("수식");
-
+		for (const name of [...SOURCE_BLOCKS, "callout", "tabs", "columns"]) {
+			expect(titles, name).toContain(block(name).label);
+		}
 		// image must be excluded so it does not duplicate the existing hardcoded entry.
-		expect(titles).not.toContain("이미지");
-
+		expect(titles).not.toContain(block("image").label);
 		// Blocks with insertable=false or a view other than node must be excluded.
-		expect(titles).toContain("콜아웃");
-		expect(titles).toContain("탭");
-		expect(titles).toContain("단 나누기");
-		expect(titles).not.toContain("정렬");
+		expect(titles).not.toContain(block("text-align").label);
+		expect(titles).not.toContain(block("file").label);
 
-		const mermaidCmd = commands.find((c) => c.title === "다이어그램");
-		expect(mermaidCmd?.keywords).toContain("mermaid");
-		expect(mermaidCmd?.keywords).toContain("다이어그램");
-		expect(mermaidCmd?.description).toMatch(/\S/);
-
-		const chartCmd = commands.find((c) => c.title === "차트");
-		expect(chartCmd?.keywords).toContain("chart");
-		expect(chartCmd?.keywords).toContain("차트");
-		expect(chartCmd?.description).toMatch(/\S/);
-
-		const mathCmd = commands.find((c) => c.title === "수식");
-		expect(mathCmd?.keywords).toContain("math");
-		expect(mathCmd?.keywords).toContain("수식");
-		expect(mathCmd?.description).toMatch(/\S/);
+		for (const name of SOURCE_BLOCKS) {
+			const command = commands.find((c) => c.title === block(name).label);
+			expect(command?.keywords, name).toEqual(expect.arrayContaining([...(block(name).editor.keywords ?? [])]));
+			expect(command?.description, name).toBe(block(name).description);
+		}
 	});
 
 	it("extensibility: adding a new block definition and action to the registry auto-generates a slash command", () => {
@@ -116,34 +112,38 @@ describe("slash menu insertion driven by block definitions", () => {
 		SLASH_COMMANDS.find((c) => c.title === t("slash.file.title"))?.action(editor, { from: 1, to: 4 });
 		window.removeEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 		expect(open).toHaveBeenCalledOnce();
-		expect((open.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ kind: "file" });
+		expect(open).toHaveBeenCalledWith(expect.objectContaining({ detail: { kind: "file" } }));
 		expect(editor.getText()).toBe("");
 		editor.destroy();
 	});
 
 	it("WRITE-W1 filterCommands searches block commands by Korean and English keywords", () => {
-		expect(filterCommands(testSite, "mermaid").some((c) => c.title === "다이어그램")).toBe(true);
-		expect(filterCommands(testSite, "다이어그램").some((c) => c.title === "다이어그램")).toBe(true);
-		expect(filterCommands(testSite, "chart").some((c) => c.title === "차트")).toBe(true);
-		expect(filterCommands(testSite, "그래프").some((c) => c.title === "차트")).toBe(true);
-		expect(filterCommands(testSite, "math").some((c) => c.title === "수식")).toBe(true);
-		expect(filterCommands(testSite, "katex").some((c) => c.title === "수식")).toBe(true);
+		// Every keyword of the config, Korean and English, finds its block.
+		for (const name of SOURCE_BLOCKS) {
+			for (const keyword of block(name).editor.keywords ?? []) {
+				expect(
+					filterCommands(testSite, keyword).some((c) => c.title === block(name).label),
+					`${name}: ${keyword}`,
+				).toBe(true);
+			}
+		}
 		// Tooltip is a text decoration from the blocks extension, so it is not in the core menu; extension-provided entries (`inline`) come after the text formatting entries and before the block entries.
-		expect(filterCommands(testSite, "tooltip").some((c) => c.title === "툴팁")).toBe(false);
+		const tooltipTitle = block("tooltip").label;
+		expect(filterCommands(testSite, "tooltip").some((c) => c.title === tooltipTitle)).toBe(false);
 		const inline = [
 			{
-				title: "툴팁",
+				title: tooltipTitle,
 				group: "insert" as const,
 				description: "글자에 설명 달기",
 				keywords: ["tooltip"],
 				action: () => {},
 			},
 		];
-		expect(filterCommands(testSite, "tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
+		expect(filterCommands(testSite, "tooltip", [], inline).map((c) => c.title)).toEqual([tooltipTitle]);
 		const titles = filterCommands(testSite, "", [], inline).map((c) => c.title);
-		expect(titles.indexOf("툴팁")).toBeGreaterThan(titles.indexOf("내부 글 링크"));
+		expect(titles.indexOf(tooltipTitle)).toBeGreaterThan(titles.indexOf(t("slash.internalLink.title")));
 		// An extension item sits with the other items that insert something; the components come after them.
-		expect(titles.indexOf("툴팁")).toBeLessThan(titles.indexOf("다이어그램"));
+		expect(titles.indexOf(tooltipTitle)).toBeLessThan(titles.indexOf(block("mermaid").label));
 	});
 });
 
@@ -154,42 +154,17 @@ describe("stored document after block insert actions", () => {
 			content: "<p></p>",
 		});
 
-	it("WRITE-W1 saves a stored code block after inserting mermaid", () => {
+	it.each([
+		["code", "mermaid", { type: "codeBlock", attrs: { language: "mermaid" } }, ["graph TD", "A --> B"]],
+		["code", "chart", { type: "codeBlock", attrs: { language: "chart" } }, ["chart bar", "x month", "series views"]],
+		["math", "math", { type: "math" }, ["E = mc^2"]],
+	] as const)("WRITE-W1 saves a stored %s block after inserting %s", (_, name, stored, texts) => {
 		const editor = createEditor();
-		const range = { from: 1, to: 1 };
+		BLOCK_INSERT_ACTIONS[name](editor, { from: 1, to: 1 });
 
-		BLOCK_INSERT_ACTIONS.mermaid(editor, range);
-
-		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
-		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "mermaid" } });
-		expect(textOf(block)).toContain("graph TD");
-		expect(textOf(block)).toContain("A --> B");
-		editor.destroy();
-	});
-
-	it("WRITE-W1 saves a stored code block after inserting chart", () => {
-		const editor = createEditor();
-		const range = { from: 1, to: 1 };
-
-		BLOCK_INSERT_ACTIONS.chart(editor, range);
-
-		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
-		expect(block).toMatchObject({ type: "codeBlock", attrs: { language: "chart" } });
-		expect(textOf(block)).toContain("chart bar");
-		expect(textOf(block)).toContain("x month");
-		expect(textOf(block)).toContain("series views");
-		editor.destroy();
-	});
-
-	it("WRITE-W1 saves a stored math block after inserting math", () => {
-		const editor = createEditor();
-		const range = { from: 1, to: 1 };
-
-		BLOCK_INSERT_ACTIONS.math(editor, range);
-
-		const block = tiptapToStored(testSite, editor.getJSON()).content[0];
-		expect(block).toMatchObject({ type: "math" });
-		expect(textOf(block)).toContain("E = mc^2");
+		const saved = tiptapToStored(testSite, editor.getJSON()).content[0];
+		expect(saved).toMatchObject(stored);
+		for (const value of texts) expect(textOf(saved)).toContain(value);
 		editor.destroy();
 	});
 });

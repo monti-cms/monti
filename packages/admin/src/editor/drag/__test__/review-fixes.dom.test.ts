@@ -2,7 +2,6 @@ import { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { deleteBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
 import { targetBlockAt } from "../block-resolve";
 import { canDropBlockNode } from "../drag-commands";
@@ -23,7 +22,7 @@ describe("review fixes", () => {
 		const editor = create(`<p>첫</p>${OPAQUE}<p>끝</p>`);
 		const pos = editor.state.doc.child(0).nodeSize;
 		editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)));
-		deleteBlock(editor, editor.state.selection.from);
+		editor.commands.keyboardShortcut("Mod-Shift-Backspace");
 		expect(texts(editor)).toEqual(["paragraph:첫", "paragraph:끝"]);
 		editor.destroy();
 	});

@@ -6,16 +6,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import type { AdminServer } from "../../host/server";
 import SettingsPage from "../settings/page";
+import { SettingsScreen } from "../settings/settings-screen";
 import { SCHEMA_TABS, settingsTabs } from "../settings/tabs";
-
-vi.mock("../require-admin", () => ({ requireAdminPage: async () => undefined }));
-vi.mock("../settings/settings-screen", () => ({ SettingsScreen: () => <p>settings screen</p> }));
 
 afterEach(cleanup);
 
 const _withAdmin = (admin: Record<string, unknown>) =>
 	createSite({ ...testConfig, admin: { ...testConfig.admin, ...admin } } as CmsConfig);
-const cms = (site: typeof testSite) => ({ site }) as unknown as Cms;
+// The auth gateway is the edge: it lets the admin in.
+const cms = (site: typeof testSite) => ({ site, authGateway: { verifyAdmin: async () => ({}) } }) as unknown as Cms;
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {
 		throw new Error(`redirect:${href}`);
@@ -42,7 +41,10 @@ describe("settings page", () => {
 
 	it("ADMIN-U1 opens a schema tab", async () => {
 		const stop = server();
-		await expect(SettingsPage({ cms: cms(testSite), server: stop, tab: "locales" })).resolves.toHaveProperty("type");
+		await expect(SettingsPage({ cms: cms(testSite), server: stop, tab: "locales" })).resolves.toMatchObject({
+			type: SettingsScreen,
+			props: { tab: "locales" },
+		});
 		expect(stop.notFound).not.toHaveBeenCalled();
 	});
 

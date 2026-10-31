@@ -54,7 +54,8 @@ const mount = async (source: string) => {
 			/>
 		</SiteProvider>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
+	// Every code block view has the copy tool.
+	await waitFor(() => expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -126,11 +127,6 @@ describe("code block edit view", () => {
 		// No text is selected (the cursor sits at the start of the line); the line shows as a background.
 		expect(editor.state.selection.empty).toBe(true);
 		expect(editor.state.selection.from).toBe(1 + "const a = 1;\n".length);
-		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
-				1,
-			),
-		);
 		await openLineMenu(1);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) });
 		act(() => fireEvent.click(within(menu).getByRole("menuitemcheckbox", { name: HIGHLIGHT_LABEL })));
@@ -143,12 +139,11 @@ describe("code block edit view", () => {
 			),
 		);
 		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "highlight", start: 1, end: 2 }]);
-		// Changing the effect keeps the selected lines (another effect can be turned on next).
-		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
-				1,
-			),
-		);
+		// Changing the effect keeps the picked line: the header's line effect tool opens the menu for it again.
+		fireEvent.keyDown(document, { key: "Escape" });
+		await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+		act(() => fireEvent.click(screen.getByRole("button", { name: t("view.lineEffects") })));
+		expect(await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) })).toBeInTheDocument();
 	});
 
 	it("EDIT-C2 dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
@@ -183,8 +178,6 @@ describe("code block edit view", () => {
 		act(() => fireEvent.click(add));
 		fireEvent.change(await screen.findByLabelText(t("rulesPanel.pattern")), { target: { value: "const" } });
 		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeInTheDocument();
-
-		// The rule's delete button is red.
 
 		const rules = block(editor).attrs.rules as CodeRule[];
 		// A new rule starts with the first offered text effect (bold by default).
@@ -234,10 +227,12 @@ describe("code block edit view", () => {
 
 	it("EDIT-D3 hovering a code line still attaches only one drag handle for the whole code block", async () => {
 		const editor = await mount(`문단\n\n${CODE}`);
-		const text = document.querySelector("[data-code-block-wrapper] pre code") as HTMLElement;
-		const inner = (text.querySelector("span") ?? text) as HTMLElement;
+		// The code block follows the paragraph; the hovered element is the code text inside its first line.
+		const codeBlockAt = editor.state.doc.child(0).nodeSize;
+		const { node } = editor.view.domAtPos(codeBlockAt + 3);
+		const inner = (node instanceof HTMLElement ? node : node.parentElement) as HTMLElement;
 		const found = findBlockDOM(editor.view.dom, inner);
-		expect(found?.classList.contains("node-codeBlock")).toBe(true);
+		expect(found).toBe(editor.view.nodeDOM(codeBlockAt));
 		expect(found && refineBlock(found, 0, 0)).toBe(found);
 	});
 

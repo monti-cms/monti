@@ -68,13 +68,21 @@ const idsOf = (nodes: readonly CmsNode[] | undefined): string[] =>
 
 const roundTrip = (doc: StoredDocument) => tiptapToStored(testSite, storedToTiptap(testSite, doc));
 
+// The reference blog config has tabs and columns; another site config may not install them.
+const hasContainers = ["tabs", "columns"].every((name) => testSite.BLOCKS.some((block) => block.name === name));
+
 describe("block ids through the editor", () => {
-	it.each([
-		["a table with rows and cells", tableDoc],
-		["tabs and columns with their children", tabsDoc],
-	])("TRANS-B1 %s keep their ids through storedToTiptap and tiptapToStored", (_, doc) => {
+	const keepsIds = (_: string, doc: StoredDocument) => {
 		expect(idsOf(roundTrip(doc).content)).toEqual(idsOf(doc.content));
-	});
+	};
+	it.each([["a table with rows and cells", tableDoc] as const])(
+		"TRANS-B1 %s keep their ids through storedToTiptap and tiptapToStored",
+		keepsIds,
+	);
+	it.skipIf(!hasContainers).each([["tabs and columns with their children", tabsDoc] as const])(
+		"TRANS-B1 %s keep their ids through storedToTiptap and tiptapToStored",
+		keepsIds,
+	);
 
 	it("TRANS-B1 keeps the ids of a table after its text is edited and a cell is typed into", () => {
 		const editor = new Editor({
@@ -91,21 +99,17 @@ describe("block ids through the editor", () => {
 		editor.destroy();
 	});
 
-	// The reference blog config has tabs and columns; another site config may not install them.
-	it.skipIf(!testSite.BLOCKS.some((block) => block.name === "tabs"))(
-		"TRANS-B1 keeps the ids of tabs and columns after an edit inside them",
-		() => {
-			const editor = new Editor({
-				extensions: buildEditorExtensions(testSite),
-				content: storedToTiptap(testSite, tabsDoc),
-			});
-			editor.commands.setTextSelection(editor.state.doc.content.size - 3);
-			editor.commands.insertContent("!");
-			const saved = tiptapToStored(testSite, editor.getJSON());
-			expect(idsOf(saved.content)).toEqual(
-				expect.arrayContaining(["tab00001", "tbi00001", "tbi00002", "col00001", "cli00001", "cli00002"]),
-			);
-			editor.destroy();
-		},
-	);
+	it.skipIf(!hasContainers)("TRANS-B1 keeps the ids of tabs and columns after an edit inside them", () => {
+		const editor = new Editor({
+			extensions: buildEditorExtensions(testSite),
+			content: storedToTiptap(testSite, tabsDoc),
+		});
+		editor.commands.setTextSelection(editor.state.doc.content.size - 3);
+		editor.commands.insertContent("!");
+		const saved = tiptapToStored(testSite, editor.getJSON());
+		expect(idsOf(saved.content)).toEqual(
+			expect.arrayContaining(["tab00001", "tbi00001", "tbi00002", "col00001", "cli00001", "cli00002"]),
+		);
+		editor.destroy();
+	});
 });

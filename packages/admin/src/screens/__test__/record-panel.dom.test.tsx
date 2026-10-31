@@ -6,12 +6,15 @@ import { testConfig, testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { fakeApi } from "../../test/fake-api";
 import { withSite } from "../../test/site";
+import { AdminUiLabels } from "../../ui/labels";
 import type { EntryData } from "../entries/entry-form";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 
 const tScreens = testSite.createTranslator(screensMessages);
 const tCommon = testSite.createTranslator(commonMessages);
+/** The name of the tag's title field, the one field of each language tab. */
+const NAME = testSite.titleField("tag").field.label;
 
 const tag: EntryData = {
 	id: "tag-1",
@@ -43,10 +46,16 @@ afterEach(() => {
 const renderPanel = (target: { collection: "tag" | "category" | "collection"; id: string | null }) => {
 	const onClose = vi.fn();
 	const onSaved = vi.fn();
-	render(withSite(<RecordPanel target={target} onClose={onClose} onSaved={onSaved} />));
+	render(
+		withSite(
+			<AdminUiLabels>
+				<RecordPanel target={target} onClose={onClose} onSaved={onSaved} />
+			</AdminUiLabels>,
+		),
+	);
 	return { onClose, onSaved };
 };
-const panel = () => screen.getByRole("complementary", { name: /태그/ });
+const panel = () => screen.getByRole("complementary", { name: new RegExp(testSite.COLLECTION_DEFINITIONS.tag.label) });
 
 describe("taxonomy edit panel", () => {
 	it("opens as a panel beside the list and shows per locale tab whether a translation exists", async () => {
@@ -64,11 +73,14 @@ describe("taxonomy edit panel", () => {
 		const { onSaved } = renderPanel({ collection: "tag", id: "tag-1" });
 		await screen.findByDisplayValue("리액트");
 
-		fireEvent.click(within(panel()).getByRole("tab", { name: /일본어/ }));
+		const japanese = testSite.localeLabel("ja");
+		fireEvent.click(within(panel()).getByRole("tab", { name: tScreens("record.translationOff", { name: japanese }) }));
 		expect(screen.queryByRole("textbox", { name: tScreens("column.slug") })).toBeNull();
-		expect(screen.getByText(/주소와 연결은 모든 언어가 같아요/)).toBeInTheDocument();
-		fireEvent.change(screen.getByRole("textbox", { name: /^이름/ }), { target: { value: "リアクト" } });
-		expect(within(panel()).getByRole("tab", { name: "일본어 · 번역 있음" })).toBeInTheDocument();
+		expect(screen.getByText(tScreens("record.localeEmpty", { name: japanese }))).toBeInTheDocument();
+		fireEvent.change(screen.getByRole("textbox", { name: NAME }), { target: { value: "リアクト" } });
+		expect(
+			within(panel()).getByRole("tab", { name: tScreens("record.translationOn", { name: japanese }) }),
+		).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
@@ -125,7 +137,7 @@ describe("taxonomy edit panel", () => {
 		const { onClose } = renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 
-		fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
+		fireEvent.click(within(panel()).getByRole("button", { name: tCommon("close") }));
 		const dialog = await screen.findByRole("alertdialog", { name: tCommon("discard.title") });
 		expect(onClose).not.toHaveBeenCalled();
 

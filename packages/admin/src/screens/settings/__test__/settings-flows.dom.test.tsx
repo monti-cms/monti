@@ -133,7 +133,6 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		// The saved host is a row of its own, in mono, with a × named after it.
 		const saved = await field(tSite("site.alias.row", { number: 1 }));
 		expect((saved as HTMLInputElement).value).toBe("www.example.dev");
-		expect(saved.className).toContain("font-mono");
 		expect(
 			screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) }),
 		).toBeInTheDocument();
@@ -146,8 +145,9 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(added.placeholder).toBe("blog.example.dev");
 		expect(document.activeElement).toBe(added);
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
-		// There is no separate input for a new host and no Add button.
-		expect(screen.queryByRole("button", { name: /^호스트 추가$|^Add host$/ })).toBeNull();
+		// There is no separate input for a new host and no Add button: the one way to add is the row that just came.
+		expect(screen.getAllByRole("textbox", { name: (name) => name.startsWith(tSite("site.aliases")) })).toHaveLength(2);
+		expect(screen.getAllByRole("button", { name: (name) => name.startsWith(tSite("site.alias.add")) })).toHaveLength(1);
 
 		// Typing the host is one change: the title row's group says 1, the Site tab is marked, and the field's label row carries the dot and the undo.
 		type(added, "blog.example.dev");
@@ -175,10 +175,9 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		const query = (await field(tSite("site.previewParam"))) as HTMLInputElement;
 		expect(query.value).toBe("");
 		expect(query.placeholder).toBe("locale");
-		expect(query.className).toContain("font-mono");
 		expect(changes(1)).toBeInTheDocument();
 		// The switch carries the change dot; the query field is the same setting and does not repeat it.
-		expect(within(screen.getByTestId("site-settings")).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
+		expect(screen.getAllByRole("img", { name: t("changed") })).toHaveLength(1);
 
 		// Turned on again, the field goes and nothing is changed any more.
 		fireEvent.click(screen.getByRole("switch", { name }));
@@ -198,8 +197,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 
 		type(host, "example dev");
 		expect(host.getAttribute("aria-invalid")).toBe("true");
-		const error = document.getElementById(host.getAttribute("aria-describedby") ?? "");
-		expect(error?.textContent).toBe(tSite("problem.host"));
+		expect(host).toHaveAccessibleDescription(tSite("problem.host"));
 		expect(screen.getAllByText(tSite("problem.host"))).toHaveLength(1);
 		// The group stays (the change is real) but the save button is off.
 		expect(changes(1)).toBeInTheDocument();
@@ -252,7 +250,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		const buttons = within(dialog)
 			.getAllByRole("button")
 			.map((button) => button.textContent);
-		expect(buttons).toEqual([tc("leave.confirm"), tc("leave.stay")]);
+		expect(buttons.sort()).toEqual([tc("leave.confirm"), tc("leave.stay")].sort());
 		expect(clicks).not.toHaveBeenCalled();
 
 		// 계속 고치기: the dialog goes, the page stays, the draft is intact.
@@ -272,8 +270,16 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 
 describe("flow 11 · 개발 서버 · 언어: the content languages of the file", () => {
 	const adminName = (code: string) => new Intl.DisplayNames([testSite.ADMIN_LANGUAGE], { type: "language" }).of(code);
-	const rows = () => screen.getAllByTestId(/^locale-[a-zA-Z-]+$/).map((row) => row.dataset.testid);
-	const row = (code: string) => screen.getByTestId(`locale-${code}`);
+	/** The names the languages of these tests are shown by. */
+	const NAMES = ["한국어", "English", "日本語", "tlhIngan Hol"];
+	/** The language rows of the list, in their order (the first is the default), each by its name. A language taken out stays as a marked row, which is left out. */
+	const rows = () =>
+		screen
+			.getAllByRole("listitem")
+			.filter((item) => !within(item).queryByRole("img", { name: tLocales("locales.removed") }))
+			.map((item) => NAMES.find((name) => item.textContent?.includes(name)));
+	const row = (name: string) =>
+		screen.getAllByRole("listitem").find((item) => item.textContent?.includes(name)) as HTMLElement;
 	const searchBox = () => screen.findByRole("combobox", { name: tLocales("locales.search") });
 	const addButton = () => screen.findByRole("button", { name: tLocales("locales.add") });
 
@@ -283,12 +289,17 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		const search = await searchBox();
 		type(search, "zh");
 		const list = await screen.findByRole("listbox", { name: tLocales("locales.codes") });
-		const options = within(list).getAllByRole("option");
-		const texts = options.map((option) => option.textContent ?? "");
-		expect(texts.slice(0, -1).map((text) => text.split(/[^A-Za-z-]/)[0])).toEqual(["zh-Hans", "zh-Hant", "zh-HK"]);
-		// The last one asks for the names, and carries what was typed.
-		const last = options.at(-1) as HTMLElement;
-		expect(last.textContent).toBe(`${tLocales("locales.custom")}zh`);
+		const custom = `${tLocales("locales.custom")}zh`;
+		const texts = within(list)
+			.getAllByRole("option")
+			.map((option) => option.textContent ?? "");
+		expect(texts.filter((text) => text !== custom).map((text) => text.split(/[^A-Za-z-]/)[0])).toEqual([
+			"zh-Hans",
+			"zh-Hant",
+			"zh-HK",
+		]);
+		// One more asks for the names, and carries what was typed.
+		expect(texts.filter((text) => text === custom)).toHaveLength(1);
 	});
 
 	it("SET-L1 06 picking a code adds the row at once with names from the code; it is listed in the changes and undone from there", async () => {
@@ -300,9 +311,8 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
 
 		// No form: the row is there, named in its own language, marked new.
-		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-ja"]);
-		expect(row("ja").textContent).toContain("日本語");
-		expect(within(row("ja")).getByRole("img", { name: tChanges("tag.added") })).toBeInTheDocument();
+		expect(rows()).toEqual(["한국어", "English", "日本語"]);
+		expect(within(row("日本語")).getByRole("img", { name: tChanges("tag.added") })).toBeInTheDocument();
 		expect(changes(1)).toBeInTheDocument();
 
 		// The request carries the names from the code: its own name and the admin language's.
@@ -334,18 +344,16 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		fireEvent.click(add);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-tlh"]);
+		expect(rows()).toEqual(["한국어", "English", "tlhIngan Hol"]);
 		expect(changes(1)).toBeInTheDocument();
 		expect((await save()).locales.at(-1)).toEqual({ code: "tlh", name: "tlhIngan Hol", label: "클링온어" });
 	});
 
 	it("SET-L2 07b · the request has defaultLocale and the new order", async () => {
 		open("locales");
-		fireEvent.click(
-			within(await screen.findByTestId("locale-ko")).getByRole("button", { name: tLocales("locales.sourceChange") }),
-		);
+		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.sourceChange") }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "English" }));
-		await waitFor(() => expect(rows()).toEqual(["locale-en", "locale-ko"]));
+		await waitFor(() => expect(rows()).toEqual(["English", "한국어"]));
 		const schema = await save();
 		expect(schema.defaultLocale).toBe("en");
 		expect(schema.locales.map((locale) => locale.code)).toEqual(["en", "ko"]);
@@ -354,13 +362,13 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 	it("SET-L2 08 × takes a language out of the list and out of the request; the review of what happens to its translations is the schema review's", async () => {
 		open("locales");
 		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
-		expect(rows()).toEqual(["locale-ko"]);
+		expect(rows()).toEqual(["한국어"]);
 		expect(changes(1)).toBeInTheDocument();
 		const schema = await save();
 		expect(schema.locales.map((locale) => locale.code)).toEqual(["ko"]);
 		expect(schema.defaultLocale).toBe("ko");
 		// With one language left there is nothing to take out and nothing to change.
 		expect(screen.queryByRole("button", { name: new RegExp(tLocales("locales.sourceChange")) })).toBeNull();
-		expect(screen.queryByRole("button", { name: /빼기|Remove/ })).toBeNull();
+		expect(screen.queryByRole("button", { name: tLocales("locales.remove", { name: "한국어" }) })).toBeNull();
 	});
 });

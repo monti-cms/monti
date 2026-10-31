@@ -1,5 +1,5 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
@@ -44,11 +44,13 @@ const mount = async (doc: StoredDocument, wrap: (node: React.ReactElement) => Re
 		),
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector("[data-monti-custom-block]")).toBeInTheDocument());
+	// Every view of the notice draws its body.
+	await waitFor(() => expect(screen.getByText(BODY)).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
-const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para("본문")] });
+const BODY = "본문";
+const NOTICE = storedDoc({ type: "notice", attrs: { level: "info" }, content: [para(BODY)] });
 
 /** The attributes of the saved notice block. */
 const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON()).content[0];
@@ -57,7 +59,7 @@ const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON(
 function NoticeView() {
 	const block = useBlockEditor();
 	return (
-		<BlockFrame data-monti-custom-block="notice">
+		<BlockFrame>
 			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
 				단계: {String(block.values.level)}
 			</button>
@@ -90,7 +92,7 @@ describe("custom block NodeView", () => {
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
-		expect(JSON.stringify(savedNotice(editor))).toContain("본문");
+		expect(JSON.stringify(savedNotice(editor))).toContain(BODY);
 	});
 
 	it("EDIT-B3 shows the warnings of a block next to that block only", async () => {
@@ -107,9 +109,9 @@ describe("custom block NodeView", () => {
 				{node}
 			</BlockIssuesProvider>
 		));
-		const frame = document.querySelector("[data-monti-custom-block]") as HTMLElement;
-		const list = await within(frame).findByRole("list", { name: tBlocks("issues.label") });
+		const list = await screen.findByRole("list", { name: tBlocks("issues.label") });
 		expect(list.textContent).toBe("1줄: 문법 오류");
+		expect(screen.getAllByRole("list", { name: tBlocks("issues.label") })).toHaveLength(1);
 		expect(screen.queryByText("다른 블록의 경고")).toBeNull();
 	});
 

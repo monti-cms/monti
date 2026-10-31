@@ -39,8 +39,8 @@ describe("draft site", () => {
 			.on("PATCH /v1/media/:id", () => undefined)
 			.install();
 		const site = draftSiteOf(testSite, draft(), []);
-		expect(site && isSandboxSite(site)).toBe(true);
-		if (!site) return;
+		if (site === null) throw new Error("a valid draft makes a site");
+		expect(isSandboxSite(site)).toBe(true);
 		await expect(adminFetch(site, "/v1/references/unlink", { method: "POST", json: {} })).rejects.toMatchObject({
 			code: "preview",
 		});

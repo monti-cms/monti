@@ -4,10 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { NoticeError } from "../../api/client";
 import { renderWithSite } from "../../test/site";
+import { AdminUiLabels } from "../../ui/labels";
+import { uiMessages } from "../../ui/messages";
 import { slotsMessages } from "../messages";
 import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 
 const t = testSite.createTranslator(slotsMessages);
+const tUi = testSite.createTranslator(uiMessages);
 
 afterEach(cleanup);
 
@@ -15,7 +18,7 @@ function Host({ request }: { request: SlotRequest }) {
 	const { trigger, panel } = useSlot(request);
 	return (
 		<div>
-			<span data-testid="trigger">{trigger}</span>
+			{trigger}
 			{panel}
 		</div>
 	);
@@ -29,16 +32,18 @@ const action = (overrides: Partial<SlotAction> = {}): SlotAction => ({
 	...overrides,
 });
 
-function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}) {
+/** Renders the slot's action; with `inAdmin`, inside the admin's labels, so its words are the admin's (Korean) ones. */
+function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}, { inAdmin = false } = {}) {
 	const apply = vi.fn();
 	const getContext = vi.fn(() => ({ title: "Title" }));
-	renderWithSite(
+	const slot = (
 		<TooltipProvider>
 			<SlotRegistryProvider sources={sources}>
 				<Host request={{ slot: "field", target: "slug", collection: "post", getContext, apply, ...request }} />
 			</SlotRegistryProvider>
-		</TooltipProvider>,
+		</TooltipProvider>
 	);
+	renderWithSite(inAdmin ? <AdminUiLabels>{slot}</AdminUiLabels> : slot);
 	return { apply, getContext };
 }
 
@@ -47,7 +52,7 @@ describe("the fill action of a slot", () => {
 		const source = vi.fn<SlotSource>(() => []);
 		renderSlot([source]);
 		expect(source).toHaveBeenCalledWith({ slot: "field", target: "slug", collection: "post" });
-		expect(screen.getByTestId("trigger").childElementCount).toBe(0);
+		expect(screen.queryByRole("button")).toBeNull();
 	});
 
 	it("PLUG-A3 one press runs the action with the current context and puts the result in at once, with no result panel", async () => {
@@ -75,9 +80,9 @@ describe("the fill action of a slot", () => {
 					finish = () => resolve({ kind: "text", text: "Done." });
 				}),
 		);
-		const { apply } = renderSlot([() => [action({ run })]]);
+		const { apply } = renderSlot([() => [action({ run })]], {}, { inAdmin: true });
 		fireEvent.click(screen.getByRole("button"));
-		const busy = await screen.findByRole("button", { name: /Writing/ });
+		const busy = await screen.findByRole("button", { name: tUi("ai.working") });
 		expect(busy.getAttribute("aria-busy")).toBe("true");
 		fireEvent.click(busy);
 		expect(run).toHaveBeenCalledTimes(1);

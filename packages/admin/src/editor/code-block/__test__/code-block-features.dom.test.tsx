@@ -74,7 +74,8 @@ const mount = async (source: string) => {
 			/>
 		</SiteTree>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
+	// Every code block view has the copy tool.
+	await waitFor(() => expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 

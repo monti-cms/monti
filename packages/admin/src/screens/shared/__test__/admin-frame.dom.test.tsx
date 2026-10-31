@@ -119,22 +119,24 @@ describe("the side panel dock", () => {
 			<AdminQueryProvider>
 				<AdminUiLabels>
 					<AdminFrame sidebar={{ activeNav: testSite.DEFAULT_COLLECTION }}>
-						<div data-testid="page">
+						<section aria-label="Page">
 							{open && (
 								<DockedPanel>
 									<aside aria-label="Record" />
 								</DockedPanel>
 							)}
-						</div>
+						</section>
 					</AdminFrame>
 				</AdminUiLabels>
 			</AdminQueryProvider>
 		);
 		const shown = render(view(true));
-		const panel = screen.getByRole("complementary", { name: "Record" });
-		expect(screen.getByTestId("page").contains(panel)).toBe(false);
+		const page = screen.getByRole("region", { name: "Page" });
+		expect(within(page).queryByRole("complementary", { name: "Record" })).toBeNull();
 		// Both the page and the panel are in the area beside the rail.
-		expect(panel.closest("main")?.contains(screen.getByTestId("page"))).toBe(true);
+		const main = within(screen.getByRole("main"));
+		expect(main.getByRole("region", { name: "Page" })).toBe(page);
+		expect(main.getByRole("complementary", { name: "Record" })).toBeInTheDocument();
 		shown.rerender(view(false));
 		expect(screen.queryByRole("complementary", { name: "Record" })).toBeNull();
 	});

@@ -106,5 +106,12 @@ describe("CmsEditor works on the stored document", () => {
 		const { editor } = await open({ doc: unreadable, onChange });
 		expect(editor.state.doc.child(0).type.name).toBe("cmsOpaqueBlock");
 		expect(onChange).not.toHaveBeenCalled();
+		// A change elsewhere in the body hands the box back with the same text.
+		act(() => {
+			editor.commands.insertContentAt(editor.state.doc.content.size, "<p>뒤에 쓴 문단</p>");
+		});
+		expect(onChange).toHaveBeenCalledWith(
+			expect.objectContaining({ content: [unreadable.content[0], expect.objectContaining({ type: "paragraph" })] }),
+		);
 	});
 });

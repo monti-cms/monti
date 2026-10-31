@@ -93,7 +93,7 @@ describe("CmsImageNodeView", () => {
 		});
 
 		expect(updateAttributes).toHaveBeenCalledOnce();
-		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+px$/);
+		expect(updateAttributes).toHaveBeenCalledWith(expect.objectContaining({ width: expect.stringMatching(/^\d+px$/) }));
 	});
 
 	it("MEDIA-W1 for % widths, computes and updates a % value on drag", () => {

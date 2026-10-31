@@ -108,7 +108,7 @@ describe("moving around by the rail", () => {
 		expect(within(rail()).getAllByLabelText(badge)).toHaveLength(1);
 		cleanup();
 		renderRail({ eventsCount: 0 });
-		expect(within(rail()).queryByLabelText(/failed/)).toBeNull();
+		expect(within(rail()).queryByLabelText(t("sidebar.eventsBadge", { count: 0 }))).toBeNull();
 	});
 
 	it("leaves media out when the site has no storage", () => {

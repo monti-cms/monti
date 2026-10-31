@@ -188,16 +188,20 @@ describe("save", () => {
 		expect(result.ok).toBe(true);
 		expect(result.ok && result.value.changed).toBe(true);
 		expect(client.update).toHaveBeenCalledTimes(1);
-		const [id, input] = client.update.mock.calls[0] as [string, Record<string, unknown>];
-		expect(id).toBe("entry-1");
-		expect(input).toMatchObject({
-			expectedVersion: 4,
-			slug: "test",
-			metadata: { title: "수정", categoryId: "cat-1", summary: "요약" },
-		});
-		// The body is always sent as a document, never as text.
-		expect(input).not.toHaveProperty("mdx");
-		expect(JSON.stringify(input.doc)).toContain("첫째 줄");
+		// The body is always sent as a document, never as text: the one the entry was opened with.
+		expect(client.update).toHaveBeenCalledWith(
+			"entry-1",
+			expect.objectContaining({
+				expectedVersion: 4,
+				slug: "test",
+				metadata: expect.objectContaining({ title: "수정", categoryId: "cat-1", summary: "요약" }),
+				doc: ENTRY.working.doc,
+			}),
+		);
+		expect(client.update).not.toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ mdx: expect.anything() }),
+		);
 		expect(editor().saveStatus).toBe("saved");
 		expect(editor().hasUnsavedChanges).toBe(false);
 		expect(editor().saveError).toBeNull();
@@ -271,10 +275,16 @@ describe("save", () => {
 		expect(editor().hasUnsavedChanges).toBe(true);
 		release();
 		expect((await saving).ok).toBe(true);
-		expect(client.update.mock.calls.map(([, input]) => (input.metadata as { title: string }).title)).toEqual([
-			"첫째",
-			"둘째",
-		]);
+		expect(client.update).toHaveBeenCalledTimes(2);
+		for (const [nth, title] of [
+			[1, "첫째"],
+			[2, "둘째"],
+		] as const)
+			expect(client.update).toHaveBeenNthCalledWith(
+				nth,
+				"entry-1",
+				expect.objectContaining({ metadata: expect.objectContaining({ title }) }),
+			);
 		expect(editor().saveStatus).toBe("saved");
 		expect(editor().hasUnsavedChanges).toBe(false);
 	});
@@ -325,9 +335,11 @@ describe("save", () => {
 		expect(editor().form.doc).toEqual(doc);
 		expect(editor().hasUnsavedChanges).toBe(true);
 		await editor().save();
-		const first = client.update.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(first.doc).toEqual(doc);
-		expect(first).not.toHaveProperty("mdx");
+		expect(client.update).toHaveBeenCalledWith("entry-1", expect.objectContaining({ doc }));
+		expect(client.update).not.toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ mdx: expect.anything() }),
+		);
 	});
 
 	it("WRITE-S3 a body that reads the same as the server's is not a change, whatever its block ids and the order of its keys", async () => {
@@ -347,10 +359,10 @@ describe("save", () => {
 		const { editor, client } = await opened({ server: { ...ENTRY, working: { metadata: stored, doc: docOf("") } } });
 		editor().setForm({ title: "Renamed" });
 		await editor().save();
-		expect((client.update.mock.calls[0]?.[1] as { metadata: unknown }).metadata).toEqual({
-			...stored,
-			title: "Renamed",
-		});
+		expect(client.update).toHaveBeenCalledWith(
+			"entry-1",
+			expect.objectContaining({ metadata: { ...stored, title: "Renamed" } }),
+		);
 	});
 
 	it("TRANS-L2 keeps the translation group info the save response does not carry", async () => {
@@ -513,10 +525,10 @@ describe("conflict", () => {
 		const result = await editor().overwriteWithMine();
 		expect(result.ok).toBe(true);
 		expect(client.update).toHaveBeenCalledTimes(1);
-		expect(client.update.mock.calls[0]?.[1]).toMatchObject({
-			expectedVersion: 9,
-			metadata: expect.objectContaining({ title: "내 수정" }),
-		});
+		expect(client.update).toHaveBeenCalledWith(
+			"entry-1",
+			expect.objectContaining({ expectedVersion: 9, metadata: expect.objectContaining({ title: "내 수정" }) }),
+		);
 		expect(server.current.version).toBe(10);
 		expect(editor().conflict).toBeNull();
 		expect(editor().saveStatus).toBe("saved");
@@ -631,8 +643,9 @@ describe("publish", () => {
 		const { editor, client } = await opened({ server });
 		const result = await editor().publish();
 		expect(result.ok && result.value.filled).toEqual([{ name: "summary", label: expect.any(String) }]);
-		expect((client.update.mock.calls[0]?.[1] as unknown as { metadata: { summary: string } }).metadata.summary).toBe(
-			"소개 본문 첫 문장.",
+		expect(client.update).toHaveBeenCalledWith(
+			"entry-1",
+			expect.objectContaining({ metadata: expect.objectContaining({ summary: "소개 본문 첫 문장." }) }),
 		);
 		expect(editor().form.summary).toBe("소개 본문 첫 문장.");
 	});
@@ -966,12 +979,13 @@ describe("translation source flow", () => {
 		expect(editor().translation?.sourceChanged).toBe(false);
 		expect(editor().hasUnsavedChanges).toBe(true);
 		await editor().save();
-		const sent = client.update.mock.calls[0]?.[1] as {
-			translation?: { version: number; baseDoc: { content: { content?: { text?: string }[] }[] } };
-		};
 		// The confirmed source is the document of the source.
-		expect(sent.translation?.version).toBe(4);
-		expect(sent.translation?.baseDoc.content[0]?.content?.[0]?.text).toBe("New source");
+		expect(client.update).toHaveBeenCalledWith(
+			"entry-2",
+			expect.objectContaining({
+				translation: expect.objectContaining({ version: 4, baseDoc: translation.source?.doc }),
+			}),
+		);
 	});
 });
 

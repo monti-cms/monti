@@ -68,10 +68,13 @@ describe("editor representation of added blocks", () => {
 		const callout = insertContentOf(testSite, block("callout"));
 		expect(callout.type).toBe(blockNodeName(block("callout")));
 		expect(callout.attrs?.values).toEqual(block("callout").editor.insert?.values ?? defaultValues(block("callout")));
-		expect(callout.content?.length).toBeGreaterThanOrEqual(1);
+		// A body container without children starts with one paragraph holding the definition's starting text.
+		expect(callout.content).toEqual([
+			{ type: "paragraph", content: [{ type: "text", text: block("callout").editor.insert?.text }] },
+		]);
 
 		const tabs = insertContentOf(testSite, block("tabs"));
-		expect(tabs.content?.length).toBeGreaterThanOrEqual(block("tabs").children?.min ?? 1);
+		expect(tabs.content).toHaveLength(block("tabs").children?.min ?? 1);
 
 		const mermaid = insertContentOf(testSite, block("mermaid"));
 		expect(mermaid.type).toBe(blockNodeName(block("mermaid")));

@@ -7,10 +7,14 @@ import { commonMessages } from "../../../lib/common.messages";
 import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
+import { screensMessages } from "../../messages";
 import type { EntryData } from "../entry-form";
 import { BacklinkInput } from "../field-inputs";
+import { entriesMessages } from "../messages";
 
 const tCommon = testSite.createTranslator(commonMessages);
+const tScreens = testSite.createTranslator(screensMessages);
+const tEntries = testSite.createTranslator(entriesMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -59,7 +63,7 @@ const collectionEntry = (id: string, metadata: Record<string, unknown>): EntryDa
 	working: { metadata, doc: emptyStoredDocument() },
 });
 
-/** Holds the save of collection `c2` until it is released with `release`. */
+/** Holds the save of collection `c2` until it is released with `release`; `api` keeps the requests. */
 function stubApi(patchStatus: number) {
 	let release: () => void = () => {};
 	const held = new Promise<void>((resolve) => {
@@ -70,7 +74,7 @@ function stubApi(patchStatus: number) {
 		c1: { ...collectionEntry("c1", { title: "시리즈 A", itemIds: ["post-1"] }), workingSlug: "a" },
 		c2: { ...collectionEntry("c2", { title: "시리즈 B", itemIds: [] }), workingSlug: "b" },
 	};
-	fakeApi()
+	const api = fakeApi()
 		.on("GET /v1/entries/search", () => ({
 			items: [
 				{ id: "c1", title: "시리즈 A", slug: "a", status: "draft" },
@@ -87,7 +91,7 @@ function stubApi(patchStatus: number) {
 				: failure("internal_error", "실패");
 		})
 		.install();
-	return () => release();
+	return { release: () => release(), api };
 }
 
 const addSeriesB = async () => {
@@ -100,9 +104,14 @@ const addSeriesB = async () => {
 
 describe("adding to a collection (inverse relation)", () => {
 	it("WRITE-W7 picking shows it right away without waiting for the save", async () => {
-		const release = stubApi(200);
+		const { release, api } = stubApi(200);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
+		// The pick saves series B with this post among its items, before the save answers.
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
+		const [save] = api.sent("PATCH /v1/entries/:id");
+		expect(save?.params.id).toBe("c2");
+		expect(save?.body.metadata.itemIds).toEqual(["post-1"]);
 		release();
 		await waitFor(() => expect(shared.refresh).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
@@ -110,7 +119,7 @@ describe("adding to a collection (inverse relation)", () => {
 	});
 
 	it("WRITE-W7 if the save fails, reports below the input and reverts", async () => {
-		const release = stubApi(500);
+		const { release } = stubApi(500);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
 		release();
@@ -173,9 +182,13 @@ describe("adding a memo to a collection", () => {
 	it("WRITE-W5 adding opens the add sheet for a memo-holding collection, and saving creates it as that collection", async () => {
 		const input = await openList();
 		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
-		fireEvent.click(await screen.findByRole("option", { name: "'새 메모 시리즈' 추가" }));
+		fireEvent.click(
+			await screen.findByRole("option", { name: tEntries("relation.create", { label: "새 메모 시리즈" }) }),
+		);
 		// Does not create from the name alone; opens the add sheet with the name filled in.
-		const panel = await screen.findByRole("dialog", { name: "모음집 추가" });
+		const panel = await screen.findByRole("dialog", {
+			name: tScreens("list.add", { label: testSite.schemaOf("collection").label }),
+		});
 		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeInTheDocument();
 		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		fireEvent.click(within(panel).getByRole("button", { name: tCommon("save") }));

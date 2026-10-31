@@ -1,7 +1,6 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
-import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
@@ -20,19 +19,6 @@ import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, PREFIXED_LOCALES, adminUrl, contentPath, localizePath } = testSite;
 const t = testSite.createTranslator(editorMessages);
 const tc = testSite.createTranslator(commonMessages);
-
-vi.mock("../../ui/tooltip", () => ({
-	Tooltip: ({ children }: { children: React.ReactNode }) => children,
-	TooltipTrigger: ({
-		render,
-		children,
-	}: {
-		render?: React.ReactElement<{ children?: React.ReactNode }>;
-		children?: React.ReactNode;
-	}) => (render ? React.cloneElement(render, {}, children ?? render.props.children) : children),
-	TooltipContent: () => null,
-	TooltipProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
 
 /** A collection with a public path, whichever site config the tests run with: only such entries can be linked to. */
 const COLLECTION = LINKABLE_COLLECTIONS[0] as string;
