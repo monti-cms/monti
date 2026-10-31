@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("github() reads the conventional environment variables", () => {
-	it("works with no arguments: the OAuth app from AUTH_GITHUB_ID and AUTH_GITHUB_SECRET", async () => {
+	it("AUTH-L9 works with no arguments: the OAuth app from AUTH_GITHUB_ID and AUTH_GITHUB_SECRET", async () => {
 		vi.stubEnv("AUTH_GITHUB_ID", "env-id");
 		vi.stubEnv("AUTH_GITHUB_SECRET", "env-secret");
 		vi.stubEnv("MONTI_ADMIN_GITHUB_ID", ADMIN_ID);
@@ -40,7 +40,7 @@ describe("github() reads the conventional environment variables", () => {
 		expect((await cmsAuth.session(requestWith(jar)))?.user?.accountId).toBe(`github:${ADMIN_ID}`);
 	});
 
-	it("lets explicit values win over the environment", async () => {
+	it("AUTH-L9 lets explicit values win over the environment", async () => {
 		vi.stubEnv("AUTH_GITHUB_ID", "env-id");
 		vi.stubEnv("AUTH_GITHUB_SECRET", "env-secret");
 		vi.stubEnv("MONTI_ADMIN_GITHUB_ID", "1");
@@ -54,7 +54,7 @@ describe("github() reads the conventional environment variables", () => {
 		expect(cmsAuth.isAdmin("github:1")).toBe(false);
 	});
 
-	it("takes several admins from MONTI_ADMIN_GITHUB_ID, separated by commas", () => {
+	it("AUTH-L5 takes several admins from MONTI_ADMIN_GITHUB_ID, separated by commas", () => {
 		vi.stubEnv("MONTI_ADMIN_GITHUB_ID", `${ADMIN_ID}, 77`);
 		const cmsAuth = connect({ providers: [github()] });
 		expect(cmsAuth.isAdmin(`github:${ADMIN_ID}`)).toBe(true);
@@ -62,7 +62,7 @@ describe("github() reads the conventional environment variables", () => {
 		expect(cmsAuth.isAdmin("github:78")).toBe(false);
 	});
 
-	it("never guesses from other names", () => {
+	it("AUTH-L9 never guesses from other names", () => {
 		vi.stubEnv("CMS_ADMIN_GITHUB_ID", ADMIN_ID);
 		vi.stubEnv("GITHUB_ID", "other");
 		vi.stubEnv("GITHUB_CLIENT_ID", "other");
@@ -73,7 +73,7 @@ describe("github() reads the conventional environment variables", () => {
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining("MONTI_ADMIN_GITHUB_ID"));
 	});
 
-	it("says which variable is missing", () => {
+	it("AUTH-L9 says which variable is missing", () => {
 		vi.stubEnv("AUTH_GITHUB_SECRET", "env-secret");
 		expect(() => connectWithEnv({ providers: [github()] })).toThrow(
 			/AUTH_GITHUB_ID is not set.*Where:.*github\(\{ clientId \}\).*Fix:/s,
@@ -85,7 +85,7 @@ describe("github() reads the conventional environment variables", () => {
 		);
 	});
 
-	it("does not need the GitHub app to start under the development bypass, and asks for it when a sign-in is attempted", async () => {
+	it("AUTH-L7 does not need the GitHub app to start under the development bypass, and asks for it when a sign-in is attempted", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const cmsAuth = connectWithEnv({ providers: [github()] });
 		await expect(
@@ -97,12 +97,12 @@ describe("github() reads the conventional environment variables", () => {
 describe("the one secret, MONTI_SECRET", () => {
 	const options = { providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })] };
 
-	it("is required, and the error names it", async () => {
+	it("AUTH-L6 is required, and the error names it", async () => {
 		const { createSecretsVault } = await import("@monti-cms/core/testing");
 		expect(() => connect(options, { secrets: createSecretsVault({}).forPlugin("auth") })).toThrow(/MONTI_SECRET/);
 	});
 
-	it("signs the session with a key derived from it: the same secret reads a session, another secret does not", async () => {
+	it("AUTH-L6 signs the session with a key derived from it: the same secret reads a session, another secret does not", async () => {
 		const { createSecretsVault } = await import("@monti-cms/core/testing");
 		const withSecret = (secret: string) =>
 			connect(options, { secrets: createSecretsVault({ secret }).forPlugin("auth") });
@@ -120,14 +120,14 @@ describe("the request host", () => {
 	const other = new Headers({ host: "staging.example.com" });
 	const admin = { providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })] };
 
-	it("is the one the framework integration attached to the instance, so auth() needs no host", async () => {
+	it("AUTH-C2 is the one the framework integration attached to the instance, so auth() needs no host", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		const cmsAuth = connect(admin, { host: { requestHeaders: async () => loopback } });
 		expect(await new CmsAuthGateway(() => cmsAuth).verifyAdmin()).toMatchObject({ isAdmin: true });
 	});
 
-	it("is the explicit `host` of auth() when one is given, which wins over the attached one", async () => {
+	it("AUTH-C2 is the explicit `host` of auth() when one is given, which wins over the attached one", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		const cmsAuth = connect(

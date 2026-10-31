@@ -22,7 +22,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 	const connection = () =>
 		connect({ providers: [github({ clientId: "id", clientSecret: "secret", admins: [ADMIN_ID] })] });
 
-	it("sign-in answers with a redirect to GitHub that carries the state cookies, and the callback ends in a session cookie", async () => {
+	it("AUTH-L4 sign-in answers with a redirect to GitHub that carries the state cookies, and the callback ends in a session cookie", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const cmsAuth = connection();
 		const { jar, authorize, callback } = await loginThrough(cmsAuth, "github");
@@ -46,14 +46,14 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 			host: { requestHeaders: async () => requestWith(jar).headers },
 		});
 
-	it("reads the session from the headers the host supplies when no request is passed", async () => {
+	it("AUTH-C2 reads the session from the headers the host supplies when no request is passed", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const { jar } = await loginThrough(connection(), "github");
 		expect((await insideRequestOf(jar).session())?.user?.accountId).toBe(`github:${ADMIN_ID}`);
 		expect(await connection().session()).toBeNull();
 	});
 
-	it("a signed-in person who is not an admin has a session but is denied by the gateway", async () => {
+	it("AUTH-L5 a signed-in person who is not an admin has a session but is denied by the gateway", async () => {
 		stubOAuthServers(githubUser(99999999, "other"));
 		const { jar } = await loginThrough(connection(), "github");
 		const cmsAuth = insideRequestOf(jar);
@@ -63,7 +63,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		await expect(new CmsAuthGateway(() => cmsAuth).verifyAdmin()).rejects.toMatchObject({ code: "forbidden" });
 	});
 
-	it("the gateway lets an admin through, with the name GitHub gives", async () => {
+	it("AUTH-L5 the gateway lets an admin through, with the name GitHub gives", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const { jar } = await loginThrough(connection(), "github");
 		const result = await new CmsAuthGateway(() => insideRequestOf(jar)).verifyAdmin();
@@ -75,7 +75,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		});
 	});
 
-	it("without a session cookie, or with a tampered one, there is no session", async () => {
+	it("AUTH-L4 without a session cookie, or with a tampered one, there is no session", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const cmsAuth = connection();
 		expect(await cmsAuth.session(new Request(`${ORIGIN}/studio`))).toBeNull();
@@ -86,7 +86,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		expect(jar.names()).toContain("authjs.session-token");
 	});
 
-	it("a callback without the state of a sign-in that started here does not log in", async () => {
+	it("AUTH-L4 a callback without the state of a sign-in that started here does not log in", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const cmsAuth = connection();
 		const callback = await cmsAuth.handlers.GET(
@@ -98,7 +98,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		expect(await cmsAuth.session(requestWith(jar))).toBeNull();
 	});
 
-	it("sign-out clears the session cookie", async () => {
+	it("AUTH-L4 sign-out clears the session cookie", async () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const cmsAuth = connection();
 		const { jar } = await loginThrough(cmsAuth, "github");
@@ -115,7 +115,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		expect(await cmsAuth.session(requestWith(jar))).toBeNull();
 	});
 
-	it("network requests keep the CSRF check: a plain POST to sign in is refused", async () => {
+	it("AUTH-L4 network requests keep the CSRF check: a plain POST to sign in is refused", async () => {
 		const cmsAuth = connection();
 		const response = await cmsAuth.handlers.POST(
 			new Request(`${ORIGIN}/api/monti/auth/signin/github`, {
@@ -127,13 +127,13 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		expect(response.headers.get("location") ?? "").not.toContain("github.com/login/oauth");
 	});
 
-	it("an unknown sign-in method is an error", async () => {
+	it("AUTH-C1 an unknown sign-in method is an error", async () => {
 		await expect(
 			connection().signIn("gitlab", { request: new Request(`${ORIGIN}/x`, { method: "POST" }) }),
 		).rejects.toThrow(/Unknown sign-in method/);
 	});
 
-	it("lists the providers for the login page, with a label that follows the admin language", () => {
+	it("AUTH-C1 lists the providers for the login page, with a label that follows the admin language", () => {
 		const [entry] = connection().providers;
 		expect(entry?.id).toBe("github");
 		expect(entry?.name).toBe("GitHub");
@@ -148,7 +148,7 @@ describe("who is an admin", () => {
 		extra: Parameters<typeof auth>[0] extends infer O ? Partial<O> : never = {},
 	) => connect({ providers: [github({ admins })], ...extra });
 
-	it("matches GitHub ids qualified as `github:<id>`, with or without the prefix in the config", () => {
+	it("AUTH-L5 matches GitHub ids qualified as `github:<id>`, with or without the prefix in the config", () => {
 		const bare = adminsOf([ADMIN_ID]);
 		const qualified = adminsOf([`github:${ADMIN_ID}`]);
 		for (const cmsAuth of [bare, qualified]) {
@@ -157,7 +157,7 @@ describe("who is an admin", () => {
 		}
 	});
 
-	it("ignores leading zeros, and never matches a bare id without the provider prefix", () => {
+	it("AUTH-L5 ignores leading zeros, and never matches a bare id without the provider prefix", () => {
 		const cmsAuth = adminsOf([`000${ADMIN_ID}`]);
 		expect(cmsAuth.isAdmin(`github:${ADMIN_ID}`)).toBe(true);
 		expect(cmsAuth.isAdmin(`github:0${ADMIN_ID}`)).toBe(true);
@@ -165,7 +165,7 @@ describe("who is an admin", () => {
 		expect(cmsAuth.isAdmin(`gitlab:${ADMIN_ID}`)).toBe(false);
 	});
 
-	it("skips unset entries, and has no admin when none is set", () => {
+	it("AUTH-L5 skips unset entries, and has no admin when none is set", () => {
 		const cmsAuth = adminsOf([undefined, " "]);
 		expect(cmsAuth.isAdmin("github:1")).toBe(false);
 		expect(cmsAuth.isAdmin(undefined)).toBe(false);
@@ -173,25 +173,25 @@ describe("who is an admin", () => {
 		expect(cmsAuth.devUserId).toBe("local-dev");
 	});
 
-	it("does not accept a login name (it can be renamed and taken), and says so", () => {
+	it("AUTH-L5 does not accept a login name (it can be renamed and taken), and says so", () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		const cmsAuth = adminsOf(["octocat"]);
 		expect(cmsAuth.isAdmin("github:octocat")).toBe(false);
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('Ignored the admin "octocat"'));
 	});
 
-	it("takes qualified admins from the top-level option too, and refuses ones of an unknown provider", () => {
+	it("AUTH-L5 takes qualified admins from the top-level option too, and refuses ones of an unknown provider", () => {
 		const cmsAuth = connect({ providers: [github()], admins: [`github:${ADMIN_ID}`] });
 		expect(cmsAuth.isAdmin(`github:${ADMIN_ID}`)).toBe(true);
 		expect(() => connect({ providers: [github()], admins: ["gitlab:1"] })).toThrow(/qualified account id/);
 		expect(() => connect({ providers: [github()], admins: [ADMIN_ID] })).toThrow(/qualified account id/);
 	});
 
-	it("the development admin is the first admin, qualified", () => {
+	it("AUTH-L7 the development admin is the first admin, qualified", () => {
 		expect(adminsOf([ADMIN_ID]).devUserId).toBe(`github:${ADMIN_ID}`);
 	});
 
-	it("refuses an empty or duplicated provider list", () => {
+	it("AUTH-C1 refuses an empty or duplicated provider list", () => {
 		expect(() => auth({ providers: [] })).toThrow(/no provider.*Where:.*providers.*Fix:/s);
 		expect(() => auth({ providers: [github(), github()] })).toThrow(/Two providers/);
 	});
@@ -210,13 +210,13 @@ describe("development bypass", () => {
 		return new CmsAuthGateway(() => cmsAuth);
 	};
 
-	it("is on by default in development, for a request from this machine: the first admin, with no devBypass option", async () => {
+	it("AUTH-L7 is on by default in development, for a request from this machine: the first admin, with no devBypass option", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		expect(await gatewayFor(loopback).verifyAdmin()).toMatchObject({ accountId: `github:${ADMIN_ID}`, isAdmin: true });
 	});
 
-	it("does not apply to a request from another host, even in development", async () => {
+	it("AUTH-L7 does not apply to a request from another host, even in development", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		await expect(gatewayFor(remote).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
@@ -224,7 +224,7 @@ describe("development bypass", () => {
 		await expect(gatewayFor(forwarded).verifyAdmin()).rejects.toBeInstanceOf(AuthError);
 	});
 
-	it("never applies in production, whatever is asked, and in development it can be turned off", async () => {
+	it("AUTH-L7 never applies in production, whatever is asked, and in development it can be turned off", async () => {
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		vi.stubEnv("NODE_ENV", "production");
 		await expect(gatewayFor(loopback).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
@@ -233,20 +233,20 @@ describe("development bypass", () => {
 		await expect(gatewayFor(loopback, false).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 	});
 
-	it("refuses to start when asked for in development mode on something that looks deployed", () => {
+	it("AUTH-L7 refuses to start when asked for in development mode on something that looks deployed", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.stubEnv("VERCEL", "1");
 		expect(() => gatewayFor(loopback, true)).toThrow(/Refusing to start with devBypass/);
 	});
 
-	it("by default stays off, without stopping the server, on something that looks deployed", async () => {
+	it("AUTH-L7 by default stays off, without stopping the server, on something that looks deployed", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.stubEnv("VERCEL", "1");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		await expect(gatewayFor(loopback).verifyAdmin()).rejects.toMatchObject({ code: "unauthorized" });
 	});
 
-	it("without the host's request headers it never applies", async () => {
+	it("AUTH-L7 without the host's request headers it never applies", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		const cmsAuth = connect({ providers: [github({ admins: [ADMIN_ID] })], devBypass: true });
@@ -264,7 +264,7 @@ describe("host trust", () => {
 	const redirectUri = (response: Response) =>
 		new URL(response.headers.get("location") ?? "").searchParams.get("redirect_uri");
 
-	it("an untrusted host cannot sign in (no redirect to the provider)", async () => {
+	it("AUTH-L8 an untrusted host cannot sign in (no redirect to the provider)", async () => {
 		vi.stubEnv("AUTH_URL", "");
 		vi.stubEnv("NEXTAUTH_URL", "");
 		vi.spyOn(console, "error").mockImplementation(() => {});
@@ -273,7 +273,7 @@ describe("host trust", () => {
 		expect(response.status).toBe(500);
 	});
 
-	it("a trusted host builds the callback URL from the forwarded host", async () => {
+	it("AUTH-L8 a trusted host builds the callback URL from the forwarded host", async () => {
 		vi.stubEnv("AUTH_URL", "");
 		vi.stubEnv("NEXTAUTH_URL", "");
 		const response = await signInAt(connect({ providers: [github1()] }, { trustHost: true }), {
@@ -284,14 +284,14 @@ describe("host trust", () => {
 		expect(redirectUri(response)).toBe("https://cms.example.com/api/monti/auth/callback/github");
 	});
 
-	it("AUTH_URL pins the origin, and a forwarded host is then ignored", async () => {
+	it("AUTH-L8 AUTH_URL pins the origin, and a forwarded host is then ignored", async () => {
 		vi.stubEnv("AUTH_URL", "https://cms.example.com");
 		const cmsAuth = connect({ providers: [github1()] }, { trustHost: false });
 		const response = await signInAt(cmsAuth, { host: "evil.example", "x-forwarded-host": "evil.example" });
 		expect(redirectUri(response)).toBe("https://cms.example.com/api/monti/auth/callback/github");
 	});
 
-	it("warns in production when the host is not trusted and there is no AUTH_URL", () => {
+	it("AUTH-L8 warns in production when the host is not trusted and there is no AUTH_URL", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		vi.stubEnv("AUTH_URL", "");
 		vi.stubEnv("NEXTAUTH_URL", "");
@@ -302,7 +302,7 @@ describe("host trust", () => {
 });
 
 describe("the login path", () => {
-	it("is under the admin API by default, and another path can be chosen", () => {
+	it("AUTH-C3 is under the admin API by default, and another path can be chosen", () => {
 		expect(connect({ providers: [github()] }).basePath).toBe("/api/monti/auth");
 		expect(connect({ providers: [github()], basePath: "/api/auth/" }).basePath).toBe("/api/auth");
 	});

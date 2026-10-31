@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 const EMAIL = "admin@example.test";
 const PASSWORD = "flows-only-password-1";
 
-test("the first admin is made on the login screen and signs in again", async ({ page, context }) => {
+test("AUTH-A2 the first admin is made on the login screen and signs in again", async ({ page, context }) => {
 	await page.goto("/studio");
 	await expect(page.getByText("첫 관리자 만들기")).toBeVisible();
 	await page.getByLabel("이메일").fill(EMAIL);

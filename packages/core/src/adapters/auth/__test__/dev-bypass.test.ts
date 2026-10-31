@@ -4,7 +4,7 @@ import { isLoopbackHostname, isLoopbackRequest, productionLikeEnvironment } from
 const request = (headers: Record<string, string>) => new Headers(headers);
 
 describe("loopback host names", () => {
-	it("accepts this machine in its usual spellings", () => {
+	it("AUTH-L7 accepts this machine in its usual spellings", () => {
 		for (const name of [
 			"localhost",
 			"LOCALHOST",
@@ -19,7 +19,7 @@ describe("loopback host names", () => {
 		}
 	});
 
-	it("rejects every other name, including ones that merely contain localhost", () => {
+	it("AUTH-L7 rejects every other name, including ones that merely contain localhost", () => {
 		for (const name of [
 			"example.com",
 			"localhost.example.com",
@@ -35,20 +35,20 @@ describe("loopback host names", () => {
 });
 
 describe("loopback request", () => {
-	it("accepts a request that reaches the dev server directly", () => {
+	it("AUTH-L7 accepts a request that reaches the dev server directly", () => {
 		expect(isLoopbackRequest(request({ host: "localhost:3000" }))).toBe(true);
 		expect(isLoopbackRequest(request({ host: "127.0.0.1:3000", "x-forwarded-for": "127.0.0.1" }))).toBe(true);
 		expect(isLoopbackRequest(request({ host: "[::1]:3000", "x-forwarded-for": "::1" }))).toBe(true);
 		expect(isLoopbackRequest(request({ host: "localhost:3000", "x-forwarded-host": "localhost:3000" }))).toBe(true);
 	});
 
-	it("rejects a request addressed to another host", () => {
+	it("AUTH-L7 rejects a request addressed to another host", () => {
 		expect(isLoopbackRequest(request({ host: "staging.example.com" }))).toBe(false);
 		expect(isLoopbackRequest(request({ host: "203.0.113.7:3000" }))).toBe(false);
 		expect(isLoopbackRequest(request({}))).toBe(false);
 	});
 
-	it("rejects a request a proxy forwarded from somewhere else", () => {
+	it("AUTH-L7 rejects a request a proxy forwarded from somewhere else", () => {
 		expect(isLoopbackRequest(request({ host: "localhost:3000", "x-forwarded-host": "staging.example.com" }))).toBe(
 			false,
 		);
@@ -60,7 +60,7 @@ describe("loopback request", () => {
 });
 
 describe("production-looking environment", () => {
-	it("is not detected on a developer machine", () => {
+	it("AUTH-L7 is not detected on a developer machine", () => {
 		expect(productionLikeEnvironment({ NODE_ENV: "development" })).toBeUndefined();
 		expect(productionLikeEnvironment({ AUTH_URL: "http://localhost:3000" })).toBeUndefined();
 		expect(productionLikeEnvironment({ AUTH_URL: "not a url" })).toBe(
@@ -68,12 +68,12 @@ describe("production-looking environment", () => {
 		);
 	});
 
-	it("is detected from hosting platform variables, with the reason", () => {
+	it("AUTH-L7 is detected from hosting platform variables, with the reason", () => {
 		expect(productionLikeEnvironment({ VERCEL: "1" })).toMatch(/VERCEL/);
 		expect(productionLikeEnvironment({ FLY_APP_NAME: "monti" })).toMatch(/FLY_APP_NAME/);
 	});
 
-	it("is detected from a public AUTH_URL or NEXTAUTH_URL", () => {
+	it("AUTH-L7 is detected from a public AUTH_URL or NEXTAUTH_URL", () => {
 		expect(productionLikeEnvironment({ AUTH_URL: "https://cms.example.com" })).toMatch(/AUTH_URL/);
 		expect(productionLikeEnvironment({ NEXTAUTH_URL: "https://cms.example.com" })).toMatch(/cms\.example\.com/);
 	});

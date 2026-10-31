@@ -50,7 +50,7 @@ describe("a second provider through the same interface", () => {
 			providers: [github({ clientId: "id", clientSecret: "secret", admins: ["77"] }), gitlab({ admins: ["gitlab:5"] })],
 		});
 
-	it("is listed on the login page next to the first, in the order given", () => {
+	it("AUTH-C1 is listed on the login page next to the first, in the order given", () => {
 		expect(both().providers.map(({ id, name }) => ({ id, name }))).toEqual([
 			{ id: "github", name: "GitHub" },
 			{ id: "gitlab", name: "GitLab" },
@@ -59,7 +59,7 @@ describe("a second provider through the same interface", () => {
 		expect(both().providers[1]).not.toHaveProperty("icon");
 	});
 
-	it("logs in through its own callback and is qualified with its own id", async () => {
+	it("AUTH-C1 logs in through its own callback and is qualified with its own id", async () => {
 		stubOAuthServers(gitlabServer);
 		const cmsAuth = connect({ providers: [github(), gitlab({ admins: ["77"] })] });
 		const { authorize, jar } = await loginThrough(cmsAuth, "gitlab");
@@ -74,7 +74,7 @@ describe("a second provider through the same interface", () => {
 		expect(cmsAuth.isAdmin("gitlab:77")).toBe(true);
 	});
 
-	it("an admin of one provider is not an admin of the other, even with the same id", async () => {
+	it("AUTH-L5 an admin of one provider is not an admin of the other, even with the same id", async () => {
 		stubOAuthServers(gitlabServer, githubServer);
 		const cmsAuth = both();
 		// GitHub account 77 is an admin; GitLab account 77 is not (GitLab's admin is 5).
@@ -87,7 +87,7 @@ describe("a second provider through the same interface", () => {
 		expect((await cmsAuth.session(requestWith(jar)))?.user?.accountId).toBe("gitlab:77");
 	});
 
-	it("a provider can refuse an account", async () => {
+	it("AUTH-C1 a provider can refuse an account", async () => {
 		stubOAuthServers(gitlabServer);
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const refusing: LoginProvider = { ...gitlab(), account: () => null };
@@ -96,7 +96,7 @@ describe("a second provider through the same interface", () => {
 		expect(jar.names()).not.toContain("authjs.session-token");
 	});
 
-	it("refuses an admin listed on the wrong provider", () => {
+	it("AUTH-L5 refuses an admin listed on the wrong provider", () => {
 		expect(() => connect({ providers: [github({ admins: ["gitlab:5"] }), gitlab()] })).toThrow(/belongs to gitlab/);
 	});
 });
@@ -126,7 +126,7 @@ describe("a credentials provider written outside this package fits the interface
 		};
 	};
 
-	it("registers next to an OAuth provider, matches admins by its own ids, and is listed as a form login", () => {
+	it("AUTH-C1 registers next to an OAuth provider, matches admins by its own ids, and is listed as a form login", () => {
 		const cmsAuth = connect({ providers: [github(), { ...password(), admins: ["u-1"] }] });
 		expect(cmsAuth.providers.map((provider) => provider.id)).toEqual(["github", "password"]);
 		expect(cmsAuth.isAdmin("password:u-1")).toBe(true);
@@ -134,7 +134,7 @@ describe("a credentials provider written outside this package fits the interface
 		expect(cmsAuth.providers.map((provider) => provider.credentials === true)).toEqual([false, true]);
 	});
 
-	it("receives the plugin storage the core supplies", () => {
+	it("AUTH-C1 receives the plugin storage the core supplies", () => {
 		const storage = vi.fn();
 		const provider = password();
 		const setup = vi.spyOn(provider, "setup");

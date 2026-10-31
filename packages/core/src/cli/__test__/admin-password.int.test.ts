@@ -83,7 +83,7 @@ describe("the email and password login on the command line", () => {
 		await closeGlobalPool();
 	});
 
-	it("doctor warns that there is no admin yet and says to open the admin, and runs no GitHub checks", async () => {
+	it("AUTH-L11 doctor warns that there is no admin yet and says to open the admin, and runs no GitHub checks", async () => {
 		const dir = app();
 		const { report } = await doctor(dir);
 		const accounts = byId(report, "auth/admin-accounts");
@@ -96,7 +96,7 @@ describe("the email and password login on the command line", () => {
 		}
 	});
 
-	it("reset-password refuses an email without an account and changes nothing", async () => {
+	it("AUTH-L11 reset-password refuses an email without an account and changes nothing", async () => {
 		const dir = app();
 		const { code, text } = await run(
 			dir,
@@ -107,7 +107,7 @@ describe("the email and password login on the command line", () => {
 		expect(text).toContain("no admin account has that email");
 	});
 
-	it("doctor is satisfied once an admin exists, and reset-password then replaces the password", async () => {
+	it("AUTH-L11 doctor is satisfied once an admin exists, and reset-password then replaces the password", async () => {
 		const dir = app();
 		const cms = await importCms(dir, "monti.config.ts");
 		const accounts = cms.auth().accounts;
@@ -141,7 +141,7 @@ describe("the email and password login on the command line", () => {
 		expect(await signIn("second password!")).toBe(true);
 	});
 
-	it("reset-password asks for the email when --email is not given, and does not change anything when the two passwords differ", async () => {
+	it("AUTH-L11 reset-password asks for the email when --email is not given, and does not change anything when the two passwords differ", async () => {
 		const dir = app();
 		const prompts = {
 			text: async () => "mina@example.com",
@@ -155,7 +155,7 @@ describe("the email and password login on the command line", () => {
 		expect(text).toContain("not the same");
 	});
 
-	it("reset-password exits with 130 when the person cancels, like init", async () => {
+	it("AUTH-L11 reset-password exits with 130 when the person cancels, like init", async () => {
 		const dir = app();
 		const prompts = {
 			text: async () => {
@@ -167,7 +167,7 @@ describe("the email and password login on the command line", () => {
 		expect(code).toBe(130);
 	});
 
-	it("reset-password refuses a short password", async () => {
+	it("AUTH-L11 reset-password refuses a short password", async () => {
 		const dir = app();
 		const { code, text } = await run(
 			dir,
@@ -178,7 +178,7 @@ describe("the email and password login on the command line", () => {
 		expect(text).toContain("at least 10 characters");
 	});
 
-	it("reset-password says what to do on a site whose login keeps no accounts", async () => {
+	it("AUTH-L11 reset-password says what to do on a site whose login keeps no accounts", async () => {
 		const github = app(configText());
 		vi.stubEnv("AUTH_GITHUB_ID", "id");
 		vi.stubEnv("AUTH_GITHUB_SECRET", "secret");

@@ -54,7 +54,7 @@ const call = (
 const GOOD = { email: "mina@example.com", password: "correct horse", confirm: "correct horse" };
 
 describe("creating the first admin", () => {
-	it("creates the account, signs it in with the same credentials and sends the browser to the admin", async () => {
+	it("AUTH-A2 creates the account, signs it in with the same credentials and sends the browser to the admin", async () => {
 		const { cms, created, signInFn } = instance();
 		const response = await call(cms, GOOD);
 		expect(created).toEqual(["mina@example.com"]);
@@ -66,7 +66,7 @@ describe("creating the first admin", () => {
 		});
 	});
 
-	it("is refused by the server once an admin exists, whatever the form says, and signs nobody in", async () => {
+	it("AUTH-A1 is refused by the server once an admin exists, whatever the form says, and signs nobody in", async () => {
 		const { cms, created, signInFn } = instance();
 		await call(cms, GOOD);
 		signInFn.mockClear();
@@ -81,26 +81,26 @@ describe("creating the first admin", () => {
 		expect(signInFn).not.toHaveBeenCalled();
 	});
 
-	it("sends the browser back to the login screen when the two passwords differ, and creates nothing", async () => {
+	it("AUTH-A3 sends the browser back to the login screen when the two passwords differ, and creates nothing", async () => {
 		const { cms, created } = instance();
 		const response = await call(cms, { ...GOOD, confirm: "something else" });
 		expect(response.headers.get("location")).toBe(`${testSite.adminUrl("/login")}?error=confirm`);
 		expect(created).toEqual([]);
 	});
 
-	it("is 404 on a login that keeps no accounts", async () => {
+	it("AUTH-A1 is 404 on a login that keeps no accounts", async () => {
 		const { cms } = instance({ accounts: false });
 		expect((await call(cms, GOOD)).status).toBe(404);
 	});
 
-	it("is refused for a post from another site", async () => {
+	it("AUTH-L4 is refused for a post from another site", async () => {
 		const { cms, created } = instance();
 		const response = await call(cms, GOOD, { origin: "https://evil.example" });
 		expect(response.status).toBe(403);
 		expect(created).toEqual([]);
 	});
 
-	it("is served by the request handler without a login", async () => {
+	it("AUTH-A2 is served by the request handler without a login", async () => {
 		const { cms, created } = instance();
 		const response = await cms.handle(form("v1/session/first-admin", GOOD));
 		expect(response.status).toBe(302);
@@ -109,7 +109,7 @@ describe("creating the first admin", () => {
 });
 
 describe("signing in through the form of an email and password method", () => {
-	it("passes the email and password of the form to the login", async () => {
+	it("AUTH-L2 passes the email and password of the form to the login", async () => {
 		const { cms, signInFn } = instance();
 		await signIn(form("v1/session/sign-in/password", { email: "mina@example.com", password: "correct horse" }), {
 			params: Promise.resolve({ provider: "password" }),
