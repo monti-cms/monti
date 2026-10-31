@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { detectImageDimensionsAndType } from "../image-detect";
 
 describe("detectImageDimensionsAndType", () => {
-	it("detects PNG signatures and dimensions", () => {
+	it("MEDIA-U2 detects PNG signatures and dimensions", () => {
 		// Minimum valid PNG header: 8-byte signature + 4-byte chunk len + 4-byte 'IHDR' + 4-byte width + 4-byte height
 		const buf = new Uint8Array(24);
 		buf.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
@@ -26,13 +26,13 @@ describe("detectImageDimensionsAndType", () => {
 		expect(result?.height).toBe(600);
 	});
 
-	it("rejects non-image or corrupted files", () => {
+	it("MEDIA-U2 rejects non-image or corrupted files", () => {
 		const buf = new Uint8Array([1, 2, 3, 4, 5]);
 		const result = detectImageDimensionsAndType(buf);
 		expect(result).toBeNull();
 	});
 
-	it("rejects corrupted image stubs without real dimensions", () => {
+	it("MEDIA-U2 rejects corrupted image stubs without real dimensions", () => {
 		// JPEG stub: SOI + APP0 marker with no SOF markers
 		const jpegStub = new Uint8Array([
 			0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
@@ -52,7 +52,7 @@ describe("detectImageDimensionsAndType", () => {
 		expect(detectImageDimensionsAndType(avifStub)).toBeNull();
 	});
 
-	it("detects valid JPEG with SOF0 marker", () => {
+	it("MEDIA-U2 detects valid JPEG with SOF0 marker", () => {
 		// JPEG: FF D8 FF + SOF0 marker (FF C0) with len 11, precision 8, height 600 (0x0258), width 800 (0x0320)
 		const jpeg = new Uint8Array([
 			0xff, 0xd8, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x02, 0x58, 0x03, 0x20, 0x03, 0x01, 0x11, 0x00, 0x02,
@@ -65,7 +65,7 @@ describe("detectImageDimensionsAndType", () => {
 		});
 	});
 
-	it("detects valid WebP VP8 lossy dimensions", () => {
+	it("MEDIA-U2 detects valid WebP VP8 lossy dimensions", () => {
 		// WebP RIFF .... WEBP VP8 (lossy): at 26-29 width 800, height 600
 		const buf = new Uint8Array(32);
 		buf.set([0x52, 0x49, 0x46, 0x46], 0); // RIFF
@@ -83,7 +83,7 @@ describe("detectImageDimensionsAndType", () => {
 		});
 	});
 
-	it("detects valid AVIF with ispe box", () => {
+	it("MEDIA-U2 detects valid AVIF with ispe box", () => {
 		const buf = new Uint8Array(32);
 		// ftypavif at 4-11
 		buf.set([0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66], 4);

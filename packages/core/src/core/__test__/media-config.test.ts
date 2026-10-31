@@ -29,7 +29,7 @@ const site = createSite(
 const api = site.api;
 
 describe("media settings", () => {
-	it("reads limits and formats from the site config", () => {
+	it("MEDIA-U2 reads limits and formats from the site config", () => {
 		expect(api.MAX_MEDIA_BYTES).toBe(2048);
 		expect(api.MAX_MEDIA_PIXELS).toBe(100);
 		expect(api.MAX_FILE_BYTES).toBe(4096);
@@ -40,7 +40,7 @@ describe("media settings", () => {
 		expect(api.fileTypeFor("a.zip")).toBeNull();
 	});
 
-	it("rejects formats excluded in the config in upload requests", () => {
+	it("MEDIA-U2 rejects formats excluded in the config in upload requests", () => {
 		const { mediaUploadBodySchema } = api;
 		const base = { filename: "a", byteSize: 10 };
 		expect(mediaUploadBodySchema.safeParse({ ...base, mimeType: "image/png" }).success).toBe(true);
@@ -53,7 +53,7 @@ describe("media settings", () => {
 		);
 	});
 
-	it("an invalid config is reported with the path of each value", () => {
+	it("MEDIA-U2 an invalid config is reported with the path of each value", () => {
 		const codes = (media: Parameters<typeof checkMediaConfig>[0]) =>
 			checkMediaConfig(media).map((issue) => `${issue.path}:${issue.code}`);
 		expect(checkMediaConfig(undefined)).toEqual([]);

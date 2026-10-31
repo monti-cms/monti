@@ -37,13 +37,13 @@ const pending = { getMediaAsset: async () => ({ status: "pending", storageKey: n
 const imageNotReady = expect.objectContaining({ code: "image_media_not_ready", message: "pending" });
 
 describe("image warnings of a publish", () => {
-	it("a single publish reports them", async () => {
+	it("WRITE-P1 a single publish reports them", async () => {
 		const service = createContentService(store() as never, { site: testSite, imageChecks: pending });
 		const { warnings } = await service.publish({ id: "e1", expectedVersion: 3 });
 		expect(warnings).toContainEqual(imageNotReady);
 	});
 
-	it("a bulk publish reports the same warnings per item", async () => {
+	it("WRITE-P1 a bulk publish reports the same warnings per item", async () => {
 		const bulk = createBulkService(store() as never, { site: testSite, imageChecks: pending });
 		const { results } = await bulk.run({ op: "publish", items: [{ id: "e1", expectedVersion: 3 }] });
 		expect(results).toEqual([
@@ -51,13 +51,13 @@ describe("image warnings of a publish", () => {
 		]);
 	});
 
-	it("a service without image checks reports none", async () => {
+	it("WRITE-P1 a service without image checks reports none", async () => {
 		const service = createContentService(store() as never, { site: testSite });
 		const { warnings } = await service.publish({ id: "e1", expectedVersion: 3 });
 		expect(warnings).not.toContainEqual(imageNotReady);
 	});
 
-	it("keeps the snapshot's own warnings when the image lookup fails", async () => {
+	it("WRITE-P1 keeps the snapshot's own warnings when the image lookup fails", async () => {
 		const failing = {
 			getMediaAsset: async () => {
 				throw new Error("db down");

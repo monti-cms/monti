@@ -41,7 +41,7 @@ describe("postgres: replacing the file of a media file", () => {
 		});
 	};
 
-	it("rolls back the removed row when the update of the target fails", async () => {
+	it("MEDIA-R3 rolls back the removed row when the update of the target fails", async () => {
 		const target = await addReady("target.png");
 		const source = await addReady("source.png");
 		// The target's update is the last step; make only that one fail.

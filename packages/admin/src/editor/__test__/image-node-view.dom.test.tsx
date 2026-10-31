@@ -57,7 +57,7 @@ describe("CmsImageNodeView", () => {
 		return { props, updateAttributes, deleteNode };
 	};
 
-	it("clearing alt text in the settings popover shows an error there, and decorative images are turned on with the switch", async () => {
+	it("MEDIA-E2 clearing alt text in the settings popover shows an error there, and decorative images are turned on with the switch", async () => {
 		const { props, updateAttributes } = createProps({ alt: "" });
 		renderWithSite(<CmsImageNodeView {...props} />);
 		fireEvent.click(screen.getByRole("button", { name: t("imageNode.settings") }));
@@ -66,7 +66,7 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ decorative: true, alt: "" });
 	});
 
-	it("hides the tool row and has no delete button when read-only", () => {
+	it("MEDIA-W1 hides the tool row and has no delete button when read-only", () => {
 		const { props } = createProps({}, false);
 		renderWithSite(<CmsImageNodeView {...props} />);
 		expect(screen.queryByRole("toolbar", { name: t("imageNode.toolbar") })).toBeNull();
@@ -76,7 +76,7 @@ describe("CmsImageNodeView", () => {
 		expect(screen.queryByRole("button", { name: /삭제/ })).toBeNull();
 	});
 
-	it("renders the width resize corner handle and updates in a single transaction on drag", () => {
+	it("MEDIA-W1 renders the width resize corner handle and updates in a single transaction on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "500px" });
 		renderWithSite(<CmsImageNodeView {...props} />);
 
@@ -96,7 +96,7 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+px$/);
 	});
 
-	it("for % widths, computes and updates a % value on drag", () => {
+	it("MEDIA-W1 for % widths, computes and updates a % value on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "60%" });
 		renderWithSite(<CmsImageNodeView {...props} />);
 
@@ -111,7 +111,7 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+%$/);
 	});
 
-	it("can open the crop and rotate sheet and perform rotate and apply", () => {
+	it("MEDIA-W1 can open the crop and rotate sheet and perform rotate and apply", () => {
 		const { props, updateAttributes } = createProps();
 		renderWithSite(<CmsImageNodeView {...props} />);
 
@@ -136,7 +136,7 @@ describe("CmsImageNodeView", () => {
 		});
 	});
 
-	it("does not call updateAttributes when the width handle is released without moving (preserves images with no width set)", () => {
+	it("MEDIA-W1 does not call updateAttributes when the width handle is released without moving (preserves images with no width set)", () => {
 		const { props, updateAttributes } = createProps({ width: null });
 		renderWithSite(<CmsImageNodeView {...props} />);
 
@@ -150,7 +150,7 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes).not.toHaveBeenCalled();
 	});
 
-	it("stores the crop coordinates relative to the original (0-100) even when rotated", () => {
+	it("MEDIA-W1 stores the crop coordinates relative to the original (0-100) even when rotated", () => {
 		const { props, updateAttributes } = createProps({ rotate: "90" });
 		renderWithSite(<CmsImageNodeView {...props} />);
 
@@ -178,7 +178,7 @@ describe("CmsImageNodeView", () => {
 		});
 	});
 
-	it("reset in the sheet reverts both crop and rotation", () => {
+	it("MEDIA-W1 reset in the sheet reverts both crop and rotation", () => {
 		const { props, updateAttributes } = createProps({
 			crop: "10,10,80,80",
 			rotate: "180",

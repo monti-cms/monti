@@ -226,7 +226,7 @@ const withCursorBetween = async () => {
 };
 
 describe("flow: upload in the editor (05–06)", () => {
-	it("puts a pasted image at the cursor at once as an uploading image, with progress in place and no dialog", async () => {
+	it("MEDIA-E1 puts a pasted image at the cursor at once as an uploading image, with progress in place and no dialog", async () => {
 		const editor = await withCursorBetween();
 		paste(pngFile());
 		// At once: before any request has finished, the image is in the body at the cursor, going up.
@@ -245,7 +245,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		finishStorage();
 	});
 
-	it("asks the server for the upload, sends the bytes, confirms, and then the image has its media and nothing of the upload", async () => {
+	it("MEDIA-E1 asks the server for the upload, sends the bytes, confirms, and then the image has its media and nothing of the upload", async () => {
 		const editor = await withCursorBetween();
 		paste(pngFile());
 		await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
@@ -260,7 +260,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		expect(imageNodes(editor)).toHaveLength(1);
 	});
 
-	it("takes a dropped image the same way, and takes the image away again with the reason when the upload fails", async () => {
+	it("MEDIA-E1 takes a dropped image the same way, and takes the image away again with the reason when the upload fails", async () => {
 		const editor = await withCursorBetween();
 		const file = pngFile();
 		fireEvent.drop(screen.getByRole("textbox", { name: /./ }), { dataTransfer: { files: [file], items: [] } });
@@ -271,7 +271,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		expect(toast.error).toHaveBeenCalled();
 	});
 
-	it("opens the image card with the alt text focused; typing sets the alt text and decorative clears it", async () => {
+	it("MEDIA-E2 opens the image card with the alt text focused; typing sets the alt text and decorative clears it", async () => {
 		const editor = await open(storedDoc(para("앞"), image("")));
 		fireEvent.click(screen.getByRole("button", { name: t("imageNode.settings") }));
 		const alt = await screen.findByRole("textbox", { name: t("imageNode.alt") });
@@ -288,7 +288,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		);
 	});
 
-	it("moves to the next image without alt text with the button or Enter: the image is selected and its card opens on the alt text", async () => {
+	it("MEDIA-E2 moves to the next image without alt text with the button or Enter: the image is selected and its card opens on the alt text", async () => {
 		const editor = await open(storedDoc(image("", "desk"), image("있는 설명", "cover"), image("", "winter")));
 		const settings = () => screen.getAllByRole("button", { name: t("imageNode.settings") });
 		fireEvent.click(settings()[0] as HTMLElement);
@@ -312,7 +312,7 @@ describe("flow: upload in the editor (05–06)", () => {
 });
 
 describe("flow: pick in the editor (29–30)", () => {
-	it("sends the folder when one is chosen in the list, and lists everything again for all", async () => {
+	it("MEDIA-P1 sends the folder when one is chosen in the list, and lists everything again for all", async () => {
 		await withCursorBetween();
 		act(() => openMediaPicker("image"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
@@ -332,7 +332,7 @@ describe("flow: pick in the editor (29–30)", () => {
 		await within(dialog).findByRole("button", { name: /desk-morning/ });
 	});
 
-	it("puts the picked image in at the cursor at once, with no alt or caption step and no upload", async () => {
+	it("MEDIA-P1 puts the picked image in at the cursor at once, with no alt or caption step and no upload", async () => {
 		const editor = await withCursorBetween();
 		act(() => openMediaPicker("image"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
@@ -348,7 +348,7 @@ describe("flow: pick in the editor (29–30)", () => {
 		expect(uploadsPosted()).toHaveLength(0);
 	});
 
-	it("takes the file chosen with Upload to the page as an uploading image and closes the picker", async () => {
+	it("MEDIA-P1 takes the file chosen with Upload to the page as an uploading image and closes the picker", async () => {
 		const editor = await withCursorBetween();
 		act(() => openMediaPicker("image"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
@@ -374,7 +374,7 @@ describe("flow: pick in the editor (29–30)", () => {
 			onChange,
 		}) as unknown as FieldInputProps;
 
-	it("opens the same library from the cover image field, picks with the pick button, and sends the media as the value", async () => {
+	it("MEDIA-P1 opens the same library from the cover image field, picks with the pick button, and sends the media as the value", async () => {
 		const onChange = vi.fn();
 		renderWithSite(<MediaImageInput {...coverProps(onChange)} />);
 		fireEvent.click(screen.getByRole("button", { name: /./ }));
@@ -388,7 +388,7 @@ describe("flow: pick in the editor (29–30)", () => {
 });
 
 describe("flow: files such as PDF (37–38)", () => {
-	it("opens the library with files only from / File, not the system file picker", async () => {
+	it("MEDIA-P1 opens the library with files only from / File, not the system file picker", async () => {
 		await withCursorBetween();
 		const click = vi.spyOn(HTMLInputElement.prototype, "click");
 		act(() => openMediaPicker("file"));
@@ -401,7 +401,7 @@ describe("flow: files such as PDF (37–38)", () => {
 		expect(click).not.toHaveBeenCalled();
 	});
 
-	it("makes a file block of the picked file at the cursor, with its name, type and size", async () => {
+	it("MEDIA-P1 makes a file block of the picked file at the cursor, with its name, type and size", async () => {
 		const editor = await withCursorBetween();
 		act(() => openMediaPicker("file"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.fileTitle") });

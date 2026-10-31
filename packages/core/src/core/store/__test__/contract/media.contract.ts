@@ -61,14 +61,14 @@ export const mediaContract: ContractSuite = (factory) => {
 		const names = async (params: Parameters<ContentStore["listMediaAssets"]>[0]) =>
 			(await store.listMediaAssets(params)).items.map((item) => item.filename).sort();
 
-		it("separates images and files by kind", async () => {
+		it("MEDIA-B2 separates images and files by kind", async () => {
 			expect(await names({})).toEqual(["a.png", "b.webp", "c.pdf", "d.md"]);
 			expect(await names({ kind: "all" })).toEqual(["a.png", "b.webp", "c.pdf", "d.md"]);
 			expect(await names({ kind: "image" })).toEqual(["a.png", "b.webp"]);
 			expect(await names({ kind: "file" })).toEqual(["c.pdf", "d.md"]);
 		});
 
-		it("keeps the mimeType filter working", async () => {
+		it("MEDIA-B2 keeps the mimeType filter working", async () => {
 			expect(await names({ mimeType: "image/png" })).toEqual(["a.png"]);
 		});
 	});
@@ -86,7 +86,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		it("lists each entry that uses a file with the places in it: the body, or a metadata field by its path", async () => {
+		it("MEDIA-B5 lists each entry that uses a file with the places in it: the body, or a metadata field by its path", async () => {
 			const media = await store.createMediaAsset({
 				filename: "used.png",
 				mimeType: "image/png",
@@ -148,7 +148,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			return media.id;
 		};
 
-		it("finds the ready files stored under the keys it is given, and leaves out a key no ready file holds", async () => {
+		it("MEDIA-B7 finds the ready files stored under the keys it is given, and leaves out a key no ready file holds", async () => {
 			const first = await upload("by-key-1.png", "media/by-key-1.png", true);
 			const second = await upload("by-key-2.png", "media/by-key-2.png", true);
 			await upload("by-key-pending.png", "media/by-key-pending.png", false);
@@ -163,7 +163,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			]);
 		});
 
-		it("asks nothing for no keys", async () => {
+		it("MEDIA-B7 asks nothing for no keys", async () => {
 			expect(await store.findReadyMediaByStorageKeys({ keys: [] })).toEqual([]);
 		});
 	});
@@ -187,7 +187,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		it("creates media assets in folders and filters them by folderId and includeDescendants", async () => {
+		it("MEDIA-B1 creates media assets in folders and filters them by folderId and includeDescendants", async () => {
 			const rootMedia = await store.createMediaAsset({
 				filename: "root.png",
 				mimeType: "image/png",
@@ -331,15 +331,15 @@ export const mediaContract: ContractSuite = (factory) => {
 			return { kinds, alts };
 		};
 
-		it("finds images without alt text: empty or only white space, and never an attachment", async () => {
+		it("MEDIA-B2 finds images without alt text: empty or only white space, and never an attachment", async () => {
 			expect(await names({ alt: "none" })).toEqual(["bird.webp", "dog.png", "other.png"]);
 		});
 
-		it("finds images with alt text, and never an attachment even when it has a stray alt", async () => {
+		it("MEDIA-B2 finds images with alt text, and never an attachment even when it has a stray alt", async () => {
 			expect(await names({ alt: "has" })).toEqual(["cat.png", "fish.png"]);
 		});
 
-		it("shows everything for alt `all` or no alt, and combines with the other conditions", async () => {
+		it("MEDIA-B2 shows everything for alt `all` or no alt, and combines with the other conditions", async () => {
 			expect(await names({ alt: "all" })).toEqual(await names({}));
 			expect(await names({ alt: "none", folderId: folderA })).toEqual(["dog.png"]);
 			expect(await names({ alt: "none", folderId: folderA, includeDescendants: true })).toEqual([
@@ -351,11 +351,11 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect((await store.listMediaAssets({ alt: "none", pageSize: 2 })).total).toBe(3);
 		});
 
-		it("counts kinds and alts over all files when nothing narrows the list", async () => {
+		it("MEDIA-B2 counts kinds and alts over all files when nothing narrows the list", async () => {
 			expect(await counts({})).toEqual({ kinds: { image: 5, file: 1 }, alts: { none: 3, has: 2 } });
 		});
 
-		it("counts ignore kind and alt themselves, so every choice of a menu has its number", async () => {
+		it("MEDIA-B2 counts ignore kind and alt themselves, so every choice of a menu has its number", async () => {
 			const all = await counts({});
 			expect(await counts({ kind: "file" })).toEqual(all);
 			expect(await counts({ kind: "image" })).toEqual(all);
@@ -365,7 +365,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect((await store.listMediaAssets({ kind: "file" })).total).toBe(1);
 		});
 
-		it("counts respect the folder and includeDescendants", async () => {
+		it("MEDIA-B2 counts respect the folder and includeDescendants", async () => {
 			expect(await counts({ folderId: folderA })).toEqual({
 				kinds: { image: 2, file: 1 },
 				alts: { none: 1, has: 1 },
@@ -377,7 +377,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(await counts({ folderId: null })).toEqual({ kinds: { image: 1, file: 0 }, alts: { none: 1, has: 0 } });
 		});
 
-		it("counts respect the search and the mime type prefix", async () => {
+		it("MEDIA-B2 counts respect the search and the mime type prefix", async () => {
 			expect(await counts({ search: "og" })).toEqual({ kinds: { image: 1, file: 0 }, alts: { none: 1, has: 0 } });
 			expect(await counts({ search: ".pdf" })).toEqual({ kinds: { image: 0, file: 1 }, alts: { none: 0, has: 0 } });
 			expect(await counts({ mimeType: "image/" })).toEqual({
@@ -386,7 +386,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("counts respect used and the upload dates", async () => {
+		it("MEDIA-B2 counts respect used and the upload dates", async () => {
 			expect(await counts({ used: "used" })).toEqual({ kinds: { image: 1, file: 0 }, alts: { none: 0, has: 1 } });
 			expect(await counts({ used: "unused" })).toEqual({ kinds: { image: 4, file: 1 }, alts: { none: 3, has: 1 } });
 			const future = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -474,7 +474,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect((error as CmsError).code).toBe(code);
 		};
 
-		it("keeps the id, name, folder, alt, caption, creation date and references, and takes the new file", async () => {
+		it("MEDIA-R1 keeps the id, name, folder, alt, caption, creation date and references, and takes the new file", async () => {
 			const target = await addReady({
 				filename: "keep.png",
 				mimeType: "image/png",
@@ -521,7 +521,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(listed?.referencesCount).toBe(1);
 		});
 
-		it("takes over the original of the new file, every original field", async () => {
+		it("MEDIA-R1 takes over the original of the new file, every original field", async () => {
 			const target = await addReady({ filename: "orig-less.png", mimeType: "image/png", width: 1, height: 1 });
 			const source = await addReady({
 				filename: "with-original.png",
@@ -543,7 +543,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(released).toEqual({ storageKey: target.storageKey, originalStorageKey: null });
 		});
 
-		it("replaces an attachment by an attachment of the same type", async () => {
+		it("MEDIA-R2 replaces an attachment by an attachment of the same type", async () => {
 			const target = await addReady({ filename: "guide.pdf", mimeType: "application/pdf", byteSize: 5 });
 			const source = await addReady({ filename: "guide-v2.pdf", mimeType: "application/pdf", byteSize: 7 });
 			const { media } = await store.replaceMediaFile({ id: target.id, fromId: source.id });
@@ -551,7 +551,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(media.storageKey).toBe(source.storageKey);
 		});
 
-		it("refuses a different kind or type with a notice, and changes nothing", async () => {
+		it("MEDIA-R2 refuses a different kind or type with a notice, and changes nothing", async () => {
 			const image = await addReady({ filename: "kind.png", mimeType: "image/png", width: 1, height: 1 });
 			const pdf = await addReady({ filename: "kind.pdf", mimeType: "application/pdf" });
 			const markdown = await addReady({ filename: "kind.md", mimeType: "text/markdown" });
@@ -572,7 +572,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(await store.getMediaAsset(markdown.id)).toEqual(markdown);
 		});
 
-		it("refuses a file that is not ready or does not exist", async () => {
+		it("MEDIA-R3 refuses a file that is not ready or does not exist", async () => {
 			const ready = await addReady({ filename: "ready.png", mimeType: "image/png", width: 1, height: 1 });
 			const other = await addReady({ filename: "other-ready.png", mimeType: "image/png", width: 1, height: 1 });
 			const waiting = await pending("waiting.png", "image/png");
@@ -589,7 +589,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect((await store.getMediaAsset(waiting.id))?.status).toBe("pending");
 		});
 
-		it("refuses a replacement that an entry refers to, so no reference loses its file", async () => {
+		it("MEDIA-R3 refuses a replacement that an entry refers to, so no reference loses its file", async () => {
 			const target = await addReady({ filename: "t-in-use.png", mimeType: "image/png", width: 1, height: 1 });
 			const source = await addReady({ filename: "s-in-use.png", mimeType: "image/png", width: 1, height: 1 });
 			await referToMedia(store, source.id);
@@ -599,7 +599,7 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(await store.getMediaAsset(source.id)).toEqual(source);
 		});
 
-		it("takes a ready replacement nothing uses out of the library, and keeps one that is in use or not ready", async () => {
+		it("MEDIA-R3 takes a ready replacement nothing uses out of the library, and keeps one that is in use or not ready", async () => {
 			const unused = await addReady({ filename: "gone.png", mimeType: "image/png", width: 1, height: 1 });
 			expect(await store.discardUnusedMedia(unused.id)).toBe(true);
 			expect((await store.getMediaAsset(unused.id))?.status).toBe("failed");
@@ -664,12 +664,12 @@ export const mediaContract: ContractSuite = (factory) => {
 		const names = async (sort?: "uploaded" | "uploadedAsc" | "name" | "size") =>
 			(await store.listMediaAssets({ ...(sort ? { sort } : {}) })).items.map((item) => item.filename);
 
-		it("lists the newest upload first by default", async () => {
+		it("MEDIA-B6 lists the newest upload first by default", async () => {
 			expect(await names()).toEqual(["c-large.png", "A-small.png", "b-medium.png"]);
 			expect(await names("uploaded")).toEqual(["c-large.png", "A-small.png", "b-medium.png"]);
 		});
 
-		it("lists the oldest first, by name without regard to case, and the biggest file first", async () => {
+		it("MEDIA-B6 lists the oldest first, by name without regard to case, and the biggest file first", async () => {
 			expect(await names("uploadedAsc")).toEqual(["b-medium.png", "A-small.png", "c-large.png"]);
 			expect(await names("name")).toEqual(["A-small.png", "b-medium.png", "c-large.png"]);
 			expect(await names("size")).toEqual(["c-large.png", "b-medium.png", "A-small.png"]);

@@ -10,7 +10,7 @@ const titleField =
 	"title";
 
 describe("grouping media usages", () => {
-	it("lists a post once even when its draft and published version both use the file, merging their places", () => {
+	it("MEDIA-B5 lists a post once even when its draft and published version both use the file, merging their places", () => {
 		const usages = mediaUsages(
 			{
 				references: [
@@ -49,7 +49,7 @@ describe("grouping media usages", () => {
 		expect(usages[1]?.places).toEqual([t("usage.place.body")]);
 	});
 
-	it("names no place when the server gives none", () => {
+	it("MEDIA-B5 names no place when the server gives none", () => {
 		const [usage] = mediaUsages(
 			{ references: [{ entryId: "a", title: "글", collection: contentCollection, state: "working" }] },
 			placeNamer(testSite, t),

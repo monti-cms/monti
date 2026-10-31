@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createS3MediaStore } from "../media-store";
 
 describe("S3 media store", () => {
-	it("prepareUpload rejects disallowed mime types like SVG or PDF", async () => {
+	it("MEDIA-U2 prepareUpload rejects disallowed mime types like SVG or PDF", async () => {
 		const store = createS3MediaStore({
 			accessKeyId: "test-key",
 			secretAccessKey: "test-sec",
@@ -22,7 +22,7 @@ describe("S3 media store", () => {
 		).rejects.toThrow(/disallowed|unsupported/i);
 	});
 
-	it("prepareUpload signs the declared size into the URL so a larger body is refused", async () => {
+	it("MEDIA-U2 prepareUpload signs the declared size into the URL so a larger body is refused", async () => {
 		const store = createS3MediaStore({
 			accessKeyId: "test-key",
 			secretAccessKey: "test-sec",
@@ -40,7 +40,7 @@ describe("S3 media store", () => {
 		expect(signed.split(";")).toContain("content-length");
 	});
 
-	it("getPublicUrl constructs canonical URL from finalKey", () => {
+	it("MEDIA-U3 getPublicUrl constructs canonical URL from finalKey", () => {
 		const store = createS3MediaStore({
 			accessKeyId: "test-key",
 			secretAccessKey: "test-sec",
@@ -53,7 +53,7 @@ describe("S3 media store", () => {
 		expect(store.getPublicUrl("/media/asset-123.webp")).toBe("https://media.example.com/media/asset-123.webp");
 	});
 
-	it("promoteFile passes CopySourceIfMatch when expectedEtag is provided", async () => {
+	it("MEDIA-R1 promoteFile passes CopySourceIfMatch when expectedEtag is provided", async () => {
 		const store = createS3MediaStore({
 			accessKeyId: "test-key",
 			secretAccessKey: "test-sec",

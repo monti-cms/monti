@@ -41,20 +41,20 @@ function setup(options: { failFor?: readonly string[]; stale?: readonly ReturnTy
 }
 
 describe("media service", () => {
-	it("deletes every file of an asset, then its row", async () => {
+	it("MEDIA-R4 deletes every file of an asset, then its row", async () => {
 		const { service, deleted, finalized } = setup();
 		await service.remove(media("a", { original: { storageKey: "o/key", stagingKey: null } }));
 		expect(deleted).toEqual(["media/a.png", "staging/a.png", "o/key"]);
 		expect(finalized).toEqual(["a"]);
 	});
 
-	it("keeps the row when a file cannot be deleted, so the delete can be repeated", async () => {
+	it("MEDIA-R4 keeps the row when a file cannot be deleted, so the delete can be repeated", async () => {
 		const { service, finalized } = setup({ failFor: ["staging/"] });
 		await expect(service.remove(media("a"))).rejects.toThrow("storage down");
 		expect(finalized).toEqual([]);
 	});
 
-	it("cleans up stale uploads with the same rules, reports the ones it could not, and asks for uploads older than a day", async () => {
+	it("MEDIA-U9 cleans up stale uploads with the same rules, reports the ones it could not, and asks for uploads older than a day", async () => {
 		const { service, store, deleted, finalized, now } = setup({
 			stale: [media("ok"), media("bad", { stagingKey: "staging/bad.png" })],
 			failFor: ["staging/bad"],
@@ -67,7 +67,7 @@ describe("media service", () => {
 	});
 
 	describe("cleanupIfDue", () => {
-		it("cleans up the first time and then not again until a day has passed", async () => {
+		it("MEDIA-U9 cleans up the first time and then not again until a day has passed", async () => {
 			const { service, store, clock } = setup();
 			await service.cleanupIfDue();
 			await service.cleanupIfDue();
@@ -80,7 +80,7 @@ describe("media service", () => {
 			expect(store.listStaleUploads).toHaveBeenCalledTimes(2);
 		});
 
-		it("does not throw when the cleanup fails, and tries again at the next call", async () => {
+		it("MEDIA-U9 does not throw when the cleanup fails, and tries again at the next call", async () => {
 			const { service, store } = setup();
 			const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
 			store.listStaleUploads.mockRejectedValueOnce(new Error("database down"));
@@ -93,7 +93,7 @@ describe("media service", () => {
 	});
 
 	describe("release", () => {
-		it("deletes the stored file and the original a replaced media file gave up, and leaves out the one it never had", async () => {
+		it("MEDIA-R4 deletes the stored file and the original a replaced media file gave up, and leaves out the one it never had", async () => {
 			const { service, deleted, finalized } = setup();
 			await service.release({ storageKey: "media/old.png", originalStorageKey: "media/old-original.png" });
 			await service.release({ storageKey: "media/old2.png", originalStorageKey: null });
@@ -102,7 +102,7 @@ describe("media service", () => {
 			expect(finalized).toEqual([]);
 		});
 
-		it("swallows a failed delete and still tries the next file", async () => {
+		it("MEDIA-R4 swallows a failed delete and still tries the next file", async () => {
 			const { service, deleted } = setup({ failFor: ["old.png"] });
 			await expect(
 				service.release({ storageKey: "media/old.png", originalStorageKey: "media/old-original.png" }),
