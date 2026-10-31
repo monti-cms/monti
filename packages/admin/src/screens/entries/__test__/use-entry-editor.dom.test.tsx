@@ -196,5 +196,3 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(input.disabled).toBe(true);
 	});
 });
-
-describe("selectors", () => {});

@@ -4,8 +4,6 @@ import { assignStateSilently, createStateStore, notifyStateStore, useStoreSelect
 
 afterEach(cleanup);
 
-describe("state store", () => {});
-
 describe("mirroring props into a store", () => {
 	it("a silent write is visible to a render in the same pass, and subscribers are told afterwards", () => {
 		const store = createStateStore({ title: "a", body: "x" });

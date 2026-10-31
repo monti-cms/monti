@@ -954,5 +954,3 @@ describe("translation source flow", () => {
 		);
 	});
 });
-
-describe("snapshot and view", () => {});

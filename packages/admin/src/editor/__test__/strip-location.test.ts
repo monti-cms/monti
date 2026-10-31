@@ -243,5 +243,3 @@ describe("other containers", () => {
 		expect(withoutLocation(new Uint8Array())).toBeNull();
 	});
 });
-
-describe("stripLocation", () => {});
