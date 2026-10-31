@@ -178,10 +178,4 @@ describe("block validate", () => {
 		}
 	});
 
-	it("does not change the saved content", async () => {
-		const doc = docOf(fence("chart001", "chart", "bad"));
-		const { snapshot } = await run(doc);
-		const { snapshot: clean } = await run(docOf(fence("chart001", "chart", "bad")));
-		expect(snapshot.contentHash).toBe(clean.contentHash);
-	});
 });

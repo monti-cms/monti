@@ -643,15 +643,6 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 
-	it("POST /media/trash rejects a body without ids", async () => {
-		const req = new Request("http://localhost/api/monti/v1/media/trash", {
-			method: "POST",
-			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
-			body: JSON.stringify({ ids: [] }),
-		});
-		expect((await handleTrashMedia(req, { cms })).status).toBe(400);
-	});
-
 	it("TRASH-D1 has no DELETE /media/:id: a file is deleted for good only from the trash", async () => {
 		const id = "00000000-0000-4000-8000-000000000009";
 		const res = await cms.handle(

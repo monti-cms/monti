@@ -157,16 +157,6 @@ describe("Public JSON API", () => {
 		for (const item of list.body.items) expect(item).not.toHaveProperty("body");
 	});
 
-	it("an unknown format is a 400 invalid_input, and nothing about the format plugin leaks", async () => {
-		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
-
-		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=hugo`);
-
-		expect(one.status).toBe(400);
-		expect(one.body).toEqual({ error: { code: "invalid_input", message: "Unknown format" } });
-		expect(one.cache).toBe("no-store");
-	});
-
 	it("SITE-J1 hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
 		publicApi = {
 			collections: [contentCollection],

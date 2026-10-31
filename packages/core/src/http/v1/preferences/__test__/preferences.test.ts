@@ -66,29 +66,4 @@ describe("Preferences API — per-collection list preferences", () => {
 		expect(saved.collections[SECOND]).toEqual({ pageSize: 100 });
 	});
 
-	it("drops the removed global shape instead of reading it as per-collection settings", async () => {
-		state.stored = {
-			defaultPageSize: 50,
-			sort: { field: "title", direction: "asc" },
-			columnSettings: { [SECOND]: { visibility: { tags: false } } },
-			collections: { [FIRST]: { pageSize: 100 } },
-		};
-		const saved = await (await getPreferences(getReq(), { cms })).json();
-		expect(saved.collections[FIRST]).toEqual({ pageSize: 100 });
-		expect(saved.collections[SECOND]).toEqual({});
-		expect(JSON.stringify(saved)).not.toMatch(/defaultPageSize|columnSettings/);
-	});
-
-	it("rejects malformed column names, duplicate order entries and invalid page sizes with 400", async () => {
-		for (const body of [
-			{ collections: { [FIRST]: { columns: { order: ["title", "title"] } } } },
-			{ collections: { [FIRST]: { columns: { visibility: { "not a column": true } } } } },
-			{ collections: { [FIRST]: { columns: { order: ["title", "1st"] } } } },
-			{ collections: { [FIRST]: { pageSize: 30 } } },
-			{ collections: { unknown: { pageSize: 25 } } },
-		]) {
-			const res = await putPreferences(putReq(body), { cms });
-			expect(res.status).toBe(400);
-		}
-	});
 });

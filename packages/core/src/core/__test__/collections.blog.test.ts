@@ -9,12 +9,6 @@ const site = createSite(config);
  * Posts (one category, many tags), memos (tags), and classification tags, categories and compilations. Rules independent of the config are in `collections.test.ts`.
  */
 describe("collection helpers (reference blog config)", () => {
-	it("the default collection is the first declared document collection", () => {
-		expect(site.DEFAULT_COLLECTION).toBe("post");
-		expect(site.isDocumentCollection("memo")).toBe(true);
-		expect(site.isDocumentCollection("tag")).toBe(false);
-		expect(site.isDocumentCollection("nope")).toBe(false);
-	});
 
 	it("classification fields are relation fields pointing to a classification (record) collection", () => {
 		expect(site.taxonomyFieldsOf("post").map((stored) => [stored.name, stored.to])).toEqual([

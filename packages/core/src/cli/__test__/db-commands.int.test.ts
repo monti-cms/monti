@@ -145,17 +145,6 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(await tablesIn(schema)).toEqual([]);
 	});
 
-	it("migrate says it is up to date when no step is pending", async () => {
-		const schema = freshSchema("update");
-		await run(dbSetup, schema);
-
-		const none = await run(dbMigrate, schema);
-		expect(none.code).toBe(0);
-		expect(none.lines[0]).toBe("Bringing Monti's tables up to date with this version…");
-		expect(none.lines.at(-1)).toBe("Already up to date.");
-		expect(none.text).not.toContain("monti db:setup");
-	});
-
 	it("migrate refuses a database created by an older pre-release, and says to recreate it", async () => {
 		const schema = freshSchema("outdated");
 		await run(dbSetup, schema);

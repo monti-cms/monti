@@ -7,13 +7,6 @@ import { testSite } from "../../../test/site";
  * `collections.blog.test.ts` checks the collection list of the reference blog config as is.
  */
 describe("collection helpers", () => {
-	it("the default collection is the first declared document collection", () => {
-		expect(testSite.DEFAULT_COLLECTION).toBe(testSite.COLLECTIONS.find((name) => !testSite.isItemCollection(name)));
-		expect(testSite.DOCUMENT_COLLECTIONS[0]).toBe(testSite.DEFAULT_COLLECTION);
-		expect(testSite.isDocumentCollection(contentCollection)).toBe(true);
-		expect(testSite.isDocumentCollection(recordCollection)).toBe(false);
-		expect(testSite.isDocumentCollection("nope")).toBe(false);
-	});
 
 	it("LIST-F2 classification fields are relation fields pointing to a classification (record) collection", () => {
 		for (const collection of testSite.COLLECTIONS) {

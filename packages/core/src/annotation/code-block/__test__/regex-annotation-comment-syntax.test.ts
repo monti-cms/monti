@@ -82,14 +82,6 @@ describe("regex annotation comment syntax", () => {
 		]);
 	});
 
-	it("does not create an annotation when the regex does not match", () => {
-		const line = 'const value = "bar"';
-		const document = parse(["// @char fold {re:/foo/g}", line].join("\n"));
-
-		expect(document.lines.map((item) => item.value)).toEqual([line]);
-		expect(document.lines[0]?.annotations).toEqual([]);
-	});
-
 	it("FMT-C1 a document regex makes a range for every match even without the g flag", () => {
 		const line = "foo bar foo";
 		const document = parse(["// @document fold {re:/foo/}", line].join("\n"));

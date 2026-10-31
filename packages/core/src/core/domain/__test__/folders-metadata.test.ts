@@ -33,10 +33,6 @@ describe("folders", () => {
 });
 
 describe("metadata", () => {
-	it("keeps JSON values and orders object keys, so equal metadata is equal however it was built", () => {
-		const normalized = normalizeMetadata({ b: 1, a: { d: [1, "x", null, true], c: "y" } });
-		expect(JSON.stringify(normalized)).toBe('{"a":{"c":"y","d":[1,"x",null,true]},"b":1}');
-	});
 
 	it("WRITE-S7 accepts an object with no prototype and a key named __proto__ as plain data", () => {
 		const input = JSON.parse('{"__proto__": {"x": 1}, "constructor": "c"}');

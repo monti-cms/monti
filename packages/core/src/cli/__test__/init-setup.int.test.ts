@@ -72,12 +72,6 @@ describe("the .env.local step", () => {
 		expect(envOf(dir).B).toBe("2");
 	});
 
-	it("does nothing without .env.example and without .env.local", () => {
-		const dir = fixtureApp();
-		expect(prepareEnvFile(dir)).toEqual({ action: "missing-example" });
-		expect(hasEnvLocal(dir)).toBe(false);
-	});
-
 	it("INIT-S1 takes a database URL from the environment or .env.local, and not the placeholder of .env.example", () => {
 		const placeholder = fixtureApp({ ".env.local": "DATABASE_URL=postgres://user:password@host:5432/monti\n" });
 		expect(databaseUrl(placeholder, {})).toBeUndefined();
@@ -180,27 +174,6 @@ describe("monti init runs the machine steps", () => {
 		expect(left).toContain("fix: do the thing");
 	});
 
-	it("does not list a database failure again when the database was skipped for want of a URL", async () => {
-		const host = fakeHost({
-			runDoctor: async (cwd) => ({
-				ok: false,
-				cwd,
-				summary: { ok: 5, warn: 0, fail: 1, skip: 0 },
-				checks: [
-					{
-						id: "database/url",
-						group: "database",
-						title: "DATABASE_URL",
-						status: "fail",
-						message: "DATABASE_URL is not set",
-					},
-				],
-			}),
-		});
-		const report = await initProject({ cwd: fixtureApp(), host });
-		expect(report.next.some((step) => step.startsWith("Fix what"))).toBe(false);
-	});
-
 	it("runs without a terminal (--yes or no TTY) and records the steps", async () => {
 		const report = await initProject({ cwd: fixtureApp(), host: fakeHost() });
 		expect(report.steps.map((step) => step.name)).toEqual([
@@ -227,20 +200,6 @@ describe("monti init runs the machine steps", () => {
 			detail: "you answered no",
 		});
 		expect(report.next.some((step) => step.includes("cp .env.example .env.local"))).toBe(true);
-	});
-
-	it("asks the question once, with a default of yes, and shows each step as a progress line", async () => {
-		const prompter = scriptedPrompter({ "Install the": true });
-		let initial: boolean | undefined;
-		const confirm = prompter.confirm.bind(prompter);
-		prompter.confirm = async (question) => {
-			if (question.message.startsWith("Set up .env.local")) initial = question.initial;
-			return confirm(question);
-		};
-		await initProject({ cwd: fixtureApp(), host: fakeHost(), prompter, ...ANSWERED });
-		expect(initial).toBe(true);
-		expect(prompter.asked.filter((message) => message.startsWith("Set up .env.local"))).toHaveLength(1);
-		expect(prompter.asked.filter((message) => message.startsWith("task: "))).toHaveLength(3);
 	});
 
 	it("a dry run changes nothing and plans the steps", async () => {

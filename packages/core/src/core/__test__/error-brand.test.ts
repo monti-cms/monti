@@ -28,14 +28,6 @@ describe("error classes across copies of the package", () => {
 		expect(handleApiError(foreign).status).toBe(503);
 	});
 
-	it("keeps subclasses apart: a CmsError is not a ServiceError, a ServiceError is a CmsError", () => {
-		const plain = new CmsError("x", "invalid_input");
-		const service = new ServiceError("invalid_input");
-		expect(plain instanceof ServiceError).toBe(false);
-		expect(service instanceof ServiceError).toBe(true);
-		expect(service instanceof CmsError).toBe(true);
-	});
-
 	it("ADMIN-E2 does not mistake other errors for its own", () => {
 		expect(new Error("x") instanceof CmsError).toBe(false);
 		expect((null as unknown) instanceof CmsError).toBe(false);

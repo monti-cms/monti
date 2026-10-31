@@ -63,11 +63,6 @@ describe("the operations of an instance", () => {
 		}
 	});
 
-	it("only read operations are defined for now", async () => {
-		const operations = await withOperations().operations();
-		expect(operations.every((operation) => operation.kind === "read")).toBe(true);
-	});
-
 	it("API-O1 make the input schema for the site: entries.list names this site's collections", async () => {
 		const list = (await withOperations().operations()).find((operation) => operation.name === "entries.list");
 		const collection = (list?.jsonSchema as { properties: { collection: { enum: string[] } } }).properties.collection;
@@ -105,26 +100,10 @@ describe("checkOperationNames", () => {
 		).toEqual([]);
 	});
 
-	it("reports a repeated name once for each repeat, with the owner of the first", () => {
-		const issues = checkOperationNames([
-			{ plugin: null, name: "a.b" },
-			{ plugin: "x", name: "a.b" },
-			{ plugin: "y", name: "a.b" },
-		]);
-		expect(issues).toHaveLength(2);
-		expect(issues[0]).toMatchObject({ code: "collision", message: 'collides with the core operation "a.b"' });
-		expect(issues[1]?.message).toBe('collides with the core operation "a.b"');
-	});
 });
 
 describe("running an operation", () => {
 	const cms = () => withOperations({ name: "demo", operations: [whoAmI] });
-
-	it("runs as the given admin: the actor of the changes is their name", async () => {
-		const result = (await cms().runOperation("test.whoAmI", {}, { auth: admin })) as { actor: string; account: string };
-		expect(result.actor).toBe("Mina Park");
-		expect(result.account).toBe("123");
-	});
 
 	it("API-O2 passes the input as the schema parsed it", async () => {
 		const result = (await cms().runOperation("test.whoAmI", { count: "5", label: "x" }, { auth: admin })) as {

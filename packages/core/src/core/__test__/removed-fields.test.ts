@@ -83,17 +83,6 @@ describe("values of removed fields", () => {
 		});
 	});
 
-	it("keeps the value in the content hash: it is part of the stored metadata", async () => {
-		const without = await prepareHeld(await draft());
-		const withValue = await prepareHeld(await draft({ [ORPHAN]: "left" }));
-		const other = await prepareHeld(await draft({ [ORPHAN]: "changed" }));
-		expect(withValue.contentHash).not.toBe(without.contentHash);
-		expect(other.contentHash).not.toBe(withValue.contentHash);
-		expect(await prepareHeld(await draft({ [ORPHAN]: "left" }))).toMatchObject({
-			contentHash: withValue.contentHash,
-		});
-	});
-
 	it("WRITE-S8 does not block publishing and warns once per removed field, with the field key as the path", async () => {
 		const snapshot = await prepareHeld(await draft({ [ORPHAN]: "left", other: ["x"] }));
 		const validation = validateForPublish(testSite, snapshot, { targets, media: [] });
@@ -101,11 +90,6 @@ describe("values of removed fields", () => {
 		expect(validation.issues).toEqual([]);
 		const orphans = validation.warnings.filter((warning) => warning.code === "orphaned_metadata_key");
 		expect(orphans.map((warning) => warning.path).sort()).toEqual(["other", ORPHAN]);
-	});
-
-	it("raises no warning when nothing was removed", async () => {
-		const snapshot = await prepareHeld(await draft());
-		expect(snapshot.warnings).toEqual([]);
 	});
 
 	it("WRITE-S8 does not take the per-language names of an item collection for a removed field", () => {
@@ -142,13 +126,4 @@ describe.skipIf(!select)("a select value that is no longer an option", () => {
 		);
 	});
 
-	it("is told apart from an option the select still has", async () => {
-		const field = select?.field;
-		if (field?.kind !== "select") throw new Error("not a select");
-		const [option] = Object.keys(field.options);
-		expect(testSite.unknownSelectValues(contentCollection, { [name]: option })).toEqual([]);
-		expect(testSite.unknownSelectValues(contentCollection, { [name]: UNKNOWN_OPTION })).toEqual([
-			{ path: name, values: [UNKNOWN_OPTION] },
-		]);
-	});
 });

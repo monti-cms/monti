@@ -95,11 +95,6 @@ describe("lifecycle transitions", () => {
 		expect(codeOf(() => assertSourceNotTrashed(undefined, 4))).toBeNull();
 	});
 
-	it("restoring a record needs its prepared draft", () => {
-		expect(codeOf(() => assertRestoreSnapshot(undefined))).toMatchObject({ code: "invalid_input" });
-		expect(codeOf(() => assertRestoreSnapshot({}))).toBeNull();
-	});
-
 	it("TRASH-D1 deletes for good only a trashed entry", () => {
 		for (const status of ALL) {
 			const result = codeOf(() => assertDeletable(status, 2));

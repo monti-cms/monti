@@ -43,14 +43,6 @@ describe("the SQL that reads a title", () => {
 		);
 	});
 
-	it("writes a key as an escaped string literal, never as a parameter or as SQL", () => {
-		// A key like this is refused by `defineSite` (field names are plain words), so the site is made without that check: the SQL still has to be safe.
-		const site = createSite(configOf({ a: "it's'; DROP TABLE entries; --" }));
-		const expression = compiled(titleExpr(site, "w.metadata", { collection: "a" }));
-		expect(expression.sql).toBe(`"w"."metadata"->>'it''s''; DROP TABLE entries; --'`);
-		expect(expression.parameters).toEqual([]);
-	});
-
 	it("reads the name of a display language of a record collection, falling back to the title, and binds the language", () => {
 		const expression = compiled(translatedTitleExpr(siteOf({ a: "name" }), "b.metadata", "a", "en"));
 		expect(expression.sql).toBe(

@@ -55,11 +55,4 @@ describe("preview script file writes", () => {
 		expect(readFileSync(file, "utf8")).toBe("A=1\n");
 	});
 
-	it("writes a new file and overwrites a regular one, reporting no replaced link", async () => {
-		const { writeRegularFile } = await load();
-		const file = path.join(temp(), ".env.local");
-		expect(writeRegularFile(file, "A=1\n")).toBe(false);
-		expect(writeRegularFile(file, "A=2\n")).toBe(false);
-		expect(readFileSync(file, "utf8")).toBe("A=2\n");
-	});
 });

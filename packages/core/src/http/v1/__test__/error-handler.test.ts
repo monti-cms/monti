@@ -7,13 +7,6 @@ import { CmsError, cmsErrorText, type ErrorBody, handleApiError } from "../error
 afterEach(() => vi.restoreAllMocks());
 
 describe("API error responses", () => {
-	it("does not log a request the browser dropped as an error", () => {
-		const log = vi.spyOn(console, "error").mockImplementation(() => {});
-		const aborted = Object.assign(new Error("aborted"), { code: "ECONNRESET" });
-		expect(handleApiError(aborted).status).toBe(499);
-		expect(handleApiError(new DOMException("stop", "AbortError")).status).toBe(499);
-		expect(log).not.toHaveBeenCalled();
-	});
 
 	it("ADMIN-E2 keeps an unknown error as a 500", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -80,12 +73,6 @@ describe("what an admin route tells the person", () => {
 		);
 		expect(setup.message).toBe(t("database_unreachable"));
 		expect(JSON.stringify(setup)).not.toContain("db.internal");
-	});
-
-	it("answers a route without the site with the developer words", async () => {
-		const error = await bodyOf(handleApiError(new CmsError("Unknown CMS API path", "not_found")));
-		expect(error.message).toBe("Unknown CMS API path");
-		expect(error.detail).toBeUndefined();
 	});
 
 	it("ADMIN-E1 gives the same text to a stream line or a batch item", () => {

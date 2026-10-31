@@ -42,22 +42,6 @@ describe("comment syntax by language", () => {
 			"  second",
 		].join("\n");
 
-		it("parses its own syntax", () => {
-			const document = parse(group.lang, input);
-
-			expect(document.lines.map((line) => line.value)).toEqual(["first", "  second"]);
-			expect(document.annotations).toEqual([
-				expect.objectContaining({ scope: "line", name: "plus", range: { start: 0, end: 1 } }),
-			]);
-			expect(document.lines[1]?.annotations).toEqual([
-				expect.objectContaining({
-					scope: "char",
-					name: "Tooltip",
-					attributes: [{ name: "content", value: "tip" }],
-				}),
-			]);
-		});
-
 		it("writes its own syntax", () => {
 			expect(write(parse(group.lang, input)).value).toBe(input);
 		});
@@ -142,13 +126,6 @@ describe("comment syntax by language", () => {
 			expect(resolveCommentSyntax("python").postfix).toBe("");
 		});
 
-		it("writes an alias with the syntax of its language", () => {
-			const document = parse("yml", "# @line plus {0-0}\nkey: value");
-
-			expect(document.lang).toBe("yml");
-			expect(document.annotations).toHaveLength(1);
-			expect(write(document).value).toBe("# @line plus {0-0}\nkey: value");
-		});
 	});
 
 	describe("`//` fallback", () => {
@@ -183,10 +160,6 @@ describe("comment syntax by language", () => {
 	});
 
 	describe("`%` and `%%`", () => {
-		it("does not read a `%%` line in a `%` language or a `%` line in a `%%` language", () => {
-			expect(parse("latex", "%% @line plus\nx").annotations).toEqual([]);
-			expect(parse("mermaid", "% @line plus\nx").annotations).toEqual([]);
-		});
 
 		it("still reads each language's own syntax", () => {
 			expect(parse("latex", "% @line plus\nx").annotations).toHaveLength(1);

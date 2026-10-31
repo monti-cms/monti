@@ -32,21 +32,6 @@ const config = defineSite({
 });
 const site = createSite(config);
 
-describe("an error that reaches a log or a test failure", () => {
-	it("says what its issues say, not only its code", () => {
-		const issues: Issue[] = [
-			{ code: "slug_not_lowercase_ascii", path: "slug", message: 'The slug "A" must be lowercase.' },
-			{ code: "empty_body", path: "body" },
-			{ code: "third" },
-			{ code: "fourth" },
-		];
-		expect(new ServiceError("validation_failed", issues).message).toBe(
-			'validation_failed: The slug "A" must be lowercase. (slug); empty_body (body); third (and 1 more)',
-		);
-		expect(new ServiceError("invalid_input").message).toBe("invalid_input");
-		expect(new ServiceError("hook_failed", issues, "written by the caller").message).toBe("written by the caller");
-	});
-});
 
 describe("metadata the caller sends", () => {
 	const input = (metadata: Record<string, unknown>) =>

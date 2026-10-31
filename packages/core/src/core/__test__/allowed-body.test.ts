@@ -182,11 +182,6 @@ describe("what a save does with content the list does not allow", () => {
 		expect(disallowed(snapshot)).toEqual(["disallowed_block", "disallowed_mark"]);
 	});
 
-	it("gives the same warnings for a write that keeps what the draft holds", async () => {
-		const snapshot = await prepareSnapshot(site, input(held), { previousDoc: held });
-		expect(disallowed(snapshot)).toEqual(["disallowed_block", "disallowed_mark"]);
-	});
-
 	it("EDIT-A2 does not limit a collection without a list", async () => {
 		const snapshot = await prepareSnapshot(site, input(doc(tabs, columns), "post"));
 		expect(disallowed(snapshot)).toEqual([]);

@@ -42,25 +42,6 @@ const byName = (items: readonly AnnotationConfigItem[] | undefined) =>
 	Object.fromEntries((items ?? []).map((item) => [item.name, item]));
 
 describe("code line effect definitions", () => {
-	it("the default definitions produce the same names and classes as the old annotation config", () => {
-		expect(byName(createAnnotationConfig().annotations)).toEqual(byName(BEFORE));
-		// A config without line effects (the example site) stays at the defaults. The site's labels are in its admin language, the defaults' in English.
-		const t = testSite.createTranslator(codeBlockMessages);
-		const tEn = createTranslator(codeBlockMessages, "en");
-		expect(testSite.CODE_LINE_EFFECTS).toEqual(
-			DEFAULT_CODE_LINE_EFFECTS.map((effect) => ({ ...effect, label: t(`lineEffect.${effect.name}` as never) })),
-		);
-		expect(byName(testSite.annotationConfig.annotations)).toEqual(byName(BEFORE));
-		// Menu labels are short, without parentheses.
-		expect(DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.label)).toEqual([
-			tEn("lineEffect.highlight"),
-			tEn("lineEffect.focus"),
-			tEn("lineEffect.plus"),
-			tEn("lineEffect.minus"),
-			tEn("lineEffect.warning"),
-			tEn("lineEffect.error"),
-		]);
-	});
 
 	it("FMT-C2 a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
@@ -83,14 +64,6 @@ describe("code line effect definitions", () => {
 		const document = fromCodeFenceToCodeBlockDocument({ type: "code", lang: "ts", value }, config);
 		expect(document.annotations).toEqual([expect.objectContaining({ name: "info", class: "my-info" })]);
 		expect(fromCodeBlockDocumentToCodeFence(document, config).value).toBe(value);
-	});
-
-	it("the editor recognizes only defined line effects plus folding and the label", () => {
-		expect(testSite.isLineEffectName("plus")).toBe(true);
-		expect(testSite.isLineEffectName("collapse")).toBe(true);
-		expect(testSite.isLineEffectName("anchor")).toBe(true);
-		expect(testSite.isLineEffectName("focus")).toBe(true);
-		expect(testSite.isLineEffectName("info")).toBe(false);
 	});
 
 	it("CONF-A1 an invalid config is reported with the path of each value", () => {

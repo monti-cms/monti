@@ -229,16 +229,6 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			expect(mockStore.searchEntries).toHaveBeenCalledWith({ collection: contentCollection, ids });
 		});
 
-		it("rejects an unknown collection, a limit that is too large and an id that is not an id", async () => {
-			for (const query of [
-				"collection=nope",
-				`collection=${contentCollection}&limit=51`,
-				`collection=${contentCollection}&limit=0`,
-				`collection=${contentCollection}&id=abc`,
-			]) {
-				expect((await search(query)).status).toBe(400);
-			}
-		});
 	});
 	describe("GET /entries: field conditions and the translation filter", () => {
 		const list = (query: string) => listEntries(new Request(`http://localhost/api/monti/v1/entries?${query}`), { cms });

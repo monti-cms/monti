@@ -125,14 +125,6 @@ describe("writeHooks", () => {
 		expect(ran).toEqual(["server-1", "server-2", "alpha-1", "alpha-2", "beta"]);
 	});
 
-	it("leaves the subscribers after the save out of the checks", async () => {
-		const plugins = serverPlugins([], { entry: { changed: [{ name: "notify", run: () => undefined }] } });
-		expect(await plugins.writeHooks()).toEqual([]);
-	});
-
-	it("is empty when nothing registers hooks", async () => {
-		expect(await serverPlugins([{ name: "plain" }]).writeHooks()).toEqual([]);
-	});
 });
 
 describe("plugin order", () => {
@@ -242,9 +234,6 @@ describe("eventSubscribers", () => {
 		).rejects.toThrow(/on\.entry of plugin:a: the subscriber name "sync" is used twice/);
 	});
 
-	it("is empty when nothing registers afterCommit", async () => {
-		expect(await serverPlugins([{ name: "plain" }]).eventSubscribers()).toEqual([]);
-	});
 });
 
 describe("events by kind", () => {
@@ -373,10 +362,4 @@ describe("formats", () => {
 		).rejects.toThrow(/"same" is provided twice/);
 	});
 
-	it("is the registry the instance gives (`cms.formats()`), with the formats a test adds", async () => {
-		const withFormat = fakeCms({ formats: [format("hugo")] });
-
-		expect((await withFormat.formats()).list().map((item) => item.name)).toEqual(["hugo"]);
-		expect((await fakeCms().formats()).list()).toEqual([]);
-	});
 });

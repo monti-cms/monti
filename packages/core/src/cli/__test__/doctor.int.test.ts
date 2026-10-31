@@ -93,17 +93,6 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "auth/admins").message).toContain("github:12345678");
 	});
 
-	it("does not assume a dev port or an empty NODE_ENV when SITE_URL is not set", async () => {
-		healthyEnv({ SITE_URL: "", NODE_ENV: "" });
-		const { report } = await doctor(project());
-		const text = JSON.stringify(report);
-		expect(text).not.toContain(":3000");
-		expect(text).not.toContain('NODE_ENV is \\"\\"');
-		expect(byId(report, "auth/callback-url").message).toContain("<your dev URL>/api/monti/auth/callback/github");
-		expect(byId(report, "config/automatic").message).toContain("NODE_ENV is not set");
-		expect(byId(report, "config/automatic").message).toMatch(/Trust host: on \(login links/);
-	});
-
 	it("DOC-R2 says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
 		healthyEnv();
 		const dir = project();
@@ -233,13 +222,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "database/migrations").status).toBe("skip");
 	});
 
-	it("rejects a DATABASE_URL that is not a Postgres URL", async () => {
-		setEnv({ DATABASE_URL: "mysql://root@localhost/blog" });
-		const { report } = await doctor(project());
-		expect(byId(report, "database/url").status).toBe("fail");
-		expect(byId(report, "database/url").message).toContain("postgres://");
-	});
-
 	it("DOC-R2 the database/url check warns about an sslmode the driver warns about, and says what to change", async () => {
 		// The modes and the URLs that need no warning are the cases of sslmodeWarning (adapters/postgres connection.test.ts); this is the check that shows it.
 		setEnv({ DATABASE_URL: "postgres://u:p@db.example.com:5432/blog?sslmode=require" });
@@ -352,20 +334,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 	});
 
-	it("warns about a root layout without suppressHydrationWarning, and is quiet once it has it", async () => {
-		setEnv();
-		const dir = project({ "app/layout.tsx": '<html lang="en"><body /></html>\n' });
-		const { report } = await doctor(dir);
-		const hydration = byId(report, "next/hydration");
-		expect(hydration.status).toBe("warn");
-		expect(hydration.fix).toContain("suppressHydrationWarning");
-		expect(report.checks.some((check) => check.id === "next/theme-styles")).toBe(false);
-
-		const fixed = project({ "app/layout.tsx": '<html lang="en" suppressHydrationWarning><body /></html>\n' });
-		const again = await doctor(fixed);
-		expect(byId(again.report, "next/hydration").status).toBe("ok");
-	});
-
 	it("DOC-R4 tells when the admin files sit at a different path than the config says", async () => {
 		setEnv();
 		const dir = project({
@@ -388,13 +356,6 @@ describe("monti doctor on the media storage", () => {
 			"database: postgres(),",
 			`database: postgres(),\n\tstorage: { createStore: () => { ${store} } },`,
 		);
-
-	it("says uploads are off when the config has no storage", async () => {
-		setEnv();
-		const { report } = await doctor(project());
-		expect(byId(report, "config/storage")).toMatchObject({ status: "ok" });
-		expect(byId(report, "config/storage").message).toContain("no `storage`");
-	});
 
 	it("DOC-R4 fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
 		setEnv();

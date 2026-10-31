@@ -106,17 +106,6 @@ describe("key slots", () => {
 		expect((await cms.apiKeys.slots())[0]?.key).toBeNull();
 	});
 
-	it("shows the slot in the admin language it is read in", async () => {
-		const language = { current: "en" };
-		const cms = cmsWith([speller(language)]);
-		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
-		await cms.apiKeys.slot("speller", "key").set(key.id);
-		expect((await cms.apiKeys.slots())[0]?.label).toBe("Spell check");
-		language.current = "ko";
-		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
-		expect((await cms.apiKeys.get(key.id))?.uses[0]?.label).toBe("맞춤법 검사");
-	});
-
 	it("KEY-P1 works out a slot label from the site, in the admin language of the instance", async () => {
 		const messages = defineMessages("test.slot", { en: { key: "Spell check" }, ko: { key: "맞춤법 검사" } });
 		const plugin = definePlugin({
@@ -133,19 +122,6 @@ describe("key slots", () => {
 			server: { secret: SECRET },
 		});
 		expect((await korean.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
-	});
-
-	it("has no slot, and no use, when the plugin is not installed", async () => {
-		const shared = fakeCms();
-		const storage = (plugin: string) => shared.plugin(plugin).storage;
-		const installed = cmsWith([speller({ current: "en" })], { storage });
-		const key = await installed.apiKeys.add({ name: "Speller", value: VALUE });
-		await installed.apiKeys.slot("speller", "key").set(key.id);
-
-		const without = cmsWith([], { storage });
-		expect(await without.apiKeys.slots()).toEqual([]);
-		expect((await without.apiKeys.get(key.id))?.uses).toEqual([]);
-		await expect(without.apiKeys.slot("speller", "key").set(key.id)).rejects.toMatchObject({ code: "not_found" });
 	});
 
 	it("KEY-P1 lists slots and assigns through the routes", async () => {

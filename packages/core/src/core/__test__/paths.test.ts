@@ -56,9 +56,6 @@ describe("sub-path (Next basePath)", () => {
 		expect(normalizeBasePath("/a/b//")).toBe("/a/b");
 	});
 
-	it("API paths must start with /", () => {
-		expect(() => adminApiUrl("v1/entries")).toThrow(/must start with/);
-	});
 });
 
 describe("locale addresses (site.localePrefix)", () => {

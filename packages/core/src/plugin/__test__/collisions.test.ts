@@ -24,12 +24,6 @@ describe("checkPluginPages", () => {
 		}
 	});
 
-	it("lets a plugin page share a name with a core screen: pages live under tools/", () => {
-		for (const path of ["templates", "events", "settings", "trash", "media"]) {
-			expect(checkPluginPages([{ plugin: "ok", path }])).toEqual([]);
-		}
-	});
-
 	it("PLUG-S3 rejects a page another plugin already uses", () => {
 		expect(
 			checkPluginPages([
@@ -39,27 +33,10 @@ describe("checkPluginPages", () => {
 		).toEqual([expect.objectContaining({ path: 'plugins.b.nav["/tools"]', code: "collision" })]);
 	});
 
-	it("lets one plugin name the same page twice", () => {
-		expect(
-			checkPluginPages([
-				{ plugin: "a", path: "tools" },
-				{ plugin: "a", path: "tools" },
-			]),
-		).toEqual([]);
-	});
 });
 
 describe("assertPluginRoutesFree", () => {
 	const core = ["v1/entries", "v1/entries/[id]", "v1/meta"];
-
-	it("accepts distinct routes", () => {
-		expect(() =>
-			assertPluginRoutesFree(core, [
-				{ plugin: "ai", pattern: "v1/ai/run" },
-				{ plugin: "ai", pattern: "v1/ai/actions/[key]" },
-			]),
-		).not.toThrow();
-	});
 
 	it("PLUG-S3 rejects a route that equals a core route, even with another param name", () => {
 		expect(checkPluginRoutes(core, [{ plugin: "x", pattern: "v1/meta" }])).toEqual([

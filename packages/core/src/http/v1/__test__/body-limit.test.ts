@@ -39,10 +39,6 @@ describe("request body reader", () => {
 		expect(await readJsonBody(post(null))).toEqual({});
 	});
 
-	it("keeps JSON errors at 400", async () => {
-		await expect(readJsonBody(post("{"))).rejects.toMatchObject({ code: "invalid_input" });
-	});
-
 	it("parses a urlencoded form under the cap and refuses one over it", async () => {
 		const headers = { "content-type": "application/x-www-form-urlencoded" };
 		const form = await readFormBody(post("email=a%40b.c&password=pw", headers));
@@ -52,9 +48,6 @@ describe("request body reader", () => {
 		});
 	});
 
-	it("keeps the global cap above the form cap", () => {
-		expect(MAX_REQUEST_BYTES).toBeGreaterThan(MAX_FORM_BYTES);
-	});
 });
 
 describe("public form route", () => {

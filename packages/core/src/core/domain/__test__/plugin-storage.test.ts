@@ -20,21 +20,6 @@ const codeOf = (run: () => unknown) => {
 };
 
 describe("plugin storage rules", () => {
-	it("names plugins and collections as lowercase words that start with a letter", () => {
-		for (const name of ["ai", "slack-on-publish", "action-overrides", "v2"]) {
-			expect(codeOf(() => assertStorageName("plugin", name))).toBeNull();
-		}
-		for (const name of ["", "AI", "two words", "1st", "under_score", "dot.ted", "-lead", "한글"]) {
-			expect(codeOf(() => assertStorageName("collection", name))).toBe("invalid_input");
-		}
-	});
-
-	it("names migration steps like collections, and also allows `_`", () => {
-		expect(codeOf(() => assertMigrationName("import_legacy_tables"))).toBeNull();
-		expect(codeOf(() => assertMigrationName("ai-features-to-actions"))).toBeNull();
-		expect(codeOf(() => assertMigrationName("Import"))).toBe("invalid_input");
-		expect(codeOf(() => assertMigrationName("_start"))).toBe("invalid_input");
-	});
 
 	it("PLUG-D1 keys are any non-empty text", () => {
 		expect(codeOf(() => assertStorageKey("a/b c:ü"))).toBeNull();

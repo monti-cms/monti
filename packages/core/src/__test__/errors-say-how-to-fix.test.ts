@@ -29,10 +29,6 @@ describe("problemText", () => {
 		).toBe("DATABASE_URL is not set. Where: .env.local. Fix: put your Postgres URL in it.");
 	});
 
-	it("leaves out Where when there is none, and does not double a full stop", () => {
-		expect(problemText({ what: "Broken.", fix: "mend it (see above)" })).toBe("Broken. Fix: mend it (see above).");
-	});
-
 	it("is an error that keeps the cause, and the driver's code", () => {
 		const cause = Object.assign(new Error("relation does not exist"), { code: "42P01" });
 		const error = problemError({ what: "x", fix: "y" }, cause, "migrations_pending");

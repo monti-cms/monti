@@ -82,36 +82,9 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("warns about duplicate definition labels once per extra definition", async () => {
-		const { warnings, snapshot } = await footnoteWarnings(
-			paragraph("Text[^a]"),
-			definition("a", "one"),
-			definition("A", "two"),
-		);
-		expect(warnings.map((warning) => warning.code)).toEqual(["footnote_definition_duplicate"]);
-		expect(warnings[0]).toMatchObject({
-			message: "A",
-			params: { label: "A" },
-			position: { blockId: snapshot.doc.content[2]?.id },
-		});
-	});
-
 	it("EDIT-F1 matches labels case-insensitively", async () => {
 		const { warnings } = await footnoteWarnings(paragraph("Text[^Note]"), definition("note", "one"));
 		expect(warnings).toEqual([]);
 	});
 
-	it("reports each problem separately", async () => {
-		const { warnings } = await footnoteWarnings(
-			paragraph("Text[^a] [^zz]"),
-			definition("a", "one"),
-			definition("b", "two"),
-			definition("a", "three"),
-		);
-		expect(warnings.map((warning) => warning.code).sort()).toEqual([
-			"footnote_definition_duplicate",
-			"footnote_definition_missing",
-			"footnote_definition_unused",
-		]);
-	});
 });

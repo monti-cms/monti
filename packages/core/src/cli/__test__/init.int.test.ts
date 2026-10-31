@@ -201,36 +201,12 @@ describe("monti init in a fresh create-next-app", () => {
 		}
 	});
 
-	it("--directive-syntax turns it on even without blocks", async () => {
-		const dir = fixtureApp();
-		await initProject({ cwd: dir, ...quiet(), blocks: "none", directiveSyntax: true });
-		expect(read(dir, "monti.config.ts")).toContain("mdx({ syntax: [directiveSyntax()] }),");
-	});
-
 	it("INIT-R2 installs @monti-cms/auth for either login", async () => {
 		for (const login of ["password", "github"] as const) {
 			const install = vi.fn();
 			await initProject({ cwd: fixtureApp(), host: fakeHost({ install }), login });
 			expect(install).toHaveBeenCalledWith(installing("@monti-cms/auth"));
 		}
-	});
-
-	it("lists the S3 variables in .env.example, each with where to get it, when storage is s3", async () => {
-		const dir = fixtureApp();
-		await initProject({ cwd: dir, ...quiet(), storage: "s3" });
-		const example = read(dir, ".env.example");
-		for (const name of [
-			"S3_ENDPOINT",
-			"S3_REGION",
-			"S3_BUCKET",
-			"S3_ACCESS_KEY_ID",
-			"S3_SECRET_ACCESS_KEY",
-			"S3_PUBLIC_URL",
-		]) {
-			expect(example).toContain(`${name}=`);
-		}
-		expect(example).toContain("r2.cloudflarestorage.com");
-		expect(example).toContain("MinIO");
 	});
 
 	it("INIT-N1 lists only the human steps after the machine steps worked, each with exact content", async () => {

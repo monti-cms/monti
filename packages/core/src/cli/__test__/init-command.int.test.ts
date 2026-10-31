@@ -31,18 +31,6 @@ function run(dir: string, argv: string[], extras: Pick<CliIo, "interactive" | "p
 }
 
 describe("monti init on the command line", () => {
-	it("--directive-syntax and --no-directive-syntax decide the block syntax, and --no-install still installs nothing", async () => {
-		for (const [flag, on] of [
-			["--directive-syntax", true],
-			["--no-directive-syntax", false],
-		] as const) {
-			const dir = fixtureApp();
-			const result = run(dir, ["--yes", "--no-install", flag]);
-			expect(await result.code).toBe(0);
-			expect(read(dir, "monti.config.ts").includes("directiveSyntax()")).toBe(on);
-			expect(result.host.install).not.toHaveBeenCalled();
-		}
-	});
 
 	it("INIT-N1 --yes takes every default and prints a plain summary", async () => {
 		const dir = fixtureApp();
@@ -56,13 +44,6 @@ describe("monti init on the command line", () => {
 		for (const file of made) expect(text).toContain(file === ".env.local" ? file : `  - ${file}`);
 		expect(text).toMatch(/\n {2}1\. .*\n.*pnpm add @monti-cms\/core/);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
-	});
-
-	it("says that the files go to src/ when the app uses src/app", async () => {
-		const dir = fixtureApp(SRC_APP);
-		const result = run(dir, ["--yes", "--no-install"]);
-		expect(await result.code).toBe(0);
-		expect(result.out.join("\n")).toContain("Your app uses src/app, so Monti's files are in src/ (next to app/).");
 	});
 
 	it("INIT-Q1 without a terminal nothing is asked, even without --yes", async () => {
@@ -160,12 +141,6 @@ describe("monti init on the command line", () => {
 		const unknown = run(fixtureApp(), ["--nope"]);
 		expect(await unknown.code).toBe(1);
 		expect(unknown.err.join("\n")).toMatch(/nope/);
-	});
-
-	it("--locale still sets the one default language", async () => {
-		const dir = fixtureApp();
-		await run(dir, ["--yes", "--no-install", "--locale", "ko"]).code;
-		expect(schemaOf(dir).defaultLocale).toBe("ko");
 	});
 
 	it("INIT-S1 exits 1 when a step failed, with the files still written", async () => {

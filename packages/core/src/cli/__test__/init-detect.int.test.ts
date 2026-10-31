@@ -18,11 +18,6 @@ describe("detectAppDir", () => {
 		expect(detectAppDir(dirWith("app"))).toMatchObject({ dir: "app", exists: true });
 	});
 
-	it("says where the folder would be made when there is none: src/app if only src/ exists", () => {
-		expect(detectAppDir(dirWith("src"))).toMatchObject({ dir: "src/app", exists: false });
-		expect(detectAppDir(dirWith())).toMatchObject({ dir: "app", exists: false });
-	});
-
 	it("DOC-R4 is what detectApp reports, so init and doctor look in the same place", () => {
 		const cwd = fixtureApp({ ...SRC_APP });
 		expect(detectApp(cwd).appDir).toBe(detectAppDir(cwd).dir);

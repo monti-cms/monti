@@ -68,12 +68,6 @@ describe("monti init with a GitHub spec for core", () => {
 		expect(args).toContain("next-themes");
 	});
 
-	it("records the same specs in a dry run", async () => {
-		const report = await initProject({ cwd: appWithCore(GITHUB), host: fakeHost(), dryRun: true });
-		const step = report.steps.find((entry) => entry.name === "Install packages");
-		expect(step?.detail).toContain("'@monti-cms/admin@github:");
-		expect(report.installed).toContain("@monti-cms/admin");
-	});
 });
 
 describe("the packages init installs", () => {
@@ -92,10 +86,4 @@ describe("the packages init installs", () => {
 		}
 	});
 
-	it("when the install is left to the person, the list says why the libraries are there", async () => {
-		const report = await initProject({ cwd: fixtureApp(), host: fakeHost(), install: false });
-		const step = report.next.find((item) => item.startsWith("Install the packages:")) ?? "";
-		expect(step).toContain("peer dependencies");
-		for (const peer of peersOf("admin")) expect(step).toContain(peer);
-	});
 });

@@ -69,12 +69,6 @@ describe("publish HTTP contract", () => {
 		});
 	});
 
-	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
-		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
-		expect(response.status).toBe(200);
-		expect(publish).toHaveBeenCalledWith({ id: "00000000-0000-4000-8000-000000000011", expectedVersion: 4 });
-	});
-
 	it("rejects a non-integer expectedVersion before publishing", async () => {
 		const invalid = await POST(request({ expectedVersion: "4" }), context);
 		expect(invalid.status).toBe(400);

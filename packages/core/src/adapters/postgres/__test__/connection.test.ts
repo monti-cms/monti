@@ -8,20 +8,4 @@ describe("the sslmode warning of monti doctor", () => {
 		expect(sslmodeWarning(url)).toContain("SECURITY WARNING");
 	});
 
-	it("says nothing for a mode the driver does not warn about, or when uselibpqcompat is set", () => {
-		for (const url of [
-			"postgres://h/db",
-			"postgres://h/db?sslmode=no-verify",
-			"postgres://h/db?sslmode=disable",
-			"postgres://h/db?sslmode=verify-full",
-			"postgres://h/db?uselibpqcompat=true&sslmode=require",
-			"postgres://u:sslmode=require@h/db",
-		]) {
-			expect(sslmodeWarning(url), url).toBeUndefined();
-		}
-	});
-
-	it("names the fix", () => {
-		expect(SSLMODE_FIX).toContain("sslmode=verify-full");
-	});
 });

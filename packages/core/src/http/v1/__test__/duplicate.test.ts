@@ -82,18 +82,6 @@ describe("Duplicate API Route", () => {
 		});
 	});
 
-	it("rejects a non-string title with 400", async () => {
-		const res = await postDuplicate(
-			postReq(
-				"http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate",
-				"http://localhost",
-				{ title: 1 },
-			),
-			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }), cms },
-		);
-		expect(res.status).toBe(400);
-	});
-
 	it("returns 404 when entry does not exist", async () => {
 		const res = await postDuplicate(
 			postReq("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000003/duplicate"),

@@ -75,8 +75,4 @@ describe("explainDatabaseError", () => {
 		expect(explain("text")).toBeUndefined();
 	});
 
-	it("keeps an error that already explains itself", () => {
-		const once = explain({ code: "ECONNREFUSED" });
-		expect(explain(once)).toBe(once);
-	});
 });

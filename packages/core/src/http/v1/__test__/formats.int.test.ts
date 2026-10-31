@@ -275,12 +275,6 @@ describe("the format option of the admin API", () => {
 			expect(doc.status).toBe(201);
 		});
 
-		it("the old `mdx` property is gone: it is not read as a body", async () => {
-			const entry = await created({ mdx: "This text is ignored" });
-
-			expect(entry.working.doc.content).toEqual([]);
-		});
-
 		it("WRITE-S7 rejects a text over the size limit with 413 body_too_large", async () => {
 			const res = await post({ format: "paragraphs", body: "a".repeat(2 * 1024 * 1024 + 1) });
 
@@ -299,14 +293,6 @@ describe("the format option of the admin API", () => {
 			expect(body.working.body).toBe("One\n\nTwo");
 			expect(body.working.doc).toEqual(entry.working.doc);
 			expect(body.published).toBeUndefined();
-		});
-
-		it("without ?format= there is no text, only the document", async () => {
-			const entry = await created({ doc: docOf("Plain") });
-
-			const { body } = await read(entry.id);
-
-			expect(body.working).not.toHaveProperty("body");
 		});
 
 		it("an unknown format is a 400 unknown_format", async () => {

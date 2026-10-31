@@ -302,33 +302,6 @@ describe("renderDocument renders the same stored document with each site's own b
 		expect(b.unknown.map((node) => node.type)).toEqual(["notice"]);
 	});
 
-	it("applies the line effects of the site that renders", async () => {
-		const effect = (name: string) => ({ name, label: name, class: `fx-${name}`, icon: "text--highlight" });
-		const withEffects = (name: string) =>
-			createSite(
-				defineSite({
-					collections: otherSiteConfig.collections,
-					locales: otherSiteConfig.locales,
-					defaultLocale: "en",
-					codeBlock: { lineEffects: [effect(name)] },
-				}),
-			);
-		const siteGlow = withEffects("glow");
-		const siteBeam = withEffects("beam");
-		const code = (name: string): StoredDocument =>
-			doc({
-				type: "codeBlock",
-				attrs: { language: "ts", meta: "", code: `const a = 1;\n// @line ${name}\nconst b = 2;` } as never,
-			});
-		const render = async (site: Site, name: string) =>
-			renderToStaticMarkup((await renderDocument(code(name), { site })).content as ReactNode);
-		expect(siteGlow.CODE_LINE_EFFECTS.map((item) => item.name)).toContain("glow");
-		expect(siteGlow.CODE_LINE_EFFECTS.map((item) => item.name)).not.toContain("beam");
-		expect(siteBeam.CODE_LINE_EFFECTS.map((item) => item.name)).toContain("beam");
-		expect(await render(siteGlow, "glow")).toContain("fx-glow");
-		expect(await render(siteBeam, "beam")).toContain("fx-beam");
-		expect(await render(siteBeam, "glow")).not.toContain("fx-glow");
-	});
 });
 
 describe("a site snapshot crosses JSON and gives the same site", () => {

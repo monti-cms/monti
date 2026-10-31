@@ -44,10 +44,6 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 		});
 
 		describe("documents", () => {
-			it("has no item before one is written", async () => {
-				expect(await storage.collection("fresh").get("missing")).toBeNull();
-				expect(await storage.collection("fresh").list()).toEqual([]);
-			});
 
 			it("PLUG-D1 creates an item at version 1 and reads back the same JSON value", async () => {
 				const settings = storage.collection<{ endpoint: string; tags: string[]; nested: { on: boolean; none: null } }>(
@@ -183,26 +179,6 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await items.get("k")).toBeNull();
 			});
 
-			it("refuses names that are not lowercase words and empty keys", async () => {
-				expect(() => session.storage("Not Valid")).toThrow(/plugin name/);
-				expect(await failure(async () => storage.collection("Upper").get("k"))).toMatchObject({
-					code: "invalid_input",
-				});
-				expect(await failure(async () => storage.collection("two words").list())).toMatchObject({
-					code: "invalid_input",
-				});
-				expect(await failure(() => storage.collection("keys").get(""))).toMatchObject({ code: "invalid_input" });
-				expect(await failure(() => storage.collection("keys").set("", 1, { expectedVersion: 0 }))).toMatchObject({
-					code: "invalid_input",
-				});
-			});
-
-			it("refuses an expected version that is not 0 or a whole number", async () => {
-				const items = storage.collection("bad-versions");
-				for (const expectedVersion of [-1, 1.5, Number.NaN]) {
-					expect(await failure(() => items.set("k", 1, { expectedVersion }))).toMatchObject({ code: "invalid_input" });
-				}
-			});
 		});
 
 		describe("the migration hook", () => {

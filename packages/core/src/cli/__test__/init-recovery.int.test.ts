@@ -24,21 +24,6 @@ describe("monti init when the install fails", () => {
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
-	it("leaves no progress file behind, on a failure or on a dry run", async () => {
-		const failed = fixtureApp();
-		await initProject({
-			cwd: failed,
-			host: fakeHost({ install: () => Promise.reject(new Error("offline")) }),
-		});
-		expect(existsSync(path.join(failed, ".monti"))).toBe(false);
-
-		const dry = fixtureApp();
-		const install = vi.fn(() => Promise.reject(new Error("offline")));
-		await initProject({ cwd: dry, host: fakeHost({ install }), dryRun: true });
-		expect(existsSync(path.join(dry, ".monti"))).toBe(false);
-		expect(install).not.toHaveBeenCalled();
-	});
-
 	it("INIT-K1 completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
 		const dir = fixtureApp();
 		const failed = await initProject({

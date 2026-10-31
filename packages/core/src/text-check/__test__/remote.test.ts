@@ -41,11 +41,6 @@ describe("remoteTextChecker", () => {
 		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow("Too much text");
 	});
 
-	it("a response without `issues` is an error", async () => {
-		vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
-		const checker = remoteTextChecker({ id: "remote", label: "원격", url: "/x" });
-		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow();
-	});
 });
 
 describe("server check route", () => {

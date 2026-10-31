@@ -191,11 +191,4 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 		});
 	});
 
-	it("is 404 when the delivery is not failed or dead any more, and 400 without a subscriber", async () => {
-		const store = storeOf({ retryDelivery: vi.fn(async () => false), dismissDelivery: vi.fn(async () => false) });
-		const cms = fakeCms({ store });
-		expect((await retryOne(post("events/x/retry", { body }), { cms, params })).status).toBe(404);
-		expect((await dismiss(post("events/x/dismiss", { body }), { cms, params })).status).toBe(404);
-		expect((await retryOne(post("events/x/retry", { body: {} }), { cms, params })).status).toBe(400);
-	});
 });

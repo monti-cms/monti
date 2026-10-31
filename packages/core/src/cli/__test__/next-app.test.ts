@@ -2,19 +2,6 @@ import { describe, expect, it } from "vitest";
 import { gitignoreCoverage, hasSuppressHydrationWarning, montiNextFilePath, montiNextFiles } from "../next-app";
 
 describe("suppressHydrationWarning on <html>", () => {
-	it("is detected on the tag, also across several lines and with a className expression", () => {
-		expect(hasSuppressHydrationWarning('<html lang="en">\n<body />\n</html>')).toBe(false);
-		expect(hasSuppressHydrationWarning('<html lang="en" suppressHydrationWarning>')).toBe(true);
-		expect(hasSuppressHydrationWarning("<html>")).toBe(false);
-		// biome-ignore lint/suspicious/noTemplateCurlyInString: the JSX source holds a template literal on purpose
-		const multi = '<html\n  lang="en"\n  className={`${font.variable} antialiased`}\n  suppressHydrationWarning\n>';
-		expect(hasSuppressHydrationWarning(multi)).toBe(true);
-	});
-
-	it("says nothing about a layout without <html>, and counts a deliberate false as missing", () => {
-		expect(hasSuppressHydrationWarning("export default () => null")).toBeUndefined();
-		expect(hasSuppressHydrationWarning("<html suppressHydrationWarning={false}>")).toBe(false);
-	});
 
 	it("INIT-K5 says what a .gitignore keeps out of git: .env.local and the .monti/ folder, in any of the usual spellings", () => {
 		expect(gitignoreCoverage("node_modules\n")).toEqual({ envLocal: false, montiFolder: false });

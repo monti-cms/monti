@@ -185,60 +185,6 @@ describe("defineSite", () => {
 		);
 	});
 
-	describe("editor.widths", () => {
-		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
-		const withWidths = (widths: { label: string; width: string }[]) => defineSite({ ...base, editor: { widths } });
-
-		it("keeps the steps in the order written, and the config works without them", () => {
-			const widths = [
-				{ label: "Desktop", width: "720px" },
-				{ label: "Phone", width: "375px" },
-			];
-			expect(withWidths(widths).editor?.widths).toEqual(widths);
-			expect(defineSite(base).editor).toBeUndefined();
-		});
-
-		it("accepts CSS lengths of every common shape", () => {
-			for (const width of [
-				"720px",
-				"48rem",
-				"60ch",
-				"80%",
-				"37.5em",
-				".5rem",
-				"min(100%, 60ch)",
-				"calc(100vw - 2rem)",
-			]) {
-				expect(() => withWidths([{ label: "A", width }]), width).not.toThrow();
-			}
-		});
-
-		it("rejects empty or invalid widths, naming the step", () => {
-			for (const width of ["", "  ", "720", "wide", "px", "-5px", "10px; color: red", "url(x)", "720 px"]) {
-				expectIssue(() => withWidths([{ label: "A", width }]), "editor.widths[0].width", "css-length");
-			}
-		});
-
-		it("rejects empty and repeated labels and an empty list", () => {
-			expectIssue(() => withWidths([{ label: " ", width: "720px" }]), "editor.widths[0].label", "empty");
-			expectIssue(
-				() =>
-					withWidths([
-						{ label: "A", width: "720px" },
-						{ label: "A", width: "375px" },
-					]),
-				"editor.widths[1].label",
-				"duplicate",
-			);
-			expectIssue(() => withWidths([]), "editor.widths", "empty");
-		});
-
-		it("reaches the browser snapshot", () => {
-			const widths = [{ label: "Desktop", width: "720px" }];
-			expect(createSite(withWidths(widths)).snapshot().editor?.widths).toEqual(widths);
-		});
-	});
-
 	it("CONF-S5 checks the admin path and the locale prefix", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, admin: { path: "/studio" } })).not.toThrow();

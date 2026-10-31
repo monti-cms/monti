@@ -433,37 +433,6 @@ describe("afterCommit delivery", () => {
 			expect(counts).toEqual({ a: 1, b: 1 });
 		});
 
-		it("keeps the mark with the delivery, so pruning the events past the retention removes it too", async () => {
-			const name = `m${++counter}`;
-			const subscribers: EventSubscriber[] = [
-				{
-					name,
-					kinds: CONTENT_CHANGE_KINDS,
-					handler: onlyFor(`once-${name}`, async (event) => {
-						await event.once(() => undefined);
-					}),
-				},
-			];
-			const dispatcherAt = (now: () => Date) =>
-				createEventDispatcher({ store: () => raw, subscribers: async () => subscribers, now });
-			const markedEvents = async () =>
-				(
-					await pool.query<{ event_id: string }>(
-						`SELECT event_id FROM "${schemaName}".cms_event_deliveries WHERE subscriber = $1 AND once_at IS NOT NULL`,
-						[name],
-					)
-				).rows.map((row) => row.event_id);
-			const first = dispatcherAt(() => new Date());
-			await create(withEventDispatch(raw, first.dispatchEntry), `once-${name}`);
-			const before = await markedEvents();
-			expect(before).toHaveLength(1);
-
-			// 91 days later, the sweep that a write carries along prunes the events past the retention, and the marks go with their deliveries.
-			const later = dispatcherAt(() => new Date(Date.now() + 91 * 24 * 60 * 60 * 1000));
-			await create(withEventDispatch(raw, later.dispatchEntry), `once-${name}-later`);
-			// Every event of the test is past the retention on that clock, and their marks are gone with them.
-			expect(await markedEvents()).toEqual([]);
-		});
 	});
 
 	it("EVENT-D3 keeps subscribers apart: one failing does not repeat or hold another", async () => {

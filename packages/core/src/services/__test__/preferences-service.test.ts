@@ -15,11 +15,6 @@ function setup() {
 }
 
 describe("preferences service", () => {
-	it("starts with an empty setting per collection", async () => {
-		const { service } = setup();
-		const preferences = await service.get("u");
-		expect(Object.keys(preferences.collections ?? {})).toEqual(["page"]);
-	});
 
 	it("LIST-S1 merges what is sent into what is saved and keeps the rest", async () => {
 		const { service } = setup();

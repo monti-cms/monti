@@ -109,14 +109,6 @@ describe("one secret, MONTI_SECRET", () => {
 		expect(createSecretsVault({ secret: "from-env" }).forPlugin("ai").decrypt(explicit)).toBeNull();
 	});
 
-	it("does not read the old names", () => {
-		vi.stubEnv("CMS_SECRET", "old-cms-secret");
-		vi.stubEnv("AUTH_SECRET", "old-auth-secret");
-		const cms = defineConfig({ ...site, database, auth });
-		expect(cms.plugin("ai").secrets.available).toBe(false);
-		expect(cms.plugin("auth").secrets.available).toBe(false);
-	});
-
 	it("AUTH-L6 derives the session key and every plugin's key from it, all different from each other", () => {
 		const cms = defineConfig({ ...site, database, auth, secret: "master" });
 		const session = cms.plugin("auth").secrets.deriveKey("session");

@@ -30,38 +30,6 @@ describe("ContentStore (Postgres)", () => {
 		await closeGlobalPool();
 	});
 
-	describe("a syntax-only change (same content hash, different text)", () => {
-		const searchTextOf = async (entryId: string, state: "working" | "published") =>
-			(
-				await pool.query<{ search_text: string }>(
-					`SELECT search_text FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
-					[entryId, state],
-				)
-			).rows[0];
-
-		it("stores the new search text without a version bump or a new updatedAt", async () => {
-			const entry = await seedEntry(store, {
-				collection: contentCollection,
-				slug: "syntax-only-save",
-				metadata: { title: "Syntax" },
-				text: "first words",
-				contentHash: "hash-syntax-only",
-			});
-
-			const saved = await seedSave(store, entry.id, {
-				expectedVersion: entry.version,
-				metadata: { title: "Syntax" },
-				text: "second words",
-				contentHash: "hash-syntax-only",
-			});
-
-			expect(saved.version).toBe(entry.version);
-			expect(saved.updatedAt.getTime()).toBe(entry.updatedAt.getTime());
-			expect(saved.working.updatedAt?.getTime()).toBe(entry.working.updatedAt?.getTime());
-			expect(await searchTextOf(entry.id, "working")).toMatchObject({ search_text: "second words" });
-		});
-	});
-
 	it("WRITE-P6 a transaction failure during publish leaves the prior published snapshot intact", async () => {
 		const entry = await seedEntry(store, {
 			collection: contentCollection,

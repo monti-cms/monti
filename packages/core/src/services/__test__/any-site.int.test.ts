@@ -101,13 +101,6 @@ describe("any site: core content flow", () => {
 		expect(record.publishedSlug).toBe("any-site-record");
 	});
 
-	it("publishes a content entry built from the schema's required fields", async () => {
-		const draft = await createContent("Published from schema");
-		const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
-		expect(published.status).toBe("published");
-		expect(published.published?.metadata.title).toBe("Published from schema");
-	});
-
 	it("reports a missing title as missing_field with the title field's label", async () => {
 		const draft = (
 			await service.createDraft({

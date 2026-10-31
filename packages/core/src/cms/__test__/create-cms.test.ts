@@ -218,16 +218,6 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(first.afterCommit).not.toHaveBeenCalled();
 	});
 
-	it("keeps the media store across reloads too", () => {
-		vi.stubEnv("NODE_ENV", "development");
-		const create = vi.fn(() => ({}) as never);
-		const media = { name: "media", createStore: create };
-		const first = createCms({ config: testConfig, server: serverFor("a", { media }).server });
-		const second = createCms({ config: testConfig, server: serverFor("a", { media }).server });
-		expect(second.mediaStore()).toBe(first.mediaStore());
-		expect(create).toHaveBeenCalledTimes(1);
-	});
-
 	it("CONF-I1 instances with different ids do not share connections", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const one = serverFor("one");

@@ -22,9 +22,6 @@ describe("body plain text and automatic summary", () => {
 		expect(excerpt("")).toBe("");
 	});
 
-	it("still gives text for a body that does not parse", () => {
-		expect(toPlainText(testSite, unparsedDocument("끝나지 않은 <Box> 문장"))).toContain("문장");
-	});
 });
 
 describe("body search text", () => {

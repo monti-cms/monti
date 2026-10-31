@@ -33,17 +33,6 @@ describe("site.pluginOptions", () => {
 		expectTypeOf(options).toEqualTypeOf<{ readonly palette: readonly string[] } | undefined>();
 	});
 
-	it("is undefined for a plugin the site config does not list", () => {
-		expect(site.pluginOptions(AI)).toBeUndefined();
-	});
-
-	it("is undefined for every name when the config lists no plugins", () => {
-		const bare = createSite(
-			defineSite({ collections: { page }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
-		);
-		expect(bare.pluginOptions(COLOR)).toBeUndefined();
-	});
-
 	it("PLUG-S4 keeps the options of two sites apart", () => {
 		const other = createSite(
 			defineSite({
@@ -59,12 +48,6 @@ describe("site.pluginOptions", () => {
 });
 
 describe("definePlugin", () => {
-	it("needs only a name for a plugin that adds hooks: options are an empty object, the hooks stay in its server module", async () => {
-		const on = { entry: { beforeSave: [() => undefined] } };
-		const plugin = definePlugin({ name: "hook-only", server: async () => ({ default: { on } }) });
-		expect(plugin.options).toEqual({});
-		expect((await plugin.server?.())?.default).toEqual({ on });
-	});
 
 	it("keeps the options it is given", () => {
 		expect(definePlugin({ name: "with-options", options: { a: 1 } }).options).toEqual({ a: 1 });

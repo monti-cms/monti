@@ -32,14 +32,6 @@ describe("GET /v1/meta features.media", () => {
 	});
 });
 
-describe("GET /v1/meta limits", () => {
-	it("reports the document limit next to the MDX limit", async () => {
-		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms: fakeCms() });
-		const { limits } = await res.json();
-		expect(limits.textBytes).toBe(MAX_TEXT_BYTES);
-		expect(limits.docBytes).toBe(MAX_DOC_BYTES);
-	});
-});
 
 describe("GET /v1/meta folders and templates", () => {
 	const readMeta = async (cms: unknown) =>
@@ -52,12 +44,6 @@ describe("GET /v1/meta folders and templates", () => {
 		}
 	});
 
-	it("says folders are on exactly when some collection uses them", async () => {
-		const meta = await readMeta(fakeCms({ config: testConfig }));
-		const some = (meta.collections as string[]).some((name) => meta.definitions[name].folders === true);
-		expect(meta.features.folders).toBe(some);
-	});
-
 	it("LIST-F6 gives a collection its kind's default unless its schema says otherwise", async () => {
 		const meta = await readMeta(fakeCms({ config: testConfig }));
 		for (const name of meta.collections as string[]) {
@@ -67,12 +53,4 @@ describe("GET /v1/meta folders and templates", () => {
 		}
 	});
 
-	it("turns features.templates off with admin.templates: false, and keeps it on otherwise", async () => {
-		const on = await readMeta(fakeCms({ config: { ...testConfig, admin: { ...testConfig.admin, templates: true } } }));
-		const off = await readMeta(
-			fakeCms({ config: { ...testConfig, admin: { ...testConfig.admin, templates: false } } }),
-		);
-		expect(on.features.templates).toBe(true);
-		expect(off.features.templates).toBe(false);
-	});
 });

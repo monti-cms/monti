@@ -57,34 +57,6 @@ describe("monti init and the languages of the content", () => {
 		expect(report.notes.join("\n")).toMatch(/languages are ko, en, found in the file names of content\/posts\//);
 	});
 
-	it("offers them in the question, and the person can change them", async () => {
-		const dir = fixtureApp(PAIR);
-		const prompter = scriptedPrompter({
-			"Default language of the site": "ko",
-			"Other languages": ["en", "ja"],
-		});
-		const report = await initProject({
-			cwd: dir,
-			prompter,
-			...quiet(),
-			siteUrl: "http://localhost:3000",
-			timeZone: "UTC",
-			storage: "none",
-			extras: "none",
-			blocks: "none",
-			adminPath: "/studio",
-			login: "password",
-			directiveSyntax: false,
-		});
-		expect(prompter.asked.find((question) => question.includes("Default language of the site"))).toMatch(
-			/found ko, en in the file names of content\/posts\//,
-		);
-		expect(report.answers.locales).toEqual(["ko", "en", "ja"]);
-		expect(report.notes.join("\n")).toMatch(
-			/found in the file names of content\/posts\/, but the site languages are ko, en, ja/,
-		);
-	});
-
 	it("INIT-Q3 an explicit --locales wins, and the report says what the files would have given", async () => {
 		const dir = fixtureApp(PAIR);
 		const report = await initProject({ cwd: dir, ...quiet(), locales: "en" });

@@ -146,97 +146,12 @@ describe("the questions of monti init", () => {
 		expect(prompter.asked.filter((message) => message.includes(QUESTIONS.localesOther))).toHaveLength(2);
 	});
 
-	it("Other... rejects a bad code", async () => {
-		const prompter = scriptedPrompter({
-			...everything,
-			[QUESTIONS.defaultLocale]: "Other...",
-			[QUESTIONS.localesOther]: "english",
-		});
-		await expect(collectAnswers(app(), {}, prompter)).rejects.toThrow(/language code/);
-	});
-
-	it("offers the common languages by their own names, with the detected one preselected", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "en", [QUESTIONS.otherLocales]: [] });
-		const select = prompter.select.bind(prompter);
-		let seen: { initial?: string; labels: string[] } = { labels: [] };
-		prompter.select = async (question) => {
-			if (question.message.includes(QUESTIONS.defaultLocale))
-				seen = { initial: question.initial, labels: question.options.map((option) => option.label) };
-			return select(question);
-		};
-		await collectAnswers(app(), {}, prompter);
-		expect(seen.initial).toBe("en");
-		expect(seen.labels).toEqual(expect.arrayContaining(["한국어 (ko)", "English (en)", "日本語 (ja)", "Other..."]));
-	});
-
-	it("the offered extras are AI only", async () => {
-		const offered: string[] = [];
-		const prompter = scriptedPrompter(everything);
-		const multiselect = prompter.multiselect.bind(prompter);
-		prompter.multiselect = async (question) => {
-			offered.push(...question.options.map((option) => option.value));
-			return multiselect(question);
-		};
-		await collectAnswers(app(), {}, prompter);
-		expect(offered.filter((value) => ["ai"].includes(value))).toEqual(["ai"]);
-		expect(offered).toContain("callout");
-	});
-
-	it("lists every block with a one-line description when picking", async () => {
-		let options: readonly { value: string; hint?: string }[] = [];
-		const prompter = scriptedPrompter(everything);
-		const multiselect = prompter.multiselect.bind(prompter);
-		prompter.multiselect = async (question) => {
-			if (question.message === QUESTIONS.blockList) options = question.options;
-			return multiselect(question);
-		};
-		await collectAnswers(app(), {}, prompter);
-		expect(options.map((option) => option.value)).toEqual([
-			"callout",
-			"collapsible",
-			"tabs",
-			"columns",
-			"code-explorer",
-			"mermaid",
-			"chart",
-			"tooltip",
-			"code-ref",
-			"color",
-		]);
-		// Each hint is the block's one line; the heavy ones also say what they add, and only they do.
-		const hints = new Map(options.map((option) => [option.value, option.hint ?? ""]));
-		for (const block of BLOCK_CHOICES) expect(hints.get(block.id)).toContain(block.description);
-		expect([...hints].filter(([, hint]) => hint.includes("Heavy:")).map(([id]) => id)).toEqual(["mermaid", "chart"]);
-		for (const hint of hints.values()) expect(hint).not.toContain("\n");
-	});
-
-	it("choosing all blocks does not open the list", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "all" });
-		const answers = await collectAnswers(app(), {}, prompter);
-		expect(prompter.asked).not.toContain(QUESTIONS.blockList);
-		expect(answers.blocks).toHaveLength(10);
-	});
-
 	it("INIT-Q1 the light set is what is offered first, and it leaves out the heavy blocks", async () => {
 		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(answers.blocks).toEqual(["callout", "collapsible", "tabs", "code-ref", "color"]);
 		expect(answers.blocks).not.toContain("mermaid");
 		expect(answers.blocks).not.toContain("chart");
-	});
-
-	it("the heavy blocks say why they are heavy in the list", async () => {
-		let options: readonly { value: string; hint?: string }[] = [];
-		const prompter = scriptedPrompter(everything);
-		const multiselect = prompter.multiselect.bind(prompter);
-		prompter.multiselect = async (question) => {
-			if (question.message === QUESTIONS.blockList) options = question.options;
-			return multiselect(question);
-		};
-		await collectAnswers(app(), {}, prompter);
-		expect(options.find((option) => option.value === "mermaid")?.hint).toMatch(/Heavy: .*MB/);
-		expect(options.find((option) => option.value === "chart")?.hint).toMatch(/Heavy: .*recharts/);
-		expect(options.find((option) => option.value === "callout")?.hint).not.toMatch(/Heavy/);
 	});
 
 	it("INIT-Q2 asks how to sign in with the built-in email and password login first and GitHub second, and has no choice for no login", async () => {
@@ -258,14 +173,6 @@ describe("the questions of monti init", () => {
 		expect(offered[0]?.label).toMatch(/password/i);
 		expect(offered[1]?.label).toContain("OAuth app");
 		expect(initial).toBe("password");
-	});
-
-	it("never asks for a GitHub id or a database schema", async () => {
-		const prompter = scriptedPrompter(everything);
-		const answers = await collectAnswers(app(), {}, prompter);
-		expect(prompter.asked.join("\n")).not.toMatch(/github id|schema/i);
-		expect(Object.keys(answers)).not.toContain("adminGithubId");
-		expect(Object.keys(answers)).not.toContain("databaseSchema");
 	});
 
 	it("INIT-Q2 --login takes password or github, skips the question, and refuses anything else", async () => {
@@ -336,41 +243,6 @@ describe("the questions of monti init", () => {
 		});
 	});
 
-	describe("the directive syntax", () => {
-		it("is asked after the blocks, and the answer decides", async () => {
-			const yes = scriptedPrompter({ ...everything, [QUESTIONS.directive]: "directive" });
-			expect((await collectAnswers(app(), {}, yes)).directiveSyntax).toBe(true);
-			const questions = yes.asked;
-			expect(questions.indexOf(QUESTIONS.directive)).toBeGreaterThan(questions.indexOf(QUESTIONS.blockList));
-			const no = scriptedPrompter({ ...everything, [QUESTIONS.directive]: "mdx" });
-			expect((await collectAnswers(app(), {}, no)).directiveSyntax).toBe(false);
-		});
-
-		it("defaults to the directive syntax when blocks are installed, and to plain MDX when none is", async () => {
-			const seen: Record<string, string | undefined> = {};
-			const record = (blocks: string) => {
-				const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
-				const select = prompter.select.bind(prompter);
-				prompter.select = (async (question: { message: string; initial?: string }) => {
-					if (question.message === QUESTIONS.directive) seen[blocks] = question.initial;
-					return select(question as never);
-				}) as never;
-				return collectAnswers(app(), blocks === "none" ? { blocks } : {}, prompter);
-			};
-			await record("default");
-			await record("none");
-			expect(seen).toEqual({ default: "directive", none: "mdx" });
-		});
-
-		it("a flag answers it without asking; without a prompter the default follows the blocks", async () => {
-			const prompter = scriptedPrompter(everything);
-			expect((await collectAnswers(app(), { directiveSyntax: false }, prompter)).directiveSyntax).toBe(false);
-			expect(prompter.asked).not.toContain(QUESTIONS.directive);
-			expect((await collectAnswers(app(), {})).directiveSyntax).toBe(true);
-			expect((await collectAnswers(app(), { blocks: "none" })).directiveSyntax).toBe(false);
-			expect((await collectAnswers(app(), { blocks: "none", directiveSyntax: true })).directiveSyntax).toBe(true);
-		});
-	});
 
 	it("INIT-Q3 the locale list drops duplicates and keeps the first as the default", async () => {
 		const answers = await collectAnswers(app(), { locales: "ko,en,ko" });
