@@ -86,15 +86,24 @@ function layoutNames(layout: unknown, rename: (name: string) => string | null): 
 	);
 }
 
-/** Puts the field `name` back at the place it had among the fields. */
-function reinsert(fields: Record<string, Obj>, name: string, field: Obj, index: number): Record<string, Obj> {
+/** Puts `name` back right after the last field that came before it in the saved order and is still there, so fields removed before it do not shift it. */
+function reinsert(
+	fields: Record<string, Obj>,
+	name: string,
+	field: Obj,
+	before: ReadonlySet<string>,
+): Record<string, Obj> {
 	const entries = Object.entries(fields);
-	entries.splice(Math.min(index, entries.length), 0, [name, field]);
+	const at = entries.reduce((last, [key], index) => (before.has(key) ? index + 1 : last), 0);
+	entries.splice(at, 0, [name, field]);
 	return Object.fromEntries(entries);
 }
 
-/** Puts `name` back in the layout groups of `current` that held it in `saved` (same group, same place), for a field that is brought back. */
-function restoreInLayout(current: Obj, saved: Obj, name: string): Obj {
+/**
+ * Puts `name` back in the layout groups of `current` that held it in `saved` (same group, after the same neighbour), for a field that is brought back.
+ * `nowName` gives a saved field's name in `current`, for a neighbour that was renamed.
+ */
+function restoreInLayout(current: Obj, saved: Obj, name: string, nowName: (savedName: string) => string): Obj {
 	if (!Array.isArray(current.layout) || !Array.isArray(saved.layout)) return current;
 	const layout = (current.layout as Obj[]).map((group, at) => {
 		const was = saved.layout?.[at as never] as Obj | undefined;
@@ -102,7 +111,9 @@ function restoreInLayout(current: Obj, saved: Obj, name: string): Obj {
 		const index = names.indexOf(name);
 		if (index === -1 || !isObj(group)) return group;
 		const fields = [...(Array.isArray(group.fields) ? (group.fields as string[]) : [])];
-		fields.splice(Math.min(index, fields.length), 0, name);
+		const before = new Set(names.slice(0, index).map(nowName));
+		const after = fields.reduce((last, field, position) => (before.has(field) ? position + 1 : last), 0);
+		fields.splice(after, 0, name);
 		return { ...group, fields };
 	});
 	return { ...current, layout };
@@ -197,6 +208,9 @@ function collectionItems(name: string, saved: Obj, draft: Obj, renames: readonly
 			);
 		}
 	}
+	// The fields before one in the saved order, by the names they have now.
+	const namesBefore = (fieldName: string) =>
+		new Set(savedNames.slice(0, savedNames.indexOf(fieldName)).map((before) => renamedTo.get(before) ?? before));
 	for (const [fieldName, field] of Object.entries(savedFields)) {
 		if (fieldName in draftFields || renamedTo.has(fieldName)) continue;
 		items.push(
@@ -208,9 +222,10 @@ function collectionItems(name: string, saved: Obj, draft: Obj, renames: readonly
 					inDraft(state, (file) =>
 						setCollection(file, name, (current) =>
 							restoreInLayout(
-								{ ...current, fields: reinsert(fieldsOf(current), fieldName, field, savedNames.indexOf(fieldName)) },
+								{ ...current, fields: reinsert(fieldsOf(current), fieldName, field, namesBefore(fieldName)) },
 								saved,
 								fieldName,
+								(before) => renamedTo.get(before) ?? before,
 							),
 						),
 					),
