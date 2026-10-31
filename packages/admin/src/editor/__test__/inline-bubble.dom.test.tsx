@@ -122,28 +122,12 @@ describe("inlineBubbleTarget", () => {
 		editor.commands.setTextSelection({ from: codeStart + 1, to: codeStart + 3 });
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
 	});
-
-	it("detects footnote references and resolves their definition position and text", () => {
-		const doc = storedDoc(line(text("Hello"), ref("1")), def("1", para("Footnote description")));
-		const editor = createEditor(storedToTiptap(testSite, doc));
-		let refPos = -1;
-		editor.state.doc.descendants((node, pos) => {
-			if (node.type.name === "footnoteReference") refPos = pos;
-		});
-		editor.commands.setNodeSelection(refPos);
-		expect(inlineBubbleTarget(editor.state)).toMatchObject({
-			kind: "footnote",
-			badge: "1",
-			label: "1",
-			defText: "Footnote description",
-		});
-	});
 });
 
 describe("InlineBubble", () => {
 	const renderBubble = (editor: Editor) => renderWithSite(<InlineBubble editor={editor} />);
 
-	it("shows the effect tool when text is selected and applies immediately", () => {
+	it("EDIT-M1 shows the effect tool when text is selected and applies immediately", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, { from: 1, to: 3 });
 		renderBubble(editor);

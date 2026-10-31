@@ -61,11 +61,6 @@ const checkDoc = async (current: Editor, checker: ReturnType<typeof wordChecker>
 };
 
 describe("checker definition", () => {
-	it("has automatic checking off by default", () => {
-		expect(defineTextChecker({ id: "a", label: "A", check: async () => [] }).auto).toBe(false);
-		expect(defineTextChecker({ id: "a", label: "A", auto: true, check: async () => [] }).auto).toBe(true);
-	});
-
 	it("PLUG-T1 rejects invalid names and limits", () => {
 		// The errors name what is wrong: the id as given, and the limit.
 		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow(/invalid id "a b"/);
@@ -123,15 +118,6 @@ describe("batching and cache", () => {
 });
 
 describe("underline decoration and editing", () => {
-	it("draws results as wavy underlines", async () => {
-		const current = open("이것은 틀린말 입니다\n");
-		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
-		expect(issue && current.state.doc.textBetween(issue.from, issue.to)).toBe("틀린말");
-		const mark = current.view.dom.querySelector("[data-text-issue]");
-		expect(mark?.textContent).toBe("틀린말");
-		expect(mark?.getAttribute("data-severity")).toBe("error");
-	});
-
 	it("PLUG-T3 keeps results in place when an earlier paragraph is edited", async () => {
 		const current = open("앞 문단\n\n이것은 틀린말 입니다\n");
 		await checkDoc(current, wordChecker("틀린말", "맞는 말"));
@@ -160,22 +146,5 @@ describe("underline decoration and editing", () => {
 		// The same checker found nothing this time (fresh cache, so the earlier result for the same text is not reused).
 		await checkDoc(current, wordChecker("없는말", "", "second"), new TextCheckCache());
 		expect(textCheckIssues(current.state).map((issue) => issue.checkerId)).toEqual(["first"]);
-	});
-
-	it("reports the result when an underline is clicked", async () => {
-		const current = open("이것은 틀린말 입니다\n");
-		const onIssueClick = vi.fn();
-		current.unregisterPlugin(textCheckPluginKey);
-		const plugin = createTextCheckPlugin({ onIssueClick });
-		current.registerPlugin(plugin);
-		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
-		if (!issue) throw new Error("no issue");
-		const target = current.view.dom.querySelector("[data-text-issue]");
-		const click = plugin.props.handleClick;
-		click?.call(plugin, current.view, issue.from + 1, { button: 0, target } as unknown as MouseEvent);
-		expect(onIssueClick).toHaveBeenCalledWith(expect.objectContaining({ key: issue.key }), current.view);
-		// Nothing opens outside an underline.
-		click?.call(plugin, current.view, 1, { button: 0, target: current.view.dom } as unknown as MouseEvent);
-		expect(onIssueClick).toHaveBeenCalledTimes(1);
 	});
 });

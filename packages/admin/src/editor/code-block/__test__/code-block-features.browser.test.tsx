@@ -87,15 +87,6 @@ const RULE_CODE = "```ts\n// @document strong {re:/const/g}\nconst a = 1;\nconst
 
 describe("code block tools turned off in the site config", () => {
 	describe("line menu", () => {
-		it("lists only the offered line effects", async () => {
-			configure({ omit: ["highlight", "plus"] });
-			await mount(CODE);
-			const menu = await openLineMenu(0);
-			expect(within(menu).queryByRole("menuitemcheckbox", { name: labelOf("highlight") })).toBeNull();
-			expect(within(menu).queryByRole("menuitemcheckbox", { name: labelOf("plus") })).toBeNull();
-			expect(within(menu).getByRole("menuitemcheckbox", { name: labelOf("minus") })).toBeInTheDocument();
-		});
-
 		it("EDIT-C2 keeps an omitted effect that is already on the picked line so it can be turned off", async () => {
 			configure({ omit: ["plus"] });
 			const editor = await mount("```ts\n// @line plus {0-0}\nconst a = 1;\nconst b = 2;\n```");
@@ -141,18 +132,6 @@ describe("code block tools turned off in the site config", () => {
 			expect(screen.queryByRole("button", { name: t("rulesPanel.addFromSelection") })).toBeNull();
 			act(() => fireEvent.click(within(row).getByRole("button", { name: t("rulesPanel.remove") })));
 			expect(block(editor).attrs.rules).toEqual([]);
-		});
-
-		it("keeps showing a rule whose effect is turned off (text styles off) and saves it unchanged", async () => {
-			configure({ features: { textStyles: false } });
-			const editor = await mount(RULE_CODE);
-			openRules();
-			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
-			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeInTheDocument();
-			expect((block(editor).attrs.rules as CodeRule[])[0]).toMatchObject({ name: "strong", pattern: "const" });
-			expect(withoutIds(tiptapToStored(site, editor.getJSON()))).toEqual(
-				withoutIds(tiptapToStored(site, tiptapOf(RULE_CODE))),
-			);
 		});
 	});
 

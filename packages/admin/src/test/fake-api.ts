@@ -29,6 +29,7 @@ import type { RestorePreview, RestoreRun, RestoreState } from "../api/restore";
 import type { SavedSchema, SchemaEditPreview, SchemaScreenState } from "../api/schema";
 import type { TrashDeleteOutcome, TrashEmptyOutcome, TrashPage, TrashRestoreOutcome } from "../api/trash";
 import type { EntryData } from "../screens/entries/entry-form";
+import { assertCoreServes } from "./core-routes";
 
 /**
  * What the admin client reads from each route, as `src/api` declares it. A handler must answer in this shape, so a fake answer that the screen code would
@@ -46,7 +47,10 @@ export interface AdminRoutes {
 	"POST /v1/entries/:id/check": { issues: CmsIssue[]; warnings: CmsIssue[] };
 	"POST /v1/entries/:id/duplicate": EntryWriteResult;
 	"POST /v1/entries/:id/translations": { entry: { id: string } };
-	"POST /v1/entries/:id/:action": unknown;
+	"POST /v1/entries/:id/archive": unknown;
+	"POST /v1/entries/:id/unarchive": unknown;
+	"POST /v1/entries/:id/trash": unknown;
+	"POST /v1/entries/:id/restore": unknown;
 	"GET /v1/entries/:id/relations": { incomingReferences: IncomingReferenceItem[] };
 	"POST /v1/bulk": { results: BulkItemResult[] };
 	"GET /v1/folders": FolderListItem[];
@@ -221,6 +225,7 @@ export function fakeApi() {
 	const api = {
 		/** Answers `route` (`"METHOD /v1/path/:param"`) with `handler`, in the shape the admin client reads. */
 		on<K extends keyof AdminRoutes>(route: K, handler: Handler<AdminRoutes[K]>) {
+			assertCoreServes(route);
 			add(route, handler as Handler<unknown>);
 			return api;
 		},

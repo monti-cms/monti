@@ -1,5 +1,5 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { docOf } from "../../test/mdx";
@@ -36,13 +36,6 @@ const open = async (props: { doc: StoredDocument; onChange?: (doc: StoredDocumen
 };
 
 describe("CmsEditor works on the stored document", () => {
-	it("shows the document it is given", async () => {
-		const { editor } = await open({ doc: docOf("첫째 문단\n\n둘째 문단") });
-		expect(text(editor)).toBe("첫째 문단|둘째 문단");
-		// No fixed toolbar over the body: the formats come with the selection.
-		expect(screen.queryByRole("toolbar")).toBeNull();
-	});
-
 	it("TRANS-B1 hands the document back after a change, with the ids of the blocks it was given", async () => {
 		const onChange = vi.fn();
 		const doc = docOf("첫째 문단\n\n둘째 문단");

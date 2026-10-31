@@ -193,7 +193,7 @@ describe("MathPreview math renderer error handling", () => {
 });
 
 describe("PreviewErrorBoundary resetKey", () => {
-	it("resets the error state and re-renders children when resetKey changes", () => {
+	it("EDIT-B5 resets the error state and re-renders children when resetKey changes", () => {
 		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 		const Bomb = ({ shouldThrow }: { shouldThrow: boolean }) => {
 			if (shouldThrow) throw new Error("폭탄 에러");

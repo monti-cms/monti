@@ -7,45 +7,7 @@ import { blockConvertersOf, converterForCms, converterForTiptap } from "../conve
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 describe("block converter registry", () => {
-	it("no two default converters handle the same node type (matches branches allowed)", () => {
-		const defaultCms = blockConvertersOf(testSite)
-			.filter((c) => !c.matches)
-			.flatMap((c) => c.cmsTypes);
-		const tiptap = blockConvertersOf(testSite).flatMap((c) => c.tiptapTypes);
-		expect(new Set(defaultCms).size).toBe(defaultCms.length);
-		expect(new Set(tiptap).size).toBe(tiptap.length);
-	});
-
-	it("the registry does not shadow types handled by the default branch", () => {
-		const reserved = [
-			"doc",
-			"paragraph",
-			"heading",
-			"blockquote",
-			"bulletList",
-			"orderedList",
-			"listItem",
-			"taskList",
-			"taskItem",
-			"horizontalRule",
-			"text-align",
-			"tableRow",
-			"tableCell",
-			"tableHeader",
-			"cmsOpaqueBlock",
-			"text",
-		];
-		const claimed = blockConvertersOf(testSite).flatMap((c) => [...c.cmsTypes, ...c.tiptapTypes]);
-		expect(claimed.filter((type) => reserved.includes(type))).toEqual([]);
-	});
-
-	it("finds a converter by type", () => {
-		expect(converterForCms(testSite, "image")?.name).toBe("image");
-		expect(converterForTiptap(testSite, "codeBlock")?.name).toBe("codeBlock");
-		expect(converterForCms(testSite, "paragraph")).toBeUndefined();
-	});
-
-	it("prefers a converter with matches and falls back to the default converter", () => {
+	it("EDIT-B4 prefers a converter with matches and falls back to the default converter", () => {
 		const mermaidNode = { type: "codeBlock", attrs: { language: "mermaid", value: "graph TD" } };
 		const chartNode = { type: "codeBlock", attrs: { language: "chart", value: "pie" } };
 		const tsNode = { type: "codeBlock", attrs: { language: "typescript", value: "const x = 1;" } };

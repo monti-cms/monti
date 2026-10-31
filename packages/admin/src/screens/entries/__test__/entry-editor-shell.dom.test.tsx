@@ -765,9 +765,7 @@ describe("entry editor shell", () => {
 			["archived", "unarchive", "보관 해제", "보관을 해제했어요."],
 			["trashed", "restore", "복원", "복원했어요."],
 		] as const) {
-			api.on("POST /v1/entries/:id/:action", ({ params }) =>
-				params.action === action ? { ...entry, version: 5 } : failure("not_found"),
-			);
+			api.on(`POST /v1/entries/:id/${action}`, () => ({ ...entry, version: 5 }));
 			serve({ ...entry, status });
 			renderEdit();
 			await editorTitle();
@@ -848,10 +846,8 @@ describe("language tabs", () => {
 	describe("flow: this translation goes to the trash (T10)", () => {
 		const serveTranslation = (current: EntryData) => {
 			serve(current);
-			api.on("POST /v1/entries/:id/:action", ({ params }) =>
-				params.id === "entry-en" && params.action === "trash"
-					? { ...current, status: "trashed" }
-					: failure("not_found"),
+			api.on("POST /v1/entries/:id/trash", ({ params }) =>
+				params.id === "entry-en" ? { ...current, status: "trashed" } : failure("not_found"),
 			);
 			api.on("POST /v1/trash/restore", () => ({ results: [] }));
 		};

@@ -2,6 +2,7 @@ import path from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { loadEnv } from "vite";
 import { configDefaults, defineConfig } from "vitest/config";
+import type { BrowserCommand } from "vitest/node";
 
 /**
  * The one shape of a package's test project. Each `packages/<name>/vitest*.config.ts` calls {@link packageTests} with what differs (its name, environment,
@@ -36,6 +37,9 @@ export interface PackageTestsOptions {
 	readonly layer?: "int" | "dom" | "browser";
 	/** Module aliases the package needs on top of `server-only`. */
 	readonly alias?: readonly { find: string | RegExp; replacement: string }[];
+	/** Functions a `browser` test calls with `commands` of `vitest/browser`; they run in Node, for what cannot load in a browser. */
+	// biome-ignore lint/suspicious/noExplicitAny: each command declares its own arguments in `BrowserCommands`.
+	readonly commands?: Record<string, BrowserCommand<any[]>>;
 }
 
 /**
@@ -52,14 +56,15 @@ const LAYER_TESTS = {
  * The real browser of the `browser` layer. The viewport is the size the admin is designed at (`docs/design/admin`), and the clock is UTC like the
  * `TZ` of the node projects below.
  */
-const browserMode = {
+const browserMode = (commands: PackageTestsOptions["commands"]) => ({
 	enabled: true,
 	provider: playwright({ contextOptions: { timezoneId: "UTC" } }),
 	headless: true,
 	instances: [{ browser: "chromium" as const }],
 	viewport: { width: 1440, height: 900 },
 	screenshotFailures: false,
-};
+	...(commands ? { commands } : {}),
+});
 
 /** `core`, `core (int)`, `core (other-site)`. */
 const projectName = (options: PackageTestsOptions): string => {
@@ -83,7 +88,7 @@ export const packageTests = (options: PackageTestsOptions) =>
 				...(options.layer === "browser" ? [] : [LAYER_TESTS.browser]),
 				...(options.exclude ?? []),
 			],
-			...(options.layer === "browser" ? { browser: browserMode } : {}),
+			...(options.layer === "browser" ? { browser: browserMode(options.commands) } : {}),
 			setupFiles: options.dom ? [path.join(ROOT, "packages/admin/src/test/setup-dom.ts")] : [],
 			testTimeout: 60000,
 			hookTimeout: 60000,

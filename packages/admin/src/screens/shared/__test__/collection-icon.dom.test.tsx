@@ -8,7 +8,7 @@ import { ICONS, useIconByName } from "../collection-icon";
 const COLLECTION_ICON_NAMES = Object.keys(ICONS);
 
 describe("icon picked by name", () => {
-	it("picks built-in and provider-registered icons, a registered one first; unknown names give none", () => {
+	it("PLUG-A12 picks built-in and provider-registered icons, a registered one first; unknown names give none", () => {
 		const builtIn = COLLECTION_ICON_NAMES[0] as string;
 		const wrapper = ({ children }: { children: ReactNode }) => (
 			<AdminComponentsProvider components={{ icons: { custom: View, [builtIn]: View } }}>

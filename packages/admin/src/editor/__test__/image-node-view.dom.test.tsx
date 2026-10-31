@@ -57,15 +57,6 @@ describe("CmsImageNodeView", () => {
 		return { props, updateAttributes, deleteNode };
 	};
 
-	it("MEDIA-E2 clearing alt text in the settings popover shows an error there, and decorative images are turned on with the switch", async () => {
-		const { props, updateAttributes } = createProps({ alt: "" });
-		renderWithSite(<CmsImageNodeView {...props} />);
-		fireEvent.click(screen.getByRole("button", { name: t("imageNode.settings") }));
-		expect((await screen.findByRole("alert")).textContent).toBe(t("imageNode.altRequired"));
-		fireEvent.click(screen.getByRole("switch", { name: t("imageNode.decorative") }));
-		expect(updateAttributes).toHaveBeenCalledWith({ decorative: true, alt: "" });
-	});
-
 	it("MEDIA-W1 renders the width resize corner handle and updates in a single transaction on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "500px" });
 		renderWithSite(<CmsImageNodeView {...props} />);

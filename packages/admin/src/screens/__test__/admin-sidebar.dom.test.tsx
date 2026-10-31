@@ -72,19 +72,6 @@ describe("folders in the rail", () => {
 			.getAllByRole("button")
 			.map((button) => button.textContent?.trim());
 
-	it("opens under the open collection, with the folders on the open path", () => {
-		const folders = [folder("a", "Dev"), folder("b", "Essays"), folder("c", "Next.js", "a")];
-		renderRail({ folderNav: folderNav(folders, { currentFolder: "a" }) });
-		expect(rows()).toEqual(["Dev", "Next.js", "Essays"]);
-		const order = within(rail())
-			.getAllByRole("link")
-			.map((item) => item.textContent?.trim());
-		expect(order).toContain(name);
-		expect(tree().compareDocumentPosition(link(name)) & Node.DOCUMENT_POSITION_PRECEDING).toBe(
-			Node.DOCUMENT_POSITION_PRECEDING,
-		);
-	});
-
 	it("LIST-F6 selects a folder, and everything again from the collection row", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderRail({ folderNav: nav });

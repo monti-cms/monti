@@ -159,7 +159,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(saved).toContain("https://example.com");
 	});
 
-	it("an external link still shows its address", async () => {
+	it("EDIT-L1 an external link still shows its address", async () => {
 		const element = document.createElement("div");
 		document.body.append(element);
 		const editor = new Editor({

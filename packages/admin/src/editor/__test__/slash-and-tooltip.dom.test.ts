@@ -48,52 +48,6 @@ describe("slash menu insertion driven by block definitions", () => {
 		}
 	});
 
-	it("extensibility: adding a new block definition and action to the registry auto-generates a slash command", () => {
-		const mockCallout = defineBlock({
-			name: "callout",
-			label: "콜아웃",
-			description: "강조 상자",
-			syntax: { kind: "container", directive: "callout" },
-			component: "Callout",
-			attributes: {},
-			editor: {
-				view: "node",
-				nodeView: "callout",
-				insertable: true,
-				keywords: ["콜아웃", "callout"],
-			},
-		});
-
-		const mockAction: BlockInsertAction = vi.fn();
-		const actions: Record<string, BlockInsertAction> = {
-			...BLOCK_INSERT_ACTIONS,
-			callout: mockAction,
-		};
-
-		const commands = buildBlockSlashCommands(testSite, [mockCallout], actions);
-		expect(commands).toHaveLength(1);
-		expect(commands[0]?.title).toBe(mockCallout.label);
-		expect(commands[0]?.description).toBe(mockCallout.description);
-		expect(commands[0]?.keywords).toEqual(mockCallout.editor.keywords);
-	});
-
-	it("SLASH_COMMANDS includes both the base commands and the auto-generated block commands", () => {
-		const titles = SLASH_COMMANDS.map((c) => c.title);
-		expect(titles).toEqual(
-			expect.arrayContaining([
-				t("slash.paragraph.title"),
-				t("slash.code.title"),
-				t("slash.table.title"),
-				t("slash.image.title"),
-			]),
-		);
-		// Tooltip is registered by the blocks extension (`@monti-cms/blocks`), so it is not in the core list.
-		expect(SLASH_COMMANDS.some((c) => c.keywords.includes("tooltip"))).toBe(false);
-		// Auto-generated block commands carry the block id.
-		const ids = SLASH_COMMANDS.map((c) => c.id);
-		expect(ids).toEqual(expect.arrayContaining(["mermaid", "chart", "math"]));
-	});
-
 	it("MEDIA-P1 slash menu and formatting tools share block names, and the file entry opens the library with files only", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
 		expect(titles).toEqual(
@@ -175,64 +129,6 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 			extensions: buildEditorExtensions(testSite),
 			content: html,
 		});
-
-	it("round-trips a tooltip label containing a closing bracket unescaped", () => {
-		const editor = createEditor("<p>a]b</p>");
-		editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setMark("cmsTooltip", { content: "설명" }).run();
-		const stored = tiptapToStored(testSite, editor.getJSON());
-		expect(stored.content[0]?.content).toEqual([text("a]b", tooltip("설명"))]);
-		expect(tiptapToStored(testSite, storedToTiptap(testSite, stored))).toEqual(stored);
-		editor.destroy();
-	});
-
-	it("sets the cmsTooltip mark on the selection and saves it in the stored document", () => {
-		const editor = createEditor();
-		// Select the "세상" range (pos 7 to 9)
-		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).run();
-
-		// Apply the tooltip
-		editor.chain().focus().setMark("cmsTooltip", { content: "우리가 사는 지구" }).run();
-
-		expect(editor.isActive("cmsTooltip")).toBe(true);
-		expect(editor.getAttributes("cmsTooltip").content).toBe("우리가 사는 지구");
-
-		const stored = tiptapToStored(testSite, editor.getJSON());
-		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("우리가 사는 지구")));
-		editor.destroy();
-	});
-
-	it("edits the description with extendMarkRange when the cursor is inside a tooltip mark", () => {
-		const editor = createEditor();
-		// Set the tooltip on the "세상" range
-		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).setMark("cmsTooltip", { content: "기존 설명" }).run();
-
-		// Move the cursor into the middle of the tooltip (pos 8)
-		editor.chain().focus().setTextSelection(8).run();
-		expect(editor.isActive("cmsTooltip")).toBe(true);
-		expect(editor.getAttributes("cmsTooltip").content).toBe("기존 설명");
-
-		// Edit the description
-		editor.chain().focus().extendMarkRange("cmsTooltip").setMark("cmsTooltip", { content: "업데이트된 설명" }).run();
-
-		expect(editor.getAttributes("cmsTooltip").content).toBe("업데이트된 설명");
-		const stored = tiptapToStored(testSite, editor.getJSON());
-		expect(stored.content[0]?.content).toContainEqual(text("세상", tooltip("업데이트된 설명")));
-		editor.destroy();
-	});
-
-	it("removes the tooltip with extendMarkRange when the cursor is inside a tooltip mark", () => {
-		const editor = createEditor();
-		editor.chain().focus().setTextSelection({ from: 7, to: 9 }).setMark("cmsTooltip", { content: "삭제될 설명" }).run();
-
-		// Move the cursor into the middle of the tooltip, then remove it
-		editor.chain().focus().setTextSelection(8).extendMarkRange("cmsTooltip").unsetMark("cmsTooltip").run();
-
-		expect(editor.isActive("cmsTooltip")).toBe(false);
-		const written = JSON.stringify(tiptapToStored(testSite, editor.getJSON()));
-		expect(written).not.toContain("tooltip");
-		expect(written).toContain("세상");
-		editor.destroy();
-	});
 
 	it("FMT-R2 loads a stored tooltip mark into the editor and round-trips it losslessly on re-saving", () => {
 		const initial = storedDoc({

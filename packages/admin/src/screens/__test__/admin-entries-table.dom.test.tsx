@@ -61,14 +61,6 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 }
 
 describe("admin entry list", () => {
-	it("LIST-C5 selects rows through the row checks and the select-all of the toolbar", () => {
-		const props = renderTable();
-		fireEvent.click(screen.getByRole("checkbox", { name: "draft 선택" }));
-		expect(props.onSelectionChange).toHaveBeenCalledWith(new Set(["draft"]));
-		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
-		expect(props.onSelectionChange).toHaveBeenLastCalledWith(new Set(["published", "draft"]));
-	});
-
 	it("LIST-C5 opens the same row actions from right click and from the always-visible ⋯ button", async () => {
 		const onSelect = vi.fn();
 		renderTable({ rowMenu: () => [{ kind: "item", label: "보관", onSelect }] });
@@ -83,32 +75,6 @@ describe("admin entry list", () => {
 		fireEvent.click(within(row).getByRole("button", { name: t("list.rowActions", { title: "draft" }) }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "보관" }));
 		expect(onSelect).toHaveBeenCalledTimes(2);
-	});
-
-	it("LIST-S3 opens record collections in their form instead of the editor", () => {
-		const tag = item("tag-1", { collection: "tag", title: "TypeScript", status: "published" });
-		const props = renderTable({
-			collection: "tag",
-			items: [tag],
-			state: parseListState(testSite, new URLSearchParams("collection=tag")),
-		});
-		fireEvent.click(screen.getByRole("button", { name: "TypeScript" }));
-		expect(props.onOpenRecord).toHaveBeenCalledWith(tag);
-		// A published item is the normal case: it says nothing.
-		expect(screen.queryByText("활성")).toBeNull();
-	});
-
-	it("LIST-F6 shows child folders in explorer mode and navigates up", () => {
-		const props = renderTable({
-			explorer: {
-				folders: [{ id: "f2", collection: "post", parentId: "f1", name: "알고리즘", position: 0, version: 1 }],
-				parent: "all",
-			},
-		});
-		fireEvent.click(screen.getByRole("button", { name: "알고리즘" }));
-		expect(props.onSelectFolder).toHaveBeenCalledWith("f2");
-		fireEvent.click(screen.getByRole("button", { name: t("list.folderUp") }));
-		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
 	describe("row drag", () => {

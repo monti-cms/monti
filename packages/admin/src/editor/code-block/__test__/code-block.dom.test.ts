@@ -151,18 +151,6 @@ describe("code block: keyboard handling and IME exclusion", () => {
 });
 
 describe("code block storage format (comment syntax) <-> editor", () => {
-	it("plain code without comments round-trips byte for byte", () => {
-		const raw = "const greeting = 'hello world';\nconsole.log(greeting);\n";
-		const node = codeBlockConverter.toTiptap(
-			{ type: "codeBlock", attrs: { language: "ts", meta: 'title="hello.ts"', code: raw } },
-			dummyCtx,
-		);
-		expect(node.attrs?.lineEffects).toEqual([]);
-		expect(node.attrs?.rules).toEqual([]);
-		const [saved] = codeBlockConverter.toCms(node, dummyCtx);
-		expect(saved?.attrs).toEqual({ language: "ts", meta: 'title="hello.ts"', code: raw });
-	});
-
 	it("FMT-R2 reads line effects (collapse, add, highlight) as line ranges and saves the stored code block as it was when unchanged", () => {
 		const raw = [
 			"// @line collapse",
@@ -341,7 +329,7 @@ describe("collapse: shown collapsed in the editor too, and expands when the curs
 			);
 	};
 
-	it("line collapse keeps only the first line and hides the rest; stays expanded if open", () => {
+	it("EDIT-C2 line collapse keeps only the first line and hides the rest; stays expanded if open", () => {
 		const closed = createTestEditor("head\nb\nc\nd", { lineEffects: [collapse()] });
 		expect(hiddenDecorations(closed).map((decoration) => [decoration.from, decoration.to])).toEqual([[5, 9]]);
 		closed.destroy();

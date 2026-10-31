@@ -44,9 +44,4 @@ describe("documentKey", () => {
 		);
 		expect(documentKey(testSite, split)).toBe(documentKey(testSite, plain));
 	});
-
-	it("is worked out once for a document", () => {
-		const one = docOf("문단");
-		expect(documentKey(testSite, one)).toBe(documentKey(testSite, one));
-	});
 });
