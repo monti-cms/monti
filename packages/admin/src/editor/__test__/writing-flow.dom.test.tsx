@@ -117,7 +117,7 @@ describe("flow: write (steps 02–05)", () => {
 	describe("step 02: / on a new post, choosing a template", () => {
 		const emptyPost = () => storedDoc(para());
 
-		it("opens in place on /, with group titles and the template group, without asking anything", async () => {
+		it("WRITE-W1 opens in place on /, with group titles and the template group, without asking anything", async () => {
 			const { editor } = await open(emptyPost());
 			typeSlashInEmpty(editor);
 			const menu = await slashMenu();
@@ -132,7 +132,7 @@ describe("flow: write (steps 02–05)", () => {
 			expect(api.requests.map((request) => `${request.method} ${request.path}`)).toEqual(["GET /v1/templates"]);
 		});
 
-		it("puts the chosen template's blocks at the cursor, with new block ids, and leaves the rest of the body alone", async () => {
+		it("WRITE-W1 puts the chosen template's blocks at the cursor, with new block ids, and leaves the rest of the body alone", async () => {
 			const { editor, onChange } = await open(storedDoc(para("앞"), para(), para("뒤")));
 			typeSlashInEmpty(editor);
 			const menu = await slashMenu();
@@ -150,7 +150,7 @@ describe("flow: write (steps 02–05)", () => {
 			expect(ids.filter((id) => own.includes(id))).toEqual([]);
 		});
 
-		it("typing the group name narrows the list to the templates, and the keyboard alone picks one", async () => {
+		it("WRITE-W1 typing the group name narrows the list to the templates, and the keyboard alone picks one", async () => {
 			const { editor, onChange } = await open(emptyPost());
 			typeSlashInEmpty(editor);
 			await within(await slashMenu()).findByText(t("slash.group.templates"));
@@ -166,7 +166,7 @@ describe("flow: write (steps 02–05)", () => {
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["한 줄 평", "줄거리"]));
 		});
 
-		it("Escape closes the menu and leaves the typed slash", async () => {
+		it("WRITE-W1 Escape closes the menu and leaves the typed slash", async () => {
 			const { editor } = await open(emptyPost());
 			typeSlashInEmpty(editor);
 			await slashMenu();
@@ -189,7 +189,7 @@ describe("flow: write (steps 02–05)", () => {
 				.getAllByRole("button")
 				.map((button) => button.getAttribute("aria-label") ?? button.textContent);
 
-		it("applies a format at once and shows it pressed", async () => {
+		it("WRITE-W2 applies a format at once and shows it pressed", async () => {
 			const { card, editor, onChange } = await selectWords();
 			fireEvent.click(within(card).getByRole("button", { name: t("inlineMarks.bold") }));
 			expect(editor.isActive("bold")).toBe(true);
@@ -201,7 +201,7 @@ describe("flow: write (steps 02–05)", () => {
 			).toBe("true");
 		});
 
-		it("ends with the request when an extension offers one, and runs it on the selection", async () => {
+		it("WRITE-W2 ends with the request when an extension offers one, and runs it on the selection", async () => {
 			const run = vi.fn();
 			const { card, editor } = await selectWords({ selectionActions: [{ id: "ask", label: "요청", run }] });
 			const list = names(card);
@@ -235,7 +235,7 @@ describe("flow: write (steps 02–05)", () => {
 				.getAllByRole("menuitem")
 				.map((item) => item.textContent ?? "");
 
-		it("turn into another block: the submenu lists the kinds with the current one ticked, and choosing heading 2 changes the block", async () => {
+		it("WRITE-W2 turn into another block: the submenu lists the kinds with the current one ticked, and choosing heading 2 changes the block", async () => {
 			const { editor, onChange } = await open(storedDoc(para("첫 글"), para("둘째 글")));
 			const menu = await openMenu(editor);
 			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.turnInto")) }));
@@ -267,7 +267,7 @@ describe("flow: write (steps 02–05)", () => {
 			await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 		});
 
-		it("turns a list item into a paragraph, and the list is not left behind", async () => {
+		it("WRITE-W2 turns a list item into a paragraph, and the list is not left behind", async () => {
 			const { editor, onChange } = await open(
 				storedDoc({ type: "bulletList", content: [{ type: "listItem", content: [para("항목")] }] }),
 			);
@@ -288,7 +288,7 @@ describe("flow: write (steps 02–05)", () => {
 			expect(blocksText(saved(onChange))).toEqual(["항목"]);
 		});
 
-		it("align: the submenu has left, center and right with the current ticked, and center is stored", async () => {
+		it("WRITE-W2 align: the submenu has left, center and right with the current ticked, and center is stored", async () => {
 			const { editor, onChange } = await open(storedDoc(para("첫 글")));
 			const menu = await openMenu(editor);
 			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.align")) }));
@@ -310,7 +310,7 @@ describe("flow: write (steps 02–05)", () => {
 			await waitFor(() => expect(JSON.stringify(saved(onChange))).not.toContain("center"));
 		});
 
-		it("hides what the block cannot do: no align on a table, no turn into on a table, no align when the body does not allow it", async () => {
+		it("WRITE-W2 hides what the block cannot do: no align on a table, no turn into on a table, no align when the body does not allow it", async () => {
 			const withTable = await open(storedDoc(table([[[text("칸")]]])));
 			const menu = await openMenu(withTable.editor);
 			const rows = rowNames(menu);
@@ -331,7 +331,7 @@ describe("flow: write (steps 02–05)", () => {
 			expect(kinds.some((name) => name.startsWith(t("blockKind.heading", { level: 2 })))).toBe(true);
 		});
 
-		it("up and down move the block, duplicate copies it below, delete removes it", async () => {
+		it("WRITE-W2 up and down move the block, duplicate copies it below, delete removes it", async () => {
 			let { editor, onChange } = await open(storedDoc(para("가"), para("나"), para("다")));
 			let menu = await openMenu(editor);
 			pressOption(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.moveDown")) }));
@@ -359,7 +359,7 @@ describe("flow: write (steps 02–05)", () => {
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나", "다"]));
 		});
 
-		it("the keys do the same from the keyboard: ⌥↓, ⌥↑, ⇧⌘D, ⇧⌘⌫", async () => {
+		it("WRITE-W2 the keys do the same from the keyboard: ⌥↓, ⌥↑, ⇧⌘D, ⇧⌘⌫", async () => {
 			const { editor, onChange } = await open(storedDoc(para("가"), para("나")));
 			act(() => {
 				editor.commands.setTextSelection(1);
@@ -375,7 +375,7 @@ describe("flow: write (steps 02–05)", () => {
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나"]));
 		});
 
-		it("the + puts an empty line below the block and opens the same list as typing /", async () => {
+		it("WRITE-W1 the + puts an empty line below the block and opens the same list as typing /", async () => {
 			const { editor, onChange } = await open(storedDoc(para("첫 글"), para("둘째 글")));
 			await handleOf(firstBlock(editor));
 			fireEvent.click(screen.getByRole("button", { name: t("blockHandle.add") }));

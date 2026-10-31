@@ -139,7 +139,7 @@ describe("ContentService Contract", () => {
 				},
 				"invalid_metadata_key",
 			],
-		] satisfies Array<[string, unknown, string]>)("rejects %s", async (_, input, expectedCode) => {
+		] satisfies Array<[string, unknown, string]>)("WRITE-S7 rejects %s", async (_, input, expectedCode) => {
 			await expect(prepareSnapshot(input as unknown as ServiceInput)).rejects.toMatchObject({ code: expectedCode });
 		});
 
@@ -148,12 +148,12 @@ describe("ContentService Contract", () => {
 				collection,
 				input({ collection, slug: "s", metadata: canonicalMetadata(collection), format: "paragraphs", body: "" }),
 			]),
-		)("permits canonical keys for %s", async (_, input) => {
+		)("WRITE-S7 permits canonical keys for %s", async (_, input) => {
 			const result = await prepareSnapshot(input);
 			expect(result.metadata).toEqual(input.metadata);
 		});
 
-		it("permits missing title/summary/category for draft preparation", async () => {
+		it("WRITE-S7 permits missing title/summary/category for draft preparation", async () => {
 			const result = await prepareSnapshot({
 				collection: content,
 				slug: "draft-post",
@@ -170,7 +170,7 @@ describe("ContentService Contract", () => {
 		it.each([
 			["   ", null],
 			["cafe\u0301", "café"],
-		])("normalizes slug %j to %j", async (inputSlug, expectedSlug) => {
+		])("WRITE-P4 normalizes slug %j to %j", async (inputSlug, expectedSlug) => {
 			const result = await prepareSnapshot({
 				collection: content,
 				slug: inputSlug,
@@ -186,13 +186,13 @@ describe("ContentService Contract", () => {
 			"test?query",
 			"test#hash",
 			"test\u0000",
-		])("rejects forbidden characters in slug: %j", async (inputSlug) => {
+		])("WRITE-P4 rejects forbidden characters in slug: %j", async (inputSlug) => {
 			await expect(
 				prepareSnapshot({ collection: content, slug: inputSlug, metadata: {}, format: "paragraphs", body: "" }),
 			).rejects.toMatchObject({ code: "invalid_slug_format" });
 		});
 
-		it("accepts exactly 200 Unicode code points and rejects 201", async () => {
+		it("WRITE-P4 accepts exactly 200 Unicode code points and rejects 201", async () => {
 			const slug200 = "😀".repeat(200);
 			const slug201 = "😀".repeat(201);
 			const result = await prepareSnapshot({
@@ -209,7 +209,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it.skipIf(titleFieldOf(content).max === undefined)(
-			"accepts exactly the title field's max Unicode code points and rejects one more",
+			"WRITE-P4 accepts exactly the title field's max Unicode code points and rejects one more",
 			async () => {
 				const { max = 0, label } = titleFieldOf(content);
 				const titleMax = "😀".repeat(max);
@@ -235,7 +235,7 @@ describe("ContentService Contract", () => {
 			},
 		);
 
-		it("allows equal slug in two different collection inputs", async () => {
+		it("WRITE-P4 allows equal slug in two different collection inputs", async () => {
 			const result1 = await prepareSnapshot({
 				collection: content,
 				slug: "shared-slug",
@@ -252,7 +252,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("3. Deterministic Hashing", () => {
-		it("computes the SHA-256 vector with key-order equivalence and metadata and MDX changes", async () => {
+		it("WRITE-S3 computes the SHA-256 vector with key-order equivalence and metadata and MDX changes", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174002", "123e4567-e89b-12d3-a456-426614174001"];
 			const snapshotOf = (metadata: Record<string, unknown>, mdx = "Hello") =>
 				prepareSnapshot(input({ collection: content, slug: "a", metadata, format: "paragraphs", body: mdx }));
@@ -281,7 +281,7 @@ describe("ContentService Contract", () => {
 			expect(snap1.contentHash).not.toEqual(snapDiffMetadata.contentHash);
 		});
 
-		it("rejects caller provided contentHash", async () => {
+		it("WRITE-S7 rejects caller provided contentHash", async () => {
 			const input = {
 				collection: content,
 				slug: "a",
@@ -295,7 +295,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("4. Reference Extraction", () => {
-		it("extracts ordered/deduplicated refs with occurrences from metadata relations", async () => {
+		it("WRITE-P1 extracts ordered/deduplicated refs with occurrences from metadata relations", async () => {
 			const snap = await prepareSnapshot(
 				input({
 					collection: content,
@@ -341,34 +341,45 @@ describe("ContentService Contract", () => {
 			expect(snap.references[2].occurrences[0]).toMatchObject({ type: "metadata", path: many.name, ordinal: 1 });
 		});
 
-		it.skipIf(!orderedList)("extracts ordered/deduplicated refs with occurrences from an ordered list", async () => {
-			if (!orderedList) return;
-			const snap = await prepareSnapshot(
-				input({
-					collection: orderedList.collection,
-					slug: "a",
-					metadata: {
-						[orderedList.name]: ["123e4567-e89b-12d3-a456-426614174001", "123e4567-e89b-12d3-a456-426614174001"],
-					},
-					format: "paragraphs",
-					body: "",
-				}),
-			);
-			expect(snap.references).toHaveLength(1);
-			expect(snap.references[0]).toMatchObject({
-				kind: "entry",
-				targetId: "123e4567-e89b-12d3-a456-426614174001",
-				isStale: false,
-			});
-			expect(snap.references[0].occurrences).toHaveLength(2);
-			expect(snap.references[0].occurrences[0]).toMatchObject({ type: "metadata", path: orderedList.name, ordinal: 0 });
-			expect(snap.references[0].occurrences[1]).toMatchObject({ type: "metadata", path: orderedList.name, ordinal: 1 });
-		});
+		it.skipIf(!orderedList)(
+			"WRITE-P1 extracts ordered/deduplicated refs with occurrences from an ordered list",
+			async () => {
+				if (!orderedList) return;
+				const snap = await prepareSnapshot(
+					input({
+						collection: orderedList.collection,
+						slug: "a",
+						metadata: {
+							[orderedList.name]: ["123e4567-e89b-12d3-a456-426614174001", "123e4567-e89b-12d3-a456-426614174001"],
+						},
+						format: "paragraphs",
+						body: "",
+					}),
+				);
+				expect(snap.references).toHaveLength(1);
+				expect(snap.references[0]).toMatchObject({
+					kind: "entry",
+					targetId: "123e4567-e89b-12d3-a456-426614174001",
+					isStale: false,
+				});
+				expect(snap.references[0].occurrences).toHaveLength(2);
+				expect(snap.references[0].occurrences[0]).toMatchObject({
+					type: "metadata",
+					path: orderedList.name,
+					ordinal: 0,
+				});
+				expect(snap.references[0].occurrences[1]).toMatchObject({
+					type: "metadata",
+					path: orderedList.name,
+					ordinal: 1,
+				});
+			},
+		);
 
 		const imageOf = (attrs: Record<string, unknown>) => ({ type: "image", attrs });
 		const docOfBlocks = (...content: unknown[]) => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
-		it("extracts ordered/deduplicated refs with occurrences from Image", async () => {
+		it("WRITE-P1 extracts ordered/deduplicated refs with occurrences from Image", async () => {
 			const first = "123e4567-e89b-12d3-a456-426614174000";
 			const second = "987e4567-e89b-12d3-a456-426614174000";
 			const doc = docOfBlocks(imageOf({ mediaId: first }), imageOf({ mediaId: second }), imageOf({ mediaId: first }));
@@ -395,7 +406,7 @@ describe("ContentService Contract", () => {
 			["no source at all", { type: "image", attrs: { alt: "a" } }, "missing_media_id"],
 			["a media id that is not text", { type: "image", attrs: { mediaId: 5, alt: "a" } }, "invalid_reference_id"],
 			["a file with no media id", { type: "file", attrs: { label: "x" } }, "missing_media_id"],
-		])("flags a document that holds %s", async (_name, block, expectedIssue) => {
+		])("WRITE-P1 flags a document that holds %s", async (_name, block, expectedIssue) => {
 			const doc = { type: "doc", version: 3, content: [block] };
 			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, doc });
 			expect(snap.issues).toContainEqual(
@@ -407,7 +418,7 @@ describe("ContentService Contract", () => {
 		it.each([
 			["an image", imageOf({ mediaId: "987e4567-e89b-12d3-a456-426614174000", alt: "a" })],
 			["a file", { type: "file", attrs: { mediaId: "987e4567-e89b-12d3-a456-426614174000" } }],
-		])("records a media reference for a registered media ID: %s", async (_name, block) => {
+		])("WRITE-P1 records a media reference for a registered media ID: %s", async (_name, block) => {
 			const snap = await prepareSnapshot({
 				collection: content,
 				slug: "a",
@@ -427,7 +438,7 @@ describe("ContentService Contract", () => {
 			expect(snap.doc.content).toHaveLength(1);
 		});
 
-		it("does not reference an external image src", async () => {
+		it("WRITE-P1 does not reference an external image src", async () => {
 			const snap = await prepareSnapshot({
 				collection: content,
 				slug: "a",
@@ -441,7 +452,7 @@ describe("ContentService Contract", () => {
 			]);
 		});
 
-		it("retains trusted previous refs marked stale when the text cannot be read and keeps the exact text unchanged", async () => {
+		it("WRITE-P8 retains trusted previous refs marked stale when the text cannot be read and keeps the exact text unchanged", async () => {
 			const text = "<<<Invalid";
 			const previousReferences: Reference[] = [
 				{
@@ -470,7 +481,7 @@ describe("ContentService Contract", () => {
 			});
 		});
 
-		it("retains trusted previous refs marked stale when the body holds a reference problem", async () => {
+		it("WRITE-P8 retains trusted previous refs marked stale when the body holds a reference problem", async () => {
 			const doc = { type: "doc", version: 3, content: [{ type: "image", attrs: { alt: "a" } }] };
 			const previousReferences: Reference[] = [
 				{
@@ -633,22 +644,72 @@ describe("ContentService Contract", () => {
 			],
 		] satisfies Array<
 			[string, PreparedSnapshot, ResolvedTargets, string]
-		>)("not ready when %s", (_, snap, resolved, expectedIssueCode) => {
+		>)("WRITE-P1 not ready when %s", (_, snap, resolved, expectedIssueCode) => {
 			const validation = validateForPublish(testSite, snap, resolved);
 			expect(validation.ready).toBe(false);
 			expect(validation.issues).toContainEqual(expect.objectContaining({ code: expectedIssueCode }));
 		});
 
-		it("is ready when valid and targets resolved", () => {
+		it("WRITE-P1 is ready when valid and targets resolved", () => {
 			const validation = validateForPublish(testSite, validSnap, validResolvedTargets);
 			expect(validation.ready).toBe(true);
+		});
+
+		it("WRITE-P1 is ready with an image whose media file exists", () => {
+			const mediaId = "987e4567-e89b-12d3-a456-426614174000";
+			const snap = {
+				...validSnap,
+				references: [
+					...validSnap.references,
+					{ kind: "media", targetId: mediaId, isStale: false, occurrences: [{ type: "body", blockId: "b1" }] },
+				],
+			} as PreparedSnapshot;
+			const validation = validateForPublish(testSite, snap, { ...validResolvedTargets, media: [{ id: mediaId }] });
+			expect(validation).toMatchObject({ ready: true, issues: [] });
+		});
+
+		it("WRITE-P1 blocks a link by address to a page that is not there, and only warns for one that is not published", () => {
+			const link = (slug: string) => ({ collection: content, slug, url: `/${slug}`, position: { blockId: slug } });
+			const snap = {
+				...validSnap,
+				internalLinks: [link("live"), link("gone"), link("deleted"), link("draft"), link("held")],
+			} as PreparedSnapshot;
+			const resolvedLink = (
+				slug: string,
+				addressType: "current" | "deleted" | "reservation",
+				isPublished: boolean,
+			) => ({
+				collection: content,
+				slug,
+				addressType,
+				isPublished,
+			});
+			const validation = validateForPublish(testSite, snap, {
+				...validResolvedTargets,
+				internalLinks: [
+					resolvedLink("live", "current", true),
+					undefined as never,
+					resolvedLink("deleted", "deleted", false),
+					resolvedLink("draft", "current", false),
+					resolvedLink("held", "reservation", false),
+				],
+			});
+			expect(validation.ready).toBe(false);
+			expect(validation.issues.map((issue) => [issue.code, issue.message])).toEqual([
+				["unresolved_internal_link", "/gone"],
+				["unresolved_internal_link", "/deleted"],
+			]);
+			expect(validation.warnings.map((warning) => [warning.code, warning.message])).toEqual([
+				["unpublished_internal_link", "/draft"],
+				["unpublished_internal_link", "/held"],
+			]);
 		});
 	});
 
 	// Only for configs that have a list relation that also holds not-yet-published posts in order (blog: collection `itemIds`).
 	describe.skipIf(!orderedList)("7. Ordered list relation (collection itemIds)", () => {
 		const list = orderedList ?? { collection: content, name: "", to: content };
-		it("preserves declared order and duplicates conservatively, validates target collection", async () => {
+		it("WRITE-P1 preserves declared order and duplicates conservatively, validates target collection", async () => {
 			const snap = await prepareSnapshot(
 				input({
 					collection: list.collection,
@@ -700,7 +761,7 @@ describe("ContentService Contract", () => {
 			expect(validation.issues).toContainEqual(expect.objectContaining({ code: "invalid_reference_collection" }));
 		});
 
-		it("is ready when all resolved IDs are published list targets, preserving order and duplicates", () => {
+		it("WRITE-P1 is ready when all resolved IDs are published list targets, preserving order and duplicates", () => {
 			const snapWithItems = {
 				collection: list.collection,
 				slug: "valid-col",
@@ -749,7 +810,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("8. Publish preflight completeness", () => {
-		it.skipIf(!orderedList)("allows unpublished targets only through an ordered list relation", async () => {
+		it.skipIf(!orderedList)("WRITE-P1 allows unpublished targets only through an ordered list relation", async () => {
 			if (!orderedList) return;
 			const id = "123e4567-e89b-12d3-a456-426614174099";
 			const snapshot = await prepareSnapshot(
@@ -768,7 +829,7 @@ describe("ContentService Contract", () => {
 			expect(validation.ready).toBe(true);
 		});
 
-		it("reports every unresolved reference with metadata occurrence", async () => {
+		it("WRITE-P1 reports every unresolved reference with metadata occurrence", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174091", "123e4567-e89b-12d3-a456-426614174092"];
 			const snapshot = await prepareSnapshot(
 				input({
@@ -788,7 +849,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("9. Service Orchestration & Fake Port", () => {
-		it("saveDraft propagates the exact save port rejection", async () => {
+		it("WRITE-S7 saveDraft propagates the exact save port rejection", async () => {
 			const exactError = { code: "concurrent_modification", message: "Conflict" };
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn().mockResolvedValue([]),
@@ -815,7 +876,7 @@ describe("ContentService Contract", () => {
 			).rejects.toBe(exactError);
 		});
 
-		it("saveDraft invalid input preparation proves saveWorkingWithReferences is not called", async () => {
+		it("WRITE-S7 saveDraft invalid input preparation proves saveWorkingWithReferences is not called", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn().mockResolvedValue([]),
 				archiveEntry: vi.fn(),
@@ -842,7 +903,7 @@ describe("ContentService Contract", () => {
 			expect(storePort.saveWorkingWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("createDraft makes an empty record slug from the slug field's `from`", async () => {
+		it("WRITE-P4 createDraft makes an empty record slug from the slug field's `from`", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -869,7 +930,7 @@ describe("ContentService Contract", () => {
 			);
 		});
 
-		it("createDraft stores through the atomic create call without previous refs/contentHash, and propagates the exact port error", async () => {
+		it("WRITE-S7 createDraft stores through the atomic create call without previous refs/contentHash, and propagates the exact port error", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -943,7 +1004,7 @@ describe("ContentService Contract", () => {
 			expect(conflictPort.createEntryWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("saveDraft stale behavior: passes loaded references as stale when the text cannot be read", async () => {
+		it("WRITE-P8 saveDraft stale behavior: passes loaded references as stale when the text cannot be read", async () => {
 			const previousRefs: Reference[] = [
 				{
 					kind: "entry",
@@ -988,7 +1049,7 @@ describe("ContentService Contract", () => {
 			);
 		});
 
-		it("saveDraft loads previous refs for the entry and forwards expectedVersion to the atomic save", async () => {
+		it("WRITE-S2 saveDraft loads previous refs for the entry and forwards expectedVersion to the atomic save", async () => {
 			const previousRefs: Reference[] = [
 				{ kind: "entry", targetId: "123e4567-e89b-12d3-a456-426614174000", isStale: false, occurrences: [] },
 			];
@@ -1121,7 +1182,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("9. Exact Byte Limits & Structural Boundaries", () => {
-		it("accepts exact boundary and rejects +1-byte for body_too_large", async () => {
+		it("WRITE-S7 accepts exact boundary and rejects +1-byte for body_too_large", async () => {
 			const mdxExact = "a".repeat(2097152);
 			const mdxTooLarge = "a".repeat(2097153);
 			await expect(
@@ -1138,35 +1199,38 @@ describe("ContentService Contract", () => {
 			).rejects.toMatchObject({ code: "body_too_large" });
 		});
 
-		it.skipIf(!unboundedText)("accepts exact boundary and rejects +1-byte for metadata_too_large", async () => {
-			const name = unboundedText?.name ?? "";
-			// The metadata limit counts the JSON of the metadata: the field with an empty value is the overhead (14 bytes for the blog's summary).
-			const overhead = JSON.stringify({ [name]: "" }).length;
-			const boundaryString = "a".repeat(262144 - overhead);
-			await expect(
-				prepareSnapshot(
-					input({
-						collection: content,
-						slug: "valid",
-						metadata: { [name]: boundaryString },
-						format: "paragraphs",
-						body: "",
-					}),
-				),
-			).resolves.toMatchObject({ metadata: { [name]: boundaryString } });
-			const tooLargeString = "a".repeat(262144 - overhead + 1);
-			await expect(
-				prepareSnapshot(
-					input({
-						collection: content,
-						slug: "valid",
-						metadata: { [name]: tooLargeString },
-						format: "paragraphs",
-						body: "",
-					}),
-				),
-			).rejects.toMatchObject({ code: "metadata_too_large" });
-		});
+		it.skipIf(!unboundedText)(
+			"WRITE-S7 accepts exact boundary and rejects +1-byte for metadata_too_large",
+			async () => {
+				const name = unboundedText?.name ?? "";
+				// The metadata limit counts the JSON of the metadata: the field with an empty value is the overhead (14 bytes for the blog's summary).
+				const overhead = JSON.stringify({ [name]: "" }).length;
+				const boundaryString = "a".repeat(262144 - overhead);
+				await expect(
+					prepareSnapshot(
+						input({
+							collection: content,
+							slug: "valid",
+							metadata: { [name]: boundaryString },
+							format: "paragraphs",
+							body: "",
+						}),
+					),
+				).resolves.toMatchObject({ metadata: { [name]: boundaryString } });
+				const tooLargeString = "a".repeat(262144 - overhead + 1);
+				await expect(
+					prepareSnapshot(
+						input({
+							collection: content,
+							slug: "valid",
+							metadata: { [name]: tooLargeString },
+							format: "paragraphs",
+							body: "",
+						}),
+					),
+				).rejects.toMatchObject({ code: "metadata_too_large" });
+			},
+		);
 
 		it.each([
 			["missing slug", { collection: content, metadata: {}, format: "paragraphs", body: "" }, "invalid_input"],
@@ -1205,11 +1269,11 @@ describe("ContentService Contract", () => {
 				),
 				"invalid_input",
 			],
-		])("rejects non-exact service inputs: %s", async (_, input, expectedCode) => {
+		])("WRITE-S7 rejects non-exact service inputs: %s", async (_, input, expectedCode) => {
 			await expect(prepareSnapshot(input as unknown as ServiceInput)).rejects.toMatchObject({ code: expectedCode });
 		});
 
-		it("prevents mutation of snapshot via caller input mutation and deep freezes snapshot", async () => {
+		it("WRITE-S7 prevents mutation of snapshot via caller input mutation and deep freezes snapshot", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174001"];
 			const snap = await prepareSnapshot(
 				input({ collection: content, slug: "valid", metadata: { [many.name]: ids }, format: "paragraphs", body: "" }),
@@ -1242,7 +1306,7 @@ describe("ContentService Contract", () => {
 			expect(snap.references).toHaveLength(1); // just tag
 		});
 
-		it("rejects metadata with symbols without executing getter", async () => {
+		it("WRITE-S7 rejects metadata with symbols without executing getter", async () => {
 			const meta = { title: "valid" };
 			Object.defineProperty(meta, Symbol("hidden"), { value: "invalid", enumerable: true });
 
@@ -1257,7 +1321,7 @@ describe("ContentService Contract", () => {
 			).rejects.toMatchObject({ code: "invalid_input" });
 		});
 
-		it("rejects metadata with getters without executing getter", async () => {
+		it("WRITE-S7 rejects metadata with getters without executing getter", async () => {
 			const spy = vi.fn();
 			const meta = {};
 			Object.defineProperty(meta, "title", {
@@ -1278,7 +1342,7 @@ describe("ContentService Contract", () => {
 			expect(spy).not.toHaveBeenCalled();
 		});
 
-		it("rejects sparse arrays in metadata", async () => {
+		it("WRITE-S7 rejects sparse arrays in metadata", async () => {
 			const sparseArray = ["123e4567-e89b-12d3-a456-426614174001"];
 			delete sparseArray[0];
 			await expect(
@@ -1294,7 +1358,7 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("10. Service Input Structural & Accessor Defenses", () => {
-		it("createDraft(null) rejects with ServiceError code invalid_input, not native TypeError, and no port call", async () => {
+		it("WRITE-S7 createDraft(null) rejects with ServiceError code invalid_input, not native TypeError, and no port call", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -1316,7 +1380,7 @@ describe("ContentService Contract", () => {
 			expect(storePort.saveWorkingWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("createDraft custom-prototype input rejects invalid_input and no port call", async () => {
+		it("WRITE-S7 createDraft custom-prototype input rejects invalid_input and no port call", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -1348,7 +1412,7 @@ describe("ContentService Contract", () => {
 			expect(storePort.saveWorkingWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("createDraft top-level accessor/getter property rejects without executing getter and no port call", async () => {
+		it("WRITE-S7 createDraft top-level accessor/getter property rejects without executing getter and no port call", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -1382,7 +1446,7 @@ describe("ContentService Contract", () => {
 			expect(storePort.saveWorkingWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("saveDraft null/custom-prototype input rejects invalid_input before getWorkingReferences or mutation", async () => {
+		it("WRITE-S7 saveDraft null/custom-prototype input rejects invalid_input before getWorkingReferences or mutation", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -1422,7 +1486,7 @@ describe("ContentService Contract", () => {
 			expect(storePort.createEntryWithReferences).not.toHaveBeenCalled();
 		});
 
-		it("saveDraft expectedVersion accessor getter rejects without executing getter or Store calls", async () => {
+		it("WRITE-S7 saveDraft expectedVersion accessor getter rejects without executing getter or Store calls", async () => {
 			const storePort: StorePort = {
 				getWorkingReferences: vi.fn(),
 				archiveEntry: vi.fn(),
@@ -1488,7 +1552,7 @@ describe("ContentService Contract", () => {
 		const mediaReferences = (snap: PreparedSnapshot) =>
 			snap.references.filter((reference) => reference.kind === "media");
 
-		it("collects media references for the images of the body", async () => {
+		it("WRITE-P1 collects media references for the images of the body", async () => {
 			const snap = await prepareSnapshot(await draft({ mediaId, alt: "설명" }));
 
 			expect(snap.issues).toEqual([]);
@@ -1497,7 +1561,7 @@ describe("ContentService Contract", () => {
 			expect(snap.imageSources).toEqual([{ mediaId, position: { blockId: snap.doc.content[0]?.id } }]);
 		});
 
-		it("an external src is not a reference and does not block publishing", async () => {
+		it("WRITE-P1 an external src is not a reference and does not block publishing", async () => {
 			const snap = await prepareSnapshot(await draft({ src: "/images/a.png", alt: "a" }));
 
 			expect(snap.issues).toEqual([]);
@@ -1505,7 +1569,7 @@ describe("ContentService Contract", () => {
 			expect(snap.imageSources).toEqual([{ src: "/images/a.png", position: { blockId: snap.doc.content[0]?.id } }]);
 		});
 
-		it("an image with no source stays blocked", async () => {
+		it("WRITE-P1 an image with no source stays blocked", async () => {
 			const { body: _text, format: _format, ...fields } = await draftInput("");
 			const snap = await prepareSnapshot({
 				...fields,
@@ -1516,7 +1580,7 @@ describe("ContentService Contract", () => {
 			expect(snap.imageSources).toEqual([]);
 		});
 
-		it("a disallowed src is a non-blocking warning (stays ready)", async () => {
+		it("WRITE-P1 a disallowed src is a non-blocking warning (stays ready)", async () => {
 			const snap = await prepareSnapshot(await draft({ src: "javascript:alert(1)", alt: "a" }));
 			const validation = validateForPublish(testSite, snap, { targets: relationTargets, media: [] });
 
@@ -1526,7 +1590,7 @@ describe("ContentService Contract", () => {
 			]);
 		});
 
-		it("builds warnings from media status and storage key, and does not warn when there is no row", async () => {
+		it("WRITE-P1 builds warnings from media status and storage key, and does not warn when there is no row", async () => {
 			const snap = await prepareSnapshot(await draft({ mediaId }));
 			const targets = relationTargets;
 
@@ -1551,7 +1615,7 @@ describe("ContentService Contract", () => {
 			expect(missing.issues).toContainEqual(expect.objectContaining({ code: "unresolved_media" }));
 		});
 
-		it("the warning for the publish response looks at both the DB state and the actual storage object", async () => {
+		it("WRITE-P1 the warning for the publish response looks at both the DB state and the actual storage object", async () => {
 			const snapshot = await prepareSnapshot(await draft({ mediaId }));
 			const pending = { getMediaAsset: async () => ({ status: "pending", storageKey: null }) };
 
@@ -1572,7 +1636,7 @@ describe("ContentService Contract", () => {
 			).toEqual([expect.objectContaining({ code: "image_media_missing_in_storage", message: "k/a.png" })]);
 		});
 
-		it("warning computation does not block publishing (no image warnings on failure)", async () => {
+		it("WRITE-P1 warning computation does not block publishing (no image warnings on failure)", async () => {
 			const warnings = await imageWarningsForSnapshot(await prepareSnapshot(await draft({ mediaId })), {
 				getMediaAsset: async () => {
 					throw new Error("db down");

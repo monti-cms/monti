@@ -11,7 +11,7 @@ import type { ServiceInput } from "../index";
  * The site address (`example.dev`), the collection paths (`/posts`, `/memos`) and the hash value fixed with `tagIds` do not exist in other site configs.
  */
 describe("ContentService Contract (blog config)", () => {
-	it("computes exact known SHA-256 vector", async () => {
+	it("WRITE-S3 computes exact known SHA-256 vector", async () => {
 		const snap = await prepareSnapshot(
 			testSite,
 			{
@@ -33,7 +33,7 @@ describe("ContentService Contract (blog config)", () => {
 		expect(snap.contentHash).toBe("6e29aef176a7373f4c2bad69f73e5f77f2302a7285b94d0e6ee0a9ce6ebbe14d");
 	});
 
-	it("extracts only supported prose links and keeps the block of each", async () => {
+	it("WRITE-P1 extracts only supported prose links and keeps the block of each", async () => {
 		const snapshot = await prepareSnapshot(testSite, {
 			collection: "memo",
 			slug: "memo",

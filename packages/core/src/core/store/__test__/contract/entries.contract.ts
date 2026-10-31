@@ -92,7 +92,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		it("creates a new entry with correct timestamp fields", async () => {
+		it("WRITE-S1 creates a new entry with correct timestamp fields", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "test-timestamps",
@@ -111,7 +111,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(entry.publishedAt ?? null).toBeNull();
 		});
 
-		it("allows two drafts in the same collection with slug null and manages workingSlug/publishedSlug", async () => {
+		it("WRITE-P4 allows two drafts in the same collection with slug null and manages workingSlug/publishedSlug", async () => {
 			const draft1 = await seedEntry(store, {
 				collection: contentCollection,
 				slug: null,
@@ -157,7 +157,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(savedAgain.publishedSlug).toBe("draft-1-slug");
 		});
 
-		it("timestamps: publish behavior and immutability", async () => {
+		it("WRITE-P5 timestamps: publish behavior and immutability", async () => {
 			// The store stamps creates, saves and publishes with the application clock; each step runs at a time of its own.
 			const createdAt = new Date("2026-01-01T00:00:00.000Z");
 			const publishedAt = new Date("2026-01-01T00:01:00.000Z");
@@ -196,7 +196,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			}
 		});
 
-		it("identical save leaves version, hash, and updatedAt unchanged", async () => {
+		it("WRITE-S3 identical save leaves version, hash, and updatedAt unchanged", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "identical",
@@ -226,7 +226,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		});
 
 		describe("a syntax-only change (same content hash, different MDX string)", () => {
-			it("still counts as a change when the slug, metadata or translation differ, but not the same content again", async () => {
+			it("WRITE-S3 still counts as a change when the slug, metadata or translation differ, but not the same content again", async () => {
 				const entry = await seedEntry(store, {
 					collection: contentCollection,
 					slug: "syntax-only-other-change",
@@ -254,7 +254,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expect(schemaChanged.version).toBe(slugChanged.version);
 			});
 
-			it("is a republish when published: the published snapshot is not replaced", async () => {
+			it("WRITE-P7 is a republish when published: the published snapshot is not replaced", async () => {
 				const entry = await seedEntry(store, {
 					collection: contentCollection,
 					slug: "syntax-only-republish",
@@ -282,7 +282,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("same-hash correctness: changed metadata/MDX with reused hash is published", async () => {
+		it("WRITE-P7 same-hash correctness: changed metadata/MDX with reused hash is published", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "republish-hash",
@@ -311,7 +311,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.published?.contentHash).toBe("same-hash");
 		});
 
-		it("metadata JSON boundary: invalid value rejected with invalid_input", async () => {
+		it("WRITE-S7 metadata JSON boundary: invalid value rejected with invalid_input", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "json-boundary",
@@ -345,7 +345,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.working.metadata).toEqual(await filled("JSON Boundary"));
 		});
 
-		it("true simultaneous-writer test: resolves one conflict", async () => {
+		it("WRITE-S2 true simultaneous-writer test: resolves one conflict", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "simul-test",
@@ -394,7 +394,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.working.contentHash).toBe(winner.working.contentHash);
 		});
 
-		it("stale expectedVersion throws CmsError with code conflict and serverVersion", async () => {
+		it("WRITE-S2 stale expectedVersion throws CmsError with code conflict and serverVersion", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "stale-test",
@@ -433,7 +433,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("keeps working and published snapshots separate", async () => {
+		it("WRITE-P3 keeps working and published snapshots separate", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "separation-test",
@@ -462,7 +462,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.publishedAt?.getTime()).toEqual(published.publishedAt?.getTime());
 		});
 
-		it("republishing the same content hash does not replace the published snapshot", async () => {
+		it("WRITE-P7 republishing the same content hash does not replace the published snapshot", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "republish-hash-identical",
@@ -487,7 +487,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.publishedAt?.getTime()).toEqual(firstPublish.publishedAt?.getTime());
 		});
 
-		it("published entry can clear its working slug, cannot publish without one, and keeps its public slug reserved", async () => {
+		it("WRITE-P4 published entry can clear its working slug, cannot publish without one, and keeps its public slug reserved", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "clear-slug-test",
@@ -531,7 +531,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		});
 
 		it.skipIf(!missingRequired)(
-			"rejects invalid direct publication without creating a published snapshot",
+			"WRITE-P1 rejects invalid direct publication without creating a published snapshot",
 			async () => {
 				const draft = await seedEntry(rawStore, {
 					collection: contentCollection,
@@ -559,7 +559,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			},
 		);
 
-		it("atomically publishes record creates and rolls invalid edits back", async () => {
+		it("WRITE-P6 atomically publishes record creates and rolls invalid edits back", async () => {
 			const service = createContentService(store, serviceOptions);
 			const badSlug = "validation-invalid-record-create";
 			await expect(
@@ -607,7 +607,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(after.working.metadata).toEqual(before.working.metadata);
 		});
 
-		it("validates internal links against locked publication addresses", async () => {
+		it("WRITE-P1 validates internal links against locked publication addresses", async () => {
 			const target = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "validation-link-target",
@@ -632,7 +632,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		});
 
 		it.skipIf(!unpublishedRelation)(
-			"allows draft references only through relations that allow unpublished targets",
+			"WRITE-P1 allows draft references only through relations that allow unpublished targets",
 			async () => {
 				if (!unpublishedRelation) return;
 				const { collection, name, to, many, when } = unpublishedRelation;
@@ -666,7 +666,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			},
 		);
 
-		it("metadata accepts valid own JSON keys named constructor and __proto__", async () => {
+		it("WRITE-S7 metadata accepts valid own JSON keys named constructor and __proto__", async () => {
 			const metadata = JSON.parse('{"constructor":"val1","__proto__":"val2"}');
 
 			// Insert raw values as they are (required-for-publish values are not filled).
@@ -732,7 +732,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			});
 		}
 
-		it("returns the draft with its working body; the public read cannot see the same slug", async () => {
+		it("WRITE-P3 returns the draft with its working body; the public read cannot see the same slug", async () => {
 			await seedDraft("draft-only-post", "초안 본문");
 
 			const found = await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "draft-only-post" });
@@ -750,7 +750,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("shows the latest working copy in the preview after the working body is edited post-publish", async () => {
+		it("WRITE-P3 shows the latest working copy in the preview after the working body is edited post-publish", async () => {
 			const draft = await seedDraft("edited-after-publish", "발행 전 본문");
 
 			await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
@@ -771,11 +771,11 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			expect(contentOf(found?.published?.doc)).toEqual(bodyText("발행 전 본문"));
 		});
 
-		it("returns null for a missing slug", async () => {
+		it("WRITE-P3 returns null for a missing slug", async () => {
 			expect(await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "does-not-exist" })).toBeNull();
 		});
 
-		it("does not find the same slug in another collection", async () => {
+		it("WRITE-P3 does not find the same slug in another collection", async () => {
 			const other = await seedEntry(store, {
 				collection: elsewhere,
 				slug: "shared-slug",
@@ -789,7 +789,7 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 			expect(await store.getWorkingEntryBySlug({ collection: contentCollection, slug: "shared-slug" })).toBeNull();
 		});
 
-		it("rejects invalid input with invalid_input instead of silently returning null", async () => {
+		it("WRITE-P3 rejects invalid input with invalid_input instead of silently returning null", async () => {
 			await expect(store.getWorkingEntryBySlug({ collection: contentCollection, slug: "" })).rejects.toBeInstanceOf(
 				CmsError,
 			);
@@ -833,7 +833,7 @@ const createSlugsInUseContract: ContractSuite = (factory) => {
 			});
 		};
 
-		it("returns slugs used in the same collection and language, excluding the entry being edited", async () => {
+		it("WRITE-P4 returns slugs used in the same collection and language, excluding the entry being edited", async () => {
 			const used = await seed("lookup-used");
 			await seed("lookup-other");
 
@@ -848,7 +848,7 @@ const createSlugsInUseContract: ContractSuite = (factory) => {
 			expect(await store.slugsInUse({ ...params, locale: "xx-unused", slugs: ["lookup-used"] })).toEqual(new Set());
 		});
 
-		it("returns an empty set for no slugs", async () => {
+		it("WRITE-P4 returns an empty set for no slugs", async () => {
 			expect(await store.slugsInUse({ collection: contentCollection, locale: defaultLocale, slugs: [] })).toEqual(
 				new Set(),
 			);
@@ -936,7 +936,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				text: "Body",
 			});
 
-		it("rejects a new unknown key on create and on save: a typo is not a removed field", async () => {
+		it("WRITE-S7 rejects a new unknown key on create and on save: a typo is not a removed field", async () => {
 			await expect(
 				service.createDraft({
 					collection: contentCollection,
@@ -960,7 +960,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			).rejects.toMatchObject({ code: "invalid_metadata_key" });
 		});
 
-		it("keeps the value of a removed field when saving", async () => {
+		it("WRITE-S8 keeps the value of a removed field when saving", async () => {
 			const draft = await staleDraft("Save");
 			// An API client that sends the stored metadata back, edited elsewhere, loses nothing.
 			const saved = (
@@ -980,24 +980,27 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it.skipIf(!selectField)("keeps a select value that is no longer an option instead of the default", async () => {
-			const name = selectField?.name ?? "";
-			const draft = await staleDraft("Select");
-			expect(draft.working.metadata[name]).toBe(UNKNOWN_OPTION);
-			const saved = (
-				await service.saveDraft(draft.id, {
-					collection: contentCollection,
-					slug: draft.workingSlug,
-					metadata: draft.working.metadata,
-					format: "paragraphs",
-					body: "Body changed",
-					expectedVersion: draft.version,
-				} as never)
-			).entry;
-			expect(saved.working.metadata[name]).toBe(UNKNOWN_OPTION);
-		});
+		it.skipIf(!selectField)(
+			"WRITE-S8 keeps a select value that is no longer an option instead of the default",
+			async () => {
+				const name = selectField?.name ?? "";
+				const draft = await staleDraft("Select");
+				expect(draft.working.metadata[name]).toBe(UNKNOWN_OPTION);
+				const saved = (
+					await service.saveDraft(draft.id, {
+						collection: contentCollection,
+						slug: draft.workingSlug,
+						metadata: draft.working.metadata,
+						format: "paragraphs",
+						body: "Body changed",
+						expectedVersion: draft.version,
+					} as never)
+				).entry;
+				expect(saved.working.metadata[name]).toBe(UNKNOWN_OPTION);
+			},
+		);
 
-		it("publishes an entry holding removed values, keeps them in the published version and warns", async () => {
+		it("WRITE-S8 publishes an entry holding removed values, keeps them in the published version and warns", async () => {
 			const draft = await staleDraft("Publish");
 			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 			expect(published.status).toBe("published");
@@ -1025,7 +1028,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			}
 		});
 
-		it("publishes in bulk an entry holding removed values", async () => {
+		it("WRITE-S8 publishes in bulk an entry holding removed values", async () => {
 			const draft = await staleDraft("Bulk publish");
 			const { results } = await createBulkService(store, serviceOptions).run({
 				op: "publish",
@@ -1045,7 +1048,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			expect(after.working.metadata[ORPHAN]).toBe("left behind");
 		});
 
-		it.skipIf(!manyRelation)("keeps removed values when a bulk operation saves the metadata", async () => {
+		it.skipIf(!manyRelation)("WRITE-S8 keeps removed values when a bulk operation saves the metadata", async () => {
 			if (!manyRelation) return;
 			const draft = await staleDraft("Bulk relation");
 			const tag = await relationTarget(manyRelation.to as Collection);
@@ -1062,7 +1065,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			expect(after.working.metadata[ORPHAN_LIST]).toEqual(["a", "b"]);
 		});
 
-		it("keeps removed values in a duplicate", async () => {
+		it("WRITE-S8 keeps removed values in a duplicate", async () => {
 			const draft = await staleDraft("Duplicate");
 			const copy = await duplicateDraft(testSite, store, { id: draft.id });
 			expect(copy.working.metadata[ORPHAN]).toBe("left behind");
@@ -1070,7 +1073,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		});
 
 		it.skipIf(!secondLocale)(
-			"lets a translation keep a removed value it already holds, and rejects a new one",
+			"WRITE-S8 lets a translation keep a removed value it already holds, and rejects a new one",
 			async () => {
 				const source = (
 					await service.createDraft({
@@ -1220,7 +1223,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				.then((result) => result.entry);
 		};
 
-		it("creates a record from its title alone and derives the slug", async () => {
+		it("WRITE-P4 creates a record from its title alone and derives the slug", async () => {
 			const tag = (
 				await service.createDraft({
 					collection: recordCollection,
@@ -1406,7 +1409,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(copy.working.contentHash).toBe(recomputed.contentHash);
 		});
 
-		it("can return to a previous public slug of the same entry", async () => {
+		it("WRITE-P4 can return to a previous public slug of the same entry", async () => {
 			const post = await publishedPost();
 			const original = post.publishedSlug as string;
 			const renamed = (

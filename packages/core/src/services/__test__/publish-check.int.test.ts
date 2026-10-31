@@ -65,7 +65,7 @@ describe("publish check on a real store", () => {
 		await closeGlobalPool();
 	});
 
-	it("reports the issues a publish of the same draft is refused with, and changes nothing", async () => {
+	it("WRITE-P1 reports the issues a publish of the same draft is refused with, and changes nothing", async () => {
 		const created = await draft("", false);
 		const before = await store.getEntry(created.entry.id);
 
@@ -85,7 +85,7 @@ describe("publish check on a real store", () => {
 		expect(after.published).toBeUndefined();
 	}, 30_000);
 
-	it("finds no issues for a draft that publishes, and publishing it afterwards still works", async () => {
+	it("WRITE-P1 finds no issues for a draft that publishes, and publishing it afterwards still works", async () => {
 		const created = await draft("Body");
 		const checked = await service.checkPublish({ id: created.entry.id });
 		expect(checked.issues).toEqual([]);
@@ -97,7 +97,7 @@ describe("publish check on a real store", () => {
 		expect(published.entry.status).toBe("published");
 	}, 30_000);
 
-	it("refuses an entry that cannot be published as a publish does", async () => {
+	it("WRITE-P1 refuses an entry that cannot be published as a publish does", async () => {
 		const created = await draft("Body");
 		await store.trashEntry({ id: created.entry.id, expectedVersion: created.entry.version });
 		await expect(service.checkPublish({ id: created.entry.id })).rejects.toMatchObject({ code: "invalid_status" });

@@ -61,8 +61,11 @@ const readRequirements = () => {
 	return requirements;
 };
 
-const TITLE =
-	/\b(?:it|test)(?:\.(?:each\([^)]*\)|skipIf\([^)]*\)|runIf\([^)]*\)|only|concurrent))?\(\s*["'`]([A-Z]+-[A-Z]+\d+) ([^"'`]*)/g;
+/**
+ * A title that starts with an ID, as the first argument of a call: `it("…")`, `it.each(rows)("… %s")`, or a helper that builds one test per
+ * case (`eachRunner("…")`).
+ */
+const TITLE = /\(\s*["'`]([A-Z]+-[A-Z]+\d+) ([^"'`]*)/g;
 
 const readTests = () => {
 	const files = [

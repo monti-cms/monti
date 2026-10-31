@@ -255,7 +255,7 @@ afterEach(() => {
 });
 
 describe("entry editor shell", () => {
-	it("keeps edits in the browser until Save is clicked", async () => {
+	it("WRITE-S1 keeps edits in the browser until Save is clicked", async () => {
 		api.on("PATCH /v1/entries/:id", savedAs());
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "로컬에서 수정" } });
@@ -272,7 +272,7 @@ describe("entry editor shell", () => {
 		expect(api.sent("PATCH /v1/entries/:id")[0]?.body.metadata.title).toBe("로컬에서 수정");
 	});
 
-	it("shows the save state in the status bar and saves from it: saved, then unsaved, saving and saved again", async () => {
+	it("WRITE-S1 shows the save state in the status bar and saves from it: saved, then unsaved, saving and saved again", async () => {
 		let finish: (() => void) | undefined;
 		api.on("PATCH /v1/entries/:id", async (request) => {
 			await new Promise<void>((resolve) => {
@@ -297,7 +297,7 @@ describe("entry editor shell", () => {
 		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1);
 	});
 
-	it("saves even when a Korean composition never reports its end", async () => {
+	it("WRITE-S4 saves even when a Korean composition never reports its end", async () => {
 		api.on("PATCH /v1/entries/:id", savedAs());
 		renderEdit();
 		const title = await editorTitle();
@@ -309,7 +309,7 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
 	});
 
-	it("shows why an explicit save failed instead of doing nothing", async () => {
+	it("WRITE-S5 shows why an explicit save failed instead of doing nothing", async () => {
 		api.on("PATCH /v1/entries/:id", () => failure("invalid_input", "제목이 너무 길어요."));
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
@@ -317,7 +317,7 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
 	});
 
-	it("saves pending changes before opening the preview", async () => {
+	it("WRITE-S1 saves pending changes before opening the preview", async () => {
 		const opened = { opener: {}, location: { href: "" }, close: vi.fn() };
 		const open = vi.spyOn(window, "open").mockReturnValue(opened as unknown as Window);
 		api.on("PATCH /v1/entries/:id", savedAs());
@@ -329,7 +329,7 @@ describe("entry editor shell", () => {
 		open.mockRestore();
 	});
 
-	it("creates a new entry only after an explicit Save", async () => {
+	it("WRITE-S1 creates a new entry only after an explicit Save", async () => {
 		api.on("POST /v1/entries", ({ body }) => ({
 			entry: {
 				...entry,
@@ -368,14 +368,14 @@ describe("entry editor shell", () => {
 		const missingTitle = told({ code: "missing_field", path: "title", message: "제목" });
 		const missingAlt = told({ code: "missing_image_alt", path: "body", position: { blockId: "b1" } });
 
-		it("says nothing is left to do when the check finds nothing, and checks once after loading", async () => {
+		it("WRITE-P1 says nothing is left to do when the check finds nothing, and checks once after loading", async () => {
 			renderEdit();
 			expect(await (await bar()).findByRole("button", { name: tStatusBar("todo.none") })).toBeInTheDocument();
 			expect(checkCalls()).toHaveLength(1);
 			expect(checkCalls()[0]?.path).toBe("/v1/entries/entry-1/check");
 		});
 
-		it("counts what to fix, and leaves the warnings out", async () => {
+		it("WRITE-P1 counts what to fix, and leaves the warnings out", async () => {
 			checkAnswer = { issues: [missingTitle, missingAlt], warnings: [told({ code: "footnote_definition_unused" })] };
 			renderEdit();
 			fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 2" }));
@@ -384,7 +384,7 @@ describe("entry editor shell", () => {
 			expect(list.queryByText(tPublishReadiness("issue.footnote_definition_unused"))).toBeNull();
 		});
 
-		it("rechecks after a save, not on a keystroke, and keeps the last answer meanwhile", async () => {
+		it("WRITE-P1 rechecks after a save, not on a keystroke, and keeps the last answer meanwhile", async () => {
 			checkAnswer = { issues: [missingTitle], warnings: [] };
 			api.on("PATCH /v1/entries/:id", savedAs());
 			renderEdit();
@@ -468,7 +468,7 @@ describe("entry editor shell", () => {
 		});
 	});
 
-	it("creates and publishes a local new entry when Publish is clicked", async () => {
+	it("WRITE-P2 creates and publishes a local new entry when Publish is clicked", async () => {
 		api.on("POST /v1/entries", ({ body }) => ({
 			entry: {
 				...entry,
@@ -495,7 +495,7 @@ describe("entry editor shell", () => {
 		expect(api.sent("POST /v1/entries/:id/publish")[0]?.params.id).toBe("published-entry");
 	});
 
-	it("binds field issues and moves issues in the body to the source text, at the block they are in", async () => {
+	it("WRITE-P1 binds field issues and moves issues in the body to the source text, at the block they are in", async () => {
 		const body = docOf("첫째 문단\n\n둘째 문단\n");
 		api.on("POST /v1/entries/:id/publish", () =>
 			failure("publish_validation_failed", undefined, {
@@ -524,7 +524,7 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(asked).toContain(body.content[1]?.id));
 	});
 
-	it("goes to the issue's block in the visual editor, and to the block in source mode when the editor does not have it", async () => {
+	it("WRITE-P1 goes to the issue's block in the visual editor, and to the block in source mode when the editor does not have it", async () => {
 		const doc = docOf("첫째 문단\n\n둘째 문단\n");
 		const second = doc.content[1]?.id;
 		let blockId = second;
@@ -552,7 +552,7 @@ describe("entry editor shell", () => {
 		expect(await screen.findByLabelText("패널 본문")).toBeInTheDocument();
 	});
 
-	it("opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
+	it("WRITE-P8 opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
 		serve({
 			...entry,
 			working: { ...entry.working, doc: unparsedDocument("본문 <Callout>닫히지 않음") },
@@ -738,7 +738,7 @@ describe("entry editor shell", () => {
 		]);
 	}, 30_000);
 
-	it("reports an offline save and keeps a browser backup", async () => {
+	it("WRITE-S5 reports an offline save and keeps a browser backup", async () => {
 		api.on("PATCH /v1/entries/:id", () => {
 			throw new TypeError("offline");
 		});
@@ -755,7 +755,7 @@ describe("entry editor shell", () => {
 		);
 	});
 
-	it("does not publish when a body-filled field has nothing to fill from, naming the field", async () => {
+	it("WRITE-P1 does not publish when a body-filled field has nothing to fill from, naming the field", async () => {
 		serve({
 			...entry,
 			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },

@@ -116,5 +116,15 @@ describe("translation groups (postgres storage)", () => {
 			expect(await statusOf(source.id)).toBe("draft");
 			expect(await statusOf(apart.id)).toBe("trashed");
 		});
+
+		it("TRASH-R2 brings back a translation trashed with its source when the source is restored", async () => {
+			const source = await createPost("restore-together");
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
+			expect(await statusOf(translation.id)).toBe("trashed");
+
+			await store.restoreEntry({ id: source.id, expectedVersion: trashed.version });
+			expect(await statusOf(translation.id)).toBe("draft");
+		});
 	});
 });

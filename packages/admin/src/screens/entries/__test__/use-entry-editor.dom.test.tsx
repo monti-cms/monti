@@ -106,7 +106,7 @@ const title = () => screen.findByLabelText("title") as Promise<HTMLInputElement>
 const status = () => screen.getByLabelText("status").textContent;
 
 describe("a minimal editor on useEntryEditor and useField", () => {
-	it("loads the entry into the field, edits it locally and saves it through the client", async () => {
+	it("WRITE-S1 loads the entry into the field, edits it locally and saves it through the client", async () => {
 		const { client } = renderMinimal();
 		expect(screen.getByText("loading")).toBeInTheDocument();
 		const input = await title();
@@ -123,14 +123,14 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(client.update).toHaveBeenCalledWith("entry-1", expect.objectContaining({ expectedVersion: 4 }));
 	});
 
-	it("publishes through a command, and the new status reaches the screen", async () => {
+	it("WRITE-P2 publishes through a command, and the new status reaches the screen", async () => {
 		renderMinimal();
 		await title();
 		fireEvent.click(screen.getByText("publish"));
 		await waitFor(() => expect(screen.getByLabelText("entry-status").textContent).toBe("published"));
 	});
 
-	it("a conflict is state: overwrite saves on top of the server's version, with no page reload", async () => {
+	it("WRITE-C3 a conflict is state: overwrite saves on top of the server's version, with no page reload", async () => {
 		const { server } = renderMinimal();
 		const input = await title();
 		server.current = { ...ENTRY, version: 9, working: { ...ENTRY.working, metadata: { title: "남의 수정" } } };
@@ -148,7 +148,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(window.location.href).toBe(href);
 	});
 
-	it("writes the recovery copy when the page is hidden, never touching the server", async () => {
+	it("WRITE-R1 writes the recovery copy when the page is hidden, never touching the server", async () => {
 		const { recovery, client } = renderMinimal();
 		fireEvent.change(await title(), { target: { value: "떠나기 전" } });
 		expect(recovery.store.put).not.toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(client.update).not.toHaveBeenCalled();
 	});
 
-	it("asks the browser to confirm leaving only while the server lacks changes, and not when warnOnLeave is off", async () => {
+	it("WRITE-S6 asks the browser to confirm leaving only while the server lacks changes, and not when warnOnLeave is off", async () => {
 		const leave = () => {
 			const event = new Event("beforeunload", { cancelable: true });
 			window.dispatchEvent(event);
@@ -179,7 +179,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(leave()).toBe(false);
 	});
 
-	it("publish issues reach the field that has them", async () => {
+	it("WRITE-P1 publish issues reach the field that has them", async () => {
 		const { client } = renderMinimal();
 		const input = await title();
 		client.publish.mockRejectedValueOnce(

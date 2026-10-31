@@ -30,7 +30,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("1. Lifecycle State Machine Transitions", () => {
-			it("draft -> published creates published body and sets status to published", async () => {
+			it("WRITE-P3 draft -> published creates published body and sets status to published", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-publish-1",
@@ -51,7 +51,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(published.publishedAt?.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
 			});
 
-			it("published -> archive closes public visibility", async () => {
+			it("WRITE-P3 published -> archive closes public visibility", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-archive-1",
@@ -74,7 +74,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(archived.publishedAt).toEqual(pub.publishedAt); // preserved
 			});
 
-			it("archived -> unarchive returns to draft without auto-publishing", async () => {
+			it("WRITE-P3 archived -> unarchive returns to draft without auto-publishing", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-unarchive-1",
@@ -99,6 +99,28 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 
 				expect(unarch.status).toBe("draft");
+			});
+
+			it("WRITE-S2 moves the version up by one on archive, unarchive, trash and restore, so a write with an older version is refused", async () => {
+				const entry = await seedEntry(store, {
+					collection: content,
+					slug: "test-version-steps",
+					metadata: { title: "Version steps" },
+					text: "Content",
+					contentHash: "hash-steps",
+				});
+
+				const archived = await store.archiveEntry({ id: entry.id, expectedVersion: entry.version });
+				const unarchived = await store.unarchiveEntry({ id: entry.id, expectedVersion: archived.version });
+				const trashed = await store.trashEntry({ id: entry.id, expectedVersion: unarchived.version });
+				const restored = await restoreDraft(testSite, store, { id: entry.id, expectedVersion: trashed.version });
+
+				expect([archived, unarchived, trashed, restored].map((step) => step.version - entry.version)).toEqual([
+					1, 2, 3, 4,
+				]);
+				await expect(store.archiveEntry({ id: entry.id, expectedVersion: trashed.version })).rejects.toMatchObject({
+					code: "conflict",
+				});
 			});
 
 			it("TRASH-T1 draft/published/archived -> trash hides from active list", async () => {
@@ -180,7 +202,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("2. Transactional Target Recheck & Published References Rollback", () => {
-			it("publishes and copies working references to published references atomically", async () => {
+			it("WRITE-P1 publishes and copies working references to published references atomically", async () => {
 				const tag = await seedEntry(store, {
 					collection: record,
 					slug: "tag-active",
@@ -371,7 +393,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it("fails publish and preserves prior published body & published references if target is unpublished or missing", async () => {
+			it("WRITE-P6 fails publish and preserves prior published body & published references if target is unpublished or missing", async () => {
 				const tag = await seedEntry(store, {
 					collection: record,
 					slug: "tag-to-archive",
@@ -431,7 +453,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("4. Timestamps", () => {
-			it("keeps the first publish time on re-publish and after archive", async () => {
+			it("WRITE-P5 keeps the first publish time on re-publish and after archive", async () => {
 				// The store stamps a publish with the application clock; each publish runs at a later time of its own.
 				const firstPublishedAt = new Date("2026-01-01T00:00:00.000Z");
 				vi.useFakeTimers({ toFake: ["Date"], now: firstPublishedAt });
@@ -477,7 +499,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("5. Publish boundary", () => {
-			it("rejects a body that could not be read in publishEntry and leaves the status unchanged", async () => {
+			it("WRITE-P8 rejects a body that could not be read in publishEntry and leaves the status unchanged", async () => {
 				const post = await seedEntry(store, {
 					collection: content,
 					slug: "post-unparsed",

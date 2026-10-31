@@ -143,7 +143,7 @@ const saved = () => api.sent("PATCH /v1/entries/:id");
 const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 
 describe("flow: set properties (steps 07, 08, 11)", () => {
-	it("is the properties pane: a tab bar over a list, with no head and no close button", async () => {
+	it("WRITE-W3 is the properties pane: a tab bar over a list, with no head and no close button", async () => {
 		renderEdit();
 		const panel = await pane();
 		expect(panel.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["기본", "SEO"]);
@@ -152,7 +152,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect(panel.queryByRole("heading", { level: 2 })).toBeNull();
 	});
 
-	it("reads as a list: the label above its value, and the group name as a subheading", async () => {
+	it("WRITE-W3 reads as a list: the label above its value, and the group name as a subheading", async () => {
 		renderEdit();
 		expect((await valueButton("주소")).textContent).toBe("/test");
 		expect((await valueButton("요약")).textContent).toBe("비어 있음");
@@ -163,7 +163,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect((await pane()).queryAllByRole("textbox")).toEqual([]);
 	});
 
-	it("a value opens for editing where it is, takes the caret, and the edit goes in the saved request", async () => {
+	it("WRITE-W3 a value opens for editing where it is, takes the caret, and the edit goes in the saved request", async () => {
 		renderEdit();
 		fireEvent.click(await valueButton("요약"));
 		const box = await (await row("요약")).findByRole("textbox");
@@ -177,7 +177,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect(saved()[0]?.body.metadata.summary).toBe("새 요약");
 	});
 
-	it("Enter ends a one-line value, Escape ends any value, and the typed text stays", async () => {
+	it("WRITE-W3 Enter ends a one-line value, Escape ends any value, and the typed text stays", async () => {
 		renderEdit();
 		fireEvent.click(await valueButton("주소"));
 		const slug = await (await row("주소")).findByRole("textbox");
@@ -197,7 +197,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect((await valueButton("요약")).textContent).toBe("줄 하나");
 	});
 
-	it("a select opens its list; the pick closes it and goes in the request", async () => {
+	it("WRITE-W3 a select opens its list; the pick closes it and goes in the request", async () => {
 		renderEdit();
 		fireEvent.click(await valueButton("정책"));
 		pressOption(await screen.findByRole("option", { name: "항상 최신 글" }));
@@ -208,7 +208,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect(saved()[0]?.body.metadata.policy).toBe("evergreen");
 	});
 
-	it("the series field offers the series that exist", async () => {
+	it("WRITE-W3 the series field offers the series that exist", async () => {
 		renderEdit();
 		expect((await valueButton("모음집")).textContent).toBe("없음");
 		fireEvent.click(await valueButton("모음집"));
@@ -217,7 +217,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect(await screen.findByRole("option", { name: "리액트 다시 만들기" })).toBeInTheDocument();
 	});
 
-	it("the SEO tab is a read list of what each empty value follows, with no preview boxes", async () => {
+	it("WRITE-W3 the SEO tab is a read list of what each empty value follows, with no preview boxes", async () => {
 		renderEdit();
 		fireEvent.click((await pane()).getByRole("tab", { name: "SEO" }));
 		expect((await valueButton("SEO 제목")).textContent).toBe("제목과 같음 · 3/60");

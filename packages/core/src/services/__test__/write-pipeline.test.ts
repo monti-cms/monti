@@ -42,7 +42,7 @@ const rejection = async (run: Promise<unknown>) => {
 };
 
 describe("write pipeline", () => {
-	it("runs the transform hooks in order, each on the result of the previous one", async () => {
+	it("WRITE-H1 runs the transform hooks in order, each on the result of the previous one", async () => {
 		const seen: unknown[] = [];
 		const first: HookSource = {
 			owner: "server",
@@ -68,7 +68,7 @@ describe("write pipeline", () => {
 		expect(transformed).toBe(true);
 	});
 
-	it("hands hooks the operation, collection, entry, locale and a copy of the data", async () => {
+	it("WRITE-H1 hands hooks the operation, collection, entry, locale and a copy of the data", async () => {
 		const contexts: WriteHookContext[] = [];
 		const pipeline = pipelineWith({
 			owner: "server",
@@ -97,7 +97,7 @@ describe("write pipeline", () => {
 		expect(transformed).toBe(false);
 	});
 
-	it("keeps the body as it came in when a transform leaves it alone", async () => {
+	it("WRITE-H1 keeps the body as it came in when a transform leaves it alone", async () => {
 		const text = "Body";
 		const plain = await createWritePipeline({ site: testSite, formats }).run(
 			request({ input: input({ title: "Title" }, text) }),
@@ -111,7 +111,7 @@ describe("write pipeline", () => {
 		expect(withHook.snapshot.metadata.title).toBe("Changed");
 	});
 
-	it("prepares a body a transform replaced, as a document", async () => {
+	it("WRITE-H1 prepares a body a transform replaced, as a document", async () => {
 		const replacement = docOf("Replaced\n");
 		const { snapshot } = await pipelineWith({
 			owner: "server",
@@ -120,14 +120,14 @@ describe("write pipeline", () => {
 		expect(contentOf(snapshot.doc)).toEqual(contentOf(replacement));
 	});
 
-	it("rejects what core preparation rejects, whatever a transform returns", async () => {
+	it("WRITE-H1 rejects what core preparation rejects, whatever a transform returns", async () => {
 		const hook = vi.fn(({ metadata, doc }: WriteHookContext) => ({ metadata: { ...metadata, notAField: "x" }, doc }));
 		const error = await rejection(pipelineWith({ owner: "server", hooks: { beforeValidate: hook } }).run(request()));
 		expect(error).toBeInstanceOf(ServiceError);
 		expect(error.code).toBe("invalid_metadata_key");
 	});
 
-	it("does not call hooks for input that core preparation rejects, and rejects it as without hooks", async () => {
+	it("WRITE-H1 does not call hooks for input that core preparation rejects, and rejects it as without hooks", async () => {
 		const transform = vi.fn();
 		const validate = vi.fn();
 		const pipeline = pipelineWith({ owner: "server", hooks: { beforeValidate: transform, beforeSave: validate } });
@@ -144,7 +144,7 @@ describe("write pipeline", () => {
 		expect(validate).not.toHaveBeenCalled();
 	});
 
-	it("collects the failures of every validate hook and blocks with all of them", async () => {
+	it("WRITE-H1 collects the failures of every validate hook and blocks with all of them", async () => {
 		const pipeline = pipelineWith(
 			{ owner: "server", hooks: { beforeSave: () => ({ issues: [{ code: "first" }] }) } },
 			{
@@ -157,7 +157,7 @@ describe("write pipeline", () => {
 		expect(error.issues?.map((issue) => issue.code)).toEqual(["first", "second"]);
 	});
 
-	it("saves a text body the format cannot read as an unparsed body, and warns with the field and where the text breaks", async () => {
+	it("WRITE-P8 saves a text body the format cannot read as an unparsed body, and warns with the field and where the text breaks", async () => {
 		const { snapshot, warnings } = await pipelineWith().run(
 			request({ input: input({ title: "Title" }, "<<<Unclosed") }),
 		);
@@ -167,7 +167,7 @@ describe("write pipeline", () => {
 		expect(warnings).toEqual([{ code: "bad_marker", path: "body", position: { line: 1, column: 1 } }]);
 	});
 
-	it("warns the same when hooks are registered, and a text body that reads gives no warning", async () => {
+	it("WRITE-P8 warns the same when hooks are registered, and a text body that reads gives no warning", async () => {
 		const pipeline = pipelineWith({ owner: "server", hooks: { beforeSave: () => undefined } });
 		const bad = await pipeline.run(request({ input: input({ title: "Title" }, "<<<Unclosed") }));
 		expect(bad.warnings.map((warning) => warning.code)).toEqual(["bad_marker"]);
@@ -176,7 +176,7 @@ describe("write pipeline", () => {
 		expect((await pipelineWith().run(request())).warnings).toEqual([]);
 	});
 
-	it("passes warnings through without blocking", async () => {
+	it("WRITE-H1 passes warnings through without blocking", async () => {
 		const pipeline = pipelineWith(
 			{ owner: "server", hooks: { beforeSave: () => ({ warnings: [{ code: "check-this" }] }) } },
 			{ owner: "plugin:seo", hooks: { beforeSave: () => undefined } },
@@ -185,7 +185,7 @@ describe("write pipeline", () => {
 		expect(warnings).toEqual([{ code: "check-this" }]);
 	});
 
-	it("gives validation a copy of the snapshot: changing it cannot remove a core issue or change what is stored", async () => {
+	it("WRITE-H1 gives validation a copy of the snapshot: changing it cannot remove a core issue or change what is stored", async () => {
 		let seen: PreparedSnapshot | undefined;
 		const pipeline = pipelineWith({
 			owner: "server",
@@ -206,7 +206,7 @@ describe("write pipeline", () => {
 		expect(snapshot.metadata.title).toBe("Title");
 	});
 
-	it("runs validatePublish for a publish only", async () => {
+	it("WRITE-H1 runs validatePublish for a publish only", async () => {
 		const validatePublish = vi.fn(() => undefined);
 		const pipeline = pipelineWith({ owner: "server", hooks: { beforePublish: validatePublish } });
 		await pipeline.run(request({ operation: "create" }));
@@ -216,7 +216,7 @@ describe("write pipeline", () => {
 		expect(validatePublish).toHaveBeenCalledTimes(1);
 	});
 
-	it("blocks a publish with the issues validatePublish adds, next to the core issues of the draft", async () => {
+	it("WRITE-H1 blocks a publish with the issues validatePublish adds, next to the core issues of the draft", async () => {
 		const pipeline = pipelineWith({
 			owner: "server",
 			hooks: { beforePublish: () => ({ issues: [{ code: "not-yet" }] }) },
@@ -228,7 +228,7 @@ describe("write pipeline", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("not-yet");
 	});
 
-	it("fails with hook_failed naming the hook and its owner, and does not repeat the hook's message", async () => {
+	it("WRITE-H2 fails with hook_failed naming the hook and its owner, and does not repeat the hook's message", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const pipeline = pipelineWith(
 			{ owner: "server", hooks: { beforeValidate: () => undefined } },
@@ -264,13 +264,13 @@ describe("write pipeline", () => {
 			{ beforeSave: () => ({ issues: [{ message: "x" }] }) as never },
 		],
 		["a validate hook that returns something that is not a result", { beforeSave: () => 5 as never }],
-	])("fails with hook_failed for %s", async (_name, hooks) => {
+	])("WRITE-H2 fails with hook_failed for %s", async (_name, hooks) => {
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const error = await rejection(pipelineWith({ owner: "server", hooks }).run(request()));
 		expect(error.code).toBe("hook_failed");
 	});
 
-	it("skips transform hooks when asked, still prepares, and still validates", async () => {
+	it("WRITE-H1 skips transform hooks when asked, still prepares, and still validates", async () => {
 		const transform = vi.fn();
 		const validatePublish = vi.fn(() => ({ warnings: [{ code: "checked" }] }));
 		const { snapshot, warnings, transformed } = await pipelineWith({
@@ -284,7 +284,7 @@ describe("write pipeline", () => {
 		expect(transformed).toBe(false);
 	});
 
-	it("reads the hooks on every write, so a plugin that loads late is used", async () => {
+	it("WRITE-H3 reads the hooks on every write, so a plugin that loads late is used", async () => {
 		let sources: HookSource[] = [];
 		const pipeline = createWritePipeline({ site: testSite, hooks: () => sources, formats });
 		await expect(pipeline.run(request())).resolves.toMatchObject({

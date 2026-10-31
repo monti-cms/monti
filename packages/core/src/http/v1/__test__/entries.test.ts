@@ -137,7 +137,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		expect(data.error.code).toBe("forbidden");
 	});
 
-	it("POST /entries creates a new draft atomically with folderId", async () => {
+	it("WRITE-S1 POST /entries creates a new draft atomically with folderId", async () => {
 		const req = new Request("http://localhost/api/monti/v1/entries", {
 			method: "POST",
 			headers: {
@@ -164,7 +164,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		]);
 	});
 
-	it("PATCH /entries/:id rejects without version with 428 version_required", async () => {
+	it("WRITE-S2 PATCH /entries/:id rejects without version with 428 version_required", async () => {
 		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000008", {
 			method: "PATCH",
 			headers: {
@@ -182,7 +182,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		expect(data.error.code).toBe("version_required");
 	});
 
-	it("PATCH /entries/:id maps optimistic lock conflict to 409 and returns serverVersion", async () => {
+	it("WRITE-S2 PATCH /entries/:id maps optimistic lock conflict to 409 and returns serverVersion", async () => {
 		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000008", {
 			method: "PATCH",
 			headers: {

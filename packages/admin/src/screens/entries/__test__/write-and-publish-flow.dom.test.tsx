@@ -150,7 +150,7 @@ afterEach(() => {
 });
 
 describe("flow: write and publish (steps 09–15)", () => {
-	it("keeps the save button in the header, with no shortcut on it, and saves with the button and with ⌘S", async () => {
+	it("WRITE-S1 keeps the save button in the header, with no shortcut on it, and saves with the button and with ⌘S", async () => {
 		renderEdit();
 		await title();
 		// A button shows no shortcut, and the save button is there while nothing is changed.
@@ -183,7 +183,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(status()).toBe("초안");
 	});
 
-	it("blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
+	it("WRITE-P1 blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
 		server.publishRefusal = [missingCategory, noAlt(0), noAlt(1)];
 		renderEdit();
 		await title();
@@ -197,7 +197,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
-	it("sends nothing to publish while a refusal is the answer, and the entry stays a draft", async () => {
+	it("WRITE-P1 sends nothing to publish while a refusal is the answer, and the entry stays a draft", async () => {
 		server.publishRefusal = [missingCategory];
 		renderEdit();
 		await title();
@@ -211,7 +211,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		).toBe(false);
 	});
 
-	it("lists the to-dos fixed along the way as check rows, and says nothing is left when they are all gone", async () => {
+	it("WRITE-P1 lists the to-dos fixed along the way as check rows, and says nothing is left when they are all gone", async () => {
 		server.checkAnswer = { issues: [missingCategory, noAlt(0), noAlt(1)], warnings: [] };
 		renderEdit();
 		fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 2" }));
@@ -228,7 +228,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(list.queryByRole("button")).toBeNull();
 	});
 
-	it("publishes with the version it saved, tells it in a toast whose 보기 opens the public page, and the button then reads 발행됨, dimmed", async () => {
+	it("WRITE-P2 publishes with the version it saved, tells it in a toast whose 보기 opens the public page, and the button then reads 발행됨, dimmed", async () => {
 		renderEdit();
 		fireEvent.change(await title(), { target: { value: "발행할 글" } });
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
@@ -250,7 +250,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(done.hasAttribute("disabled")).toBe(true);
 	});
 
-	it("after a change the status reads 수정 중 and the publish menu has two rows: keep the date, or republish with today's date", async () => {
+	it("WRITE-P5 after a change the status reads 수정 중 and the publish menu has two rows: keep the date, or republish with today's date", async () => {
 		server.entry = {
 			...draft,
 			status: "published",
@@ -276,7 +276,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		await waitFor(() => expect(status()).toBe("발행됨"));
 	});
 
-	it("keeps the original date when the main half is pressed", async () => {
+	it("WRITE-P5 keeps the original date when the main half is pressed", async () => {
 		server.entry = {
 			...draft,
 			status: "published",
@@ -322,7 +322,7 @@ describe("flow: saved elsewhere first", () => {
 		return await screen.findByRole("alert");
 	}
 
-	it("shows a notice strip above the editor, not a dialog: the time it was saved, and compare and load the server version", async () => {
+	it("WRITE-C1 shows a notice strip above the editor, not a dialog: the time it was saved, and compare and load the server version", async () => {
 		const strip = within(await conflicted());
 		expect(strip.getByText("다른 곳에서 10:41에 먼저 저장했어요")).toBeInTheDocument();
 		expect(strip.getByText(tEntryCompare("conflict.meta"))).toBeInTheDocument();
@@ -335,7 +335,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(((await title()) as HTMLInputElement).value).toBe("내 입력");
 	});
 
-	it("loads the server version from the strip without reloading the page, and drops the local copy", async () => {
+	it("WRITE-C2 loads the server version from the strip without reloading the page, and drops the local copy", async () => {
 		const strip = within(await conflicted());
 		fireEvent.click(strip.getByRole("button", { name: tEntryCompare("loadServer") }));
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
@@ -344,7 +344,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(saves()).toHaveLength(1);
 	});
 
-	it("compares on a screen of its own: both entries side by side with the differences counted, the way back, and the status bar's cell", async () => {
+	it("WRITE-C3 compares on a screen of its own: both entries side by side with the differences counted, the way back, and the status bar's cell", async () => {
 		await conflicted();
 		act(() => nav.setSearch("compare=conflict"));
 		expect(
@@ -366,7 +366,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(screen.queryByRole("textbox", { name: tScreens("column.title") })).toBeNull();
 	});
 
-	it("picks the server version on the compare screen, and goes back to the editor with it", async () => {
+	it("WRITE-C3 picks the server version on the compare screen, and goes back to the editor with it", async () => {
 		await conflicted();
 		act(() => nav.setSearch("compare=conflict"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("loadServer") }));
@@ -375,7 +375,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
 	});
 
-	it("picks my input on the compare screen: it is saved on top of the server's version without asking again, and the editor opens", async () => {
+	it("WRITE-C3 picks my input on the compare screen: it is saved on top of the server's version without asking again, and the editor opens", async () => {
 		await conflicted();
 		act(() => nav.setSearch("compare=conflict"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("saveMine") }));
@@ -389,7 +389,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("goes back to the editor from the compare screen with the conflict still there", async () => {
+	it("WRITE-C3 goes back to the editor from the compare screen with the conflict still there", async () => {
 		await conflicted();
 		act(() => nav.setSearch("compare=conflict"));
 		await screen.findByRole("heading", { level: 1, name: tEntryCompare("heading.conflict") });
@@ -398,7 +398,7 @@ describe("flow: saved elsewhere first", () => {
 		expect(((await title()) as HTMLInputElement).value).toBe("내 입력");
 	});
 
-	it("leaves the compare address when there is nothing to compare", async () => {
+	it("WRITE-C3 leaves the compare address when there is nothing to compare", async () => {
 		nav.setSearch("compare=conflict");
 		renderEdit();
 		await title();
@@ -423,7 +423,7 @@ describe("flow: browser draft on reopening", () => {
 		});
 	}
 
-	it("shows a notice strip when the entry opens: when it was kept, and compare, load and discard", async () => {
+	it("WRITE-R2 shows a notice strip when the entry opens: when it was kept, and compare, load and discard", async () => {
 		keepDraft();
 		renderEdit();
 		const sentence = await screen.findByText(tEntryCompare("draft.title"));
@@ -440,7 +440,7 @@ describe("flow: browser draft on reopening", () => {
 		expect((await bar()).getAllByText(tEntries("save.local-only")).length).toBeGreaterThan(0);
 	});
 
-	it("loads the draft into the editor from the strip, and discards it from the strip", async () => {
+	it("WRITE-R2 loads the draft into the editor from the strip, and discards it from the strip", async () => {
 		keepDraft();
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("load") }));
@@ -458,7 +458,7 @@ describe("flow: browser draft on reopening", () => {
 		expect(((await title()) as HTMLInputElement).value).toBe("첫 번째 글");
 	});
 
-	it("compares the draft with the server copy on the compare screen, and picks the draft there", async () => {
+	it("WRITE-R2 compares the draft with the server copy on the compare screen, and picks the draft there", async () => {
 		server.entry = { ...draft, changedAt: "2026-10-26T00:58:00.000Z" };
 		keepDraft();
 		renderEdit();
@@ -475,7 +475,7 @@ describe("flow: browser draft on reopening", () => {
 		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("브라우저에 남은 제목"));
 	});
 
-	it("discards the draft from the compare screen and goes back to the editor with the server's copy", async () => {
+	it("WRITE-R2 discards the draft from the compare screen and goes back to the editor with the server's copy", async () => {
 		keepDraft();
 		renderEdit();
 		await screen.findByRole("button", { name: tEntryCompare("load") });

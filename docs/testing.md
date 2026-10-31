@@ -132,7 +132,7 @@
 
 | 무엇 | 어떻게 |
 |---|---|
-| 중요한 코드가 망가지면 테스트가 알아채는지 | StrykerJS로 파일 하나씩(`pnpm --filter @monti-cms/core test:mutation --mutate src/…`). 🔴 기능을 정리할 때만 쓴다. 바꿈마다 그것을 잡는 테스트가 모두 남으므로, 그 테스트만 잡는 바꿈(테스트 하나가 더하는 것)도 여기서 본다 |
+| 중요한 코드가 망가지면 테스트가 알아채는지 | StrykerJS로 파일 하나씩(`pnpm --filter @monti-cms/core test:mutation --mutate src/…`, admin도 같다). 🔴 기능을 정리할 때만 쓴다. 바꿈마다 그것을 잡는 테스트가 모두 남으므로, 그 테스트만 잡는 바꿈(테스트 하나가 더하는 것)도 여기서 본다 |
 | 어떤 테스트도 돌리지 않는 코드 | Vitest 커버리지. 점수가 아니라 빈틈의 지도로 읽는다 |
 | 시간 | Vitest JSON 리포터 |
 | 불안정한 테스트와 순서에 기대는 테스트 | `scripts/test-metrics/repeat-runs.mjs`, 그대로 한 번과 섞어서 한 번 |

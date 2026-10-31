@@ -107,7 +107,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			return used.has(slug);
 		}
 
-		it("does not show drafts in public lists or single reads", async () => {
+		it("WRITE-P3 does not show drafts in public lists or single reads", async () => {
 			const draft = await createEntry({ collection: content, slug: "draft-only", metadata: { title: "초안" } });
 
 			expect(draft.status).toBe("draft");
@@ -118,7 +118,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("shows the canonical slug, body, and metadata in public reads once published", async () => {
+		it("WRITE-P3 shows the canonical slug, body, and metadata in public reads once published", async () => {
 			await createPublishedEntry({
 				collection: content,
 				slug: "live-post",
@@ -140,7 +140,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			}
 		});
 
-		it("omits the body in list reads by default and includes it only on request", async () => {
+		it("WRITE-P3 omits the body in list reads by default and includes it only on request", async () => {
 			await createPublishedEntry({ collection: content, slug: "list-body", text: "목록 본문" });
 			const withoutBody = await store.listPublishedEntries({ collections: [content] });
 			const withBody = await store.listPublishedEntries({ collections: [content], includeBody: true });
@@ -150,7 +150,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(contentOf(withBody.find((row) => row.slug === "list-body")?.doc)).toEqual(contentOf(docOf("목록 본문")));
 		});
 
-		it("includes the body in single reads by default", async () => {
+		it("WRITE-P3 includes the body in single reads by default", async () => {
 			await createPublishedEntry({ collection: content, slug: "single-body", text: "# 단건 본문" });
 			const lookup = await store.getPublishedEntryBySlug({ collection: content, slug: "single-body" });
 
@@ -160,7 +160,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			}
 		});
 
-		it("disappears from public reads once archived", async () => {
+		it("WRITE-P3 disappears from public reads once archived", async () => {
 			const published = await createPublishedEntry({ collection: content, slug: "to-archive" });
 
 			expect(await publishedSlugs([content])).toContain("to-archive");
@@ -186,7 +186,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("resolves the old slug as an alias and returns the canonical slug after a slug change", async () => {
+		it("WRITE-P4 resolves the old slug as an alias and returns the canonical slug after a slug change", async () => {
 			const published = await createPublishedEntry({ collection: content, slug: "before-rename" });
 			const saved = await seedSave(store, published.id, {
 				expectedVersion: published.version,
@@ -211,7 +211,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 		});
 
 		it.skipIf(!tagLikeRelation)(
-			"keeps the existing published snapshot until re-publish when a published entry's working copy is edited",
+			"WRITE-P3 keeps the existing published snapshot until re-publish when a published entry's working copy is edited",
 			async () => {
 				const tagCollection = tagLikeRelation?.to ?? recordCollection;
 				const tagField = tagLikeRelation?.name ?? "";
@@ -294,7 +294,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 				expect(republished.status).toBe("published");
 			},
 		);
-		it("does not leave a slug that went back to private as an alias either", async () => {
+		it("WRITE-P4 does not leave a slug that went back to private as an alias either", async () => {
 			const published = await createPublishedEntry({ collection: content, slug: "alias-then-archive" });
 			const saved = await seedSave(store, published.id, {
 				expectedVersion: published.version,
@@ -343,7 +343,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(await publishedSlugs([otherRecordCollection])).toContain("public-category");
 		});
 
-		it("reads several collections at once without mixing in unpublished items", async () => {
+		it("WRITE-P3 reads several collections at once without mixing in unpublished items", async () => {
 			await createEntry({ collection: recordCollection, slug: "draft-tag", metadata: { title: "초안 태그" } });
 
 			const rows = await store.listPublishedEntries({ collections: testSite.COLLECTIONS });
@@ -352,14 +352,14 @@ export const publicReadContract: ContractSuite = (factory) => {
 			expect(rows.map((row) => row.slug)).not.toContain("draft-tag");
 		});
 
-		it("rejects a collection that is not allowed", async () => {
+		it("WRITE-P3 rejects a collection that is not allowed", async () => {
 			const invalid = { code: "invalid_input" };
 			await expect(store.listPublishedEntries({ collections: ["secret"] })).rejects.toMatchObject(invalid);
 			await expect(store.listPublishedEntries({ collections: [] })).rejects.toMatchObject(invalid);
 			await expect(store.getPublishedEntryBySlug({ collection: "secret", slug: "x" })).rejects.toMatchObject(invalid);
 		});
 
-		it("rejects an empty slug", async () => {
+		it("WRITE-P3 rejects an empty slug", async () => {
 			await expect(store.getPublishedEntryBySlug({ collection: content, slug: "" })).rejects.toThrow();
 		});
 	});
