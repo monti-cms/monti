@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../../test/any-site";
 import { docOf } from "../../../../../test/stored-content";
 import type { ReferenceOccurrence } from "../../../types";
@@ -673,6 +673,82 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(await names("uploadedAsc")).toEqual(["b-medium.png", "A-small.png", "c-large.png"]);
 			expect(await names("name")).toEqual(["A-small.png", "b-medium.png", "c-large.png"]);
 			expect(await names("size")).toEqual(["c-large.png", "b-medium.png", "A-small.png"]);
+		});
+	});
+
+	describe("MediaMetadataStore: pages, names and originals", () => {
+		let session: Awaited<ReturnType<typeof factory.create>>;
+		let store: typeof session.store;
+		const ready = async (filename: string) => {
+			const media = await store.createMediaAsset({
+				filename,
+				mimeType: "image/png",
+				byteSize: 10,
+				stagingKey: `staging/${filename}`,
+			});
+			await store.completeMediaAsset({
+				id: media.id,
+				storageKey: `media/${filename}`,
+				mimeType: "image/png",
+				byteSize: 10,
+				width: 1,
+				height: 1,
+			});
+			return media.id;
+		};
+
+		beforeEach(async () => {
+			session = await factory.create();
+			store = session.store;
+		});
+
+		afterEach(async () => {
+			await session.close();
+		});
+
+		it("MEDIA-B1 lists the next files on the next page", async () => {
+			for (const name of ["a.png", "b.png", "c.png"]) await ready(name);
+			const page = async (n: number) =>
+				(await store.listMediaAssets({ sort: "name", page: n, pageSize: 1 })).items.map((item) => item.filename);
+			expect([await page(1), await page(2), await page(3)]).toEqual([["a.png"], ["b.png"], ["c.png"]]);
+		});
+
+		it("MEDIA-B4 renames a file in the composed form, so the same name typed on two systems is one name", async () => {
+			const id = await ready("rename.png");
+			const renamed = await store.updateMediaMetadata({ id, filename: "가나.png".normalize("NFD") });
+			expect(renamed.filename).toBe("가나.png".normalize("NFC"));
+			expect((await store.getMediaAsset(id))?.filename).toBe("가나.png".normalize("NFC"));
+		});
+
+		it("MEDIA-U3 keeps the original an upload brings, from the upload to the finished file", async () => {
+			const media = await store.createMediaAsset({
+				filename: "photo.webp",
+				mimeType: "image/webp",
+				byteSize: 10,
+				stagingKey: "staging/photo.webp",
+				original: { mimeType: "image/jpeg", byteSize: 50, stagingKey: "staging/photo-original.jpg" },
+			});
+			expect((await store.getMediaAsset(media.id))?.original).toMatchObject({
+				stagingKey: "staging/photo-original.jpg",
+				mimeType: "image/jpeg",
+				byteSize: 50,
+			});
+			await store.completeMediaAsset({
+				id: media.id,
+				storageKey: "media/photo.webp",
+				mimeType: "image/webp",
+				byteSize: 10,
+				width: 2,
+				height: 1,
+				original: { storageKey: "media/photo-original.jpg", mimeType: "image/jpeg", byteSize: 50, width: 4, height: 2 },
+			});
+			expect((await store.getMediaAsset(media.id))?.original).toMatchObject({
+				storageKey: "media/photo-original.jpg",
+				mimeType: "image/jpeg",
+				byteSize: 50,
+				width: 4,
+				height: 2,
+			});
 		});
 	});
 };

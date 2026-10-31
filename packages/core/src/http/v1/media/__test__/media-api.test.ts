@@ -321,6 +321,109 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
 
+	describe("completing an upload", () => {
+		const id = "00000000-0000-4000-8000-000000000011";
+		const png = () => {
+			const bytes = new Uint8Array(24);
+			bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52], 0);
+			bytes[18] = 0x01; // width 256
+			bytes[22] = 0x01; // height 256
+			return bytes;
+		};
+		const complete = () =>
+			handleComplete(
+				new Request(`http://localhost/api/monti/v1/media/${id}/complete`, {
+					method: "POST",
+					headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+				}),
+				{ params: Promise.resolve({ id }), cms },
+			);
+		const pending = (extra: Record<string, unknown> = {}) =>
+			mockGetMediaAsset.mockResolvedValue({
+				id,
+				status: "pending",
+				stagingKey: `staging/${id}/pic.png`,
+				filename: "pic.png",
+				mimeType: "image/png",
+				byteSize: 24,
+				...extra,
+			});
+
+		beforeEach(() => {
+			mockHeadFile.mockImplementation(async ({ key }: { key: string }) => ({
+				key,
+				contentType: "image/png",
+				contentLength: 24,
+				etag: `etag-${key}`,
+			}));
+			mockPromoteFile.mockResolvedValue({});
+			mockCompleteMediaAsset.mockImplementation(async (input: Record<string, unknown>) => ({
+				...input,
+				status: "ready",
+			}));
+		});
+
+		it("MEDIA-U2 refuses bytes that are not an image the site takes, marks the upload failed and promotes nothing", async () => {
+			pending();
+			mockReadFile.mockResolvedValue(new TextEncoder().encode("<svg xmlns='http://www.w3.org/2000/svg'/>"));
+			const res = await complete();
+			expect(res.status).toBe(415);
+			expect((await res.json()).error.code).toBe("unsupported_media_type");
+			expect(mockFailMediaAsset).toHaveBeenCalledWith(id);
+			expect(mockPromoteFile).not.toHaveBeenCalled();
+		});
+
+		it("MEDIA-U3 promotes the original next to the web file and records it with its size", async () => {
+			pending({ original: { stagingKey: `staging/${id}/pic-original.png`, mimeType: "image/png", byteSize: 24 } });
+			mockReadFile.mockResolvedValue(png());
+			expect((await complete()).status).toBe(200);
+			expect(mockPromoteFile).toHaveBeenCalledWith(
+				expect.objectContaining({ stagingKey: `staging/${id}/pic-original.png`, finalKey: `media/${id}-original.png` }),
+			);
+			expect(mockCompleteMediaAsset).toHaveBeenCalledWith(
+				expect.objectContaining({
+					original: {
+						storageKey: `media/${id}-original.png`,
+						mimeType: "image/png",
+						byteSize: 24,
+						width: 256,
+						height: 256,
+					},
+				}),
+			);
+		});
+
+		it("MEDIA-U2 refuses to complete an upload that already failed, and touches nothing", async () => {
+			pending({ status: "failed" });
+			const res = await complete();
+			expect(res.status).toBe(409);
+			expect(mockReadFile).not.toHaveBeenCalled();
+			expect(mockPromoteFile).not.toHaveBeenCalled();
+			expect(mockCompleteMediaAsset).not.toHaveBeenCalled();
+		});
+	});
+
+	it("MEDIA-U3 POST /media/uploads creates the file in the folder it was dropped on", async () => {
+		mockPrepareUpload.mockResolvedValue({
+			url: "https://r2/upload",
+			method: "PUT",
+			requiredHeaders: {},
+			expiresAt: new Date(),
+		});
+		mockCreateMediaAsset.mockResolvedValue({});
+		const folderId = "00000000-0000-4000-8000-0000000000f1";
+		const res = await handleUploads(
+			new Request("http://localhost/api/monti/v1/media/uploads", {
+				method: "POST",
+				headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+				body: JSON.stringify({ filename: "photo.png", mimeType: "image/png", byteSize: 1000, folderId }),
+			}),
+			{ cms },
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateMediaAsset).toHaveBeenCalledWith(expect.objectContaining({ folderId }));
+	});
+
 	it("MEDIA-U2 POST /media/uploads passes the declared size of each file to the upload ticket", async () => {
 		mockPrepareUpload.mockResolvedValue({
 			url: "https://r2/upload",
