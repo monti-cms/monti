@@ -242,10 +242,8 @@ block's source, are left as is.
 ## Development
 
 ```bash
-pnpm --filter @monti-cms/ai test:run        # Example blog config + another site config
-pnpm --filter @monti-cms/ai test:other-site # Another site config only (`test/other-site.config.ts`)
+pnpm --filter @monti-cms/ai test:run
 ```
 
-The other site config attaches the AI field actions to that site's own field names (`excerpt`, `topicIds`, `authorId`, `metaTitle`, …).
-The config-independent check is `src/__test__/any-site.test.ts` (whether field actions attach to fields of the right kind and run with
-slot inputs).
+The tests are only the API key storage checks (`KEY-A1`–`KEY-A3` in `src/__test__/settings.test.ts`). The rest were removed on 2026-11-01
+because the package is being rewritten around the agent (#312), which brings its own tests.
