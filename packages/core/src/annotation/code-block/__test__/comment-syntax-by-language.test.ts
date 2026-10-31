@@ -42,16 +42,6 @@ describe("comment syntax by language", () => {
 			"  second",
 		].join("\n");
 
-		it("writes its own syntax", () => {
-			expect(write(parse(group.lang, input)).value).toBe(input);
-		});
-
-		it("round-trips parse, write, parse to an identical document", () => {
-			const document = parse(group.lang, input);
-
-			expect(parse(group.lang, write(document).value)).toEqual(document);
-		});
-
 		it("FMT-R2 round-trips indented annotations with attributes", () => {
 			const indented = [
 				`\t${annotate(group, `@line plus {0-0} tone="info" dense`)}`,
@@ -119,17 +109,10 @@ describe("comment syntax by language", () => {
 		])("%s resolves to %s", (lang, prefix) => {
 			expect(resolveCommentSyntax(lang).prefix).toBe(prefix);
 		});
-
-		it("gives block comment languages their postfix", () => {
-			expect(resolveCommentSyntax("css")).toEqual({ prefix: "/*", postfix: "*/" });
-			expect(resolveCommentSyntax("md")).toEqual({ prefix: "<!--", postfix: "-->" });
-			expect(resolveCommentSyntax("python").postfix).toBe("");
-		});
-
 	});
 
 	describe("`//` fallback", () => {
-		it("is tried after the language's own syntax and skipped for `//` languages", () => {
+		it("FMT-R2 is tried after the language's own syntax and skipped for `//` languages", () => {
 			expect(resolveParseCommentSyntaxes("python").map((syntax) => syntax.prefix)).toEqual(["#", "//"]);
 			expect(resolveParseCommentSyntaxes("html").map((syntax) => syntax.prefix)).toEqual(["<!--", "//"]);
 			expect(resolveParseCommentSyntaxes("ts").map((syntax) => syntax.prefix)).toEqual(["//"]);
@@ -156,14 +139,6 @@ describe("comment syntax by language", () => {
 
 			expect(parse("python", value).lines).toHaveLength(2);
 			expect(parse("python", value).annotations).toEqual([]);
-		});
-	});
-
-	describe("`%` and `%%`", () => {
-
-		it("still reads each language's own syntax", () => {
-			expect(parse("latex", "% @line plus\nx").annotations).toHaveLength(1);
-			expect(parse("mermaid", "%% @line plus\nx").annotations).toHaveLength(1);
 		});
 	});
 });

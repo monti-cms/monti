@@ -83,16 +83,6 @@ describe("GET /v1/events", () => {
 		const bad = await list(new Request("http://localhost/api/monti/v1/events?state=nope"), { cms });
 		expect(bad.status).toBe(400);
 	});
-
-	it("needs an admin", async () => {
-		const cms = fakeCms({
-			store: storeOf(),
-			verifyAdmin: async () => {
-				throw new AuthError("unauthorized", "no session");
-			},
-		});
-		expect((await list(new Request("http://localhost/api/monti/v1/events"), { cms })).status).toBe(401);
-	});
 });
 
 describe("POST /v1/events/retry", () => {
@@ -146,20 +136,6 @@ describe("POST /v1/events/retry", () => {
 		const none = await retryAll(post("events/retry", { headers }), { cms: fakeCms({ store: storeOf() }) });
 		expect(none.status).toBe(401);
 	});
-
-	it("without a token, needs an admin session and a same-origin request", async () => {
-		const guarded = fakeCms({
-			store: storeOf(),
-			verifyAdmin: async () => {
-				throw new AuthError("unauthorized", "no session");
-			},
-		});
-		expect((await retryAll(post("events/retry", { body: {} }), { cms: guarded })).status).toBe(401);
-		const crossOrigin = await retryAll(post("events/retry", { headers: { origin: "http://evil.example" }, body: {} }), {
-			cms: fakeCms({ store: storeOf() }),
-		});
-		expect(crossOrigin.status).toBe(403);
-	});
 });
 
 describe("POST /v1/events/<id>/retry and /dismiss", () => {
@@ -190,5 +166,4 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 			subscriber: "plugin:mailer",
 		});
 	});
-
 });

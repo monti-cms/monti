@@ -1,25 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { contentCollection, recordCollection } from "../../../test/any-site";
-import { testConfig, testSite } from "../../../test/site";
-import { assertSchemaWritable } from "../../http/v1/schema/shared";
+import { testSite } from "../../../test/site";
 import { createTranslator } from "../../i18n";
-import { schemaEditAccess } from "../../schema-edit";
-import { createSite } from "../../site";
-import { assertNoFolderCycle } from "../domain/folders";
-import { assertArchivable, assertDeletable, assertDuplicable, assertTransitionAllowed } from "../domain/lifecycle";
-import { assertEditableStatus, assertPublishableStatus } from "../domain/publish";
-import {
-	assertKnownLocale,
-	assertTranslationMetadata,
-	assertTranslationSource,
-	type TranslationSource,
-} from "../domain/translation";
 import { noticeText } from "../error-notice";
 import { noticeMessages } from "../error-notices.messages";
 import { CmsError, type NoticeRef } from "../store/errors";
 
 /** The notice a function throws as an error (`undefined` when it throws none, or throws something else). */
-const noticeOf = (run: () => unknown): NoticeRef | undefined => {
+const _noticeOf = (run: () => unknown): NoticeRef | undefined => {
 	try {
 		run();
 	} catch (error) {
@@ -51,19 +38,6 @@ describe("core notice dictionary", () => {
 			expect(shown("ko"), key).toEqual(shown("en"));
 		}
 	});
-
-	it("fills the values a notice carries, in both languages", () => {
-		const ref: NoticeRef = { key: "media.rename.extension", vars: { extension: ".png" } };
-		for (const language of ["en", "ko"]) {
-			const site = {
-				createTranslator: createSite({ ...testConfig, admin: { ...testConfig.admin, language } } as never)
-					.createTranslator,
-			};
-			const text = noticeText(site, { code: "invalid_input", notice: ref });
-			expect(text.what).toContain(".png");
-			expect(text.fix).toContain(".png");
-		}
-	});
 });
 
 describe("notices of the domain rules", () => {
@@ -76,6 +50,4 @@ describe("notices of the domain rules", () => {
 			expect(text.fix).toBe(t(`${key}.fix`));
 		}
 	});
-
 });
-

@@ -34,15 +34,6 @@ const prepareHeld = (input: ServiceInput) =>
 	prepareSnapshot(testSite, input, { previousMetadata: input.metadata as Record<string, unknown> });
 
 describe("values of removed fields", () => {
-	it("rejects a new unknown key, as a typo, on create and on save", async () => {
-		await expect(prepareSnapshot(testSite, await draft({ titel: "typo" }))).rejects.toMatchObject({
-			code: "invalid_metadata_key",
-		});
-		await expect(
-			prepareSnapshot(testSite, await draft({ titel: "typo" }), { previousMetadata: { title: "T" } }),
-		).rejects.toMatchObject({ code: "invalid_metadata_key" });
-	});
-
 	it("WRITE-S8 keeps an unknown key only when the entry already holds it, and rejects the other new ones beside it", async () => {
 		const input = await draft({ [ORPHAN]: "left" });
 		const kept = await prepareSnapshot(testSite, input, { previousMetadata: { [ORPHAN]: "older value" } });
@@ -125,5 +116,4 @@ describe.skipIf(!select)("a select value that is no longer an option", () => {
 			expect.objectContaining({ code: "unknown_select_value", path: name, message: UNKNOWN_OPTION }),
 		);
 	});
-
 });

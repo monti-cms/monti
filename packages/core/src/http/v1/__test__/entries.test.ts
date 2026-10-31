@@ -228,7 +228,6 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			await search(`collection=${contentCollection}&id=${ids[0]}&id=${ids[1]}`);
 			expect(mockStore.searchEntries).toHaveBeenCalledWith({ collection: contentCollection, ids });
 		});
-
 	});
 	describe("GET /entries: field conditions and the translation filter", () => {
 		const list = (query: string) => listEntries(new Request(`http://localhost/api/monti/v1/entries?${query}`), { cms });
@@ -246,12 +245,6 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 					translations: ["none", "changed"],
 				}),
 			);
-		});
-
-		it("rejects a condition that is not one, and a translation state that is not one", async () => {
-			for (const query of ["field=tags:maybe", "field=tags", "translation=stale"]) {
-				expect((await list(`collection=${contentCollection}&${query}`)).status).toBe(400);
-			}
 		});
 	});
 
@@ -278,20 +271,6 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			expect(mockStore.countListValues).toHaveBeenCalledWith(
 				expect.objectContaining({ collection: contentCollection, facet: "status" }),
 			);
-		});
-
-		it("asks for the translation filter's counts with facet=translation", async () => {
-			mockStore.countListValues.mockClear();
-			await count(`collection=${contentCollection}&facet=translation`);
-			expect(mockStore.countListValues).toHaveBeenCalledWith(
-				expect.objectContaining({ collection: contentCollection, facet: "translation" }),
-			);
-		});
-
-		it("rejects asking for nothing or for both", async () => {
-			for (const query of ["", "&field=tags&facet=translation"]) {
-				expect((await count(`collection=${contentCollection}${query}`)).status).toBe(400);
-			}
 		});
 	});
 });

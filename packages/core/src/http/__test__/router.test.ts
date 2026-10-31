@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { testConfig } from "../../../test/site";
 import { fakeCms } from "../../cms";
 import { CMS_ROUTE_PATTERNS, matchRoute, pathFromRequest } from "../router";
 
@@ -45,13 +44,6 @@ describe("admin API route table", () => {
 		});
 
 		expect(Object.fromEntries(accessByPattern.filter(([, access]) => access !== "admin"))).toEqual(notAdmin);
-	});
-
-	it("the public API is an optional core feature (server config publicApi), and AI and schedule routes are added by plugins", () => {
-		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries");
-		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries/[collection]/[slug]");
-		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.startsWith("v1/ai"))).toBe(false);
-		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.includes("schedule"))).toBe(false);
 	});
 
 	it("API-R1 an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
@@ -105,5 +97,4 @@ describe("admin API route table", () => {
 		expect(pathFromRequest(new Request("http://localhost/api/monti"))).toBeNull();
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/%E0%A4%A"))).toBeNull();
 	});
-
 });

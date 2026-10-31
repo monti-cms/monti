@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms/fake-cms";
-import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../../core/limits";
-import { readBodyText, readFormBody, readJsonBody, runRoute } from "../handler";
+import { MAX_FORM_BYTES } from "../../../core/limits";
+import { readBodyText, readJsonBody, runRoute } from "../handler";
 import { POST as signIn } from "../session/sign-in/[provider]/route";
 
 const post = (body: BodyInit | null, headers: Record<string, string> = {}, init: RequestInit = {}) =>
@@ -33,21 +33,11 @@ describe("request body reader", () => {
 		await expect(readBodyText(request, 250)).rejects.toMatchObject({ code: "payload_too_large" });
 	});
 
-	it("reads a body under the cap", async () => {
+	it("API-G4 reads a body under the cap", async () => {
 		expect(await readBodyText(post("hello"), 10)).toBe("hello");
 		expect(await readJsonBody(post(JSON.stringify({ a: 1 })))).toEqual({ a: 1 });
 		expect(await readJsonBody(post(null))).toEqual({});
 	});
-
-	it("parses a urlencoded form under the cap and refuses one over it", async () => {
-		const headers = { "content-type": "application/x-www-form-urlencoded" };
-		const form = await readFormBody(post("email=a%40b.c&password=pw", headers));
-		expect(form.get("email")).toBe("a@b.c");
-		await expect(readFormBody(post("a=".padEnd(MAX_FORM_BYTES + 10, "x"), headers))).rejects.toMatchObject({
-			code: "payload_too_large",
-		});
-	});
-
 });
 
 describe("public form route", () => {

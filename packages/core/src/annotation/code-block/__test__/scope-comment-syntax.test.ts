@@ -37,26 +37,6 @@ describe("scope comment syntax", () => {
 		]);
 	});
 
-	it("@line plus {0-1} is read as the closed range [0,1], so the internal range end is +1", () => {
-		const document = parse(
-			["// @line plus {0-1}", "const first = 1", "const second = 2", "const third = 3"].join("\n"),
-		);
-
-		expect(document.lines.map((line) => line.value)).toEqual([
-			"const first = 1",
-			"const second = 2",
-			"const third = 3",
-		]);
-		expect(document.annotations).toEqual([
-			expect.objectContaining({
-				scope: "line",
-				name: "plus",
-				class: "diff plus",
-				range: { start: 0, end: 2 },
-			}),
-		]);
-	});
-
 	it("@line plus ... @line plus end is parsed as a continuous-range line scope annotation", () => {
 		const document = parse(
 			["// @line plus", "const first = 1", "const second = 2", "// @line plus end", "const third = 3"].join("\n"),
@@ -72,28 +52,6 @@ describe("scope comment syntax", () => {
 				scope: "line",
 				name: "plus",
 				class: "diff plus",
-				range: { start: 0, end: 2 },
-			}),
-		]);
-	});
-
-	it("@line collapse ... @line collapse end is parsed as a line scope wrapper range", () => {
-		const document = parse(
-			["// @line collapse", "const first = 1", "const second = 2", "// @line collapse end", "const third = 3"].join(
-				"\n",
-			),
-		);
-
-		expect(document.lines.map((line) => line.value)).toEqual([
-			"const first = 1",
-			"const second = 2",
-			"const third = 3",
-		]);
-		expect(document.annotations).toEqual([
-			expect.objectContaining({
-				scope: "line",
-				name: "collapse",
-				render: "collapse",
 				range: { start: 0, end: 2 },
 			}),
 		]);

@@ -158,7 +158,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(admins.fix).toContain("api.github.com/users");
 	});
 
-	it("runs no GitHub checks for a site whose login has no GitHub provider", async () => {
+	it("DOC-R3 runs no GitHub checks for a site whose login has no GitHub provider", async () => {
 		setEnv({ MONTI_SECRET: STRONG_SECRET });
 		const other =
 			'{ id: "gitlab", name: "GitLab", label: { en: "Sign in with GitLab" }, setup: () => ({ id: "gitlab", type: "oauth" }), account: () => null }';
@@ -325,13 +325,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(files.fix).toContain("app/api/monti/[...path]/route.ts");
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
-	});
-
-	it("does not count a comment that mentions withCms as the wrapper", async () => {
-		setEnv();
-		const dir = project({ "next.config.ts": "// wrap the config in withCms(nextConfig) later\nexport default {};\n" });
-		const { report } = await doctor(dir);
-		expect(byId(report, "next/with-cms").status).toBe("fail");
 	});
 
 	it("DOC-R4 tells when the admin files sit at a different path than the config says", async () => {

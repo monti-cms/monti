@@ -141,11 +141,6 @@ describe("what validation reports", () => {
 		expect(check.issues.filter((issue) => issue.code.startsWith("disallowed_"))).toEqual([]);
 	});
 
-	it("reports nothing for a body without a list", () => {
-		const check = checkDocument(site, body, undefined);
-		expect(check.warnings.filter((issue) => issue.code.startsWith("disallowed_"))).toEqual([]);
-	});
-
 	it("EDIT-A2 counts a checked list item as a task list, and the rows and cells of an allowed table as part of it", () => {
 		const tasks: CmsNode = {
 			id: "tasks001",

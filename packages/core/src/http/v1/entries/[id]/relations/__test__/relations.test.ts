@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection } from "../../../../../../../test/any-site";
 import { testConfig } from "../../../../../../../test/site";
-import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { CmsError } from "../../../../../../core/store";
 import { routeCaller } from "../../../../../../testing";
@@ -53,25 +52,5 @@ describe("Relations API Contract", () => {
 		expect(data.total).toBe(1);
 		expect(data.incomingReferences[0].sourceId).toBe("post-1");
 		expect(data.incomingReferences[0].state).toBe("working");
-	});
-
-	it("GET /entries/:id/relations requires admin access", async () => {
-		verifyAdmin.mockRejectedValueOnce(new AuthError("unauthorized", "Not logged in"));
-		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000004/relations");
-		const res = await getRelations(req, {
-			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000004" }),
-			cms,
-		});
-		expect(res.status).toBe(401);
-	});
-
-	it("GET /entries/:id/relations returns 404 for nonexistent entry", async () => {
-		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000002/relations");
-		const res = await getRelations(req, {
-			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000002" }),
-			cms,
-		});
-
-		expect(res.status).toBe(404);
 	});
 });

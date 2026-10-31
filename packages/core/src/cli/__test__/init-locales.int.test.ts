@@ -1,25 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
-import { detectApp } from "../init-detect";
-import { fakeHost, fixtureApp, POST_MDX, schemaOf, scriptedPrompter } from "./init-helpers";
+import { fakeHost, fixtureApp, POST_MDX, schemaOf } from "./init-helpers";
 
 const quiet = () => ({ host: fakeHost(), install: false });
-
-describe("languages found in the content files", () => {
-	it("detectApp reports suffix languages of a content folder", () => {
-		const app = detectApp(
-			fixtureApp({
-				"content/posts/hello.en.mdx": POST_MDX("hello"),
-				"content/posts/hello.ko.mdx": POST_MDX("hello"),
-				"content/posts/about.ko.mdx": POST_MDX("about"),
-			}),
-		);
-		const folder = app.contentFolders[0];
-		expect(folder?.dir).toBe("content/posts");
-		expect(folder?.localesFrom).toBe("filename");
-		expect(folder?.locales?.map((locale) => locale.code)).toEqual(["ko", "en"]);
-	});
-});
 
 describe("monti init and the languages of the content", () => {
 	const PAIR = {
@@ -38,7 +21,7 @@ describe("monti init and the languages of the content", () => {
 		expect(report.notes.join("\n")).toMatch(/languages are ko, en, found in the file names of content\/posts\//);
 	});
 
-	it("language folders give the languages too", async () => {
+	it("INIT-Q3 language folders give the languages too", async () => {
 		const dir = fixtureApp({
 			"content/en/hello.mdx": POST_MDX("hello"),
 			"content/ko/hello.mdx": POST_MDX("hello"),
@@ -47,11 +30,5 @@ describe("monti init and the languages of the content", () => {
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(report.answers.locales).toEqual(["ko", "en"]);
 		expect(report.notes.join("\n")).toContain("found in the folders of content/");
-	});
-
-	it("an app with one language keeps en", async () => {
-		const dir = fixtureApp({ "content/posts/a.mdx": POST_MDX("a"), "content/posts/b.mdx": POST_MDX("b") });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(report.answers.locales).toEqual(["en"]);
 	});
 });

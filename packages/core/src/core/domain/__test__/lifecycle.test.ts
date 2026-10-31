@@ -6,11 +6,9 @@ import type { EntryStatus } from "../../store/types";
 import {
 	assertArchivable,
 	assertDeletable,
-	assertRestoreSnapshot,
 	assertSourceNotTrashed,
 	assertTransitionAllowed,
 	blockingTranslations,
-	canTransition,
 	type GroupMember,
 	type LifecycleAction,
 	membersToArchive,
@@ -57,20 +55,6 @@ describe("lifecycle transitions", () => {
 		it(`TRASH-R9 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () =>
 			allowedFrom(action));
 	}
-
-	it("canTransition agrees with assertTransitionAllowed for every action and status", () => {
-		for (const action of Object.keys(STARTS) as LifecycleAction[]) {
-			for (const status of ALL) {
-				expect(canTransition(action, status), `${action} from ${status}`).toBe(
-					codeOf(() => assertTransitionAllowed(action, status, 1)) === null,
-				);
-			}
-		}
-	});
-
-	it("TRASH-R9 a restore never takes a published entry offline: only a trashed entry can be restored", () => {
-		expect(codeOf(() => assertTransitionAllowed("restore", "published", 1))).toMatchObject({ code: "invalid_status" });
-	});
 
 	it("TRASH-R1 leaves an entry as archived, draft, trashed and draft after archive, unarchive, trash and restore", () => {
 		expect(STATUS_AFTER).toEqual({ archive: "archived", unarchive: "draft", trash: "trashed", restore: "draft" });

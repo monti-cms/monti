@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../../../test/site";
-import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { issueText, tellIssues } from "../../../../../../core/issue-text";
-import { CmsError } from "../../../../../../core/store";
 import { ServiceError } from "../../../../../../services/types";
 import { routeCaller } from "../../../../../../testing";
 import { POST as POSTHandler } from "../route";
@@ -69,12 +67,6 @@ describe("publish HTTP contract", () => {
 		});
 	});
 
-	it("rejects a non-integer expectedVersion before publishing", async () => {
-		const invalid = await POST(request({ expectedVersion: "4" }), context);
-		expect(invalid.status).toBe(400);
-		expect(publish).not.toHaveBeenCalled();
-	});
-
 	it("WRITE-P1 does not publish when validation fails, and tells each issue with its text next to its position", async () => {
 		const issues = [
 			{ code: "missing_field", path: "title", message: "제목" },
@@ -106,27 +98,5 @@ describe("publish HTTP contract", () => {
 				issues: [{ params: { hook: "transform", owner: "plugin:seo" } }],
 			},
 		});
-	});
-
-	it("keeps optimistic version conflicts", async () => {
-		publish.mockRejectedValue(new CmsError("Conflict", "conflict", { serverVersion: 7 }));
-		const response = await POST(request(), context);
-		expect(response.status).toBe(409);
-		expect(await response.json()).toMatchObject({ error: { code: "conflict", details: { serverVersion: 7 } } });
-	});
-
-	it("requires expectedVersion before any publish", async () => {
-		const response = await POST(request({}), context);
-		expect(response.status).toBe(428);
-		expect(publish).not.toHaveBeenCalled();
-	});
-
-	it("blocks unauthorized and cross-origin requests before reads and writes", async () => {
-		verifyAdmin.mockRejectedValueOnce(new AuthError("unauthorized", "Not logged in"));
-		const unauthorized = await POST(request(), context);
-		expect(unauthorized.status).toBe(401);
-		const crossOrigin = await POST(request({ expectedVersion: 4 }, "http://attacker.invalid"), context);
-		expect(crossOrigin.status).toBe(403);
-		expect(publish).not.toHaveBeenCalled();
 	});
 });

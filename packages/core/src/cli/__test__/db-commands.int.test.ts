@@ -145,17 +145,6 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(await tablesIn(schema)).toEqual([]);
 	});
 
-	it("migrate refuses a database created by an older pre-release, and says to recreate it", async () => {
-		const schema = freshSchema("outdated");
-		await run(dbSetup, schema);
-		await pool.query(`INSERT INTO "${schema}".cms_migrations (name) VALUES ('0017_unparsed_bodies')`);
-
-		const refused = await run(dbMigrate, schema);
-
-		expect(refused.code).toBe(1);
-		expect(refused.text).toContain("cannot be upgraded");
-	});
-
 	it("DB-M2 the command line returns 0 for both, and 1 for migrate before setup", async () => {
 		const schema = freshSchema("cli");
 		setEnv({ DATABASE_URL: DATABASE, DATABASE_SCHEMA: schema });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { importsOf } from "../import-boundary";
 
 describe("import boundary: the config file stays out of client bundles", () => {
-	it("reads the imports a file makes at run time", () => {
+	it("DOC-B1 reads the imports a file makes at run time", () => {
 		expect(
 			importsOf(
 				[

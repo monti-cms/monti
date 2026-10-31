@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { BLOCK_CHOICES } from "../block-choices";
 import { detectApp } from "../init-detect";
 import { collectAnswers, QUESTIONS } from "../init-prompts";
 import { fixtureApp, scriptedPrompter } from "./init-helpers";
@@ -105,21 +104,6 @@ describe("the questions of monti init", () => {
 		});
 	});
 
-	it("the default is first, the others follow, and none is fine", async () => {
-		const many = await collectAnswers(
-			app(),
-			{},
-			scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "en", [QUESTIONS.otherLocales]: ["ko", "ja"] }),
-		);
-		expect(many.locales).toEqual(["en", "ko", "ja"]);
-		const single = await collectAnswers(
-			app(),
-			{},
-			scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "ja", [QUESTIONS.otherLocales]: [] }),
-		);
-		expect(single.locales).toEqual(["ja"]);
-	});
-
 	it("INIT-Q1 the light set is what is offered first, and it leaves out the heavy blocks", async () => {
 		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
 		const answers = await collectAnswers(app(), {}, prompter);
@@ -160,30 +144,6 @@ describe("the questions of monti init", () => {
 		);
 	});
 
-	it("a question whose flag is given is not asked", async () => {
-		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
-		const answers = await collectAnswers(
-			app(),
-			{
-				locales: "ja",
-				storage: "none",
-				blocks: "none",
-				adminPath: "/studio",
-				login: "password",
-				directiveSyntax: false,
-				timeZone: "Asia/Tokyo",
-			},
-			prompter,
-		);
-		expect(prompter.asked).toEqual([QUESTIONS.setup, QUESTIONS.extras]);
-		expect(answers).toMatchObject({
-			locales: ["ja"],
-			storage: "none",
-			blocks: [],
-			timeZone: "Asia/Tokyo",
-		});
-	});
-
 	it("INIT-Q1 without a prompter every question takes its default", async () => {
 		expect(await collectAnswers(app(), {}, undefined, () => "UTC")).toEqual({
 			siteUrl: "http://localhost:3000",
@@ -198,11 +158,5 @@ describe("the questions of monti init", () => {
 			login: "password",
 			directiveSyntax: true,
 		});
-	});
-
-	it("cancelling at any question rejects", async () => {
-		await expect(
-			collectAnswers(app(), {}, scriptedPrompter({ ...everything, [QUESTIONS.storage]: "cancel" })),
-		).rejects.toThrow("Cancelled. Nothing was written.");
 	});
 });

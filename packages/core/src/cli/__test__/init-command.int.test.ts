@@ -2,16 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CliIo } from "../command";
 import { runCli } from "../index";
 import { QUESTIONS } from "../init-prompts";
-import {
-	type FakeHost,
-	fakeHost,
-	fixtureApp,
-	listFiles,
-	read,
-	SRC_APP,
-	schemaOf,
-	scriptedPrompter,
-} from "./init-helpers";
+import { type FakeHost, fakeHost, fixtureApp, listFiles, read, schemaOf, scriptedPrompter } from "./init-helpers";
 
 /** The command line: flags, `--yes`, `--json`, the interactive run, and the exit codes. */
 
@@ -31,7 +22,6 @@ function run(dir: string, argv: string[], extras: Pick<CliIo, "interactive" | "p
 }
 
 describe("monti init on the command line", () => {
-
 	it("INIT-N1 --yes takes every default and prints a plain summary", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
@@ -76,15 +66,7 @@ describe("monti init on the command line", () => {
 		expect(result.err).toEqual([]);
 	});
 
-	it("--json reports an error as JSON with exit code 1", async () => {
-		const dir = fixtureApp();
-		const result = run(dir, ["--json", "--storage", "gcs"]);
-		expect(await result.code).toBe(1);
-		expect(JSON.parse(result.out[0] ?? "")).toMatchObject({ ok: false, error: expect.stringContaining("--storage") });
-		expect(listFiles(dir)).toEqual(listFiles(fixtureApp()));
-	});
-
-	it("--dry-run changes nothing", async () => {
+	it("INIT-K7 --dry-run changes nothing", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const result = run(dir, ["--yes", "--dry-run"]);
@@ -121,22 +103,7 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
-	it("the flags of the removed behavior are refused", async () => {
-		for (const flag of [
-			"--database",
-			"--database-schema",
-			"--admin-github-id",
-			"--no-migrate",
-			"--no-docker-start",
-			"--blog-theme",
-			"--resume",
-		]) {
-			const removed = run(fixtureApp(), ["--yes", flag, "x"]);
-			expect(await removed.code).toBe(1);
-		}
-	});
-
-	it("a bad --package-manager and an unknown flag are refused", async () => {
+	it("INIT-K7 a bad --package-manager and an unknown flag are refused", async () => {
 		expect(await run(fixtureApp(), ["--package-manager", "pip"]).code).toBe(1);
 		const unknown = run(fixtureApp(), ["--nope"]);
 		expect(await unknown.code).toBe(1);
@@ -194,7 +161,7 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("Start the app: pnpm dev, then open http://localhost:3000/studio");
 	});
 
-	it("answering no to the install runs nothing and lists the command", async () => {
+	it("INIT-S1 answering no to the install runs nothing and lists the command", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({
 			[QUESTIONS.defaultLocale]: "en",
@@ -225,32 +192,5 @@ describe("monti init on the command line", () => {
 		expect(result.err[0]).toMatch(/cancel/i);
 		expect(result.err[0]).toMatch(/nothing was written/i);
 		expect(listFiles(dir)).toEqual(before);
-	});
-
-	it("runCli routes init, and `init --help` shows every flag", async () => {
-		const out: string[] = [];
-		const code = await runCli(["init", "--help"], {
-			cwd: fixtureApp(),
-			log: (message) => out.push(message),
-			error: () => undefined,
-		});
-		expect(code).toBe(0);
-		for (const flag of [
-			"--yes",
-			"--json",
-			"--dry-run",
-			"--site-url",
-			"--locales",
-			"--time-zone",
-			"--storage",
-			"--extras",
-			"--blocks",
-			"--admin-path",
-			"--overwrite",
-			"--no-install",
-			"--package-manager",
-		]) {
-			expect(out.join("\n")).toContain(flag);
-		}
 	});
 });

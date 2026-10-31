@@ -105,7 +105,7 @@ describe("detecting the app", () => {
 		expect(posts?.keys.find((key) => key.name === "date")?.type).toBe("date");
 	});
 
-	it("reads an existing monti.config.ts", () => {
+	it("INIT-K1 reads an existing monti.config.ts", () => {
 		expect(detectApp(fixtureApp({ "monti.config.ts": "" })).existingConfig).toBe("monti.config.ts");
 		expect(detectApp(fixtureApp({ ...SRC_APP, "src/monti.config.ts": "" })).existingConfig).toBe("src/monti.config.ts");
 	});

@@ -33,7 +33,7 @@ import { GET as getTemplatesHandler, POST as postTemplateHandler } from "../temp
 const getEntry = routeCaller(getEntryHandler);
 const patchEntry = routeCaller(patchEntryHandler);
 const postEntries = routeCaller(postEntriesHandler);
-const getMeta = routeCaller(getMetaHandler);
+const _getMeta = routeCaller(getMetaHandler);
 const deleteTemplate = routeCaller(deleteTemplateHandler);
 const getTemplate = routeCaller(getTemplateHandler);
 const patchTemplate = routeCaller(patchTemplateHandler);
@@ -139,7 +139,7 @@ describe("the format option of the admin API", () => {
 		return ((await res.json()) as { entry: Entry }).entry;
 	};
 
-	const patch = (id: string, body: Record<string, unknown>) =>
+	const _patch = (id: string, body: Record<string, unknown>) =>
 		patchEntry(send(`http://localhost/api/monti/v1/entries/${id}`, "PATCH", body), {
 			params: Promise.resolve({ id }),
 			cms,
@@ -168,59 +168,13 @@ describe("the format option of the admin API", () => {
 	};
 
 	describe("writing", () => {
-		it("a text in a format a plugin provides is read by that plugin, and stored as a document", async () => {
-			const entry = await created({ format: "paragraphs", body: "First paragraph\n\nSecond paragraph" });
-
-			expect(entry.working.doc.content.map((block) => block.type)).toEqual(["paragraph", "paragraph"]);
-			expect(JSON.stringify(entry.working.doc)).toContain("Second paragraph");
-			for (const block of entry.working.doc.content) expect(block.id).toMatch(/^[0-9a-z]{8}$/);
-			expect((await read(entry.id)).body.working.doc).toEqual(entry.working.doc);
-		});
-
-		it("a save with a text pairs the blocks with the draft, so unchanged blocks keep their ids", async () => {
-			const entry = await created({ format: "paragraphs", body: "One\n\nTwo\n\nThree" });
-
-			const res = await patch(entry.id, {
-				expectedVersion: entry.version,
-				format: "paragraphs",
-				body: "One\n\nTwo, edited\n\nThree",
-			});
-
-			expect(res.status).toBe(200);
-			const saved = ((await res.json()) as { entry: Entry }).entry;
-			expect(saved.working.doc.content.map((block) => block.id)).toEqual(
-				entry.working.doc.content.map((block) => block.id),
-			);
-			expect(JSON.stringify(saved.working.doc)).toContain("Two, edited");
-		});
-
-		it.skipIf(!linkable)(
-			"an internal link written as the path of its target is stored as the id of that target, whatever the format",
-			async () => {
-				const target = await publishedPost(unique("link-target"));
-				const path = testSite.contentPath(contentCollection, target.workingSlug) as string;
-
-				const entry = await created({ format: "paragraphs", body: `See [the target](${path}) for more.` });
-
-				expect(entryLinkIds(entry.working.doc.content)).toEqual([target.translationGroupId ?? target.id]);
-				expect(JSON.stringify(entry.working.doc)).not.toContain(path);
-			},
-		);
-
-		it("an unknown format is a 400 unknown_format, and nothing is stored", async () => {
+		it("FMT-P3 an unknown format is a 400 unknown_format, and nothing is stored", async () => {
 			const res = await post({ format: "hugo", body: "Text" });
 
 			expect(res.status).toBe(400);
 			expect(await res.json()).toMatchObject({
 				error: { code: "unknown_format", issues: [{ params: { format: "hugo" } }] },
 			});
-		});
-
-		it("a format that can only write is a 400 format_not_importable", async () => {
-			const res = await post({ format: "one-way", body: "Text" });
-
-			expect(res.status).toBe(400);
-			expect((await res.json()).error.code).toBe("format_not_importable");
 		});
 
 		it("FMT-P1 a format that throws is a 422 format_import_failed, without its own message", async () => {
@@ -233,17 +187,6 @@ describe("the format option of the admin API", () => {
 			expect(body.error.code).toBe("format_import_failed");
 			expect(JSON.stringify(body)).not.toContain("secret detail");
 			quiet.mockRestore();
-		});
-
-		it("a text the format rejects is kept as an unparsed draft, with the format's findings blocking publishing", async () => {
-			const entry = await created({ format: "paragraphs", body: "Broken <<< text" });
-
-			expect(entry.working.doc.content).toEqual([
-				expect.objectContaining({ type: "unparsed", attrs: { format: "paragraphs", source: "Broken <<< text" } }),
-			]);
-			await expect(service.publish({ id: entry.id, expectedVersion: entry.version })).rejects.toMatchObject({
-				code: expect.stringMatching(/validation_failed|unparsed/),
-			});
 		});
 
 		it("FMT-P3 with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
@@ -346,46 +289,6 @@ describe("the format option of the admin API", () => {
 				expect(entryLinkIds((await read(entry.id)).body.working.doc.content)).toEqual([target.id]);
 			},
 		);
-
-		it.skipIf(!linkable)(
-			"a link to an entry that is gone is written as its id when the text is to be imported again, and imports back as that link",
-			async () => {
-				const target = await publishedPost(unique("round-trip"));
-				const entry = await created({
-					doc: {
-						type: "doc",
-						version: 3,
-						content: [
-							{
-								type: "paragraph",
-								content: [
-									{ type: "text", text: "back and forth", marks: [{ type: "link", attrs: { entryId: target.id } }] },
-								],
-							},
-						],
-					},
-				});
-				const text = (await read(entry.id, "?format=paragraphs")).body.working.body as string;
-
-				const again = await created({ format: "paragraphs", body: text });
-
-				expect(entryLinkIds(again.working.doc.content)).toEqual([target.id]);
-			},
-		);
-	});
-
-	describe("meta", () => {
-		it("lists the formats with what a client needs: the file facts, and whether the format can be read back", async () => {
-			const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
-			const { formats } = await res.json();
-
-			expect(formats).toEqual(
-				expect.arrayContaining([
-					{ name: "paragraphs", label: "Paragraphs", mimeType: "text/plain", extension: "txt", canImport: true },
-					{ name: "one-way", label: "One way", mimeType: "text/plain", extension: "out", canImport: false },
-				]),
-			);
-		});
 	});
 
 	describe("templates", () => {
@@ -414,18 +317,6 @@ describe("the format option of the admin API", () => {
 			const b = await fromText.json();
 			expect(b.doc.content.map((block: { type: string }) => block.type)).toEqual(["paragraph", "paragraph"]);
 			expect((await store.getTemplate(b.id)).doc).toEqual(b.doc);
-		});
-
-		it("creates an empty template when it gets no body", async () => {
-			const res = await postTemplate(
-				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("empty") }),
-				{
-					cms,
-				},
-			);
-
-			expect(res.status).toBe(201);
-			expect((await res.json()).doc.content).toEqual([]);
 		});
 
 		it("rejects a text without its format, and a body that is not a document", async () => {

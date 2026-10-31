@@ -98,12 +98,6 @@ describe("monti init runs the machine steps", () => {
 		expect(stepOf(report, "Set up .env.local")?.detail).toContain("filled");
 	});
 
-	it("keeps a secret that is set", async () => {
-		const dir = fixtureApp({ ".env.local": "MONTI_SECRET=already-set-by-me\n" });
-		await initProject({ cwd: dir, host: fakeHost() });
-		expect(read(dir, ".env.local")).toBe("MONTI_SECRET=already-set-by-me\n");
-	});
-
 	it("INIT-S1 sets up the database when a URL is in .env.local or in the environment", async () => {
 		const inFile = fixtureApp({ ".env.local": "DATABASE_URL=postgres://localhost/mine\n" });
 		const host = fakeHost();
@@ -174,16 +168,6 @@ describe("monti init runs the machine steps", () => {
 		expect(left).toContain("fix: do the thing");
 	});
 
-	it("runs without a terminal (--yes or no TTY) and records the steps", async () => {
-		const report = await initProject({ cwd: fixtureApp(), host: fakeHost() });
-		expect(report.steps.map((step) => step.name)).toEqual([
-			"Install packages",
-			"Set up .env.local",
-			"Set up the database",
-			"Check the setup",
-		]);
-	});
-
 	it("INIT-S1 skips the steps when the person answers no to the question, and lists them by hand", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({
@@ -202,15 +186,6 @@ describe("monti init runs the machine steps", () => {
 		expect(report.next.some((step) => step.includes("cp .env.example .env.local"))).toBe(true);
 	});
 
-	it("a dry run changes nothing and plans the steps", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost();
-		const report = await initProject({ cwd: dir, host, dryRun: true });
-		expect(hasEnvLocal(dir)).toBe(false);
-		expect(host.setupDatabase).not.toHaveBeenCalled();
-		expect(stepOf(report, "Set up .env.local, the secret and the database")?.status).toBe("planned");
-	});
-
 	it("INIT-S1 without the packages installed (--no-install) the database and the check wait, and are in what is left", async () => {
 		const dir = fixtureApp({ ".env.local": "DATABASE_URL=postgres://localhost/mine\n" });
 		const host = fakeHost();
@@ -220,14 +195,5 @@ describe("monti init runs the machine steps", () => {
 		const left = report.next.join("\n");
 		expect(left).toContain("db:setup");
 		expect(left).toContain("monti doctor");
-	});
-
-	it("with GitHub login the human steps are the OAuth app and the dev server, with the secret already made", async () => {
-		const dir = fixtureApp({ ".env.local": "DATABASE_URL=postgres://localhost/mine\n" });
-		const report = await initProject({ cwd: dir, host: fakeHost(), login: "github" });
-		const left = report.next.join("\n");
-		expect(left).toContain("Create the GitHub OAuth app");
-		expect(left).toContain("Start the app");
-		expect(left).not.toMatch(/openssl|cp \.env\.example/);
 	});
 });

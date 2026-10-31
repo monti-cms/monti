@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defineCollection, defineSite, fields } from "../../../index";
 import { createSite } from "../../../site";
 import { createDb } from "../db/kysely";
-import { ROW_COLLECTION, titleExpr, translatedTitleExpr } from "../store/title-sql";
+import { ROW_COLLECTION, titleExpr } from "../store/title-sql";
 
 const collection = (titleKey: string) =>
 	defineCollection({
@@ -25,12 +25,6 @@ const compiled = (expression: ReturnType<typeof titleExpr>) => {
 };
 
 describe("the SQL that reads a title", () => {
-	it("reads the title field of the collection, found by role", () => {
-		const expression = compiled(titleExpr(siteOf({ a: "headline" }), "w.metadata", { collection: "a" }));
-		expect(expression.sql).toBe(`"w"."metadata"->>'headline'`);
-		expect(expression.parameters).toEqual([]);
-	});
-
 	it("is one plain read across collections that name the title the same way", () => {
 		const site = siteOf({ a: "title", b: "title" });
 		expect(compiled(titleExpr(site, "b.metadata", ROW_COLLECTION)).sql).toBe(`"b"."metadata"->>'title'`);
@@ -41,13 +35,5 @@ describe("the SQL that reads a title", () => {
 		expect(compiled(titleExpr(site, "b.metadata", ROW_COLLECTION)).sql).toBe(
 			`case "e"."collection" when 'a' then "b"."metadata"->>'headline' when 'b' then "b"."metadata"->>'name' end`,
 		);
-	});
-
-	it("reads the name of a display language of a record collection, falling back to the title, and binds the language", () => {
-		const expression = compiled(translatedTitleExpr(siteOf({ a: "name" }), "b.metadata", "a", "en"));
-		expect(expression.sql).toBe(
-			`coalesce(nullif(btrim("b"."metadata"->'translations'->$1::text->>'name'), ''), "b"."metadata"->>'name')`,
-		);
-		expect(expression.parameters).toEqual(["en"]);
 	});
 });

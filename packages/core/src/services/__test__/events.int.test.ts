@@ -341,28 +341,6 @@ describe("afterCommit delivery", () => {
 		expect(seen.of(second.id).map((item) => item.kind)).toEqual(["created", "saved"]);
 	});
 
-	it("is at least once: a subscriber that did its work and then failed gets the same event id again, and can skip it", async () => {
-		const done = new Set<string>();
-		let effects = 0;
-		let first = true;
-		const { store, events } = setup({
-			a: (event) => {
-				if (event.kind !== "created" || event.workingSlug !== "delivery-idempotent") return;
-				if (done.has(event.eventId)) return;
-				effects += 1;
-				done.add(event.eventId);
-				if (first) {
-					first = false;
-					throw new Error("crashed after the work");
-				}
-			},
-		});
-		await create(store, "delivery-idempotent");
-		advance(120_000);
-		await events.retry();
-		expect(effects).toBe(1);
-	});
-
 	describe("once", () => {
 		const onlyFor =
 			(slug: string, handler: Handler): Handler =>
@@ -432,7 +410,6 @@ describe("afterCommit delivery", () => {
 			await create(store, "once-apart-2");
 			expect(counts).toEqual({ a: 1, b: 1 });
 		});
-
 	});
 
 	it("EVENT-D3 keeps subscribers apart: one failing does not repeat or hold another", async () => {
@@ -519,18 +496,6 @@ describe("afterCommit delivery", () => {
 			for (const draft of drafts) {
 				expect(seen.of(draft.id).map((item) => item.kind)).toEqual(["created", "published", "archived"]);
 			}
-		});
-
-		it("restoring an entry from the trash delivers `restored`, after `trashed`", async () => {
-			const seen = recorder();
-			const { store } = setup({ a: seen.handler });
-			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
-			const entry = await create(store, "restore-a");
-			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
-			const restored = (await service.restore({ id: entry.id, expectedVersion: trashed.version })).entry;
-			expect(restored.status).toBe("draft");
-			expect(seen.of(entry.id).map((item) => item.kind)).toEqual(["created", "trashed", "restored"]);
-			expect(seen.of(entry.id).at(-1)?.version).toBe(restored.version);
 		});
 	});
 

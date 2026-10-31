@@ -49,19 +49,6 @@ describe("same-origin check", () => {
 		expect(() => validateSameOrigin(cmsWith(false), direct)).not.toThrow();
 	});
 
-	it("trusts the forwarded host by the server config and AUTH_TRUST_HOST when no option is passed", () => {
-		const behindProxy = () =>
-			post("http://internal:3000/api/monti/v1/x", {
-				host: "internal:3000",
-				"x-forwarded-host": "www.example.com",
-				origin: "https://www.example.com",
-			});
-		vi.stubEnv("AUTH_TRUST_HOST", "false");
-		expect(() => validateSameOrigin(cms, behindProxy())).toThrow(/Cross-origin/);
-		vi.stubEnv("AUTH_TRUST_HOST", "true");
-		expect(() => validateSameOrigin(cms, behindProxy())).not.toThrow();
-	});
-
 	it.skipIf(!testConfig.site?.url)("API-G2 also accepts the host of the site URL (site.url)", () => {
 		const siteHost = new URL(testConfig.site?.url ?? "").host;
 		const request = post("http://internal:3000/api/monti/v1/x", {

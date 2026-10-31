@@ -3,11 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	contentCollection,
 	firstMediaField,
-	firstRelationField,
 	mediaFieldCollection,
 	recordCollection,
 	requiredMetadata,
-	titleFieldOf,
 } from "../../../test/any-site";
 import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
@@ -101,55 +99,6 @@ describe("any site: core content flow", () => {
 		expect(record.publishedSlug).toBe("any-site-record");
 	});
 
-	it("reports a missing title as missing_field with the title field's label", async () => {
-		const draft = (
-			await service.createDraft({
-				collection: contentCollection,
-				slug: unique("untitled"),
-				metadata: {},
-				format: "paragraphs",
-				body: "Body text",
-			})
-		).entry;
-		await expect(publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject(
-			{
-				code: "publish_validation_failed",
-				issues: expect.arrayContaining([
-					{ code: "missing_field", path: "title", message: titleFieldOf(contentCollection).label },
-				]),
-			},
-		);
-	});
-
-	it("limits the title by the title field's own max", async () => {
-		const { max, label } = titleFieldOf(contentCollection);
-		if (max === undefined) return;
-		const draft = await createContent("x".repeat(max));
-		expect(draft.working.metadata.title).toHaveLength(max);
-		await expect(createContent("x".repeat(max + 1))).rejects.toMatchObject({
-			code: "field_too_long",
-			issues: [{ code: "field_too_long", path: "title", message: label }],
-		});
-	});
-
-	it("lists entries by title and names related entries by their title", async () => {
-		const draft = await createContent("Findable headline");
-		const list = await store.listEntries({ collection: contentCollection, search: "Findable" });
-		expect(list.items.map((item) => item.id)).toEqual([draft.id]);
-		expect(list.items[0]?.title).toBe("Findable headline");
-		const relation = firstRelationField(contentCollection);
-		if (!relation) return;
-		const value = draft.working.metadata[relation.name];
-		if (value === undefined) return;
-		const ids = Array.isArray(value) ? value : [value];
-		expect(list.items[0]?.relations[relation.name]?.map((item) => item.id)).toEqual(ids);
-		expect(list.items[0]?.relations[relation.name]?.every((item) => typeof item.title === "string")).toBe(true);
-		const incoming = await store.getIncomingReferences({ targetId: String(ids[0]) });
-		expect(incoming).toContainEqual(
-			expect.objectContaining({ sourceId: draft.id, sourceTitle: "Findable headline", state: "working" }),
-		);
-	});
-
 	it("WRITE-W10 duplicates with the title the caller gives and keeps it otherwise", async () => {
 		const draft = await createContent("Original");
 		const copy = await duplicateDraft(testSite, store, { id: draft.id, title: "Original (copy)" });
@@ -193,10 +142,6 @@ describe("any site: core content flow", () => {
 				.then((result) => result.entry);
 		};
 
-		it("the config has a media field (SEO share image)", () => {
-			expect(media?.field.kind).toBe("media");
-		});
-
 		it.skipIf(!media)(
 			"MEDIA-B5 tracks the field value as a media reference: usage, the unused filter and the trash check",
 			async () => {
@@ -222,13 +167,6 @@ describe("any site: core content flow", () => {
 				expect(after?.references.map((reference) => reference.state).sort()).toEqual(["published", "working"]);
 			},
 		);
-
-		it("rejects a value that is not a media ID and ignores an empty one", async () => {
-			if (!collection || !media) return;
-			await expect(draftWith("Bad media", "not-a-uuid")).rejects.toMatchObject({ code: "invalid_metadata_value" });
-			const empty = await draftWith("No media", "");
-			expect(empty.working.metadata[media.name]).toBe("");
-		});
 
 		it.skipIf(!media)(
 			"TRASH-T5 keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)",

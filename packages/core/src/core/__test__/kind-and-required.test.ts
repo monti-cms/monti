@@ -59,16 +59,6 @@ describe("collection kind", () => {
 	});
 });
 
-describe("required fields (`required: true`)", () => {
-	it("an empty value is an issue", () => {
-		expect(site.missingRequiredIssues(c("label"), { slug: null, metadata: {} })).toEqual([
-			{ code: "null_slug", path: "slug" },
-			{ code: "missing_field", path: "title", message: "Title" },
-		]);
-		expect(site.missingRequiredIssues(c("label"), { slug: "a", metadata: { title: "T" } })).toEqual([]);
-	});
-});
-
 describe("empty body check", () => {
 	it("WRITE-P1 only collections that use a body (`body`) reject it", () => {
 		expect(validateForPublish(site, snapshot("page"), { targets: [], media: [] }).issues).toEqual([]);

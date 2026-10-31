@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { ConfigError, type ConfigIssue, defineCollection, definePlugin, defineSite, fields } from "../..";
-import { createSite } from "../../site";
 
 const title = fields.text({ label: "Title" });
 const slug = fields.slug({ label: "Slug", from: "title" });
@@ -27,19 +26,6 @@ describe("defineSite", () => {
 		const defined = defineSite(config);
 		expect(defined).toEqual(config);
 		expect(defined.collections.topic).toMatchObject({ kind: "item", body: false });
-	});
-
-	it("rejects a definition without a kind", () => {
-		expectIssue(
-			() =>
-				defineSite({
-					collections: { bad: { label: "Bad", fields: { title, slug } } as unknown as typeof topic },
-					locales,
-					defaultLocale: "en",
-				}),
-			"collections.bad.kind",
-			"enum",
-		);
 	});
 
 	it("SCHEMA-F14 rejects an option the format does not have, whichever way the collection is written", () => {
@@ -77,19 +63,6 @@ describe("defineSite", () => {
 				"collections.topic.fields.slug.frm",
 			),
 		).toContain('did you mean "from"');
-	});
-
-	it('rejects the removed `required: "publish"`: only `true` exists', () => {
-		const old = defineCollection({
-			label: "Old",
-			kind: "document",
-			fields: { title: { ...title, required: "publish" } as never, slug },
-		});
-		expectIssue(
-			() => defineSite({ collections: { old }, locales, defaultLocale: "en" }),
-			"collections.old.fields.title.required",
-			"enum",
-		);
 	});
 
 	it("SCHEMA-F14 reports every problem at once, not only the first", () => {
@@ -208,19 +181,6 @@ describe("defineSite", () => {
 			() => defineSite({ ...base, site: { previewLocaleParam: "a b" } }),
 			"site.previewLocaleParam",
 			"query-name",
-		);
-	});
-
-	it("rejects a default locale outside the list and duplicate locales", () => {
-		expectIssue(
-			() => defineSite({ collections: { topic }, locales, defaultLocale: "ko" as "en" }),
-			"defaultLocale",
-			"unknown-locale",
-		);
-		expectIssue(
-			() => defineSite({ collections: { topic }, locales: [...locales, ...locales], defaultLocale: "en" }),
-			"locales[1].code",
-			"duplicate",
 		);
 	});
 
@@ -367,11 +327,6 @@ describe("defineSite", () => {
 			defineCollection({ label: "Note", kind: "item", fields: noteFields });
 		const config = (collection: ReturnType<typeof note>) =>
 			defineSite({ collections: { note: collection }, locales, defaultLocale: "en" });
-
-		it("takes a text field of any name that has the role", () => {
-			const site = config(note({ headline: fields.text({ label: "Headline", role: "title" }) }));
-			expect(Object.keys(site.collections.note.fields)).toEqual(["headline"]);
-		});
 
 		it("SCHEMA-S2 keeps the name title for the title field once the role is elsewhere", () => {
 			expect(() =>

@@ -5,8 +5,7 @@ import type { AnnotationConfig } from "../types";
 const { normalizeConfigItems, createAnnotationRegistry, supportsAnnotationScope } = __testable__;
 
 describe("normalizeConfigItems / createAnnotationRegistry", () => {
-
-	it("assigns defaults (source/scopes) and priority per type group", () => {
+	it("FMT-C2 assigns defaults (source/scopes) and priority per type group", () => {
 		const config: AnnotationConfig = {
 			annotations: [
 				{ name: "strong", kind: "class", class: "font-bold", source: "mdast", scopes: ["char", "document"] },
@@ -37,5 +36,4 @@ describe("normalizeConfigItems / createAnnotationRegistry", () => {
 		expect(supportsAnnotationScope(item("Callout"), "line")).toBe(true);
 		expect(supportsAnnotationScope(item("emphasis"), "line")).toBe(false);
 	});
-
 });

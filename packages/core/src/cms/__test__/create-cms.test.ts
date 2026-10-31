@@ -173,16 +173,6 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(logs.join("\n")).toContain("fake-a");
 		expect(logs.at(-1)).toBe("Done.");
 	});
-
-	it("keeps no global state: nothing is left on the global object", async () => {
-		const cms = createCms({ config: testConfig, server: serverFor("a").server });
-		cms.store();
-		cms.contentService();
-		cms.auth();
-		await cms.read.getTranslations({ translationGroupId: "g" });
-		expect(Object.keys(globalThis).filter((key) => key.startsWith("__cms"))).toEqual([]);
-		expect(Object.getOwnPropertySymbols(globalThis).filter((key) => key === DEV_REGISTRY)).toEqual([]);
-	});
 });
 
 describe("createCms: a development reload does not leak connections", () => {

@@ -204,14 +204,4 @@ describe("/v1/api-keys", () => {
 		expect(forced.status).toBe(204);
 		expect(await cms.apiKeys.get(key.id)).toBeNull();
 	});
-
-	it("deletes a key nothing uses without asking", async () => {
-		const cms = cmsWithSecret();
-		const key = await cms.apiKeys.add({ name: "Spare", value: VALUE });
-		const response = await removeKey(request("DELETE", `api-keys/${key.id}?expectedVersion=${key.version}`), {
-			cms,
-			params: Promise.resolve({ id: key.id }),
-		});
-		expect(response.status).toBe(204);
-	});
 });

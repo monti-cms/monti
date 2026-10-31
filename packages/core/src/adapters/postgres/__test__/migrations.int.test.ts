@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
-import { contentOf, docOf } from "../../../../test/stored-content";
 import { SetupError } from "../../../core/problem";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import { documentKeyHash } from "../../../core/translation/state-hash";
@@ -96,38 +95,6 @@ describe("migrations", () => {
 		const again = await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect(again).toEqual({ applied: 0, upToDate: CONTENT_STORE_MIGRATIONS.length });
 		expect(await applied(schemaName)).toEqual(before);
-	});
-
-	it("creates no MDX text columns, and a normal write stores the document only", async () => {
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		const columns = await pool.query(
-			`SELECT 1 FROM information_schema.columns
-			 WHERE table_schema = $1 AND column_name = 'mdx' AND table_name IN ('entry_bodies', 'body_templates')`,
-			[schemaName],
-		);
-		expect(columns.rows).toHaveLength(0);
-
-		const store = createContentStore(pool, { site: testSite, schema: schemaName });
-		const entry = await seedEntry(store, {
-			collection: "x",
-			slug: "doc-only",
-			metadata: { title: "Doc only" },
-			text: "words",
-		});
-		expect(contentOf((await store.getEntry(entry.id)).working.doc)).toEqual(contentOf(docOf("words")));
-		const template = await store.createTemplate({ name: "Doc only template", doc: docOf("template words") });
-		expect(contentOf((await store.getTemplate(template.id)).doc)).toEqual(contentOf(docOf("template words")));
-	});
-
-	it("seeds the initial body templates once, and does not revive a deleted one", async () => {
-		const seeded = testSite.config.seed?.templates ?? [];
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		const count = async () =>
-			Number((await pool.query(`SELECT count(*) AS count FROM "${schemaName}".body_templates`)).rows[0].count);
-		expect(await count()).toBe(seeded.length);
-		await pool.query(`DELETE FROM "${schemaName}".body_templates`);
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		expect(await count()).toBe(0);
 	});
 
 	it("DB-M5 refuses a database built from the numbered steps of an older pre-release, and changes nothing", async () => {

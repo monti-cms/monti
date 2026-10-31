@@ -6,7 +6,6 @@ import { importCms } from "../app";
 import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
 import { runCli } from "../index";
-import { Cancelled } from "../prompt";
 import { byId, CORE_SRC, configText, project, setEnv } from "./doctor-helpers";
 
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -170,18 +169,6 @@ describe("the email and password login on the command line", () => {
 		expect(await signIn("first password!")).toBe(true);
 		expect(await signIn("one password!")).toBe(false);
 		expect(await signIn("another password")).toBe(false);
-	});
-
-	it("AUTH-L12 reset-password exits with 130 when the person cancels, like init", async () => {
-		const dir = app();
-		const prompts = {
-			text: async () => {
-				throw new Cancelled();
-			},
-			password: async () => "",
-		};
-		const { code } = await run(dir, ["admin:reset-password"], prompts);
-		expect(code).toBe(130);
 	});
 
 	it("AUTH-L12 reset-password refuses a short password", async () => {

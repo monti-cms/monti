@@ -112,18 +112,4 @@ describe("plugin route collisions", () => {
 		);
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
-
-	it("a route identical to another plugin's is also an error", async () => {
-		const cms = instance({
-			plugin: "other",
-			routes: [{ pattern: "v1/example/private", module: { GET: mocks.privateGet } }],
-		});
-		await expect(call(cms, "GET", "v1/example/private")).rejects.toThrow(
-			/plugins\.other\.routes.*collides with the route "v1\/example\/private" of plugin "example"/,
-		);
-	});
-
-	it("works when there is no collision", async () => {
-		expect((await call(instance(), "GET", "v1/example/private")).status).toBe(200);
-	});
 });

@@ -31,7 +31,7 @@ describe("path patterns", () => {
 		expect(matchPattern("/posts/:slug", "/posts/a/b")).toBeNull();
 	});
 
-	it("builds the shape for a folder", () => {
+	it("SITE-R8 builds the shape for a folder", () => {
 		expect(patternUnder("blog")).toBe("/blog/:slug");
 		expect(patternUnder("/blog/")).toBe("/blog/:slug");
 		expect(checkPathPattern(patternUnder("notes"))).toBeUndefined();

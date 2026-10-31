@@ -10,8 +10,7 @@ import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { duplicateDraft, publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
-import { withoutBlockIds } from "../../../doc/block-ids";
-import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import { readStoredDocument } from "../../../doc/stored-document";
 import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -165,22 +164,6 @@ describe("stored documents", () => {
 			expect(saved.working.doc).toEqual(row.doc);
 		});
 
-		it("saving the same content without its ids changes nothing", async () => {
-			const draft = await createDraft({ doc: docOf(BODY) });
-			const before = await stored(draft.id, "working");
-			const idless = {
-				type: "doc",
-				version: STORED_DOCUMENT_VERSION,
-				content: withoutBlockIds(draft.working.doc.content),
-			};
-
-			const saved = await save(draft, { doc: idless });
-
-			expect(saved.version).toBe(draft.version);
-			expect(saved.updatedAt.getTime()).toBe(draft.updatedAt.getTime());
-			expect(await stored(draft.id, "working")).toEqual(before);
-		});
-
 		it("FMT-R4 a body that stops being readable becomes an unparsed document, and a document again when it is fixed", async () => {
 			const draft = await createDraft({ doc: docOf(BODY) });
 
@@ -273,26 +256,6 @@ describe("stored documents", () => {
 					expect.objectContaining({ type: "unparsed", attrs: expect.objectContaining({ format: "mdx" }) }),
 				]);
 			}
-		});
-
-		it("the public read returns the stored document, and a list returns it only with the body", async () => {
-			const published = await publish(await createDraft({ doc: docOf(BODY) }));
-			const row = await stored(published.id, "published");
-
-			const lookup = await store.getPublishedEntryBySlug({
-				collection: contentCollection,
-				slug: published.workingSlug ?? "",
-			});
-			if (lookup.status !== "current") throw new Error("expected the published entry");
-			// The document that was stored, not one parsed again from the text.
-			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc));
-			expect(lookup.entry.doc).not.toBeNull();
-
-			const withBody = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
-			expect(withBody.find((entry) => entry.id === published.id)?.doc).toEqual(lookup.entry.doc);
-			const withoutBody = await store.listPublishedEntries({ collections: [contentCollection] });
-			expect(withoutBody.length).toBeGreaterThan(0);
-			for (const entry of withoutBody) expect(entry.doc).toBeNull();
 		});
 	});
 

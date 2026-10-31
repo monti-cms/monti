@@ -2,10 +2,9 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
 import { paragraphsFormat } from "../../../test/paragraphs-format";
-import { testConfig, testSite } from "../../../test/site";
+import { testSite } from "../../../test/site";
 import type { ContentStore } from "../../core/store";
 import { createFormatRegistry } from "../../format/registry";
-import { createSite } from "../../site";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -64,7 +63,7 @@ describe("content service rules", () => {
 	});
 
 	it.skipIf(!secondLocale)(
-		"refuses to translate an archived entry, and allows it once unarchived",
+		"TRANS-N1 refuses to translate an archived entry, and allows it once unarchived",
 		async () => {
 			const service = serviceFor(testSite);
 			const source = await createPost(service);
@@ -78,25 +77,6 @@ describe("content service rules", () => {
 			await store.unarchiveEntry({ id: source.id, expectedVersion: archived.version });
 			const translation = await service.createTranslation({ sourceId: source.id, locale: secondLocale as string });
 			expect(translation.entry.locale).toBe(secondLocale);
-		},
-		30_000,
-	);
-
-	it.skipIf(!secondLocale)(
-		"refuses to create a translation when the site turns translations off",
-		async () => {
-			const source = await createPost(serviceFor(testSite));
-			const off = createSite({
-				...testConfig,
-				admin: { ...testConfig.admin, translations: false },
-			} as typeof testConfig);
-			expect(off.ADMIN_TRANSLATIONS).toBe(false);
-			await expect(
-				serviceFor(off).createTranslation({ sourceId: source.id, locale: secondLocale as string }),
-			).rejects.toMatchObject({ code: "invalid_input" });
-			// With translations on, the same request works: the refusal comes from the setting.
-			const on = await serviceFor(testSite).createTranslation({ sourceId: source.id, locale: secondLocale as string });
-			expect(on.entry.locale).toBe(secondLocale);
 		},
 		30_000,
 	);

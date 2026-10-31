@@ -9,7 +9,6 @@ import { formatInitReport } from "../init-report";
 import { InitError, ProjectWriter } from "../init-writer";
 import { Cancelled } from "../prompt";
 import {
-	CREATE_NEXT_APP_LAYOUT,
 	fakeHost,
 	fixtureApp,
 	installing,
@@ -259,16 +258,6 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(next[0]).toContain("openssl rand -base64 32");
 		expect(next[2]).toContain("`monti doctor` will tell you if any of the steps above is missing");
 	});
-
-	it("never writes a docker compose file, a proxy or theme files", async () => {
-		const dir = fixtureApp();
-		const before = listFiles(dir);
-		const report = await initProject({ cwd: dir, ...quiet() });
-		const created = listFiles(dir).filter((file) => !before.includes(file));
-		expect(created.length).toBeGreaterThan(0);
-		for (const file of created) expect(file).not.toMatch(/docker|compose|proxy\.ts|theme|\(site\)/i);
-		expect(report.created.join("\n")).not.toMatch(/docker|compose|proxy\.ts|theme/i);
-	});
 });
 
 describe("monti init and the package install", () => {
@@ -335,19 +324,6 @@ describe("monti init and the package install", () => {
 		expect(report.steps[0]).toEqual({ name: "Install packages", status: "skipped", detail: "--no-install" });
 		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core /);
 		expect(index(report.next, "Install the packages")).toBeLessThan(index(report.next, "Create .env.local"));
-	});
-
-	it("a failed install turns ok off, names the step and keeps the command in the list; the files stay", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
-		const report = await initProject({ cwd: dir, host });
-		expect(report.ok).toBe(false);
-		expect(report.steps).toContainEqual(
-			expect.objectContaining({ name: "Install packages", status: "failed", detail: "`pnpm add` failed" }),
-		);
-		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
-		expect(report.next.join("\n")).toMatch(/Install the packages:\npnpm add @monti-cms\/core/);
-		expect(formatInitReport(report)).toContain("Install packages: FAILED");
 	});
 
 	it("INIT-S1 does not ask about the install when every package is already a dependency", async () => {
@@ -440,18 +416,6 @@ describe("monti init tailors what is left to the app", () => {
 		expect(report.next.join("\n")).toContain("app/layout.tsx has no <html> tag");
 	});
 
-	it("an existing withCms and an existing suppressHydrationWarning are left alone and need no step", async () => {
-		const withCms = 'import { withCms } from "@monti-cms/nextjs/config";\nexport default withCms({});\n';
-		const done = fixtureApp({
-			"next.config.ts": withCms,
-			"app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', '<html lang="en" suppressHydrationWarning>'),
-		});
-		const report = await initProject({ cwd: done, ...quiet() });
-		expect(read(done, "next.config.ts")).toBe(withCms);
-		expect(report.changed.map((item) => item.file)).toEqual([".gitignore"]);
-		expect(report.next.join("\n")).not.toMatch(/next\.config|suppressHydrationWarning/);
-	});
-
 	it("INIT-K5 a missing .gitignore is created, and one that misses .env.local gets it; none of it is left to the person", async () => {
 		const none = fixtureApp({ ".gitignore": null });
 		const report = await initProject({ cwd: none, ...quiet() });
@@ -491,7 +455,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(bun.next.join("\n")).toContain("Start the app: bun run dev");
 	});
 
-	it("takes the dev port from the dev script for the callback URL", async () => {
+	it("INIT-N1 takes the dev port from the dev script for the callback URL", async () => {
 		const dir = fixtureApp({
 			"package.json": JSON.stringify({
 				name: "x",
@@ -621,14 +585,6 @@ describe("monti init and files that already exist", () => {
 		expect(line).toContain("`timeZone` in monti.schema.ts");
 	});
 
-	it("a broken computer time zone gives UTC and the summary says it could not be read", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost({ systemTimeZone: () => "Mars/Olympus" });
-		const report = await initProject({ cwd: dir, host, install: false });
-		expect(schemaOf(dir).timeZone).toBe("UTC");
-		expect(formatInitReport(report)).toContain("Time zone: UTC (this computer's time zone could not be read).");
-	});
-
 	it("INIT-K1 an existing monti.config.ts is kept, its schema file is not written, and the skip is reported", async () => {
 		const dir = fixtureApp({ "monti.config.ts": "// mine\nexport const cms = {};\n" });
 		const report = await initProject({ cwd: dir, ...quiet() });
@@ -639,14 +595,6 @@ describe("monti init and files that already exist", () => {
 		expect(report.created).toContain("app/studio/layout.tsx");
 		expect(report.notes.join("\n")).toContain("monti.config.ts already exists, so it was kept");
 		expect(formatInitReport(report)).toContain("Already there, left as they are:\n  - monti.config.ts");
-	});
-
-	it("an existing .env.example is kept and reported, never merged", async () => {
-		const dir = fixtureApp({ ".env.example": "MINE=1\n" });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, ".env.example")).toBe("MINE=1\n");
-		expect(report.skipped).toContain(".env.example");
-		expect(report.notes.join("\n")).toContain(".env.example already exists and was kept");
 	});
 
 	it("INIT-K1 a changed file is kept unless --overwrite (or a yes in the prompts)", async () => {

@@ -52,7 +52,7 @@ describe("monti command helpers", () => {
 		expect(() => locateConfig(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
 	});
 
-	it("help and unknown commands", async () => {
+	it("CLI-H1 help and unknown commands", async () => {
 		const out: string[] = [];
 		const io = { cwd: tempDir({}), log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) };
 		expect(await runCli([], io)).toBe(0);

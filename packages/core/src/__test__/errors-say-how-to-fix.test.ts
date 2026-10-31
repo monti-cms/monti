@@ -23,13 +23,13 @@ const messageOf = (fn: () => unknown): string => {
 };
 
 describe("problemText", () => {
-	it("writes what, where and fix as one line with markers", () => {
+	it("SETUP-E1 writes what, where and fix as one line with markers", () => {
 		expect(
 			problemText({ what: "DATABASE_URL is not set", where: ".env.local", fix: "put your Postgres URL in it" }),
 		).toBe("DATABASE_URL is not set. Where: .env.local. Fix: put your Postgres URL in it.");
 	});
 
-	it("is an error that keeps the cause, and the driver's code", () => {
+	it("SETUP-E1 is an error that keeps the cause, and the driver's code", () => {
 		const cause = Object.assign(new Error("relation does not exist"), { code: "42P01" });
 		const error = problemError({ what: "x", fix: "y" }, cause, "migrations_pending");
 		expect(error).toBeInstanceOf(SetupError);

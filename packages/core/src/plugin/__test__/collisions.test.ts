@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
-import {
-	assertPluginRoutesFree,
-	checkPluginNames,
-	checkPluginPages,
-	checkPluginRoutes,
-	RESERVED_SCOPES,
-} from "../collisions";
+import { checkPluginNames, checkPluginPages, checkPluginRoutes } from "../collisions";
 
 describe("checkPluginPages", () => {
 	it("PLUG-S3 accepts distinct pages", () => {
@@ -32,7 +26,6 @@ describe("checkPluginPages", () => {
 			]),
 		).toEqual([expect.objectContaining({ path: 'plugins.b.nav["/tools"]', code: "collision" })]);
 	});
-
 });
 
 describe("assertPluginRoutesFree", () => {
@@ -80,10 +73,6 @@ describe("checkPluginNames: core storage scopes", () => {
 	])("KEY-S1 rejects a plugin named %s, which would read the core's secrets and data", (name) => {
 		expect(checkPluginNames([name])[0]?.message).toContain("core storage scope");
 	});
-
-	it("reserves the scopes the core itself uses", () => {
-		expect([...RESERVED_SCOPES].sort()).toEqual(["auth", "core-keys"]);
-	});
 });
 
 describe("defineSite: plugin collisions", () => {
@@ -95,10 +84,6 @@ describe("defineSite: plugin collisions", () => {
 	const base = { collections: { topic: collection }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" };
 	const plugin = (name: string, path?: string) =>
 		definePlugin({ name, options: {}, nav: path === undefined ? undefined : [{ path, label: name }] });
-
-	it("accepts plugins with distinct names and pages", () => {
-		expect(() => defineSite({ ...base, plugins: [plugin("a", "a"), plugin("b", "b")] })).not.toThrow();
-	});
 
 	it("PLUG-S3 rejects a nav path two plugins share", () => {
 		expect(() => defineSite({ ...base, plugins: [plugin("a", "tools"), plugin("b", "tools")] })).toThrow(

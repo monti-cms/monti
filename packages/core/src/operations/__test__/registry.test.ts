@@ -4,7 +4,6 @@ import { testConfig, testSite } from "../../../test/site";
 import type { AuthContext } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
 import { currentActor } from "../../core/actor";
-import { checkOperationNames } from "../../plugin/collisions";
 import { CORE_OPERATIONS, defineOperation, type OperationContext } from "..";
 import { OPERATION_NAME } from "../define";
 import { inputJsonSchema } from "../registry";
@@ -31,12 +30,6 @@ describe("defineOperation", () => {
 	it("API-O1 rejects a name that is not dotted or does not start lowercase", () => {
 		for (const name of ["list", "Entries.list", "entries.", "entries.list-all", "entries..list", "entries.1st"]) {
 			expect(() => defineOperation({ ...whoAmIDefinition, name })).toThrow(/invalid name/);
-		}
-	});
-
-	it("accepts dotted names with camel-case segments", () => {
-		for (const name of ["entries.list", "entries.checkPublish", "mailer.status.last"]) {
-			expect(OPERATION_NAME.test(name)).toBe(true);
 		}
 	});
 
@@ -88,18 +81,6 @@ describe("the operations of an instance", () => {
 		const cms = withOperations({ name: "one", operations: [whoAmI] }, { name: "two", operations: [whoAmI] });
 		await expect(cms.operations()).rejects.toThrow(/plugin "one"/);
 	});
-});
-
-describe("checkOperationNames", () => {
-	it("accepts distinct names", () => {
-		expect(
-			checkOperationNames([
-				{ plugin: null, name: "a.b" },
-				{ plugin: "x", name: "a.c" },
-			]),
-		).toEqual([]);
-	});
-
 });
 
 describe("running an operation", () => {

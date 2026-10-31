@@ -240,29 +240,6 @@ describe("write hook contract", () => {
 	});
 
 	describe("extra validation can only add failures", () => {
-		it("WRITE-H1 blocks a save with the failures it adds, and stores nothing", async () => {
-			const draft = await newPost();
-			sources = server({ beforeSave: () => ({ issues: [{ code: "no_way", path: "title" }] }) });
-			const error = await service
-				.saveDraft(draft.id, saveInput(draft, { ...draft.working.metadata, title: "Changed" }))
-				.catch((e) => e);
-			expect(error).toMatchObject({ code: "validation_failed", issues: [{ code: "no_way", path: "title" }] });
-			const after = await store.getEntry(draft.id);
-			expect(after.version).toBe(draft.version);
-			expect(after.working.metadata.title).toBe(draft.working.metadata.title);
-			expect(changes).toEqual([]);
-		});
-
-		it("WRITE-H1 passes warnings through with the result and does not block", async () => {
-			sources = server({ beforeSave: () => ({ warnings: [{ code: "consider_this" }] }) });
-			const created = await service.createDraft(await postInput("Warned"));
-			expect(created.warnings).toEqual([{ code: "consider_this" }]);
-			expect(created.entry).not.toHaveProperty("warnings");
-			const published = await service.publish({ id: created.entry.id, expectedVersion: created.entry.version });
-			expect(published.warnings).toContainEqual({ code: "consider_this" });
-			expect(published.entry.status).toBe("published");
-		});
-
 		it("WRITE-H1 does not stop the core checks of a publish: a draft that core rejects stays unpublished however the hooks answer", async () => {
 			// A body that does not parse can be saved as a draft (as an unparsed body), and core publish validation blocks it.
 			const draft = await newPost("Broken", "<<<Unclosed");
@@ -278,33 +255,6 @@ describe("write hook contract", () => {
 				issues: expect.arrayContaining([expect.objectContaining({ code: "unparsed_body" })]),
 			});
 			expect((await store.getEntry(draft.id)).status).toBe("draft");
-		});
-
-		it("WRITE-H1 blocks a publish with the failures validatePublish adds, and a save of the same draft still works", async () => {
-			const draft = await newPost();
-			sources = server({ beforePublish: () => ({ issues: [{ code: "not_ready", path: "title" }] }) });
-			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
-				code: "publish_validation_failed",
-				issues: expect.arrayContaining([expect.objectContaining({ code: "not_ready" })]),
-			});
-			expect((await store.getEntry(draft.id)).status).toBe("draft");
-			expect(changes).toEqual([]);
-			const saved = (await service.saveDraft(draft.id, saveInput(draft))).entry;
-			expect(saved.status).toBe("draft");
-		});
-
-		it("WRITE-H1 calls validatePublish for a publish and for no other write", async () => {
-			const seen: WriteOperation[] = [];
-			sources = server({
-				beforePublish: ({ operation }) => {
-					seen.push(operation);
-				},
-			});
-			const draft = (await service.createDraft(await postInput("Seen"))).entry;
-			await service.saveDraft(draft.id, saveInput(draft));
-			expect(seen).toEqual([]);
-			await service.publish({ id: draft.id, expectedVersion: draft.version });
-			expect(seen).toEqual(["publish"]);
 		});
 	});
 

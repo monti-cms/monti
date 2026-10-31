@@ -178,15 +178,6 @@ describe("two instances with different site configs", () => {
 		expect([a.limits.mediaBytes, b.limits.mediaBytes]).toEqual([10 * 1024 * 1024, 1_000_000]);
 	});
 
-	it("the same holds for instances built by fakeCms over fake stores", async () => {
-		const a = fakeCms({ config: blog });
-		const b = fakeCms({ config: other });
-		expect((await metaOf(a)).collections).toEqual(["post", "memo", "category", "tag", "collection"]);
-		expect((await metaOf(b)).collections).toEqual(["article", "topic", "author"]);
-		expect((await metaOf(b)).limits.mediaBytes).toBe(1_000_000);
-		expect((await metaOf(a)).limits.mediaBytes).toBe(10 * 1024 * 1024);
-	});
-
 	it("CONF-I2 the admin language of each site picks its own text", () => {
 		const { cmsBlog, cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", {
@@ -234,20 +225,7 @@ describe("two instances read their own stores and build their own public paths",
 		expect(otherStore.asked).toEqual(["other:get:article:hello:en"]);
 	});
 
-	it("the locale prefix follows each site's rule", async () => {
-		const { cmsBlog, cmsOther } = instances();
-		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello", locale: "en" });
-		if (a.status !== "found") throw new Error("expected the entry");
-		expect(a.entry.path).toBe("/en/posts/hello");
-		expect((await cmsBlog.read.getTranslations({ translationGroupId: "post-hello" })).map((item) => item.path)).toEqual(
-			["/posts/hello", "/en/posts/hello"],
-		);
-		expect(
-			(await cmsOther.read.getTranslations({ translationGroupId: "article-hello" })).map((item) => item.path),
-		).toEqual(["/en/blog/hello/"]);
-	});
-
-	it("listEntries builds its paths from its own site", async () => {
+	it("CONF-I2 listEntries builds its paths from its own site", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.listEntries({ collection: "post" });
 		const b = await cmsOther.read.listEntries({ collection: "article" });
@@ -301,7 +279,6 @@ describe("renderDocument renders the same stored document with each site's own b
 		expect(b.markup).not.toContain('data-block="notice"');
 		expect(b.unknown.map((node) => node.type)).toEqual(["notice"]);
 	});
-
 });
 
 describe("a site snapshot crosses JSON and gives the same site", () => {

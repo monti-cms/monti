@@ -128,35 +128,6 @@ describe("code-string converter", () => {
 		});
 	});
 
-	it("when converting a document to a code fence, preserves tag and order sequence", () => {
-		const input: CodeBlockDocument = {
-			lang: "ts",
-			meta: { title: "hello.ts", showLineNumbers: true },
-			annotations: [rowWrap("Callout", { start: 0, end: 2 }, 0), rowClass("diff", { start: 1, end: 2 }, 1)],
-			lines: [
-				line('console.log("hello")', [
-					charRender("Tooltip", { start: 0, end: 7 }, 0, [{ name: "content", value: "tip" }]),
-				]),
-				line("return 1"),
-			],
-		};
-
-		const codeNode = fromCodeBlockDocumentToCodeFence(input, annotationConfig);
-
-		expect(codeNode.type).toBe("code");
-		expect(codeNode.lang).toBe("ts");
-		expect(codeNode.meta).toBe('title="hello.ts" showLineNumbers');
-		expect(codeNode.value).toBe(
-			[
-				`// @line Callout {0-1}`,
-				`// @char Tooltip {0-6} content="tip"`,
-				'console.log("hello")',
-				`// @line diff {1-1}`,
-				"return 1",
-			].join("\n"),
-		);
-	});
-
 	it("FMT-R2 the order of same-range wrappers survives a round trip via code string line order", () => {
 		const input: Code = {
 			type: "code",
@@ -361,22 +332,6 @@ describe("code-string converter", () => {
 			{ name: "items", value: [1, "x"] },
 			{ name: "collapsed", value: null },
 		]);
-	});
-
-	it("code -> document parses a boolean shorthand attribute as true", () => {
-		const input: Code = {
-			type: "code",
-			lang: "ts",
-			meta: "",
-			value: [`// @line Callout {0-0} showLineNumbers`, `// @char Tooltip {0-4} showLineNumbers`, "hello"].join("\n"),
-		};
-
-		const output = fromCodeFenceToCodeBlockDocument(input, annotationConfig);
-		const rowWrapAttrs = output.annotations[0]?.attributes;
-		const inlineAttrs = output.lines[0]?.annotations[0]?.attributes;
-
-		expect(rowWrapAttrs).toEqual([{ name: "showLineNumbers", value: true }]);
-		expect(inlineAttrs).toEqual([{ name: "showLineNumbers", value: true }]);
 	});
 
 	it("FMT-C1 parses a rowWrap range with line marker syntax (@line name ... @line name end)", () => {

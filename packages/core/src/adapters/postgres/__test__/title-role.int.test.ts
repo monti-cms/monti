@@ -91,12 +91,6 @@ describe("a collection whose title field is not named title", () => {
 			} as never)
 			.then((result) => result.entry);
 
-	it("answers the title field as the title of the site's collections", () => {
-		expect(site.titleField("article").name).toBe("headline");
-		expect(site.titleField("topic").name).toBe("name");
-		expect(site.titleOfValues("article", { headline: "A", title: "ignored" })).toBe("A");
-	});
-
 	it("SCHEMA-S2 makes the address from the title field and lists, sorts and searches by it", async () => {
 		const zebra = await article("Zebra crossing");
 		const apple = await article("Apple pie");

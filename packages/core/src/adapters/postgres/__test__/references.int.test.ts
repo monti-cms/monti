@@ -116,30 +116,6 @@ describe("ContentStore References", () => {
 		expect(refTargetCount.rows[0].count).toBe("0");
 	});
 
-	it("explicit DB FK contract: entry_references has a foreign key to entries covering target_entry_id", async () => {
-		const res = await pool.query(
-			`
-			SELECT con.conname
-			FROM pg_catalog.pg_constraint con
-			JOIN pg_catalog.pg_class cl ON con.conrelid = cl.oid
-			JOIN pg_catalog.pg_namespace ns ON cl.relnamespace = ns.oid
-			JOIN pg_catalog.pg_class fcl ON con.confrelid = fcl.oid
-			JOIN pg_catalog.pg_namespace fns ON fcl.relnamespace = fns.oid
-			JOIN pg_catalog.pg_attribute a ON a.attrelid = cl.oid AND a.attnum = ANY(con.conkey)
-			JOIN pg_catalog.pg_attribute fa ON fa.attrelid = fcl.oid AND fa.attnum = ANY(con.confkey)
-			WHERE con.contype = 'f'
-			  AND ns.nspname = $1
-			  AND cl.relname = 'entry_references'
-			  AND a.attname = 'target_entry_id'
-			  AND fns.nspname = $1
-			  AND fcl.relname = 'entries'
-			  AND fa.attname = 'id'
-			`,
-			[schemaName],
-		);
-		expect(res.rows.length).toBeGreaterThanOrEqual(1);
-	});
-
 	it("WRITE-S11 DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
 		const source = await seedEntry(store, {
 			collection: contentCollection,

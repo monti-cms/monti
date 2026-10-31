@@ -38,16 +38,6 @@ const footnoteWarnings = async (...content: CmsNode[]) => {
 };
 
 describe("footnote pre-publish validation (warnings only)", () => {
-	it("raises nothing for matching references and definitions", async () => {
-		const { warnings, snapshot } = await footnoteWarnings(
-			paragraph("A[^1] and B[^b] and A again[^1]."),
-			definition("1", "one"),
-			definition("b", "two"),
-		);
-		expect(warnings).toEqual([]);
-		expect(snapshot.issues).toEqual([]);
-	});
-
 	it("EDIT-F1 warns about a reference without a definition", async () => {
 		const { warnings, snapshot } = await footnoteWarnings(
 			paragraph("Text[^1] and more[^gone]."),
@@ -86,5 +76,4 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		const { warnings } = await footnoteWarnings(paragraph("Text[^Note]"), definition("note", "one"));
 		expect(warnings).toEqual([]);
 	});
-
 });

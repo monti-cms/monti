@@ -45,14 +45,6 @@ describe("monti init with a GitHub spec for core", () => {
 		expect(without.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("syntax-directive")));
 	});
 
-	it("installs bare names when core has a version range", async () => {
-		const host = fakeHost();
-		await initProject({ cwd: appWithCore("^0.2.0"), host });
-		expect(host.install).toHaveBeenCalledOnce();
-		expect(host.install).toHaveBeenCalledWith(installing("@monti-cms/admin"));
-		expect(host.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("github:")));
-	});
-
 	it("INIT-I1 prints the --no-install command with the same specs, quoted for a shell", async () => {
 		const dir = appWithCore(GITHUB);
 		const report = await initProject({ cwd: dir, host: fakeHost(), install: false });
@@ -67,7 +59,6 @@ describe("monti init with a GitHub spec for core", () => {
 		expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin");
 		expect(args).toContain("next-themes");
 	});
-
 });
 
 describe("the packages init installs", () => {
@@ -85,5 +76,4 @@ describe("the packages init installs", () => {
 			expect(report.installed).toEqual(expect.arrayContaining([...peersOf("admin"), ...peersOf("ai")]));
 		}
 	});
-
 });

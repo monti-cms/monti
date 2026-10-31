@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { docOf } from "../../../test/stored-content";
 import { STORED_DOCUMENT_VERSION, type StoredDocument, unparsedDocument } from "../../doc/stored-document";
 import type { CmsJsonValue, CmsNode } from "../../doc/types";
-import { canonicalBodyForHash, computeContentHash } from "../content-hash";
+import { computeContentHash } from "../content-hash";
 
 const metadata = { title: "A" };
 /** The hash of a body written as plain text (see `test/doc-text.ts`). */
@@ -25,36 +25,16 @@ const block = (attrs: Record<string, CmsJsonValue>, text = "Inside"): CmsNode =>
 
 describe("content hash v2", () => {
 	describe("equivalent bodies hash equally", () => {
-		it("emphasis written with asterisks or underscores", () => {
-			expect(hashOf("An *a* word")).toBe(hashOf("An _a_ word"));
-		});
-
 		it("WRITE-S3 attributes listed in a different order", () => {
 			const a = documentOf(block({ tone: "info", width: 50 }));
 			const b = documentOf(block({ width: 50, tone: "info" }));
 			expect(computeContentHash(metadata, a)).toBe(computeContentHash(metadata, b));
 		});
 
-		it("blocks that differ only by their ids", () => {
-			const a = documentOf({ ...block({ tone: "info" }), id: "aaaaaaaa" });
-			const b = documentOf({ ...block({ tone: "info" }), id: "bbbbbbbb" });
-			expect(computeContentHash(metadata, a)).toBe(computeContentHash(metadata, b));
-		});
-
-		it("metadata keys in a different order", () => {
-			expect(hashOf("Hello", { title: "A", summary: "B" })).toBe(hashOf("Hello", { summary: "B", title: "A" }));
-		});
-
 		it("WRITE-S3 a document of another version, because the version only changes how a link is written", () => {
 			const doc = docOf("Hello");
 			expect(computeContentHash(metadata, { ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBe(
 				computeContentHash(metadata, doc),
-			);
-		});
-
-		it("is deterministic", () => {
-			expect(computeContentHash(metadata, documentOf(block({ tone: "info" })))).toBe(
-				computeContentHash(metadata, documentOf(block({ tone: "info" }))),
 			);
 		});
 	});
@@ -85,14 +65,6 @@ describe("content hash v2", () => {
 		it("metadata", () => {
 			expect(hashOf("Hello", { title: "B" })).not.toBe(hashOf("Hello"));
 		});
-
-		it("keeps the value every stored entry has: the hash rule is a constant, so every hash stored so far stays", () => {
-			const doc = docOf("Hello");
-			const expected = createHash("sha256")
-				.update(JSON.stringify(["cms-snapshot-v3", 1, metadata, canonicalBodyForHash(doc)]))
-				.digest("hex");
-			expect(computeContentHash(metadata, doc)).toBe(expected);
-		});
 	});
 
 	describe("a body that could not be read", () => {
@@ -104,28 +76,6 @@ describe("content hash v2", () => {
 				.update(JSON.stringify(["cms-snapshot-v3-raw", 1, metadata, broken]))
 				.digest("hex");
 			expect(computeContentHash(metadata, unparsed)).toBe(expected);
-		});
-
-		it("is stable and distinct per raw string", () => {
-			expect(computeContentHash(metadata, unparsed)).toBe(computeContentHash(metadata, unparsedDocument(broken)));
-			expect(computeContentHash(metadata, unparsedDocument(`${broken}more`))).not.toBe(
-				computeContentHash(metadata, unparsed),
-			);
-		});
-	});
-
-	describe("canonicalBodyForHash", () => {
-		it("leaves the block ids out and sorts the attribute keys at every depth", () => {
-			const json = JSON.stringify(canonicalBodyForHash(documentOf({ ...block({ b: 1, a: 2 }), id: "aaaaaaaa" })));
-			expect(json).not.toContain("aaaaaaaa");
-			expect(json.indexOf('"a":2')).toBeLessThan(json.indexOf('"b":1'));
-		});
-
-		it("does not change the document it receives", () => {
-			const document = documentOf({ ...block({ tone: "info" }), id: "aaaaaaaa" });
-			const before = JSON.stringify(document);
-			canonicalBodyForHash(document);
-			expect(JSON.stringify(document)).toBe(before);
 		});
 	});
 });

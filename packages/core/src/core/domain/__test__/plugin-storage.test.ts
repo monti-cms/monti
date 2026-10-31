@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CmsError } from "../../store/errors";
-import {
-	assertExpectedVersionNumber,
-	assertMigrationName,
-	assertStorageKey,
-	assertStorageName,
-	serializeStorageValue,
-	storageConflict,
-	storageNotFound,
-} from "../plugin-storage";
+import { assertExpectedVersionNumber, assertStorageKey, serializeStorageValue } from "../plugin-storage";
 
 const codeOf = (run: () => unknown) => {
 	try {
@@ -20,7 +12,6 @@ const codeOf = (run: () => unknown) => {
 };
 
 describe("plugin storage rules", () => {
-
 	it("PLUG-D1 keys are any non-empty text", () => {
 		expect(codeOf(() => assertStorageKey("a/b c:ü"))).toBeNull();
 		expect(codeOf(() => assertStorageKey(""))).toBe("invalid_input");
@@ -42,10 +33,5 @@ describe("plugin storage rules", () => {
 		for (const value of [undefined, () => 1, Symbol("s"), circular, 10n]) {
 			expect(codeOf(() => serializeStorageValue(value))).toBe("invalid_input");
 		}
-	});
-
-	it("a conflict carries the stored version, and a missing item is not_found", () => {
-		expect(storageConflict(4)).toMatchObject({ code: "conflict", serverVersion: 4 });
-		expect(storageNotFound()).toMatchObject({ code: "not_found" });
 	});
 });

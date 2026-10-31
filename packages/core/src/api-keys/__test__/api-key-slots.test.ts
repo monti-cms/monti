@@ -68,7 +68,7 @@ describe("key slots", () => {
 		expect(await cms.apiKeys.slot("speller", "key").read()).toBe(`${VALUE}2`);
 	});
 
-	it("names a key entered for a slot after the service, not the localized label, so every language and the migrations agree", async () => {
+	it("KEY-P1 names a key entered for a slot after the service, not the localized label, so every language and the migrations agree", async () => {
 		const language = { current: "ko" };
 		const cms = cmsWith([speller(language)]);
 		await assign(request({ plugin: "speller", slot: "key", key: { use: "new", value: VALUE } }), { cms });

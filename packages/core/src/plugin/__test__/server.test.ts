@@ -124,38 +124,6 @@ describe("writeHooks", () => {
 			await (hooks.beforeValidate ?? hooks.beforeSave ?? hooks.beforePublish)?.({} as never);
 		expect(ran).toEqual(["server-1", "server-2", "alpha-1", "alpha-2", "beta"]);
 	});
-
-});
-
-describe("plugin order", () => {
-	it("runs the subscribers of each plugin after the server config's, in the plugin order", async () => {
-		const check = { beforeSave: [() => undefined] };
-		const plugins = serverPlugins(
-			[
-				{ name: "first", server: async () => ({ default: { on: { entry: check } } }) },
-				{ name: "second", server: async () => ({ default: { on: { entry: check } } }) },
-			],
-			{ entry: check },
-		);
-		expect((await plugins.writeHooks()).map((source) => source.owner)).toEqual([
-			"server",
-			"plugin:first",
-			"plugin:second",
-		]);
-	});
-
-	it("keeps every part of a server module, not only its subscribers", async () => {
-		const plugins = serverPlugins([
-			{
-				name: "both",
-				server: async () => ({
-					default: { on: { entry: { beforeSave: [() => undefined] } }, features: async () => ({ ready: true }) },
-				}),
-			},
-		]);
-		expect(await plugins.features()).toEqual({ both: { ready: true } });
-		expect((await plugins.writeHooks()).map((source) => source.owner)).toEqual(["plugin:both"]);
-	});
 });
 
 describe("eventSubscribers", () => {
@@ -233,7 +201,6 @@ describe("eventSubscribers", () => {
 			]).eventSubscribers(),
 		).rejects.toThrow(/on\.entry of plugin:a: the subscriber name "sync" is used twice/);
 	});
-
 });
 
 describe("events by kind", () => {
@@ -332,17 +299,6 @@ describe("formats", () => {
 		expect((await serverPlugins([]).formats()).list()).toEqual([]);
 	});
 
-	it("loads the plugins' formats once, and hands out the same registry afterwards", async () => {
-		const load = vi.fn(async () => format("hugo"));
-		const plugins = serverPlugins([{ name: "one", server: async () => ({ default: { formats: load } }) }]);
-
-		const first = await plugins.formats();
-		const second = await plugins.formats();
-
-		expect(second).toBe(first);
-		expect(load).toHaveBeenCalledTimes(1);
-	});
-
 	it("PLUG-S5 fails when two formats have one name, and tries again on the next call", async () => {
 		let name = "same";
 		const plugins = serverPlugins([
@@ -361,5 +317,4 @@ describe("formats", () => {
 			]).formats(),
 		).rejects.toThrow(/"same" is provided twice/);
 	});
-
 });

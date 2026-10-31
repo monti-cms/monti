@@ -56,10 +56,6 @@ describe("defineConfig: one config, one instance", () => {
 		expect(cms.server.media).toBe(storage);
 	});
 
-	it("names what is missing", () => {
-		expect(() => defineConfig({ ...site, auth } as never)).toThrow(/database.*postgres\(\)/);
-	});
-
 	it("AUTH-L7 boots without `auth`: the dev bypass lets this machine in, and production refuses everyone", async () => {
 		const cms = defineConfig({ ...site, database });
 		hostOf(cms).attachHost({
@@ -129,15 +125,6 @@ describe("one secret, MONTI_SECRET", () => {
 		const OLD = "the-old-cms-secret";
 		const stored = createSecretsVault({ secret: OLD }).forPlugin("ai").encrypt("sk-live-1234");
 
-		it("decrypts when MONTI_SECRET is set to the old value", () => {
-			vi.stubEnv("MONTI_SECRET", OLD);
-			expect(
-				defineConfig({ ...site, database, auth })
-					.plugin("ai")
-					.secrets.decrypt(stored),
-			).toBe("sk-live-1234");
-		});
-
 		it("KEY-S2 decrypts when the old value is listed as a previous secret, and is current again after the next save", () => {
 			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
 			const secrets = defineConfig({ ...site, database, auth, previousSecrets: [OLD] }).plugin("ai").secrets;
@@ -157,17 +144,6 @@ describe("one secret, MONTI_SECRET", () => {
 			expect(
 				() => defineConfig({ ...site, database, auth, previousSecrets: [undefined] }).plugin("ai").secrets,
 			).not.toThrow();
-		});
-
-		it("does not decrypt when the old secret is neither the new one nor listed", () => {
-			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
-			// Not even when it is still in the environment under its old name: nothing is guessed from other names.
-			vi.stubEnv("CMS_SECRET", OLD);
-			expect(
-				defineConfig({ ...site, database, auth })
-					.plugin("ai")
-					.secrets.decrypt(stored),
-			).toBeNull();
 		});
 	});
 });

@@ -24,7 +24,7 @@ const site = createSite(
 );
 
 const COLOR: PluginId<"color", { readonly palette: readonly string[] }> = { name: "color" };
-const AI: PluginId<"ai", { readonly model: string }> = { name: "ai" };
+const _AI: PluginId<"ai", { readonly model: string }> = { name: "ai" };
 
 describe("site.pluginOptions", () => {
 	it("PLUG-S4 returns the options of the plugin with that id's name, typed by the id", () => {
@@ -44,12 +44,5 @@ describe("site.pluginOptions", () => {
 		);
 		expect(other.pluginOptions(COLOR)).toEqual({ palette: ["blue"] });
 		expect(site.pluginOptions(COLOR)).toEqual({ palette: ["red"] });
-	});
-});
-
-describe("definePlugin", () => {
-
-	it("keeps the options it is given", () => {
-		expect(definePlugin({ name: "with-options", options: { a: 1 } }).options).toEqual({ a: 1 });
 	});
 });

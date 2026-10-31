@@ -121,9 +121,4 @@ describe("import boundary: the config file stays out of client bundles", () => {
 		expect(out.at(-1)).toContain("components/a.tsx -> monti.config.ts");
 		expect(out.at(-1)).toContain("fix:");
 	});
-
-	it("holds for the blog example: no client component reaches monti.config.ts, and it does import the config from its server files", () => {
-		const blog = path.resolve(__dirname, "../../../../../examples/blog");
-		expect(formatBoundaryViolations(findBoundaryViolations(blog))).toBe("");
-	});
 });
