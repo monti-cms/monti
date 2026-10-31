@@ -24,7 +24,7 @@ const textOf = (node: ElementContent): string =>
 	node.type === "text" ? node.value : node.type === "element" ? node.children.map(textOf).join("") : "";
 
 describe("highlight inline render integration", () => {
-	it("converts inline annotation decorations into render tags", () => {
+	it("SITE-D2 converts inline annotation decorations into render tags", () => {
 		const hast = highlight(
 			"console.log('hello')",
 			"ts",

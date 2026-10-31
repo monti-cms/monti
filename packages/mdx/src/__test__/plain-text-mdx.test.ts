@@ -22,7 +22,7 @@ const titled = (() => {
 const search = (mdx: string) => documentText(testSite, docOf(mdx), SEARCH_TEXT);
 
 describe("body plain text and search text of MDX", () => {
-	it("keeps readable text and drops code, math, images and the syntax around them", () => {
+	it("FMT-R1 keeps readable text and drops code, math, images and the syntax around them", () => {
 		const mdx = [
 			"## 개요",
 			"",
@@ -47,18 +47,18 @@ describe("body plain text and search text of MDX", () => {
 		expect(plain(mdx)).toBe("개요 굵은 문장과 링크, 밑줄 표현. 할 일 머리 칸 셀 값");
 	});
 
-	it("reads the text of a block body and of the text attributes the block definition marks translatable", () => {
+	it("FMT-R1 reads the text of a block body and of the text attributes the block definition marks translatable", () => {
 		if (!titled) return;
 		const { component, attribute } = titled;
 		const mdx = `앞 문장.\n\n<${component} ${attribute}="상자 제목">\n\n상자 안 문장\n\n</${component}>\n\n뒷 문장.`;
 		expect(plain(mdx)).toBe("앞 문장. 상자 제목 상자 안 문장 뒷 문장.");
 	});
 
-	it("leaves out text the page does not show", () => {
+	it("FMT-R1 leaves out text the page does not show", () => {
 		expect(plain("공개 <Untranslated>번역 안내</Untranslated> 문장")).toBe("공개 문장");
 	});
 
-	it("keeps code and math as written, and the alt text and caption of an image", () => {
+	it("FMT-R1 keeps code and math as written, and the alt text and caption of an image", () => {
 		const text = search(
 			[
 				"```ts",
@@ -82,7 +82,7 @@ describe("body plain text and search text of MDX", () => {
 		expect(text).not.toContain("/a.png");
 	});
 
-	it("indexes the code of a fence without its annotation comments", () => {
+	it("FMT-R1 indexes the code of a fence without its annotation comments", () => {
 		const text = search(
 			["```ts", "// @line plus", "const needle = 1;", "// @char strong {6-6}", "const other = 2;", "```"].join("\n"),
 		);
@@ -91,7 +91,7 @@ describe("body plain text and search text of MDX", () => {
 		expect(text).not.toContain("@char");
 	});
 
-	it("keeps the text attributes of blocks and the hover text of a text decoration", () => {
+	it("FMT-R1 keeps the text attributes of blocks and the hover text of a text decoration", () => {
 		if (titled) {
 			const { component, attribute } = titled;
 			expect(search(`<${component} ${attribute}="상자 제목">\n\n안\n\n</${component}>`)).toContain("상자 제목");
@@ -109,19 +109,19 @@ describe("body plain text and search text of MDX", () => {
 		}
 	});
 
-	it("does not read markup as text", () => {
+	it("FMT-R1 does not read markup as text", () => {
 		const text = search('<u>밑줄</u> {/* 주석 */} <Image mediaId="x" alt="a" />');
 		expect(text).not.toMatch(/[<>]/);
 		expect(text).not.toContain("주석");
 	});
 
-	it("falls back to the string for a body that does not parse: visible words stay, comments, imports and addresses go", () => {
+	it("FMT-R1 falls back to the string for a body that does not parse: visible words stay, comments, imports and addresses go", () => {
 		const text = search('{/* 주석 */}\nexport const a = { b: "내보냄" };\n보이는 말 [라벨](https://example.com/주소)');
 		expect(text).toContain("보이는 말 라벨");
 		for (const gone of ["주석", "내보냄", "주소"]) expect(text).not.toContain(gone);
 	});
 
-	it("keeps translation notes, which are removed before publishing and which an editor may look for", () => {
+	it("FMT-R1 keeps translation notes, which are removed before publishing and which an editor may look for", () => {
 		expect(search("공개 <Untranslated>번역 안내</Untranslated>")).toBe("공개 번역 안내");
 	});
 });

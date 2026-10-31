@@ -37,13 +37,13 @@ describe.each([
 	["ranged annotations above their own lines", perLine],
 	["ranged annotations that reach past the code", pastTheEnd],
 ])("code with %s", (_name, mdx) => {
-	it("is read as a document, not an unparsed body", async () => {
+	it("FMT-R2 is read as a document, not an unparsed body", async () => {
 		const snapshot = await prepare({ body: mdx, format: "mdx" });
 		expect(snapshot.doc.content.map((node) => node.type)).toEqual(["codeBlock"]);
 		expect(snapshot.issues.map((issue) => issue.code)).not.toContain("unparsed_body");
 	});
 
-	it("keeps its annotations and the code without the annotation comments", async () => {
+	it("FMT-R2 keeps its annotations and the code without the annotation comments", async () => {
 		const attrs = (await prepare({ body: mdx, format: "mdx" })).doc.content[0]?.attrs as {
 			code: string;
 			annotations: { lines: { name: string; start: number; end: number }[] };
@@ -56,7 +56,7 @@ describe.each([
 		}
 	});
 
-	it("has the same content hash when the document is sent back, and when the text it was written as is saved again", async () => {
+	it("FMT-R2 has the same content hash when the document is sent back, and when the text it was written as is saved again", async () => {
 		const first = await prepare({ body: mdx, format: "mdx" });
 		const fromDocument = await prepare({ doc: first.doc });
 		const written = documentToMdx(testSite, first.doc);
@@ -66,14 +66,14 @@ describe.each([
 		expect(documentToMdx(testSite, fromWritten.doc)).toBe(written);
 	});
 
-	it("is stored as a document with the annotations", () => {
+	it("FMT-R2 is stored as a document with the annotations", () => {
 		const doc = docOf(mdx);
 		expect(doc?.content[0]?.type).toBe("codeBlock");
 	});
 });
 
 describe("code annotations the text cannot keep", () => {
-	it("drops an annotation that starts past the last code line, and keeps the others", async () => {
+	it("FMT-R2 drops an annotation that starts past the last code line, and keeps the others", async () => {
 		const attrs = (await prepare({ format: "mdx", body: pastTheEnd })).doc.content[0]?.attrs as {
 			annotations: { lines: { name: string; start: number; end: number }[] };
 		};
@@ -81,7 +81,7 @@ describe("code annotations the text cannot keep", () => {
 		expect(attrs.annotations.lines.find((line) => line.name === "plus")).toMatchObject({ start: 3, end: CODE.length });
 	});
 
-	it("warns about each one (not an error), with the block, so the body still saves and publishes", async () => {
+	it("FMT-R2 warns about each one (not an error), with the block, so the body still saves and publishes", async () => {
 		const snapshot = await prepare({ format: "mdx", body: pastTheEnd });
 		const block = snapshot.doc.content[0]?.id;
 		expect(block).toMatch(/\S/);
@@ -91,14 +91,14 @@ describe("code annotations the text cannot keep", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("does not warn about annotations that stay in the code", async () => {
+	it("FMT-R2 does not warn about annotations that stay in the code", async () => {
 		for (const mdx of [stacked, perLine]) {
 			const snapshot = await prepare({ body: mdx, format: "mdx" });
 			expect((snapshot.warnings ?? []).map((warning) => warning.code)).not.toContain("code_annotation_out_of_range");
 		}
 	});
 
-	it("still makes a body unparsed when it does not parse", async () => {
+	it("FMT-R2 still makes a body unparsed when it does not parse", async () => {
 		const snapshot = await prepare({ format: "mdx", body: "<Open\n" });
 		expect(snapshot.doc.content[0]?.type).toBe("unparsed");
 		expect(snapshot.issues.map((issue) => issue.code)).toContain("unparsed_body");

@@ -19,7 +19,7 @@ const paragraph = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", cont
 const doc = (...content: CmsNode[]): CmsNode => ({ type: "doc", content });
 
 describe("syntax extensions: writing", () => {
-	it("an extension writes a mark around the already written content", () => {
+	it("FMT-P1 an extension writes a mark around the already written content", () => {
 		const braces: SyntaxExtension = {
 			name: "braces",
 			fromMark: { underline: (_mark, inner) => `{u ${inner}}` },
@@ -28,7 +28,7 @@ describe("syntax extensions: writing", () => {
 		expect(serialize(doc(paragraph(text("밑줄", [{ type: "underline" }]))))).toBe("{u 밑줄}\n");
 	});
 
-	it("the standard notation is written where an extension has no writer or defers", () => {
+	it("FMT-P1 the standard notation is written where an extension has no writer or defers", () => {
 		const defers: SyntaxExtension = {
 			name: "defers",
 			fromMark: { "*": () => undefined },
@@ -39,7 +39,7 @@ describe("syntax extensions: writing", () => {
 		expect(mdxWith(testSite, []).serialize(content)).toBe("<u>a</u>**b**\n");
 	});
 
-	it("the first extension that does not defer wins, in list order", () => {
+	it("FMT-P1 the first extension that does not defer wins, in list order", () => {
 		const writer = (name: string, answer: string | undefined): SyntaxExtension => ({
 			name,
 			fromDocument: { horizontalRule: () => answer },
@@ -50,7 +50,7 @@ describe("syntax extensions: writing", () => {
 		expect(mdxWith(testSite, [writer("a", undefined), writer("b", undefined)]).serialize(rule)).toBe("---\n");
 	});
 
-	it("a specific node type is tried before the wildcard of the same extension", () => {
+	it("FMT-P1 a specific node type is tried before the wildcard of the same extension", () => {
 		const extension: SyntaxExtension = {
 			name: "both",
 			fromDocument: {
@@ -61,7 +61,7 @@ describe("syntax extensions: writing", () => {
 		expect(mdxWith(testSite, [extension]).serialize(doc({ type: "horizontalRule" }))).toBe("specific\n");
 	});
 
-	it("never offers a line break to an extension", () => {
+	it("FMT-P1 never offers a line break to an extension", () => {
 		const greedy: SyntaxExtension = {
 			name: "greedy",
 			fromDocument: { hardBreak: () => "<<br>>", "*": (node) => (node.type === "paragraph" ? undefined : "<<any>>") },
@@ -72,14 +72,14 @@ describe("syntax extensions: writing", () => {
 		expect(written).toBe("가<br />\n나\n");
 	});
 
-	it("body text is escaped by every extension, but code text is not", () => {
+	it("FMT-P1 body text is escaped by every extension, but code text is not", () => {
 		const at: SyntaxExtension = { name: "at", escapeText: (value) => value.replace(/@/g, "\\@") };
 		const { serialize } = mdxWith(testSite, [at]);
 		expect(serialize(doc(paragraph(text("a@b"))))).toBe("a\\@b\n");
 		expect(serialize(doc(paragraph(text("a@b", [{ type: "code" }]))))).toBe("`a@b`\n");
 	});
 
-	it("escaping knows whether the text is inside a label and which marks wrap it", () => {
+	it("FMT-P1 escaping knows whether the text is inside a label and which marks wrap it", () => {
 		const seen: { label: boolean; marks: string[] }[] = [];
 		const spy: SyntaxExtension = {
 			name: "spy",
@@ -101,7 +101,7 @@ describe("syntax extensions: writing", () => {
 		]);
 	});
 
-	it("a block writer can write its children, sees the indentation and the site's blocks", () => {
+	it("FMT-P1 a block writer can write its children, sees the indentation and the site's blocks", () => {
 		const seen: { indent: string; align?: string }[] = [];
 		const box: SyntaxExtension = {
 			name: "box",
@@ -121,7 +121,7 @@ describe("syntax extensions: writing", () => {
 		expect(seen).toEqual([{ indent: "  ", align: "center" }]);
 	});
 
-	it("shows attributes of a block the way the standard notation writes them", () => {
+	it("FMT-P1 shows attributes of a block the way the standard notation writes them", () => {
 		const probe: SyntaxExtension = {
 			name: "probe",
 			fromDocument: {
@@ -159,14 +159,14 @@ describe("syntax extensions: reading", () => {
 		},
 	});
 
-	it("an extension's plugins read its notation, and receive the site's blocks", () => {
+	it("FMT-P1 an extension's plugins read its notation, and receive the site's blocks", () => {
 		const names: string[] = [];
 		const { write } = mdxWith(testSite, [atNotation(names)]);
 		expect(write("앞 @@word@@ 뒤").trimEnd()).toBe("<u>word</u>");
 		expect(names).toContain("image");
 	});
 
-	it("receives the names of the code block line effects the site uses", () => {
+	it("FMT-P1 receives the names of the code block line effects the site uses", () => {
 		let effects: ReadonlySet<string> = new Set();
 		const spy: SyntaxExtension = {
 			name: "spy",
@@ -179,11 +179,11 @@ describe("syntax extensions: reading", () => {
 		expect([...effects]).toEqual(expect.arrayContaining(["highlight", "plus", "minus", "warning", "error"]));
 	});
 
-	it("without the extension the notation is ordinary text", () => {
+	it("FMT-P1 without the extension the notation is ordinary text", () => {
 		expect(mdxWith(testSite, []).write("앞 @@word@@ 뒤").trimEnd()).toBe("앞 @@word@@ 뒤");
 	});
 
-	it("the public render chain reads the notation too", async () => {
+	it("FMT-P1 the public render chain reads the notation too", async () => {
 		const names: string[] = [];
 		const markup = renderToStaticMarkup(
 			(await renderMdx("앞 @@word@@ 뒤", { site: testSite, syntax: [atNotation(names)] })).content,

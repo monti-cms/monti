@@ -41,7 +41,7 @@ describe("rendering links by entry id", () => {
 		],
 	});
 
-	it("draws a link at the address its entry has now, and an unresolved one as plain text", async () => {
+	it("SITE-R3 draws a link at the address its entry has now, and an unresolved one as plain text", async () => {
 		const markup = await render({ doc: body, refs });
 
 		expect(markup).toContain('<a href="/posts/renamed">it</a>');
@@ -51,14 +51,14 @@ describe("rendering links by entry id", () => {
 		expect(markup).toContain('href="https://example.com/a"');
 	});
 
-	it("draws every entry link as plain text without refs", async () => {
+	it("SITE-R3 draws every entry link as plain text without refs", async () => {
 		const markup = await render({ doc: body });
 
 		expect(markup).toContain("See it, gone and");
 		expect(markup).not.toContain("/posts/renamed");
 	});
 
-	it("gives a site's own link component the entry, its address and the id", async () => {
+	it("SITE-D1 gives a site's own link component the entry, its address and the id", async () => {
 		const seen: LinkProps[] = [];
 		const components = {
 			marks: {

@@ -48,7 +48,7 @@ const directiveName = (block: BlockDefinition) => ("directive" in block.syntax ?
 const { write, writeTwice } = mdxWith(testSite, [directiveSyntax()]);
 
 describe("directive syntax: writing", () => {
-	it("normalizes read-compatible JSX and inline HTML to directives", () => {
+	it("FMT-S1 normalizes read-compatible JSX and inline HTML to directives", () => {
 		expect(write("<u>밑줄</u>").trimEnd()).toBe(":u[밑줄]");
 		expect(write("<sup>위</sup>").trimEnd()).toBe(":sup[위]");
 		expect(write("<sub>아래</sub>").trimEnd()).toBe(":sub[아래]");
@@ -57,7 +57,7 @@ describe("directive syntax: writing", () => {
 		);
 	});
 
-	it.skipIf(!bodyBlock || !bodyAttribute)("also normalizes JSX of a site container block to a directive", () => {
+	it.skipIf(!bodyBlock || !bodyAttribute)("FMT-S1 also normalizes JSX of a site container block to a directive", () => {
 		if (!bodyBlock || !bodyAttribute) return;
 		const { component } = bodyBlock;
 		const [name, attribute] = bodyAttribute;
@@ -67,15 +67,18 @@ describe("directive syntax: writing", () => {
 		);
 	});
 
-	it.skipIf(!markBlock || !markAttribute)("also normalizes JSX of a site text decoration block to a directive", () => {
-		if (!markBlock || !markAttribute) return;
-		const [name] = markAttribute;
-		expect(write(`<${markBlock.component} ${name}="설명">라벨</${markBlock.component}>`).trimEnd()).toBe(
-			`:${directiveName(markBlock)}[라벨]{${name}="설명"}`,
-		);
-	});
+	it.skipIf(!markBlock || !markAttribute)(
+		"FMT-S1 also normalizes JSX of a site text decoration block to a directive",
+		() => {
+			if (!markBlock || !markAttribute) return;
+			const [name] = markAttribute;
+			expect(write(`<${markBlock.component} ${name}="설명">라벨</${markBlock.component}>`).trimEnd()).toBe(
+				`:${directiveName(markBlock)}[라벨]{${name}="설명"}`,
+			);
+		},
+	);
 
-	it.skipIf(groups.length < 2)("nested containers have more colons the further out they are (3 + level)", () => {
+	it.skipIf(groups.length < 2)("FMT-S1 nested containers have more colons the further out they are (3 + level)", () => {
 		const [outer, inner] = groups;
 		if (!outer || !inner) return;
 		const { block: tabs, child: tab } = outer;
@@ -103,7 +106,7 @@ describe("directive syntax: writing", () => {
 		expect(nested).toContain(`:::${directiveName(column)}`);
 	});
 
-	it.skipIf(!bodyBlock)("a core container inside a site container: the outer one has more colons", () => {
+	it.skipIf(!bodyBlock)("FMT-S1 a core container inside a site container: the outer one has more colons", () => {
 		if (!bodyBlock) return;
 		const { component } = bodyBlock;
 		const nested = write(`<${component}>\n<TextAlign align="center">\n깊은 본문\n</TextAlign>\n</${component}>`);
@@ -113,7 +116,7 @@ describe("directive syntax: writing", () => {
 	});
 
 	it.skipIf(!booleanBlock || !booleanAttribute)(
-		"a boolean attribute writes its name only when true and omits false or missing",
+		"FMT-S1 a boolean attribute writes its name only when true and omits false or missing",
 		() => {
 			if (!booleanBlock || !booleanAttribute) return;
 			const { component } = booleanBlock;
@@ -128,7 +131,7 @@ describe("directive syntax: writing", () => {
 		},
 	);
 
-	it("writes JSX where Markdown emphasis does not hold", () => {
+	it("FMT-S1 writes JSX where Markdown emphasis does not hold", () => {
 		// If the inner end is punctuation, CommonMark emphasis does not close and the asterisks stay as text.
 		expect(write("<strong>정적(Static)</strong>과 동적").trimEnd()).toBe("<strong>정적(Static)</strong>과 동적");
 		expect(write('<strong>"인용"</strong>').trimEnd()).toBe('<strong>"인용"</strong>');
@@ -140,12 +143,12 @@ describe("directive syntax: writing", () => {
 		expect(write("**정적(Static)**과 동적").trimEnd()).toBe("\\*\\*정적(Static)\\*\\*과 동적");
 	});
 
-	it("does not write line breaks as directives (always <br />)", () => {
+	it("FMT-S1 does not write line breaks as directives (always <br />)", () => {
 		expect(write("첫 줄\\\n둘째 줄")).toBe("첫 줄<br />\n둘째 줄\n");
 		expect(write("앞:br[]뒤")).toBe("앞<br />\n뒤\n");
 	});
 
-	it("writes an image as a leaf if it has a media reference, size, alignment, caption or decorative flag, otherwise as Markdown", () => {
+	it("FMT-S1 writes an image as a leaf if it has a media reference, size, alignment, caption or decorative flag, otherwise as Markdown", () => {
 		expect(write('<Image mediaId="uuid-1" alt="설명" />').trimEnd()).toBe('::image{mediaId="uuid-1" alt="설명"}');
 		expect(write('<Image src="/images/a.png" alt="설명" width="60%" align="center" caption="캡션" />').trimEnd()).toBe(
 			'::image{src="/images/a.png" alt="설명" width="60%" align="center" caption="캡션"}',
@@ -156,7 +159,7 @@ describe("directive syntax: writing", () => {
 		expect(write("![설명](/images/a.png)").trimEnd()).toBe("![설명](/images/a.png)");
 	});
 
-	it("keeps an escaped `:name` as text", () => {
+	it("FMT-S1 keeps an escaped `:name` as text", () => {
 		// If a delimiter follows a registered name it is read as a directive, so it is cut with `\:`.
 		expect(write("글자로 쓰는 \\:u[괄호] 예문").trimEnd()).toBe("글자로 쓰는 \\:u\\[괄호] 예문");
 		expect(write("줄바꿈 글자 \\:br 입니다").trimEnd()).toBe("줄바꿈 글자 \\:br 입니다");
@@ -168,7 +171,7 @@ describe("directive syntax: writing", () => {
 		expect(write("낮 12:30에 만나요").trimEnd()).toBe("낮 12:30에 만나요");
 	});
 
-	it("writing the written string again gives the same string (idempotent)", () => {
+	it("FMT-S1 writing the written string again gives the same string (idempotent)", () => {
 		const [group] = groups;
 		const samples = [
 			':::text-align{align="center"}\n\n본문 :u[밑줄] 과 줄바꿈\n\n:::',

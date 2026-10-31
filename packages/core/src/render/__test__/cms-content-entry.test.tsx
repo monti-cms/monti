@@ -52,7 +52,7 @@ describe("CmsContent with an entry", () => {
 		{ type: "file", attrs: { mediaId: ATTACHMENT, label: "Deck" } },
 	);
 
-	it("draws images and files from the entry's refs, with no image resolver", async () => {
+	it("SITE-R4 draws images and files from the entry's refs, with no image resolver", async () => {
 		const seen: ImageProps[] = [];
 		const files: FileProps[] = [];
 		await render({
@@ -75,7 +75,7 @@ describe("CmsContent with an entry", () => {
 		expect(files[0]).toMatchObject({ url: "https://cdn.test/deck.pdf", filename: "deck.pdf" });
 	});
 
-	it("resolves every media id of the document from the refs a read returns for it", async () => {
+	it("SITE-R4 resolves every media id of the document from the refs a read returns for it", async () => {
 		// What a read returns: refs for exactly the ids `collectRefs` finds.
 		const wanted = collectRefs(doc).media;
 		expect(wanted).toEqual([MEDIA, MISSING, ATTACHMENT]);
@@ -85,7 +85,7 @@ describe("CmsContent with an entry", () => {
 		expect(markup).toContain("deck.pdf");
 	});
 
-	it("takes the language of the page from the entry, and the options win over the entry", async () => {
+	it("SITE-R3 takes the language of the page from the entry, and the options win over the entry", async () => {
 		const locales: (string | undefined)[] = [];
 		const components = loose({
 			paragraph: ({ ctx, children }: { ctx: { locale?: string }; children: ReactNode }) => {
@@ -103,7 +103,7 @@ describe("CmsContent with an entry", () => {
 		expect(locales).toEqual(["fr", "de", undefined]);
 	});
 
-	it("lets an image resolver of the site win over the refs", async () => {
+	it("SITE-R4 lets an image resolver of the site win over the refs", async () => {
 		const seen: ImageProps[] = [];
 		await render({
 			entry: { doc, refs },
@@ -119,12 +119,12 @@ describe("CmsContent with an entry", () => {
 		expect(seen.map((image) => image.src)).toEqual(Array(2).fill("https://site.test/own.png"));
 	});
 
-	it("renders an entry without a document as nothing", async () => {
+	it("SITE-R1 renders an entry without a document as nothing", async () => {
 		expect(await CmsContent({ cms, entry: { doc: null } })).toBeNull();
 		expect(await CmsContent({ cms, doc: null })).toBeNull();
 	});
 
-	it("renders the same as renderDocument for the same document and refs", async () => {
+	it("SITE-R1 renders the same as renderDocument for the same document and refs", async () => {
 		const direct = renderToStaticMarkup((await renderDocument(doc, { site: testSite, refs })).content as ReactNode);
 
 		expect(await render({ entry: { doc, refs } })).toBe(direct);
@@ -133,7 +133,7 @@ describe("CmsContent with an entry", () => {
 });
 
 describe("tableOfContents with an entry's document", () => {
-	it("lists the headings of the document, and has none for an entry without one", () => {
+	it("SITE-D3 lists the headings of the document, and has none for an entry without one", () => {
 		const toc = tableOfContents(docOf("## One\n\ntext\n\n### Two"));
 
 		expect(toc.map((item) => [item.value, item.level])).toEqual([

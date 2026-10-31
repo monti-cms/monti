@@ -16,7 +16,7 @@ const post = defineCollection({ label: "Post", kind: "document", fields: { title
 const base = { collections: { post }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
 
 describe("one plugin per block", () => {
-	it("every block extension is a plain plugin entry that works with no arguments", () => {
+	it("BLOCK-R1 every block extension is a plain plugin entry that works with no arguments", () => {
 		const everyone = [callout, collapsible, tabs, columns, codeExplorer, mermaid, chart, tooltip, codeRef, color];
 		for (const factory of everyone) {
 			const plugin = factory();
@@ -38,17 +38,17 @@ describe("one plugin per block", () => {
 		]);
 	});
 
-	it("there is no bundle that adds them all behind one call", async () => {
+	it("BLOCK-R1 there is no bundle that adds them all behind one call", async () => {
 		const exported = await import("..");
 		expect(exported).not.toHaveProperty("blocks");
 	});
 
-	it("listing them in the config adds exactly the blocks listed, in the order given", () => {
+	it("BLOCK-R1 listing them in the config adds exactly the blocks listed, in the order given", () => {
 		const config = defineSite({ ...base, plugins: [tooltip(), callout(), codeRef()] });
 		expect(names(config.plugins ?? [])).toEqual(["tooltip", "callout", "code-ref"]);
 	});
 
-	it("a block that is not listed is not there", () => {
+	it("BLOCK-R1 a block that is not listed is not there", () => {
 		const blocksOf = (config: { plugins?: readonly { blocks?: readonly { name: string }[] }[] }) =>
 			(config.plugins ?? []).flatMap((plugin) => (plugin.blocks ?? []).map((block) => block.name));
 		const some = blocksOf(defineSite({ ...base, plugins: [callout(), tooltip()] }));
@@ -57,7 +57,7 @@ describe("one plugin per block", () => {
 		expect(some).not.toContain("tabs");
 	});
 
-	it("takes its own options, and a bad option is a config error", () => {
+	it("BLOCK-R1 takes its own options, and a bad option is a config error", () => {
 		const palette = [defaultTextPalette((key) => translate(colorMessages, "en", key))[0]].filter(
 			(item) => item !== undefined,
 		);
@@ -75,7 +75,7 @@ describe("one plugin per block", () => {
 		).toThrow(/hex/);
 	});
 
-	it("adding the same block twice is a config error", () => {
+	it("BLOCK-R1 adding the same block twice is a config error", () => {
 		expect(() => defineSite({ ...base, plugins: [callout(), callout()] })).toThrow();
 	});
 });
@@ -93,7 +93,7 @@ function LoadedPreview({ lang }: { lang: string }) {
 describe("editor preview", () => {
 	const SitePreview = () => null;
 
-	it("the Mermaid and chart extensions register default previews and load the renderer when a preview opens", async () => {
+	it("BLOCK-R1 the Mermaid and chart extensions register default previews and load the renderer when a preview opens", async () => {
 		render(
 			<AdminComponentsProvider components={mermaidComponents}>
 				<AdminComponentsProvider components={chartComponents}>
@@ -107,7 +107,7 @@ describe("editor preview", () => {
 		await waitFor(() => expect(screen.getByText("chart: ChartPreview")).toBeInTheDocument(), { timeout: 15_000 });
 	}, 30_000);
 
-	it("a preview the site registers under the same name (inner provider) wins", async () => {
+	it("BLOCK-R1 a preview the site registers under the same name (inner provider) wins", async () => {
 		const Site = ({ children }: { children: ReactNode }) => (
 			<AdminComponentsProvider components={{ fencePreviews: { chart: async () => SitePreview } }}>
 				{children}

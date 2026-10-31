@@ -8,7 +8,7 @@ import { allBlocks } from "../test/all-blocks";
 describe("block extensions vs. their public components", () => {
 	const plugins = allBlocks();
 
-	it("every extension has a render module whose default export is its component table", async () => {
+	it("BLOCK-R4 every extension has a render module whose default export is its component table", async () => {
 		expect(plugins.length).toBeGreaterThan(0);
 		for (const plugin of plugins) {
 			expect(plugin.render, plugin.name).toBeTypeOf("function");
@@ -17,7 +17,7 @@ describe("block extensions vs. their public components", () => {
 		}
 	});
 
-	it("every block that is not a child of another block has a component", async () => {
+	it("BLOCK-R4 every block that is not a child of another block has a component", async () => {
 		for (const plugin of plugins) {
 			const table = (await plugin.render?.())?.default;
 			for (const block of plugin.blocks ?? []) {

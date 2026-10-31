@@ -140,6 +140,11 @@
 | 약한 패턴 | `scripts/test-metrics/weak-patterns.mjs`, `site-names.mjs` |
 | 약속마다 그 층의 테스트가 있는지 | `scripts/test-metrics/requirements.mjs` |
 
+**바뀐 것만 잰다.** 🔴 기능을 처음 정리할 때는 파일 전체를 재지만, 그 뒤에는 브랜치가 바꾼 줄만 잰다. `pnpm test:mutation:changed`는 기준
+브랜치(기본 `origin/overhaul`, `--base`로 바꾼다)와의 차이에서 core, admin, auth의 바뀐 소스 줄을 골라 그 줄에만 Stryker를 돌린다.
+incremental 모드라서 결과를 패키지의 `reports/mutation/stryker-incremental.json`에 남기고, 다음 실행은 코드나 테스트가 바뀐 바꿈만 다시 돈다.
+🔴 코드를 고친 PR에서 돌리고, 살아남은 바꿈은 위의 기준대로 처리한다. 흐름이 바뀌면 표를 먼저 고치고, 결함이 빠져나가면 표에 없던 약속을 찾아 더한다.
+
 변이 테스트를 돌릴 때(2026-10-31에 배운 것):
 
 - 보고서는 `--reporters json,progress`처럼 쉼표로 묶는다. `--reporters`를 여러 번 주면 마지막 것만 쓰인다.

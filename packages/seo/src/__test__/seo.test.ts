@@ -12,7 +12,7 @@ import { seoMessages } from "../messages";
  */
 
 describe("seoFields", () => {
-	it("builds the field set with default names and roles", () => {
+	it("SITE-N2 builds the field set with default names and roles", () => {
 		const bundle = seoFields();
 		expect(bundle.seoTitle).toMatchObject({ kind: "text", role: SEO_ROLES.title, localized: true });
 		expect(bundle.seoImage).toMatchObject({ kind: "media", accept: "image", role: SEO_ROLES.image });
@@ -21,7 +21,7 @@ describe("seoFields", () => {
 		expect(bundle.seoNoindex.localized).toBeUndefined();
 	});
 
-	it("default labels are chosen in the admin language at read time, not when the field is built (labels set by the site stay as is)", () => {
+	it("SITE-N2 default labels are chosen in the admin language at read time, not when the field is built (labels set by the site stay as is)", () => {
 		const seoBundle = seoFields({ labels: { canonical: "Canonical" } });
 		const page = defineCollection({
 			label: "Page",
@@ -42,7 +42,7 @@ describe("seoFields", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("changes names, labels, per-language values and recommended lengths, and omits slots (stored names are kept as they are)", () => {
+	it("SITE-N2 changes names, labels, per-language values and recommended lengths, and omits slots (stored names are kept as they are)", () => {
 		const bundle = seoFields({
 			keys: { title: "metaTitle", image: "ogImageId" },
 			labels: { title: "Meta title" },
@@ -69,7 +69,7 @@ describe("config validation (`seo().checkConfig`)", () => {
 			} as CollectionsConfig,
 		});
 
-	it("checks that SEO roles are attached to fields of the right kind", () => {
+	it("SITE-N2 checks that SEO roles are attached to fields of the right kind", () => {
 		expect(check(seoFields())).toEqual([]);
 		expect(check({ image: fields.text({ label: "Image", role: "ogImage" }) })).toEqual([
 			expect.objectContaining({ path: "collections.page.fields.image.role", code: "role-kind" }),
@@ -95,7 +95,7 @@ describe("public page helper (`seoOf`)", () => {
 		},
 	});
 
-	it("reads values by role and fills an empty title or description from the title or summary", () => {
+	it("SITE-N2 reads values by role and fills an empty title or description from the title or summary", () => {
 		expect(seoOf(page, { title: "Page", intro: "Intro text" })).toEqual({
 			title: "Page",
 			description: "Intro text",
@@ -119,7 +119,7 @@ describe("public page helper (`seoOf`)", () => {
 		});
 	});
 
-	it("falls back to the title field found by its role, not by the name `title`", () => {
+	it("SITE-N2 falls back to the title field found by its role, not by the name `title`", () => {
 		const article = defineCollection({
 			label: "Article",
 			kind: "document",
@@ -149,13 +149,13 @@ describe("current config: AI features", () => {
 			)
 			.sort();
 
-	it("with the AI plugin, search title and description suggestions attach to the role fields (even if not listed in the AI config)", () => {
+	it("SITE-N2 with the AI plugin, search title and description suggestions attach to the role fields (even if not listed in the AI config)", () => {
 		expect(withRole(SEO_ROLES.title).length).toBeGreaterThan(0);
 		expect(pairs("seoTitle")).toEqual(withRole(SEO_ROLES.title));
 		expect(pairs("seoDescription")).toEqual(withRole(SEO_ROLES.description));
 	});
 
-	it("suggestion length is field `max` → recommended length (`limits`) → default", () => {
+	it("SITE-N2 suggestion length is field `max` → recommended length (`limits`) → default", () => {
 		const collection = testSite.COLLECTIONS.find((name) => testSite.roleField(name, SEO_ROLES.title));
 		const field = collection ? testSite.roleField(collection, SEO_ROLES.title)?.field : undefined;
 		const limit = field?.kind === "text" ? (field.max ?? field.inputOptions?.limit ?? 60) : 60;
@@ -163,7 +163,7 @@ describe("current config: AI features", () => {
 		expect(actions.seoTitle?.prompt).toContain(`${limit} characters`);
 	});
 
-	it("the plugin places every SEO field in a tab of its own, found by role and by the preview view", () => {
+	it("SITE-N2 the plugin places every SEO field in a tab of its own, found by role and by the preview view", () => {
 		for (const collection of testSite.COLLECTIONS) {
 			const placed = testSite.panelGroupsOf(collection).find((group) => group.placedBy === "seo");
 			for (const { name, field } of valueFieldsOf(testSite.schemaOf(collection))) {
@@ -173,14 +173,14 @@ describe("current config: AI features", () => {
 		expect(testSite.plugins?.some((plugin) => plugin.name === "seo")).toBe(true);
 	});
 
-	it("takes the tab name from the plugin options, and places nothing in a collection without SEO fields", () => {
+	it("SITE-N2 takes the tab name from the plugin options, and places nothing in a collection without SEO fields", () => {
 		const layout = (tab?: string) => seo(tab ? { tab } : {}).contributes?.layout;
 		expect(layout()).toEqual([expect.objectContaining({ tab: "SEO" })]);
 		expect(layout("Search")).toEqual([expect.objectContaining({ tab: "Search" })]);
 		expect(seo({ ai: false }).contributes).not.toHaveProperty("ai");
 	});
 
-	it("offers its fields to the settings screen as a field set of plain data, found in a collection by role", () => {
+	it("SITE-N2 offers its fields to the settings screen as a field set of plain data, found in a collection by role", () => {
 		const [set] = fieldSetsOf([{ name: "seo", contributes: seo().contributes }]);
 		expect(set).toMatchObject({ id: "seo", label: "SEO", plugin: "seo" });
 		expect(set?.roles).toEqual(Object.values(SEO_ROLES));

@@ -24,7 +24,7 @@ const siteWith = (codeBlock?: Parameters<typeof defineSite>[0]["codeBlock"]) =>
 const ELIXIR = 'defmodule Hello do\n  def hi, do: "hi"\nend';
 
 describe("the site's code block themes and languages", () => {
-	it("highlight with the configured themes and an added language", async () => {
+	it("SITE-D2 highlight with the configured themes and an added language", async () => {
 		const site = siteWith({ themes: { light: "github-light", dark: "github-dark" }, languages: ["elixir"] });
 		const options = await siteCodeHighlighterOptions(site);
 		expect([options.themes?.light.name, options.themes?.dark.name]).toEqual(["github-light", "github-dark"]);
@@ -35,13 +35,13 @@ describe("the site's code block themes and languages", () => {
 		expect(html).toContain("--shiki-dark:#F97583");
 	});
 
-	it("keeps the default themes for a site that sets none", async () => {
+	it("SITE-D2 keeps the default themes for a site that sets none", async () => {
 		const site = siteWith();
 		const options = await siteCodeHighlighterOptions(site);
 		expect([options.themes?.light.name, options.themes?.dark.name]).toEqual(["one-light", "one-dark-pro"]);
 	});
 
-	it("builds one highlighter per site, each with its own themes", async () => {
+	it("SITE-D2 builds one highlighter per site, each with its own themes", async () => {
 		const github = siteWith({ themes: { light: "github-light", dark: "github-dark" } });
 		const plain = siteWith();
 		expect(await siteHighlight(github)).toBe(await siteHighlight(github));

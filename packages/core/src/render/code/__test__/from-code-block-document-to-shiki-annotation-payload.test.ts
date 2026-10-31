@@ -45,7 +45,7 @@ const testAnnotationConfig: AnnotationConfig = {
 };
 
 describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
-	it("converts a document into a shiki payload (decorations/lineDecorations/rowWrappers)", () => {
+	it("SITE-D2 converts a document into a shiki payload (decorations/lineDecorations/rowWrappers)", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}
@@ -111,7 +111,7 @@ describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 		);
 	});
 
-	it("converts absolute ranges into line-local ones correctly even with a document scope regex and leading blank lines", () => {
+	it("SITE-D2 converts absolute ranges into line-local ones correctly even with a document scope regex and leading blank lines", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}
@@ -146,7 +146,7 @@ describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 		expect(payload.decorations).toEqual([fold(1), fold(2), fold(3), fold(4)]);
 	});
 
-	it("builds the payload through a name+scope rule lookup even when the annotation has no class/render", () => {
+	it("SITE-D2 builds the payload through a name+scope rule lookup even when the annotation has no class/render", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
 			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
 		}

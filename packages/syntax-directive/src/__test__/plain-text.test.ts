@@ -63,7 +63,7 @@ const bodies = (): { directive: string; standard: string } => {
 };
 
 describe("directive syntax: plain text from the parsed body", () => {
-	it("gives the same summary text as the body in standard MDX, with no directive syntax left in it", () => {
+	it("FMT-S1 gives the same summary text as the body in standard MDX, with no directive syntax left in it", () => {
 		const { directive, standard } = bodies();
 		const text = toPlainText(testSite, docOfMdx(testSite, directive, syntax));
 		expect(text).toBe(toPlainText(testSite, docOfMdx(testSite, standard)));
@@ -74,7 +74,7 @@ describe("directive syntax: plain text from the parsed body", () => {
 		if (titled) expect(text).toContain("상자 제목 상자 안 문장");
 	});
 
-	it("gives the same search text, with code and the alt text kept", () => {
+	it("FMT-S1 gives the same search text, with code and the alt text kept", () => {
 		const { directive, standard } = bodies();
 		const text = documentText(testSite, docOfMdx(testSite, directive, syntax), SEARCH_TEXT);
 		expect(text).toBe(documentText(testSite, docOfMdx(testSite, standard), SEARCH_TEXT));
@@ -83,7 +83,7 @@ describe("directive syntax: plain text from the parsed body", () => {
 		expect(text).not.toContain("mediaId");
 	});
 
-	it("does not read a directive-looking text as markup when the extension is off", () => {
+	it("FMT-S1 does not read a directive-looking text as markup when the extension is off", () => {
 		expect(toPlainText(testSite, docOfMdx(testSite, ":u[밑줄]"))).toBe(":u[밑줄]");
 	});
 });

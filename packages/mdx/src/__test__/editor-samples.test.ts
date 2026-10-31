@@ -42,7 +42,7 @@ const firstDiff = (a: unknown, b: unknown, at: string): string | null => {
 };
 
 describe("MDX text <-> editor round trip", () => {
-	it("does not lose inline marks, headings, and line breaks", () => {
+	it("FMT-R2 does not lose inline marks, headings, and line breaks", () => {
 		const first = docOfMdx(
 			testSite,
 			'문장 **굵게** *기울임* ~~취소~~ `코드` <u>밑줄</u> <sup>위</sup> <sub>아래</sub> <Tooltip content="설명">라벨</Tooltip> [링크](https://example.com "제목")\n\n## 제목\n\n첫 줄<br />\n둘째 줄',
@@ -50,7 +50,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(contentOf(throughEditor(first))).toEqual(contentOf(first));
 	});
 
-	it("maps every spelling of a line break to the editor's hardBreak and writes it back as one", () => {
+	it("FMT-R2 maps every spelling of a line break to the editor's hardBreak and writes it back as one", () => {
 		const spellings = ["가<br />나", "가\\\n나", "가  \n나"];
 		const editorDocs = spellings.map((source) => throughSchema(storedToTiptap(testSite, docOfMdx(testSite, source))));
 		for (const editorDoc of editorDocs)
@@ -62,13 +62,13 @@ describe("MDX text <-> editor round trip", () => {
 		expect(mdxOfDoc(tiptapToStored(testSite, editorDocs[0] as JSONContent))).toBe("가<br />\n나\n");
 	});
 
-	it("keeps a line break inside a table cell", () => {
+	it("FMT-R2 keeps a line break inside a table cell", () => {
 		const first = docOfMdx(testSite, "| a | b |\n| - | - |\n| x<br />y | z |\n");
 		expect(contentOf(throughEditor(first))).toEqual(contentOf(first));
 		expect(JSON.stringify(first)).toContain('"hardBreak"');
 	});
 
-	it("keeps the empty paragraphs between blocks through the text a source panel shows", () => {
+	it("FMT-R2 keeps the empty paragraphs between blocks through the text a source panel shows", () => {
 		const paragraph = (text: string): JSONContent => ({ type: "paragraph", content: [{ type: "text", text }] });
 		const count = 3;
 		const typed: JSONContent = {
@@ -81,7 +81,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(empty).toHaveLength(count);
 	});
 
-	it("writes neither the trailing empty paragraph of the editor nor a line break for a new empty list item", () => {
+	it("FMT-R2 writes neither the trailing empty paragraph of the editor nor a line break for a new empty list item", () => {
 		const paragraph = (text?: string): JSONContent =>
 			text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" };
 		expect(
@@ -102,7 +102,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(mdxOfDoc(tiptapToStored(testSite, list))).not.toContain("<br />");
 	});
 
-	it("expands and collapses an alignment container", () => {
+	it("FMT-R2 expands and collapses an alignment container", () => {
 		const first = docOfMdx(testSite, '<TextAlign align="center">\n\n## 가운데\n\n</TextAlign>');
 		const json = storedToTiptap(testSite, first);
 
@@ -117,7 +117,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(mdxOfDoc(second)).toContain("<TextAlign");
 	});
 
-	it("preserves blocks not in the schema as boxes and restores them", () => {
+	it("FMT-R2 preserves blocks not in the schema as boxes and restores them", () => {
 		const source = [
 			'<Callout variant="note">\n\n보존\n\n</Callout>',
 			'<Tabs>\n\n<Tab label="a">\n\nA\n\n</Tab>\n\n<Tab label="b">\n\nB\n\n</Tab>\n\n</Tabs>',
@@ -134,7 +134,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
+	it("FMT-R2 keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
 		const first = docOfMdx(testSite, '단락 <br data-x="1" /> 안\n\n뒤');
 		const json = throughSchema(storedToTiptap(testSite, first));
 		const box = json.content?.[0];
@@ -145,7 +145,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(second.content[0]).toEqual(first.content[0]);
 	});
 
-	it("shows a box's node written in MDX, and as JSON when there is none", () => {
+	it("FMT-R2 shows a box's node written in MDX, and as JSON when there is none", () => {
 		const doc = docOfMdx(testSite, 'A<br data-x="1" />B');
 		const plain = storedToTiptap(testSite, doc).content?.[0];
 		expect(plain?.type).toBe(OPAQUE_BLOCK_NAME);
@@ -160,7 +160,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(tiptapToStored(testSite, { type: "doc", content: [written as JSONContent] }).content).toEqual(doc.content);
 	});
 
-	it("converts tables (with column alignment) and task lists to editable nodes and restores them", () => {
+	it("FMT-R2 converts tables (with column alignment) and task lists to editable nodes and restores them", () => {
 		const first = docOfMdx(
 			testSite,
 			"| a | **b** |\n| :-: | --: |\n| 1 | `2` |\n\n- [ ] 할 일\n- [x] 끝남\n\n1. [ ] 번호 체크 항목",
@@ -170,7 +170,7 @@ describe("MDX text <-> editor round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("does not lose image attributes", () => {
+	it("FMT-R2 does not lose image attributes", () => {
 		const first = docOfMdx(
 			testSite,
 			'<Image mediaId="uuid-1" alt="설명" width="60%" align="left" caption="캡션" />\n\n![그냥](https://example.com/a.png)',
@@ -182,28 +182,28 @@ describe("MDX text <-> editor round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("an explicit value equal to the editor default is normalized once on save and converges", () => {
+	it("FMT-R2 an explicit value equal to the editor default is normalized once on save and converges", () => {
 		// `align="center"` is the render default, so it is dropped on save. The meaning is the same, and reopening gives the same result.
 		const once = throughEditor(docOfMdx(testSite, '<Image mediaId="uuid-1" alt="설명" align="center" />'));
 		expect(JSON.stringify(once)).not.toContain("align");
 		expect(contentOf(throughEditor(once))).toEqual(contentOf(once));
 	});
 
-	it("does not lose decorative images, and writes them as such", () => {
+	it("FMT-R2 does not lose decorative images, and writes them as such", () => {
 		const first = docOfMdx(testSite, '<Image src="/images/a.png" alt="" decorative />');
 		const second = throughEditor(first);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(mdxOfDoc(second)).toContain("decorative");
 	});
 
-	it("preserves an explicit width of 100%", () => {
+	it("FMT-R2 preserves an explicit width of 100%", () => {
 		const first = docOfMdx(testSite, '<Image src="/images/a.png" alt="설명" width="100%" />');
 		const second = throughEditor(first);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(mdxOfDoc(second)).toContain('width="100%"');
 	});
 
-	it("keeps internal links as the id of their entry, without the address the editor shows", () => {
+	it("FMT-R2 keeps internal links as the id of their entry, without the address the editor shows", () => {
 		const id = "6f1c0b0e-3c1d-4a0e-9f5a-0d9c2f1e7a11";
 		const first = docOfMdx(testSite, `A [post](entry:${id}) and [site](https://example.com "T").`);
 		const json = throughSchema(storedToTiptap(testSite, first));
@@ -218,7 +218,7 @@ describe("MDX text <-> editor round trip", () => {
 });
 
 describe("loads real content into the editor and restores it", () => {
-	it("all sample content passes the schema and the document is the same", () => {
+	it("FMT-R2 all sample content passes the schema and the document is the same", () => {
 		const items = readSamples();
 		expect(items.length).toBeGreaterThan(0);
 

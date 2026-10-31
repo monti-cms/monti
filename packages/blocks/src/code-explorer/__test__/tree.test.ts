@@ -10,27 +10,27 @@ const outline = (nodes: readonly TreeNode[]): unknown[] =>
 	);
 
 describe("parsePath", () => {
-	it("splits on slashes and ignores a leading ./ or /, empty and . segments and spaces around names", () => {
+	it("BLOCK-R2 splits on slashes and ignores a leading ./ or /, empty and . segments and spaces around names", () => {
 		expect(parsePath("src/app/page.tsx").segments).toEqual(["src", "app", "page.tsx"]);
 		expect(parsePath("./src//app/./page.tsx").segments).toEqual(["src", "app", "page.tsx"]);
 		expect(parsePath("/src/a.ts").segments).toEqual(["src", "a.ts"]);
 		expect(parsePath("  src / a.ts ").segments).toEqual(["src", "a.ts"]);
 	});
 
-	it("treats a trailing slash as a folder and keeps odd names as they are", () => {
+	it("BLOCK-R2 treats a trailing slash as a folder and keeps odd names as they are", () => {
 		expect(parsePath("src/").folder).toBe(true);
 		expect(parsePath("src").folder).toBe(false);
 		expect(parsePath("../x/.env").segments).toEqual(["..", "x", ".env"]);
 		expect(parsePath("a\\b.ts").segments).toEqual(["a\\b.ts"]);
 	});
 
-	it("has no segments for a path with no name", () => {
+	it("BLOCK-R2 has no segments for a path with no name", () => {
 		for (const path of ["", "   ", "/", "./", "//", "./."]) expect(parsePath(path).segments).toEqual([]);
 	});
 });
 
 describe("buildTree", () => {
-	it("keeps the author's order and puts a folder where its first file appears", () => {
+	it("BLOCK-R2 keeps the author's order and puts a folder where its first file appears", () => {
 		const { nodes, rejected } = buildTree([
 			entry("src/b.ts"),
 			entry("README.md"),
@@ -42,7 +42,7 @@ describe("buildTree", () => {
 		expect(rejected).toEqual([]);
 	});
 
-	it("gives files their normalized path, entry index and the path of folders", () => {
+	it("BLOCK-R2 gives files their normalized path, entry index and the path of folders", () => {
 		const { nodes } = buildTree([entry("./src//app/page.tsx"), entry("/x.ts")]);
 		const [src, x] = nodes;
 		expect(src).toMatchObject({ kind: "folder", name: "src", path: "src" });
@@ -53,13 +53,13 @@ describe("buildTree", () => {
 		expect(x).toMatchObject({ kind: "file", path: "x.ts", selectable: true });
 	});
 
-	it("marks files with no code as not selectable", () => {
+	it("BLOCK-R2 marks files with no code as not selectable", () => {
 		const { nodes } = buildTree([entry("a.ts"), entry("notes.md", false), entry("src/b.ts", false)]);
 		expect(outline(nodes)).toEqual(["a.ts", "~notes.md", { src: ["~b.ts"] }]);
 		expect(filesOf(nodes).map((file) => file.selectable)).toEqual([true, false, false]);
 	});
 
-	it("makes a folder of a path with a trailing slash, nested and where it appears, and absorbs a repeat", () => {
+	it("BLOCK-R2 makes a folder of a path with a trailing slash, nested and where it appears, and absorbs a repeat", () => {
 		const { nodes, rejected } = buildTree([
 			entry("public/", false),
 			entry("src/a.ts"),
@@ -71,7 +71,7 @@ describe("buildTree", () => {
 		expect(rejected).toEqual([]);
 	});
 
-	it("rejects a later entry for a path already in the tree (the first wins), even when written differently", () => {
+	it("BLOCK-R2 rejects a later entry for a path already in the tree (the first wins), even when written differently", () => {
 		const { nodes, rejected } = buildTree([
 			entry("a.ts"),
 			entry("src/b.ts"),
@@ -84,7 +84,7 @@ describe("buildTree", () => {
 		expect(filesOf(nodes).map((file) => file.index)).toEqual([0, 1, 4]);
 	});
 
-	it("rejects a file and a folder that share a name, whichever comes first", () => {
+	it("BLOCK-R2 rejects a file and a folder that share a name, whichever comes first", () => {
 		const fileFirst = buildTree([entry("a"), entry("a/b.ts"), entry("a/", false)]);
 		expect(outline(fileFirst.nodes)).toEqual(["a"]);
 		expect(fileFirst.rejected).toEqual([1, 2]);
@@ -94,24 +94,24 @@ describe("buildTree", () => {
 		expect(folderFirst.rejected).toEqual([1]);
 	});
 
-	it("rejects paths with no name and folder entries that hold code", () => {
+	it("BLOCK-R2 rejects paths with no name and folder entries that hold code", () => {
 		const { nodes, rejected } = buildTree([entry("/"), entry("   "), entry("dir/", true), entry("ok.ts")]);
 		expect(outline(nodes)).toEqual(["ok.ts"]);
 		expect(rejected).toEqual([0, 1, 2]);
 	});
 
-	it("builds an empty tree from no entries", () => {
+	it("BLOCK-R2 builds an empty tree from no entries", () => {
 		expect(buildTree([])).toEqual({ nodes: [], rejected: [] });
 	});
 });
 
 describe("filesOf and ancestorsOf", () => {
-	it("lists files depth first in display order", () => {
+	it("BLOCK-R2 lists files depth first in display order", () => {
 		const { nodes } = buildTree([entry("a/x.ts"), entry("b.ts"), entry("a/c/y.ts")]);
 		expect(filesOf(nodes).map((file) => file.path)).toEqual(["a/x.ts", "a/c/y.ts", "b.ts"]);
 	});
 
-	it("lists the folders above a path, outermost first", () => {
+	it("BLOCK-R2 lists the folders above a path, outermost first", () => {
 		expect(ancestorsOf("a/b/c.ts")).toEqual(["a", "a/b"]);
 		expect(ancestorsOf("c.ts")).toEqual([]);
 	});

@@ -130,7 +130,7 @@ describe("links by entry id", () => {
 			)
 		).rows;
 
-	it("a body written with the address of a post is stored with the id of that post, and the address leaves the document", async () => {
+	it("SITE-R3 a body written with the address of a post is stored with the id of that post, and the address leaves the document", async () => {
 		const target = await publish("links-target");
 
 		const source = await draft(
@@ -151,7 +151,7 @@ describe("links by entry id", () => {
 		expect(incoming.some((item) => item.sourceId === source.id && item.kind === "entry")).toBe(true);
 	});
 
-	it("an address with the locale prefix of the site's URLs (as the public page shows it) is a link by id too", async () => {
+	it("SITE-R3 an address with the locale prefix of the site's URLs (as the public page shows it) is a link by id too", async () => {
 		const target = await publish("links-prefixed-target");
 
 		const source = await draft("links-prefixed-source", `[x](${publicPath("links-prefixed-target")})`);
@@ -160,7 +160,7 @@ describe("links by entry id", () => {
 		expect(JSON.stringify(source.working.doc)).not.toContain("links-prefixed-target");
 	});
 
-	it("an address with a prefix that no entry holds blocks publishing, like any other", async () => {
+	it("WRITE-P1 an address with a prefix that no entry holds blocks publishing, like any other", async () => {
 		const created = await draft("links-prefixed-dangling", `[x](${publicPath("links-nobody-prefixed")})`);
 
 		const error = await publishError(created.id, created.version);
@@ -168,7 +168,7 @@ describe("links by entry id", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
 	});
 
-	it("an address no entry holds stays as written, and publishing says it does not resolve", async () => {
+	it("WRITE-P1 an address no entry holds stays as written, and publishing says it does not resolve", async () => {
 		const created = await draft("links-dangling", `[nowhere](${pathOf("nobody-holds-this")})`);
 		expect(entryLinkIds(created.working.doc.content)).toEqual([]);
 		expect(JSON.stringify(created.working.doc)).toContain(pathOf("nobody-holds-this"));
@@ -179,7 +179,7 @@ describe("links by entry id", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
 	});
 
-	it("two new posts that link to each other can both be published, and each link works once its target is published", async () => {
+	it("WRITE-P1 two new posts that link to each other can both be published, and each link works once its target is published", async () => {
 		const first = await draft("links-series-1", "One");
 		const second = await draft("links-series-2", "Two");
 		const one = (
@@ -215,7 +215,7 @@ describe("links by entry id", () => {
 		expect(publishedOne.status).toBe("published");
 	});
 
-	it("publishing does not need the target to be published: the link is a warning", async () => {
+	it("WRITE-P1 publishing does not need the target to be published: the link is a warning", async () => {
 		const target = await draft("links-unpublished", "Not yet");
 		const source = await draft("links-to-draft", `[draft](${pathOf("links-unpublished")})`);
 		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
@@ -233,7 +233,7 @@ describe("links by entry id", () => {
 		expect(again.warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([]);
 	});
 
-	it("a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {
+	it("WRITE-P1 a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {
 		const id = "00000000-0000-4000-8000-0000000000aa";
 		const created = await draft("links-bad-id", linksByIdTo(["x", id]));
 		expect(entryLinkIds(created.working.doc.content)).toEqual([id]);
@@ -243,7 +243,7 @@ describe("links by entry id", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
 	});
 
-	it("a post that other posts link to can be deleted: the link only stays in their text, and its reference goes", async () => {
+	it("SITE-R3 a post that other posts link to can be deleted: the link only stays in their text, and its reference goes", async () => {
 		const target = await publish("links-in-use");
 		const source = await draft("links-in-use-source", `[x](${pathOf("links-in-use")})`);
 
@@ -262,7 +262,7 @@ describe("links by entry id", () => {
 		expect(await linkedTo()).toEqual([]);
 	});
 
-	it("the read API gives each link the address and title of its target for this reader", async () => {
+	it("SITE-R3 the read API gives each link the address and title of its target for this reader", async () => {
 		const target = await publish("links-read-target");
 		await publish("links-read-source", `See [it](${pathOf("links-read-target")}).`);
 
@@ -282,7 +282,7 @@ describe("links by entry id", () => {
 		expect(markup).toContain(">it</a>");
 	});
 
-	it("a link whose target is not published is left out of the refs and drawn as plain text, in a preview too", async () => {
+	it("SITE-R3 a link whose target is not published is left out of the refs and drawn as plain text, in a preview too", async () => {
 		await draft("links-hidden-target", "Draft only");
 		const source = await draft("links-hidden-source", `A [hidden](${pathOf("links-hidden-target")}) page.`);
 		void source;
@@ -296,7 +296,7 @@ describe("links by entry id", () => {
 	});
 
 	it.skipIf(!secondLocale)(
-		"a link follows the reader's language and falls back to the source when the target has no translation",
+		"SITE-R3 a link follows the reader's language and falls back to the source when the target has no translation",
 		async () => {
 			const locale = secondLocale as string;
 			const translated = await publish("links-lang-target");

@@ -27,7 +27,7 @@ const table = (rows: string[][]) =>
  * or a rowspan past the last row, never reaches the check: it is stored as a valid value (or none), and only what that leaves behind can warn.
  */
 describe("table cell merge pre-publish validation (span and grid warnings)", () => {
-	it("a billion-column merge is stored as the largest span and warns quickly without building a grid", async () => {
+	it("FMT-R2 a billion-column merge is stored as the largest span and warns quickly without building a grid", async () => {
 		// The merge starts at the second column: stored as the largest span, it still runs past the table's allowed width.
 		const mdx = table([[cell("앞"), cell("위험", 'colspan="1000000000"')]]);
 		const snap = await prepareSnapshot({
@@ -47,7 +47,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		);
 	});
 
-	it("a valid merged table raises no warnings", async () => {
+	it("FMT-R2 a valid merged table raises no warnings", async () => {
 		const mdx = [
 			'<Table align="left,center">',
 			"<TableRow>",
@@ -75,7 +75,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings).toEqual([]);
 	});
 
-	it("stores a rowspan past the last row as the remaining rows, and warns about the layout that leaves", async () => {
+	it("FMT-R2 stores a rowspan past the last row as the remaining rows, and warns about the layout that leaves", async () => {
 		const mdx = table([[cell("초과", 'rowspan="5"')], [cell("값")]]);
 
 		const snap = await prepareSnapshot({
@@ -94,7 +94,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
 	});
 
-	it("warns when merged cells overlap", async () => {
+	it("FMT-R2 warns when merged cells overlap", async () => {
 		const mdx = table([
 			[cell("셀1", 'colspan="2"'), cell("셀2", 'colspan="2"')],
 			[cell("셀3", 'rowspan="2"'), cell("셀4")],
@@ -112,7 +112,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings.length).toBeGreaterThan(0);
 	});
 
-	it("warns when column counts differ between rows", async () => {
+	it("FMT-R2 warns when column counts differ between rows", async () => {
 		const mdx = table([[cell("셀1"), cell("셀2")], [cell("셀3")]]);
 
 		const snap = await prepareSnapshot({
@@ -128,7 +128,7 @@ describe("table cell merge pre-publish validation (span and grid warnings)", () 
 		expect(tableWarnings[0]?.params).toMatchObject({ reason: "ragged_rows" });
 	});
 
-	it("stores an invalid span value (0 or less, or not a number) as no merge, so it raises no warning", async () => {
+	it("FMT-R2 stores an invalid span value (0 or less, or not a number) as no merge, so it raises no warning", async () => {
 		for (const [attribute, value] of [
 			["colspan", "0"],
 			["colspan", "-2"],

@@ -37,20 +37,20 @@ const nested: [string, string][] = [
 ];
 
 describe("unregistered directive storage round trip", () => {
-	it("the name this test uses is not in the current config", () => {
+	it("FMT-S1 the name this test uses is not in the current config", () => {
 		for (const name of [outer, inner]) {
 			expect(DIRECTIVE_NAMES.has(name)).toBe(false);
 			expect(testSite.BLOCKS.some((block) => block.name === name)).toBe(false);
 		}
 	});
 
-	it.each(verbatim)("%s is written as is", (_label, source) => {
+	it.each(verbatim)("FMT-S1 %s is written as is", (_label, source) => {
 		const first = write(source);
 		expect(first).toBe(source);
 		expect(write(first)).toBe(first);
 	});
 
-	it.each(nested)("%s is the same from the second save", (_label, source) => {
+	it.each(nested)("FMT-S1 %s is the same from the second save", (_label, source) => {
 		const first = write(source);
 		const second = write(first);
 		expect(second).toBe(first);

@@ -72,7 +72,7 @@ describe("previewEntry: the draft for the site's preview page", () => {
 		return defineConfig({ ...site, database: postgres({ schema: schemaName }), auth: auth({ providers: [github()] }) });
 	};
 
-	it("returns the draft as the very first call on a fresh instance, logged in by the dev bypass", async () => {
+	it("SITE-R6 returns the draft as the very first call on a fresh instance, logged in by the dev bypass", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		requestHeaders = new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" });
@@ -86,7 +86,7 @@ describe("previewEntry: the draft for the site's preview page", () => {
 		}
 	});
 
-	it("without the helper the same first call cannot see the session, which is what the helper is for", async () => {
+	it("SITE-R6 without the helper the same first call cannot see the session, which is what the helper is for", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		const cms = freshInstance();
@@ -97,7 +97,7 @@ describe("previewEntry: the draft for the site's preview page", () => {
 		}
 	});
 
-	it("returns nothing for a visitor who is not the admin", async () => {
+	it("SITE-R6 returns nothing for a visitor who is not the admin", async () => {
 		vi.stubEnv("NODE_ENV", "production");
 		requestHeaders = new Headers({ host: "example.com" });
 		const cms = freshInstance();

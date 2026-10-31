@@ -14,7 +14,7 @@ const definition = (label: string, ...content: CmsNode[]): CmsNode => ({
 });
 
 describe("analyzeDocument footnotes", () => {
-	it("numbers the references of the body first, then the ones inside definitions, wherever the definitions stand", () => {
+	it("SITE-D3 numbers the references of the body first, then the ones inside definitions, wherever the definitions stand", () => {
 		const analysis = analyzeDocument(
 			doc(
 				paragraph(text("one"), ref("a")),

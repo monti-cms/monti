@@ -13,12 +13,12 @@ const bomb = (id: string) => {
 };
 
 describe("drawMermaid", () => {
-	it("returns the svg of a valid diagram", async () => {
+	it("BLOCK-R2 returns the svg of a valid diagram", async () => {
 		const render = vi.fn(async () => ({ svg: "<svg/>" }));
 		expect(await drawMermaid({ parse: async () => true, render }, "m1", "graph TD\n A-->B")).toBe("<svg/>");
 	});
 
-	it("throws the syntax error without rendering, so nothing is added to the page", async () => {
+	it("BLOCK-R2 throws the syntax error without rendering, so nothing is added to the page", async () => {
 		const render = vi.fn(async () => ({ svg: "" }));
 		const parse = async () => {
 			throw new Error("Parse error on line 2");
@@ -28,7 +28,7 @@ describe("drawMermaid", () => {
 		expect(document.body.children).toHaveLength(0);
 	});
 
-	it("removes the error graphic mermaid leaves behind when a render fails", async () => {
+	it("BLOCK-R2 removes the error graphic mermaid leaves behind when a render fails", async () => {
 		const render = async () => {
 			bomb("m3");
 			throw new Error("render failed");

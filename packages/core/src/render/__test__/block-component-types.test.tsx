@@ -49,7 +49,7 @@ type Blocks = NonNullable<Components["blocks"]>;
 type Marks = NonNullable<Components["marks"]>;
 
 describe("block component types", () => {
-	it("derives the attribute props from the definition", () => {
+	it("SITE-D1 derives the attribute props from the definition", () => {
 		type Props = AttributeProps<typeof note>;
 		expectTypeOf<Props["tone"]>().toEqualTypeOf<"info" | "warn">();
 		expectTypeOf<Props["kicker"]>().toEqualTypeOf<string | undefined>();
@@ -62,7 +62,7 @@ describe("block component types", () => {
 		expectTypeOf<AttributeProps<typeof collapsibleBlock>["defaultOpen"]>().toEqualTypeOf<boolean>();
 	});
 
-	it("keys the blocks of the config and its plugins by name, and sends text blocks to the marks", () => {
+	it("SITE-D1 keys the blocks of the config and its plugins by name, and sends text blocks to the marks", () => {
 		expectTypeOf<keyof Blocks>().toEqualTypeOf<"note-box" | "mermaid" | "tabs" | "tab">();
 		expectTypeOf<keyof Marks>().toEqualTypeOf<
 			| "tooltip"
@@ -78,7 +78,7 @@ describe("block component types", () => {
 		>();
 	});
 
-	it("types the props of a block component", () => {
+	it("SITE-D1 types the props of a block component", () => {
 		type NoteProps = BlockProps<typeof note>;
 		expectTypeOf<NoteProps["tone"]>().toEqualTypeOf<"info" | "warn">();
 		expectTypeOf<NoteProps["children"]>().not.toBeAny();
@@ -89,7 +89,7 @@ describe("block component types", () => {
 		expectTypeOf<MarkBlockProps<typeof tooltipBlock>["content"]>().toEqualTypeOf<string>();
 	});
 
-	it("rejects a component for a block the config does not have, and a wrong prop type", () => {
+	it("SITE-D1 rejects a component for a block the config does not have, and a wrong prop type", () => {
 		const ok = {
 			blocks: {
 				"note-box": ({ tone, children }: { tone: "info" | "warn"; children: React.ReactNode }) => (
@@ -106,7 +106,7 @@ describe("block component types", () => {
 		void wrongProp;
 	});
 
-	it("reads the blocks of a plugin from its literal type (the per-block functions of the extension package)", () => {
+	it("SITE-D1 reads the blocks of a plugin from its literal type (the per-block functions of the extension package)", () => {
 		type Plugins = ReturnType<typeof allBlocks>;
 		type FromHelper = DocumentComponentsFor<CmsConfig<CollectionsConfig, "en", Plugins>>;
 		type HelperBlocks = NonNullable<FromHelper["blocks"]>;
@@ -118,13 +118,13 @@ describe("block component types", () => {
 		expectTypeOf<"tooltip" extends keyof HelperMarks ? true : false>().toEqualTypeOf<true>();
 	});
 
-	it("is built from a real site config: the keys are the block names of that config, not any string", () => {
+	it("SITE-D1 is built from a real site config: the keys are the block names of that config, not any string", () => {
 		type Site = NonNullable<DocumentComponentsFor<typeof blogConfig>["blocks"]>;
 		expectTypeOf<string extends keyof Site ? true : false>().toEqualTypeOf<false>();
 		expectTypeOf<keyof Site>().not.toBeNever();
 	});
 
-	it("falls back to no site blocks for a definition that is not a literal", () => {
+	it("SITE-D1 falls back to no site blocks for a definition that is not a literal", () => {
 		type Wide = DocumentComponentsFor<CmsConfig<CollectionsConfig, "en", readonly never[], readonly BlockDefinition[]>>;
 		expectTypeOf<keyof NonNullable<Wide["blocks"]>>().toEqualTypeOf<never>();
 	});

@@ -91,7 +91,7 @@ describe("public site reading (cms.read)", () => {
 		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
-	it("paginates and sorts the list in the DB, leaves out drafts, and filters by relation", async () => {
+	it("SITE-R5 paginates and sorts the list in the DB, leaves out drafts, and filters by relation", async () => {
 		const first = await publish("read-list-1");
 		const second = await publish("read-list-2");
 		await seedEntry(store, {
@@ -135,7 +135,7 @@ describe("public site reading (cms.read)", () => {
 	);
 
 	it.skipIf(!localizedItemCollection || !secondLocale)(
-		"sorting an item collection by title sorts by that locale's name",
+		"SITE-R5 sorting an item collection by title sorts by that locale's name",
 		async () => {
 			const collection = localizedItemCollection as Collection;
 			const language = secondLocale as string;
@@ -167,7 +167,7 @@ describe("public site reading (cms.read)", () => {
 		},
 	);
 
-	it("one entry: resolves relations to the published targets' titles and URLs, and an old URL reports a redirect", async () => {
+	it("SITE-R5 one entry: resolves relations to the published targets' titles and URLs, and an old URL reports a redirect", async () => {
 		const target = relation ? await relationTarget(relation.to) : undefined;
 		const published = await publish(
 			"read-detail",
@@ -202,7 +202,7 @@ describe("public site reading (cms.read)", () => {
 	});
 
 	it.skipIf(!secondLocale)(
-		"translations: published locales and URLs, and falls back to the source text if there is no translation",
+		"SITE-R5 translations: published locales and URLs, and falls back to the source text if there is no translation",
 		async () => {
 			const locale = secondLocale as string;
 			const source = await publish("read-translated");
@@ -230,7 +230,7 @@ describe("public site reading (cms.read)", () => {
 		},
 	);
 
-	it("preview shows the latest draft to admins only", async () => {
+	it("SITE-R6 preview shows the latest draft to admins only", async () => {
 		const published = await publish("read-preview");
 		await seedSave(store, published.id, {
 			expectedVersion: published.version,
@@ -249,7 +249,7 @@ describe("public site reading (cms.read)", () => {
 		state.admin = true;
 	});
 
-	it("leaves out the values of removed fields, in an entry, a list and a preview", async () => {
+	it("SITE-R5 leaves out the values of removed fields, in an entry, a list and a preview", async () => {
 		const published = await publish("read-removed", { removedField: "left behind", removedList: ["a"] });
 		const hidden = (metadata: Record<string, unknown>) => {
 			expect(metadata.title).toBe("Title read-removed");

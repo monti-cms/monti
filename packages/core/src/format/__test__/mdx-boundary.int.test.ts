@@ -14,7 +14,7 @@ const MDX_ECOSYSTEM =
 const isForbidden = (specifier: string) => MDX_PACKAGE.test(specifier) || MDX_ECOSYSTEM.test(specifier);
 
 describe("the core package manifest has no MDX in it", () => {
-	it("depends on no MDX package, in any dependency field", () => {
+	it("FMT-P1 depends on no MDX package, in any dependency field", () => {
 		const manifest = JSON.parse(readFileSync(path.join(CORE_ROOT, "package.json"), "utf8")) as Record<string, unknown>;
 		const names = ["dependencies", "peerDependencies", "devDependencies", "optionalDependencies"].flatMap((field) =>
 			Object.keys((manifest[field] as Record<string, string> | undefined) ?? {}),
@@ -22,7 +22,7 @@ describe("the core package manifest has no MDX in it", () => {
 		expect(names.filter(isForbidden)).toEqual([]);
 	});
 
-	it("does not export the entry points that held MDX", () => {
+	it("FMT-P1 does not export the entry points that held MDX", () => {
 		const manifest = JSON.parse(readFileSync(path.join(CORE_ROOT, "package.json"), "utf8")) as {
 			exports: Record<string, unknown>;
 		};

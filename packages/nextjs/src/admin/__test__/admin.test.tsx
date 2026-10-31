@@ -42,7 +42,7 @@ function Probe() {
 }
 
 describe("NextAdminRouter", () => {
-	it("gives the admin Next's address and a link to an address inside the site", () => {
+	it("SITE-N1 gives the admin Next's address and a link to an address inside the site", () => {
 		render(
 			<NextAdminRouter>
 				<Probe />
@@ -52,7 +52,7 @@ describe("NextAdminRouter", () => {
 		expect(screen.getByRole("link", { name: "Media" }).getAttribute("href")).toBe("/admin/media");
 	});
 
-	it("navigates through Next's router: push for a new history entry, replace with its options", () => {
+	it("SITE-N1 navigates through Next's router: push for a new history entry, replace with its options", () => {
 		render(
 			<NextAdminRouter>
 				<Probe />
@@ -78,13 +78,13 @@ describe("CmsAdminPage", () => {
 	const page = (path: string[], cms = fakeCms()) =>
 		run(<CmsAdminPage cms={cms} params={Promise.resolve({ path })} searchParams={Promise.resolve({})} />);
 
-	it("answers 404 through Next's notFound for a path no screen handles", async () => {
+	it("SITE-N1 answers 404 through Next's notFound for a path no screen handles", async () => {
 		await expect(page(["entries", "a", "b", "c"])).rejects.toMatchObject({
 			digest: expect.stringContaining("NEXT_HTTP_ERROR_FALLBACK;404"),
 		});
 	});
 
-	it("sends a visitor who is not signed in to the login screen through Next's redirect", async () => {
+	it("SITE-N1 sends a visitor who is not signed in to the login screen through Next's redirect", async () => {
 		const cms = fakeCms({
 			verifyAdmin: async () => {
 				throw new AuthError("unauthorized", "Authentication required");
@@ -97,13 +97,13 @@ describe("CmsAdminPage", () => {
 });
 
 describe("cmsAdminMetadata", () => {
-	it("titles the admin pages and keeps them out of search results", () => {
+	it("SITE-N1 titles the admin pages and keeps them out of search results", () => {
 		const metadata = cmsAdminMetadata(fakeCms());
 		expect(metadata.title).toMatch(/\S/);
 		expect(metadata.robots).toEqual({ index: false, follow: false });
 	});
 
-	it("puts the name of the instance's site in the title", () => {
+	it("SITE-N1 puts the name of the instance's site in the title", () => {
 		const cms = fakeCms({
 			config: defineSite({
 				collections: {
@@ -123,7 +123,7 @@ describe("cmsAdminMetadata", () => {
 });
 
 describe("CmsAdminLayout under Cache Components", () => {
-	it("waits for the request inside a Suspense boundary with no fallback, then attaches the host", async () => {
+	it("SITE-N1 waits for the request inside a Suspense boundary with no fallback, then attaches the host", async () => {
 		const calls: string[] = [];
 		const connection = vi.fn(async () => void calls.push("connection"));
 		vi.doMock("next/server", () => ({ connection }));

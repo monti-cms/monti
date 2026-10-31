@@ -10,7 +10,7 @@ describe("text color public page", () => {
 	const SOURCE =
 		'빨간 <Color fg="#dc2626" fgDark="#f87171">경고</Color>와 <Color bg="#fef3c7" bgDark="#453a12">**강조**</Color> 글.';
 
-	it("attaches per-theme CSS variables and drops non-hex values", async () => {
+	it("BLOCK-R1 attaches per-theme CSS variables and drops non-hex values", async () => {
 		const markup = await html(`${SOURCE}\n\n<Color fg="red; background:url(x)">위험</Color>`);
 		expect(markup).toContain('class="monti-color" style="--monti-fg:#dc2626;--monti-fg-dark:#f87171" data-fg=""');
 		expect(markup).toMatch(
@@ -35,7 +35,7 @@ describe("body-to-code link public page", () => {
 		"```",
 	].join("\n");
 
-	it("renders the linked text and the labeled code lines", async () => {
+	it("BLOCK-R1 renders the linked text and the labeled code lines", async () => {
 		const markup = await html(SOURCE);
 		expect(markup).toMatch(/data-code-ref="c1"[^>]*>함수가/);
 		// The two labeled lines get `data-anchor` (the code link highlights these lines in the browser).

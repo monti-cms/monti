@@ -55,13 +55,13 @@ const exportContext = (
 const documentWith = (body: string): StoredDocument => docOf(body);
 
 describe("the mdx format", () => {
-	it("is a two-way format with the usual file facts", () => {
+	it("FMT-R7 is a two-way format with the usual file facts", () => {
 		expect(mdxFormat).toMatchObject({ name: "mdx", extension: "mdx", mimeType: "text/mdx" });
 		expect(typeof mdxFormat.import).toBe("function");
 	});
 
 	describe("export", () => {
-		it("writes an internal link as the real path of its target, never as an id", async () => {
+		it("FMT-R7 writes an internal link as the real path of its target, never as an id", async () => {
 			const doc = documentWith(`See [the target](${entryLinkHref(ENTRY_ID)}) now.`);
 			expect(entryLinkIds(doc.content)).toEqual([ENTRY_ID]);
 			const { ctx, reported } = exportContext({ links: { [ENTRY_ID]: link("/en/posts/the-target") } });
@@ -74,7 +74,7 @@ describe("the mdx format", () => {
 			expect(reported).toEqual([]);
 		});
 
-		it("follows the target when its address changes: the same document is written with the new path", async () => {
+		it("FMT-R7 follows the target when its address changes: the same document is written with the new path", async () => {
 			const doc = documentWith(`[x](${entryLinkHref(ENTRY_ID)})`);
 			const before = await mdxFormat.export(doc, exportContext({ links: { [ENTRY_ID]: link("/posts/old") } }).ctx);
 			const after = await mdxFormat.export(doc, exportContext({ links: { [ENTRY_ID]: link("/posts/new") } }).ctx);
@@ -83,7 +83,7 @@ describe("the mdx format", () => {
 			expect(after).toContain("(/posts/new)");
 		});
 
-		it("drops a link whose target cannot be resolved when the text is for readers, keeping its label, and reports it", async () => {
+		it("FMT-R7 drops a link whose target cannot be resolved when the text is for readers, keeping its label, and reports it", async () => {
 			const doc = documentWith(`See [the target](${entryLinkHref(ENTRY_ID)}) now.`);
 			const { ctx, reported } = exportContext({ purpose: "read" });
 
@@ -94,7 +94,7 @@ describe("the mdx format", () => {
 			expect(reported).toEqual([expect.objectContaining({ code: "unresolved_internal_link", message: ENTRY_ID })]);
 		});
 
-		it("keeps the id of an unresolved link when the text is meant to be imported again", async () => {
+		it("FMT-R7 keeps the id of an unresolved link when the text is meant to be imported again", async () => {
 			const doc = documentWith(`See [the target](${entryLinkHref(ENTRY_ID)}) now.`);
 			const { ctx, reported } = exportContext({ purpose: "sync" });
 
@@ -104,12 +104,12 @@ describe("the mdx format", () => {
 			expect(reported).toHaveLength(1);
 		});
 
-		it("leaves external links alone", async () => {
+		it("FMT-R7 leaves external links alone", async () => {
 			const text = await mdxFormat.export(documentWith("[out](https://example.com/a)"), exportContext().ctx);
 			expect(text).toContain("[out](https://example.com/a)");
 		});
 
-		it("writes a registered image by its public URL for readers, and by its id when the text is to be imported again", async () => {
+		it("FMT-R7 writes a registered image by its public URL for readers, and by its id when the text is to be imported again", async () => {
 			const doc = documentWith(`<Image mediaId="${MEDIA_ID}" alt="a photo" />`);
 			const resolved = { [MEDIA_ID]: media("https://cdn.test/photo.png") };
 
@@ -122,7 +122,7 @@ describe("the mdx format", () => {
 			expect(forSync).not.toContain("cdn.test");
 		});
 
-		it("reports an image whose media is not ready, and keeps it as it is", async () => {
+		it("FMT-R7 reports an image whose media is not ready, and keeps it as it is", async () => {
 			const doc = documentWith(`<Image mediaId="${MEDIA_ID}" alt="a photo" />`);
 			const { ctx, reported } = exportContext({ purpose: "read" });
 
@@ -132,7 +132,7 @@ describe("the mdx format", () => {
 			expect(reported).toEqual([expect.objectContaining({ code: "unresolved_media", message: MEDIA_ID })]);
 		});
 
-		it("writes a file card as a link to the file for readers", async () => {
+		it("FMT-R7 writes a file card as a link to the file for readers", async () => {
 			const doc: StoredDocument = {
 				type: "doc",
 				version: STORED_DOCUMENT_VERSION,
@@ -146,7 +146,7 @@ describe("the mdx format", () => {
 			expect(text).toContain("[The report](https://cdn.test/report.pdf)");
 		});
 
-		it("does not change the document it is given", async () => {
+		it("FMT-R7 does not change the document it is given", async () => {
 			const doc = documentWith(`[x](${entryLinkHref(ENTRY_ID)}) <Image mediaId="${MEDIA_ID}" alt="a" />`);
 			const snapshot = JSON.stringify(doc);
 
@@ -170,7 +170,7 @@ describe("the mdx format", () => {
 			site: testSite,
 		};
 
-		it("reads a text into a stored document, without block ids (core gives them)", async () => {
+		it("FMT-R7 reads a text into a stored document, without block ids (core gives them)", async () => {
 			const result = await mdxFormat.import?.("# Title\n\nSome *words*\n", importContext);
 
 			expect(result?.ok).toBe(true);
@@ -180,7 +180,7 @@ describe("the mdx format", () => {
 			expect(JSON.stringify(result.doc)).not.toContain('"id"');
 		});
 
-		it("reads a path back as a plain href: turning it into an id is core's job, whatever the format", async () => {
+		it("FMT-R7 reads a path back as a plain href: turning it into an id is core's job, whatever the format", async () => {
 			const result = await mdxFormat.import?.("[a post](/posts/the-target)", importContext);
 
 			expect(result?.ok).toBe(true);
@@ -189,7 +189,7 @@ describe("the mdx format", () => {
 			expect(entryLinkIds(result.doc.content)).toEqual([]);
 		});
 
-		it("reads the entry:<id> form into a link by id", async () => {
+		it("FMT-R7 reads the entry:<id> form into a link by id", async () => {
 			const result = await mdxFormat.import?.(`[a post](${entryLinkHref(ENTRY_ID)})`, importContext);
 
 			expect(result?.ok).toBe(true);
@@ -197,7 +197,7 @@ describe("the mdx format", () => {
 			expect(entryLinkIds(result.doc.content)).toEqual([ENTRY_ID]);
 		});
 
-		it("rejects a text that does not parse, with the line and column in that text", async () => {
+		it("FMT-R7 rejects a text that does not parse, with the line and column in that text", async () => {
 			const result = await mdxFormat.import?.("Words\n\n<Unclosed", importContext);
 
 			expect(result?.ok).toBe(false);
@@ -210,7 +210,7 @@ describe("the mdx format", () => {
 			}
 		});
 
-		it("rejects a text with front matter, which a document cannot hold", async () => {
+		it("FMT-R7 rejects a text with front matter, which a document cannot hold", async () => {
 			const result = await mdxFormat.import?.("---\ntitle: x\n---\n\nBody", importContext);
 
 			expect(result?.ok).toBe(false);
@@ -218,7 +218,7 @@ describe("the mdx format", () => {
 			expect(result.issues).toContainEqual(expect.objectContaining({ code: "frontmatter_present" }));
 		});
 
-		it("reports a code annotation that reaches past the code, naming the block by its index", async () => {
+		it("FMT-R7 reports a code annotation that reaches past the code, naming the block by its index", async () => {
 			const text = "Intro\n\n```ts\n// @line plus {3-9}\nconst a = 1;\nconst b = 2;\n```\n";
 			const result = await mdxFormat.import?.(text, importContext);
 
@@ -230,7 +230,7 @@ describe("the mdx format", () => {
 		});
 	});
 
-	it("reads back what it wrote: export then import gives the same content, for a body without internal links or media", async () => {
+	it("FMT-R7 reads back what it wrote: export then import gives the same content, for a body without internal links or media", async () => {
 		const body = "# Title\n\nSome *words* and **more** with `code`.\n\n- one\n- two\n\n> quoted\n";
 		const doc = docOf(body);
 		const text = await mdxFormat.export(doc, exportContext().ctx);
@@ -246,7 +246,7 @@ describe("the mdx format", () => {
 		expect(contentOf(back.doc)).toEqual(contentOf(doc));
 	});
 
-	it("reads back a link it wrote for another consumer as a link to that path", async () => {
+	it("FMT-R7 reads back a link it wrote for another consumer as a link to that path", async () => {
 		const doc = documentWith(`[x](${entryLinkHref(ENTRY_ID)})`);
 		const text = await mdxFormat.export(doc, exportContext({ links: { [ENTRY_ID]: link("/en/posts/x") } }).ctx);
 		const back = await mdxFormat.import?.(text, {

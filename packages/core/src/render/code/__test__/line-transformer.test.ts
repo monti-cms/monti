@@ -45,7 +45,7 @@ const createTransformer = (lineDecorations: LineDecorationPayload[]) => {
 };
 
 describe("transformers.line addLineDecorations", () => {
-	it("adds the class to lines included in the range (1-based input)", () => {
+	it("SITE-D2 adds the class to lines included in the range (1-based input)", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -68,7 +68,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line3.properties.className).toEqual(["line"]);
 	});
 
-	it("merges classes when several line decorations overlap", () => {
+	it("SITE-D2 merges classes when several line decorations overlap", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -90,7 +90,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line2.properties.className).toEqual(expect.arrayContaining(["line", "diff", "focus"]));
 	});
 
-	it("ignores an invalid range (start >= end)", () => {
+	it("SITE-D2 ignores an invalid range (start >= end)", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",
@@ -106,7 +106,7 @@ describe("transformers.line addLineDecorations", () => {
 		expect(line2.properties.className).toEqual(["line"]);
 	});
 
-	it("also keeps the base class that came in through the existing class attribute", () => {
+	it("SITE-D2 also keeps the base class that came in through the existing class attribute", () => {
 		const transformer = createTransformer([
 			{
 				scope: "line",

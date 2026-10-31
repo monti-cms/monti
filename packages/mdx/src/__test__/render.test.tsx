@@ -57,7 +57,7 @@ const atNotation: SyntaxExtension = {
 };
 
 describe("renderMdx", () => {
-	it("gives every heading a slug and collects them as the table of contents, in document order", async () => {
+	it("FMT-P2 gives every heading a slug and collects them as the table of contents, in document order", async () => {
 		const { html, toc } = await renderFixture("## Getting started\n\ntext\n\n## 시작하기\n\n### Deep dive\n");
 		expect(toc.length).toBe(3);
 		for (const item of toc) {
@@ -72,14 +72,14 @@ describe("renderMdx", () => {
 		expect(new Set(toc.map((item) => item.id)).size).toBe(toc.length);
 	});
 
-	it("draws a footnote reference and its definition", async () => {
+	it("FMT-P2 draws a footnote reference and its definition", async () => {
 		const { html, unknown } = await renderFixture("A claim[^1].\n\n[^1]: The proof of it.\n");
 		expect(unknown).toEqual([]);
 		expect(html).toContain("The proof of it.");
 		expect(html).toContain("A claim");
 	});
 
-	it("highlights a code block", async () => {
+	it("FMT-P2 highlights a code block", async () => {
 		const plain = await renderFixture("```ts\nconst answer = 42;\n```\n");
 		expect(plain.html).toContain("answer");
 		// Highlighted code is split into styled tokens, plain text is not.
@@ -87,13 +87,13 @@ describe("renderMdx", () => {
 		expect(plain.html).not.toContain("const answer = 42;</code>");
 	});
 
-	it("draws math", async () => {
+	it("FMT-P2 draws math", async () => {
 		const { html, unknown } = await renderFixture("The area is $E = mc^2$.\n\n$$\n\\int_0^1 x\\,dx\n$$\n");
 		expect(unknown).toEqual([]);
 		expect(html).toContain("katex");
 	});
 
-	it("uses the public component a plugin of the site config gives a block", async () => {
+	it("FMT-P2 uses the public component a plugin of the site config gives a block", async () => {
 		const { html, unknown } = await renderFixture('<Callout variant="tip" title="Heads up">Body words</Callout>\n');
 		expect(unknown).toEqual([]);
 		expect(html).toContain('data-from-plugin="yes"');
@@ -101,7 +101,7 @@ describe("renderMdx", () => {
 		expect(html).toContain("Body words");
 	});
 
-	it("lets the call override the component of a block", async () => {
+	it("FMT-P2 lets the call override the component of a block", async () => {
 		const { html } = await renderFixture('<Callout variant="tip" title="Heads up">Body words</Callout>\n', {
 			components: {
 				blocks: { callout: ({ title }: { title?: string }) => <section data-from-call="yes">{title}</section> },
@@ -111,19 +111,19 @@ describe("renderMdx", () => {
 		expect(html).not.toContain("data-from-plugin");
 	});
 
-	it("throws for a text that cannot be read, naming the reason", async () => {
+	it("FMT-P2 throws for a text that cannot be read, naming the reason", async () => {
 		await expect(renderMdx("Words\n\n<Unclosed")).rejects.toThrow("MDX validation failed");
 		await expect(renderMdx("import a from 'a'\n\ntext")).rejects.toThrow("MDX validation failed");
 	});
 
-	it("reads the syntax extensions it is given, and standard MDX without them", async () => {
+	it("FMT-P2 reads the syntax extensions it is given, and standard MDX without them", async () => {
 		const withExtension = await renderFixture("앞 @@word@@ 뒤", { syntax: [atNotation] });
 		expect(withExtension.html).toContain("<u>word</u>");
 		const without = await renderFixture("앞 @@word@@ 뒤");
 		expect(without.html).toContain("@@word@@");
 	});
 
-	it("draws a registered image from the refs of a read, and leaves out one the refs do not have", async () => {
+	it("FMT-P2 draws a registered image from the refs of a read, and leaves out one the refs do not have", async () => {
 		const known = "00000000-0000-4000-8000-0000000000a1";
 		const unknownId = "00000000-0000-4000-8000-0000000000a2";
 		const source = `<Image mediaId="${known}" alt="a photo" />\n\n<Image mediaId="${unknownId}" alt="gone" />\n`;
@@ -139,7 +139,7 @@ describe("renderMdx", () => {
 		expect(bare).not.toContain("cdn.test");
 	});
 
-	it("draws what the document renderer draws for the same text", async () => {
+	it("FMT-P2 draws what the document renderer draws for the same text", async () => {
 		const source = "# Title\n\nSome *words* and a [link](https://example.com).\n";
 		const read = await mdxFormat.import?.(source, {
 			locale: "ko",

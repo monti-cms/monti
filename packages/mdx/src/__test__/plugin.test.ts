@@ -17,7 +17,7 @@ const braces: SyntaxExtension = {
 const other: SyntaxExtension = { name: "other" };
 
 describe("mdx()", () => {
-	it("is a plugin named mdx whose options are the ones it was given", () => {
+	it("FMT-P1 is a plugin named mdx whose options are the ones it was given", () => {
 		const plugin = mdx({ syntax: [braces] });
 		expect(plugin.name).toBe(MDX_PLUGIN_NAME);
 		expect(plugin.name).toBe("mdx");
@@ -25,31 +25,31 @@ describe("mdx()", () => {
 		expect(plugin.options.syntax?.[0]).toBe(braces);
 	});
 
-	it("works without options", () => {
+	it("FMT-P1 works without options", () => {
 		const plugin = mdx();
 		expect(plugin.name).toBe("mdx");
 		expect(plugin.options).toEqual({});
 	});
 
-	it("provides its admin side and its server side (the formats) lazily", async () => {
+	it("FMT-P1 provides its admin side and its server side (the formats) lazily", async () => {
 		const plugin = mdx();
 		expect(typeof plugin.admin).toBe("function");
 		expect(typeof (await serverSideOf(plugin))?.formats).toBe("function");
 	});
 
 	describe("validation", () => {
-		it("accepts distinct named extensions, and no extension at all", () => {
+		it("FMT-P1 accepts distinct named extensions, and no extension at all", () => {
 			expect(checkMdxOptions({ syntax: [braces, other] })).toEqual([]);
 			expect(checkMdxOptions({})).toEqual([]);
 			expect(checkMdxOptions(undefined)).toEqual([]);
 		});
 
-		it("rejects an extension without a name", () => {
+		it("FMT-P1 rejects an extension without a name", () => {
 			const nameless = { ...braces, name: "" };
 			expect(checkMdxOptions({ syntax: [nameless] })).toEqual([expect.objectContaining({ code: "name" })]);
 		});
 
-		it("rejects the same name listed twice", () => {
+		it("FMT-P1 rejects the same name listed twice", () => {
 			expect(checkMdxOptions({ syntax: [braces, { ...other, name: braces.name }] })).toEqual([
 				expect.objectContaining({ code: "duplicate" }),
 			]);
@@ -58,7 +58,7 @@ describe("mdx()", () => {
 			]);
 		});
 
-		it("is run again by the validate hook of the plugin", () => {
+		it("FMT-P1 is run again by the validate hook of the plugin", () => {
 			const plugin = mdx({ syntax: [braces] });
 			expect(() => plugin.checkConfig?.({} as never)).not.toThrow();
 		});
@@ -75,14 +75,14 @@ describe("mdx()", () => {
 			return provided as import("@monti-cms/core/format").CmsFormat;
 		};
 
-		it("resolves to a format named mdx", async () => {
+		it("FMT-P1 resolves to a format named mdx", async () => {
 			const format = await formatOf();
 			expect(format.name).toBe("mdx");
 			expect(format.extension).toBe("mdx");
 			expect(typeof format.import).toBe("function");
 		});
 
-		it("writes and reads with the syntax it was given", async () => {
+		it("FMT-P1 writes and reads with the syntax it was given", async () => {
 			const doc = {
 				...docOfMdx(testSite, "x"),
 				content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
@@ -120,7 +120,7 @@ describe("the root entry", () => {
 	};
 	const PARSER_PACKAGES = /^(unified|remark|rehype|mdast|micromark|unist)/;
 
-	it("imports no remark package at run time: it is read by the site config in the browser as well", () => {
+	it("FMT-P1 imports no remark package at run time: it is read by the site config in the browser as well", () => {
 		const files = [path.join(SRC, "index.ts"), path.join(SRC, "plugin.ts"), ...filesUnder(path.join(SRC, "syntax"))];
 		expect(files.length).toBeGreaterThan(2);
 		for (const file of files) {
@@ -129,7 +129,7 @@ describe("the root entry", () => {
 		}
 	});
 
-	it("does not import the parts that parse MDX at load time", () => {
+	it("FMT-P1 does not import the parts that parse MDX at load time", () => {
 		const heavy = new Set(["./format", "./body", "./analyze", "./serialize", "./parse", "./render", "./server"]);
 		for (const file of [path.join(SRC, "index.ts"), path.join(SRC, "plugin.ts")]) {
 			const text = readFileSync(file, "utf8");

@@ -6,7 +6,7 @@ import { testSite } from "../../../core/test/site";
 import { mdxFormat } from "../format";
 
 describe("footnote markers in MDX text", () => {
-	it("does not mistake an escaped marker or inline code for a missing definition", async () => {
+	it("FMT-R1 does not mistake an escaped marker or inline code for a missing definition", async () => {
 		const snapshot = await prepareSnapshot(
 			testSite,
 			{

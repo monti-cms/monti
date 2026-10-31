@@ -23,7 +23,7 @@ const codeIssues = (items: readonly { code: string }[] | undefined) =>
 	(items ?? []).filter((item) => item.code.startsWith("code_"));
 
 describe("code-ref pre-publish validation", () => {
-	it("raises nothing when every link has its label", async () => {
+	it("WRITE-P1 raises nothing when every link has its label", async () => {
 		const snapshot = await snapshotOf(
 			[
 				'See <CodeRef to="c1">the sum</CodeRef> and <CodeRef to="c1">it again</CodeRef>.',
@@ -36,7 +36,7 @@ describe("code-ref pre-publish validation", () => {
 		expect(codeIssues(snapshot.warnings)).toEqual([]);
 	});
 
-	it("blocks publishing a link whose label no code block has, at the link", async () => {
+	it("WRITE-P1 blocks publishing a link whose label no code block has, at the link", async () => {
 		const snapshot = await snapshotOf(
 			[
 				"Intro.",
@@ -58,7 +58,7 @@ describe("code-ref pre-publish validation", () => {
 		]);
 	});
 
-	it("warns about a label a second code block uses again, at the second block", async () => {
+	it("WRITE-P1 warns about a label a second code block uses again, at the second block", async () => {
 		const snapshot = await snapshotOf(
 			[
 				'See <CodeRef to="c1">this</CodeRef>.',
@@ -80,7 +80,7 @@ describe("code-ref pre-publish validation", () => {
 		]);
 	});
 
-	it("does not count one block labelling two ranges with the same label as a duplicate", async () => {
+	it("WRITE-P1 does not count one block labelling two ranges with the same label as a duplicate", async () => {
 		const snapshot = await snapshotOf(
 			[
 				'See <CodeRef to="c1">this</CodeRef>.',
@@ -92,7 +92,7 @@ describe("code-ref pre-publish validation", () => {
 		expect(codeIssues(snapshot.warnings)).toEqual([]);
 	});
 
-	it("reads a label written in the comment syntax of the code's language", async () => {
+	it("WRITE-P1 reads a label written in the comment syntax of the code's language", async () => {
 		const snapshot = await snapshotOf(
 			[
 				'See <CodeRef to="py1">this</CodeRef>.',
@@ -104,7 +104,7 @@ describe("code-ref pre-publish validation", () => {
 		expect(codeIssues(snapshot.issues)).toEqual([]);
 	});
 
-	it("leaves a link without a value to the required attribute check", async () => {
+	it("WRITE-P1 leaves a link without a value to the required attribute check", async () => {
 		const snapshot = await snapshotOf('See <CodeRef to="">this</CodeRef>.\n');
 		expect(codeIssues(snapshot.issues)).toEqual([]);
 		expect(snapshot.issues.map((issue) => issue.code)).toContain("missing_block_attribute");

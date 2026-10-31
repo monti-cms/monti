@@ -32,7 +32,7 @@ const fromMdx = (source: string): Doc => {
 
 /** The block extensions draw a stored document by themselves (the `defineRender` table of each extension's render module), without compiling MDX. */
 describe("block extension components of the JSON renderer", () => {
-	it("draws a callout from its stored attributes, and the title and body follow the language", async () => {
+	it("BLOCK-R1 draws a callout from its stored attributes, and the title and body follow the language", async () => {
 		const callout = (attrs: Record<string, string>, content: Node[]): Node => ({ type: "callout", attrs, content });
 		const markup = await html(
 			doc(callout({ variant: "warning", title: "주의" }, [paragraph(text("본문", [{ type: "bold" }]))])),
@@ -56,7 +56,7 @@ describe("block extension components of the JSON renderer", () => {
 		);
 	});
 
-	it("draws a collapsible with its default title and its open state", async () => {
+	it("BLOCK-R1 draws a collapsible with its default title and its open state", async () => {
 		const collapsible = (attrs: Record<string, string | boolean>): Node => ({
 			type: "collapsible",
 			attrs,
@@ -71,7 +71,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(closed).toContain(">펼치기</summary>");
 	});
 
-	it("draws tabs from the stored tabs: the names are their labels, the panels their content, and the default is a name", async () => {
+	it("BLOCK-R1 draws tabs from the stored tabs: the names are their labels, the panels their content, and the default is a name", async () => {
 		const tab = (label: string, ...content: Node[]): Node => ({ type: "tab", attrs: { label }, content });
 		const tabs = (attrs: Record<string, string>, ...content: Node[]): Node => ({ type: "tabs", attrs, content });
 		const markup = await html(
@@ -98,7 +98,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(fallback).not.toContain('monti-block-tabs-panel"><div');
 	});
 
-	it("draws columns from the stored columns, and the widths follow the column count", async () => {
+	it("BLOCK-R1 draws columns from the stored columns, and the widths follow the column count", async () => {
 		const column = (...content: Node[]): Node => ({ type: "column", content });
 		const columns = (attrs: Record<string, string>, ...content: Node[]): Node => ({ type: "columns", attrs, content });
 		const two = await html(
@@ -112,7 +112,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(mismatch).toContain("--monti-columns:repeat(2, minmax(0, 1fr))");
 	});
 
-	it("draws a code explorer from the stored code blocks: the tree from their titles and the code of the picked file", async () => {
+	it("BLOCK-R1 draws a code explorer from the stored code blocks: the tree from their titles and the code of the picked file", async () => {
 		const file = (title: string, code: string): Node => ({
 			type: "codeBlock",
 			attrs: { language: "ts", meta: `title="${title}"`, code },
@@ -146,7 +146,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(plain).not.toContain('role="tree"');
 	});
 
-	it("draws the marks: tooltip, code link and text color", async () => {
+	it("BLOCK-R1 draws the marks: tooltip, code link and text color", async () => {
 		const markup = await html(
 			doc(
 				paragraph(
@@ -165,13 +165,13 @@ describe("block extension components of the JSON renderer", () => {
 		expect(markup).not.toContain("red");
 	});
 
-	it("draws the tooltip inside a code block, numbered, as the MDX renderer did", async () => {
+	it("BLOCK-R1 draws the tooltip inside a code block, numbered, as the MDX renderer did", async () => {
 		const markup = await html(fromMdx('```ts\n// @char Tooltip {0-5} content="코드 설명"\nconst a = 1;\n```'));
 		expect(markup).toContain('class="monti-block-tooltip-content">코드 설명</span>');
 		expect(markup).toContain('class="monti-code-notes"');
 	});
 
-	it("draws Mermaid and chart code fences from the source", async () => {
+	it("BLOCK-R1 draws Mermaid and chart code fences from the source", async () => {
 		const fence = (language: string, code: string): Node => ({
 			type: "codeBlock",
 			attrs: { language, meta: "", code },
@@ -185,7 +185,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(broken).toContain('role="alert"');
 	});
 
-	it("lets the site override a block extension's component", async () => {
+	it("BLOCK-R1 lets the site override a block extension's component", async () => {
 		const stored = doc({
 			type: "callout",
 			attrs: { variant: "tip", title: "제목" },
@@ -205,7 +205,7 @@ describe("block extension components of the JSON renderer", () => {
 		expect(markup).toBe('<aside data-tone="tip" title="제목"><p>본문</p></aside>');
 	});
 
-	it("renders every block of the extension with nothing left to the fallback, in strict mode", async () => {
+	it("BLOCK-R1 renders every block of the extension with nothing left to the fallback, in strict mode", async () => {
 		const source = [
 			':::callout{variant="info" title="a"}\nb\n:::',
 			':::collapsible{title="c"}\nd\n:::',

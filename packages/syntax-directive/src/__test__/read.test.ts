@@ -95,14 +95,14 @@ describe("directive syntax: turning unregistered directives back", () => {
 	it.each([
 		["openai/gpt-oss-120b:free를 쓴다.", ":free를"],
 		["비율이 1:1로 맞는다.", ":1로"],
-	])("%s → %s is kept as body text", (body, expected) => {
+	])("FMT-S1 %s → %s is kept as body text", (body, expected) => {
 		const tree = parseMdxAst(body);
 
 		expect(collectDirectiveNames(tree)).toEqual([]);
 		expect(collectText(tree)).toContain(expected);
 	});
 
-	it("an unregistered container is kept as the original source down to the inside", () => {
+	it("FMT-S1 an unregistered container is kept as the original source down to the inside", () => {
 		const body = ":::unknown\n안쪽 :free를 그대로\n:::";
 		const tree = parseMdxAst(body);
 
@@ -113,7 +113,7 @@ describe("directive syntax: turning unregistered directives back", () => {
 
 describe("directive syntax: registered directives", () => {
 	it.skipIf(!siteContainer || !siteAttribute)(
-		"the CMS analysis tree also turns registered names into MDX elements (reference collection and validation run on one shape)",
+		"FMT-S1 the CMS analysis tree also turns registered names into MDX elements (reference collection and validation run on one shape)",
 		() => {
 			if (!siteContainer || !siteAttribute) return;
 			const tree = parseMdxAst(`:::${siteContainer.name}{${siteAttribute}="제목"}\n본문\n:::`);
@@ -130,7 +130,7 @@ describe("directive syntax: registered directives", () => {
 		},
 	);
 
-	it("the analysis tree and the public render tree produce the same elements", () => {
+	it("FMT-S1 the analysis tree and the public render tree produce the same elements", () => {
 		const body = [
 			':::text-align{align="center"}',
 			"가운데 문단",
@@ -144,7 +144,7 @@ describe("directive syntax: registered directives", () => {
 		expect(collectJsx(parseMdxAst(body))).toEqual(collectJsx(renderTree(body)));
 	});
 
-	it("the public render turns registered names into MDX elements", () => {
+	it("FMT-S1 the public render turns registered names into MDX elements", () => {
 		const tree = renderTree(
 			[
 				':::text-align{align="center"}',
@@ -166,7 +166,7 @@ describe("directive syntax: registered directives", () => {
 		expect(jsx[5]).toMatchObject({ type: "mdxJsxFlowElement", attributes: { mediaId: "abc", width: "60%" } });
 	});
 
-	it("converted elements keep the directive's body position (warning and reference positions)", () => {
+	it("FMT-S1 converted elements keep the directive's body position (warning and reference positions)", () => {
 		const body = ["첫 문단", "", "둘째 줄 :u[밑줄] 끝", "", '::image{mediaId="abc"}'].join("\n");
 		const jsx = collectJsx(parseMdxAst(body));
 
@@ -175,7 +175,7 @@ describe("directive syntax: registered directives", () => {
 		expect(jsx.find((element) => element.name === "u")).toMatchObject({ position: { start: { line: 3 } } });
 	});
 
-	it("a false boolean creates no attribute (avoids the trap where 'false' is truthy)", () => {
+	it("FMT-S1 a false boolean creates no attribute (avoids the trap where 'false' is truthy)", () => {
 		const [withFalse] = collectJsx(renderTree('::image{mediaId="abc" decorative="false"}'));
 		const [withTrue] = collectJsx(renderTree('::image{mediaId="abc" decorative}'));
 		const [withLiteralTrue] = collectJsx(renderTree('::image{mediaId="abc" decorative="true"}'));
@@ -187,7 +187,7 @@ describe("directive syntax: registered directives", () => {
 });
 
 describe("invariants on real posts", () => {
-	it("no unregistered name remains as a directive (0 cases)", () => {
+	it("FMT-S1 no unregistered name remains as a directive (0 cases)", () => {
 		const offenders: string[] = [];
 		for (const { name, mdx } of readSamples()) {
 			const names = collectDirectiveNames(parseMdxAst(mdx));
@@ -197,7 +197,7 @@ describe("invariants on real posts", () => {
 		expect(offenders).toEqual([]);
 	});
 
-	it("the 2 measured false positives remain in the body as they are", () => {
+	it("FMT-S1 the 2 measured false positives remain in the body as they are", () => {
 		expect(collectText(parseMdxAst(readSample("vector-rag-search.mdx")))).toContain(":free를");
 		expect(collectText(parseMdxAst(readSample("tooltips-in-code-blocks.mdx")))).toContain(":1로");
 	});

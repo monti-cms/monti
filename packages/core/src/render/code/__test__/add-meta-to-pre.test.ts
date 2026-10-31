@@ -10,7 +10,7 @@ const runPreHook = (node: Element, code: string, meta: Record<string, unknown>) 
 };
 
 describe("addMetaToPre", () => {
-	it("injects code and meta into the pre properties", () => {
+	it("SITE-D2 injects code and meta into the pre properties", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -25,7 +25,7 @@ describe("addMetaToPre", () => {
 		expect(pre.properties.showLineNumbers).toBe(true);
 	});
 
-	it("works safely even without existing properties", () => {
+	it("SITE-D2 works safely even without existing properties", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",
@@ -39,7 +39,7 @@ describe("addMetaToPre", () => {
 		expect(pre.properties).toEqual({ code: "print('hello')", language: "python" });
 	});
 
-	it("keeps existing properties and updates the same key with the latest value", () => {
+	it("SITE-D2 keeps existing properties and updates the same key with the latest value", () => {
 		const pre: Element = {
 			type: "element",
 			tagName: "pre",

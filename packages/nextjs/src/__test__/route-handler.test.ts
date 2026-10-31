@@ -8,7 +8,7 @@ import { nextHost } from "../auth/host";
 const cms = fakeCms({ store: { getPreferences: async () => null } });
 
 describe("createRouteHandler", () => {
-	it("serves the path segments Next split, for each HTTP method the API uses", async () => {
+	it("SITE-N1 serves the path segments Next split, for each HTTP method the API uses", async () => {
 		const handler = createRouteHandler(cms);
 		expect(Object.keys(handler).sort()).toEqual(["DELETE", "GET", "PATCH", "POST", "PUT"]);
 		const response = await handler.GET(new Request("http://localhost/api/monti/v1/preferences"), {
@@ -17,7 +17,7 @@ describe("createRouteHandler", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("answers 404 for an unknown path and 405 for a known path with another method", async () => {
+	it("SITE-N1 answers 404 for an unknown path and 405 for a known path with another method", async () => {
 		const handler = createRouteHandler(cms);
 		const unknown = await handler.GET(new Request("http://localhost/api/monti/v1/nope"), {
 			params: Promise.resolve({ path: ["v1", "nope"] }),
@@ -33,7 +33,7 @@ describe("createRouteHandler", () => {
 		expect(wrongMethod.status).toBe(405);
 	});
 
-	it("attaches the Next request headers to the instance, so the config needs no host", () => {
+	it("SITE-N1 attaches the Next request headers to the instance, so the config needs no host", () => {
 		const attached: unknown[] = [];
 		createRouteHandler({ handle: cms.handle, attachHost: (host) => attached.push(host) });
 		expect(attached).toEqual([nextHost]);

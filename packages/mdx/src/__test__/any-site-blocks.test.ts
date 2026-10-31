@@ -39,11 +39,11 @@ const samples = testSite.ADDED_BLOCKS.flatMap((block) => {
 });
 
 describe("any site: added blocks round-trip", () => {
-	it("the active config adds at least one block", () => {
+	it("FMT-R2 the active config adds at least one block", () => {
 		expect(samples.length).toBeGreaterThan(0);
 	});
 
-	it.each(samples)("%s keeps its content through analyze → document → serialize", (_name, mdx) => {
+	it.each(samples)("FMT-R2 %s keeps its content through analyze → document → serialize", (_name, mdx) => {
 		const first = analyze(testSite, mdx);
 		expect(first.errors).toEqual([]);
 		const serialized = serialize(testSite, toDocument(testSite, first));

@@ -17,7 +17,7 @@ const headingDoc = (text: string): StoredDocument => ({
 const contentOf = (doc: StoredDocument | null) => (doc?.content ?? []).map(({ id: _id, ...rest }) => rest);
 
 describe("EditorToggle", () => {
-	it("opens valid MDX in visual mode", () => {
+	it("FMT-P2 opens valid MDX in visual mode", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 		expect(toggle.mode).toBe("visual");
@@ -26,7 +26,7 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe(source);
 	});
 
-	it("falls back to source mode for invalid MDX, preserving original source", () => {
+	it("FMT-P2 falls back to source mode for invalid MDX, preserving original source", () => {
 		const invalidSource = "# Hello\n\n<Component>";
 		const toggle = new EditorToggle(invalidSource, mdxBrowserFormat);
 		expect(toggle.mode).toBe("source");
@@ -35,7 +35,7 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe(invalidSource);
 	});
 
-	it("surfaces errors, stays in source mode, and preserves original bytes for syntactically valid but disallowed MDX", () => {
+	it("FMT-P2 surfaces errors, stays in source mode, and preserves original bytes for syntactically valid but disallowed MDX", () => {
 		const disallowedSource = '<Callout onClick={() => alert("x")}>Caution</Callout>';
 		const toggle = new EditorToggle(disallowedSource, mdxBrowserFormat);
 		expect(toggle.mode).toBe("source");
@@ -45,7 +45,7 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe(disallowedSource);
 	});
 
-	it("toggles to source without edits returns exact original bytes", () => {
+	it("FMT-P2 toggles to source without edits returns exact original bytes", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 		expect(toggle.mode).toBe("visual");
@@ -55,7 +55,7 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe(source);
 	});
 
-	it("toggles to source after edits returns the written document and roundtrips semantically", () => {
+	it("FMT-P2 toggles to source after edits returns the written document and roundtrips semantically", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
@@ -73,7 +73,7 @@ describe("EditorToggle", () => {
 		}
 	});
 
-	it("toggling from source back to visual re-reads the text", () => {
+	it("FMT-P2 toggling from source back to visual re-reads the text", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
@@ -88,7 +88,7 @@ describe("EditorToggle", () => {
 		expect(toggle.document).not.toBeNull();
 	});
 
-	it("does not mutate internal document or falsely write it when the document getter's return value is mutated", () => {
+	it("FMT-P2 does not mutate internal document or falsely write it when the document getter's return value is mutated", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
@@ -116,7 +116,7 @@ describe("EditorToggle", () => {
 		expect(contentOf(toggle.document)).toEqual(contentOf(currentDoc));
 	});
 
-	it("does not mutate internal state when the object passed to notifyVisualChange is mutated after notification", () => {
+	it("FMT-P2 does not mutate internal state when the object passed to notifyVisualChange is mutated after notification", () => {
 		const source = "# Hello\n\nWorld!";
 		const toggle = new EditorToggle(source, mdxBrowserFormat);
 
@@ -136,14 +136,14 @@ describe("EditorToggle", () => {
 		expect(toggle.source).toBe("# Original Update\n");
 	});
 
-	it("does not expose the destructive visual load method on the public API", () => {
+	it("FMT-P2 does not expose the destructive visual load method on the public API", () => {
 		type PublicKeys = keyof EditorToggle;
 		type HasOpenVisual = "openVisual" extends PublicKeys ? true : false;
 		const hasOpenVisual: HasOpenVisual = false;
 		expect(hasOpenVisual).toBe(false);
 	});
 
-	it("does not alter subsequent errors read when returned errors value is mutated or cleared", () => {
+	it("FMT-P2 does not alter subsequent errors read when returned errors value is mutated or cleared", () => {
 		const invalidSource = "# Hello\n\n<Component>";
 		const toggle = new EditorToggle(invalidSource, mdxBrowserFormat);
 

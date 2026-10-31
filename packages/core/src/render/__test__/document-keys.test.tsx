@@ -67,7 +67,7 @@ const showcase: StoredDocument = {
 afterEach(() => vi.restoreAllMocks());
 
 describe("keys of rendered children", () => {
-	it("renders every child list with keys, so React logs no key warning", async () => {
+	it("SITE-D5 renders every child list with keys, so React logs no key warning", async () => {
 		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const { content } = await renderDocument(showcase, { site: testSite });
 		renderToStaticMarkup(content);

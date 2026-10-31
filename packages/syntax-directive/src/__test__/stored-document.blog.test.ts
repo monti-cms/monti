@@ -9,7 +9,7 @@ import { directiveSyntax } from "..";
 const directives = [directiveSyntax()];
 
 describe("stored documents of real directive posts", () => {
-	it("store every post as a document that writes back to the same directive text", () => {
+	it("FMT-S1 store every post as a document that writes back to the same directive text", () => {
 		for (const { name, mdx } of readSamples()) {
 			const body = bodyFromMdx(testSite, mdx, directives);
 			expect(body.doc, name).not.toBeNull();

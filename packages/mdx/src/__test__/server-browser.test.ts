@@ -9,12 +9,12 @@ const manifest = JSON.parse(readFileSync(new URL("../../package.json", import.me
 };
 
 describe("@monti-cms/mdx/server in the browser bundle", () => {
-	it("has a browser condition that points at a stub, in the source and the published exports", () => {
+	it("FMT-P1 has a browser condition that points at a stub, in the source and the published exports", () => {
 		expect(manifest.exports["./server"]).toMatchObject({ browser: "./src/server.browser.ts" });
 		expect(manifest.publishConfig.exports["./server"]).toMatchObject({ browser: "./dist/server.browser.js" });
 	});
 
-	it("is the empty server side, so the MDX parser is not in it", () => {
+	it("FMT-P1 is the empty server side, so the MDX parser is not in it", () => {
 		expect(browserEntry.default).toEqual({});
 		expect(serverEntry.default.formats).toBeTypeOf("function");
 	});

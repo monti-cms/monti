@@ -18,7 +18,7 @@ const prepareSnapshot = (value: unknown, options: Parameters<typeof prepareCore>
 const mdxInput = (body: string) => ({ collection: content, slug: "a", metadata: {}, format: "mdx", body });
 
 describe("MDX that cannot become a document", () => {
-	it("rejects retired ContentLink with a migration message", async () => {
+	it("FMT-R4 rejects retired ContentLink with a migration message", async () => {
 		const snap = await prepareSnapshot(mdxInput('<ContentLink targetId="123e4567-e89b-12d3-a456-426614174000" />'));
 		expect(snap.issues).toContainEqual(
 			expect.objectContaining({
@@ -35,13 +35,13 @@ describe("MDX that cannot become a document", () => {
 		["<File />", "missing_media_id"],
 		["<File mediaId={dynamicId} />", "mdx_error"],
 		['<File mediaId="not-a-uuid" />', "invalid_reference_id"],
-	])("creates structured issues for dynamic IDs: %s", async (mdx, expectedIssue) => {
+	])("FMT-R4 creates structured issues for dynamic IDs: %s", async (mdx, expectedIssue) => {
 		const snap = await prepareSnapshot(mdxInput(mdx));
 		expect(snap.issues).toContainEqual(expect.objectContaining({ code: expectedIssue }));
 		expect(snap.references).toEqual([]);
 	});
 
-	it("retains trusted previous refs marked stale on MDX syntax error and keeps the exact text", async () => {
+	it("FMT-R4 retains trusted previous refs marked stale on MDX syntax error and keeps the exact text", async () => {
 		const mdx = "</Invalid>";
 		const previousReferences: Reference[] = [
 			{
@@ -67,7 +67,7 @@ describe("MDX that cannot become a document", () => {
 		});
 	});
 
-	it("keeps the analyser positions in blocking issues", async () => {
+	it("FMT-R4 keeps the analyser positions in blocking issues", async () => {
 		const snapshot = await prepareSnapshot({
 			...mdxInput('First line\n<ContentLink targetId="bad" />'),
 			metadata: { title: "Memo" },
@@ -80,7 +80,7 @@ describe("MDX that cannot become a document", () => {
 });
 
 describe("MDX with front matter", () => {
-	it("preserves frontmatter bytes, draft is allowed, but produces frontmatter_present issue making it not ready", async () => {
+	it("FMT-R4 preserves frontmatter bytes, draft is allowed, but produces frontmatter_present issue making it not ready", async () => {
 		const mdx = "---\ntitle: test\n---\nHello";
 		const created: Parameters<StorePort["createEntryWithReferences"]>[0][] = [];
 		const storePort: StorePort = {

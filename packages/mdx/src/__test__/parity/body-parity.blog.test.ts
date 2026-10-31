@@ -74,7 +74,7 @@ const prepare = async (mdx: string) => {
 describe("stored-document checks keep the results of the checks over MDX text", () => {
 	const corpus = parityCorpus();
 
-	it("has a recorded result for every body of the corpus", () => {
+	it("FMT-R6 has a recorded result for every body of the corpus", () => {
 		expect(corpus.filter(({ name }) => !(name in golden))).toEqual([]);
 	});
 
@@ -83,7 +83,7 @@ describe("stored-document checks keep the results of the checks over MDX text", 
 		if (!before) continue;
 
 		if (before.parsed) {
-			it(`${name}: same hash, codes, references and text`, async () => {
+			it(`FMT-R6 ${name}: same hash, codes, references and text`, async () => {
 				const { snap, publish } = await prepare(mdx);
 				expect(snap.contentHash).toBe(before.hash);
 				expect(unique(snap.issues)).toEqual(before.issues);
@@ -101,7 +101,7 @@ describe("stored-document checks keep the results of the checks over MDX text", 
 			continue;
 		}
 
-		it(`${name}: an unparsed body that keeps its reasons and blocks publishing`, async () => {
+		it(`FMT-R6 ${name}: an unparsed body that keeps its reasons and blocks publishing`, async () => {
 			const { snap, publish } = await prepare(mdx);
 			expect(snap.doc.content).toEqual([
 				expect.objectContaining({ type: "unparsed", attrs: { format: "mdx", source: mdx } }),

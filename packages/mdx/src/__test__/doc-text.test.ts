@@ -27,7 +27,7 @@ const SAMPLES = [
 
 describe("the plain-text reader of core tests", () => {
 	for (const sample of SAMPLES) {
-		it(`reads ${JSON.stringify(sample)} like the mdx format`, () => {
+		it(`FMT-R1 reads ${JSON.stringify(sample)} like the mdx format`, () => {
 			expect(withoutBlockIds(docOfText(sample).content)).toEqual(withoutBlockIds(docOfMdx(testSite, sample).content));
 		});
 	}

@@ -72,13 +72,13 @@ describe("inline mark saved text", () => {
 		'<Tooltip content="설명 &quot;따옴표&quot;"><CodeRef to="c2"><Color fg="#16a34a">겹침</Color></CodeRef></Tooltip>',
 		'<Tooltip content="a &amp; b">**굵게** 와 <u>밑줄</u></Tooltip>',
 		'<Tooltip content="닫는 괄호">a]b</Tooltip>',
-	])("body → editor → body is unchanged: %s", (body) => {
+	])("BLOCK-R1 body → editor → body is unchanged: %s", (body) => {
 		const mdx = `${body}\n`;
 		expect(serialize(site, toDocument(site, analyze(site, mdx)))).toBe(mdx);
 		expect(roundTrip(mdx)).toBe(mdx);
 	});
 
-	it("sample posts (the blog post set) are unchanged after passing through the editor", () => {
+	it("BLOCK-R1 sample posts (the blog post set) are unchanged after passing through the editor", () => {
 		// The samples are stored with directives, so they are read with the extension and written back as standard MDX first.
 		const syntax = [directiveSyntax()];
 		const standardOf = (mdx: string, name: string) =>
@@ -95,7 +95,7 @@ describe("inline mark saved text", () => {
 		}
 	});
 
-	it("editor marks render with the shape the extension provides", () => {
+	it("BLOCK-R1 editor marks render with the shape the extension provides", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(site, MARKS),
 			content: mdxToTiptap(
@@ -112,7 +112,7 @@ describe("inline mark saved text", () => {
 });
 
 describe("slash menu", () => {
-	it("choosing the tooltip selects sample text and asks for its description input", async () => {
+	it("BLOCK-R1 choosing the tooltip selects sample text and asks for its description input", async () => {
 		render(
 			<WithMarks>
 				<CmsEditor doc={docOfMdx("")} onChange={vi.fn()} />
@@ -158,7 +158,7 @@ describe("inline bubble", () => {
 			editor.view.focus();
 		});
 
-	it("selecting text shows the footnote and then ⋯, and the site-added formats are the rows under it, in the order they were added", async () => {
+	it("BLOCK-R1 selecting text shows the footnote and then ⋯, and the site-added formats are the rows under it, in the order they were added", async () => {
 		const editor = await mount("가나다\n\n```ts\nconst a = 1;\n```\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -175,7 +175,7 @@ describe("inline bubble", () => {
 		]);
 	});
 
-	it("leaves the code ref row out when the body has no code block", async () => {
+	it("BLOCK-R1 leaves the code ref row out when the body has no code block", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -183,7 +183,7 @@ describe("inline bubble", () => {
 		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["툴팁 넣기", "글자색"]);
 	});
 
-	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
+	it("BLOCK-R1 edits and removes the description even with the cursor at the tooltip boundary", async () => {
 		const editor = await mount('<Tooltip content="설명">사아</Tooltip> 자\n');
 		focusAt(editor, 1);
 		act(() => fireEvent.click(screen.getByRole("button", { name: tTooltip("edit") })));
@@ -198,7 +198,7 @@ describe("inline bubble", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe("사아 자\n");
 	});
 
-	it("the text color row opens a color picker in the bubble and applies the chosen color", async () => {
+	it("BLOCK-R1 the text color row opens a color picker in the bubble and applies the chosen color", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const bubble = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -209,7 +209,7 @@ describe("inline bubble", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Color fg="#dc2626" fgDark="#f87171">가나</Color>다\n');
 	});
 
-	it("a code ref with no linked line is reported in the bubble", async () => {
+	it("BLOCK-R1 a code ref with no linked line is reported in the bubble", async () => {
 		const editor = await mount('<CodeRef to="c9">호출</CodeRef> 뒤\n');
 		focusAt(editor, 2);
 		expect(await screen.findByText(tCodeRef("none"))).toBeInTheDocument();

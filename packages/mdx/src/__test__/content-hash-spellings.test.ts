@@ -14,7 +14,7 @@ const hashOf = (mdx: string, syntax: readonly SyntaxExtension[] = []) =>
 
 /** The content hash is over the stored document, so MDX written in different ways that read the same hash equally. */
 describe("content hash of MDX spellings", () => {
-	it("a notation an extension reads and the standard JSX of the same meaning", () => {
+	it("FMT-R1 a notation an extension reads and the standard JSX of the same meaning", () => {
 		// A made-up notation: `@@word@@` is read as `<u>word</u>`.
 		const atNotation: SyntaxExtension = {
 			name: "at",
@@ -41,11 +41,11 @@ describe("content hash of MDX spellings", () => {
 		expect(hashOf(notation)).not.toBe(hashOf(standard));
 	});
 
-	it("emphasis written with asterisks or underscores", () => {
+	it("FMT-R1 emphasis written with asterisks or underscores", () => {
 		expect(hashOf("An *a* word")).toBe(hashOf("An _a_ word"));
 	});
 
-	it("JSX attributes listed in a different order", () => {
+	it("FMT-R1 JSX attributes listed in a different order", () => {
 		const image = (attributes: string) => `<Image ${attributes} />\n`;
 		const a = image('src="https://example.com/a.png" alt="A" width="50"');
 		const b = image('width="50" alt="A" src="https://example.com/a.png"');
@@ -53,7 +53,7 @@ describe("content hash of MDX spellings", () => {
 		expect(hashOf(a)).toBe(hashOf(b));
 	});
 
-	it("an unclosed element is one body per raw string", () => {
+	it("FMT-R1 an unclosed element is one body per raw string", () => {
 		const broken = "<Callout>\nInside\n";
 		expect(analyze(testSite, broken).errors.length).toBeGreaterThan(0);
 		expect(hashOf(broken)).toBe(hashOf(broken));

@@ -15,20 +15,20 @@ type NamesOf<Plugins extends readonly Plugin[]> = {
 };
 
 describe("each block function keeps the blocks it installs in its type", () => {
-	it("types only the blocks that are listed", () => {
+	it("BLOCK-R4 types only the blocks that are listed", () => {
 		const some = [chart(), tooltip()] as const;
 		expectTypeOf<NamesOf<typeof some>["blocks"]>().toEqualTypeOf<"chart">();
 		expectTypeOf<NamesOf<typeof some>["marks"]>().toEqualTypeOf<"tooltip">();
 		expect(some.map((plugin) => plugin.name)).toEqual(["chart", "tooltip"]);
 	});
 
-	it("types the blocks and marks of the ones listed, whatever the others are", () => {
+	it("BLOCK-R4 types the blocks and marks of the ones listed, whatever the others are", () => {
 		const rest = [callout(), collapsible(), tooltip(), codeRef()] as const;
 		expectTypeOf<NamesOf<typeof rest>["blocks"]>().toEqualTypeOf<"callout" | "collapsible">();
 		expectTypeOf<NamesOf<typeof rest>["marks"]>().toEqualTypeOf<"tooltip" | "code-ref">();
 	});
 
-	it("types every block when all are listed, and a color palette keeps the color mark", () => {
+	it("BLOCK-R4 types every block when all are listed, and a color palette keeps the color mark", () => {
 		const all = allBlocks();
 		expectTypeOf<NamesOf<typeof all>["blocks"]>().toEqualTypeOf<
 			"callout" | "collapsible" | "tabs" | "tab" | "columns" | "column" | "code-explorer" | "mermaid" | "chart"

@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 describe("withCms: what it adds", () => {
-	it("adds no stand-ins for packages that are not installed", () => {
+	it("SITE-N1 adds no stand-ins for packages that are not installed", () => {
 		const config = withCms({});
 		expect(config.turbopack).toBeUndefined();
 		expect(config.webpack).toBeUndefined();
@@ -19,12 +19,12 @@ describe("withCms: what it adds", () => {
 });
 
 describe("withCms: basePath", () => {
-	it("passes Next basePath to the server and browser bundles as an environment variable", () => {
+	it("SITE-N1 passes Next basePath to the server and browser bundles as an environment variable", () => {
 		expect(withCms({ basePath: "/blog" }).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
 		expect(withCms({ basePath: "/blog/" }).env?.NEXT_PUBLIC_CMS_BASE_PATH).toBe("/blog");
 	});
 
-	it("empty value without basePath, and the app's other env is left alone", () => {
+	it("SITE-N1 empty value without basePath, and the app's other env is left alone", () => {
 		const config = withCms({ env: { KEEP: "1" } });
 		expect(config.env).toEqual({ KEEP: "1", NEXT_PUBLIC_CMS_BASE_PATH: "" });
 	});
@@ -42,7 +42,7 @@ describe("withCms: the config file stays out of client bundles", () => {
 	};
 	const client = '"use client";\nimport { cms } from "../monti.config";\nexport const A = cms;\n';
 
-	it("warns once in development when a client component imports monti.config.ts, and never stops the server", () => {
+	it("SITE-N1 warns once in development when a client component imports monti.config.ts, and never stops the server", () => {
 		const dir = text({ "monti.config.ts": "export const cms = {};\n", "components/a.tsx": client });
 		const warnings: string[] = [];
 		const message = checkImportBoundaryInDev(dir, { NODE_ENV: "development" }, (m) => warnings.push(m));
@@ -53,7 +53,7 @@ describe("withCms: the config file stays out of client bundles", () => {
 		expect(warnings).toHaveLength(1);
 	});
 
-	it("says nothing for a clean app, in production, or for a folder that cannot be read", () => {
+	it("SITE-N1 says nothing for a clean app, in production, or for a folder that cannot be read", () => {
 		const clean = text({
 			"monti.config.ts": "export const cms = {};\n",
 			"app/page.tsx": 'import { cms } from "../monti.config";\nexport default () => cms;\n',

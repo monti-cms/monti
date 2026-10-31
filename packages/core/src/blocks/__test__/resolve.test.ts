@@ -27,12 +27,12 @@ const diagram = defineBlock({
 });
 
 describe("body blocks from the site config", () => {
-	it("uses only core blocks when there is no config", () => {
+	it("SITE-D4 uses only core blocks when there is no config", () => {
 		expect(names(resolveBlocks(undefined))).toEqual(names(BUILTIN_BLOCKS));
 		for (const added of testSite.ADDED_BLOCKS) expect(names(BUILTIN_BLOCKS)).not.toContain(added.name);
 	});
 
-	it("adds site blocks after plugin blocks", () => {
+	it("SITE-D4 adds site blocks after plugin blocks", () => {
 		const blocks = names(
 			resolveBlocks({ plugins: [{ name: "diagram", blocks: [diagram] }, { name: "ai" }], blocks: [card] }),
 		);
@@ -40,7 +40,7 @@ describe("body blocks from the site config", () => {
 		expect(blocks.slice(0, BUILTIN_BLOCKS.length)).toEqual(names(BUILTIN_BLOCKS));
 	});
 
-	it("validates the name, syntax, component, editing mode, and children of an added block", () => {
+	it("SITE-D4 validates the name, syntax, component, editing mode, and children of an added block", () => {
 		const bad = (patch: object) => resolveBlocks({ blocks: [{ ...card, ...patch } as never] });
 		expect(() => bad({ name: "Card" })).toThrow(/kebab/);
 		expect(() => bad({ syntax: { kind: "math" } })).toThrow(/container, leaf, text or fence/);
@@ -59,7 +59,7 @@ describe("body blocks from the site config", () => {
 		expect(() => resolveBlocks({ blocks: [card, card] })).toThrow(/already used/);
 	});
 
-	it("adds text marks (`text`, `mark`), and the code line label attribute (`codeAnchor`) is one text attribute of one mark", () => {
+	it("SITE-D4 adds text marks (`text`, `mark`), and the code line label attribute (`codeAnchor`) is one text attribute of one mark", () => {
 		const note = defineBlock({
 			name: "note",
 			label: "메모",
@@ -85,7 +85,7 @@ describe("body blocks from the site config", () => {
 		);
 	});
 
-	it("code fence blocks do not share languages", () => {
+	it("SITE-D4 code fence blocks do not share languages", () => {
 		expect(() =>
 			resolveBlocks({ blocks: [diagram, { ...diagram, name: "diagram-two", component: "DiagramTwo" }] }),
 		).toThrow(/fence lang "diagram" is already used/);
@@ -94,7 +94,7 @@ describe("body blocks from the site config", () => {
 		);
 	});
 
-	it("a child-value attribute requires that attribute on the child block", () => {
+	it("SITE-D4 a child-value attribute requires that attribute on the child block", () => {
 		const group = defineBlock({
 			name: "group",
 			label: "묶음",
@@ -164,7 +164,7 @@ describe("custom block publish check", () => {
 		return snapshot.issues.map((issue) => issue.code);
 	};
 
-	it.skipIf(!choiceBlock)("blocks an attribute outside the choice values", async () => {
+	it.skipIf(!choiceBlock)("WRITE-P1 blocks an attribute outside the choice values", async () => {
 		const block = choiceBlock as BlockDefinition;
 		const [name, attribute] = attributeOf(block, (candidate) => Boolean(candidate.options)) ?? [];
 		const valid = Object.keys(attribute?.options ?? {})[0];
@@ -172,7 +172,7 @@ describe("custom block publish check", () => {
 		expect(await issuesOf(blockDoc(block, { [name as string]: valid as string }))).toEqual([]);
 	});
 
-	it.skipIf(!requiredBlock)("blocks a missing required attribute", async () => {
+	it.skipIf(!requiredBlock)("WRITE-P1 blocks a missing required attribute", async () => {
 		const block = requiredBlock as BlockDefinition;
 		const [name] = attributeOf(block, (attribute) => Boolean(attribute.required) && !attribute.options) ?? [];
 		expect(await issuesOf(blockDoc(block, {}))).toContain("missing_block_attribute");

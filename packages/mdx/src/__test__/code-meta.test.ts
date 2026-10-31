@@ -6,7 +6,7 @@ const codeBlockOf = (mdx: string) =>
 	toDocument(testSite, analyze(testSite, mdx)).content?.find((node) => node.type === "codeBlock");
 
 describe("code fence meta", () => {
-	it("keeps legitimate meta keys on the code block", () => {
+	it("FMT-R2 keeps legitimate meta keys on the code block", () => {
 		const block = codeBlockOf('```ts title="a.ts"\nconst a = 1;\n```\n');
 		expect(block?.attrs?.title).toBe("a.ts");
 	});
@@ -16,7 +16,7 @@ describe("code fence meta", () => {
 		"language",
 		"codeDocument",
 		"meta",
-	])("does not let a `%s` meta key overwrite the block's own field", (key) => {
+	])("FMT-R2 does not let a `%s` meta key overwrite the block's own field", (key) => {
 		const mdx = `\`\`\`ts ${key}="x"\nconst a = 1;\n\`\`\`\n`;
 		const block = codeBlockOf(mdx);
 		expect(block?.attrs?.value).toBe("const a = 1;");

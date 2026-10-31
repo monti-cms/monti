@@ -12,7 +12,7 @@ const fenceBlock = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "
 
 /** Rendering of MDX text (`renderMdx`): the text is read by the mdx format and drawn by core's document renderer. */
 describe("renderMdx", () => {
-	it("renders Markdown, tables, line breaks and the table of contents", async () => {
+	it("FMT-P2 renders Markdown, tables, line breaks and the table of contents", async () => {
 		const rendered = await renderFixture("## 제목\n\n첫 줄<br />\n둘째 줄\n\n| a | b |\n| --- | --- |\n| 1 | 2 |");
 		const markup = rendered.html;
 		expect(markup).toContain('<h2 id="제목"');
@@ -21,17 +21,17 @@ describe("renderMdx", () => {
 		expect(rendered.toc).toEqual([expect.objectContaining({ value: "제목", depth: 0 })]);
 	});
 
-	it("renders a single newline inside a paragraph as a space, as CommonMark and the CMS tree read it", async () => {
+	it("FMT-P2 renders a single newline inside a paragraph as a space, as CommonMark and the CMS tree read it", async () => {
 		const markup = await html("첫 줄\n둘째 줄");
 		expect(markup).not.toContain("<br");
 		expect(markup).toContain("첫 줄\n둘째 줄");
 	});
 
-	it("does not render a body that fails the check", async () => {
+	it("FMT-P2 does not render a body that fails the check", async () => {
 		await expect(renderFixture("<Unclosed>")).rejects.toThrow(/MDX validation failed/);
 	});
 
-	it("renders underline, superscript, subscript and line break elements", async () => {
+	it("FMT-P2 renders underline, superscript, subscript and line break elements", async () => {
 		const markup = await html("밑줄은 <u>밑줄</u> 위는 <sup>위</sup> 아래는 <sub>아래</sub> 첫 줄<br />\n둘째 줄");
 		expect(markup).toContain("<u>밑줄</u>");
 		expect(markup).toContain("<sup>위</sup>");
@@ -41,17 +41,19 @@ describe("renderMdx", () => {
 		expect(markup.match(/<br\/>/g)).toHaveLength(1);
 	});
 
-	it.each([1, 2, 4])("renders %i blank lines between blocks as that many line breaks between them", async (count) => {
+	it.each([
+		1, 2, 4,
+	])("FMT-P2 renders %i blank lines between blocks as that many line breaks between them", async (count) => {
 		const markup = await html(`앞\n\n${"<br />\n\n".repeat(count)}뒤`);
 		expect(markup.replace(/\n/g, "")).toBe(`<p>앞</p>${"<br/>".repeat(count)}<p>뒤</p>`);
 	});
 
-	it("<TextAlign> turns only validated alignments into classes", async () => {
+	it("FMT-P2 <TextAlign> turns only validated alignments into classes", async () => {
 		expect(await html('<TextAlign align="center">\n\n가운데\n\n</TextAlign>')).toContain('class="monti-align-center"');
 		expect(await html('<TextAlign align="justify">\n\n무시\n\n</TextAlign>')).not.toContain("monti-align-justify");
 	});
 
-	it("<Image> renders the address, alt text, caption and width, and if unresolved only an empty slot and the caption remain", async () => {
+	it("FMT-P2 <Image> renders the address, alt text, caption and width, and if unresolved only an empty slot and the caption remain", async () => {
 		const ok = await html('<Image src="/images/a.png" alt="설명" caption="캡션" width="60%" />');
 		expect(ok).toContain('src="/images/a.png"');
 		expect(ok).toContain('alt="설명"');
@@ -67,7 +69,7 @@ describe("renderMdx", () => {
 		expect(unresolved).toContain("캡션");
 	});
 
-	it("accepts an image resolver and a link rewriter", async () => {
+	it("FMT-P2 accepts an image resolver and a link rewriter", async () => {
 		const markup = await html(
 			'<Image mediaId="m1" alt="a" />\n\n[안](/a) [밖](https://example.com) [나쁜](javascript:x)',
 			{
@@ -82,7 +84,7 @@ describe("renderMdx", () => {
 		expect(markup).not.toContain("javascript:");
 	});
 
-	it("<File> renders the name, type, size and a download link, and if unresolved only the name remains", async () => {
+	it("FMT-P2 <File> renders the name, type, size and a download link, and if unresolved only the name remains", async () => {
 		const source = '<File mediaId="11111111-1111-4111-8111-111111111111" label="발표 자료" />';
 		const ok = await html(source, {
 			imageResolver: () => ({
@@ -100,14 +102,14 @@ describe("renderMdx", () => {
 		expect(unresolved).not.toContain("<a ");
 	});
 
-	it("highlights code fences and leaves unregistered directives as body text", async () => {
+	it("FMT-P2 highlights code fences and leaves unregistered directives as body text", async () => {
 		const code = await html("```ts\nconst a = 1;\n```");
 		expect(code).toContain('class="shiki');
 		expect(await html("openai/gpt-oss-120b:free를 쓴다.")).toContain("gpt-oss-120b:free를");
 	});
 
 	it.skipIf(!fenceBlock)(
-		"passes a code fence block to the block component as the original source, and the site can override the component",
+		"FMT-P2 passes a code fence block to the block component as the original source, and the site can override the component",
 		async () => {
 			const block = fenceBlock as NonNullable<typeof fenceBlock>;
 			const lang = block.syntax.kind === "fence" ? block.syntax.lang : "";

@@ -24,7 +24,7 @@ const codeBlockOf = (doc: StoredDocument | null): CmsNode => {
 };
 
 describe("a stored code block", () => {
-	it("holds its code without the annotation comments, and the annotations as data", () => {
+	it("FMT-R2 holds its code without the annotation comments, and the annotations as data", () => {
 		const block = codeBlockOf(bodyFromMdx(testSite, FENCE).doc);
 		expect(block.attrs?.code).toBe(["const a = 1;", "const b = 2;", "const old = 3;", "return a + b;"].join("\n"));
 		expect(block.attrs).not.toHaveProperty("value");
@@ -42,7 +42,7 @@ describe("a stored code block", () => {
 		});
 	});
 
-	it("writes the annotations back as Monti comments and reads them back to the same data", () => {
+	it("FMT-R2 writes the annotations back as Monti comments and reads them back to the same data", () => {
 		const body = bodyFromMdx(testSite, FENCE);
 		expect(body.mdx).toContain("// @line plus");
 		expect(body.mdx).toContain('id="c1"');
@@ -52,7 +52,7 @@ describe("a stored code block", () => {
 		expect(again.doc).toEqual(body.doc);
 	});
 
-	it("gives the working document the fence text, the parsed annotations and the meta keys again", () => {
+	it("FMT-R2 gives the working document the fence text, the parsed annotations and the meta keys again", () => {
 		const working = fromStoredDocument(testSite, bodyFromMdx(testSite, FENCE).doc as StoredDocument);
 		const block = working.content?.find((node) => node.type === "codeBlock");
 		expect(block?.attrs?.value).toContain("// @line plus");
@@ -60,18 +60,18 @@ describe("a stored code block", () => {
 		expect(block?.attrs?.title).toBe("a.ts");
 	});
 
-	it("keeps a plain code block plain", () => {
+	it("FMT-R2 keeps a plain code block plain", () => {
 		const block = codeBlockOf(bodyFromMdx(testSite, "```js\nconsole.log(1);\n```\n").doc);
 		expect(block.attrs).toEqual({ code: "console.log(1);", language: "js", meta: "" });
 	});
 
-	it("keeps a comment line that is not an annotation as code", () => {
+	it("FMT-R2 keeps a comment line that is not an annotation as code", () => {
 		const block = codeBlockOf(bodyFromMdx(testSite, "```ts\n// @nope plus\nx();\n```\n").doc);
 		expect(block.attrs?.code).toBe("// @nope plus\nx();");
 		expect(block.attrs).not.toHaveProperty("annotations");
 	});
 
-	it("writes a text range on a later line where it was, even when its offset into the code is small enough to fit that line", () => {
+	it("FMT-R2 writes a text range on a later line where it was, even when its offset into the code is small enough to fit that line", () => {
 		// The first line is short, so the offsets of the second line's range (4-9) also fit inside the second line.
 		const fence = ["```ts", "abc", "// @char strong {0-4}", "const item = 1;", "```", ""].join("\n");
 		const body = bodyFromMdx(testSite, fence);

@@ -36,25 +36,25 @@ function reach(entry: string): { files: Set<string>; packages: Set<string> } {
 describe("the barrel of @monti-cms/blocks stays light", () => {
 	const { files, packages } = reach(path.join(SRC, "index.ts"));
 
-	it("does not export the two heavy blocks, so they cannot be reached without asking for them", () => {
+	it("BLOCK-R4 does not export the two heavy blocks, so they cannot be reached without asking for them", () => {
 		expect(Object.keys(barrel)).not.toContain("chart");
 		expect(Object.keys(barrel)).not.toContain("mermaid");
 		expect(Object.keys(barrel)).toEqual(expect.arrayContaining(["callout", "tabs", "collapsible", "tooltip", "color"]));
 	});
 
-	it("reaches no code of the chart or the mermaid block", () => {
+	it("BLOCK-R4 reaches no code of the chart or the mermaid block", () => {
 		const heavy = [...files].filter((file) => /\/(chart|mermaid)\//.test(file));
 		expect(heavy).toEqual([]);
 	});
 
-	it("names no heavy library, directly or through the blocks it exports", () => {
+	it("BLOCK-R4 names no heavy library, directly or through the blocks it exports", () => {
 		const names = [...packages].filter(
 			(name) => /^(recharts|mermaid|d3)(\/|$)/.test(name) || /blocks\/(chart|mermaid)/.test(name),
 		);
 		expect(names).toEqual([]);
 	});
 
-	it("the heavy blocks have their own entry points", () => {
+	it("BLOCK-R4 the heavy blocks have their own entry points", () => {
 		const exports = JSON.parse(readFileSync(path.join(SRC, "../package.json"), "utf8")).exports as Record<
 			string,
 			string
