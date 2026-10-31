@@ -9,7 +9,7 @@ import type {
 	MediaTrashResult,
 	PreferencesBody,
 } from "@monti-cms/core/site";
-import { type ErrorCode, errorResponse } from "@monti-cms/core/testing";
+import { type ErrorCode, errorResponse, matchRoute } from "@monti-cms/core/testing";
 import { afterEach, vi } from "vitest";
 import type {
 	BulkItemResult,
@@ -44,7 +44,10 @@ export interface AdminRoutes {
 	"POST /v1/entries/:id/check": { issues: CmsIssue[]; warnings: CmsIssue[] };
 	"POST /v1/entries/:id/duplicate": EntryWriteResult;
 	"POST /v1/entries/:id/translations": { entry: { id: string } };
-	"POST /v1/entries/:id/:action": unknown;
+	"POST /v1/entries/:id/archive": unknown;
+	"POST /v1/entries/:id/unarchive": unknown;
+	"POST /v1/entries/:id/trash": unknown;
+	"POST /v1/entries/:id/restore": unknown;
 	"GET /v1/entries/:id/relations": { incomingReferences: IncomingReferenceItem[] };
 	"POST /v1/bulk": { results: BulkItemResult[] };
 	"GET /v1/folders": FolderListItem[];
@@ -136,6 +139,17 @@ const parse = (route: string): { method: Method; segments: string[] } => {
 	return { method: method as Method, segments: path.replace(/^\/v1/, "").split("/").filter(Boolean) };
 };
 
+/**
+ * Refuses a route the core API does not serve with that method. The screen and this fake both name routes as text, so without it a route renamed or
+ * removed in core would still pass every screen test and break only the real app.
+ */
+const assertCoreServes = (route: string) => {
+	const { method, segments } = parse(route);
+	const core = matchRoute(["v1", ...segments.map((segment) => (segment.startsWith(":") ? "x" : segment))]);
+	if (!core) throw new Error(`fake API: the core API has no route ${route}`);
+	if (!(method in core.module)) throw new Error(`fake API: the core API answers no ${route}`);
+};
+
 /** The params of `segments` (`:id`) when the path matches, and how many segments were literal (more wins). */
 const match = (route: Route, method: string, parts: readonly string[]) => {
 	if (route.method !== method || route.segments.length !== parts.length) return undefined;
@@ -219,6 +233,7 @@ export function fakeApi() {
 	const api = {
 		/** Answers `route` (`"METHOD /v1/path/:param"`) with `handler`, in the shape the admin client reads. */
 		on<K extends keyof AdminRoutes>(route: K, handler: Handler<AdminRoutes[K]>) {
+			assertCoreServes(route);
 			add(route, handler as Handler<unknown>);
 			return api;
 		},
