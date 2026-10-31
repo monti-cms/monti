@@ -55,7 +55,7 @@ function renderFields(
 }
 
 describe("input parts (`FieldInputParts`)", () => {
-	it("keeps the default input and changes the hint text and the right side of the label row. A part reads other field values (`form`)", () => {
+	it("PLUG-A2 keeps the default input and changes the hint text and the right side of the label row. A part reads other field values (`form`)", () => {
 		if (!text?.field.input) return;
 		renderFields(
 			text,
@@ -76,7 +76,7 @@ describe("input parts (`FieldInputParts`)", () => {
 		expect(screen.getByText("count 14")).toBeInTheDocument();
 	});
 
-	it("`Empty` is what the list reads in place of an empty value", () => {
+	it("PLUG-A2 `Empty` is what the list reads in place of an empty value", () => {
 		if (!text?.field.input) return;
 		renderFields(
 			text,
@@ -88,7 +88,7 @@ describe("input parts (`FieldInputParts`)", () => {
 		);
 	});
 
-	it("with `Input: null`, only the label row's `Aside` renders, without an input row (toggle)", () => {
+	it("PLUG-A2 with `Input: null`, only the label row's `Aside` renders, without an input row (toggle)", () => {
 		if (!select?.field.input || select.field.kind !== "select") return;
 		const off = select.field.defaultValue;
 		const on = Object.keys(select.field.options).find((option) => option !== off) ?? off;
@@ -111,7 +111,7 @@ describe("input parts (`FieldInputParts`)", () => {
 		expect(onChange).toHaveBeenCalledWith({ [select.name]: on });
 	});
 
-	it("an unregistered `input` is the kind's default input", () => {
+	it("PLUG-A2 an unregistered `input` is the kind's default input", () => {
 		if (!text) return;
 		renderFields(text, { ...EMPTY_FORM, title: "x", [text.name]: "kept" });
 		fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${text.field.label}`) }));
@@ -120,7 +120,7 @@ describe("input parts (`FieldInputParts`)", () => {
 });
 
 describe("media field (`fields.media`)", () => {
-	it("reads as its file name and opens the media picker input. A picked value is cleared with remove", () => {
+	it("MEDIA-P1 reads as its file name and opens the media picker input. A picked value is cleared with remove", () => {
 		if (!media) return;
 		fakeApi().install();
 		const onChange = renderFields(media, {
@@ -141,7 +141,7 @@ describe("media field (`fields.media`)", () => {
 		expect(screen.getByRole("button", { name: media.field.label }).textContent).toBe(t("media.chooseImage"));
 	});
 
-	it("cannot pick when the server has no media storage", () => {
+	it("MEDIA-U6 cannot pick when the server has no media storage", () => {
 		if (!media) return;
 		const target = media;
 		render(

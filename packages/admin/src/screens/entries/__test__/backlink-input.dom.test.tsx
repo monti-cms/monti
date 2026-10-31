@@ -99,7 +99,7 @@ const addSeriesB = async () => {
 };
 
 describe("adding to a collection (inverse relation)", () => {
-	it("picking shows it right away without waiting for the save", async () => {
+	it("WRITE-W7 picking shows it right away without waiting for the save", async () => {
 		const release = stubApi(200);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe("adding to a collection (inverse relation)", () => {
 		expect(toast.error).not.toHaveBeenCalled();
 	});
 
-	it("if the save fails, reports below the input and reverts", async () => {
+	it("WRITE-W7 if the save fails, reports below the input and reverts", async () => {
 		const release = stubApi(500);
 		await addSeriesB();
 		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
@@ -163,14 +163,14 @@ describe("adding a memo to a collection", () => {
 		return input;
 	};
 
-	it("only collections that hold memos can be picked", async () => {
+	it("WRITE-W7 only collections that hold memos can be picked", async () => {
 		await openList();
 		await waitFor(async () =>
 			expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual(["Type Challenges"]),
 		);
 	});
 
-	it("adding opens the add sheet for a memo-holding collection, and saving creates it as that collection", async () => {
+	it("WRITE-W5 adding opens the add sheet for a memo-holding collection, and saving creates it as that collection", async () => {
 		const input = await openList();
 		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
 		fireEvent.click(await screen.findByRole("option", { name: "'새 메모 시리즈' 추가" }));

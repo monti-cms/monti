@@ -114,7 +114,7 @@ describe("folding the sidebar to its icons", () => {
 describe("the side panel dock", () => {
 	beforeEach(() => stubWidth(false));
 
-	it("draws a panel that a screen opens outside that screen, beside the whole page, and takes it away when the screen closes it", () => {
+	it("PLUG-A5 draws a panel that a screen opens outside that screen, beside the whole page, and takes it away when the screen closes it", () => {
 		const view = (open: boolean) => (
 			<AdminQueryProvider>
 				<AdminUiLabels>

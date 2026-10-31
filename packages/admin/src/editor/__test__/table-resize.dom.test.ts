@@ -74,7 +74,7 @@ describe("blocking cell selection while resizing table columns", () => {
 		editor.destroy();
 	});
 
-	it("clearing the column width (fill width) also clears the old width on screen", () => {
+	it("EDIT-T1 clearing the column width (fill width) also clears the old width on screen", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(testSite),
 			content: '<table><tr><td colwidth="160"><p>a</p></td><td colwidth="140"><p>b</p></td></tr></table>',

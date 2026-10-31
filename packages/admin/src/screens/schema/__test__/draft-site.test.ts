@@ -21,18 +21,18 @@ const draft = (extraFields: Obj = {}): Obj => ({
 afterEach(() => vi.unstubAllGlobals());
 
 describe("draft site", () => {
-	it("is a site made from the draft: its collections are the draft's, not the saved ones", () => {
+	it("SCHEMA-F16 is a site made from the draft: its collections are the draft's, not the saved ones", () => {
 		const site = draftSiteOf(testSite, draft({ intro: { kind: "text", label: "Intro" } }), []);
 		expect(site?.isCollection("page")).toBe(true);
 		expect(Object.keys(site?.schemaOf("page").fields ?? {})).toEqual(["title", "intro"]);
 		expect(site?.isCollection("not-in-the-draft")).toBe(false);
 	});
 
-	it("is nothing while the draft is not a valid schema", () => {
+	it("SCHEMA-F9 is nothing while the draft is not a valid schema", () => {
 		expect(draftSiteOf(testSite, draft({ bad: { kind: "nope" } }), [])).toBeNull();
 	});
 
-	it("refuses to write, but reads", async () => {
+	it("SCHEMA-F16 refuses to write, but reads", async () => {
 		const api = fakeApi()
 			.on("GET /v1/entries", () => ({ items: [], total: 0 }))
 			.on("POST /v1/references/unlink", () => ({ entries: 0 }))

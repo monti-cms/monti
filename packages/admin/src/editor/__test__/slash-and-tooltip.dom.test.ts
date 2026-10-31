@@ -18,7 +18,7 @@ const textOf = (node: unknown): string => JSON.stringify(node);
 const tooltip = (content: string) => [{ type: "tooltip", attrs: { content } }];
 
 describe("slash menu insertion driven by block definitions", () => {
-	it("builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
+	it("WRITE-W1 builds slash commands for BLOCKS entries with insertable=true and view='node'", () => {
 		const commands = buildBlockSlashCommands(testSite);
 
 		// mermaid, chart and math must be included.
@@ -98,7 +98,7 @@ describe("slash menu insertion driven by block definitions", () => {
 		expect(ids).toEqual(expect.arrayContaining(["mermaid", "chart", "math"]));
 	});
 
-	it("slash menu and formatting tools share block names, and the file entry opens the library with files only", () => {
+	it("MEDIA-P1 slash menu and formatting tools share block names, and the file entry opens the library with files only", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
 		expect(titles).toEqual(
 			expect.arrayContaining([
@@ -121,7 +121,7 @@ describe("slash menu insertion driven by block definitions", () => {
 		editor.destroy();
 	});
 
-	it("filterCommands searches block commands by Korean and English keywords", () => {
+	it("WRITE-W1 filterCommands searches block commands by Korean and English keywords", () => {
 		expect(filterCommands(testSite, "mermaid").some((c) => c.title === "다이어그램")).toBe(true);
 		expect(filterCommands(testSite, "다이어그램").some((c) => c.title === "다이어그램")).toBe(true);
 		expect(filterCommands(testSite, "chart").some((c) => c.title === "차트")).toBe(true);
@@ -154,7 +154,7 @@ describe("stored document after block insert actions", () => {
 			content: "<p></p>",
 		});
 
-	it("saves a stored code block after inserting mermaid", () => {
+	it("WRITE-W1 saves a stored code block after inserting mermaid", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -167,7 +167,7 @@ describe("stored document after block insert actions", () => {
 		editor.destroy();
 	});
 
-	it("saves a stored code block after inserting chart", () => {
+	it("WRITE-W1 saves a stored code block after inserting chart", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -181,7 +181,7 @@ describe("stored document after block insert actions", () => {
 		editor.destroy();
 	});
 
-	it("saves a stored math block after inserting math", () => {
+	it("WRITE-W1 saves a stored math block after inserting math", () => {
 		const editor = createEditor();
 		const range = { from: 1, to: 1 };
 
@@ -259,7 +259,7 @@ describe("setting, editing and removing a tooltip, and stored round trip", () =>
 		editor.destroy();
 	});
 
-	it("loads a stored tooltip mark into the editor and round-trips it losslessly on re-saving", () => {
+	it("FMT-R2 loads a stored tooltip mark into the editor and round-trips it losslessly on re-saving", () => {
 		const initial = storedDoc({
 			type: "paragraph",
 			content: [text("본문 속 "), text("단어", tooltip("상세 설명")), text(" 확인하기")],

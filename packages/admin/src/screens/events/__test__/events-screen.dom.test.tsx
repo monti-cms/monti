@@ -89,7 +89,7 @@ describe("EventsScreen", () => {
 		expect(within(failedRow).getByText("slug-e1").closest("a")).toBeInTheDocument();
 	});
 
-	it("opens the full record of an event beside the list without breaking the row's own actions", async () => {
+	it("EVENT-L2 opens the full record of an event beside the list without breaking the row's own actions", async () => {
 		renderScreen();
 
 		const row = (await screen.findByText("webhook")).closest("tr") as HTMLElement;
@@ -110,7 +110,7 @@ describe("EventsScreen", () => {
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
-	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
+	it("EVENT-L1 labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
 		listing(() => ({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }));
 		renderScreen();
 
@@ -121,7 +121,7 @@ describe("EventsScreen", () => {
 		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 	});
 
-	it("retries one delivery with its subscriber", async () => {
+	it("EVENT-R1 retries one delivery with its subscriber", async () => {
 		renderScreen();
 		fireEvent.click(
 			await screen.findByRole("button", { name: t("action.retryLabel", { subscriber: "search-index" }) }),
@@ -130,7 +130,7 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/v1/events/e1/retry", { subscriber: "search-index" }]]));
 	});
 
-	it("asks before dismissing, then posts", async () => {
+	it("EVENT-R1 asks before dismissing, then posts", async () => {
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.dismissLabel", { subscriber: "webhook" }) }));
 
@@ -141,7 +141,7 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
 	});
 
-	it("retries everything due", async () => {
+	it("EVENT-R1 retries everything due", async () => {
 		let retried = false;
 		api.on("POST /v1/events/retry", () => {
 			retried = true;
@@ -162,7 +162,7 @@ describe("EventsScreen", () => {
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
-	it("opens on all recent events, not only the failed ones", async () => {
+	it("EVENT-L1 opens on all recent events, not only the failed ones", async () => {
 		listing(() => ({
 			items: [item("e3", "search-index", "delivered", "saved"), item("e1", "webhook", "failed")],
 			total: 2,
@@ -181,7 +181,7 @@ describe("EventsScreen", () => {
 		expect(list?.query.getAll("state")).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead"]));
 	});
 
-	it("filters by delivery status and returns to all from the empty state", async () => {
+	it("EVENT-F2 filters by delivery status and returns to all from the empty state", async () => {
 		// The sidebar's failed-delivery count is a request without a state; the list is the one that names states.
 		const requested = () =>
 			api

@@ -84,18 +84,18 @@ describe("fieldState", () => {
 			given: { form: { ...EMPTY_FORM, slug: "own" }, locked: locked({ slug: "original" }) },
 			want: { value: "own", readOnly: false, readOnlyReason: null },
 		},
-	])("$case", ({ name, given, want }) => {
+	])("PLUG-A6 $case", ({ name, given, want }) => {
 		expect(stateOf(name, given)).toMatchObject(want);
 	});
 
-	it("gives the definition and label of the collection's field, the nested field of a conditional field included", () => {
+	it("PLUG-A6 gives the definition and label of the collection's field, the nested field of a conditional field included", () => {
 		const title = testSite.titleField("post").field;
 		expect(stateOf("title")).toMatchObject({ definition: title, label: title.label });
 		expect(stateOf("replacementPostId").definition?.kind).toBe("relation");
 		expect(stateOf("slug").definition?.kind).toBe("slug");
 	});
 
-	it("takes the issues on the field's path as its errors, the first one as its error, and none on a locked field", () => {
+	it("PLUG-A6 takes the issues on the field's path as its errors, the first one as its error, and none on a locked field", () => {
 		const issues: CmsIssue[] = [
 			{ code: "missing_field", path: "title", text: "Enter a title." },
 			{ code: "too_long", path: "title", text: "Shorter, please." },
@@ -132,7 +132,7 @@ describe("applySlotValue", () => {
 		{ case: "append to a field that is not a list starts one", current: "x", next: "c", mode: "append", want: ["c"] },
 		{ case: "replace writes the value as it is", current: ["a"], next: "only", mode: "replace", want: "only" },
 	];
-	it.each(cases)("$case", ({ current, next, mode, want }) => {
+	it.each(cases)("PLUG-A3 $case", ({ current, next, mode, want }) => {
 		expect(applySlotValue(current, next, mode)).toEqual(want);
 	});
 });

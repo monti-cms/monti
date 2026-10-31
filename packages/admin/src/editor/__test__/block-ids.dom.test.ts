@@ -62,7 +62,7 @@ const cursorAtEndOf = (editor: Editor, text: string) => {
 };
 
 describe("block ids in the editor", () => {
-	it("load with a stored document and come back unchanged", () => {
+	it("TRANS-B1 load with a stored document and come back unchanged", () => {
 		const doc = stored(BODY);
 		const editor = open(doc);
 		const back = saved(editor);
@@ -71,7 +71,7 @@ describe("block ids in the editor", () => {
 		}
 	});
 
-	it("do not change while typing", () => {
+	it("TRANS-B1 do not change while typing", () => {
 		const doc = stored(BODY);
 		const editor = open(doc);
 		cursorAtEndOf(editor, "First paragraph");
@@ -79,7 +79,7 @@ describe("block ids in the editor", () => {
 		expect(idOf(saved(editor), "First paragraph, edited")).toBe(idOf(doc, "First paragraph"));
 	});
 
-	it("stay on the first part when a paragraph is split, and the new part gets its own", () => {
+	it("TRANS-B1 stay on the first part when a paragraph is split, and the new part gets its own", () => {
 		const doc = stored(BODY);
 		const editor = open(doc);
 		cursorAtEndOf(editor, "First paragraph");
@@ -92,7 +92,7 @@ describe("block ids in the editor", () => {
 		expect(blocksOf(doc).map((block) => block.id)).not.toContain(added);
 	});
 
-	it("give a duplicated block a new id", () => {
+	it("TRANS-B1 give a duplicated block a new id", () => {
 		const doc = stored("Only paragraph\n");
 		const editor = open(doc);
 		const pos = findBlock(editor.state.doc, idOf(doc, "Only paragraph") as string);
@@ -129,7 +129,7 @@ describe("block ids in the editor", () => {
 		expect(idOf(after, "First paragraph")).toBe(idOf(doc, "First paragraph"));
 	});
 
-	it("are not on inline nodes", () => {
+	it("TRANS-B1 are not on inline nodes", () => {
 		const editor = open(stored("Text with a note[^1].\n\n[^1]: The note\n"));
 		editor.state.doc.descendants((node) => {
 			if (node.isInline) expect(node.attrs).not.toHaveProperty(BLOCK_ID_ATTRIBUTE);
@@ -159,7 +159,7 @@ describe("source links in the editor", () => {
 		return found;
 	};
 
-	it("load with a stored document and come back unchanged, nested blocks included", () => {
+	it("TRANS-B1 load with a stored document and come back unchanged, nested blocks included", () => {
 		const { source, doc } = translationOf(BODY);
 		const back = saved(open(doc));
 		expect(linkOf(back, "First paragraph")).toBe(idOf(source, "First paragraph"));
@@ -167,14 +167,14 @@ describe("source links in the editor", () => {
 		expect(linkOf(back, "one")).toBe(idOf(source, "one"));
 	});
 
-	it("come back unchanged on the items of a task list", () => {
+	it("TRANS-B1 come back unchanged on the items of a task list", () => {
 		const { source, doc } = translationOf("- [ ] Open task\n- [x] Done task\n");
 		const back = saved(open(doc));
 		expect(linkOf(back, "Open task", "listItem")).toBe(idOf(source, "Open task", "listItem"));
 		expect(linkOf(back, "Done task", "listItem")).toBe(idOf(source, "Done task", "listItem"));
 	});
 
-	it("stay on the first part when a paragraph is split: the new part has none", () => {
+	it("TRANS-B1 stay on the first part when a paragraph is split: the new part has none", () => {
 		const { source, doc } = translationOf(BODY);
 		const editor = open(doc);
 		cursorAtEndOf(editor, "First paragraph");
@@ -185,7 +185,7 @@ describe("source links in the editor", () => {
 		expect(linkOf(after, "New paragraph")).toBe("none");
 	});
 
-	it("are not given to a duplicated block", () => {
+	it("TRANS-B1 are not given to a duplicated block", () => {
 		const { source, doc } = translationOf("Only paragraph\n");
 		const editor = open(doc);
 		duplicateBlock(editor, findBlock(editor.state.doc, idOf(doc, "Only paragraph") as string) as number);

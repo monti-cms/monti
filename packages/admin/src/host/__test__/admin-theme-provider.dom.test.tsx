@@ -41,7 +41,7 @@ function SetThemeButton({ to }: { to: string }) {
 }
 
 describe("AdminThemeProvider", () => {
-	it("keeps the admin theme under its own key and leaves the site's theme key alone", () => {
+	it("ADMIN-H3 keeps the admin theme under its own key and leaves the site's theme key alone", () => {
 		localStorage.setItem(SITE_THEME_KEY, "light");
 		const { getByText } = render(
 			<AdminThemeProvider>
@@ -65,7 +65,7 @@ describe("AdminThemeProvider", () => {
 		expect(localStorage.getItem(ADMIN_THEME_STORAGE_KEY)).toBeNull();
 	});
 
-	it("leaves the site's own dark class and color-scheme in place when the admin unmounts", () => {
+	it("ADMIN-H3 leaves the site's own dark class and color-scheme in place when the admin unmounts", () => {
 		html.classList.add("site-font", "dark");
 		html.style.colorScheme = "dark";
 		const { unmount } = render(
@@ -79,7 +79,7 @@ describe("AdminThemeProvider", () => {
 		expect(html.classList.contains("site-font")).toBe(true);
 	});
 
-	it("removes the admin's dark class and color-scheme again when the site had none", () => {
+	it("ADMIN-H3 removes the admin's dark class and color-scheme again when the site had none", () => {
 		localStorage.setItem(ADMIN_THEME_STORAGE_KEY, "dark");
 		html.classList.add("site-font");
 		const { unmount } = render(
@@ -95,7 +95,7 @@ describe("AdminThemeProvider", () => {
 		expect(html.classList.contains("site-font")).toBe(true);
 	});
 
-	it("restores the state recorded before the admin theme script ran on a full page load", () => {
+	it("ADMIN-H3 restores the state recorded before the admin theme script ran on a full page load", () => {
 		// The inline script in the server HTML recorded the site's dark theme; by hydration the admin's light theme is on `html`.
 		(window as unknown as Record<string, unknown>).__montiAdminHtmlBefore = {
 			dark: true,

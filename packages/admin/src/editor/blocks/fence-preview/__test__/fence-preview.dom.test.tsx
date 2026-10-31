@@ -83,7 +83,7 @@ describe("FencePreviewBlockView", () => {
 		expect((textarea as HTMLTextAreaElement).value).toBe('pie\n  "A": 10');
 	});
 
-	it("clicking the preview switches to edit mode and shows the textarea", async () => {
+	it("EDIT-B4 clicking the preview switches to edit mode and shows the textarea", async () => {
 		const props = createNodeViewProps("cmsMath", "E = mc^2", false);
 		const { container } = renderWithSite(<View {...props} />);
 
@@ -117,7 +117,7 @@ describe("FencePreviewBlockView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ value: "x = 2" });
 	});
 
-	it("pending changes are committed immediately on blur", () => {
+	it("EDIT-B4 pending changes are committed immediately on blur", () => {
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
 		const { container } = renderWithSite(<View {...props} />);
@@ -130,7 +130,7 @@ describe("FencePreviewBlockView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ value: "x = immediate" });
 	});
 
-	it("does not commit during IME composition, and commits immediately on compositionend", () => {
+	it("EDIT-B4 does not commit during IME composition, and commits immediately on compositionend", () => {
 		vi.useFakeTimers();
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
@@ -154,7 +154,7 @@ describe("FencePreviewBlockView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ value: "x = 한글" });
 	});
 
-	it("does not lose the value being typed if unmounted during IME composition", () => {
+	it("EDIT-B4 does not lose the value being typed if unmounted during IME composition", () => {
 		const updateAttributes = vi.fn();
 		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
 		const { container, unmount } = renderWithSite(<View {...props} />);
@@ -165,7 +165,7 @@ describe("FencePreviewBlockView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ value: "x = 한" });
 	});
 
-	it("keeps cursor keys and Mod combos in the input, and only save (Mod-s) commits pending input and passes through", () => {
+	it("WRITE-S4 keeps cursor keys and Mod combos in the input, and only save (Mod-s) commits pending input and passes through", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
 		const { container } = renderWithSite(<View {...props} />);
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
@@ -193,7 +193,7 @@ describe("FencePreviewBlockView", () => {
 		expect(props.updateAttributes).toHaveBeenCalledWith({ value: "graph LR" });
 	});
 
-	it("commits pending input when it disappears", () => {
+	it("EDIT-B4 commits pending input when it disappears", () => {
 		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
 		const { container, unmount } = renderWithSite(<View {...props} />);
 		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
@@ -204,7 +204,7 @@ describe("FencePreviewBlockView", () => {
 });
 
 describe("MathPreview math renderer error handling", () => {
-	it("shows an error message in destructive token style for invalid math input and leaves the source untouched", async () => {
+	it("EDIT-B4 shows an error message in destructive token style for invalid math input and leaves the source untouched", async () => {
 		const { container } = renderWithSite(<MathPreview value="\\invalidMacro{" />);
 
 		await waitFor(() => {

@@ -251,7 +251,7 @@ describe("flow: rows go to the trash (T2)", () => {
 });
 
 describe("flow: moving rows to a folder can be undone", () => {
-	it("puts the rows back in the folder they came from", async () => {
+	it("LIST-C7 puts the rows back in the folder they came from", async () => {
 		server.posts = [item("가", { folderId: null }), item("나", { folderId: null })];
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: /가/ }));

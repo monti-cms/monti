@@ -39,7 +39,7 @@ describe("browser storage of a site", () => {
 		expect(readPreference(siteOf("Blog", "/studio"), "media-view")).toBeNull();
 	});
 
-	it("does not fail when storage is unavailable", () => {
+	it("ADMIN-S1 does not fail when storage is unavailable", () => {
 		vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
 			throw new Error("blocked");
 		});

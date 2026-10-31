@@ -188,7 +188,7 @@ const click = (name: string) => fireEvent.click(screen.getByRole("button", { nam
 const failure = () => screen.getByLabelText("failure").textContent;
 
 describe("a custom block view built on useBlockEditor and Content", () => {
-	it("reads the children and values, and renders the nested body", async () => {
+	it("PLUG-A10 reads the children and values, and renders the nested body", async () => {
 		await mountTabs();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
 		expect(screen.getByText("첫째")).toBeInTheDocument();
@@ -211,7 +211,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(getComputedStyle(bodies[1] as HTMLElement).display).not.toBe("none");
 	});
 
-	it("adds a child up to definition.children.max, then returns a limit error", async () => {
+	it("PLUG-A10 adds a child up to definition.children.max, then returns a limit error", async () => {
 		const editor = await mountTabs();
 		expect(screen.getByLabelText("flags").textContent).toBe("true/false/true");
 		for (let added = 2; added < 8; added += 1) click("add");
@@ -223,7 +223,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(editor.state.doc.firstChild?.childCount).toBe(8);
 	});
 
-	it("removes a child down to definition.children.min, then returns a limit error", async () => {
+	it("PLUG-A10 removes a child down to definition.children.min, then returns a limit error", async () => {
 		const editor = await mountTabs();
 		click("remove");
 		expect(failure()).toBe("limit");
@@ -237,7 +237,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(labelsOf(editor)).toEqual(["하나", "둘"]);
 	});
 
-	it("moves a child, keeping its body", async () => {
+	it("PLUG-A10 moves a child, keeping its body", async () => {
 		const editor = await mountTabs();
 		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
 		click("left");
@@ -250,7 +250,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(labelsOf(editor)).toEqual(["둘", "하나"]);
 	});
 
-	it("transact writes a child and the parent in one document change and one undo step", async () => {
+	it("PLUG-A10 transact writes a child and the parent in one document change and one undo step", async () => {
 		const editor = await mountTabs();
 		const before = savedDoc(editor);
 		const transactions = countTransactions(editor);
@@ -266,7 +266,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(withoutIds(savedDoc(editor))).toEqual(withoutIds(before));
 	});
 
-	it("a rule broken inside transact writes nothing and returns the failure", async () => {
+	it("PLUG-A10 a rule broken inside transact writes nothing and returns the failure", async () => {
 		let result: EditorResult<unknown> | null = null;
 		function Probe() {
 			const block = useBlockEditor();
@@ -299,7 +299,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		expect(savedDoc(editor)).toEqual(before);
 	});
 
-	it("fails with read_only while the editor is locked", async () => {
+	it("PLUG-A10 fails with read_only while the editor is locked", async () => {
 		const editor = await mountTabs();
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.getByLabelText("flags").textContent).toBe("false/false/false"));
@@ -312,7 +312,7 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 });
 
 describe("useBlockEditor", () => {
-	it("gives a view its name, definition, id, selection state and an escape hatch", async () => {
+	it("PLUG-A10 gives a view its name, definition, id, selection state and an escape hatch", async () => {
 		let seen: ReturnType<typeof useBlockEditor> | null = null;
 		function Spy() {
 			const block = useBlockEditor();
@@ -363,7 +363,7 @@ describe("useBlockEditor commands", () => {
 		return { editor, block: () => seen as unknown as ReturnType<typeof useBlockEditor> };
 	};
 
-	it("selects the block, moves the cursor into a child and reads the text around it", async () => {
+	it("PLUG-A10 selects the block, moves the cursor into a child and reads the text around it", async () => {
 		const { editor, block } = await mountSpy();
 		expect(block().textAround(100, "[탭]")).toBe("앞 문단\n[탭]\n뒤 문단");
 		act(() => block().select());
@@ -376,7 +376,7 @@ describe("useBlockEditor commands", () => {
 		expect(editor.state.selection.$from.parentOffset).toBe(2);
 	});
 
-	it("removes the block", async () => {
+	it("PLUG-A10 removes the block", async () => {
 		const { editor, block } = await mountSpy();
 		let result: EditorResult | null = null;
 		act(() => {
@@ -431,14 +431,14 @@ describe("a block view adding body content the body's allowed list does not allo
 		return count;
 	};
 
-	it("adds a code block when the list allows it, or when the body has no list", async () => {
+	it("PLUG-A10 adds a code block when the list allows it, or when the body has no list", async () => {
 		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout", "codeBlock"] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("added"));
 		expect(codeBlocks(editor)).toBe(1);
 	});
 
-	it("fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
+	it("PLUG-A10 fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
 		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout"] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("invalid_state"));

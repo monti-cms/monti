@@ -34,19 +34,19 @@ describe("settings tabs", () => {
 });
 
 describe("settings page", () => {
-	it("sends the bare settings address to the first tab", async () => {
+	it("ADMIN-U1 sends the bare settings address to the first tab", async () => {
 		await expect(SettingsPage({ cms: cms(testSite), server: server(), tab: undefined })).rejects.toThrow(
 			`redirect:${testSite.adminHref(`/settings/${SCHEMA_TABS[0]}`)}`,
 		);
 	});
 
-	it("opens a schema tab", async () => {
+	it("ADMIN-U1 opens a schema tab", async () => {
 		const stop = server();
 		await expect(SettingsPage({ cms: cms(testSite), server: stop, tab: "locales" })).resolves.toHaveProperty("type");
 		expect(stop.notFound).not.toHaveBeenCalled();
 	});
 
-	it("is a 404 for a tab nobody owns, including the screens that used to be tabs (the API keys moved to their own page)", async () => {
+	it("ADMIN-U1 is a 404 for a tab nobody owns, including the screens that used to be tabs (the API keys moved to their own page)", async () => {
 		for (const tab of ["nope", "schema", "templates", "events", "ai", "api-keys"]) {
 			await expect(SettingsPage({ cms: cms(testSite), server: server(), tab })).rejects.toThrow("not-found");
 		}

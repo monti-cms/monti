@@ -158,7 +158,7 @@ const clickIssue = (editor: Editor) => {
 };
 
 describe("spellcheck button", () => {
-	it("adds one button per checker when several extensions provide checkers", async () => {
+	it("PLUG-T1 adds one button per checker when several extensions provide checkers", async () => {
 		const other = defineTextChecker({ ...fakeChecker(), id: "other", label: "다른 검사" });
 		renderWithSite(
 			<AdminComponentsProvider components={{ textCheckers: [fakeChecker()] }}>
@@ -183,7 +183,7 @@ describe("spellcheck button", () => {
 		expect(checkButton()).toBeNull();
 	});
 
-	it("checks the whole document on click and shows underlines", async () => {
+	it("PLUG-T1 checks the whole document on click and shows underlines", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("첫 문단은 틀린말 입니다\n\n둘째 문단\n", [checker]);
 
@@ -197,7 +197,7 @@ describe("spellcheck button", () => {
 		expect(editor.view.dom.querySelector("[data-text-issue]")?.textContent).toBe("틀린말");
 	});
 
-	it("checks only the selected paragraph when text is selected", async () => {
+	it("PLUG-T1 checks only the selected paragraph when text is selected", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("첫 틀린말\n\n둘째 틀린말\n", [checker]);
 		const second = editor.state.doc.child(1);
@@ -215,7 +215,7 @@ describe("spellcheck button", () => {
 		expect(issue?.from).toBeGreaterThan(start);
 	});
 
-	it("replaces the text when a suggestion is chosen in the result popup", async () => {
+	it("PLUG-T3 replaces the text when a suggestion is chosen in the result popup", async () => {
 		const { editor, onChange } = await renderEditor("이것은 틀린말 입니다\n", [fakeChecker()]);
 		fireEvent.click(checkButton() as HTMLElement);
 		await waitFor(() => expect(issuesOf(editor)).toHaveLength(1));
@@ -231,7 +231,7 @@ describe("spellcheck button", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: t("results") })).toBeNull());
 	});
 
-	it("hides ignored results and keeps them hidden after rechecking", async () => {
+	it("PLUG-T4 hides ignored results and keeps them hidden after rechecking", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("이것은 틀린말 입니다\n\n또 틀린말\n", [checker]);
 		fireEvent.click(checkButton() as HTMLElement);
@@ -251,7 +251,7 @@ describe("spellcheck button", () => {
 		expect(checker.check).toHaveBeenCalledTimes(1);
 	});
 
-	it("shows a notification when the checker fails", async () => {
+	it("PLUG-T4 shows a notification when the checker fails", async () => {
 		const failing = defineTextChecker({
 			id: "broken",
 			label: "고장",
@@ -267,7 +267,7 @@ describe("spellcheck button", () => {
 });
 
 describe("findings for the status bar", () => {
-	it("fixes one finding and leaves the others", async () => {
+	it("PLUG-T3 fixes one finding and leaves the others", async () => {
 		const { editor, onChange, findings } = await renderEditor("첫 틀린말\n\n둘째 틀린말\n", [fakeChecker()]);
 		fireEvent.click(checkButton() as HTMLElement);
 		await waitFor(() => expect(findings.current?.items).toHaveLength(2));
@@ -277,7 +277,7 @@ describe("findings for the status bar", () => {
 		expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("첫 틀린말");
 	});
 
-	it("fixes every finding at once", async () => {
+	it("PLUG-T3 fixes every finding at once", async () => {
 		const { editor, onChange, findings } = await renderEditor("첫 틀린말 입니다\n\n둘째 틀린말\n\n셋째 틀린말\n", [
 			fakeChecker(),
 		]);
@@ -292,7 +292,7 @@ describe("findings for the status bar", () => {
 		expect(text).not.toContain("틀린말");
 	});
 
-	it("has no findings for a language no checker covers", async () => {
+	it("PLUG-T1 has no findings for a language no checker covers", async () => {
 		const { findings } = await renderEditor("hello\n", [fakeChecker({ locales: ["ko"] })], "en");
 		expect(findings.current).toBeNull();
 	});
@@ -308,7 +308,7 @@ describe("automatic checking", () => {
 				.run();
 		});
 
-	it("is off by default and does not check on input", async () => {
+	it("PLUG-T4 is off by default and does not check on input", async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("문단\n", [checker]);
@@ -319,7 +319,7 @@ describe("automatic checking", () => {
 		expect(checker.check).not.toHaveBeenCalled();
 	});
 
-	it("with `auto: true`, checks only the changed paragraph after typing stops", async () => {
+	it("PLUG-T4 with `auto: true`, checks only the changed paragraph after typing stops", async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const checker = fakeChecker({ auto: true });
 		const { editor } = await renderEditor("그대로 둘 문단\n\n고칠 문단\n", [checker]);

@@ -14,7 +14,7 @@ const folder = (id: string, parentId: string | null): Folder => ({
 const folders = [folder("a", null), folder("b", "a"), folder("c", "b"), folder("d", null)];
 
 describe("a screen that shows a folder which goes to the trash", () => {
-	it("leaves the folder itself and every folder inside it, and stays in the others", () => {
+	it("LIST-F6 leaves the folder itself and every folder inside it, and stays in the others", () => {
 		expect(isInsideFolder(folders, "a", "a")).toBe(true);
 		expect(isInsideFolder(folders, "c", "a")).toBe(true);
 		expect(isInsideFolder(folders, "b", "c")).toBe(false);

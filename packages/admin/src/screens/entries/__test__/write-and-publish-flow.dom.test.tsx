@@ -293,7 +293,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(publishes()[0]?.body?.resetPublishedAt).toBeFalsy();
 	});
 
-	it("shows the reason a preview cannot open in place, beside the button, not in a tooltip", async () => {
+	it("WRITE-W8 shows the reason a preview cannot open in place, beside the button, not in a tooltip", async () => {
 		server.entry = { ...draft, workingSlug: "" };
 		renderEdit();
 		await title();

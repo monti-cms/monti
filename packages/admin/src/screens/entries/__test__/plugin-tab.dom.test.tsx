@@ -61,7 +61,7 @@ describe("properties panel: the tab a plugin places fields in", () => {
 		expect(found).toMatchObject({ field: { kind: "text" } });
 	});
 
-	it("a field a plugin places renders in that tab, and not in the default tab, even without a layout entry", async () => {
+	it("PLUG-A7 a field a plugin places renders in that tab, and not in the default tab, even without a layout entry", async () => {
 		if (!found || !testSite.isCollection(found.collection)) return;
 		renderPanel(found.collection, { ...EMPTY_FORM, title: "Title", [found.name]: "Tab value" });
 		expect(screen.queryByText(found.field.label)).toBeNull();

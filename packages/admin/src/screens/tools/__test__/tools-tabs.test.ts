@@ -15,7 +15,7 @@ const withPlugins = (templates = true) =>
 	} as CmsConfig);
 
 describe("the tabs of the tools page", () => {
-	it("starts with templates, data, the activity log and API keys, then the plugin pages in plugin order", () => {
+	it("PLUG-A1 starts with templates, data, the activity log and API keys, then the plugin pages in plugin order", () => {
 		const ids = toolsTabs(withPlugins()).map((tab) => tab.id);
 		expect(ids).toEqual(["templates", "data", "events", "api-keys", "tools:stats", "tools:more"]);
 	});
@@ -24,18 +24,18 @@ describe("the tabs of the tools page", () => {
 		expect(toolsTabs(withPlugins(false)).map((tab) => tab.id)).not.toContain("templates");
 	});
 
-	it("gives each tab its own address under the tools address", () => {
+	it("ADMIN-U1 gives each tab its own address under the tools address", () => {
 		const site = withPlugins();
 		for (const tab of toolsTabs(site)) expect(tab.href).toBe(site.adminHref(`/tools/${tab.path}`));
 		expect(toolsTabs(site).find((tab) => tab.id === "tools:more")?.path).toBe("more");
 	});
 
-	it("names a plugin tab by its nav label, calling a label function with the site", () => {
+	it("PLUG-A1 names a plugin tab by its nav label, calling a label function with the site", () => {
 		const labels = toolsTabs(withPlugins()).map((tab) => tab.label);
 		expect(labels).toEqual(expect.arrayContaining(["Post stats", "More"]));
 	});
 
-	it("never lets a plugin page take the address of a built-in tab", () => {
+	it("PLUG-A1 never lets a plugin page take the address of a built-in tab", () => {
 		const site = createSite({
 			...testConfig,
 			plugins: [definePlugin({ name: "clash", options: {}, nav: [{ path: "data", label: "Mine" }] })],
@@ -43,7 +43,7 @@ describe("the tabs of the tools page", () => {
 		expect(toolsTabs(site).filter((tab) => tab.path === "data")).toHaveLength(1);
 	});
 
-	it("points the tools address at the first tab", () => {
+	it("ADMIN-U1 points the tools address at the first tab", () => {
 		expect(toolsHref(testSite)).toBe(toolsTabs(testSite)[0]?.href);
 		expect(toolsHref(withPlugins(false))).toBe(withPlugins(false).adminHref("/tools/data"));
 	});

@@ -15,7 +15,7 @@ const createTestEditor = (content: string) => {
 };
 
 describe("Pure block drag-and-drop commands", () => {
-	it("top-level block move: reorders paragraphs and is restored with a single undo", () => {
+	it("EDIT-D1 top-level block move: reorders paragraphs and is restored with a single undo", () => {
 		const editor = createTestEditor("<p>첫 번째</p><p>두 번째</p><p>세 번째</p>");
 		const state = editor.state;
 
@@ -38,7 +38,7 @@ describe("Pure block drag-and-drop commands", () => {
 		editor.destroy();
 	});
 
-	it("atom nodes (images, raw-source boxes, etc.) can also be moved as blocks", () => {
+	it("EDIT-D1 atom nodes (images, raw-source boxes, etc.) can also be moved as blocks", () => {
 		const editor = createTestEditor(
 			'<p>앞 단락</p><div data-monti-opaque="true" data-raw-source="<Callout>\n내용\n</Callout>" data-line-start="1"></div><p>뒤 단락</p>',
 		);
@@ -60,7 +60,7 @@ describe("Pure block drag-and-drop commands", () => {
 		editor.destroy();
 	});
 
-	it("nested blocks: a list item (listItem) can be moved within its list", () => {
+	it("EDIT-D1 nested blocks: a list item (listItem) can be moved within its list", () => {
 		const editor = createTestEditor("<ul><li><p>항목 1</p></li><li><p>항목 2</p></li><li><p>항목 3</p></li></ul>");
 		const { doc } = editor.state;
 
@@ -88,7 +88,7 @@ describe("Pure block drag-and-drop commands", () => {
 		editor.destroy();
 	});
 
-	it("nested blocks: a paragraph inside a blockquote can be moved or taken out of it", () => {
+	it("EDIT-D1 nested blocks: a paragraph inside a blockquote can be moved or taken out of it", () => {
 		const editor = createTestEditor("<blockquote><p>인용 1</p><p>인용 2</p></blockquote><p>외부 단락</p>");
 		const { doc } = editor.state;
 
@@ -113,7 +113,7 @@ describe("Pure block drag-and-drop commands", () => {
 		editor.destroy();
 	});
 
-	it("rejects drops at positions the schema does not allow (canReplace/contentMatch fail)", () => {
+	it("EDIT-D1 rejects drops at positions the schema does not allow (canReplace/contentMatch fail)", () => {
 		const editor = createTestEditor(
 			"<ul><li><p>목록</p></li></ul><pre><code>코드 블록 내용</code></pre><p>일반 문단</p>",
 		);
@@ -141,7 +141,7 @@ describe("Pure block drag-and-drop commands", () => {
 		editor.destroy();
 	});
 
-	it("calculateDropPosition: a drop inside text is corrected to a valid parent block boundary", () => {
+	it("EDIT-D1 calculateDropPosition: a drop inside text is corrected to a valid parent block boundary", () => {
 		const editor = createTestEditor("<p>첫 번째 단락</p><p>두 번째 단락</p>");
 		const { doc } = editor.state;
 
@@ -234,7 +234,7 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 		return found;
 	};
 
-	it("the only item of an indented list is taken out together with the empty list and moved between other list items", () => {
+	it("EDIT-D1 the only item of an indented list is taken out together with the empty list and moved between other list items", () => {
 		const editor = createTestEditor("<ul><li><p>첫째</p></li><li><p>둘째</p><ul><li><p>들여쓴</p></li></ul></li></ul>");
 		const from = nodePos(editor, (text, type) => type === "listItem" && text === "들여쓴");
 		const target = nodePos(editor, (text, type) => type === "listItem" && text === "둘째들여쓴");
@@ -249,7 +249,7 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 		editor.destroy();
 	});
 
-	it("moving the only paragraph of a column into another column leaves an empty paragraph", () => {
+	it("EDIT-D1 moving the only paragraph of a column into another column leaves an empty paragraph", () => {
 		const editor = createTestEditor(
 			tiptapOfNodes({
 				type: "columns",
@@ -299,7 +299,7 @@ describe("dragging a list item out of its list", () => {
 	// the empty paragraph at the end of the document is added by the trailing node extension.
 	const html = (editor: Editor) => editor.getHTML().replace(/<p><\/p>$/, "");
 
-	it("dropping between paragraphs makes a new list wrapped in the original list type, and the remaining items stay in the original list", () => {
+	it("EDIT-D1 dropping between paragraphs makes a new list wrapped in the original list type, and the remaining items stay in the original list", () => {
 		const editor = createTestEditor("<ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>가</p><p>나</p>");
 		const from = posOf(editor, "listItem", "둘");
 		const target = posOf(editor, "paragraph", "나");
@@ -311,14 +311,14 @@ describe("dragging a list item out of its list", () => {
 		editor.destroy();
 	});
 
-	it("dragging out the only item leaves no empty list, and child items move along with it", () => {
+	it("EDIT-D1 dragging out the only item leaves no empty list, and child items move along with it", () => {
 		const editor = createTestEditor("<p>가</p><ul><li><p>부모</p><ul><li><p>자식</p></li></ul></li></ul><p>나</p>");
 		move(editor, posOf(editor, "listItem", "부모자식"), 0);
 		expect(html(editor)).toBe("<ul><li><p>부모</p><ul><li><p>자식</p></li></ul></li></ul><p>가</p><p>나</p>");
 		editor.destroy();
 	});
 
-	it("an ordered list item is wrapped in an ordered list, merged with an adjacent list of the same type but not with a different type", () => {
+	it("EDIT-D1 an ordered list item is wrapped in an ordered list, merged with an adjacent list of the same type but not with a different type", () => {
 		const editor = createTestEditor(
 			"<ol><li><p>일</p></li><li><p>이</p></li></ol><p>가</p><ol><li><p>삼</p></li></ol><ul><li><p>점</p></li></ul>",
 		);
@@ -354,14 +354,14 @@ describe("block selection (marquee): select, move and delete by line", () => {
 	const backspace = (editor: Editor) =>
 		editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true }));
 
-	it("selecting text across several blocks does not make a block selection (what is shown is what is deleted)", () => {
+	it("EDIT-D2 selecting text across several blocks does not make a block selection (what is shown is what is deleted)", () => {
 		const editor = createTestEditor("<p>가나다</p><p>라마바</p>");
 		editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 2, 7)));
 		expect(selectedBlocks(editor.state)).toBeNull();
 		editor.destroy();
 	});
 
-	it("each list item is a line: deleting only some items leaves the rest", () => {
+	it("EDIT-D2 each list item is a line: deleting only some items leaves the rest", () => {
 		const editor = createTestEditor("<ol><li><p>하나</p></li><li><p>둘</p></li><li><p>셋</p></li></ol>");
 		select(editor, [posOf(editor, "listItem", "둘"), posOf(editor, "listItem", "셋")]);
 		backspace(editor);
@@ -370,7 +370,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		editor.destroy();
 	});
 
-	it("deleting a heading together with the leading list items leaves no stray text, and an emptied list is removed entirely", () => {
+	it("EDIT-D2 deleting a heading together with the leading list items leaves no stray text, and an emptied list is removed entirely", () => {
 		const editor = createTestEditor("<h2>제목</h2><ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>뒤</p>");
 		select(editor, [posOf(editor, "heading", "제목"), posOf(editor, "listItem", "하나")]);
 		backspace(editor);
@@ -381,7 +381,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		editor.destroy();
 	});
 
-	it("selecting a parent item does not count its child items separately (children go with the parent)", () => {
+	it("EDIT-D2 selecting a parent item does not count its child items separately (children go with the parent)", () => {
 		const editor = createTestEditor("<ul><li><p>부모</p><ul><li><p>자식</p></li></ul></li><li><p>다음</p></li></ul>");
 		const parent = posOf(editor, "listItem", "부모자식");
 		select(editor, [parent, posOf(editor, "listItem", "자식")]);
@@ -389,7 +389,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		editor.destroy();
 	});
 
-	it("selecting elsewhere or pressing Esc clears the block selection", () => {
+	it("EDIT-D2 selecting elsewhere or pressing Esc clears the block selection", () => {
 		const editor = createTestEditor("<p>가</p><p>나</p><p>다</p>");
 		select(editor, [0, posOf(editor, "paragraph", "나")]);
 		editor.view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -400,7 +400,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		editor.destroy();
 	});
 
-	it("moving a paragraph and some list items together wraps the items in a list, and the moved lines stay selected", () => {
+	it("EDIT-D2 moving a paragraph and some list items together wraps the items in a list, and the moved lines stay selected", () => {
 		const editor = createTestEditor("<p>가</p><ul><li><p>하나</p></li><li><p>둘</p></li></ul><p>나</p>");
 		const rows = [0, posOf(editor, "listItem", "하나")];
 		const tr = moveBlockSet(editor.state, rows, editor.state.doc.content.size);
@@ -414,7 +414,7 @@ describe("block selection (marquee): select, move and delete by line", () => {
 		editor.destroy();
 	});
 
-	it("selecting only items and dropping them between items of another list inserts them as plain items", () => {
+	it("EDIT-D2 selecting only items and dropping them between items of another list inserts them as plain items", () => {
 		const editor = createTestEditor(
 			"<ul><li><p>a</p></li><li><p>b</p></li></ul><p>가</p><ul><li><p>x</p></li><li><p>y</p></li></ul>",
 		);

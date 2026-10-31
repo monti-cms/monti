@@ -326,7 +326,7 @@ describe("the tree, the schema and the panel agree", () => {
 		}
 	};
 
-	it("keeps what a person built through any run of edits: tree to schema to tree is the same tree, and the panel draws the groups of the tree", () => {
+	it("SCHEMA-N5 keeps what a person built through any run of edits: tree to schema to tree is the same tree, and the panel draws the groups of the tree", () => {
 		for (let seed = 1; seed <= 60; seed += 1) {
 			const next = random(seed);
 			let collection = post(undefined, { extra: text("Extra") });

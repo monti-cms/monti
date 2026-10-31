@@ -32,7 +32,7 @@ describe("top-level block operations", () => {
 		expect(topLevelBlockAt(instance.state.doc, posOf(instance, 1))?.node.type.name).toBe("heading");
 	});
 
-	it("moves, duplicates and deletes blocks without touching neighbours", () => {
+	it("WRITE-W2 moves, duplicates and deletes blocks without touching neighbours", () => {
 		const instance = make();
 		expect(moveBlock(instance, posOf(instance, 1), -1)).toBe(true);
 		expect(texts(instance)).toEqual(["B", "A", "C"]);
@@ -47,7 +47,7 @@ describe("top-level block operations", () => {
 });
 
 describe("nested block operations", () => {
-	it("moves nested list items within parent list", () => {
+	it("WRITE-W2 moves nested list items within parent list", () => {
 		const listEditor = new Editor({
 			extensions: [StarterKit],
 			content: "<ul><li><p>Item 1</p></li><li><p>Item 2</p></li><li><p>Item 3</p></li></ul>",
@@ -68,12 +68,12 @@ describe("nested block operations", () => {
 });
 
 describe("image width and upload optimization", () => {
-	it("accepts 1–100% or 1–4096px only", () => {
+	it("MEDIA-W1 accepts 1–100% or 1–4096px only", () => {
 		for (const ok of ["", "1%", "100%", "600", "600px", "4096px"]) expect(isValidImageWidth(ok), ok).toBe(true);
 		for (const bad of ["0%", "101%", "0px", "4097px", "50vw", "-1px"]) expect(isValidImageWidth(bad), bad).toBe(false);
 	});
 
-	it("keeps the original for GIF", async () => {
+	it("MEDIA-U3 keeps the original for GIF", async () => {
 		const gif = new File([new Uint8Array([71, 73, 70])], "a.gif", { type: "image/gif" });
 		expect(await prepareUpload(testSite, gif)).toMatchObject({
 			file: gif,
@@ -82,7 +82,7 @@ describe("image width and upload optimization", () => {
 		});
 	});
 
-	it("never turns an animated WebP into a still image", async () => {
+	it("MEDIA-U3 never turns an animated WebP into a still image", async () => {
 		const bytes = new Uint8Array(64);
 		bytes.set([0x41, 0x4e, 0x49, 0x4d], 30);
 		const webp = new File([bytes], "a.webp", { type: "image/webp" });

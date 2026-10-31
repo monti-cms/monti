@@ -39,7 +39,7 @@ describe("usePreference", () => {
 		expect(seen[0]).toBe("list");
 	});
 
-	it("falls back to the default for a missing or invalid stored value", () => {
+	it("ADMIN-S1 falls back to the default for a missing or invalid stored value", () => {
 		writePreference(testSite, "probe-view", "sideways");
 		render(wrap(<Probe id="a" />));
 		expect(screen.getByTestId("a").textContent).toBe("grid");

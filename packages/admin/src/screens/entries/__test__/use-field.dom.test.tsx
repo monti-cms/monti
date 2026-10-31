@@ -153,7 +153,7 @@ describe("useField", () => {
 		expect(setForm).toHaveBeenCalledWith({ title: "Edited" });
 	});
 
-	it("builds the slot request of the field: scope, collection and a context read when the action runs", () => {
+	it("PLUG-A3 builds the slot request of the field: scope, collection and a context read when the action runs", () => {
 		let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", doc: docOf("Body"), tagIds: ["a"] };
 		const setForm = vi.fn();
 		const { result, rerender } = renderHook(() => useField("tagIds"), {
@@ -253,7 +253,7 @@ describe("subscription of one field", () => {
 		expect(renders.title).toBeGreaterThan(2);
 	});
 
-	it("a component that re-renders with the form never reads a value one step behind", () => {
+	it("PLUG-A6 a component that re-renders with the form never reads a value one step behind", () => {
 		const seen: string[] = [];
 		function Plain() {
 			const field = useField<string>("title");
@@ -353,7 +353,7 @@ describe("a custom field UI built only from the hooks", () => {
 				]
 			: [];
 
-	it("edits the value, shows the error linked to the input, and applies an AI suggestion through the slot", async () => {
+	it("PLUG-A6 edits the value, shows the error linked to the input, and applies an AI suggestion through the slot", async () => {
 		const patches: EntryFormPatch[] = [];
 		render(
 			<SlotRegistryProvider sources={[source]}>
@@ -388,7 +388,7 @@ describe("a custom field UI built only from the hooks", () => {
 		expect(screen.queryByText("by the assistant")).toBeNull();
 	});
 
-	it("the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
+	it("ASSIST-F1 the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
 		function Marked({ version }: { version: number }) {
 			const title = useField("title");
 			const slot = useSlotActions(title.slotRequest as NonNullable<FieldState["slotRequest"]>);

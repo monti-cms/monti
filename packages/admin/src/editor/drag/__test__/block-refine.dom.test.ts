@@ -18,7 +18,7 @@ const html = (markup: string) => {
 };
 
 describe("one handle per line (refineBlock)", () => {
-	it("a list's bullet area maps to the item at that height, or the inner item for an indented list", () => {
+	it("EDIT-D3 a list's bullet area maps to the item at that height, or the inner item for an indented list", () => {
 		const root = html("<ul><li><p>첫째</p></li><li><p>둘째</p><ul><li><p>안쪽</p></li></ul></li></ul>");
 		const [outer, first, second, inner] = [
 			root.querySelector("ul"),
@@ -46,7 +46,7 @@ describe("one handle per line (refineBlock)", () => {
 		expect(refineBlock(list, 5, 56)).toBe(second);
 	});
 
-	it("a single column is not a target: column gaps and margins map to the paragraph at that height, and a line with no paragraph maps to the whole column split", () => {
+	it("EDIT-D3 a single column is not a target: column gaps and margins map to the paragraph at that height, and a line with no paragraph maps to the whole column split", () => {
 		const root = html(
 			'<div class="react-renderer node-cmsColumns"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react>' +
 				`<div class="react-renderer node-cmsColumn ${PARENT_ONLY_VIEW_CLASS}"><div data-node-view-wrapper><div data-node-view-content><div data-node-view-content-react><p>왼쪽</p></div></div></div></div>` +
@@ -69,7 +69,7 @@ describe("one handle per line (refineBlock)", () => {
 		expect(refineBlock(columns as HTMLElement, 100, 5)).toBe(columns);
 	});
 
-	it("pointing inside a blockquote still targets the whole blockquote", () => {
+	it("EDIT-D3 pointing inside a blockquote still targets the whole blockquote", () => {
 		const root = html("<blockquote><p>인용</p><p>둘째</p></blockquote><p>뒤</p>");
 		const quote = root.querySelector("blockquote");
 		expect(findBlockDOM(root, root.querySelector("blockquote p"))).toBe(quote);

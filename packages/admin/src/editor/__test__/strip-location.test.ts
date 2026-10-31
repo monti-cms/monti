@@ -158,7 +158,7 @@ describe.each([
 	const file = jpeg({ marker: 0xe0, data: ascii("JFIF\0") }, { marker: 0xe1, data: concat(ascii("Exif\0\0"), exif) });
 	const tiffStart = at(file, "Exif\0\0") + 6;
 
-	it("removes the GPS block and its entry from a JPEG, and keeps the rotation, the camera and the size", () => {
+	it("MEDIA-U4 removes the GPS block and its entry from a JPEG, and keeps the rotation, the camera and the size", () => {
 		const cleaned = withoutLocation(file);
 		expect(cleaned).not.toBeNull();
 		const after = cleaned as Uint8Array;
@@ -192,7 +192,7 @@ describe.each([
 });
 
 describe("other containers", () => {
-	it("cleans the eXIf chunk of a PNG and writes its checksum again", () => {
+	it("MEDIA-U4 cleans the eXIf chunk of a PNG and writes its checksum again", () => {
 		const tiff = buildTiff(true);
 		const file = png(pngChunk("eXIf", tiff.bytes));
 		const after = withoutLocation(file) as Uint8Array;
@@ -212,7 +212,7 @@ describe("other containers", () => {
 		]);
 	});
 
-	it("cleans the EXIF chunk of a WebP, with or without the Exif mark in front", () => {
+	it("MEDIA-U4 cleans the EXIF chunk of a WebP, with or without the Exif mark in front", () => {
 		for (const mark of [[], ascii("Exif\0\0")]) {
 			const tiff = buildTiff(true);
 			const file = webp(webpChunk("EXIF", concat(mark, tiff.bytes)));
@@ -228,7 +228,7 @@ describe("other containers", () => {
 		}
 	});
 
-	it("blanks the GPS properties of an XMP packet, in JPEG, PNG and WebP, and keeps the rest of it", () => {
+	it("MEDIA-U4 blanks the GPS properties of an XMP packet, in JPEG, PNG and WebP, and keeps the rest of it", () => {
 		const packet = ascii(XMP_WITH_GPS);
 		const keyword = ascii("XML:com.adobe.xmp\0");
 		const files = [
@@ -248,7 +248,7 @@ describe("other containers", () => {
 		}
 	});
 
-	it("returns null for files that are not JPEG, PNG or WebP, and for ones without Exif", () => {
+	it("MEDIA-U4 returns null for files that are not JPEG, PNG or WebP, and for ones without Exif", () => {
 		expect(withoutLocation(new Uint8Array([71, 73, 70, 56, 57, 97]))).toBeNull();
 		expect(withoutLocation(jpeg({ marker: 0xe0, data: ascii("JFIF\0") }))).toBeNull();
 		expect(withoutLocation(new Uint8Array())).toBeNull();

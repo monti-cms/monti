@@ -105,7 +105,7 @@ afterEach(() => {
 });
 
 describe("any site: list screen", () => {
-	it("shows the collection's rows under its configured list columns", async () => {
+	it("LIST-S3 shows the collection's rows under its configured list columns", async () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha"), item("e2", "Beta")];
 		render(
@@ -123,7 +123,7 @@ describe("any site: list screen", () => {
 		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeInTheDocument();
 	});
 
-	it("duplicates a row with a copy title made by the admin", async () => {
+	it("WRITE-W10 duplicates a row with a copy title made by the admin", async () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];
 		api.on("POST /v1/entries/:id/duplicate", () => ({
@@ -159,7 +159,7 @@ describe("any site: list screen", () => {
 });
 
 describe("any site: copy title", () => {
-	it("adds the copy suffix and stays within the title field's max", () => {
+	it("WRITE-W10 adds the copy suffix and stays within the title field's max", () => {
 		expect(copyTitle(testSite, content, "Alpha")).toBe(`Alpha${tEntries("copy.suffix")}`);
 		expect(copyTitle(testSite, content, "  ")).toBe(`${tc("untitled")}${tEntries("copy.suffix")}`);
 		const field = testSite.storedField(content, "title")?.field;
@@ -174,7 +174,7 @@ describe("any site: copy title", () => {
 });
 
 describe("any site: record panel", () => {
-	it("creates a record from its title field alone", async () => {
+	it("WRITE-W6 creates a record from its title field alone", async () => {
 		api.on("POST /v1/entries", () => ({
 			entry: {
 				id: "r1",
@@ -222,7 +222,7 @@ describe("any site: entry editor", () => {
 		working: { metadata: { title: "Any title" }, doc: docOf("Body") },
 	};
 
-	it("opens an entry with the title field's label and saves only schema fields", async () => {
+	it("WRITE-S1 opens an entry with the title field's label and saves only schema fields", async () => {
 		api
 			.on("GET /v1/entries/:id", () => entry)
 			.on("PATCH /v1/entries/:id", ({ body }) => ({

@@ -72,11 +72,11 @@ describe("block ids through the editor", () => {
 	it.each([
 		["a table with rows and cells", tableDoc],
 		["tabs and columns with their children", tabsDoc],
-	])("%s keep their ids through storedToTiptap and tiptapToStored", (_, doc) => {
+	])("TRANS-B1 %s keep their ids through storedToTiptap and tiptapToStored", (_, doc) => {
 		expect(idsOf(roundTrip(doc).content)).toEqual(idsOf(doc.content));
 	});
 
-	it("keeps the ids of a table after its text is edited and a cell is typed into", () => {
+	it("TRANS-B1 keeps the ids of a table after its text is edited and a cell is typed into", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(testSite),
 			content: storedToTiptap(testSite, tableDoc),
@@ -93,7 +93,7 @@ describe("block ids through the editor", () => {
 
 	// The reference blog config has tabs and columns; another site config may not install them.
 	it.skipIf(!testSite.BLOCKS.some((block) => block.name === "tabs"))(
-		"keeps the ids of tabs and columns after an edit inside them",
+		"TRANS-B1 keeps the ids of tabs and columns after an edit inside them",
 		() => {
 			const editor = new Editor({
 				extensions: buildEditorExtensions(testSite),

@@ -227,7 +227,7 @@ describe("admin CSS confinement", () => {
 		}, 120_000);
 
 		for (const pkg of STYLE_PACKAGES) {
-			it(`${pkg}: no unscoped selector, no global custom property, no layer, no foreign keyframes`, () => {
+			it(`ADMIN-H1 ${pkg}: no unscoped selector, no global custom property, no layer, no foreign keyframes`, () => {
 				const css = built.get(pkg) ?? "";
 				expect(css.length).toBeGreaterThan(0);
 				const root = postcss.parse(css);
@@ -276,7 +276,7 @@ describe("admin CSS confinement", () => {
 			});
 		}
 
-		it("no selector is defined in more than one bundle", () => {
+		it("ADMIN-H1 no selector is defined in more than one bundle", () => {
 			// Bundles load one after another (admin first). A second copy of `.prose` or another shared utility in a plugin's file would load later and
 			// reset what the admin's dark variant had set, so a file defines only rules of its own.
 			const owner = new Map<string, string>();
@@ -300,11 +300,11 @@ describe("admin CSS confinement", () => {
 			expect(duplicates).toEqual([]);
 		});
 
-		it("no bundle reads Tailwind's own --tw-* variables under their original name", () => {
+		it("ADMIN-H1 no bundle reads Tailwind's own --tw-* variables under their original name", () => {
 			for (const pkg of STYLE_PACKAGES) expect(built.get(pkg) ?? "").not.toMatch(/(?<![\w-])--tw-/);
 		});
 
-		it("every utility the admin and the first-party plugins use is in the admin CSS", () => {
+		it("ADMIN-H2 every utility the admin and the first-party plugins use is in the admin CSS", () => {
 			const cwd = path.join(packagesDir, "admin");
 			const out = execFileSync("node", [buildScript, "--missing"], {
 				cwd,
@@ -315,7 +315,7 @@ describe("admin CSS confinement", () => {
 			expect(JSON.parse(out) as string[]).toEqual([]);
 		});
 
-		it("admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
+		it("ADMIN-H1 admin: the reset is scoped, the tokens and color-scheme stay, KaTeX is included, and no radius name leaks", () => {
 			const css = built.get("admin") ?? "";
 			const selectors = selectorsOf(postcss.parse(css));
 			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).

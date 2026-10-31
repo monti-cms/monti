@@ -47,7 +47,7 @@ const codeBlockAt = (instance: Editor, nth = 0) => {
 };
 
 describe("line labels stay unique in the editor", () => {
-	it("a duplicated code block does not take the label: links keep pointing to the original lines", () => {
+	it("EDIT-C4 a duplicated code block does not take the label: links keep pointing to the original lines", () => {
 		const instance = mount();
 		duplicateBlock(instance, codeBlockAt(instance));
 		const saved = save(instance);
@@ -56,7 +56,7 @@ describe("line labels stay unique in the editor", () => {
 		expect(findAnchor(instance.state.doc, "c1")?.blockPos).toBe(codeBlockAt(instance, 0));
 	});
 
-	it("pasting text and code that link to each other renames the pasted label and its links together", () => {
+	it("EDIT-C4 pasting text and code that link to each other renames the pasted label and its links together", () => {
 		const instance = mount();
 		const copied = instance.state.doc.slice(0, instance.state.doc.content.size);
 		instance.view.dispatch(
@@ -71,7 +71,7 @@ describe("line labels stay unique in the editor", () => {
 		expect(codeLinkTargetsOf(saved)).toEqual(["c1", "c2"]);
 	});
 
-	it("pasting only a code block with a label already in the document drops the pasted label", () => {
+	it("EDIT-C4 pasting only a code block with a label already in the document drops the pasted label", () => {
 		const instance = mount();
 		const block = instance.state.doc.nodeAt(codeBlockAt(instance));
 		if (!block) throw new Error("no code block");

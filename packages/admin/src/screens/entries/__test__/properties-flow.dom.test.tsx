@@ -232,7 +232,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect((await row("SEO 제목")).getByText("3/60")).toBeInTheDocument();
 	});
 
-	it("fills the empty summary at once, marks it as the assistant's, and an edit takes the mark off", async () => {
+	it("ASSIST-F1 fills the empty summary at once, marks it as the assistant's, and an edit takes the mark off", async () => {
 		renderEdit();
 		expect((await row("요약")).queryByRole("button", { name: /^다시$/ })).toBeNull();
 		fireEvent.click((await row("요약")).getByRole("button", { name: /채우기/ }));
@@ -268,7 +268,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBeNull());
 	});
 
-	it("fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
+	it("WRITE-W7 fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
 		renderEdit();
 		fireEvent.click((await row("모음집")).getByRole("button", { name: /채우기/ }));
 		await waitFor(() => expect(api.sent("PATCH /v1/entries/series-1")).toHaveLength(1));

@@ -101,7 +101,7 @@ describe("moving around by the rail", () => {
 		expect(within(rail()).queryByLabelText(/in trash/)).toBeNull();
 	});
 
-	it("counts the failed deliveries on the tools row, and only while there are some", () => {
+	it("EVENT-F1 counts the failed deliveries on the tools row, and only while there are some", () => {
 		renderRail({ eventsCount: 4 });
 		const badge = t("sidebar.eventsBadge", { count: 4 });
 		expect(within(link(new RegExp(t("sidebar.tools")))).getByLabelText(badge)).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe("folders in the rail", () => {
 		);
 	});
 
-	it("selects a folder, and everything again from the collection row", () => {
+	it("LIST-F6 selects a folder, and everything again from the collection row", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderRail({ folderNav: nav });
 		fireEvent.click(within(tree()).getByRole("button", { name: "Dev" }));
@@ -156,7 +156,7 @@ describe("folders in the rail", () => {
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
-	it("moves dropped entries into the folder they are dropped on", () => {
+	it("LIST-C5 moves dropped entries into the folder they are dropped on", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderRail({ folderNav: nav });
 		const entries = [{ id: "e1", expectedVersion: 3 }];
@@ -175,7 +175,7 @@ describe("folders in the rail", () => {
 		expect(screen.queryByRole("textbox")).toBeNull();
 	});
 
-	it("shows the media folders under media", () => {
+	it("MEDIA-B1 shows the media folders under media", () => {
 		renderRail({ activeNav: "media", folderNav: folderNav([folder("m1", "Blog Assets")], { collection: "media" }) });
 		const media = screen.getByRole("list", { name: t("sidebar.folderTree", { label: t("sidebar.media") }) });
 		expect(within(media).getByRole("button", { name: "Blog Assets" })).toBeInTheDocument();

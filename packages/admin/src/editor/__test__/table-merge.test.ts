@@ -50,7 +50,7 @@ const createTableEditor = (content: ReturnType<typeof storedToTiptap>) => {
 };
 
 describe("editor table cell merge and split", () => {
-	it("loading a merged table preserves colspan/rowspan in the Tiptap schema", () => {
+	it("FMT-R2 loading a merged table preserves colspan/rowspan in the Tiptap schema", () => {
 		const source = mergedTable();
 
 		const instance = createTableEditor(storedToTiptap(testSite, source));
@@ -69,7 +69,7 @@ describe("editor table cell merge and split", () => {
 		expect(withoutIds(tiptapToStored(testSite, json))).toEqual(withoutIds(source));
 	});
 
-	it("merging cells (mergeCells) in a GFM table saves a table with a merged cell", () => {
+	it("FMT-R2 merging cells (mergeCells) in a GFM table saves a table with a merged cell", () => {
 		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
 
 		// set the cell selection (CellSelection)
@@ -117,7 +117,7 @@ describe("editor table cell merge and split", () => {
 		).toContain(2);
 	});
 
-	it("splitting a merged cell (splitCell) returns the table to GFM", () => {
+	it("FMT-R2 splitting a merged cell (splitCell) returns the table to GFM", () => {
 		const source = storedDoc(
 			table([[{ attrs: { header: true, colspan: 2 }, content: [text("제목")] }], [[text("1")], [text("2")]]], {
 				align: ["left", "center"],
@@ -164,7 +164,7 @@ describe("editor table cell merge and split", () => {
 		expect(instance.state.selection instanceof CellSelection).toBe(false);
 	});
 
-	it("undoing a merge does not turn a first-column header layout into a first-row header", () => {
+	it("FMT-R2 undoing a merge does not turn a first-column header layout into a first-row header", () => {
 		const source = storedDoc(
 			table([
 				[
@@ -185,7 +185,7 @@ describe("editor table cell merge and split", () => {
 		]);
 	});
 
-	it("loads column widths as cell colwidth and saves adjusted widths as widths", () => {
+	it("FMT-R2 loads column widths as cell colwidth and saves adjusted widths as widths", () => {
 		const source = storedDoc(
 			table([[{ attrs: { header: true, colspan: 2 }, content: [text("합친 머리글")] }], [[text("a")], [text("b")]]], {
 				widths: [80, 160],

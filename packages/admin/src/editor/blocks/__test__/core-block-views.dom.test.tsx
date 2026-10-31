@@ -78,7 +78,7 @@ describe("image, file and math on the blockViews contract", () => {
 		);
 	}
 
-	it("a site replaces the image view, and the view reads and writes the image through useBlockEditor", async () => {
+	it("PLUG-A9 a site replaces the image view, and the view reads and writes the image through useBlockEditor", async () => {
 		const editor = await mount(
 			storedDoc({ type: "image", attrs: { mediaId: "m1", alt: "고양이" } }),
 			"[data-test-view='image']",
@@ -103,7 +103,7 @@ describe("image, file and math on the blockViews contract", () => {
 		expect(document.querySelector("[data-file-block]")).toBeNull();
 	});
 
-	it("a site replaces the math view, and the view writes the source", async () => {
+	it("PLUG-A9 a site replaces the math view, and the view writes the source", async () => {
 		const editor = await mount(storedDoc({ type: "math", attrs: { value: "x^2" } }), "[data-test-view='math']", {
 			math: MathView,
 		});
@@ -117,7 +117,7 @@ describe("image, file and math on the blockViews contract", () => {
 		);
 	});
 
-	it("without a registration the default views render", async () => {
+	it("PLUG-A9 without a registration the default views render", async () => {
 		await mount(
 			storedDoc(
 				{ type: "math", attrs: { value: "x^2" } },

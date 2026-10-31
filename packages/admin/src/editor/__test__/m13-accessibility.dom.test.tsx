@@ -33,7 +33,7 @@ afterEach(cleanup);
 const CmsImageNodeView = withBlockEditor(ImageBlockView, image);
 
 describe("editor accessibility", () => {
-	it("names image controls and exposes alignment state", async () => {
+	it("MEDIA-W1 names image controls and exposes alignment state", async () => {
 		const updateAttributes = vi.fn();
 		const deleteNode = vi.fn();
 		const nodeViewProps = {
@@ -98,7 +98,7 @@ describe("editor accessibility", () => {
 		expect(new Set(altIds).size).toBe(2);
 	});
 
-	it("lets keyboard-focused suggestions activate and close", async () => {
+	it("EDIT-L2 lets keyboard-focused suggestions activate and close", async () => {
 		const onSelectSlash = vi.fn();
 		const onCloseSlash = vi.fn();
 		render(

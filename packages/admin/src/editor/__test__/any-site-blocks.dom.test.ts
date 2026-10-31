@@ -32,14 +32,14 @@ describe("any site: added blocks in the editor", () => {
 
 	it.each(
 		insertable.map((block) => [block.name, block] as const),
-	)("%s is in the slash menu under its own label", (_name, block) => {
+	)("WRITE-W1 %s is in the slash menu under its own label", (_name, block) => {
 		const command = buildBlockSlashCommands(testSite).find((item) => item.id === block.name);
 		expect(command?.title).toBe(block.label);
 	});
 
 	it.each(
 		insertable.map((block) => [block.name, block] as const),
-	)("%s inserted from the slash menu saves as a stored document and reopens as the same node", (_name, block) => {
+	)("FMT-R2 %s inserted from the slash menu saves as a stored document and reopens as the same node", (_name, block) => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p></p>" });
 		addedBlockInsertActions(testSite)[block.name]?.(editor, { from: 1, to: 1 });
 		// A block that holds body text is saved with the typed text in place (a block that must have a body opens as a raw box when empty).

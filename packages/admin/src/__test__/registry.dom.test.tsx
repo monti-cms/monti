@@ -42,7 +42,7 @@ const probed = () => JSON.parse(screen.getByRole("status").textContent ?? "{}");
 describe("the admin components registry", () => {
 	afterEach(() => document.body.replaceChildren());
 
-	it("adds source panels and formats up across nested providers, outer ones first", () => {
+	it("PLUG-A12 adds source panels and formats up across nested providers, outer ones first", () => {
 		render(
 			<AdminComponentsProvider components={{ sourcePanels: [panel("alpha")], formats: { alpha: fakeFormat("alpha") } }}>
 				<AdminComponentsProvider components={{ sourcePanels: [panel("beta")], formats: { beta: fakeFormat("beta") } }}>
@@ -65,7 +65,7 @@ describe("the admin components registry", () => {
 		expect(probed()).toMatchObject({ found: "ALPHA", missing: true });
 	});
 
-	it("uses the format of the first registered panel as the source format", () => {
+	it("PLUG-A12 uses the format of the first registered panel as the source format", () => {
 		render(
 			<AdminComponentsProvider
 				components={{

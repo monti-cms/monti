@@ -30,7 +30,7 @@ describe("collection label in admin messages", () => {
 		expect(collectionNoun(site, "no-such-collection")).toBe("");
 	});
 
-	it("English messages name the entry with the label, lower case, and never say post", () => {
+	it("ADMIN-M1 English messages name the entry with the label, lower case, and never say post", () => {
 		const { site, name } = siteLabeled("Memo", "en");
 		const noun = nounVars(site, name);
 		const confirm = lifecycleConfirm(site, "archive", null, [{ state: "published" }] as never, name);
@@ -64,7 +64,7 @@ describe("collection label in admin messages", () => {
 		);
 	});
 
-	it("Korean messages pick the particle that fits the label", () => {
+	it("ADMIN-M1 Korean messages pick the particle that fits the label", () => {
 		const withFinal = siteLabeled("메모", "ko");
 		const noun = nounVars(withFinal.site, withFinal.name);
 		const tc = withFinal.site.createTranslator(entriesMessages);

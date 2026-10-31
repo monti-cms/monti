@@ -67,7 +67,7 @@ function NoticeView() {
 }
 
 describe("custom block NodeView", () => {
-	it("without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
+	it("EDIT-B3 without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
 		const editor = await mount(NOTICE);
 		expect(screen.getByText("공지")).toBeInTheDocument();
 		expect(screen.queryByLabelText("단계")).toBeNull();
@@ -78,13 +78,13 @@ describe("custom block NodeView", () => {
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ attrs: { title: "점검" } }));
 	});
 
-	it("hides the settings tool when read-only", async () => {
+	it("EDIT-B3 hides the settings tool when read-only", async () => {
 		const editor = await mount(NOTICE);
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByRole("button", { name: tBlocks("settings.label") })).toBeNull());
 	});
 
-	it("renders with the edit view registered by the site in blockViews", async () => {
+	it("PLUG-A9 renders with the edit view registered by the site in blockViews", async () => {
 		const editor = await mount(NOTICE, (node) => (
 			<AdminComponentsProvider components={{ blockViews: { notice: NoticeView } }}>{node}</AdminComponentsProvider>
 		));
@@ -93,7 +93,7 @@ describe("custom block NodeView", () => {
 		expect(JSON.stringify(savedNotice(editor))).toContain("본문");
 	});
 
-	it("shows the warnings of a block next to that block only", async () => {
+	it("EDIT-B3 shows the warnings of a block next to that block only", async () => {
 		const id = NOTICE.content[0]?.id as string;
 		await mount(NOTICE, (node) => (
 			<BlockIssuesProvider

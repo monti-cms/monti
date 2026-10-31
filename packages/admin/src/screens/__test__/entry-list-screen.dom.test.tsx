@@ -169,7 +169,7 @@ describe("list screen — list settings", () => {
 });
 
 describe("list screen — row menu and bulk actions", () => {
-	it("the Delete key moves all selected draft rows to the trash at once", async () => {
+	it("LIST-C5 the Delete key moves all selected draft rows to the trash at once", async () => {
 		api.on("POST /v1/bulk", () => ({
 			results: [
 				{ id: "가", ok: true as const, version: 4 },
@@ -335,7 +335,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 	});
 	const panelName = () => screen.findByRole("textbox", { name: /이름/ }) as Promise<HTMLInputElement>;
 
-	it("pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
+	it("WRITE-S6 pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
 		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
@@ -350,7 +350,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
 	});
 
-	it("a link that leaves the list asks first while the panel has changes", async () => {
+	it("WRITE-S6 a link that leaves the list asks first while the panel has changes", async () => {
 		render(
 			<AdminQueryProvider>
 				<a href="/studio/events">elsewhere</a>
@@ -382,7 +382,7 @@ describe("list screen — screen context", () => {
 			</ScreenContextProvider>,
 		);
 
-	it("publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
+	it("PLUG-A5 publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
 		renderWithContext();
 		await screen.findByRole("row", { name: /가/ });
 		await waitFor(() => expect(whereIs()).toMatchObject({ screen: "entries", collection: "post" }));

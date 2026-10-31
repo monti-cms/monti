@@ -105,7 +105,7 @@ const openOnDocument = () => {
 const renderBubble = (editor: Editor) => renderWithSite(<InlineBubble editor={editor} />);
 
 describe("where an internal link goes, shown in the editor", () => {
-	it("resolves the id to the entry's title and address, and opens its page on the site when it is published", async () => {
+	it("EDIT-L3 resolves the id to the entry's title and address, and opens its page on the site when it is published", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 
@@ -140,7 +140,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(link.textContent).toContain(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello-draft") as string));
 	});
 
-	it("says so when the entry is gone, and when it cannot be looked up", async () => {
+	it("EDIT-L3 says so when the entry is gone, and when it cannot be looked up", async () => {
 		api.on("GET /v1/entries/:id", () => failure("not_found"));
 		const editor = openOnDocument();
 		const { unmount } = renderBubble(editor);
@@ -180,7 +180,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(api.requests).toHaveLength(looked);
 	});
 
-	it("shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {
+	it("EDIT-L3 shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 		await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
@@ -196,7 +196,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(JSON.stringify(saved)).toContain(TARGET);
 	});
 
-	it("an address typed in the form replaces the entry the link pointed to", async () => {
+	it("EDIT-L3 an address typed in the form replaces the entry the link pointed to", async () => {
 		const editor = openOnDocument();
 		renderBubble(editor);
 		await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });

@@ -63,7 +63,7 @@ describe("useSlotActions", () => {
 		expect(empty.result.current.actions).toEqual([]);
 	});
 
-	it("runs with the context read at run time and puts the first candidate in at once", async () => {
+	it("PLUG-A3 runs with the context read at run time and puts the first candidate in at once", async () => {
 		const run = vi.fn(action().run);
 		const opts = options();
 		const { result } = renderHook(() => useSlotActions(opts), { wrapper: wrap([() => [action({ run })]]) });
@@ -78,7 +78,7 @@ describe("useSlotActions", () => {
 		expect(result.current.state).toEqual({ status: "idle" });
 	});
 
-	it("an `append` action adds every candidate, and a text result is put in as it is", async () => {
+	it("PLUG-A3 an `append` action adds every candidate, and a text result is put in as it is", async () => {
 		const opts = options();
 		const append = renderHook(() => useSlotActions(opts), {
 			wrapper: wrap([() => [action({ apply: "append", run: async () => candidates("a", "b", "c") })]]),
@@ -102,7 +102,7 @@ describe("useSlotActions", () => {
 		expect(text.apply).toHaveBeenCalledWith("One line.", "replace");
 	});
 
-	it("a result with nothing for a field is a failure, not a silent write", async () => {
+	it("PLUG-A3 a result with nothing for a field is a failure, not a silent write", async () => {
 		const opts = options();
 		const { result } = renderHook(() => useSlotActions(opts), {
 			wrapper: wrap([() => [action({ run: async () => ({ kind: "note", text: "Only a note." }) })]]),
@@ -116,7 +116,7 @@ describe("useSlotActions", () => {
 		expect(result.current.state).toEqual({ status: "idle" });
 	});
 
-	it("is running while the request is out, then idle; cancelling aborts the signal and never applies", async () => {
+	it("PLUG-A3 is running while the request is out, then idle; cancelling aborts the signal and never applies", async () => {
 		const pending = deferred();
 		const opts = options();
 		const { result } = renderHook(() => useSlotActions(opts), {

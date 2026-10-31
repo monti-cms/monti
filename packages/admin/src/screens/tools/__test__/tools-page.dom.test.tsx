@@ -61,13 +61,13 @@ const open = async (path: string | undefined) => {
 const tabs = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
 describe("the tools page", () => {
-	it("goes to the first tab from the bare tools address", async () => {
+	it("ADMIN-U1 goes to the first tab from the bare tools address", async () => {
 		await expect(ToolsPage({ cms: { site } as unknown as Cms, server: server(), path: undefined })).rejects.toThrow(
 			`redirect:${toolsTabs(site)[0]?.href}`,
 		);
 	});
 
-	it("is a 404 for a path that is neither a built-in tab nor a plugin page", async () => {
+	it("ADMIN-U1 is a 404 for a path that is neither a built-in tab nor a plugin page", async () => {
 		for (const path of ["nope", "settings", "media"]) {
 			await expect(open(path)).rejects.toThrow("not-found");
 		}
@@ -89,7 +89,7 @@ describe("the tools page", () => {
 		).toBeInTheDocument();
 	});
 
-	it("counts the failed deliveries on the activity log tab", async () => {
+	it("EVENT-F1 counts the failed deliveries on the activity log tab", async () => {
 		// The Data tab's own body: the export formats, whether the site is empty, and the export summary.
 		api
 			.on("GET /v1/meta", () => ({ formats: [] }))

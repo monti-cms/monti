@@ -28,7 +28,7 @@ const segmentsOf = (source: string | StoredDocument) => extractSegments(open(sou
 const docText = (current: Editor, from: number, to: number) => current.state.doc.textBetween(from, to);
 
 describe("extracting check segments", () => {
-	it("extracts one segment per block with text and keeps only the text of marks", () => {
+	it("PLUG-T2 extracts one segment per block with text and keeps only the text of marks", () => {
 		const segments = segmentsOf("## 제목입니다\n\n**굵은** 글자와 _기울인_ 글자\n\n- 목록 항목\n- 둘째 항목\n");
 		expect(segments.map((segment) => segment.text)).toEqual([
 			"제목입니다",
@@ -39,7 +39,7 @@ describe("extracting check segments", () => {
 		expect(segments.every((segment) => segment.locale === "ko")).toBe(true);
 	});
 
-	it("Korean text positions map back to document positions as is", () => {
+	it("PLUG-T2 Korean text positions map back to document positions as is", () => {
 		const current = open("안녕 **세상아** 반갑다\n");
 		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
 		if (!segment) throw new Error("no segment");
@@ -48,7 +48,7 @@ describe("extracting check segments", () => {
 		expect(range && docText(current, range.from, range.to)).toBe("세상아");
 	});
 
-	it("positions after an emoji (surrogate pair) are correct too", () => {
+	it("PLUG-T2 positions after an emoji (surrogate pair) are correct too", () => {
 		const current = open("좋아요 👍 맞춤법 틀린말\n");
 		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
 		if (!segment) throw new Error("no segment");
@@ -57,7 +57,7 @@ describe("extracting check segments", () => {
 		expect(range && docText(current, range.from, range.to)).toBe("틀린말");
 	});
 
-	it("inline code is replaced with a one-character placeholder and positions after it are correct", () => {
+	it("PLUG-T2 inline code is replaced with a one-character placeholder and positions after it are correct", () => {
 		const current = open("명령은 `pnpm install --frozen` 으로 실행합니다\n");
 		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
 		if (!segment) throw new Error("no segment");
@@ -71,7 +71,7 @@ describe("extracting check segments", () => {
 		expect(segmentRangeToDoc(segment, placeholder - 1, placeholder + 1)).toBeNull();
 	});
 
-	it("sends only the text of links, not the URL", () => {
+	it("PLUG-T2 sends only the text of links, not the URL", () => {
 		const segments = segmentsOf(
 			"[공식 문서](https://example.com/docs)를 보세요. https://example.com/raw 주소. [https://a.dev](https://a.dev)\n",
 		);
@@ -81,7 +81,7 @@ describe("extracting check segments", () => {
 		expect(segment.text).not.toContain("example.com");
 	});
 
-	it("does not send code blocks and math blocks", () => {
+	it("PLUG-T2 does not send code blocks and math blocks", () => {
 		const segments = segmentsOf(
 			storedDoc(
 				para("앞 문단"),
@@ -109,7 +109,7 @@ describe("extracting check segments", () => {
 		expect(segmentsOf("1234\n\n---\n\n글자\n").map((segment) => segment.text)).toEqual(["글자"]);
 	});
 
-	it("paragraphs with the same text get different names, and names stay the same when another paragraph is edited", () => {
+	it("PLUG-T2 paragraphs with the same text get different names, and names stay the same when another paragraph is edited", () => {
 		const current = open("같은 문단\n\n같은 문단\n\n다른 문단\n");
 		const before = extractSegments(current.state.doc, { locale: "ko" });
 		expect(new Set(before.map((segment) => segment.id)).size).toBe(3);
@@ -122,7 +122,7 @@ describe("extracting check segments", () => {
 		expect(after[2]?.id).not.toBe(before[2]?.id);
 	});
 
-	it("given a range, returns only paragraphs overlapping it, with names based on the whole document", () => {
+	it("PLUG-T2 given a range, returns only paragraphs overlapping it, with names based on the whole document", () => {
 		const current = open("첫 문단\n\n둘째 문단\n\n셋째 문단\n");
 		const all = extractSegments(current.state.doc, { locale: "ko" });
 		const second = all[1];
@@ -135,7 +135,7 @@ describe("extracting check segments", () => {
 		expect(docRangeToSegment(second, second.from + 1, second.from + 2)).toEqual({ start: 1, end: 2 });
 	});
 
-	it("widens a zero-length result to one adjacent character and discards positions outside the paragraph", () => {
+	it("PLUG-T2 widens a zero-length result to one adjacent character and discards positions outside the paragraph", () => {
 		const current = open("띄어쓰기없음\n");
 		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
 		if (!segment) throw new Error("no segment");

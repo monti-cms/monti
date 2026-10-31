@@ -34,7 +34,7 @@ describe("values of removed fields and options", () => {
 		});
 	});
 
-	it("keeps it on an item collection with per-language names, and on a translation", () => {
+	it("WRITE-S8 keeps it on an item collection with per-language names, and on a translation", () => {
 		const record = { title: "에세이", translations: { en: { title: "Essay" } }, removedField: "x" };
 		const recordForm = formFromEntry(
 			testSite,
@@ -61,14 +61,14 @@ describe("values of removed fields and options", () => {
 		expect(metadataFromForm(testSite, form, "post", { title: "T" })).toEqual({ metadata: { title: "T" } });
 	});
 
-	it("shows a select value that is no longer an option as it is stored, and keeps it on save", () => {
+	it("WRITE-S8 shows a select value that is no longer an option as it is stored, and keeps it on save", () => {
 		const metadata = { title: "T", policy: "removed-option" };
 		const form = formFromEntry(testSite, entry({ working: { metadata, doc: emptyStoredDocument() } }));
 		expect(form.policy).toBe("removed-option");
 		expect(metadataFromForm(testSite, form, "post", metadata)).toEqual({ metadata });
 	});
 
-	it("replaces it once the author picks an option, and does not accept a value it never stored", () => {
+	it("WRITE-S8 replaces it once the author picks an option, and does not accept a value it never stored", () => {
 		const metadata = { title: "T", policy: "removed-option" };
 		const form = formFromEntry(testSite, entry({ working: { metadata, doc: emptyStoredDocument() } }));
 		expect(metadataFromForm(testSite, { ...form, policy: "evergreen" }, "post", metadata)).toEqual({

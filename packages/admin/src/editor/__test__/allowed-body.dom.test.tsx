@@ -113,7 +113,7 @@ const type = (editor: Editor, value: string) => {
 };
 
 describe("what the menus offer", () => {
-	it("offers everything when the body has no list", async () => {
+	it("EDIT-A1 offers everything when the body has no list", async () => {
 		const { editor } = await open(docOf("text"));
 		const names = await cardNames(editor);
 		for (const name of [
@@ -134,7 +134,7 @@ describe("what the menus offer", () => {
 		expect(has(rows, t("slash.image.title"))).toBe(true);
 	});
 
-	it("leaves out the blocks and marks the list does not allow, and keeps the ones it does", async () => {
+	it("EDIT-A1 leaves out the blocks and marks the list does not allow, and keeps the ones it does", async () => {
 		const { editor } = await open(docOf("text"), LIMITED);
 		const names = await cardNames(editor);
 		for (const name of [
@@ -173,7 +173,7 @@ describe("the slash menu", () => {
 			(item) => item.block ?? `h${item.heading}`,
 		);
 
-	it("lists only the blocks and heading levels the list allows", () => {
+	it("EDIT-A1 lists only the blocks and heading levels the list allows", () => {
 		const all = titles();
 		expect(all).toEqual(
 			expect.arrayContaining(["table", "taskList", "codeBlock", "h4", ...insertable.map((block) => block.name)]),
@@ -185,7 +185,7 @@ describe("the slash menu", () => {
 		}
 	});
 
-	it("keeps the items that are not blocks (paragraph, lists, internal link)", () => {
+	it("EDIT-A1 keeps the items that are not blocks (paragraph, lists, internal link)", () => {
 		const limited = filterCommands(testSite, "", [], [], editorAllowance(testSite, { blocks: [] }));
 		expect(limited.filter((item) => item.block !== undefined)).toEqual([]);
 		// Paragraph, the headings and the internal link are not blocks of the list.
@@ -194,7 +194,7 @@ describe("the slash menu", () => {
 });
 
 describe("input rules, commands and paste", () => {
-	it("does not turn `> ` into a quote when quotes are not allowed, and does when they are", async () => {
+	it("EDIT-A1 does not turn `> ` into a quote when quotes are not allowed, and does when they are", async () => {
 		const blocked = await open(docOf("x"), LIMITED);
 		blocked.editor.commands.setContent("<p>&gt;</p>");
 		blocked.editor.commands.setTextSelection(2);
@@ -209,7 +209,7 @@ describe("input rules, commands and paste", () => {
 		expect(allowed.editor.isActive("blockquote")).toBe(true);
 	});
 
-	it("does not turn `#### ` into a heading of a level the list does not allow, and does for one it allows", async () => {
+	it("EDIT-A1 does not turn `#### ` into a heading of a level the list does not allow, and does for one it allows", async () => {
 		const { editor } = await open(docOf("x"), LIMITED);
 		editor.commands.setContent("<p>###</p>");
 		editor.commands.setTextSelection(4);
@@ -224,7 +224,7 @@ describe("input rules, commands and paste", () => {
 		expect(four.editor.isActive("heading")).toBe(false);
 	});
 
-	it("refuses a command that would add a block the list does not allow", async () => {
+	it("EDIT-A1 refuses a command that would add a block the list does not allow", async () => {
 		const { editor } = await open(docOf("text"), LIMITED);
 		editor.commands.insertTable({ rows: 1, cols: 1 });
 		editor.commands.toggleBlockquote();
@@ -232,7 +232,7 @@ describe("input rules, commands and paste", () => {
 		expect(editor.getJSON().content?.map((node) => node.type)).toEqual(["paragraph"]);
 	});
 
-	it("pastes a block the list does not allow as its text in paragraphs, and drops marks it does not allow", async () => {
+	it("EDIT-A1 pastes a block the list does not allow as its text in paragraphs, and drops marks it does not allow", async () => {
 		const { editor } = await open(docOf("start"), LIMITED);
 		editor.commands.focus("end");
 		editor.view.pasteHTML(
@@ -248,7 +248,7 @@ describe("input rules, commands and paste", () => {
 		expect(json).toContain('"bold"');
 	});
 
-	it("keeps the text of a pasted block and a heading of another level (cleanSlice)", async () => {
+	it("EDIT-A1 keeps the text of a pasted block and a heading of another level (cleanSlice)", async () => {
 		const { editor } = await open(docOf("x"), LIMITED);
 		const allowance = editorAllowance(testSite, LIMITED);
 		const source = editor.schema.nodeFromJSON({
@@ -276,7 +276,7 @@ describe("a body that holds what the list no longer allows", () => {
 		{ type: "heading", attrs: { level: 4 }, content: [text("deep")] },
 	);
 
-	it("opens and shows it", async () => {
+	it("WRITE-S10 opens and shows it", async () => {
 		const { editor } = await open(legacy, LIMITED);
 		const types = editor.getJSON().content?.map((node) => node.type);
 		expect(types).toEqual(["paragraph", "table", "paragraph", "heading"]);
@@ -284,7 +284,7 @@ describe("a body that holds what the list no longer allows", () => {
 		expect(editor.view.dom.querySelector("h4")).toBeInTheDocument();
 	});
 
-	it("saves it unchanged after an edit elsewhere", async () => {
+	it("WRITE-S10 saves it unchanged after an edit elsewhere", async () => {
 		const { editor, onChange } = await open(legacy, LIMITED);
 		editor.commands.setTextSelection(2);
 		editor.commands.insertContent("X");
@@ -296,7 +296,7 @@ describe("a body that holds what the list no longer allows", () => {
 		expect(content[3]?.attrs).toMatchObject({ level: 4 });
 	});
 
-	it("lets the writer edit inside it, and add more of a type the body already holds", async () => {
+	it("EDIT-A1 lets the writer edit inside it, and add more of a type the body already holds", async () => {
 		const { editor, onChange } = await open(legacy, LIMITED);
 		// Edit the text of the table cell.
 		let cellText = 0;
@@ -319,7 +319,7 @@ describe("a body that holds what the list no longer allows", () => {
 		expect(editor.state.doc.childCount).toBe(before + 1);
 	});
 
-	it("applies a stored body that replaces the shown one, whatever it holds", async () => {
+	it("WRITE-S10 applies a stored body that replaces the shown one, whatever it holds", async () => {
 		let editor: Editor | null = null;
 		const props = {
 			onChange: vi.fn(),

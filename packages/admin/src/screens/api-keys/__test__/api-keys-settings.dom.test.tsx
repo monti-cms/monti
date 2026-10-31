@@ -82,7 +82,7 @@ const row = async (name: string) => within(await screen.findByTestId(`api-key-${
 const deleteCalls = () => api.sent("DELETE /v1/api-keys/:id");
 
 describe("API keys page", () => {
-	it("lists each key with a masked tail and where it is used, and never a value", async () => {
+	it("KEY-A1 lists each key with a masked tail and where it is used, and never a value", async () => {
 		renderTab();
 		const anthropic = await row("Anthropic");
 		expect(anthropic.getByText(/••••91c0/)).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe("API keys page", () => {
 		expect((await row("Spare")).getByText(t("row.unused"))).toBeInTheDocument();
 	});
 
-	it("asks before deleting a key that is in use, lists what stops working, and deletes with force only after confirming", async () => {
+	it("KEY-W2 asks before deleting a key that is in use, lists what stops working, and deletes with force only after confirming", async () => {
 		renderTab();
 		const anthropic = await row("Anthropic");
 		fireEvent.click(anthropic.getByRole("button", { name: t("row.menu", { name: "Anthropic" }) }));
@@ -109,7 +109,7 @@ describe("API keys page", () => {
 		expect(deleteCalls()[0]?.query.get("force")).toBe("true");
 	});
 
-	it("deletes an unused key without force", async () => {
+	it("KEY-W2 deletes an unused key without force", async () => {
 		renderTab();
 		const spare = await row("Spare");
 		fireEvent.click(spare.getByRole("button", { name: t("row.menu", { name: "Spare" }) }));
@@ -119,14 +119,14 @@ describe("API keys page", () => {
 		expect(deleteCalls()[0]?.query.has("force")).toBe(false);
 	});
 
-	it("cannot add a key while the server has no secret, and says why", async () => {
+	it("KEY-A3 cannot add a key while the server has no secret, and says why", async () => {
 		secretsAvailable = false;
 		renderTab();
 		expect(await screen.findByText(t("secret.description"))).toBeInTheDocument();
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it("adds a key from the dialog", async () => {
+	it("KEY-W1 adds a key from the dialog", async () => {
 		renderTab();
 		await screen.findByTestId("api-key-Spare");
 		fireEvent.click(screen.getAllByRole("button", { name: t("add") })[0] as HTMLElement);
@@ -139,7 +139,7 @@ describe("API keys page", () => {
 		);
 	});
 
-	it("lists a plugin's key slot that has no key as a row with an action to add one, and counts it as needed", async () => {
+	it("KEY-W3 lists a plugin's key slot that has no key as a row with an action to add one, and counts it as needed", async () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
 		expect(slot.getByText("Spell check")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("API keys page", () => {
 
 	const putCalls = () => api.sent("PUT /v1/api-keys/slots").map((request) => request.body);
 
-	it("assigns a saved key to the slot", async () => {
+	it("KEY-W3 assigns a saved key to the slot", async () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
 		fireEvent.click(slot.getByRole("button", { name: t("slot.assign") }));
@@ -160,7 +160,7 @@ describe("API keys page", () => {
 		);
 	});
 
-	it("enters a new key for the slot, sent in the same request as the assignment", async () => {
+	it("KEY-W3 enters a new key for the slot, sent in the same request as the assignment", async () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
 		fireEvent.click(slot.getByRole("button", { name: t("slot.assign") }));
@@ -176,7 +176,7 @@ describe("API keys page", () => {
 		expect(api.sent("POST /v1/api-keys")).toHaveLength(0);
 	});
 
-	it("clears an assigned slot from the key's row menu", async () => {
+	it("KEY-W3 clears an assigned slot from the key's row menu", async () => {
 		keys = [key("k3", "Speller", "77e1", [{ plugin: "speller", ref: "key", label: "Spell check" }])];
 		slots = [
 			{

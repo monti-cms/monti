@@ -6,7 +6,7 @@ const api = (status: number, code?: string, issues: CmsApiError["issues"] = []) 
 	new CmsApiError(status, code, `server ${status}`, issues, {});
 
 describe("toEditorError", () => {
-	it("maps API errors by status and code, keeping the server message", () => {
+	it("WRITE-S5 maps API errors by status and code, keeping the server message", () => {
 		expect(toEditorError(api(401), "fallback")).toMatchObject({
 			code: "session_expired",
 			message: "server 401",
@@ -22,7 +22,7 @@ describe("toEditorError", () => {
 		});
 	});
 
-	it("passes other server codes through, and a 4xx is not retryable while a 5xx is", () => {
+	it("WRITE-S5 passes other server codes through, and a 4xx is not retryable while a 5xx is", () => {
 		expect(toEditorError(api(403, "forbidden"), "fallback")).toMatchObject({ code: "forbidden", retryable: false });
 		expect(toEditorError(api(400), "fallback")).toMatchObject({ code: "failed", retryable: false });
 		expect(toEditorError(api(409, "other"), "fallback")).toMatchObject({ code: "other", retryable: false });
@@ -30,12 +30,12 @@ describe("toEditorError", () => {
 		expect(toEditorError(api(503, "unavailable"), "fallback")).toMatchObject({ code: "unavailable", retryable: true });
 	});
 
-	it("uses the fallback text when the API error has no message", () => {
+	it("WRITE-S5 uses the fallback text when the API error has no message", () => {
 		const error = new CmsApiError(500, undefined, "", [], {});
 		expect(toEditorError(error, "fallback").message).toBe("fallback");
 	});
 
-	it("maps a fetch TypeError to offline with the localized fallback, retryable", () => {
+	it("WRITE-S5 maps a fetch TypeError to offline with the localized fallback, retryable", () => {
 		expect(toEditorError(new TypeError("Failed to fetch"), "You are offline.")).toMatchObject({
 			code: "offline",
 			message: "You are offline.",
@@ -48,7 +48,7 @@ describe("toEditorError", () => {
 		expect(toEditorError(abort, "fallback")).toMatchObject({ code: "aborted", message: "fallback" });
 	});
 
-	it("shows the text of a NoticeError, keeps the words of any other error as the detail only", () => {
+	it("ADMIN-E2 shows the text of a NoticeError, keeps the words of any other error as the detail only", () => {
 		expect(toEditorError(new NoticeError("Too large.", "Pick a smaller file."), "fallback")).toMatchObject({
 			code: "failed",
 			message: "Too large. Pick a smaller file.",

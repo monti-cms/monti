@@ -84,7 +84,7 @@ describe("load", () => {
 		await vi.waitFor(() => expect(ctx.editor().load.status).toBe("ready"));
 	});
 
-	it("reports a failed load as an error state with the server's message, and a network error as the offline text", async () => {
+	it("WRITE-W11 reports a failed load as an error state with the server's message, and a network error as the offline text", async () => {
 		const ctx = setup();
 		ctx.client.get.mockRejectedValueOnce(unauthorizedError());
 		ctx.core.start();
@@ -100,7 +100,7 @@ describe("load", () => {
 		expect(failed.status === "error" && failed.error.code).toBe("offline");
 	});
 
-	it("says redirect instead of navigating when the entry belongs to an item collection", async () => {
+	it("WRITE-W6 says redirect instead of navigating when the entry belongs to an item collection", async () => {
 		const ctx = await opened({ server: { ...ENTRY, collection: "tag" } });
 		expect(ctx.editor().load).toEqual({
 			status: "redirect",
@@ -111,7 +111,7 @@ describe("load", () => {
 		expect(ctx.editor().entry).toBeNull();
 	});
 
-	it("starts a new entry of an item collection as a redirect without any request", () => {
+	it("WRITE-W6 starts a new entry of an item collection as a redirect without any request", () => {
 		const ctx = setup({ target: { mode: "new", collection: "tag" } });
 		expect(ctx.editor().load).toEqual({ status: "redirect", reason: "item-collection", collection: "tag" });
 		ctx.core.start();
@@ -353,7 +353,7 @@ describe("save", () => {
 		});
 	});
 
-	it("keeps the translation group info the save response does not carry", async () => {
+	it("TRANS-L2 keeps the translation group info the save response does not carry", async () => {
 		const group: EntryData = {
 			...ENTRY,
 			locale: "ko",
@@ -682,7 +682,7 @@ describe("publish", () => {
 });
 
 describe("status changes, duplicate and delete", () => {
-	it("changeStatus sends the version, reloads the entry and is busy meanwhile", async () => {
+	it("WRITE-S2 changeStatus sends the version, reloads the entry and is busy meanwhile", async () => {
 		const { editor, client } = await opened();
 		const result = await editor().changeStatus("archive");
 		expect(client.changeStatus).toHaveBeenCalledWith("entry-1", "archive", { expectedVersion: 4 });
@@ -699,7 +699,7 @@ describe("status changes, duplicate and delete", () => {
 		expect(editor().readOnly).toBe(false);
 	});
 
-	it("refuses a status change while changes are unsaved, except restore", async () => {
+	it("WRITE-S6 refuses a status change while changes are unsaved, except restore", async () => {
 		const { editor, client } = await opened();
 		editor().setForm({ title: "저장 전" });
 		expect(await editor().changeStatus("archive")).toMatchObject({ ok: false, error: { code: "invalid_state" } });
@@ -707,7 +707,7 @@ describe("status changes, duplicate and delete", () => {
 		expect((await editor().changeStatus("restore")).ok).toBe(true);
 	});
 
-	it("trashing a translation says to open the original instead and does not reload", async () => {
+	it("TRASH-T6 trashing a translation says to open the original instead and does not reload", async () => {
 		const translation: EntryData = { ...ENTRY, id: "entry-2", locale: "en", translationGroupId: "entry-1" };
 		const { editor, client } = await opened({ server: translation });
 		client.get.mockClear();
@@ -717,14 +717,14 @@ describe("status changes, duplicate and delete", () => {
 		expect(client.get).not.toHaveBeenCalled();
 	});
 
-	it("a failed status change is an error result", async () => {
+	it("WRITE-W9 a failed status change is an error result", async () => {
 		const { editor, client } = await opened();
 		client.changeStatus.mockRejectedValueOnce(conflictError());
 		expect(await editor().changeStatus("archive")).toMatchObject({ ok: false, error: { code: "conflict" } });
 		expect(editor().busy).toBeNull();
 	});
 
-	it("duplicate copies a saved entry with a copy title, and needs the changes saved first", async () => {
+	it("WRITE-W10 duplicate copies a saved entry with a copy title, and needs the changes saved first", async () => {
 		const { editor, client } = await opened();
 		const result = await editor().duplicate();
 		expect(client.duplicate).toHaveBeenCalledWith("entry-1", { title: expect.stringContaining("테스트") });
@@ -955,7 +955,7 @@ describe("translation source flow", () => {
 		expect(editor().translation).toBeNull();
 	});
 
-	it("says the source changed when it differs from the confirmed one, and confirming it records the source in the next save", async () => {
+	it("TRANS-S1 says the source changed when it differs from the confirmed one, and confirming it records the source in the next save", async () => {
 		const { editor, client } = await opened({ server: translation });
 		expect(editor().translation).toMatchObject({
 			source: { locale: "ko", title: "테스트" },

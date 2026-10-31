@@ -6,7 +6,7 @@ type Draft = { name: string; note: string };
 const EMPTY: Draft = { name: "", note: "" };
 
 describe("useDraftEditor", () => {
-	it("treats a new item with nothing entered as clean, and with something entered as dirty", () => {
+	it("PLUG-A11 treats a new item with nothing entered as clean, and with something entered as dirty", () => {
 		const { result } = renderHook(() => useDraftEditor<Draft>({ saved: null, empty: EMPTY }));
 		expect(result.current.isNew).toBe(true);
 		expect(result.current.dirty).toBe(false);
@@ -16,7 +16,7 @@ describe("useDraftEditor", () => {
 		expect(result.current.dirty).toBe(false);
 	});
 
-	it("compares an existing item with what the server holds", () => {
+	it("PLUG-A11 compares an existing item with what the server holds", () => {
 		const saved: Draft = { name: "x", note: "" };
 		const { result } = renderHook(() => useDraftEditor<Draft>({ saved, empty: EMPTY }));
 		expect(result.current.isNew).toBe(false);
@@ -27,7 +27,7 @@ describe("useDraftEditor", () => {
 		expect(result.current.dirty).toBe(false);
 	});
 
-	it("starts again from the server's copy after a save", () => {
+	it("PLUG-A11 starts again from the server's copy after a save", () => {
 		const { result, rerender } = renderHook(
 			({ saved }: { saved: Draft }) => useDraftEditor<Draft>({ saved, empty: EMPTY }),
 			{ initialProps: { saved: { name: "x", note: "" } } },
@@ -38,7 +38,7 @@ describe("useDraftEditor", () => {
 		expect(result.current.dirty).toBe(false);
 	});
 
-	it("reports dirtiness once per change even when the callback is a new function each render", () => {
+	it("PLUG-A11 reports dirtiness once per change even when the callback is a new function each render", () => {
 		const calls: boolean[] = [];
 		const { result, rerender, unmount } = renderHook(() =>
 			useDraftEditor<Draft>({ saved: null, empty: EMPTY, onDirtyChange: (dirty) => calls.push(dirty) }),

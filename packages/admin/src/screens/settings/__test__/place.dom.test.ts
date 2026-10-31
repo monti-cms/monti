@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("tabOfPath", () => {
-	it("reads the tab from the last segment, under any admin path or base path", () => {
+	it("ADMIN-U1 reads the tab from the last segment, under any admin path or base path", () => {
 		expect(tabOfPath("/admin/settings/locales")).toBe("locales");
 		expect(tabOfPath("/blog/cms/settings/collections")).toBe("collections");
 		expect(tabOfPath("/admin/settings")).toBeUndefined();
@@ -16,7 +16,7 @@ describe("tabOfPath", () => {
 });
 
 describe("addressOfTab", () => {
-	it("swaps the last segment for the tab and keeps the query", () => {
+	it("ADMIN-U1 swaps the last segment for the tab and keeps the query", () => {
 		expect(addressOfTab("/admin/settings/site", "?collection=post&section=fields", "collections")).toBe(
 			"/admin/settings/collections?collection=post&section=fields",
 		);

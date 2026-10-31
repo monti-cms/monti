@@ -53,7 +53,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(screen.queryByRole("toolbar")).toBeNull();
 	});
 
-	it("hands the document back after a change, with the ids of the blocks it was given", async () => {
+	it("TRANS-B1 hands the document back after a change, with the ids of the blocks it was given", async () => {
 		const onChange = vi.fn();
 		const doc = docOf("첫째 문단\n\n둘째 문단");
 		const { editor } = await open({ doc, onChange });
@@ -67,7 +67,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(JSON.stringify(next)).toContain("셋째");
 	});
 
-	it("shows another document when it is replaced from outside, and does not report that as a change", async () => {
+	it("WRITE-S9 shows another document when it is replaced from outside, and does not report that as a change", async () => {
 		const onChange = vi.fn();
 		const { editor, show } = await open({ doc: docOf("처음 본문"), onChange });
 		show(docOf("## 템플릿\n\n바뀐 본문"));
@@ -75,7 +75,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(onChange).not.toHaveBeenCalled();
 	});
 
-	it("leaves the editor alone for a document that says what it already shows, so the caret stays", async () => {
+	it("WRITE-S9 leaves the editor alone for a document that says what it already shows, so the caret stays", async () => {
 		const { editor, show } = await open({ doc: docOf("같은 본문") });
 		act(() => {
 			editor.commands.setTextSelection(3);
@@ -87,7 +87,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(editor.state.selection.from).toBe(3);
 	});
 
-	it("starts empty while the source view is open, and shows the document it is then given when the view closes", async () => {
+	it("FMT-R8 starts empty while the source view is open, and shows the document it is then given when the view closes", async () => {
 		const { editor, show } = await open({ doc: docOf("원문에서 쓴 본문"), sourceView: true });
 		expect(text(editor)).toBe("");
 		expect(editor.isEditable).toBe(false);
@@ -96,7 +96,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(editor.isEditable).toBe(true);
 	});
 
-	it("keeps a body that could not be read in a box, and hands the same text back when it changes elsewhere", async () => {
+	it("WRITE-P8 keeps a body that could not be read in a box, and hands the same text back when it changes elsewhere", async () => {
 		const onChange = vi.fn();
 		const unreadable: StoredDocument = {
 			type: "doc",

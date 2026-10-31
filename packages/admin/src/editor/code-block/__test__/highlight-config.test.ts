@@ -14,7 +14,7 @@ const site = siteWith({
 });
 
 describe("editor highlighting themes", () => {
-	it("creates the highlighter with the site's light and dark themes", () => {
+	it("EDIT-C5 creates the highlighter with the site's light and dark themes", () => {
 		expect(highlighterOptions(site.CODE_BLOCK_THEMES).themes).toEqual(["github-light", "github-dark"]);
 		expect(highlighterOptions(site.CODE_BLOCK_THEMES).langs).toContain("typescript");
 	});
@@ -23,7 +23,7 @@ describe("editor highlighting themes", () => {
 		expect(highlighterOptions({ light: "nord", dark: "nord" }).themes).toEqual(["nord"]);
 	});
 
-	it("tokenizes with the configured theme names instead of the defaults", () => {
+	it("EDIT-C5 tokenizes with the configured theme names instead of the defaults", () => {
 		const codeToTokensWithThemes = vi.fn(() => []);
 		tokensWithThemes({ codeToTokensWithThemes } as never, "typescript", "const a = 1;", {
 			light: "github-light",
@@ -35,7 +35,7 @@ describe("editor highlighting themes", () => {
 		});
 	});
 
-	it("falls back to the default themes when the site's theme names are not Shiki themes", async () => {
+	it("EDIT-C5 falls back to the default themes when the site's theme names are not Shiki themes", async () => {
 		const broken = siteWith({ themes: { light: "no-such-light", dark: "no-such-dark" } });
 		const highlighter = await getShikiHighlighter(broken);
 		expect(highlighter.getLoadedThemes()).toEqual(expect.arrayContaining(["one-light", "one-dark-pro"]));
@@ -43,7 +43,7 @@ describe("editor highlighting themes", () => {
 });
 
 describe("editor extra languages", () => {
-	it("loads the site's extra languages and skips one Shiki does not know without failing", async () => {
+	it("EDIT-C5 loads the site's extra languages and skips one Shiki does not know without failing", async () => {
 		const loadLanguage = vi.fn(async (name: string) => {
 			if (name === "nope") throw new Error("unknown language");
 		});
@@ -60,7 +60,7 @@ describe("editor extra languages", () => {
 });
 
 describe("language dropdown", () => {
-	it("lists the default languages followed by the extra ones that are not in it, labeled by name", () => {
+	it("EDIT-C5 lists the default languages followed by the extra ones that are not in it, labeled by name", () => {
 		const choices = codeLanguageChoices(site.EXTRA_CODE_LANGUAGES);
 		const values = choices.map((option) => option.value);
 		expect(values.slice(-2)).toEqual(["elixir", "zig"]);

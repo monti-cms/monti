@@ -66,7 +66,7 @@ const optionNames = async () => (await screen.findAllByRole("option")).map((opti
 describe("replacement post (single relation)", () => {
 	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
 
-	it("pressing opens the first posts minus itself, and picking switches to that ID", async () => {
+	it("WRITE-W3 pressing opens the first posts minus itself, and picking switches to that ID", async () => {
 		const onChange = vi.fn();
 		render(<EntryPicker {...props(field, null, onChange)} />);
 		await openList("최신 글");
@@ -89,7 +89,7 @@ describe("replacement post (single relation)", () => {
 describe("relation picker search on the server", () => {
 	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
 
-	it("asks the server for the typed text after a pause, instead of loading the whole list", async () => {
+	it("LIST-F7 asks the server for the typed text after a pause, instead of loading the whole list", async () => {
 		render(<EntryPicker {...props(field, null)} />);
 		const input = await openList("최신 글");
 		await waitFor(() => expect(searches().length).toBeGreaterThan(0));
@@ -120,7 +120,7 @@ describe("relation picker search on the server", () => {
 		expect(searches().every((query) => query.get("publishedOnly") === "true")).toBe(true);
 	});
 
-	it("keeps the picked post visible when the search does not return it", async () => {
+	it("WRITE-W3 keeps the picked post visible when the search does not return it", async () => {
 		render(<EntryPicker {...props(field, "p2")} />);
 		const input = (await screen.findByRole("combobox", { name: "최신 글" })) as HTMLInputElement;
 		await waitFor(() => expect(input.value).toBe(`둘째 글${t("entry.unpublished")}`));
@@ -151,7 +151,7 @@ describe("relation picker search on the server", () => {
 describe("collection post list (ordered multi relation)", () => {
 	const field: RelationField = { kind: "relation", label: "게시글", to: "post", many: true, ordered: true };
 
-	it("shows number and title in saved order and flags unpublished posts", async () => {
+	it("WRITE-W3 shows number and title in saved order and flags unpublished posts", async () => {
 		render(<OrderedEntryList {...props(field, ["p3", "p2"])} />);
 		const list = await screen.findByRole("list", { name: t("entry.listAria", { target: TARGET }) });
 		await waitFor(() =>
@@ -164,7 +164,7 @@ describe("collection post list (ordered multi relation)", () => {
 		expect(within(list).getByText(t("entry.unpublished").trim())).toBeInTheDocument();
 	});
 
-	it("checking in the add/remove posts list appends it, and unchecking removes it", async () => {
+	it("WRITE-W3 checking in the add/remove posts list appends it, and unchecking removes it", async () => {
 		const onChange = vi.fn();
 		const { rerender } = render(<OrderedEntryList {...props(field, ["p3"], onChange)} />);
 		await openList(t("entry.editList", { target: TARGET }));
@@ -176,7 +176,7 @@ describe("collection post list (ordered multi relation)", () => {
 		expect(onChange).toHaveBeenLastCalledWith(["p1"]);
 	});
 
-	it("up, down and remove buttons change the order and the list", async () => {
+	it("WRITE-W3 up, down and remove buttons change the order and the list", async () => {
 		const onChange = vi.fn();
 		render(<OrderedEntryList {...props(field, ["p1", "p2", "p3"], onChange)} />);
 		fireEvent.click(await screen.findByRole("button", { name: t("entry.up", { title: "셋째 글" }) }));

@@ -33,7 +33,7 @@ describe("custom block editing", () => {
 		expect(tiptapToStored(testSite, storedToTiptap(testSite, stored))).toEqual(stored);
 	});
 
-	it("insertable custom blocks appear in the slash menu", () => {
+	it("EDIT-B2 insertable custom blocks appear in the slash menu", () => {
 		const items = buildBlockSlashCommands(testSite);
 		expect(items.find((item) => item.id === "notice")?.title).toBe("공지");
 		expect(items.some((item) => item.id === "embed")).toBe(false);
@@ -64,7 +64,7 @@ describe("editor representation of added blocks", () => {
 		expect(mermaid?.icon).toBe(block("mermaid").editor.icon);
 	});
 
-	it("inserted content follows the definition's initial value, otherwise default values and the minimum number of children", () => {
+	it("EDIT-B2 inserted content follows the definition's initial value, otherwise default values and the minimum number of children", () => {
 		const callout = insertContentOf(testSite, block("callout"));
 		expect(callout.type).toBe(blockNodeName(block("callout")));
 		expect(callout.attrs?.values).toEqual(block("callout").editor.insert?.values ?? defaultValues(block("callout")));
@@ -83,7 +83,7 @@ describe("editor representation of added blocks", () => {
 		expect(notice.content).toHaveLength(1);
 	});
 
-	it("a body container with `insert.codeBlocks` starts with those code blocks instead of an empty paragraph", () => {
+	it("EDIT-B2 a body container with `insert.codeBlocks` starts with those code blocks instead of an empty paragraph", () => {
 		const files: BlockDefinition = {
 			name: "file-box",
 			label: "Files",

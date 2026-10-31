@@ -65,12 +65,12 @@ describe("checker definition", () => {
 		expect(defineTextChecker({ id: "a", label: "A", auto: true, check: async () => [] }).auto).toBe(true);
 	});
 
-	it("rejects invalid names and limits", () => {
+	it("PLUG-T1 rejects invalid names and limits", () => {
 		expect(() => defineTextChecker({ id: "a b", label: "A", check: async () => [] })).toThrow();
 		expect(() => defineTextChecker({ id: "a", label: "A", limits: { maxChars: 0 }, check: async () => [] })).toThrow();
 	});
 
-	it("matches languages by their primary subtag", () => {
+	it("PLUG-T1 matches languages by their primary subtag", () => {
 		const ko = defineTextChecker({ id: "ko", label: "ko", locales: ["ko-KR"], check: async () => [] });
 		expect(supportsLocale(ko, "ko")).toBe(true);
 		expect(supportsLocale(ko, "en")).toBe(false);
@@ -81,7 +81,7 @@ describe("checker definition", () => {
 describe("batching and cache", () => {
 	const segment = (id: string, text: string): TextCheckSegment => ({ id, text, locale: "ko" });
 
-	it("splits by paragraph and character limits", () => {
+	it("PLUG-T4 splits by paragraph and character limits", () => {
 		const list = [segment("a", "12345"), segment("b", "123"), segment("c", "1234567890"), segment("d", "1")];
 		expect(chunkSegments(list, { maxSegments: 2 }).map((chunk) => chunk.map((item) => item.id))).toEqual([
 			["a", "b"],
@@ -94,7 +94,7 @@ describe("batching and cache", () => {
 		]);
 	});
 
-	it("does not resend the same text and sends in batches per limit", async () => {
+	it("PLUG-T4 does not resend the same text and sends in batches per limit", async () => {
 		const current = open("가 틀린말\n\n나 틀린말\n\n가 틀린말\n");
 		const checker = defineTextChecker({ ...wordChecker("틀린말", "맞는 말"), limits: { maxSegments: 1 } });
 		const cache = new TextCheckCache();
@@ -125,7 +125,7 @@ describe("batching and cache", () => {
 		expect(checker.check).not.toHaveBeenCalled();
 	});
 
-	it("drops invalid values in checker results and fills in missing ones", () => {
+	it("PLUG-T2 drops invalid values in checker results and fills in missing ones", () => {
 		expect(normalizeIssue({ start: 0, end: 9, message: "x", suggestions: [] }, 5, "c")).toBeNull();
 		expect(normalizeIssue({ start: 2, end: 1, message: "x", suggestions: [] }, 5, "c")).toBeNull();
 		expect(normalizeIssue({ start: 0, end: 1, suggestions: [] }, 5, "c")).toBeNull();
@@ -145,7 +145,7 @@ describe("underline decoration and editing", () => {
 		expect(mark?.getAttribute("data-severity")).toBe("error");
 	});
 
-	it("keeps results in place when an earlier paragraph is edited", async () => {
+	it("PLUG-T3 keeps results in place when an earlier paragraph is edited", async () => {
 		const current = open("앞 문단\n\n이것은 틀린말 입니다\n");
 		await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		current.commands.insertContentAt(2, "아주 긴 ");
@@ -153,7 +153,7 @@ describe("underline decoration and editing", () => {
 		expect(issue && current.state.doc.textBetween(issue.from, issue.to)).toBe("틀린말");
 	});
 
-	it("removes a result when its range is edited", async () => {
+	it("PLUG-T3 removes a result when its range is edited", async () => {
 		const current = open("이것은 틀린말 입니다\n");
 		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		if (!issue) throw new Error("no issue");
@@ -170,7 +170,7 @@ describe("underline decoration and editing", () => {
 		expect(textCheckIssues(current.state)).toHaveLength(1);
 	});
 
-	it("replaces only that checker's results on recheck", async () => {
+	it("PLUG-T1 replaces only that checker's results on recheck", async () => {
 		const current = open("틀린말 그른말\n");
 		const cache = new TextCheckCache();
 		await checkDoc(current, wordChecker("틀린말", "맞는 말", "first"), cache);

@@ -85,7 +85,7 @@ describe("screen context of the shell pages", () => {
 		return whereIs();
 	};
 
-	it("names the collection on a list", () => {
+	it("PLUG-A5 names the collection on a list", () => {
 		expect(open("post")).toEqual({ screen: "entries", collection: "post" });
 	});
 
@@ -103,7 +103,7 @@ describe("screen context of the shell pages", () => {
 		expect(open("tools:ai")).toEqual({ screen: "other" });
 	});
 
-	it("follows the screen it is published by: leaving a screen takes its values away", async () => {
+	it("PLUG-A5 follows the screen it is published by: leaving a screen takes its values away", async () => {
 		const first = renderShell("post");
 		fireEvent.click(toggle());
 		expect(whereIs().collection).toBe("post");

@@ -58,7 +58,7 @@ const article = (metadata: Record<string, unknown>, extra: Partial<EntryData> = 
 });
 
 describe("the title in the edit form", () => {
-	it("is kept under the name of the title field, and written back to that key", () => {
+	it("SCHEMA-S2 is kept under the name of the title field, and written back to that key", () => {
 		expect(titleKeyOf(site, "article")).toBe("headline");
 		expect(titleKeyOf(site, "topic")).toBe("name");
 		const form = formFromEntry(site, article({ headline: "Hello", note: "n" }));
@@ -71,7 +71,7 @@ describe("the title in the edit form", () => {
 		expect(built).toEqual({ metadata: { headline: "Hello again", note: "n" } });
 	});
 
-	it("is the title of a translation's source", () => {
+	it("SCHEMA-S2 is the title of a translation's source", () => {
 		const translation = article(
 			{ headline: "Translated" },
 			{
@@ -91,12 +91,12 @@ describe("the title in the edit form", () => {
 		expect(translationSourceOf(site, translation)?.title).toBe("Source headline");
 	});
 
-	it("is shortened to the length the title field allows when a copy gets a suffix", () => {
+	it("WRITE-W10 is shortened to the length the title field allows when a copy gets a suffix", () => {
 		expect(copyTitle(site, "article", "A very long headline indeed")).toHaveLength(20);
 		expect(copyTitle(site, "article", "Short")).toContain("Short");
 	});
 
-	it("is one list column, `title`, whatever the title field is named", () => {
+	it("LIST-S3 is one list column, `title`, whatever the title field is named", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(available.filter((column) => column === "title" || column === "headline")).toEqual(["title"]);
 		expect(available).toContain("note");

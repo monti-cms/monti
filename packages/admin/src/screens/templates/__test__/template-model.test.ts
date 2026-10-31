@@ -26,7 +26,7 @@ describe("sectionsLine", () => {
 		expect(sectionsLine(doc([{ type: "heading", id: "a1", attrs: { level: 2 }, content: [] }]))).toBe("");
 	});
 
-	it("reads the outline a new template starts from", () => {
+	it("TPL-N1 reads the outline a new template starts from", () => {
 		expect(sectionsLine(newTemplateDoc(t))).toBe(
 			[t("newBody.introduction"), t("newBody.body"), t("newBody.conclusion")].join(" · "),
 		);
@@ -34,7 +34,7 @@ describe("sectionsLine", () => {
 });
 
 describe("duplicateInput", () => {
-	it("keeps the body and gives every block an id of its own", () => {
+	it("TPL-L1 keeps the body and gives every block an id of its own", () => {
 		const source = newTemplateDoc(t);
 		const copy = duplicateInput({ name: "기본 글", doc: source }, "기본 글 복사본");
 		expect(copy.name).toBe("기본 글 복사본");

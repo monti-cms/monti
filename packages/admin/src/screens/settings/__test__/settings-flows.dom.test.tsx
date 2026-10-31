@@ -126,7 +126,7 @@ const save = async () => {
 const saveButton = () => within(bar()).getByRole("button", { name: t("bar.save") }) as HTMLButtonElement;
 
 describe("flow 11 · 개발 서버 · 사이트: the site settings of the file", () => {
-	it("01 + 호스트 adds an empty row with the caret in it, typing writes site.aliases, and × takes a host out", async () => {
+	it("SET-S1 01 + 호스트 adds an empty row with the caret in it, typing writes site.aliases, and × takes a host out", async () => {
 		const onChanged = vi.fn();
 		open("site", onChanged);
 
@@ -164,7 +164,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(schema.site.aliases).toEqual(["www.example.dev", "blog.example.dev"]);
 	});
 
-	it("02 turning off 'language in the preview path' shows the query field (empty means locale); turning it on hides it", async () => {
+	it("SET-S1 02 turning off 'language in the preview path' shows the query field (empty means locale); turning it on hides it", async () => {
 		open("site");
 		const name = tSite("site.previewInPath");
 		const toggle = await screen.findByRole("switch", { name });
@@ -191,7 +191,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect((await save()).site.previewLocaleParam).toBe("lang");
 	});
 
-	it("03 a host that is not a host name shows one error line under its row and blocks saving until it is fixed", async () => {
+	it("SET-S2 03 a host that is not a host name shows one error line under its row and blocks saving until it is fixed", async () => {
 		open("site");
 		const host = (await field(tSite("site.alias.row", { number: 1 }))) as HTMLInputElement;
 		expect(host.getAttribute("aria-invalid")).toBeNull();
@@ -228,7 +228,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(saveButton().disabled).toBe(false);
 	});
 
-	it("04 a link clicked with unsaved changes asks first: keep editing stays, leaving without saving goes on", async () => {
+	it("WRITE-S6 04 a link clicked with unsaved changes asks first: keep editing stays, leaving without saving goes on", async () => {
 		// Only the clicks that reach the window from the link itself are counted (the dialog's own buttons click too).
 		const clicks = vi.fn((event: MouseEvent) => event.preventDefault());
 		const onWindowClick = (event: MouseEvent) => {
@@ -277,7 +277,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 	const searchBox = () => screen.findByRole("combobox", { name: tLocales("locales.search") });
 	const addButton = () => screen.findByRole("button", { name: tLocales("locales.add") });
 
-	it("05 + 언어 추가 opens a code finder: typing zh lists the zh variants, the last item is 직접 입력", async () => {
+	it("SET-L1 05 + 언어 추가 opens a code finder: typing zh lists the zh variants, the last item is 직접 입력", async () => {
 		open("locales");
 		fireEvent.click(await addButton());
 		const search = await searchBox();
@@ -291,7 +291,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		expect(last.textContent).toBe(`${tLocales("locales.custom")}zh`);
 	});
 
-	it("06 picking a code adds the row at once with names from the code; it is listed in the changes and undone from there", async () => {
+	it("SET-L1 06 picking a code adds the row at once with names from the code; it is listed in the changes and undone from there", async () => {
 		open("locales");
 		fireEvent.click(await addButton());
 		type(await searchBox(), "ja");
@@ -313,7 +313,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		);
 	});
 
-	it("06b 직접 입력 asks the two names once; 추가 adds the row with them", async () => {
+	it("SET-L1 06b 직접 입력 asks the two names once; 추가 adds the row with them", async () => {
 		open("locales");
 		fireEvent.click(await addButton());
 		type(await searchBox(), "tlh");
@@ -339,7 +339,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		expect((await save()).locales.at(-1)).toEqual({ code: "tlh", name: "tlhIngan Hol", label: "클링온어" });
 	});
 
-	it("07b · the request has defaultLocale and the new order", async () => {
+	it("SET-L2 07b · the request has defaultLocale and the new order", async () => {
 		open("locales");
 		fireEvent.click(
 			within(await screen.findByTestId("locale-ko")).getByRole("button", { name: tLocales("locales.sourceChange") }),
@@ -351,7 +351,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		expect(schema.locales.map((locale) => locale.code)).toEqual(["en", "ko"]);
 	});
 
-	it("08 × takes a language out of the list and out of the request; the review of what happens to its translations is the schema review's", async () => {
+	it("SET-L2 08 × takes a language out of the list and out of the request; the review of what happens to its translations is the schema review's", async () => {
 		open("locales");
 		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
 		expect(rows()).toEqual(["locale-ko"]);

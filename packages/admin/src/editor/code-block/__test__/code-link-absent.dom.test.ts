@@ -23,7 +23,7 @@ describe("body decoration for body-to-code linking", () => {
 		);
 	});
 
-	it.runIf(ANCHOR_REF === null)("if there is no such decoration, linking does not change the document", () => {
+	it.runIf(ANCHOR_REF === null)("EDIT-C4 if there is no such decoration, linking does not change the document", () => {
 		const editor = new Editor({
 			extensions: buildEditorExtensions(testSite),
 			content: tiptapOf("이 함수가 값을 돌려준다.\n\n```ts\nconst a = 1;\n```\n"),

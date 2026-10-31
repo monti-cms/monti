@@ -137,7 +137,7 @@ describe("default list cells", () => {
 });
 
 describe("listCells extension", () => {
-	it("LIST-S3 draws a registered cell for a column name, with the field and stored value", () => {
+	it("PLUG-A12 draws a registered cell for a column name, with the field and stored value", () => {
 		const Format = ({ column, field, value, entry }: ListCellProps) => (
 			<span data-testid="cell">{`${column}/${field?.kind}/${value}/${entry.id}`}</span>
 		);
@@ -146,7 +146,7 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).queryByText("Guide")).toBeNull();
 	});
 
-	it("LIST-S3 falls back to the field's `input` name, and the column name wins over it", () => {
+	it("PLUG-A12 falls back to the field's `input` name, and the column name wins over it", () => {
 		const Swatch = ({ value }: ListCellProps) => <span data-testid="swatch">{value}</span>;
 		const Named = () => <span data-testid="named">named</span>;
 		renderTable([item("first", { values: { accent: "#f00" } })], { listCells: { color: Swatch } });
@@ -157,7 +157,7 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).queryByTestId("swatch")).toBeNull();
 	});
 
-	it("LIST-S3 can replace a system column cell, and inner providers add to outer ones", () => {
+	it("PLUG-A12 can replace a system column cell, and inner providers add to outer ones", () => {
 		const Status = ({ entry }: ListCellProps) => <span data-testid="status">{`state:${entry.status}`}</span>;
 		const Format = () => <span data-testid="format">fmt</span>;
 		renderTable([item("first")], { listCells: { status: Status } });

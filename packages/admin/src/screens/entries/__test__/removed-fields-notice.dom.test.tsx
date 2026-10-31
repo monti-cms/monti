@@ -48,7 +48,7 @@ describe("select value that is no longer an option", () => {
 			.map((stored) => ({ collection: name, ...stored })),
 	)[0];
 
-	it.skipIf(!found)("shows the stored value marked as no longer an option instead of the default", () => {
+	it.skipIf(!found)("WRITE-S8 shows the stored value marked as no longer an option instead of the default", () => {
 		if (!found) return;
 		render(
 			<TooltipProvider>

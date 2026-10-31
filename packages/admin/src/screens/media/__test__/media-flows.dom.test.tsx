@@ -495,7 +495,7 @@ describe("flow: deleting (지우기)", () => {
 		expect(written("POST", "/trash/restore")[0]).toEqual({ items: [{ type: "media", id: "cafe-window" }] });
 	});
 
-	it("keeps a file that is in use and says so, with a view of the ones that stayed", async () => {
+	it("TRASH-T5 keeps a file that is in use and says so, with a view of the ones that stayed", async () => {
 		backend.onTrash = (ids) => ({ trashed: ids.filter((id) => id !== "desk-morning"), kept: ["desk-morning"] });
 		await renderLibrary();
 		pick("desk-morning.jpg");

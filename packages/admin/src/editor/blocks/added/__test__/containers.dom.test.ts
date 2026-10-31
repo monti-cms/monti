@@ -40,7 +40,7 @@ describe("container body editing", () => {
 		["cmsCallout", "cmsCollapsible", "cmsTabs", "cmsColumns", "cmsColumns", "cmsCodeExplorer"].map(
 			(expected, index) => [index, expected] as const,
 		),
-	)("stored document -> Tiptap schema -> stored document round trip: block %i", (index, expected) => {
+	)("FMT-R2 stored document -> Tiptap schema -> stored document round trip: block %i", (index, expected) => {
 		const source = docOfSource(index);
 		const content = storedToTiptap(testSite, source);
 		expect(content.content?.[0]?.type).toBe(expected);
@@ -73,7 +73,7 @@ describe("container body editing", () => {
 		editor.destroy();
 	});
 
-	it("HTML copy and paste also keep container attributes", () => {
+	it("EDIT-B1 HTML copy and paste also keep container attributes", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOfSource(0) });
 		const html = editor.getHTML();
 		const element = document.createElement("div");
@@ -108,7 +108,7 @@ describe("container body editing", () => {
 		editor.destroy();
 	});
 
-	it("empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
+	it("FMT-R2 empty containers (except callouts) and a Tab outside its parent go to the raw-source box", () => {
 		const empty = storedToTiptap(testSite, storedDoc({ type: "collapsible", attrs: { title: "a" } }));
 		expect(empty.content?.[0]?.type).not.toBe("cmsCollapsible");
 		const orphan = storedToTiptap(testSite, storedDoc(tab("a", "본문")));
@@ -119,7 +119,7 @@ describe("container body editing", () => {
 		expect(invalid.content?.[0]?.type).not.toBe("cmsCallout");
 	});
 
-	it("handle commands cannot bypass the minimum and maximum Tab count", () => {
+	it("EDIT-B1 handle commands cannot bypass the minimum and maximum Tab count", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOfSource(2) });
 		expect(deleteBlock(editor, 1)).toBe(false);
 		let pos = 0;

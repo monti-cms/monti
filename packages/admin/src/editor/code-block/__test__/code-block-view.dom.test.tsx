@@ -97,7 +97,7 @@ describe("code block edit view", () => {
 		expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument();
 	});
 
-	it("hides language, file path, and effect tools and does not select lines when read-only", async () => {
+	it("EDIT-C2 hides language, file path, and effect tools and does not select lines when read-only", async () => {
 		const editor = await mount('```ts title="src/a.ts"\nconst a = 1;\n```');
 		act(() => editor.setEditable(false));
 		await waitFor(() => expect(screen.queryByLabelText(t("view.language"))).toBeNull());
@@ -111,7 +111,7 @@ describe("code block edit view", () => {
 		expect(screen.queryByRole("menu")).toBeNull();
 	});
 
-	it("stores the file path and line number display in meta", async () => {
+	it("EDIT-C2 stores the file path and line number display in meta", async () => {
 		const editor = await mount(CODE);
 		fireEvent.change(screen.getByLabelText(t("view.filePath")), { target: { value: "src/a.ts" } });
 		await waitFor(() => expect((screen.getByLabelText(t("view.filePath")) as HTMLInputElement).value).toBe("src/a.ts"));
@@ -119,7 +119,7 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(block(editor).attrs.meta).toBe('title="src/a.ts" lnum'));
 	});
 
-	it("selects only the line on a line number click, and turning on highlight from the right-click menu is reflected in the saved format", async () => {
+	it("EDIT-C2 selects only the line on a line number click, and turning on highlight from the right-click menu is reflected in the saved format", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(1));
 		expect(screen.queryByRole("menu")).toBeNull();
@@ -151,7 +151,7 @@ describe("code block edit view", () => {
 		);
 	});
 
-	it("dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
+	it("EDIT-C2 dragging to select lines and folding leaves only the first line, and the arrow toggles it even while editing", async () => {
 		const editor = await mount(CODE);
 		act(() => pickLines(0, 2));
 		// Right-clicking inside the selected lines targets all of them.
@@ -176,7 +176,7 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(gutterLines()).toEqual([0, 1, 2]));
 	});
 
-	it("adding a regex rule shows the match count and saves the rule as is", async () => {
+	it("EDIT-C2 adding a regex rule shows the match count and saves the rule as is", async () => {
 		const editor = await mount(CODE);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("rulesPanel.title") })));
 		const add = await screen.findByRole("button", { name: t("rulesPanel.add") });
@@ -194,7 +194,7 @@ describe("code block edit view", () => {
 		]);
 	});
 
-	it("points to source editing when there are annotations the editor cannot display", async () => {
+	it("EDIT-C2 points to source editing when there are annotations the editor cannot display", async () => {
 		await mount('```ts\n// @char Tooltip {0-3} content="하나"\n// @char Tooltip {2-5} content="둘"\nabcdef\n```');
 		expect(screen.getByText(t("view.rawMode"))).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
@@ -222,7 +222,7 @@ describe("code block edit view", () => {
 		expect(editor.state.selection.from).toBe(1);
 	});
 
-	it("selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
+	it("EDIT-C2 selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
 		const editor = await mount("```ts\n// @line collapse {0-2}\na\nb\nc\nd\n```");
 		// The right-clicked line is the target even if no line was selected first.
 		await openLineMenu(0);
@@ -232,7 +232,7 @@ describe("code block edit view", () => {
 		await waitFor(() => expect(block(editor).attrs.lineEffects).toEqual([]));
 	});
 
-	it("hovering a code line still attaches only one drag handle for the whole code block", async () => {
+	it("EDIT-D3 hovering a code line still attaches only one drag handle for the whole code block", async () => {
 		const editor = await mount(`문단\n\n${CODE}`);
 		const text = document.querySelector("[data-code-block-wrapper] pre code") as HTMLElement;
 		const inner = (text.querySelector("span") ?? text) as HTMLElement;

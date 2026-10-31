@@ -44,7 +44,7 @@ const docOfBlocks = (...content: CmsNode[]): StoredDocument => ({
 const text = (value: string): CmsNode => ({ type: "text", text: value });
 
 describe("stored document <-> Tiptap round trip", () => {
-	it("does not lose inline marks, headings, and line breaks", () => {
+	it("FMT-R1 does not lose inline marks, headings, and line breaks", () => {
 		const first = docOf(
 			'문장 **굵게** *기울임* ~~취소~~ `코드` [링크](https://example.com "제목")\n\n## 제목\n\n첫 줄<br />둘째 줄',
 		);
@@ -61,7 +61,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(saved.content[0]?.content?.map((node) => node.type)).toEqual(["text", "hardBreak", "text"]);
 	});
 
-	it("keeps a line break inside a table cell", () => {
+	it("FMT-R1 keeps a line break inside a table cell", () => {
 		const cell = (...content: CmsNode[]): CmsNode => ({ type: "tableCell", content });
 		const first = docOfBlocks({
 			type: "table",
@@ -82,7 +82,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		const emptyParagraphs = (json: JSONContent) =>
 			(json.content ?? []).filter((block) => block.type === "paragraph" && !block.content?.length).length;
 
-		it.each([1, 2, 3, 6])("keep %i empty paragraphs between blocks through save, reload and save", (count) => {
+		it.each([1, 2, 3, 6])("FMT-R1 keep %i empty paragraphs between blocks through save, reload and save", (count) => {
 			const typed = editorDoc(paragraph("앞"), ...Array.from({ length: count }, () => paragraph()), paragraph("뒤"));
 
 			const saved = tiptapToStored(testSite, typed);
@@ -93,7 +93,7 @@ describe("stored document <-> Tiptap round trip", () => {
 			expect(contentOf(tiptapToStored(testSite, reloaded))).toEqual(contentOf(saved));
 		});
 
-		it("keep empty paragraphs before a block and between other kinds of blocks", () => {
+		it("FMT-R1 keep empty paragraphs before a block and between other kinds of blocks", () => {
 			const typed = editorDoc(
 				paragraph(),
 				{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "제목" }] },
@@ -108,7 +108,7 @@ describe("stored document <-> Tiptap round trip", () => {
 			expect(contentOf(tiptapToStored(testSite, reloaded))).toEqual(contentOf(saved));
 		});
 
-		it("do not store the empty paragraph the editor keeps at the end, nor make an empty body not empty", () => {
+		it("FMT-R1 do not store the empty paragraph the editor keeps at the end, nor make an empty body not empty", () => {
 			expect(tiptapToStored(testSite, editorDoc(paragraph())).content).toEqual([]);
 			expect(tiptapToStored(testSite, editorDoc(paragraph("끝"), paragraph(), paragraph())).content).toHaveLength(1);
 			const fence = { type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "a();" }] };
@@ -117,7 +117,7 @@ describe("stored document <-> Tiptap round trip", () => {
 			);
 		});
 
-		it("keep a new, empty list item and an empty quote as they were", () => {
+		it("FMT-R2 keep a new, empty list item and an empty quote as they were", () => {
 			const typed = editorDoc({
 				type: "bulletList",
 				content: [
@@ -131,7 +131,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		});
 	});
 
-	it("expands and collapses an alignment container", () => {
+	it("FMT-R2 expands and collapses an alignment container", () => {
 		const first = docOfBlocks({
 			type: "text-align",
 			id: "align001",
@@ -166,7 +166,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
+	it("FMT-R2 keeps a box exactly as it was, nested ids and all, and gives it the id the editor holds", () => {
 		const first = docOfBlocks(unknownBlock("mist0001"), { type: "paragraph", id: "para0001", content: [text("뒤")] });
 		const json = throughSchema(storedToTiptap(testSite, first));
 		const box = json.content?.[0];
@@ -181,7 +181,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(tiptapToStored(testSite, copied).content[0]?.id).toBe("zzzzzzzz");
 	});
 
-	it("shows a box's node written in the registered format, and as JSON when there is none", () => {
+	it("EDIT-B5 shows a box's node written in the registered format, and as JSON when there is none", () => {
 		const doc = docOfBlocks(unknownBlock("mist0001"));
 		const plain = storedToTiptap(testSite, doc).content?.[0];
 		expect(plain?.type).toBe(OPAQUE_BLOCK_NAME);
@@ -198,7 +198,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		).toBe("<mystery-block>");
 	});
 
-	it("keeps a body that could not be read as a box holding its text", () => {
+	it("FMT-R4 keeps a body that could not be read as a box holding its text", () => {
 		const unparsed: StoredDocument = {
 			type: "doc",
 			version: STORED_DOCUMENT_VERSION,
@@ -210,7 +210,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(tiptapToStored(testSite, json).content).toEqual(unparsed.content);
 	});
 
-	it("converts tables and task lists to editable nodes and restores them", () => {
+	it("FMT-R2 converts tables and task lists to editable nodes and restores them", () => {
 		const cell = (value: string): CmsNode => ({ type: "tableCell", content: [text(value)] });
 		const first = docOfBlocks(
 			{
@@ -238,7 +238,7 @@ describe("stored document <-> Tiptap round trip", () => {
 
 	const imageBlock = (attrs: NonNullable<CmsNode["attrs"]>): CmsNode => ({ type: "image", id: "imag0001", attrs });
 
-	it("does not lose image attributes", () => {
+	it("FMT-R2 does not lose image attributes", () => {
 		const first = docOfBlocks(
 			imageBlock({ mediaId: "uuid-1", alt: "설명", width: "60%", align: "left", caption: "캡션" }),
 			imageBlock({ src: "https://example.com/a.png", alt: "그냥" }),
@@ -250,14 +250,14 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(contentOf(tiptapToStored(testSite, throughSchema(json)))).toEqual(contentOf(first));
 	});
 
-	it("an explicit value equal to the Tiptap default is normalized once on save and converges", () => {
+	it("FMT-R1 an explicit value equal to the Tiptap default is normalized once on save and converges", () => {
 		// `align="center"` is the render default, so it is dropped on save. The meaning is the same, and reopening gives the same result.
 		const once = throughEditor(docOfBlocks(imageBlock({ mediaId: "uuid-1", alt: "설명", align: "center" })));
 		expect(JSON.stringify(once)).not.toContain("align");
 		expect(contentOf(throughEditor(once))).toEqual(contentOf(once));
 	});
 
-	it("does not lose decorative images", () => {
+	it("FMT-R2 does not lose decorative images", () => {
 		const first = docOfBlocks(imageBlock({ src: "/images/a.png", alt: "", decorative: true }));
 		const json = storedToTiptap(testSite, first);
 
@@ -271,14 +271,14 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(JSON.stringify(second)).toContain("decorative");
 	});
 
-	it("preserves an explicit width of 100%", () => {
+	it("FMT-R2 preserves an explicit width of 100%", () => {
 		const first = docOfBlocks(imageBlock({ src: "/images/a.png", alt: "설명", width: "100%" }));
 		const second = throughEditor(first);
 		expect(contentOf(second)).toEqual(contentOf(first));
 		expect(JSON.stringify(second)).toContain('"width":"100%"');
 	});
 
-	it("the upload insertion shape comes back as is", () => {
+	it("FMT-R2 the upload insertion shape comes back as is", () => {
 		const first = docOfBlocks(
 			imageBlock({ mediaId: "uuid-1", src: "https://r2.example/a.png", alt: "a.png", width: "100%", align: "center" }),
 		);
@@ -292,7 +292,7 @@ describe("stored document <-> Tiptap round trip", () => {
 		]);
 	});
 
-	it("keeps internal links as the id of their entry, without the address the editor shows", () => {
+	it("FMT-R7 keeps internal links as the id of their entry, without the address the editor shows", () => {
 		const id = "6f1c0b0e-3c1d-4a0e-9f5a-0d9c2f1e7a11";
 		const first = docOfBlocks({
 			type: "paragraph",

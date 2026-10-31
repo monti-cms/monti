@@ -43,7 +43,7 @@ function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}) {
 }
 
 describe("the fill action of a slot", () => {
-	it("renders nothing when no action is attached, and asks the source with the slot, target and collection", () => {
+	it("PLUG-A3 renders nothing when no action is attached, and asks the source with the slot, target and collection", () => {
 		const source = vi.fn<SlotSource>(() => []);
 		renderSlot([source]);
 		expect(source).toHaveBeenCalledWith({ slot: "field", target: "slug", collection: "post" });
@@ -67,7 +67,7 @@ describe("the fill action of a slot", () => {
 		expect(screen.getByRole("button").textContent).toMatch(/Again/);
 	});
 
-	it("shows writing while the request runs and cannot be pressed again", async () => {
+	it("PLUG-A3 shows writing while the request runs and cannot be pressed again", async () => {
 		let finish: (() => void) | undefined;
 		const run = vi.fn(
 			() =>
@@ -103,7 +103,7 @@ describe("the fill action of a slot", () => {
 		expect(apply).not.toHaveBeenCalled();
 	});
 
-	it("with more than one action the press lists them by name and runs the one picked", async () => {
+	it("PLUG-A3 with more than one action the press lists them by name and runs the one picked", async () => {
 		const second = vi.fn(async () => ({ kind: "text" as const, text: "From the second." }));
 		const { apply } = renderSlot([() => [action(), action({ id: "a2", label: "Rewrite it", run: second })]]);
 		fireEvent.click(screen.getByRole("button"));
@@ -111,7 +111,7 @@ describe("the fill action of a slot", () => {
 		await waitFor(() => expect(apply).toHaveBeenCalledWith("From the second.", "replace"));
 	});
 
-	it("is disabled when the request is", () => {
+	it("PLUG-A3 is disabled when the request is", () => {
 		renderSlot([() => [action()]], { disabled: true });
 		expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
 	});

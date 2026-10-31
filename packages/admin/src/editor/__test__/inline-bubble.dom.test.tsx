@@ -88,7 +88,7 @@ const HTML =
 	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
 
 describe("inlineBubbleTarget", () => {
-	it("returns the effect and its range when the cursor is inside or at the end of an effect", () => {
+	it("EDIT-M1 returns the effect and its range when the cursor is inside or at the end of an effect", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(5);
 		expect(inlineBubbleTarget(editor.state)).toMatchObject({
@@ -110,7 +110,7 @@ describe("inlineBubbleTarget", () => {
 		});
 	});
 
-	it("does not show for a cursor outside any effect, a code block being edited as source, or a selection spanning code blocks", () => {
+	it("EDIT-M1 does not show for a cursor outside any effect, a code block being edited as source, or a selection spanning code blocks", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(2);
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
@@ -161,7 +161,7 @@ describe("InlineBubble", () => {
 		expect(screen.getByRole("button", { name: t("inlineMarks.italic") }).getAttribute("aria-pressed")).toBe("true");
 	});
 
-	it("removes the whole effect with the remove button when the cursor is inside it", () => {
+	it("EDIT-M1 removes the whole effect with the remove button when the cursor is inside it", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 5);
 		renderBubble(editor);
@@ -173,7 +173,7 @@ describe("InlineBubble", () => {
 		expect(editor.state.selection.from).toBe(5);
 	});
 
-	it("shows the address inside a link and edits it with the form in the bubble", () => {
+	it("EDIT-L1 shows the address inside a link and edits it with the form in the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -190,7 +190,7 @@ describe("InlineBubble", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("the unlink button removes only the link and keeps the text", () => {
+	it("EDIT-L1 the unlink button removes only the link and keeps the text", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, 8);
 		renderBubble(editor);
@@ -200,7 +200,7 @@ describe("InlineBubble", () => {
 		expect(editor.getText()).toContain("마바");
 	});
 
-	it("an extension text decoration lists its format under the ⋯, and renders its registered content and input", () => {
+	it("PLUG-A8 an extension text decoration lists its format under the ⋯, and renders its registered content and input", () => {
 		const extension: EditorMarkExtension = {
 			formatItems: [
 				{
@@ -308,7 +308,7 @@ describe("InlineBubble", () => {
 			expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
 		});
 
-		it("runs a format by its id on the selection (what a slash item uses)", async () => {
+		it("PLUG-A8 runs a format by its id on the selection (what a slash item uses)", async () => {
 			const editor = createEditor(HTML);
 			focusAt(editor, { from: 1, to: 3 });
 			renderWith(editor, [noteFormat]);
@@ -317,7 +317,7 @@ describe("InlineBubble", () => {
 		});
 	});
 
-	it("adds a link to the selected text from the bubble", () => {
+	it("EDIT-L1 adds a link to the selected text from the bubble", () => {
 		const editor = createEditor(HTML);
 		focusAt(editor, { from: 1, to: 3 });
 		renderBubble(editor);
@@ -328,7 +328,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/<a [^>]*href="\/posts\/hello"[^>]*>가나<\/a>/);
 	});
 
-	it("in a code block, shows only the effects code accepts and text folding", () => {
+	it("EDIT-M2 in a code block, shows only the effects code accepts and text folding", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		focusAt(editor, { from: 6, to: 10 });
 		renderBubble(editor);
@@ -343,7 +343,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).toMatch(/call\(<span data-code-fold=""[^>]*>a, b<\/span>\)/);
 	});
 
-	it("sets unfold and open options at the cursor next to a code fold", () => {
+	it("EDIT-C2 sets unfold and open options at the cursor next to a code fold", () => {
 		const editor = createEditor("<pre><code>call(a, b)</code></pre>");
 		editor.chain().setTextSelection({ from: 6, to: 10 }).setMark("codeFold").run();
 		focusAt(editor, 6);
@@ -361,7 +361,7 @@ describe("InlineBubble", () => {
 		expect(editor.getHTML()).not.toContain("data-code-fold");
 	});
 
-	it("for a fold made by a regex rule, the whole rule can be removed or individual effects unfolded", () => {
+	it("EDIT-C2 for a fold made by a regex rule, the whole rule can be removed or individual effects unfolded", () => {
 		const rule = { id: "r", scope: "document", name: "fold", pattern: "b", flags: "g", attrs: {} };
 		const editor = createEditor("<pre><code>abab</code></pre>");
 		editor.commands.command(({ tr }) => {
@@ -391,7 +391,7 @@ describe("InlineBubble", () => {
 		expect(editor.state.doc.child(0).attrs.rules).toEqual([]);
 	});
 
-	it("shows footnote preview bubble and allows editing in popup and removing footnote", () => {
+	it("EDIT-F2 shows footnote preview bubble and allows editing in popup and removing footnote", () => {
 		const doc = storedDoc(line(text("Hello"), ref("1")), def("1", para("Footnote description")));
 		const editor = createEditor(storedToTiptap(testSite, doc));
 		let refPos = -1;

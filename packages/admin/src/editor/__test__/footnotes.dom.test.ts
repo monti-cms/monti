@@ -53,7 +53,7 @@ describe("footnotes in the visual editor", () => {
 		expect(definitionB?.content?.map((node) => node.type)).toEqual(["paragraph", "codeBlock"]);
 	});
 
-	it("round-trips through the editor unchanged", () => {
+	it("FMT-R3 round-trips through the editor unchanged", () => {
 		expect(saved(tiptapOf(SOURCE))).toEqual(SOURCE);
 		const editor = createEditor(SOURCE);
 		expect(saved(editor.getJSON())).toEqual(SOURCE);
@@ -121,7 +121,7 @@ describe("footnotes in the visual editor", () => {
 });
 
 describe("footnote numbering", () => {
-	it("numbers labels by their first reference and leaves the stored label alone", () => {
+	it("EDIT-F1 numbers labels by their first reference and leaves the stored label alone", () => {
 		const editor = createEditor(
 			storedDoc(
 				line(text("B"), ref("zebra"), text(" A"), ref("apple"), text(" B again"), ref("zebra")),
@@ -137,7 +137,7 @@ describe("footnote numbering", () => {
 		editor.destroy();
 	});
 
-	it("matches labels case-insensitively", () => {
+	it("EDIT-F1 matches labels case-insensitively", () => {
 		const editor = createEditor(
 			storedDoc(line(text("A"), ref("Note"), text(" B"), ref("note")), def("note", para("x"))),
 		);
@@ -145,7 +145,7 @@ describe("footnote numbering", () => {
 		editor.destroy();
 	});
 
-	it("shows the number on references and definitions and flags missing and unused ones", () => {
+	it("EDIT-F1 shows the number on references and definitions and flags missing and unused ones", () => {
 		const editor = createEditor(
 			storedDoc(line(text("A B"), ref("y")), def("y", para("y")), def("spare", para("spare"))),
 		);
@@ -199,7 +199,7 @@ describe("Footnote slash command", () => {
 		expect(filterCommands(testSite, "footnote").map((command) => command.title)).toContain(t("slash.footnote.title"));
 	});
 
-	it("inserts a reference at the cursor and appends an empty definition with the next numeric label", () => {
+	it("EDIT-F2 inserts a reference at the cursor and appends an empty definition with the next numeric label", () => {
 		const editor = createEditor(storedDoc(para("Hello world"), def("1", para("one")), def("3", para("three"))));
 		// Cursor after "Hello", as if "/footnote" had just been typed there.
 		editor.commands.insertContentAt(6, "/fn");
@@ -250,7 +250,7 @@ describe("Footnote slash command", () => {
 		editor.destroy();
 	});
 
-	it("selects the inserted reference chip and keeps the definition at the end", () => {
+	it("EDIT-F2 selects the inserted reference chip and keeps the definition at the end", () => {
 		const editor = createEditor(storedDoc(para("Hello")));
 		editor.commands.setTextSelection(6);
 		item()?.action(editor, { from: 6, to: 6 });
@@ -270,7 +270,7 @@ describe("Footnote slash command", () => {
 		editor.destroy();
 	});
 
-	it("uses one more than the largest numeric label and ignores text labels", () => {
+	it("EDIT-F2 uses one more than the largest numeric label and ignores text labels", () => {
 		const editor = createEditor(
 			storedDoc(line(text("A"), ref("2"), text(" B"), ref("note")), def("2", para("two")), def("note", para("n"))),
 		);
@@ -288,7 +288,7 @@ describe("Footnote slash command", () => {
 });
 
 describe("deleting footnotes", () => {
-	it("keeps the definition when its only reference is deleted", () => {
+	it("EDIT-F1 keeps the definition when its only reference is deleted", () => {
 		const editor = createEditor(storedDoc(line(text("A"), ref("1")), def("1", para("note"))));
 		let position = -1;
 		editor.state.doc.descendants((node, pos) => {

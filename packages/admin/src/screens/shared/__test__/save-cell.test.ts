@@ -9,15 +9,15 @@ describe("save cell", () => {
 		"local-only",
 		"failed",
 		"conflict",
-	])("%s: pressing the cell saves again", (status) => {
+	])("WRITE-S1 %s: pressing the cell saves again", (status) => {
 		expect(saveCell(status).action).toBe("save");
 	});
 
-	it("session-expired: the cell leads to signing in, not to saving", () => {
+	it("WRITE-S5 session-expired: the cell leads to signing in, not to saving", () => {
 		expect(saveCell("session-expired").action).toBe("sign-in");
 	});
 
-	it.each<SaveStatus>(["saved", "saving"])("%s: there is nothing to press", (status) => {
+	it.each<SaveStatus>(["saved", "saving"])("WRITE-S1 %s: there is nothing to press", (status) => {
 		expect(saveCell(status).action).toBeNull();
 	});
 

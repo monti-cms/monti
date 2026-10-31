@@ -60,7 +60,7 @@ describe("taxonomy edit panel", () => {
 		expect(tabs).toEqual(["한국어", "영어 · 번역 있음", "일본어 · 번역 없음"]);
 	});
 
-	it("on other locale tabs only that locale's name is edited, and it says the slug is the same in all locales", async () => {
+	it("WRITE-W6 on other locale tabs only that locale's name is edited, and it says the slug is the same in all locales", async () => {
 		const { onSaved } = renderPanel({ collection: "tag", id: "tag-1" });
 		await screen.findByDisplayValue("리액트");
 
@@ -106,7 +106,7 @@ describe("taxonomy edit panel", () => {
 		expect(onClose).not.toHaveBeenCalled();
 	});
 
-	it("after saving, saves again based on the received revision", async () => {
+	it("WRITE-S2 after saving, saves again based on the received revision", async () => {
 		renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
@@ -121,7 +121,7 @@ describe("taxonomy edit panel", () => {
 		expect(calls("PATCH")[1]?.body.expectedVersion).toBe(4);
 	});
 
-	it("with unsaved changes, asks whether to discard before closing", async () => {
+	it("WRITE-S6 with unsaved changes, asks whether to discard before closing", async () => {
 		const { onClose } = renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 
