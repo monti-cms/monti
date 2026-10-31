@@ -91,6 +91,21 @@ describe("the list of changes", () => {
 		expect(undone.draft).toEqual(saved);
 	});
 
+	it("SCHEMA-F8 puts a removed field back in its place when a field before it is removed too", () => {
+		let state = edit(start, (file) =>
+			setCollection(file, "post", (collection) => removeField(collection, {}, "summary")),
+		);
+		state = edit(state, (file) => setCollection(file, "post", (collection) => removeField(collection, {}, "subtitle")));
+		const subtitle = items(state).find((item) => item.subject.kind === "field" && item.subject.name === "subtitle");
+		const back = subtitle?.revert(state) as DraftState;
+		const post = (back.draft.collections as Record<string, Obj>).post;
+		expect(Object.keys(post?.fields as object)).toEqual(["title", "subtitle", "cover"]);
+		expect(post?.layout).toEqual([{ fields: ["title", "subtitle", "cover"] }]);
+		expect(items(back).map((item) => [item.tag, item.subject.kind === "field" ? item.subject.name : ""])).toEqual([
+			["removed", "summary"],
+		]);
+	});
+
 	it("SCHEMA-F8 does not count the slug that follows a renamed source field", () => {
 		const withSlug: Obj = {
 			...saved,
