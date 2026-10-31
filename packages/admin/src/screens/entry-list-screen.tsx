@@ -77,7 +77,7 @@ function SearchScope({ list }: { list: EntryList }) {
 	);
 }
 
-/** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
+/** List body: bulk action row, table, taxonomy edit panel, and the dialogs list actions open. Filters show as dots after the column names, not as chips. */
 function EntryListBody({ list }: { list: EntryList }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
