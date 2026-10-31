@@ -392,6 +392,19 @@ describe("failures are results", () => {
 		expect(recovery.records.get(`${ADMIN}:entry-1`)?.snapshot.title).toBe("오프라인");
 	});
 
+	it("WRITE-S5 a retry that cannot reach the server keeps the changes in the browser and sends nothing", async () => {
+		const { editor, client } = await opened();
+		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+		editor().setForm({ title: "오프라인" });
+		await editor().save();
+		client.update.mockClear();
+		client.get.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+		expect(await editor().retry()).toMatchObject({ ok: false, error: { code: "offline" } });
+		expect(editor().saveStatus).toBe("local-only");
+		expect(editor().hasUnsavedChanges).toBe(true);
+		expect(client.update).not.toHaveBeenCalled();
+	});
+
 	it("WRITE-S5 offline without a recovery copy: failed, not local-only", async () => {
 		const { editor, client, recovery } = await opened();
 		recovery.available.current = false;
@@ -483,6 +496,15 @@ describe("conflict", () => {
 		expect(await editor().publish()).toMatchObject({ ok: false, error: { code: "conflict" } });
 		expect(client.update).not.toHaveBeenCalled();
 		expect(client.publish).not.toHaveBeenCalled();
+	});
+
+	it("WRITE-C1 typing while the conflict stands keeps the conflict, and still sends nothing", async () => {
+		const { editor, client } = await conflicted();
+		client.update.mockClear();
+		editor().setForm({ title: "더 고침" });
+		expect(editor().saveStatus).toBe("conflict");
+		expect(await editor().save()).toMatchObject({ ok: false, error: { code: "conflict" } });
+		expect(client.update).not.toHaveBeenCalled();
 	});
 
 	it("WRITE-C3 overwriteWithMine saves this editor's form on top of the server's version", async () => {
@@ -839,6 +861,13 @@ describe("recovery on open", () => {
 			form: copy.snapshot,
 			server: expect.objectContaining({ version: 4 }),
 		});
+	});
+
+	it("WRITE-R2 loading the server's version over a copy made before it takes the copy's notice away", async () => {
+		const { editor } = await opened({ records: [recoveryCopy(ENTRY, { title: "예전 제목" }, { baseVersion: 3 })] });
+		expect(editor().recovery).toMatchObject({ kind: "conflict" });
+		expect((await editor().reload()).ok).toBe(true);
+		expect(editor().recovery).toBeNull();
 	});
 
 	it("WRITE-R2 discardRecovery keeps the server's version and deletes the copy", async () => {
