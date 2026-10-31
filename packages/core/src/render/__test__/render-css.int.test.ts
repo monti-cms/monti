@@ -12,19 +12,19 @@ const block = (selector: string) => {
 };
 
 describe("render.css", () => {
-	it("SITE-D5 makes alignment beat prose and .monti-table-cell with a doubled class", () => {
+	it("makes alignment beat prose and .monti-table-cell with a doubled class", () => {
 		for (const side of ["left", "center", "right"]) {
 			expect(block(`.monti-align-${side}.monti-align-${side}`)).toContain(`text-align: ${side}`);
 		}
 	});
 
-	it("SITE-D5 removes list markers from task lists, nested ones included", () => {
+	it("removes list markers from task lists, nested ones included", () => {
 		expect(block("ul.contains-task-list")).toContain("list-style: none");
 		expect(block("li.task-list-item")).toContain("list-style: none");
 		expect(css).toContain("ul.contains-task-list ul.contains-task-list");
 	});
 
-	it("SITE-D5 applies dark code colors under .dark, [data-theme=dark] and the system setting unless opted out", () => {
+	it("applies dark code colors under .dark, [data-theme=dark] and the system setting unless opted out", () => {
 		expect(css).toContain(':where(.dark, [data-theme="dark"]) .shiki');
 		const media = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
 		expect(media).toContain('.shiki:not(:where(.light, [data-theme="light"]) *)');

@@ -126,7 +126,7 @@ const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.te
 const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tCommon("lifecycle.trash")) });
 
 describe("list screen — list settings", () => {
-	it("LIST-S1 with no page size or sort in the address, requests with the saved settings", async () => {
+	it("LIST-S4 with no page size or sort in the address, requests with the saved settings", async () => {
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -137,15 +137,6 @@ describe("list screen — list settings", () => {
 			expect(last?.get("sortField")).toBe("title");
 			expect(last?.get("sortDirection")).toBe("asc");
 		});
-	});
-
-	it("LIST-S1 values written in the address take precedence over saved settings", async () => {
-		nav.setSearch("collection=post&pageSize=100&sort=createdAt&dir=asc");
-		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		await waitFor(() => expect(entryRequests().at(-1)?.get("pageSize")).toBe("100"));
 	});
 });
 

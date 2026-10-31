@@ -15,8 +15,7 @@ function setup() {
 }
 
 describe("preferences service", () => {
-
-	it("LIST-S1 merges what is sent into what is saved and keeps the rest", async () => {
+	it("LIST-S4 merges what is sent into what is saved and keeps the rest", async () => {
 		const { service } = setup();
 		await service.update("u", { collections: { page: { pageSize: 50 } } } as never);
 		const next = await service.update("u", { editor: { inspectorOpen: true } } as never);

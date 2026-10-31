@@ -181,7 +181,7 @@ function findContentFolders(cwd: string): ContentFolder[] {
  * Sibling folders named after languages (`content/ko`, `content/en`) are one set of posts in two languages, not two collections: they are merged into their parent,
  * which then lists the languages. A single folder named like a language is left alone (it may be a name).
  */
-function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string, string[]>): ContentFolder[] {
+export function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string, string[]>): ContentFolder[] {
 	const byParent = new Map<string, ContentFolder[]>();
 	for (const folder of folders) {
 		const base = path.posix.basename(folder.dir);

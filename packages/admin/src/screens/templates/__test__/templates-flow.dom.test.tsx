@@ -164,7 +164,7 @@ describe("flow: templates · a row's menu", () => {
 		return screen.findAllByRole("menuitem");
 	};
 
-	it("TPL-L1 duplicates: one create request under a copy name, and the copy joins the list", async () => {
+	it("TPL-L2 duplicates: one create request under a copy name, and the copy joins the list", async () => {
 		await renderList();
 		await openMenu(FIRST.name);
 		fireEvent.click(screen.getByRole("menuitem", { name: t("row.duplicate") }));
@@ -175,7 +175,7 @@ describe("flow: templates · a row's menu", () => {
 		await screen.findByRole("link", { name: t("copyName", { name: FIRST.name }) });
 	});
 
-	it("TPL-L1 deletes only after a question, with the version it saw, and the row goes", async () => {
+	it("TPL-L2 deletes only after a question, with the version it saw, and the row goes", async () => {
 		await renderList();
 		await openMenu(FIRST.name);
 		fireEvent.click(screen.getByRole("menuitem", { name: t("row.delete") }));

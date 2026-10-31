@@ -309,7 +309,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		await waitFor(async () => expect((await item("리액트")).getAttribute("aria-checked")).toBe("false"));
 	});
 
-	it("LIST-C4 narrows the values to what the search row finds", async () => {
+	it("LIST-F7 narrows the values to what the search row finds", async () => {
 		bar({ initial: two });
 		await openField("태그");
 		await item("성능");

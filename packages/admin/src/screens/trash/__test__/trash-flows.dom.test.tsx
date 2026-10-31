@@ -332,7 +332,7 @@ describe("flow: several at once (T6)", () => {
 });
 
 describe("flow: emptying the trash (T7)", () => {
-	it("TRASH-E1 asks how many go, sends the empty, tells what went and what stayed, and the kept row offers the permanent delete", async () => {
+	it("TRASH-E5 asks how many go, sends the empty, tells what went and what stayed, and the kept row offers the permanent delete", async () => {
 		backend.top = [first, about, tag];
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
@@ -346,7 +346,7 @@ describe("flow: emptying the trash (T7)", () => {
 		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
 	});
 
-	it("TRASH-E1 says nothing was kept when everything went, and shows the empty trash with no actions", async () => {
+	it("TRASH-E5 says nothing was kept when everything went, and shows the empty trash with no actions", async () => {
 		backend.top = [first, about];
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
@@ -360,7 +360,7 @@ describe("flow: emptying the trash (T7)", () => {
 		expect(screen.queryAllByRole("columnheader")).toHaveLength(0);
 	});
 
-	it("TRASH-E1 cancelling the question sends nothing", async () => {
+	it("TRASH-E5 cancelling the question sends nothing", async () => {
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
 		fireEvent.click(await within(await screen.findByRole("alertdialog")).findByRole("button", { name: tc("cancel") }));

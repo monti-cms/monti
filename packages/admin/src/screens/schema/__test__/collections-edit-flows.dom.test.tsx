@@ -449,7 +449,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(apply(dialog).disabled).toBe(false);
 	});
 
-	it("SCHEMA-F10 when the file changed since the screen opened, the sheet says so, offers a reload and cannot apply", async () => {
+	it("SCHEMA-F17 when the file changed since the screen opened, the sheet says so, offers a reload and cannot apply", async () => {
 		const dialog = await review();
 		api.on("PUT /v1/schema", () => failure("schema_conflict", "conflict"));
 		fireEvent.click(apply(dialog));
@@ -579,7 +579,7 @@ describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 		expect(nav.navigate).toHaveBeenCalledWith("/admin?collection=note");
 	});
 
-	it("SCHEMA-F10 when the database does not take the saved file, the page says so with a way to reload", async () => {
+	it("SCHEMA-F17 when the database does not take the saved file, the page says so with a way to reload", async () => {
 		openFields();
 		await removeField("subtitle");
 		fireEvent.click(saveButton());

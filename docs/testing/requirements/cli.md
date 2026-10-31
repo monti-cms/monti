@@ -5,8 +5,8 @@
 중요도: [기능의 중요도](../features.md)의 "흐름에 없는 core의 기능"(제안대로, 2026-10-31). `monti init`이 사람의 파일과 비밀을 지키는 것과
 처음 사이트가 뜨는 것, 비밀값을 찍지 않는 것은 🔴이다. init의 설치·묻기·앱 읽기·남은 일과 `monti doctor`, 그 밖의 명령줄은 🟡라서 대표
 약속만 적는다. 도움말과 질문의 문구, 힌트, hydration 경고는 ⚪다. 흐름이 따로 없다. 데이터베이스 명령(`db:setup`, `db:migrate`)은
-[데이터베이스](database.md), 스키마 명령은 [컬렉션과 스키마 적용](collections.md), `reset-password`는 [처음 설치와 로그인](first-install.md)의
-AUTH-L11, 플러그인 명령은 [관리자 플러그인](plugins.md)의 PLUG-S2가 다룬다. 읽는 법은 [휴지통](trash.md#읽는-법)과 같다.
+[데이터베이스](database.md), 스키마 명령은 [컬렉션과 스키마 적용](collections.md), `admin:reset-password`는 [처음 설치와 로그인](first-install.md)의
+AUTH-L12, 플러그인 명령은 [관리자 플러그인](plugins.md)의 PLUG-S2가 다룬다. 읽는 법은 [휴지통](trash.md#읽는-법)과 같다.
 
 ## init: 사람의 파일과 비밀 지키기 🔴
 

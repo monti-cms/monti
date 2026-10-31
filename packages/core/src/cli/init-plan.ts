@@ -93,7 +93,7 @@ export interface PlanInput {
 }
 
 /** The note about the languages found in the file names or folders of the content, if any. */
-function localeNote(app: DetectedApp, answers: InitAnswers, localesFlag: boolean): string | undefined {
+export function localeNote(app: DetectedApp, answers: InitAnswers, localesFlag: boolean): string | undefined {
 	const found = detectedLocales(app);
 	if (!found) return undefined;
 	const where = found.from === "filename" ? "the file names" : "the folders";

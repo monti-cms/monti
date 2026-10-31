@@ -349,6 +349,34 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
+	it("SCHEMA-F10 says so when the file was saved but the database did not take it, and the database is as it was", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		write(schemaOf({}));
+		const cms = newCms();
+		await cms.migrate({ log: () => {} });
+		// The database refuses the change only when it commits. The dry run before the file is written never commits, so only the apply fails.
+		await pool.query(
+			`CREATE FUNCTION "${schemaName}".refuse_schema() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the test database refuses the schema'; END $$`,
+		);
+		await pool.query(
+			`CREATE CONSTRAINT TRIGGER refuse_schema AFTER INSERT OR UPDATE ON "${schemaName}".schema_state DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION "${schemaName}".refuse_schema()`,
+		);
+		const recorded = async () => (await pool.query(`SELECT schema FROM "${schemaName}".schema_state`)).rows;
+		const before = await recorded();
+		const { hash, schema } = await read(cms);
+		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
+		edited.collections.post.fields.summary = { kind: "text", label: "Summary" };
+
+		const res = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
+
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.error).toMatchObject({ code: "schema_apply_failed", details: { fileWritten: true } });
+		expect(body.error.details.hash).toBe((await read(cms)).hash);
+		expect(Object.keys(onDiskData().collections.post.fields)).toContain("summary");
+		expect(await recorded()).toEqual(before);
+	});
+
 	it("SCHEMA-F11 reports what is wrong with the path of the value, and writes nothing", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		write(schemaOf({}));
@@ -721,7 +749,7 @@ describe("schema settings API", () => {
 			expect(now.version).toBe(was.version + 1);
 		});
 
-		it("SCHEMA-D1 does not save a deletion nobody reviewed", async () => {
+		it("SCHEMA-D2 does not save a deletion nobody reviewed", async () => {
 			const { cms } = await withMemos();
 			const { hash, schema } = await read(cms);
 			const refused = await call(cms, "PUT", "schema", {

@@ -19,25 +19,6 @@ describe("languages found in the content files", () => {
 		expect(folder?.localesFrom).toBe("filename");
 		expect(folder?.locales?.map((locale) => locale.code)).toEqual(["ko", "en"]);
 	});
-
-	it("INIT-Q3 detectApp merges sibling language folders into one set of posts", () => {
-		const app = detectApp(
-			fixtureApp({
-				"content/en/hello.mdx": POST_MDX("hello"),
-				"content/ko/hello.mdx": POST_MDX("hello"),
-				"content/ko/about.mdx": POST_MDX("about"),
-			}),
-		);
-		expect(app.contentFolders).toHaveLength(1);
-		const folder = app.contentFolders[0];
-		expect(folder).toMatchObject({ dir: "content", files: 3, localesFrom: "folder" });
-		expect(folder?.locales?.map((locale) => locale.code)).toEqual(["ko", "en"]);
-	});
-
-	it("INIT-Q3 a single folder named like a language is left alone", () => {
-		const app = detectApp(fixtureApp({ "content/it/pasta.mdx": POST_MDX("pasta") }));
-		expect(app.contentFolders.map((folder) => [folder.dir, folder.locales])).toEqual([["content/it", undefined]]);
-	});
 });
 
 describe("monti init and the languages of the content", () => {
@@ -55,13 +36,6 @@ describe("monti init and the languages of the content", () => {
 		expect(schema.defaultLocale).toBe("ko");
 		expect(report.answers.locales).toEqual(["ko", "en"]);
 		expect(report.notes.join("\n")).toMatch(/languages are ko, en, found in the file names of content\/posts\//);
-	});
-
-	it("INIT-Q3 an explicit --locales wins, and the report says what the files would have given", async () => {
-		const dir = fixtureApp(PAIR);
-		const report = await initProject({ cwd: dir, ...quiet(), locales: "en" });
-		expect(report.answers.locales).toEqual(["en"]);
-		expect(report.notes.join("\n")).toMatch(/ko, en found in the file names.*site languages are en/);
 	});
 
 	it("language folders give the languages too", async () => {

@@ -357,12 +357,16 @@ describe("trash", () => {
 			});
 		});
 
-		it("TRASH-T4 refuses to trash a folder twice, a stale version, and to restore one that is not in the trash", async () => {
-			const shelf = await folder("Twice");
+		it("TRASH-D9 refuses to trash a folder with a stale version", async () => {
+			const shelf = await folder("Stale");
 			const stale = await trash
 				.trashFolder({ id: shelf.id, expectedVersion: shelf.version - 1 })
 				.catch((error) => error);
 			expect(stale).toMatchObject({ code: "conflict", serverVersion: shelf.version });
+		});
+
+		it("TRASH-R9 refuses to trash a folder twice, and to restore one that is not in the trash", async () => {
+			const shelf = await folder("Twice");
 			await expect(store.restoreFolder({ id: shelf.id })).rejects.toMatchObject({ code: "invalid_status" });
 			await expect(store.folderRestoreEntries({ id: shelf.id })).rejects.toMatchObject({ code: "not_found" });
 
@@ -379,7 +383,7 @@ describe("trash", () => {
 			expect(outcome).toMatchObject({ entries: 1 });
 		});
 
-		it("TRASH-R4 gives each entry the next version, and names the entries it brought back", async () => {
+		it("WRITE-S2 gives each entry the next version, and names the entries it brought back", async () => {
 			const shelf = await folder("Versions");
 			const entry = await draft("Versioned", shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -432,7 +436,7 @@ describe("trash", () => {
 		});
 
 		it.skipIf(!secondLocale)(
-			"TRASH-R2 brings a translation back when its source is live outside the folder",
+			"TRASH-R3 brings a translation back when its source is live outside the folder",
 			async () => {
 				const source = await draft(unique("Live source"));
 				const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
@@ -585,7 +589,7 @@ describe("trash", () => {
 			expect((await store.getMediaAsset(free.id))?.status).toBe("ready");
 		});
 
-		it("TRASH-T5 trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
+		it("TRASH-R9 trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
 			expect(await store.trashMedia({ ids: [] })).toEqual({ trashed: [], kept: [] });
 			const file = await readyMedia(`${unique("once")}.png`);
 			await store.trashMedia({ ids: [file.id] });

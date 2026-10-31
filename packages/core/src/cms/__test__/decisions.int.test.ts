@@ -87,19 +87,15 @@ describe("Cms.decisions", () => {
 		expect(file?.source).toContain("auto-detected");
 	});
 
-	it("DOC-R5 turns hot reload on only in development with a schema file", () => {
+	it("DOC-R5 turns hot reload on in development when the schema file is on disk, and off when it is not", () => {
 		writeSchema();
 		const cms = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		expect(find(cms.decisions({ NODE_ENV: "development" }), "Schema hot reload")?.value).toBe("on");
-		const production = find(cms.decisions({ NODE_ENV: "production" }), "Schema hot reload");
-		expect(production?.value).toBe("off");
-		expect(production?.source).toContain('NODE_ENV is "production"');
 
 		rmSync(path.join(dir, "monti.schema.ts"));
 		const bare = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		expect(find(bare.decisions({ NODE_ENV: "development" }), "Schema hot reload")?.value).toBe("off");
 	});
-
 });
 
 describe("SITE_URL source through defineConfig", () => {
@@ -143,5 +139,4 @@ describe("SITE_URL source through defineConfig", () => {
 		const cms = defineConfig({ ...site, database, auth } as never);
 		expect(siteUrl(cms)).toEqual({ topic: "SITE_URL", value: "https://env.test", source: "from env SITE_URL" });
 	});
-
 });

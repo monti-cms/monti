@@ -175,7 +175,7 @@ describe("subscription of one field", () => {
 		);
 	});
 
-	it("PLUG-A6 a field re-renders when its error or the disabled state changes, others only for what they read", () => {
+	it("PLUG-A15 a field re-renders when its error or the disabled state changes, others only for what they read", () => {
 		for (const key of Object.keys(renders)) delete renders[key];
 		const Harness = ({ issues, disabled }: { issues: EntryFormValue["issues"]; disabled: boolean }) => (
 			<EntryFormProvider value={baseValue({ issues, disabled })}>

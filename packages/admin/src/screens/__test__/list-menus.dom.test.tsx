@@ -168,7 +168,7 @@ const NEXT = tu("pagination.nextPage");
 const valueBox = (label: string) => screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${label}`) });
 
 describe("flow: sort from a column's menu", () => {
-	it("LIST-S1 picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
+	it("LIST-S4 picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
 		await renderList();
 		openColumn(t("column.title"));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
