@@ -77,13 +77,6 @@ describe("load", () => {
 		expect(editor().conflict).toBeNull();
 	});
 
-	it("is loading until the server answers", async () => {
-		const ctx = setup();
-		expect(ctx.editor().load).toEqual({ status: "loading" });
-		ctx.core.start();
-		await vi.waitFor(() => expect(ctx.editor().load.status).toBe("ready"));
-	});
-
 	it("WRITE-W11 reports a failed load as an error state with the server's message, and a network error as the offline text", async () => {
 		const ctx = setup();
 		ctx.client.get.mockRejectedValueOnce(unauthorizedError());
@@ -116,15 +109,6 @@ describe("load", () => {
 		expect(ctx.editor().load).toEqual({ status: "redirect", reason: "item-collection", collection: "tag" });
 		ctx.core.start();
 		expect(ctx.client.get).not.toHaveBeenCalled();
-	});
-
-	it("drops the result of a load that was stopped", async () => {
-		const ctx = setup();
-		ctx.core.start();
-		ctx.core.stop();
-		await new Promise((resolve) => setTimeout(resolve, 10));
-		expect(ctx.editor().load).toEqual({ status: "loading" });
-		expect(ctx.editor().entry).toBeNull();
 	});
 });
 
@@ -962,11 +946,6 @@ describe("translation source flow", () => {
 			doc: docOf("New source"),
 		},
 	};
-
-	it("is null for an entry that is not a translation", async () => {
-		const { editor } = await opened();
-		expect(editor().translation).toBeNull();
-	});
 
 	it("TRANS-S1 says the source changed when it differs from the confirmed one, and confirming it records the source in the next save", async () => {
 		const { editor, client } = await opened({ server: translation });

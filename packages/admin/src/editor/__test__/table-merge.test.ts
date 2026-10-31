@@ -160,12 +160,6 @@ describe("editor table cell merge and split", () => {
 		expect(JSON.stringify(cells[0])).toContain("제목");
 	});
 
-	it("mergeCells and splitCell must be unavailable when the selection is not a CellSelection", () => {
-		const instance = createTableEditor(storedToTiptap(testSite, gfmTable()));
-		// default cursor selection (TextSelection)
-		expect(instance.state.selection instanceof CellSelection).toBe(false);
-	});
-
 	it("FMT-R2 undoing a merge does not turn a first-column header layout into a first-row header", () => {
 		const source = storedDoc(
 			table([

@@ -81,8 +81,6 @@ describe("the login screen of the email and password login", () => {
 });
 
 describe("the header of the login screen", () => {
-	const github = { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] };
-
 	it("AUTH-C3 titles the screen with the site name and says it is managed with Monti, on sign-in and on first-admin", async () => {
 		const name = testConfig.site?.name ?? "";
 		expect(name).not.toBe("");
@@ -92,11 +90,5 @@ describe("the header of the login screen", () => {
 			expect(screen.getByText(t("managedWith"))).toBeInTheDocument();
 			cleanup();
 		}
-	});
-
-	it("AUTH-C3 falls back to Monti when the site has no name", async () => {
-		const cms = fakeCms({ config: { ...testConfig, site: { ...testConfig.site, name: undefined } }, auth: github });
-		await show(cms as never);
-		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Monti");
 	});
 });

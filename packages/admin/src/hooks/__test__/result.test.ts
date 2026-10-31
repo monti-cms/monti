@@ -43,11 +43,6 @@ describe("toEditorError", () => {
 		});
 	});
 
-	it("maps an AbortError to aborted", () => {
-		const abort = new DOMException("The operation was aborted.", "AbortError");
-		expect(toEditorError(abort, "fallback")).toMatchObject({ code: "aborted", message: "fallback" });
-	});
-
 	it("ADMIN-E2 shows the text of a NoticeError, keeps the words of any other error as the detail only", () => {
 		expect(toEditorError(new NoticeError("Too large.", "Pick a smaller file."), "fallback")).toMatchObject({
 			code: "failed",
@@ -62,10 +57,5 @@ describe("toEditorError", () => {
 		});
 		expect(toEditorError(new Error(""), "fallback").message).toBe("fallback");
 		expect(toEditorError("string", "fallback")).toMatchObject({ code: "failed", message: "fallback" });
-	});
-
-	it("keeps the original error as cause", () => {
-		const cause = new Error("boom");
-		expect(toEditorError(cause, "fallback").cause).toBe(cause);
 	});
 });

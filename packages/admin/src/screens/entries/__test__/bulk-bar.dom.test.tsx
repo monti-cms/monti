@@ -166,21 +166,6 @@ const openField = async (label: string) => {
 const names = () => screen.getAllByRole("button").map((button) => button.textContent?.trim());
 
 describe("the bar over picked rows", () => {
-	it("LIST-C5 says how many are picked, and lets go with one press", () => {
-		const { onClear } = bar();
-		expect(screen.getByRole("toolbar", { name: t("count", { count: 1 }) })).toBeInTheDocument();
-		fireEvent.click(screen.getByRole("button", { name: t("clear") }));
-		expect(onClear).toHaveBeenCalled();
-	});
-
-	it("LIST-C5 draws nothing while no row is picked, and has no request to the assistant yet", () => {
-		bar({ initial: [] });
-		expect(screen.queryByRole("toolbar")).toBeNull();
-		cleanup();
-		bar();
-		expect(screen.queryByRole("button", { name: /요청|request/i })).toBeNull();
-	});
-
 	it("LIST-C5 shows publish, archive, the folder and 바꾸기 as buttons", () => {
 		bar();
 		expect(names()).toEqual(

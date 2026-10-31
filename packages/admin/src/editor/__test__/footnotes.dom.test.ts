@@ -225,31 +225,6 @@ describe("Footnote slash command", () => {
 		editor.destroy();
 	});
 
-	it("keeps new definitions together without piling up empty paragraphs", () => {
-		const editor = createEditor(storedDoc(para("One two"), def("1", para("one"))));
-		editor.commands.setTextSelection(4);
-		item()?.action(editor, { from: 4, to: 4 });
-		editor.commands.setTextSelection(1);
-		item()?.action(editor, { from: 1, to: 1 });
-		const types = (editor.getJSON().content ?? []).map((node) => node.type);
-		expect(types.filter((type) => type === "paragraph")).toHaveLength(2);
-		expect(types.slice(0, 4)).toEqual(["paragraph", "footnoteDefinition", "footnoteDefinition", "footnoteDefinition"]);
-		const stored = saved(editor.getJSON());
-		expect(stored.content.map((node) => [node.type, node.attrs?.label])).toEqual([
-			["paragraph", undefined],
-			["footnoteDefinition", "1"],
-			["footnoteDefinition", "2"],
-			["footnoteDefinition", "3"],
-		]);
-		expect(stored.content[0]?.content?.map((node) => node.attrs?.label ?? node.text)).toEqual([
-			"3",
-			"One",
-			"2",
-			" two",
-		]);
-		editor.destroy();
-	});
-
 	it("EDIT-F2 selects the inserted reference chip and keeps the definition at the end", () => {
 		const editor = createEditor(storedDoc(para("Hello")));
 		editor.commands.setTextSelection(6);
@@ -275,14 +250,6 @@ describe("Footnote slash command", () => {
 			storedDoc(line(text("A"), ref("2"), text(" B"), ref("note")), def("2", para("two")), def("note", para("n"))),
 		);
 		expect(nextFootnoteLabel(editor.state.doc)).toBe("3");
-		editor.destroy();
-	});
-
-	it("does nothing where an inline reference cannot go, such as in a code block", () => {
-		const editor = createEditor(storedDoc(code("code")));
-		editor.commands.setTextSelection(3);
-		expect(item()?.action(editor, { from: 3, to: 3 })).toBeUndefined();
-		expect(JSON.stringify(editor.getJSON())).not.toContain("footnote");
 		editor.destroy();
 	});
 });

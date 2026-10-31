@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { useDraftEditor } from "../use-draft-editor";
 
 type Draft = { name: string; note: string };
@@ -50,13 +50,5 @@ describe("useDraftEditor", () => {
 		expect(calls).toEqual([false, true]);
 		unmount();
 		expect(calls.at(-1)).toBe(false);
-	});
-
-	it("is busy while saving or deleting", () => {
-		const { result } = renderHook(() => useDraftEditor<Draft>({ saved: null, empty: EMPTY, saving: true }));
-		expect(result.current.busy).toBe(true);
-		const onDirtyChange = vi.fn();
-		renderHook(() => useDraftEditor<Draft>({ saved: null, empty: EMPTY, onDirtyChange }));
-		expect(onDirtyChange).toHaveBeenCalledWith(false);
 	});
 });

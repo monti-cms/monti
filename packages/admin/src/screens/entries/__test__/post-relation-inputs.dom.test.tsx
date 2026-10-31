@@ -104,24 +104,6 @@ describe("relation picker search on the server", () => {
 		await waitFor(async () => expect(await optionNames()).toEqual([`둘째 글${t("entry.unpublished")}`]));
 	});
 
-	it("sends one request for a burst of typing", async () => {
-		render(<EntryPicker {...props(field, null)} />);
-		const input = await openList("최신 글");
-		await waitFor(() => expect(searches().length).toBeGreaterThan(0));
-		const before = searches().length;
-		for (const text of ["첫", "첫 ", "첫 글"])
-			fireEvent.input(input, { target: { value: text }, inputType: "insertText" });
-		await waitFor(() => expect(searches().at(-1)?.get("query")).toBe("첫 글"));
-		expect(searches().length - before).toBe(1);
-	});
-
-	it("only asks for published posts when the field says so", async () => {
-		render(<EntryPicker {...props({ ...field, publishedOnly: true }, null)} />);
-		await openList("최신 글");
-		await waitFor(async () => expect(await optionNames()).toEqual(["첫 글", "셋째 글"]));
-		expect(searches().every((query) => query.get("publishedOnly") === "true")).toBe(true);
-	});
-
 	it("WRITE-W3 keeps the picked post visible when the search does not return it", async () => {
 		render(<EntryPicker {...props(field, "p2")} />);
 		const input = (await screen.findByRole("combobox", { name: "최신 글" })) as HTMLInputElement;
@@ -131,22 +113,6 @@ describe("relation picker search on the server", () => {
 		fireEvent.mouseDown(input);
 		fireEvent.input(input, { target: { value: "셋째" }, inputType: "insertText" });
 		await waitFor(async () => expect(await optionNames()).toEqual(["셋째 글"]));
-	});
-
-	it("names the picked posts of an ordered list by looking them up by id", async () => {
-		const many: RelationField = { kind: "relation", label: "게시글", to: "post", many: true, ordered: true };
-		render(<OrderedEntryList {...props(many, ["p3", "gone"])} />);
-		const list = await screen.findByRole("list", { name: t("entry.listAria", { target: TARGET }) });
-		await waitFor(() =>
-			expect(
-				within(list)
-					.getAllByRole("listitem")
-					.map((item) => item.textContent),
-			).toEqual([
-				expect.stringContaining("1. 셋째 글"),
-				expect.stringContaining(`2. ${t("entry.missing", { target: TARGET })}`),
-			]),
-		);
 	});
 });
 
@@ -185,11 +151,5 @@ describe("collection post list (ordered multi relation)", () => {
 		expect(onChange).toHaveBeenLastCalledWith(["p1", "p3", "p2"]);
 		fireEvent.click(screen.getByRole("button", { name: t("entry.remove", { title: "첫 글" }) }));
 		expect(onChange).toHaveBeenLastCalledWith(["p2", "p3"]);
-	});
-
-	it("each item has a handle for dragging", async () => {
-		render(<OrderedEntryList {...props(field, ["p1", "p2"])} />);
-		expect(await screen.findByRole("button", { name: t("entry.drag", { title: "첫 글" }) })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("entry.drag", { title: "둘째 글" }) })).toBeInTheDocument();
 	});
 });

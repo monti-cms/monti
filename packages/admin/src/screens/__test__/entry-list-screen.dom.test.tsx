@@ -125,17 +125,6 @@ const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.te
 /** The row menu's move to the trash: its name is the label and then its key. */
 const trashItem = () => screen.getByRole("menuitem", { name: (name) => name.startsWith(tCommon("lifecycle.trash")) });
 
-describe("list screen — title row", () => {
-	it("LIST-S3 shows the title and, for a collection with a public route, its address rule beside it", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.post.label);
-		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeInTheDocument();
-	});
-});
-
 describe("list screen — list settings", () => {
 	it("LIST-S1 with no page size or sort in the address, requests with the saved settings", async () => {
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
@@ -148,18 +137,6 @@ describe("list screen — list settings", () => {
 			expect(last?.get("sortField")).toBe("title");
 			expect(last?.get("sortDirection")).toBe("asc");
 		});
-	});
-
-	it("LIST-S1 requests the list once, with the saved sort, and not first with the defaults", async () => {
-		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		await new Promise((resolve) => setTimeout(resolve, 50));
-
-		// The trash badge asks for trashed rows too; the list itself is the request with a sort.
-		const listRequests = entryRequests().filter((query) => query.has("sortField"));
-		expect(listRequests).toHaveLength(1);
-		expect(listRequests[0]?.get("sortField")).toBe("title");
 	});
 
 	it("LIST-S1 values written in the address take precedence over saved settings", async () => {

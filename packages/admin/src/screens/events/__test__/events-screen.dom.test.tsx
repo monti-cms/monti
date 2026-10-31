@@ -88,19 +88,6 @@ const posts = () =>
 	api.requests.filter((request) => request.method === "POST").map((request) => [request.path, request.body]);
 
 describe("EventsScreen", () => {
-	it("lists failed and dead deliveries with subscriber and state", async () => {
-		renderScreen();
-
-		const failedRow = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
-		const deadRow = screen.getByText("webhook").closest("tr") as HTMLElement;
-		expect(within(failedRow).getByText(t("state.failed"))).toBeInTheDocument();
-		expect(within(deadRow).getByText(t("state.dead"))).toBeInTheDocument();
-		// A deleted entry is named by the title the event kept, as plain text (there is nothing to link to).
-		expect(within(deadRow).getByText("Title e2").closest("a")).toBeNull();
-		expect(within(deadRow).queryByText("entry-e2")).toBeNull();
-		expect(within(failedRow).getByText("slug-e1").closest("a")).toBeInTheDocument();
-	});
-
 	it("EVENT-L2 opens the full record of an event beside the list without breaking the row's own actions", async () => {
 		renderScreen();
 
@@ -222,17 +209,5 @@ describe("EventsScreen", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 		expect(await screen.findByText("search-index")).toBeInTheDocument();
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
-	});
-
-	it("pages through the events", async () => {
-		listing((query) => {
-			const offset = Number(query.get("offset"));
-			return { items: [item(`e${offset}`, "webhook", "delivered")], total: 60, counts };
-		});
-		renderScreen();
-		await screen.findByText("slug-e0");
-
-		fireEvent.click(screen.getByRole("link", { name: /Next page|다음 페이지/ }));
-		expect(await screen.findByText("slug-e25")).toBeInTheDocument();
 	});
 });

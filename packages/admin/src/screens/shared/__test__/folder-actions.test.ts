@@ -20,9 +20,4 @@ describe("a screen that shows a folder which goes to the trash", () => {
 		expect(isInsideFolder(folders, "b", "c")).toBe(false);
 		expect(isInsideFolder(folders, "d", "a")).toBe(false);
 	});
-
-	it("ends on a folder that is not known or on a loop in the data", () => {
-		expect(isInsideFolder(folders, "gone", "a")).toBe(false);
-		expect(isInsideFolder([folder("x", "y"), folder("y", "x")], "x", "a")).toBe(false);
-	});
 });

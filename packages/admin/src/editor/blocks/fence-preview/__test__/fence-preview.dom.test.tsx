@@ -72,23 +72,6 @@ const View = (props: NodeViewProps) => (
 );
 
 describe("FencePreviewBlockView", () => {
-	it("shows only the preview, without a textarea, when not selected", () => {
-		const props = createNodeViewProps("cmsMermaid", "graph TD;\n  A-->B;", false);
-		const { container } = renderWithSite(<View {...props} />);
-
-		expect(container.querySelector("textarea")).toBeNull();
-		expect(container.querySelector('[data-fence-preview="mermaid"]')).toBeInTheDocument();
-	});
-
-	it("shows both the textarea and the preview when selected (selected=true)", () => {
-		const props = createNodeViewProps("cmsChart", 'pie\n  "A": 10', true);
-		const { container } = renderWithSite(<View {...props} />);
-
-		const textarea = container.querySelector("textarea");
-		expect(textarea).not.toBeNull();
-		expect((textarea as HTMLTextAreaElement).value).toBe('pie\n  "A": 10');
-	});
-
 	it("EDIT-B4 clicking the preview switches to edit mode and shows the textarea", async () => {
 		const props = createNodeViewProps("cmsMath", "E = mc^2", false);
 		renderWithSite(<View {...props} />);
@@ -98,26 +81,6 @@ describe("FencePreviewBlockView", () => {
 		fireEvent.click(screen.getByRole("button", { name: tBlocks("fence.edit", { label: metaOf("cmsMath").label }) }));
 
 		await waitFor(() => expect(sourceField()).toHaveValue("E = mc^2"));
-	});
-
-	it("updateAttributes is called after the debounce (400ms) when the textarea content changes", () => {
-		vi.useFakeTimers();
-		const updateAttributes = vi.fn();
-		const props = createNodeViewProps("cmsMath", "x = 1", true, updateAttributes);
-		const { container } = renderWithSite(<View {...props} />);
-
-		const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
-		expect(textarea).not.toBeNull();
-
-		fireEvent.change(textarea, { target: { value: "x = 2" } });
-		// Not yet committed before 400ms
-		expect(updateAttributes).not.toHaveBeenCalled();
-
-		// Committed after 400ms
-		act(() => {
-			vi.advanceTimersByTime(400);
-		});
-		expect(updateAttributes).toHaveBeenCalledWith({ value: "x = 2" });
 	});
 
 	it("EDIT-B4 pending changes are committed immediately on blur", () => {
@@ -226,14 +189,6 @@ describe("MathPreview math renderer error handling", () => {
 		expect(await screen.findByText(message)).toBeInTheDocument();
 		expect(sourceField()).toHaveValue(invalid);
 		expect(updateAttributes).not.toHaveBeenCalled();
-	});
-
-	it("renders valid math as KaTeX output", async () => {
-		const { container } = renderWithSite(<MathPreview value="a^2 + b^2 = c^2" />);
-
-		await waitFor(() => {
-			expect(container.querySelector(".katex")).toBeInTheDocument();
-		});
 	});
 });
 

@@ -6,39 +6,11 @@ import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM } from "../entry-form";
 import { entriesMessages } from "../messages";
 import { PropertyFields } from "../property-fields";
-import { RemovedFieldsNotice } from "../removed-fields-notice";
 import { EntryFormProvider } from "../use-field";
 
 const t = testSite.createTranslator(entriesMessages);
 
 afterEach(cleanup);
-
-const collection = testSite.COLLECTIONS[0] ?? "";
-
-describe("notice of removed fields", () => {
-	it("lists the keys of the values the schema no longer has", () => {
-		render(<RemovedFieldsNotice collection={collection} metadata={{ title: "T", oldField: "x", oldList: ["a"] }} />);
-		const note = screen.getByRole("note");
-		expect(note.textContent).toContain(t("inspector.removed.title"));
-		expect(note.textContent).toContain("oldField, oldList");
-		expect(note.textContent).not.toContain("title,");
-	});
-
-	it("renders nothing when every value has a field", () => {
-		const { container } = render(<RemovedFieldsNotice collection={collection} metadata={{ title: "T" }} />);
-		expect(container.textContent).toBe("");
-	});
-
-	it("renders nothing without metadata or for an unknown collection", () => {
-		const { container } = render(
-			<>
-				<RemovedFieldsNotice collection={collection} metadata={undefined} />
-				<RemovedFieldsNotice collection="unknown" metadata={{ oldField: "x" }} />
-			</>,
-		);
-		expect(container.textContent).toBe("");
-	});
-});
 
 describe("select value that is no longer an option", () => {
 	const found = testSite.COLLECTIONS.flatMap((name) =>

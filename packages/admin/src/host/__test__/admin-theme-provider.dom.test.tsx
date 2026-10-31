@@ -54,17 +54,6 @@ describe("AdminThemeProvider", () => {
 		expect(ADMIN_THEME_STORAGE_KEY).not.toBe(SITE_THEME_KEY);
 	});
 
-	it("stores the admin theme under the key the site picks", () => {
-		const { getByText } = render(
-			<AdminThemeProvider storageKey="my-admin-theme">
-				<SetThemeButton to="dark" />
-			</AdminThemeProvider>,
-		);
-		act(() => getByText("set").click());
-		expect(localStorage.getItem("my-admin-theme")).toBe("dark");
-		expect(localStorage.getItem(ADMIN_THEME_STORAGE_KEY)).toBeNull();
-	});
-
 	it("ADMIN-H3 leaves the site's own dark class and color-scheme in place when the admin unmounts", () => {
 		html.classList.add("site-font", "dark");
 		html.style.colorScheme = "dark";

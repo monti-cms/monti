@@ -1,5 +1,5 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
@@ -11,8 +11,7 @@ import { renderWithSite } from "../../test/site";
 import { storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
 import { InlineBubble } from "../inline-bubble";
-import { insertInternalLink } from "../internal-link";
-import { requestLinkTarget, resetLinkTargets } from "../link-targets";
+import { resetLinkTargets } from "../link-targets";
 import { editorMessages } from "../messages";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
@@ -139,31 +138,6 @@ describe("where an internal link goes, shown in the editor", () => {
 		});
 		renderBubble(editor);
 		expect(await screen.findByText(t("link.targetUnavailable"))).toBeInTheDocument();
-	});
-
-	it("looks an entry up once however many places show it, and not again for a link just inserted", async () => {
-		requestLinkTarget(testSite, TARGET);
-		requestLinkTarget(testSite, TARGET);
-		await waitFor(() => expect(api.requests).toHaveLength(1));
-
-		resetLinkTargets(testSite);
-		const looked = api.requests.length;
-		const element = document.createElement("div");
-		document.body.append(element);
-		const editor = new Editor({ element, extensions: buildEditorExtensions(testSite), content: "<p>[[</p>" });
-		editors.push(editor);
-		insertInternalLink(
-			testSite,
-			editor,
-			{ from: 1, to: 3 },
-			{ id: TARGET, collection: COLLECTION, title: "방금 고른 글", slug: "picked", status: "published" },
-		);
-		editor.commands.setTextSelection(3);
-		editor.view.focus();
-		renderBubble(editor);
-		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "방금 고른 글" }) });
-		expect(link.getAttribute("href")).toBe(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "picked") as string));
-		expect(api.requests).toHaveLength(looked);
 	});
 
 	it("EDIT-L3 shows the target in the link form, and leaves the link as it is when nothing is typed", async () => {

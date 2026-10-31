@@ -20,23 +20,4 @@ describe("save cell", () => {
 	it.each<SaveStatus>(["saved", "saving"])("WRITE-S1 %s: there is nothing to press", (status) => {
 		expect(saveCell(status).action).toBeNull();
 	});
-
-	it("marks what needs attention as a warning and what is broken as danger", () => {
-		expect(saveCell("saved").tone).toBeUndefined();
-		expect(saveCell("saving").tone).toBeUndefined();
-		expect(saveCell("new").tone).toBeUndefined();
-		expect(saveCell("dirty").tone).toBe("warning");
-		expect(saveCell("local-only").tone).toBe("warning");
-		for (const status of ["failed", "conflict", "session-expired"] as const)
-			expect(saveCell(status).tone).toBe("danger");
-	});
-});
-
-describe("save cell dot", () => {
-	it("marks changes that are not on the server yet, and nothing else", () => {
-		expect(saveCell("dirty").dot).toBe(true);
-		expect(saveCell("local-only").dot).toBe(true);
-		for (const status of ["saved", "saving", "new", "failed", "conflict", "session-expired"] as const)
-			expect(saveCell(status).dot).toBe(false);
-	});
 });

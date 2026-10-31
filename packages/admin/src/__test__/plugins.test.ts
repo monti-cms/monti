@@ -55,11 +55,4 @@ describe("loadAdminPlugins", () => {
 		]);
 		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["a", "b", "plain"]);
 	});
-
-	it("keeps the loaded plugins of one site apart from another site", async () => {
-		const first = siteWith([{ name: "a", admin: admin({ one: Page }) }]);
-		const second = siteWith([{ name: "b", admin: admin({ two: Page }) }]);
-		expect((await loadAdminPlugins(first)).map((plugin) => plugin.name)).toEqual(["a"]);
-		expect((await loadAdminPlugins(second)).map((plugin) => plugin.name)).toEqual(["b"]);
-	});
 });

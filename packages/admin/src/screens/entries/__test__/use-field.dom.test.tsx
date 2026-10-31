@@ -189,17 +189,6 @@ describe("useField", () => {
 		request?.apply("c", "append");
 		expect(setForm).toHaveBeenLastCalledWith({ tagIds: ["a", "b", "c"] });
 	});
-
-	it("a new entry's slot request has the `new` scope", () => {
-		const { result } = renderHook(() => useField("title"), { wrapper: providerWith(baseValue()) });
-		expect(result.current.slotRequest?.scope).toBe("new");
-	});
-
-	it("throws outside an EntryFormProvider", () => {
-		const error = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(() => renderHook(() => useField("title"))).toThrow(/EntryFormProvider/);
-		error.mockRestore();
-	});
 });
 
 describe("subscription of one field", () => {

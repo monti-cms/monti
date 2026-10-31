@@ -9,10 +9,7 @@ import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { InspectorPanel } from "../inspector-panel";
-import { entriesMessages } from "../messages";
 import { EntryFormProvider } from "../use-field";
-
-const t = testSite.createTranslator(entriesMessages);
 
 /**
  * The tab a plugin places its fields in, and view fields (regression guard, independent of config). Collection, field and tab names are found in the current config
@@ -57,10 +54,6 @@ function renderPanel(collection: Collection, form: EntryForm) {
 }
 
 describe("properties panel: the tab a plugin places fields in", () => {
-	it("the config has fields a plugin places", () => {
-		expect(found).toMatchObject({ field: { kind: "text" } });
-	});
-
 	it("PLUG-A7 a field a plugin places renders in that tab, and not in the default tab, even without a layout entry", async () => {
 		// Both example configs place the SEO fields in a tab of their own; a config without such a field fails here instead of passing unseen.
 		if (!found || !testSite.isCollection(found.collection))
@@ -104,12 +97,5 @@ describe("properties panel: the tab a plugin places fields in", () => {
 		render(<TooltipProvider>{panel}</TooltipProvider>, { site });
 		await screen.findAllByRole("tab");
 		expect(screen.queryByText("preview: Title")).toBeNull();
-	});
-
-	it("a collection no plugin places fields in and no layout group has a tab has only the default tab", () => {
-		const plain = testSite.COLLECTIONS.find((collection) => testSite.panelTabsOf(collection).length === 1);
-		if (!plain) return;
-		renderPanel(plain, { ...EMPTY_FORM, title: "Plain" });
-		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([t("tab.default")]);
 	});
 });

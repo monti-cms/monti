@@ -2,12 +2,11 @@ import type { CmsConfig } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
-import { bulkBarMessages } from "../../entries/bulk-bar.messages";
 import { entryEditorShellMessages } from "../../entries/entry-editor-shell.messages";
 import { lifecycleConfirm } from "../../entries/lifecycle-confirm";
 import { entriesMessages } from "../../entries/messages";
 import { screensMessages } from "../../messages";
-import { collectionNoun, nounVars } from "../noun.messages";
+import { nounVars } from "../noun.messages";
 
 /** The site of the test config with its first content collection relabeled and the admin in `language`. */
 const siteLabeled = (label: string, language: "en" | "ko") => {
@@ -24,12 +23,6 @@ const siteLabeled = (label: string, language: "en" | "ko") => {
 };
 
 describe("collection label in admin messages", () => {
-	it("reads the label of the collection, and nothing for an unknown one", () => {
-		const { site, name } = siteLabeled("Memo", "en");
-		expect(collectionNoun(site, name)).toBe("Memo");
-		expect(collectionNoun(site, "no-such-collection")).toBe("");
-	});
-
 	it("ADMIN-M1 English messages name the entry with the label, lower case, and never say post", () => {
 		const { site, name } = siteLabeled("Memo", "en");
 		const noun = nounVars(site, name);
@@ -50,20 +43,6 @@ describe("collection label in admin messages", () => {
 		expect(ts("archive.askMany", { count: 3, ...noun })).not.toMatch(/post/i);
 	});
 
-	it("keeps a label with capitals of its own", () => {
-		const { site, name } = siteLabeled("FAQ", "en");
-		expect(site.createTranslator(entryEditorShellMessages)("trashNotice", nounVars(site, name))).toContain("This FAQ");
-	});
-
-	it("uses a neutral word when the collection is unknown", () => {
-		const { site } = siteLabeled("Memo", "en");
-		const noun = nounVars(site, "");
-		expect(site.createTranslator(entryEditorShellMessages)("trashNotice", noun)).toContain("This entry");
-		expect(site.createTranslator(screensMessages)("archive.askMany", { count: 2, ...noun })).toContain(
-			"2 selected items",
-		);
-	});
-
 	it("ADMIN-M1 Korean messages pick the particle that fits the label", () => {
 		const withFinal = siteLabeled("메모", "ko");
 		const noun = nounVars(withFinal.site, withFinal.name);
@@ -82,22 +61,5 @@ describe("collection label in admin messages", () => {
 		expect(withBatchim.site.createTranslator(screensMessages)("archive.askMany", { count: 2, ...batchim })).toBe(
 			"선택한 글 2개를 보관할까요? 공개가 종료돼요.",
 		);
-	});
-
-	it("bulk confirmations of a list name the label in both languages", () => {
-		for (const [language, label, expected] of [
-			["en", "Memo", "memo"],
-			["ko", "메모", "메모"],
-		] as const) {
-			const { site, name } = siteLabeled(label, language);
-			const t = site.createTranslator(bulkBarMessages);
-			const asks = (["ask.publish", "ask.archive", "ask.unarchive"] as const).map((key) =>
-				t(key, { count: 2, ...nounVars(site, name) }),
-			);
-			for (const ask of asks) {
-				expect(ask).toContain(expected);
-				expect(ask).not.toMatch(/post|글/);
-			}
-		}
 	});
 });

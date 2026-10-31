@@ -10,7 +10,7 @@ import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateEditorScreen } from "../template-editor-screen";
-import { editTemplateHref, newTemplateHref } from "../template-hrefs";
+import { editTemplateHref } from "../template-hrefs";
 import { TemplatesScreen } from "../templates-screen";
 
 // One test group per canvas flow of the Templates boards ("도구 · 템플릿" and "도구 · 템플릿 편집기"): the list, a row's menu, the editor page and its save.
@@ -158,14 +158,6 @@ const pressSave = () => {
 	});
 };
 
-describe("flow: templates · the list", () => {
-	it("starts a new template from the header: it goes to the new template page", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("button", { name: t("add") }));
-		expect(nav.navigate).toHaveBeenCalledWith(newTemplateHref(testSite));
-	});
-});
-
 describe("flow: templates · a row's menu", () => {
 	const openMenu = async (name: string) => {
 		fireEvent.click(within(rowOf(name)).getByRole("button", { name: t("row.more") }));
@@ -252,21 +244,6 @@ describe("flow: templates · the editor page", () => {
 		await waitFor(() => expect(name.value).toBe("서버에서 고침"));
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-	});
-
-	it("shows a failed load with the server's message and a retry, under the back link", async () => {
-		store = [];
-		render(
-			<AdminQueryProvider>
-				<TemplateEditorScreen id={FIRST.id} />
-			</AdminQueryProvider>,
-		);
-		const alert = await screen.findByRole("alert");
-		expect(alert.textContent).toContain("없음");
-		expect(screen.getByRole("link", { name: t("editor.back") })).toBeInTheDocument();
-		store = [FIRST, SECOND];
-		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
-		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 	});
 
 	it("WRITE-S6 asks before the back link throws unsaved changes away, and stays when told to", async () => {

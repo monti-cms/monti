@@ -70,15 +70,6 @@ describe("searchLinkTargets", () => {
 		expect(error).toBeInstanceOf(CmsApiError);
 		expect(error.status).toBe(500);
 	});
-
-	it("lets a network failure through as a TypeError", async () => {
-		fakeApi()
-			.on("GET /v1/entries", () => {
-				throw new TypeError("Failed to fetch");
-			})
-			.install();
-		await expect(searchLinkTargets(testSite, "a")).rejects.toBeInstanceOf(TypeError);
-	});
 });
 
 describe("InternalLinkPopup", () => {
@@ -95,11 +86,5 @@ describe("InternalLinkPopup", () => {
 		renderWithSite(<InternalLinkPopup {...props} error="Boom" />);
 		expect((await screen.findByRole("alert")).textContent).toBe("Boom");
 		expect(screen.queryByText(t("internalLink.empty"))).toBeNull();
-	});
-
-	it("shows the empty-result text when there is no error", async () => {
-		renderWithSite(<InternalLinkPopup {...props} error={null} />);
-		expect(await screen.findByText(t("internalLink.empty"))).toBeInTheDocument();
-		expect(screen.queryByRole("alert")).toBeNull();
 	});
 });

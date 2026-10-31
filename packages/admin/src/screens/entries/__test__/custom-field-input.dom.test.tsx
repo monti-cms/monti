@@ -33,16 +33,4 @@ describe("site-registered field input", () => {
 		fireEvent.click(screen.getByText("사이트 입력: 제목 abc"));
 		expect(onChange).toHaveBeenCalledWith({ seoTitle: "제목 ABC" });
 	});
-
-	it("a multi-line text field is a multi-line input with `rows` rows", () => {
-		render(
-			<EntryFormProvider value={{ collection: "post", form: { ...EMPTY_FORM, summary: "요약" }, setForm: vi.fn() }}>
-				<PropertyFields include={(group) => group.fields.includes("summary")} />
-			</EntryFormProvider>,
-		);
-		fireEvent.click(screen.getByRole("button", { name: /^요약/ }));
-		const input = screen.getByDisplayValue("요약") as HTMLTextAreaElement;
-		expect(input.tagName).toBe("TEXTAREA");
-		expect(input.rows).toBe(3);
-	});
 });

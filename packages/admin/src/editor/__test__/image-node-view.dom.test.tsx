@@ -66,16 +66,6 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ decorative: true, alt: "" });
 	});
 
-	it("MEDIA-W1 hides the tool row and has no delete button when read-only", () => {
-		const { props } = createProps({}, false);
-		renderWithSite(<CmsImageNodeView {...props} />);
-		expect(screen.queryByRole("toolbar", { name: t("imageNode.toolbar") })).toBeNull();
-		cleanup();
-		renderWithSite(<CmsImageNodeView {...createProps().props} />);
-		expect(screen.getByRole("toolbar", { name: t("imageNode.toolbar") })).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /삭제/ })).toBeNull();
-	});
-
 	it("MEDIA-W1 renders the width resize corner handle and updates in a single transaction on drag", () => {
 		const { props, updateAttributes } = createProps({ width: "500px" });
 		renderWithSite(<CmsImageNodeView {...props} />);

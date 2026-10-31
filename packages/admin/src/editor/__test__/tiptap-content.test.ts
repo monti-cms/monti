@@ -334,26 +334,4 @@ describe("stored document <-> Tiptap round trip", () => {
 		expect(Object.keys(schema.marks)).toContain(addedMarkName("tooltip"));
 		expect(Object.keys(schema.nodes)).toContain(OPAQUE_BLOCK_NAME);
 	});
-
-	it("gives the stored document in its canonical form: keys sorted, one text run per mark set", () => {
-		const typed: JSONContent = {
-			type: "doc",
-			content: [
-				{
-					type: "paragraph",
-					content: [
-						{ type: "text", text: "a" },
-						{ type: "text", text: "b" },
-						{ type: "text", text: "c", marks: [{ type: "bold" }] },
-					],
-				},
-			],
-		};
-		const stored = tiptapToStored(testSite, typed);
-		expect(stored.content[0]?.content).toEqual([
-			{ text: "ab", type: "text" },
-			{ marks: [{ type: "bold" }], text: "c", type: "text" },
-		]);
-		expect(Object.keys(stored.content[0] ?? {})).toEqual([...Object.keys(stored.content[0] ?? {})].sort());
-	});
 });

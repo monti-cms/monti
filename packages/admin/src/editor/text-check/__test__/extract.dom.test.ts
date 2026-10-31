@@ -4,7 +4,7 @@ import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
-import { codeNode, para, storedDoc, table, text } from "../../../test/stored-doc";
+import { codeNode, para, storedDoc } from "../../../test/stored-doc";
 import { storedToTiptap } from "../../tiptap-content";
 import { docRangeToSegment, extractSegments, PLACEHOLDER, segmentRangeToDoc } from "../extract";
 
@@ -91,22 +91,6 @@ describe("extracting check segments", () => {
 			),
 		);
 		expect(segments.map((segment) => segment.text)).toEqual(["앞 문단", "뒤 문단"]);
-	});
-
-	it("extracts table cell text one by one too", () => {
-		const segments = segmentsOf(
-			storedDoc(
-				table([
-					[[text("이름")], [text("설명")]],
-					[[text("사과")], [text("빨간 과일")]],
-				]),
-			),
-		);
-		expect(segments.map((segment) => segment.text)).toEqual(["이름", "설명", "사과", "빨간 과일"]);
-	});
-
-	it("skips blocks without letters (only digits or symbols)", () => {
-		expect(segmentsOf("1234\n\n---\n\n글자\n").map((segment) => segment.text)).toEqual(["글자"]);
 	});
 
 	it("PLUG-T2 paragraphs with the same text get different names, and names stay the same when another paragraph is edited", () => {

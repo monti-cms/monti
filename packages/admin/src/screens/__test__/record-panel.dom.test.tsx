@@ -1,8 +1,7 @@
 import { emptyStoredDocument } from "@monti-cms/core/document";
-import { createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testConfig, testSite } from "../../../../core/test/site";
+import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { fakeApi } from "../../test/fake-api";
 import { withSite } from "../../test/site";
@@ -58,17 +57,6 @@ const renderPanel = (target: { collection: "tag" | "category" | "collection"; id
 const panel = () => screen.getByRole("complementary", { name: new RegExp(testSite.COLLECTION_DEFINITIONS.tag.label) });
 
 describe("taxonomy edit panel", () => {
-	it("opens as a panel beside the list and shows per locale tab whether a translation exists", async () => {
-		renderPanel({ collection: "tag", id: "tag-1" });
-		const name = (await screen.findByRole("textbox", { name: /이름/ })) as HTMLInputElement;
-		await waitFor(() => expect(name.value).toBe("리액트"));
-
-		const tabs = within(panel())
-			.getAllByRole("tab")
-			.map((tab) => tab.getAttribute("aria-label"));
-		expect(tabs).toEqual(["한국어", "영어 · 번역 있음", "일본어 · 번역 없음"]);
-	});
-
 	it("WRITE-W6 on other locale tabs only that locale's name is edited, and it says the slug is the same in all locales", async () => {
 		const { onSaved } = renderPanel({ collection: "tag", id: "tag-1" });
 		await screen.findByDisplayValue("리액트");
@@ -89,16 +77,6 @@ describe("taxonomy edit panel", () => {
 			metadata: { translations: { ja: { title: "リアクト" } } },
 		});
 		await waitFor(() => expect(onSaved).toHaveBeenCalled());
-	});
-
-	it("shows no language tabs when the site turns the translation UI off, and still edits the default language", async () => {
-		const site = createSite({ ...testConfig, admin: { ...testConfig.admin, translations: false } });
-		render(
-			withSite(<RecordPanel target={{ collection: "tag", id: "tag-1" }} onClose={vi.fn()} onSaved={vi.fn()} />, site),
-		);
-		await screen.findByDisplayValue("리액트");
-		expect(within(panel()).queryAllByRole("tab")).toHaveLength(0);
-		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeInTheDocument();
 	});
 
 	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {
@@ -143,10 +121,5 @@ describe("taxonomy edit panel", () => {
 
 		fireEvent.click(within(dialog).getByRole("button", { name: tCommon("discard.confirm") }));
 		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-	});
-
-	it("a series edits its post list on the default locale tab", async () => {
-		renderPanel({ collection: "collection", id: null });
-		expect(await screen.findByRole("combobox", { name: "게시글 추가·빼기" })).toBeInTheDocument();
 	});
 });

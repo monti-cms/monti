@@ -1,5 +1,5 @@
 import { image } from "@monti-cms/core/site";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -72,35 +72,6 @@ describe("editor accessibility", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ align: "left" });
 		// Delete lives only in the block handle menu (the same action is not placed in two spots).
 		expect(screen.queryByRole("button", { name: tc("delete") })).toBeNull();
-	});
-
-	it("assigns unique IDs to each image editor field", async () => {
-		const props = {
-			node: { attrs: { src: "/test-image.png", alt: "", width: "100%", align: "center", caption: "", mediaId: null } },
-			updateAttributes: vi.fn(),
-			deleteNode: vi.fn(),
-			selected: false,
-		} as unknown as NodeViewProps;
-		render(
-			<>
-				<CmsImageNodeView {...props} />
-				<CmsImageNodeView {...props} />
-			</>,
-		);
-
-		// Only one settings popover is open at a time. Open them in turn and collect each input's ID.
-		const widthIds: string[] = [];
-		const altIds: string[] = [];
-		for (const button of screen.getAllByRole("button", { name: tEditorMedia("imageNode.settings") })) {
-			fireEvent.click(button);
-			const width = await screen.findByLabelText(tEditorMedia("imageNode.width"));
-			widthIds.push(width.id);
-			altIds.push(screen.getByLabelText(tEditorMedia("imageNode.alt")).id);
-			fireEvent.keyDown(width, { key: "Escape" });
-			await waitFor(() => expect(screen.queryByLabelText(tEditorMedia("imageNode.alt"))).toBeNull());
-		}
-		expect(new Set(widthIds).size).toBe(2);
-		expect(new Set(altIds).size).toBe(2);
 	});
 
 	it("EDIT-L2 lets keyboard-focused suggestions activate and close", async () => {

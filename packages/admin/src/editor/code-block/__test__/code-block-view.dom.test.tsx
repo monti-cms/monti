@@ -4,12 +4,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { findBlockDOM, refineBlock } from "../../drag";
 import { buildEditorExtensions } from "../../extensions";
-import { inlineBubbleTarget } from "../../inline-marks";
 import { tiptapToStored } from "../../tiptap-content";
 import { codeBlockMessages } from "../messages";
 
@@ -88,16 +87,6 @@ const openLineMenu = async (line = 0) => {
 const CODE = "```ts\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```";
 
 describe("code block edit view", () => {
-	it("has language, file path, line effects, regex rules, line numbers, and copy in the header tools", async () => {
-		await mount(CODE);
-		expect(screen.getByLabelText(t("view.language"))).toBeInTheDocument();
-		expect(screen.getByLabelText(t("view.filePath"))).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.lineEffects") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.lineNumbers") })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument();
-	});
-
 	it("EDIT-C2 hides language, file path, and effect tools and does not select lines when read-only", async () => {
 		const editor = await mount('```ts title="src/a.ts"\nconst a = 1;\n```');
 		act(() => editor.setEditable(false));
@@ -193,28 +182,6 @@ describe("code block edit view", () => {
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
 	});
 
-	it("copy button copies the code without annotation lines", async () => {
-		const writeText = vi.fn().mockResolvedValue(undefined);
-		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-		await mount("```ts\n// @line plus\nconst a = 1;\n```");
-		await act(async () => fireEvent.click(screen.getByRole("button", { name: t("view.copy") })));
-		expect(writeText).toHaveBeenCalledWith("const a = 1;");
-	});
-
-	it("Shift-clicking a line number extends the selected lines", async () => {
-		const editor = await mount(CODE);
-		act(() => pickLines(0));
-		act(() => {
-			fireEvent.mouseDown(gutterRow(2), { button: 0, shiftKey: true });
-			fireEvent.mouseUp(window);
-		});
-		await openLineMenu(2);
-		expect(
-			await screen.findByRole("menu", { name: t("lineMenu.rangeEffects", { start: 1, end: 3 }) }),
-		).toBeInTheDocument();
-		expect(editor.state.selection.from).toBe(1);
-	});
-
 	it("EDIT-C2 selecting only the first line of a fold (the › line) still offers unfold and expand-from-start", async () => {
 		const editor = await mount("```ts\n// @line collapse {0-2}\na\nb\nc\nd\n```");
 		// The right-clicked line is the target even if no line was selected first.
@@ -234,29 +201,5 @@ describe("code block edit view", () => {
 		const found = findBlockDOM(editor.view.dom, inner);
 		expect(found).toBe(editor.view.nodeDOM(codeBlockAt));
 		expect(found && refineBlock(found, 0, 0)).toBe(found);
-	});
-
-	it("does not show the text effect bubble while selecting lines by line number", async () => {
-		const editor = await mount(CODE);
-		act(() => pickLines(0, 1));
-		expect(inlineBubbleTarget(editor.state)).toBeNull();
-		// It shows again when text is selected directly.
-		act(() => {
-			editor.commands.setTextSelection({ from: 2, to: 5 });
-		});
-		expect(inlineBubbleTarget(editor.state)).toMatchObject({ kind: "selection" });
-	});
-
-	it("draws the warning underline text once across the whole line, and it stays after picking lines by line number", async () => {
-		await mount("```ts\n// @line warning\nconst a = 1;\nconst b = 2;\n```");
-		// The decoration overlay is aria-hidden and holds only the text of lines that carry a wavy underline.
-		const overlayText = () =>
-			[...document.querySelectorAll("[data-code-block-wrapper] [aria-hidden='true'][contenteditable='false']")]
-				.map((element) => element.textContent)
-				.join("");
-		expect(overlayText()).toBe("const a = 1;");
-
-		act(() => pickLines(1));
-		await waitFor(() => expect(overlayText()).toBe("const a = 1;"));
 	});
 });

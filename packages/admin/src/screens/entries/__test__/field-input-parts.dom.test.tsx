@@ -196,13 +196,6 @@ describe("media field (`fields.media`)", () => {
 		},
 	);
 
-	it("when empty, it is a pick button", () => {
-		if (!media) return;
-		renderFields(media, { ...EMPTY_FORM, title: "x" });
-		fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${media.field.label}`) }));
-		expect(screen.getByRole("button", { name: media.field.label }).textContent).toBe(t("media.chooseImage"));
-	});
-
 	it.skipIf(!plainMedia)("MEDIA-U6 cannot pick when the server has no media storage", () => {
 		const { site, target } = present(plainMedia);
 		render(

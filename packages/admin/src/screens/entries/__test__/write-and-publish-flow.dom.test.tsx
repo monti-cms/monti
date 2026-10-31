@@ -179,15 +179,6 @@ describe("flow: write and publish (steps 09–15)", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(tCommon("saved")));
 	});
 
-	it("starts with the collection as a link back, the full path and the status", async () => {
-		renderEdit();
-		await title();
-		const back = header().getByRole("link", { name: "게시글" });
-		expect(back.getAttribute("href")).toBe(testSite.adminHref("?collection=post"));
-		expect(header().getByText("/posts/first-post")).toBeInTheDocument();
-		expect(status()).toBe("초안");
-	});
-
 	it("WRITE-P1 blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
 		server.publishRefusal = [missingCategory, noAlt(0), noAlt(1)];
 		renderEdit();

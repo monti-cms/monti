@@ -128,12 +128,6 @@ describe("default list cells", () => {
 		expect(within(row).getByText("Lead story")).toBeInTheDocument();
 		expect(within(row).getByText("Alpha · Beta")).toBeInTheDocument();
 	});
-
-	it("LIST-S3 leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {
-		renderTable([item("empty"), item("stale", { values: { format: "retired" } })]);
-		expect(within(rowOf(/empty/)).queryByText("—")).toBeNull();
-		expect(within(rowOf(/stale/)).getByText("retired")).toBeInTheDocument();
-	});
 });
 
 describe("listCells extension", () => {

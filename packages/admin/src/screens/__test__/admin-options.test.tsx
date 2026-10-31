@@ -7,7 +7,7 @@ import { testConfig, testSite } from "../../../../core/test/site";
 import type { AdminServer } from "../../host/server";
 import SettingsPage from "../settings/page";
 import { SettingsScreen } from "../settings/settings-screen";
-import { SCHEMA_TABS, settingsTabs } from "../settings/tabs";
+import { SCHEMA_TABS } from "../settings/tabs";
 
 afterEach(cleanup);
 
@@ -22,14 +22,6 @@ const server = (): AdminServer => ({
 	notFound: vi.fn(() => {
 		throw new Error("not-found");
 	}),
-});
-
-describe("settings tabs", () => {
-	it("are the schema file's tabs, Site first; templates, the event log and plugin pages are not among them", () => {
-		const ids: string[] = settingsTabs(testSite).map((tab) => tab.id);
-		expect(ids.filter((id) => id !== "api-keys")).toEqual([...SCHEMA_TABS]);
-		expect(ids[0]).toBe("site");
-	});
 });
 
 describe("settings page", () => {

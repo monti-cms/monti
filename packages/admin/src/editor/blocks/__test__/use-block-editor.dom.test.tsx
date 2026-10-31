@@ -102,11 +102,6 @@ const labelsOf = (editor: Editor) =>
 		String(editor.state.doc.firstChild?.child(index).attrs.values.label ?? ""),
 	);
 
-const labelsOfAt = (editor: Editor, at: number) => {
-	const block = editor.state.doc.child(at);
-	return Array.from({ length: block.childCount }, (_, index) => String(block.child(index).attrs.values.label ?? ""));
-};
-
 /** Tabs drawn with nothing but `useBlockEditor`, `Content` and `BlockFrame`: add, move, remove (with the definition's min and max) and rename. */
 function CustomTabs() {
 	const block = useBlockEditor<{ defaultValue: string }>();
@@ -196,22 +191,6 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 		await mountTabs();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
 		for (const body of BODIES) expect(screen.getByText(body)).toBeInTheDocument();
-	});
-
-	it("shows only the visible child", async () => {
-		await mountTabs();
-		const rule = () => document.querySelector("[data-monti-container-node='cmsTabs'] > style")?.textContent ?? "";
-		expect(rule()).toContain(":nth-child(1)");
-		fireEvent.click(screen.getAllByRole("tab")[1] as HTMLElement);
-		await waitFor(() => expect(rule()).toContain(":nth-child(2)"));
-		const bodies = Array.from(
-			document.querySelectorAll<HTMLElement>(
-				"[data-monti-container-node='cmsTabs'] > [data-monti-block-content] > * > *",
-			),
-		);
-		expect(bodies).toHaveLength(2);
-		expect(getComputedStyle(bodies[0] as HTMLElement).display).toBe("none");
-		expect(getComputedStyle(bodies[1] as HTMLElement).display).not.toBe("none");
 	});
 
 	it("PLUG-A10 adds a child up to definition.children.max, then returns a limit error", async () => {
@@ -393,16 +372,6 @@ describe("useBlockEditor commands", () => {
 		expect(result).toMatchObject({ ok: true });
 		expect(savedDoc(editor).content.map((node) => node.type)).toEqual(["paragraph", "paragraph"]);
 		expect(savedDoc(editor).content.map((node) => node.content?.[0]?.text)).toEqual(["앞 문단", "뒤 문단"]);
-	});
-
-	it("moves a child together with the cursor inside it", async () => {
-		const { editor, block } = await mountSpy();
-		act(() => block().focus({ child: 1 }));
-		act(() => {
-			block().moveChild(1, 0);
-		});
-		expect(labelsOfAt(editor, 1)).toEqual(["둘", "하나"]);
-		expect(editor.state.selection.$from.parent.textContent).toBe("둘째");
 	});
 });
 

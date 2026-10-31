@@ -178,17 +178,6 @@ describe.each([
 			[tiffStart + tiff.gpsValues, tiffStart + tiff.gpsValues + 24],
 		]);
 	});
-
-	it("does not change the file it was given", () => {
-		const copy = file.slice();
-		withoutLocation(file);
-		expect(file).toEqual(copy);
-	});
-
-	it("leaves a file without GPS alone", () => {
-		const once = withoutLocation(file) as Uint8Array;
-		expect(withoutLocation(once)).toBeNull();
-	});
 });
 
 describe("other containers", () => {

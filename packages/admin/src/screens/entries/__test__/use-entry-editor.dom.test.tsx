@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memo, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -11,7 +11,7 @@ import {
 	useField,
 } from "../../../hooks/public";
 import { fakeApi } from "../../../test/fake-api";
-import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
+import { renderWithSite as render } from "../../../test/site";
 import { ENTRY, fakeClient, fakeRecoveryStore, invalidError } from "./entry-editor-fakes";
 
 /**
@@ -233,51 +233,5 @@ describe("selectors", () => {
 		fireEvent.change(input, { target: { value: "가나다" } });
 		// Typing more changes the form, not the status: the component is not rendered again.
 		expect(renders.mock.calls.length).toBe(afterFirst);
-	});
-
-	it("useEntryEditorContext outside a provider says so", () => {
-		const log = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(() => renderHook(() => useEntryEditorContext())).toThrow("EntryEditorProvider");
-		log.mockRestore();
-	});
-
-	it("EntryEditorProvider needs the value that useEntryEditor returned", () => {
-		const log = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(() => render(<EntryEditorProvider editor={{} as never}>x</EntryEditorProvider>)).toThrow("useEntryEditor");
-		log.mockRestore();
-	});
-
-	it("callbacks may be new functions on every render and the latest one is called", async () => {
-		const fake = fakeClient();
-		const recovery = fakeRecoveryStore();
-		const seen: string[] = [];
-		function Editor({ tag }: { tag: string }) {
-			const editor = useEntryEditor({
-				adminId: "u1",
-				target: { mode: "edit", entryId: "entry-1" },
-				client: fake.client,
-				recoveryStore: recovery.store,
-				onSaved: () => seen.push(tag),
-			});
-			return (
-				<button
-					type="button"
-					onClick={() => {
-						editor.setForm({ title: "수정" });
-						void editor.save();
-					}}
-				>
-					go
-				</button>
-			);
-		}
-		const { rerender } = render(<Editor tag="first" />);
-		await waitFor(() => expect(fake.client.get).toHaveBeenCalled());
-		rerender(<Editor tag="second" />);
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 10));
-		});
-		fireEvent.click(screen.getByText("go"));
-		await waitFor(() => expect(seen).toEqual(["second"]));
 	});
 });

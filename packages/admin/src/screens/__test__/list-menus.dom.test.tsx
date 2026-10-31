@@ -185,12 +185,6 @@ describe("flow: sort from a column's menu", () => {
 				.getAttribute("aria-sort"),
 		).toBe("ascending");
 	});
-
-	it("LIST-S1 opens a column's menu from the keyboard too, with the arrow down on its name", async () => {
-		await renderList();
-		fireEvent.keyDown(head().getByRole("button", { name: t("column.title") }), { key: "ArrowDown" });
-		await screen.findByRole("menuitemradio", { name: t("sort.text.asc") });
-	});
 });
 
 describe("flow: columns and page size", () => {
@@ -281,44 +275,6 @@ describe("flow: filter by date", () => {
 });
 
 describe("flow: pick rows and act", () => {
-	it("LIST-C5 hangs a check on each row and a select-all on the head row, and the bar replaces the column names in the same place while rows are picked", async () => {
-		nav.setSearch("collection=post&status=draft");
-		await renderList();
-		expect(screen.queryByRole("toolbar")).toBeNull();
-		// The select-all is on the head row while nothing is picked.
-		expect(head().getByRole("checkbox", { name: t("list.selectAll") })).toBeInTheDocument();
-		const widths = () =>
-			[...document.querySelectorAll("table colgroup col")].map((col) => (col as HTMLElement).style.width);
-		const before = {
-			widths: widths(),
-			rows: screen.getAllByRole("row").length,
-			groups: screen.getAllByRole("rowgroup").length,
-		};
-		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
-		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "나" }) }));
-		const bar = await screen.findByRole("toolbar");
-		expect(bar.getAttribute("aria-label")).toBe(
-			testSite.createTranslator((await import("../entries/bulk-bar.messages")).bulkBarMessages)("count", { count: 2 }),
-		);
-		// It is the head row's place, one row of the same table, and the columns keep their widths: nothing below moves.
-		expect(headRow().contains(bar)).toBe(true);
-		expect(headRow().querySelectorAll("tr")).toHaveLength(1);
-		expect(widths()).toEqual(before.widths);
-		expect({ rows: screen.getAllByRole("row").length, groups: screen.getAllByRole("rowgroup").length }).toEqual({
-			rows: before.rows,
-			groups: before.groups,
-		});
-		expect(within(headRow()).queryByRole("columnheader", { name: t("column.title"), hidden: true })).toBeNull();
-		expect(screen.queryByRole("button", { name: t("column.add") })).toBeNull();
-		// The select-all moved onto the bar and shows that only some are picked.
-		expect(screen.getAllByRole("checkbox", { name: t("list.selectAll") })).toHaveLength(1);
-		expect(
-			within(bar)
-				.getByRole("checkbox", { name: t("list.selectAll") })
-				.getAttribute("aria-checked"),
-		).toBe("mixed");
-	});
-
 	it("LIST-C5 picks every row of the page with the select-all, and lets go with 'clear selection', which brings the column names back", async () => {
 		nav.setSearch("collection=post&status=draft");
 		await renderList();

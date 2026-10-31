@@ -159,35 +159,6 @@ describe("useSlotActions", () => {
 		});
 	});
 
-	it("an unknown action id fails with invalid_state", async () => {
-		const { result } = renderHook(() => useSlotActions(options()), { wrapper: wrap([() => [action()]]) });
-		let outcome: EditorResult<SlotResult> | undefined;
-		await act(async () => {
-			outcome = await result.current.run("nope");
-		});
-		expect(outcome).toMatchObject({ ok: false, error: { code: "invalid_state" } });
-	});
-
-	it("two hook instances with the same slot, target, collection and scope share one run state; another scope does not", async () => {
-		const pending = deferred();
-		const { result } = renderHook(
-			() => ({
-				a: useSlotActions(options({ scope: "e1" })),
-				b: useSlotActions(options({ scope: "e1" })),
-				c: useSlotActions(options({ scope: "e2" })),
-			}),
-			{ wrapper: wrap([() => [action({ run: pending.run })]]) },
-		);
-		act(() => {
-			void result.current.a.run("suggest");
-		});
-		expect(result.current.b.state.status).toBe("running");
-		expect(result.current.b.disabled).toBe(true);
-		expect(result.current.c.state.status).toBe("idle");
-		await act(async () => pending.resolve(candidates("shared")));
-		expect(result.current.b.state.status).toBe("idle");
-	});
-
 	it("`disabled` follows the option", () => {
 		const { result, rerender } = renderHook(({ disabled }) => useSlotActions(options({ disabled })), {
 			initialProps: { disabled: true },

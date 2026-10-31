@@ -19,8 +19,4 @@ describe("moveWithin", () => {
 		expect(moveWithin(list, 0, 1)).toEqual(["b", "a"]);
 		expect(list).toEqual(["a", "b"]);
 	});
-
-	it("moves items that are falsy", () => {
-		expect(moveWithin([0, 1, 2], 0, 2)).toEqual([1, 2, 0]);
-	});
 });

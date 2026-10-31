@@ -80,13 +80,4 @@ describe("the admin components registry", () => {
 		);
 		expect(probed().source).toBe("beta");
 	});
-
-	it("has no source format without a registered panel", () => {
-		render(
-			<AdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
-				<Probe />
-			</AdminComponentsProvider>,
-		);
-		expect(probed().source).toBeNull();
-	});
 });

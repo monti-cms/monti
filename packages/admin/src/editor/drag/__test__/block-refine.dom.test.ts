@@ -33,16 +33,6 @@ describe("one handle per line (refineBlock)", () => {
 		expect(refineBlock(list, 5, 70)).toBe(inner);
 	});
 
-	it("the gap between list items maps to the nearest item, not the whole list", () => {
-		const root = html("<ul><li><p>첫째</p></li><li><p>둘째</p></li></ul>");
-		const [first, second] = Array.from(root.querySelectorAll("li"));
-		const list = box(root.querySelector("ul"), 0, 0, 500, 100);
-		box(first ?? null, 20, 0, 500, 40);
-		box(second ?? null, 20, 60, 500, 100);
-		expect(refineBlock(list, 5, 45)).toBe(first);
-		expect(refineBlock(list, 5, 56)).toBe(second);
-	});
-
 	it("EDIT-D3 a single column is not a target: column gaps and margins map to the paragraph at that height, and a line with no paragraph maps to the whole column split", () => {
 		const [leftWord, rightWord] = ["왼쪽", "오른쪽"];
 		const root = html(

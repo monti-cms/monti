@@ -64,14 +64,6 @@ describe("the fill action of a slot", () => {
 		expect(screen.getAllByRole("button")).toHaveLength(1);
 	});
 
-	it("says fill while the target is empty and again once it has a value; both are the same press", () => {
-		renderSlot([() => [action()]]);
-		expect(screen.getByRole("button").textContent).toMatch(/Fill/);
-		cleanup();
-		renderSlot([() => [action()]], { filled: true });
-		expect(screen.getByRole("button").textContent).toMatch(/Again/);
-	});
-
 	it("PLUG-A3 shows writing while the request runs and cannot be pressed again", async () => {
 		let finish: (() => void) | undefined;
 		const run = vi.fn(

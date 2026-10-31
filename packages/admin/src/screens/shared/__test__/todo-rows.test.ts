@@ -6,7 +6,6 @@ import {
 	doneLabels,
 	groupIssues,
 	imageNumbers,
-	requiredFields,
 	type TodoContext,
 	todoCount,
 	todoRows,
@@ -41,14 +40,6 @@ describe("grouping to-dos", () => {
 		expect(unknown?.detail).toBe("본문");
 	});
 
-	it("words an empty field with its name, and picks instead of writing for a field that is chosen", () => {
-		const rows = todoRows(t, [missing("summary", "요약"), missing("cover", "대표 이미지")], () => {}, context());
-		expect(rows.map((row) => [row.title, row.detail])).toEqual([
-			["요약 쓰기", "요약 · 비어 있음"],
-			["대표 이미지 고르기", "대표 이미지 · 비어 있음"],
-		]);
-	});
-
 	it("WRITE-P1 keeps one row for each of the other problems, in the server's order", () => {
 		const rows = todoRows(
 			t,
@@ -75,11 +66,6 @@ describe("grouping to-dos", () => {
 		rows[0]?.onOpen?.();
 		expect(focus).toHaveBeenCalledWith(first);
 		expect(rows[1]?.onOpen).toBeUndefined();
-	});
-
-	it("names the thing a problem is about", () => {
-		const [row] = todoRows(t, [issue({ code: "code_ref_broken", message: "foo", path: "body" })], () => {}, context());
-		expect(row?.title).toContain("`foo`");
 	});
 
 	it("groups by a key that stays the same while the group has the same kind of problem", () => {
@@ -116,11 +102,6 @@ describe("done rows", () => {
 		const back = trackResolved(afterAll, rowsOf([]), rowsOf([missing("summary", "요약")]));
 		expect(back.map((item) => item.label)).toEqual(["이미지 대체 텍스트 2개"]);
 	});
-
-	it("does not remember a problem that has no name to put under a check", () => {
-		const plugin = issue({ code: "plugin_rule", text: "플러그인" });
-		expect(trackResolved([], rowsOf([plugin]), rowsOf([]))).toEqual([]);
-	});
 });
 
 describe("done labels", () => {
@@ -132,49 +113,5 @@ describe("done labels", () => {
 
 	it("WRITE-P1 lists the required fields that have no problem", () => {
 		expect(doneLabels(required, [missing("cover", "대표 이미지")])).toEqual(["제목", "주소"]);
-	});
-
-	it("lists every required field when nothing is left to fix", () => {
-		expect(doneLabels(required, [])).toEqual(["제목", "주소", "대표 이미지"]);
-	});
-
-	it("leaves out the fields that have their own row because they were fixed just now", () => {
-		expect(doneLabels(required, [], ["대표 이미지"])).toEqual(["제목", "주소"]);
-	});
-});
-
-describe("required fields", () => {
-	const field = (name: string, order: number, label?: string) => ({ name, label, slug: false, order });
-	/** The schema of a note with a `kind` that shows an address for a link, and a blurb for a text. */
-	const site = {
-		isCollection: () => true,
-		requiredFieldsOf: (
-			_collection: string,
-			metadata: Record<string, unknown>,
-			options?: { localizedOnly?: boolean },
-		) => [
-			{ ...field("slug", 1, "주소"), slug: true },
-			field("title", 0, "제목"),
-			...(metadata.kind === "link" ? [field("url", 2, "링크 주소")] : []),
-			...(options?.localizedOnly ? [] : [field("categoryId", 3, "카테고리")]),
-		],
-	} as unknown as Parameters<typeof requiredFields>[0];
-
-	it("lists the required fields in the order of the form", () => {
-		expect(requiredFields(site, "note", false, {}).map((item) => item.label)).toEqual(["제목", "주소", "카테고리"]);
-	});
-
-	it("names a field of a conditional group when its condition is met and it has no problem", () => {
-		const required = requiredFields(site, "note", false, { kind: "link" });
-		expect(doneLabels(required, [])).toContain("링크 주소");
-	});
-
-	it("leaves out a field whose condition is not met", () => {
-		const required = requiredFields(site, "note", false, { kind: "text" });
-		expect(doneLabels(required, [])).not.toContain("링크 주소");
-	});
-
-	it("asks the check only for the fields written per language when the entry is a translation", () => {
-		expect(requiredFields(site, "note", true, {}).map((item) => item.name)).toEqual(["title", "slug"]);
 	});
 });

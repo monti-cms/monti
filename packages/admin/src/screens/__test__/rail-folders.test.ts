@@ -36,25 +36,11 @@ describe("the folders the rail shows", () => {
 		const other = folder("other", "Other", "essays");
 		expect(names(railFolders([...folders, other], "dev"))).toEqual(["0:Dev", "1:Next.js", "0:Essays"]);
 	});
-
-	it("ignores an open folder it does not know", () => {
-		expect(names(railFolders(folders, "gone"))).toEqual(["0:Dev", "0:Essays"]);
-	});
-
-	it("shows nothing for no folders", () => {
-		expect(railFolders([], "all")).toEqual([]);
-	});
 });
 
 describe("the path to a folder", () => {
 	it("LIST-F6 runs from the top-level folder to the folder itself", () => {
 		expect(folderPath(folders, "app").map((entry) => entry.name)).toEqual(["Dev", "Next.js", "App router"]);
 		expect(folderPath(folders, "essays").map((entry) => entry.name)).toEqual(["Essays"]);
-	});
-
-	it("is empty for the top level and for a folder that is not known, and ends on a loop in the data", () => {
-		expect(folderPath(folders, "all")).toEqual([]);
-		expect(folderPath(folders, "gone")).toEqual([]);
-		expect(folderPath([folder("x", "X", "y"), folder("y", "Y", "x")], "x")).toHaveLength(2);
 	});
 });

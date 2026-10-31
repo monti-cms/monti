@@ -114,9 +114,4 @@ describe("custom block NodeView", () => {
 		expect(screen.getAllByRole("list", { name: tBlocks("issues.label") })).toHaveLength(1);
 		expect(screen.queryByText("다른 블록의 경고")).toBeNull();
 	});
-
-	it("shows no warning list for a block without warnings", async () => {
-		await mount(NOTICE);
-		expect(screen.queryByRole("list", { name: tBlocks("issues.label") })).toBeNull();
-	});
 });

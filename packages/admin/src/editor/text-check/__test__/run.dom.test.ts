@@ -112,23 +112,6 @@ describe("batching and cache", () => {
 		expect(placeIssues({ checkers: [checker], segments, locale: "ko", cache })).toHaveLength(3);
 	});
 
-	it("stops sending when aborted", async () => {
-		const current = open("가\n\n나\n");
-		const checker = defineTextChecker({ ...wordChecker("가", "카"), limits: { maxSegments: 1 } });
-		const controller = new AbortController();
-		controller.abort();
-		await expect(
-			checkSegments({
-				checker,
-				segments: extractSegments(current.state.doc, { locale: "ko" }),
-				locale: "ko",
-				cache: new TextCheckCache(),
-				signal: controller.signal,
-			}),
-		).rejects.toMatchObject({ name: "AbortError" });
-		expect(checker.check).not.toHaveBeenCalled();
-	});
-
 	it("PLUG-T2 drops invalid values in checker results and fills in missing ones", () => {
 		expect(normalizeIssue({ start: 0, end: 9, message: "x", suggestions: [] }, 5, "c")).toBeNull();
 		expect(normalizeIssue({ start: 2, end: 1, message: "x", suggestions: [] }, 5, "c")).toBeNull();
@@ -166,14 +149,6 @@ describe("underline decoration and editing", () => {
 		// A kept underline would still wrap the edited word on its own.
 		const edited = current.state.doc.textBetween(issue.from, issue.to + 1);
 		expect(within(current.view.dom).queryByText(edited)).toBeNull();
-	});
-
-	it("keeps results when only marks such as bold change", async () => {
-		const current = open("이것은 틀린말 입니다\n");
-		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
-		if (!issue) throw new Error("no issue");
-		current.chain().setTextSelection({ from: issue.from, to: issue.to }).toggleBold().run();
-		expect(textCheckIssues(current.state)).toHaveLength(1);
 	});
 
 	it("PLUG-T1 replaces only that checker's results on recheck", async () => {

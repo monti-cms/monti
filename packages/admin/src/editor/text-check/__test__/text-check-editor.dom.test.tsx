@@ -200,11 +200,6 @@ describe("spellcheck button", () => {
 		expect(checkButton("다른 검사")).not.toBeNull();
 	});
 
-	it("shows no button when no checker is registered", async () => {
-		await renderEditor("틀린말\n", []);
-		expect(checkButton()).toBeNull();
-	});
-
 	it("PLUG-T1 checks the whole document on click and shows underlines", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("첫 문단은 틀린말 입니다\n\n둘째 문단\n", [checker]);

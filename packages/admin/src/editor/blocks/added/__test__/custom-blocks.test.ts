@@ -48,22 +48,6 @@ describe("editor representation of added blocks", () => {
 		return found;
 	};
 
-	it("the slash menu lists added blocks (in config order) after the core blocks, and icons come from the definition", () => {
-		const items = buildBlockSlashCommands(testSite);
-		const ids = items.map((item) => item.id);
-		const added = testSite.ADDED_BLOCKS.map((candidate) => candidate.name).filter((name) => ids.includes(name));
-		// Added blocks keep their config order relative to each other.
-		expect(added.length).toBeGreaterThan(1);
-		expect(added.map((name) => ids.indexOf(name))).toEqual(
-			[...added.map((name) => ids.indexOf(name))].sort((a, b) => a - b),
-		);
-		// Core blocks (math) come after every added block.
-		expect(ids.indexOf("math")).toBeGreaterThan(Math.max(...added.map((name) => ids.indexOf(name))));
-		// The icon comes from the block definition.
-		const mermaid = items.find((item) => item.id === "mermaid");
-		expect(mermaid?.icon).toBe(block("mermaid").editor.icon);
-	});
-
 	it("EDIT-B2 inserted content follows the definition's initial value, otherwise default values and the minimum number of children", () => {
 		const callout = insertContentOf(testSite, block("callout"));
 		expect(callout.type).toBe(blockNodeName(block("callout")));

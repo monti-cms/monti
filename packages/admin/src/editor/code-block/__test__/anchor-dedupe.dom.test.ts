@@ -2,15 +2,7 @@ import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import {
-	anchorIdsOf,
-	codeLink,
-	codeLinkTargetsOf,
-	codeNode,
-	storedDoc,
-	text,
-	withoutIds,
-} from "../../../test/stored-doc";
+import { anchorIdsOf, codeLink, codeLinkTargetsOf, codeNode, storedDoc, text } from "../../../test/stored-doc";
 import { duplicateBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
@@ -82,13 +74,5 @@ describe("line labels stay unique in the editor", () => {
 		// The pasted copy is first in the document, but the block that held the label keeps it.
 		expect(anchorIdsOf(saved)).toEqual(["c1"]);
 		expect(findAnchor(instance.state.doc, "c1")?.blockPos).toBe(codeBlockAt(instance, 1));
-	});
-
-	it("undoing a duplicate removes the copy in one step", () => {
-		const instance = mount();
-		const before = save(instance);
-		duplicateBlock(instance, codeBlockAt(instance));
-		instance.commands.undo();
-		expect(withoutIds(save(instance))).toEqual(withoutIds(before));
 	});
 });

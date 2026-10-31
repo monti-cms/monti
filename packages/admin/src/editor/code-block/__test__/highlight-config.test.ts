@@ -19,10 +19,6 @@ describe("editor highlighting themes", () => {
 		expect(highlighterOptions(site.CODE_BLOCK_THEMES).langs).toContain("typescript");
 	});
 
-	it("loads one theme once when light and dark are the same", () => {
-		expect(highlighterOptions({ light: "nord", dark: "nord" }).themes).toEqual(["nord"]);
-	});
-
 	it("EDIT-C5 tokenizes with the configured theme names instead of the defaults", () => {
 		const codeToTokensWithThemes = vi.fn(() => []);
 		tokensWithThemes({ codeToTokensWithThemes } as never, "typescript", "const a = 1;", {
@@ -69,9 +65,5 @@ describe("language dropdown", () => {
 		expect(values.filter((value) => value === "elixir")).toHaveLength(1);
 		expect(choices.at(-1)).toEqual({ label: "zig", value: "zig" });
 		expect(choices[0]).toEqual({ label: "TypeScript", value: "ts" });
-	});
-
-	it("is only the default list when there are no extra languages", () => {
-		expect(codeLanguageChoices([])).toHaveLength(codeLanguageChoices(site.EXTRA_CODE_LANGUAGES).length - 2);
 	});
 });

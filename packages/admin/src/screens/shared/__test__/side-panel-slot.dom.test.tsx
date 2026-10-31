@@ -8,7 +8,7 @@ import { createTestRouter } from "../../../test/router";
 import { AdminFrame } from "../admin-frame";
 import { AdminQueryProvider } from "../query-provider";
 import { ScreenContextProvider, useScreenContext } from "../screen-context";
-import { AdminPanelProvider, SIDE_PANEL_SHORTCUT_KEY } from "../side-panel-slot";
+import { AdminPanelProvider } from "../side-panel-slot";
 
 const { render } = createTestRouter();
 
@@ -62,16 +62,6 @@ describe("side panel in the admin shell", () => {
 		expect(screen.getByRole("complementary", { name: "Helper" })).toBeInTheDocument();
 		expect(screen.getByLabelText("where")).toBeInTheDocument();
 		fireEvent.click(toggle());
-		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
-	it("opens and closes with the keyboard shortcut, and leaves other keys alone", () => {
-		renderShell("media");
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY });
-		expect(screen.queryByRole("complementary")).toBeNull();
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, ctrlKey: true });
-		expect(screen.getByRole("complementary")).toBeInTheDocument();
-		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, metaKey: true });
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 });

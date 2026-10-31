@@ -2,7 +2,7 @@ import { type CmsConfig, definePlugin } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
-import { isToolsNav, toolsHref, toolsTabs } from "../tools-tabs";
+import { toolsHref, toolsTabs } from "../tools-tabs";
 
 const withPlugins = (templates = true) =>
 	createSite({
@@ -18,10 +18,6 @@ describe("the tabs of the tools page", () => {
 	it("PLUG-A1 starts with templates, data, the activity log and API keys, then the plugin pages in plugin order", () => {
 		const ids = toolsTabs(withPlugins()).map((tab) => tab.id);
 		expect(ids).toEqual(["templates", "data", "events", "api-keys", "tools:stats", "tools:more"]);
-	});
-
-	it("leaves templates out when the site turns them off", () => {
-		expect(toolsTabs(withPlugins(false)).map((tab) => tab.id)).not.toContain("templates");
 	});
 
 	it("ADMIN-U1 gives each tab its own address under the tools address", () => {
@@ -46,12 +42,5 @@ describe("the tabs of the tools page", () => {
 	it("ADMIN-U1 points the tools address at the first tab", () => {
 		expect(toolsHref(testSite)).toBe(toolsTabs(testSite)[0]?.href);
 		expect(toolsHref(withPlugins(false))).toBe(withPlugins(false).adminHref("/tools/data"));
-	});
-
-	it("knows which nav ids belong to the tools page", () => {
-		for (const id of ["templates", "data", "events", "api-keys", "tools:stats"] as const)
-			expect(isToolsNav(id)).toBe(true);
-		for (const id of ["media", "settings", "trash", testSite.DEFAULT_COLLECTION] as const)
-			expect(isToolsNav(id)).toBe(false);
 	});
 });

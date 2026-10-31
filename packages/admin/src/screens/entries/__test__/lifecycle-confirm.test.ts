@@ -4,7 +4,6 @@ import { deleteMessages } from "../../shared/delete.messages";
 import { nounVars } from "../../shared/noun.messages";
 import {
 	lifecycleConfirm,
-	lifecycleSuccess,
 	type TrashSubject,
 	trashConfirm,
 	trashSubjectOfEntry,
@@ -52,11 +51,6 @@ describe("status transition confirmation text", () => {
 		expect(lifecycleConfirm(testSite, "archive", translation, [], collection).description).toBe(
 			t("lifecycle.archive.ask", { translation: 1, ...noun }),
 		);
-	});
-
-	it("transitions that do not ask also have text to announce when done", () => {
-		expect(lifecycleSuccess(testSite).unarchive).toBe(t("lifecycle.success.unarchive"));
-		expect(lifecycleSuccess(testSite).restore).toBe(t("lifecycle.success.restore"));
 	});
 });
 

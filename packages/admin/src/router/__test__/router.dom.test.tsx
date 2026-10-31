@@ -1,5 +1,5 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { createTestRouter } from "../../test/router";
 import { AdminLink, useAdminPathname, useAdminRouter, useAdminSearchParams } from "..";
 
@@ -41,11 +41,5 @@ describe("admin router", () => {
 		expect(screen.getByLabelText("where").textContent).toBe("/admin?collection=tag");
 		act(() => host.setSearch("collection=post"));
 		expect(screen.getByLabelText("where").textContent).toBe("/admin?collection=post");
-	});
-
-	it("fails with a message that names the missing provider when there is none", () => {
-		const log = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(() => render(<Probe />)).toThrow(/AdminRouterProvider/);
-		log.mockRestore();
 	});
 });

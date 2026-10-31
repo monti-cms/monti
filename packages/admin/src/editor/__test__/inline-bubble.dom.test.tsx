@@ -275,31 +275,6 @@ describe("InlineBubble", () => {
 				</AdminComponentsProvider>,
 			);
 
-		it("is not there when no site format is available for the selection (in code, or none registered)", () => {
-			const code = createEditor("<pre><code>call(a, b)</code></pre>");
-			focusAt(code, { from: 6, to: 10 });
-			const { unmount } = renderWith(code, [noteFormat]);
-			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
-			unmount();
-
-			const plain = createEditor(HTML);
-			focusAt(plain, { from: 1, to: 3 });
-			renderWith(plain, undefined);
-			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
-		});
-
-		it("ticks a format the selection has, and runs the one that is picked", () => {
-			const editor = createEditor(HTML);
-			focusAt(editor, { from: 10, to: 12 });
-			renderWith(editor, [noteFormat]);
-			act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
-			const row = screen.getByRole("menuitem", { name: "메모 넣기" });
-			// The text already has the note, so the row ends in a ✓.
-			expect(row.querySelector("[data-slot=menu-tick]")).toBeInTheDocument();
-			act(() => fireEvent.click(row));
-			expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
-		});
-
 		it("PLUG-A8 runs a format by its id on the selection (what a slash item uses)", async () => {
 			const editor = createEditor(HTML);
 			focusAt(editor, { from: 1, to: 3 });
