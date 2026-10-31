@@ -163,7 +163,7 @@ const dotsIn = (column: string) =>
 		.length;
 
 describe("flow: sort from a column's menu", () => {
-	it("picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
+	it("LIST-S1 picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
 		await renderList();
 		openColumn(t("column.title"));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
@@ -181,7 +181,7 @@ describe("flow: sort from a column's menu", () => {
 		).toBe("ascending");
 	});
 
-	it("opens a column's menu from the keyboard too, with the arrow down on its name", async () => {
+	it("LIST-S1 opens a column's menu from the keyboard too, with the arrow down on its name", async () => {
 		await renderList();
 		fireEvent.keyDown(head().getByRole("button", { name: t("column.title") }), { key: "ArrowDown" });
 		await screen.findByRole("menuitemradio", { name: t("sort.text.asc") });
@@ -189,7 +189,7 @@ describe("flow: sort from a column's menu", () => {
 });
 
 describe("flow: columns and page size", () => {
-	it("lists only the hidden columns under +, and picking one shows it and saves it", async () => {
+	it("LIST-S3 lists only the hidden columns under +, and picking one shows it and saves it", async () => {
 		await renderList();
 		fireEvent.click(head().getByRole("button", { name: t("column.add") }));
 		const rows = await screen.findAllByRole("menuitem");
@@ -206,7 +206,7 @@ describe("flow: columns and page size", () => {
 		expect(screen.queryByRole("menuitem", { name: t("column.createdAt") })).toBeNull();
 	});
 
-	it("picks 50 per page from the footer, which applies it, closes the menu and is saved", async () => {
+	it("LIST-S2 picks 50 per page from the footer, which applies it, closes the menu and is saved", async () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("button", { name: t("list.pageSize") }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("list.pageSizeOption", { size: 50 }) }));
@@ -217,7 +217,7 @@ describe("flow: columns and page size", () => {
 });
 
 describe("flow: filter by value", () => {
-	it("ticks 'editing' and 'draft' on the status menu, which stays open, and the dot says it until they are unticked", async () => {
+	it("LIST-F2 ticks 'editing' and 'draft' on the status menu, which stays open, and the dot says it until they are unticked", async () => {
 		await renderList();
 		openColumn(t("column.status"));
 		const editing = await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
@@ -237,7 +237,7 @@ describe("flow: filter by value", () => {
 		expect(dotsIn(t("column.status"))).toBe(0);
 	});
 
-	it("narrows the items of a relation to what the search row types", async () => {
+	it("LIST-F7 narrows the items of a relation to what the search row types", async () => {
 		await renderList();
 		openColumn("태그");
 		await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ });
@@ -263,7 +263,7 @@ describe("flow: filter by date", () => {
 			.find((button) => button.textContent === n) as HTMLElement;
 
 	// jsdom moves focus out of the card once the days re-render, which a browser does not; that the calendar stays open is checked by the UpdatedRangeSet story.
-	it("picks a period on the calendar: the first day starts it, the second sets it, and the dot says it", async () => {
+	it("LIST-F4 picks a period on the calendar: the first day starts it, the second sets it, and the dot says it", async () => {
 		await openCalendar();
 		fireEvent.click(day("10"));
 		expect(nav.search.has("updated")).toBe(false);
@@ -275,7 +275,7 @@ describe("flow: filter by date", () => {
 });
 
 describe("flow: pick rows and act", () => {
-	it("hangs a check on each row and a select-all on the head row, and the bar replaces the column names in the same place while rows are picked", async () => {
+	it("LIST-C5 hangs a check on each row and a select-all on the head row, and the bar replaces the column names in the same place while rows are picked", async () => {
 		nav.setSearch("collection=post&status=draft");
 		await renderList();
 		expect(screen.queryByRole("toolbar")).toBeNull();
@@ -313,7 +313,7 @@ describe("flow: pick rows and act", () => {
 		).toBe("mixed");
 	});
 
-	it("picks every row of the page with the select-all, and lets go with 'clear selection', which brings the column names back", async () => {
+	it("LIST-C5 picks every row of the page with the select-all, and lets go with 'clear selection', which brings the column names back", async () => {
 		nav.setSearch("collection=post&status=draft");
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
@@ -371,7 +371,7 @@ describe("flow: change the relations of the picked rows", () => {
 		await screen.findByRole("toolbar");
 	};
 
-	it("adds a tag some picked rows hold to all of them from 바꾸기, keeps the rows picked and the menu open, and the box turns on", async () => {
+	it("LIST-C4 adds a tag some picked rows hold to all of them from 바꾸기, keeps the rows picked and the menu open, and the box turns on", async () => {
 		await pickTwo();
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
@@ -391,7 +391,7 @@ describe("flow: change the relations of the picked rows", () => {
 		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
 	});
 
-	it("tells it when a change of a relation fails", async () => {
+	it("LIST-C2 tells it when a change of a relation fails", async () => {
 		await pickTwo();
 		api.on("POST /v1/bulk", () => ({
 			results: [
@@ -405,7 +405,7 @@ describe("flow: change the relations of the picked rows", () => {
 		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 	});
 
-	it("opens a field from the right-click menu of several picked rows, with what the picked rows hold", async () => {
+	it("LIST-C4 opens a field from the right-click menu of several picked rows, with what the picked rows hold", async () => {
 		await pickTwo();
 		fireEvent.contextMenu(screen.getByRole("row", { name: /가/ }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
@@ -420,7 +420,7 @@ describe("flow: page through the list", () => {
 		server.total = 148;
 	});
 
-	it("goes to a page by its button and to the next one by 'next'", async () => {
+	it("LIST-S2 goes to a page by its button and to the next one by 'next'", async () => {
 		await renderList();
 		const pager = await screen.findByRole("navigation", { name: PAGER });
 		fireEvent.click(within(pager).getByRole("link", { name: "3" }));

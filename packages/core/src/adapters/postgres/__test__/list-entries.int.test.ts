@@ -224,7 +224,7 @@ describe("listEntries in Postgres", () => {
 	// 5  sort fields/directions, NULLS LAST, deterministic id tie-break
 	// -----------------------------------------------------------------------
 
-	it("5. all sort fields/directions, NULLS LAST both dirs, deterministic id tie-break; malicious sort rejects invalid_input", async () => {
+	it("LIST-S1 5. all sort fields/directions, NULLS LAST both dirs, deterministic id tie-break; malicious sort rejects invalid_input", async () => {
 		// Seed entries and capture IDs for deterministic assertions
 		const e5a = await seed(content, null, null);
 		const e5b = await seed(content, "le5-a", "B-title");
@@ -353,7 +353,7 @@ describe("listEntries in Postgres", () => {
 	// 6  pagination: 26 entries, exact metadata, no dup/omission, reject bad
 	// -----------------------------------------------------------------------
 
-	it("6. 26 entries pageSize=25: exact total/page metadata, no omission/duplicate, deterministic repeat; page<1 / invalid pageSize reject invalid_input", async () => {
+	it("LIST-S2 6. 26 entries pageSize=25: exact total/page metadata, no omission/duplicate, deterministic repeat; page<1 / invalid pageSize reject invalid_input", async () => {
 		// Create 26 entries concurrently with bounded Promise.all
 		await Promise.all(
 			Array.from({ length: 26 }, (_, i) => seed(content, `le6-s${String(i).padStart(2, "0")}`, `Title ${i}`)),
@@ -436,7 +436,7 @@ describe("listEntries in Postgres", () => {
 	// -----------------------------------------------------------------------
 
 	it.skipIf(!singleRelation || !manyRelation)(
-		"7. List authority: working metadata is authoritative for the single relation and the ordered many relation; publishedAt is the column",
+		"LIST-S3 7. List authority: working metadata is authoritative for the single relation and the ordered many relation; publishedAt is the column",
 		async () => {
 			const single = singleRelation as RelationInfo;
 			const many = manyRelation as RelationInfo;
@@ -544,7 +544,7 @@ describe("listEntries in Postgres", () => {
 		60_000,
 	);
 
-	it("8. publishedAt sort and range use the published_at column; entries without it come last", async () => {
+	it("LIST-S1 8. publishedAt sort and range use the published_at column; entries without it come last", async () => {
 		const entry = async (slug: string, publishedAt?: string) => {
 			const created = await seedEntry(store, {
 				collection: content,

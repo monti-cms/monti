@@ -164,14 +164,14 @@ const openField = async (label: string) => {
 const names = () => screen.getAllByRole("button").map((button) => button.textContent?.trim());
 
 describe("the bar over picked rows", () => {
-	it("says how many are picked, and lets go with one press", () => {
+	it("LIST-C5 says how many are picked, and lets go with one press", () => {
 		const { onClear } = bar();
 		expect(screen.getByRole("toolbar", { name: t("count", { count: 1 }) })).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: t("clear") }));
 		expect(onClear).toHaveBeenCalled();
 	});
 
-	it("draws nothing while no row is picked, and has no request to the assistant yet", () => {
+	it("LIST-C5 draws nothing while no row is picked, and has no request to the assistant yet", () => {
 		bar({ initial: [] });
 		expect(screen.queryByRole("toolbar")).toBeNull();
 		cleanup();
@@ -179,14 +179,14 @@ describe("the bar over picked rows", () => {
 		expect(screen.queryByRole("button", { name: /요청|request/i })).toBeNull();
 	});
 
-	it("shows publish, archive, the folder and 바꾸기 as buttons", () => {
+	it("LIST-C5 shows publish, archive, the folder and 바꾸기 as buttons", () => {
 		bar();
 		expect(names()).toEqual(
 			expect.arrayContaining([tc("lifecycle.publish"), tc("lifecycle.archive"), t("folder.move"), t("change")]),
 		);
 	});
 
-	it("publishes after asking", async () => {
+	it("LIST-C5 publishes after asking", async () => {
 		const { run } = bar();
 		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.publish") }));
 		await confirmIn(tc("lifecycle.publish"), t("ask.publish", { count: 1, noun: "게시글" }));
@@ -194,7 +194,7 @@ describe("the bar over picked rows", () => {
 		expect(run).toHaveBeenCalledWith("publish", tc("lifecycle.publish"), picked.map(toSelection), {});
 	});
 
-	it("moves to the top level or to a folder from the folder menu, after asking", async () => {
+	it("LIST-C5 moves to the top level or to a folder from the folder menu, after asking", async () => {
 		const { run } = bar();
 		fireEvent.click(screen.getByRole("button", { name: t("folder.move") }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("option.root") }));
@@ -211,7 +211,7 @@ describe("the bar over picked rows", () => {
 		});
 	});
 
-	it("keeps export and then the trash in the ⋯, the trash in red, and moves drafts at once", async () => {
+	it("LIST-C5 keeps export and then the trash in the ⋯, the trash in red, and moves drafts at once", async () => {
 		const { run, onExport } = bar();
 		const rows = await openMore();
 		expect(rows.map((entry) => entry.textContent)).toEqual([
@@ -248,7 +248,7 @@ describe("the bar over picked rows", () => {
 		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 	});
 
-	it("offers an item collection that has folders the folder move, and no publishing", () => {
+	it("LIST-C5 offers an item collection that has folders the folder move, and no publishing", () => {
 		stubApi();
 		const site = createSite({
 			...testConfig,
@@ -278,7 +278,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 	const two = [row("a", { relations: tags("리액트", "성능") }), row("b", { relations: tags("리액트") })];
 	const item = (name: string) => screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${name}`) });
 
-	it("shows a tag every picked row holds as ticked, one only some hold as mixed with how many, and the others empty", async () => {
+	it("LIST-C4 shows a tag every picked row holds as ticked, one only some hold as mixed with how many, and the others empty", async () => {
 		bar({ initial: two });
 		await openField("태그");
 		expect((await item("리액트")).getAttribute("aria-checked")).toBe("true");
@@ -294,7 +294,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		]);
 	});
 
-	it("adds a mixed tag to all the rows without asking, and the menu stays open with it ticked", async () => {
+	it("LIST-C4 adds a mixed tag to all the rows without asking, and the menu stays open with it ticked", async () => {
 		const { run } = bar({ initial: two });
 		await openField("태그");
 		fireEvent.click(await item("성능"));
@@ -308,7 +308,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
 	});
 
-	it("adds an empty tag to all, and takes a ticked tag off all of them", async () => {
+	it("LIST-C4 adds an empty tag to all, and takes a ticked tag off all of them", async () => {
 		const { run } = bar({ initial: two });
 		await openField("태그");
 		fireEvent.click(await item("타입스크립트"));
@@ -333,7 +333,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		await waitFor(async () => expect((await item("리액트")).getAttribute("aria-checked")).toBe("false"));
 	});
 
-	it("narrows the values to what the search row finds", async () => {
+	it("LIST-C4 narrows the values to what the search row finds", async () => {
 		bar({ initial: two });
 		await openField("태그");
 		await item("성능");
@@ -344,7 +344,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		expect(screen.getByRole("menuitemcheckbox", { name: /^타입스크립트/ })).toBeInTheDocument();
 	});
 
-	it("sets a one-value field on all the rows in one pick, which closes the menu", async () => {
+	it("LIST-C4 sets a one-value field on all the rows in one pick, which closes the menu", async () => {
 		const { run } = bar({ initial: two });
 		await openField("카테고리");
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "개발" }));
@@ -356,7 +356,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 		await waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
 	});
 
-	it("puts the ✓ on the value every picked row shares, and has no 'none' for a required field", async () => {
+	it("LIST-C4 puts the ✓ on the value every picked row shares, and has no 'none' for a required field", async () => {
 		const category = { id: "cat-1", title: "개발" };
 		bar({
 			initial: [

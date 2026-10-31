@@ -11,19 +11,19 @@ import {
 } from "../list-filter-fields";
 
 describe("the fields the filter menu offers", () => {
-	it("are the stored text, media, select and relation fields in schema order, without the title", () => {
+	it("LIST-F2 are the stored text, media, select and relation fields in schema order, without the title", () => {
 		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
 		expect(names.slice(0, 5)).toEqual(["summary", "categoryId", "tagIds", "policy", "replacementPostId"]);
 		expect(names).not.toContain("title");
 	});
 
-	it("leave out an address and a reverse relation, which have no filter", () => {
+	it("LIST-F2 leave out an address and a reverse relation, which have no filter", () => {
 		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
 		expect(names).not.toContain("slug");
 		expect(names).not.toContain("series");
 	});
 
-	it("carry the label, the kind, the options of a select and the target of a relation", () => {
+	it("LIST-F2 carry the label, the kind, the options of a select and the target of a relation", () => {
 		expect(filterFieldOf(testSite, "post", "summary")).toMatchObject({ label: "요약", kind: "text" });
 		expect(filterFieldOf(testSite, "post", "tagIds")).toMatchObject({ label: "태그", kind: "relation", to: "tag" });
 		expect(filterFieldOf(testSite, "post", "policy")).toMatchObject({
@@ -36,19 +36,19 @@ describe("the fields the filter menu offers", () => {
 		});
 	});
 
-	it("follow the kind inside a conditional field, which comes right after its choice", () => {
+	it("LIST-F2 follow the kind inside a conditional field, which comes right after its choice", () => {
 		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
 		expect(names.indexOf("replacementPostId")).toBe(names.indexOf("policy") + 1);
 		expect(filterFieldOf(testSite, "post", "replacementPostId")).toMatchObject({ kind: "relation", to: "post" });
 	});
 
-	it("are none for what is not a collection", () => {
+	it("LIST-F2 are none for what is not a collection", () => {
 		expect(filterFieldsOf(testSite, "nope")).toEqual([]);
 	});
 });
 
 describe("conditions on a field", () => {
-	it("are what the kind takes: text and media only empty, select and relation empty or an item", () => {
+	it("LIST-F2 are what the kind takes: text and media only empty, select and relation empty or an item", () => {
 		expect([takesCondition("text", "empty"), takesCondition("text", "filled"), takesCondition("text", "is")]).toEqual([
 			true,
 			false,
@@ -59,7 +59,7 @@ describe("conditions on a field", () => {
 		expect([takesCondition("relation", "is"), takesCondition("relation", "filled")]).toEqual([true, false]);
 	});
 
-	it("are ticked and unticked one by one, several at once", () => {
+	it("LIST-F2 are ticked and unticked one by one, several at once", () => {
 		let conditions = toggleCondition(undefined, { kind: "empty" });
 		conditions = toggleCondition(conditions, { kind: "is", value: "a" });
 		conditions = toggleCondition(conditions, { kind: "is", value: "b" });
@@ -70,7 +70,7 @@ describe("conditions on a field", () => {
 		expect(toggleCondition([{ kind: "empty" }], { kind: "empty" })).toEqual([]);
 	});
 
-	it("are written and read as the address and the API write them", () => {
+	it("LIST-F5 are written and read as the address and the API write them", () => {
 		for (const [name, condition, raw] of [
 			["tagIds", { kind: "empty" }, "tagIds:empty"],
 			["summary", { kind: "filled" }, "summary:filled"],

@@ -122,7 +122,7 @@ const openRowMenu = async (title: string) => {
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
 
 describe("list screen — title row", () => {
-	it("shows the title and, for a collection with a public route, its address rule beside it", async () => {
+	it("LIST-S3 shows the title and, for a collection with a public route, its address rule beside it", async () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
@@ -133,7 +133,7 @@ describe("list screen — title row", () => {
 });
 
 describe("list screen — list settings", () => {
-	it("with no page size or sort in the address, requests with the saved settings", async () => {
+	it("LIST-S1 with no page size or sort in the address, requests with the saved settings", async () => {
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -146,7 +146,7 @@ describe("list screen — list settings", () => {
 		});
 	});
 
-	it("requests the list once, with the saved sort, and not first with the defaults", async () => {
+	it("LIST-S1 requests the list once, with the saved sort, and not first with the defaults", async () => {
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -158,7 +158,7 @@ describe("list screen — list settings", () => {
 		expect(listRequests[0]?.get("sortField")).toBe("title");
 	});
 
-	it("values written in the address take precedence over saved settings", async () => {
+	it("LIST-S1 values written in the address take precedence over saved settings", async () => {
 		nav.setSearch("collection=post&pageSize=100&sort=createdAt&dir=asc");
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };
 		renderList();
@@ -188,7 +188,7 @@ describe("list screen — row menu and bulk actions", () => {
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
-	it("actions are applied to the list first, and failed rows stay selected", async () => {
+	it("LIST-C2 actions are applied to the list first, and failed rows stay selected", async () => {
 		let respond: (value: { results: BulkItemResult[] }) => void = () => {};
 		api.on(
 			"POST /v1/bulk",
@@ -229,7 +229,7 @@ describe("list screen — row menu and bulk actions", () => {
 		);
 	});
 
-	it("if the request itself fails, the list is rolled back before refetching", async () => {
+	it("LIST-C2 if the request itself fails, the list is rolled back before refetching", async () => {
 		let bulkFailed = false;
 		api
 			.on("POST /v1/bulk", () => {
@@ -247,7 +247,7 @@ describe("list screen — row menu and bulk actions", () => {
 		expect(screen.getByRole("row", { name: /가/ })).toBeInTheDocument();
 	});
 
-	it("adding a post creates it in the current folder", async () => {
+	it("LIST-F6 adding a post creates it in the current folder", async () => {
 		nav.setSearch("collection=post&folder=f1");
 		server.folders = [folder];
 		renderList();
@@ -281,7 +281,7 @@ describe("list screen — a collection without folders", () => {
 		);
 	};
 
-	it("offers no Add folder in the blank-area menu, where a collection with folders does", async () => {
+	it("LIST-F6 offers no Add folder in the blank-area menu, where a collection with folders does", async () => {
 		server.folders = [folder];
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
@@ -295,7 +295,7 @@ describe("list screen — a collection without folders", () => {
 		expect(labels).not.toContain("폴더 추가");
 	});
 
-	it("never requests folders, even with a ?folder= left in the address", async () => {
+	it("LIST-F6 never requests folders, even with a ?folder= left in the address", async () => {
 		offNav.setSearch("collection=post&folder=f1");
 		offNav.render(
 			<AdminQueryProvider>

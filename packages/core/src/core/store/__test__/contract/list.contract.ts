@@ -178,7 +178,7 @@ export const listContract: ContractSuite = (factory) => {
 		// 1  exact item keys, default pagination, collection isolation
 		// -----------------------------------------------------------------------
 
-		it("1. exact item keys, default pagination, collection isolation", async () => {
+		it("LIST-S2 1. exact item keys, default pagination, collection isolation", async () => {
 			await seed(content, "le1a-slug", "Le1a Title");
 			if (isolatedCollection) await seed(isolatedCollection, "le1b-slug", "Le1b Title");
 
@@ -270,14 +270,14 @@ export const listContract: ContractSuite = (factory) => {
 				return { tagA, tagB };
 			};
 
-			it("is finds the rows that hold the item, and empty the rows that hold none", async () => {
+			it("LIST-F2 is finds the rows that hold the item, and empty the rows that hold none", async () => {
 				const { tagA, tagB } = await seedTagged();
 				expect(await slugsOf({ [field()]: [{ kind: "is", value: tagA }] })).toEqual(["fc-a", "fc-ab"]);
 				expect(await slugsOf({ [field()]: [{ kind: "is", value: tagB }] })).toEqual(["fc-ab"]);
 				expect(await slugsOf({ [field()]: [{ kind: "empty" }] })).toEqual(["fc-none"]);
 			});
 
-			it("takes several conditions on one field as OR", async () => {
+			it("LIST-F2 takes several conditions on one field as OR", async () => {
 				const { tagA, tagB } = await seedTagged();
 				expect(await slugsOf({ [field()]: [{ kind: "empty" }, { kind: "is", value: tagB }] })).toEqual([
 					"fc-ab",
@@ -293,7 +293,7 @@ export const listContract: ContractSuite = (factory) => {
 				).toEqual(["fc-a", "fc-ab"]);
 			});
 
-			it("takes conditions on different fields as AND", async () => {
+			it("LIST-F2 takes conditions on different fields as AND", async () => {
 				const { tagB } = await seedTagged();
 				const other = filledRelation && filledRelation.name !== field() ? filledRelation : undefined;
 				if (!other) return;
@@ -305,21 +305,24 @@ export const listContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it.skipIf(!filledRelation)("a relation of one item: is finds the item, empty finds a row without it", async () => {
-			const relation = filledRelation as RelationInfo;
-			const targetId = await relationTarget(relation.to);
-			await seed(content, "fc-single", "Single");
-			expect(await slugsOf({ [relation.name]: [{ kind: "is", value: targetId }] })).toContain("fc-single");
-			expect(
-				await slugsOf({ [relation.name]: [{ kind: "is", value: "00000000-0000-4000-8000-000000000000" }] }),
-			).toEqual([]);
-			expect(await slugsOf({ [relation.name]: [{ kind: "empty" }] })).not.toContain("fc-single");
-		});
+		it.skipIf(!filledRelation)(
+			"LIST-F2 a relation of one item: is finds the item, empty finds a row without it",
+			async () => {
+				const relation = filledRelation as RelationInfo;
+				const targetId = await relationTarget(relation.to);
+				await seed(content, "fc-single", "Single");
+				expect(await slugsOf({ [relation.name]: [{ kind: "is", value: targetId }] })).toContain("fc-single");
+				expect(
+					await slugsOf({ [relation.name]: [{ kind: "is", value: "00000000-0000-4000-8000-000000000000" }] }),
+				).toEqual([]);
+				expect(await slugsOf({ [relation.name]: [{ kind: "empty" }] })).not.toContain("fc-single");
+			},
+		);
 
 		const textField = testSite.storedFields(content).find(({ field, when, name }) => {
 			return !when && field.kind === "text" && name !== "title" && !isRequiredField(field);
 		});
-		it.skipIf(!textField)("a text field: filled finds a row with text, empty one without", async () => {
+		it.skipIf(!textField)("LIST-F2 a text field: filled finds a row with text, empty one without", async () => {
 			const name = (textField as { name: string }).name;
 			await seedWith("fc-text", { [name]: "Something to say" });
 			await seedWith("fc-blank", { [name]: "" });
@@ -329,7 +332,7 @@ export const listContract: ContractSuite = (factory) => {
 		});
 
 		const selectField = testSite.storedFields(content).find(({ field, when }) => !when && field.kind === "select");
-		it.skipIf(!selectField)("a select: is finds the option, empty a row with none chosen", async () => {
+		it.skipIf(!selectField)("LIST-F2 a select: is finds the option, empty a row with none chosen", async () => {
 			const { name, field } = selectField as { name: string; field: { options: Record<string, string> } };
 			const [first, second] = Object.keys(field.options);
 			await seedWith("fc-first", { [name]: first });
@@ -342,16 +345,19 @@ export const listContract: ContractSuite = (factory) => {
 		});
 
 		const mediaField = testSite.storedFields(content).find(({ field, when }) => !when && field.kind === "media");
-		it.skipIf(!mediaField)("a media field: filled finds a row that has a file, empty one that has none", async () => {
-			const name = (mediaField as { name: string }).name;
-			await seedWith("fc-media", { [name]: "5c1e7a8e-2d0b-4f4b-9d57-3f6a1b9a0c11" });
-			await seedWith("fc-no-media", {});
-			expect(await slugsOf({ [name]: [{ kind: "filled" }] })).toEqual(["fc-media"]);
-			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).toContain("fc-no-media");
-			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).not.toContain("fc-media");
-		});
+		it.skipIf(!mediaField)(
+			"LIST-F2 a media field: filled finds a row that has a file, empty one that has none",
+			async () => {
+				const name = (mediaField as { name: string }).name;
+				await seedWith("fc-media", { [name]: "5c1e7a8e-2d0b-4f4b-9d57-3f6a1b9a0c11" });
+				await seedWith("fc-no-media", {});
+				expect(await slugsOf({ [name]: [{ kind: "filled" }] })).toEqual(["fc-media"]);
+				expect(await slugsOf({ [name]: [{ kind: "empty" }] })).toContain("fc-no-media");
+				expect(await slugsOf({ [name]: [{ kind: "empty" }] })).not.toContain("fc-media");
+			},
+		);
 
-		it("refuses a condition the field's kind does not take, and a field that is not there", async () => {
+		it("LIST-F2 refuses a condition the field's kind does not take, and a field that is not there", async () => {
 			const targetId = filledRelation ? await relationTarget(filledRelation.to) : "";
 			const invalid: Record<string, { kind: "empty" } | { kind: "filled" } | { kind: "is"; value: string }>[] = [
 				// Nothing named so.
@@ -385,20 +391,23 @@ export const listContract: ContractSuite = (factory) => {
 		});
 
 		describe("countListValues: the numbers beside the filter menu's values", () => {
-			it.skipIf(!manyRelation)("counts the rows of each item of a relation, and the rows with none", async () => {
-				const many = manyRelation as RelationInfo;
-				const tagA = await makeItem(many.to, "a");
-				const tagB = await makeItem(many.to, "b");
-				await seedWith("cv-a", { [many.name]: [tagA] });
-				await seedWith("cv-ab", { [many.name]: [tagA, tagB] });
-				await seedWith("cv-none", { [many.name]: [] });
-				const counts = await store.countListValues({ collection: content, facet: { field: many.name } });
-				expect(counts.total).toBe(3);
-				expect(counts.empty).toBe(1);
-				expect(counts.values).toEqual({ [tagA]: 2, [tagB]: 1 });
-			});
+			it.skipIf(!manyRelation)(
+				"LIST-F3 counts the rows of each item of a relation, and the rows with none",
+				async () => {
+					const many = manyRelation as RelationInfo;
+					const tagA = await makeItem(many.to, "a");
+					const tagB = await makeItem(many.to, "b");
+					await seedWith("cv-a", { [many.name]: [tagA] });
+					await seedWith("cv-ab", { [many.name]: [tagA, tagB] });
+					await seedWith("cv-none", { [many.name]: [] });
+					const counts = await store.countListValues({ collection: content, facet: { field: many.name } });
+					expect(counts.total).toBe(3);
+					expect(counts.empty).toBe(1);
+					expect(counts.values).toEqual({ [tagA]: 2, [tagB]: 1 });
+				},
+			);
 
-			it("counts the rows of the folder, and no others", async () => {
+			it("LIST-F3 counts the rows of the folder, and no others", async () => {
 				const folder = await store.createFolder({ collection: content, parentId: null, name: "Counted" });
 				await seed(content, "cv-in", "In folder", { folderId: folder.id });
 				await seed(content, "cv-in-published", "Published in folder", { folderId: folder.id, status: "published" });
@@ -409,7 +418,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect((await store.countListValues({ collection: content, facet })).total).toBe(3);
 			});
 
-			it("counts the rows in each state of the status column, which add up to the rows in scope", async () => {
+			it("LIST-F3 counts the rows in each state of the status column, which add up to the rows in scope", async () => {
 				await seed(content, "cs-draft", "Draft");
 				await seed(content, "cs-live", "Live", { status: "published" });
 				const editing = await seed(content, "cs-editing", "Editing", { status: "published" });
@@ -421,7 +430,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(counts.total).toBe(4);
 			});
 
-			it.skipIf(!textField)("counts a text field as empty and filled", async () => {
+			it.skipIf(!textField)("LIST-F3 counts a text field as empty and filled", async () => {
 				const name = (textField as { name: string }).name;
 				await seedWith("cv-text", { [name]: "Words" });
 				await seedWith("cv-blank", { [name]: "" });
@@ -430,7 +439,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(counts).toMatchObject({ total: 3, empty: 2, filled: 1 });
 			});
 
-			it.skipIf(!selectField)("counts a select per option", async () => {
+			it.skipIf(!selectField)("LIST-F3 counts a select per option", async () => {
 				const { name, field } = selectField as { name: string; field: { options: Record<string, string> } };
 				const [first] = Object.keys(field.options) as [string];
 				await seedWith("cv-first", { [name]: first });
@@ -441,7 +450,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(counts.empty).toBe(1);
 			});
 
-			it("refuses a field that is not there, and the translation filter of a collection without translations", async () => {
+			it("LIST-F3 refuses a field that is not there, and the translation filter of a collection without translations", async () => {
 				await expect(
 					store.countListValues({ collection: content, facet: { field: "noSuchField" } }),
 				).rejects.toMatchObject({ code: "invalid_input" });
@@ -455,7 +464,7 @@ export const listContract: ContractSuite = (factory) => {
 		// 2  Korean + Latin case-insensitive substring; body search gating
 		// -----------------------------------------------------------------------
 
-		it("2. Korean case-insensitive substring over title+slug; Latin case-insensitive; body excluded by default, searched only with includeBody=true, but never adds body to output", async () => {
+		it("LIST-F1 2. Korean case-insensitive substring over title+slug; Latin case-insensitive; body excluded by default, searched only with includeBody=true, but never adds body to output", async () => {
 			await seed(content, "slug-한국어", "제목 테스트", {
 				doc: withHidden("본문 내용 [Link](http://example.com/url)"),
 			});
@@ -523,7 +532,7 @@ export const listContract: ContractSuite = (factory) => {
 			expect(afterMalicious.items.map((item) => item.slug).sort()).toEqual(["le2-other", "slug-한국어"]);
 		});
 
-		it("2a. Search matches word by word: every word must be found, in any order and in different places", async () => {
+		it("LIST-F1 2a. Search matches word by word: every word must be found, in any order and in different places", async () => {
 			await seed(content, "wm-launch-notes", "Spring Launch Plan", { text: "budget and timeline for the campaign" });
 			await seed(content, "wm-other", "Autumn Plan", { text: "nothing about the spring" });
 			const slugsOf = async (search: string, includeBody = false) =>
@@ -544,7 +553,7 @@ export const listContract: ContractSuite = (factory) => {
 			expect(await slugsOf("   ")).toEqual(["wm-launch-notes", "wm-other"]);
 		});
 
-		it("2b. Visible body search: link addresses and block attributes must not match; visible text, link labels and fenced code must match", async () => {
+		it("LIST-F1 2b. Visible body search: link addresses and block attributes must not match; visible text, link labels and fenced code must match", async () => {
 			const slug = "d2-body-search";
 			await seed(content, slug, "Body Search Title", {
 				doc: withHidden(
@@ -576,7 +585,7 @@ export const listContract: ContractSuite = (factory) => {
 		// 3  status filter; folder undefined/null/direct/descendants
 		// -----------------------------------------------------------------------
 
-		it("3. draft/published status filter; folder undefined=all, null=unfiled, folderId=direct, includeDescendants", async () => {
+		it("LIST-F6 3. draft/published status filter; folder undefined=all, null=unfiled, folderId=direct, includeDescendants", async () => {
 			const f3a = await store.createFolder({ collection: content, parentId: null, name: "F3a" });
 			const f3b = await store.createFolder({ collection: content, parentId: f3a.id, name: "F3b" });
 
@@ -612,7 +621,7 @@ export const listContract: ContractSuite = (factory) => {
 			expect(desc.items.map((i) => i.slug).sort()).toEqual(["le3-pub-f3a", "le3-pub-f3b"]);
 		}, 60_000);
 
-		it("the status filter tells the four states apart, and several are OR", async () => {
+		it("LIST-F2 the status filter tells the four states apart, and several are OR", async () => {
 			await seed(content, "st-draft", "Draft");
 			await seed(content, "st-live", "Live", { status: "published" });
 			const editing = await seed(content, "st-editing", "Editing", { status: "published" });
@@ -657,7 +666,7 @@ export const listContract: ContractSuite = (factory) => {
 		// 4  AND vs OR across status+folder; collection is mandatory; supplied search is ANDed
 		// -----------------------------------------------------------------------
 
-		it("4. predicates are AND, multiple statuses are OR; collection is mandatory; when search is supplied it remains AND with other predicates", async () => {
+		it("LIST-F2 4. predicates are AND, multiple statuses are OR; collection is mandatory; when search is supplied it remains AND with other predicates", async () => {
 			const f4 = await store.createFolder({ collection: content, parentId: null, name: "F4" });
 
 			// Fixture names chosen so none contains a substring of another:
@@ -680,7 +689,7 @@ export const listContract: ContractSuite = (factory) => {
 		}, 30_000);
 
 		it.skipIf(!manyRelation)(
-			"resolves tag names in metadata order without changing tag IDs",
+			"LIST-S3 resolves tag names in metadata order without changing tag IDs",
 			async () => {
 				const many = manyRelation as RelationInfo;
 				const firstTag = await seedEntry(store, {
@@ -721,7 +730,7 @@ export const listContract: ContractSuite = (factory) => {
 			.find(({ name, field, when }) => !when && name !== "title" && (field.kind === "select" || field.kind === "text"));
 
 		it.skipIf(!plainField)(
-			"lists the stored text of text and select fields as `values` (empty values are left out)",
+			"LIST-S3 lists the stored text of text and select fields as `values` (empty values are left out)",
 			async () => {
 				const stored = plainField as NonNullable<typeof plainField>;
 				const value = stored.field.kind === "select" ? (Object.keys(stored.field.options)[0] ?? "x") : "plain value";
@@ -749,7 +758,7 @@ export const listContract: ContractSuite = (factory) => {
 
 		// Requires an item collection with per-language names and a second language.
 		it.skipIf(!secondLocale || !localizedRecordCollection)(
-			"9. record collections list the locales that have a name (the default locale is the record's own title)",
+			"LIST-S3 9. record collections list the locales that have a name (the default locale is the record's own title)",
 			async () => {
 				const records = localizedRecordCollection as Collection;
 				const translations: Record<string, { title: string }> = { [secondLocale as string]: { title: "React" } };
@@ -789,7 +798,7 @@ export const listContract: ContractSuite = (factory) => {
 		describe("searchEntries", () => {
 			const titles = (hits: readonly { title: string | null }[]) => hits.map((hit) => hit.title);
 
-			it("ranks a title equal to the query, then a prefix, a word start, a contains, and a slug match, ignoring case", async () => {
+			it("LIST-F7 ranks a title equal to the query, then a prefix, a word start, a contains, and a slug match, ignoring case", async () => {
 				await seed(content, "s-contains", "The Roadmap");
 				await seed(content, "s-word", "My road trip");
 				await seed(content, "s-prefix", "Roadside");
@@ -800,7 +809,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(titles(hits)).toEqual(["road", "Roadside", "My road trip", "The Roadmap", "Something else"]);
 			});
 
-			it("answers title, slug and status, and the slug as the title of an entry without one", async () => {
+			it("LIST-F7 answers title, slug and status, and the slug as the title of an entry without one", async () => {
 				const published = await seed(content, "found-it", "Found it", { status: "published" });
 				await seed(content, "untitled-one", null);
 				const hits = await store.searchEntries({ collection: content });
@@ -810,7 +819,7 @@ export const listContract: ContractSuite = (factory) => {
 				);
 			});
 
-			it("returns the first entries by title when there is no query, up to the limit", async () => {
+			it("LIST-F7 returns the first entries by title when there is no query, up to the limit", async () => {
 				for (const name of ["Charlie", "alpha", "Bravo", "delta"]) await seed(content, `l-${name}`, name);
 				expect(titles(await store.searchEntries({ collection: content }))).toEqual([
 					"alpha",
@@ -824,13 +833,13 @@ export const listContract: ContractSuite = (factory) => {
 				]);
 			});
 
-			it("orders equal matches by title and caps the hits at the limit", async () => {
+			it("LIST-F7 orders equal matches by title and caps the hits at the limit", async () => {
 				for (const name of ["pick b", "pick a", "pick c"]) await seed(content, name.replace(" ", "-"), name);
 				const hits = await store.searchEntries({ collection: content, query: "pick", limit: 2 });
 				expect(titles(hits)).toEqual(["pick a", "pick b"]);
 			});
 
-			it("matches % and _ in the query as text", async () => {
+			it("LIST-F7 matches % and _ in the query as text", async () => {
 				await seed(content, "pct-a", "100% done");
 				await seed(content, "pct-b", "1000 done");
 				expect(titles(await store.searchEntries({ collection: content, query: "100%" }))).toEqual(["100% done"]);
@@ -846,7 +855,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(hits.map((hit) => hit.id)).toEqual([kept.id]);
 			});
 
-			it("finds only published entries with publishedOnly", async () => {
+			it("LIST-F7 finds only published entries with publishedOnly", async () => {
 				await seed(content, "p-draft", "Pub draft");
 				const live = await seed(content, "p-live", "Pub live", { status: "published" });
 				const hits = await store.searchEntries({ collection: content, query: "pub", publishedOnly: true });
@@ -857,7 +866,7 @@ export const listContract: ContractSuite = (factory) => {
 				]);
 			});
 
-			it.skipIf(!secondLocale)("finds only the entries of the locale", async () => {
+			it.skipIf(!secondLocale)("LIST-F7 finds only the entries of the locale", async () => {
 				await seed(content, "loc-default", "Locale default");
 				const other = await seedEntry(store, {
 					collection: content,
@@ -876,7 +885,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(await store.searchEntries({ collection: content, query: "locale" })).toHaveLength(2);
 			});
 
-			it("looks entries up by id whatever the other filters say, in the collection only", async () => {
+			it("LIST-F7 looks entries up by id whatever the other filters say, in the collection only", async () => {
 				const draft = await seed(content, "id-draft", "By id");
 				const trashed = await seed(content, "id-trashed", "Trashed by id");
 				await store.trashEntry({ id: trashed.id, expectedVersion: trashed.version });
@@ -891,7 +900,7 @@ export const listContract: ContractSuite = (factory) => {
 				expect(await store.searchEntries({ collection: content, ids: [] })).toEqual([]);
 			});
 
-			it("rejects parameters it cannot search with", async () => {
+			it("LIST-F7 rejects parameters it cannot search with", async () => {
 				for (const params of [
 					{ collection: "no-such-collection" },
 					{ collection: content, limit: 0 },

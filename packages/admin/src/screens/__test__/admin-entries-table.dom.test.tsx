@@ -61,7 +61,7 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 }
 
 describe("admin entry list", () => {
-	it("selects rows through the row checks and the select-all of the toolbar", () => {
+	it("LIST-C5 selects rows through the row checks and the select-all of the toolbar", () => {
 		const props = renderTable();
 		fireEvent.click(screen.getByRole("checkbox", { name: "draft 선택" }));
 		expect(props.onSelectionChange).toHaveBeenCalledWith(new Set(["draft"]));
@@ -69,7 +69,7 @@ describe("admin entry list", () => {
 		expect(props.onSelectionChange).toHaveBeenLastCalledWith(new Set(["published", "draft"]));
 	});
 
-	it("opens the same row actions from right click and from the always-visible ⋯ button", async () => {
+	it("LIST-C5 opens the same row actions from right click and from the always-visible ⋯ button", async () => {
 		const onSelect = vi.fn();
 		renderTable({ rowMenu: () => [{ kind: "item", label: "보관", onSelect }] });
 		const row = screen.getByRole("row", { name: /draft/ });
@@ -85,7 +85,7 @@ describe("admin entry list", () => {
 		expect(onSelect).toHaveBeenCalledTimes(2);
 	});
 
-	it("opens record collections in their form instead of the editor", () => {
+	it("LIST-S3 opens record collections in their form instead of the editor", () => {
 		const tag = item("tag-1", { collection: "tag", title: "TypeScript", status: "published" });
 		const props = renderTable({
 			collection: "tag",
@@ -98,7 +98,7 @@ describe("admin entry list", () => {
 		expect(screen.queryByText("활성")).toBeNull();
 	});
 
-	it("shows child folders in explorer mode and navigates up", () => {
+	it("LIST-F6 shows child folders in explorer mode and navigates up", () => {
 		const props = renderTable({
 			explorer: {
 				folders: [{ id: "f2", collection: "post", parentId: "f1", name: "알고리즘", position: 0, version: 1 }],
@@ -111,7 +111,7 @@ describe("admin entry list", () => {
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
-	it("starts a folder row's name in the title's cell, after the folder icon, with how many things are in it, and no status", () => {
+	it("LIST-F6 starts a folder row's name in the title's cell, after the folder icon, with how many things are in it, and no status", () => {
 		renderTable({
 			explorer: {
 				folders: [
@@ -137,7 +137,7 @@ describe("admin entry list", () => {
 		expect(up[1]?.querySelector("svg")).toBeInTheDocument();
 	});
 
-	it("a taxonomy item shows its first language and how many others have a name", () => {
+	it("LIST-S3 a taxonomy item shows its first language and how many others have a name", () => {
 		const tag = item("tag-1", {
 			collection: "tag",
 			title: "리액트",
@@ -163,7 +163,7 @@ describe("admin entry list", () => {
 			types: [] as string[],
 		});
 
-		it("dragging one row uses a small drag image holding only that row's title", () => {
+		it("LIST-C5 dragging one row uses a small drag image holding only that row's title", () => {
 			renderTable();
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
@@ -174,7 +174,7 @@ describe("admin entry list", () => {
 			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toEqual([{ id: "draft", expectedVersion: 1 }]);
 		});
 
-		it("dragging selected rows shows the item count and moves all selected rows", () => {
+		it("LIST-C5 dragging selected rows shows the item count and moves all selected rows", () => {
 			renderTable({ selectedIds: new Set(["published", "draft"]) });
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
@@ -184,7 +184,7 @@ describe("admin entry list", () => {
 			expect(JSON.parse(transfer.setData.mock.calls[0]?.[1] as string)).toHaveLength(2);
 		});
 
-		it("the drag image is removed from the page after the drag starts", async () => {
+		it("LIST-C5 the drag image is removed from the page after the drag starts", async () => {
 			renderTable();
 			const transfer = dataTransfer();
 			fireEvent.dragStart(screen.getByRole("row", { name: /draft/ }), { dataTransfer: transfer });
@@ -198,7 +198,7 @@ describe("admin entry list", () => {
 		const t = testSite.createTranslator(screensMessages);
 		const emptyTitle = () => document.querySelector('[data-slot="empty-title"]')?.textContent;
 
-		it("welcomes a document collection with no entries, offering to write and to import Markdown", () => {
+		it("LIST-S3 welcomes a document collection with no entries, offering to write and to import Markdown", () => {
 			const run = vi.fn();
 			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run } });
 			expect(emptyTitle()).toBe(t("list.welcomeTitle"));
@@ -208,7 +208,7 @@ describe("admin entry list", () => {
 			expect(link.getAttribute("href")).toMatch(/\/data#import-entries$/);
 		});
 
-		it("keeps the plain empty state with an add button for an item collection", () => {
+		it("LIST-S3 keeps the plain empty state with an add button for an item collection", () => {
 			const run = vi.fn();
 			renderTable({
 				collection: "tag",
@@ -223,7 +223,7 @@ describe("admin entry list", () => {
 			expect(run).toHaveBeenCalled();
 		});
 
-		it("says nothing matches when filtered, and clears the search and filters", () => {
+		it("LIST-F5 says nothing matches when filtered, and clears the search and filters", () => {
 			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
 			const props = renderTable({ items: [], total: 0, state });
 			expect(emptyTitle()).toBe(t("list.emptyNoMatch"));

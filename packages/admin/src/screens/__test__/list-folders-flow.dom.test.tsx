@@ -172,7 +172,7 @@ const scopeButton = (name: string) => within(scopeGroup()).getByRole("button", {
 
 describe("flow: folders in the list (steps 01–06)", () => {
 	describe("step 01: + 폴더 puts a new folder row at the top, name selected", () => {
-		it("creates the folder with the typed name and its parent on Enter, and the row becomes a folder", async () => {
+		it("LIST-F6 creates the folder with the typed name and its parent on Enter, and the row becomes a folder", async () => {
 			await renderList();
 			pressAddFolder();
 			type(nameField(), "원고");
@@ -186,7 +186,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(toast).not.toHaveBeenCalled();
 		});
 
-		it("tells the person when the server refuses the name, and the row goes", async () => {
+		it("LIST-F6 tells the person when the server refuses the name, and the row goes", async () => {
 			await renderList();
 			server.refuseWrites = true;
 			pressAddFolder();
@@ -196,7 +196,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(screen.queryByRole("textbox", NAME_FIELD)).toBeNull();
 		});
 
-		it("adds the folder inside the folder being viewed, after the way up", async () => {
+		it("LIST-F6 adds the folder inside the folder being viewed, after the way up", async () => {
 			nav.setSearch("collection=post&folder=f1");
 			await renderList();
 			pressAddFolder();
@@ -209,7 +209,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 	});
 
 	describe("step 02: inside a folder, a path and the way up", () => {
-		it("shows every folder on the way in the path, each a way back", async () => {
+		it("LIST-F6 shows every folder on the way in the path, each a way back", async () => {
 			nav.setSearch("collection=post&folder=f2");
 			await renderList();
 
@@ -224,7 +224,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.stringContaining("folder=f1"), expect.anything());
 		});
 
-		it("goes up one folder from the 상위 폴더로 row", async () => {
+		it("LIST-F6 goes up one folder from the 상위 폴더로 row", async () => {
 			nav.setSearch("collection=post&folder=f2");
 			await renderList();
 			fireEvent.click(screen.getByRole("button", { name: ts("list.folderUp") }));
@@ -234,7 +234,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.not.stringContaining("folder="), expect.anything());
 		});
 
-		it("opens a folder from its row", async () => {
+		it("LIST-F6 opens a folder from its row", async () => {
 			await renderList();
 			fireEvent.click(folderLink("뉴스"));
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.stringContaining("folder=f1"), expect.anything());
@@ -242,7 +242,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 	});
 
 	describe("step 03: a search inside a folder looks here, and can widen to all folders", () => {
-		it("widens to every folder, asks the server for no folder, and keeps the words", async () => {
+		it("LIST-F6 widens to every folder, asks the server for no folder, and keeps the words", async () => {
 			nav.setSearch("collection=post&folder=f1&search=저장소");
 			await renderList();
 			fireEvent.click(scopeButton(ts("toolbar.scopeAll")));
@@ -263,7 +263,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 	describe("steps 04–06: the folder row's menu, rename in place, delete", () => {
 		const openMenu = async () => contextMenu(folderRow(/뉴스/));
 
-		it("renames in place: the name becomes a selected field, Enter sends the new name with the version", async () => {
+		it("LIST-F6 renames in place: the name becomes a selected field, Enter sends the new name with the version", async () => {
 			await renderList();
 			const items = await openMenu();
 			fireEvent.click(menuItem(items, td("folder.menu.rename")));
@@ -283,7 +283,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			await waitFor(() => expect(document.activeElement).toBe(folderLink("속보")));
 		});
 
-		it("offers the other folders to move to, and not the folder itself or what is inside it", async () => {
+		it("LIST-F6 offers the other folders to move to, and not the folder itself or what is inside it", async () => {
 			server.folders = [NEWS, SERIES, folder("f3", "기록")];
 			await renderList();
 			const items = await openMenu();
@@ -318,7 +318,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			await waitFor(() => expect(api.sent("GET /v1/folders").length).toBeGreaterThan(0));
 		};
 
-		it("returns to the folder it was in when it was a subfolder", async () => {
+		it("LIST-F6 returns to the folder it was in when it was a subfolder", async () => {
 			nav.setSearch("collection=post&folder=f2");
 			await renderProbe();
 			fireEvent.click(screen.getByRole("button", { name: "delete viewed" }));
