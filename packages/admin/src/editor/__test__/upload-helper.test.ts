@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { errorText } from "../../api/client";
 import { apiErrorMessages } from "../../api/error-message.messages";
 import { markSandboxSite } from "../../screens/shared/preview-sandbox";
 import { answer, fakeApi } from "../../test/fake-api";
@@ -29,6 +30,31 @@ describe("uploadImageFile", () => {
 			})
 			.install();
 		await expect(uploadImageFile(testSite, file())).rejects.toThrow(t("upload.networkError"));
+	});
+
+	it.each([
+		["the storage cannot be reached", "onerror", "upload.networkError"],
+		["the storage takes too long", "ontimeout", "upload.timeout"],
+	] as const)("MEDIA-E1 says why when %s", async (_, event, message) => {
+		fakeApi()
+			.on("POST /v1/media/uploads", () => ({ mediaId: "m1", uploadUrl: "https://storage.test/put" }))
+			.install();
+		vi.stubGlobal(
+			"XMLHttpRequest",
+			class {
+				upload = {};
+				onerror?: () => void;
+				ontimeout?: () => void;
+				open() {}
+				setRequestHeader() {}
+				send() {
+					queueMicrotask(() => this[event]?.());
+				}
+			},
+		);
+		const failure = await uploadImageFile(testSite, file()).catch((error: unknown) => error);
+		// The screen shows the reason, not only its own fallback.
+		expect(errorText(testSite, failure, "fallback")).toBe(t(message));
 	});
 
 	it("MEDIA-E1 shows the preparation failure message when the server refuses the upload", async () => {

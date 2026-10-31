@@ -170,6 +170,7 @@ export async function shrinkForUpload(
 	}
 }
 
+/** Sends the bytes to the storage URL. A failure says why in the admin's words (`NoticeError`), so the screen shows it. */
 function putFile(site: Site, ticket: UploadTicket, file: File, onProgress?: (loaded: number) => void): Promise<void> {
 	const t = site.createTranslator(editorMessages);
 	return new Promise<void>((resolve, reject) => {
@@ -182,9 +183,9 @@ function putFile(site: Site, ticket: UploadTicket, file: File, onProgress?: (loa
 		xhr.onload = () =>
 			xhr.status >= 200 && xhr.status < 300
 				? resolve()
-				: reject(new Error(t("upload.storageFailed", { status: xhr.status })));
-		xhr.onerror = () => reject(new Error(t("upload.networkError")));
-		xhr.ontimeout = () => reject(new Error(t("upload.timeout")));
+				: reject(new NoticeError(t("upload.storageFailed", { status: xhr.status })));
+		xhr.onerror = () => reject(new NoticeError(t("upload.networkError")));
+		xhr.ontimeout = () => reject(new NoticeError(t("upload.timeout")));
 		xhr.send(file);
 	});
 }
