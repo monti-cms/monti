@@ -68,7 +68,7 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 		});
 		expect(left.folderId).toBeNull();
 		expect(left.version).toBeGreaterThan(entry.version);
-	}, 30_000);
+	});
 
 	afterAll(closeGlobalPool);
 });

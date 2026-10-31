@@ -137,7 +137,7 @@ describe("the questions of monti init", () => {
 	it("INIT-Q3 Other... asks for codes as text, for the default and for the others", async () => {
 		const prompter = scriptedPrompter({
 			...everything,
-			[QUESTIONS.defaultLocale]: "INIT-Q3 Other...",
+			[QUESTIONS.defaultLocale]: "Other...",
 			[QUESTIONS.otherLocales]: ["en", "Other..."],
 			[QUESTIONS.localesOther]: "pt-BR",
 		});
@@ -252,11 +252,11 @@ describe("the questions of monti init", () => {
 			return select(question);
 		};
 		await collectAnswers(app(), {}, prompter);
-		expect(QUESTIONS.login).toBe("How should people sign in to the admin?");
-		expect(offered.map((option) => [option.value, option.label])).toEqual([
-			["password", "Email and password (built in, no other service needed)"],
-			["github", "GitHub (needs a GitHub OAuth app)"],
-		]);
+		expect(prompter.asked).toContain(QUESTIONS.login);
+		expect(offered.map((option) => option.value)).toEqual(["password", "github"]);
+		// Each choice says what it needs: nothing else for the built-in login, an OAuth app for GitHub.
+		expect(offered[0]?.label).toMatch(/password/i);
+		expect(offered[1]?.label).toContain("OAuth app");
 		expect(initial).toBe("password");
 	});
 
@@ -318,16 +318,6 @@ describe("the questions of monti init", () => {
 			expect(answers).toMatchObject({ timeZone: "UTC", timeZoneSource: "fallback" });
 			expect(timeZoneNote(answers, "monti.schema.ts")).toContain("could not be read");
 		}
-	});
-
-	it("INIT-Q4 the time zone line names the zone, where it came from and what to change", async () => {
-		const answers = await collectAnswers(app(), {}, undefined, () => "Asia/Seoul");
-		expect(timeZoneNote(answers, "src/monti.schema.ts")).toBe(
-			"Time zone: Asia/Seoul (from this computer). Dates on your site and scheduled publishing use it; change `timeZone` in src/monti.schema.ts if your readers are elsewhere.",
-		);
-		expect(timeZoneNote({ timeZone: "Asia/Tokyo", timeZoneSource: "flag" }, "monti.schema.ts")).toContain(
-			"(from --time-zone)",
-		);
 	});
 
 	it("INIT-Q1 without a prompter every question takes its default", async () => {

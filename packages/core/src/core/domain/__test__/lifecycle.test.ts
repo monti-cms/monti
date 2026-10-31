@@ -41,14 +41,21 @@ const STARTS: Record<LifecycleAction, EntryStatus[]> = {
 };
 
 describe("lifecycle transitions", () => {
-	for (const action of Object.keys(STARTS) as LifecycleAction[]) {
-		it(`WRITE-W13 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () => {
-			for (const status of ALL) {
-				const result = codeOf(() => assertTransitionAllowed(action, status, 7));
-				if (STARTS[action].includes(status)) expect(result).toBeNull();
-				else expect(result).toEqual({ code: "invalid_status", serverVersion: 7 });
-			}
-		});
+	const allowedFrom = (action: LifecycleAction) => {
+		for (const status of ALL) {
+			const result = codeOf(() => assertTransitionAllowed(action, status, 7));
+			if (STARTS[action].includes(status)) expect(result).toBeNull();
+			else expect(result).toEqual({ code: "invalid_status", serverVersion: 7 });
+		}
+	};
+	// Archiving is a write rule, trashing and restoring are trash rules.
+	for (const action of ["archive", "unarchive"] as const) {
+		it(`WRITE-W13 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () =>
+			allowedFrom(action));
+	}
+	for (const action of ["trash", "restore"] as const) {
+		it(`TRASH-R9 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () =>
+			allowedFrom(action));
 	}
 
 	it("canTransition agrees with assertTransitionAllowed for every action and status", () => {

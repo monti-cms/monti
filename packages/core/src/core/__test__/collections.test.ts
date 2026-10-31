@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentCollection, recordCollection, recordRelationField } from "../../../test/any-site";
+import { contentCollection, recordCollection } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 
 /**
@@ -16,10 +16,6 @@ describe("collection helpers", () => {
 	});
 
 	it("LIST-F2 classification fields are relation fields pointing to a classification (record) collection", () => {
-		const first = recordRelationField(contentCollection);
-		if (first)
-			expect(testSite.taxonomyFieldsOf(contentCollection)[0]).toMatchObject({ name: first.name, to: first.to });
-
 		for (const collection of testSite.COLLECTIONS) {
 			const relations = testSite
 				.storedFields(collection)

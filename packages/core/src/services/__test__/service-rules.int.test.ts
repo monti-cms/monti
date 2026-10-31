@@ -61,7 +61,7 @@ describe("content service rules", () => {
 		await store.restoreEntry({ id: entry.id, expectedVersion: trashed.version });
 		const copy = await service.duplicate({ id: entry.id });
 		expect(copy.entry.id).not.toBe(entry.id);
-	}, 30_000);
+	});
 
 	it.skipIf(!secondLocale)(
 		"refuses to translate an archived entry, and allows it once unarchived",

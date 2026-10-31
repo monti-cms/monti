@@ -96,7 +96,11 @@ describe("checkPluginNames", () => {
 });
 
 describe("checkPluginNames: core storage scopes", () => {
-	it.each(RESERVED_SCOPES)("KEY-S1 rejects a plugin named %s, which would read the core's secrets and data", (name) => {
+	// Written out, not read from `RESERVED_SCOPES`: a scope dropped from that list must fail here.
+	it.each([
+		"auth",
+		"core-keys",
+	])("KEY-S1 rejects a plugin named %s, which would read the core's secrets and data", (name) => {
 		expect(checkPluginNames([name])[0]?.message).toContain("core storage scope");
 	});
 

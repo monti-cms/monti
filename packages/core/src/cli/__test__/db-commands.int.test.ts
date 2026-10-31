@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
@@ -11,6 +12,7 @@ describe("monti db:setup and monti db:migrate", () => {
 	let pool: Pool;
 	let base: string;
 	const extraSchemas: string[] = [];
+	const extraRoles: string[] = [];
 
 	beforeAll(async () => {
 		const isolated = await createIsolatedTestPool();
@@ -22,6 +24,10 @@ describe("monti db:setup and monti db:migrate", () => {
 
 	afterAll(async () => {
 		for (const schema of extraSchemas) await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+		for (const role of extraRoles) {
+			await pool.query(`DROP OWNED BY "${role}"`);
+			await pool.query(`DROP ROLE "${role}"`);
+		}
 		if (pool && base) await dropIsolatedTestPool(pool, base);
 		await closeGlobalPool();
 	});
@@ -41,8 +47,8 @@ describe("monti db:setup and monti db:migrate", () => {
 			)
 		).rows.map((row) => row.table_name);
 
-	const run = async (command: typeof dbSetup | typeof dbMigrate, schema: string) => {
-		setEnv({ DATABASE_URL: DATABASE, DATABASE_SCHEMA: schema });
+	const run = async (command: typeof dbSetup | typeof dbMigrate, schema: string, url = DATABASE) => {
+		setEnv({ DATABASE_URL: url, DATABASE_SCHEMA: schema });
 		const lines: string[] = [];
 		const code = await command({
 			cwd: project(),
@@ -67,16 +73,10 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(result.lines[0]).toContain(target.hostname);
 		expect(result.lines[0]).toContain(target.pathname.slice(1));
 		expect(result.lines[0]).toContain(`schema "${schema}"`);
-		expect(result.lines.at(-1)).toBe(`Done: created ${tables.length} tables.`);
+		// The last line says how many tables were made.
+		expect(result.lines.at(-1)).toMatch(new RegExp(`\\b${tables.length} tables\\b`));
 		// First-time setup is one plain story: no per-plugin "migrating" line, the plugin tables are in the count.
 		expect(result.text).not.toMatch(/migrat/i);
-		// No credentials are printed: take away what is meant to be shown and neither the user nor the password is left.
-		const allowed = [target.hostname, target.port, target.pathname.slice(1), schema, "postgres"].filter(Boolean);
-		const rest = allowed.reduce((text, part) => text.split(part).join(""), result.text);
-		for (const secret of [target.username, target.password].map(decodeURIComponent).filter(Boolean)) {
-			if (!allowed.includes(secret)) expect(rest).not.toContain(secret);
-		}
-		expect(result.text).not.toMatch(/@/);
 	});
 
 	it("DB-M1 setup on a database that is already set up changes nothing and points to db:migrate", async () => {
@@ -87,9 +87,11 @@ describe("monti db:setup and monti db:migrate", () => {
 
 		const again = await run(dbSetup, schema);
 		expect(again.code).toBe(0);
-		expect(again.text).toBe(
-			`Monti is already set up in this database (schema "${schema}"). After updating Monti, run \`monti db:migrate\`.`,
-		);
+		// One line: it is already set up, in which schema, and the command for after an update.
+		expect(again.lines).toHaveLength(1);
+		expect(again.text).toContain("already set up");
+		expect(again.text).toContain(`schema "${schema}"`);
+		expect(again.text).toContain("monti db:migrate");
 		expect(await tablesIn(schema)).toEqual(before);
 		expect((await pool.query(`SELECT name FROM "${schema}".cms_migrations ORDER BY name`)).rows).toEqual(applied);
 	});
@@ -105,8 +107,34 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(result.text).toContain("already has 1 other table");
 		expect(await tablesIn(schema)).toContain("orders");
 		const monti = (await tablesIn(schema)).length - 1;
-		expect(result.lines.at(-1)).toBe(`Done: created ${monti} tables.`);
+		expect(result.lines.at(-1)).toMatch(new RegExp(`\\b${monti} tables\\b`));
 		expect((await pool.query(`SELECT id FROM "${schema}".orders`)).rows).toEqual([{ id: 1 }]);
+	});
+
+	it("CLI-P2 setup and migrate name the host, the database and the schema, and never the user or the password", async () => {
+		// A user and a password of their own, so neither can be mistaken for the host, the database or the schema.
+		const suffix = randomBytes(4).toString("hex");
+		const user = `monti_user_${suffix}`;
+		const password = `pass-${suffix}-word`;
+		const target = new URL(DATABASE);
+		const database = target.pathname.slice(1);
+		await pool.query(`CREATE ROLE "${user}" LOGIN PASSWORD '${password}'`);
+		extraRoles.push(user);
+		await pool.query(`GRANT CREATE ON DATABASE "${database}" TO "${user}"`);
+		const url = new URL(DATABASE);
+		url.username = user;
+		url.password = password;
+
+		const schema = freshSchema("where");
+		for (const command of [dbSetup, dbMigrate]) {
+			const result = await run(command, schema, url.href);
+			expect(result.code, result.text).toBe(0);
+			expect(result.text).toContain(target.hostname);
+			expect(result.text).toContain(database);
+			expect(result.text).toContain(`schema "${schema}"`);
+			expect(result.text).not.toContain(user);
+			expect(result.text).not.toContain(password);
+		}
 	});
 
 	it("DB-M2 migrate on a database that was never set up points to db:setup, fails, and creates nothing", async () => {

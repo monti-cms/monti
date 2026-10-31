@@ -5,7 +5,6 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadEnvFiles } from "../env";
 import { dbMigrate, runCli } from "../index";
-import { parseJsonc } from "../jsonc";
 import { locateConfig } from "../locate";
 
 let dirs: string[] = [];
@@ -31,11 +30,6 @@ describe("monti command helpers", () => {
 		expect(env).toEqual({ A: "shell", B: "local", C: "env" });
 		expect(loadEnvFiles(dir, [], {})).toEqual([]);
 		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/\.env\.missing.*does not exist.*Fix:/);
-	});
-
-	it("DOC-B1 reads tsconfig with comments and trailing commas", () => {
-		expect(parseJsonc('{ // a\n "a": "x//y", /* b */ "c": [1,], }')).toEqual({ a: "x//y", c: [1] });
-		expect(parseJsonc("{ nope")).toBeUndefined();
 	});
 
 	it("CLI-C1 finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
@@ -117,6 +111,29 @@ describe("monti commands run against the instance the config file exports", () =
 		await expect(dbMigrate(options)).rejects.toThrow("no database");
 		const { calls } = await import(pathToFileURL(path.join(dir, "monti.config.mjs")).href);
 		expect(calls).toEqual(["close"]);
+	});
+
+	it("PLUG-S2 `monti <plugin>:<command>` loads the instance of the file --config names, runs the command with it, and closes it", async () => {
+		const dir = tempDir({
+			"custom/app.mjs": `export const calls = [];
+export const cms = {
+	migrate: async () => undefined,
+	close: async () => { calls.push("close"); },
+	plugins: async () => [{ name: "demo", commands: { go: {
+		description: "Goes",
+		options: { name: { type: "string" } },
+		run: async ({ cms: instance, args }) => { calls.push({ args, same: instance === cms, env: process.env.MONTI_PLUGIN_TEST }); },
+	} } }],
+	plugin: () => ({}),
+};
+`,
+			".env.local": "MONTI_PLUGIN_TEST=from-env-file\n",
+		});
+		const io = { cwd: dir, log: () => undefined, error: () => undefined };
+		expect(await runCli(["demo:go", "--name", "x", "--no-env-file", "--config", "custom/app.mjs"], io)).toBe(0);
+		const { calls } = await import(pathToFileURL(path.join(dir, "custom/app.mjs")).href);
+		// --no-env-file: the .env.local next to it was not read.
+		expect(calls).toEqual([{ args: { name: "x" }, same: true, env: undefined }, "close"]);
 	});
 
 	it("CLI-C1 a config file that does not export an instance is refused with the shape to use", async () => {

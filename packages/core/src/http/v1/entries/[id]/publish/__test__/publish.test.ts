@@ -59,6 +59,16 @@ describe("publish HTTP contract", () => {
 		expect(publish).toHaveBeenCalledWith({ id: "00000000-0000-4000-8000-000000000011", expectedVersion: 4 });
 	});
 
+	it("WRITE-P5 passes the choice to reset the publish date to the publish", async () => {
+		const response = await POST(request({ expectedVersion: 4, resetPublishedAt: true }), context);
+		expect(response.status).toBe(200);
+		expect(publish).toHaveBeenCalledWith({
+			id: "00000000-0000-4000-8000-000000000011",
+			expectedVersion: 4,
+			resetPublishedAt: true,
+		});
+	});
+
 	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
 		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
 		expect(response.status).toBe(200);

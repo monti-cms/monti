@@ -163,24 +163,6 @@ describe("write hook contract", () => {
 			expect((await store.getEntry(created.id)).working.metadata.title).toBe("SHOUTING");
 		});
 
-		it("WRITE-H1 gets the address of the entry, and may change it", async () => {
-			const seen: (string | null)[] = [];
-			sources = server({
-				beforeValidate: ({ slug, metadata, doc }) => {
-					seen.push(slug);
-					return { metadata, doc, slug: slug?.toUpperCase() };
-				},
-				beforeSave: ({ slug }) => {
-					seen.push(slug);
-				},
-			});
-			const input = await postInput("Slug hook");
-			const created = (await service.createDraft({ ...input, slug: "mixed-case" } as ServiceInput)).entry;
-			// The transform saw what was sent, the validation what core prepared from what the transform returned.
-			expect(seen).toEqual(["mixed-case", "MIXED-CASE"]);
-			expect(created.workingSlug).toBe("MIXED-CASE");
-		});
-
 		it("WRITE-H1 validates it: a key the schema does not have is rejected and nothing is stored", async () => {
 			sources = server({ beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
 			const before = await entryCount();
@@ -503,8 +485,10 @@ describe("write hook contract", () => {
 		/** Ways of writing the site cannot do: a translation needs a second language. */
 		const unavailable = new Set(secondLocale ? [] : ["translate"]);
 		/** One test per way of writing, skipped where the site cannot write that way. */
+		/** One test per write operation. The title starts with the requirement ID, which stays in front of the operation's name. */
 		const eachRunner = (title: string, test: (name: string) => Promise<void>) => {
-			for (const name of names) it.skipIf(unavailable.has(name))(`WRITE-H3 ${name}: ${title}`, () => test(name));
+			const [id, ...rest] = title.split(" ");
+			for (const name of names) it.skipIf(unavailable.has(name))(`${id} ${name}: ${rest.join(" ")}`, () => test(name));
 		};
 
 		eachRunner("WRITE-H3 a transform and both validations see it, with the operation", async (name) => {

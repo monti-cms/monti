@@ -81,9 +81,9 @@ AUTH-L11, 플러그인 명령은 [관리자 플러그인](plugins.md)의 PLUG-S2
 
 - 아직 테스트가 없는 🔴: 덮어쓰기 물음의 기본 "아니오"(INIT-K1, init.int의 "a changed file is kept…"는 "아니오"로 답할 뿐이다), doctor의
   `config/env-ignored` 점검(INIT-K5), `db:setup`의 출력에 비밀번호가 없는지(CLI-P2, 지금은 db-commands.int의 만들기 테스트가 함께 본다).
-- init.int의 `next.config`와 레이아웃 고치기 경우 6개는 L1(`wrapNextConfig`, `addSuppressHydrationWarning`, `ignoreForMonti`)로 옮긴다.
-  지금 L1에는 그 경우가 없으므로(INIT-K4, K5), 옮기기 전에 지우지 않는다.
-- `cli/diff.ts`의 `unifiedDiff`와 `DetectedApp.envLocalIgnored`는 아무 코드도 쓰지 않는다. knip으로 확인한 뒤 테스트와 함께 지운다.
-- `.int.test.ts` 안에 파일 시스템을 쓰지 않는 L1 테스트가 있다(init-locales, init-specs, next-app, init-detect의 front matter, import-boundary의
-  `importsOf`, cli-helpers의 tsconfig). ID를 달 때 L1 파일로 옮긴다.
+- init.int의 `next.config`와 레이아웃 고치기 경우 6개는 L1(`init-edit.test.ts`의 `wrapNextConfig`, `addSuppressHydrationWarning`,
+  `ignoreForMonti`)로 옮겼다(2026-11-01). init.int에는 이어짐을 보는 INIT-K3 테스트 셋이 남는다.
+- `cli/diff.ts`의 `unifiedDiff`와 `DetectedApp.envLocalIgnored`는 아무 코드도 쓰지 않아서 테스트와 함께 지웠다(2026-11-01).
+- `.int.test.ts` 안에 있던, 파일 시스템을 쓰지 않는 L1 테스트(init-locales, init-specs, next-app, init-detect의 front matter, import-boundary의
+  `importsOf`, cli-helpers의 tsconfig)는 L1 파일로 옮겼다(2026-11-01).
 - CLI 출력의 문구를 글자 그대로 보는 테스트 14개는 [언어와 문구](../../testing.md#언어와-문구)대로, 무엇이·어디서·어떻게 고치는지가 들어 있는지로 바꾼다.

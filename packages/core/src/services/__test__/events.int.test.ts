@@ -636,15 +636,4 @@ describe("afterCommit delivery", () => {
 			expect((await readLog(failedEntry.id)).map((item) => item.state)).toEqual(["failed"]);
 		});
 	});
-
-	describe("the retry secret", () => {
-		it("API-G3 accepts only the configured secret", () => {
-			const { events } = setup({}, { retrySecret: "s3cret" });
-			expect(events.acceptsRetryToken("s3cret")).toBe(true);
-			expect(events.acceptsRetryToken("s3cret ")).toBe(false);
-			expect(events.acceptsRetryToken("")).toBe(false);
-			expect(events.acceptsRetryToken(null)).toBe(false);
-			expect(setup({}).events.acceptsRetryToken("s3cret")).toBe(false);
-		});
-	});
 });

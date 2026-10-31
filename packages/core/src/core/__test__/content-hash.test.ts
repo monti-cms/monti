@@ -78,6 +78,10 @@ describe("content hash v2", () => {
 			expect(hashOf("```ts\nconst a = 1\n```")).not.toBe(hashOf("```ts\nconst a = 2\n```"));
 		});
 
+		it("WRITE-S3 the language of a code block, with the same code", () => {
+			expect(hashOf("```ts\nconst a = 1\n```")).not.toBe(hashOf("```js\nconst a = 1\n```"));
+		});
+
 		it("metadata", () => {
 			expect(hashOf("Hello", { title: "B" })).not.toBe(hashOf("Hello"));
 		});
@@ -115,12 +119,6 @@ describe("content hash v2", () => {
 			const json = JSON.stringify(canonicalBodyForHash(documentOf({ ...block({ b: 1, a: 2 }), id: "aaaaaaaa" })));
 			expect(json).not.toContain("aaaaaaaa");
 			expect(json.indexOf('"a":2')).toBeLessThan(json.indexOf('"b":1'));
-		});
-
-		it("keeps the code and its language", () => {
-			const json = JSON.stringify(canonicalBodyForHash(docOf('```ts title="a"\nconst a = 1\n```')));
-			expect(json).toContain("const a = 1");
-			expect(json).toContain('"language":"ts"');
 		});
 
 		it("does not change the document it receives", () => {

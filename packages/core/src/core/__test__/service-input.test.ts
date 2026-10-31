@@ -60,13 +60,20 @@ describe("metadata the caller sends", () => {
 	it("WRITE-S7 names the field that has the wrong kind of value", async () => {
 		const error = await prepareSnapshot(site, input({ title: "A", summary: 3 })).catch((caught) => caught);
 		expect(error).toMatchObject({ code: "invalid_metadata_type", issues: [{ path: "summary" }] });
-		expect(error.message).toBe('invalid_metadata_type: The value of "summary" must be text, not number. (summary)');
+		// The message names the field, the kind it must be and the kind it got.
+		expect(error.message).toContain('"summary"');
+		expect(error.message).toContain("text");
+		expect(error.message).toContain("number");
 	});
 
 	it("WRITE-S7 names the field that does not exist, and the ones that do", async () => {
 		const error = await prepareSnapshot(site, input({ title: "A", subtitle: "B" })).catch((caught) => caught);
 		expect(error).toMatchObject({ code: "invalid_metadata_key", issues: [{ path: "subtitle" }] });
-		expect(error.message).toContain('"subtitle" is not a field of post (its fields are: title, summary)');
+		// The message names the field it got, the collection and the fields it has.
+		expect(error.message).toContain('"subtitle"');
+		expect(error.message).toMatch(/\bpost\b/);
+		expect(error.message).toMatch(/\btitle\b/);
+		expect(error.message).toMatch(/\bsummary\b/);
 	});
 });
 

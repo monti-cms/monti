@@ -114,10 +114,10 @@ describe("monti doctor on a healthy project", () => {
 		const migrations = byId(report, "database/migrations");
 		expect(code).toBe(1);
 		expect(migrations.status).toBe("fail");
-		expect(migrations.message).toBe(
-			"This database was created by an older pre-release of Monti and cannot be upgraded",
-		);
-		expect(migrations.fix).toContain("recreate it");
+		// What is wrong (an older pre-release, no upgrade), where (the schema) and the fix (recreate it).
+		expect(migrations.message).toContain("older pre-release");
+		expect(migrations.message).toContain("cannot be upgraded");
+		expect(migrations.fix).toContain("recreate");
 		expect(migrations.where).toContain(schemaName);
 		// The rest of the setup is still reported: one broken part does not hide the others.
 		expect(byId(report, "database/connect").status).toBe("ok");
@@ -240,20 +240,29 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "database/url").message).toContain("postgres://");
 	});
 
-	it("warns about sslmode=require|prefer|verify-ca without uselibpqcompat, and says what to change", async () => {
-		for (const mode of ["require", "prefer", "verify-ca"]) {
-			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog?sslmode=${mode}` });
-			const { report } = await doctor(project());
-			const url = byId(report, "database/url");
-			expect(url.status).toBe("warn");
-			expect(url.message).toContain("SECURITY WARNING");
-			expect(url.fix).toContain("sslmode=verify-full");
-		}
-		for (const query of ["sslmode=verify-full", "sslmode=require&uselibpqcompat=true", ""]) {
-			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog${query ? `?${query}` : ""}` });
-			const { report } = await doctor(project());
-			expect(byId(report, "database/url").status).toBe("ok");
-		}
+	it("DOC-R2 the database/url check warns about an sslmode the driver warns about, and says what to change", async () => {
+		// The modes and the URLs that need no warning are the cases of sslmodeWarning (adapters/postgres connection.test.ts); this is the check that shows it.
+		setEnv({ DATABASE_URL: "postgres://u:p@db.example.com:5432/blog?sslmode=require" });
+		const { report } = await doctor(project(), ["--only", "database/url"]);
+		const url = byId(report, "database/url");
+		expect(url.status).toBe("warn");
+		expect(url.message).toContain("sslmode=require");
+		expect(url.fix).toContain("sslmode=verify-full");
+	});
+
+	it("INIT-K5 reports a .gitignore that does not keep .env.local out of git, and says what to add", async () => {
+		setEnv();
+		const exposed = project({ ".gitignore": "node_modules\n.monti/\n", ".env.local": "MONTI_SECRET=x\n" });
+		const check = byId((await doctor(exposed, ["--only", "config/env-ignored"])).report, "config/env-ignored");
+		expect(check.status).toBe("warn");
+		expect(check.message).toContain(".env.local");
+		expect(check.where).toBe(".gitignore");
+		expect(check.fix).toContain("`.env.local`");
+
+		const covered = project({ ".gitignore": ".env*\n.monti/\n", ".env.local": "MONTI_SECRET=x\n" });
+		expect(byId((await doctor(covered, ["--only", "config/env-ignored"])).report, "config/env-ignored").status).toBe(
+			"ok",
+		);
 	});
 
 	it("CLI-P1 warns about a weak MONTI_SECRET and never prints it", async () => {

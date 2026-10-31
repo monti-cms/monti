@@ -7,7 +7,7 @@ const codeOf = (run: () => unknown) => {
 	try {
 		run();
 	} catch (error) {
-		return error instanceof CmsError ? { code: error.code, message: error.message } : "other";
+		return error instanceof CmsError ? { code: error.code } : "other";
 	}
 	return null;
 };
@@ -15,26 +15,20 @@ const codeOf = (run: () => unknown) => {
 describe("folders", () => {
 	it("LIST-F6 an entry goes in a folder of its own collection", () => {
 		expect(codeOf(() => assertFolderInCollection("post", "post"))).toBeNull();
-		expect(codeOf(() => assertFolderInCollection("tag", "post"))).toEqual({
-			code: "invalid_input",
-			message: "Invalid folder",
-		});
+		expect(codeOf(() => assertFolderInCollection("tag", "post"))).toMatchObject({ code: "invalid_input" });
 		expect(codeOf(() => assertFolderInCollection(undefined, "post"))).toMatchObject({ code: "invalid_input" });
 	});
 
 	it("LIST-F6 a folder nests under a parent of its own collection", () => {
 		expect(codeOf(() => assertParentInCollection("post", "post"))).toBeNull();
-		expect(codeOf(() => assertParentInCollection("tag", "post"))).toEqual({
-			code: "invalid_input",
-			message: "Invalid parent",
-		});
+		expect(codeOf(() => assertParentInCollection("tag", "post"))).toMatchObject({ code: "invalid_input" });
 		expect(codeOf(() => assertParentInCollection(undefined, "post"))).toMatchObject({ code: "invalid_input" });
 	});
 
 	it("LIST-F6 a folder cannot move under itself or under one of its descendants", () => {
 		expect(codeOf(() => assertNoFolderCycle("f", ["parent", "grandparent"]))).toBeNull();
-		expect(codeOf(() => assertNoFolderCycle("f", ["f"]))).toMatchObject({ code: "invalid_input", message: "Cycle" });
-		expect(codeOf(() => assertNoFolderCycle("f", ["child", "f"]))).toMatchObject({ message: "Cycle" });
+		expect(codeOf(() => assertNoFolderCycle("f", ["f"]))).toMatchObject({ code: "invalid_input" });
+		expect(codeOf(() => assertNoFolderCycle("f", ["child", "f"]))).toMatchObject({ code: "invalid_input" });
 	});
 });
 

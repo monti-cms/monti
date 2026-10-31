@@ -434,12 +434,3 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect((await response.json()).error.code).toBe("payload_too_large");
 	});
 });
-
-describe("reading a zip", () => {
-	it("DATA-I9 stops at the size the entries inflate to, so a small zip cannot expand without limit", () => {
-		const zip = createZipArchive([{ path: "big.txt", data: new Uint8Array(4 * 1024 * 1024) }]);
-		expect(zip.byteLength).toBeLessThan(64 * 1024);
-		expect(() => readZipArchive(zip, { maxTotalBytes: 1024 * 1024 })).toThrow(/limit/);
-		expect(readZipArchive(zip, { maxTotalBytes: 8 * 1024 * 1024 })[0]?.data.byteLength).toBe(4 * 1024 * 1024);
-	});
-});

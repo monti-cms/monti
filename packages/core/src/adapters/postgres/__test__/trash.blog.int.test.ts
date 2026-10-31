@@ -691,8 +691,8 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-B1 shows what an entry has: its languages, whether it was published, and how many entries point at it",
 			async () => {
-				if (!relation) return;
-				const tag = await relationTarget(relation.to);
+				const field = relation as NonNullable<typeof relation>;
+				const tag = await relationTarget(field.to);
 				const post = await publish(await draft(unique("Tagged")));
 				await point(await store.getEntry(post.id), [{ kind: "entry", targetId: tag, type: "metadata" }]);
 				const never = await draft(unique("Never published"));
@@ -812,7 +812,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D2 is held back by a relation field, naming the entries that point at it and whether they are in the trash",
 			async () => {
-				if (!relation) return;
 				const target = await draft(unique("Pointed at"));
 				const live = await draft(unique("Live pointer"));
 				const gone = await draft(unique("Trashed pointer"));
@@ -838,7 +837,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D3 goes through when the entries that point at it are deleted in the same call, whatever the order",
 			async () => {
-				if (!relation) return;
 				const target = await draft(unique("Target"));
 				const pointer = await draft(unique("Pointer"));
 				await point(pointer, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
@@ -887,7 +885,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D7 holds a folder back when an entry outside it points at something inside",
 			async () => {
-				if (!relation) return;
 				const crate = await folder("Held");
 				const target = await draft(unique("Inside"), crate.id);
 				const outside = await draft(unique("Outside"));
@@ -1278,9 +1275,9 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-R1 goes to the trash while an entry uses it, and restoring it publishes it again",
 			async () => {
-				if (!relation) return;
-				const tag = await relationTarget(relation.to);
-				await draft(unique("User"), null, { [relation.name]: relation.many ? [tag] : tag });
+				const field = relation as NonNullable<typeof relation>;
+				const tag = await relationTarget(field.to);
+				await draft(unique("User"), null, { [field.name]: field.many ? [tag] : tag });
 				const entry = await store.getEntry(tag);
 				await store.trashEntry({ id: tag, expectedVersion: entry.version });
 				expect(await statusOf(tag)).toBe("trashed");

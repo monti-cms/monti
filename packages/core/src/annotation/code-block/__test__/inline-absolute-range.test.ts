@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { __testable__ as codeFenceToDocument } from "../code-fence-to-document";
-import { __testable__ as documentToCodeFence } from "../document-to-code-fence";
+import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
+import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
 import type { AnnotationConfig, CodeFence as Code, CodeBlockDocument } from "../types";
-
-const { fromCodeFenceToCodeBlockDocument } = codeFenceToDocument;
-const { fromCodeBlockDocumentToCodeFence } = documentToCodeFence;
 
 const annotationConfig: AnnotationConfig = {
 	annotations: [{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char"] }],

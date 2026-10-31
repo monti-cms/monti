@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runCli } from "..";
-import { findBoundaryViolations, formatBoundaryViolations, importsOf } from "../import-boundary";
+import { findBoundaryViolations, formatBoundaryViolations } from "../import-boundary";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -106,23 +106,6 @@ describe("import boundary: the config file stays out of client bundles", () => {
 			"lib/server.ts": 'import { cms } from "../monti.config";\nexport const s = cms;\n',
 		});
 		expect(findBoundaryViolations(dir)).toEqual([]);
-	});
-
-	it("reads the imports a file makes at run time", () => {
-		expect(
-			importsOf(
-				[
-					'import a from "a";',
-					'import type { T } from "types-only";',
-					'import { type U, type V } from "also-types";',
-					'import { type W, x } from "mixed";',
-					'import "side-effect";',
-					'export * from "re-export";',
-					'export type { Y } from "type-export";',
-					'const lazy = () => import("lazy");',
-				].join("\n"),
-			),
-		).toEqual(["a", "mixed", "side-effect", "re-export", "lazy"]);
 	});
 
 	it("DOC-B1 is the config/boundary check of `monti doctor`: exit 0 when clean, 1 with the chains when not", async () => {

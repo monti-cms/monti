@@ -239,7 +239,7 @@ describe("defineSite", () => {
 		});
 	});
 
-	it("CONF-S5 checks the admin path, locale prefix, preview locale param", () => {
+	it("CONF-S5 checks the admin path and the locale prefix", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, admin: { path: "/studio" } })).not.toThrow();
 		expect(() => defineSite({ ...base, admin: { path: "/cms/admin" } })).not.toThrow();
@@ -252,6 +252,10 @@ describe("defineSite", () => {
 			"site.localePrefix",
 			"enum",
 		);
+	});
+
+	it("CONF-A1 checks the preview locale param", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, site: { previewLocaleParam: false } })).not.toThrow();
 		expect(() => defineSite({ ...base, site: { previewLocaleParam: "lang" } })).not.toThrow();
 		expectIssue(

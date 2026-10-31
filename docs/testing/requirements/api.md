@@ -46,3 +46,7 @@ core의 읽기 API를 이름으로 부르는 작업이다. 관리자 라우트 �
 - 본문이 문서인지 글인지 가르는 `bodyIsDocOrText`와 문서 한도·문서가 아닌 값을 거르는 `documentInputBody`에 L1 테스트가 없다(WRITE-S7).
   라우트에서 그 경우를 보는 테스트 6개(아래로)는 L1 테스트를 더한 뒤에 지운다.
 - 발행 라우트가 `resetPublishedAt`을 서비스에 넘기는지 보는 테스트가 없다(WRITE-P5).
+
+위 넷은 모두 더했다(2026-11-01): 라우트 표를 돌며 예외 아홉 밖은 `admin`인지 보는 API-G1(`http/__test__/router.test.ts`), 출처 검사의
+세 경우(API-G2, `security.test.ts`), `bodyIsDocOrText`와 `documentInputBody`의 L1 테스트(WRITE-S7, `core/__test__/api.test.ts`,
+`snapshot.test.ts`), 발행 라우트의 `resetPublishedAt`(WRITE-P5). 테스트마다 그 소스 줄을 망가뜨려 실패하는 것을 확인했다.

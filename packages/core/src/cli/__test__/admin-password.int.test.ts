@@ -83,6 +83,28 @@ describe("the email and password login on the command line", () => {
 		await closeGlobalPool();
 	});
 
+	/** The app's instance, with the first admin mina@example.com made with this password. */
+	const withAdmin = async (dir: string, secret: string) => {
+		const cms = await importCms(dir, "monti.config.ts");
+		const accounts = cms.auth().accounts;
+		if (!accounts) throw new Error("expected accounts");
+		expect(await accounts.createFirst({ email: "mina@example.com", password: secret })).toEqual({ ok: true });
+		return cms;
+	};
+
+	/** Whether mina@example.com can sign in with this password. */
+	const signInTo = (cms: Awaited<ReturnType<typeof importCms>>) => async (secret: string) => {
+		const response = (await cms.auth().signIn("password", {
+			redirectTo: "/studio",
+			request: new Request("https://blog.example.com/api/monti/v1/session/sign-in/password", {
+				method: "POST",
+				headers: { host: "blog.example.com" },
+			}),
+			credentials: { email: "mina@example.com", password: secret },
+		})) as Response;
+		return !response.headers.get("location")?.includes("error=");
+	};
+
 	it("AUTH-L11 doctor warns that there is no admin yet and says to open the admin, and runs no GitHub checks", async () => {
 		const dir = app();
 		const { report } = await doctor(dir);
@@ -109,25 +131,10 @@ describe("the email and password login on the command line", () => {
 
 	it("AUTH-L11 doctor is satisfied once an admin exists, and reset-password then replaces the password", async () => {
 		const dir = app();
-		const cms = await importCms(dir, "monti.config.ts");
-		const accounts = cms.auth().accounts;
-		if (!accounts) throw new Error("expected accounts");
-		expect(await accounts.createFirst({ email: "mina@example.com", password: "first password!" })).toEqual({
-			ok: true,
-		});
+		const cms = await withAdmin(dir, "first password!");
 		expect(byId((await doctor(dir)).report, "auth/admin-accounts").status).toBe("ok");
 
-		const signIn = async (secret: string) => {
-			const response = (await cms.auth().signIn("password", {
-				redirectTo: "/studio",
-				request: new Request("https://blog.example.com/api/monti/v1/session/sign-in/password", {
-					method: "POST",
-					headers: { host: "blog.example.com" },
-				}),
-				credentials: { email: "mina@example.com", password: secret },
-			})) as Response;
-			return !response.headers.get("location")?.includes("error=");
-		};
+		const signIn = signInTo(cms);
 		expect(await signIn("first password!")).toBe(true);
 
 		const reset = await run(
@@ -143,16 +150,26 @@ describe("the email and password login on the command line", () => {
 
 	it("AUTH-L11 reset-password asks for the email when --email is not given, and does not change anything when the two passwords differ", async () => {
 		const dir = app();
+		const signIn = signInTo(await withAdmin(dir, "first password!"));
+		let askedEmail = false;
 		const prompts = {
-			text: async () => "mina@example.com",
+			text: async () => {
+				askedEmail = true;
+				return "mina@example.com";
+			},
 			password: (() => {
 				const queue = ["one password!", "another password"];
 				return async () => queue.shift() ?? "";
 			})(),
 		};
 		const { code, text } = await run(dir, ["admin:reset-password"], prompts);
+		expect(askedEmail).toBe(true);
 		expect(code).toBe(1);
 		expect(text).toContain("not the same");
+		// The old password still works, and neither new one does.
+		expect(await signIn("first password!")).toBe(true);
+		expect(await signIn("one password!")).toBe(false);
+		expect(await signIn("another password")).toBe(false);
 	});
 
 	it("AUTH-L11 reset-password exits with 130 when the person cancels, like init", async () => {

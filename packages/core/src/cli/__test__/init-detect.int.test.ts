@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { detectApp, parseFrontMatterKeys } from "../init-detect";
+import { detectApp } from "../init-detect";
 import { detectAppDir } from "../next-app";
 import { fixtureApp, POST_MDX, SRC_APP } from "./init-helpers";
 
@@ -44,7 +44,6 @@ describe("detecting the app", () => {
 			contentFolders: [],
 			nextConfig: "next.config.ts",
 			devPort: 3000,
-			envLocalIgnored: true,
 			existingConfig: undefined,
 		});
 	});
@@ -120,30 +119,5 @@ describe("detecting the app", () => {
 		const pkg = (dev: string) => JSON.stringify({ dependencies: { next: "16" }, scripts: { dev } });
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev -p 4000") })).devPort).toBe(4000);
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev --turbopack --port=5000") })).devPort).toBe(5000);
-	});
-
-	it("notices a .gitignore that does not cover .env.local", () => {
-		expect(detectApp(fixtureApp({ ".gitignore": "node_modules\n" })).envLocalIgnored).toBe(false);
-		expect(detectApp(fixtureApp({ ".gitignore": ".env*.local\n" })).envLocalIgnored).toBe(true);
-		expect(detectApp(fixtureApp({ ".gitignore": null })).envLocalIgnored).toBe(false);
-	});
-});
-
-describe("front matter keys", () => {
-	it("INIT-C1 types the top-level keys and ignores nested ones and the body", () => {
-		const keys = parseFrontMatterKeys(
-			'---\ntitle: "Hello: world"\ncount: 3\nok: true\nwhen: 2024-02-03T10:00:00Z\ntags: [a, b]\nauthors:\n  - name: x\nnested:\n  inner: 1\n---\nbody: not a key\n',
-		);
-		expect([...keys]).toEqual([
-			["title", "string"],
-			["count", "number"],
-			["ok", "boolean"],
-			["when", "date"],
-			["tags", "list"],
-			["authors", "list"],
-			["nested", "string"],
-		]);
-		expect(parseFrontMatterKeys("# no front matter\n").size).toBe(0);
-		expect(parseFrontMatterKeys("﻿---\r\ntitle: x\r\n---\r\n").has("title")).toBe(true);
 	});
 });

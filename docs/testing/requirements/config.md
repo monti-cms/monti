@@ -40,4 +40,4 @@ SCHEMA-F14, 제목과 역할의 검사는 SCHEMA-S2·S3, 다른 사이트의 데
 - 코드 설정과 스키마 파일은 같은 검사(`checkConfig`)를 지난다. `schema-file/__test__/define-schema.test.ts`가 파일로 이미 보는 경우는
   `config/__test__/define.test.ts`에서 겹침으로 적었다.
 - `define.test.ts`의 "checks the admin path, locale prefix, preview locale param"은 두 약속을 함께 본다. 미리보기의 언어 쿼리는 관리자에만
-  닿으므로 CONF-A1의 테스트로 떼어 낸다. 관리자 언어는 관리자 화면만 깨뜨려서 🔴이 아니라 CONF-A1이다.
+  닿으므로 CONF-A1의 테스트로 떼어 냈다(2026-11-01). 관리자 언어는 관리자 화면만 깨뜨려서 🔴이 아니라 CONF-A1이다.

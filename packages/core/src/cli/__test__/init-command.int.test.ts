@@ -46,14 +46,15 @@ describe("monti init on the command line", () => {
 
 	it("INIT-N1 --yes takes every default and prints a plain summary", async () => {
 		const dir = fixtureApp();
+		const before = listFiles(dir);
 		const result = run(dir, ["--yes", "--no-install"]);
 		expect(await result.code).toBe(0);
 		const text = result.out.join("\n");
-		expect(text).toContain("Monti is added to your app.");
-		expect(text).toContain("Created:\n  - monti.config.ts");
-		expect(text).toContain("Monti's files are in the project root (next to app/).");
-		expect(text).toContain("What is left:");
-		expect(text).toMatch(/\n {2}1\. /);
+		// Every file init made is named (.env.local in its step, the others in the list), and what is left is a numbered list whose first step is the install it did not run.
+		const made = listFiles(dir).filter((file) => !before.includes(file));
+		expect(made).toEqual(expect.arrayContaining(["monti.config.ts", ".env.local"]));
+		for (const file of made) expect(text).toContain(file === ".env.local" ? file : `  - ${file}`);
+		expect(text).toMatch(/\n {2}1\. .*\n.*pnpm add @monti-cms\/core/);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
@@ -244,7 +245,10 @@ describe("monti init on the command line", () => {
 		const prompter = scriptedPrompter({ [QUESTIONS.defaultLocale]: "cancel" });
 		const result = run(dir, [], { interactive: true, prompter });
 		expect(await result.code).toBe(130);
-		expect(result.err).toEqual(["Cancelled. Nothing was written."]);
+		// One line that says it was cancelled and that nothing was written.
+		expect(result.err).toHaveLength(1);
+		expect(result.err[0]).toMatch(/cancel/i);
+		expect(result.err[0]).toMatch(/nothing was written/i);
 		expect(listFiles(dir)).toEqual(before);
 	});
 

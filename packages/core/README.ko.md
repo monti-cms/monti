@@ -1002,7 +1002,6 @@ const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // �
 const value = await cms.apiKeys.read(id);                                  // 서버에서만. 키가 지워졌거나 풀 수 없으면 null
 await cms.apiKeys.setUses("my-plugin", [{ ref: "item:42", keyId: id }]);   // 플러그인의 어느 항목이 키를 쓰는지, 전체를 통째로 바꾼다
 await plugin.key("key").read();                                           // 플러그인이 선언한 슬롯(`keySlots`)에 정해진 키
-await cms.apiKeys.findOrAdd({ baseName: "GitHub", value });                // 값이 같은 키, 없으면 새 키
 await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...)와 tx.storage("my-plugin") 쓰기: 모두 남거나 모두 사라진다 */ });
 ```
 

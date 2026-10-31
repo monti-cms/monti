@@ -204,28 +204,31 @@ describe("any site: core content flow", () => {
 			expect(media?.field.kind).toBe("media");
 		});
 
-		it("MEDIA-B5 tracks the field value as a media reference: usage, the unused filter and the trash check", async () => {
-			if (!collection || !media) return;
-			const used = await readyMedia(`${unique("used")}.png`);
-			const spare = await readyMedia(`${unique("spare")}.png`);
-			const draft = await draftWith("Uses a share image", used.id);
-			const list = await store.listMediaAssets({ pageSize: 100 });
-			const usedItem = list.items.find((item) => item.id === used.id);
-			expect(usedItem?.referencesCount).toBe(1);
-			expect(usedItem?.references).toEqual([
-				expect.objectContaining({ entryId: draft.id, state: "working", title: "Uses a share image" }),
-			]);
-			const unused = await store.listMediaAssets({ pageSize: 100, used: "unused" });
-			expect(unused.items.map((item) => item.id)).toContain(spare.id);
-			expect(unused.items.map((item) => item.id)).not.toContain(used.id);
-			expect(await store.trashMedia({ ids: [used.id] })).toEqual({ trashed: [], kept: [used.id] });
-			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
-			// The published copy also has the same references.
-			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
-			expect(published.published?.metadata[media.name]).toBe(used.id);
-			const after = (await store.listMediaAssets({ pageSize: 100 })).items.find((item) => item.id === used.id);
-			expect(after?.references.map((reference) => reference.state).sort()).toEqual(["published", "working"]);
-		});
+		it.skipIf(!media)(
+			"MEDIA-B5 tracks the field value as a media reference: usage, the unused filter and the trash check",
+			async () => {
+				const field = media as NonNullable<typeof media>;
+				const used = await readyMedia(`${unique("used")}.png`);
+				const spare = await readyMedia(`${unique("spare")}.png`);
+				const draft = await draftWith("Uses a share image", used.id);
+				const list = await store.listMediaAssets({ pageSize: 100 });
+				const usedItem = list.items.find((item) => item.id === used.id);
+				expect(usedItem?.referencesCount).toBe(1);
+				expect(usedItem?.references).toEqual([
+					expect.objectContaining({ entryId: draft.id, state: "working", title: "Uses a share image" }),
+				]);
+				const unused = await store.listMediaAssets({ pageSize: 100, used: "unused" });
+				expect(unused.items.map((item) => item.id)).toContain(spare.id);
+				expect(unused.items.map((item) => item.id)).not.toContain(used.id);
+				expect(await store.trashMedia({ ids: [used.id] })).toEqual({ trashed: [], kept: [used.id] });
+				expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
+				// The published copy also has the same references.
+				const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
+				expect(published.published?.metadata[field.name]).toBe(used.id);
+				const after = (await store.listMediaAssets({ pageSize: 100 })).items.find((item) => item.id === used.id);
+				expect(after?.references.map((reference) => reference.state).sort()).toEqual(["published", "working"]);
+			},
+		);
 
 		it("rejects a value that is not a media ID and ignores an empty one", async () => {
 			if (!collection || !media) return;
@@ -234,16 +237,19 @@ describe("any site: core content flow", () => {
 			expect(empty.working.metadata[media.name]).toBe("");
 		});
 
-		it("TRASH-T5 keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)", async () => {
-			if (!collection || !media) return;
-			const legacy = await readyMedia(`${unique("legacy")}.png`);
-			const draft = await draftWith("Legacy share image", "");
-			// Like a value saved before the media field existed, it is kept only in the metadata with no reference index.
-			await pool.query(
-				`UPDATE "${schemaName}".entry_bodies SET metadata = jsonb_set(metadata, $2, to_jsonb($3::text)) WHERE entry_id = $1`,
-				[draft.id, [media.name], legacy.id],
-			);
-			expect(await store.trashMedia({ ids: [legacy.id] })).toEqual({ trashed: [], kept: [legacy.id] });
-		});
+		it.skipIf(!media)(
+			"TRASH-T5 keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)",
+			async () => {
+				const field = media as NonNullable<typeof media>;
+				const legacy = await readyMedia(`${unique("legacy")}.png`);
+				const draft = await draftWith("Legacy share image", "");
+				// Like a value saved before the media field existed, it is kept only in the metadata with no reference index.
+				await pool.query(
+					`UPDATE "${schemaName}".entry_bodies SET metadata = jsonb_set(metadata, $2, to_jsonb($3::text)) WHERE entry_id = $1`,
+					[draft.id, [field.name], legacy.id],
+				);
+				expect(await store.trashMedia({ ids: [legacy.id] })).toEqual({ trashed: [], kept: [legacy.id] });
+			},
+		);
 	});
 });

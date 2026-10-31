@@ -13,10 +13,10 @@ const deleteFolder = routeCaller(deleteFolderHandler);
 const folderContents = routeCaller(folderContentsHandler);
 const getFolders = routeCaller(getFoldersHandler);
 
+const folders = [{ id: "00000000-0000-4000-8000-000000000007", name: "Folder 1", version: 1 }];
+
 const mockStore = {
-	listFolders: vi
-		.fn()
-		.mockResolvedValue([{ id: "00000000-0000-4000-8000-000000000007", name: "Folder 1", version: 1 }]),
+	listFolders: vi.fn().mockResolvedValue(folders),
 	createFolder: vi.fn().mockImplementation((p) => Promise.resolve({ id: "f-new", version: 1, ...p })),
 	updateFolder: vi.fn().mockImplementation((p) => {
 		if (p.expectedVersion === 1) {
@@ -43,12 +43,12 @@ const mockStore = {
 const cms = fakeCms({ config: testConfig, store: mockStore });
 
 describe("Folders HTTP API Contract", () => {
-	it("LIST-F6 GET /folders returns list", async () => {
+	it("LIST-F6 GET /folders lists the folders of the collection it names", async () => {
 		const req = new Request(`http://localhost/api/monti/v1/folders?collection=${contentCollection}`);
 		const res = await getFolders(req, { cms });
 		expect(res.status).toBe(200);
-		const data = await res.json();
-		expect(data[0].version).toBe(1);
+		expect(mockStore.listFolders).toHaveBeenCalledWith({ collection: contentCollection });
+		expect(await res.json()).toEqual(folders);
 	});
 
 	it("PATCH /folders/:id rejects without expectedVersion with 428", async () => {

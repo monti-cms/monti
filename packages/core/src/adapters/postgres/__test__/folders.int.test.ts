@@ -112,7 +112,8 @@ describe("Folders in Postgres", () => {
 						);
 						return res.rows.filter((r) => r.state === "active" && r.wait_event !== null).length;
 					},
-					{ timeout: 15_000 },
+					// The second pool opens its connections and both moves reach the gate: on a slow CI database this takes seconds.
+					{ timeout: 10_000 },
 				)
 				.toBe(2);
 
@@ -161,5 +162,5 @@ describe("Folders in Postgres", () => {
 			gateClient.release();
 			await customPool.end();
 		}
-	}, 30_000);
+	});
 });

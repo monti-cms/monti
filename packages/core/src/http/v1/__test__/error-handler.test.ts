@@ -17,8 +17,10 @@ describe("API error responses", () => {
 
 	it("ADMIN-E2 keeps an unknown error as a 500", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
-		expect(handleApiError(new Error("boom")).status).toBe(500);
-		expect(log).toHaveBeenCalled();
+		const error = new Error("boom");
+		expect(handleApiError(error).status).toBe(500);
+		// The server log keeps the error itself, for the developer.
+		expect(log).toHaveBeenCalledWith(expect.any(String), error);
 	});
 });
 

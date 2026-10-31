@@ -7,7 +7,6 @@ export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schem
 export { adminResetPassword, type ResetPasswordOptions } from "./admin-command";
 export type { CliContext, CliIo } from "./command";
 export { dbMigrate, dbSetup, type MigrateOptions } from "./db";
-export { unifiedDiff } from "./diff";
 export {
 	type DoctorOptions,
 	type DoctorReport,

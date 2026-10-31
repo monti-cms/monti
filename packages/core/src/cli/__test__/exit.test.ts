@@ -26,7 +26,7 @@ describe("one place turns an error into an exit code", () => {
 
 		const json = capture();
 		expect(reportError(new Cancelled(), json.io, { json: true })).toBe(130);
-		expect(JSON.parse(json.out.join(""))).toMatchObject({ ok: false, error: expect.any(String) });
+		expect(JSON.parse(json.out.join(""))).toEqual({ ok: false, error: new Cancelled().message });
 		expect(json.err).toEqual([]);
 	});
 

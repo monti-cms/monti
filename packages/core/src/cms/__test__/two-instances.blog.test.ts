@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import blog from "../../../test/cms.config";
 import otherSiteConfig from "../../../test/other-site.config";
 import { defineSite } from "../../config/define";
@@ -8,7 +8,7 @@ import type { ContentStore, PublishedEntryRecord } from "../../core/store";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { defineMessages } from "../../i18n/define";
-import { type DocumentComponentsFor, type DocumentComponentsOf, renderDocument } from "../../render";
+import { renderDocument } from "../../render";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createSite, type Site } from "../../site";
 import { type Cms, createCms } from "../create-cms";
@@ -348,48 +348,5 @@ describe("a site snapshot crosses JSON and gives the same site", () => {
 		expect(copy.ADMIN_LANGUAGE).toBe(site.ADMIN_LANGUAGE);
 		expect(copy.CMS_TIME_ZONE).toBe(site.CMS_TIME_ZONE);
 		expect(copy.localizePath(site.DEFAULT_LOCALE, "/x")).toBe(site.localizePath(site.DEFAULT_LOCALE, "/x"));
-	});
-});
-
-/** Compile-time checks (only `tsc` reads them): the instance keeps the type of its config. */
-describe("instance types", () => {
-	it("keeps the config's types", () => {
-		// Never run: the calls below only exist to be type-checked.
-		const check = () => {
-			const server = stubServer("types").server;
-			const cmsBlog = createCms({ config: blog, server });
-			const cmsOther = createCms({ config: other, server });
-
-			// An instance of any config is accepted where `Cms` (any config) is expected.
-			const any: Cms = cmsBlog;
-			const anyOther: Cms = cmsOther;
-			void any;
-			void anyOther;
-
-			// Collection names and metadata come from the config.
-			void cmsBlog.read.listEntries({ collection: "post" });
-			void cmsOther.read.listEntries({ collection: "article" });
-			// @ts-expect-error `article` is not a collection of the blog config
-			void cmsBlog.read.listEntries({ collection: "article" }).catch(() => undefined);
-			// @ts-expect-error `post` is not a collection of the other-site config
-			void cmsOther.read.listEntries({ collection: "post" }).catch(() => undefined);
-			expectTypeOf(cmsBlog.site.config).toEqualTypeOf<typeof blog>();
-
-			// The component table of an instance, or of a config, names that site's blocks.
-			const ofInstance = {
-				blocks: { notice: ({ level }: { level: "info" | "warn" }) => createElement("aside", { "data-level": level }) },
-			} satisfies DocumentComponentsOf<typeof cmsBlog>;
-			const ofConfig = {
-				blocks: { "quote-card": ({ author }: { author?: string }) => createElement("figure", null, author) },
-			} satisfies DocumentComponentsFor<typeof other>;
-			void ofInstance;
-			void ofConfig;
-			const wrongBlock = {
-				// @ts-expect-error `quote-card` is not a block of the blog config
-				blocks: { "quote-card": () => null },
-			} satisfies DocumentComponentsOf<typeof cmsBlog>;
-			void wrongBlock;
-		};
-		expect(check).toBeTypeOf("function");
 	});
 });

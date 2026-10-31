@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../test/site";
 import { fakeCms } from "../cms";
 import { problemError, problemText, SetupError } from "../core/problem";
@@ -45,6 +45,9 @@ describe("problemText", () => {
 });
 
 describe("a setup mistake over HTTP", () => {
+	// Restored even when a check fails, so the silenced console does not leak into the next test.
+	afterEach(() => vi.restoreAllMocks());
+
 	it("SETUP-E1 is a 503 that points at the server log, where the full message with the fix is printed", async () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const response = handleApiError(
@@ -62,7 +65,6 @@ describe("a setup mistake over HTTP", () => {
 			},
 		});
 		expect(log.mock.calls.flat().join(" ")).toContain("run `monti db:migrate`");
-		log.mockRestore();
 	});
 });
 

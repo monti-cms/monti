@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { testConfig } from "../../../test/site";
+import { testConfig, testSite } from "../../../test/site";
 import type { AuthContext } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
 import { currentActor } from "../../core/actor";
@@ -71,7 +71,7 @@ describe("the operations of an instance", () => {
 	it("API-O1 make the input schema for the site: entries.list names this site's collections", async () => {
 		const list = (await withOperations().operations()).find((operation) => operation.name === "entries.list");
 		const collection = (list?.jsonSchema as { properties: { collection: { enum: string[] } } }).properties.collection;
-		expect(collection.enum.length).toBeGreaterThan(0);
+		expect(collection.enum).toEqual([...testSite.COLLECTIONS]);
 	});
 
 	it("API-O1 add the operations of plugins, tagged with the plugin", async () => {

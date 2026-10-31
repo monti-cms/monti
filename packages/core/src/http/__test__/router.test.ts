@@ -25,6 +25,28 @@ describe("admin API route table", () => {
 		expect(matchRoute(["v2", "entries"])).toBeNull();
 	});
 
+	it("API-G1 every route of the table is admin-only, except the ones listed here", () => {
+		// The only routes that may be called without the admin login, and the guard each one gets instead.
+		const notAdmin = {
+			"v1/session/first-admin": "same-origin-form",
+			"v1/session/sign-in/[provider]": "same-origin-form",
+			"v1/session/sign-out": "same-origin-form",
+			"v1/public/entries": "public-read",
+			"v1/public/entries/[collection]/[slug]": "public-read",
+			"v1/events/retry": "admin-or-bearer",
+			"v1/trash/purge": "admin-or-bearer",
+			"v1/import/entries": "admin-upload",
+			"v1/import/restore": "admin-upload",
+		};
+		// The access the router applies to a request on each path, with a placeholder for every `[name]` segment.
+		const accessByPattern = CMS_ROUTE_PATTERNS.map((pattern) => {
+			const path = pattern.split("/").map((segment) => (segment.startsWith("[") ? "x" : segment));
+			return [pattern, matchRoute(path)?.access] as const;
+		});
+
+		expect(Object.fromEntries(accessByPattern.filter(([, access]) => access !== "admin"))).toEqual(notAdmin);
+	});
+
 	it("the public API is an optional core feature (server config publicApi), and AI and schedule routes are added by plugins", () => {
 		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries");
 		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries/[collection]/[slug]");

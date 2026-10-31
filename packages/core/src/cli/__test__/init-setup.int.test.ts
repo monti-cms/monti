@@ -170,7 +170,11 @@ describe("monti init runs the machine steps", () => {
 			}),
 		});
 		const report = await initProject({ cwd: fixtureApp(), host });
-		expect(stepOf(report, "Check the setup")?.detail).toBe("Checked the setup: 8 ok, 1 warning, 1 to fix");
+		// The step gives each count with what it counts.
+		const detail = stepOf(report, "Check the setup")?.detail;
+		expect(detail).toMatch(/\b8 ok\b/);
+		expect(detail).toMatch(/\b1 warning\b/);
+		expect(detail).toMatch(/\b1 to fix\b/);
 		const left = report.next.find((step) => step.startsWith("Fix what"));
 		expect(left).toContain("secrets/monti-secret: it is wrong");
 		expect(left).toContain("fix: do the thing");

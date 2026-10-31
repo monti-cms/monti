@@ -90,11 +90,8 @@ describe("Public JSON API", () => {
 		expect((await get("v1/public/entries")).status).toBe(404);
 	});
 
-	it("SITE-R5 list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
-		publicApi = {
-			collections: [contentCollection],
-			filters: relation ? { related: relation.name } : {},
-		} satisfies PublicApiOptions;
+	it("SITE-R5 list: paging, no caching; a bad query is 400", async () => {
+		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const list = await get("v1/public/entries?pageSize=1");
 		expect(list.status).toBe(200);
 		expect(list.cache).toBe("no-store");
@@ -105,13 +102,20 @@ describe("Public JSON API", () => {
 		expect(list.body.items[0]).not.toHaveProperty("refs");
 		expect(list.body.items[0]).not.toHaveProperty("version");
 
-		if (relation) {
-			const filtered = await get(`v1/public/entries?related=${encodeURIComponent(targetSlug)}`);
-			expect(filtered.body.items.map((item: { slug: string }) => item.slug)).toEqual(["public-2"]);
-			expect((await get("v1/public/entries?related=no-such-target")).body).toMatchObject({ items: [], total: 0 });
-		}
 		expect((await get("v1/public/entries?pageSize=101")).status).toBe(400);
 		expect((await get("v1/public/entries?collection=nope")).status).toBe(400);
+	});
+
+	it.skipIf(!relation)("SITE-R5 list: a relation filter takes the address of the target", async () => {
+		publicApi = {
+			collections: [contentCollection],
+			filters: { related: relation?.name ?? "" },
+		} satisfies PublicApiOptions;
+
+		const filtered = await get(`v1/public/entries?related=${encodeURIComponent(targetSlug)}`);
+
+		expect(filtered.body.items.map((item: { slug: string }) => item.slug)).toEqual(["public-2"]);
+		expect((await get("v1/public/entries?related=no-such-target")).body).toMatchObject({ items: [], total: 0 });
 	});
 
 	it("SITE-R5 single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {

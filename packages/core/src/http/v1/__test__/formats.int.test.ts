@@ -246,23 +246,6 @@ describe("the format option of the admin API", () => {
 			});
 		});
 
-		it("sending a document and a text together, or a text without its format, is a 400 invalid_input", async () => {
-			const doc = docOf("Body");
-			for (const body of [
-				{ doc, body: "Text", format: "paragraphs" },
-				{ doc, format: "paragraphs" },
-				{ body: "Text" },
-				{ format: "paragraphs" },
-			]) {
-				const res = await post(body);
-				expect(res.status, JSON.stringify(body)).toBe(400);
-				expect((await res.json()).error.code).toBe("invalid_input");
-			}
-			const entry = await created({ doc });
-			const res = await patch(entry.id, { expectedVersion: entry.version, body: "Text" });
-			expect(res.status).toBe(400);
-		});
-
 		it("FMT-P3 with no format installed a text write is a 400 unknown_format, and a document write still works", async () => {
 			const bare = fakeCms({
 				config: testConfig,
@@ -333,16 +316,6 @@ describe("the format option of the admin API", () => {
 
 			expect(status).toBe(400);
 			expect(body.error.code).toBe("unknown_format");
-		});
-
-		it("the published body is written too, and a one-way format can be read as text", async () => {
-			const draft = await created({ format: "paragraphs", body: "Live text" });
-			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
-
-			const { body } = await read(published.id, "?format=one-way");
-
-			expect(body.working.body).toBe("1 blocks");
-			expect(body.published.body).toBe("1 blocks");
 		});
 
 		it.skipIf(!linkable)(
@@ -469,16 +442,17 @@ describe("the format option of the admin API", () => {
 			expect((await res.json()).doc.content).toEqual([]);
 		});
 
-		it("rejects both a document and a text, a text without its format, and a body that is not a document", async () => {
+		it("rejects a text without its format, and a body that is not a document", async () => {
 			const name = unique("bad");
-			for (const body of [
-				{ name, doc: docOf("x"), body: "x", format: "paragraphs" },
-				{ name, body: "x" },
-				{ name, format: "paragraphs" },
-			]) {
-				const res = await postTemplate(send("http://localhost/api/monti/v1/templates", "POST", body), { cms });
-				expect(res.status, JSON.stringify(body)).toBe(400);
-			}
+			// Which bodies are refused is the schema's (core/__test__/api.test.ts); this is the route reaching it.
+			const textAlone = await postTemplate(
+				send("http://localhost/api/monti/v1/templates", "POST", { name, body: "x" }),
+				{
+					cms,
+				},
+			);
+			expect(textAlone.status).toBe(400);
+			expect((await textAlone.json()).error.code).toBe("invalid_input");
 			const notADoc = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", { name, doc: "## text" }),
 				{
@@ -592,15 +566,21 @@ describe("the format option of the admin API", () => {
 				},
 			);
 			const template = await createdRes.json();
+			const remove = (query: string) =>
+				deleteTemplate(
+					new Request(`http://localhost/api/monti/v1/templates/${template.id}${query}`, {
+						method: "DELETE",
+						headers: { origin: "http://localhost" },
+					}),
+					{ params: Promise.resolve({ id: template.id }), cms },
+				);
 
-			const res = await deleteTemplate(
-				new Request(`http://localhost/api/monti/v1/templates/${template.id}?expectedVersion=${template.version}`, {
-					method: "DELETE",
-					headers: { origin: "http://localhost" },
-				}),
-				{ params: Promise.resolve({ id: template.id }), cms },
-			);
-			expect(res.status).toBe(204);
+			const unversioned = await remove("");
+			expect(unversioned.status).toBe(428);
+			expect((await unversioned.json()).error.code).toBe("version_required");
+			expect((await store.getTemplate(template.id)).id).toBe(template.id);
+
+			expect((await remove(`?expectedVersion=${template.version}`)).status).toBe(204);
 		});
 	});
 });

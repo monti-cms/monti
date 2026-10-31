@@ -153,21 +153,10 @@ describe("entry API with a stored document", () => {
 	});
 
 	it("WRITE-S7 rejects a create with a document that is not a stored document", async () => {
-		const doc = sampleDoc();
-		const invalid: unknown[] = [
-			{ ...(doc as object), version: 999 },
-			{ type: "doc", version: 3, content: "not a list" },
-			{ type: "paragraph" },
-			"text",
-			42,
-			null,
-			[],
-		];
-		for (const value of invalid) {
-			const res = await post({ doc: value });
-			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).error.code).toBe("invalid_input");
-		}
+		// Which values are not a stored document is `documentInputBody`'s (core/__test__/snapshot.test.ts); this is the route reaching it.
+		const res = await post({ doc: { ...(sampleDoc() as object), version: 999 } });
+		expect(res.status).toBe(400);
+		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
 	it("WRITE-S1 saves a document with a patch", async () => {
@@ -248,27 +237,13 @@ describe("entry API with a stored document", () => {
 
 	it("WRITE-S7 rejects a patch with a document that is not a stored document, and changes nothing", async () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
-		const doc = sampleDoc();
 
-		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 3 }, "text", null]) {
-			const res = await patch(entry.id, { expectedVersion: entry.version, doc: value });
-			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).error.code).toBe("invalid_input");
-		}
+		const res = await patch(entry.id, { expectedVersion: entry.version, doc: "text" });
+		expect(res.status).toBe(400);
+		expect((await res.json()).error.code).toBe("invalid_input");
 		const after = await read(entry.id);
 		expect(after.version).toBe(entry.version);
 		expect(after.working.doc).toEqual(entry.working.doc);
-	});
-
-	it("WRITE-S7 rejects a document larger than the limit with 413", async () => {
-		const doc = {
-			type: "doc",
-			version: 3,
-			content: [{ type: "paragraph", content: [{ type: "text", text: "x".repeat(MAX_DOC_BYTES) }] }],
-		};
-		const res = await post({ doc });
-		expect(res.status).toBe(413);
-		expect((await res.json()).error.code).toBe("body_too_large");
 	});
 
 	it("WRITE-S7 accepts a document larger than the text limit", async () => {

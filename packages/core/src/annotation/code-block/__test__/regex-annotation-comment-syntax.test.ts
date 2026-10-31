@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { __testable__ as fromCodeFenceToCodeBlockDocumentTestable } from "../code-fence-to-document";
+import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
+import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
 import type { AnnotationConfig, CodeFence as Code } from "../types";
 
-const { fromCodeFenceToCodeBlockDocument } = fromCodeFenceToCodeBlockDocumentTestable;
 const annotationConfig: AnnotationConfig = {
 	annotations: [{ name: "fold", kind: "render", source: "mdx-text", render: "fold", scopes: ["char", "document"] }],
 };
@@ -154,18 +154,18 @@ describe("regex rule preservation", () => {
 		expect(document.lines[0]?.annotations[0]?.rule).toBe(0);
 	});
 
-	it("writes a `/` in a regex as `\\/` so the comment does not break", async () => {
-		const { __testable__ } = await import("../document-to-code-fence");
-		const line = __testable__.fromRuleToCommentLine(
-			{ prefix: "//", postfix: "" },
-			{ scope: "document", name: "fold", pattern: "a/b\\/c", flags: "", attributes: [] },
-		);
-		expect(line).toBe("// @document fold {re:/a\\/b\\/c/}");
-		expect(parse([line, "a/b/c"].join("\n")).lines[0]?.annotations[0]?.range).toEqual({ start: 0, end: 5 });
+	it("FMT-R2 writes a `/` in a regex as `\\/` so the comment does not break", () => {
+		const document = parse(["// @document fold {re:/x/}", "a/b/c"].join("\n"));
+		const rule = document.rules?.[0];
+		if (!rule) throw new Error("the comment was not read as a rule");
+		// A pattern with a bare `/` next to one already escaped.
+		const withSlash = { ...document, rules: [{ ...rule, pattern: "a/b\\/c" }] };
+		const written = fromCodeBlockDocumentToCodeFence(withSlash, annotationConfig).value;
+		expect(written.split("\n")[0]).toBe("// @document fold {re:/a\\/b\\/c/}");
+		expect(parse(written).lines[0]?.annotations[0]?.range).toEqual({ start: 0, end: 5 });
 	});
 
-	it("FMT-R2 writes the rule as is when saved again", async () => {
-		const { fromCodeBlockDocumentToCodeFence } = await import("../document-to-code-fence");
+	it("FMT-R2 writes the rule as is when saved again", () => {
 		const source = ["// @document fold {re:/b+/}", "// @char fold {re:/a/g} open", "aab", "bb"].join("\n");
 		expect(fromCodeBlockDocumentToCodeFence(parse(source), annotationConfig).value).toBe(source);
 	});

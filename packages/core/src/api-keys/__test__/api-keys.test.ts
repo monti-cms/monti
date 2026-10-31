@@ -41,7 +41,12 @@ describe("api key store", () => {
 	it("KEY-A3 refuses to save without a server secret and says how to fix it", async () => {
 		const cms = fakeCms();
 		expect(cms.apiKeys.available).toBe(false);
-		await expect(cms.apiKeys.add({ name: "X", value: VALUE })).rejects.toMatchObject({ code: "secret_not_configured" });
+		const error = await cms.apiKeys.add({ name: "X", value: VALUE }).catch((caught: Error) => caught);
+		expect(error).toMatchObject({ code: "secret_not_configured" });
+		// What is missing, where it is set, and how to make one.
+		expect((error as Error).message).toContain("MONTI_SECRET");
+		expect((error as Error).message).toMatch(/Where:.*secret/);
+		expect((error as Error).message).toMatch(/Fix:.*openssl rand/);
 	});
 
 	it("KEY-N1 rejects a taken name, and picks a free one when the place chooses the name", async () => {
@@ -78,13 +83,6 @@ describe("api key store", () => {
 		});
 		await cms.apiKeys.remove(key.id, { expectedVersion: renamed.version });
 		await cms.apiKeys.add({ name: "new", value: `${VALUE}3` });
-	});
-
-	it("reuses a key that has the same value, and names a new one when there is none", async () => {
-		const cms = cmsWithSecret();
-		const first = await cms.apiKeys.findOrAdd({ baseName: "GitHub", value: VALUE });
-		expect((await cms.apiKeys.findOrAdd({ baseName: "Other", value: VALUE })).id).toBe(first.id);
-		expect((await cms.apiKeys.findOrAdd({ baseName: "GitHub", value: `${VALUE}2` })).name).toBe("GitHub 2");
 	});
 
 	it("KEY-A4 refuses to delete a key that is used unless forced, and deletes the key with its uses together", async () => {
