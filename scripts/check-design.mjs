@@ -8,7 +8,7 @@
  *
  * Checked: `packages/ui/src`, `packages/admin/src`, the `.tsx` files of `packages/ai/src` and `packages/seo/src`, and `packages/mdx/src/admin` (they render
  * inside the admin). Not checked: tests (`__test__`, `*.test.*`, `src/test`), Storybook stories (`*.stories.*`, `foundations`), site rendering
- * (`packages/blocks`, `packages/core/render.css`) and `examples/`.
+ * (`packages/blocks`, `packages/core/render.css`) and `examples/`. The last three rules below name their own files.
  *
  * Rules (each finding names its rule id):
  *   css-file            Admin styling lives in token utilities. The only stylesheets in `packages/ui` and `packages/admin` are `ui/styles/theme.css`,
@@ -26,6 +26,18 @@
  *                       on (Base UI, Radix, `class-variance-authority`, `cmdk`, `sonner`, ...), no `cva(`, and no `@monti-cms/ui/internal` (the open
  *                       parts with `className`) unless the file says why. Add the part to `@monti-cms/ui`.
  *   undocumented-part   Every component exported from `packages/ui/src/index.ts` is named in backticks in `docs/design/admin/components/*.md`.
+ *   drawing-only        A screen of a package the admin stylesheet compiles (its `@source` lines: admin, ai, blocks, mdx, seo; not `ui`,
+ *                       `admin/src/ui`, stories or the blocks' `render.tsx`) sets no `className` or `style`, and imports neither
+ *                       `@monti-cms/ui/internal` nor a class helper (`cn`, `*Variants`), unless it is in `DRAWING` with its reason. A
+ *                       `DRAWING` entry that no longer exists or draws fails too. A `design-allow` marker does not skip this rule.
+ *   app-color           No class or variable of the host app's color names (`bg-background`, `--muted-foreground`), no `dark:` variant and no
+ *                       `data-horizontal` variant in the sources of core, admin, blocks, mdx, seo and ai.
+ *   theme-names         `ui/styles/theme.css` clears Tailwind's names and defines only `monti` ones that read `--monti-*` variables, its variants
+ *                       are `monti-` (the dark one follows `.dark` and `[data-theme="dark"]`), and `ui/styles/tokens.css` and `admin/styles/admin.css`
+ *                       declare only `--monti-*` variables, none named like the host app's colors.
+ *   off-system          Every class word in the admin UI packages (stories and test helpers too) is in the design system: a known role per
+ *                       namespace, the weights, radius and shadows it keeps, no line height or letter spacing of its own, and on screens the
+ *                       spacing scale. The roles are read from `packages/ui/styles/theme.css`; `OWN_TYPE` and `OWN_COLORS` name the exceptions.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -639,6 +651,455 @@ function checkUndocumentedParts() {
 }
 if (covers(path.join(root, "packages/ui/src/index.ts"))) checkUndocumentedParts();
 
+/** `.ts`/`.tsx` sources under `dir`, tests and test helpers left out. */
+function sourcesUnder(dir, skip = ["__test__", "node_modules", "dist", "test"]) {
+	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const full = path.join(dir, entry.name);
+		if (entry.isDirectory()) return skip.includes(entry.name) ? [] : sourcesUnder(full, skip);
+		return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+	});
+}
+/** The 1-based lines of `source` that match `pattern`. */
+const linesMatching = (source, pattern) =>
+	source.split("\n").flatMap((text, index) => (pattern.test(text) ? [index + 1] : []));
+
+/** The packages whose classes the admin stylesheet compiles (its `@source` lines): the admin UI. */
+const ADMIN_UI_PACKAGES = [
+	...readFileSync(path.join(root, "packages/admin/styles/index.css"), "utf8").matchAll(
+		/^@source "(?:\.\.\/\.\.\/)?([\w-]+|\.\.)\/src";/gm,
+	),
+].map((match) => (match[1] === ".." ? "admin" : match[1]));
+
+/**
+ * Files of a screen package that draw something the components cannot say (positions over the document, drag transforms, measured layouts, chart
+ * geometry, an imitation of another site), with the reason. Only these set `className` or `style`, import the open entry or the class helpers.
+ * Adding a file here is a design decision, made in review.
+ */
+const DRAWING = new Map([
+	["admin/src/editor/block-handle-overlay.tsx", "the handle floats beside the block at measured coordinates"],
+	[
+		"admin/src/editor/blocks/added/view.tsx",
+		"the default custom block is drawn in the document: a frame with the component name above its body",
+	],
+	[
+		"admin/src/editor/blocks/block-issues.tsx",
+		"a notice under a block inside the document; block views stay free of UI packages",
+	],
+	[
+		"admin/src/editor/blocks/fence-preview/fence-preview-node-view.tsx",
+		"the preview block is drawn inside the document",
+	],
+	[
+		"admin/src/editor/blocks/fence-preview/preview-renderers.tsx",
+		"rendered previews (diagram, formula) are drawn inside the document in the block's own look",
+	],
+	[
+		"admin/src/editor/blocks/shared.tsx",
+		"the block toolbar floats over the block corner and attributes are written in place inside the block",
+	],
+	[
+		"admin/src/editor/blocks/use-block-editor.tsx",
+		"`Content` and `BlockFrame` are how a block view draws inside the document, so they take a `className`",
+	],
+	[
+		"admin/src/editor/code-block/code-block-view.tsx",
+		"the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together",
+	],
+	[
+		"admin/src/editor/code-block/line-menu.tsx",
+		"a menu beside the picked lines (absolute position inside the block, never takes focus from the code)",
+	],
+	[
+		"admin/src/editor/file-node-view.tsx",
+		"the file card is a block inside the document, with its name written in place",
+	],
+	[
+		"admin/src/editor/image-node-view.tsx",
+		"the image block is drawn inside the document: frame, crop, width, caption in place, resize handles",
+	],
+	[
+		"admin/src/editor/inline-bubble.tsx",
+		"the bubble floats at the selection (fixed coordinates, z-index, measured by ref)",
+	],
+	[
+		"admin/src/editor/internal-link-popup.tsx",
+		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
+	],
+	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
+	[
+		"admin/src/editor/tiptap-editor.tsx",
+		"the editor canvas: the writing column is sized by `--editor-width`, and the empty-line hint and the block under an open menu are styled inside it",
+	],
+	["admin/src/host/layout.tsx", "the admin root: `monti-admin` scopes the tokens and the page fills the window"],
+	[
+		"admin/src/host/setup-problem.tsx",
+		"the admin root: `monti-admin` scopes the tokens and the screen is centered in the window",
+	],
+	[
+		"admin/src/screens/entries/editor-scroller.tsx",
+		"the scrolling body of the editor: its active-block highlight reaches into the editor's own markup",
+	],
+	[
+		"admin/src/screens/entries/entry-editor-side-panels.tsx",
+		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow)",
+	],
+	[
+		"admin/src/screens/entries/scroll-room.tsx",
+		"extra room after the last block so the source can scroll as far as the translation does (35% of the viewport, in step with the editor)",
+	],
+	[
+		"admin/src/screens/entries/sortable-entry-row.tsx",
+		"a sortable row is moved by dnd-kit's transform (inline style) and lifts while dragged, and its handle needs a grab cursor and no touch scrolling",
+	],
+	[
+		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
+		"the drop rows of the field list: a drag transform on the row",
+	],
+	[
+		"admin/src/screens/schema/fields-tree-rows.tsx",
+		"the field list rows: the hover-revealed row buttons and the problem dot",
+	],
+	[
+		"admin/src/screens/shared/side-panel.tsx",
+		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
+	],
+	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
+	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],
+	["blocks/src/chart/ui.tsx", "chart geometry (recharts selectors, aspect ratio, tooltip and legend boxes, swatches)"],
+	["blocks/src/chart/view.tsx", "the public page's chart, styled by render.css"],
+	["blocks/src/code-explorer/view.tsx", "draws the explorer as the public post does"],
+	["blocks/src/collapsible/view.tsx", "draws the collapsible as the public post does"],
+	["blocks/src/color/menu.tsx", "color samples painted by the mark's own classes and variables"],
+	["blocks/src/columns/view.tsx", "measured column layout with boundary handles and drag"],
+	["blocks/src/mermaid/preview.tsx", "hosts the diagram SVG"],
+	["blocks/src/tabs/view.tsx", "draws the tab bar and body as the public post does"],
+	["mdx/src/admin/mdx-source-editor.tsx", "a textarea laid over a syntax-highlighted layer"],
+	["mdx/src/admin/source-panel.tsx", "sizes the highlighted source editor, which draws its own surface"],
+]);
+
+/**
+ * Screens are built from `@monti-cms/ui` components and their options only: no `className`, no `style`, no import of the open entry
+ * (`@monti-cms/ui/internal`) and no class helper (`cn`, `*Variants`), outside the drawing files. The components refuse `className` and `style` in
+ * their types; this covers raw elements. A screen is every source of a package the admin stylesheet compiles, except the design system itself
+ * (`ui`, `admin/src/ui`), stories and the blocks' public-site renderers (`render.tsx`, styled by `render.css`).
+ */
+function checkDrawingOnly() {
+	const isScreen = (file) =>
+		!file.startsWith("admin/src/ui/") &&
+		!file.startsWith("admin/src/stories/") &&
+		!/\.stories\.tsx$/.test(file) &&
+		!/\/render(\.client)?\.tsx$/.test(file);
+	const packagesDir = path.join(root, "packages");
+	const screens = ADMIN_UI_PACKAGES.filter((name) => name !== "ui")
+		.flatMap((name) => sourcesUnder(path.join(packagesDir, name, "src")))
+		.map((full) => ({ full, file: path.relative(packagesDir, full).split(path.sep).join("/") }))
+		.filter(({ file }) => isScreen(file));
+	const byFile = new Map();
+	for (const { full, file } of screens) {
+		const source = readFileSync(full, "utf8");
+		byFile.set(file, source);
+		if (DRAWING.has(file) || !inTargets(full)) continue;
+		for (const line of linesMatching(source, /\b(?:className|style)=\{?["'`{]/))
+			add(
+				full,
+				line,
+				"drawing-only",
+				"sets `className` or `style`; a screen uses the options of the `@monti-cms/ui` parts",
+			);
+		for (const line of linesMatching(source, /from "@monti-cms\/ui\/internal"/))
+			add(
+				full,
+				line,
+				"drawing-only",
+				"imports `@monti-cms/ui/internal`; a screen uses the closed parts of `@monti-cms/ui`",
+			);
+		for (const line of linesMatching(
+			source,
+			/import (?:type )?\{[^}]*\b(?:cn|[a-z]+Variants)\b[^}]*\} from "@monti-cms\/(?:ui|admin|admin\/kit)"/,
+		))
+			add(full, line, "drawing-only", "imports a class helper (`cn`, `*Variants`); a screen sets no classes");
+	}
+	for (const file of DRAWING.keys()) {
+		const full = path.join(packagesDir, file);
+		if (!covers(full)) continue;
+		const source = byFile.get(file);
+		if (source === undefined)
+			add(full, 1, "drawing-only", "is listed in DRAWING (scripts/check-design.mjs) but is not a screen file any more");
+		else if (!/\b(?:className|style)=|@monti-cms\/ui\/internal/.test(source))
+			add(
+				full,
+				1,
+				"drawing-only",
+				"is listed in DRAWING (scripts/check-design.mjs) but draws nothing any more; take it off the list",
+			);
+	}
+}
+checkDrawingOnly();
+
+/** The app's (shadcn) color names: the admin neither uses them unprefixed nor defines them, under its prefix or not. */
+const APP_COLORS = [
+	"sidebar-primary-foreground",
+	"sidebar-accent-foreground",
+	"sidebar-foreground",
+	"sidebar-primary",
+	"sidebar-accent",
+	"sidebar-border",
+	"sidebar-ring",
+	"sidebar",
+	"card-foreground",
+	"popover-foreground",
+	"primary-foreground",
+	"secondary-foreground",
+	"muted-foreground",
+	"accent-foreground",
+	"destructive-foreground",
+	"background",
+	"foreground",
+	"card",
+	"popover",
+	"primary",
+	"secondary",
+	"muted",
+	"accent",
+	"destructive",
+	"border",
+	"input",
+	"ring",
+].join("|");
+const APP_COLOR_UTILITIES =
+	"bg|text|border-[xytrblse]|border|ring-offset|ring|outline|fill|stroke|divide|decoration|caret|from|via|to|shadow|accent|placeholder|selection|inset-ring";
+
+/**
+ * The admin's CSS is confined to its own names (`monti-` prefix): the sources of the admin and its first-party plugins use no class of the host app's
+ * color names (`bg-background`, `text-muted-foreground`), no `--background` variable, no `dark:` variant (the admin's is `monti-dark:`) and no
+ * shadcn orientation variant (`data-horizontal`). They would pick up the host's theme, or nothing.
+ */
+function checkAppColors() {
+	const patterns = [
+		{
+			regex: new RegExp(`(?<![\\w-])(?:${APP_COLOR_UTILITIES})-(?:${APP_COLORS})(?![\\w-])`, "g"),
+			why: "is the host app's color name; use a token utility (`bg-monti-…`, `text-monti-…`)",
+		},
+		{
+			regex: new RegExp(`\\(\\s*--(?:color-)?(?:${APP_COLORS})(?![\\w-])`, "g"),
+			why: "reads the host app's color variable; use a `--monti-…` token",
+		},
+		{ regex: /(?<=[\s"'`:!([])dark:(?=[^\s,])/g, why: "is the host's dark variant; the admin's is `monti-dark:`" },
+		{
+			regex: /(?<![\w-])(?:group-|peer-|in-|has-)*data-(?:horizontal|vertical)(?![\w-[])/g,
+			why: "is shadcn's orientation variant; use `data-[orientation=…]:`",
+		},
+	];
+	for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai"]) {
+		for (const full of sourcesUnder(path.join(root, "packages", pkg, "src"), [
+			"node_modules",
+			"dist",
+			".next",
+			"__test__",
+			"test",
+		])) {
+			if (!inTargets(full)) continue;
+			const lexed = lex(readFileSync(full, "utf8"));
+			for (const { regex, why } of patterns)
+				for (const match of lexed.blanked.matchAll(regex))
+					add(full, lexed.lineAt(match.index), "app-color", `\`${match[0]}\` ${why}`);
+		}
+	}
+}
+checkAppColors();
+
+const THEME_FILE = "packages/ui/styles/theme.css";
+const TOKENS_FILE = "packages/ui/styles/tokens.css";
+const themeCss = readFileSync(path.join(root, THEME_FILE), "utf8");
+const lineOf = (source, offset) => source.slice(0, offset).split("\n").length;
+
+/**
+ * The admin's stylesheet names only what is its own, so it cannot restyle the host and Tailwind's defaults cannot leak in. The theme
+ * (`theme.css`) clears Tailwind's palette, text sizes, weights, shadows, tracking, line heights and radius, then defines only `monti` names whose
+ * values read the admin's variables; its variants are `monti-` too, and the dark one follows both `.dark` and `[data-theme="dark"]`. The token
+ * values (`tokens.css`) and the hand-written rules (`admin.css`) declare only `--monti-*` variables, none named like the host app's colors.
+ */
+function checkThemeNames() {
+	const themeFile = path.join(root, THEME_FILE);
+	if (covers(themeFile)) {
+		const blocks = [...themeCss.matchAll(/@theme inline \{([\s\S]*?)\n\}/g)].map((match) => ({
+			text: match[1],
+			offset: match.index + match[0].indexOf("{") + 1,
+		}));
+		const allowed =
+			/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|spacing|radius|height|size|container|shadow)-monti-|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold|bold)$|tracking-caps$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/;
+		const declarations = blocks.flatMap(({ text, offset }) =>
+			[...text.matchAll(/(--[\w-]+(?:-\*)?)\s*:\s*([^;]+);/g)].map((match) => ({
+				name: match[1],
+				value: match[2].trim(),
+				line: lineOf(themeCss, offset + match.index),
+			})),
+		);
+		if (!declarations.some(({ name }) => name.startsWith("--background-color-monti-")))
+			throw new Error(`check-design: read no color roles from the @theme blocks of ${THEME_FILE}`);
+		for (const { name, value, line } of declarations) {
+			if (!allowed.test(name))
+				add(themeFile, line, "theme-names", `\`${name}\` is not a monti name; the theme defines only its own`);
+			else if (/^--font-(?:sans|mono)$/.test(name) && !value.includes("--monti-font-"))
+				add(themeFile, line, "theme-names", `\`${name}\` must read a \`--monti-font-*\` variable`);
+			else if (name.startsWith("--radius-monti-") && !/^var\(--monti-radius-/.test(value))
+				add(themeFile, line, "theme-names", `\`${name}\` must read a \`--monti-radius-*\` variable`);
+			else if (/^--(?!animate-)[a-z-]+-monti-/.test(name) && !/^var\(--monti-|^\d/.test(value))
+				add(themeFile, line, "theme-names", `\`${name}\` must read a \`--monti-*\` variable`);
+		}
+		for (const reset of [
+			"--color-*",
+			"--text-*",
+			"--font-weight-*",
+			"--shadow-*",
+			"--tracking-*",
+			"--leading-*",
+			"--radius-*",
+		])
+			if (!declarations.some(({ name, value }) => name === reset && value === "initial"))
+				add(themeFile, 1, "theme-names", `the theme does not clear Tailwind's \`${reset}\` (\`${reset}: initial;\`)`);
+		for (const match of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g))
+			if (!match[1].startsWith("monti-"))
+				add(themeFile, lineOf(themeCss, match.index), "theme-names", `the variant \`${match[1]}\` is not a monti name`);
+		if (!/@custom-variant monti-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/.test(themeCss))
+			add(themeFile, 1, "theme-names", 'the `monti-dark` variant must follow both `.dark` and `[data-theme="dark"]`');
+	}
+	for (const file of [TOKENS_FILE, ADMIN_CSS_FILE]) {
+		const full = path.join(root, file);
+		if (!covers(full)) continue;
+		const source = readFileSync(full, "utf8").replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
+		for (const match of source.matchAll(/^\s*(--[\w-]+)\s*:/gm)) {
+			const name = match[1];
+			const line = lineOf(source, match.index + match[0].indexOf(name));
+			if (!name.startsWith("--monti-"))
+				add(full, line, "theme-names", `declares \`${name}\`; the admin declares only \`--monti-*\` variables`);
+			else if (new RegExp(`^--monti-(?:${APP_COLORS})$`).test(name))
+				add(full, line, "theme-names", `declares \`${name}\`, the host app's color name under the admin's prefix`);
+		}
+		if (file === TOKENS_FILE && !/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.monti-admin\)/.test(source))
+			add(full, 1, "theme-names", 'the dark tokens must apply under both `.dark` and `[data-theme="dark"]`');
+	}
+}
+checkThemeNames();
+
+/** Role names per namespace, read from the generated theme, so adding a role to `tokens.json` is all it takes. */
+const rolesOf = (namespace) =>
+	new Set([...themeCss.matchAll(new RegExp(`--${namespace}-monti-([a-z-]+?)(?:--[a-z-]+)?:`, "g"))].map((m) => m[1]));
+const ROLES = {
+	bg: rolesOf("background-color"),
+	// The type roles are utilities of their own (`@utility text-monti-body`), the colors are theme variables.
+	text: new Set([
+		...rolesOf("text-color"),
+		...[...themeCss.matchAll(/@utility text-monti-([\w-]+)/g)].map((m) => m[1]),
+	]),
+	border: rolesOf("border-color"),
+	divide: rolesOf("border-color"),
+	ring: rolesOf("ring-color"),
+	"ring-offset": rolesOf("ring-offset-color"),
+	outline: rolesOf("outline-color"),
+	fill: rolesOf("fill"),
+	stroke: rolesOf("stroke"),
+	decoration: rolesOf("text-decoration-color"),
+	caret: rolesOf("caret-color"),
+	shadow: rolesOf("shadow"),
+};
+/** The spacing scale (`--spacing-monti-*` in the theme): gaps, padding and margins on screens use these, plus `0`, `px` and `auto`. */
+const SPACING = new Set([...themeCss.matchAll(/--spacing-(monti-\d+):/g)].map((m) => m[1]));
+for (const [kind, names] of [...Object.entries(ROLES), ["spacing", SPACING]])
+	if (names.size === 0) throw new Error(`check-design: read no ${kind} names from packages/ui/styles/theme.css`);
+
+/** Files that draw something other than the admin and keep its colors on purpose. */
+const OWN_COLORS = new Set([
+	// Imitates a search result page, so it uses that page's link colors.
+	"seo/src/admin/preview.tsx",
+]);
+/** Type the design system's own parts set outside the roles, by file: what the role does not cover. */
+const OWN_TYPE = new Map([
+	// Text that runs over several lines in a field takes the design system's own line of 1.6 times the size (`.mt-textarea`).
+	["ui/src/textarea.tsx", new Set(["leading-[1.6]"])],
+	// The conversation's own line heights: 1.6 times the size in the admin's bubble and 1.7 in the assistant's answer (`.mt-msg-user`).
+	["ui/src/chat-message.tsx", new Set(["leading-[1.6]", "leading-[1.7]"])],
+	// The modal's own type: a 20px title (28px line, -0.015em) and text at 1.65 times the size (`.mt-dialog-title`, `.mt-dialog` text).
+	["ui/src/dialog.tsx", new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"])],
+	// The translation marker's text, 10px, the one size under the micro role (`.mt-marker`).
+	["ui/src/marker.tsx", new Set(["text-[10px]"])],
+	// The heading icon's level number, 8px mono in the corner of the 16px glyph (`.mt-ico-level .lv`).
+	["ui/src/heading-icon.tsx", new Set(["text-[8px]", "leading-[8px]"])],
+]);
+
+/** Why a utility is outside the design system, or null. */
+function offSystem(utility, inUi, ownColors) {
+	const color = utility.match(
+		/^-?(bg|text|border(?:-[xytblrse])?|divide|ring-offset|ring|outline|fill|stroke|decoration|caret|accent|shadow|from|via|to)-([a-z][\w-]*?)(\/[\w.]+)?$/,
+	);
+	if (color) {
+		const [, rawKind, name, alpha] = color;
+		const kind = rawKind.replace(/^border-.$/, "border");
+		if (name.startsWith("monti-")) {
+			const role = name.slice("monti-".length);
+			if (!ROLES[kind]) return `no ${kind}-* colors in the system`;
+			if (!ROLES[kind].has(role)) return `unknown role "${role}" for ${kind}-*`;
+			return null;
+		}
+		if (new RegExp(`^(?:${PALETTE})(?:-\\d+)?$`).test(name)) return ownColors ? null : "Tailwind palette color";
+		if (kind === "text" && /^(xs|sm|base|lg|[2-9]?xl)$/.test(name)) return "Tailwind text size: use text-monti-<role>";
+		if (kind === "shadow" && /^(2xs|xs|sm|md|lg|xl|2xl)$/.test(name))
+			return "Tailwind shadow: use shadow-monti-floating or none";
+		if (["transparent", "current", "inherit"].includes(name) && !alpha) return null;
+	}
+	if (
+		/^-?(bg|text|border|ring|fill|stroke|outline|decoration|from|via|to|shadow)-\[(#|rgb|hsl|oklch|color:)/.test(
+			utility,
+		)
+	)
+		return ownColors ? null : "arbitrary color";
+	if (/^text-\[[\d.]+(px|rem)\]$/.test(utility)) return "arbitrary text size";
+	if (utility === "shadow") return "Tailwind shadow: use shadow-monti-floating or none";
+	if (/^font-(thin|extralight|light|extrabold|black)$/.test(utility))
+		return "weight outside normal, medium, semibold, bold";
+	if (/^leading-(?!none$)/.test(utility)) return "line height comes with the text role";
+	if (/^tracking-(?!caps$)/.test(utility)) return "letter spacing: only tracking-caps";
+	if (/^rounded(-[a-z]+)?-(xs|2xl|3xl|4xl|dialog)$/.test(utility) || utility === "rounded")
+		return "radius outside sm, md, lg, xl, full";
+	if (/^rounded(-[a-z]{1,2})?-(sm|md|lg|xl|full)$/.test(utility)) return "unprefixed radius: use rounded-monti-<size>";
+	const space = utility.match(/^-?(?:p[xytblrse]?|m[xytblrse]?|gap(?:-[xy])?|space-[xy])-([a-z0-9.-]+)$/);
+	if (space && !inUi && !["0", "px", "auto"].includes(space[1]) && !SPACING.has(space[1]))
+		return `spacing "${space[1]}": use the scale (${[...SPACING].join(", ")})`;
+	return null;
+}
+
+/**
+ * The admin uses the design system only. The theme clears Tailwind's palette, text sizes, weights, shadows, tracking and line heights, so a class
+ * outside the system compiles to nothing; this names each such class instead of letting it vanish. Every class-like word of a double-quoted or
+ * template string in the admin UI packages counts, stories and test helpers too. Spacing on screens takes the scale (`gap-monti-8`); the parts of
+ * `@monti-cms/ui` may use in-between numbers of their own.
+ */
+function checkOffSystem() {
+	const packagesDir = path.join(root, "packages");
+	for (const pkg of ADMIN_UI_PACKAGES) {
+		for (const full of sourcesUnder(path.join(packagesDir, pkg, "src"), ["__test__", "node_modules", "dist"])) {
+			if (!inTargets(full)) continue;
+			const file = path.relative(packagesDir, full).split(path.sep).join("/");
+			const inUi = file.startsWith("ui/src/") || file.startsWith("admin/src/ui/");
+			const source = readFileSync(full, "utf8");
+			for (const literal of source.matchAll(/"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)) {
+				const line = source.slice(0, literal.index).split("\n").length;
+				for (const word of literal[0]
+					.slice(1, -1)
+					.replace(/\$\{[^}]*\}/g, " ")
+					.split(/\s+/)) {
+					if (!word) continue;
+					const utility = splitTop(word, ":").at(-1).text.replace(/^!/, "");
+					if (OWN_TYPE.get(file)?.has(utility)) continue;
+					const why = offSystem(utility, inUi, OWN_COLORS.has(file));
+					if (why) add(full, line, "off-system", `\`${word}\`: ${why}`);
+				}
+			}
+		}
+	}
+}
+checkOffSystem();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -648,6 +1109,11 @@ const HINTS = {
 	"part-in-screen":
 		"A screen composes the parts of @monti-cms/ui; a new styled part is built there first, with its story.",
 	"undocumented-part": "Every ui part has its rules in docs/design/admin/components/.",
+	"drawing-only": "A screen composes the parts of @monti-cms/ui by their options; only the files in DRAWING draw.",
+	"app-color": "The admin's CSS uses its own names only (monti- prefix), so the host's theme cannot reach it.",
+	"theme-names":
+		"The theme and the token files define only the admin's own names (monti-), and the theme clears Tailwind's.",
+	"off-system": "Use the type roles, color roles, radius, weights and spacing scale of packages/ui/styles/theme.css.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

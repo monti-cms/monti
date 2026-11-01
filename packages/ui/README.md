@@ -67,4 +67,4 @@ pnpm gen:tokens   # after editing tokens/tokens.json
 pnpm gen:tokens --check   # what CI runs: names each generated file that differs, writes nothing
 ```
 
-The admin's design-system test (`packages/admin/src/__test__/design-system.test.ts`) fails on any class outside the system in this package, the admin and the first-party plugins.
+`pnpm check:design` (`scripts/check-design.mjs`, rule `off-system`) fails on any class outside the system in this package, the admin and the first-party plugins.
