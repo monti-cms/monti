@@ -28,8 +28,8 @@
 		"knip": "knip --include files,exports,types,duplicates && knip --production --include exports,types"
 	},
 	"lint-staged": {
-		"*.{js,jsx,ts,tsx,mjs}": [
-			"biome check --write --no-errors-on-unmatched"
+		"*": [
+			"biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
 		]
 	},
 	"devDependencies": {
