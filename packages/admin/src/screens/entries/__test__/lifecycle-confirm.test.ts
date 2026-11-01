@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultLocale } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { deleteMessages } from "../../shared/delete.messages";
 import { nounVars } from "../../shared/noun.messages";
@@ -14,13 +15,16 @@ import { entriesMessages } from "../messages";
 const t = testSite.createTranslator(entriesMessages);
 const td = testSite.createTranslator(deleteMessages);
 
+/** Two languages other than the default: the site's own, then made-up codes on a site with fewer (the code under test only reads them). */
+const [FIRST = "", SECOND = ""] = [...testSite.LOCALES.filter((code) => code !== defaultLocale), "x-first", "x-second"];
+
 const source = {
 	id: "src",
 	translationGroupId: "src",
 	translations: [
-		{ id: "src", locale: "ko", status: "published", isSource: true },
-		{ id: "en-1", locale: "en", status: "draft", isSource: false },
-		{ id: "ja-1", locale: "ja", status: "trashed", isSource: false },
+		{ id: "src", locale: defaultLocale, status: "published", isSource: true },
+		{ id: "en-1", locale: FIRST, status: "draft", isSource: false },
+		{ id: "ja-1", locale: SECOND, status: "trashed", isSource: false },
 	],
 } as never;
 const translation = { id: "en-1", translationGroupId: "src", translations: [] } as never;
@@ -79,25 +83,25 @@ describe("when the trash asks", () => {
 	it("TRASH-T3 names the translations that go with a published entry, by their language", () => {
 		const ask = trashConfirm(testSite, collection, [
 			subject("published", [
-				{ locale: "en", status: "draft" },
-				{ locale: "ja", status: "published" },
+				{ locale: FIRST, status: "draft" },
+				{ locale: SECOND, status: "published" },
 			]),
 		]);
-		const languages = `${testSite.localeLabel("en")}·${testSite.localeLabel("ja")}`;
+		const languages = `${testSite.localeLabel(FIRST)}·${testSite.localeLabel(SECOND)}`;
 		expect(ask?.description).toBe(
 			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages })}`,
 		);
 	});
 
 	it("TRASH-T3 asks when only a translation is published, with the same two sentences", () => {
-		const ask = trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "published" }])]);
+		const ask = trashConfirm(testSite, collection, [subject("draft", [{ locale: FIRST, status: "published" }])]);
 		expect(ask?.description).toBe(
-			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages: testSite.localeLabel("en") })}`,
+			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages: testSite.localeLabel(FIRST) })}`,
 		);
 	});
 
 	it("TRASH-T3 does not ask when a draft only has draft translations", () => {
-		expect(trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "draft" }])])).toBeNull();
+		expect(trashConfirm(testSite, collection, [subject("draft", [{ locale: FIRST, status: "draft" }])])).toBeNull();
 	});
 
 	it("TRASH-T3 asks once for several rows when any is published, counting those that come down", () => {
@@ -122,7 +126,7 @@ describe("when the trash asks", () => {
 		expect(trashSubjectOfRow(row)).toEqual({
 			title: "첫 글",
 			status: "published",
-			alongside: [{ id: "en-1", locale: "en", status: "draft", isSource: false }],
+			alongside: [{ id: "en-1", locale: FIRST, status: "draft", isSource: false }],
 		});
 	});
 
@@ -133,7 +137,7 @@ describe("when the trash asks", () => {
 			status: "published",
 			working: { metadata: { title: "첫 글" } },
 		} as never;
-		expect(trashSubjectOfEntry(testSite, original).alongside.map((member) => member.locale)).toEqual(["en"]);
+		expect(trashSubjectOfEntry(testSite, original).alongside.map((member) => member.locale)).toEqual([FIRST]);
 		const open = { ...(translation as object), collection, status: "draft", working: { metadata: {} } } as never;
 		expect(trashSubjectOfEntry(testSite, open).alongside).toEqual([]);
 	});

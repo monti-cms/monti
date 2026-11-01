@@ -1,4 +1,6 @@
+import { SUMMARY_ROLE } from "@monti-cms/core";
 import { vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { CmsApiError } from "../../../api/client";
 import type { EntryEditorClient, EntryWriteResult } from "../../../api/entries";
@@ -8,18 +10,38 @@ import type { RecoveryRecord, RecoveryStore } from "../entry-editor-client";
 import { type EntryData, type EntryForm, type EntryFormPatch, formFingerprint, formFromEntry } from "../entry-form";
 
 /**
- * Fakes for the entry editor's two seams, so a test drives the editor without `fetch` or IndexedDB. They use the reference blog's `post` collection.
+ * Fakes for the entry editor's two seams, so a test drives the editor without `fetch` or IndexedDB. They use the site's first document collection
+ * with a body (`contentCollection`), so the same tests run on any site config.
  */
+
+/** The collection's summary field (the field with the summary role), if it has one. */
+export const SUMMARY_FIELD = testSite
+	.storedFields(contentCollection)
+	.find(({ field }) => field.kind === "text" && field.role === SUMMARY_ROLE);
+
+/** The first relation the collection requires, if any: the entry holds a value for it, as a publishable entry does. */
+export const REQUIRED_RELATION = testSite
+	.storedFields(contentCollection)
+	.find(({ field, when }) => field.kind === "relation" && field.required === true && !when);
+
+/** The entry's metadata without its summary: a summary field filled from the body is empty until publishing fills it. */
+export const METADATA_WITHOUT_SUMMARY: Record<string, unknown> = {
+	title: "테스트",
+	...(REQUIRED_RELATION ? { [REQUIRED_RELATION.name]: "rel-1" } : {}),
+};
 
 export const ENTRY: EntryData = {
 	id: "entry-1",
-	collection: "post",
+	collection: contentCollection,
 	status: "draft",
 	version: 4,
 	folderId: null,
 	workingSlug: "test",
 	publishedSlug: null,
-	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, doc: docOf("첫째 줄\n둘째 줄") },
+	working: {
+		metadata: { ...METADATA_WITHOUT_SUMMARY, ...(SUMMARY_FIELD ? { [SUMMARY_FIELD.name]: "요약" } : {}) },
+		doc: docOf("첫째 줄\n둘째 줄"),
+	},
 };
 
 export const conflictError = () => new CmsApiError(409, "conflict", "someone saved first", [], { code: "conflict" });
@@ -51,7 +73,7 @@ export function fakeClient(initial: EntryData = ENTRY, records: Record<string, E
 			server.current.translations = [
 				{
 					id: "created-1",
-					locale: server.current.locale ?? "ko",
+					locale: server.current.locale ?? defaultLocale,
 					status: "draft",
 					isSource: true,
 					title: null,

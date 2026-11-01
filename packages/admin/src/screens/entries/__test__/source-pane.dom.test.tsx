@@ -1,5 +1,6 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { defaultLocale } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { docOf } from "../../../test/mdx";
@@ -47,10 +48,16 @@ describe("DocPreview", () => {
 describe("SourcePane", () => {
 	it("TRANS-S3 shows the source document under its title, and closes", async () => {
 		const onClose = vi.fn();
+		const title = "원문 제목";
 		render(
-			<SourcePane doc={docOf("원문 첫 문단\n\n원문 둘째 문단\n")} locale="ko" title="원문 제목" onClose={onClose} />,
+			<SourcePane
+				doc={docOf("원문 첫 문단\n\n원문 둘째 문단\n")}
+				locale={defaultLocale}
+				title={title}
+				onClose={onClose}
+			/>,
 		);
-		expect(screen.getByRole("heading", { name: "원문 제목" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
 		await waitFor(() => expect(bodyText(t("sourcePane.body"))).toContain("원문 둘째 문단"));
 		screen.getByRole("button", { name: tCommon("close") }).click();
 		expect(onClose).toHaveBeenCalled();

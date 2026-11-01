@@ -1,10 +1,11 @@
 import { unparsedDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import { blockText, compareEntries, diffText, type Segment } from "../compare-entries";
 import { type EntryForm, formFromEntry } from "../entry-form";
-import { ENTRY } from "./entry-editor-fakes";
+import { ENTRY, SUMMARY_FIELD } from "./entry-editor-fakes";
 
 const labels = { slug: "주소" };
 const marked = (segments: readonly Segment[]) =>
@@ -13,7 +14,7 @@ const plain = (segments: readonly Segment[]) => segments.map((segment) => segmen
 
 const base = formFromEntry(testSite, ENTRY);
 const withBody = (text: string, over: Partial<EntryForm> = {}): EntryForm => ({ ...base, doc: docOf(text), ...over });
-const compare = (left: EntryForm, right: EntryForm) => compareEntries(testSite, "post", left, right, labels);
+const compare = (left: EntryForm, right: EntryForm) => compareEntries(testSite, contentCollection, left, right, labels);
 
 describe("diffText", () => {
 	it("WRITE-C3 marks nothing when the texts are the same", () => {
@@ -70,16 +71,20 @@ describe("comparing two entries", () => {
 		expect(result.left.flatMap((block) => marked(block.segments))).toEqual([]);
 	});
 
-	it("WRITE-C3 lists only the properties that differ, the same on both sides, with the words that differ marked", () => {
-		const result = compare(
-			withBody("본문", { summary: "리액트로 다시 만들며 덜어낸 것." }),
-			withBody("본문", { summary: "" }),
-		);
-		expect(result.properties.map((property) => [property.name, property.label])).toEqual([["summary", "요약"]]);
-		expect(marked(result.properties[0]?.left ?? [])).toEqual(["리액트로 다시 만들며 덜어낸 것."]);
-		expect(result.properties[0]?.right).toEqual([]);
-		expect(result.count).toBe(1);
-	});
+	it.skipIf(!SUMMARY_FIELD)(
+		"WRITE-C3 lists only the properties that differ, the same on both sides, with the words that differ marked",
+		() => {
+			const { name, field } = SUMMARY_FIELD ?? { name: "", field: { label: "" } };
+			const result = compare(
+				withBody("본문", { [name]: "리액트로 다시 만들며 덜어낸 것." }),
+				withBody("본문", { [name]: "" }),
+			);
+			expect(result.properties.map((property) => [property.name, property.label])).toEqual([[name, field.label]]);
+			expect(marked(result.properties[0]?.left ?? [])).toEqual(["리액트로 다시 만들며 덜어낸 것."]);
+			expect(result.properties[0]?.right).toEqual([]);
+			expect(result.count).toBe(1);
+		},
+	);
 
 	it("WRITE-C3 compares the address and the title as well", () => {
 		const result = compare(withBody("본문", { slug: "a" }), withBody("본문", { slug: "b", title: "다른 제목" }));

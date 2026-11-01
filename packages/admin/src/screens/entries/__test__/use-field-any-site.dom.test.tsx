@@ -1,14 +1,14 @@
-import { act, cleanup, fireEvent, renderHook, screen } from "@testing-library/react";
-import { memo, type ReactNode, useState } from "react";
+import { act, cleanup, renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { EntryFormProvider, type EntryFormValue, useField } from "../../../hooks/public";
-import { renderWithSite as render, SiteWrapper } from "../../../test/site";
-import { EMPTY_FORM, type EntryForm } from "../entry-form";
+import { SiteWrapper } from "../../../test/site";
+import { EMPTY_FORM } from "../entry-form";
 
 /**
  * `useField` checks that do not depend on the site config (regression guard): they use the default collection and its `title` field,
- * and plain keys for everything else. `use-field.dom.test.tsx` covers the reference blog's own fields.
+ * and plain keys for everything else. `use-field.dom.test.tsx` covers fields looked up from the config.
  */
 
 afterEach(cleanup);

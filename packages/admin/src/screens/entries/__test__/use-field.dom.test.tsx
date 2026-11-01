@@ -1,7 +1,9 @@
+import { SUMMARY_ROLE } from "@monti-cms/core";
 import { SiteProvider } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale, titleFieldOf } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import {
 	EntryFormProvider,
@@ -16,12 +18,19 @@ import { renderWithSite as render, renderHookWithSite as renderHook } from "../.
 import { draftSiteOf } from "../../schema/draft-site";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 
-const TITLE_LABEL = testSite.titleField("post").field.label;
+const TITLE_LABEL = titleFieldOf(contentCollection).label;
+const FIELDS = testSite.storedFields(contentCollection);
+/** A field a translation group shares (shown from the original on a translation), and one each language writes itself. */
+const SHARED = FIELDS.find(({ name, field }) => name !== "title" && !field.localized);
+const PER_LANGUAGE = FIELDS.find(({ field }) => field.localized === true);
+/** A relation field that holds many values: a slot can append to it. */
+const MANY = FIELDS.find(({ field, when }) => field.kind === "relation" && field.many === true && !when);
+const SUMMARY = testSite.roleField(contentCollection, SUMMARY_ROLE);
 
 afterEach(cleanup);
 
 const baseValue = (overrides: Partial<EntryFormValue> = {}): EntryFormValue => ({
-	collection: "post",
+	collection: contentCollection,
 	form: { ...EMPTY_FORM },
 	setForm: vi.fn(),
 	...overrides,
@@ -47,7 +56,7 @@ function Owner({
 	return (
 		<EntryFormProvider
 			value={{
-				collection: "post",
+				collection: contentCollection,
 				form,
 				setForm: (patch) => {
 					onPatch?.(patch);
@@ -90,7 +99,7 @@ describe("useField", () => {
 			wrapper: providerWith(baseValue({ form: { ...EMPTY_FORM, title: "Hello" }, setForm })),
 		});
 		expect(result.current.value).toBe("Hello");
-		expect(result.current.label).toBe("제목");
+		expect(result.current.label).toBe(TITLE_LABEL);
 		expect(result.current.definition?.kind).toBe("text");
 		expect(result.current.ids).toEqual({ input: "cms-title", error: "cms-title-error" });
 		expect(result.current.inputProps).toEqual({ id: "cms-title" });
@@ -100,66 +109,75 @@ describe("useField", () => {
 		expect(setForm).toHaveBeenCalledWith({ title: "Changed" });
 	});
 
-	it("PLUG-A6 on a translation, a shared field shows the original's value read-only; a per-language field stays editable", () => {
-		const setForm = vi.fn();
-		const locked = {
-			values: { ...EMPTY_FORM, title: "Original title", categoryId: "cat-1" },
-			note: "From the original",
-		};
-		const { result } = renderHook(() => ({ category: useField("categoryId"), title: useField<string>("title") }), {
-			wrapper: providerWith(
-				baseValue({ form: { ...EMPTY_FORM, title: "Own title", categoryId: "other" }, locked, setForm }),
-			),
-		});
-		const { category, title } = result.current;
-		expect(category.value).toBe("cat-1");
-		expect(category.readOnlyReason).toBe("locked");
-		// A locked field has no slot.
-		expect(category.slotRequest).toBeNull();
-		act(() => category.setValue("changed"));
-		expect(setForm).not.toHaveBeenCalled();
+	it.skipIf(!SHARED || !PER_LANGUAGE)(
+		"PLUG-A6 on a translation, a shared field shows the original's value read-only; a per-language field stays editable",
+		() => {
+			const shared = (SHARED as NonNullable<typeof SHARED>).name;
+			const own = (PER_LANGUAGE as NonNullable<typeof PER_LANGUAGE>).name;
+			const setForm = vi.fn();
+			const locked = {
+				values: { ...EMPTY_FORM, [own]: "Original value", [shared]: "from-original" },
+				note: "From the original",
+			};
+			const { result } = renderHook(() => ({ sharedField: useField(shared), ownField: useField<string>(own) }), {
+				wrapper: providerWith(
+					baseValue({ form: { ...EMPTY_FORM, [own]: "Own value", [shared]: "other" }, locked, setForm }),
+				),
+			});
+			const { sharedField, ownField } = result.current;
+			expect(sharedField.value).toBe("from-original");
+			expect(sharedField.readOnlyReason).toBe("locked");
+			// A locked field has no slot.
+			expect(sharedField.slotRequest).toBeNull();
+			act(() => sharedField.setValue("changed"));
+			expect(setForm).not.toHaveBeenCalled();
 
-		expect(title.value).toBe("Own title");
-		act(() => title.setValue("Edited"));
-		expect(setForm).toHaveBeenCalledWith({ title: "Edited" });
-	});
+			expect(ownField.value).toBe("Own value");
+			act(() => ownField.setValue("Edited"));
+			expect(setForm).toHaveBeenCalledWith({ [own]: "Edited" });
+		},
+	);
 
-	it("PLUG-A3 builds the slot request of the field: scope, collection and a context read when the action runs", () => {
-		let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", doc: docOf("Body"), tagIds: ["a"] };
-		const setForm = vi.fn();
-		const { result, rerender } = renderHook(() => useField("tagIds"), {
-			wrapper: ({ children }: { children: ReactNode }) => (
-				<EntryFormProvider value={baseValue({ form, setForm, entryId: "e1", locale: "ko" })}>
-					{children}
-				</EntryFormProvider>
-			),
-		});
-		const request = result.current.slotRequest;
-		expect(request).toMatchObject({
-			slot: "field",
-			target: "tagIds",
-			collection: "post",
-			scope: "e1",
-			disabled: false,
-		});
+	it.skipIf(!MANY)(
+		"PLUG-A3 builds the slot request of the field: scope, collection and a context read when the action runs",
+		() => {
+			const name = (MANY as NonNullable<typeof MANY>).name;
+			let form: EntryForm = { ...EMPTY_FORM, title: "Title v1", doc: docOf("Body"), [name]: ["a"] };
+			const setForm = vi.fn();
+			const { result, rerender } = renderHook(() => useField(name), {
+				wrapper: ({ children }: { children: ReactNode }) => (
+					<EntryFormProvider value={baseValue({ form, setForm, entryId: "e1", locale: defaultLocale })}>
+						{children}
+					</EntryFormProvider>
+				),
+			});
+			const request = result.current.slotRequest;
+			expect(request).toMatchObject({
+				slot: "field",
+				target: name,
+				collection: contentCollection,
+				scope: "e1",
+				disabled: false,
+			});
 
-		// The values at click time, not those of the render that built the request.
-		form = { ...form, title: "Title v2", tagIds: ["a", "b"] };
-		rerender();
-		expect(result.current.slotRequest).toBe(request);
-		expect(request?.getContext()).toEqual({
-			collection: "post",
-			locale: "ko",
-			entryId: "e1",
-			title: "Title v2",
-			summary: undefined,
-			body: form.doc,
-			current: ["a", "b"],
-		});
+			// The values at click time, not those of the render that built the request.
+			form = { ...form, title: "Title v2", [name]: ["a", "b"] };
+			rerender();
+			expect(result.current.slotRequest).toBe(request);
+			expect(request?.getContext()).toEqual({
+				collection: contentCollection,
+				locale: defaultLocale,
+				entryId: "e1",
+				title: "Title v2",
+				summary: undefined,
+				body: form.doc,
+				current: ["a", "b"],
+			});
 
-		request?.apply("c", "append");
-		expect(setForm).toHaveBeenLastCalledWith({ tagIds: ["a", "b", "c"] });
-	});
+			request?.apply("c", "append");
+			expect(setForm).toHaveBeenLastCalledWith({ [name]: ["a", "b", "c"] });
+		},
+	);
 });
 
 describe("subscription of one field", () => {
@@ -256,7 +274,7 @@ describe("a custom field UI built only from the hooks", () => {
 				<Owner
 					initial={{ ...EMPTY_FORM, title: "Draft" }}
 					onPatch={(patch) => patches.push(patch)}
-					issues={[{ code: "missing_field", path: "title", message: "제목", text: "제목을 입력하세요." }]}
+					issues={[{ code: "missing_field", path: "title", message: TITLE_LABEL, text: "제목을 입력하세요." }]}
 				>
 					<SuggestedTitle />
 				</Owner>
@@ -284,34 +302,37 @@ describe("a custom field UI built only from the hooks", () => {
 		expect(screen.queryByText("by the assistant")).toBeNull();
 	});
 
-	it("ASSIST-F1 the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
-		function Marked({ version }: { version: number }) {
-			const title = useField("title");
-			const slot = useSlotActions(title.slotRequest as NonNullable<FieldState["slotRequest"]>);
-			const summary = useField("summary");
-			return (
-				<div>
-					<button type="button" onClick={() => void slot.run("suggest")}>
-						Suggest
-					</button>
-					<span>title {String(title.assisted)}</span>
-					<span>summary {String(summary.assisted)}</span>
-					<span>version {version}</span>
-				</div>
+	it.skipIf(!SUMMARY)(
+		"ASSIST-F1 the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it",
+		async () => {
+			function Marked({ version }: { version: number }) {
+				const title = useField("title");
+				const slot = useSlotActions(title.slotRequest as NonNullable<FieldState["slotRequest"]>);
+				const summary = useField(SUMMARY?.name ?? "");
+				return (
+					<div>
+						<button type="button" onClick={() => void slot.run("suggest")}>
+							Suggest
+						</button>
+						<span>title {String(title.assisted)}</span>
+						<span>summary {String(summary.assisted)}</span>
+						<span>version {version}</span>
+					</div>
+				);
+			}
+			const view = (version: number) => (
+				<SlotRegistryProvider sources={[source]}>
+					<Owner initial={{ ...EMPTY_FORM, title: "Draft" }} entry={{ version } as never}>
+						<Marked version={version} />
+					</Owner>
+				</SlotRegistryProvider>
 			);
-		}
-		const view = (version: number) => (
-			<SlotRegistryProvider sources={[source]}>
-				<Owner initial={{ ...EMPTY_FORM, title: "Draft" }} entry={{ version } as never}>
-					<Marked version={version} />
-				</Owner>
-			</SlotRegistryProvider>
-		);
-		const { rerender } = render(view(1));
-		fireEvent.click(screen.getByText("Suggest"));
-		await screen.findByText("title true");
-		expect(screen.getByText("summary false")).toBeInTheDocument();
-		rerender(view(2));
-		await screen.findByText("title false");
-	});
+			const { rerender } = render(view(1));
+			fireEvent.click(screen.getByText("Suggest"));
+			await screen.findByText("title true");
+			expect(screen.getByText("summary false")).toBeInTheDocument();
+			rerender(view(2));
+			await screen.findByText("title false");
+		},
+	);
 });

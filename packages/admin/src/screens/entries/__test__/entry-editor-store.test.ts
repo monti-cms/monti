@@ -1,5 +1,6 @@
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale, recordCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import { RECOVERY_IDLE_MS } from "../entry-editor-recovery-state";
@@ -12,6 +13,8 @@ import {
 	fakeClient,
 	fakeRecoveryStore,
 	invalidError,
+	METADATA_WITHOUT_SUMMARY,
+	REQUIRED_RELATION,
 	recoveryCopy,
 	serverError,
 	unauthorizedError,
@@ -19,8 +22,19 @@ import {
 
 /**
  * The entry editor's engine, driven without React or a DOM: a fake server and a fake recovery store stand in for `fetch` and IndexedDB.
- * Uses the reference blog's `post` collection (an `summary` filled from the body, a slug made from the title).
+ * Uses the site's first document collection with a body (`contentCollection`, a slug made from the title); the tests of a field filled from the body
+ * and of backlink picks look those fields up and are skipped on a site that has none.
  */
+
+/** A text field of the collection that publishing fills from the body when it is empty (`fillFromBody`), if any. */
+const BODY_FILLED = testSite
+	.storedFields(contentCollection)
+	.find(({ field, when }) => field.kind === "text" && Boolean(field.fillFromBody) && !when);
+
+/** The first backlink field of the collection, if any: a record of another collection lists this entry in one of its relations. */
+const BACKLINK = Object.entries(testSite.schemaOf(contentCollection).fields).flatMap(([name, field]) =>
+	field.kind === "backlink" ? [{ name, from: field.from, via: field.via }] : [],
+)[0];
 
 const ADMIN = "u1";
 const tick = () => vi.advanceTimersByTimeAsync(0);
@@ -84,19 +98,19 @@ describe("load", () => {
 	});
 
 	it("WRITE-W6 says redirect instead of navigating when the entry belongs to an item collection", async () => {
-		const ctx = await opened({ server: { ...ENTRY, collection: "tag" } });
+		const ctx = await opened({ server: { ...ENTRY, collection: recordCollection } });
 		expect(ctx.editor().load).toEqual({
 			status: "redirect",
 			reason: "item-collection",
-			collection: "tag",
+			collection: recordCollection,
 			entryId: "entry-1",
 		});
 		expect(ctx.editor().entry).toBeNull();
 	});
 
 	it("WRITE-W6 starts a new entry of an item collection as a redirect without any request", () => {
-		const ctx = setup({ target: { mode: "new", collection: "tag" } });
-		expect(ctx.editor().load).toEqual({ status: "redirect", reason: "item-collection", collection: "tag" });
+		const ctx = setup({ target: { mode: "new", collection: recordCollection } });
+		expect(ctx.editor().load).toEqual({ status: "redirect", reason: "item-collection", collection: recordCollection });
 		ctx.core.start();
 		expect(ctx.client.get).not.toHaveBeenCalled();
 	});
@@ -122,7 +136,7 @@ describe("the form", () => {
 	});
 
 	it("WRITE-P4 regenerates the slug from the title until it is touched by hand, and regenerateSlug starts it again", async () => {
-		const { editor } = await opened({ target: { mode: "new", collection: "post" }, server: ENTRY });
+		const { editor } = await opened({ target: { mode: "new", collection: contentCollection }, server: ENTRY });
 		expect(editor().slug.touched).toBe(false);
 		editor().setForm({ title: "Hello World" });
 		const generated = editor().form.slug;
@@ -168,7 +182,7 @@ describe("save", () => {
 			expect.objectContaining({
 				expectedVersion: 4,
 				slug: "test",
-				metadata: expect.objectContaining({ title: "수정", categoryId: "cat-1", summary: "요약" }),
+				metadata: expect.objectContaining({ ...ENTRY.working.metadata, title: "수정" }),
 				doc: ENTRY.working.doc,
 			}),
 		);
@@ -264,19 +278,19 @@ describe("save", () => {
 	});
 
 	it("WRITE-S1 shows the language a new entry was saved in as existing right after the first save", async () => {
-		const { editor } = await opened({ target: { mode: "new", collection: "post" } });
+		const { editor } = await opened({ target: { mode: "new", collection: contentCollection } });
 		expect(editor().entry?.translations ?? []).toEqual([]);
 		editor().setForm({ title: "새 글" });
 		const result = await editor().save();
 		expect(result.ok).toBe(true);
 		const members = editor().entry?.translations ?? [];
 		expect(members.map((member) => member.id)).toContain("created-1");
-		expect(members.find((member) => member.id === "created-1")?.locale).toBe("ko");
+		expect(members.find((member) => member.id === "created-1")?.locale).toBe(defaultLocale);
 	});
 
 	it("WRITE-S1 creates a new entry with POST (with its folder), asks the UI to move to the edit URL, and drops the new-entry copy", async () => {
 		const { editor, client, onSaved, recovery } = await opened({
-			target: { mode: "new", collection: "post", folderId: "folder-1" },
+			target: { mode: "new", collection: contentCollection, folderId: "folder-1" },
 		});
 		expect(editor().load).toEqual({ status: "ready" });
 		editor().setForm({ title: "새 글" });
@@ -284,13 +298,13 @@ describe("save", () => {
 		expect(result.ok && result.value.entry.id).toBe("created-1");
 		expect(client.create).toHaveBeenCalledWith(
 			expect.objectContaining({
-				collection: "post",
+				collection: contentCollection,
 				folderId: "folder-1",
 				metadata: expect.objectContaining({ title: "새 글" }),
 			}),
 		);
 		expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "created-1" }), { created: true });
-		expect(recovery.store.delete).toHaveBeenCalledWith(`${ADMIN}:new:post`);
+		expect(recovery.store.delete).toHaveBeenCalledWith(`${ADMIN}:new:${contentCollection}`);
 		expect(editor().getSnapshot().entryId).toBe("created-1");
 		// From now on it is an edit.
 		editor().setForm({ title: "새 글 수정" });
@@ -342,9 +356,11 @@ describe("save", () => {
 	it("TRANS-L2 keeps the translation group info the save response does not carry", async () => {
 		const group: EntryData = {
 			...ENTRY,
-			locale: "ko",
+			locale: defaultLocale,
 			translationGroupId: "entry-1",
-			translations: [{ id: "entry-1", locale: "ko", status: "draft", isSource: true, title: "t", workingSlug: "test" }],
+			translations: [
+				{ id: "entry-1", locale: defaultLocale, status: "draft", isSource: true, title: "t", workingSlug: "test" },
+			],
 		};
 		const { editor, client } = await opened({ server: group });
 		client.update.mockResolvedValueOnce({ entry: { ...ENTRY, version: 5 }, warnings: [] });
@@ -590,8 +606,10 @@ describe("publish", () => {
 	});
 
 	it("WRITE-P2 creates a new entry and publishes it", async () => {
-		const { editor, client } = await opened({ target: { mode: "new", collection: "memo" } });
-		editor().setForm({ title: "바로 발행" });
+		const { editor, client } = await opened({ target: { mode: "new", collection: contentCollection } });
+		editor().setForm({ ...METADATA_WITHOUT_SUMMARY, title: "바로 발행" });
+		// A body to fill a body-filled field from, so publishing has what it needs on any site.
+		editor().setBody(docOf("바로 발행하는 글의 본문."));
 		const result = await editor().publish();
 		expect(result.ok).toBe(true);
 		expect(client.create).toHaveBeenCalledTimes(1);
@@ -609,41 +627,46 @@ describe("publish", () => {
 		expect(result.ok && result.value.warnings).toEqual([{ code: "seo_missing", text: "SEO" }]);
 	});
 
-	it("WRITE-P1 fills an empty body-filled field from the body, and says which", async () => {
+	it.skipIf(!BODY_FILLED)("WRITE-P1 fills an empty body-filled field from the body, and says which", async () => {
+		const name = BODY_FILLED?.name ?? "";
 		const server: EntryData = {
 			...ENTRY,
-			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
+			working: { metadata: METADATA_WITHOUT_SUMMARY, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
 		};
 		const { editor, client } = await opened({ server });
 		const result = await editor().publish();
-		expect(result.ok && result.value.filled).toEqual([{ name: "summary", label: expect.any(String) }]);
+		expect(result.ok && result.value.filled).toEqual([{ name, label: expect.any(String) }]);
 		expect(client.update).toHaveBeenCalledWith(
 			"entry-1",
-			expect.objectContaining({ metadata: expect.objectContaining({ summary: "소개 본문 첫 문장." }) }),
+			expect.objectContaining({ metadata: expect.objectContaining({ [name]: "소개 본문 첫 문장." }) }),
 		);
-		expect(editor().form.summary).toBe("소개 본문 첫 문장.");
+		expect(editor().form[name]).toBe("소개 본문 첫 문장.");
 	});
 
-	it("WRITE-P1 does not publish when a body-filled field has no body to come from: a validation error naming the field", async () => {
-		const server: EntryData = {
-			...ENTRY,
-			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
-		};
-		const { editor, client } = await opened({ server });
-		const result = await editor().publish();
-		expect(result).toMatchObject({
-			ok: false,
-			error: { code: "validation", issues: [{ code: "missing_field", path: "summary" }] },
-		});
-		expect(editor().publishIssues).toEqual([expect.objectContaining({ code: "missing_field", path: "summary" })]);
-		expect(client.update).not.toHaveBeenCalled();
-		expect(client.publish).not.toHaveBeenCalled();
-		expect(editor().busy).toBeNull();
-	});
+	it.skipIf(!BODY_FILLED)(
+		"WRITE-P1 does not publish when a body-filled field has no body to come from: a validation error naming the field",
+		async () => {
+			const name = BODY_FILLED?.name ?? "";
+			const server: EntryData = {
+				...ENTRY,
+				working: { metadata: METADATA_WITHOUT_SUMMARY, doc: docOf("```js\nonly();\n```") },
+			};
+			const { editor, client } = await opened({ server });
+			const result = await editor().publish();
+			expect(result).toMatchObject({
+				ok: false,
+				error: { code: "validation", issues: [{ code: "missing_field", path: name }] },
+			});
+			expect(editor().publishIssues).toEqual([expect.objectContaining({ code: "missing_field", path: name })]);
+			expect(client.update).not.toHaveBeenCalled();
+			expect(client.publish).not.toHaveBeenCalled();
+			expect(editor().busy).toBeNull();
+		},
+	);
 
 	it("WRITE-P1 a refusal with issues is a validation error and sets publishIssues; the next publish clears them", async () => {
 		const { editor, client } = await opened();
-		const issues = [{ code: "required", path: "categoryId", text: "카테고리를 입력하세요." }];
+		const issues = [{ code: "required", path: REQUIRED_RELATION?.name ?? "title", text: "값을 입력하세요." }];
 		client.publish.mockRejectedValueOnce(invalidError(issues));
 		const result = await editor().publish();
 		expect(result).toMatchObject({ ok: false, error: { code: "validation", issues } });
@@ -889,7 +912,7 @@ describe("recovery on open", () => {
 		const base = formFromEntry(testSite, { ...ENTRY, working: { metadata: {}, doc: docOf("") }, workingSlug: null });
 		const snapshot = { ...base, title: "쓰던 글" };
 		const record = {
-			key: `${ADMIN}:new:post`,
+			key: `${ADMIN}:new:${contentCollection}`,
 			entryId: "new",
 			baseVersion: 0,
 			baseFingerprint: formFingerprint(testSite, base),
@@ -898,7 +921,7 @@ describe("recovery on open", () => {
 			changeSeq: 1,
 			savedAt: 5,
 		};
-		const ctx = setup({ target: { mode: "new", collection: "post" }, records: [record] });
+		const ctx = setup({ target: { mode: "new", collection: contentCollection }, records: [record] });
 		ctx.core.start();
 		await vi.waitFor(() => expect(ctx.editor().recovery).not.toBeNull());
 		expect(ctx.editor().recovery).toEqual({ kind: "restore", savedAt: 5, form: snapshot });
@@ -929,7 +952,7 @@ describe("translation source flow", () => {
 		},
 		source: {
 			id: "entry-1",
-			locale: "ko",
+			locale: defaultLocale,
 			status: "draft",
 			workingSlug: "test",
 			metadata: { title: "테스트" },
@@ -940,7 +963,7 @@ describe("translation source flow", () => {
 	it("TRANS-S1 says the source changed when it differs from the confirmed one, and confirming it records the source in the next save", async () => {
 		const { editor, client } = await opened({ server: translation });
 		expect(editor().translation).toMatchObject({
-			source: { locale: "ko", title: "테스트" },
+			source: { locale: defaultLocale, title: "테스트" },
 			confirmed: { version: 4 },
 			sourceChanged: true,
 		});
@@ -958,28 +981,30 @@ describe("translation source flow", () => {
 	});
 });
 
-describe("backlink picks", () => {
-	// The reference blog's post has a `series` backlink: a series (`collection`) lists its posts in `itemIds`.
+describe.skipIf(!BACKLINK)("backlink picks", () => {
+	// A record of the backlink's `from` collection (a series) lists the entries it holds in its `via` relation.
+	const field = BACKLINK?.name ?? "";
+	const via = BACKLINK?.via ?? "";
 	const series = (id: string, itemIds: string[]): EntryData => ({
 		...ENTRY,
 		id,
-		collection: "collection",
+		collection: BACKLINK?.from ?? "",
 		version: 1,
 		workingSlug: id,
-		working: { metadata: { title: id, itemIds }, doc: ENTRY.working.doc },
+		working: { metadata: { title: id, [via]: itemIds }, doc: ENTRY.working.doc },
 	});
 	const pick = { add: [{ id: "s2", title: "s2" }], remove: ["s1"] };
 	const withSeries = () => opened({ others: { s1: series("s1", ["other", "entry-1"]), s2: series("s2", ["other"]) } });
 
 	it("WRITE-W7 a pick is an unsaved change: dirty, and nothing is sent until the save", async () => {
 		const { editor, client } = await withSeries();
-		editor().setBacklink("series", pick);
+		editor().setBacklink(field, pick);
 		expect(editor().saveStatus).toBe("dirty");
 		expect(editor().hasUnsavedChanges).toBe(true);
 		expect(editor().getSnapshot().hasUnsavedChanges).toBe(true);
 		expect(client.update).not.toHaveBeenCalled();
 		// Taking the pick back leaves nothing to save.
-		editor().setBacklink("series", null);
+		editor().setBacklink(field, null);
 		expect(editor().saveStatus).toBe("saved");
 		expect(editor().hasUnsavedChanges).toBe(false);
 	});
@@ -987,17 +1012,17 @@ describe("backlink picks", () => {
 	it("WRITE-W7 the save writes the picks to the series after the entry, and a save with only picks does not send the entry", async () => {
 		const { editor, client, records } = await withSeries();
 		editor().setForm({ title: "가" });
-		editor().setBacklink("series", pick);
+		editor().setBacklink(field, pick);
 		expect((await editor().save()).ok).toBe(true);
 		expect(client.update.mock.calls.map(([id]) => id)).toEqual(["entry-1", "s2", "s1"]);
 		// Added to the end of one series; taken out of the other.
-		expect(records.s2?.working.metadata.itemIds).toEqual(["other", "entry-1"]);
-		expect(records.s1?.working.metadata.itemIds).toEqual(["other"]);
+		expect(records.s2?.working.metadata[via]).toEqual(["other", "entry-1"]);
+		expect(records.s1?.working.metadata[via]).toEqual(["other"]);
 		expect(editor().backlinks).toEqual({});
 		expect(editor().saveStatus).toBe("saved");
 
 		client.update.mockClear();
-		editor().setBacklink("series", { add: [], remove: ["s2"] });
+		editor().setBacklink(field, { add: [], remove: ["s2"] });
 		const result = await editor().save();
 		expect(result.ok && result.value.changed).toBe(true);
 		expect(client.update.mock.calls.map(([id]) => id)).toEqual(["s2"]);
@@ -1007,7 +1032,7 @@ describe("backlink picks", () => {
 	it("WRITE-W7 a pick the save could not write is dropped with its reason, and the entry stays saved", async () => {
 		const { editor, client } = await withSeries();
 		editor().setForm({ title: "가" });
-		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		editor().setBacklink(field, { add: [{ id: "s2", title: "s2" }], remove: [] });
 		const write = client.update.getMockImplementation();
 		client.update.mockImplementation(async (id, input) => {
 			if (id === "s2" || !write) throw serverError();
@@ -1015,36 +1040,36 @@ describe("backlink picks", () => {
 		});
 		expect((await editor().save()).ok).toBe(true);
 		expect(editor().backlinks).toEqual({});
-		expect(editor().backlinkErrors.series).toBe("server error");
+		expect(editor().backlinkErrors[field]).toBe("server error");
 		expect(editor().saveStatus).toBe("saved");
 		// A new pick clears the reason.
-		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		editor().setBacklink(field, { add: [{ id: "s2", title: "s2" }], remove: [] });
 		expect(editor().backlinkErrors).toEqual({});
 	});
 
 	it("WRITE-W7 a retry after a failed save writes the picks with the entry", async () => {
 		const { editor, client, records } = await withSeries();
 		editor().setForm({ title: "가" });
-		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		editor().setBacklink(field, { add: [{ id: "s2", title: "s2" }], remove: [] });
 		client.update.mockRejectedValueOnce(serverError());
 		expect((await editor().save()).ok).toBe(false);
-		expect(editor().backlinks.series).toBeDefined();
+		expect(editor().backlinks[field]).toEqual({ add: [{ id: "s2", title: "s2" }], remove: [] });
 		expect((await editor().retry()).ok).toBe(true);
-		expect(records.s2?.working.metadata.itemIds).toEqual(["other", "entry-1"]);
+		expect(records.s2?.working.metadata[via]).toEqual(["other", "entry-1"]);
 		expect(editor().hasUnsavedChanges).toBe(false);
 	});
 
 	it("WRITE-W7 a translation's pick puts the original into the series", async () => {
 		const translation = { ...ENTRY, id: "entry-en", translationGroupId: "entry-1" };
 		const { editor, records } = await opened({ server: translation, others: { s2: series("s2", []) } });
-		editor().setBacklink("series", { add: [{ id: "s2", title: "s2" }], remove: [] });
+		editor().setBacklink(field, { add: [{ id: "s2", title: "s2" }], remove: [] });
 		await editor().save();
-		expect(records.s2?.working.metadata.itemIds).toEqual(["entry-1"]);
+		expect(records.s2?.working.metadata[via]).toEqual(["entry-1"]);
 	});
 
 	it("WRITE-W7 a status change waits for unsaved picks, and reload drops them", async () => {
 		const { editor, client } = await withSeries();
-		editor().setBacklink("series", pick);
+		editor().setBacklink(field, pick);
 		const archived = await editor().changeStatus("archive");
 		expect(!archived.ok && archived.error.code).toBe("invalid_state");
 		await editor().reload();
