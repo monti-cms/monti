@@ -1132,7 +1132,7 @@ API 키 저장(🔴 KEY-A1~A3)의 7개만 남기고 나머지를 지웠다. 다�
 
 | 테스트 | 판정 | 이유 |
 |---|---|---|
-| creates no MDX text columns, and a normal write stores the document only | 겹침 | `pg/database-types.int` 171(없던 열이 생기면 실패), `pg/stored-document.int` 130(문서만 저장), `pg/templates.int` 37(템플릿 문서) · 셋이 같은 결함을 나눠 잡는다 |
+| creates no MDX text columns, and a normal write stores the document only | 겹침 | CI의 `pnpm gen:db-types --check`(없던 열이 생기면 실패, 전에는 `pg/database-types.int` 171), `pg/stored-document.int` 130(문서만 저장), `pg/templates.int` 37(템플릿 문서) · 셋이 같은 결함을 나눠 잡는다 |
 | seeds the initial body templates once, and does not revive a deleted one | 겹침 | `pg/templates.int` 37 · 둘 다 지운 뒤 다시 마이그레이션해 되살아나지 않는지 본다. 37은 내용까지 본다 |
 
 ### `core/src/adapters/postgres/__test__/references.int.test.ts`

@@ -15,7 +15,7 @@
  *   mutant, so it is run on the file whose tests are being sorted out (`--mutate`), not on all of core.
  * - Per-test coverage picks the tests that ran a line. A store method is defined when the store is created, so a mutant that empties a whole
  *   method can be reported as surviving although the tests that call it fail on it: run such a mutant by hand before counting it.
- * - `vitest.mutation.config.ts`: the suite without the two tests that read the source as text.
+ * - `vitest.mutation.config.ts`: the suite without the test that type-checks a generated project against the sources.
  *
  * `mutate` is set per run (`--mutate`); the default is the pilot module.
  * @type {import("@stryker-mutator/api/core").PartialStrykerOptions}

@@ -14,7 +14,6 @@
 		"src/**/__test__/**/*.test.*",
 		"src/render/__test__/parity.tsx",
 		"src/adapters/postgres/__test__/fake-mdx-format.ts",
-		"src/adapters/postgres/__test__/store-contract-factory.ts",
 		"src/core/store/__test__/contract/**",
 		"src/plugin/__test__/storage-contract.ts"
 	]

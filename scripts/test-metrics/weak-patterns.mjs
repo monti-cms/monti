@@ -24,7 +24,6 @@ const asCheck = process.argv.includes("--check");
  */
 const CEILING = {
 	core: 0,
-	admin: 149,
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
@@ -164,18 +163,6 @@ const EXEMPT = [
 		count,
 		why: "reads a published package.json (peers, exports)",
 	})),
-	{
-		pattern: "source-read",
-		file: "packages/core/src/adapters/postgres/__test__/database-types.int.test.ts",
-		count: 1,
-		why: "compares the hand-written `db/database.ts` with a freshly migrated database, which neither tsc nor lint can see",
-	},
-	{
-		pattern: "source-read",
-		file: "packages/core/src/adapters/postgres/__test__/store-contract-files.int.test.ts",
-		count: 1,
-		why: "checks that every store contract suite has the test file that runs it: the test files are what it checks",
-	},
 	{
 		pattern: "fetch-stub",
 		file: "packages/admin/src/test/fake-api.ts",
