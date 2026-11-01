@@ -3,9 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
+import { EMPTY_REFS, type ReadRefs } from "../../../doc/document-refs";
 import { storedCodeBlockAttrs } from "../../../doc/stored-code-block";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../doc/stored-document";
-import type { CmsNode } from "../../../doc/types";
+import type { CmsMark, CmsNode } from "../../../doc/types";
 import {
 	CmsContent,
 	type CodeBlockProps,
@@ -914,5 +915,157 @@ describe("unknown content: a fallback, never an error", () => {
 			const rendered = await renderDocument(doc(paragraph(text("앞")), node), { site: testSite });
 			expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("<p>앞</p>");
 		}
+	});
+});
+
+describe("keys of rendered children", () => {
+	const text = (value: string, marks?: CmsNode["marks"]): CmsNode => ({
+		type: "text",
+		text: value,
+		...(marks ? { marks } : {}),
+	});
+
+	const p = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", content });
+
+	/** A body shaped like the showcase: marks, links, breaks, task lists, tables, footnotes, code, quotes and images. */
+	const showcase: StoredDocument = {
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: [
+			{ type: "heading", attrs: { level: 2 }, content: [text("Title"), text(" bold", [{ type: "bold" }])] },
+			p(
+				text("plain "),
+				text("bold", [{ type: "bold" }]),
+				text(" and "),
+				text("both", [{ type: "bold" }, { type: "italic" }]),
+				{ type: "hardBreak" },
+				text("link", [{ type: "link", attrs: { href: "https://example.com" } }]),
+				{ type: "footnoteReference", attrs: { label: "1" } },
+				{ type: "image", attrs: { alt: "inline", src: "https://example.com/a.png" } },
+			),
+			{ type: "bulletList", content: [{ type: "listItem", content: [p(text("one"), text("!", [{ type: "code" }]))] }] },
+			{
+				type: "bulletList",
+				content: [
+					{ type: "listItem", attrs: { checked: true }, content: [p(text("done"), text("x", [{ type: "bold" }]))] },
+				],
+			},
+			{
+				type: "bulletList",
+				content: [
+					{
+						type: "listItem",
+						attrs: { checked: false },
+						content: [p(text("loose "), text("a", [{ type: "bold" }])), p(text("second"))],
+					},
+				],
+			},
+			{ type: "paragraph" },
+			{ type: "blockquote", content: [p(text("quote"), text("em", [{ type: "italic" }]))] },
+			{
+				type: "table",
+				content: [
+					{
+						type: "tableRow",
+						content: [
+							{ type: "tableCell", content: [p(text("a"))] },
+							{ type: "tableCell", content: [p(text("b"))] },
+						],
+					},
+				],
+			},
+			{ type: "codeBlock", attrs: { language: "ts", meta: "", code: "const a = 1;" } },
+			{ type: "footnoteDefinition", attrs: { label: "1" }, content: [p(text("note"), text("b", [{ type: "bold" }]))] },
+		],
+	};
+
+	afterEach(() => vi.restoreAllMocks());
+
+	it("SITE-D5 renders every child list with keys, so React logs no key warning", async () => {
+		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const { content } = await renderDocument(showcase, { site: testSite });
+		renderToStaticMarkup(content);
+		const warned = error.mock.calls.filter((call) => String(call[0]).includes('unique "key"'));
+		expect(warned).toEqual([]);
+	});
+});
+
+describe("rendering links by entry id", () => {
+	const ID = "123e4567-e89b-42d3-a456-426614174000";
+
+	const GONE = "123e4567-e89b-42d3-a456-426614174001";
+
+	const link = (label: string, attrs: CmsMark["attrs"]): CmsNode => ({
+		type: "text",
+		text: label,
+		marks: [{ type: "link", attrs }],
+	});
+
+	const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
+
+	// The renderer passes a link's language through as is, so any language tag will do.
+	const refs: ReadRefs = { ...EMPTY_REFS, links: { [ID]: { path: "/posts/renamed", title: "Renamed", locale: "fr" } } };
+
+	type ContentProps = Parameters<typeof CmsContent>[0];
+
+	type WithoutCms<T> = T extends unknown ? Omit<T, "cms"> : never;
+
+	const cms = { site: testSite };
+
+	const render = async (props: WithoutCms<ContentProps>) =>
+		renderToStaticMarkup((await CmsContent({ cms, ...props } as ContentProps)) as ReactNode);
+
+	const body = doc({
+		type: "paragraph",
+		content: [
+			{ type: "text", text: "See " },
+			link("it", { entryId: ID }),
+			{ type: "text", text: ", " },
+			link("gone", { entryId: GONE }),
+			{ type: "text", text: " and " },
+			link("out", { href: "https://example.com/a" }),
+			{ type: "text", text: "." },
+		],
+	});
+
+	it("SITE-R3 draws a link at the address its entry has now, and an unresolved one as plain text", async () => {
+		const markup = await render({ doc: body, refs });
+
+		expect(markup).toContain('<a href="/posts/renamed">it</a>');
+		expect(markup).toContain("gone");
+		expect(markup).not.toContain(GONE);
+		expect(markup).not.toMatch(/<a[^>]*>gone/);
+		expect(markup).toContain('href="https://example.com/a"');
+	});
+
+	it("SITE-R3 draws every entry link as plain text without refs", async () => {
+		const markup = await render({ doc: body });
+
+		expect(markup).toContain("See it, gone and");
+		expect(markup).not.toContain("/posts/renamed");
+	});
+
+	it("SITE-D1 gives a site's own link component the entry, its address and the id", async () => {
+		const seen: LinkProps[] = [];
+		const components = {
+			marks: {
+				link: (props: LinkProps) => {
+					seen.push(props);
+					return createElement("span", null, props.children);
+				},
+			},
+		} as unknown as DocumentComponents;
+
+		await render({ doc: body, refs, components });
+
+		expect(seen.find((props) => props.entryId === ID)).toMatchObject({
+			href: "/posts/renamed",
+			entry: { path: "/posts/renamed", title: "Renamed", locale: "fr" },
+		});
+		expect(seen.find((props) => props.entryId === GONE)).toMatchObject({ href: undefined, entry: undefined });
+		expect(seen.find((props) => props.entryId === undefined)).toMatchObject({
+			href: "https://example.com/a",
+			external: true,
+		});
 	});
 });

@@ -59,33 +59,6 @@ const ALLOWED = [
 		file: "packages/core/src/render/__test__/render-css.browser.test.ts",
 		why: "checks the public stylesheet `packages/core/render.css`, which is not a source module",
 	},
-	// Each of these has one module, but the module's test file is on the other side of the per-file rules of the other-site run
-	// (`test/config-sensitive.ts`) and of `site-names.mjs`: merged, the run would gain or lose tests, or names of the file's own config would count
-	// as reference-blog names. They wait for those rules to work per `describe`.
-	...[
-		["packages/core/src/api-keys/__test__/api-key-slots.test.ts", "api-keys.test.ts", "reads the site config"],
-		["packages/core/src/cms/__test__/plugin-context.test.ts", "create-cms.test.ts", "builds its own config"],
-		[
-			"packages/core/src/core/__test__/kind-and-required.test.ts",
-			"collections.test.ts, snapshot.test.ts, fields.test.ts",
-			"builds its own config",
-		],
-		["packages/core/src/core/__test__/list-query.test.ts", "api.test.ts", "builds its own config"],
-		["packages/core/src/core/__test__/service-input.test.ts", "snapshot.test.ts", "builds its own config"],
-		[
-			"packages/core/src/render/__test__/document-keys.test.tsx",
-			"document/__test__/render.test.tsx",
-			"reads no config name",
-		],
-		[
-			"packages/core/src/render/__test__/entry-links.test.tsx",
-			"document/__test__/render.test.tsx",
-			"reads no config name",
-		],
-	].map(([file, target, own]) => ({
-		file,
-		why: `belongs in ${target}, but it ${own}, unlike that file, so merging changes what the other-site run or site-names.mjs sees`,
-	})),
 ];
 
 const TEST = /\.test\.tsx?$/;

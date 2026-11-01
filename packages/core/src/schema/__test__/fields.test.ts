@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
-import { DEFAULT_TITLE_FIELD, fieldTraits, isStoredField, SUMMARY_ROLE, TITLE_ROLE } from "../fields";
+import { defineCollection, defineSite, fields } from "../..";
+import { createSite } from "../../site";
+import {
+	DEFAULT_TITLE_FIELD,
+	fieldTraits,
+	fillFromBodyLength,
+	isStoredField,
+	SUMMARY_ROLE,
+	TITLE_ROLE,
+} from "../fields";
 import { valueFieldsOf } from "../walk";
 
 describe("field traits", () => {
@@ -47,5 +56,48 @@ describe("field traits", () => {
 				),
 			);
 		}
+	});
+});
+
+describe("filling from the body (`fillFromBody`)", () => {
+	/**
+	 * Tests collection kind (`kind`), required fields (`required: true`) and empty-body validation (`body`) with a single test config.
+	 * Builds its own site so it runs regardless of the reference blog or other site configs.
+	 */
+	const title = fields.text({ label: "Title", required: true });
+
+	const slug = fields.slug({ label: "Slug", from: "title", required: true });
+
+	const site = createSite(
+		defineSite({
+			collections: {
+				// A document without a body (e.g. a link collection). It publishes but its body is not checked.
+				page: defineCollection({ label: "Page", kind: "document", body: false, fields: { title, slug } }),
+				note: defineCollection({
+					label: "Note",
+					kind: "document",
+					fields: {
+						title,
+						slug,
+						pageId: fields.relation({ label: "Page", to: "page", allowUnpublished: true }),
+						excerpt: fields.text({ label: "Excerpt", fillFromBody: { maxLength: 40 }, max: 30 }),
+					},
+				}),
+				label: defineCollection({ label: "Label", kind: "item", fields: { title, slug } }),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+
+	/** This file's config collections (the type is widened because it is the package test config). */
+	const c = (name: "page" | "note" | "label") => name;
+
+	it("WRITE-W12 uses `{ maxLength }` and does not exceed the field `max`", () => {
+		const field = site.storedField(c("note"), "excerpt")?.field;
+		expect(field?.kind === "text" && fillFromBodyLength(field)).toBe(30);
+		expect(fillFromBodyLength({ kind: "text", label: "a", fillFromBody: true })).toBe(160);
+		expect(fillFromBodyLength({ kind: "text", label: "a", fillFromBody: { maxLength: 80 } })).toBe(80);
+		expect(fillFromBodyLength({ kind: "text", label: "a" })).toBeUndefined();
 	});
 });

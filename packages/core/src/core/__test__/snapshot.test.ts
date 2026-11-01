@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import { docOf, docOf as docOfText } from "../../../test/stored-content";
+import { defineCollection, defineSite, fields } from "../..";
 import { entryLinkHref, linkMarkAttrs, mapLinkAttrs } from "../../doc/entry-links";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { RECORD_TRANSLATIONS_KEY } from "../../schema/fields";
+import { createSite } from "../../site";
 import type { Collection } from "../collections";
 import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../limits";
 import { documentInputBody, prepareSnapshot, validateForPublish } from "../snapshot";
@@ -249,6 +251,145 @@ describe("what a removed field or option leaves behind", () => {
 			expect(validation.warnings).toContainEqual(
 				expect.objectContaining({ code: "unknown_select_value", path: name, message: UNKNOWN_OPTION }),
 			);
+		});
+	});
+});
+
+describe("empty body check", () => {
+	/**
+	 * Tests collection kind (`kind`), required fields (`required: true`) and empty-body validation (`body`) with a single test config.
+	 * Builds its own site so it runs regardless of the reference blog or other site configs.
+	 */
+	const title = fields.text({ label: "Title", required: true });
+
+	const slug = fields.slug({ label: "Slug", from: "title", required: true });
+
+	const site = createSite(
+		defineSite({
+			collections: {
+				// A document without a body (e.g. a link collection). It publishes but its body is not checked.
+				page: defineCollection({ label: "Page", kind: "document", body: false, fields: { title, slug } }),
+				note: defineCollection({
+					label: "Note",
+					kind: "document",
+					fields: {
+						title,
+						slug,
+						pageId: fields.relation({ label: "Page", to: "page", allowUnpublished: true }),
+						excerpt: fields.text({ label: "Excerpt", fillFromBody: { maxLength: 40 }, max: 30 }),
+					},
+				}),
+				label: defineCollection({ label: "Label", kind: "item", fields: { title, slug } }),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+
+	const snapshot = (collection: string, patch: object = {}) =>
+		({
+			collection,
+			slug: "a",
+			metadata: { title: "T" },
+			doc: { type: "doc", version: 3, content: [] },
+			contentHash: "h",
+			references: [],
+			issues: [],
+			imageSources: [],
+			...patch,
+		}) as never;
+
+	it("WRITE-P1 only collections that use a body (`body`) reject it", () => {
+		expect(validateForPublish(site, snapshot("page"), { targets: [], media: [] }).issues).toEqual([]);
+		expect(validateForPublish(site, snapshot("note"), { targets: [], media: [] }).issues).toContainEqual(
+			expect.objectContaining({ code: "empty_body" }),
+		);
+	});
+
+	it("WRITE-P1 a different target collection is `invalid_reference_collection` even for relations that allow unpublished targets", () => {
+		const target = "123e4567-e89b-12d3-a456-426614174001";
+		const result = validateForPublish(
+			site,
+			snapshot("note", { doc: docOf("본문"), metadata: { title: "T", pageId: target } }),
+			{
+				targets: [{ id: target, isPublished: false, collection: "note" }],
+				media: [],
+			},
+		);
+		expect(result.issues.map((issue) => issue.code)).toEqual(["invalid_reference_collection"]);
+	});
+});
+
+describe("what a developer sends to the write services", () => {
+	const config = defineSite({
+		collections: {
+			article: defineCollection({
+				label: "Article",
+				kind: "document",
+				fields: {
+					title: fields.text({ label: "Title", required: true }),
+					slug: fields.slug({ label: "Slug", from: "title", required: true }),
+					excerpt: fields.text({ label: "Excerpt" }),
+				},
+			}),
+			label: defineCollection({
+				label: "Label",
+				kind: "item",
+				fields: {
+					title: fields.text({ label: "Name", required: true }),
+					slug: fields.slug({ label: "Slug", from: "title", required: true }),
+				},
+			}),
+		},
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+	});
+	const site = createSite(config);
+
+	describe("metadata the caller sends", () => {
+		const input = (metadata: Record<string, unknown>) =>
+			({ collection: "article", slug: "a", metadata, doc: { type: "doc", version: 3, content: [] } }) as never;
+
+		it("WRITE-S7 treats a field set to undefined as a field that is not set", async () => {
+			const snapshot = await prepareSnapshot(site, input({ title: "A", excerpt: undefined }));
+			expect(snapshot.metadata).toEqual({ title: "A" });
+		});
+
+		it("WRITE-S7 names the field that has the wrong kind of value", async () => {
+			const error = await prepareSnapshot(site, input({ title: "A", excerpt: 3 })).catch((caught) => caught);
+			expect(error).toMatchObject({ code: "invalid_metadata_type", issues: [{ path: "excerpt" }] });
+			// The message names the field, the kind it must be and the kind it got.
+			expect(error.message).toContain('"excerpt"');
+			expect(error.message).toContain("text");
+			expect(error.message).toContain("number");
+		});
+
+		it("WRITE-S7 names the field that does not exist, and the ones that do", async () => {
+			const error = await prepareSnapshot(site, input({ title: "A", subtitle: "B" })).catch((caught) => caught);
+			expect(error).toMatchObject({ code: "invalid_metadata_key", issues: [{ path: "subtitle" }] });
+			// The message names the field it got, the collection and the fields it has.
+			expect(error.message).toContain('"subtitle"');
+			expect(error.message).toMatch(/\barticle\b/);
+			expect(error.message).toMatch(/\btitle\b/);
+			expect(error.message).toMatch(/\bexcerpt\b/);
+		});
+	});
+
+	describe("an item collection has no body", () => {
+		it("WRITE-W6 is written with the metadata only, and its document is empty", async () => {
+			const snapshot = await prepareSnapshot(site, {
+				collection: "label",
+				slug: "monti",
+				metadata: { title: "Monti" },
+			} as never);
+			expect(snapshot.doc.content).toEqual([]);
+			expect(snapshot.metadata).toEqual({ title: "Monti" });
+		});
+
+		it("WRITE-S7 is still an error for a document collection to have none", async () => {
+			await expect(
+				prepareSnapshot(site, { collection: "article", slug: "a", metadata: { title: "A" } } as never),
+			).rejects.toMatchObject({ code: "invalid_input" });
 		});
 	});
 });

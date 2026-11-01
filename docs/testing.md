@@ -132,8 +132,7 @@
 - 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
   더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
   `scripts/test-metrics/test-names.mjs`가 core에서 이 규칙을 본다(`pnpm check:tests`). 모듈 하나로 정할 수 없는 파일(여러 모듈을 한꺼번에
-  보는 검사)만 이유와 함께 그 `ALLOWED`에 둔다. 다른 사이트 실행과 `site-names.mjs`가 파일 단위로 고르는 탓에 아직 모듈의 파일로
-  합치지 못한 7개도 그 목록에 있다(#341).
+  보는 검사)만 이유와 함께 그 `ALLOWED`에 둔다.
 - 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.ts(x)`와 `.browser.test.ts(x)`(L3). 확장자 `.tsx`는
   JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`, `admin (browser)`, ui는 `ui`, `ui (dom)`, `ui (browser)`), 한 층만 따로 돌릴 수 있다.
 - 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
