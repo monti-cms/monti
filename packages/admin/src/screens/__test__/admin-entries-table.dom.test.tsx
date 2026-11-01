@@ -2,6 +2,7 @@ import type { ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
@@ -16,8 +17,8 @@ const t = testSite.createTranslator(screensMessages);
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
-	collection: "post",
-	locale: "ko",
+	collection: contentCollection,
+	locale: defaultLocale,
 	translationGroupId: id,
 	title: id,
 	slug: id,
@@ -36,11 +37,11 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 
 function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>> = {}) {
 	const props: ComponentProps<typeof AdminEntriesTable> = {
-		collection: "post",
+		collection: contentCollection,
 		items: [item("published", { status: "published", hasUnpublishedChanges: true }), item("draft")],
 		folders: [],
 		explorer: null,
-		state: parseListState(testSite, new URLSearchParams("collection=post")),
+		state: parseListState(testSite, new URLSearchParams(`collection=${contentCollection}`)),
 		onStateChange: vi.fn(),
 		onColumnSettingsChange: vi.fn(),
 		selectedIds: new Set(),
@@ -63,17 +64,19 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 describe("admin entry list", () => {
 	it("LIST-C5 opens the same row actions from right click and from the always-visible ⋯ button", async () => {
 		const onSelect = vi.fn();
-		renderTable({ rowMenu: () => [{ kind: "item", label: "보관", onSelect }] });
+		// The menu the test hands the table, with a label of its own.
+		const label = "보관";
+		renderTable({ rowMenu: () => [{ kind: "item", label, onSelect }] });
 		const row = screen.getByRole("row", { name: /draft/ });
 		await act(async () => {
 			fireEvent.contextMenu(row);
 		});
-		fireEvent.click(await screen.findByRole("menuitem", { name: "보관" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: label }));
 		expect(onSelect).toHaveBeenCalledTimes(1);
-		await waitFor(() => expect(screen.queryByRole("menuitem", { name: "보관" })).toBeNull());
+		await waitFor(() => expect(screen.queryByRole("menuitem", { name: label })).toBeNull());
 
 		fireEvent.click(within(row).getByRole("button", { name: t("list.rowActions", { title: "draft" }) }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "보관" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: label }));
 		expect(onSelect).toHaveBeenCalledTimes(2);
 	});
 
@@ -124,7 +127,10 @@ describe("admin entry list", () => {
 		const t = testSite.createTranslator(screensMessages);
 
 		it("LIST-F5 says nothing matches when filtered, and clears the search and filters", () => {
-			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
+			const state = parseListState(
+				testSite,
+				new URLSearchParams(`collection=${contentCollection}&search=zzz&status=draft`),
+			);
 			const props = renderTable({ items: [], total: 0, state });
 			expect(screen.getByText(t("list.emptyNoMatch"))).toBeInTheDocument();
 			fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));

@@ -177,6 +177,12 @@ const EXEMPT = [
 		why: "a selector the built stylesheet must hold: dark tokens follow the host's `[data-theme=dark]` marker, read from the CSS text",
 	},
 	{
+		pattern: "class-name",
+		file: "packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		count: 2,
+		why: "SCHEMA-F2 promises a red apply button before values are deleted; the visual stories do not run on every push (#334)",
+	},
+	{
 		pattern: "fetch-stub",
 		file: "packages/admin/src/test/fake-api.ts",
 		count: 1,
@@ -223,6 +229,27 @@ const EXEMPT = [
 		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",
 		count: 1,
 		why: "the upper bound of an `expect.poll`, which returns as soon as the condition holds",
+	},
+	{
+		pattern: "test-id",
+		file: "packages/admin/src/screens/__test__/entry-list-screen.dom.test.tsx",
+		count: 1,
+		why: "the blank area under the rows is a right-click target hidden from assistive tech (`aria-hidden`), so it has no role or name to find it by",
+	},
+	...[
+		"packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		"packages/admin/src/screens/schema/__test__/collections-flows.dom.test.tsx",
+	].map((file) => ({
+		pattern: "own-module-mock",
+		file,
+		count: 1,
+		why: "replaces only `reloadPage` of `schema/reload.ts`: jsdom cannot reload a page; the message a save leaves for the next page goes through the real module",
+	})),
+	{
+		pattern: "own-module-mock",
+		file: "packages/admin/src/screens/media/__test__/media-flows.dom.test.tsx",
+		count: 1,
+		why: "the upload resizes with canvas and sends with XMLHttpRequest progress, which jsdom lacks and the fake API (fetch) cannot answer; the tests drive progress and the shrink result through it",
 	},
 ];
 

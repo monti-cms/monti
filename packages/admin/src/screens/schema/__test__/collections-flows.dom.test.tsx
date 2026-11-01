@@ -11,6 +11,7 @@ import { AdminQueryProvider } from "../../shared/query-provider";
 import { schemaCollectionMessages } from "../collection.messages";
 import { schemaFieldsMessages } from "../fields.messages";
 import { schemaMessages } from "../messages";
+import { takeSavedMessage } from "../reload";
 import { schemaReviewMessages } from "../review.messages";
 import { SchemaSettings } from "../schema-screen";
 
@@ -30,8 +31,13 @@ const tExport = testSite.createTranslator(exportMessages);
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
-vi.mock("../reload", () => reload);
+// Only the browser's reload is replaced (jsdom cannot reload a page; `reload.ts` keeps it in a function of its own for this). The line a save leaves for the
+// next page goes through the real session storage.
+const reload = vi.hoisted(() => ({ reloadPage: vi.fn() }));
+vi.mock("../reload", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../reload")>()),
+	...reload,
+}));
 
 const field = (label: string) => ({ kind: "text", label });
 const collection = (label: string) => ({
@@ -46,7 +52,7 @@ const state: SchemaScreenState = {
 	file: "monti.schema.ts",
 	hash: "hash-1",
 	schema: {
-		collections: { post: collection("Post"), memo: collection("Memo") },
+		collections: { story: collection("Story"), digest: collection("Digest") },
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",
 	},
@@ -56,8 +62,8 @@ const state: SchemaScreenState = {
 	applied: { appliedAt: "2026-01-01T00:00:00.000Z" },
 	codeCollections: [],
 	vocabulary: { blocks: [], marks: [] },
-	collections: ["post", "memo"],
-	footprints: { post: { entries: 148, trashed: 0, folders: 3 }, memo: { entries: 23, trashed: 2, folders: 2 } },
+	collections: ["story", "digest"],
+	footprints: { story: { entries: 148, trashed: 0, folders: 3 }, digest: { entries: 23, trashed: 2, folders: 2 } },
 	siteUrl: { url: null, from: "none" },
 };
 
@@ -91,7 +97,8 @@ const emptySaved: SavedSchema = {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	window.history.replaceState(null, "", "/admin/settings/collections?collection=post");
+	window.sessionStorage.clear();
+	window.history.replaceState(null, "", "/admin/settings/collections?collection=story");
 	preview = emptyPreview;
 	saved = emptySaved;
 	api = fakeApi()
@@ -135,7 +142,7 @@ const hasChangeCount = (count: number) =>
 describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 	it("SCHEMA-N3 creates a collection from the sheet, adds a field to it and saves it", async () => {
 		open();
-		await screen.findByRole("button", { name: t("collection.drag", { name: "Post" }) });
+		await screen.findByRole("button", { name: t("collection.drag", { name: "Story" }) });
 
 		// 01: "+ 새 컬렉션" under the list opens a sheet (not a dialog in the middle) with focus in the name.
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
@@ -157,7 +164,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect((createButton as HTMLButtonElement).disabled).toBe(false);
 
 		// 02: an identifier that is taken shows the one error line, marks the field and keeps "만들기" off.
-		fireEvent.change(identifier, { target: { value: "memo" } });
+		fireEvent.change(identifier, { target: { value: "digest" } });
 		expect(within(sheet).getAllByText(t("name.taken"))).toHaveLength(1);
 		expect(identifier.getAttribute("aria-invalid")).toBe("true");
 		expect((createButton as HTMLButtonElement).disabled).toBe(true);
@@ -233,16 +240,16 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(within(adding).getByRole("switch", { name: tFields("field.multiline") })).toBeInTheDocument();
 
 		// Name it, make it required: the name follows the label until it is typed, and the summary line shows the field as it will be.
-		fireEvent.change(label, { target: { value: "Summary" } });
+		fireEvent.change(label, { target: { value: "Lede" } });
 		const fieldName = within(adding).getByRole("textbox", { name: tFields("field.name") }) as HTMLInputElement;
-		expect(fieldName.value).toBe("summary");
+		expect(fieldName.value).toBe("lede");
 		fireEvent.click(within(adding).getByRole("switch", { name: tFields("field.multiline") }));
 		fireEvent.click(within(adding).getByRole("switch", { name: tFields("field.required") }));
-		expect(adding.textContent).toContain(`summary · text · ${tFields("sum.multiline")}`);
+		expect(adding.textContent).toContain(`lede · text · ${tFields("sum.multiline")}`);
 		expect(addButton.disabled).toBe(false);
 		fireEvent.click(addButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(screen.getByRole("button", { name: tFields("field.toggle", { name: "summary" }) })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: tFields("field.toggle", { name: "lede" }) })).toBeInTheDocument();
 		// A new collection is one change, whatever it holds.
 		expect(hasChangeCount(1)).toBe(true);
 
@@ -257,21 +264,25 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		const schema = put?.body.schema as {
 			collections: Record<string, { path?: string; kind: string; fields: object }>;
 		};
-		expect(Object.keys(schema.collections)).toEqual(["post", "memo", "note"]);
+		expect(Object.keys(schema.collections)).toEqual(["story", "digest", "note"]);
 		expect(schema.collections.note).toMatchObject({ kind: "document", path: "/notes/:slug" });
-		expect(Object.keys(schema.collections.note?.fields ?? {})).toEqual(["title", "slug", "summary"]);
+		expect(Object.keys(schema.collections.note?.fields ?? {})).toEqual(["title", "slug", "lede"]);
 		// The title and slug a collection starts with are named in the admin's language.
 		expect(schema.collections.note?.fields).toMatchObject({
 			title: { kind: "text", label: tCollection("collection.titleFieldLabel") },
 			slug: { kind: "slug", label: tCollection("collection.slugFieldLabel") },
-			summary: { kind: "text", multiline: true, required: true },
+			lede: { kind: "text", multiline: true, required: true },
 		});
-		expect(reload.rememberSaved).toHaveBeenCalled();
+		// The page after the reload says the collection was made, with a link to its entries.
+		expect(takeSavedMessage()).toEqual({
+			message: tReview("saved.created", { name: "Notes" }),
+			href: testSite.adminHref("?collection=note"),
+		});
 	});
 
 	it("SCHEMA-N2 hides the address box for an item", async () => {
 		open();
-		await screen.findByRole("button", { name: t("collection.drag", { name: "Post" }) });
+		await screen.findByRole("button", { name: t("collection.drag", { name: "Story" }) });
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const sheet = await screen.findByRole("dialog", { name: tCollection("collection.createTitle") });
 		fireEvent.change(within(sheet).getByRole("textbox", { name: tCollection("collection.newName") }), {
@@ -282,9 +293,9 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 	});
 });
 
-const KEY = "collection_removed:memo";
+const KEY = "collection_removed:digest";
 const removal: SchemaEditPreview["impacts"][number] = {
-	change: { kind: "collection_removed", collection: "memo", handledBy: "drop-memo" },
+	change: { kind: "collection_removed", collection: "digest", handledBy: "drop-digest" },
 	key: KEY,
 	entries: 23,
 	sample: [],
@@ -298,7 +309,7 @@ const removal: SchemaEditPreview["impacts"][number] = {
 		addresses: 31,
 		unlinked: {
 			count: 4,
-			sample: [{ id: "e-1", title: "First post", collection: "post", locale: "en", status: "published" }],
+			sample: [{ id: "e-1", title: "First story", collection: "story", locale: "en", status: "published" }],
 		},
 		bodyLinks: 2,
 	},
@@ -332,16 +343,16 @@ describe("flow 4 · 필드 시트", () => {
 
 describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 	beforeEach(() => {
-		window.history.replaceState(null, "", "/admin/settings/collections?collection=memo");
+		window.history.replaceState(null, "", "/admin/settings/collections?collection=digest");
 		preview = {
 			...emptyPreview,
 			impacts: [removal],
-			transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
+			transforms: [{ id: "drop-digest", op: "dropCollection", collection: "digest" }],
 		};
 		saved = {
 			...emptySaved,
-			transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
-			dropped: [{ collection: "memo", entries: 23, trashed: 2, translations: 0, folders: 2, addresses: 31 }],
+			transforms: [{ id: "drop-digest", op: "dropCollection", collection: "digest" }],
+			dropped: [{ collection: "digest", entries: 23, trashed: 2, translations: 0, folders: 2, addresses: 31 }],
 		};
 	});
 
@@ -353,38 +364,38 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		expect(block.textContent).toContain(
 			tCollection("collection.count", { entries: 23, trashed: 2, folders: 2, kind: "document" }),
 		);
-		expect(inList("Memo")).toBe(true);
+		expect(inList("Digest")).toBe(true);
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 16: pressed, the collection leaves the list at once and the editor shows the first one left; the changes count goes up.
 		await pressDelete();
-		expect(inList("Memo")).toBe(false);
-		expect(inList("Post")).toBe(true);
-		expect(openInList().textContent).toContain("Post");
-		expect(within(await deleteBlock()).getByText("Post")).toBeInTheDocument();
+		expect(inList("Digest")).toBe(false);
+		expect(inList("Story")).toBe(true);
+		expect(openInList().textContent).toContain("Story");
+		expect(within(await deleteBlock()).getByText("Story")).toBeInTheDocument();
 		const bar = screen.getByRole("region", { name: t("bar.label") });
 		expect(within(bar).getByLabelText(t("bar.count", { count: 1 }))).toBeInTheDocument();
 
 		// The toast says so and takes it back.
 		expect(toast).toHaveBeenCalledTimes(1);
 		expect(toast).toHaveBeenCalledWith(
-			tCollection("collection.deleted", { name: "Memo" }),
+			tCollection("collection.deleted", { name: "Digest" }),
 			expect.objectContaining({ action: expect.objectContaining({ label: tCollection("collection.deleteUndo") }) }),
 		);
 
 		// The menu of changes lists the collection with its tag, and its undo brings it back: nothing to save any more.
 		fireEvent.click(within(bar).getByRole("button", { name: t("bar.list") }));
-		const row = await screen.findByRole("menuitem", { name: new RegExp(`^Memo ${t("bar.removed")}`) });
+		const row = await screen.findByRole("menuitem", { name: new RegExp(`^Digest ${t("bar.removed")}`) });
 		expect(row.textContent).toContain(t("bar.undo"));
 		fireEvent.click(row);
-		await waitFor(() => expect(inList("Memo")).toBe(true));
+		await waitFor(() => expect(inList("Digest")).toBe(true));
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// The toast's undo does the same.
 		await pressDelete();
-		expect(inList("Memo")).toBe(false);
-		deletedToastAction("Memo")?.onClick();
-		await waitFor(() => expect(inList("Memo")).toBe(true));
+		expect(inList("Digest")).toBe(false);
+		deletedToastAction("Digest")?.onClick();
+		await waitFor(() => expect(inList("Digest")).toBe(true));
 		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// 17: deleted again, saved: the review names what goes and what is cut, and it is sent without the collection.
@@ -395,9 +406,9 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		// The collection that goes is the sheet's one change.
 		const sheet = await screen.findByRole("dialog");
 		const change = sheet;
-		await within(sheet).findByText(tReview("drop.tag"));
-		expect(lastPreview()?.body.dropCollections).toEqual(["memo"]);
-		expect(Object.keys((lastPreview()?.body.schema as { collections: object }).collections)).toEqual(["post"]);
+		await waitFor(() => expect(sheet.textContent).toContain(tReview("drop.tag")));
+		expect(lastPreview()?.body.dropCollections).toEqual(["digest"]);
+		expect(Object.keys((lastPreview()?.body.schema as { collections: object }).collections)).toEqual(["story"]);
 		// Nothing to resolve first: the sheet's only buttons (besides its close) are the export, cancel and the apply, no identifier to type,
 		// and the apply is on from the start.
 		const actions = within(sheet)
@@ -427,21 +438,21 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 			}));
 		fireEvent.click(within(change).getByRole("button", { name: tReview("drop.export") }));
 		expect(
-			await screen.findByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Memo" }) }),
+			await screen.findByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Digest" }) }),
 		).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tExport("action.cancel") }));
 		await waitFor(() =>
-			expect(screen.queryByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Memo" }) })).toBeNull(),
+			expect(screen.queryByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Digest" }) })).toBeNull(),
 		);
 
 		// 18: applied, the save names the collection to delete and the reviewed change; the page reloads with the toast that says what went.
 		fireEvent.click(apply);
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
 		const put = api.sent("PUT /v1/schema")[0];
-		expect(put?.body).toMatchObject({ baseHash: "hash-1", dropCollections: ["memo"], acknowledged: [KEY] });
-		expect(Object.keys((put?.body.schema as { collections: object }).collections)).toEqual(["post"]);
+		expect(put?.body).toMatchObject({ baseHash: "hash-1", dropCollections: ["digest"], acknowledged: [KEY] });
+		expect(Object.keys((put?.body.schema as { collections: object }).collections)).toEqual(["story"]);
 		// The toast after the save says the save, not one of its changes.
-		expect(reload.rememberSaved).toHaveBeenCalledWith(t("save.done"));
+		expect(takeSavedMessage()).toEqual({ message: t("save.done") });
 		// Nothing but the schema was sent: the links are cut by the apply, not by a request of the screen.
 		expect(api.requests.some((request) => request.path.includes("/references/"))).toBe(false);
 	});
@@ -453,10 +464,10 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
 		);
 		const sheet = await screen.findByRole("dialog");
-		await within(sheet).findByText(tReview("drop.tag"));
+		await waitFor(() => expect(sheet.textContent).toContain(tReview("drop.tag")));
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		expect(api.requests.some((request) => request.method === "PUT")).toBe(false);
-		expect(inList("Memo")).toBe(false);
+		expect(inList("Digest")).toBe(false);
 	});
 });

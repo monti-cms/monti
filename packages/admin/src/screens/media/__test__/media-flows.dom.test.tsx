@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { NoticeError } from "../../../api/client";
 import { commonMessages } from "../../../lib/common.messages";
@@ -57,7 +58,7 @@ const used = (n: number) => ({
 	references: Array.from({ length: n }, (_, i) => ({
 		entryId: `e${i}`,
 		title: `Post ${i}`,
-		collection: "post",
+		collection: contentCollection,
 		state: "published" as const,
 	})),
 });
@@ -112,6 +113,24 @@ const written = (method: string, path: string) =>
 	api.requests.filter((request) => request.method === method && request.path === `/v1${path}`).map((r) => r.body);
 const tile = (name: RegExp | string) =>
 	screen.getByRole("button", { name: typeof name === "string" ? new RegExp(`^${name}`) : name });
+/**
+ * Presses the panel's 파일 바꾸기 and returns the file picker it opens. jsdom shows no picker, so the click on the file input is caught instead; a test
+ * then hands the input its file, as the picker would.
+ */
+const openReplacePicker = async (panel: HTMLElement) => {
+	const opened: HTMLInputElement[] = [];
+	const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (this: HTMLInputElement) {
+		opened.push(this);
+	});
+	try {
+		fireEvent.click(moreButton(panel));
+		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
+		await waitFor(() => expect(opened).toHaveLength(1));
+	} finally {
+		click.mockRestore();
+	}
+	return opened[0] as HTMLInputElement;
+};
 const openMenu = async (target: HTMLElement) => {
 	await act(async () => {
 		fireEvent.contextMenu(target);
@@ -124,9 +143,12 @@ const file = (name: string, type: string, size = 100) => {
 	Object.defineProperty(made, "size", { value: size });
 	return made;
 };
-/** A folder tile of the grid (the sidebar lists the folders too). */
-const folderTile = (name: string) => within(dropArea()).getByRole("button", { name: new RegExp(`^${name}`) });
-const dropArea = () => document.querySelector("[data-slot=drop-area]") as HTMLElement;
+/** The page's own content, without the sidebar (which lists the folders too). */
+const page = () => screen.getByRole("main");
+/** A folder tile of the grid. */
+const folderTile = (name: string) => within(page()).getByRole("button", { name: new RegExp(`^${name}`) });
+/** Where a drop lands on the open folder: a file of it, which leaves the drop to the folder (only a folder tile takes one itself). */
+const openFolderDrop = () => tile("desk-morning.jpg");
 const dragOf = (...files: File[]) => ({
 	dataTransfer: { types: ["Files"], files, items: files.map(() => ({ kind: "file" })) },
 });
@@ -158,7 +180,7 @@ describe("flow: upload (올리기)", () => {
 				}),
 		);
 		await renderLibrary();
-		fireEvent.drop(dropArea(), dragOf(file("hero.png", "image/png"), file("hero-dark.png", "image/png")));
+		fireEvent.drop(openFolderDrop(), dragOf(file("hero.png", "image/png"), file("hero-dark.png", "image/png")));
 		const hero = await screen.findByRole("button", { name: /^hero\.png/ });
 		act(() => report(64));
 		await waitFor(() => expect(hero.textContent).toContain(t("upload.progress", { percent: 64 })));
@@ -195,7 +217,7 @@ describe("flow: upload (올리기)", () => {
 	it("MEDIA-U1 keeps a file that failed in its place with the reason, and the button takes it out", async () => {
 		upload.uploadImageFile.mockRejectedValue(new NoticeError("The storage said no"));
 		await renderLibrary();
-		fireEvent.drop(dropArea(), dragOf(file("hero.png", "image/png")));
+		fireEvent.drop(openFolderDrop(), dragOf(file("hero.png", "image/png")));
 		const failed = await screen.findByRole("button", { name: /^hero\.png/ });
 		await waitFor(() => expect(failed.textContent).toContain("The storage said no"));
 		fireEvent.click(screen.getByRole("button", { name: t("upload.remove") }));
@@ -207,7 +229,7 @@ describe("flow: upload (올리기)", () => {
 		const small = new File(["y"], "panorama.webp", { type: "image/webp" });
 		upload.shrinkForUpload.mockResolvedValue({ file: small, optimized: true });
 		await renderLibrary();
-		fireEvent.drop(dropArea(), dragOf(big));
+		fireEvent.drop(openFolderDrop(), dragOf(big));
 		await screen.findByRole("button", { name: /^panorama\.jpg/ });
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("button", { name: t("upload.shrink") }));
@@ -225,7 +247,7 @@ describe("flow: upload (올리기)", () => {
 	it("MEDIA-U1 says it when even the smallest version does not fit, and keeps the tile", async () => {
 		upload.shrinkForUpload.mockResolvedValue(null);
 		await renderLibrary();
-		fireEvent.drop(dropArea(), dragOf(file("panorama.jpg", "image/jpeg", testSite.api.MAX_MEDIA_BYTES + 1)));
+		fireEvent.drop(openFolderDrop(), dragOf(file("panorama.jpg", "image/jpeg", testSite.api.MAX_MEDIA_BYTES + 1)));
 		await screen.findByRole("button", { name: /^panorama\.jpg/ });
 		fireEvent.click(screen.getByRole("button", { name: t("upload.shrink") }));
 		await waitFor(() =>
@@ -298,10 +320,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 	it("MEDIA-R5 asks with the number of places that use the file, then uploads the new file, replaces it in the same id and tells so", async () => {
 		upload.uploadImageFile.mockResolvedValue({ mediaId: "new-file" });
 		await renderLibrary();
-		const panel = await openPanel();
-		fireEvent.click(moreButton(panel));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
-		const input = document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement;
+		const input = await openReplacePicker(await openPanel());
 		fireEvent.change(input, { target: { files: [file("desk-morning-v2.jpg", "image/jpeg")] } });
 		const dialog = await screen.findByRole("alertdialog", { name: t("replace.title") });
 		expect(within(dialog).getByText(t("replace.body", { count: 2 }))).toBeInTheDocument();
@@ -323,10 +342,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 
 	it("MEDIA-R5 does not send anything when cancelled", async () => {
 		await renderLibrary();
-		const panel = await openPanel();
-		fireEvent.click(moreButton(panel));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
-		fireEvent.change(document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement, {
+		fireEvent.change(await openReplacePicker(await openPanel()), {
 			target: { files: [file("v2.jpg", "image/jpeg")] },
 		});
 		const dialog = await screen.findByRole("alertdialog", { name: t("replace.title") });
@@ -338,10 +354,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 
 	it("MEDIA-R2 says a picture can only be replaced by a picture and does not let the replace go on", async () => {
 		await renderLibrary();
-		const panel = await openPanel();
-		fireEvent.click(moreButton(panel));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
-		fireEvent.change(document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement, {
+		fireEvent.change(await openReplacePicker(await openPanel()), {
 			target: { files: [file("guide.pdf", "application/pdf")] },
 		});
 		const dialog = await screen.findByRole("alertdialog", { name: t("replace.title") });
@@ -409,7 +422,7 @@ describe("flow: moving many by dragging", () => {
 		// The folder of the same name in the sidebar, not the tile in the grid.
 		const target = screen
 			.getAllByRole("button", { name: new RegExp(folderName) })
-			.find((button) => !dropArea().contains(button)) as HTMLElement;
+			.find((button) => !page().contains(button)) as HTMLElement;
 		fireEvent.drop(target, { dataTransfer });
 	};
 
@@ -469,8 +482,8 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("kind.file")}`) }));
 		await waitFor(() => expect(lastList().get("kind")).toBe("file"));
 		// The folder stays browsable: its folders and the way up stay.
-		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeInTheDocument();
-		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeInTheDocument();
+		expect(within(page()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeInTheDocument();
+		expect(within(page()).getByRole("button", { name: /^covers/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: t("head.folder") })).toBeInTheDocument();
 		expect(await screen.findByText(t("chip.kind", { value: t("kind.value.file") }))).toBeInTheDocument();
 		await screen.findByRole("button", { name: /^notes-scan\.pdf/ });

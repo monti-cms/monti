@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import type { ExportSummary } from "../../../api/export";
 import type { ImportPreview, ImportRun } from "../../../api/import";
@@ -22,21 +23,24 @@ const ti = testSite.createTranslator(importMessages);
 const tr = testSite.createTranslator(restoreMessages);
 const tc = testSite.createTranslator(commonMessages);
 
+/** The zip holds entries of the site's first document collection with a body, in its default locale, so it imports there as is. */
+const collection = contentCollection;
+
 const reason = (code: string, text: string) => ({ code, text });
 
 const IMPORT_PREVIEW: ImportPreview = {
 	mode: "preview",
 	kind: "export",
-	collections: [{ name: "memo", entries: 2, target: "memo", skipped: null }],
-	targets: [{ name: "memo", label: "Memo" }],
+	collections: [{ name: collection, entries: 2, target: collection, skipped: null }],
+	targets: [{ name: collection, label: "Collection" }],
 	entries: [
 		{
 			key: "a",
-			collection: "memo",
-			target: "memo",
+			collection,
+			target: collection,
 			title: "First",
 			slug: "first",
-			locale: "ko",
+			locale: defaultLocale,
 			isTranslation: false,
 			body: { kind: "text", format: "mdx" },
 			published: true,
@@ -47,11 +51,11 @@ const IMPORT_PREVIEW: ImportPreview = {
 		},
 		{
 			key: "b",
-			collection: "memo",
-			target: "memo",
+			collection,
+			target: collection,
 			title: "Second",
 			slug: "second",
-			locale: "ko",
+			locale: defaultLocale,
 			isTranslation: false,
 			body: { kind: "json" },
 			published: false,
@@ -79,9 +83,9 @@ const IMPORT_RUN: ImportRun = {
 	results: [
 		{
 			key: "a",
-			collection: "memo",
-			target: "memo",
-			locale: "ko",
+			collection,
+			target: collection,
+			locale: defaultLocale,
 			title: "First",
 			slug: "first",
 			id: "11111111-1111-4111-8111-111111111111",

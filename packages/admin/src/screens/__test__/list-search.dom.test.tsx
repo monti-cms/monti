@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, recordCollection } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
@@ -18,7 +19,7 @@ const picker = () => screen.queryByRole("button", { name: new RegExp(`, ${t("too
 describe("search box", () => {
 	it("LIST-F1 turns body search on and off with the picker in front of the box", async () => {
 		const onChange = vi.fn();
-		render(withSite(<ListSearch state={stateOf("collection=post")} onChange={onChange} />));
+		render(withSite(<ListSearch state={stateOf(`collection=${contentCollection}`)} onChange={onChange} />));
 		// The header shows the "Search" button; pressed, the box opens with its picker.
 		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		fireEvent.click(picker() as HTMLElement);
@@ -27,11 +28,13 @@ describe("search box", () => {
 	});
 
 	it("LIST-F1 has no picker for an item collection or where body search is not allowed", () => {
-		render(withSite(<ListSearch state={stateOf("collection=tag")} onChange={vi.fn()} />));
+		render(withSite(<ListSearch state={stateOf(`collection=${recordCollection}`)} onChange={vi.fn()} />));
 		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()).toBeNull();
 		cleanup();
-		render(withSite(<ListSearch state={stateOf("collection=post")} onChange={vi.fn()} allowBody={false} />));
+		render(
+			withSite(<ListSearch state={stateOf(`collection=${contentCollection}`)} onChange={vi.fn()} allowBody={false} />),
+		);
 		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()).toBeNull();
 	});
