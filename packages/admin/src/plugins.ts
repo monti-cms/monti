@@ -1,3 +1,4 @@
+import type { AdminPluginShape } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 import type { AdminComponents } from "./admin-components";
@@ -63,5 +64,10 @@ export interface AdminPlugin {
 	readonly Provider?: ComponentType<{ readonly children: ReactNode }>;
 }
 
-/** Declares the admin side of a plugin. It returns what it is given, typed. */
-export const defineAdminPlugin = (plugin: AdminPlugin): AdminPlugin => plugin;
+/**
+ * Declares the admin side of a plugin. It returns what it is given, typed. The core types the module `admin` loads by a shape of its own (the core does
+ * not depend on the admin), so the declaration has to fit that shape.
+ */
+export const defineAdminPlugin = ((plugin: AdminPlugin): AdminPlugin => plugin) satisfies (
+	plugin: AdminPlugin,
+) => AdminPluginShape;
