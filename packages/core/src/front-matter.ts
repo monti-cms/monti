@@ -46,11 +46,12 @@ export function parseFile(raw: string): ParsedFile {
 	try {
 		data = parse(found[1] ?? "", { schema: "core", prettyErrors: false });
 	} catch (error) {
-		const line = (error as { linePos?: { line: number }[] }).linePos?.[0]?.line;
+		// Without `prettyErrors` a YAML error has no line, only its offset in the front matter, which starts on the file's second line.
+		const offset = (error as { pos?: readonly number[] }).pos?.[0];
 		return {
 			ok: false,
 			message: `front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
-			...(line === undefined ? {} : { line: line + 1 }),
+			...(offset === undefined ? {} : { line: (found[1] ?? "").slice(0, offset).split("\n").length + 1 }),
 		};
 	}
 	if (data === null || data === undefined) data = {};
