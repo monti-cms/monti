@@ -8,6 +8,9 @@ import { codeNode, para, storedDoc } from "../../../test/stored-doc";
 import { storedToTiptap } from "../../tiptap-content";
 import { docRangeToSegment, extractSegments, PLACEHOLDER, segmentRangeToDoc } from "../extract";
 
+/** The language of the Korean test text, as a language tag. The text check reads it from the entry, not from the site's locales. */
+const LANGUAGE = "ko";
+
 let editor: Editor | null = null;
 afterEach(() => {
 	editor?.destroy();
@@ -22,7 +25,7 @@ const open = (source: string | StoredDocument) => {
 	return editor;
 };
 
-const segmentsOf = (source: string | StoredDocument) => extractSegments(open(source).state.doc, { locale: "ko" });
+const segmentsOf = (source: string | StoredDocument) => extractSegments(open(source).state.doc, { locale: LANGUAGE });
 
 /** The document text a paragraph-relative position points to. */
 const docText = (current: Editor, from: number, to: number) => current.state.doc.textBetween(from, to);
@@ -36,12 +39,12 @@ describe("extracting check segments", () => {
 			"목록 항목",
 			"둘째 항목",
 		]);
-		expect(segments.every((segment) => segment.locale === "ko")).toBe(true);
+		expect(segments.every((segment) => segment.locale === LANGUAGE)).toBe(true);
 	});
 
 	it("PLUG-T2 Korean text positions map back to document positions as is", () => {
 		const current = open("안녕 **세상아** 반갑다\n");
-		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
+		const [segment] = extractSegments(current.state.doc, { locale: LANGUAGE });
 		if (!segment) throw new Error("no segment");
 		const start = segment.text.indexOf("세상아");
 		const range = segmentRangeToDoc(segment, start, start + 3);
@@ -50,7 +53,7 @@ describe("extracting check segments", () => {
 
 	it("PLUG-T2 positions after an emoji (surrogate pair) are correct too", () => {
 		const current = open("좋아요 👍 맞춤법 틀린말\n");
-		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
+		const [segment] = extractSegments(current.state.doc, { locale: LANGUAGE });
 		if (!segment) throw new Error("no segment");
 		const start = segment.text.indexOf("틀린말");
 		const range = segmentRangeToDoc(segment, start, start + 3);
@@ -59,7 +62,7 @@ describe("extracting check segments", () => {
 
 	it("PLUG-T2 inline code is replaced with a one-character placeholder and positions after it are correct", () => {
 		const current = open("명령은 `pnpm install --frozen` 으로 실행합니다\n");
-		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
+		const [segment] = extractSegments(current.state.doc, { locale: LANGUAGE });
 		if (!segment) throw new Error("no segment");
 		expect(segment.text).toBe(`명령은 ${PLACEHOLDER} 으로 실행합니다`);
 		expect(segment.text).not.toContain("pnpm");
@@ -95,12 +98,12 @@ describe("extracting check segments", () => {
 
 	it("PLUG-T2 paragraphs with the same text get different names, and names stay the same when another paragraph is edited", () => {
 		const current = open("같은 문단\n\n같은 문단\n\n다른 문단\n");
-		const before = extractSegments(current.state.doc, { locale: "ko" });
+		const before = extractSegments(current.state.doc, { locale: LANGUAGE });
 		expect(new Set(before.map((segment) => segment.id)).size).toBe(3);
 		const last = before[2];
 		if (!last) throw new Error("no segment");
 		current.commands.insertContentAt(last.to, "이 바뀜");
-		const after = extractSegments(current.state.doc, { locale: "ko" });
+		const after = extractSegments(current.state.doc, { locale: LANGUAGE });
 		expect(after[0]?.id).toBe(before[0]?.id);
 		expect(after[1]?.id).toBe(before[1]?.id);
 		expect(after[2]?.id).not.toBe(before[2]?.id);
@@ -108,11 +111,11 @@ describe("extracting check segments", () => {
 
 	it("PLUG-T2 given a range, returns only paragraphs overlapping it, with names based on the whole document", () => {
 		const current = open("첫 문단\n\n둘째 문단\n\n셋째 문단\n");
-		const all = extractSegments(current.state.doc, { locale: "ko" });
+		const all = extractSegments(current.state.doc, { locale: LANGUAGE });
 		const second = all[1];
 		if (!second) throw new Error("no segment");
 		const picked = extractSegments(current.state.doc, {
-			locale: "ko",
+			locale: LANGUAGE,
 			range: { from: second.from + 1, to: second.from + 2 },
 		});
 		expect(picked.map((segment) => segment.id)).toEqual([second.id]);
@@ -121,7 +124,7 @@ describe("extracting check segments", () => {
 
 	it("PLUG-T2 widens a zero-length result to one adjacent character and discards positions outside the paragraph", () => {
 		const current = open("띄어쓰기없음\n");
-		const [segment] = extractSegments(current.state.doc, { locale: "ko" });
+		const [segment] = extractSegments(current.state.doc, { locale: LANGUAGE });
 		if (!segment) throw new Error("no segment");
 		const range = segmentRangeToDoc(segment, 4, 4);
 		expect(range && docText(current, range.from, range.to)).toBe("없");

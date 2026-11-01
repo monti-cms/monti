@@ -34,8 +34,8 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 	return <EditorContent editor={editor} />;
 }
 
-/** `ready` is a selector or a check that passes once the view is drawn. */
-const mount = async (doc: StoredDocument, ready: string | (() => unknown), views: Record<string, BlockView> = {}) => {
+/** `ready` is a check that passes once the view is drawn. */
+const mount = async (doc: StoredDocument, ready: () => unknown, views: Record<string, BlockView> = {}) => {
 	let editor: Editor | null = null;
 	renderWithSite(
 		<AdminComponentsProvider components={{ blockViews: views }}>
@@ -48,9 +48,7 @@ const mount = async (doc: StoredDocument, ready: string | (() => unknown), views
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() =>
-		typeof ready === "string" ? expect(document.querySelector(ready)).toBeInTheDocument() : ready(),
-	);
+	await waitFor(ready);
 	return editor as unknown as Editor;
 };
 

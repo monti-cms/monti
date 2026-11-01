@@ -34,6 +34,9 @@ const MESSAGE = "맞춤법이 틀렸습니다.";
 const LABEL = "가짜 검사";
 const TOOLBAR = "확장 도구";
 
+/** The language of the Korean test text, as a language tag. The text check reads it from the entry, not from the site's locales. */
+const LANGUAGE = "ko";
+
 /** Fake checker that finds `WRONG` and suggests `RIGHT`. */
 const fakeChecker = (options: Partial<Pick<TextChecker, "auto" | "locales">> = {}) =>
 	defineTextChecker({
@@ -76,7 +79,7 @@ function Harness({
 }) {
 	const extensions = useEditorExtensions({
 		translateLocales: null,
-		getEntry: () => ({ title: "", collection: "post", locale }),
+		getEntry: () => ({ title: "", collection: testSite.DEFAULT_COLLECTION, locale }),
 	});
 	const doc = useMemo(() => docOf(content), [content]);
 	findings.current = extensions.textIssues;
@@ -102,7 +105,7 @@ function Harness({
 	);
 }
 
-const renderEditor = async (content: string, checkers: readonly TextChecker[], locale = "ko") => {
+const renderEditor = async (content: string, checkers: readonly TextChecker[], locale = LANGUAGE) => {
 	let editor: Editor | null = null;
 	const onChange = vi.fn();
 	const findings: { current: ReturnType<typeof useEditorExtensions>["textIssues"] } = { current: null };
@@ -139,7 +142,7 @@ const checkButton = (name = LABEL) =>
 	within(screen.getByRole("toolbar", { name: TOOLBAR })).queryByRole("button", { name });
 
 /** Matches the segments a checker was sent, by their text, all in `locale`. */
-const segmentsOf = (texts: readonly string[], locale = "ko") =>
+const segmentsOf = (texts: readonly string[], locale = LANGUAGE) =>
 	texts.map((text) => expect.objectContaining({ text, locale }));
 
 /** Matches a saved document that holds every one of `texts` and none of `without`. */
@@ -176,7 +179,7 @@ describe("spellcheck button", () => {
 				<AdminComponentsProvider components={{ textCheckers: [other] }}>
 					<Harness
 						content={"틀린말\n"}
-						locale="ko"
+						locale={LANGUAGE}
 						onChange={vi.fn()}
 						onReady={() => {}}
 						findings={{ current: null }}
@@ -293,7 +296,7 @@ describe("findings for the status bar", () => {
 	});
 
 	it("PLUG-T1 has no findings for a language no checker covers", async () => {
-		const { findings } = await renderEditor("hello\n", [fakeChecker({ locales: ["ko"] })], "en");
+		const { findings } = await renderEditor("hello\n", [fakeChecker({ locales: [LANGUAGE] })], "en");
 		expect(findings.current).toBeNull();
 	});
 });

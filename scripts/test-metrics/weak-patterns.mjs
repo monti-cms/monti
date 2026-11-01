@@ -206,6 +206,41 @@ const EXEMPT = [
 		count: 1,
 		why: "the mock is how the test sees that the module was loaded, which is the behavior under test",
 	},
+	...[
+		["data-attribute", 6],
+		["query-selector", 3],
+	].map(([pattern, count]) => ({
+		pattern,
+		file: "packages/admin/src/editor/__test__/footnotes.dom.test.ts",
+		count,
+		why: "the editor's styles draw a footnote's number and its missing and unused flags from these attributes (`content: attr(data-footnote-number)`); the chips have no role",
+	})),
+	{
+		pattern: "query-selector",
+		file: "packages/admin/src/editor/__test__/table-resize.dom.test.ts",
+		count: 1,
+		why: "the column widths the table is laid out with live on its `col` elements, which have no role",
+	},
+	...[
+		["packages/admin/src/editor/code-block/__test__/code-block-features.browser.test.tsx", 2, 1],
+		["packages/admin/src/editor/code-block/__test__/code-block-view.browser.test.tsx", 5, 2],
+	].flatMap(([file, attributes, selectors]) =>
+		[
+			["data-attribute", attributes],
+			["query-selector", selectors],
+		].map(([pattern, count]) => ({
+			pattern,
+			file,
+			count,
+			why: "a code block's line numbers answer only the mouse (keyboard users have the Line effects button), so a line row has no role or name: its line attribute is the handle",
+		})),
+	),
+	...["data-attribute", "query-selector"].map((pattern) => ({
+		pattern,
+		file: "packages/admin/src/editor/drag/__test__/drop-indicator.dom.test.ts",
+		count: 3,
+		why: "the drop line is an `aria-hidden` drawing the drag plugin adds outside the document, with no role; the attribute marks that element",
+	})),
 	{
 		pattern: "long-wait",
 		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",

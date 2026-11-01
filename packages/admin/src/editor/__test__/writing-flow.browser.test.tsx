@@ -30,8 +30,17 @@ const template = (id: string, name: string, ...content: CmsNode[]): BodyTemplate
 	createdAt: stamp,
 	updatedAt: stamp,
 });
+/** The section headings of the first template: the test's data. */
+const BASIC_SECTIONS = ["서론", "본론", "결론"] as const;
 const TEMPLATES = [
-	template("basic", "기본 글", heading("서론"), para("이 글에서 다룰 것."), heading("본론"), heading("결론")),
+	template(
+		"basic",
+		"기본 글",
+		heading(BASIC_SECTIONS[0]),
+		para("이 글에서 다룰 것."),
+		heading(BASIC_SECTIONS[1]),
+		heading(BASIC_SECTIONS[2]),
+	),
 	template("review", "책 리뷰", heading("한 줄 평"), para("줄거리")),
 	template("tutorial", "튜토리얼", heading("준비물"), heading("단계")),
 ];
@@ -116,7 +125,7 @@ describe("flow: write (steps 02–05)", () => {
 			const names = optionNames(menu);
 			for (const template of TEMPLATES) expect(names.some((name) => name.startsWith(template.name))).toBe(true);
 			// A template row says its sections.
-			expect(within(menu).getByText("서론 · 본론 · 결론")).toBeInTheDocument();
+			expect(within(menu).getByText(BASIC_SECTIONS.join(" · "))).toBeInTheDocument();
 			expect(api.requests.map((request) => `${request.method} ${request.path}`)).toEqual(["GET /v1/templates"]);
 		});
 
@@ -200,6 +209,7 @@ describe("flow: write (steps 02–05)", () => {
 	});
 
 	describe("steps 03–05: the block handle", () => {
+		const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 		const handleOf = async (block: HTMLElement) => {
 			fireEvent.mouseMove(block, { clientX: 100, clientY: 20 });
 			return screen.findByRole("button", { name: t("blockHandle.label") });
@@ -213,7 +223,11 @@ describe("flow: write (steps 02–05)", () => {
 			for (let attempt = 0; attempt < 3; attempt++) {
 				fireEvent.click(await handleOf(blockAt(editor, index)));
 				const menu = await screen.findByRole("menu", { name: t("blockHandle.label") });
-				await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+				// The handle is drawn again on the frame after a change: two frames later the menu is either still open or gone.
+				await act(async () => {
+					await nextFrame();
+					await nextFrame();
+				});
 				if (menu.isConnected) return menu;
 			}
 			throw new Error("the block menu did not stay open");
@@ -259,7 +273,7 @@ describe("flow: write (steps 02–05)", () => {
 			const { editor, onChange } = await open(
 				storedDoc({ type: "bulletList", content: [{ type: "listItem", content: [para("항목")] }] }),
 			);
-			const item = editor.view.dom.querySelector("li") as HTMLElement;
+			const item = within(editor.view.dom).getByRole("listitem");
 			const openOnItem = async () => {
 				fireEvent.click(await handleOf(item));
 				return screen.findByRole("menu", { name: t("blockHandle.label") });
