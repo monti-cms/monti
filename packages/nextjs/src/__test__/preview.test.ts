@@ -23,6 +23,12 @@ vi.mock("next/headers", () => ({
 		return requestHeaders;
 	},
 }));
+vi.mock("next/server", async (importOriginal) => ({
+	...(await importOriginal<typeof import("next/server")>()),
+	connection: async () => {
+		if (!requestHeaders) throw new Error("outside a request");
+	},
+}));
 
 const post = defineCollection({
 	label: "Post",

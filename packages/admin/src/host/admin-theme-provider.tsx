@@ -27,6 +27,13 @@ const readHtmlThemeState = (): HtmlThemeState => {
  */
 const CAPTURE_SCRIPT = `(function(){var r=document.documentElement;window.${BEFORE_KEY}={dark:r.classList.contains("dark"),light:r.classList.contains("light"),colorScheme:r.style.colorScheme};})();`;
 
+/**
+ * The inline scripts only matter in the server HTML. When the admin is rendered in the browser (a client navigation into it), React would make
+ * them anyway, never run them, and log an error for each; a data type (`text/plain`) tells React they are data. The two values differ between
+ * server and browser on purpose, which `suppressHydrationWarning` allows.
+ */
+const SCRIPT_TYPE = typeof window === "undefined" ? undefined : "text/plain";
+
 const restoreHtmlThemeState = (before: HtmlThemeState) => {
 	const root = document.documentElement;
 	root.classList.toggle("dark", before.dark);
@@ -69,8 +76,13 @@ export function AdminThemeProvider({
 	return (
 		<>
 			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string with no input */}
-			<script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: CAPTURE_SCRIPT }} />
-			<ThemeProvider attribute="class" storageKey={storageKey} disableTransitionOnChange>
+			<script type={SCRIPT_TYPE} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: CAPTURE_SCRIPT }} />
+			<ThemeProvider
+				attribute="class"
+				storageKey={storageKey}
+				disableTransitionOnChange
+				scriptProps={{ type: SCRIPT_TYPE }}
+			>
 				{children}
 			</ThemeProvider>
 		</>
