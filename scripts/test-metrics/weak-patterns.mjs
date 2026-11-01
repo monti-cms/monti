@@ -24,11 +24,11 @@ const asCheck = process.argv.includes("--check");
  */
 const CEILING = {
 	core: 0,
-	admin: 169,
+	admin: 149,
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
-	ui: 1,
+	ui: 0,
 	seo: 1,
 	nextjs: 0,
 	"storage-s3": 0,
