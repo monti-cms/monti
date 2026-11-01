@@ -2,7 +2,7 @@
 
 Monti's design system: the tokens and the components the admin and its extensions are built from.
 
-- **Tokens.** `tokens/tokens.json` is the design system's own token file and the single source. `pnpm gen:tokens` (at the repo root) writes `styles/tokens.css` (the values, light and dark, as `--monti-*` variables) and the token block of `styles/theme.css` (their names for Tailwind 4); a test fails when either differs from what the script writes. Every class carries `monti-` and then the design system's role name: colors per property (`bg-monti-tool`, `text-monti-faint`, `border-monti-muted`, `ring-monti-contrast`), the spacing scale (`gap-monti-12`, 2 to 48px), radii (`rounded-monti-md`), heights (`h-monti-control-md`, `h-monti-header`), widths (`w-monti-sidebar`, `max-w-monti-reading`), icon sizes (`size-monti-icon-md`), three shadows (`shadow-monti-floating`, `-overlay`, `-sheet`) and one type role per style, with size, line height, weight, letter spacing and family together (`text-monti-body` … `text-monti-display`); `font-mono` on the same element of a sans role always wins, and does not reach its children.
+- **Tokens.** `tokens/tokens.json` is the design system's own token file and the single source. `pnpm gen:tokens` (at the repo root) writes `styles/tokens.css` (the values, light and dark, as `--monti-*` variables) and the token block of `styles/theme.css` (their names for Tailwind 4); `pnpm gen:tokens --check` (run in CI) fails when a generated file differs from what the script writes, and the script writes nothing when a text role falls under 4.5:1 on its ground or a role is declared twice. Every class carries `monti-` and then the design system's role name: colors per property (`bg-monti-tool`, `text-monti-faint`, `border-monti-muted`, `ring-monti-contrast`), the spacing scale (`gap-monti-12`, 2 to 48px), radii (`rounded-monti-md`), heights (`h-monti-control-md`, `h-monti-header`), widths (`w-monti-sidebar`, `max-w-monti-reading`), icon sizes (`size-monti-icon-md`), three shadows (`shadow-monti-floating`, `-overlay`, `-sheet`) and one type role per style, with size, line height, weight, letter spacing and family together (`text-monti-body` … `text-monti-display`); `font-mono` on the same element of a sans role always wins, and does not reach its children.
 - **Components.** Controls (`Button`, `IconButton`, `Input`, `Select`, `Combobox`, `Checkbox`, `Switch`, `Tabs`, ...), feedback (`EntryStatus`, `Count`, `Banner`, `Progress`), overlays (`Dialog`, `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`), and layout (`Text`, `Heading`, `Stack`, `Table`, `PageHeader`, `StatusBar`). Components take a role or a tone as props, never a raw value.
 - **Built-in words.** A few components write words themselves (close, clear, pagination). They are English unless an app passes its own through `UiLabelsProvider`; the admin passes its dictionaries.
 
@@ -62,8 +62,9 @@ Do not commit shots made this way: the CI runner has another CPU architecture th
 ## Development
 
 ```bash
-pnpm --filter @monti-cms/ui test:run   # the code, the parts in jsdom, and the pointer and focus tests in Chromium
+pnpm --filter @monti-cms/ui test:run   # the code, the parts in jsdom, and the pointer, focus and visual-check tests in Chromium
 pnpm gen:tokens   # after editing tokens/tokens.json
+pnpm gen:tokens --check   # what CI runs: names each generated file that differs, writes nothing
 ```
 
 The admin's design-system test (`packages/admin/src/__test__/design-system.test.ts`) fails on any class outside the system in this package, the admin and the first-party plugins.
