@@ -1,0 +1,221 @@
+import type { DecorationItem } from "shiki";
+import { describe, expect, it } from "vitest";
+import { type AnnotationConfig, type CodeBlockDocument, fromCodeFenceToCodeBlockDocument } from "../../../code-block";
+import { fromCodeBlockDocumentToShikiAnnotationPayload as toPayload } from "../annotation-payload";
+
+type ComposePayloadResult = {
+	code: string;
+	lang: string;
+	meta: Record<string, unknown>;
+	decorations: DecorationItem[];
+	lineDecorations: Array<{
+		scope: "line";
+		name: string;
+		range: { start: number; end: number };
+		class: string;
+		order: number;
+	}>;
+	rowWrappers: Array<{
+		scope: "line";
+		name: string;
+		range: { start: number; end: number };
+		render: string;
+		order: number;
+		attributes?: { name: string; value: unknown }[];
+	}>;
+};
+
+const fromCodeBlockDocumentToShikiAnnotationPayload = toPayload as unknown as (
+	document: CodeBlockDocument,
+	annotationConfig?: AnnotationConfig,
+) => ComposePayloadResult;
+
+const testAnnotationConfig: AnnotationConfig = {
+	annotations: [
+		{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char"] },
+		{ name: "fold", kind: "render", source: "mdx-text", render: "fold", scopes: ["char", "document"] },
+		{ name: "diff", kind: "class", class: "diff", scopes: ["line"] },
+		{ name: "Callout", kind: "render", render: "Callout", scopes: ["line"] },
+		{ name: "plus", kind: "class", class: "plus", scopes: ["line"] },
+		{ name: "minus", kind: "class", class: "minus", scopes: ["line"] },
+		{ name: "highlight", kind: "class", class: "highlight", scopes: ["line"] },
+	],
+};
+
+describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
+	it("SITE-D2 converts a document into a shiki payload (decorations/lineDecorations/rowWrappers)", () => {
+		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
+			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
+		}
+
+		const document = fromCodeFenceToCodeBlockDocument(
+			{
+				type: "code",
+				lang: "ts",
+				meta: 'title="demo.ts" showLineNumbers',
+				value: [
+					'// @char Tooltip {6-10} content="tip"',
+					"const value = 1",
+					'// @line Callout {0-1} variant="tip"',
+					"// @line diff {1-1}",
+					"const next = 2",
+				].join("\n"),
+			},
+			testAnnotationConfig,
+		);
+
+		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, testAnnotationConfig);
+
+		expect(payload.code).toBe("const value = 1\nconst next = 2");
+		expect(payload.lang).toBe("ts");
+		expect(payload.meta).toEqual({ title: "demo.ts", showLineNumbers: true });
+
+		expect(payload.decorations).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					start: { line: 0, character: 6 },
+					end: { line: 0, character: 11 },
+					properties: {
+						"data-anno-render": "Tooltip",
+						"data-anno-content": '"tip"',
+					},
+				}),
+			]),
+		);
+
+		expect(payload.lineDecorations).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					scope: "line",
+					name: "diff",
+					range: { start: 1, end: 2 },
+					class: "diff",
+					order: 1,
+				}),
+			]),
+		);
+
+		expect(payload.rowWrappers).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					scope: "line",
+					name: "Callout",
+					range: { start: 0, end: 2 },
+					render: "Callout",
+					order: 0,
+					attributes: [{ name: "variant", value: "tip" }],
+				}),
+			]),
+		);
+	});
+
+	it("SITE-D2 converts absolute ranges into line-local ones correctly even with a document scope regex and leading blank lines", () => {
+		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
+			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
+		}
+
+		const document = fromCodeFenceToCodeBlockDocument(
+			{
+				type: "code",
+				lang: "ts",
+				meta: "",
+				value: [
+					"// @document fold {re:/console/g}",
+					"",
+					"// @line plus",
+					"console.log",
+					"// @line minus",
+					"console.log",
+					"// @line highlight",
+					"console.log",
+					"console.log",
+				].join("\n"),
+			},
+			testAnnotationConfig,
+		);
+
+		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, testAnnotationConfig);
+		// The annotation comments leave the code; line 0 is the blank line, and each `console` match is local to its own line.
+		const fold = (line: number) => ({
+			start: { line, character: 0 },
+			end: { line, character: 7 },
+			properties: { "data-anno-render": "fold" },
+		});
+		expect(payload.decorations).toEqual([fold(1), fold(2), fold(3), fold(4)]);
+	});
+
+	it("SITE-D2 builds the payload through a name+scope rule lookup even when the annotation has no class/render", () => {
+		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
+			throw new Error("fromCodeBlockDocumentToShikiAnnotationPayload is not implemented");
+		}
+
+		const document: CodeBlockDocument = {
+			lang: "ts",
+			meta: {},
+			lines: [
+				{
+					value: "console.log(value)",
+					annotations: [
+						{
+							scope: "char",
+							name: "Tooltip",
+							range: { start: 0, end: 7 },
+							order: 0,
+							priority: 0,
+							source: "mdx-text",
+							attributes: [{ name: "content", value: "tip" }],
+						},
+					],
+				},
+			],
+			annotations: [
+				{
+					scope: "line",
+					name: "diff",
+					range: { start: 0, end: 1 },
+					order: 0,
+					priority: 0,
+				},
+				{
+					scope: "line",
+					name: "Callout",
+					range: { start: 0, end: 1 },
+					order: 1,
+					priority: 0,
+					attributes: [{ name: "variant", value: "tip" }],
+				},
+			],
+		};
+
+		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, testAnnotationConfig);
+
+		expect(payload.decorations).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					properties: {
+						"data-anno-render": "Tooltip",
+						"data-anno-content": '"tip"',
+					},
+				}),
+			]),
+		);
+		expect(payload.lineDecorations).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					scope: "line",
+					name: "diff",
+					class: "diff",
+				}),
+			]),
+		);
+		expect(payload.rowWrappers).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					scope: "line",
+					name: "Callout",
+					render: "Callout",
+				}),
+			]),
+		);
+	});
+});

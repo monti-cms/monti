@@ -28,7 +28,7 @@ export const templatesContract: ContractSuite = (factory) => {
 			await session.close();
 		});
 
-		it("stores a template as its document, with an id on every block, on create and on update", async () => {
+		it("TPL-A1 stores a template as its document, with an id on every block, on create and on update", async () => {
 			const doc = docOf("Title\n=====\n\nSome _words_\n\n\n* one\n");
 			const created = await store.createTemplate({ name: "doc template", doc });
 			expect(contentOf(created.doc)).toEqual(contentOf(doc));
@@ -48,13 +48,23 @@ export const templatesContract: ContractSuite = (factory) => {
 			});
 			expect(contentOf(updated.doc)).toEqual(contentOf(docOf("## Other\n")));
 
-			// A rename keeps the body and its document as they are.
+			// A rename takes the new name and keeps the body and its document as they are.
 			const renamed = await store.updateTemplate({
 				id: created.id,
 				expectedVersion: updated.version,
 				name: "doc template 2",
 			});
 			expect(renamed.doc).toEqual(updated.doc);
+			expect((await store.getTemplate(created.id)).name).toBe("doc template 2");
+		});
+
+		it("TPL-A2 refuses a rename to a name another template has, saying the name is taken, and keeps the template", async () => {
+			await store.createTemplate({ name: "Taken name" });
+			const other = await store.createTemplate({ name: "Free name" });
+			await expect(
+				store.updateTemplate({ id: other.id, expectedVersion: other.version, name: "taken NAME" }),
+			).rejects.toThrowError(expect.objectContaining({ code: "conflict", notice: { key: "template.name_taken" } }));
+			expect(await store.getTemplate(other.id)).toEqual(other);
 		});
 
 		it("keeps the block ids of the body a document replaces where its blocks pair up", async () => {

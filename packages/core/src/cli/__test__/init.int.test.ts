@@ -1,4 +1,5 @@
-import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -9,6 +10,7 @@ import { formatInitReport } from "../init-report";
 import { InitError, ProjectWriter } from "../init-writer";
 import { Cancelled } from "../prompt";
 import {
+	CREATE_NEXT_APP,
 	fakeHost,
 	fixtureApp,
 	installing,
@@ -716,5 +718,192 @@ describe("monti init writes only inside the project", () => {
 		symlinkSync(outside, path.join(dir, "app"), "dir");
 		await expect(initProject({ cwd: dir, ...quiet() })).rejects.toThrow(/outside the project/);
 		expect(listFiles(outside)).toEqual([]);
+	});
+});
+
+describe("monti init and the heavy blocks", () => {
+	const run = async (blocks: string) => {
+		const dir = fixtureApp();
+		const host = fakeHost();
+		await initProject({ cwd: dir, host, blocks });
+		expect(host.install).toHaveBeenCalledOnce();
+		return { config: read(dir, "monti.config.ts"), install: host.install };
+	};
+
+	it("INIT-R2 the default blocks import from the barrel and install neither mermaid nor recharts", async () => {
+		const { config, install } = await run("default");
+		expect(config).toContain('from "@monti-cms/blocks";');
+		expect(config).not.toContain("@monti-cms/blocks/chart");
+		expect(config).not.toContain("@monti-cms/blocks/mermaid");
+		expect(install).toHaveBeenCalledWith(installing("@monti-cms/blocks"));
+		expect(install).not.toHaveBeenCalledWith(installing("recharts"));
+		expect(install).not.toHaveBeenCalledWith(installing("mermaid"));
+	});
+
+	it("INIT-R2 chart and mermaid come from their own entry points, and their libraries are installed only then", async () => {
+		const { config, install } = await run("default,chart,mermaid");
+		expect(config).toContain('import { chart } from "@monti-cms/blocks/chart";');
+		expect(config).toContain('import { mermaid } from "@monti-cms/blocks/mermaid";');
+		// The barrel import has none of the two.
+		const barrel = config.split("\n").find((line) => line.endsWith('from "@monti-cms/blocks";')) ?? "";
+		expect(barrel).not.toMatch(/\b(chart|mermaid)\b/);
+		expect(install).toHaveBeenCalledWith(installing("recharts", "mermaid"));
+		expect(config).toContain("chart(),");
+		expect(config).toContain("mermaid(),");
+	});
+
+	it("INIT-R2 only the chosen heavy block brings its library", async () => {
+		const { config, install } = await run("default,chart");
+		expect(config).toContain('from "@monti-cms/blocks/chart"');
+		expect(config).not.toContain("@monti-cms/blocks/mermaid");
+		expect(install).toHaveBeenCalledWith(installing("recharts"));
+		expect(install).not.toHaveBeenCalledWith(installing("mermaid"));
+	});
+});
+
+describe("monti init and the languages of the content", () => {
+	const quiet = () => ({ host: fakeHost(), install: false });
+
+	const PAIR = {
+		"content/posts/hello.en.mdx": POST_MDX("hello"),
+		"content/posts/hello.ko.mdx": POST_MDX("hello"),
+		"content/posts/about.ko.mdx": POST_MDX("about"),
+	};
+
+	it("INIT-Q3 with --yes (no prompts) the site languages are the ones found, the default being the unpaired one", async () => {
+		const dir = fixtureApp(PAIR);
+		const report = await initProject({ cwd: dir, ...quiet() });
+		const schema = schemaOf(dir);
+		expect(schema.locales.map((locale: { code: string }) => locale.code)).toEqual(["ko", "en"]);
+		expect(schema.defaultLocale).toBe("ko");
+		expect(report.answers.locales).toEqual(["ko", "en"]);
+		expect(report.notes.join("\n")).toMatch(/languages are ko, en, found in the file names of content\/posts\//);
+	});
+
+	it("INIT-Q3 language folders give the languages too", async () => {
+		const dir = fixtureApp({
+			"content/en/hello.mdx": POST_MDX("hello"),
+			"content/ko/hello.mdx": POST_MDX("hello"),
+			"content/ko/about.mdx": POST_MDX("about"),
+		});
+		const report = await initProject({ cwd: dir, ...quiet() });
+		expect(report.answers.locales).toEqual(["ko", "en"]);
+		expect(report.notes.join("\n")).toContain("found in the folders of content/");
+	});
+});
+
+describe("monti init when the install fails", () => {
+	it("INIT-S1 does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
+		const report = await initProject({ cwd: dir, host });
+		const text = formatInitReport(report);
+
+		expect(report.ok).toBe(false);
+		expect(report.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "failed"]);
+		// Without the packages the database and the check cannot run: they are skipped, and the list says to run them later.
+		expect(report.steps.find((step) => step.name === "Set up the database")?.status).toBe("skipped");
+		expect(report.steps.find((step) => step.name === "Check the setup")?.status).toBe("skipped");
+		expect(text).not.toContain("Monti is added to your app");
+		expect(text).toContain("Install packages: FAILED");
+		expect(report.next.some((line) => /^Install the packages:\npnpm add @monti-cms\/core /.test(line))).toBe(true);
+		// The files are still there.
+		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
+	});
+
+	it("INIT-K1 completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
+		const dir = fixtureApp();
+		const failed = await initProject({
+			cwd: dir,
+			host: fakeHost({ install: () => Promise.reject(new Error("offline")) }),
+		});
+		expect(failed.ok).toBe(false);
+		const filesAfterFailure = listFiles(dir);
+		const edited = `${read(dir, "monti.config.ts")}\n// my edit\n`;
+		writeFileSync(path.join(dir, "monti.config.ts"), edited);
+
+		const online = fakeHost();
+		const second = await initProject({ cwd: dir, host: online });
+		expect(second.ok).toBe(true);
+		expect(second.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "done"]);
+		expect(online.install).toHaveBeenCalled();
+		expect(second.overwritten).toEqual([]);
+		expect(second.skipped).toContain("monti.config.ts");
+		expect(read(dir, "monti.config.ts")).toBe(edited);
+		expect(listFiles(dir).filter((file) => !filesAfterFailure.includes(file))).toEqual([]);
+		expect(formatInitReport(second)).not.toContain("FAILED");
+	});
+});
+
+describe("monti init with a GitHub spec for core", () => {
+	const GITHUB = "github:monti-cms/monti#release/v0.2.0-next.16&path:/core";
+
+	/** A fresh Next app whose package.json lists `@monti-cms/core` with the given spec. */
+	function appWithCore(spec: string, field: "dependencies" | "devDependencies" = "dependencies") {
+		const pkg = JSON.parse(CREATE_NEXT_APP["package.json"] as string);
+		pkg[field] = { ...pkg[field], "@monti-cms/core": spec };
+		return fixtureApp({ "package.json": JSON.stringify(pkg) });
+	}
+
+	it("INIT-I1 installs the missing Monti packages from the same ref, in dependencies or devDependencies", async () => {
+		for (const field of ["dependencies", "devDependencies"] as const) {
+			const host = fakeHost();
+			await initProject({ cwd: appWithCore(GITHUB, field), host });
+			expect(host.install).toHaveBeenCalledOnce();
+			expect(host.install).toHaveBeenCalledWith(
+				installing(
+					"@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin",
+					"@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs",
+					"next-themes",
+				),
+			);
+			expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/admin"));
+			expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/core"));
+			expect(host.install).not.toHaveBeenCalledWith(installing(expect.stringMatching(/^@monti-cms\/core@/)));
+		}
+	});
+
+	it("INIT-R2 installs @monti-cms/syntax-directive from the same ref when the directive syntax is on", async () => {
+		const host = fakeHost();
+		await initProject({ cwd: appWithCore(GITHUB), host, directiveSyntax: true });
+		expect(host.install).toHaveBeenCalledWith(
+			installing("@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.16&path:/syntax-directive"),
+		);
+		const without = fakeHost();
+		await initProject({ cwd: appWithCore(GITHUB), host: without, directiveSyntax: false });
+		expect(without.install).toHaveBeenCalledOnce();
+		expect(without.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("syntax-directive")));
+	});
+
+	it("INIT-I1 prints the --no-install command with the same specs, quoted for a shell", async () => {
+		const dir = appWithCore(GITHUB);
+		const report = await initProject({ cwd: dir, host: fakeHost(), install: false });
+		const text = report.next.find((item) => item.startsWith("Install the packages:"))?.split("\n")[1] ?? "";
+		expect(text).toContain("'@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin'");
+		expect(text).toMatch(/ next-themes /);
+		// A shell reads the printed line back as the same arguments, with no `&` or `#` acting on the command.
+		const run = spawnSync("sh", ["-c", `set -- ${text.replace(/^pnpm add /, "")}; printf '%s\\n' "$@"`], {
+			encoding: "utf8",
+		});
+		const args = run.stdout.trim().split("\n");
+		expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin");
+		expect(args).toContain("next-themes");
+	});
+});
+
+describe("the packages init installs", () => {
+	const PACKAGES = path.resolve(import.meta.dirname, "../../../..");
+	/** The peers a package asks the app to install: not Monti's own, not React. */
+	const peersOf = (folder: string): string[] =>
+		Object.keys(
+			JSON.parse(readFileSync(path.join(PACKAGES, folder, "package.json"), "utf8")).peerDependencies ?? {},
+		).filter((name) => !name.startsWith("@monti-cms/") && name !== "react" && name !== "react-dom");
+
+	it("INIT-R2 includes every library the admin and the AI plugin need as peers, also with no blocks", async () => {
+		for (const blocks of ["default", "none"]) {
+			const dir = fixtureApp();
+			const report = await initProject({ cwd: dir, host: fakeHost(), install: false, extras: "ai", blocks });
+			expect(report.installed).toEqual(expect.arrayContaining([...peersOf("admin"), ...peersOf("ai")]));
+		}
 	});
 });

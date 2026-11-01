@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
 import { testConfig } from "../../../test/site";
+import { defineSite } from "../../config/define";
 import type { ClaimedDelivery, ContentChange, ContentStore } from "../../core/store";
+import type { SchemaTypes } from "../../schema-file/types";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
+import { fakeCms, fakeAuth as fakeServerAuth } from "../fake-cms";
 
 /** A database adapter that records how it was used. `tag` marks everything that came from this adapter. */
 function fakeDatabase(tag: string) {
@@ -226,5 +229,73 @@ describe("createCms: a development reload does not leak connections", () => {
 		const store = createCms({ config: testConfig, server: second.server }).store() as unknown as { tag: string };
 		expect(store.tag).toBe("second");
 		expect(first.database.createStore).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("cms.plugin(name)", () => {
+	// The server config's auth from `fake-cms`, not the `fakeAuth` adapter of the tests above.
+	const fakeAuth = fakeServerAuth;
+	const schemaOf = (extra: Record<string, unknown> = {}) =>
+		({
+			collections: {
+				article: {
+					label: "Article",
+					kind: "document",
+					path: "/articles/:slug",
+					fields: {
+						title: { kind: "text", label: "Title", required: true },
+						slug: { kind: "slug", label: "Address", from: "title" },
+						...extra,
+					},
+				},
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}) as unknown as SchemaTypes;
+
+	afterEach(() => vi.unstubAllEnvs());
+
+	it("PLUG-S6 gives a plugin its own storage, secrets and the key store", () => {
+		const cms = fakeCms({ server: { secret: "a-long-enough-test-secret" } });
+		const context = cms.plugin("my-plugin");
+		expect(context.name).toBe("my-plugin");
+		expect(context.storage.plugin).toBe("my-plugin");
+		expect(context.secrets.available).toBe(true);
+		expect(context.apiKeys).toBe(cms.apiKeys);
+	});
+
+	it("PLUG-S6 makes a value once per key and plugin", () => {
+		const cms = fakeCms();
+		const make = vi.fn(() => ({}));
+		const first = cms.plugin("a").once("store", make);
+		expect(cms.plugin("a").once("store", make)).toBe(first);
+		expect(cms.plugin("b").once("store", make)).not.toBe(first);
+		expect(make).toHaveBeenCalledTimes(2);
+	});
+
+	it("PLUG-S6 starts again after a schema reload, so a value built from the site never keeps the old one", () => {
+		vi.stubEnv("NODE_ENV", "development");
+		const cms = createCms({
+			config: defineSite({ schema: schemaOf() }),
+			server: {
+				database: {
+					name: "fake",
+					createStore: vi.fn(),
+					migrate: vi.fn(),
+					pluginStorage: vi.fn(),
+					transaction: vi.fn(),
+				},
+				auth: fakeAuth(),
+			},
+		});
+		const build = () => ({ site: cms.site });
+		const before = cms.plugin("a").once("store", build);
+		expect(before.site).toBe(cms.site);
+
+		expect(cms.reloadSchema(schemaOf({ extra: { kind: "text", label: "Extra" } }))).toEqual({ reloaded: true });
+		const after = cms.plugin("a").once("store", build);
+		expect(after).not.toBe(before);
+		expect(after.site).toBe(cms.site);
+		expect(after.site).not.toBe(before.site);
 	});
 });

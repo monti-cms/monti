@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale, recordCollection, secondLocale } from "../../../test/any-site";
 import { testConfig, testSite } from "../../../test/site";
+import { previewHrefWith } from "../links";
 
 /**
  * Internal body link rules that do not depend on the config. Collections, public paths and the site address are looked up in the current config (`test/any-site.ts`).
@@ -75,5 +76,23 @@ describe("draft preview addresses", () => {
 		expect(href).toContain(secondLocale);
 		expect(href).toContain(encodeURIComponent("한글 메모"));
 		expect(href).not.toBe(testSite.previewHref(contentCollection, "한글 메모", defaultLocale));
+	});
+});
+
+describe("locale of preview addresses (site.previewLocaleParam)", () => {
+	const base = { previewPath: "/preview/", path: "/posts/a", defaultLocale: "de" };
+	it("WRITE-W8 by default `?locale=` is used when the locale is not the default", () => {
+		expect(previewHrefWith({ ...base, locale: "en", param: "locale", localePrefix: "/en" })).toBe(
+			"/preview/posts/a?locale=en",
+		);
+		expect(previewHrefWith({ ...base, locale: "de", param: "locale", localePrefix: "" })).toBe("/preview/posts/a");
+		expect(previewHrefWith({ ...base, locale: "en", param: "lang", localePrefix: "/en" })).toBe(
+			"/preview/posts/a?lang=en",
+		);
+	});
+
+	it("WRITE-W8 with `false` the locale prefix goes in the path", () => {
+		expect(previewHrefWith({ ...base, locale: "en", param: false, localePrefix: "/en" })).toBe("/preview/en/posts/a");
+		expect(previewHrefWith({ ...base, locale: "de", param: false, localePrefix: "" })).toBe("/preview/posts/a");
 	});
 });

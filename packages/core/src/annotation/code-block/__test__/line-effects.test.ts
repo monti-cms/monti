@@ -1,5 +1,9 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
+import { storedCodeBlockAttrs } from "../../../doc/stored-code-block";
+import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import { renderDocument } from "../../../render/index";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
@@ -82,5 +86,23 @@ describe("code block options of the site config", () => {
 		expect(codes({ themes: { light: "github-light", dark: " " } })).toEqual(["codeBlock.themes.dark:empty"]);
 		expect(codes({ languages: ["not a language"] })).toEqual(["codeBlock.languages[0]:name"]);
 		expect(codes({ theme: {} } as never)).toEqual(["codeBlock.theme:unknown-key"]);
+	});
+});
+
+describe("focus lines", () => {
+	const codeDoc = (language: string, value: string) => ({
+		type: "doc" as const,
+		version: STORED_DOCUMENT_VERSION,
+		content: [{ type: "codeBlock", attrs: storedCodeBlockAttrs(testSite, { language, meta: "", value }) }],
+	});
+
+	it("SITE-D2 carry the class the public styles dim the other lines by", async () => {
+		const { content } = await renderDocument(
+			codeDoc("ts", "const a = 1;\n// @line focus\nconst b = 2;\nconst c = 3;"),
+			{ site: testSite },
+		);
+		const markup = renderToStaticMarkup(content);
+		const lines = [...markup.matchAll(/<span class="([^"]*\bline\b[^"]*)"/g)].map((match) => match[1] ?? "");
+		expect(lines.map((names) => names.split(/\s+/).includes("code-focus"))).toEqual([false, true, false]);
 	});
 });

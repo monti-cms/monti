@@ -353,7 +353,7 @@ export function createPublishing(ctx: StoreContext) {
 					.forShare()
 					.execute()
 			: [];
-		// A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it is, as an unpublished link.
+		// A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it warns, as an unpublished link.
 		const trashed = new Set(rows.filter((row) => row.status === "trashed").map((row) => row.id));
 		if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
 			throw new CmsError("Cannot reference a trashed entry", "invalid_reference", {

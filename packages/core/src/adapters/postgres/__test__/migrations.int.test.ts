@@ -1,11 +1,15 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { contentCollection } from "../../../../test/any-site";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { contentCollection, recordCollection, recordRelationField } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
+import { contentOf, docOf } from "../../../../test/stored-content";
+import type { Collection } from "../../../core/collections";
 import { SetupError } from "../../../core/problem";
+import type { ContentStore } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import { documentKeyHash } from "../../../core/translation/state-hash";
+import type { StorePort } from "../../../services";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../migrations";
 import { fillDocumentHashes } from "../migrations/0003_translation_source_hashes";
@@ -125,5 +129,170 @@ describe("migrations", () => {
 		// Another plugin's step of the same name is a different step.
 		expect(await createPluginStorage(pool, schemaName, "other").once("first-step", async () => {})).toBe(true);
 		expect(await storage.once("first-step", async () => {})).toBe(false);
+	});
+});
+
+describe("Body templates: seeding and migration in Postgres", () => {
+	/** The site config's initial body templates (`seed.templates`). For a config without any, the seeding tests are skipped. */
+	const SEEDED = testSite.config.seed?.templates ?? [];
+
+	let pool: Pool;
+	let schemaName: string;
+	let store: ContentStore;
+
+	// Every test gets its own schema, seeded by its own migration: the tests delete templates and clear the seed marker.
+	beforeEach(async () => {
+		const isolated = await createIsolatedTestPool();
+		pool = isolated.pool;
+		schemaName = isolated.schemaName;
+
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+	});
+
+	afterEach(async () => {
+		if (pool && schemaName) {
+			await dropIsolatedTestPool(pool, schemaName);
+		}
+	});
+
+	afterAll(closeGlobalPool);
+
+	// To check that deleting one leaves the other intact, there must be at least two templates.
+	it.skipIf(SEEDED.length < 2)(
+		"TPL-S1 seeds templates for both editor types without reviving deleted templates",
+		async () => {
+			const templates = await store.listTemplates();
+			expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
+
+			// The config's templates are inserted with their name and their document: a seed written as text is read by its format, and nothing is written
+			// to the text column.
+			for (const seed of SEEDED) {
+				const found = templates.find((t) => t.name === seed.name);
+				if (!found) throw new Error(`Template not found: ${seed.name}`);
+				// The core test config writes its seeds as documents, so no format is needed to read them.
+				const expected = contentOf(seed.doc);
+				expect(expected).not.toBeNull();
+				expect(contentOf(found.doc)).toEqual(expected);
+			}
+			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
+			if (!first || !second) throw new Error("Seed templates not found.");
+
+			// Delete one template
+			await store.deleteTemplate({ id: first.id, expectedVersion: first.version });
+
+			// Re-run migration
+			await migrateContentStore(pool, { site: testSite, schema: schemaName });
+
+			// Verify deleted template did NOT resurrect (one-time seed guarantee)
+			const remaining = await store.listTemplates();
+			expect(remaining.map((t) => t.id)).not.toContain(first.id);
+			expect(remaining.find((t) => t.id === second.id)).toMatchObject({ name: second.name });
+		},
+	);
+
+	it.skipIf(SEEDED.length === 0)(
+		"TPL-S1 seed preserves same-name user templates and never resurrects deletions",
+		async () => {
+			const name = SEEDED[SEEDED.length - 1]?.name;
+			const seeded = (await store.listTemplates()).find((template) => template.name === name);
+			if (!seeded) throw new Error(`Template not found: ${name}`);
+
+			const userId = randomUUID();
+			await pool.query(`UPDATE "${schemaName}".body_templates SET id = $1, doc = $2::jsonb WHERE id = $3`, [
+				userId,
+				JSON.stringify(docOf("사용자가 수정한 본문")),
+				seeded.id,
+			]);
+			// Even if the seed marker is cleared so seeding runs again, a user template with the same name is not overwritten.
+			await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = 'seed_initial_body_templates'`);
+			await migrateContentStore(pool, { site: testSite, schema: schemaName });
+
+			const preserved = (await store.listTemplates()).filter((template) => template.name === name);
+			expect(preserved).toHaveLength(1);
+			expect(preserved[0]).toMatchObject({ id: userId });
+			expect(contentOf(preserved[0]?.doc)).toEqual(contentOf(docOf("사용자가 수정한 본문")));
+
+			await store.deleteTemplate({ id: userId, expectedVersion: preserved[0].version });
+			await migrateContentStore(pool, { site: testSite, schema: schemaName });
+			expect((await store.listTemplates()).some((template) => template.name === name)).toBe(false);
+		},
+	);
+});
+
+describe("ContentStore References", () => {
+	type ExtendedStore = ReturnType<typeof createContentStore> & StorePort;
+
+	/**
+	 * A relation field where a body collection points at an item collection. A multi-select field is preferred (it also tests the order `ordinal`).
+	 * Collection and field names are looked up in the current config (`test/any-site.ts`).
+	 */
+	const relation = (() => {
+		for (const { name, field, when } of testSite.storedFields(contentCollection)) {
+			if (!when && field.kind === "relation" && field.many && testSite.isItemCollection(field.to)) {
+				return { name, to: field.to as Collection, many: true };
+			}
+		}
+		return recordRelationField(contentCollection);
+	})();
+
+	/** The item collection that creates reference targets. */
+	const targetCollection = relation?.to ?? recordCollection;
+
+	let pool: Pool;
+	let schemaName: string;
+	let store: ExtendedStore;
+
+	beforeAll(async () => {
+		const isolated = await createIsolatedTestPool();
+		pool = isolated.pool;
+		schemaName = isolated.schemaName;
+
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName }) as unknown as ExtendedStore;
+	});
+
+	afterAll(async () => {
+		if (pool && schemaName) {
+			await dropIsolatedTestPool(pool, schemaName);
+		}
+		await closeGlobalPool();
+	});
+
+	it("WRITE-S11 DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
+		const source = await seedEntry(store, {
+			collection: contentCollection,
+			slug: `source-${randomUUID()}`,
+			metadata: {},
+			text: "",
+			contentHash: "src",
+		});
+		const targetA = await seedEntry(store, {
+			collection: targetCollection,
+			slug: `target-a-${randomUUID()}`,
+			metadata: {},
+			text: "",
+			contentHash: "ta",
+		});
+		const targetB = await seedEntry(store, {
+			collection: targetCollection,
+			slug: `target-b-${randomUUID()}`,
+			metadata: {},
+			text: "",
+			contentHash: "tb",
+		});
+
+		await expect(
+			pool.query(
+				`INSERT INTO "${schemaName}".entry_references (entry_id, state, kind, target_id, target_entry_id, is_stale, occurrences)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+				[source.id, "working", "entry", targetA.id, targetB.id, false, JSON.stringify([])],
+			),
+		).rejects.toMatchObject({ code: "23514", constraint: "entry_references_target_check" });
+
+		const res = await pool.query(`SELECT COUNT(*) as count FROM "${schemaName}".entry_references WHERE entry_id = $1`, [
+			source.id,
+		]);
+		expect(res.rows[0].count).toBe("0");
 	});
 });

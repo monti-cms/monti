@@ -99,3 +99,27 @@ describe("ignoreForMonti", () => {
 		expect(ignoreForMonti(`${line}\n.env.local\n`)).toEqual({ status: "present" });
 	});
 });
+
+describe("wrapNextConfig on a file that only mentions withCms", () => {
+	const WRAPPED =
+		'import { withCms } from "@monti-cms/nextjs/config";\nconst nextConfig = {};\nexport default withCms(nextConfig);\n';
+
+	it("INIT-K4 still wraps the export, adding the import once", () => {
+		const result = wrapNextConfig(
+			"next.config.ts",
+			"// wrap with withCms later\nconst nextConfig = {};\nexport default nextConfig;\n",
+		);
+		expect(result).toMatchObject({
+			status: "edit",
+			text: expect.stringContaining("export default withCms(nextConfig);"),
+		});
+		// The import is there once.
+		expect(result).toMatchObject({
+			text: expect.toSatisfy((text: string) => text.split("import { withCms }").length === 2),
+		});
+	});
+
+	it("INIT-K4 leaves a wrapped file alone", () => {
+		expect(wrapNextConfig("next.config.ts", WRAPPED)).toEqual({ status: "present" });
+	});
+});
