@@ -1,12 +1,12 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
 import { runCli } from "../index";
-import { byId, configText, project, SCHEMA_TEXT, setEnv, statusesOf } from "./doctor-helpers";
+import { byId, CORE_SRC, configText, project, SCHEMA_TEXT, setEnv, statusesOf } from "./doctor-helpers";
 
 // The pg driver warns about sslmode=require; verify-full is what it means today, so the healthy project has no warning.
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -414,6 +414,83 @@ describe("monti doctor --json and the text report", () => {
 			// where and fix only come with a warning or a failure.
 			if (check.status === "ok" || check.status === "skip") expect(check.fix).toBeUndefined();
 			if (check.status === "fail") expect(check.fix).toEqual(expect.any(String));
+		}
+	});
+});
+
+describe("the email and password login on the command line", () => {
+	const AUTH_SRC = path.resolve(CORE_SRC, "../../auth/src");
+
+	/** The healthy project's config, with the built-in email and password login instead of GitHub. */
+	const passwordConfig = () =>
+		configText()
+			.replace(
+				`import { github } from ${JSON.stringify(path.join(AUTH_SRC, "github.ts"))};`,
+				`import { password } from ${JSON.stringify(path.join(AUTH_SRC, "password.ts"))};`,
+			)
+			.replace("github()", "password()");
+
+	async function run(
+		dir: string,
+		argv: string[],
+		prompter?: { text: () => Promise<string>; password: () => Promise<string> },
+	) {
+		const out: string[] = [];
+		const code = await runCli([...argv, "--no-env-file"], {
+			cwd: dir,
+			log: (message) => out.push(message),
+			error: (message) => out.push(message),
+			...(prompter ? { prompter: prompter as never } : {}),
+		});
+		return { code, text: out.join("\n") };
+	}
+
+	const doctor = async (dir: string) => {
+		const { code, text } = await run(dir, ["doctor", "--json"]);
+		return { code, report: JSON.parse(text) as DoctorReport };
+	};
+
+	/** A project with the password login, and the environment pointing at this test's schema (the helpers reset both after every test). */
+	const app = (config = passwordConfig()) => {
+		setEnv({
+			DATABASE_URL: DATABASE,
+			DATABASE_SCHEMA: schemaName,
+			MONTI_SECRET: STRONG_SECRET,
+			SITE_URL: "https://blog.example.com",
+		});
+		return project({ "monti.config.ts": config });
+	};
+
+	let pool: Pool;
+	let schemaName: string;
+
+	beforeAll(async () => {
+		const isolated = await createIsolatedTestPool();
+		pool = isolated.pool;
+		schemaName = isolated.schemaName;
+		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
+	});
+
+	// The login keeps its accounts in the plugin storage of the schema: every test starts with no admin account.
+	beforeEach(async () => {
+		await pool.query(`DELETE FROM "${schemaName}".plugin_documents`);
+	});
+
+	afterAll(async () => {
+		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+		await closeGlobalPool();
+	});
+
+	it("AUTH-L12 doctor warns that there is no admin yet and says to open the admin, and runs no GitHub checks", async () => {
+		const dir = app();
+		const { report } = await doctor(dir);
+		const accounts = byId(report, "auth/admin-accounts");
+		expect(accounts.status).toBe("warn");
+		expect(accounts.fix).toContain("create the first admin");
+		expect(accounts.fix).toContain("https://blog.example.com/studio");
+		expect(accounts.fix?.length).toBeLessThan(200);
+		for (const id of ["auth/github-id", "auth/github-secret", "auth/admins", "auth/callback-url"]) {
+			expect(byId(report, id).status, id).toBe("skip");
 		}
 	});
 });

@@ -1,0 +1,183 @@
+import { describe, expect, it } from "vitest";
+import { defineCollection, defineSite, fields } from "../..";
+import { createSite } from "../../site";
+import { fieldValueError } from "../derive";
+
+// A site whose field names differ from the reference blog. Checks that the library finds fields by role and `from`, not by name.
+const articleCollection = defineCollection({
+	label: "Article",
+	kind: "document",
+	fields: {
+		title: fields.text({ label: "Title", required: true }),
+		headline: fields.text({ label: "Headline" }),
+		slug: fields.slug({ label: "Slug", from: "headline", required: true }),
+		excerpt: fields.text({ label: "Excerpt", role: "summary", fillFromBody: true }),
+		topicId: fields.relation({ label: "Topic", to: "topic", required: true }),
+		hero: fields.media({ label: "Hero", role: "heroImage" }),
+		robots: fields.select({
+			label: "Robots",
+			role: "noindex",
+			options: { index: "Index", noindex: "No index" },
+			defaultValue: "index",
+		}),
+	},
+	layout: [{ tab: "Search", fields: ["robots"] }],
+});
+const topicCollection = defineCollection({
+	label: "Topic",
+	kind: "item",
+	fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug" }) },
+});
+const config = defineSite({
+	collections: { article: articleCollection, topic: topicCollection },
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
+});
+
+const site = createSite(config);
+const article = "article";
+const topic = "topic";
+const { fillFromBodyFields, metadataReferences, missingRequiredIssues, roleField, roleValue, slugFromValues } = site;
+
+describe("field roles", () => {
+	it("SCHEMA-S3 finds fields by role, not by name", () => {
+		expect(roleField(article, "summary")?.name).toBe("excerpt");
+		expect(roleField(article, "noindex")?.field.kind).toBe("select");
+		expect(roleField(article, "seoTitle")).toBeUndefined();
+		// Roles the core does not know are also found by name (the kind is decided by the extension that uses the role).
+		expect(roleField(article, "heroImage")?.name).toBe("hero");
+		expect(roleValue(article, "summary", { excerpt: "Short", summary: "Not this" })).toBe("Short");
+		expect(roleValue(topic, "summary", { summary: "x" })).toBe("");
+	});
+
+	it("SCHEMA-S3 lists fields filled from the body", () => {
+		expect(fillFromBodyFields(article).map((stored) => stored.name)).toEqual(["excerpt"]);
+		expect(fillFromBodyFields(topic)).toEqual([]);
+	});
+});
+
+describe("media fields", () => {
+	const MEDIA = "11111111-1111-4111-8111-111111111111";
+	const TOPIC = "22222222-2222-4222-8222-222222222222";
+
+	it("SCHEMA-S3 collects the media ID as a media reference next to relation references", () => {
+		expect(metadataReferences(article, { topicId: TOPIC, hero: MEDIA })).toEqual([
+			{ kind: "entry", targetId: TOPIC, path: "topicId" },
+			{ kind: "media", targetId: MEDIA, path: "hero" },
+		]);
+		expect(metadataReferences(article, { hero: "" })).toEqual([]);
+	});
+
+	it("SCHEMA-S3 accepts a media ID or an empty value", () => {
+		const hero = roleField(article, "heroImage")?.field;
+		if (!hero) throw new Error("hero");
+		expect(fieldValueError(hero, MEDIA)).toBeNull();
+		expect(fieldValueError(hero, "")).toBeNull();
+		expect(fieldValueError(hero, "hero.png")).toBe("invalid_metadata_value");
+	});
+});
+
+describe("slug from", () => {
+	it("SCHEMA-S3 makes the slug from the field named by `from`", () => {
+		expect(slugFromValues(article, { title: "Ignored", headline: "Hello World" })).toBe("hello-world");
+	});
+
+	it("SCHEMA-S3 does not make a slug without `from`", () => {
+		expect(slugFromValues(topic, { title: "Hello" })).toBe("");
+	});
+});
+
+describe("missing required fields", () => {
+	it("SCHEMA-S3 uses missing_field with the field label for every field, title included", () => {
+		expect(missingRequiredIssues(article, { slug: null, metadata: { title: "" } })).toEqual([
+			{ code: "null_slug", path: "slug" },
+			{ code: "missing_field", path: "title", message: "Title" },
+			{ code: "missing_field", path: "topicId", message: "Topic" },
+		]);
+	});
+});
+
+describe("required fields now", () => {
+	const noteSite = createSite(
+		defineSite({
+			collections: {
+				note: defineCollection({
+					label: "Note",
+					kind: "document",
+					fields: {
+						title: fields.text({ label: "Title", required: true }),
+						slug: fields.slug({ label: "Slug", from: "title", required: true }),
+						kind: fields.conditional(
+							fields.select({ label: "Kind", options: { link: "Link", text: "Text" }, defaultValue: "text" }),
+							{
+								link: { url: fields.text({ label: "Address", required: true }) },
+								text: { blurb: fields.text({ label: "Blurb", required: true }) },
+							},
+						),
+						note: fields.text({ label: "Note" }),
+					},
+				}),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+	const names = (metadata: Record<string, unknown>) =>
+		noteSite
+			.requiredFieldsOf("note", metadata)
+			.sort((a, b) => a.order - b.order)
+			.map((field) => field.name);
+
+	it("SCHEMA-S3 lists a field of a conditional group while its condition holds, and `order` puts them in the order of the form", () => {
+		expect(names({ kind: "link" })).toEqual(["title", "slug", "url"]);
+	});
+
+	it("SCHEMA-S3 leaves out a field whose condition is not met", () => {
+		expect(names({ kind: "text" })).toEqual(["title", "slug", "blurb"]);
+		expect(names({})).toEqual(["title", "slug"]);
+	});
+
+	it("SCHEMA-S3 is the list the publish check asks for: a field it lists is flagged when empty and the others are not", () => {
+		const flagged = noteSite
+			.missingRequiredIssues("note", { slug: null, metadata: { kind: "link" } })
+			.map((issue) => issue.path)
+			.sort();
+		expect(flagged).toEqual(["slug", "title", "url"]);
+	});
+});
+
+describe("the title field is always required", () => {
+	const slug = fields.slug({ label: "Slug" });
+
+	const site = createSite(
+		defineSite({
+			collections: {
+				post: defineCollection({
+					label: "Post",
+					kind: "document",
+					fields: { headline: fields.text({ label: "Headline", role: "title", required: undefined }), slug },
+				}),
+				tag: defineCollection({
+					label: "Tag",
+					kind: "item",
+					fields: { title: fields.text({ label: "Name" }), slug },
+				}),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+
+	it("SCHEMA-S2 asks for a title whatever its `required` says, on a document and on an item", () => {
+		expect(site.missingRequiredIssues("post", { slug: "a", metadata: {} })).toEqual([
+			{ code: "missing_field", path: "headline", message: "Headline" },
+		]);
+		expect(site.missingRequiredIssues("tag", { slug: "a", metadata: {} })).toEqual([
+			{ code: "missing_field", path: "title", message: "Name" },
+		]);
+	});
+
+	it("SCHEMA-S2 is satisfied once the title has a value", () => {
+		expect(site.missingRequiredIssues("post", { slug: "a", metadata: { headline: "Hello" } })).toEqual([]);
+	});
+});

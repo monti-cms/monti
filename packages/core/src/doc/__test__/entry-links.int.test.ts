@@ -1,0 +1,337 @@
+import type { Pool } from "pg";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { contentCollection, fillRequiredMetadata, requiredMetadata, secondLocale } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
+import { testConfig, testSite } from "../../../test/site";
+import { docOf } from "../../../test/stored-content";
+import { type Cms, fakeCms } from "../../cms";
+import type { Collection } from "../../core/collections";
+import type { ContentStore } from "../../core/store";
+import { publishDraft } from "../../core/store/__test__/seed";
+import { ServiceError } from "../../core/types";
+import { createFormatRegistry } from "../../format/registry";
+import { CmsContent } from "../../render";
+import { createContentService } from "../../services/content-service";
+import {
+	closeGlobalPool,
+	createContentStore,
+	createIsolatedTestPool,
+	dropIsolatedTestPool,
+	migrateContentStore,
+} from "../../testing";
+import { entryLinkIds } from "../entry-links";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../stored-document";
+
+/** Links by entry id, from the write that turns an address into an id to the page that draws the link for one reader. */
+describe("links by entry id", () => {
+	let pool: Pool;
+	let schemaName: string;
+	let store: ContentStore;
+	let cms: Cms;
+	let service: ReturnType<typeof createContentService>;
+	let relationTarget: (to: Collection) => Promise<string>;
+	let rawCreate: ContentStore["createEntryWithReferences"];
+
+	beforeAll(async () => {
+		const isolated = await createIsolatedTestPool();
+		pool = isolated.pool;
+		schemaName = isolated.schemaName;
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		store = createContentStore(pool, { site: testSite, schema: schemaName });
+		const filled = fillRequiredMetadata(store);
+		relationTarget = filled.relationTarget as typeof relationTarget;
+		rawCreate = filled.raw.createEntryWithReferences;
+		service = createContentService(store, {
+			site: testSite,
+			formats: async () => createFormatRegistry([paragraphsFormat]),
+		});
+		cms = fakeCms({
+			config: testConfig,
+			store,
+			contentService: service,
+			formats: [paragraphsFormat],
+			verifyAdmin: async () => ({ userId: "u", accountId: "a", isAdmin: true }),
+		});
+	});
+
+	afterAll(async () => {
+		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+		await closeGlobalPool();
+	});
+
+	/** The address a body is written with: the default-language path, no locale prefix. */
+	const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
+	/** The public address a read gives: the same path with the prefix of the language of the version (the config may set one for every language). */
+	const publicPath = (slug: string, locale: string = testSite.DEFAULT_LOCALE) =>
+		testSite.localizePath(locale, pathOf(slug));
+
+	const draft = async (slug: string, body: string | StoredDocument) =>
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
+				...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
+			} as never)
+			.then((result) => result.entry);
+
+	/** A paragraph of links by id, written as the document keeps them (a text format of the test reads addresses, not ids). */
+	const linksByIdTo = (...links: [label: string, entryId: string][]): StoredDocument => ({
+		type: "doc",
+		version: STORED_DOCUMENT_VERSION,
+		content: [
+			{
+				type: "paragraph",
+				content: links.flatMap(([label, entryId], index) => [
+					...(index > 0 ? [{ type: "text", text: " " }] : []),
+					{ type: "text", text: label, marks: [{ type: "link", attrs: { entryId } }] },
+				]),
+			},
+		],
+	});
+
+	const publish = async (slug: string, body: string | StoredDocument = `Body ${slug}`) => {
+		const created = await draft(slug, body);
+		return publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
+	};
+
+	/** A published translation. Its body is given as text or as a document; the common values stay with the source. */
+	const publishTranslation = async (slug: string, locale: string, sourceId: string, body: string | StoredDocument) => {
+		const created = await rawCreate({
+			snapshot: {
+				collection: contentCollection,
+				slug,
+				metadata: { title: `Title ${slug}` },
+				doc: typeof body === "string" ? docOf(body) : body,
+				contentHash: `hash-${slug}`,
+				references: [],
+				issues: [],
+				imageSources: [],
+			} as never,
+			references: [],
+			locale,
+			translationOf: sourceId,
+		});
+		return publishDraft(testSite, store, { id: created.id, expectedVersion: created.version });
+	};
+
+	const publishError = async (id: string, version: number) => {
+		const error = await service.publish({ id, expectedVersion: version }).catch((caught) => caught);
+		expect(error).toBeInstanceOf(ServiceError);
+		return error as ServiceError;
+	};
+
+	const references = async (entryId: string) =>
+		(
+			await pool.query<{ target_id: string; occurrences: { type: string; blockId?: string }[] }>(
+				`SELECT target_id, occurrences FROM "${schemaName}".entry_references WHERE entry_id = $1 AND state = 'working' AND kind = 'entry' AND occurrences @> '[{"type":"body"}]'::jsonb`,
+				[entryId],
+			)
+		).rows;
+
+	it("SITE-R3 a body written with the address of a post is stored with the id of that post, and the address leaves the document", async () => {
+		const target = await publish("links-target");
+
+		const source = await draft(
+			"links-source",
+			`Read [the target](${pathOf("links-target")}) or [outside](https://example.com/x).`,
+		);
+
+		const marks = JSON.stringify(source.working.doc);
+		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
+		expect(marks).not.toContain(pathOf("links-target"));
+		expect(marks).toContain("https://example.com/x");
+		// The id is a reference like a relation: the draft records where it is used (the block), so the target cannot be deleted from under it.
+		const refs = await references(source.id);
+		expect(refs).toHaveLength(1);
+		expect(refs[0]?.target_id).toBe(target.translationGroupId);
+		expect(refs[0]?.occurrences).toEqual([{ type: "body", blockId: expect.stringMatching(/^[0-9a-z]{8}$/) }]);
+		const incoming = await store.getIncomingReferences({ targetId: target.id });
+		expect(incoming.some((item) => item.sourceId === source.id && item.kind === "entry")).toBe(true);
+	});
+
+	it("SITE-R3 an address with the locale prefix of the site's URLs (as the public page shows it) is a link by id too", async () => {
+		const target = await publish("links-prefixed-target");
+
+		const source = await draft("links-prefixed-source", `[x](${publicPath("links-prefixed-target")})`);
+
+		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
+		expect(JSON.stringify(source.working.doc)).not.toContain("links-prefixed-target");
+	});
+
+	it("WRITE-P1 an address with a prefix that no entry holds blocks publishing, like any other", async () => {
+		const created = await draft("links-prefixed-dangling", `[x](${publicPath("links-nobody-prefixed")})`);
+
+		const error = await publishError(created.id, created.version);
+
+		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
+	});
+
+	it("WRITE-P1 an address no entry holds stays as written, and publishing says it does not resolve", async () => {
+		const created = await draft("links-dangling", `[nowhere](${pathOf("nobody-holds-this")})`);
+		expect(entryLinkIds(created.working.doc.content)).toEqual([]);
+		expect(JSON.stringify(created.working.doc)).toContain(pathOf("nobody-holds-this"));
+
+		const error = await publishError(created.id, created.version);
+
+		expect(error.code).toBe("publish_validation_failed");
+		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
+	});
+
+	it("WRITE-P1 two new posts that link to each other can both be published, and each link works once its target is published", async () => {
+		const first = await draft("links-series-1", "One");
+		const second = await draft("links-series-2", "Two");
+		const one = (
+			await service.saveDraft(first.id, {
+				collection: contentCollection,
+				slug: "links-series-1",
+				metadata: first.working.metadata as never,
+				format: "paragraphs",
+				body: `Next: [two](${pathOf("links-series-2")})`,
+				expectedVersion: first.version,
+			})
+		).entry;
+		const two = (
+			await service.saveDraft(second.id, {
+				collection: contentCollection,
+				slug: "links-series-2",
+				metadata: second.working.metadata as never,
+				format: "paragraphs",
+				body: `Back: [one](${pathOf("links-series-1")})`,
+				expectedVersion: second.version,
+			})
+		).entry;
+
+		const publishedOne = await publishDraft(testSite, store, { id: one.id, expectedVersion: one.version });
+		// The target is not published yet: the page draws the link as plain text.
+		const early = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
+		if (early.status !== "found") throw new Error("not found");
+		expect(early.entry.refs.links).toEqual({});
+		await publishDraft(testSite, store, { id: two.id, expectedVersion: two.version });
+		const later = await cms.read.getEntry({ collection: contentCollection, slug: "links-series-1" });
+		if (later.status !== "found") throw new Error("not found");
+		expect(Object.keys(later.entry.refs.links)).toEqual([two.translationGroupId]);
+		expect(publishedOne.status).toBe("published");
+	});
+
+	it("WRITE-P1 publishing does not need the target to be published: the link is a warning", async () => {
+		const target = await draft("links-unpublished", "Not yet");
+		const source = await draft("links-to-draft", `[draft](${pathOf("links-unpublished")})`);
+		expect(entryLinkIds(source.working.doc.content)).toEqual([target.translationGroupId]);
+
+		const { entry, warnings } = await service.publish({ id: source.id, expectedVersion: source.version });
+
+		expect(entry.status).toBe("published");
+		// The publish result says that link is not live yet, at its block, so the editor knows the text is plain until the target is published.
+		expect(warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([
+			expect.objectContaining({ position: { blockId: expect.stringMatching(/^[0-9a-z]{8}$/) } }),
+		]);
+		// Once the target is published, publishing again has nothing to warn about.
+		await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
+		const again = await service.publish({ id: source.id, expectedVersion: entry.version });
+		expect(again.warnings.filter((warning) => warning.code === "unpublished_internal_link")).toEqual([]);
+	});
+
+	it("WRITE-P1 a link to an id that is not an entry is an unresolved link at publish, and a draft with it still saves", async () => {
+		const id = "00000000-0000-4000-8000-0000000000aa";
+		const created = await draft("links-bad-id", linksByIdTo(["x", id]));
+		expect(entryLinkIds(created.working.doc.content)).toEqual([id]);
+		expect(await references(created.id)).toEqual([]);
+
+		const error = await publishError(created.id, created.version);
+		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
+	});
+
+	it("SITE-R3 a post that other posts link to can be deleted: the link only stays in their text, and its reference goes", async () => {
+		const target = await publish("links-in-use");
+		const source = await draft("links-in-use-source", `[x](${pathOf("links-in-use")})`);
+
+		const trashed = await store.trashEntry({ id: target.id, expectedVersion: target.version });
+		// The draft that links to a trashed post can still be saved, and published: a link to a trashed post is a warning, like an unpublished one.
+		const published = await publishDraft(testSite, store, { id: source.id, expectedVersion: source.version });
+		expect(published.status).toBe("published");
+		const linkedTo = async () =>
+			(await store.getWorkingReferences({ entryId: source.id })).filter(
+				(reference) => reference.targetId === target.id,
+			);
+		expect(await linkedTo()).toHaveLength(1);
+
+		await store.permanentDeleteEntry({ id: target.id, expectedVersion: trashed.version });
+		await expect(store.getEntry(target.id)).rejects.toMatchObject({ code: "not_found" });
+		expect(await linkedTo()).toEqual([]);
+	});
+
+	it("SITE-R3 the read API gives each link the address and title of its target for this reader", async () => {
+		const target = await publish("links-read-target");
+		await publish("links-read-source", `See [it](${pathOf("links-read-target")}).`);
+
+		const found = await cms.read.getEntry({ collection: contentCollection, slug: "links-read-source" });
+		if (found.status !== "found") throw new Error("not found");
+
+		expect(found.entry.refs.links).toEqual({
+			[target.translationGroupId]: {
+				path: publicPath("links-read-target"),
+				title: "Title links-read-target",
+				locale: testSite.DEFAULT_LOCALE,
+			},
+		});
+		// Only the links of this document are listed, and a link is drawn from them.
+		const markup = renderToStaticMarkup(await CmsContent({ cms, entry: found.entry }));
+		expect(markup).toContain(`href="${publicPath("links-read-target")}"`);
+		expect(markup).toContain(">it</a>");
+	});
+
+	it("SITE-R3 a link whose target is not published is left out of the refs and drawn as plain text, in a preview too", async () => {
+		await draft("links-hidden-target", "Draft only");
+		const source = await draft("links-hidden-source", `A [hidden](${pathOf("links-hidden-target")}) page.`);
+		void source;
+
+		const preview = await cms.read.getPreview({ collection: contentCollection, slug: "links-hidden-source" });
+
+		expect(preview?.refs.links).toEqual({});
+		const markup = renderToStaticMarkup(await CmsContent({ cms, entry: preview as never }));
+		expect(markup).toContain("A hidden page.");
+		expect(markup).not.toContain("<a");
+	});
+
+	it.skipIf(!secondLocale)(
+		"SITE-R3 a link follows the reader's language and falls back to the source when the target has no translation",
+		async () => {
+			const locale = secondLocale as string;
+			const translated = await publish("links-lang-target");
+			const translatedEn = await publishTranslation("links-lang-target-t", locale, translated.id, "Translated");
+			const plain = await publish("links-lang-plain");
+			const body = `[one](${pathOf("links-lang-target")}) [two](${pathOf("links-lang-plain")})`;
+			const source = await publish("links-lang-source", body);
+			await publishTranslation(
+				"links-lang-source-t",
+				locale,
+				source.id,
+				linksByIdTo(["one", translated.id], ["two", plain.id]),
+			);
+
+			const inLocale = await cms.read.getEntry({ collection: contentCollection, slug: "links-lang-source-t", locale });
+			if (inLocale.status !== "found") throw new Error("not found");
+
+			expect(inLocale.entry.refs.links).toEqual({
+				[translated.id]: {
+					path: publicPath("links-lang-target-t", locale),
+					title: "Title links-lang-target-t",
+					locale,
+				},
+				// No translation of this one: the source's address, in the source's language.
+				[plain.id]: {
+					path: publicPath("links-lang-plain"),
+					title: "Title links-lang-plain",
+					locale: testSite.DEFAULT_LOCALE,
+				},
+			});
+			void translatedEn;
+			// The same document read in the source language points at the source pages.
+			const inSource = await cms.read.getEntry({ collection: contentCollection, slug: "links-lang-source" });
+			if (inSource.status !== "found") throw new Error("not found");
+			expect(inSource.entry.refs.links[translated.id]?.path).toBe(publicPath("links-lang-target"));
+		},
+	);
+});

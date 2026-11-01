@@ -92,5 +92,5 @@ DATA-R3에 보드의 "겹치는 주소"를 적었다(그 검사는 이미 있고
 
 ### admin 코드와 보드 대조 (2026-10-31)
 
-보드의 백업은 옵션 없는 "백업 받기" 하나다. DATA-B3(공개 내보내기)과 B5(본문 형식 고르기)는 지금 코드의 동작이고, #321이 공개 내보내기를 없애면 그 줄과 테스트(`export.dom.test.tsx`, `export.test.ts`, `export-selection.test.ts`, `export-service.test.ts`)를 고친다.
+보드의 백업은 옵션 없는 "백업 받기" 하나다. DATA-B3(공개 내보내기)과 B5(본문 형식 고르기)는 지금 코드의 동작이고, #321이 공개 내보내기를 없애면 그 줄과 테스트(`export.dom.test.tsx`, `export.test.ts`, `summary.test.ts`, `export-service.test.ts`)를 고친다.
 DATA-I2(건너뛰기)와 I7(그림 빼기)도 지금의 동작이다. 보드의 동작은 I11과 I14(#322)다. 가져오기 미리보기의 "원문 그대로 둘 컴포넌트 3종 · 12편" 요약은 #322에 더했다.

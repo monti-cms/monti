@@ -80,7 +80,7 @@ AUTH-L12, 플러그인 명령은 [관리자 플러그인](plugins.md)의 PLUG-S2
 ### 약속 없는 테스트 나누기 (2026-10-31)
 
 - 아직 테스트가 없는 🔴: 덮어쓰기 물음의 기본 "아니오"(INIT-K1, init.int의 "a changed file is kept…"는 "아니오"로 답할 뿐이다), doctor의
-  `config/env-ignored` 점검(INIT-K5), `db:setup`의 출력에 비밀번호가 없는지(CLI-P2, 지금은 db-commands.int의 만들기 테스트가 함께 본다).
+  `config/env-ignored` 점검(INIT-K5), `db:setup`의 출력에 비밀번호가 없는지(CLI-P2, 지금은 db.int의 만들기 테스트가 함께 본다).
 - init.int의 `next.config`와 레이아웃 고치기 경우 6개는 L1(`init-edit.test.ts`의 `wrapNextConfig`, `addSuppressHydrationWarning`,
   `ignoreForMonti`)로 옮겼다(2026-11-01). init.int에는 이어짐을 보는 INIT-K3 테스트 셋이 남는다.
 - `cli/diff.ts`의 `unifiedDiff`와 `DetectedApp.envLocalIgnored`는 아무 코드도 쓰지 않아서 테스트와 함께 지웠다(2026-11-01).

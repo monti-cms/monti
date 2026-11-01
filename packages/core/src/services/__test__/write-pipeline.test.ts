@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { contentCollection, defaultLocale } from "../../../test/any-site";
+import { contentCollection, defaultLocale, requiredMetadata } from "../../../test/any-site";
 import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
-import { contentOf, docOf } from "../../../test/stored-content";
+import { contentOf, docOf, docOf as docOfText } from "../../../test/stored-content";
+import { linkAddressKey } from "../../core/link-ids";
+import { linkMarkAttrs, mapLinkAttrs } from "../../doc/entry-links";
+import type { StoredDocument } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
 import { createFormatRegistry } from "../../format/registry";
 import type { HookSource, WriteHookContext } from "../reactions";
 import { type PreparedSnapshot, ServiceError, type ServiceInput } from "../types";
@@ -312,5 +316,76 @@ describe("write pipeline", () => {
 		});
 		sources = [{ owner: "server", hooks: { beforeSave: () => ({ issues: [{ code: "late" }] }) } }];
 		await expect(pipeline.run(request())).rejects.toMatchObject({ code: "validation_failed" });
+	});
+});
+
+describe("turning links by address into links by id", () => {
+	const ID = "123e4567-e89b-42d3-a456-426614174000";
+	const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
+
+	/** The text read by the test reader, with a link to `entry:<id>` made an entry link, as a format that knows the notation writes it. */
+	const docOf = (text: string): StoredDocument => {
+		const doc = docOfText(text);
+		const content = mapLinkAttrs(doc.content, (attrs) =>
+			typeof attrs.href === "string"
+				? linkMarkAttrs(attrs.href, typeof attrs.title === "string" ? attrs.title : null)
+				: undefined,
+		);
+		return { ...doc, content: content as CmsNode[] };
+	};
+
+	const formats = async () => createFormatRegistry([paragraphsFormat]);
+
+	/** A write of a body given as a document (the text read by the test reader). */
+	const input = async (text: string): Promise<ServiceInput> =>
+		({
+			collection: contentCollection,
+			slug: "entry",
+			metadata: await requiredMetadata(contentCollection, "Post", async () => "00000000-0000-4000-8000-000000000009"),
+			doc: docOf(text),
+		}) as ServiceInput;
+
+	/** A write of the same body given as text in a format. */
+	const textInput = async (text: string): Promise<ServiceInput> => {
+		const { doc: _doc, ...rest } = (await input("")) as ServiceInput & { doc?: unknown };
+		return { ...rest, format: "paragraphs", body: text } as ServiceInput;
+	};
+
+	it("SITE-R3 the write pipeline does it for text and for a document, and keeps the input as it came when there is nothing to do", async () => {
+		const seen: string[] = [];
+		const pipeline = createWritePipeline({
+			site: testSite,
+			formats,
+			links: async (addresses) => {
+				seen.push(...addresses.map((address) => linkAddressKey(testSite, address)));
+				return new Map(addresses.map((address) => [linkAddressKey(testSite, address), ID]));
+			},
+		});
+		const run = (given: ServiceInput) => pipeline.run({ operation: "create", locale: defaultLocale, input: given });
+
+		const fromText = await run(await textInput(`[a](${pathOf("a")})`));
+		const fromDoc = await run(await input(`[a](${pathOf("a")})`));
+		const plain = await run(await input("No links."));
+
+		for (const result of [fromText, fromDoc]) {
+			expect(JSON.stringify(result.snapshot.doc)).toContain(`"entryId":"${ID}"`);
+			expect(result.snapshot.references.some((ref) => ref.kind === "entry" && ref.targetId === ID)).toBe(true);
+		}
+		expect(JSON.stringify(plain.snapshot.doc)).not.toContain("entryId");
+		expect(seen).toEqual([
+			linkAddressKey(testSite, { collection: contentCollection, slug: "a" }),
+			linkAddressKey(testSite, { collection: contentCollection, slug: "a" }),
+		]);
+	});
+
+	it("SITE-R3 without a resolver, links keep their address", async () => {
+		const result = await createWritePipeline({ site: testSite, formats }).run({
+			operation: "create",
+			locale: defaultLocale,
+			input: await input(`[a](${pathOf("a")})`),
+		});
+
+		expect(JSON.stringify(result.snapshot.doc)).toContain(pathOf("a"));
+		expect(result.snapshot.internalLinks).toHaveLength(1);
 	});
 });

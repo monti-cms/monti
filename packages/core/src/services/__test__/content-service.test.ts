@@ -1647,3 +1647,66 @@ describe("ContentService Contract", () => {
 		});
 	});
 });
+
+describe("image warnings of a publish", () => {
+	/** The service as the publish creates it, without the default formats of this file's `createContentService`. */
+	const createContentService = createCoreContentService;
+	const mediaId = "987e4567-e89b-12d3-a456-426614174000";
+
+	/** A store holding one draft whose body is a single image of the media `mediaId`. Publishing just reports the next version. */
+	const store = () => ({
+		async getWorkingReferences() {
+			return [] as Reference[];
+		},
+		async getWorking() {
+			return {
+				collection: contentCollection,
+				slug: "hello",
+				metadata: { title: "Hello" },
+				doc: {
+					type: "doc",
+					version: STORED_DOCUMENT_VERSION,
+					content: [{ type: "image", attrs: { mediaId, alt: "a" } }],
+				},
+				version: 3,
+				folderId: null,
+				locale: null,
+			};
+		},
+		async publishEntry() {
+			return { version: 4 };
+		},
+	});
+
+	const pending = { getMediaAsset: async () => ({ status: "pending", storageKey: null }) };
+	const imageNotReady = expect.objectContaining({ code: "image_media_not_ready", message: "pending" });
+
+	it("WRITE-P1 a single publish reports them", async () => {
+		const service = createContentService(store() as never, { site: testSite, imageChecks: pending });
+		const { warnings } = await service.publish({ id: "e1", expectedVersion: 3 });
+		expect(warnings).toContainEqual(imageNotReady);
+	});
+
+	it("WRITE-P1 a service without image checks reports none", async () => {
+		const service = createContentService(store() as never, { site: testSite });
+		const { warnings } = await service.publish({ id: "e1", expectedVersion: 3 });
+		expect(warnings).not.toContainEqual(imageNotReady);
+	});
+
+	it("WRITE-P1 keeps the snapshot's own warnings when the image lookup fails", async () => {
+		const failing = {
+			getMediaAsset: async () => {
+				throw new Error("db down");
+			},
+		};
+		const withOrphan = store();
+		const getWorking = withOrphan.getWorking;
+		withOrphan.getWorking = async () => ({
+			...(await getWorking()),
+			metadata: { title: "Hello", leftover: "from a removed field" },
+		});
+		const service = createContentService(withOrphan as never, { site: testSite, imageChecks: failing });
+		const { warnings } = await service.publish({ id: "e1", expectedVersion: 3 });
+		expect(warnings).toContainEqual(expect.objectContaining({ code: "orphaned_metadata_key", path: "leftover" }));
+	});
+});

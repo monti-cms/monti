@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { blogSchema, cloneSchema, type EditableSchema } from "../../../test/blog-schema";
+import { defineSite } from "../..";
 import { ConfigError, type ConfigIssue } from "../../config/check/issue";
+import { createSite } from "../../site";
 import { parseSchemaFile } from "../format";
+import type { SchemaTypes } from "../types";
 
 /** The issues of a schema, for assertions. */
 function problems(edit: (schema: EditableSchema) => void): ConfigIssue[] {
@@ -156,5 +159,100 @@ describe("parseSchemaFile", () => {
 			schema.collections["my.posts"] = { label: "X", kind: "document", fields: { title: { kind: "nope" } } };
 		});
 		expect(issue?.path).toBe('collections["my.posts"].fields.title.kind');
+	});
+});
+
+describe("migrations in the schema file", () => {
+	const issues = (edit: (schema: EditableSchema) => void) => {
+		const schema = cloneSchema();
+		edit(schema);
+		try {
+			parseSchemaFile(schema);
+		} catch (error) {
+			expect(error).toBeInstanceOf(ConfigError);
+			return (error as ConfigError).issues.map((issue) => `${issue.path}: ${issue.message}`);
+		}
+		throw new Error("the schema was accepted");
+	};
+
+	it("SCHEMA-F6 accepts the six transforms", () => {
+		const schema = cloneSchema();
+		schema.migrations = [
+			{ id: "a", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
+			{ id: "b", op: "mapOption", collection: "post", field: "policy", from: "x", to: "normal", note: "merged" },
+			{ id: "c", op: "dropField", collection: "post", field: "legacy" },
+			{ id: "d", op: "setDefault", collection: "post", field: "summary", value: "-" },
+			{ id: "e", op: "dropCollection", collection: "memo", note: "no longer used" },
+			{ id: "f", op: "trashLocale", locale: "ja", note: "translations to the trash" },
+		];
+		const parsed = parseSchemaFile(schema);
+		expect(parsed.migrations).toEqual(schema.migrations);
+	});
+
+	it("SCHEMA-C2 keeps a trashLocale to a language: a collection is not part of it", () => {
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "trashLocale", collection: "post", locale: "ja" }];
+			}),
+		).toEqual(["migrations[0].collection: is not an option (known: id, note, op, locale)"]);
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "trashLocale" }];
+			})[0],
+		).toMatch(/^migrations\[0\]\.locale:/);
+	});
+
+	it("SCHEMA-F6 does not need them: a file without transforms is valid", () => {
+		const parsed = parseSchemaFile(cloneSchema());
+		expect(parsed.migrations).toBeUndefined();
+	});
+
+	it("SCHEMA-F6 names the path of a bad transform", () => {
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "moveField", collection: "post" }];
+			})[0],
+		).toMatch(/^migrations\[0\]\.op: /);
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "dropField", collection: "post", field: "x", extra: 1 }];
+			}),
+		).toEqual(["migrations[0].extra: is not an option (known: id, note, collection, op, field)"]);
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "", op: "dropField", collection: "post", field: "x" }];
+			})[0],
+		).toMatch(/^migrations\[0\]\.id:/);
+	});
+
+	it("SCHEMA-F6 rejects an id used twice", () => {
+		expect(
+			issues((schema) => {
+				schema.migrations = [
+					{ id: "a", op: "dropField", collection: "post", field: "x" },
+					{ id: "a", op: "dropField", collection: "post", field: "y" },
+				];
+			}),
+		).toEqual(['migrations[1].id: "a" is used twice']);
+	});
+});
+
+describe("the title role in the schema file", () => {
+	/** A schema whose posts keep the title in `headline` (`role: "title"`). */
+	const renamed = () => {
+		const schema = cloneSchema();
+		const { title, ...rest } = schema.collections.post.fields;
+		schema.collections.post.fields = { headline: { ...title, role: "title" }, ...rest };
+		schema.collections.post.fields.slug.from = "headline";
+		schema.collections.post.layout = [{ fields: ["headline", "slug", "summary"] }];
+		return schema;
+	};
+
+	it("SCHEMA-S2 is a field role the format reads, and the config built from the file names the title field by it", () => {
+		const file = parseSchemaFile(renamed());
+		expect(file.collections.post?.fields.headline).toMatchObject({ kind: "text", role: "title" });
+		const config = defineSite({ schema: renamed() as SchemaTypes });
+		expect(createSite(config).titleField("post").name).toBe("headline");
+		expect(createSite(config).titleField("tag").name).toBe("title");
 	});
 });

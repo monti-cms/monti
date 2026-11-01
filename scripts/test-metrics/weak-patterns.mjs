@@ -73,7 +73,11 @@ const PATTERNS = [
 	},
 	{ name: "query-selector", why: "finds by CSS selector instead of role and name", regex: /querySelector(?:All)?\(/g },
 	{ name: "test-id", why: "finds by test id instead of role and name", regex: /ByTestId\(/g },
-	{ name: "own-module-mock", why: "replaces a module of the package itself", regex: /vi\.mock\(\s*["']\.\.?\//g },
+	{
+		name: "own-module-mock",
+		why: "replaces a module of the package itself",
+		regex: /vi\.(?:do)?[mM]ock\(\s*["']\.\.?\//g,
+	},
 	{ name: "mock-call-args", why: "reads the arguments of a mock call by position", regex: /\.mock\.calls\[/g },
 	{
 		name: "fetch-stub",
@@ -151,11 +155,10 @@ const EXEMPT = [
 		["packages/core/src/cli/__test__/schema-apply.int.test.ts", 1],
 		["packages/core/src/cli/__test__/schema-extract.int.test.ts", 1],
 		["packages/core/src/cli/__test__/init-helpers.ts", 1],
-		["packages/core/src/schema-edit/__test__/schema-edit.int.test.ts", 1],
-		["packages/core/src/schema-edit/__test__/title-rename.int.test.ts", 1],
+		["packages/core/src/schema-edit/__test__/edit.int.test.ts", 2],
 	].map(([file, count]) => ({ pattern: "source-read", file, count, why: "reads the file the code under test wrote" })),
 	...[
-		["packages/core/src/cli/__test__/init-specs.int.test.ts", 1],
+		["packages/core/src/cli/__test__/init.int.test.ts", 1],
 		["packages/core/src/format/__test__/mdx-boundary.int.test.ts", 2],
 		["packages/admin/src/__test__/mdx-boundary.test.ts", 1],
 	].map(([file, count]) => ({
@@ -220,7 +223,7 @@ const EXEMPT = [
 	},
 	{
 		pattern: "own-module-mock",
-		file: "packages/core/src/adapters/postgres/__test__/lazy-adapter.test.ts",
+		file: "packages/core/src/adapters/postgres/__test__/adapter.test.ts",
 		count: 1,
 		why: "the mock is how the test sees that the module was loaded, which is the behavior under test",
 	},
@@ -273,7 +276,7 @@ const EXEMPT = [
 	},
 	{
 		pattern: "long-wait",
-		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",
+		file: "packages/core/src/adapters/postgres/store/__test__/folders.int.test.ts",
 		count: 1,
 		why: "the upper bound of an `expect.poll`, which returns as soon as the condition holds",
 	},

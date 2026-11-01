@@ -106,7 +106,7 @@ TRASH-P2: 어시스턴트에는 아직 휴지통 도구가 없다. 어시스턴�
 
 - 두 약속: `contract/public-read` "makes classification records (item collections) public too, and excludes them once trashed", `contract/list` "searches one collection only, and never finds the trash", `any-site` "tracks the field value as a media reference: usage, the unused filter and the trash check".
 - 1 글 쓰고 발행: `domain/lifecycle` "a restore never takes a published entry offline…", "restoring a record needs its prepared draft", `admin/editor-store` "refuses a status change while changes are unsaved, except restore", "trashing a translation says to open the original instead…".
-- 그 밖: `admin/lifecycle-confirm` "status transition confirmation text"(보관), `events` "restoring an entry … delivers `restored`"(12 활동 기록), `schema-*`의 휴지통 테스트(4 컬렉션), `admin/safe-delete` "puts the rows back in the folder they came from"(옮기기), `admin/bulk-bar` "keeps export and then the trash in the ⋯, the trash in red…"(모양).
+- 그 밖: `admin/lifecycle-confirm` "status transition confirmation text"(보관), `events` "restoring an entry … delivers `restored`"(12 활동 기록), `store/schema-change.int`의 휴지통 테스트(4 컬렉션), `admin/safe-delete` "puts the rows back in the folder they came from"(옮기기), `admin/bulk-bar` "keeps export and then the trash in the ⋯, the trash in red…"(모양).
 
 ### 변이 테스트 (2026-10-31)
 
