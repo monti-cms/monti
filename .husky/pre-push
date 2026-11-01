@@ -1,7 +1,13 @@
 set -e
 
 # Check only (nothing is fixed). Fix issues with `pnpm lint:fix`, commit, then push.
-# Tests need a DB and take long, so CI (.github/workflows/ci.yml) runs them.
+# The quick checks of CI's first job, so a push does not wait on CI to find them. Tests need a DB and take long, and
+# `check:migrations` needs the base branch that `ci.yml` sets, so CI (.github/workflows/ci.yml) runs those.
 pnpm lint
 pnpm check:korean
+pnpm check:design
+pnpm gen:tokens --check
+pnpm check:messages
+pnpm check:tests
 pnpm typecheck
+pnpm knip
