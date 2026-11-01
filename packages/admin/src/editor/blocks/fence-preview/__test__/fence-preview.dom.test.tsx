@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 const createNodeViewProps = (
-	typeName: "cmsMermaid" | "cmsChart" | "cmsMath",
+	typeName: "cmsDiagram" | "cmsChart" | "cmsMath",
 	value: string,
 	selected = false,
 	updateAttributes = vi.fn(),
@@ -59,10 +59,10 @@ const metaOf = (typeName: string): FenceEditorMeta =>
 				preview: (value) => <MathPreview value={value} />,
 			}
 		: {
-				kind: typeName === "cmsChart" ? "chart" : "mermaid",
+				kind: typeName === "cmsChart" ? "chart" : "diagram",
 				label: typeName === "cmsChart" ? "차트" : "다이어그램",
 				placeholder: "",
-				preview: (value) => <LazyFencePreview lang="mermaid" label="다이어그램" value={value} emptyText="비었음" />,
+				preview: (value) => <LazyFencePreview lang="diagram" label="다이어그램" value={value} emptyText="비었음" />,
 			};
 
 const View = (props: NodeViewProps) => (
@@ -131,7 +131,7 @@ describe("FencePreviewBlockView", () => {
 	});
 
 	it("WRITE-S4 keeps cursor keys and Mod combos in the input, and only save (Mod-s) commits pending input and passes through", () => {
-		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
+		const props = createNodeViewProps("cmsDiagram", "graph TD", true);
 		// The editor around the block stands outside: it must not see the keys the input keeps, and must see save.
 		const outside = vi.fn();
 		renderWithSite(
@@ -162,7 +162,7 @@ describe("FencePreviewBlockView", () => {
 	});
 
 	it("EDIT-B4 commits pending input when it disappears", () => {
-		const props = createNodeViewProps("cmsMermaid", "graph TD", true);
+		const props = createNodeViewProps("cmsDiagram", "graph TD", true);
 		const { unmount } = renderWithSite(<View {...props} />);
 		fireEvent.change(sourceField(), { target: { value: "graph BT" } });
 		unmount();

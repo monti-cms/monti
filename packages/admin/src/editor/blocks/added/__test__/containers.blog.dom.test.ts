@@ -1,3 +1,4 @@
+// Blog only: the subject is the blocks extension's containers (callout, collapsible, tabs, columns, code explorer), which the reference blog installs.
 import type { CmsNode } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { DOMParser as PmDOMParser } from "@tiptap/pm/model";

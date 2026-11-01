@@ -294,7 +294,7 @@ describe("stored document <-> Tiptap round trip", () => {
 			id: "para0001",
 			content: [
 				text("A "),
-				{ type: "text", text: "post", marks: [{ type: "link", attrs: { entryId: id } }] },
+				{ type: "text", text: "an entry", marks: [{ type: "link", attrs: { entryId: id } }] },
 				text(" and site."),
 			],
 		});

@@ -1,12 +1,50 @@
+import { type BlockDefinition, type CmsConfig, defineBlock } from "@monti-cms/core";
+import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
+import { createSite } from "@monti-cms/core/site";
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
-import { testSite } from "../../../../../core/test/site";
-import { anchorIdsOf, codeLink, codeLinkTargetsOf, codeNode, storedDoc, text } from "../../../test/stored-doc";
+import { testConfig } from "../../../../../core/test/site";
+import { anchorIdsOf, codeNode, storedDoc, text } from "../../../test/stored-doc";
 import { duplicateBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 import { findAnchor } from "../link-commands";
+
+/**
+ * The body side of the link is a text decoration whose attribute points at a code line (`codeAnchor`, like the blocks extension's code link). It is
+ * defined here, and stands in for any such decoration the site has, so the test runs on any site config.
+ */
+const lineRef = defineBlock({
+	name: "test-line-ref",
+	label: "Line link",
+	syntax: { kind: "text", directive: "test-line-ref" },
+	component: "TestLineRef",
+	attributes: { to: { type: "string", label: "Line", required: true, codeAnchor: true } },
+	editor: { view: "mark" },
+});
+const pointsAtCode = (block: BlockDefinition) =>
+	Object.values(block.attributes ?? {}).some((attribute) => attribute.codeAnchor === true);
+const site = createSite({
+	...testConfig,
+	blocks: [...(testConfig.blocks ?? []).filter((block) => !pointsAtCode(block)), lineRef],
+} as CmsConfig);
+
+/** A text node linked to the code line labelled `to`. */
+const codeLink = (value: string, to: string): CmsNode => text(value, [{ type: lineRef.name, attrs: { to } }]);
+/** The targets (`to`) of the code links of a document, in document order. */
+const codeLinkTargetsOf = (doc: StoredDocument): string[] => {
+	const targets: string[] = [];
+	const walk = (nodes: readonly CmsNode[]) => {
+		for (const node of nodes) {
+			for (const mark of node.marks ?? [])
+				if (mark.type === lineRef.name && typeof mark.attrs?.to === "string") targets.push(mark.attrs.to);
+			if (node.content) walk(node.content);
+		}
+	};
+	walk(doc.content);
+	return targets;
+};
 
 let editor: Editor | null = null;
 afterEach(() => {
@@ -22,11 +60,11 @@ const SOURCE = storedDoc(
 );
 
 const mount = (doc = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: storedToTiptap(testSite, doc) });
+	editor = new Editor({ extensions: buildEditorExtensions(site), content: storedToTiptap(site, doc) });
 	return editor;
 };
 
-const save = (instance: Editor) => tiptapToStored(testSite, instance.getJSON());
+const save = (instance: Editor) => tiptapToStored(site, instance.getJSON());
 
 /** Position of the n-th code block. */
 const codeBlockAt = (instance: Editor, nth = 0) => {
