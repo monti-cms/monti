@@ -120,3 +120,20 @@ execFileSync("pnpm", ["exec", "playwright", "test", "--config", "flows/playwrigh
 	stdio: "inherit",
 	env: { ...runEnv, MONTI_FLOWS_DATABASE_URL: databaseUrl, MONTI_FLOWS_SCHEMA: SCHEMA },
 });
+
+// A flow can pass while the server logs an error the person never sees in the page (a render that Next refused, then retried), but the site's
+// owner sees it in their terminal and the dev overlay. `next dev` writes its log as JSON lines; any error in it fails the run.
+const serverErrors = apps.flatMap(({ dir }) => {
+	const log = path.join(dir, ".next/dev/logs/next-development.log");
+	if (!existsSync(log)) return [];
+	return readFileSync(log, "utf8")
+		.split("\n")
+		.filter(Boolean)
+		.map((line) => JSON.parse(line))
+		.filter((entry) => entry.level === "ERROR")
+		.map((entry) => `${path.relative(root, dir)}: ${entry.message.split("\n")[0]}`);
+});
+if (serverErrors.length > 0) {
+	console.error(`\nflows: the app logged ${serverErrors.length} error(s):\n${[...new Set(serverErrors)].join("\n")}`);
+	process.exit(1);
+}
