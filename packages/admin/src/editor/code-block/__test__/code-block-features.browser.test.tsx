@@ -1,11 +1,10 @@
 import type { CodeLineEffect, CodeRule } from "@monti-cms/core/code-block";
 import { createSite, type Site, SiteProvider } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { Editor } from "@tiptap/core";
+import { type Editor, isMacOS } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { userEvent } from "vitest/browser";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import { tiptapOf } from "../../../test/mdx";
 import { withoutIds } from "../../../test/stored-doc";
@@ -178,10 +177,14 @@ describe("code block tools turned off in the site config", () => {
 	});
 
 	describe("text style shortcuts", () => {
-		/** ⌘B on a Mac and Ctrl+B elsewhere, as real keys. */
-		const bold = async (editor: Editor) => {
+		/**
+		 * ⌘B on a Mac and Ctrl+B elsewhere, sent to the editor in the page. Real keys (`userEvent.keyboard`) go through Playwright, which looks
+		 * the test frame up by name on every call; once in 20 shuffled full runs it found a frame that had just been detached and failed with
+		 * nothing wrong in the editor. The keymap reads `key` and the modifiers, so a key event on the editor is the same press to it.
+		 */
+		const bold = (editor: Editor) => {
 			act(() => editor.view.focus());
-			await userEvent.keyboard("{ControlOrMeta>}b{/ControlOrMeta}");
+			fireEvent.keyDown(editor.view.dom, { key: "b", ...(isMacOS() ? { metaKey: true } : { ctrlKey: true }) });
 		};
 		const WITH_PARAGRAPH = `${CODE}\n\nbody`;
 
@@ -191,7 +194,7 @@ describe("code block tools turned off in the site config", () => {
 			act(() => {
 				editor.commands.setTextSelection({ from: 2, to: 7 });
 			});
-			await bold(editor);
+			bold(editor);
 			expect(editor.isActive("bold")).toBe(false);
 		});
 
@@ -202,7 +205,7 @@ describe("code block tools turned off in the site config", () => {
 				editor.commands.setTextSelection({ from: 1, to: 5 });
 			});
 			expect(editor.isActive("bold")).toBe(true);
-			await bold(editor);
+			bold(editor);
 			expect(editor.isActive("bold")).toBe(false);
 		});
 	});
