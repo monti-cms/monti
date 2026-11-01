@@ -13,4 +13,3 @@ or {
 } as $m where {
 	register_diagnostic(span=$m, message="An admin API address is built with adminApiUrl or adminFetch, which add the site basePath and the /api/monti prefix: do not write the prefix or CMS_API_PATH by hand.")
 }
-

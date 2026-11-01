@@ -4,9 +4,14 @@
 // name, a call, or an array with a spread or a name in it. (Sample data may have a `tags` field of its own; a string or an object there passes.)
 // `biome.json` applies this to `*.stories.tsx`.
 or {
-	or { `"visual"`, `"no-visual"`, `"visual-allow-clipped"`, `"visual-allow-overflow"` } as $tag where {
+	or {
+		`"visual"`,
+		`"no-visual"`,
+		`"visual-allow-clipped"`,
+		`"visual-allow-overflow"`
+	} as $tag where {
 		or {
-			not $tag <: within `tags: [$_]`,
+			not $tag <: within `tags: [$_]` ,
 			$tag <: within or {
 				JsArrowFunctionExpression(),
 				JsFunctionExpression(),
@@ -17,7 +22,12 @@ or {
 		register_diagnostic(span=$tag, message="Write a visual tag as a string literal in the tags array of the story or its meta: Storybook does not index a tag kept in a constant, spread in or added by a helper.")
 	},
 	`tags: $value` as $pair where {
-		$value <: or { JsIdentifierExpression(), JsCallExpression(), JsStaticMemberExpression(), JsComputedMemberExpression() },
+		$value <: or {
+			JsIdentifierExpression(),
+			JsCallExpression(),
+			JsStaticMemberExpression(),
+			JsComputedMemberExpression()
+		},
 		register_diagnostic(span=$pair, message="A story's tags is an array of string literals: Storybook indexes only the tags written out on the story or its meta.")
 	},
 	`tags: [$elements]` as $pair where {
