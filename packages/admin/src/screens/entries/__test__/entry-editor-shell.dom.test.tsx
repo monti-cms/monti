@@ -522,6 +522,8 @@ describe("entry editor shell", () => {
 
 		fireEvent.click(popup.getByRole("button", { name: startingWith(MDX_ERROR) }));
 		await waitFor(() => expect(editor.state.selection.$from.parent.textContent).toBe("둘째 문단"));
+		// The editor takes focus a frame later (Tiptap's `focus()`); a popup opened before that would lose it to the editor and close.
+		await waitFor(() => expect(editor.isFocused).toBe(true));
 		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 
 		blockId = "zzzzzzzz";
