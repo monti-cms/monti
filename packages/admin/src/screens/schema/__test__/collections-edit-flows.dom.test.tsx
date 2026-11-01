@@ -418,9 +418,12 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 	});
 
 	it("SCHEMA-F2 12 choosing to delete the values turns the apply into 지우고 적용, and choosing keep turns it back", async () => {
-		// How the two buttons look (the red one that deletes) is the visual stories' job; here, which one the sheet offers.
+		// The red of the deleting button is the promise itself (the warning before values are lost), and the visual stories do not run on
+		// every push (#334), so its colour class is checked here too.
+		const applyButton = (name: string) => within(dialog).getByRole("button", { name });
 		const dialog = await review();
 		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
+		expect(applyButton(tReview("review.save")).className).not.toContain("danger");
 
 		await choose(dialog, new RegExp(tReview("choice.erase")));
 		// The subtitle's block says what is lost, with its own count, and that it cannot be undone.
@@ -428,6 +431,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 			tReview("note.erased", { count: tReview("count.entries", { count: 132, kind: "document" }) }),
 		);
 		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("drop.apply")]);
+		expect(applyButton(tReview("drop.apply")).className).toContain("bg-monti-danger-emphasis");
 
 		await choose(dialog, new RegExp(tReview("choice.keep")));
 		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);

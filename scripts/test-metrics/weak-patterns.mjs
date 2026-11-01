@@ -165,6 +165,12 @@ const EXEMPT = [
 		why: "reads a published package.json (peers, exports)",
 	})),
 	{
+		pattern: "class-name",
+		file: "packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		count: 2,
+		why: "SCHEMA-F2 promises a red apply button before values are deleted; the visual stories do not run on every push (#334)",
+	},
+	{
 		pattern: "fetch-stub",
 		file: "packages/admin/src/test/fake-api.ts",
 		count: 1,
