@@ -1868,3 +1868,29 @@ API 키 저장(🔴 KEY-A1~A3)의 7개만 남기고 나머지를 지웠다. 다�
 | 테스트 | 판정 | 이유 |
 |---|---|---|
 | a response without `issues` is an error | 작음 | 잘못된 응답의 드문 경우 |
+
+## #378 도구로 옮김
+
+소스를 글자로 읽거나 브라우저를 흉내 내던 테스트를 도구나 낮은 층의 테스트로 옮기고 지웠다(#393, #394, #395와 admin 규칙 PR). 판정이 아니라
+"그 규칙을 이제 무엇이 지키나"가 이유라 파일마다 적는다. 옮길 때마다 일부러 어긴 코드로 새 도구가 실패하는 것을 확인했다.
+
+| 파일 | 지운 테스트 | 이제 지키는 것 |
+|---|---|---|
+| `admin/src/__test__/no-framework-imports.test.ts` | 2 | `biome.json`의 `noRestrictedImports`(관리자 소스에서 `next/*`, `next-auth`, `@monti-cms/nextjs`) |
+| `admin/src/__test__/mdx-boundary.test.ts` | 2 | 같은 규칙(MDX 파서). FMT-P1의 매니페스트 테스트는 남았다 |
+| `admin/src/screens/__test__/api-urls.test.ts` | 1 | `biome-plugins/admin-api-url.grit`(손으로 쓴 `/api/monti` 주소). 옛 테스트는 `/api/cms`를 찾아 늘 통과했다 |
+| `admin/src/__test__/screens-use-components.test.ts` | 4 | `check:design`(`drawing-only`, 화면의 `className`/`style`) |
+| `admin/src/__test__/design-system.test.ts` | 3 | `check:design`(`app-color`, `off-system`) |
+| `admin/src/__test__/css-confinement.test.ts` | 7 | `check:design`(`theme-names`)와 `pnpm gen:tokens`(글자 대비 4.5:1, 역할을 한 번만 적기). 배포 CSS를 보는 ADMIN-H1은 남았다 |
+| `admin/src/__test__/plugin-shape.test.ts` | 1 | `plugins.ts`의 `satisfies AdminPluginShape`(타입 검사) |
+| `admin/src/__test__/server-safe-root.test.ts` | 2 | `entry-loading.test.ts`(ADMIN-H4): 루트를 `react-server` 조건으로 실제로 불러 본다 |
+| `admin/src/hooks/__test__/import-graph.test.ts` | 4 | 같은 파일이 편집기 훅을 불러 본다 |
+| `admin/src/__test__/messages.test.ts`, `blocks/…/messages.test.ts`, `seo/…/messages.test.ts` | 3 | `pnpm check:messages`(파일 이름, 두 언어의 같은 키, 쓰이지 않는 키) |
+| `ui/src/__test__/tokens.test.ts` | 1 | `pnpm gen:tokens --check`(UI-T2, 층 `CI`) |
+| `ui/src/__test__/visual-setup.test.ts` | 1 | `biome-plugins/story-visual-tags.grit`(UI-T4, 층 `CI`) |
+| `ui/src/__test__/visual-checks.test.ts` | 7 | 잰 값을 받는 판단 함수의 L1 테스트와 검사마다 하나인 브라우저 테스트(UI-T5~T8). 스텁이 사라졌다 |
+| `core/src/render/__test__/render-css.int.test.ts` | 3 | `render-css.browser.test.ts`: 계산된 스타일로 본다 |
+| `core/…/postgres/__test__/database-types.int.test.ts` | 8 | `pnpm gen:db-types --check`(CI) |
+| `core/…/postgres/__test__/migrations.int.test.ts` | 1 | `pnpm check:migrations`(CI): 단계 파일의 이름 바꾸기와 지우기 |
+| `core/…/postgres/__test__/store-contract-files.int.test.ts` | 1 | `store-contract.int.test.ts` 하나가 폴더의 계약 묶음을 모두 돌린다 |
+| `admin/src/editor/__test__/image-node-view.dom.test.tsx` 외 화면 테스트 | 2 | 판단을 함수로 뽑은 L1 테스트(#393). 나머지 여섯은 같은 제목으로 L1 파일에 옮겨 위 셈에 들지 않는다 |
