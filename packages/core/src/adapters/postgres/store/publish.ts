@@ -332,13 +332,15 @@ export function createPublishing(ctx: StoreContext) {
 	};
 
 	/**
-	 * Locks the targets the draft points at. A trashed target cannot be newly referenced. Returns the references a draft stores: one whose target does
+	 * Locks the targets the draft points at. A trashed target cannot be newly referenced: a relation the draft already had (`kept`, the stored
+	 * references before this save) stays, so trashing a tag the posts use (TRASH-T9) does not stop those posts from being saved. Returns the references a draft stores: one whose target does
 	 * not exist and is only a link in a body (a link to an entry that is gone) is not stored, because the index cannot point at nothing; the publish check still sees it
 	 * (it works from the prepared snapshot). A relation to a missing entry is still refused by the foreign key and blocks publishing it.
 	 */
 	const lockDraftReferenceTargets = async (
 		client: PoolClient,
 		references: readonly Reference[],
+		kept: readonly Reference[] = [],
 	): Promise<readonly Reference[]> => {
 		const ids = Array.from(
 			new Set(references.filter((ref) => ref.kind !== "media" && isUuid(ref.targetId)).map((ref) => ref.targetId)),
@@ -355,7 +357,9 @@ export function createPublishing(ctx: StoreContext) {
 			: [];
 		// A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it warns, as an unpublished link.
 		const trashed = new Set(rows.filter((row) => row.status === "trashed").map((row) => row.id));
-		if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
+		const isRelation = (ref: Reference) => ref.occurrences.some((o) => o.type !== "body");
+		const keptRelations = new Set(kept.filter(isRelation).map((ref) => ref.targetId));
+		if (references.some((ref) => trashed.has(ref.targetId) && isRelation(ref) && !keptRelations.has(ref.targetId))) {
 			throw new CmsError("Cannot reference a trashed entry", "invalid_reference", {
 				notice: { key: "entry.reference.trashed" },
 			});

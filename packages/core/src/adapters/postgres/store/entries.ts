@@ -220,7 +220,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					);
 					const folderChanged = params.folderId !== undefined;
 
-					const references = await lockDraftReferenceTargets(client, params.references);
+					const references = await lockDraftReferenceTargets(client, params.references, currentRefs);
 					const refsEqual = isReferencesEqual(currentRefs, references);
 
 					let version = locked.version;
