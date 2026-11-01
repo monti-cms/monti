@@ -44,7 +44,6 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 		});
 
 		describe("documents", () => {
-
 			it("PLUG-D1 creates an item at version 1 and reads back the same JSON value", async () => {
 				const settings = storage.collection<{ endpoint: string; tags: string[]; nested: { on: boolean; none: null } }>(
 					"settings",
@@ -178,7 +177,6 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				}
 				expect(await items.get("k")).toBeNull();
 			});
-
 		});
 
 		describe("the migration hook", () => {
