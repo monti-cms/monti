@@ -17,6 +17,8 @@ export type ImportReasonCode =
 	| "no_title"
 	| "slug_exists"
 	| "slug_repeated"
+	| "slug_invalid"
+	| "slug_too_long"
 	| "locale_unknown"
 	| "locale_not_default"
 	| "source_missing"

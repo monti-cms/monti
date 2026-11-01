@@ -14,6 +14,8 @@ export const importMessages = defineMessages("cms.core.import", {
 		slug_exists: ({ slug }) => `An entry with the address ${slug} already exists here, so this one is not imported.`,
 		slug_repeated: ({ slug }) =>
 			`Another entry of the archive has the address ${slug} in the same collection and language.`,
+		slug_invalid: ({ slug }) => `The address ${slug} has a character an address cannot use (/, ? or #).`,
+		slug_too_long: ({ max }) => `The address is longer than ${max} characters.`,
 		locale_unknown: ({ locale }) => `The language ${locale} isn't set up on this site.`,
 		locale_not_default: ({ locale }) =>
 			`It is written in ${locale}, but a new entry starts in the site's default language. Its translations are skipped too.`,
@@ -40,6 +42,8 @@ export const importMessages = defineMessages("cms.core.import", {
 		no_title: "제목도 주소도 없어요.",
 		slug_exists: ({ slug }) => `주소가 ${slug}인 글이 이미 있어서 가져오지 않아요.`,
 		slug_repeated: ({ slug }) => `보관 파일의 다른 글이 같은 컬렉션과 언어에서 같은 주소(${slug})를 써요.`,
+		slug_invalid: ({ slug }) => `주소 ${slug}에 주소에 쓸 수 없는 글자(/, ?, #)가 있어요.`,
+		slug_too_long: ({ max }) => `주소가 ${max}자보다 길어요.`,
 		locale_unknown: ({ locale }) => `이 사이트에 설정되지 않은 언어(${locale})예요.`,
 		locale_not_default: ({ locale }) =>
 			`${locale}로 쓰인 글이지만 새 글은 사이트의 기본 언어로 시작해요. 이 글의 번역도 함께 건너뛰어요.`,

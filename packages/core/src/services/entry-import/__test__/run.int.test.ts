@@ -54,8 +54,7 @@ describe("runImport", () => {
 		const planned = await planOf([
 			sourceEntry("broken-body", { published: true }),
 			sourceEntry("broken-draft"),
-			// An address the store does not take (`?` is not allowed in a slug).
-			sourceEntry("bad-slug", { slug: "what?", published: true }),
+			sourceEntry("bad-slug", { published: true }),
 			sourceEntry("fine", {
 				published: true,
 				body: { kind: "text", format: "paragraphs", text: "See [the other note](/notes/other)" },
@@ -67,9 +66,12 @@ describe("runImport", () => {
 		const unsaveable = doc({ type: "image", attrs: { mediaId: "77777777-7777-4777-8777-777777777777", alt: "" } });
 		const plan: ImportPlan = {
 			...planned,
-			entries: planned.entries.map((entry) =>
-				entry.source.key.startsWith("broken-") ? { ...entry, doc: unsaveable } : entry,
-			),
+			entries: planned.entries.map((entry) => {
+				if (entry.source.key.startsWith("broken-")) return { ...entry, doc: unsaveable };
+				// A create the store refuses: an address it does not take (`?`). The plan refuses one, so it is set after the plan.
+				if (entry.source.key === "bad-slug") return { ...entry, slug: "what?" };
+				return entry;
+			}),
 		};
 		const results = await resultsOf(plan, true);
 

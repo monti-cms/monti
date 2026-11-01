@@ -107,6 +107,20 @@ describe("planImport", () => {
 		});
 	});
 
+	it("DATA-I1 skips an entry whose address the write would refuse, says why, and checks the address as it would be stored", async () => {
+		const entries = await byKey([
+			sourceEntry("question", { slug: "what?" }),
+			sourceEntry("path", { slug: "a/b" }),
+			sourceEntry("long", { slug: "x".repeat(201) }),
+			sourceEntry("padded", { slug: " taken " }),
+		]);
+		expect(entries.question?.skip).toEqual({ code: "slug_invalid", params: { slug: "what?" } });
+		expect(entries.path?.skip).toEqual({ code: "slug_invalid", params: { slug: "a/b" } });
+		expect(entries.long?.skip).toEqual({ code: "slug_too_long", params: { max: 200 } });
+		// Stored trimmed, so it is the address another entry already has.
+		expect(entries.padded?.skip).toEqual({ code: "slug_exists", params: { slug: "taken" } });
+	});
+
 	it("DATA-I17 reads the title under the target's title field, then under title or name, and else takes the slug and says so", async () => {
 		const entries = await byKey(
 			[

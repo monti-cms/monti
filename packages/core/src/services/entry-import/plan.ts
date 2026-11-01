@@ -1,4 +1,5 @@
 import { isUuid } from "../../core/ids";
+import { MAX_SLUG_LENGTH, normalizeSlugInput } from "../../core/slug";
 import { entryLinkIds } from "../../doc/entry-links";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
@@ -205,8 +206,17 @@ export async function planImport(
 		if (!found && !entry.slug) return skipped(entry, { code: "no_title" }, target);
 		const title = found?.title ?? (entry.slug as string);
 		if (!found) notes.push({ code: "title_from_slug" });
-		// A translation without a slug of its own takes its source's.
-		const slug = entry.slug ?? sourceOf?.slug ?? null;
+		// A translation without a slug of its own takes its source's. The slug is the one the write will store, so the preview refuses what the write would.
+		const normalized = normalizeSlugInput(entry.slug ?? sourceOf?.slug ?? null);
+		if ("error" in normalized)
+			return skipped(
+				entry,
+				normalized.error === "slug_too_long"
+					? { code: "slug_too_long", params: { max: MAX_SLUG_LENGTH } }
+					: { code: "slug_invalid", params: { slug: entry.slug ?? "" } },
+				target,
+			);
+		const slug = normalized.slug;
 		if (slug) {
 			const conflict = await slugCheck(target, entry.locale, slug);
 			if (conflict) return skipped(entry, conflict, target);
