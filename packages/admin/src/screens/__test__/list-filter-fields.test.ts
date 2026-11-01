@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { testSite } from "../../../../core/test/site";
 import {
 	filterFieldOf,
 	filterFieldsOf,
@@ -9,41 +8,44 @@ import {
 	toggleCondition,
 	writeCondition,
 } from "../list-filter-fields";
+import { listSite } from "./list-site";
+
+const site = listSite();
 
 describe("the fields the filter menu offers", () => {
 	it("LIST-F2 are the stored text, media, select and relation fields in schema order, without the title", () => {
-		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
-		expect(names.slice(0, 5)).toEqual(["summary", "categoryId", "tagIds", "policy", "replacementPostId"]);
-		expect(names).not.toContain("title");
+		const names = filterFieldsOf(site, "story").map((field) => field.name);
+		expect(names).toEqual(["lede", "deskId", "labelIds", "state", "successorId", "cover"]);
 	});
 
 	it("LIST-F2 leave out an address and a reverse relation, which have no filter", () => {
-		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
+		const names = filterFieldsOf(site, "story").map((field) => field.name);
 		expect(names).not.toContain("slug");
-		expect(names).not.toContain("series");
+		expect(names).not.toContain("shelves");
 	});
 
 	it("LIST-F2 carry the label, the kind, the options of a select and the target of a relation", () => {
-		expect(filterFieldOf(testSite, "post", "summary")).toMatchObject({ label: "요약", kind: "text" });
-		expect(filterFieldOf(testSite, "post", "tagIds")).toMatchObject({ label: "태그", kind: "relation", to: "tag" });
-		expect(filterFieldOf(testSite, "post", "policy")).toMatchObject({
+		expect(filterFieldOf(site, "story", "lede")).toMatchObject({ label: "Lede", kind: "text" });
+		expect(filterFieldOf(site, "story", "cover")).toMatchObject({ label: "Cover", kind: "media" });
+		expect(filterFieldOf(site, "story", "labelIds")).toMatchObject({ label: "Labels", kind: "relation", to: "label" });
+		expect(filterFieldOf(site, "story", "state")).toMatchObject({
 			kind: "select",
 			options: [
-				{ value: "normal", label: "일반" },
-				{ value: "evergreen", label: "항상 최신 글" },
-				{ value: "deprecated", label: "지원 중단" },
+				{ value: "live", label: "Live" },
+				{ value: "stale", label: "Stale" },
+				{ value: "gone", label: "Gone" },
 			],
 		});
 	});
 
 	it("LIST-F2 follow the kind inside a conditional field, which comes right after its choice", () => {
-		const names = filterFieldsOf(testSite, "post").map((field) => field.name);
-		expect(names.indexOf("replacementPostId")).toBe(names.indexOf("policy") + 1);
-		expect(filterFieldOf(testSite, "post", "replacementPostId")).toMatchObject({ kind: "relation", to: "post" });
+		const names = filterFieldsOf(site, "story").map((field) => field.name);
+		expect(names.indexOf("successorId")).toBe(names.indexOf("state") + 1);
+		expect(filterFieldOf(site, "story", "successorId")).toMatchObject({ kind: "relation", to: "story" });
 	});
 
 	it("LIST-F2 are none for what is not a collection", () => {
-		expect(filterFieldsOf(testSite, "nope")).toEqual([]);
+		expect(filterFieldsOf(site, "nope")).toEqual([]);
 	});
 });
 
@@ -72,21 +74,21 @@ describe("conditions on a field", () => {
 
 	it("LIST-F5 are written and read as the address and the API write them", () => {
 		for (const [name, condition, raw] of [
-			["tagIds", { kind: "empty" }, "tagIds:empty"],
-			["summary", { kind: "filled" }, "summary:filled"],
-			["policy", { kind: "is", value: "a:b" }, "policy:is:a:b"],
+			["labelIds", { kind: "empty" }, "labelIds:empty"],
+			["lede", { kind: "filled" }, "lede:filled"],
+			["state", { kind: "is", value: "a:b" }, "state:is:a:b"],
 		] as const) {
 			expect(writeCondition(name, condition)).toBe(raw);
 			expect(readCondition(raw)).toEqual({ name, condition });
 		}
 		for (const raw of [
 			"",
-			"tagIds",
-			"tagIds:",
-			"tagIds:maybe",
-			"tagIds:is",
-			"tagIds:is:",
-			"tagIds:empty:x",
+			"labelIds",
+			"labelIds:",
+			"labelIds:maybe",
+			"labelIds:is",
+			"labelIds:is:",
+			"labelIds:empty:x",
 			":empty",
 		]) {
 			expect(readCondition(raw), raw).toBeNull();

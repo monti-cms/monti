@@ -1,6 +1,7 @@
 import type { FolderContents, FolderListItem, FolderTrashResult, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import { type FakeApi, failure, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
@@ -23,11 +24,12 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 const ts = testSite.createTranslator(screensMessages);
 const tf = testSite.createTranslator(sharedMessages);
 const td = testSite.createTranslator(deleteMessages);
-const postsLabel = testSite.COLLECTION_DEFINITIONS.post.label;
+const content = contentCollection;
+const collectionLabel = testSite.COLLECTION_DEFINITIONS[content].label;
 
 const folder = (id: string, name: string, parentId: string | null = null, version = 1): FolderListItem => ({
 	id,
-	collection: "post",
+	collection: content,
 	parentId,
 	name,
 	position: 0,
@@ -37,8 +39,8 @@ const folder = (id: string, name: string, parentId: string | null = null, versio
 
 const item = (id: string, folderId: string | null = null): ListEntriesItem => ({
 	id,
-	collection: "post",
-	locale: "ko",
+	collection: content,
+	locale: defaultLocale,
 	translationGroupId: id,
 	title: id,
 	slug: id,
@@ -74,7 +76,7 @@ const lastEntryQuery = () => entryQueries().at(-1) as URLSearchParams;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	nav = createTestRouter({ search: "collection=post" });
+	nav = createTestRouter({ search: `collection=${content}` });
 	server.posts = [item("가"), item("나")];
 	server.folders = [NEWS, SERIES];
 	server.contents = { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 };
@@ -125,7 +127,7 @@ beforeEach(() => {
 			};
 		})
 		.on("GET /v1/entries", ({ query }) => {
-			const items = query.get("collection") === "post" ? server.posts : [];
+			const items = query.get("collection") === content ? server.posts : [];
 			return { items, total: items.length };
 		})
 		.install();
@@ -175,7 +177,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			press(nameField(), "Enter");
 
 			await waitFor(() => expect(api.sent("POST /v1/folders")).toHaveLength(1));
-			expect(api.sent("POST /v1/folders")[0]?.body).toEqual({ collection: "post", name: "원고", parentId: null });
+			expect(api.sent("POST /v1/folders")[0]?.body).toEqual({ collection: content, name: "원고", parentId: null });
 			await waitFor(() => expect(screen.queryByRole("textbox", NAME_FIELD)).toBeNull());
 			// Focus is on the new folder, and no notice repeats what the row shows.
 			await waitFor(() => expect(document.activeElement).toBe(folderLink("원고")));
@@ -193,7 +195,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 		});
 
 		it("LIST-F6 adds the folder inside the folder being viewed", async () => {
-			nav.setSearch("collection=post&folder=f1");
+			nav.setSearch(`collection=${content}&folder=f1`);
 			await renderList();
 			pressAddFolder();
 			press(nameField(), "Enter");
@@ -205,22 +207,22 @@ describe("flow: folders in the list (steps 01–06)", () => {
 
 	describe("step 02: inside a folder, a path and the way up", () => {
 		it("LIST-F6 shows every folder on the way in the path, each a way back", async () => {
-			nav.setSearch("collection=post&folder=f2");
+			nav.setSearch(`collection=${content}&folder=f2`);
 			await renderList();
 
-			expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("연재");
+			expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(SERIES.name);
 			const path = screen.getByRole("navigation", { name: ts("list.trail") });
 			expect(
 				within(path)
 					.getAllByRole("button")
 					.map((entry) => entry.textContent),
-			).toEqual([postsLabel, "뉴스"]);
-			fireEvent.click(within(path).getByRole("button", { name: "뉴스" }));
+			).toEqual([collectionLabel, NEWS.name]);
+			fireEvent.click(within(path).getByRole("button", { name: NEWS.name }));
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.stringContaining("folder=f1"), expect.anything());
 		});
 
 		it("LIST-F6 goes up one folder from the 상위 폴더로 row", async () => {
-			nav.setSearch("collection=post&folder=f2");
+			nav.setSearch(`collection=${content}&folder=f2`);
 			await renderList();
 			fireEvent.click(screen.getByRole("button", { name: ts("list.folderUp") }));
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.stringContaining("folder=f1"), expect.anything());
@@ -231,14 +233,14 @@ describe("flow: folders in the list (steps 01–06)", () => {
 
 		it("LIST-F6 opens a folder from its row", async () => {
 			await renderList();
-			fireEvent.click(folderLink("뉴스"));
+			fireEvent.click(folderLink(NEWS.name));
 			expect(nav.replace).toHaveBeenLastCalledWith(expect.stringContaining("folder=f1"), expect.anything());
 		});
 	});
 
 	describe("step 03: a search inside a folder looks here, and can widen to all folders", () => {
 		it("LIST-F6 widens to every folder, asks the server for no folder, and keeps the words", async () => {
-			nav.setSearch("collection=post&folder=f1&search=저장소");
+			nav.setSearch(`collection=${content}&folder=f1&search=저장소`);
 			await renderList();
 			fireEvent.click(scopeButton(ts("toolbar.scopeAll")));
 
@@ -249,14 +251,14 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(scopeButton(ts("toolbar.scopeAll")).getAttribute("aria-pressed")).toBe("true");
 
 			// And back to the folder.
-			fireEvent.click(scopeButton("뉴스"));
+			fireEvent.click(scopeButton(NEWS.name));
 			expect(nav.search.get("scope")).toBeNull();
 			await waitFor(() => expect(lastEntryQuery().get("folderId")).toBe("f1"));
 		});
 	});
 
 	describe("steps 04–06: the folder row's menu, rename in place, delete", () => {
-		const openMenu = async () => contextMenu(folderRow(/뉴스/));
+		const openMenu = async () => contextMenu(folderRow(new RegExp(NEWS.name)));
 
 		it("LIST-F6 renames in place: the name becomes a selected field, Enter sends the new name with the version", async () => {
 			await renderList();
@@ -266,7 +268,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			const field = await screen.findByRole("textbox", NAME_FIELD);
 			expect(document.activeElement).toBe(field);
 			const input = field as HTMLInputElement;
-			expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(["뉴스", 0, 2]);
+			expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([NEWS.name, 0, NEWS.name.length]);
 			expect(screen.queryByRole("dialog")).toBeNull();
 
 			type(field, "속보");
@@ -285,7 +287,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			fireEvent.click(menuItem(items, td("folder.menu.move")));
 			const labels = (await screen.findAllByRole("menuitem")).map((entry) => entry.textContent);
 			expect(labels).toContain("기록");
-			expect(labels).not.toContain("연재");
+			expect(labels).not.toContain(SERIES.name);
 		});
 	});
 
@@ -314,7 +316,7 @@ describe("flow: folders in the list (steps 01–06)", () => {
 		};
 
 		it("LIST-F6 returns to the folder it was in when it was a subfolder", async () => {
-			nav.setSearch("collection=post&folder=f2");
+			nav.setSearch(`collection=${content}&folder=f2`);
 			await renderProbe();
 			fireEvent.click(screen.getByRole("button", { name: "delete viewed" }));
 			await waitFor(() => expect(screen.getByLabelText("viewing").textContent).toBe("f1"));

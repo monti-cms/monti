@@ -1,6 +1,7 @@
 import type { ListEntriesItem, PreferencesBody } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import type { EntrySearchResponse, ListCountsResponse } from "../../api/entries";
 import { type FakeApi, fakeApi } from "../../test/fake-api";
@@ -28,10 +29,20 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 const t = testSite.createTranslator(screensMessages);
 const statusName = (status: "draft" | "published" | "archived") => statusLabels(testSite)[status];
 
+const content = contentCollection;
+/** A relation field of the collection that holds several items, which the bar and the row menu tick on and off. */
+const many = (() => {
+	const found = testSite
+		.storedFields(content)
+		.find(({ field, when }) => field.kind === "relation" && field.many === true && !when);
+	if (!found) throw new Error(`${content} has no relation field that holds several items`);
+	return { name: found.name, label: found.field.label };
+})();
+
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
-	collection: "post",
-	locale: "ko",
+	collection: content,
+	locale: defaultLocale,
 	translationGroupId: id,
 	title: id,
 	slug: id,
@@ -48,9 +59,12 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	...fields,
 });
 
+/** The items the relation field can hold, by their titles. */
+const REACT = "리액트";
+const NEXT = "넥스트";
 const TAGS: EntrySearchResponse["items"] = [
-	{ id: "t-react", title: "리액트", slug: "react", status: "published" },
-	{ id: "t-next", title: "넥스트", slug: "next", status: "published" },
+	{ id: "t-react", title: REACT, slug: "react", status: "published" },
+	{ id: "t-next", title: NEXT, slug: "next", status: "published" },
 ];
 
 const server = {
@@ -63,12 +77,12 @@ let api: FakeApi;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	nav.setSearch("collection=post");
+	nav.setSearch(`collection=${content}`);
 	server.posts = [item("가"), item("나"), item("다")];
 	server.total = undefined;
 	server.preferences = {};
 	server.counts = {
-		tagIds: { total: 3, empty: 1, values: { "t-react": 2, "t-next": 0 } },
+		[many.name]: { total: 3, empty: 1, values: { "t-react": 2, "t-next": 0 } },
 		translation: { total: 3, values: { none: 1, changed: 1, current: 1 } },
 		status: { total: 148, values: { published: 101, editing: 3, draft: 41, archived: 3 } },
 	};
@@ -115,7 +129,7 @@ beforeEach(() => {
 			};
 		})
 		.on("GET /v1/entries", ({ query }) => {
-			const items = query.get("collection") === "post" ? server.posts : [];
+			const items = query.get("collection") === content ? server.posts : [];
 			return { items, total: server.total ?? items.length };
 		})
 		.install();
@@ -129,7 +143,7 @@ const listRequests = () =>
 	api
 		.sent("GET /v1/entries")
 		.filter(
-			(request) => request.query.get("collection") === "post" && !request.query.getAll("status").includes("trashed"),
+			(request) => request.query.get("collection") === content && !request.query.getAll("status").includes("trashed"),
 		);
 const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
 
@@ -156,6 +170,8 @@ const closeMenu = async () => {
 	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 	await menuClosed();
 };
+/** A name that starts with `text` (a count may follow it). */
+const startsWith = (text: string) => (name: string) => name.startsWith(text);
 /** A value of the open menu, by the start of its name (the count follows it). */
 const valueBox = (label: string) => screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${label}`) });
 
@@ -184,13 +200,13 @@ describe("flow: filter by value", () => {
 
 	it("LIST-F7 narrows the items of a relation to what the search row types", async () => {
 		await renderList();
-		openColumn("태그");
-		await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ });
-		fireEvent.change(await screen.findByRole("textbox", { name: t("listMenu.valueSearch", { label: "태그" }) }), {
-			target: { value: "넥" },
+		openColumn(many.label);
+		await screen.findByRole("menuitemcheckbox", { name: startsWith(NEXT) });
+		fireEvent.change(await screen.findByRole("textbox", { name: t("listMenu.valueSearch", { label: many.label }) }), {
+			target: { value: NEXT.slice(0, 1) },
 		});
-		await waitFor(() => expect(screen.queryByRole("menuitemcheckbox", { name: /^리액트/ })).toBeNull());
-		expect(screen.getByRole("menuitemcheckbox", { name: /^넥스트/ })).toBeInTheDocument();
+		await waitFor(() => expect(screen.queryByRole("menuitemcheckbox", { name: startsWith(REACT) })).toBeNull());
+		expect(screen.getByRole("menuitemcheckbox", { name: startsWith(NEXT) })).toBeInTheDocument();
 	});
 });
 
@@ -220,14 +236,14 @@ describe("flow: filter by date", () => {
 
 describe("flow: pick rows and act", () => {
 	it("LIST-C5 picks every row of the page with the select-all, and lets go with 'clear selection', which brings the column names back", async () => {
-		nav.setSearch("collection=post&status=draft");
+		nav.setSearch(`collection=${content}&status=draft`);
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
 		await screen.findByRole("toolbar");
 		expect(screen.getByRole("checkbox", { name: t("list.selectAll") }).getAttribute("aria-checked")).toBe("true");
 		fireEvent.click(
 			screen.getByRole("button", {
-				name: testSite.createTranslator((await import("../entries/bulk-bar.messages")).bulkBarMessages)("clear"),
+				name: tBulkBar("clear"),
 			}),
 		);
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
@@ -244,7 +260,7 @@ describe("flow: pick rows and act", () => {
 
 describe("flow: change the relations of the picked rows", () => {
 	const tagged = (...ids: string[]) => ({
-		tagIds: ids.map((id) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id })),
+		[many.name]: ids.map((id) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id })),
 	});
 	const bulkCalls = () => api.sent("POST /v1/bulk").map((request) => request.body);
 	const pickTwo = async () => {
@@ -259,20 +275,20 @@ describe("flow: change the relations of the picked rows", () => {
 		await screen.findByRole("toolbar");
 	};
 
-	it("LIST-C4 adds a tag some picked rows hold to all of them from 바꾸기, keeps the rows picked and the menu open, and the box turns on", async () => {
+	it("LIST-C4 adds an item some picked rows hold to all of them from the change menu, keeps the rows picked and the menu open, and the box turns on", async () => {
 		await pickTwo();
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
-		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
-		const next = await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ });
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: many.label }), { key: "ArrowRight" });
+		const next = await screen.findByRole("menuitemcheckbox", { name: startsWith(NEXT) });
 		expect(next.getAttribute("aria-checked")).toBe("mixed");
 		fireEvent.click(next);
 		await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-		expect(bulkCalls()[0]).toMatchObject({ op: "relation.add", field: "tagIds", ids: ["t-next"] });
+		expect(bulkCalls()[0]).toMatchObject({ op: "relation.add", field: many.name, ids: ["t-next"] });
 		expect(bulkCalls()[0].items).toHaveLength(2);
 		await waitFor(async () =>
-			expect((await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ })).getAttribute("aria-checked")).toBe(
-				"true",
-			),
+			expect(
+				(await screen.findByRole("menuitemcheckbox", { name: startsWith(NEXT) })).getAttribute("aria-checked"),
+			).toBe("true"),
 		);
 		// Still picked, still open: the next tick changes the same two rows.
 		expect(screen.getByRole("toolbar")).toBeInTheDocument();
@@ -288,8 +304,8 @@ describe("flow: change the relations of the picked rows", () => {
 			],
 		}));
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
-		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ }));
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: many.label }), { key: "ArrowRight" });
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: startsWith(NEXT) }));
 		const reason = describeBulkFailure(testSite, { id: "가", ok: false, error: "conflict" });
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining(reason)));
 	});
@@ -297,8 +313,8 @@ describe("flow: change the relations of the picked rows", () => {
 	it("LIST-C4 opens a field from the right-click menu of several picked rows, with what the picked rows hold", async () => {
 		await pickTwo();
 		fireEvent.contextMenu(screen.getByRole("row", { name: /가/ }));
-		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
-		expect((await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ })).getAttribute("aria-checked")).toBe(
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: many.label }), { key: "ArrowRight" });
+		expect((await screen.findByRole("menuitemcheckbox", { name: startsWith(NEXT) })).getAttribute("aria-checked")).toBe(
 			"mixed",
 		);
 	});

@@ -2,6 +2,7 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import type { FolderListItem, ListEntriesItem, PreferencesBody } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale, recordCollection } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import type { BulkItemResult, EntriesPage } from "../../api/entries";
 import { commonMessages } from "../../lib/common.messages";
@@ -17,6 +18,8 @@ import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
 
 const tCommon = testSite.createTranslator(commonMessages);
+const content = contentCollection;
+const record = recordCollection;
 const tDelete = testSite.createTranslator(deleteMessages);
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
@@ -29,8 +32,8 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
-	collection: "post",
-	locale: "ko",
+	collection: content,
+	locale: defaultLocale,
 	translationGroupId: id,
 	title: id,
 	slug: id,
@@ -48,9 +51,9 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 });
 const folder: FolderListItem = {
 	id: "f1",
-	collection: "post",
+	collection: content,
 	parentId: null,
-	name: "뉴스",
+	name: "News desk",
 	position: 0,
 	version: 1,
 	entryCount: 0,
@@ -68,7 +71,7 @@ let api: FakeApi;
 const listAnswer = ({ query }: SentRequest): EntriesPage => {
 	const collection = query.get("collection");
 	const trash = query.getAll("status").includes("trashed");
-	const items = collection !== "post" ? [] : trash ? server.trashed : server.posts;
+	const items = collection !== content ? [] : trash ? server.trashed : server.posts;
 	return { items, total: items.length };
 };
 /** The requests for the trash: the same list, asked for the trashed status. */
@@ -78,12 +81,12 @@ const _trashRequests = () =>
 		.map((request) => request.query)
 		.filter(
 			(query) =>
-				query.get("collection") === "post" && query.getAll("status").includes("trashed") && query.has("sortField"),
+				query.get("collection") === content && query.getAll("status").includes("trashed") && query.has("sortField"),
 		);
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	nav.setSearch("collection=post");
+	nav.setSearch(`collection=${content}`);
 	server.posts = [item("가"), item("나"), item("다")];
 	server.trashed = [];
 	server.folders = [];
@@ -199,25 +202,25 @@ describe("list screen — row menu and bulk actions", () => {
 		expect(screen.getByRole("row", { name: /가/ })).toBeInTheDocument();
 	});
 
-	it("LIST-F6 adding a post creates it in the current folder", async () => {
-		nav.setSearch("collection=post&folder=f1");
+	it("LIST-F6 adding an entry creates it in the current folder", async () => {
+		nav.setSearch(`collection=${content}&folder=f1`);
 		server.folders = [folder];
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
 		fireEvent.click(screen.getByRole("button", { name: _t("list.writeNew") }));
 
-		expect(nav.navigate).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
+		expect(nav.navigate).toHaveBeenCalledWith(testSite.adminHref(`/entries/new?collection=${content}&folder=f1`));
 	});
 });
 
 describe("list screen — a collection without folders", () => {
-	/** The same list screen under a site where `post` has folders turned off. */
-	const offNav = createTestRouter({ site: siteWithFolders("post", false) });
+	/** The same list screen under a site where the collection has folders turned off. */
+	const offNav = createTestRouter({ site: siteWithFolders(content, false) });
 	const blankArea = () => screen.queryByTestId("list-blank-area");
 	/** The sidebar counts folders of the other collections that use them; only this collection's folders are in question. */
 	const folderRequests = () =>
-		api.sent("GET /v1/folders").filter((request) => request.query.get("collection") === "post");
+		api.sent("GET /v1/folders").filter((request) => request.query.get("collection") === content);
 	const openBlankMenu = async () => {
 		await act(async () => {
 			fireEvent.contextMenu(blankArea() as HTMLElement);
@@ -225,7 +228,7 @@ describe("list screen — a collection without folders", () => {
 		return menuLabels(await screen.findAllByRole("menuitem"));
 	};
 	const renderOff = () => {
-		offNav.setSearch("collection=post");
+		offNav.setSearch(`collection=${content}`);
 		return offNav.render(
 			<AdminQueryProvider>
 				<EntryListScreen />
@@ -248,7 +251,7 @@ describe("list screen — a collection without folders", () => {
 	});
 
 	it("LIST-F6 never requests folders, even with a ?folder= left in the address", async () => {
-		offNav.setSearch("collection=post&folder=f1");
+		offNav.setSearch(`collection=${content}&folder=f1`);
 		offNav.render(
 			<AdminQueryProvider>
 				<EntryListScreen />
@@ -262,9 +265,12 @@ describe("list screen — a collection without folders", () => {
 });
 
 describe("taxonomy edit panel — unsaved changes", () => {
-	const record = (id: string, title: string): EntryData => ({
+	/** Names of the two items the test makes. */
+	const FIRST = "리액트";
+	const SECOND = "뷰";
+	const recordOf = (id: string, title: string): EntryData => ({
 		id,
-		collection: "tag",
+		collection: record,
 		status: "published",
 		version: 1,
 		folderId: null,
@@ -273,34 +279,34 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		working: { metadata: { title }, doc: emptyStoredDocument() },
 	});
 	beforeEach(() => {
-		nav.setSearch("collection=tag");
+		nav.setSearch(`collection=${record}`);
 		const tags = [
-			item("t1", { collection: "tag", title: "리액트", status: "published" }),
-			item("t2", { collection: "tag", title: "뷰", status: "published" }),
+			item("t1", { collection: record, title: FIRST, status: "published" }),
+			item("t2", { collection: record, title: SECOND, status: "published" }),
 		];
-		const records: Record<string, EntryData> = { t1: record("t1", "리액트"), t2: record("t2", "뷰") };
+		const records: Record<string, EntryData> = { t1: recordOf("t1", FIRST), t2: recordOf("t2", SECOND) };
 		api
 			.on("GET /v1/entries", (request) =>
-				request.query.get("collection") === "tag" ? { items: tags, total: tags.length } : listAnswer(request),
+				request.query.get("collection") === record ? { items: tags, total: tags.length } : listAnswer(request),
 			)
 			.on("GET /v1/entries/:id", ({ params }) => records[params.id ?? ""] ?? failure("not_found"));
 	});
 	const panelName = () =>
-		screen.findByRole("textbox", { name: testSite.titleField("tag").field.label }) as Promise<HTMLInputElement>;
+		screen.findByRole("textbox", { name: testSite.titleField(record).field.label }) as Promise<HTMLInputElement>;
 
 	it("WRITE-S6 pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
 		renderList();
-		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
+		fireEvent.click(await screen.findByRole("button", { name: FIRST }));
+		await waitFor(async () => expect((await panelName()).value).toBe(FIRST));
 		fireEvent.change(await panelName(), { target: { value: "React!" } });
 
-		fireEvent.click(screen.getByRole("button", { name: "뷰" }));
+		fireEvent.click(screen.getByRole("button", { name: SECOND }));
 		const dialog = await screen.findByRole("alertdialog", { name: tCommon("discard.title") });
 		// While the confirm dialog is up the panel is hidden but the changed values remain.
 		expect(screen.getByDisplayValue("React!")).toBeInTheDocument();
 
 		fireEvent.click(within(dialog).getByRole("button", { name: tCommon("discard.confirm") }));
-		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
+		await waitFor(async () => expect((await panelName()).value).toBe(SECOND));
 	});
 
 	it("WRITE-S6 a link that leaves the list asks first while the panel has changes", async () => {
@@ -310,8 +316,8 @@ describe("taxonomy edit panel — unsaved changes", () => {
 				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
-		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
+		fireEvent.click(await screen.findByRole("button", { name: FIRST }));
+		await waitFor(async () => expect((await panelName()).value).toBe(FIRST));
 		fireEvent.change(await panelName(), { target: { value: "React!" } });
 
 		fireEvent.click(screen.getByRole("link", { name: "elsewhere" }));
@@ -338,7 +344,7 @@ describe("list screen — screen context", () => {
 	it("PLUG-A5 publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
 		renderWithContext();
 		await screen.findByRole("row", { name: /가/ });
-		await waitFor(() => expect(whereIs()).toMatchObject({ screen: "entries", collection: "post" }));
+		await waitFor(() => expect(whereIs()).toMatchObject({ screen: "entries", collection: content }));
 		expect(whereIs().selectedIds).toEqual([]);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: _t("list.rowSelect", { title: "가" }) }));
