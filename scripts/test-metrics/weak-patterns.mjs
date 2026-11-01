@@ -157,6 +157,7 @@ const EXEMPT = [
 	...[
 		["packages/core/src/cli/__test__/init-specs.int.test.ts", 1],
 		["packages/core/src/format/__test__/mdx-boundary.int.test.ts", 2],
+		["packages/admin/src/__test__/mdx-boundary.test.ts", 1],
 	].map(([file, count]) => ({
 		pattern: "source-read",
 		file,
