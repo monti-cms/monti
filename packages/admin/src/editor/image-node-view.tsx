@@ -35,22 +35,14 @@ import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { acknowledgeImageCard, nextImageWithoutAlt, openImageCard, useImageCardRequested } from "./image-alt";
 import { ImageCropSheet } from "./image-crop-sheet";
 import { useImageUpload } from "./image-upload";
+import {
+	isValidImageWidth,
+	moveImageResize,
+	normalizeImageWidth,
+	releaseImageResize,
+	startImageResize,
+} from "./image-width";
 import { editorMediaMessages } from "./media.messages";
-
-/** Width input: 1 to 100%, or a positive integer px of at most 4096. Empty means fit to the body. */
-export const isValidImageWidth = (value: string) => {
-	const trimmed = value.trim();
-	if (!trimmed) return true;
-	const percent = /^(\d{1,3})%$/.exec(trimmed);
-	if (percent) return Number(percent[1]) >= 1 && Number(percent[1]) <= 100;
-	const px = /^(\d{1,4})(px)?$/.exec(trimmed);
-	return Boolean(px) && Number(px?.[1]) >= 1 && Number(px?.[1]) <= 4096;
-};
-
-const normalizeWidth = (value: string) => {
-	const trimmed = value.trim();
-	return /^\d+$/.test(trimmed) ? `${trimmed}px` : trimmed;
-};
 
 /** Body text before and after the image, for the slot action that describes the image within the text flow. */
 const AROUND_CHARS = 1500;
@@ -228,30 +220,20 @@ export function ImageBlockView() {
 
 		activeResizeCleanupRef.current?.();
 
-		const startX = e.clientX;
 		const initialRect = figure.getBoundingClientRect();
 		const parentRect = figure.parentElement?.getBoundingClientRect() ?? initialRect;
-		const startWidth = initialRect.width;
-		const parentWidth = parentRect.width || initialRect.width;
-		const isPercent = typeof width === "string" && width.trim().endsWith("%");
-		let currentPreview = width || `${Math.round(startWidth)}px`;
-		let hasMoved = false;
+		let resize = startImageResize({
+			width,
+			handle,
+			startX: e.clientX,
+			startWidth: initialRect.width,
+			parentWidth: parentRect.width || initialRect.width,
+		});
 
 		const onPointerMove = (moveEvent: PointerEvent) => {
-			const delta = handle === "right" ? moveEvent.clientX - startX : startX - moveEvent.clientX;
-			if (Math.abs(delta) >= 2) {
-				hasMoved = true;
-			}
-			const newWidth = Math.max(20, startWidth + delta);
-			if (isPercent) {
-				const percent = Math.min(100, Math.max(1, Math.round((newWidth / parentWidth) * 100)));
-				currentPreview = `${percent}%`;
-			} else {
-				const px = Math.min(4096, Math.max(20, Math.round(newWidth)));
-				currentPreview = `${px}px`;
-			}
-			setPreviewWidth(currentPreview);
-			setWidthDraft(currentPreview);
+			resize = moveImageResize(resize, moveEvent.clientX);
+			setPreviewWidth(resize.preview);
+			setWidthDraft(resize.preview);
 		};
 
 		const cleanup = () => {
@@ -264,10 +246,8 @@ export function ImageBlockView() {
 		const onPointerUp = () => {
 			cleanup();
 			setPreviewWidth(null);
-			// If clicked without moving, do not commit (preserve images with no width set).
-			if (hasMoved && currentPreview && currentPreview !== (width || null) && isValidImageWidth(currentPreview)) {
-				block.setValues({ width: normalizeWidth(currentPreview) });
-			}
+			const next = releaseImageResize(resize);
+			if (next) block.setValues({ width: next });
 		};
 
 		const onPointerCancel = () => {
@@ -400,7 +380,9 @@ export function ImageBlockView() {
 											onChange={(e) => {
 												setWidthDraft(e.target.value);
 												if (isValidImageWidth(e.target.value)) {
-													block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
+													block.setValues({
+														width: e.target.value.trim() ? normalizeImageWidth(e.target.value) : null,
+													});
 												}
 											}}
 											placeholder={t("imageNode.widthPlaceholder")}

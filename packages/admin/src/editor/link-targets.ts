@@ -49,6 +49,50 @@ const LOADING: LinkTargetState = { status: "loading" };
 const MISSING: LinkTargetState = { status: "missing" };
 const FAILED: LinkTargetState = { status: "error" };
 
+/** The entry a link points to, as far as its title and address go. */
+interface LinkedEntry {
+	readonly id: string;
+	readonly collection: string;
+	readonly title: string;
+	readonly published: boolean;
+	/** The slug its address uses. */
+	readonly slug?: string | null;
+	readonly locale?: string;
+}
+
+/**
+ * Where a link to the entry goes. Its path is the one on the site, with the locale prefix of its language (the same path the public read gives). Opening it
+ * goes to that page when the entry is published and has one, otherwise to the entry in the admin.
+ */
+function linkTarget(site: Site, entry: LinkedEntry): LinkTarget {
+	const contentPath = site.contentPath(entry.collection, entry.slug);
+	const path = contentPath ? site.localizePath(entry.locale ?? site.DEFAULT_LOCALE, contentPath) : null;
+	return {
+		id: entry.id,
+		collection: entry.collection,
+		title: entry.title,
+		path,
+		published: entry.published,
+		href: entry.published && path ? withBasePath(path) : site.adminUrl(`/entries/${entry.id}/edit`),
+	};
+}
+
+/** Where a link to the entry the admin API returned goes. The address readers see is the published one; a draft shows the address it would get. */
+export function linkTargetOfRow(site: Site, row: EntryRow): LinkTarget {
+	const published = row.status === "published";
+	const title = site.isCollection(row.collection)
+		? site.titleOfValues(row.collection, row.working?.metadata ?? {})
+		: null;
+	return linkTarget(site, {
+		id: row.id,
+		collection: row.collection,
+		title: title?.trim() ?? "",
+		published,
+		slug: published ? (row.publishedSlug ?? row.workingSlug) : row.workingSlug,
+		locale: row.locale,
+	});
+}
+
 /** What a site knows of the entries its links point to. Addresses depend on the site (locale prefixes, collection paths), so each site has its own. */
 const storeOf = perSite((site: Site) => {
 	const cache = new Map<string, Cached>();
@@ -64,46 +108,11 @@ const storeOf = perSite((site: Site) => {
 		notify();
 	};
 
-	/** Where opening the link goes: the page on the site when the entry is published and has one, otherwise the entry in the admin. */
-	const hrefOf = (id: string, published: boolean, path: string | null): string =>
-		published && path ? withBasePath(path) : site.adminUrl(`/entries/${id}/edit`);
-
-	/** The path of an entry on the site, with the locale prefix of its language (the same path the public read gives). */
-	const publicPath = (
-		collection: string,
-		slug: string | null | undefined,
-		locale: string | undefined,
-	): string | null => {
-		const path = site.contentPath(collection, slug);
-		return path ? site.localizePath(locale ?? site.DEFAULT_LOCALE, path) : null;
-	};
-
-	const targetOf = (row: EntryRow): LinkTarget => {
-		const published = row.status === "published";
-		const title = site.isCollection(row.collection)
-			? site.titleOfValues(row.collection, row.working?.metadata ?? {})
-			: null;
-		// The address readers see is the published one; a draft shows the address it would get.
-		const path = publicPath(
-			row.collection,
-			published ? (row.publishedSlug ?? row.workingSlug) : row.workingSlug,
-			row.locale,
-		);
-		return {
-			id: row.id,
-			collection: row.collection,
-			title: title?.trim() ?? "",
-			path,
-			published,
-			href: hrefOf(row.id, published, path),
-		};
-	};
-
 	const load = (id: string) => {
 		if (inflight.has(id)) return;
 		inflight.add(id);
 		getEntry<EntryRow>(site, id)
-			.then((row) => put(id, { status: "ready", target: targetOf(row) }))
+			.then((row) => put(id, { status: "ready", target: linkTargetOfRow(site, row) }))
 			.catch((error: unknown) => put(id, error instanceof CmsApiError && error.status === 404 ? MISSING : FAILED))
 			.finally(() => inflight.delete(id));
 	};
@@ -125,18 +134,9 @@ const storeOf = perSite((site: Site) => {
 			load(id);
 		},
 		remember(item: InternalLinkItem): void {
-			const published = item.status === "published";
-			const path = publicPath(item.collection, item.slug, item.locale);
 			put(item.id, {
 				status: "ready",
-				target: {
-					id: item.id,
-					collection: item.collection,
-					title: item.title,
-					path,
-					published,
-					href: hrefOf(item.id, published, path),
-				},
+				target: linkTarget(site, { ...item, published: item.status === "published" }),
 			});
 		},
 		reset(): void {

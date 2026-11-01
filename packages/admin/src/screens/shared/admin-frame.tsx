@@ -29,7 +29,7 @@ export function useAdminNav(): AdminNavContextValue {
 }
 
 /** Where the admin is on a frame page, for the side panel: a collection (or the trash) is the entry list, and the other nav items name their own screen. */
-function frameScreenContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): Partial<ScreenContextValue> {
+export function frameScreenContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): Partial<ScreenContextValue> {
 	if (site.COLLECTIONS.includes(activeNav)) return { screen: "entries", collection: activeNav };
 	if (activeNav === "trash") return { screen: "entries" };
 	if (activeNav === "media" || activeNav === "settings") return { screen: activeNav };

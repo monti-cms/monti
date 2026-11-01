@@ -3,7 +3,6 @@
 import { Restart } from "@carbon/icons-react";
 import {
 	type CropBox,
-	formatCrop,
 	isFullCrop,
 	parseCrop,
 	parseRotate,
@@ -32,6 +31,7 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
+import { cropSheetResult, FULL_CROP, setCropValue } from "./image-crop";
 import { editorMediaMessages } from "./media.messages";
 
 export interface ImageCropSheetProps {
@@ -43,7 +43,6 @@ export interface ImageCropSheetProps {
 	onApply: (result: { crop: string | null; rotate: string | null }) => void;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
 const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(min, val));
 
 /** Crops and rotates an image. Making with several inputs, so it is a sheet (the design system's rule for work beyond a question). */
@@ -54,8 +53,8 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 	const imgRef = useRef<HTMLImageElement>(null);
 	const activeDragCleanupRef = useRef<(() => void) | null>(null);
 
-	const [cropDraft, setCropDraft] = useState<CropBox>({ x: 0, y: 0, width: 100, height: 100 });
-	const [rotateDraft, setRotateDraft] = useState<number>(0);
+	const [cropDraft, setCropDraft] = useState<CropBox>(FULL_CROP);
+	const [rotateDraft, setRotateDraft] = useState<0 | RotateDegree>(0);
 
 	useEffect(() => {
 		return () => {
@@ -70,7 +69,7 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 			return;
 		}
 		const parsedCrop = parseCrop(crop);
-		setCropDraft(parsedCrop || { x: 0, y: 0, width: 100, height: 100 });
+		setCropDraft(parsedCrop || FULL_CROP);
 		const parsedRot = parseRotate(rotate);
 		setRotateDraft(parsedRot || 0);
 	}, [open, crop, rotate]);
@@ -84,7 +83,7 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 	};
 
 	const handleResetCrop = () => {
-		setCropDraft({ x: 0, y: 0, width: 100, height: 100 });
+		setCropDraft(FULL_CROP);
 	};
 
 	const handleResetAll = () => {
@@ -94,31 +93,13 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 
 	const handleApply = (event?: React.FormEvent<HTMLElement>) => {
 		event?.preventDefault();
-		const finalCrop = isFullCrop(cropDraft) ? null : formatCrop(cropDraft);
-		const finalRotate = rotateDraft === 0 ? null : String(rotateDraft);
-		onApply({ crop: finalCrop, rotate: finalRotate });
+		onApply(cropSheetResult(cropDraft, rotateDraft));
 		onOpenChange(false);
 	};
 
 	// Alternative: typing values directly with the keyboard
 	const handleNumericCropChange = (field: keyof CropBox, rawValue: number) => {
-		if (!Number.isFinite(rawValue)) return;
-		const val = round2(rawValue);
-		setCropDraft((prev) => {
-			let { x, y, width, height } = prev;
-			if (field === "x") {
-				x = clamp(val, 0, 99);
-				if (x + width > 100) width = round2(100 - x);
-			} else if (field === "y") {
-				y = clamp(val, 0, 99);
-				if (y + height > 100) height = round2(100 - y);
-			} else if (field === "width") {
-				width = clamp(val, 1, round2(100 - x));
-			} else if (field === "height") {
-				height = clamp(val, 1, round2(100 - y));
-			}
-			return { x, y, width, height };
-		});
+		setCropDraft((prev) => setCropValue(prev, field, rawValue));
 	};
 
 	// Select the crop area by dragging (free aspect ratio, coordinates relative to the real image element)

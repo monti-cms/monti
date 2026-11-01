@@ -89,4 +89,12 @@ describe("what the bar offers", () => {
 			);
 		}
 	});
+
+	it("LIST-C5 offers an item collection that has folders the folder move, and no publishing", () => {
+		for (const name of testSite.COLLECTIONS.filter((candidate) => testSite.isItemCollection(candidate))) {
+			const { primary } = ask([row("a", { collection: name })], { collection: name, hasFolders: true });
+			expect(primary).toContain("folder.move");
+			expect(primary).not.toContain("publish");
+		}
+	});
 });
