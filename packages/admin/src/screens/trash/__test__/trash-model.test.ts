@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { firstRelationField } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import type { TrashReferrer } from "../../../api/trash";
 import { trashMessages } from "../messages";
@@ -103,11 +104,12 @@ describe("what points at an entry", () => {
 	});
 
 	it("TRASH-D2 counts relation fields only, once per entry, and says which are in the trash", () => {
+		const field = { type: "metadata" as const, path: firstRelationField(content)?.name ?? "relatedIds" };
 		const usages = usagesFromReferrers([
-			referrer("a", [{ type: "metadata", path: "tagIds" }]),
-			{ ...referrer("a", [{ type: "metadata", path: "tagIds" }]), state: "published" },
+			referrer("a", [field]),
+			{ ...referrer("a", [field]), state: "published" },
 			referrer("b", [{ type: "body" }]),
-			referrer("c", [{ type: "metadata", path: "tagIds" }], true),
+			referrer("c", [field], true),
 		]);
 		expect(usages.map((usage) => [usage.entryId, usage.trashed])).toEqual([
 			["a", false],
@@ -118,7 +120,7 @@ describe("what points at an entry", () => {
 });
 
 describe("the permanent delete plan", () => {
-	const tag = entry("tag", "임시", { collection: record });
+	const tag = entry("pointed", "임시", { collection: record });
 	const usages = [
 		{ entryId: "r1", title: "r1", collection: content, trashed: false },
 		{ entryId: "r2", title: "r2", collection: content, trashed: true },
@@ -135,8 +137,8 @@ describe("the permanent delete plan", () => {
 		expect(canDelete(unlinked)).toBe(false);
 		const both = { ...unlinked, together: new Set([itemKey(tag)]) };
 		expect(canDelete(both)).toBe(true);
-		expect(deleteRequestOf(both).map((target) => target.id)).toEqual(["r2", "tag"]);
-		expect(deleteRequestOf(unlinked).map((target) => target.id)).toEqual(["tag"]);
+		expect(deleteRequestOf(both).map((target) => target.id)).toEqual(["r2", tag.id]);
+		expect(deleteRequestOf(unlinked).map((target) => target.id)).toEqual([tag.id]);
 	});
 
 	it("TRASH-D2 takes the blockers a refused delete names, and only for the units that came back in use", () => {
@@ -144,12 +146,12 @@ describe("the permanent delete plan", () => {
 		const blockers = blockersFromResults(
 			[tag, other],
 			[
-				{ type: "entry", id: "tag", ok: false, error: "in_use", usages },
+				{ type: "entry", id: tag.id, ok: false, error: "in_use", usages },
 				{ type: "entry", id: "other", ok: true },
 			],
 		);
 		expect(blockers.map((blocker) => [blocker.item.id, blocker.live.length, blocker.trashed.length])).toEqual([
-			["tag", 1, 1],
+			[tag.id, 1, 1],
 		]);
 	});
 
