@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NoticeError } from "../../api/client";
+import { contentCollection } from "../../../../core/test/any-site";
 import { type EditorResult, type SlotActionsOptions, useSlotActions } from "../../hooks/public";
 import { SiteWrapper } from "../../test/site";
 import { type SlotAction, SlotRegistryProvider, type SlotResult, type SlotSource } from "../registry";
@@ -24,7 +24,7 @@ const action = (overrides: Partial<SlotAction> = {}): SlotAction => ({
 const options = (overrides: Partial<SlotActionsOptions> = {}): SlotActionsOptions => ({
 	slot: "field",
 	target: "title",
-	collection: "post",
+	collection: contentCollection,
 	getContext: () => ({ title: "Hello" }),
 	apply: vi.fn(),
 	...overrides,

@@ -35,27 +35,37 @@ const passwordCms = (exists: boolean) =>
 		},
 	});
 
+/** The form the submit button with this name posts. */
+const formOf = (submit: string) => {
+	const form = (screen.getByRole("button", { name: submit }) as HTMLButtonElement).form;
+	if (!form) throw new Error(`the ${submit} button posts no form`);
+	return form;
+};
+
+/** The names of the fields a form posts: what the route it posts to reads. */
+const fieldNames = (form: HTMLFormElement) =>
+	[...form.elements].filter((element) => element instanceof HTMLInputElement).map((input) => input.name);
+
 const show = async (cms: ReturnType<typeof passwordCms>, query: Record<string, string> = {}) =>
 	render(await AdminLoginPage({ cms, server, searchParams: Promise.resolve(query) }));
 
 describe("the login screen of the email and password login", () => {
 	it("AUTH-A4 shows the create-the-first-admin form while no admin exists, posting to the first-admin route", async () => {
-		const { container } = await show(passwordCms(false));
+		await show(passwordCms(false));
 		expect(screen.getByText(t("firstAdminTitle"))).toBeInTheDocument();
-		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/first-admin");
-		expect(
-			["email", "password", "confirm"].map((name) => container.querySelector(`input[name=${name}]`) !== null),
-		).toEqual([true, true, true]);
-		expect(screen.queryByText(t("signInSubmit"), { selector: "button" })).toBeNull();
+		const form = formOf(t("createFirstAdmin"));
+		expect(form.getAttribute("action")).toContain("/v1/session/first-admin");
+		expect(fieldNames(form)).toEqual(["email", "password", "confirm"]);
+		expect(screen.queryByRole("button", { name: t("signInSubmit") })).toBeNull();
 	});
 
 	it("AUTH-A4 shows the sign-in form, not the first-admin form, once an admin exists", async () => {
-		const { container } = await show(passwordCms(true));
+		await show(passwordCms(true));
 		expect(screen.queryByText(t("firstAdminTitle"))).toBeNull();
-		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/sign-in/password");
-		expect(container.querySelector("input[name=confirm]")).toBeNull();
-		expect(container.querySelector("input[type=password]")).toBeInTheDocument();
-		expect(screen.getByText(t("signInSubmit"), { selector: "button" })).toBeInTheDocument();
+		const form = formOf(t("signInSubmit"));
+		expect(form.getAttribute("action")).toContain("/v1/session/sign-in/password");
+		expect(fieldNames(form)).toEqual(["email", "password"]);
+		expect(screen.getByLabelText(t("password"))).toHaveAttribute("type", "password");
 	});
 
 	it("AUTH-A4 says why the last attempt did not work", async () => {
@@ -74,9 +84,9 @@ describe("the login screen of the email and password login", () => {
 			config: testConfig,
 			auth: { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] },
 		});
-		const { container } = await show(cms as never);
-		expect(screen.getByText(t("signIn", { provider: "GitHub" }))).toBeInTheDocument();
-		expect(container.querySelector("input")).toBeNull();
+		await show(cms as never);
+		expect(fieldNames(formOf(t("signIn", { provider: "GitHub" })))).toEqual([]);
+		expect([...document.forms].flatMap(fieldNames)).toEqual([]);
 	});
 });
 

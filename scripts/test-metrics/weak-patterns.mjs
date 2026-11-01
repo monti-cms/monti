@@ -165,6 +165,18 @@ const EXEMPT = [
 		why: "reads a published package.json (peers, exports)",
 	})),
 	{
+		pattern: "class-name",
+		file: "packages/admin/src/host/__test__/admin-theme-provider.dom.test.tsx",
+		count: 10,
+		why: "the `dark` class on `html` is what the provider puts there and gives back, and what the admin's and the site's styles read",
+	},
+	{
+		pattern: "data-attribute",
+		file: "packages/admin/src/__test__/css-confinement.test.ts",
+		count: 1,
+		why: "a selector the built stylesheet must hold: dark tokens follow the host's `[data-theme=dark]` marker, read from the CSS text",
+	},
+	{
 		pattern: "fetch-stub",
 		file: "packages/admin/src/test/fake-api.ts",
 		count: 1,
