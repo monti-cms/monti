@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { blocksMessages } from "../../../admin/src/editor/blocks/messages";
 import { testSite } from "../../../core/test/site";
 import { calloutMessages } from "../callout/messages";
 import { calloutComponents } from "../callout/provider";
@@ -23,6 +24,7 @@ const tTabs = testSite.createTranslator(tabsMessages);
 const tColumns = testSite.createTranslator(columnsMessages);
 const tCallout = testSite.createTranslator(calloutMessages);
 const tCollapsible = testSite.createTranslator(collapsibleMessages);
+const tBlocks = testSite.createTranslator(blocksMessages);
 
 afterEach(cleanup);
 
@@ -77,8 +79,8 @@ const mount = async (source: string) => {
 		</BlockViews>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	// Wait until the NodeView (React portal) has rendered.
-	await waitFor(() => expect(document.querySelector("[data-monti-container-node]")).toBeInTheDocument());
+	// Wait until the NodeView (React portal) has rendered: every container view has its toolbar.
+	await screen.findAllByRole("toolbar");
 	return editor as unknown as Editor;
 };
 
@@ -150,14 +152,16 @@ describe("container NodeView (public look + in-place editing)", () => {
 
 	it("BLOCK-E1 changes the callout variant from the toolbar menu", async () => {
 		const editor = await mount('<Callout variant="tip">\n\n본문\n\n</Callout>');
-		fireEvent.click(screen.getByRole("button", { name: /콜아웃 종류/ }));
+		fireEvent.click(
+			screen.getByRole("button", { name: tCallout("variant.button", { variant: tCallout("option.tip") }) }),
+		);
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: tCallout("option.warning") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "warning" }));
 	});
 
 	it("BLOCK-E1 toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
 		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
-		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
 		fireEvent.click(await screen.findByRole("switch", { name: tCollapsible("defaultOpen.label") }));
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain("defaultOpen"));
 	});
@@ -173,7 +177,9 @@ describe("container NodeView (public look + in-place editing)", () => {
 			fireEvent.click(toggle);
 		});
 		await waitFor(() =>
-			expect(screen.getByRole("button", { name: tCollapsible("label") }).getAttribute("aria-expanded")).toBe("true"),
+			expect(screen.getByRole("button", { name: tCollapsible("toggle.close") }).getAttribute("aria-expanded")).toBe(
+				"true",
+			),
 		);
 		expect(parentTypeOfSelection(editor)).toBe("cmsCollapsible");
 	});

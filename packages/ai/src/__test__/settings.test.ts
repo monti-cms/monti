@@ -158,7 +158,10 @@ describe("AI connection settings", () => {
 		await store.cms.apiKeys.update(key?.id ?? "", { expectedVersion: 1, value: "ts-key-replaced-000000" });
 		const runtime = await loadAiRuntime(testSite, store, spec("tags"));
 		await runtime.decider?.decide({ state: { t: "x" }, questions: {} });
-		expect(JSON.stringify(fetchMock.mock.calls[0]?.[1]?.headers)).toContain("ts-key-replaced-000000");
+		expect(fetchMock).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer ts-key-replaced-000000" }) }),
+		);
 	});
 
 	it("KEY-A3 refuses to save a typed key when the instance has no secret, and says how to fix it", async () => {

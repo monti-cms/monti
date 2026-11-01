@@ -6,6 +6,9 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { blockInsertActions } from "../../../../admin/src/editor/block-inserts";
+import { blocksMessages } from "../../../../admin/src/editor/blocks/messages";
+import { codeBlockMessages } from "../../../../admin/src/editor/code-block/messages";
+import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import { testSite } from "../../../../core/test/site";
 import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
 import { renderSite as site } from "../../test/render-config";
@@ -15,6 +18,9 @@ import { codeExplorerMessages } from "../messages";
 import { codeExplorerComponents } from "../provider";
 
 const tCodeExplorer = testSite.createTranslator(codeExplorerMessages);
+const tBlocks = testSite.createTranslator(blocksMessages);
+const tCodeBlock = testSite.createTranslator(codeBlockMessages);
+const tCommon = testSite.createTranslator(commonMessages);
 
 afterEach(cleanup);
 
@@ -75,10 +81,7 @@ const mount = async (source: string, expectBlock = true) => {
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
-	if (expectBlock)
-		await waitFor(() =>
-			expect(document.querySelector('[data-monti-container-node="cmsCodeExplorer"]')).toBeInTheDocument(),
-		);
+	if (expectBlock) await screen.findByText(tCodeExplorer("label"));
 	return editor as unknown as Editor;
 };
 
@@ -108,11 +111,7 @@ describe("code explorer editing view", () => {
 		expect(screen.getByText(tCodeExplorer("label"))).toBeInTheDocument();
 		expect(fileButtons().map((button) => button.textContent)).toEqual(["a.ts", "src/b.ts", "docs/"]);
 		// Every file is an ordinary code block below the list (the same node view as everywhere else).
-		expect(
-			document.querySelectorAll(
-				'[data-monti-container-node="cmsCodeExplorer"] pre, [data-monti-container-node="cmsCodeExplorer"] [data-code-ui]',
-			).length,
-		).toBeGreaterThan(0);
+		expect(screen.getAllByRole("combobox", { name: tCodeBlock("view.language") })).toHaveLength(3);
 		expect(editor.state.doc.firstChild?.childCount).toBe(3);
 	});
 
@@ -184,20 +183,20 @@ describe("code explorer editing view", () => {
 
 	it("BLOCK-E1 adds a folder (a title ending in `/`)", async () => {
 		const editor = await mount(SOURCE);
-		fireEvent.click(screen.getByRole("button", { name: "폴더 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("addFolder") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(4));
 		expect(editor.state.doc.firstChild?.lastChild?.attrs.meta).toBe('title="src/new-folder/"');
-		fireEvent.click(screen.getByRole("button", { name: "폴더 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("addFolder") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.lastChild?.attrs.meta).toBe('title="src/new-folder-2/"'));
 	});
 
 	it("BLOCK-E1 picks the file shown first from the file paths (folders are not offered)", async () => {
 		const editor = await mount(SOURCE);
-		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
 		const trigger = await openTrigger();
 		fireEvent.click(trigger);
 		const options = await screen.findAllByRole("option");
-		expect(options.map((option) => option.textContent)).toEqual(["첫 파일", "a.ts", "src/b.ts"]);
+		expect(options.map((option) => option.textContent)).toEqual([tCodeExplorer("open.first"), "a.ts", "src/b.ts"]);
 		choose(options[1] as HTMLElement);
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ open: "a.ts" }));
 		expect(tiptapToMdx(editor.getJSON())).toContain('open="a.ts"');
@@ -205,7 +204,7 @@ describe("code explorer editing view", () => {
 
 	it("BLOCK-E1 choosing the first file clears the setting", async () => {
 		const editor = await mount(SOURCE);
-		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
 		fireEvent.click(await openTrigger());
 		choose((await screen.findAllByRole("option"))[0] as HTMLElement);
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({}));
@@ -214,7 +213,7 @@ describe("code explorer editing view", () => {
 
 	it("BLOCK-E1 falls back to a text input for the open file while there is no file to pick", async () => {
 		const editor = await mount('<CodeExplorer open="x.ts" />');
-		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
 		const input = (await screen.findByDisplayValue("x.ts")) as HTMLInputElement;
 		fireEvent.focus(input);
 		fireEvent.change(input, { target: { value: "y.ts" } });

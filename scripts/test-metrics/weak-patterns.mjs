@@ -25,11 +25,12 @@ const asCheck = process.argv.includes("--check");
 const CEILING = {
 	core: 0,
 	admin: 0,
+	ai: 0,
 	auth: 0,
 	mdx: 0,
-	blocks: 35,
+	blocks: 0,
 	ui: 0,
-	seo: 1,
+	seo: 0,
 	nextjs: 0,
 	"storage-s3": 0,
 	"syntax-directive": 0,
@@ -114,6 +115,33 @@ const EXEMPT = [
 			}),
 		),
 	),
+	...[
+		["packages/blocks/src/__test__/render-client.test.tsx", 7],
+		["packages/blocks/src/code-explorer/__test__/editor.test.tsx", 1],
+	].map(([file, count]) => ({
+		pattern: "korean-copy",
+		file,
+		count,
+		why: "the text the test put in the block (tab bodies, a tooltip term, a link, a paragraph): the test's own data, not a label",
+	})),
+	{
+		pattern: "query-selector",
+		file: "packages/blocks/src/__test__/render-client.test.tsx",
+		count: 2,
+		why: "the code ref script works on the page's rendered code lines, written by hand in the test; the marks it sets are what the site styles read",
+	},
+	...["data-attribute", "query-selector"].map((pattern) => ({
+		pattern,
+		file: "packages/blocks/src/__test__/container-views.test.tsx",
+		count: 1,
+		why: "`data-monti-collapsed` on a closed body is what the source pane reads to show that body anyway (`source-sync.ts`)",
+	})),
+	{
+		pattern: "fetch-stub",
+		file: "packages/ai/src/__test__/settings.test.ts",
+		count: 1,
+		why: "the AI provider's HTTP API is outside Monti; the test checks which key goes out in the request",
+	},
 	{
 		pattern: "long-wait",
 		file: "packages/blocks/src/__test__/blocks.test.tsx",

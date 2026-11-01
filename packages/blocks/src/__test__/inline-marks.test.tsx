@@ -7,6 +7,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { editorMessages } from "../../../admin/src/editor/messages";
+import { commonMessages } from "../../../admin/src/lib/common.messages";
 import { testSite } from "../../../core/test/site";
 import { codeRefMessages } from "../code-ref/messages";
 import { codeRefComponents, codeRefMarkExtension } from "../code-ref/provider";
@@ -21,6 +23,12 @@ import { tooltipComponents, tooltipMarkExtension } from "../tooltip/provider";
 const tTooltip = testSite.createTranslator(tooltipMessages);
 const tColor = testSite.createTranslator(colorMessages);
 const tCodeRef = testSite.createTranslator(codeRefMessages);
+const tEditor = testSite.createTranslator(editorMessages);
+const tCommon = testSite.createTranslator(commonMessages);
+/** The bubble that opens on a text selection. */
+const BUBBLE = { name: tEditor("inlineBubble.selectionLabel") };
+/** Its ⋯ button, which holds the formats the site added. */
+const MORE = { name: tEditor("formatBar.more") };
 
 /**
  * Inline marks of the block extensions (tooltip, code ref, text color). The core editor does not know the mark names; it only renders the shapes and tools the extensions register.
@@ -123,7 +131,7 @@ describe("slash menu", () => {
 		const run = tooltipExtension.insertActions?.[0]?.run;
 		const editor = new Editor({ extensions: buildEditorExtensions(site, MARKS), content: "<p>/</p>" });
 		act(() => run?.(editor, { from: 1, to: 2 }));
-		expect(editor.state.doc.textContent).toBe("툴팁 텍스트");
+		expect(editor.state.doc.textContent).toBe(tTooltip("insert.text"));
 		expect(editor.state.selection.empty).toBe(false);
 		expect(opened).toHaveBeenCalled();
 		window.removeEventListener("cms:run-format-item", opened);
@@ -161,26 +169,25 @@ describe("inline bubble", () => {
 	it("BLOCK-R1 selecting text shows the footnote and then ⋯, and the site-added formats are the rows under it, in the order they were added", async () => {
 		const editor = await mount("가나다\n\n```ts\nconst a = 1;\n```\n");
 		focusAt(editor, { from: 1, to: 3 });
-		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
-		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
+		const toolbar = await screen.findByRole("toolbar", BUBBLE);
+		const labels = within(toolbar)
+			.getAllByRole("button")
+			.map((button) => button.getAttribute("aria-label"));
+		const rows = [tTooltip("add"), tCodeRef("link"), tColor("label")];
 		// None of the three has a button of its own: they are under the ⋯, which follows the footnote.
-		for (const own of ["툴팁 넣기", "코드 연결", "글자색"]) expect(labels).not.toContain(own);
-		expect(labels.indexOf("사이트가 더한 서식")).toBe(labels.indexOf("각주") + 1);
-		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: "사이트가 더한 서식" })));
+		for (const own of rows) expect(labels).not.toContain(own);
+		expect(labels.indexOf(MORE.name)).toBe(labels.indexOf(tEditor("inlineBubble.footnoteAdd")) + 1);
+		act(() => fireEvent.click(within(toolbar).getByRole("button", MORE)));
 		// The code ref row is there because the body has a code block to link to.
-		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
-			"툴팁 넣기",
-			"코드 연결",
-			"글자색",
-		]);
+		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(rows);
 	});
 
 	it("BLOCK-R1 leaves the code ref row out when the body has no code block", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
-		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
-		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: "사이트가 더한 서식" })));
-		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["툴팁 넣기", "글자색"]);
+		const toolbar = await screen.findByRole("toolbar", BUBBLE);
+		act(() => fireEvent.click(within(toolbar).getByRole("button", MORE)));
+		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([tTooltip("add"), tColor("label")]);
 	});
 
 	it("BLOCK-R1 edits and removes the description even with the cursor at the tooltip boundary", async () => {
@@ -190,7 +197,7 @@ describe("inline bubble", () => {
 		const input = screen.getByLabelText(tTooltip("content.label")) as HTMLTextAreaElement;
 		expect(input.value).toBe("설명");
 		act(() => fireEvent.change(input, { target: { value: "새 설명" } }));
-		act(() => fireEvent.click(screen.getByRole("button", { name: "적용" })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tCommon("apply") })));
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Tooltip content="새 설명">사아</Tooltip> 자\n');
 
 		focusAt(editor, 1);
@@ -201,11 +208,17 @@ describe("inline bubble", () => {
 	it("BLOCK-R1 the text color row opens a color picker in the bubble and applies the chosen color", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
-		const bubble = await screen.findByRole("toolbar", { name: "인라인 서식" });
-		act(() => fireEvent.click(within(bubble).getByRole("button", { name: "사이트가 더한 서식" })));
+		const bubble = await screen.findByRole("toolbar", BUBBLE);
+		act(() => fireEvent.click(within(bubble).getByRole("button", MORE)));
 		act(() => fireEvent.click(screen.getByRole("menuitem", { name: tColor("label") })));
 		const dialog = screen.getByRole("dialog", { name: tColor("label") });
-		act(() => fireEvent.click(within(dialog).getByRole("button", { name: "글자색 빨강" })));
+		act(() =>
+			fireEvent.click(
+				within(dialog).getByRole("button", {
+					name: tColor("pick", { kind: tColor("fg.label"), name: tColor("palette.red") }),
+				}),
+			),
+		);
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Color fg="#dc2626" fgDark="#f87171">가나</Color>다\n');
 	});
 

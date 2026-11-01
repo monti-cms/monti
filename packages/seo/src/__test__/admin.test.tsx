@@ -81,7 +81,8 @@ describe("SEO extension admin UI", () => {
 		expect(
 			screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.image).field.label}`) }),
 		).toBeInTheDocument();
-		expect(screen.queryByRole("region", { name: /미리보기|preview/i })).toBeNull();
+		// No preview box of any kind (the search result look was dropped): the tab holds only the read list.
+		expect(screen.queryAllByRole("region")).toEqual([]);
 		expect(screen.queryAllByRole("textbox")).toEqual([]);
 	});
 
