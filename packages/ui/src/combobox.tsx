@@ -1,6 +1,6 @@
 "use client";
 
-import { Combobox as ComboboxPrimitive } from "@base-ui/react";
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { Caret } from "./caret";
