@@ -1,6 +1,10 @@
 import type { Site } from "@monti-cms/core/site";
 import type { Locale } from "react-day-picker";
-import { enUS, ja, ko, zhCN } from "react-day-picker/locale";
+// One file per language: `react-day-picker/locale` also loads every other date-fns locale.
+import { enUS } from "react-day-picker/locale/en-US";
+import { ja } from "react-day-picker/locale/ja";
+import { ko } from "react-day-picker/locale/ko";
+import { zhCN } from "react-day-picker/locale/zh-CN";
 
 const CALENDAR_LOCALES: Readonly<Record<string, Locale>> = { ko, ja, zh: zhCN };
 
