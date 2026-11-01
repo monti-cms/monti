@@ -60,7 +60,9 @@ export const otherSiteTests = configSensitiveTests({
 		"src/editor/__test__/internal-link-display.browser.test.tsx",
 		"src/editor/__test__/internal-link-search.dom.test.tsx",
 	],
+	// A test that needs the reference blog's own collections, fields, blocks or languages says so in its name (`*.blog.dom.test.tsx`, as in core).
 	skip: (file) =>
+		/\.blog\.(?:dom\.|browser\.)?test\.[jt]sx?$/.test(file) ||
 		BLOG_FIXTURE_TESTS.includes(
 			path
 				.relative(import.meta.dirname, file)

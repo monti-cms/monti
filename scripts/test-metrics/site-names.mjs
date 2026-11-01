@@ -3,7 +3,7 @@
  * Counts the tests that name the reference blog's config as it is: a collection, field, block or locale that the blog test config
  * (`packages/core/test/cms.config.ts`) has and the other-site config (`other-site.config.ts`) does not, written as a string in a test that runs
  * on the shared test site. Such a test breaks, or checks nothing, on another site's config; looking the name up (`test/any-site.ts`) keeps it
- * working on both. Not counted: `*.blog.test.ts` and `*.blog.int.test.ts` (blog-only by name), tests that build a site config of their own and never touch the shared
+ * working on both. Not counted: `*.blog.test.ts` and `*.blog.{int,dom,browser}.test.ts` (blog-only by name), tests that build a site config of their own and never touch the shared
  * one, and names inside `ByRole(...)` (a `tab` role is not the `tab` block).
  *
  *   node scripts/test-metrics/site-names.mjs          # table per package, with the names met most
@@ -95,7 +95,7 @@ const perName = {};
 const byFile = {};
 for (const file of files) {
 	const rel = path.relative(root, file);
-	if (rel.startsWith("packages/ui/visual/") || /\.blog\.(?:int\.)?test\.[jt]sx?$/.test(rel)) continue;
+	if (rel.startsWith("packages/ui/visual/") || /\.blog\.(?:int\.|dom\.|browser\.)?test\.[jt]sx?$/.test(rel)) continue;
 	const text = readFileSync(file, "utf8");
 	if (!SHARED.test(text)) continue;
 	const pkg = rel.split(path.sep)[1];
