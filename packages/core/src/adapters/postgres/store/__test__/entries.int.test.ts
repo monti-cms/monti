@@ -434,6 +434,32 @@ describe("ContentStore References", () => {
 		expect(await store.getWorkingReferences({ entryId: source.id })).toEqual([]);
 	});
 
+	it("WRITE-S14 keeps a relation the draft already had when its target goes to the trash, so the draft can still be saved and moved", async () => {
+		const target = await seedEntry(store, {
+			collection: contentCollection,
+			slug: `trashed-later-${randomUUID()}`,
+			metadata: { title: "Trashed later" },
+			text: "Target",
+		});
+		const relation = buildReference({ targetId: target.id });
+		const source = await store.createEntryWithReferences({
+			snapshot: buildSnapshot({ references: [relation] }),
+			references: [relation],
+		});
+		// TRASH-T9: an entry other drafts point at can still go to the trash.
+		const live = await store.getEntry(target.id);
+		await store.trashEntry({ id: target.id, expectedVersion: live.version });
+
+		const saved = await store.saveWorkingWithReferences({
+			entryId: source.id,
+			expectedVersion: source.version,
+			snapshot: buildSnapshot({ text: "Edited after the trash", references: [relation] }),
+			references: [relation],
+		});
+		expect(saved.version).toBe(source.version + 1);
+		expect(await store.getWorkingReferences({ entryId: source.id })).toEqual([relation]);
+	});
+
 	it("WRITE-S14 saves a body link to an entry in the trash, and indexes it", async () => {
 		const target = await trashedTarget();
 		const source = await store.createEntryWithReferences({ snapshot: buildSnapshot(), references: [] });
