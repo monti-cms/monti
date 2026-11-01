@@ -165,8 +165,10 @@ describe("write hook contract", () => {
 
 		it("WRITE-H1 validates it: a key the schema does not have is rejected and nothing is stored", async () => {
 			sources = server({ beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
+			// The input first: making it can create the post's relation targets, which are not what this test counts.
+			const input = await postInput("Bad");
 			const before = await entryCount();
-			await expect(service.createDraft(await postInput("Bad"))).rejects.toMatchObject({ code: "invalid_metadata_key" });
+			await expect(service.createDraft(input)).rejects.toMatchObject({ code: "invalid_metadata_key" });
 			expect(await entryCount()).toBe(before);
 			expect(changes).toEqual([]);
 		});
@@ -278,8 +280,9 @@ describe("write hook contract", () => {
 			"beforeSave",
 		])("WRITE-H2 fails a create with hook_failed when %s throws: nothing is stored, nothing is sent", async (hook) => {
 			sources = [{ owner: "plugin:seo", hooks: failing[hook] }];
+			const input = await postInput("Never stored");
 			const before = await entryCount();
-			const error = await service.createDraft(await postInput("Never stored")).catch((e) => e);
+			const error = await service.createDraft(input).catch((e) => e);
 			expect(error).toMatchObject({
 				code: "hook_failed",
 				issues: [{ code: "hook_failed", params: { hook, owner: "plugin:seo" } }],
