@@ -6,6 +6,7 @@
 				"scripts/*.mjs",
 				"scripts/test-metrics/*.mjs",
 				"flows/playwright.config.ts",
+				"flows/warm-up.ts",
 				"flows/*.flow.ts",
 				"flows/overlay/**/*.ts"
 			]

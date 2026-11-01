@@ -21,6 +21,7 @@ export default defineConfig({
 	workers: 1,
 	fullyParallel: false,
 	retries: 0,
+	globalSetup: path.join(import.meta.dirname, "warm-up.ts"),
 	timeout: 120_000,
 	expect: { timeout: 15_000 },
 	reporter: process.env.CI
