@@ -1,6 +1,6 @@
-import { doc } from "../../../../test/paragraphs-format";
-import { defineCollection, defineSite, fields } from "../../../index";
-import type { SourceEntry } from "../types";
+import { defineCollection, defineSite, fields } from "../src/index";
+import type { SourceEntry } from "../src/services/entry-import/types";
+import { doc } from "./paragraphs-format";
 
 /**
  * A site of the import tests' own, so they give the same result on any test config: notes keep their title in `title`, books in `headline`

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { paragraph } from "../../../../test/entry-import-fixture";
 import { doc, paragraphsFormat } from "../../../../test/paragraphs-format";
 import { overlappingZip } from "../../../../test/zip-bomb";
 import { CmsError } from "../../../core/store/errors";
@@ -6,7 +7,6 @@ import { createFormatRegistry } from "../../../format/registry";
 import { type CmsFormat, defineFormat } from "../../../format/types";
 import { createZipArchive } from "../../zip";
 import { MAX_IMPORT_INFLATED_BYTES, readImportArchive } from "../read-archive";
-import { paragraph } from "./fixture";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 

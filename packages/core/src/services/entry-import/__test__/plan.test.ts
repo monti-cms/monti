@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { importConfig, paragraph, sourceEntry } from "../../../../test/entry-import-fixture";
 import { doc, paragraphsFormat } from "../../../../test/paragraphs-format";
 import { fakeCms } from "../../../cms";
 import type { MediaStore } from "../../../media/store";
 import { type ImportMapping, planImport } from "../plan";
 import type { SourceEntry } from "../types";
-import { importConfig, paragraph, sourceEntry } from "./fixture";
 
 const OUR_MEDIA = "11111111-1111-4111-8111-111111111111";
 const FOREIGN_IMAGE = "22222222-2222-4222-8222-222222222222";

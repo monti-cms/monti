@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { importConfig, paragraph, sourceEntry } from "../../../../test/entry-import-fixture";
 import { doc, paragraphsFormat } from "../../../../test/paragraphs-format";
 import { fakeCms } from "../../../cms";
 import type { ContentStore } from "../../../core/store";
@@ -17,7 +18,6 @@ import { createContentService } from "../../content-service";
 import { type ImportPlan, planImport } from "../plan";
 import { runImport } from "../run";
 import type { ImportHost, SourceEntry } from "../types";
-import { importConfig, paragraph, sourceEntry } from "./fixture";
 
 const site = createSite(importConfig);
 
