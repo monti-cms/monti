@@ -1,68 +1,19 @@
 // @vitest-environment node
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import postcss from "postcss";
 import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * CSS confinement. The admin and plugin stylesheets ship prebuilt (`scripts/build-styles.mjs`), so the host needs no Tailwind and imports them as they are.
- * The sources only use names carrying the `monti` prefix, and the built files must not restyle the host: every selector sits under a document that
- * contains the admin, and every custom property, keyframes name is `monti`-prefixed, and no layer is left.
+ * The built files must not restyle the host: every selector sits under a document that contains the admin, and every custom property, keyframes
+ * name is `monti`-prefixed, and no layer is left. That the sources use only `monti` names is `pnpm check:design`'s (`theme-names`, `app-color`).
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
-const themeCss = readFileSync(path.resolve(__dirname, "../../../ui/styles/theme.css"), "utf8");
-/** The token values (`@monti-cms/ui/tokens.css`) and the admin's own hand-written rules, read together as the admin bundle reads them. */
-const adminCss = [
-	readFileSync(path.resolve(__dirname, "../../../ui/styles/tokens.css"), "utf8"),
-	readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8"),
-].join("\n");
 /** Packages with an admin stylesheet (`styles/index.css`). */
 /** (ai, mdx and seo ship none: their utilities are compiled into the admin's file, which scans their sources.) */
 const STYLE_PACKAGES = ["admin", "blocks"];
-
-/** The app's (shadcn) color names: the admin neither uses them unprefixed nor defines them, under its prefix or not. */
-const TOKENS = [
-	"sidebar-primary-foreground",
-	"sidebar-accent-foreground",
-	"sidebar-foreground",
-	"sidebar-primary",
-	"sidebar-accent",
-	"sidebar-border",
-	"sidebar-ring",
-	"sidebar",
-	"card-foreground",
-	"popover-foreground",
-	"primary-foreground",
-	"secondary-foreground",
-	"muted-foreground",
-	"accent-foreground",
-	"destructive-foreground",
-	"background",
-	"foreground",
-	"card",
-	"popover",
-	"primary",
-	"secondary",
-	"muted",
-	"accent",
-	"destructive",
-	"border",
-	"input",
-	"ring",
-].join("|");
-const UTILITIES =
-	"bg|text|border-[xytrblse]|border|ring-offset|ring|outline|fill|stroke|divide|decoration|caret|from|via|to|shadow|accent|placeholder|selection|inset-ring";
-
-function sourceFiles(dir: string): string[] {
-	return readdirSync(dir).flatMap((name) => {
-		if (["node_modules", "dist", ".next", "__test__", "test"].includes(name)) return [];
-		const file = path.join(dir, name);
-		if (statSync(file).isDirectory()) return sourceFiles(file);
-		return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [file] : [];
-	});
-}
 
 /** Selectors of every rule (keyframe steps excluded), split at top-level commas. */
 function selectorsOf(root: postcss.Root): string[] {
@@ -78,73 +29,6 @@ function selectorsOf(root: postcss.Root): string[] {
 const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.monti-admin\)/.test(selector.trim());
 
 describe("admin CSS confinement", () => {
-	it("the theme defines only monti-prefixed names, after clearing Tailwind's own", () => {
-		// `@theme` holds the color roles per namespace (`--background-color-monti-*` and so on), the scales (spacing, radius, heights, widths, sizes, shadows),
-		// the weights, the one tracking, `--font-sans`/`--font-mono` (mapped to `--monti-font-*`), and the resets. The type roles are `@utility` rules.
-		const theme = [...themeCss.matchAll(/@theme inline \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
-		const names = [...theme.matchAll(/(--[\w-]+(?:-\*)?)\s*:/g)].map((m) => m[1]);
-		expect(names.filter((name) => name.startsWith("--background-color-monti-")).length).toBeGreaterThan(0);
-		for (const name of names)
-			expect(name).toMatch(
-				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|spacing|radius|height|size|container|shadow)-monti-|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold|bold)$|tracking-caps$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
-			);
-		// Tailwind's palette, text sizes, weights, shadows, tracking and line heights are cleared, so an off-system class compiles to nothing.
-		for (const reset of [
-			"--color-*",
-			"--text-*",
-			"--font-weight-*",
-			"--shadow-*",
-			"--tracking-*",
-			"--leading-*",
-			"--radius-*",
-		])
-			expect(theme).toContain(`${reset}: initial;`);
-		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
-		for (const radius of theme.matchAll(/--radius-monti-[\w-]+:\s*([^;]+);/g))
-			expect(radius[1]).toMatch(/^var\(--monti-radius-/);
-		// Every role reads an admin variable (an animation names its `monti-` keyframes instead).
-		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[\w-]+:\s*([^;]+);/g))
-			expect(role[1]).toMatch(/^var\(--monti-|^\d/);
-		// Variant names also start with `monti-`.
-		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);
-		// The dark theme follows both `.dark` and `[data-theme="dark"]`.
-		expect(themeCss).toMatch(/@custom-variant monti-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
-		expect(adminCss).toMatch(/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.monti-admin\)/);
-	});
-
-	it("the default token values have zero specificity, so a site's own --monti-* wins in any import order", () => {
-		const holders: string[] = [];
-		postcss.parse(adminCss).walkRules((rule) => {
-			if (rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-bg-page"))
-				holders.push(rule.selector);
-		});
-		// One block for light, one for dark; each is a single `:where(...)`, so nothing outside it adds specificity.
-		expect(holders).toHaveLength(2);
-		for (const selector of holders) expect(selector).toMatch(/^:where\((?:[^()]|\([^()]*\))*\)$/);
-	});
-
-	it("each token block sets color-scheme, so light-dark() works in a site's override", () => {
-		const schemes = new Map<string, string>();
-		postcss.parse(adminCss).walkRules((rule) => {
-			if (!rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-bg-page")) return;
-			const scheme = rule.nodes.find((node) => node.type === "decl" && node.prop === "color-scheme");
-			schemes.set(rule.selector.includes(".dark") ? "dark" : "light", scheme?.type === "decl" ? scheme.value : "");
-		});
-		expect(Object.fromEntries(schemes)).toEqual({ light: "light", dark: "dark" });
-	});
-
-	it("the theme keeps the admin's own names only", () => {
-		// Tailwind's `--radius*` is not defined by the hand-written rules.
-		expect(adminCss).not.toMatch(/^\s*--radius/m);
-	});
-
-	it("color variables only define --monti-* names", () => {
-		const definitions = [...adminCss.matchAll(/^\t(--[\w-]+)\s*:/gm)].map((m) => m[1]);
-		const colorVars = definitions.filter((name) => new RegExp(`^--(?:monti-)?(${TOKENS})$`).test(name));
-		expect(colorVars).toEqual([]);
-		expect(definitions.filter((name) => !name.startsWith("--monti-"))).toEqual([]);
-	});
-
 	describe("prebuilt stylesheets", () => {
 		const built = new Map<string, string>();
 		beforeAll(() => {
@@ -208,6 +92,17 @@ describe("admin CSS confinement", () => {
 				expect(keyframes.filter((name) => !name.startsWith("monti-"))).toEqual([]);
 			});
 		}
+
+		it("the default token values have zero specificity, so a site's own --monti-* wins in any import order", () => {
+			const holders: string[] = [];
+			postcss.parse(built.get("admin") ?? "").walkRules((rule) => {
+				if (rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-bg-page"))
+					holders.push(rule.selector);
+			});
+			// One block for light, one for dark; each is a single `:where(...)`, so nothing outside it adds specificity.
+			expect(holders).toHaveLength(2);
+			for (const selector of holders) expect(selector).toMatch(/^:where\((?:[^()]|\([^()]*\))*\)$/);
+		});
 
 		it("ADMIN-H1 no selector is defined in more than one bundle", () => {
 			// Bundles load one after another (admin first). A second copy of `.prose` or another shared utility in a plugin's file would load later and
@@ -282,23 +177,5 @@ describe("admin CSS confinement", () => {
 			// Radius utilities read the design system's radius tokens.
 			expect(css).toMatch(/border-radius:var\(--monti-radius-md\)/);
 		});
-	});
-
-	it("admin and extension screen sources use no app-named color classes or dark: variants", () => {
-		const offenders: string[] = [];
-		const color = new RegExp(`(?<![\\w-])(?:${UTILITIES})-(?:${TOKENS})(?![\\w-])`, "g");
-		const variable = new RegExp(`\\(\\s*--(?:color-)?(?:${TOKENS})(?![\\w-])`, "g");
-		const dark = /(?<=[\s"'`:!([])dark:(?=[^\s,])/g;
-		const orientation = /(?<![\w-])(?:group-|peer-|in-|has-)*data-(?:horizontal|vertical)(?![\w-[])/g;
-		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai"]) {
-			const root = path.join(packagesDir, pkg, "src");
-			for (const file of sourceFiles(root)) {
-				const text = readFileSync(file, "utf8");
-				for (const re of [color, variable, dark, orientation]) {
-					for (const m of text.matchAll(re)) offenders.push(`${path.relative(packagesDir, file)}: ${m[0]}`);
-				}
-			}
-		}
-		expect(offenders).toEqual([]);
 	});
 });

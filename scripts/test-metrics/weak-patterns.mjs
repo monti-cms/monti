@@ -24,11 +24,11 @@ const asCheck = process.argv.includes("--check");
  */
 const CEILING = {
 	core: 0,
-	admin: 169,
+	admin: 149,
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
-	ui: 1,
+	ui: 0,
 	seo: 1,
 	nextjs: 0,
 	"storage-s3": 0,
@@ -157,6 +157,7 @@ const EXEMPT = [
 	...[
 		["packages/core/src/cli/__test__/init-specs.int.test.ts", 1],
 		["packages/core/src/format/__test__/mdx-boundary.int.test.ts", 2],
+		["packages/admin/src/__test__/mdx-boundary.test.ts", 1],
 	].map(([file, count]) => ({
 		pattern: "source-read",
 		file,

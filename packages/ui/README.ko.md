@@ -67,4 +67,4 @@ pnpm gen:tokens   # tokens/tokens.json을 고친 뒤
 pnpm gen:tokens --check   # CI가 도는 것: 다른 생성 파일의 이름을 알리고 아무것도 쓰지 않는다
 ```
 
-관리자의 디자인 시스템 테스트(`packages/admin/src/__test__/design-system.test.ts`)는 이 패키지, 관리자, 1차 플러그인에 시스템 밖의 클래스가 있으면 실패한다.
+`pnpm check:design`(`scripts/check-design.mjs`의 `off-system` 규칙)은 이 패키지, 관리자, 1차 플러그인에 시스템 밖의 클래스가 있으면 실패한다.

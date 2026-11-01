@@ -1,0 +1,47 @@
+// Storybook indexes a story's tags only where they are written out on the story or its meta: a tag spread in from a shared array, kept in a constant
+// or added by a helper never reaches the index, so the visual run (`packages/ui/visual`) silently shoots a story it should skip, or skips one it should
+// shoot. So in a story file a visual tag is a string literal in a `tags` array outside any function, and `tags` is an array of string literals: not a
+// name, a call, or an array with a spread or a name in it. (Sample data may have a `tags` field of its own; a string or an object there passes.)
+// `biome.json` applies this to `*.stories.tsx`.
+or {
+	or {
+		`"visual"`,
+		`"no-visual"`,
+		`"visual-allow-clipped"`,
+		`"visual-allow-overflow"`
+	} as $tag where {
+		or {
+			not $tag <: within `tags: [$_]` ,
+			$tag <: within or {
+				JsArrowFunctionExpression(),
+				JsFunctionExpression(),
+				JsFunctionDeclaration(),
+				JsMethodObjectMember()
+			}
+		},
+		register_diagnostic(span=$tag, message="Write a visual tag as a string literal in the tags array of the story or its meta: Storybook does not index a tag kept in a constant, spread in or added by a helper.")
+	},
+	`tags: $value` as $pair where {
+		$value <: or {
+			JsIdentifierExpression(),
+			JsCallExpression(),
+			JsStaticMemberExpression(),
+			JsComputedMemberExpression()
+		},
+		register_diagnostic(span=$pair, message="A story's tags is an array of string literals: Storybook indexes only the tags written out on the story or its meta.")
+	},
+	`tags: [$elements]` as $pair where {
+		$elements <: contains or {
+			JsSpread(),
+			JsIdentifierExpression(),
+			JsCallExpression(),
+			JsStaticMemberExpression(),
+			JsComputedMemberExpression(),
+			JsTemplateExpression(),
+			JsConditionalExpression(),
+			JsLogicalExpression(),
+			JsBinaryExpression()
+		},
+		register_diagnostic(span=$pair, message="A story's tags is an array of string literals: Storybook indexes only the tags written out on the story or its meta, so a spread, a constant or a call is lost.")
+	}
+}

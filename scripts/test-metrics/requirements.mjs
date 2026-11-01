@@ -22,6 +22,7 @@ const asInverted = process.argv.includes("--inverted");
 
 const ID = /^[A-Z]+-[A-Z]+\d+$/;
 const LAYERS = ["L1", "L2", "L3", "L4"];
+/** The layer of a requirement that a tool guards instead of a test (`pnpm lint`, a `check:*` script). */
 
 const walk = (dir, keep, out = []) => {
 	for (const name of readdirSync(dir)) {

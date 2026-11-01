@@ -34,6 +34,8 @@ jobs:
       # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
       # declaration per role).
       - run: pnpm gen:tokens --check
+      # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
+      - run: pnpm check:messages
       # The tests of overhauled packages (docs/testing.md) gain no new weak pattern or reference blog name.
       - run: pnpm check:tests
       - run: pnpm typecheck
