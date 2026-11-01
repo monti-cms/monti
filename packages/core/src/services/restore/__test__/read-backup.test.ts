@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
+import { overlappingZip } from "../../../../test/zip-bomb";
 import type { CmsError } from "../../../core/store/errors";
 import type { ExportSnapshot, MediaAssetRecord } from "../../../core/store/types";
+import { MAX_IMPORT_INFLATED_BYTES } from "../../entry-import/read-archive";
 import { buildExportArchive } from "../../export-service";
 import { createZipArchive, readZipArchive } from "../../zip";
 import { readBackupArchive } from "../read-backup";
@@ -226,5 +228,9 @@ describe("readBackupArchive", () => {
 		expect(refusal(new Uint8Array([1, 2, 3]))).toEqual({ key: "import.archive.unreadable" });
 		const noManifest = createZipArchive([{ path: "readme.txt", data: new TextEncoder().encode("hello") }]);
 		expect(refusal(noManifest)).toEqual({ key: "restore.archive.invalid" });
+	});
+
+	it("DATA-R5 stops reading a backup whose files inflate past the limit", () => {
+		expect(refusal(overlappingZip(MAX_IMPORT_INFLATED_BYTES))).toEqual({ key: "import.archive.unreadable" });
 	});
 });
