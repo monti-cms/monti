@@ -526,7 +526,7 @@ describe("entry editor shell", () => {
 		expect(await screen.findByLabelText("패널 본문")).toBeInTheDocument();
 	});
 
-	it("WRITE-P8 opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
+	it("WRITE-P11 opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
 		serve({
 			...entry,
 			working: { ...entry.working, doc: unparsedDocument("본문 <Callout>닫히지 않음") },

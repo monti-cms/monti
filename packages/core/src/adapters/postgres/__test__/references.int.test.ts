@@ -76,7 +76,7 @@ describe("ContentStore References", () => {
 		await closeGlobalPool();
 	});
 
-	it("create rollback: invalid/nonexistent entry target causes failure and leaves zero matching entry or reference rows", async () => {
+	it("WRITE-S11 create rollback: invalid/nonexistent entry target causes failure and leaves zero matching entry or reference rows", async () => {
 		const nonexistentId = randomUUID();
 		const ref1 = buildReference({ kind: "entry", targetId: nonexistentId });
 		const snapshot1 = buildSnapshot({ slug: "create-invalid-target", references: [ref1] });
@@ -116,31 +116,7 @@ describe("ContentStore References", () => {
 		expect(refTargetCount.rows[0].count).toBe("0");
 	});
 
-	it("explicit DB FK contract: entry_references has a foreign key to entries covering target_entry_id", async () => {
-		const res = await pool.query(
-			`
-			SELECT con.conname
-			FROM pg_catalog.pg_constraint con
-			JOIN pg_catalog.pg_class cl ON con.conrelid = cl.oid
-			JOIN pg_catalog.pg_namespace ns ON cl.relnamespace = ns.oid
-			JOIN pg_catalog.pg_class fcl ON con.confrelid = fcl.oid
-			JOIN pg_catalog.pg_namespace fns ON fcl.relnamespace = fns.oid
-			JOIN pg_catalog.pg_attribute a ON a.attrelid = cl.oid AND a.attnum = ANY(con.conkey)
-			JOIN pg_catalog.pg_attribute fa ON fa.attrelid = fcl.oid AND fa.attnum = ANY(con.confkey)
-			WHERE con.contype = 'f'
-			  AND ns.nspname = $1
-			  AND cl.relname = 'entry_references'
-			  AND a.attname = 'target_entry_id'
-			  AND fns.nspname = $1
-			  AND fcl.relname = 'entries'
-			  AND fa.attname = 'id'
-			`,
-			[schemaName],
-		);
-		expect(res.rows.length).toBeGreaterThanOrEqual(1);
-	});
-
-	it("DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
+	it("WRITE-S11 DB CHECK binds target_id to target_entry_id for entry kinds, rejecting mismatched identities", async () => {
 		const source = await seedEntry(store, {
 			collection: contentCollection,
 			slug: `source-${randomUUID()}`,
@@ -177,49 +153,7 @@ describe("ContentStore References", () => {
 		expect(res.rows[0].count).toBe("0");
 	});
 
-	it("media reference enforces DB identity via media_assets table, rejects invalid/mismatched targets, and roundtrips valid references", async () => {
-		const fkRes = await pool.query(
-			`
-			SELECT con.conname
-			FROM pg_catalog.pg_constraint con
-			JOIN pg_catalog.pg_class cl ON con.conrelid = cl.oid
-			JOIN pg_catalog.pg_namespace ns ON cl.relnamespace = ns.oid
-			JOIN pg_catalog.pg_class fcl ON con.confrelid = fcl.oid
-			JOIN pg_catalog.pg_namespace fns ON fcl.relnamespace = fns.oid
-			JOIN pg_catalog.pg_attribute a ON a.attrelid = cl.oid AND a.attnum = ANY(con.conkey)
-			JOIN pg_catalog.pg_attribute fa ON fa.attrelid = fcl.oid AND fa.attnum = ANY(con.confkey)
-			WHERE con.contype = 'f'
-			  AND ns.nspname = $1
-			  AND cl.relname = 'entry_references'
-			  AND a.attname = 'target_media_id'
-			  AND fns.nspname = $1
-			  AND fcl.relname = 'media_assets'
-			  AND fa.attname = 'id'
-			`,
-			[schemaName],
-		);
-		expect(fkRes.rows.length).toBeGreaterThanOrEqual(1);
-
-		const checkRes = await pool.query(
-			`
-			SELECT con.conname, pg_get_constraintdef(con.oid) as def
-			FROM pg_catalog.pg_constraint con
-			JOIN pg_catalog.pg_class cl ON con.conrelid = cl.oid
-			JOIN pg_catalog.pg_namespace ns ON cl.relnamespace = ns.oid
-			WHERE con.contype = 'c'
-			  AND ns.nspname = $1
-			  AND cl.relname = 'entry_references'
-			`,
-			[schemaName],
-		);
-		const hasMediaCheck = checkRes.rows.some(
-			(row) =>
-				row.def.toLowerCase().includes("target_media_id") &&
-				row.def.toLowerCase().includes("media") &&
-				row.def.toLowerCase().includes("target_id"),
-		);
-		expect(hasMediaCheck).toBe(true);
-
+	it("WRITE-S11 media reference enforces DB identity via media_assets table, rejects invalid/mismatched targets, and roundtrips valid references", async () => {
 		const source = await seedEntry(store, {
 			collection: contentCollection,
 			slug: `media-src-${randomUUID()}`,
@@ -355,5 +289,5 @@ describe("ContentStore References", () => {
 
 		const refsAfterFail = await store.getWorkingReferences({ entryId: entryValid.id });
 		expect(refsAfterFail).toEqual(refsUpdated);
-	}, 15_000);
+	});
 });

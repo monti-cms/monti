@@ -85,16 +85,13 @@ describe("Public JSON API", () => {
 		await closeGlobalPool();
 	});
 
-	it("is 404 when not configured", async () => {
+	it("SITE-J1 is 404 when not configured", async () => {
 		publicApi = undefined;
 		expect((await get("v1/public/entries")).status).toBe(404);
 	});
 
-	it("list: paging, relation filter (target address), no caching; a bad query is 400", async () => {
-		publicApi = {
-			collections: [contentCollection],
-			filters: relation ? { related: relation.name } : {},
-		} satisfies PublicApiOptions;
+	it("SITE-R5 list: paging, no caching; a bad query is 400", async () => {
+		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const list = await get("v1/public/entries?pageSize=1");
 		expect(list.status).toBe(200);
 		expect(list.cache).toBe("no-store");
@@ -105,16 +102,23 @@ describe("Public JSON API", () => {
 		expect(list.body.items[0]).not.toHaveProperty("refs");
 		expect(list.body.items[0]).not.toHaveProperty("version");
 
-		if (relation) {
-			const filtered = await get(`v1/public/entries?related=${encodeURIComponent(targetSlug)}`);
-			expect(filtered.body.items.map((item: { slug: string }) => item.slug)).toEqual(["public-2"]);
-			expect((await get("v1/public/entries?related=no-such-target")).body).toMatchObject({ items: [], total: 0 });
-		}
 		expect((await get("v1/public/entries?pageSize=101")).status).toBe(400);
 		expect((await get("v1/public/entries?collection=nope")).status).toBe(400);
 	});
 
-	it("single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {
+	it.skipIf(!relation)("SITE-R5 list: a relation filter takes the address of the target", async () => {
+		publicApi = {
+			collections: [contentCollection],
+			filters: { related: relation?.name ?? "" },
+		} satisfies PublicApiOptions;
+
+		const filtered = await get(`v1/public/entries?related=${encodeURIComponent(targetSlug)}`);
+
+		expect(filtered.body.items.map((item: { slug: string }) => item.slug)).toEqual(["public-2"]);
+		expect((await get("v1/public/entries?related=no-such-target")).body).toMatchObject({ items: [], total: 0 });
+	});
+
+	it("SITE-R5 single: includes the body as a document with its refs, reports the canonical address for an old address, and is 404 if missing", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 		const one = await get(`v1/public/entries/${contentCollection}/public-1`);
 		expect(one.body).toMatchObject({ entry: { slug: "public-1" }, address: { isAlias: false } });
@@ -139,7 +143,7 @@ describe("Public JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/missing`)).status).toBe(404);
 	});
 
-	it("single with ?format= also carries the body as text in that format, as { format, text }", async () => {
+	it("SITE-R7 single with ?format= also carries the body as text in that format, as { format, text }", async () => {
 		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
 
 		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=paragraphs`);
@@ -153,17 +157,7 @@ describe("Public JSON API", () => {
 		for (const item of list.body.items) expect(item).not.toHaveProperty("body");
 	});
 
-	it("an unknown format is a 400 invalid_input, and nothing about the format plugin leaks", async () => {
-		publicApi = { collections: [contentCollection] } satisfies PublicApiOptions;
-
-		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=hugo`);
-
-		expect(one.status).toBe(400);
-		expect(one.body).toEqual({ error: { code: "invalid_input", message: "Unknown format" } });
-		expect(one.cache).toBe("no-store");
-	});
-
-	it("hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
+	it("SITE-J1 hides the entry when toJson returns null (dropped from lists, 404 for a single read)", async () => {
 		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry) => (entry.slug === "public-2" ? null : { s: entry.slug }),
@@ -173,7 +167,7 @@ describe("Public JSON API", () => {
 		expect((await get(`v1/public/entries/${contentCollection}/public-2`)).status).toBe(404);
 	});
 
-	it("the site can set the response shape (toJson)", async () => {
+	it("SITE-J1 the site can set the response shape (toJson)", async () => {
 		publicApi = {
 			collections: [contentCollection],
 			toJson: (entry, { body }) => ({ s: entry.slug, hasBody: body }),

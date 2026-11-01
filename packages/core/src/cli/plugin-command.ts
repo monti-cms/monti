@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import type { Cms } from "../cms";
 import { hostOf } from "../cms/host";
 import type { PluginCommand } from "../plugin/define";
 import { loadApp } from "./app";
@@ -17,19 +18,24 @@ const PARSE_OPTIONS = {
 	help: { type: "boolean" },
 } as const;
 
+/** The plugin and the command of a name like `my-plugin:pull`. */
+function partsOf(fullName: string): { readonly pluginName: string; readonly commandName: string } {
+	const [, pluginName, commandName] = COMMAND_NAME.exec(fullName) ?? [];
+	if (!pluginName || !commandName) throw new Error(`Unknown command: ${fullName}`);
+	return { pluginName, commandName };
+}
+
 /**
- * `monti <plugin>:<command> [options]`: loads the app's CMS instance, finds the command in the server side of the named plugin and runs it with the instance.
- * The options of the command are the ones it declares plus the app options (`--env-file`, `--no-env-file`, `--config`). Returns the exit code.
+ * `monti <plugin>:<command> [options]`: loads the app's CMS instance with the app options (`--env-file`, `--no-env-file`, `--config`), then runs the command
+ * with it (see {@link runPluginCommandWith}). Returns the exit code.
  */
 export async function runPluginCommand(
 	context: CliContext,
 	fullName: string,
 	argv: readonly string[],
 ): Promise<number> {
-	const { log, error } = context;
-	const [, pluginName, commandName] = COMMAND_NAME.exec(fullName) ?? [];
-	if (!pluginName || !commandName) throw new Error(`Unknown command: ${fullName}`);
-
+	// A name that is not `<plugin>:<command>` fails before the app loads.
+	partsOf(fullName);
 	// The app options come first: loading the app is what tells which options the command has.
 	const first = parseArgs({ args: [...argv], options: PARSE_OPTIONS, strict: false, allowPositionals: true });
 	const app = appFlagsOf({
@@ -37,8 +43,23 @@ export async function runPluginCommand(
 		"no-env-file": first.values["no-env-file"] === true,
 		config: typeof first.values.config === "string" ? first.values.config : undefined,
 	});
-	const cms = await loadApp({ cwd: context.cwd, log, error, ...app });
+	const cms = await loadApp({ cwd: context.cwd, log: context.log, error: context.error, ...app });
+	return runPluginCommandWith(cms, context, fullName, argv);
+}
+
+/**
+ * Finds the command in the server side of the named plugin and runs it with `cms`, then closes `cms` (also when the command fails or is unknown).
+ * The options of the command are the ones it declares plus the app options, which are accepted and left to {@link runPluginCommand}. Returns the exit code.
+ */
+export async function runPluginCommandWith(
+	cms: Cms,
+	context: CliContext,
+	fullName: string,
+	argv: readonly string[],
+): Promise<number> {
+	const { log, error } = context;
 	try {
+		const { pluginName, commandName } = partsOf(fullName);
 		const plugins = await hostOf(cms).plugins();
 		const plugin = plugins.find((item) => item.name === pluginName);
 		const command: PluginCommand | undefined = plugin?.commands?.[commandName];

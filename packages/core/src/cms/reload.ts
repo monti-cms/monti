@@ -89,7 +89,7 @@ export function withSchemaControls<Config extends CmsConfig>(parts: {
 				siteUrlSource: options.siteUrlSource,
 				schemaFile: file ? path.relative(process.cwd(), file) || file : undefined,
 				schemaFileGiven: Boolean(options.schemaFile),
-				hotReload: env.NODE_ENV === "development" && Boolean(source && file),
+				reloadable: Boolean(source && file),
 			}),
 		];
 	};

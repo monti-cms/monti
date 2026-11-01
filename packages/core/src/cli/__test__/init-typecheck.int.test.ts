@@ -73,7 +73,10 @@ const host = {
 };
 
 describe("the project monti init writes", () => {
-	it.each(["password", "github"] as const)("type checks with every feature on and the %s login", async (login) => {
+	it.each([
+		"password",
+		"github",
+	] as const)("INIT-R1 type checks with every feature on and the %s login", async (login) => {
 		const dir = fixture();
 		const report = await initProject({
 			cwd: dir,
@@ -99,5 +102,5 @@ describe("the project monti init writes", () => {
 		const probe = spawnSync(tsc, ["--noEmit", "-p", "."], { cwd: dir, encoding: "utf8" });
 		expect(probe.status).not.toBe(0);
 		expect(probe.stdout).toContain("probe.ts");
-	}, 180_000);
+	});
 });

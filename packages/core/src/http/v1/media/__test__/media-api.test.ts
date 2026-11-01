@@ -9,7 +9,6 @@ import type { MessageVars } from "../../../../i18n/define";
 import { routeCaller } from "../../../../testing";
 import { POST as handleCompleteHandler } from "../[id]/complete/route";
 import { POST as handleReplaceHandler } from "../[id]/replace/route";
-import * as mediaItemRoute from "../[id]/route";
 import { PATCH as handlePatchMediaHandler } from "../[id]/route";
 import { renameProblem, typeNames } from "../media-files";
 import { GET as handleListMediaHandler } from "../route";
@@ -443,8 +442,9 @@ describe("Media Upload API Endpoints", () => {
 			}),
 		});
 		expect((await handleUploads(req, { cms })).status).toBe(201);
-		const sizes = mockPrepareUpload.mock.calls.map(([input]) => input.byteSize).sort((a, b) => a - b);
-		expect(sizes).toEqual([1000, 5000]);
+		expect(mockPrepareUpload).toHaveBeenCalledTimes(2);
+		expect(mockPrepareUpload).toHaveBeenCalledWith(expect.objectContaining({ byteSize: 1000 }));
+		expect(mockPrepareUpload).toHaveBeenCalledWith(expect.objectContaining({ byteSize: 5000 }));
 	});
 
 	it.each([
@@ -621,7 +621,7 @@ describe("Media Upload API Endpoints", () => {
 		expect((await get("?alt=maybe")).status).toBe(400);
 	});
 
-	it("POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
+	it("TRASH-T5 POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
 		mockTrashMedia.mockResolvedValue({
 			trashed: ["00000000-0000-4000-8000-000000000009"],
 			kept: ["00000000-0000-4000-8000-00000000000a"],
@@ -643,17 +643,17 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 
-	it("POST /media/trash rejects a body without ids", async () => {
-		const req = new Request("http://localhost/api/monti/v1/media/trash", {
-			method: "POST",
-			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
-			body: JSON.stringify({ ids: [] }),
-		});
-		expect((await handleTrashMedia(req, { cms })).status).toBe(400);
-	});
-
-	it("has no DELETE /media/:id: a file is deleted for good only from the trash", () => {
-		expect(Object.keys(mediaItemRoute)).not.toContain("DELETE");
+	it("TRASH-D1 has no DELETE /media/:id: a file is deleted for good only from the trash", async () => {
+		const id = "00000000-0000-4000-8000-000000000009";
+		const res = await cms.handle(
+			new Request(`http://localhost/api/monti/v1/media/${id}`, {
+				method: "DELETE",
+				headers: { origin: "http://localhost" },
+			}),
+		);
+		expect(res.status).toBe(405);
+		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
+		expect(mockDeleteFile).not.toHaveBeenCalled();
 	});
 });
 
@@ -902,7 +902,9 @@ describe("POST /media/:id/replace", () => {
 			defaultCaption: "Kept caption",
 		});
 		expect(mockReplaceMediaFile).toHaveBeenCalledWith({ id, fromId });
-		expect(mockDeleteFile.mock.calls.map(([arg]) => arg.key)).toEqual([`media/${id}.png`, `media/${id}-original.png`]);
+		expect(mockDeleteFile).toHaveBeenCalledTimes(2);
+		expect(mockDeleteFile).toHaveBeenCalledWith(expect.objectContaining({ key: `media/${id}.png` }));
+		expect(mockDeleteFile).toHaveBeenCalledWith(expect.objectContaining({ key: `media/${id}-original.png` }));
 	});
 
 	it("MEDIA-R4 does not delete a file the target did not have", async () => {

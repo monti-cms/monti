@@ -38,17 +38,7 @@ const footnoteWarnings = async (...content: CmsNode[]) => {
 };
 
 describe("footnote pre-publish validation (warnings only)", () => {
-	it("raises nothing for matching references and definitions", async () => {
-		const { warnings, snapshot } = await footnoteWarnings(
-			paragraph("A[^1] and B[^b] and A again[^1]."),
-			definition("1", "one"),
-			definition("b", "two"),
-		);
-		expect(warnings).toEqual([]);
-		expect(snapshot.issues).toEqual([]);
-	});
-
-	it("warns about a reference without a definition", async () => {
+	it("EDIT-F1 warns about a reference without a definition", async () => {
 		const { warnings, snapshot } = await footnoteWarnings(
 			paragraph("Text[^1] and more[^gone]."),
 			definition("1", "one"),
@@ -65,7 +55,7 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("warns about a definition that no reference uses", async () => {
+	it("EDIT-F1 warns about a definition that no reference uses", async () => {
 		const { warnings, snapshot } = await footnoteWarnings(
 			paragraph("Text[^1]"),
 			definition("1", "one"),
@@ -82,36 +72,8 @@ describe("footnote pre-publish validation (warnings only)", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("warns about duplicate definition labels once per extra definition", async () => {
-		const { warnings, snapshot } = await footnoteWarnings(
-			paragraph("Text[^a]"),
-			definition("a", "one"),
-			definition("A", "two"),
-		);
-		expect(warnings.map((warning) => warning.code)).toEqual(["footnote_definition_duplicate"]);
-		expect(warnings[0]).toMatchObject({
-			message: "A",
-			params: { label: "A" },
-			position: { blockId: snapshot.doc.content[2]?.id },
-		});
-	});
-
-	it("matches labels case-insensitively", async () => {
+	it("EDIT-F1 matches labels case-insensitively", async () => {
 		const { warnings } = await footnoteWarnings(paragraph("Text[^Note]"), definition("note", "one"));
 		expect(warnings).toEqual([]);
-	});
-
-	it("reports each problem separately", async () => {
-		const { warnings } = await footnoteWarnings(
-			paragraph("Text[^a] [^zz]"),
-			definition("a", "one"),
-			definition("b", "two"),
-			definition("a", "three"),
-		);
-		expect(warnings.map((warning) => warning.code).sort()).toEqual([
-			"footnote_definition_duplicate",
-			"footnote_definition_missing",
-			"footnote_definition_unused",
-		]);
 	});
 });

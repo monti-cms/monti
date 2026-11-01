@@ -79,7 +79,7 @@ describe("CmsEditor works on the stored document", () => {
 		expect(editor.isEditable).toBe(true);
 	});
 
-	it("WRITE-P8 keeps a body that could not be read in a box, and hands the same text back when it changes elsewhere", async () => {
+	it("WRITE-P11 keeps a body that could not be read in a box, and hands the same text back when it changes elsewhere", async () => {
 		const onChange = vi.fn();
 		const unreadable: StoredDocument = {
 			type: "doc",

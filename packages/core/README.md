@@ -1005,7 +1005,6 @@ const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // wh
 const value = await cms.apiKeys.read(id);                                  // server only; null if the key was deleted or cannot be decrypted
 await cms.apiKeys.setUses("my-plugin", [{ ref: "item:42", keyId: id }]);   // which items of the plugin use keys, replaced as a whole
 await plugin.key("key").read();                                           // the key assigned to a slot the plugin declared (`keySlots`)
-await cms.apiKeys.findOrAdd({ baseName: "GitHub", value });                // the key that has this value, or a new one
 await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...) and tx.storage("my-plugin") writes: all kept or none */ });
 ```
 

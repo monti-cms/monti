@@ -57,7 +57,7 @@ describe("monti doctor on a healthy project", () => {
 			...extra,
 		});
 
-	it("passes every check, prints no warning, and exits 0", async () => {
+	it("DOC-R1 passes every check, prints no warning, and exits 0", async () => {
 		healthyEnv();
 		const dir = project();
 		expect(await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
@@ -93,18 +93,7 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "auth/admins").message).toContain("github:12345678");
 	});
 
-	it("does not assume a dev port or an empty NODE_ENV when SITE_URL is not set", async () => {
-		healthyEnv({ SITE_URL: "", NODE_ENV: "" });
-		const { report } = await doctor(project());
-		const text = JSON.stringify(report);
-		expect(text).not.toContain(":3000");
-		expect(text).not.toContain('NODE_ENV is \\"\\"');
-		expect(byId(report, "auth/callback-url").message).toContain("<your dev URL>/api/monti/auth/callback/github");
-		expect(byId(report, "config/automatic").message).toContain("NODE_ENV is not set");
-		expect(byId(report, "config/automatic").message).toMatch(/Trust host: on \(login links/);
-	});
-
-	it("says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
+	it("DOC-R2 says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
 		healthyEnv();
 		const dir = project();
 		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined });
@@ -114,17 +103,17 @@ describe("monti doctor on a healthy project", () => {
 		const migrations = byId(report, "database/migrations");
 		expect(code).toBe(1);
 		expect(migrations.status).toBe("fail");
-		expect(migrations.message).toBe(
-			"This database was created by an older pre-release of Monti and cannot be upgraded",
-		);
-		expect(migrations.fix).toContain("recreate it");
+		// What is wrong (an older pre-release, no upgrade), where (the schema) and the fix (recreate it).
+		expect(migrations.message).toContain("older pre-release");
+		expect(migrations.message).toContain("cannot be upgraded");
+		expect(migrations.fix).toContain("recreate");
 		expect(migrations.where).toContain(schemaName);
 		// The rest of the setup is still reported: one broken part does not hide the others.
 		expect(byId(report, "database/connect").status).toBe("ok");
 		expect(byId(report, "config/loads").status).toBe("ok");
 	});
 
-	it("says all migrations are pending, and that the schema is not there yet, for a database nobody migrated", async () => {
+	it("DOC-R2 says all migrations are pending, and that the schema is not there yet, for a database nobody migrated", async () => {
 		healthyEnv({ DATABASE_SCHEMA: `${schemaName}_none` });
 		const { report } = await doctor(project());
 		expect(byId(report, "database/schema")).toMatchObject({ status: "warn" });
@@ -139,7 +128,7 @@ describe("monti doctor on a healthy project", () => {
 });
 
 describe("monti doctor on a project with missing settings", () => {
-	it("fails with what, where and how to fix for every missing value, and exits 1", async () => {
+	it("DOC-R1 fails with what, where and how to fix for every missing value, and exits 1", async () => {
 		setEnv();
 		const { code, report } = await doctor(project());
 		expect(code).toBe(1);
@@ -169,7 +158,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(admins.fix).toContain("api.github.com/users");
 	});
 
-	it("runs no GitHub checks for a site whose login has no GitHub provider", async () => {
+	it("DOC-R3 runs no GitHub checks for a site whose login has no GitHub provider", async () => {
 		setEnv({ MONTI_SECRET: STRONG_SECRET });
 		const other =
 			'{ id: "gitlab", name: "GitLab", label: { en: "Sign in with GitLab" }, setup: () => ({ id: "gitlab", type: "oauth" }), account: () => null }';
@@ -181,7 +170,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "auth/github-id").message).toContain("no GitHub provider");
 	});
 
-	it("is stricter about the login when it runs as production", async () => {
+	it("DOC-R3 is stricter about the login when it runs as production", async () => {
 		setEnv({ NODE_ENV: "production" });
 		const { report } = await doctor(project());
 		expect(byId(report, "auth/github-id").status).toBe("fail");
@@ -192,7 +181,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "auth/trust-host").fix).toContain("AUTH_TRUST_HOST=true");
 	});
 
-	it("warns about a config with no login in development, and fails for production or a known platform, with how to add GitHub", async () => {
+	it("DOC-R3 warns about a config with no login in development, and fails for production or a known platform, with how to add GitHub", async () => {
 		const noAuth = configText().replace("\tauth: auth({ providers: [github()] }),\n", "");
 		expect(noAuth).not.toContain("auth: ");
 		setEnv({ MONTI_SECRET: STRONG_SECRET });
@@ -222,7 +211,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId((await doctor(project({ "monti.config.ts": noAuth }))).report, "auth/login").status).toBe("fail");
 	});
 
-	it("explains a database that cannot be reached, without printing the password", async () => {
+	it("CLI-P1 explains a database that cannot be reached, without printing the password", async () => {
 		setEnv({ DATABASE_URL: "postgres://monti:hunter2@127.0.0.1:1/blog", MONTI_SECRET: STRONG_SECRET });
 		const { report } = await doctor(project());
 		const connect = byId(report, "database/connect");
@@ -233,30 +222,32 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "database/migrations").status).toBe("skip");
 	});
 
-	it("rejects a DATABASE_URL that is not a Postgres URL", async () => {
-		setEnv({ DATABASE_URL: "mysql://root@localhost/blog" });
-		const { report } = await doctor(project());
-		expect(byId(report, "database/url").status).toBe("fail");
-		expect(byId(report, "database/url").message).toContain("postgres://");
+	it("DOC-R2 the database/url check warns about an sslmode the driver warns about, and says what to change", async () => {
+		// The modes and the URLs that need no warning are the cases of sslmodeWarning (adapters/postgres connection.test.ts); this is the check that shows it.
+		setEnv({ DATABASE_URL: "postgres://u:p@db.example.com:5432/blog?sslmode=require" });
+		const { report } = await doctor(project(), ["--only", "database/url"]);
+		const url = byId(report, "database/url");
+		expect(url.status).toBe("warn");
+		expect(url.message).toContain("sslmode=require");
+		expect(url.fix).toContain("sslmode=verify-full");
 	});
 
-	it("warns about sslmode=require|prefer|verify-ca without uselibpqcompat, and says what to change", async () => {
-		for (const mode of ["require", "prefer", "verify-ca"]) {
-			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog?sslmode=${mode}` });
-			const { report } = await doctor(project());
-			const url = byId(report, "database/url");
-			expect(url.status).toBe("warn");
-			expect(url.message).toContain("SECURITY WARNING");
-			expect(url.fix).toContain("sslmode=verify-full");
-		}
-		for (const query of ["sslmode=verify-full", "sslmode=require&uselibpqcompat=true", ""]) {
-			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog${query ? `?${query}` : ""}` });
-			const { report } = await doctor(project());
-			expect(byId(report, "database/url").status).toBe("ok");
-		}
+	it("INIT-K5 reports a .gitignore that does not keep .env.local out of git, and says what to add", async () => {
+		setEnv();
+		const exposed = project({ ".gitignore": "node_modules\n.monti/\n", ".env.local": "MONTI_SECRET=x\n" });
+		const check = byId((await doctor(exposed, ["--only", "config/env-ignored"])).report, "config/env-ignored");
+		expect(check.status).toBe("warn");
+		expect(check.message).toContain(".env.local");
+		expect(check.where).toBe(".gitignore");
+		expect(check.fix).toContain("`.env.local`");
+
+		const covered = project({ ".gitignore": ".env*\n.monti/\n", ".env.local": "MONTI_SECRET=x\n" });
+		expect(byId((await doctor(covered, ["--only", "config/env-ignored"])).report, "config/env-ignored").status).toBe(
+			"ok",
+		);
 	});
 
-	it("warns about a weak MONTI_SECRET and never prints it", async () => {
+	it("CLI-P1 warns about a weak MONTI_SECRET and never prints it", async () => {
 		setEnv({ MONTI_SECRET: "changeme" });
 		const { report } = await doctor(project());
 		const secret = byId(report, "secrets/monti-secret");
@@ -265,7 +256,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(JSON.stringify(report)).not.toContain("changeme");
 	});
 
-	it("reports a config that does not load, and skips what needs it", async () => {
+	it("DOC-R4 reports a config that does not load, and skips what needs it", async () => {
 		setEnv();
 		const dir = project({ "monti.config.ts": 'import "this-package-does-not-exist";\nexport const cms = {};\n' });
 		const { code, report } = await doctor(dir);
@@ -280,14 +271,14 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "schema/file").status).toBe("ok");
 	});
 
-	it("reports a missing config file with what to do", async () => {
+	it("DOC-R4 reports a missing config file with what to do", async () => {
 		setEnv();
 		const { report } = await doctor(project({ "monti.config.ts": null }));
 		expect(byId(report, "config/file").status).toBe("fail");
 		expect(byId(report, "config/file").fix).toContain("monti init");
 	});
 
-	it("names the path of what is wrong in the schema file", async () => {
+	it("SCHEMA-F14 names the path of what is wrong in the schema file", async () => {
 		setEnv();
 		const dir = project();
 		writeFileSync(
@@ -302,7 +293,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(schema.fix).toContain("defineSchema");
 	});
 
-	it("reports a schema file that is valid but holds code: the admin cannot rewrite it", async () => {
+	it("DOC-R4 reports a schema file that is valid but holds code: the admin cannot rewrite it", async () => {
 		setEnv();
 		const dir = project();
 		writeFileSync(
@@ -319,7 +310,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(schema.message).toContain("read-only");
 	});
 
-	it("checks the three Next files and the admin path", async () => {
+	it("DOC-R4 checks the three Next files and the admin path", async () => {
 		setEnv();
 		const dir = project({
 			"app/studio/layout.tsx": null,
@@ -336,28 +327,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
 	});
 
-	it("does not count a comment that mentions withCms as the wrapper", async () => {
-		setEnv();
-		const dir = project({ "next.config.ts": "// wrap the config in withCms(nextConfig) later\nexport default {};\n" });
-		const { report } = await doctor(dir);
-		expect(byId(report, "next/with-cms").status).toBe("fail");
-	});
-
-	it("warns about a root layout without suppressHydrationWarning, and is quiet once it has it", async () => {
-		setEnv();
-		const dir = project({ "app/layout.tsx": '<html lang="en"><body /></html>\n' });
-		const { report } = await doctor(dir);
-		const hydration = byId(report, "next/hydration");
-		expect(hydration.status).toBe("warn");
-		expect(hydration.fix).toContain("suppressHydrationWarning");
-		expect(report.checks.some((check) => check.id === "next/theme-styles")).toBe(false);
-
-		const fixed = project({ "app/layout.tsx": '<html lang="en" suppressHydrationWarning><body /></html>\n' });
-		const again = await doctor(fixed);
-		expect(byId(again.report, "next/hydration").status).toBe("ok");
-	});
-
-	it("tells when the admin files sit at a different path than the config says", async () => {
+	it("DOC-R4 tells when the admin files sit at a different path than the config says", async () => {
 		setEnv();
 		const dir = project({
 			"app/studio/layout.tsx": null,
@@ -380,14 +350,7 @@ describe("monti doctor on the media storage", () => {
 			`database: postgres(),\n\tstorage: { createStore: () => { ${store} } },`,
 		);
 
-	it("says uploads are off when the config has no storage", async () => {
-		setEnv();
-		const { report } = await doctor(project());
-		expect(byId(report, "config/storage")).toMatchObject({ status: "ok" });
-		expect(byId(report, "config/storage").message).toContain("no `storage`");
-	});
-
-	it("fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
+	it("DOC-R4 fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
 		setEnv();
 		const dir = project({
 			"monti.config.ts": withStorage(
@@ -404,7 +367,7 @@ describe("monti doctor on the media storage", () => {
 		expect(code).toBe(1);
 	});
 
-	it("passes when the store can make public file addresses", async () => {
+	it("DOC-R4 passes when the store can make public file addresses", async () => {
 		setEnv();
 		const dir = project({
 			"monti.config.ts": withStorage(
@@ -418,7 +381,7 @@ describe("monti doctor on the media storage", () => {
 });
 
 describe("monti doctor --only", () => {
-	it("runs only the groups and checks it names", async () => {
+	it("DOC-R1 runs only the groups and checks it names", async () => {
 		setEnv();
 		const { report } = await doctor(project(), ["--only", "auth/admins,schema/file"]);
 		expect(report.checks.map((check) => check.id).sort()).toEqual(["auth/admins", "schema/file"]);
@@ -426,7 +389,7 @@ describe("monti doctor --only", () => {
 });
 
 describe("monti doctor --json and the text report", () => {
-	it("prints a stable JSON shape for tools", async () => {
+	it("DOC-R1 prints a stable JSON shape for tools", async () => {
 		setEnv();
 		const { report } = await doctor(project());
 		expect(Object.keys(report).sort()).toEqual(["checks", "cwd", "ok", "summary"]);

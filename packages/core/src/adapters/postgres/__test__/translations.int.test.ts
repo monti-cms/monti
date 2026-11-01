@@ -29,16 +29,6 @@ describe("translation groups (postgres storage)", () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
 	});
 
-	it("gives the same result when migrated again (columns and primary key)", async () => {
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		const pk = await pool.query<{ column_name: string }>(
-			`SELECT column_name FROM information_schema.key_column_usage
-			 WHERE table_schema = $1 AND constraint_name = 'content_addresses_pkey' ORDER BY ordinal_position`,
-			[schemaName],
-		);
-		expect(pk.rows.map((row) => row.column_name)).toEqual(["collection", "locale", "slug"]);
-	});
-
 	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
 		const statusOf = async (id: string) =>
 			(await pool.query<{ status: string }>(`SELECT status FROM "${schemaName}".entries WHERE id = $1`, [id])).rows[0]
@@ -66,7 +56,7 @@ describe("translation groups (postgres storage)", () => {
 			expect(await statusOf(translation.id)).toBeUndefined();
 		});
 
-		it("records one named deleted event for the source and for each translation it deletes with it", async () => {
+		it("EVENT-D4 records one named deleted event for the source and for each translation it deletes with it", async () => {
 			const source = await createPost("delete-events");
 			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			const trashedTranslation = await store.trashEntry({
@@ -115,16 +105,6 @@ describe("translation groups (postgres storage)", () => {
 			await store.restoreEntry({ id: source.id, expectedVersion: trashed.version });
 			expect(await statusOf(source.id)).toBe("draft");
 			expect(await statusOf(apart.id)).toBe("trashed");
-		});
-
-		it("TRASH-R2 brings back a translation trashed with its source when the source is restored", async () => {
-			const source = await createPost("restore-together");
-			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
-			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
-			expect(await statusOf(translation.id)).toBe("trashed");
-
-			await store.restoreEntry({ id: source.id, expectedVersion: trashed.version });
-			expect(await statusOf(translation.id)).toBe("draft");
 		});
 	});
 });

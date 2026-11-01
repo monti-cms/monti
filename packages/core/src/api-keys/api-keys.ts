@@ -80,8 +80,6 @@ export interface ApiKeys {
 	add(input: { name: string; value: string }): Promise<ApiKeyView>;
 	/** Saves a key under `baseName`, or `baseName 2`, `baseName 3`, ... when that name is taken. */
 	addNamed(input: { baseName: string; value: string }): Promise<ApiKeyView>;
-	/** The saved key that has this value, or a new one named like {@link addNamed}. */
-	findOrAdd(input: { baseName: string; value: string }): Promise<ApiKeyView>;
 	/**
 	 * Turns what a form sent for a place's key into the id to keep: the id of a saved key (which must exist), the id of a key just saved from the typed value
 	 * (named `baseName`, or `baseName 2`, ... when taken), or `null` for no key.
@@ -321,12 +319,6 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 		slot: slotOf,
 		add: ({ name, value }) => create(name, value),
 		addNamed,
-		findOrAdd: async ({ baseName, value }) => {
-			for (const item of await keys().list()) {
-				if (secrets.decrypt(item.value.secret) === value) return view(item, (await usesByKey()).get(item.key));
-			}
-			return addNamed({ baseName, value });
-		},
 		choose,
 		update: async (id, { expectedVersion, name, value }) => {
 			const current = await keys().get(id);
@@ -412,7 +404,6 @@ export function createApiKeys(options: ApiKeysOptions): ApiKeys {
 		...direct,
 		add: (input) => inTx((keys) => keys.add(input)),
 		addNamed: (input) => inTx((keys) => keys.addNamed(input)),
-		findOrAdd: (input) => inTx((keys) => keys.findOrAdd(input)),
 		choose: (choice, where) => inTx((keys) => keys.choose(choice, where)),
 		update: (id, input) => inTx((keys) => keys.update(id, input)),
 		remove: (id, input) => inTx((keys) => keys.remove(id, input)),

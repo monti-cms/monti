@@ -12,9 +12,12 @@ export function coreDecisions(input: {
 	/** The schema file, relative to the working directory, or `undefined` when the site has none. */
 	readonly schemaFile: string | undefined;
 	readonly schemaFileGiven: boolean;
-	readonly hotReload: boolean;
+	/** The site was built from a schema file that is on disk, so the instance can evaluate it again. */
+	readonly reloadable: boolean;
 }): readonly Decision[] {
 	const { env } = input;
+	// Only the dev server reloads the schema: a server runs the schema it started with.
+	const hotReload = env.NODE_ENV === "development" && input.reloadable;
 	return [
 		{
 			topic: "Trust host",
@@ -41,8 +44,8 @@ export function coreDecisions(input: {
 		},
 		{
 			topic: "Schema hot reload",
-			value: input.hotReload ? "on" : "off",
-			source: input.hotReload
+			value: hotReload ? "on" : "off",
+			source: hotReload
 				? 'auto-detected (NODE_ENV is "development": the dev server evaluates monti.config.ts again when the schema file changes)'
 				: input.schemaFile
 					? `auto-detected (${describeNodeEnv(env)}: a server runs the schema it started with)`

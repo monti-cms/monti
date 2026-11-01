@@ -6,11 +6,9 @@ import type { EntryStatus } from "../../store/types";
 import {
 	assertArchivable,
 	assertDeletable,
-	assertRestoreSnapshot,
 	assertSourceNotTrashed,
 	assertTransitionAllowed,
 	blockingTranslations,
-	canTransition,
 	type GroupMember,
 	type LifecycleAction,
 	membersToArchive,
@@ -41,35 +39,28 @@ const STARTS: Record<LifecycleAction, EntryStatus[]> = {
 };
 
 describe("lifecycle transitions", () => {
-	for (const action of Object.keys(STARTS) as LifecycleAction[]) {
-		it(`${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () => {
-			for (const status of ALL) {
-				const result = codeOf(() => assertTransitionAllowed(action, status, 7));
-				if (STARTS[action].includes(status)) expect(result).toBeNull();
-				else expect(result).toEqual({ code: "invalid_status", serverVersion: 7 });
-			}
-		});
+	const allowedFrom = (action: LifecycleAction) => {
+		for (const status of ALL) {
+			const result = codeOf(() => assertTransitionAllowed(action, status, 7));
+			if (STARTS[action].includes(status)) expect(result).toBeNull();
+			else expect(result).toEqual({ code: "invalid_status", serverVersion: 7 });
+		}
+	};
+	// Archiving is a write rule, trashing and restoring are trash rules.
+	for (const action of ["archive", "unarchive"] as const) {
+		it(`WRITE-W13 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () =>
+			allowedFrom(action));
+	}
+	for (const action of ["trash", "restore"] as const) {
+		it(`TRASH-R9 ${action} is allowed from ${STARTS[action].join(", ")} and rejects every other status with invalid_status`, () =>
+			allowedFrom(action));
 	}
 
-	it("canTransition agrees with assertTransitionAllowed for every action and status", () => {
-		for (const action of Object.keys(STARTS) as LifecycleAction[]) {
-			for (const status of ALL) {
-				expect(canTransition(action, status), `${action} from ${status}`).toBe(
-					codeOf(() => assertTransitionAllowed(action, status, 1)) === null,
-				);
-			}
-		}
-	});
-
-	it("a restore never takes a published entry offline: only a trashed entry can be restored", () => {
-		expect(codeOf(() => assertTransitionAllowed("restore", "published", 1))).toMatchObject({ code: "invalid_status" });
-	});
-
-	it("leaves an entry as archived, draft, trashed and draft after archive, unarchive, trash and restore", () => {
+	it("TRASH-R1 leaves an entry as archived, draft, trashed and draft after archive, unarchive, trash and restore", () => {
 		expect(STATUS_AFTER).toEqual({ archive: "archived", unarchive: "draft", trash: "trashed", restore: "draft" });
 	});
 
-	it("archives content collections, but not record collections", () => {
+	it("WRITE-W13 archives content collections, but not record collections", () => {
 		expect(codeOf(() => assertArchivable(testSite, contentCollection, 3))).toBeNull();
 		expect(codeOf(() => assertArchivable(testSite, recordCollection, 3))).toEqual({
 			code: "invalid_status",
@@ -86,11 +77,6 @@ describe("lifecycle transitions", () => {
 		expect(codeOf(() => assertSourceNotTrashed("trashed", 4))).toEqual({ code: "source_trashed", serverVersion: 4 });
 		expect(codeOf(() => assertSourceNotTrashed("draft", 4))).toBeNull();
 		expect(codeOf(() => assertSourceNotTrashed(undefined, 4))).toBeNull();
-	});
-
-	it("restoring a record needs its prepared draft", () => {
-		expect(codeOf(() => assertRestoreSnapshot(undefined))).toMatchObject({ code: "invalid_input" });
-		expect(codeOf(() => assertRestoreSnapshot({}))).toBeNull();
 	});
 
 	it("TRASH-D1 deletes for good only a trashed entry", () => {
@@ -111,11 +97,11 @@ describe("what a source's transition does to its translations", () => {
 		{ id: "trashed-earlier", status: "trashed", trashedWithSource: false },
 	];
 
-	it("archives the drafts and published translations only", () => {
+	it("TRANS-N8 archives the drafts and published translations only", () => {
 		expect(membersToArchive(group)).toEqual(["draft", "published"]);
 	});
 
-	it("unarchives the archived translations only", () => {
+	it("TRANS-N8 unarchives the archived translations only", () => {
 		expect(membersToUnarchive(group)).toEqual(["archived"]);
 	});
 

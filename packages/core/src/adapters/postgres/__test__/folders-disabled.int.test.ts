@@ -37,17 +37,7 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 		await dropIsolatedTestPool(pool, schemaName);
 	});
 
-	it("rejects changing, deleting and reading the contents of a folder in a collection without folders", async () => {
-		const folder = await on.createFolder({ collection: collection as string, parentId: null, name: "Left over" });
-		await expect(off.updateFolder({ id: folder.id, name: "Renamed" })).rejects.toMatchObject({ code: "invalid_input" });
-		await expect(off.trashFolder({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
-		await expect(off.getFolderContents({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
-		// The folder is untouched.
-		const folders = await on.listFolders({ collection: collection as string });
-		expect(folders.find((f) => f.id === folder.id)).toMatchObject({ name: "Left over" });
-	}, 30_000);
-
-	it("rejects saving an entry into such a folder, but lets it leave the folder", async () => {
+	it("LIST-F6 rejects saving an entry into such a folder, but lets it leave the folder", async () => {
 		const folder = await on.createFolder({ collection: collection as string, parentId: null, name: "Old home" });
 		const entry = await seedEntry(on, {
 			collection: collection as string,
@@ -68,7 +58,7 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 		});
 		expect(left.folderId).toBeNull();
 		expect(left.version).toBeGreaterThan(entry.version);
-	}, 30_000);
+	});
 
 	afterAll(closeGlobalPool);
 });

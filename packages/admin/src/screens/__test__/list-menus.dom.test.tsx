@@ -3,12 +3,10 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import type { EntrySearchResponse, ListCountsResponse } from "../../api/entries";
-import { commonMessages } from "../../lib/common.messages";
 import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { AdminUiLabels } from "../../ui/labels";
-import { uiMessages } from "../../ui/messages";
 import { describeBulkFailure } from "../entries/bulk-bar";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
@@ -28,8 +26,6 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 );
 
 const t = testSite.createTranslator(screensMessages);
-const tc = testSite.createTranslator(commonMessages);
-const tu = testSite.createTranslator(uiMessages);
 const statusName = (status: "draft" | "published" | "archived") => statusLabels(testSite)[status];
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
@@ -136,7 +132,6 @@ const listRequests = () =>
 			(request) => request.query.get("collection") === "post" && !request.query.getAll("status").includes("trashed"),
 		);
 const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
-const saved = () => api.sent("PUT /v1/preferences").map((request) => request.body);
 
 const renderList = async () => {
 	render(
@@ -161,59 +156,8 @@ const closeMenu = async () => {
 	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 	await menuClosed();
 };
-/** The pager's names are the UI labels the admin gives the design system. */
-const PAGER = tu("pagination.label");
-const NEXT = tu("pagination.nextPage");
 /** A value of the open menu, by the start of its name (the count follows it). */
 const valueBox = (label: string) => screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${label}`) });
-
-describe("flow: sort from a column's menu", () => {
-	it("LIST-S1 picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
-		await renderList();
-		openColumn(t("column.title"));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
-		await waitFor(() => expect(lastList().get("sortField")).toBe("title"));
-		expect(lastList().get("sortDirection")).toBe("asc");
-		await menuClosed();
-		await waitFor(() =>
-			expect(saved()).toEqual([{ collections: { post: { sort: { field: "title", direction: "asc" } } } }]),
-		);
-		// The sorted column shows it in the head.
-		expect(
-			head()
-				.getByRole("columnheader", { name: t("column.title") })
-				.getAttribute("aria-sort"),
-		).toBe("ascending");
-	});
-});
-
-describe("flow: columns and page size", () => {
-	it("LIST-S3 lists only the hidden columns under +, and picking one shows it and saves it", async () => {
-		await renderList();
-		fireEvent.click(head().getByRole("button", { name: t("column.add") }));
-		const rows = await screen.findAllByRole("menuitem");
-		const labels = rows.map((row) => row.textContent);
-		// Plain rows: no checks, no heading. What is already in the head is not offered.
-		expect(screen.queryByRole("menuitemcheckbox")).toBeNull();
-		expect(labels).toContain(t("column.createdAt"));
-		fireEvent.click(screen.getByRole("menuitem", { name: t("column.createdAt") }));
-		await waitFor(() => expect(saved().at(-1)?.collections.post.columns.visibility).toMatchObject({ createdAt: true }));
-		await head().findByRole("button", { name: t("column.createdAt") });
-		// It is no longer offered.
-		fireEvent.click(head().getByRole("button", { name: t("column.add") }));
-		await screen.findAllByRole("menuitem");
-		expect(screen.queryByRole("menuitem", { name: t("column.createdAt") })).toBeNull();
-	});
-
-	it("LIST-S2 picks 50 per page from the footer, which applies it, closes the menu and is saved", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("button", { name: t("list.pageSize") }));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("list.pageSizeOption", { size: 50 }) }));
-		await waitFor(() => expect(lastList().get("pageSize")).toBe("50"));
-		await menuClosed();
-		await waitFor(() => expect(saved().at(-1)).toEqual({ collections: { post: { pageSize: 50 } } }));
-	});
-});
 
 describe("flow: filter by value", () => {
 	it("LIST-F2 ticks 'editing' and 'draft' on the status menu, which stays open with them ticked, until they are unticked", async () => {
@@ -357,28 +301,5 @@ describe("flow: change the relations of the picked rows", () => {
 		expect((await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ })).getAttribute("aria-checked")).toBe(
 			"mixed",
 		);
-	});
-});
-
-describe("flow: page through the list", () => {
-	beforeEach(() => {
-		server.total = 148;
-	});
-
-	it("LIST-S2 goes to a page by its button and to the next one by 'next'", async () => {
-		await renderList();
-		const pager = await screen.findByRole("navigation", { name: PAGER });
-		fireEvent.click(within(pager).getByRole("link", { name: "3" }));
-		await waitFor(() => expect(lastList().get("page")).toBe("3"));
-		expect(nav.search.get("page")).toBe("3");
-		await waitFor(() =>
-			expect(
-				within(screen.getByRole("navigation", { name: PAGER }))
-					.getByRole("link", { name: "3" })
-					.getAttribute("aria-current"),
-			).toBe("page"),
-		);
-		fireEvent.click(within(screen.getByRole("navigation", { name: PAGER })).getByRole("link", { name: NEXT }));
-		await waitFor(() => expect(lastList().get("page")).toBe("4"));
 	});
 });

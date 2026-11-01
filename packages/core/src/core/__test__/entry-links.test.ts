@@ -45,7 +45,7 @@ const textInput = async (text: string): Promise<ServiceInput> => {
 };
 
 describe("checking links by entry id", () => {
-	it("records one reference per target, with the block of every link, and no href check for it", async () => {
+	it("WRITE-P1 records one reference per target, with the block of every link, and no href check for it", async () => {
 		const snapshot = await prepareSnapshot(
 			testSite,
 			await input(`One [a](${entryLinkHref(ID)}).\n\nTwo [b](${entryLinkHref(ID)}).`),
@@ -58,7 +58,7 @@ describe("checking links by entry id", () => {
 		expect(snapshot.internalLinks).toEqual([]);
 	});
 
-	it("an id that is not an id is a body error and the body's references are not trusted", () => {
+	it("WRITE-P1 an id that is not an id is a body error and the body's references are not trusted", () => {
 		const check = checkDocument(testSite, docOf("[x](entry:00000000-0000-4000-8000-000000000001)"));
 		expect(check.entryLinks).toHaveLength(1);
 		const bad = checkDocument(testSite, {
@@ -76,7 +76,7 @@ describe("checking links by entry id", () => {
 		expect(bad.incomplete).toBe(true);
 	});
 
-	it("publishing reports a target that is gone, unpublished, a translation or not linkable with the link codes, at the link's block", async () => {
+	it("WRITE-P1 publishing reports a target that is gone, unpublished, a translation or not linkable with the link codes, at the link's block", async () => {
 		const snapshot = await prepareSnapshot(testSite, await input(`[a](${entryLinkHref(ID)})`));
 		const blockId = snapshot.references.find((ref) => ref.targetId === ID)?.occurrences.find((o) => o.type === "body");
 		const result = (target: Parameters<typeof validateForPublish>[2]["targets"][number] | undefined) =>
@@ -102,7 +102,7 @@ describe("checking links by entry id", () => {
 });
 
 describe("turning links by address into links by id", () => {
-	it("finds the addresses of this site's content, each once, and no others", () => {
+	it("SITE-R3 finds the addresses of this site's content, each once, and no others", () => {
 		const doc = docOf(
 			`[a](${pathOf("a")}) [again](${pathOf("a")}) [b](${pathOf("b")}) [out](https://example.com/a) [id](${entryLinkHref(ID)})`,
 		);
@@ -113,7 +113,7 @@ describe("turning links by address into links by id", () => {
 		]);
 	});
 
-	it("changes a link whose address resolves, leaves one that does not, and returns the same document when nothing changes", () => {
+	it("SITE-R3 changes a link whose address resolves, leaves one that does not, and returns the same document when nothing changes", () => {
 		const doc = docOf(`[a](${pathOf("a")}) [b](${pathOf("b")})`);
 		const found = new Map([[linkAddressKey(testSite, { collection: contentCollection, slug: "a" }), ID]]);
 
@@ -126,7 +126,7 @@ describe("turning links by address into links by id", () => {
 		expect(withEntryLinks(testSite, doc, new Map())).toBe(doc);
 	});
 
-	it("the write pipeline does it for text and for a document, and keeps the input as it came when there is nothing to do", async () => {
+	it("SITE-R3 the write pipeline does it for text and for a document, and keeps the input as it came when there is nothing to do", async () => {
 		const seen: string[] = [];
 		const pipeline = createWritePipeline({
 			site: testSite,
@@ -153,7 +153,7 @@ describe("turning links by address into links by id", () => {
 		]);
 	});
 
-	it("without a resolver, links keep their address", async () => {
+	it("SITE-R3 without a resolver, links keep their address", async () => {
 		const result = await createWritePipeline({ site: testSite, formats }).run({
 			operation: "create",
 			locale: defaultLocale,

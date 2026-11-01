@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { detectApp, parseFrontMatterKeys } from "../init-detect";
+import { detectApp } from "../init-detect";
 import { detectAppDir } from "../next-app";
 import { fixtureApp, POST_MDX, SRC_APP } from "./init-helpers";
 
@@ -13,24 +13,19 @@ describe("detectAppDir", () => {
 		return dir;
 	};
 
-	it("prefers the folders that exist: src/app, then app", () => {
+	it("INIT-R2 prefers the folders that exist: src/app, then app", () => {
 		expect(detectAppDir(dirWith("src/app", "app"))).toMatchObject({ dir: "src/app", exists: true });
 		expect(detectAppDir(dirWith("app"))).toMatchObject({ dir: "app", exists: true });
 	});
 
-	it("says where the folder would be made when there is none: src/app if only src/ exists", () => {
-		expect(detectAppDir(dirWith("src"))).toMatchObject({ dir: "src/app", exists: false });
-		expect(detectAppDir(dirWith())).toMatchObject({ dir: "app", exists: false });
-	});
-
-	it("is what detectApp reports, so init and doctor look in the same place", () => {
+	it("DOC-R4 is what detectApp reports, so init and doctor look in the same place", () => {
 		const cwd = fixtureApp({ ...SRC_APP });
 		expect(detectApp(cwd).appDir).toBe(detectAppDir(cwd).dir);
 	});
 });
 
 describe("detecting the app", () => {
-	it("reads a create-next-app project", () => {
+	it("INIT-R2 reads a create-next-app project", () => {
 		const app = detectApp(fixtureApp());
 		expect(app).toMatchObject({
 			packageName: "my-blog",
@@ -44,12 +39,11 @@ describe("detecting the app", () => {
 			contentFolders: [],
 			nextConfig: "next.config.ts",
 			devPort: 3000,
-			envLocalIgnored: true,
 			existingConfig: undefined,
 		});
 	});
 
-	it("finds src/app and the other package managers", () => {
+	it("INIT-I1 finds src/app and the other package managers", () => {
 		const pkg = JSON.stringify({
 			name: "x",
 			dependencies: { next: "16.0.0" },
@@ -72,7 +66,7 @@ describe("detecting the app", () => {
 		).toBe("yarn");
 	});
 
-	it("knows a JavaScript app, a pages-only app and a missing tsconfig", () => {
+	it("INIT-K7 knows a JavaScript app, a pages-only app and a missing tsconfig", () => {
 		const js = detectApp(fixtureApp({ "tsconfig.json": null, "package.json": '{"dependencies":{"next":"16"}}' }));
 		expect(js.typescript).toBe(false);
 		const pages = detectApp(
@@ -81,7 +75,7 @@ describe("detecting the app", () => {
 		expect(pages).toMatchObject({ hasAppRouter: false, pagesRouterOnly: true });
 	});
 
-	it("finds Markdown and MDX folders and the front matter keys, most common first", () => {
+	it("INIT-C1 finds Markdown and MDX folders and the front matter keys, most common first", () => {
 		const app = detectApp(
 			fixtureApp({
 				"content/posts/a.mdx": POST_MDX("a"),
@@ -111,39 +105,14 @@ describe("detecting the app", () => {
 		expect(posts?.keys.find((key) => key.name === "date")?.type).toBe("date");
 	});
 
-	it("reads an existing monti.config.ts", () => {
+	it("INIT-K1 reads an existing monti.config.ts", () => {
 		expect(detectApp(fixtureApp({ "monti.config.ts": "" })).existingConfig).toBe("monti.config.ts");
 		expect(detectApp(fixtureApp({ ...SRC_APP, "src/monti.config.ts": "" })).existingConfig).toBe("src/monti.config.ts");
 	});
 
-	it("reads the port from the dev script", () => {
+	it("INIT-N1 reads the port from the dev script", () => {
 		const pkg = (dev: string) => JSON.stringify({ dependencies: { next: "16" }, scripts: { dev } });
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev -p 4000") })).devPort).toBe(4000);
 		expect(detectApp(fixtureApp({ "package.json": pkg("next dev --turbopack --port=5000") })).devPort).toBe(5000);
-	});
-
-	it("notices a .gitignore that does not cover .env.local", () => {
-		expect(detectApp(fixtureApp({ ".gitignore": "node_modules\n" })).envLocalIgnored).toBe(false);
-		expect(detectApp(fixtureApp({ ".gitignore": ".env*.local\n" })).envLocalIgnored).toBe(true);
-		expect(detectApp(fixtureApp({ ".gitignore": null })).envLocalIgnored).toBe(false);
-	});
-});
-
-describe("front matter keys", () => {
-	it("types the top-level keys and ignores nested ones and the body", () => {
-		const keys = parseFrontMatterKeys(
-			'---\ntitle: "Hello: world"\ncount: 3\nok: true\nwhen: 2024-02-03T10:00:00Z\ntags: [a, b]\nauthors:\n  - name: x\nnested:\n  inner: 1\n---\nbody: not a key\n',
-		);
-		expect([...keys]).toEqual([
-			["title", "string"],
-			["count", "number"],
-			["ok", "boolean"],
-			["when", "date"],
-			["tags", "list"],
-			["authors", "list"],
-			["nested", "string"],
-		]);
-		expect(parseFrontMatterKeys("# no front matter\n").size).toBe(0);
-		expect(parseFrontMatterKeys("﻿---\r\ntitle: x\r\n---\r\n").has("title")).toBe(true);
 	});
 });

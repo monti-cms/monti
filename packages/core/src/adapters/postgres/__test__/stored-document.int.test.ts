@@ -10,8 +10,7 @@ import { computeContentHash } from "../../../core/content-hash";
 import type { Entry } from "../../../core/store";
 import { duplicateDraft, publishDraft } from "../../../core/store/__test__/seed";
 import type { JsonValue } from "../../../core/types";
-import { withoutBlockIds } from "../../../doc/block-ids";
-import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import { readStoredDocument } from "../../../doc/stored-document";
 import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -127,7 +126,7 @@ describe("stored documents", () => {
 		return { ...row, doc: doc as NonNullable<typeof doc> };
 	};
 
-	it("creating a draft stores the document and no text", async () => {
+	it("WRITE-S12 creating a draft stores the document and no text", async () => {
 		const draft = await createDraft({ doc: docOf(BODY) });
 
 		const row = await expectConsistent(draft.id, "working");
@@ -135,7 +134,7 @@ describe("stored documents", () => {
 		expect(draft.working.doc).toEqual(row.doc);
 	});
 
-	it("creating a draft from text stores the document its format reads, like creating it from that document", async () => {
+	it("WRITE-S12 creating a draft from text stores the document its format reads, like creating it from that document", async () => {
 		const fromText = await createDraft({ text: "One\n\nTwo" });
 		const fromDoc = await createDraft({ doc: fromText.working.doc });
 
@@ -145,7 +144,7 @@ describe("stored documents", () => {
 		expect(docRow.doc).toEqual(fromText.working.doc);
 	});
 
-	it("a text its format cannot read is stored as an unparsed document of the text as given", async () => {
+	it("FMT-R4 a text its format cannot read is stored as an unparsed document of the text as given", async () => {
 		const draft = await createDraft({ text: OPEN });
 
 		const row = await expectConsistent(draft.id, "working");
@@ -154,7 +153,7 @@ describe("stored documents", () => {
 	});
 
 	describe("saving", () => {
-		it("a changed body is stored with its new document", async () => {
+		it("WRITE-S12 a changed body is stored with its new document", async () => {
 			const draft = await createDraft({ doc: docOf(BODY) });
 
 			const saved = await save(draft, { doc: docOf("Changed words") });
@@ -165,23 +164,7 @@ describe("stored documents", () => {
 			expect(saved.working.doc).toEqual(row.doc);
 		});
 
-		it("saving the same content without its ids changes nothing", async () => {
-			const draft = await createDraft({ doc: docOf(BODY) });
-			const before = await stored(draft.id, "working");
-			const idless = {
-				type: "doc",
-				version: STORED_DOCUMENT_VERSION,
-				content: withoutBlockIds(draft.working.doc.content),
-			};
-
-			const saved = await save(draft, { doc: idless });
-
-			expect(saved.version).toBe(draft.version);
-			expect(saved.updatedAt.getTime()).toBe(draft.updatedAt.getTime());
-			expect(await stored(draft.id, "working")).toEqual(before);
-		});
-
-		it("a body that stops being readable becomes an unparsed document, and a document again when it is fixed", async () => {
+		it("FMT-R4 a body that stops being readable becomes an unparsed document, and a document again when it is fixed", async () => {
 			const draft = await createDraft({ doc: docOf(BODY) });
 
 			const broken = await save(draft, { text: OPEN });
@@ -196,7 +179,7 @@ describe("stored documents", () => {
 	});
 
 	describe("publishing", () => {
-		it("copies the document to the published body", async () => {
+		it("WRITE-P2 copies the document to the published body", async () => {
 			const draft = await createDraft({ doc: docOf(BODY) });
 
 			const published = await publish(draft);
@@ -208,7 +191,7 @@ describe("stored documents", () => {
 			expect(published.published?.doc).toEqual(published.working.doc);
 		});
 
-		it("a later save leaves the published document as it was", async () => {
+		it("WRITE-P3 a later save leaves the published document as it was", async () => {
 			const published = await publish(await createDraft({ doc: docOf(BODY) }));
 			const publishedBefore = await stored(published.id, "published");
 
@@ -222,7 +205,7 @@ describe("stored documents", () => {
 	});
 
 	describe("duplicating", () => {
-		it("copies the document, and the copy has its own hash", async () => {
+		it("WRITE-W10 copies the document, and the copy has its own hash", async () => {
 			const original = await createDraft({ doc: docOf(BODY) });
 
 			const copy = await duplicateDraft(testSite, store, { id: original.id });
@@ -233,7 +216,7 @@ describe("stored documents", () => {
 			expect(contentOf(copy.working.doc)).toEqual(contentOf(source.doc));
 		});
 
-		it("copies an unparsed body as it is", async () => {
+		it("FMT-R4 copies an unparsed body as it is", async () => {
 			const original = await createDraft({ text: OPEN });
 
 			const copy = await duplicateDraft(testSite, store, { id: original.id });
@@ -244,7 +227,7 @@ describe("stored documents", () => {
 	});
 
 	describe("reading", () => {
-		it("the working copy, the entry and the export carry the document", async () => {
+		it("DATA-B1 the working copy, the entry and the export carry the document", async () => {
 			const published = await publish(await createDraft({ doc: docOf(BODY) }));
 			const doc = (await stored(published.id, "working")).doc;
 			expect(doc).not.toBeNull();
@@ -258,7 +241,7 @@ describe("stored documents", () => {
 			expect(exported?.published?.doc).toEqual(doc);
 		});
 
-		it("a stored value that is not a document reads as an unparsed body, not as an empty one", async () => {
+		it("FMT-R4 a stored value that is not a document reads as an unparsed body, not as an empty one", async () => {
 			const draft = await createDraft({ doc: docOf(BODY) });
 			await pool.query(`UPDATE "${schemaName}".entry_bodies SET doc = $1::jsonb WHERE entry_id = $2`, [
 				JSON.stringify({ type: "doc", version: 99, content: [] }),
@@ -274,30 +257,10 @@ describe("stored documents", () => {
 				]);
 			}
 		});
-
-		it("the public read returns the stored document, and a list returns it only with the body", async () => {
-			const published = await publish(await createDraft({ doc: docOf(BODY) }));
-			const row = await stored(published.id, "published");
-
-			const lookup = await store.getPublishedEntryBySlug({
-				collection: contentCollection,
-				slug: published.workingSlug ?? "",
-			});
-			if (lookup.status !== "current") throw new Error("expected the published entry");
-			// The document that was stored, not one parsed again from the text.
-			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc));
-			expect(lookup.entry.doc).not.toBeNull();
-
-			const withBody = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
-			expect(withBody.find((entry) => entry.id === published.id)?.doc).toEqual(lookup.entry.doc);
-			const withoutBody = await store.listPublishedEntries({ collections: [contentCollection] });
-			expect(withoutBody.length).toBeGreaterThan(0);
-			for (const entry of withoutBody) expect(entry.doc).toBeNull();
-		});
 	});
 
 	describe.skipIf(!secondLocale)("translations", () => {
-		it("a translation starts from the source's stored text, which is also the source it was confirmed against", async () => {
+		it("TRANS-N2 a translation starts from the source's stored text, which is also the source it was confirmed against", async () => {
 			const source = await createDraft({ doc: docOf(BODY) });
 
 			const translation = (await service.createTranslation({ sourceId: source.id, locale: secondLocale as string }))

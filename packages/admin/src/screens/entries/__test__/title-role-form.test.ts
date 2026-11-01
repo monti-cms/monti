@@ -2,7 +2,6 @@ import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
-import { columnsFor } from "../../list-columns";
 import {
 	copyTitle,
 	type EntryData,
@@ -94,12 +93,5 @@ describe("the title in the edit form", () => {
 	it("WRITE-W10 is shortened to the length the title field allows when a copy gets a suffix", () => {
 		expect(copyTitle(site, "article", "A very long headline indeed")).toHaveLength(20);
 		expect(copyTitle(site, "article", "Short")).toContain("Short");
-	});
-
-	it("LIST-S3 is one list column, `title`, whatever the title field is named", () => {
-		const { available, defaults } = columnsFor(site, "article");
-		expect(available.filter((column) => column === "title" || column === "headline")).toEqual(["title"]);
-		expect(available).toContain("note");
-		expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 	});
 });

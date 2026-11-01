@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { handleApiError } from "../../http/v1/error-handler";
 import { SetupError } from "../problem";
 import { CmsError } from "../store/errors";
-import { ServiceError } from "../types";
 
 /**
  * An error made by another copy of the package (the bundled one and the installed one in a Next app): same class name and brand, different prototype
@@ -14,7 +13,7 @@ function fromOtherCopy(name: string, fields: Record<string, unknown>): Error {
 }
 
 describe("error classes across copies of the package", () => {
-	it("recognizes a CmsError from another copy, so the API answers with its code and not a 500", async () => {
+	it("ADMIN-E1 recognizes a CmsError from another copy, so the API answers with its code and not a 500", async () => {
 		const foreign = fromOtherCopy("CmsError", { code: "not_found" });
 		expect(foreign instanceof CmsError).toBe(true);
 		const res = handleApiError(foreign);
@@ -22,21 +21,13 @@ describe("error classes across copies of the package", () => {
 		expect((await res.json()).error.code).toBe("not_found");
 	});
 
-	it("recognizes a SetupError from another copy as a setup problem", () => {
+	it("ADMIN-E1 recognizes a SetupError from another copy as a setup problem", () => {
 		const foreign = fromOtherCopy("SetupError", { kind: "migrations_pending", code: "migrations_pending" });
 		expect(foreign instanceof SetupError).toBe(true);
 		expect(handleApiError(foreign).status).toBe(503);
 	});
 
-	it("keeps subclasses apart: a CmsError is not a ServiceError, a ServiceError is a CmsError", () => {
-		const plain = new CmsError("x", "invalid_input");
-		const service = new ServiceError("invalid_input");
-		expect(plain instanceof ServiceError).toBe(false);
-		expect(service instanceof ServiceError).toBe(true);
-		expect(service instanceof CmsError).toBe(true);
-	});
-
-	it("does not mistake other errors for its own", () => {
+	it("ADMIN-E2 does not mistake other errors for its own", () => {
 		expect(new Error("x") instanceof CmsError).toBe(false);
 		expect((null as unknown) instanceof CmsError).toBe(false);
 		expect({ code: "not_found" } instanceof CmsError).toBe(false);

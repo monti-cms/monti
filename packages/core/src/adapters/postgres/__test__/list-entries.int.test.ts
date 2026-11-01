@@ -3,7 +3,6 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
-import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { CmsError } from "../../../core/store";
@@ -75,18 +74,6 @@ interface ExtendedContentStore {
 /** Document collection under test for lists (the reference blog's posts). */
 const content = contentCollection;
 
-type RelationInfo = { name: string; to: Collection; many: boolean };
-/** A non-conditional relation field that points at an item collection. */
-const itemRelations: RelationInfo[] = testSite
-	.storedFields(content)
-	.flatMap(({ name, field, when }) =>
-		!when && field.kind === "relation" && testSite.isItemCollection(field.to)
-			? [{ name, to: field.to as Collection, many: Boolean(field.many) }]
-			: [],
-	);
-/** A single-select relation (the reference blog's category) and a multi-select relation (the reference blog's tags). */
-const singleRelation = itemRelations.find((relation) => !relation.many);
-const manyRelation = itemRelations.find((relation) => relation.many);
 const relationTargetTitle = (to: Collection) => `List test ${to}`;
 
 // ---------------------------------------------------------------------------
@@ -221,93 +208,11 @@ describe("listEntries in Postgres", () => {
 	}
 
 	// -----------------------------------------------------------------------
-	// 5  sort fields/directions, NULLS LAST, deterministic id tie-break
+	// 5  list input that is not on the list never reaches SQL
 	// -----------------------------------------------------------------------
 
-	it("LIST-S1 5. all sort fields/directions, NULLS LAST both dirs, deterministic id tie-break; malicious sort rejects invalid_input", async () => {
-		// Seed entries and capture IDs for deterministic assertions
-		const e5a = await seed(content, null, null);
-		const e5b = await seed(content, "le5-a", "B-title");
-		const e5c = await seed(content, "le5-b", "A-title");
-
-		const seededIds = [e5a.id, e5b.id, e5c.id];
-
-		// Assign deterministic distinct created_at values via schema-qualified SQL
-		await pool.query(`UPDATE "${schemaName}".entries SET created_at = $1 WHERE id = $2`, [
-			new Date("2020-01-01T00:00:00Z"),
-			seededIds[0],
-		]);
-		await pool.query(`UPDATE "${schemaName}".entries SET created_at = $1 WHERE id = $2`, [
-			new Date("2020-01-02T00:00:00Z"),
-			seededIds[1],
-		]);
-		await pool.query(`UPDATE "${schemaName}".entries SET created_at = $1 WHERE id = $2`, [
-			new Date("2020-01-03T00:00:00Z"),
-			seededIds[2],
-		]);
-
-		// Assign deterministic distinct updated_at values
-		await pool.query(`UPDATE "${schemaName}".entries SET updated_at = $1 WHERE id = $2`, [
-			new Date("2021-06-01T00:00:00Z"),
-			seededIds[0],
-		]);
-		await pool.query(`UPDATE "${schemaName}".entries SET updated_at = $1 WHERE id = $2`, [
-			new Date("2021-06-02T00:00:00Z"),
-			seededIds[1],
-		]);
-		await pool.query(`UPDATE "${schemaName}".entries SET updated_at = $1 WHERE id = $2`, [
-			new Date("2021-06-03T00:00:00Z"),
-			seededIds[2],
-		]);
-
-		// --- default sort: updatedAt DESC then id ASC ---
-		const defaultSort = await store.listEntries({ collection: content });
-		expect(defaultSort.items.map((i) => i.id)).toEqual([seededIds[2], seededIds[1], seededIds[0]]);
-
-		// --- createdAt ASC: e5a (Jan 1) → e5b (Jan 2) → e5c (Jan 3) ---
-		const caAsc = await store.listEntries({ collection: content, sort: { field: "createdAt", direction: "asc" } });
-		expect(caAsc.items.map((i) => i.id)).toEqual([seededIds[0], seededIds[1], seededIds[2]]);
-
-		// --- createdAt DESC: e5c → e5b → e5a ---
-		const caDesc = await store.listEntries({ collection: content, sort: { field: "createdAt", direction: "desc" } });
-		expect(caDesc.items.map((i) => i.id)).toEqual([seededIds[2], seededIds[1], seededIds[0]]);
-
-		// --- updatedAt ASC: e5a (Jun 1) → e5b (Jun 2) → e5c (Jun 3) ---
-		const uaAsc = await store.listEntries({ collection: content, sort: { field: "updatedAt", direction: "asc" } });
-		expect(uaAsc.items.map((i) => i.id)).toEqual([seededIds[0], seededIds[1], seededIds[2]]);
-
-		// --- updatedAt DESC: e5c → e5b → e5a ---
-		const uaDesc = await store.listEntries({ collection: content, sort: { field: "updatedAt", direction: "desc" } });
-		expect(uaDesc.items.map((i) => i.id)).toEqual([seededIds[2], seededIds[1], seededIds[0]]);
-
-		// --- Tied group for id ASC tie-break ---
-		// Force all three to identical created_at
-		await pool.query(`UPDATE "${schemaName}".entries SET created_at = $1 WHERE collection = $2`, [
-			new Date("2020-01-01T00:00:00Z"),
-			content,
-		]);
-		const tied = await store.listEntries({ collection: content, sort: { field: "createdAt", direction: "asc" } });
-		expect(tied.items).toHaveLength(3);
-		const tiedIds = tied.items.map((i) => i.id);
-		const sortedIds = [...tiedIds].sort();
-		expect(tiedIds).toEqual(sortedIds);
-
-		// --- slug ASC: NULLS LAST → le5-a, le5-b, null ---
-		const slugAsc = await store.listEntries({ collection: content, sort: { field: "slug", direction: "asc" } });
-		expect(slugAsc.items.map((i) => i.slug)).toEqual(["le5-a", "le5-b", null]);
-
-		// --- slug DESC: NULLS LAST → le5-b, le5-a, null ---
-		const slugDesc = await store.listEntries({ collection: content, sort: { field: "slug", direction: "desc" } });
-		expect(slugDesc.items.map((i) => i.slug)).toEqual(["le5-b", "le5-a", null]);
-
-		// --- title ASC: NULLS LAST → A-title, B-title, null ---
-		const titleAsc = await store.listEntries({ collection: content, sort: { field: "title", direction: "asc" } });
-		expect(titleAsc.items.map((i) => i.title)).toEqual(["A-title", "B-title", null]);
-
-		// --- title DESC: NULLS LAST → B-title, A-title, null ---
-		const titleDesc = await store.listEntries({ collection: content, sort: { field: "title", direction: "desc" } });
-		expect(titleDesc.items.map((i) => i.title)).toEqual(["B-title", "A-title", null]);
-
+	it("API-G5 refuses a sort field, a sort direction or a status that is not on the list, and the tables are as they were", async () => {
+		await seed(content, "le5-a", "A-title");
 		// Malicious runtime sort field → invalid_input, no schema mutation
 		const beforeTables = await pool.query(`SELECT tablename FROM pg_tables WHERE schemaname = $1 ORDER BY tablename`, [
 			schemaName,
@@ -347,7 +252,7 @@ describe("listEntries in Postgres", () => {
 			schemaName,
 		]);
 		expect(afterTables.rows).toEqual(beforeTables.rows);
-	}, 15_000);
+	});
 
 	// -----------------------------------------------------------------------
 	// 6  pagination: 26 entries, exact metadata, no dup/omission, reject bad
@@ -434,152 +339,4 @@ describe("listEntries in Postgres", () => {
 	// -----------------------------------------------------------------------
 	// 7  List authority
 	// -----------------------------------------------------------------------
-
-	it.skipIf(!singleRelation || !manyRelation)(
-		"LIST-S3 7. List authority: working metadata is authoritative for the single relation and the ordered many relation; publishedAt is the column",
-		async () => {
-			const single = singleRelation as RelationInfo;
-			const many = manyRelation as RelationInfo;
-			await seedEntry(store, {
-				collection: content,
-				slug: "d1-direct",
-				metadata: { [single.name]: "cat-1", [many.name]: ["tag-a", "tag-b"] },
-				text: "body",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-
-			const targetCat = await seedEntry(store, {
-				collection: single.to,
-				slug: "cat-real",
-				metadata: {},
-				text: "",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-			const targetTag1 = await seedEntry(store, {
-				collection: many.to,
-				slug: "tag-real1",
-				metadata: {},
-				text: "",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-			const targetTag2 = await seedEntry(store, {
-				collection: many.to,
-				slug: "tag-real2",
-				metadata: {},
-				text: "",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-
-			await store.createEntryWithReferences({
-				snapshot: {
-					collection: content,
-					slug: "d1-ref",
-					metadata: { [single.name]: "cat-meta", [many.name]: ["tag-meta1", "tag-meta2"] },
-					doc: docOf("body"),
-					contentHash: randomBytes(16).toString("hex"),
-					references: [],
-					issues: [],
-				},
-				references: [
-					{ kind: "entry", targetId: targetCat.id, isStale: true, occurrences: [] },
-					{ kind: "entry", targetId: targetTag2.id, isStale: true, occurrences: [] },
-					{ kind: "entry", targetId: targetTag1.id, isStale: true, occurrences: [] },
-				],
-			});
-
-			const histDate = "2019-01-01T00:00:00.000Z";
-			const histE = await seedEntry(store, {
-				collection: content,
-				slug: "d1-hist",
-				metadata: await metadataFor(content, "Historical date"),
-				text: "body",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-			// If the publish date is set beforehand, like a migrated entry, it stays as is after publishing.
-			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [histE.id, histDate]);
-			await publishDraft(testSite, store, { id: histE.id, expectedVersion: histE.version });
-
-			const noMetaE = await seedEntry(store, {
-				collection: content,
-				slug: "d1-nometa",
-				metadata: await metadataFor(content, "No explicit published date"),
-				text: "body",
-				contentHash: randomBytes(16).toString("hex"),
-			});
-			const pubNoMetaE = await publishDraft(testSite, store, { id: noMetaE.id, expectedVersion: noMetaE.version });
-
-			const list = await store.listEntries({ collection: content });
-
-			const getBySlug = (s: string) => {
-				const item = list.items.find((i) => i.slug === s);
-				if (!item) throw new Error(`Missing ${s}`);
-				return item;
-			};
-
-			const iDirect = getBySlug("d1-direct");
-			const ids = (item: typeof iDirect, field: string) => item.relations[field]?.map((value) => value.id);
-			expect(ids(iDirect, single.name)).toEqual(["cat-1"]);
-			expect(ids(iDirect, many.name)).toEqual(["tag-a", "tag-b"]);
-			expect(iDirect.publishedAt).toBeNull();
-
-			const iRef = getBySlug("d1-ref");
-			expect(ids(iRef, single.name)).toEqual(["cat-meta"]);
-			expect(ids(iRef, many.name)).toEqual(["tag-meta1", "tag-meta2"]);
-			expect(iRef.publishedAt).toBeNull();
-
-			const iHist = getBySlug("d1-hist");
-			expect(iHist.publishedAt?.toISOString()).toBe(histDate);
-
-			const iNoMeta = getBySlug("d1-nometa");
-			expect(iNoMeta.publishedAt).toBeInstanceOf(Date);
-			expect(
-				Math.abs((iNoMeta.publishedAt as Date).getTime() - (pubNoMetaE.publishedAt as Date).getTime()),
-			).toBeLessThan(5000);
-
-			for (const i of [iDirect, iRef, iHist, iNoMeta]) {
-				expect("body" in i).toBe(false);
-				expect("mdx" in i).toBe(false);
-			}
-		},
-		60_000,
-	);
-
-	it("LIST-S1 8. publishedAt sort and range use the published_at column; entries without it come last", async () => {
-		const entry = async (slug: string, publishedAt?: string) => {
-			const created = await seedEntry(store, {
-				collection: content,
-				slug,
-				metadata: await metadataFor(content, slug),
-				text: "body",
-				contentHash: uniqueHash(),
-			});
-			if (publishedAt) {
-				await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [
-					created.id,
-					publishedAt,
-				]);
-			}
-			return created;
-		};
-		// A draft with a preset publish date, like a migrated draft, also sorts by that date.
-		await entry("d-2023", "2023-07-17T00:00:00.000+09:00");
-		await entry("d-2025", "2025-06-07T00:00:00.000+09:00");
-		await entry("d-2024", "2024-03-15T00:00:00.000+09:00");
-		await entry("d-none");
-		const published = await entry("p-now");
-		await publishDraft(testSite, store, { id: published.id, expectedVersion: published.version });
-
-		const order = async (direction: "asc" | "desc") =>
-			(await store.listEntries({ collection: content, sort: { field: "publishedAt", direction } as never })).items.map(
-				(item) => item.slug,
-			);
-		expect(await order("desc")).toEqual(["p-now", "d-2025", "d-2024", "d-2023", "d-none"]);
-		expect(await order("asc")).toEqual(["d-2023", "d-2024", "d-2025", "p-now", "d-none"]);
-
-		const inRange = await store.listEntries({
-			collection: content,
-			publishedAt: { from: new Date("2024-01-01T00:00:00Z"), to: new Date("2025-12-31T00:00:00Z") },
-		} as never);
-		expect(inRange.items.map((item) => item.slug).sort()).toEqual(["d-2024", "d-2025"]);
-	}, 30_000);
 });

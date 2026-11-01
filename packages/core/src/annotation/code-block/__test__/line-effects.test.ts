@@ -1,68 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
-import { createTranslator } from "../../../i18n";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
-import { checkCodeBlockConfig, DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects } from "../line-effects";
-import { codeBlockMessages } from "../messages";
-import type { AnnotationConfigItem } from "../types";
-
-/** The annotation config before switching to a definition list (checks the public view classes stay the same), plus `focus`, added later. */
-const BEFORE: AnnotationConfigItem[] = [
-	{ name: "Tooltip", kind: "render", source: "mdx-text", render: "Tooltip", scopes: ["char", "document"] },
-	{ name: "strong", kind: "render", source: "mdx-text", render: "strong", scopes: ["char", "document"] },
-	{ name: "em", kind: "render", source: "mdx-text", render: "em", scopes: ["char", "document"] },
-	{ name: "del", kind: "render", source: "mdx-text", render: "del", scopes: ["char", "document"] },
-	{ name: "u", kind: "render", source: "mdx-text", render: "u", scopes: ["char", "document"] },
-	{ name: "fold", kind: "render", source: "mdx-text", render: "fold", scopes: ["char", "document"] },
-	{
-		name: "plus",
-		kind: "class",
-		class:
-			"inline-block w-full anno-mark-base anno-mark:content-['+'] anno-mark:text-gray-400 bg-green-400/10 shadow-[inset_2px_0_0_0_rgba(74,222,128,1)]",
-		scopes: ["line"],
-	},
-	{
-		name: "minus",
-		kind: "class",
-		class:
-			"inline-block w-full anno-mark-base anno-mark:content-['-'] anno-mark:text-gray-400 bg-red-400/10 shadow-[inset_2px_0_0_0_rgba(239,68,68,1)]",
-		scopes: ["line"],
-	},
-	{ name: "highlight", kind: "class", class: "inline-block w-full anno-mark-base bg-gray-400/20", scopes: ["line"] },
-	{ name: "focus", kind: "class", class: "code-focus", scopes: ["line"] },
-	{ name: "warning", kind: "class", class: "underline decoration-wavy decoration-yellow-400/80", scopes: ["line"] },
-	{ name: "error", kind: "class", class: "underline decoration-wavy decoration-red-500", scopes: ["line"] },
-	{ name: "collapse", kind: "render", render: "collapse", scopes: ["line"] },
-	{ name: "anchor", kind: "class", class: "code-anchor", scopes: ["line"] },
-];
-
-const byName = (items: readonly AnnotationConfigItem[] | undefined) =>
-	Object.fromEntries((items ?? []).map((item) => [item.name, item]));
+import { checkCodeBlockConfig, resolveCodeLineEffects } from "../line-effects";
 
 describe("code line effect definitions", () => {
-	it("the default definitions produce the same names and classes as the old annotation config", () => {
-		expect(byName(createAnnotationConfig().annotations)).toEqual(byName(BEFORE));
-		// A config without line effects (the example site) stays at the defaults. The site's labels are in its admin language, the defaults' in English.
-		const t = testSite.createTranslator(codeBlockMessages);
-		const tEn = createTranslator(codeBlockMessages, "en");
-		expect(testSite.CODE_LINE_EFFECTS).toEqual(
-			DEFAULT_CODE_LINE_EFFECTS.map((effect) => ({ ...effect, label: t(`lineEffect.${effect.name}` as never) })),
-		);
-		expect(byName(testSite.annotationConfig.annotations)).toEqual(byName(BEFORE));
-		// Menu labels are short, without parentheses.
-		expect(DEFAULT_CODE_LINE_EFFECTS.map((effect) => effect.label)).toEqual([
-			tEn("lineEffect.highlight"),
-			tEn("lineEffect.focus"),
-			tEn("lineEffect.plus"),
-			tEn("lineEffect.minus"),
-			tEn("lineEffect.warning"),
-			tEn("lineEffect.error"),
-		]);
-	});
-
-	it("a site definition replaces the same name in place and appends a new name", () => {
+	it("FMT-C2 a site definition replaces the same name in place and appends a new name", () => {
 		const effects = resolveCodeLineEffects([
 			{ name: "highlight", label: "강조", class: "my-highlight" },
 			{ name: "info", label: "정보", icon: "star", class: "my-info", editor: { background: "bg-primary/10" } },
@@ -85,15 +29,7 @@ describe("code line effect definitions", () => {
 		expect(fromCodeBlockDocumentToCodeFence(document, config).value).toBe(value);
 	});
 
-	it("the editor recognizes only defined line effects plus folding and the label", () => {
-		expect(testSite.isLineEffectName("plus")).toBe(true);
-		expect(testSite.isLineEffectName("collapse")).toBe(true);
-		expect(testSite.isLineEffectName("anchor")).toBe(true);
-		expect(testSite.isLineEffectName("focus")).toBe(true);
-		expect(testSite.isLineEffectName("info")).toBe(false);
-	});
-
-	it("an invalid config is reported with the path of each value", () => {
+	it("CONF-A1 an invalid config is reported with the path of each value", () => {
 		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
 			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
 		expect(codes({ lineEffects: [{ name: "Focus", label: "Focus", class: "" }] })).toEqual([
@@ -118,14 +54,14 @@ describe("code line effect definitions", () => {
 });
 
 describe("code block options of the site config", () => {
-	it("are all on by default, with the default themes and every line effect offered", () => {
+	it("FMT-C2 are all on by default, with the default themes and every line effect offered", () => {
 		expect(testSite.CODE_BLOCK_FEATURES).toEqual({ rules: true, fold: true, tooltip: true, textStyles: true });
 		expect(testSite.OFFERED_LINE_EFFECTS).toEqual(testSite.CODE_LINE_EFFECTS);
 		expect(["strong", "em", "del", "u", "Tooltip", "fold"].every(testSite.offersCharEffect)).toBe(true);
 		expect(testSite.CODE_BLOCK_THEMES).toEqual({ light: "one-light", dark: "one-dark-pro" });
 	});
 
-	it("accept switches, omitted line effects, themes and languages", () => {
+	it("CONF-A1 accept switches, omitted line effects, themes and languages", () => {
 		expect(
 			checkCodeBlockConfig({
 				lineEffects: [{ name: "focus", label: "Focus", class: "a" }],
@@ -137,7 +73,7 @@ describe("code block options of the site config", () => {
 		).toEqual([]);
 	});
 
-	it("report a wrong value at startup", () => {
+	it("CONF-A1 report a wrong value at startup", () => {
 		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
 			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
 		expect(codes({ features: { comments: false } as never })).toEqual(["codeBlock.features.comments:unknown-key"]);

@@ -4,7 +4,7 @@
 
 흐름: [흐름 11 · 설정](../../design/admin/flows/11-settings.md). 중요도: [기능의 중요도](../features.md)의 "11 설정" 🟡. 🟡라서 대표 약속만 적는다.
 설정의 탭 주소는 [관리자의 바탕](admin.md)의 ADMIN-U1, 나가기 확인(11·4)은 [글 쓰고 발행](write-and-publish.md)의 WRITE-S6, 뺀 언어의 번역은
-[컬렉션](collections.md)의 SCHEMA-C2, 배포된 사이트의 단계(11·9~18)는 SCHEMA-F15(#325), 11·19~20은 SCHEMA-F10이 다룬다.
+[컬렉션](collections.md)의 SCHEMA-C2, 배포된 사이트의 단계(11·9~18)는 SCHEMA-F15(#325), 11·19~20은 SCHEMA-F10(서버)과 SCHEMA-F17(검토 창)이 다룬다.
 관리자 옵션으로 번역이나 템플릿을 끄면 화면 부분이 숨는 것은 ⚪다. 읽는 법은 [휴지통](trash.md#읽는-법)과 같다.
 
 ## 사이트 🟡

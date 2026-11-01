@@ -95,30 +95,31 @@ describe("bulk operations on a real store", () => {
 			expect(after.published?.metadata[field]).toContain(target);
 			expect(after.version).toBeGreaterThan(created.entry.version);
 		},
-		30_000,
 	);
 
-	it("LIST-C5 answers a bulk folder.move into a collection without folders with invalid_input per item", async () => {
-		if (testSite.foldersEnabled(recordCollection)) return;
-		const record = await service.createDraft({
-			collection: recordCollection,
-			slug: null,
-			metadata: await requiredMetadata(recordCollection, unique("bulk folder"), targetOf),
-			format: "paragraphs",
-			body: "",
-		});
-		const folder = await store.createFolder({
-			collection: contentCollection,
-			parentId: null,
-			name: unique("Elsewhere"),
-		});
+	it.skipIf(testSite.foldersEnabled(recordCollection))(
+		"LIST-C5 answers a bulk folder.move into a collection without folders with invalid_input per item",
+		async () => {
+			const record = await service.createDraft({
+				collection: recordCollection,
+				slug: null,
+				metadata: await requiredMetadata(recordCollection, unique("bulk folder"), targetOf),
+				format: "paragraphs",
+				body: "",
+			});
+			const folder = await store.createFolder({
+				collection: contentCollection,
+				parentId: null,
+				name: unique("Elsewhere"),
+			});
 
-		const { results } = await bulk.run({
-			op: "folder.move",
-			folderId: folder.id,
-			items: [{ id: record.entry.id, expectedVersion: record.entry.version }],
-		});
-		expect(results).toEqual([expect.objectContaining({ id: record.entry.id, ok: false, error: "invalid_input" })]);
-		expect((await store.getEntry(record.entry.id)).folderId).toBeNull();
-	}, 30_000);
+			const { results } = await bulk.run({
+				op: "folder.move",
+				folderId: folder.id,
+				items: [{ id: record.entry.id, expectedVersion: record.entry.version }],
+			});
+			expect(results).toEqual([expect.objectContaining({ id: record.entry.id, ok: false, error: "invalid_input" })]);
+			expect((await store.getEntry(record.entry.id)).folderId).toBeNull();
+		},
+	);
 });

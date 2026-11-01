@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { testConfig } from "../../../test/site";
 import { fakeCms } from "../../cms";
 import { CMS_ROUTE_PATTERNS, matchRoute, pathFromRequest } from "../router";
 
@@ -12,7 +11,7 @@ const store = { getPreferences: async () => null };
 const cms = fakeCms({ store, auth: { basePath: "/api/monti/auth", handlers } });
 
 describe("admin API route table", () => {
-	it("named segments match before [name] segments, and params are extracted", () => {
+	it("API-R1 named segments match before [name] segments, and params are extracted", () => {
 		expect(matchRoute(["v1", "entries"])?.params).toEqual({});
 		expect(matchRoute(["v1", "entries", "abc"])?.params).toEqual({ id: "abc" });
 		// `search` is its own route, not an entry id.
@@ -25,14 +24,29 @@ describe("admin API route table", () => {
 		expect(matchRoute(["v2", "entries"])).toBeNull();
 	});
 
-	it("the public API is an optional core feature (server config publicApi), and AI and schedule routes are added by plugins", () => {
-		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries");
-		expect(CMS_ROUTE_PATTERNS).toContain("v1/public/entries/[collection]/[slug]");
-		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.startsWith("v1/ai"))).toBe(false);
-		expect(CMS_ROUTE_PATTERNS.some((pattern) => pattern.includes("schedule"))).toBe(false);
+	it("API-G1 every route of the table is admin-only, except the ones listed here", () => {
+		// The only routes that may be called without the admin login, and the guard each one gets instead.
+		const notAdmin = {
+			"v1/session/first-admin": "same-origin-form",
+			"v1/session/sign-in/[provider]": "same-origin-form",
+			"v1/session/sign-out": "same-origin-form",
+			"v1/public/entries": "public-read",
+			"v1/public/entries/[collection]/[slug]": "public-read",
+			"v1/events/retry": "admin-or-bearer",
+			"v1/trash/purge": "admin-or-bearer",
+			"v1/import/entries": "admin-upload",
+			"v1/import/restore": "admin-upload",
+		};
+		// The access the router applies to a request on each path, with a placeholder for every `[name]` segment.
+		const accessByPattern = CMS_ROUTE_PATTERNS.map((pattern) => {
+			const path = pattern.split("/").map((segment) => (segment.startsWith("[") ? "x" : segment));
+			return [pattern, matchRoute(path)?.access] as const;
+		});
+
+		expect(Object.fromEntries(accessByPattern.filter(([, access]) => access !== "admin"))).toEqual(notAdmin);
 	});
 
-	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
+	it("API-R1 an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
 		const call = (method: "GET" | "DELETE", path: string) =>
 			cms.handle(
 				new Request(`http://localhost/api/monti/${path}`, { method, headers: { origin: "http://localhost" } }),
@@ -42,7 +56,7 @@ describe("admin API route table", () => {
 		expect((await call("GET", "v1/preferences")).status).toBe(200);
 	});
 
-	it("when the auth path is the default (`/api/monti/auth`), forwards `auth/*` to the auth handler", async () => {
+	it("AUTH-C3 when the auth path is the default (`/api/monti/auth`), forwards `auth/*` to the auth handler", async () => {
 		const call = (instance: typeof cms, method: "GET" | "POST" | "DELETE", path: string) =>
 			instance.handle(new Request(`http://localhost/api/monti/${path}`, { method }));
 		expect(await (await call(cms, "GET", "auth/session")).text()).toBe("auth-get");
@@ -66,14 +80,14 @@ describe("admin API route table", () => {
 		).toBe(405);
 	});
 
-	it("`handle` takes the path segments from the options when the host already split them", async () => {
+	it("API-R1 `handle` takes the path segments from the options when the host already split them", async () => {
 		const response = await cms.handle(new Request("http://localhost/mounted/anywhere"), {
 			path: ["v1", "preferences"],
 		});
 		expect(response.status).toBe(200);
 	});
 
-	it("the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
+	it("API-R1 the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/entries/a%20b?x=1"))).toEqual([
 			"v1",
 			"entries",
@@ -82,32 +96,5 @@ describe("admin API route table", () => {
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1//meta/"))).toEqual(["v1", "meta"]);
 		expect(pathFromRequest(new Request("http://localhost/api/monti"))).toBeNull();
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/%E0%A4%A"))).toBeNull();
-	});
-
-	describe("routes tied to a site feature", () => {
-		const templateStore = { listTemplates: async () => [], getTemplate: async () => ({}) } as never;
-		const call = (instance: { handle: (request: Request) => Promise<Response> }, path: string) =>
-			instance.handle(new Request(`http://localhost/api/monti/${path}`, { headers: { origin: "http://localhost" } }));
-		const withTemplates = (templates: boolean) =>
-			fakeCms({
-				config: { ...testConfig, admin: { ...testConfig.admin, templates } },
-				store: templateStore,
-			});
-
-		it("answers 404 on the template routes when admin.templates is false", async () => {
-			const off = withTemplates(false);
-			expect((await call(off, "v1/templates")).status).toBe(404);
-			expect((await call(off, "v1/templates/00000000-0000-4000-8000-000000000001")).status).toBe(404);
-		});
-
-		it("serves the template routes when admin.templates is on", async () => {
-			const on = withTemplates(true);
-			expect((await call(on, "v1/templates")).status).toBe(200);
-			expect((await call(on, "v1/templates/00000000-0000-4000-8000-000000000001")).status).not.toBe(404);
-		});
-
-		it("leaves other routes alone when templates are off", async () => {
-			expect((await call(withTemplates(false), "v1/preferences")).status).not.toBe(404);
-		});
 	});
 });

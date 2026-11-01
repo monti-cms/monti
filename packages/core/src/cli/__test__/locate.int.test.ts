@@ -27,13 +27,15 @@ describe("finding the config, extract and schema files", () => {
 		["schema", locateSchema, "monti.schema.ts"],
 	] as const;
 
-	it.each(lookups)("the %s lookup finds a usual location and honours the chosen path", (_, locate, usual) => {
+	it.each(lookups)("CLI-C1 the %s lookup finds a usual location and honours the chosen path", (_, locate, usual) => {
 		expect(locate(folder(usual))).toBe(usual);
 		expect(locate(folder(`src/${usual}`))).toBe(`src/${usual}`);
 		expect(locate(folder(usual, "other.ts"), "other.ts")).toBe("other.ts");
 	});
 
-	it.each(lookups)("a missing %s file is a SetupError that says where it looked and how to fix it", (_, locate) => {
+	it.each(
+		lookups,
+	)("CLI-C1 a missing %s file is a SetupError that says where it looked and how to fix it", (_, locate) => {
 		for (const attempt of [() => locate(folder()), () => locate(folder(), "nope.ts")]) {
 			let thrown: unknown;
 			try {
@@ -46,7 +48,7 @@ describe("finding the config, extract and schema files", () => {
 		}
 	});
 
-	it("a legacy cms.config.ts is read by schema:extract only", () => {
+	it("SCHEMA-S4 a legacy cms.config.ts is read by schema:extract only", () => {
 		const dir = folder("cms.config.ts");
 		expect(locateExtractConfig(dir)).toBe("cms.config.ts");
 		expect(() => locateConfig(dir, undefined, {})).toThrow(SetupError);

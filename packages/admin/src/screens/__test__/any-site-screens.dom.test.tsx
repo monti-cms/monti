@@ -13,7 +13,6 @@ import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { copyTitle, type EntryData } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
 import { EntryListScreen } from "../entry-list-screen";
-import { columnLabel, columnsFor } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
@@ -79,24 +78,6 @@ afterEach(() => {
 });
 
 describe("any site: list screen", () => {
-	it("LIST-S3 shows the collection's rows under its configured list columns", async () => {
-		nav.setSearch(`collection=${content}`);
-		listed = [item("e1", "Alpha"), item("e2", "Beta")];
-		render(
-			<AdminQueryProvider>
-				<EntryListScreen />
-			</AdminQueryProvider>,
-		);
-		await screen.findByRole("row", { name: /Alpha/ });
-		expect(screen.getByRole("row", { name: /Beta/ })).toBeInTheDocument();
-		// Every default column is a name in the head row.
-		for (const column of columnsFor(testSite, content).defaults) {
-			expect(screen.getByRole("columnheader", { name: columnLabel(testSite, content, column) })).toBeInTheDocument();
-		}
-		// A collection of writing has the one "write a new post" button, whatever its label.
-		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeInTheDocument();
-	});
-
 	it("WRITE-W10 duplicates a row with a copy title made by the admin", async () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];

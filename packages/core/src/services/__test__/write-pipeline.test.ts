@@ -97,6 +97,25 @@ describe("write pipeline", () => {
 		expect(transformed).toBe(false);
 	});
 
+	it("WRITE-H1 gets the address of the entry, and may change it", async () => {
+		const seen: (string | null)[] = [];
+		const { snapshot } = await pipelineWith({
+			owner: "server",
+			hooks: {
+				beforeValidate: ({ slug, metadata, doc }) => {
+					seen.push(slug);
+					return { metadata, doc, slug: slug?.toUpperCase() };
+				},
+				beforeSave: ({ slug }) => {
+					seen.push(slug);
+				},
+			},
+		}).run(request({ input: { ...input(), slug: "mixed-case" } as ServiceInput }));
+		// The transform saw what was sent, the validation what core prepared from what the transform returned.
+		expect(seen).toEqual(["mixed-case", "MIXED-CASE"]);
+		expect(snapshot.slug).toBe("MIXED-CASE");
+	});
+
 	it("WRITE-H1 keeps the body as it came in when a transform leaves it alone", async () => {
 		const text = "Body";
 		const plain = await createWritePipeline({ site: testSite, formats }).run(

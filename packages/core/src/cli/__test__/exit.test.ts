@@ -11,14 +11,14 @@ const capture = () => {
 };
 
 describe("one place turns an error into an exit code", () => {
-	it("a cancelled question ends with 130, any other error with 1", () => {
+	it("CLI-E1 a cancelled question ends with 130, any other error with 1", () => {
 		expect(exitCodeFor(new Cancelled())).toBe(130);
 		expect(exitCodeFor(problemError({ what: "x", fix: "y" }))).toBe(1);
 		expect(exitCodeFor(new Error("boom"))).toBe(1);
 		expect(exitCodeFor("a string")).toBe(1);
 	});
 
-	it("prints the message to error, or as JSON to log with --json", () => {
+	it("CLI-E1 prints the message to error, or as JSON to log with --json", () => {
 		const text = capture();
 		expect(reportError(new Error("boom"), text.io)).toBe(1);
 		expect(text.err).toEqual(["boom"]);
@@ -26,11 +26,11 @@ describe("one place turns an error into an exit code", () => {
 
 		const json = capture();
 		expect(reportError(new Cancelled(), json.io, { json: true })).toBe(130);
-		expect(JSON.parse(json.out.join(""))).toMatchObject({ ok: false, error: expect.any(String) });
+		expect(JSON.parse(json.out.join(""))).toEqual({ ok: false, error: new Cancelled().message });
 		expect(json.err).toEqual([]);
 	});
 
-	it("every command ends through it: an unknown option is exit 1, and JSON stays JSON", async () => {
+	it("CLI-E1 every command ends through it: an unknown option is exit 1, and JSON stays JSON", async () => {
 		for (const command of [
 			"init",
 			"db:setup",

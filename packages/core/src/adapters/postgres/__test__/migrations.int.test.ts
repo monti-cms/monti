@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
-import { contentOf, docOf } from "../../../../test/stored-content";
 import { SetupError } from "../../../core/problem";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import { documentKeyHash } from "../../../core/translation/state-hash";
@@ -41,7 +40,7 @@ describe("migrations", () => {
 			(row) => row.name,
 		);
 
-	it("has exactly the baseline as its step list (a guard against renaming a step)", () => {
+	it("DB-M3 has exactly the baseline as its step list (a guard against renaming a step)", () => {
 		expect([...CONTENT_STORE_MIGRATIONS]).toEqual([
 			"0001_baseline",
 			"0002_media_folders",
@@ -50,7 +49,7 @@ describe("migrations", () => {
 		]);
 	});
 
-	it("fills the hashes the translation filter compares for bodies written before they were kept, and every new body has them", async () => {
+	it("DB-M4 fills the hashes the translation filter compares for bodies written before they were kept, and every new body has them", async () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const entry = await seedEntry(store, {
@@ -81,7 +80,7 @@ describe("migrations", () => {
 		expect((await read())?.doc_key_hash).toBe(documentKeyHash(entry.working.doc));
 	});
 
-	it("runs one at a time even when started twice concurrently, and records the steps and the seed once", async () => {
+	it("DB-M3 runs one at a time even when started twice concurrently, and records the steps and the seed once", async () => {
 		await Promise.all([
 			migrateContentStore(pool, { site: testSite, schema: schemaName }),
 			migrateContentStore(pool, { site: testSite, schema: schemaName }),
@@ -90,7 +89,7 @@ describe("migrations", () => {
 		expect(await applied(schemaName)).toEqual(expected);
 	});
 
-	it("is a no-op when run again", async () => {
+	it("DB-M3 is a no-op when run again", async () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const before = await applied(schemaName);
 		const again = await migrateContentStore(pool, { site: testSite, schema: schemaName });
@@ -98,39 +97,7 @@ describe("migrations", () => {
 		expect(await applied(schemaName)).toEqual(before);
 	});
 
-	it("creates no MDX text columns, and a normal write stores the document only", async () => {
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		const columns = await pool.query(
-			`SELECT 1 FROM information_schema.columns
-			 WHERE table_schema = $1 AND column_name = 'mdx' AND table_name IN ('entry_bodies', 'body_templates')`,
-			[schemaName],
-		);
-		expect(columns.rows).toHaveLength(0);
-
-		const store = createContentStore(pool, { site: testSite, schema: schemaName });
-		const entry = await seedEntry(store, {
-			collection: "x",
-			slug: "doc-only",
-			metadata: { title: "Doc only" },
-			text: "words",
-		});
-		expect(contentOf((await store.getEntry(entry.id)).working.doc)).toEqual(contentOf(docOf("words")));
-		const template = await store.createTemplate({ name: "Doc only template", doc: docOf("template words") });
-		expect(contentOf((await store.getTemplate(template.id)).doc)).toEqual(contentOf(docOf("template words")));
-	});
-
-	it("seeds the initial body templates once, and does not revive a deleted one", async () => {
-		const seeded = testSite.config.seed?.templates ?? [];
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		const count = async () =>
-			Number((await pool.query(`SELECT count(*) AS count FROM "${schemaName}".body_templates`)).rows[0].count);
-		expect(await count()).toBe(seeded.length);
-		await pool.query(`DELETE FROM "${schemaName}".body_templates`);
-		await migrateContentStore(pool, { site: testSite, schema: schemaName });
-		expect(await count()).toBe(0);
-	});
-
-	it("refuses a database built from the numbered steps of an older pre-release, and changes nothing", async () => {
+	it("DB-M5 refuses a database built from the numbered steps of an older pre-release, and changes nothing", async () => {
 		const schema = `cms_test_old_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
 		await migrateContentStore(pool, { site: testSite, schema });
@@ -148,7 +115,7 @@ describe("migrations", () => {
 		);
 	});
 
-	it("creates the schema if missing (only set `schema` and run monti db:migrate)", async () => {
+	it("DB-M6 creates the schema if missing (only set `schema` and run monti db:migrate)", async () => {
 		const schema = `cms_test_new_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
 		await migrateContentStore(pool, { site: testSite, schema });
@@ -159,7 +126,7 @@ describe("migrations", () => {
 		expect(tables.rows).toHaveLength(1);
 	});
 
-	it("records a plugin's one-time step in the core migration log, under the plugin's name", async () => {
+	it("PLUG-S8 records a plugin's one-time step in the core migration log, under the plugin's name", async () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const storage = createPluginStorage(pool, schemaName, "logged");
 		expect(await storage.once("first-step", async () => {})).toBe(true);

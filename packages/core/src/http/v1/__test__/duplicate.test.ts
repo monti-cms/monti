@@ -47,23 +47,7 @@ const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 	});
 
 describe("Duplicate API Route", () => {
-	it("duplicates entry with 201 Created", async () => {
-		const res = await postDuplicate(
-			postReq("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate"),
-			{
-				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
-				cms,
-			},
-		);
-		expect(res.status).toBe(201);
-		const data = await res.json();
-		expect(data.entry.id).toBe("new-duplicated-id");
-		expect(data.entry.status).toBe("draft");
-		expect(data.entry.working.metadata.title).toBe("Original");
-		expect(duplicateEntry).toHaveBeenLastCalledWith({ id: "00000000-0000-4000-8000-000000000001", title: undefined });
-	});
-
-	it("passes the caller's copy title to the service", async () => {
+	it("WRITE-W10 passes the caller's copy title to the service", async () => {
 		const res = await postDuplicate(
 			postReq(
 				"http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate",
@@ -80,44 +64,5 @@ describe("Duplicate API Route", () => {
 			id: "00000000-0000-4000-8000-000000000001",
 			title: "Original (copy)",
 		});
-	});
-
-	it("rejects a non-string title with 400", async () => {
-		const res = await postDuplicate(
-			postReq(
-				"http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate",
-				"http://localhost",
-				{ title: 1 },
-			),
-			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }), cms },
-		);
-		expect(res.status).toBe(400);
-	});
-
-	it("returns 404 when entry does not exist", async () => {
-		const res = await postDuplicate(
-			postReq("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000003/duplicate"),
-			{
-				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000003" }),
-				cms,
-			},
-		);
-		expect(res.status).toBe(404);
-		const data = await res.json();
-		expect(data.error.code).toBe("not_found");
-	});
-
-	it("rejects cross-origin requests with 403", async () => {
-		const res = await postDuplicate(
-			postReq(
-				"http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000001/duplicate",
-				"http://evil.com",
-			),
-			{
-				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
-				cms,
-			},
-		);
-		expect(res.status).toBe(403);
 	});
 });

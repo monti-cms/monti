@@ -3,7 +3,6 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { type CmsIssue, issueLine } from "../../../api/error-message";
 import {
 	EntryFormProvider,
 	type EntryFormValue,
@@ -175,7 +174,7 @@ describe("subscription of one field", () => {
 		);
 	});
 
-	it("PLUG-A6 a field re-renders when its error or the disabled state changes, others only for what they read", () => {
+	it("PLUG-A15 a field re-renders when its error or the disabled state changes, others only for what they read", () => {
 		for (const key of Object.keys(renders)) delete renders[key];
 		const Harness = ({ issues, disabled }: { issues: EntryFormValue["issues"]; disabled: boolean }) => (
 			<EntryFormProvider value={baseValue({ issues, disabled })}>
@@ -205,49 +204,6 @@ describe("subscription of one field", () => {
 		// A stale render would put "ab" back into the controlled input for a pass, which moves the caret.
 		expect(seen.slice(1)).not.toContain("ab");
 		expect(seen.at(-1)).toBe("axb");
-	});
-});
-
-describe("orphaned values", () => {
-	it("PLUG-A6 a change patches the field only, so values of removed fields stay in the form", () => {
-		const patches: EntryFormPatch[] = [];
-		let latest: EntryForm = EMPTY_FORM;
-		function Capture() {
-			const field = useField<string>("title");
-			const summary = useField<string>("summary");
-			return (
-				<>
-					<input aria-label="title" value={field.value ?? ""} onChange={(e) => field.setValue(e.target.value)} />
-					<input aria-label="summary" value={summary.value ?? ""} onChange={(e) => summary.setValue(e.target.value)} />
-				</>
-			);
-		}
-		function Reader({ form }: { form: EntryForm }) {
-			latest = form;
-			return null;
-		}
-		function Host() {
-			const [form, setForm] = useState<EntryForm>({ ...EMPTY_FORM, title: "T", oldField: "kept", oldList: ["a", "b"] });
-			return (
-				<EntryFormProvider
-					value={baseValue({
-						form,
-						setForm: (patch) => {
-							patches.push(patch);
-							setForm((current) => ({ ...current, ...patch }));
-						},
-					})}
-				>
-					<Capture />
-					<Reader form={form} />
-				</EntryFormProvider>
-			);
-		}
-		render(<Host />);
-		fireEvent.change(screen.getByLabelText("title"), { target: { value: "T2" } });
-		fireEvent.change(screen.getByLabelText("summary"), { target: { value: "S" } });
-		expect(patches).toEqual([{ title: "T2" }, { summary: "S" }]);
-		expect(latest).toMatchObject({ title: "T2", summary: "S", oldField: "kept", oldList: ["a", "b"] });
 	});
 });
 

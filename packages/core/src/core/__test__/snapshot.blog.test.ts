@@ -9,7 +9,7 @@ const site = createSite(blog);
 
 /** The publish check of the reference blog config's blocks (tabs, tooltip, alignment): their required and valid attributes. */
 describe("validateForPublish with the blog's blocks", () => {
-	it("blocks publishing blocks without required or valid attributes", async () => {
+	it("WRITE-P1 blocks publishing blocks without required or valid attributes", async () => {
 		const text = (value: string): CmsNode => ({ type: "paragraph", content: [{ type: "text", text: value }] });
 		const tab = (attrs: Record<string, string>, value: string): CmsNode => ({
 			type: "tab",
@@ -48,7 +48,7 @@ describe("validateForPublish with the blog's blocks", () => {
 		}
 	});
 
-	it("blocks publishing a document whose text decoration lacks its required attribute, at the block", async () => {
+	it("WRITE-P1 blocks publishing a document whose text decoration lacks its required attribute, at the block", async () => {
 		const doc = {
 			type: "doc",
 			version: STORED_DOCUMENT_VERSION,

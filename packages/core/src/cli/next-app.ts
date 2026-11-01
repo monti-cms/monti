@@ -164,9 +164,6 @@ export function gitignoreCoverage(gitignore: string): { readonly envLocal: boole
 	};
 }
 
-/** Whether a `.gitignore` covers `.env.local`. */
-export const ignoresEnvLocal = (gitignore: string): boolean => gitignoreCoverage(gitignore).envLocal;
-
 // ---- the three Next files Monti adds ----
 
 /** One of the three files Monti adds to the Next app: the admin layout, the admin page and the API route. */

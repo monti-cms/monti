@@ -51,7 +51,7 @@ describe("Folders in Postgres", () => {
 	// 8  Concurrency opposing moves
 	// -----------------------------------------------------------------------
 
-	it("8. Folder concurrency: concurrent opposing moves (A under B, B under A) fulfills one, rejects other with invalid_input, graph is acyclic", async () => {
+	it("LIST-F9 8. Folder concurrency: concurrent opposing moves (A under B, B under A) fulfills one, rejects other with invalid_input, graph is acyclic", async () => {
 		const lockId = randomBytes(4).readInt32BE();
 		const appName = `test8_${randomBytes(4).toString("hex")}`;
 		const funcName = `trig_func_${randomBytes(4).toString("hex")}`;
@@ -112,7 +112,8 @@ describe("Folders in Postgres", () => {
 						);
 						return res.rows.filter((r) => r.state === "active" && r.wait_event !== null).length;
 					},
-					{ timeout: 15_000 },
+					// The second pool opens its connections and both moves reach the gate: on a slow CI database this takes seconds.
+					{ timeout: 10_000 },
 				)
 				.toBe(2);
 
@@ -161,5 +162,5 @@ describe("Folders in Postgres", () => {
 			gateClient.release();
 			await customPool.end();
 		}
-	}, 30_000);
+	});
 });

@@ -1,5 +1,6 @@
 import {
 	type Collection,
+	type CollectionPreferences,
 	type FieldCondition,
 	LIST_SORT_FIELDS,
 	type ListSortField,
@@ -133,6 +134,16 @@ export function parseListState(
 		pageSize: pageSizeParam.parse(params.get("pageSize")),
 	};
 	return { ...state, explicit: { pageSize: params.has("pageSize"), sort: params.has("sortField") } };
+}
+
+/** The list state with the collection's saved page size and sort where the address does not say them: what the address says wins. */
+export function withSavedSettings(parsed: ReturnType<typeof parseListState>, saved: CollectionPreferences): ListState {
+	return {
+		...parsed,
+		pageSize: parsed.explicit.pageSize ? parsed.pageSize : (saved.pageSize ?? parsed.pageSize),
+		sortField: parsed.explicit.sort ? parsed.sortField : (saved.sort?.field ?? parsed.sortField),
+		sortDirection: parsed.explicit.sort ? parsed.sortDirection : (saved.sort?.direction ?? parsed.sortDirection),
+	};
 }
 
 /** Writes search, filters and sort as a URL query. */

@@ -83,7 +83,7 @@ describe("publish check on a real store", () => {
 		expect(after.version).toBe(before.version);
 		expect(after.status).toBe(before.status);
 		expect(after.published).toBeUndefined();
-	}, 30_000);
+	});
 
 	it("WRITE-P1 finds no issues for a draft that publishes, and publishing it afterwards still works", async () => {
 		const created = await draft("Body");
@@ -95,11 +95,11 @@ describe("publish check on a real store", () => {
 
 		const published = await service.publish({ id: created.entry.id, expectedVersion: created.entry.version });
 		expect(published.entry.status).toBe("published");
-	}, 30_000);
+	});
 
 	it("WRITE-P1 refuses an entry that cannot be published as a publish does", async () => {
 		const created = await draft("Body");
 		await store.trashEntry({ id: created.entry.id, expectedVersion: created.entry.version });
 		await expect(service.checkPublish({ id: created.entry.id })).rejects.toMatchObject({ code: "invalid_status" });
-	}, 30_000);
+	});
 });

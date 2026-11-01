@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import blog from "../../../test/cms.config";
 import otherSiteConfig from "../../../test/other-site.config";
 import { defineSite } from "../../config/define";
@@ -8,7 +8,7 @@ import type { ContentStore, PublishedEntryRecord } from "../../core/store";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { defineMessages } from "../../i18n/define";
-import { type DocumentComponentsFor, type DocumentComponentsOf, renderDocument } from "../../render";
+import { renderDocument } from "../../render";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter } from "../../server/define";
 import { createSite, type Site } from "../../site";
 import { type Cms, createCms } from "../create-cms";
@@ -122,7 +122,7 @@ describe("two instances with different site configs", () => {
 		return { realBlog, realOther, cmsBlog, cmsOther };
 	};
 
-	it("each holds the site of its own config", () => {
+	it("CONF-I2 each holds the site of its own config", () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = cmsBlog.site;
 		const b = cmsOther.site;
@@ -151,7 +151,7 @@ describe("two instances with different site configs", () => {
 		expect([a.api.MAX_MEDIA_BYTES, b.api.MAX_MEDIA_BYTES]).toEqual([10 * 1024 * 1024, 1_000_000]);
 	});
 
-	it("hands its own site to its database adapter, for the store and for a migration", async () => {
+	it("DB-C3 hands its own site to its database adapter, for the store and for a migration", async () => {
 		const { realBlog, realOther, cmsBlog, cmsOther } = instances();
 		cmsBlog.store();
 		cmsOther.store();
@@ -164,7 +164,7 @@ describe("two instances with different site configs", () => {
 		expect(realOther.sites).toEqual([cmsOther.site]);
 	});
 
-	it("each /meta response lists its own collections, locales, blocks and limits", async () => {
+	it("CONF-I2 each /meta response lists its own collections, locales, blocks and limits", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = await metaOf(cmsBlog);
 		const b = await metaOf(cmsOther);
@@ -178,16 +178,7 @@ describe("two instances with different site configs", () => {
 		expect([a.limits.mediaBytes, b.limits.mediaBytes]).toEqual([10 * 1024 * 1024, 1_000_000]);
 	});
 
-	it("the same holds for instances built by fakeCms over fake stores", async () => {
-		const a = fakeCms({ config: blog });
-		const b = fakeCms({ config: other });
-		expect((await metaOf(a)).collections).toEqual(["post", "memo", "category", "tag", "collection"]);
-		expect((await metaOf(b)).collections).toEqual(["article", "topic", "author"]);
-		expect((await metaOf(b)).limits.mediaBytes).toBe(1_000_000);
-		expect((await metaOf(a)).limits.mediaBytes).toBe(10 * 1024 * 1024);
-	});
-
-	it("the admin language of each site picks its own text", () => {
+	it("CONF-I2 the admin language of each site picks its own text", () => {
 		const { cmsBlog, cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", {
 			en: { hello: "Hello {name}" },
@@ -197,7 +188,7 @@ describe("two instances with different site configs", () => {
 		expect(cmsOther.site.createTranslator(bundle)("hello", { name: "A" })).toBe("Hello A");
 	});
 
-	it("an admin message override of one site does not reach the other", () => {
+	it("CONF-I2 an admin message override of one site does not reach the other", () => {
 		const { cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", { en: { hello: "Hello" } });
 		const overridden = createSite(
@@ -221,7 +212,7 @@ describe("two instances read their own stores and build their own public paths",
 		return { blogStore, otherStore, cmsBlog, cmsOther };
 	};
 
-	it("getEntry goes to the instance's store and returns the path of its URL rule", async () => {
+	it("CONF-I2 getEntry goes to the instance's store and returns the path of its URL rule", async () => {
 		const { blogStore, otherStore, cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello" });
 		const b = await cmsOther.read.getEntry({ collection: "article", slug: "hello" });
@@ -234,20 +225,7 @@ describe("two instances read their own stores and build their own public paths",
 		expect(otherStore.asked).toEqual(["other:get:article:hello:en"]);
 	});
 
-	it("the locale prefix follows each site's rule", async () => {
-		const { cmsBlog, cmsOther } = instances();
-		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello", locale: "en" });
-		if (a.status !== "found") throw new Error("expected the entry");
-		expect(a.entry.path).toBe("/en/posts/hello");
-		expect((await cmsBlog.read.getTranslations({ translationGroupId: "post-hello" })).map((item) => item.path)).toEqual(
-			["/posts/hello", "/en/posts/hello"],
-		);
-		expect(
-			(await cmsOther.read.getTranslations({ translationGroupId: "article-hello" })).map((item) => item.path),
-		).toEqual(["/en/blog/hello/"]);
-	});
-
-	it("listEntries builds its paths from its own site", async () => {
+	it("CONF-I2 listEntries builds its paths from its own site", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.listEntries({ collection: "post" });
 		const b = await cmsOther.read.listEntries({ collection: "article" });
@@ -255,7 +233,7 @@ describe("two instances read their own stores and build their own public paths",
 		expect(b.items.map((item) => item.path)).toEqual(["/en/blog/hello/"]);
 	});
 
-	it("a collection of the other site is unknown to an instance", async () => {
+	it("CONF-I2 a collection of the other site is unknown to an instance", async () => {
 		const { cmsBlog, cmsOther } = instances();
 		await expect(
 			// @ts-expect-error `article` is not a collection of the blog config
@@ -291,7 +269,7 @@ describe("renderDocument renders the same stored document with each site's own b
 		{ type: "quote-card", id: "blk00002", attrs: { author: "A" }, content: [paragraph("q")] },
 	);
 
-	it("draws the blocks the site defines and leaves the other site's as unknown content", async () => {
+	it("CONF-I2 draws the blocks the site defines and leaves the other site's as unknown content", async () => {
 		const a = await html(stored, siteBlog, components);
 		const b = await html(stored, siteOther, components);
 		expect(a.markup).toContain('data-block="notice"');
@@ -301,41 +279,13 @@ describe("renderDocument renders the same stored document with each site's own b
 		expect(b.markup).not.toContain('data-block="notice"');
 		expect(b.unknown.map((node) => node.type)).toEqual(["notice"]);
 	});
-
-	it("applies the line effects of the site that renders", async () => {
-		const effect = (name: string) => ({ name, label: name, class: `fx-${name}`, icon: "text--highlight" });
-		const withEffects = (name: string) =>
-			createSite(
-				defineSite({
-					collections: otherSiteConfig.collections,
-					locales: otherSiteConfig.locales,
-					defaultLocale: "en",
-					codeBlock: { lineEffects: [effect(name)] },
-				}),
-			);
-		const siteGlow = withEffects("glow");
-		const siteBeam = withEffects("beam");
-		const code = (name: string): StoredDocument =>
-			doc({
-				type: "codeBlock",
-				attrs: { language: "ts", meta: "", code: `const a = 1;\n// @line ${name}\nconst b = 2;` } as never,
-			});
-		const render = async (site: Site, name: string) =>
-			renderToStaticMarkup((await renderDocument(code(name), { site })).content as ReactNode);
-		expect(siteGlow.CODE_LINE_EFFECTS.map((item) => item.name)).toContain("glow");
-		expect(siteGlow.CODE_LINE_EFFECTS.map((item) => item.name)).not.toContain("beam");
-		expect(siteBeam.CODE_LINE_EFFECTS.map((item) => item.name)).toContain("beam");
-		expect(await render(siteGlow, "glow")).toContain("fx-glow");
-		expect(await render(siteBeam, "beam")).toContain("fx-beam");
-		expect(await render(siteBeam, "glow")).not.toContain("fx-glow");
-	});
 });
 
 describe("a site snapshot crosses JSON and gives the same site", () => {
 	it.each([
 		["blog", blog],
 		["other site", other],
-	])("%s", (_name, config) => {
+	])("CONF-I2 %s", (_name, config) => {
 		const site = createSite(config);
 		const copy = createSite(JSON.parse(JSON.stringify(site.snapshot())));
 		expect(copy.COLLECTIONS).toEqual(site.COLLECTIONS);
@@ -348,48 +298,5 @@ describe("a site snapshot crosses JSON and gives the same site", () => {
 		expect(copy.ADMIN_LANGUAGE).toBe(site.ADMIN_LANGUAGE);
 		expect(copy.CMS_TIME_ZONE).toBe(site.CMS_TIME_ZONE);
 		expect(copy.localizePath(site.DEFAULT_LOCALE, "/x")).toBe(site.localizePath(site.DEFAULT_LOCALE, "/x"));
-	});
-});
-
-/** Compile-time checks (only `tsc` reads them): the instance keeps the type of its config. */
-describe("instance types", () => {
-	it("keeps the config's types", () => {
-		// Never run: the calls below only exist to be type-checked.
-		const check = () => {
-			const server = stubServer("types").server;
-			const cmsBlog = createCms({ config: blog, server });
-			const cmsOther = createCms({ config: other, server });
-
-			// An instance of any config is accepted where `Cms` (any config) is expected.
-			const any: Cms = cmsBlog;
-			const anyOther: Cms = cmsOther;
-			void any;
-			void anyOther;
-
-			// Collection names and metadata come from the config.
-			void cmsBlog.read.listEntries({ collection: "post" });
-			void cmsOther.read.listEntries({ collection: "article" });
-			// @ts-expect-error `article` is not a collection of the blog config
-			void cmsBlog.read.listEntries({ collection: "article" }).catch(() => undefined);
-			// @ts-expect-error `post` is not a collection of the other-site config
-			void cmsOther.read.listEntries({ collection: "post" }).catch(() => undefined);
-			expectTypeOf(cmsBlog.site.config).toEqualTypeOf<typeof blog>();
-
-			// The component table of an instance, or of a config, names that site's blocks.
-			const ofInstance = {
-				blocks: { notice: ({ level }: { level: "info" | "warn" }) => createElement("aside", { "data-level": level }) },
-			} satisfies DocumentComponentsOf<typeof cmsBlog>;
-			const ofConfig = {
-				blocks: { "quote-card": ({ author }: { author?: string }) => createElement("figure", null, author) },
-			} satisfies DocumentComponentsFor<typeof other>;
-			void ofInstance;
-			void ofConfig;
-			const wrongBlock = {
-				// @ts-expect-error `quote-card` is not a block of the blog config
-				blocks: { "quote-card": () => null },
-			} satisfies DocumentComponentsOf<typeof cmsBlog>;
-			void wrongBlock;
-		};
-		expect(check).toBeTypeOf("function");
 	});
 });

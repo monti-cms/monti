@@ -33,13 +33,7 @@ beforeEach(() => {
 });
 
 describe("browser recovery copy per site", () => {
-	it("WRITE-R1 keeps a site's copies in a database named after the site and its admin path", async () => {
-		expect(backupDatabaseName(blog)).toBe(`cms_backup:Blog${blog.ADMIN_PATH}`);
-		await saveLocalBackup(record("u1:e1"), blog);
-		expect(idb.recordsOf(backupDatabaseName(blog))?.has("u1:e1")).toBe(true);
-	});
-
-	it("WRITE-R1 keeps two sites on one origin apart, even for the same key", async () => {
+	it("WRITE-R4 keeps two sites on one origin apart, even for the same key", async () => {
 		await saveLocalBackup(record("u1:e1", "블로그"), blog);
 		await saveLocalBackup(record("u1:e1", "상점"), shop);
 		expect((await getLocalBackup("u1:e1", blog))?.snapshot).toEqual({ title: "블로그" });
@@ -49,13 +43,13 @@ describe("browser recovery copy per site", () => {
 		expect(await getLocalBackup("u1:e1", shop)).not.toBeNull();
 	});
 
-	it("WRITE-R1 reports that recovery is unavailable when the browser has no IndexedDB", async () => {
+	it("WRITE-W15 reports that recovery is unavailable when the browser has no IndexedDB", async () => {
 		Reflect.deleteProperty(window, "indexedDB");
 		expect(await saveLocalBackup(record("u1:e1"), blog)).toBe(false);
 		expect(await getLocalBackup("u1:e1", blog)).toBeNull();
 	});
 
-	it("WRITE-R1 the recovery store of a site reads and writes that site's database", async () => {
+	it("WRITE-R4 the recovery store of a site reads and writes that site's database", async () => {
 		const store = localRecoveryStoreOf(shop);
 		expect(await store.put(record("u1:e1") as never)).toBe(true);
 		expect(idb.recordsOf(backupDatabaseName(shop))?.has("u1:e1")).toBe(true);

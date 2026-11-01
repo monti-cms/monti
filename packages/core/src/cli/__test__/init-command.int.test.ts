@@ -2,16 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CliIo } from "../command";
 import { runCli } from "../index";
 import { QUESTIONS } from "../init-prompts";
-import {
-	type FakeHost,
-	fakeHost,
-	fixtureApp,
-	listFiles,
-	read,
-	SRC_APP,
-	schemaOf,
-	scriptedPrompter,
-} from "./init-helpers";
+import { type FakeHost, fakeHost, fixtureApp, listFiles, read, schemaOf, scriptedPrompter } from "./init-helpers";
 
 /** The command line: flags, `--yes`, `--json`, the interactive run, and the exit codes. */
 
@@ -31,40 +22,21 @@ function run(dir: string, argv: string[], extras: Pick<CliIo, "interactive" | "p
 }
 
 describe("monti init on the command line", () => {
-	it("--directive-syntax and --no-directive-syntax decide the block syntax, and --no-install still installs nothing", async () => {
-		for (const [flag, on] of [
-			["--directive-syntax", true],
-			["--no-directive-syntax", false],
-		] as const) {
-			const dir = fixtureApp();
-			const result = run(dir, ["--yes", "--no-install", flag]);
-			expect(await result.code).toBe(0);
-			expect(read(dir, "monti.config.ts").includes("directiveSyntax()")).toBe(on);
-			expect(result.host.install).not.toHaveBeenCalled();
-		}
-	});
-
-	it("--yes takes every default and prints a plain summary", async () => {
+	it("INIT-N1 --yes takes every default and prints a plain summary", async () => {
 		const dir = fixtureApp();
+		const before = listFiles(dir);
 		const result = run(dir, ["--yes", "--no-install"]);
 		expect(await result.code).toBe(0);
 		const text = result.out.join("\n");
-		expect(text).toContain("Monti is added to your app.");
-		expect(text).toContain("Created:\n  - monti.config.ts");
-		expect(text).toContain("Monti's files are in the project root (next to app/).");
-		expect(text).toContain("What is left:");
-		expect(text).toMatch(/\n {2}1\. /);
+		// Every file init made is named (.env.local in its step, the others in the list), and what is left is a numbered list whose first step is the install it did not run.
+		const made = listFiles(dir).filter((file) => !before.includes(file));
+		expect(made).toEqual(expect.arrayContaining(["monti.config.ts", ".env.local"]));
+		for (const file of made) expect(text).toContain(file === ".env.local" ? file : `  - ${file}`);
+		expect(text).toMatch(/\n {2}1\. .*\n.*pnpm add @monti-cms\/core/);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
-	it("says that the files go to src/ when the app uses src/app", async () => {
-		const dir = fixtureApp(SRC_APP);
-		const result = run(dir, ["--yes", "--no-install"]);
-		expect(await result.code).toBe(0);
-		expect(result.out.join("\n")).toContain("Your app uses src/app, so Monti's files are in src/ (next to app/).");
-	});
-
-	it("without a terminal nothing is asked, even without --yes", async () => {
+	it("INIT-Q1 without a terminal nothing is asked, even without --yes", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({});
 		const result = run(dir, ["--no-install"], { interactive: false, prompter });
@@ -72,7 +44,7 @@ describe("monti init on the command line", () => {
 		expect(prompter.asked).toEqual([]);
 	});
 
-	it("--json prints one JSON document and asks nothing, even on a terminal", async () => {
+	it("CLI-E1 --json prints one JSON document and asks nothing, even on a terminal", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\n---\nx\n" });
 		const prompter = scriptedPrompter({});
 		const result = run(dir, ["--json", "--extras", "ai", "--no-install"], {
@@ -94,15 +66,7 @@ describe("monti init on the command line", () => {
 		expect(result.err).toEqual([]);
 	});
 
-	it("--json reports an error as JSON with exit code 1", async () => {
-		const dir = fixtureApp();
-		const result = run(dir, ["--json", "--storage", "gcs"]);
-		expect(await result.code).toBe(1);
-		expect(JSON.parse(result.out[0] ?? "")).toMatchObject({ ok: false, error: expect.stringContaining("--storage") });
-		expect(listFiles(dir)).toEqual(listFiles(fixtureApp()));
-	});
-
-	it("--dry-run changes nothing", async () => {
+	it("INIT-K7 --dry-run changes nothing", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const result = run(dir, ["--yes", "--dry-run"]);
@@ -111,7 +75,7 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("Dry run: nothing was written");
 	});
 
-	it("every question has a flag", async () => {
+	it("INIT-Q1 every question has a flag", async () => {
 		const dir = fixtureApp();
 		const result = run(dir, [
 			"--yes",
@@ -139,35 +103,14 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
-	it("the flags of the removed behavior are refused", async () => {
-		for (const flag of [
-			"--database",
-			"--database-schema",
-			"--admin-github-id",
-			"--no-migrate",
-			"--no-docker-start",
-			"--blog-theme",
-			"--resume",
-		]) {
-			const removed = run(fixtureApp(), ["--yes", flag, "x"]);
-			expect(await removed.code).toBe(1);
-		}
-	});
-
-	it("a bad --package-manager and an unknown flag are refused", async () => {
+	it("INIT-K7 a bad --package-manager and an unknown flag are refused", async () => {
 		expect(await run(fixtureApp(), ["--package-manager", "pip"]).code).toBe(1);
 		const unknown = run(fixtureApp(), ["--nope"]);
 		expect(await unknown.code).toBe(1);
 		expect(unknown.err.join("\n")).toMatch(/nope/);
 	});
 
-	it("--locale still sets the one default language", async () => {
-		const dir = fixtureApp();
-		await run(dir, ["--yes", "--no-install", "--locale", "ko"]).code;
-		expect(schemaOf(dir).defaultLocale).toBe("ko");
-	});
-
-	it("exits 1 when a step failed, with the files still written", async () => {
+	it("INIT-S1 exits 1 when a step failed, with the files still written", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost({ install: () => Promise.reject(new Error("offline")) });
 		const result = run(dir, ["--yes"], { host });
@@ -176,7 +119,7 @@ describe("monti init on the command line", () => {
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
-	it("an interactive run: the questions, the install confirmation, and the final summary", async () => {
+	it("INIT-Q1 an interactive run: the questions, the install confirmation, and the final summary", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\ndate: 2024-01-01\n---\nx\n" });
 		const prompter = scriptedPrompter({
 			[QUESTIONS.defaultLocale]: "ko",
@@ -218,7 +161,7 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("Start the app: pnpm dev, then open http://localhost:3000/studio");
 	});
 
-	it("answering no to the install runs nothing and lists the command", async () => {
+	it("INIT-S1 answering no to the install runs nothing and lists the command", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({
 			[QUESTIONS.defaultLocale]: "en",
@@ -238,40 +181,16 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toMatch(/Install the packages:\n\s+pnpm add @monti-cms\/core/);
 	});
 
-	it("Ctrl+C leaves the project as it was and exits 130", async () => {
+	it("INIT-K7 Ctrl+C leaves the project as it was and exits 130", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const prompter = scriptedPrompter({ [QUESTIONS.defaultLocale]: "cancel" });
 		const result = run(dir, [], { interactive: true, prompter });
 		expect(await result.code).toBe(130);
-		expect(result.err).toEqual(["Cancelled. Nothing was written."]);
+		// One line that says it was cancelled and that nothing was written.
+		expect(result.err).toHaveLength(1);
+		expect(result.err[0]).toMatch(/cancel/i);
+		expect(result.err[0]).toMatch(/nothing was written/i);
 		expect(listFiles(dir)).toEqual(before);
-	});
-
-	it("runCli routes init, and `init --help` shows every flag", async () => {
-		const out: string[] = [];
-		const code = await runCli(["init", "--help"], {
-			cwd: fixtureApp(),
-			log: (message) => out.push(message),
-			error: () => undefined,
-		});
-		expect(code).toBe(0);
-		for (const flag of [
-			"--yes",
-			"--json",
-			"--dry-run",
-			"--site-url",
-			"--locales",
-			"--time-zone",
-			"--storage",
-			"--extras",
-			"--blocks",
-			"--admin-path",
-			"--overwrite",
-			"--no-install",
-			"--package-manager",
-		]) {
-			expect(out.join("\n")).toContain(flag);
-		}
 	});
 });

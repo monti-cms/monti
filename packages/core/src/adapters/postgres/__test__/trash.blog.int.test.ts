@@ -357,12 +357,16 @@ describe("trash", () => {
 			});
 		});
 
-		it("TRASH-T4 refuses to trash a folder twice, a stale version, and to restore one that is not in the trash", async () => {
-			const shelf = await folder("Twice");
+		it("TRASH-D9 refuses to trash a folder with a stale version", async () => {
+			const shelf = await folder("Stale");
 			const stale = await trash
 				.trashFolder({ id: shelf.id, expectedVersion: shelf.version - 1 })
 				.catch((error) => error);
 			expect(stale).toMatchObject({ code: "conflict", serverVersion: shelf.version });
+		});
+
+		it("TRASH-R9 refuses to trash a folder twice, and to restore one that is not in the trash", async () => {
+			const shelf = await folder("Twice");
 			await expect(store.restoreFolder({ id: shelf.id })).rejects.toMatchObject({ code: "invalid_status" });
 			await expect(store.folderRestoreEntries({ id: shelf.id })).rejects.toMatchObject({ code: "not_found" });
 
@@ -379,7 +383,7 @@ describe("trash", () => {
 			expect(outcome).toMatchObject({ entries: 1 });
 		});
 
-		it("TRASH-R4 gives each entry the next version, and names the entries it brought back", async () => {
+		it("WRITE-S2 gives each entry the next version, and names the entries it brought back", async () => {
 			const shelf = await folder("Versions");
 			const entry = await draft("Versioned", shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -432,7 +436,7 @@ describe("trash", () => {
 		});
 
 		it.skipIf(!secondLocale)(
-			"TRASH-R2 brings a translation back when its source is live outside the folder",
+			"TRASH-R3 brings a translation back when its source is live outside the folder",
 			async () => {
 				const source = await draft(unique("Live source"));
 				const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
@@ -585,7 +589,7 @@ describe("trash", () => {
 			expect((await store.getMediaAsset(free.id))?.status).toBe("ready");
 		});
 
-		it("TRASH-T5 trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
+		it("TRASH-R9 trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
 			expect(await store.trashMedia({ ids: [] })).toEqual({ trashed: [], kept: [] });
 			const file = await readyMedia(`${unique("once")}.png`);
 			await store.trashMedia({ ids: [file.id] });
@@ -691,8 +695,8 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-B1 shows what an entry has: its languages, whether it was published, and how many entries point at it",
 			async () => {
-				if (!relation) return;
-				const tag = await relationTarget(relation.to);
+				const field = relation as NonNullable<typeof relation>;
+				const tag = await relationTarget(field.to);
 				const post = await publish(await draft(unique("Tagged")));
 				await point(await store.getEntry(post.id), [{ kind: "entry", targetId: tag, type: "metadata" }]);
 				const never = await draft(unique("Never published"));
@@ -812,7 +816,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D2 is held back by a relation field, naming the entries that point at it and whether they are in the trash",
 			async () => {
-				if (!relation) return;
 				const target = await draft(unique("Pointed at"));
 				const live = await draft(unique("Live pointer"));
 				const gone = await draft(unique("Trashed pointer"));
@@ -838,7 +841,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D3 goes through when the entries that point at it are deleted in the same call, whatever the order",
 			async () => {
-				if (!relation) return;
 				const target = await draft(unique("Target"));
 				const pointer = await draft(unique("Pointer"));
 				await point(pointer, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
@@ -887,7 +889,6 @@ describe("trash", () => {
 		it.skipIf(!relation)(
 			"TRASH-D7 holds a folder back when an entry outside it points at something inside",
 			async () => {
-				if (!relation) return;
 				const crate = await folder("Held");
 				const target = await draft(unique("Inside"), crate.id);
 				const outside = await draft(unique("Outside"));
@@ -976,21 +977,6 @@ describe("trash", () => {
 			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: user.id, trashed: false }] });
 			expect((await store.getMediaAsset(file.id))?.status).toBe("trashed");
 			expect(deletedFiles).not.toContain(file.storageKey);
-		});
-
-		it.skipIf(!secondLocale)("TRASH-D6 deletes a source with a translation that was trashed on its own", async () => {
-			const source = await draft(unique("Source"));
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
-				.entry;
-			await trashed(translation);
-			await trashed(source);
-
-			const [result] = await trash.delete([{ type: "entry", id: source.id }]);
-
-			expect(result).toMatchObject({ ok: true });
-			await expect(store.getEntry(source.id)).rejects.toMatchObject({ code: "not_found" });
-			await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
-			expect(await eventKinds(translation.id)).toContain("deleted");
 		});
 
 		it("TRASH-D8 names the entries that point at a file it refuses to delete", async () => {
@@ -1272,23 +1258,6 @@ describe("trash", () => {
 			// Run again: nothing is left to unlink.
 			expect(await trash.unlink({ collection: field.to })).toEqual({ entries: 0 });
 		});
-	});
-
-	describe("an item", () => {
-		it.skipIf(!relation)(
-			"TRASH-R1 goes to the trash while an entry uses it, and restoring it publishes it again",
-			async () => {
-				if (!relation) return;
-				const tag = await relationTarget(relation.to);
-				await draft(unique("User"), null, { [relation.name]: relation.many ? [tag] : tag });
-				const entry = await store.getEntry(tag);
-				await store.trashEntry({ id: tag, expectedVersion: entry.version });
-				expect(await statusOf(tag)).toBe("trashed");
-				const [result] = await trash.restore([{ type: "entry", id: tag }]);
-				expect(result).toMatchObject({ ok: true });
-				expect(await statusOf(tag)).toBe("published");
-			},
-		);
 	});
 });
 

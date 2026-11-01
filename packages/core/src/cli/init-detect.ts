@@ -7,14 +7,7 @@ import {
 	localesFromFileNames,
 	normalizeLanguageCode,
 } from "./locale-names";
-import {
-	dependencyNames,
-	dependencySpec,
-	detectAppDir,
-	findNextConfig,
-	ignoresEnvLocal,
-	readPackageJson,
-} from "./next-app";
+import { dependencyNames, dependencySpec, detectAppDir, findNextConfig, readPackageJson } from "./next-app";
 
 /** What `monti init` finds out about the app before it asks anything. Read-only: nothing is written here. */
 
@@ -89,8 +82,6 @@ export interface DetectedApp {
 	readonly dependencies: ReadonlySet<string>;
 	/** The existing `monti.config.ts` (relative to cwd), if any. */
 	readonly existingConfig?: string;
-	/** Whether `.gitignore` covers `.env.local`. */
-	readonly envLocalIgnored: boolean;
 }
 
 /** Folders searched for Markdown and MDX (each, and the folders up to {@link MAX_DEPTH} levels under it). */
@@ -190,7 +181,7 @@ function findContentFolders(cwd: string): ContentFolder[] {
  * Sibling folders named after languages (`content/ko`, `content/en`) are one set of posts in two languages, not two collections: they are merged into their parent,
  * which then lists the languages. A single folder named like a language is left alone (it may be a name).
  */
-function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string, string[]>): ContentFolder[] {
+export function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string, string[]>): ContentFolder[] {
 	const byParent = new Map<string, ContentFolder[]>();
 	for (const folder of folders) {
 		const base = path.posix.basename(folder.dir);
@@ -254,7 +245,6 @@ export function detectApp(cwd: string): DetectedApp {
 	const configRoots = src ? ["src/", ""] : [""];
 	const dev = typeof pkg.scripts?.dev === "string" ? pkg.scripts.dev : "";
 	const port = /(?:-p|--port)[ =]+(\d{2,5})/.exec(dev)?.[1];
-	const gitignore = exists(".gitignore") ? readFileSync(path.join(cwd, ".gitignore"), "utf8") : "";
 	return {
 		cwd,
 		packageName: typeof pkg.name === "string" ? pkg.name : undefined,
@@ -271,6 +261,5 @@ export function detectApp(cwd: string): DetectedApp {
 		coreSpec: dependencySpec(pkg, "@monti-cms/core"),
 		dependencies,
 		existingConfig: configRoots.map((root) => `${root}monti.config.ts`).find(exists),
-		envLocalIgnored: ignoresEnvLocal(gitignore),
 	};
 }

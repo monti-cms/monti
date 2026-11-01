@@ -24,6 +24,7 @@ import {
 	listStateToApiQuery,
 	listStateToSearchParams,
 	parseListState,
+	withSavedSettings,
 } from "./list-state";
 import { screensMessages } from "./messages";
 import type { MenuAction } from "./shared/action-menu";
@@ -59,16 +60,7 @@ function useListState() {
 	const preferences = preferencesQuery.data ?? null;
 
 	const collectionPrefs: CollectionPreferences = preferences?.collections?.[parsed.collection] ?? {};
-	const sortPrefs = collectionPrefs.sort;
-	const state: ListState = useMemo(
-		() => ({
-			...parsed,
-			pageSize: parsed.explicit.pageSize ? parsed.pageSize : (collectionPrefs.pageSize ?? parsed.pageSize),
-			sortField: parsed.explicit.sort ? parsed.sortField : (sortPrefs?.field ?? parsed.sortField),
-			sortDirection: parsed.explicit.sort ? parsed.sortDirection : (sortPrefs?.direction ?? parsed.sortDirection),
-		}),
-		[parsed, collectionPrefs, sortPrefs],
-	);
+	const state: ListState = useMemo(() => withSavedSettings(parsed, collectionPrefs), [parsed, collectionPrefs]);
 
 	const navigate = useCallback(
 		(next: ListState) => router.replace(`${basePath}?${listStateToSearchParams(next).toString()}`, { scroll: false }),

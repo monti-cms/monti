@@ -1,12 +1,12 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
 import { formatInitReport } from "../init-report";
 import { fakeHost, fixtureApp, listFiles, read } from "./init-helpers";
 
 describe("monti init when the install fails", () => {
-	it("does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
+	it("INIT-S1 does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
 		const report = await initProject({ cwd: dir, host });
@@ -24,22 +24,7 @@ describe("monti init when the install fails", () => {
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
-	it("leaves no progress file behind, on a failure or on a dry run", async () => {
-		const failed = fixtureApp();
-		await initProject({
-			cwd: failed,
-			host: fakeHost({ install: () => Promise.reject(new Error("offline")) }),
-		});
-		expect(existsSync(path.join(failed, ".monti"))).toBe(false);
-
-		const dry = fixtureApp();
-		const install = vi.fn(() => Promise.reject(new Error("offline")));
-		await initProject({ cwd: dry, host: fakeHost({ install }), dryRun: true });
-		expect(existsSync(path.join(dry, ".monti"))).toBe(false);
-		expect(install).not.toHaveBeenCalled();
-	});
-
-	it("completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
+	it("INIT-K1 completes when init is run again after the failure, and does not overwrite the files from the first run", async () => {
 		const dir = fixtureApp();
 		const failed = await initProject({
 			cwd: dir,

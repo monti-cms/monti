@@ -15,7 +15,7 @@ const siteHost = new URL(testConfig.site?.url ?? "https://example.invalid").host
 const aliasHost = testConfig.site?.aliases?.[0] ?? siteHost;
 
 describe("internal body link rules", () => {
-	it("only collections with a path can be linked to", () => {
+	it("SITE-R8 only collections with a path can be linked to", () => {
 		expect(testSite.LINKABLE_COLLECTIONS).toEqual(testSite.COLLECTIONS.filter((name) => testSite.schemaOf(name).path));
 		expect(testSite.LINKABLE_COLLECTIONS).toContain(contentCollection);
 		expect(testSite.contentPath(contentCollection, "nextjs-guide")).toBe(pathOf("nextjs-guide"));
@@ -24,7 +24,7 @@ describe("internal body link rules", () => {
 		expect(testSite.contentPath(contentCollection, "")).toBeNull();
 	});
 
-	it("reads the collection and slug from a path", () => {
+	it("SITE-R3 reads the collection and slug from a path", () => {
 		expect(testSite.parseContentPath(pathOf("a"))).toEqual({ collection: contentCollection, slug: "a" });
 		// A trailing slash makes no difference; it is the same post.
 		const encoded = pathOf("%ED%95%9C%EA%B8%80").replace(/\/?$/, "/");
@@ -34,7 +34,7 @@ describe("internal body link rules", () => {
 		expect(testSite.parseContentPath(pathOf("%E0%A4%A"))).toBeNull();
 	});
 
-	it("reads the language of a path that has the locale prefix of the site's URLs", () => {
+	it("SITE-R3 reads the language of a path that has the locale prefix of the site's URLs", () => {
 		for (const locale of [defaultLocale, secondLocale]) {
 			if (!locale) continue;
 			const prefixed = testSite.localizePath(locale, pathOf("a"));
@@ -47,7 +47,7 @@ describe("internal body link rules", () => {
 		}
 	});
 
-	it("only links written as a path or with the site address count as internal links", () => {
+	it("SITE-R3 only links written as a path or with the site address count as internal links", () => {
 		const relative = `${pathOf("a")}?x=1#h`;
 		expect(testSite.parseInternalLink(relative)).toEqual({ collection: contentCollection, slug: "a", url: relative });
 		expect(testSite.parseInternalLink(`https://${aliasHost}${pathOf("b")}`)?.slug).toBe("b");
@@ -61,7 +61,7 @@ describe("internal body link rules", () => {
 describe("draft preview addresses", () => {
 	const previewPath = testConfig.site?.previewPath;
 
-	it.skipIf(!previewPath)("appends the public path under the preview path", () => {
+	it.skipIf(!previewPath)("WRITE-W8 appends the public path under the preview path", () => {
 		const href = testSite.previewHref(contentCollection, "nextjs-guide", defaultLocale);
 		expect(href?.startsWith(previewPath?.replace(/\/$/, "") ?? "")).toBe(true);
 		expect(href?.endsWith(pathOf("nextjs-guide"))).toBe(true);
@@ -70,7 +70,7 @@ describe("draft preview addresses", () => {
 	});
 
 	// For a non-default locale the locale is passed (as a query or a path prefix). A config with only one locale has none.
-	it.skipIf(!previewPath || !secondLocale)("passes the locale when it is not the default", () => {
+	it.skipIf(!previewPath || !secondLocale)("WRITE-W8 passes the locale when it is not the default", () => {
 		const href = testSite.previewHref(contentCollection, "한글 메모", secondLocale);
 		expect(href).toContain(secondLocale);
 		expect(href).toContain(encodeURIComponent("한글 메모"));

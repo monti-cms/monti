@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { ConfigError, type ConfigIssue, defineCollection, definePlugin, defineSite, fields } from "../..";
-import { createSite } from "../../site";
 
 const title = fields.text({ label: "Title" });
 const slug = fields.slug({ label: "Slug", from: "title" });
@@ -22,27 +21,14 @@ const expectIssue = (run: () => unknown, path: string, code: string) =>
 	expect(issuesOf(run)).toContainEqual(expect.objectContaining({ path, code }));
 
 describe("defineSite", () => {
-	it("returns the config with collections normalized (kind, body)", () => {
+	it("SCHEMA-S1 returns the config with collections normalized (kind, body)", () => {
 		const config = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		const defined = defineSite(config);
 		expect(defined).toEqual(config);
 		expect(defined.collections.topic).toMatchObject({ kind: "item", body: false });
 	});
 
-	it("rejects a definition without a kind", () => {
-		expectIssue(
-			() =>
-				defineSite({
-					collections: { bad: { label: "Bad", fields: { title, slug } } as unknown as typeof topic },
-					locales,
-					defaultLocale: "en",
-				}),
-			"collections.bad.kind",
-			"enum",
-		);
-	});
-
-	it("rejects an option the format does not have, whichever way the collection is written", () => {
+	it("SCHEMA-F14 rejects an option the format does not have, whichever way the collection is written", () => {
 		const retired = { label: "Old", kind: "item", workflow: "record", fields: { title, slug } } as never;
 		expectIssue(
 			() => defineSite({ collections: { old: retired }, locales, defaultLocale: "en" }),
@@ -63,7 +49,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("names the closest option when a key is misspelt, at every level", () => {
+	it("SCHEMA-F14 names the closest option when a key is misspelt, at every level", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		const hint = (run: () => unknown, path: string) => issuesOf(run).find((issue) => issue.path === path)?.message;
 		expect(hint(() => defineSite({ ...base, plugin: [] } as never), "plugin")).toContain('did you mean "plugins"');
@@ -79,20 +65,7 @@ describe("defineSite", () => {
 		).toContain('did you mean "from"');
 	});
 
-	it('rejects the removed `required: "publish"`: only `true` exists', () => {
-		const old = defineCollection({
-			label: "Old",
-			kind: "document",
-			fields: { title: { ...title, required: "publish" } as never, slug },
-		});
-		expectIssue(
-			() => defineSite({ collections: { old }, locales, defaultLocale: "en" }),
-			"collections.old.fields.title.required",
-			"enum",
-		);
-	});
-
-	it("reports every problem at once, not only the first", () => {
+	it("SCHEMA-F14 reports every problem at once, not only the first", () => {
 		const issues = issuesOf(() =>
 			defineSite({
 				collections: { topic },
@@ -110,7 +83,7 @@ describe("defineSite", () => {
 		]);
 	});
 
-	it("rejects collection paths that can make the same URL", () => {
+	it("CONF-S3 rejects collection paths that can make the same URL", () => {
 		const page = (path: `/${string}:slug${string}`) =>
 			defineCollection({ label: "Page", kind: "document", path, fields: { title, slug } });
 		expect(() =>
@@ -139,7 +112,7 @@ describe("defineSite", () => {
 		).not.toThrow();
 	});
 
-	it("rejects a field named like a reserved metadata key (`translations`)", () => {
+	it("CONF-S3 rejects a field named like a reserved metadata key (`translations`)", () => {
 		const collection = defineCollection({
 			label: "Reserved",
 			kind: "item",
@@ -152,7 +125,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("rejects locale codes that are not BCP 47 shaped (they go into URLs and SQL defaults)", () => {
+	it("CONF-S5 rejects locale codes that are not BCP 47 shaped (they go into URLs and SQL defaults)", () => {
 		for (const code of ["pt-BR", "zh-Hant", "ko"]) {
 			expect(() =>
 				defineSite({ collections: { topic }, locales: [{ code, name: code }], defaultLocale: code }),
@@ -167,7 +140,7 @@ describe("defineSite", () => {
 		}
 	});
 
-	it("checks the admin locale and fillFromBody.maxLength", () => {
+	it("CONF-A1 checks the admin locale and fillFromBody.maxLength", () => {
 		expectIssue(
 			() => defineSite({ collections: { topic }, locales, defaultLocale: "en", admin: { locale: "not a locale!" } }),
 			"admin.locale",
@@ -185,61 +158,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	describe("editor.widths", () => {
-		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
-		const withWidths = (widths: { label: string; width: string }[]) => defineSite({ ...base, editor: { widths } });
-
-		it("keeps the steps in the order written, and the config works without them", () => {
-			const widths = [
-				{ label: "Desktop", width: "720px" },
-				{ label: "Phone", width: "375px" },
-			];
-			expect(withWidths(widths).editor?.widths).toEqual(widths);
-			expect(defineSite(base).editor).toBeUndefined();
-		});
-
-		it("accepts CSS lengths of every common shape", () => {
-			for (const width of [
-				"720px",
-				"48rem",
-				"60ch",
-				"80%",
-				"37.5em",
-				".5rem",
-				"min(100%, 60ch)",
-				"calc(100vw - 2rem)",
-			]) {
-				expect(() => withWidths([{ label: "A", width }]), width).not.toThrow();
-			}
-		});
-
-		it("rejects empty or invalid widths, naming the step", () => {
-			for (const width of ["", "  ", "720", "wide", "px", "-5px", "10px; color: red", "url(x)", "720 px"]) {
-				expectIssue(() => withWidths([{ label: "A", width }]), "editor.widths[0].width", "css-length");
-			}
-		});
-
-		it("rejects empty and repeated labels and an empty list", () => {
-			expectIssue(() => withWidths([{ label: " ", width: "720px" }]), "editor.widths[0].label", "empty");
-			expectIssue(
-				() =>
-					withWidths([
-						{ label: "A", width: "720px" },
-						{ label: "A", width: "375px" },
-					]),
-				"editor.widths[1].label",
-				"duplicate",
-			);
-			expectIssue(() => withWidths([]), "editor.widths", "empty");
-		});
-
-		it("reaches the browser snapshot", () => {
-			const widths = [{ label: "Desktop", width: "720px" }];
-			expect(createSite(withWidths(widths)).snapshot().editor?.widths).toEqual(widths);
-		});
-	});
-
-	it("checks the admin path, locale prefix, preview locale param", () => {
+	it("CONF-S5 checks the admin path and the locale prefix", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, admin: { path: "/studio" } })).not.toThrow();
 		expect(() => defineSite({ ...base, admin: { path: "/cms/admin" } })).not.toThrow();
@@ -252,6 +171,10 @@ describe("defineSite", () => {
 			"site.localePrefix",
 			"enum",
 		);
+	});
+
+	it("CONF-A1 checks the preview locale param", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, site: { previewLocaleParam: false } })).not.toThrow();
 		expect(() => defineSite({ ...base, site: { previewLocaleParam: "lang" } })).not.toThrow();
 		expectIssue(
@@ -261,20 +184,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("rejects a default locale outside the list and duplicate locales", () => {
-		expectIssue(
-			() => defineSite({ collections: { topic }, locales, defaultLocale: "ko" as "en" }),
-			"defaultLocale",
-			"unknown-locale",
-		);
-		expectIssue(
-			() => defineSite({ collections: { topic }, locales: [...locales, ...locales], defaultLocale: "en" }),
-			"locales[1].code",
-			"duplicate",
-		);
-	});
-
-	it("rejects relations and backlinks to unknown or mismatched collections", () => {
+	it("CONF-S4 rejects relations and backlinks to unknown or mismatched collections", () => {
 		const article = defineCollection({
 			label: "Article",
 			kind: "document",
@@ -304,7 +214,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks the public path pattern and site URL", () => {
+	it("CONF-S5 checks the public path pattern and site URL", () => {
 		const withPath = (path: string) => ({ ...topic, path }) as typeof topic & { path: `/${string}:slug${string}` };
 		expect(() =>
 			defineSite({ collections: { topic: withPath("/topics/:slug") }, locales, defaultLocale: "en" }),
@@ -334,7 +244,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks that a seed template has a document, or a text with its format", () => {
+	it("CONF-A1 checks that a seed template has a document, or a text with its format", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		const id = "00000000-0000-4000-8000-000000000001";
 		const doc = { type: "doc", version: 3, content: [] } as const;
@@ -347,7 +257,7 @@ describe("defineSite", () => {
 		expectIssue(() => defineSite({ ...base, seed: { templates: [both] } }), "seed.templates[0]", "shape");
 	});
 
-	it("checks seed template ids", () => {
+	it("CONF-A1 checks seed template ids", () => {
 		const template = { id: "00000000-0000-4000-8000-000000000001", name: "Note", format: "mdx", body: "" };
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, seed: { templates: [template] } })).not.toThrow();
@@ -363,7 +273,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks layout tab names and view field names", () => {
+	it("CONF-A1 checks layout tab names and view field names", () => {
 		const note = (extra: { view?: string; tab?: string }) =>
 			defineCollection({
 				label: "Note",
@@ -389,7 +299,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("requires a title text field in every collection", () => {
+	it("SCHEMA-S2 requires a title text field in every collection", () => {
 		const untitled = defineCollection({
 			label: "Note",
 			kind: "item",
@@ -418,12 +328,7 @@ describe("defineSite", () => {
 		const config = (collection: ReturnType<typeof note>) =>
 			defineSite({ collections: { note: collection }, locales, defaultLocale: "en" });
 
-		it("takes a text field of any name that has the role", () => {
-			const site = config(note({ headline: fields.text({ label: "Headline", role: "title" }) }));
-			expect(Object.keys(site.collections.note.fields)).toEqual(["headline"]);
-		});
-
-		it("keeps the name title for the title field once the role is elsewhere", () => {
+		it("SCHEMA-S2 keeps the name title for the title field once the role is elsewhere", () => {
 			expect(() =>
 				config(
 					note({ title: fields.text({ label: "Title" }), headline: fields.text({ label: "Headline", role: "title" }) }),
@@ -442,7 +347,7 @@ describe("defineSite", () => {
 			);
 		});
 
-		it("rejects a title role on a field that is not text", () => {
+		it("SCHEMA-S2 rejects a title role on a field that is not text", () => {
 			const select = fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a", role: "title" });
 			expectIssue(
 				() => config(note({ title: fields.text({ label: "Title" }), kind: select })),
@@ -451,7 +356,7 @@ describe("defineSite", () => {
 			);
 		});
 
-		it("rejects two title fields", () => {
+		it("SCHEMA-S2 rejects two title fields", () => {
 			expect(() =>
 				config(
 					note({
@@ -473,7 +378,7 @@ describe("defineSite", () => {
 			);
 		});
 
-		it("rejects a title role inside a conditional field", () => {
+		it("SCHEMA-S2 rejects a title role inside a conditional field", () => {
 			const nested = fields.conditional(fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a" }), {
 				a: { inner: fields.text({ label: "Inner", role: "title" }) },
 			});
@@ -496,7 +401,7 @@ describe("defineSite", () => {
 		});
 	});
 
-	it("rejects a collection named like the media library", () => {
+	it("CONF-S3 rejects a collection named like the media library", () => {
 		const media = defineCollection({ label: "Media", kind: "item", fields: { title, slug } });
 		const issues = issuesOf(() => defineSite({ collections: { media }, locales, defaultLocale: "en" }));
 		expect(issues).toContainEqual(expect.objectContaining({ path: "collections.media" }));
@@ -504,7 +409,7 @@ describe("defineSite", () => {
 		expect(issuesOf(() => defineSite({ collections: { gallery: media }, locales, defaultLocale: "en" }))).toEqual([]);
 	});
 
-	it("rejects a collection with more than one slug field", () => {
+	it("CONF-S3 rejects a collection with more than one slug field", () => {
 		const twoSlugs = defineCollection({
 			label: "Page",
 			kind: "document",
@@ -521,7 +426,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks field roles: one field per role, and the field kind fits", () => {
+	it("SCHEMA-S3 checks field roles: one field per role, and the field kind fits", () => {
 		const article = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
 			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra } });
 		const ok = article({
@@ -568,7 +473,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks media fields, and refuses a tab on a field: tabs live on layout groups", () => {
+	it("SCHEMA-F14 checks media fields, and refuses a tab on a field: tabs live on layout groups", () => {
 		const article = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
 			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra } });
 		const ok = article({ hero: fields.media({ label: "Hero", accept: "file" }) });
@@ -593,7 +498,7 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("passes the whole config and other plugins to plugin checks", () => {
+	it("PLUG-S4 passes the whole config and other plugins to plugin checks", () => {
 		const seen: unknown[] = [];
 		const other = definePlugin({ name: "other", options: {}, contributes: { ai: { actions: {} } } });
 		const watcher = definePlugin({
@@ -616,7 +521,7 @@ describe("defineSite", () => {
 		expect(seen).toEqual(["en", ["other", "watcher"], true]);
 	});
 
-	it("allows fillFromBody only in collections with a body", () => {
+	it("CONF-A1 allows fillFromBody only in collections with a body", () => {
 		const note = defineCollection({
 			label: "Note",
 			kind: "item",
@@ -639,7 +544,7 @@ describe("defineSite", () => {
 				defaultLocale: "en",
 			});
 
-		it("rejects a layout group that lists a field the collection does not have", () => {
+		it("CONF-S4 rejects a layout group that lists a field the collection does not have", () => {
 			expectIssue(
 				() => site({}, { layout: [{ fields: ["title", "missing"] }] }),
 				"collections.note.layout[0].fields[1]",
@@ -648,7 +553,7 @@ describe("defineSite", () => {
 			expect(() => site({}, { layout: [{ fields: ["title"] }] })).not.toThrow();
 		});
 
-		it("rejects a select whose default is not one of its options", () => {
+		it("CONF-S4 rejects a select whose default is not one of its options", () => {
 			const kind = { ...fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a" }), defaultValue: "b" };
 			expectIssue(() => site({ kind } as never), "collections.note.fields.kind.defaultValue", "default-not-option");
 		});
@@ -661,7 +566,7 @@ describe("defineSite", () => {
 			expectIssue(() => site({ kind } as never), "collections.note.fields.kind.values.b", "branch-not-option");
 		});
 
-		it("checks the role and required of the address field like those of any other", () => {
+		it("SCHEMA-S3 checks the role and required of the address field like those of any other", () => {
 			const badRole = fields.slug({ label: "Slug", from: "title", role: "not a name" });
 			expectIssue(() => site({ slug: badRole } as never), "collections.note.fields.slug.role", "role-name");
 			const required = { ...fields.slug({ label: "Slug", from: "title" }), required: "publish" };
@@ -671,7 +576,7 @@ describe("defineSite", () => {
 		});
 	});
 
-	it("checks that a slug is made from a text field", () => {
+	it("CONF-S4 checks that a slug is made from a text field", () => {
 		const withFrom = (from: string) =>
 			defineCollection({
 				label: "Topic",

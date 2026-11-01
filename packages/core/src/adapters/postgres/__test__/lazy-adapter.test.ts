@@ -7,7 +7,7 @@ vi.mock("../content-store", () => {
 });
 
 describe("postgres() lazy loading", () => {
-	it("does not load the store module when creating the adapter and getting the store", async () => {
+	it("CONF-I1 does not load the store module when creating the adapter and getting the store", async () => {
 		const { postgres } = await import("../adapter");
 		const adapter = postgres({ connectionString: "postgres://localhost/none" });
 		const store = adapter.createStore({ site: testSite });

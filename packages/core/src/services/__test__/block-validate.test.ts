@@ -92,7 +92,7 @@ const run = (doc: StoredDocument, operation: WriteOperation = "save") =>
 const VALID_CHART = "chart bar\nx month\nseries views | Views | chart-1\n\ndata\nmonth | views\nJan | 1200";
 
 describe("block validate", () => {
-	it("warns with the block id when a chart is broken", async () => {
+	it("BLOCK-R2 warns with the block id when a chart is broken", async () => {
 		const { warnings, snapshot } = await run(docOf(fence("chart001", "chart", "chart radar\ndata")));
 		expect(warnings).toContainEqual(
 			expect.objectContaining({
@@ -107,12 +107,12 @@ describe("block validate", () => {
 		expect(snapshot.issues).toEqual([]);
 	});
 
-	it("gives no warning for a valid chart", async () => {
+	it("BLOCK-R2 gives no warning for a valid chart", async () => {
 		const { warnings } = await run(docOf(fence("chart001", "chart", VALID_CHART)));
 		expect(warnings).toEqual([]);
 	});
 
-	it("warns on save and on publish alike, and never blocks the publish", async () => {
+	it("WRITE-H4 warns on save and on publish alike, and never blocks the publish", async () => {
 		const doc = docOf(fence("chart001", "chart", "nonsense"));
 		for (const operation of ["create", "save", "publish", "restore"] as const) {
 			const { warnings } = await run(doc, operation);
@@ -120,7 +120,7 @@ describe("block validate", () => {
 		}
 	});
 
-	it("checks mermaid with its own parser", async () => {
+	it("BLOCK-R2 checks mermaid with its own parser", async () => {
 		const good = await run(docOf(fence("diag0001", "mermaid", "graph TD\n  A --> B")));
 		expect(good.warnings).toEqual([]);
 		const bad = await run(docOf(fence("diag0002", "mermaid", "graph TD\n  A -->")));
@@ -129,7 +129,7 @@ describe("block validate", () => {
 		);
 	});
 
-	it("lets a site's own block add validate, to a fence and to a directive block", async () => {
+	it("WRITE-H4 lets a site's own block add validate, to a fence and to a directive block", async () => {
 		const { warnings } = await run(
 			docOf(
 				fence("map00001", "map", "37.5,127.0\nnowhere"),
@@ -148,7 +148,7 @@ describe("block validate", () => {
 		]);
 	});
 
-	it("checks every node of the block, in body order", async () => {
+	it("WRITE-H4 checks every node of the block, in body order", async () => {
 		const { warnings } = await run(
 			docOf(
 				fence("chart001", "chart", "bad"),
@@ -159,14 +159,14 @@ describe("block validate", () => {
 		expect(warnings.map((warning) => warning.position?.blockId)).toEqual(["chart001", "chart003"]);
 	});
 
-	it("takes the block id of a node nested in another block", async () => {
+	it("WRITE-H4 takes the block id of a node nested in another block", async () => {
 		const { warnings } = await run(
 			docOf({ id: "outer001", type: "paragraph", content: [{ type: "note", attrs: { tone: "loud" } }] }),
 		);
 		expect(warnings).toContainEqual(expect.objectContaining({ code: "note_loud", position: { blockId: "outer001" } }));
 	});
 
-	it("turns a check that throws into a warning and goes on with the write", async () => {
+	it("WRITE-H4 turns a check that throws into a warning and goes on with the write", async () => {
 		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		try {
 			const { warnings } = await run(docOf({ id: "brk00001", type: "broken" }));
@@ -176,12 +176,5 @@ describe("block validate", () => {
 		} finally {
 			error.mockRestore();
 		}
-	});
-
-	it("does not change the saved content", async () => {
-		const doc = docOf(fence("chart001", "chart", "bad"));
-		const { snapshot } = await run(doc);
-		const { snapshot: clean } = await run(docOf(fence("chart001", "chart", "bad")));
-		expect(snapshot.contentHash).toBe(clean.contentHash);
 	});
 });

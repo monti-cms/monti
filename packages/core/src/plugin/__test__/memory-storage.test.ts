@@ -1,5 +1,5 @@
 import { createMemoryPluginStorage } from "../memory-storage";
-import { runPluginStorageContract } from "./storage-contract";
+import { runPluginStorageContract } from "./storage.contract";
 
 runPluginStorageContract({
 	name: "in-memory",

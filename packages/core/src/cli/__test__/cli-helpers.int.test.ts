@@ -5,7 +5,6 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadEnvFiles } from "../env";
 import { dbMigrate, runCli } from "../index";
-import { parseJsonc } from "../jsonc";
 import { locateConfig } from "../locate";
 
 let dirs: string[] = [];
@@ -24,7 +23,7 @@ const tempDir = (files: Record<string, string>) => {
 };
 
 describe("monti command helpers", () => {
-	it("env files do not override existing values (shell values and earlier files win)", () => {
+	it("DB-C2 env files do not override existing values (shell values and earlier files win)", () => {
 		const dir = tempDir({ ".env.local": "A=local\nB=local\n", ".env": "B=env\nC=env\n" });
 		const env: Record<string, string | undefined> = { A: "shell" };
 		expect(loadEnvFiles(dir, undefined, env)).toEqual([".env.local", ".env"]);
@@ -33,12 +32,7 @@ describe("monti command helpers", () => {
 		expect(() => loadEnvFiles(dir, [".env.missing"], {})).toThrow(/\.env\.missing.*does not exist.*Fix:/);
 	});
 
-	it("reads tsconfig with comments and trailing commas", () => {
-		expect(parseJsonc('{ // a\n "a": "x//y", /* b */ "c": [1,], }')).toEqual({ a: "x//y", c: [1] });
-		expect(parseJsonc("{ nope")).toBeUndefined();
-	});
-
-	it("finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
+	it("CLI-C1 finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
 		const root = tempDir({ "monti.config.ts": "", "src/monti.config.ts": "", "custom/config.ts": "" });
 		// The root file wins over the one in `src`.
 		expect(locateConfig(root, undefined, {})).toBe("monti.config.ts");
@@ -58,7 +52,7 @@ describe("monti command helpers", () => {
 		expect(() => locateConfig(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
 	});
 
-	it("help and unknown commands", async () => {
+	it("CLI-H1 help and unknown commands", async () => {
 		const out: string[] = [];
 		const io = { cwd: tempDir({}), log: (m: string) => out.push(m), error: (m: string) => out.push(`E:${m}`) };
 		expect(await runCli([], io)).toBe(0);
@@ -91,7 +85,7 @@ const appWith = (body: string) => {
 };
 
 describe("monti commands run against the instance the config file exports", () => {
-	it("`db:migrate` migrates through the instance, then closes it", async () => {
+	it("DB-M2 `db:migrate` migrates through the instance, then closes it", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
 				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
@@ -106,7 +100,7 @@ describe("monti commands run against the instance the config file exports", () =
 		expect(logs).toContain("migrating");
 	});
 
-	it("a failing migration throws (the runner turns it into exit code 1) and still closes the connection", async () => {
+	it("DB-M2 a failing migration throws (the runner turns it into exit code 1) and still closes the connection", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
 				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
@@ -119,7 +113,30 @@ describe("monti commands run against the instance the config file exports", () =
 		expect(calls).toEqual(["close"]);
 	});
 
-	it("a config file that does not export an instance is refused with the shape to use", async () => {
+	it("PLUG-S2 `monti <plugin>:<command>` loads the instance of the file --config names, runs the command with it, and closes it", async () => {
+		const dir = tempDir({
+			"custom/app.mjs": `export const calls = [];
+export const cms = {
+	migrate: async () => undefined,
+	close: async () => { calls.push("close"); },
+	plugins: async () => [{ name: "demo", commands: { go: {
+		description: "Goes",
+		options: { name: { type: "string" } },
+		run: async ({ cms: instance, args }) => { calls.push({ args, same: instance === cms, env: process.env.MONTI_PLUGIN_TEST }); },
+	} } }],
+	plugin: () => ({}),
+};
+`,
+			".env.local": "MONTI_PLUGIN_TEST=from-env-file\n",
+		});
+		const io = { cwd: dir, log: () => undefined, error: () => undefined };
+		expect(await runCli(["demo:go", "--name", "x", "--no-env-file", "--config", "custom/app.mjs"], io)).toBe(0);
+		const { calls } = await import(pathToFileURL(path.join(dir, "custom/app.mjs")).href);
+		// --no-env-file: the .env.local next to it was not read.
+		expect(calls).toEqual([{ args: { name: "x" }, same: true, env: undefined }, "close"]);
+	});
+
+	it("CLI-C1 a config file that does not export an instance is refused with the shape to use", async () => {
 		const { options } = appWith("export default { database: {}, auth: {} };");
 		await expect(dbMigrate(options)).rejects.toThrow(/must export the CMS instance.*defineConfig/);
 	});

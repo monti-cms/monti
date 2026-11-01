@@ -29,7 +29,7 @@ describe("who may be published and edited", () => {
 		expect(codeOf(() => assertPublishableStatus("trashed"))).toMatchObject({ code: "invalid_status" });
 	});
 
-	it("edits everything but a trashed entry", () => {
+	it("TRASH-T7 edits everything but a trashed entry", () => {
 		expect(codeOf(() => assertEditableStatus("published"))).toBeNull();
 		expect(codeOf(() => assertEditableStatus("archived"))).toBeNull();
 		expect(codeOf(() => assertEditableStatus("trashed"))).toMatchObject({ code: "invalid_status" });

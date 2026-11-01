@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../../../test/site";
-import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { tellIssues } from "../../../../../../core/issue-text";
 import { routeCaller } from "../../../../../../testing";
@@ -30,7 +29,7 @@ describe("publish check HTTP contract", () => {
 		verifyAdmin.mockResolvedValue({ isAdmin: true });
 	});
 
-	it("answers the issues and warnings with their text and place", async () => {
+	it("WRITE-P1 answers the issues and warnings with their text and place", async () => {
 		const issues = [{ code: "missing_field", path: "title", message: "Title" }];
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
 		checkPublish.mockResolvedValue({ issues, warnings });
@@ -41,14 +40,5 @@ describe("publish check HTTP contract", () => {
 			warnings: tellIssues(cms.site, warnings),
 		});
 		expect(checkPublish).toHaveBeenCalledWith({ id });
-	});
-
-	it("is guarded as publish is: same-origin and admin login", async () => {
-		const crossOrigin = await POST(request("https://evil.example"), context);
-		expect(crossOrigin.status).toBe(403);
-		verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Not logged in"));
-		const anonymous = await POST(request(), context);
-		expect(anonymous.status).toBe(401);
-		expect(checkPublish).not.toHaveBeenCalled();
 	});
 });

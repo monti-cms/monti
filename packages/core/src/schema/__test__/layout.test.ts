@@ -106,7 +106,7 @@ describe("the groups of the properties panel", () => {
 });
 
 describe("what plugins place is checked with the config", () => {
-	it("reports a tab name the panel cannot show, and role and view lists that are not names", () => {
+	it("CONF-A1 reports a tab name the panel cannot show, and role and view lists that are not names", () => {
 		const bad = definePlugin({
 			name: "bad",
 			options: {},

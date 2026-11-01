@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { memo, useState } from "react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type EntryEditorClient,
@@ -12,6 +12,7 @@ import {
 } from "../../../hooks/public";
 import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
+import { RECOVERY_IDLE_MS } from "../entry-editor-recovery-state";
 import { ENTRY, fakeClient, fakeRecoveryStore, invalidError } from "./entry-editor-fakes";
 
 /**
@@ -148,13 +149,35 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(window.location.href).toBe(href);
 	});
 
+	// The copy is also written once input pauses, so waiting that long would pass without the event: wait well under the pause.
+	const BEFORE_IDLE = { timeout: RECOVERY_IDLE_MS / 5 };
+
 	it("WRITE-R1 writes the recovery copy when the page is hidden, never touching the server", async () => {
 		const { recovery, client } = renderMinimal();
 		fireEvent.change(await title(), { target: { value: "떠나기 전" } });
 		expect(recovery.store.put).not.toHaveBeenCalled();
 		window.dispatchEvent(new Event("pagehide"));
-		await waitFor(() => expect(recovery.store.put).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(recovery.store.put).toHaveBeenCalledTimes(1), BEFORE_IDLE);
 		expect(recovery.records.get("u1:entry-1")?.snapshot.title).toBe("떠나기 전");
+		expect(client.update).not.toHaveBeenCalled();
+	});
+
+	it("WRITE-R1 writes the recovery copy when the tab is hidden, the only signal a phone browser gives before it closes", async () => {
+		const { recovery, client } = renderMinimal();
+		fireEvent.change(await title(), { target: { value: "탭을 숨기기 전" } });
+		// No browser lets a page hide itself, so the hidden state is set by hand, and taken back for the tests after this one.
+		const visibility = vi.spyOn(document, "visibilityState", "get");
+		try {
+			visibility.mockReturnValue("visible");
+			document.dispatchEvent(new Event("visibilitychange"));
+			expect(recovery.store.put).not.toHaveBeenCalled();
+			visibility.mockReturnValue("hidden");
+			document.dispatchEvent(new Event("visibilitychange"));
+			await waitFor(() => expect(recovery.store.put).toHaveBeenCalledTimes(1), BEFORE_IDLE);
+		} finally {
+			visibility.mockRestore();
+		}
+		expect(recovery.records.get("u1:entry-1")?.snapshot.title).toBe("탭을 숨기기 전");
 		expect(client.update).not.toHaveBeenCalled();
 	});
 

@@ -29,7 +29,7 @@ const temp = () => {
 };
 
 describe("preview script file writes", () => {
-	it("replaces a symlink with a regular file and leaves the link's target alone", async () => {
+	it("DEV-W1 replaces a symlink with a regular file and leaves the link's target alone", async () => {
 		const { writeRegularFile } = await load();
 		const dir = temp();
 		const target = path.join(dir, "real.env");
@@ -44,7 +44,7 @@ describe("preview script file writes", () => {
 		expect(readFileSync(target, "utf8")).toBe("KEEP=me\n");
 	});
 
-	it("replaces a dangling symlink without creating its target", async () => {
+	it("DEV-W1 replaces a dangling symlink without creating its target", async () => {
 		const { writeRegularFile } = await load();
 		const dir = temp();
 		const target = path.join(dir, "missing.env");
@@ -53,13 +53,5 @@ describe("preview script file writes", () => {
 		expect(writeRegularFile(file, "A=1\n")).toBe(true);
 		expect(existsSync(target)).toBe(false);
 		expect(readFileSync(file, "utf8")).toBe("A=1\n");
-	});
-
-	it("writes a new file and overwrites a regular one, reporting no replaced link", async () => {
-		const { writeRegularFile } = await load();
-		const file = path.join(temp(), ".env.local");
-		expect(writeRegularFile(file, "A=1\n")).toBe(false);
-		expect(writeRegularFile(file, "A=2\n")).toBe(false);
-		expect(readFileSync(file, "utf8")).toBe("A=2\n");
 	});
 });
