@@ -394,6 +394,8 @@ export const mediaContract: ContractSuite = (factory) => {
 				kinds: { image: 0, file: 0 },
 				alts: { none: 0, has: 0 },
 			});
+			const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+			expect(await counts({ uploadedTo: past })).toEqual({ kinds: { image: 0, file: 0 }, alts: { none: 0, has: 0 } });
 		});
 	});
 
@@ -707,10 +709,14 @@ export const mediaContract: ContractSuite = (factory) => {
 		});
 
 		it("MEDIA-B1 lists the next files on the next page", async () => {
-			for (const name of ["a.png", "b.png", "c.png"]) await ready(name);
+			for (const name of ["a.png", "b.png", "c.png", "d.png", "e.png"]) await ready(name);
 			const page = async (n: number) =>
-				(await store.listMediaAssets({ sort: "name", page: n, pageSize: 1 })).items.map((item) => item.filename);
-			expect([await page(1), await page(2), await page(3)]).toEqual([["a.png"], ["b.png"], ["c.png"]]);
+				(await store.listMediaAssets({ sort: "name", page: n, pageSize: 2 })).items.map((item) => item.filename);
+			expect([await page(1), await page(2), await page(3)]).toEqual([
+				["a.png", "b.png"],
+				["c.png", "d.png"],
+				["e.png"],
+			]);
 		});
 
 		it("MEDIA-B4 renames a file in the composed form, so the same name typed on two systems is one name", async () => {
@@ -740,11 +746,12 @@ export const mediaContract: ContractSuite = (factory) => {
 				byteSize: 10,
 				width: 2,
 				height: 1,
-				original: { storageKey: "media/photo-original.jpg", mimeType: "image/jpeg", byteSize: 50, width: 4, height: 2 },
+				// The type found in the bytes of the original wins over the one the upload declared.
+				original: { storageKey: "media/photo-original.png", mimeType: "image/png", byteSize: 50, width: 4, height: 2 },
 			});
 			expect((await store.getMediaAsset(media.id))?.original).toMatchObject({
-				storageKey: "media/photo-original.jpg",
-				mimeType: "image/jpeg",
+				storageKey: "media/photo-original.png",
+				mimeType: "image/png",
 				byteSize: 50,
 				width: 4,
 				height: 2,

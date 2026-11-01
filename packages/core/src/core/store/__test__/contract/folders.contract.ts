@@ -278,6 +278,23 @@ export const foldersContract: ContractSuite = (factory) => {
 			expect(afterCreateCross).toEqual(beforeCross);
 		}, 30_000);
 
+		it("LIST-F10 renames and moves a folder at the version it was read at, each change raising it, and refuses a version that is behind", async () => {
+			const folder = await store.createFolder({ collection: contentCollection, parentId: null, name: "Versioned" });
+			const parent = await store.createFolder({ collection: contentCollection, parentId: null, name: "Above" });
+
+			const renamed = await store.updateFolder({ id: folder.id, expectedVersion: folder.version, name: "Renamed" });
+			expect(renamed.version).toBeGreaterThan(folder.version);
+			const moved = await store.updateFolder({ id: folder.id, expectedVersion: renamed.version, parentId: parent.id });
+			expect(moved.version).toBeGreaterThan(renamed.version);
+
+			// A tab that still holds the folder as it was before the move.
+			await expect(
+				store.updateFolder({ id: folder.id, expectedVersion: renamed.version, name: "Stale" }),
+			).rejects.toMatchObject({ code: "conflict" });
+			const listed = (await store.listFolders({ collection: contentCollection })).find((item) => item.id === folder.id);
+			expect(listed).toMatchObject({ name: "Renamed", parentId: parent.id, version: moved.version });
+		});
+
 		// -----------------------------------------------------------------------
 		// 3b  how many things sit directly in a folder
 		// -----------------------------------------------------------------------
