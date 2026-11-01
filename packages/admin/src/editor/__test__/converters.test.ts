@@ -16,6 +16,10 @@ describe("block converter registry", () => {
 		const tsNode = { type: "codeBlock", attrs: { language: "typescript", value: "const x = 1;" } };
 
 		expect(converterForCms(testSite, "codeBlock", chartNode)?.name).toBe("chart");
+		// A fence language is matched in any case: ```Chart is the chart block too.
+		expect(
+			converterForCms(testSite, "codeBlock", { ...chartNode, attrs: { ...chartNode.attrs, language: "Chart" } })?.name,
+		).toBe("chart");
 		expect(converterForCms(testSite, "codeBlock", tsNode)?.name).toBe("codeBlock");
 		expect(converterForCms(testSite, "codeBlock")?.name).toBe("codeBlock");
 		expect(converterForCms(testSite, "math")?.name).toBe("math");
