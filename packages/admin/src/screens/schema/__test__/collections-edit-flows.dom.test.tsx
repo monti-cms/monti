@@ -13,6 +13,7 @@ import { schemaFieldsMessages } from "../fields.messages";
 import { schemaLocalesMessages } from "../locales.messages";
 import { schemaMessages } from "../messages";
 import { schemaProblemMessages } from "../problems.messages";
+import { rememberSaved } from "../reload";
 import { schemaReviewMessages } from "../review.messages";
 import { ReviewDialog } from "../review-dialog";
 import { SchemaSettings } from "../schema-screen";
@@ -34,14 +35,21 @@ const tc = testSite.createTranslator(commonMessages);
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
-vi.mock("../reload", () => reload);
+// Only the browser's reload is replaced (jsdom cannot reload a page; `reload.ts` keeps it in a function of its own for this). The line a save leaves for the
+// next page goes through the real session storage.
+const reload = vi.hoisted(() => ({ reloadPage: vi.fn() }));
+vi.mock("../reload", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../reload")>()),
+	...reload,
+}));
 
 const field = (label: string, extra: object = {}) => ({ kind: "text", label, ...extra });
-const post = (fields: Record<string, unknown>) => ({
+/** The label of the lede field, which names the first choice of the review. */
+const LEDE_LABEL = "요약";
+const story = (fields: Record<string, unknown>) => ({
 	label: "게시글",
 	kind: "document",
-	path: "/posts/:slug",
+	path: "/stories/:slug",
 	fields: {
 		title: field("제목", { required: true }),
 		slug: { kind: "slug", label: "주소", from: "title" },
@@ -51,12 +59,12 @@ const post = (fields: Record<string, unknown>) => ({
 
 const stateOf = (
 	collections: Record<string, unknown>,
-	locales: unknown[] = [{ code: "ko", name: "한국어" }],
+	locales: unknown[] = [{ code: "de", name: "Deutsch" }],
 ): SchemaScreenState => ({
 	access: { writable: true },
 	file: "monti.schema.ts",
 	hash: "hash-1",
-	schema: { collections, locales, defaultLocale: "ko" },
+	schema: { collections, locales, defaultLocale: "de" },
 	source: "file",
 	comments: false,
 	issues: [],
@@ -74,8 +82,8 @@ type Impact = SchemaEditPreview["impacts"][number];
 type Decision = SchemaEditPreview["decisions"][number];
 
 const sample: Impact["sample"] = [
-	{ id: "e-1", title: "첫 번째 글", collection: "post", locale: "ko", status: "published" },
-	{ id: "e-2", title: "발행 후 고친 글", collection: "post", locale: "ko", status: "published" },
+	{ id: "e-1", title: "첫 번째 글", collection: "story", locale: "de", status: "published" },
+	{ id: "e-2", title: "발행 후 고친 글", collection: "story", locale: "de", status: "published" },
 ];
 const preview = (over: Partial<SchemaEditPreview> = {}): SchemaEditPreview => ({
 	valid: true,
@@ -97,6 +105,7 @@ let saved: SavedSchema;
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	window.sessionStorage.clear();
 	previewOf = () => preview();
 	saved = {
 		saved: true,
@@ -132,7 +141,7 @@ const open = (tab: "collections" | "locales" = "collections") =>
 		</AdminQueryProvider>,
 	);
 const openFields = () => {
-	window.history.replaceState(null, "", "/admin/settings/collections?collection=post&section=fields");
+	window.history.replaceState(null, "", "/admin/settings/collections?collection=story&section=fields");
 	return open();
 };
 /** Removes a field of the open collection from its row. */
@@ -163,8 +172,8 @@ const saveButton = () => within(bar()).getByRole("button", { name: t("bar.save")
 describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (steps 07-10)", () => {
 	beforeEach(() => {
 		state = stateOf({
-			post: post({
-				summary: field("요약"),
+			story: story({
+				lede: field("요약"),
 				subtitle: field("부제"),
 				extra: field("덧말"),
 				format: { kind: "select", label: "글 종류", options: { note: "메모", essay: "에세이" } },
@@ -175,7 +184,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 	it("SCHEMA-F8 07 counts every changed field, 10 lists them with one undo each and takes one back", async () => {
 		openFields();
 		await removeField("subtitle");
-		await removeField("summary");
+		await removeField("lede");
 		await removeField("extra");
 		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeInTheDocument();
 
@@ -185,16 +194,16 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		for (const row of rows) expect(row.textContent).toContain(t("bar.undo"));
 		expect(rows.map((row) => row.textContent).join(" ")).toContain(tChanges("tag.removed"));
 
-		// A change is named for its field's label: 요약 is the summary.
+		// A change is named for its field's label: 요약 is the lede.
 		fireEvent.click(screen.getByRole("menuitem", { name: /^요약/ }));
 		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeInTheDocument());
-		expect(fieldRow("summary").textContent).not.toContain(tChanges("tag.removed"));
+		expect(fieldRow("lede").textContent).not.toContain(tChanges("tag.removed"));
 	});
 
 	it("SCHEMA-F8 07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
 		openFields();
 		// A rename: the name is taken from the field's sheet on Save.
-		fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: "summary" }) }));
+		fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: "lede" }) }));
 		const sheet = await screen.findByRole("dialog");
 		const nameBox = within(sheet).getByRole("textbox", { name: tFields("field.name") });
 		fireEvent.change(nameBox, { target: { value: "excerpt" } });
@@ -212,7 +221,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
 		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeInTheDocument();
-		expect(fieldRow("excerpt").textContent).toContain("\u2190 summary");
+		expect(fieldRow("excerpt").textContent).toContain("\u2190 lede");
 		const gone = goneRow("subtitle") as HTMLElement;
 		expect(gone.textContent).toContain(tChanges("tag.removed"));
 		expect(fieldRow("lead").textContent).toContain(tChanges("tag.added"));
@@ -228,7 +237,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 
 	it("SCHEMA-F9 09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {
 		state = stateOf({
-			post: post({ subtitle: field("부제"), format: { kind: "select", label: "글 종류", options: {} } }),
+			story: story({ subtitle: field("부제"), format: { kind: "select", label: "글 종류", options: {} } }),
 		});
 		openFields();
 		await removeField("subtitle");
@@ -263,7 +272,7 @@ function Review(props: Partial<ComponentProps<typeof ReviewDialog>>) {
 			draft={{}}
 			saved={{}}
 			renames={[]}
-			target={{ kind: "collection", name: "post", count: 1 }}
+			target={{ kind: "collection", name: "story", count: 1 }}
 			baseHash="hash-1"
 			onIssues={() => undefined}
 			onSaved={() => undefined}
@@ -284,8 +293,8 @@ const apply = (dialog: HTMLElement, name = tReview("review.save")) =>
 const choose = async (dialog: HTMLElement, name: string | RegExp) => {
 	fireEvent.click(within(dialog).getByRole("radio", { name }));
 };
-const footerNames = (dialog: HTMLElement) =>
-	names(within(dialog.querySelector('[data-slot="sheet-footer"]') as HTMLElement).getAllByRole("button"));
+/** The buttons of the sheet that say what they do (the close × is named, not labelled), in their order. */
+const actionNames = (dialog: HTMLElement) => names(within(dialog).getAllByRole("button")).filter(Boolean);
 /** The sheet offers cancel and the plain apply, not the red one that deletes. */
 const expectPlainApply = (dialog: HTMLElement) => {
 	expect(within(dialog).getByRole("button", { name: tc("cancel") })).toBeInTheDocument();
@@ -293,17 +302,17 @@ const expectPlainApply = (dialog: HTMLElement) => {
 	expect(within(dialog).queryByRole("button", { name: tReview("drop.apply") })).toBeNull();
 };
 
-const SUMMARY = "field_removed:post:summary";
-const SUBTITLE = "field_removed:post:subtitle";
-const FORMAT = "field_added:post:format";
-const rename: SuggestedTransform = { op: "renameField", collection: "post", from: "summary", to: "excerpt" };
-const dropSubtitle: SuggestedTransform = { op: "dropField", collection: "post", field: "subtitle" };
-const fill = (value: string): SuggestedTransform => ({ op: "setDefault", collection: "post", field: "format", value });
+const LEDE = "field_removed:story:lede";
+const SUBTITLE = "field_removed:story:subtitle";
+const FORMAT = "field_added:story:format";
+const rename: SuggestedTransform = { op: "renameField", collection: "story", from: "lede", to: "excerpt" };
+const dropSubtitle: SuggestedTransform = { op: "dropField", collection: "story", field: "subtitle" };
+const fill = (value: string): SuggestedTransform => ({ op: "setDefault", collection: "story", field: "format", value });
 
 const fieldsDraft = {
 	collections: {
-		post: post({
-			excerpt: field("요약"),
+		story: story({
+			excerpt: field(LEDE_LABEL),
 			subtitleTarget: field("소제목"),
 			format: {
 				kind: "select",
@@ -314,10 +323,10 @@ const fieldsDraft = {
 		}),
 	},
 };
-const fieldsSaved = { collections: { post: post({ summary: field("요약"), subtitle: field("부제") }) } };
+const fieldsSaved = { collections: { story: story({ lede: field(LEDE_LABEL), subtitle: field("부제") }) } };
 const subtitleDecision: Decision = {
 	key: SUBTITLE,
-	change: { kind: "field_removed", collection: "post", field: "subtitle", fieldKind: "text" },
+	change: { kind: "field_removed", collection: "story", field: "subtitle", fieldKind: "text" },
 	entries: 132,
 	sample,
 	suggestions: [dropSubtitle],
@@ -326,15 +335,15 @@ const subtitleDecision: Decision = {
 const fieldChanges = preview({
 	impacts: [
 		{
-			change: { kind: "field_renamed", collection: "post", from: "summary", to: "excerpt" },
-			key: "field_renamed:post:summary:excerpt",
+			change: { kind: "field_renamed", collection: "story", from: "lede", to: "excerpt" },
+			key: "field_renamed:story:lede:excerpt",
 			entries: 148,
 			sample,
 			consequence: "transformed",
 			checked: true,
 		},
 		{
-			change: { kind: "field_removed", collection: "post", field: "subtitle", fieldKind: "text" },
+			change: { kind: "field_removed", collection: "story", field: "subtitle", fieldKind: "text" },
 			key: SUBTITLE,
 			entries: 132,
 			sample,
@@ -342,7 +351,7 @@ const fieldChanges = preview({
 			checked: true,
 		},
 		{
-			change: { kind: "field_added", collection: "post", field: "format", fieldKind: "select", required: true },
+			change: { kind: "field_added", collection: "story", field: "format", fieldKind: "select", required: true },
 			key: FORMAT,
 			entries: 148,
 			sample,
@@ -352,17 +361,17 @@ const fieldChanges = preview({
 	],
 	decisions: [
 		{
-			key: SUMMARY,
-			change: { kind: "field_removed", collection: "post", field: "summary", fieldKind: "text" },
+			key: LEDE,
+			change: { kind: "field_removed", collection: "story", field: "lede", fieldKind: "text" },
 			entries: 148,
 			sample,
-			suggestions: [rename, { op: "dropField", collection: "post", field: "summary" }],
+			suggestions: [rename, { op: "dropField", collection: "story", field: "lede" }],
 			chosen: rename,
 		},
 		subtitleDecision,
 		{
 			key: FORMAT,
-			change: { kind: "field_added", collection: "post", field: "format", fieldKind: "select", required: true },
+			change: { kind: "field_added", collection: "story", field: "format", fieldKind: "select", required: true },
 			entries: 148,
 			sample,
 			suggestions: [fill("note"), fill("essay"), fill("review")],
@@ -378,11 +387,11 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		mount({
 			draft: fieldsDraft,
 			saved: fieldsSaved,
-			renames: [{ kind: "field", collection: "post", from: "summary", to: "excerpt" }],
+			renames: [{ kind: "field", collection: "story", from: "lede", to: "excerpt" }],
 		});
 		const dialog = await sheet();
-		// The rename of summary to excerpt is its first choice, named for the field.
-		await within(dialog).findByRole("radiogroup", { name: "요약" });
+		// The rename of lede to excerpt is its first choice, named for the field.
+		await within(dialog).findByRole("radiogroup", { name: LEDE_LABEL });
 		return dialog;
 	};
 
@@ -390,7 +399,12 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		const dialog = await review();
 		await choose(dialog, new RegExp(tReview("choice.move")));
 		await choose(dialog, new RegExp(tReview("choice.erase")));
-		await choose(dialog, new RegExp(tReview("choice.fill", { count: "148편", kind: "document" })));
+		await choose(
+			dialog,
+			new RegExp(
+				tReview("choice.fill", { count: tReview("count.entries", { count: 148, kind: "document" }), kind: "document" }),
+			),
+		);
 		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([rename, dropSubtitle, fill("note")]));
 
 		fireEvent.click(apply(dialog, tReview("drop.apply")));
@@ -398,28 +412,25 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(put()?.body).toMatchObject({
 			baseHash: "hash-1",
 			transforms: [rename, dropSubtitle, fill("note")],
-			renames: [{ kind: "field", collection: "post", from: "summary", to: "excerpt" }],
+			renames: [{ kind: "field", collection: "story", from: "lede", to: "excerpt" }],
 		});
-		expect(put()?.body.acknowledged).toEqual(["field_renamed:post:summary:excerpt", SUBTITLE, FORMAT]);
+		expect(put()?.body.acknowledged).toEqual(["field_renamed:story:lede:excerpt", SUBTITLE, FORMAT]);
 	});
 
-	it("SCHEMA-F2 12 choosing to delete the values turns the apply into the red 지우고 적용, and choosing keep turns it back", async () => {
+	it("SCHEMA-F2 12 choosing to delete the values turns the apply into 지우고 적용, and choosing keep turns it back", async () => {
+		// How the two buttons look (the red one that deletes) is the visual stories' job; here, which one the sheet offers.
 		const dialog = await review();
-		const button = apply(dialog);
-		expect(button.className).toContain("bg-monti-emphasis");
-		expect(button.className).not.toContain("danger");
+		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
 
 		await choose(dialog, new RegExp(tReview("choice.erase")));
-		const danger = apply(dialog, tReview("drop.apply"));
-		expect(danger.className).toContain("bg-monti-danger-emphasis");
-		// The block says what is lost, and that it cannot be undone.
-		expect(within(dialog).getByTestId(`impact-${SUBTITLE}`).textContent).toContain(
+		// The subtitle's block says what is lost, with its own count, and that it cannot be undone.
+		expect(dialog.textContent).toContain(
 			tReview("note.erased", { count: tReview("count.entries", { count: 132, kind: "document" }) }),
 		);
-		expect(footerNames(dialog)).toEqual([tc("cancel"), tReview("drop.apply")]);
+		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("drop.apply")]);
 
 		await choose(dialog, new RegExp(tReview("choice.keep")));
-		expect(apply(dialog).className).toContain("bg-monti-emphasis");
+		expect(actionNames(dialog)).toEqual([tc("cancel"), tReview("review.save")]);
 	});
 
 	it("SCHEMA-F3 11 moving the values of a removed field picks another field and sends the move", async () => {
@@ -428,7 +439,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(dialog.textContent).toContain(tReview("note.kept"));
 		expect(within(dialog).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
 		await choose(dialog, new RegExp(tReview("choice.moveTo")));
-		const move = { op: "renameField", collection: "post", from: "subtitle", to: "excerpt" };
+		const move = { op: "renameField", collection: "story", from: "subtitle", to: "excerpt" };
 		await waitFor(() => expect(lastPreview()?.body.transforms).toContainEqual(move));
 		// Moving the values says nothing about being lost.
 		expect(dialog.textContent).not.toContain(tReview("note.kept"));
@@ -464,16 +475,16 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 });
 
 describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
-	const KEY = "collection_path_changed:post";
-	const pathDraft = { collections: { post: { ...post({}), path: "/blog/:slug" } } };
-	const pathSaved = { collections: { post: post({}) } };
+	const KEY = "collection_path_changed:story";
+	const pathDraft = { collections: { story: { ...story({}), path: "/blog/:slug" } } };
+	const pathSaved = { collections: { story: story({}) } };
 
 	it("SCHEMA-A1 14 shows the address before and after and the published entries that change, with no redirect to pick", async () => {
 		previewOf = () =>
 			preview({
 				impacts: [
 					{
-						change: { kind: "collection_path_changed", collection: "post", from: "/posts/:slug", to: "/blog/:slug" },
+						change: { kind: "collection_path_changed", collection: "story", from: "/stories/:slug", to: "/blog/:slug" },
 						key: KEY,
 						entries: 148,
 						sample: [],
@@ -488,11 +499,13 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 		expect(await within(dialog).findByText(tReview("tag.address"))).toBeInTheDocument();
 		const block = dialog;
 		expect(block.textContent).toContain(tReview("block.address"));
-		expect(block.textContent).toContain("/posts/:slug");
+		expect(block.textContent).toContain("/stories/:slug");
 		expect(block.textContent).toContain("/blog/:slug");
 		// The count comes from the preview: 148 published entries change address.
 		expect(block.textContent).toContain(tReview("path.entries"));
-		expect(block.textContent).toContain(tReview("path.entries.then", { count: "148편" }));
+		expect(block.textContent).toContain(
+			tReview("path.entries.then", { count: tReview("count.entries", { count: 148, kind: "document" }) }),
+		);
 		expect(block.textContent).toContain(tReview("path.note"));
 		// Nothing to pick, nothing to tick: just cancel and apply.
 		expect(within(block).queryAllByRole("radio")).toHaveLength(0);
@@ -510,7 +523,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 	const noteDraft = {
 		collections: {
-			post: post({}),
+			story: story({}),
 			note: {
 				label: "노트",
 				kind: "document",
@@ -537,7 +550,7 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 			});
 		mount({
 			draft: noteDraft,
-			saved: { collections: { post: post({}) } },
+			saved: { collections: { story: story({}) } },
 			target: { kind: "collection", name: "note", count: 1 },
 		});
 		// The new collection is the sheet's one change.
@@ -545,7 +558,7 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 		expect(await within(dialog).findByText(tReview("tag.new"))).toBeInTheDocument();
 		const block = dialog;
 		expect(dialog.textContent).toContain(tReview("review.what", { name: "노트", count: 1 }));
-		expect(block.textContent).toContain("note · 문서");
+		expect(block.textContent).toContain(`note · ${t("collection.kindDocument")}`);
 		expect(block.textContent).toContain("/notes/:slug");
 		expect(block.textContent).toContain("title, slug");
 		expect(block.textContent).toContain(tReview("consequence.none"));
@@ -555,14 +568,11 @@ describe("flow 4 · 새 컬렉션 (steps 05-06)", () => {
 
 describe("flow 4 · 새 컬렉션 — the page after the apply", () => {
 	beforeEach(() => {
-		state = stateOf({ post: post({ subtitle: field("부제") }) });
+		state = stateOf({ story: story({ subtitle: field("부제") }) });
 	});
 
 	it("SCHEMA-N3 06 shows the line the save left, with 보기 opening the new collection's entries when it left a link", async () => {
-		reload.takeSavedMessage.mockReturnValueOnce({
-			message: "노트를 만들었어요",
-			href: "/admin?collection=note",
-		} as never);
+		rememberSaved("노트를 만들었어요", "/admin?collection=note");
 		openFields();
 		await waitFor(() =>
 			expect(toast).toHaveBeenCalledWith(
@@ -607,8 +617,8 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		chosen: null,
 	};
 	beforeEach(() => {
-		state = stateOf({ post: post({}) }, [
-			{ code: "ko", name: "한국어" },
+		state = stateOf({ story: story({}) }, [
+			{ code: "de", name: "Deutsch" },
 			{ code: "en", name: "English", label: "영어" },
 		]);
 		previewOf = () =>
@@ -637,7 +647,9 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		const block = dialog;
 		expect(within(dialog).getByText(tReview("tag.locale"))).toBeInTheDocument();
 		expect(block.textContent).toContain("English");
-		expect(block.textContent).toContain("en · 번역 12편");
+		expect(block.textContent).toContain(
+			tReview("locale.key", { code: "en", count: tReview("count.entries", { count: 12, kind: "document" }) }),
+		);
 		const radio = (label: string) => within(dialog).getByRole("radio", { name: new RegExp(`^${label}`) });
 		expect(radio(tReview("choice.keep")).getAttribute("aria-checked")).toBe("true");
 		expect(radio(tReview("choice.trash")).getAttribute("aria-checked")).toBe("false");

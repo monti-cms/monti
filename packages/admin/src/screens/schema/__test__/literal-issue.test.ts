@@ -45,8 +45,8 @@ describe("describeLiteralIssue", () => {
 		for (const value of Object.values(params)) expect(text).toContain(value);
 	});
 
-	it.runIf(testSite.ADMIN_LANGUAGE === "ko")(
-		"SCHEMA-F12 does not show the English sentence of the server in a Korean admin",
+	it.runIf(testSite.ADMIN_LANGUAGE !== "en")(
+		"SCHEMA-F12 does not show the English sentence of the server in an admin in another language",
 		() => {
 			const text = describeLiteralIssue(t, { code: "second_import", params: {}, line: 2, column: 1 });
 			expect(text).not.toMatch(/a second import|Line 2|line 2/);
