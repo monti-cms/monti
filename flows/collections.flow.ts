@@ -21,7 +21,8 @@ test("SCHEMA-F1 a field renamed in the collection settings is applied and shown 
 	await expect(page.getByRole("button", { name: "summary 필드 편집" })).toBeVisible({ timeout: 60_000 });
 	await expect(page.getByRole("button", { name: "저장하고 적용" })).toBeHidden();
 
+	// The editor is still part of that compile.
 	await page.goto("/studio/entries/new?collection=post");
-	await expect(page.getByRole("button", { name: "Lead 비어 있음" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "Lead 비어 있음" })).toBeVisible({ timeout: 60_000 });
 	await expect(page.getByRole("button", { name: "Summary 비어 있음" })).toBeHidden();
 });
