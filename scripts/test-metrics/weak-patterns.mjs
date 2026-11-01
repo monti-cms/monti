@@ -212,6 +212,27 @@ const EXEMPT = [
 		count: 1,
 		why: "the upper bound of an `expect.poll`, which returns as soon as the condition holds",
 	},
+	{
+		pattern: "test-id",
+		file: "packages/admin/src/screens/__test__/entry-list-screen.dom.test.tsx",
+		count: 1,
+		why: "the blank area under the rows is a right-click target hidden from assistive tech (`aria-hidden`), so it has no role or name to find it by",
+	},
+	...[
+		"packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		"packages/admin/src/screens/schema/__test__/collections-flows.dom.test.tsx",
+	].map((file) => ({
+		pattern: "own-module-mock",
+		file,
+		count: 1,
+		why: "replaces only `reloadPage` of `schema/reload.ts`: jsdom cannot reload a page; the message a save leaves for the next page goes through the real module",
+	})),
+	{
+		pattern: "own-module-mock",
+		file: "packages/admin/src/screens/media/__test__/media-flows.dom.test.tsx",
+		count: 1,
+		why: "the upload resizes with canvas and sends with XMLHttpRequest progress, which jsdom lacks and the fake API (fetch) cannot answer; the tests drive progress and the shrink result through it",
+	},
 ];
 
 /** How many uses of `pattern` in `rel` the exemptions cover. */
