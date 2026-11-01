@@ -13,6 +13,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The integration branch that feature branches are cut from and merged into. `check:migrations` compares with it. It becomes `main` once the
+  # overhaul merges.
+  MONTI_BASE_BRANCH: overhaul
+
 jobs:
   check:
     name: lint · typecheck · build
@@ -20,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # Every branch's history, for `check:migrations` to find the branch this one was cut from.
+          # The full history, for `check:migrations` to reach its base (the merge base with the integration branch, or the commit before the push).
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
@@ -43,6 +48,8 @@ jobs:
       - run: pnpm check:tests
       # A migration step on the base branch is not renamed or deleted, and the step list is the step files (a store records steps by name).
       - run: pnpm check:migrations
+        env:
+          MONTI_PUSH_BEFORE: ${{ github.event.before }}
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses, and exports only tests use (a test seam is tagged @internal).
       - run: pnpm knip

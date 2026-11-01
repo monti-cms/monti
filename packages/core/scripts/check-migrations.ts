@@ -1,17 +1,20 @@
 /**
- * Fails when a migration step that already exists on the base branch is gone. A store records each step it ran by name (`cms_migrations`), so a step
- * whose file is renamed or deleted runs again, or never, on a store that is upgraded. Adding a step is fine.
+ * Fails when a migration step that already exists on the base is gone. A store records each step it ran by name (`cms_migrations`), so a step whose
+ * file is renamed or deleted runs again, or never, on a store that is upgraded. Adding a step is fine.
  *
- *   pnpm check:migrations                       # compares with the base branch (below)
- *   pnpm check:migrations --base origin/main    # compares with that ref
+ *   pnpm check:migrations --base origin/overhaul   # locally: compares with that ref
+ *   pnpm check:migrations                          # in CI: the base below
  *
  * Two checks:
  * - No step file (`migrations/NNNN_name.ts`) of the base is deleted or renamed here (`git diff --name-status <base>...HEAD`, and what is not
  *   committed yet).
  * - The step list (`CONTENT_STORE_MIGRATIONS`) is exactly the step files, in the order of their numbers, so a step's name is its file's name.
  *
- * The base is `--base`; else, in a pull request, its base branch (`GITHUB_BASE_REF`); else, on a push, the remote branch this one was cut from: of the
- * other `origin/*` branches, the one whose merge base is the fewest commits behind HEAD (on a tie, the one with the fewest commits of its own since).
+ * The base is `--base`; else, in a pull request, its base branch (`GITHUB_BASE_REF`). On a push it depends on the branch, against the integration
+ * branch `MONTI_BASE_BRANCH` (set once in `ci.yml`):
+ * - a push to the integration branch compares with the commit before the push (`MONTI_PUSH_BEFORE`, from `github.event.before`); when that is all
+ *   zeros (the branch's first push), with `HEAD^`;
+ * - a push to any other branch compares with its merge base with `origin/<MONTI_BASE_BRANCH>`.
  * CI checks out the full history for this.
  */
 import { execFileSync } from "node:child_process";
@@ -42,23 +45,14 @@ function findBase(): { ref: string; why: string } {
 	const pullBase = process.env.GITHUB_BASE_REF;
 	if (pullBase) return { ref: `origin/${pullBase}`, why: "the pull request's base branch" };
 
+	const integration = process.env.MONTI_BASE_BRANCH;
+	if (!integration)
+		throw new Error("pass --base <ref> (for example origin/overhaul), or set MONTI_BASE_BRANCH as CI does");
 	const branch = process.env.GITHUB_REF_NAME || git("rev-parse", "--abbrev-ref", "HEAD");
-	let best: { ref: string; behind: number; ahead: number } | null = null;
-	for (const ref of git("for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split("\n")) {
-		if (!ref.startsWith("origin/") || ref === "origin/HEAD" || ref === `origin/${branch}`) continue;
-		const mergeBase = tryGit("merge-base", "HEAD", ref);
-		if (!mergeBase) continue;
-		const behind = Number(git("rev-list", "--count", `${mergeBase}..HEAD`));
-		// On a tie (sibling branches cut from the same commit), the one that has moved least since is the branch they were cut from.
-		const ahead = Number(git("rev-list", "--count", `${mergeBase}..${ref}`));
-		if (!best || behind < best.behind || (behind === best.behind && ahead < best.ahead)) best = { ref, behind, ahead };
-	}
-	if (!best) {
-		throw new Error(
-			"no other origin/* branch shares history with HEAD: fetch the full history (fetch-depth: 0) or pass --base <ref>",
-		);
-	}
-	return { ref: best.ref, why: `the branch this one was cut from (${best.behind} commits since)` };
+	if (branch !== integration) return { ref: `origin/${integration}`, why: `its merge base with origin/${integration}` };
+	const before = process.env.MONTI_PUSH_BEFORE;
+	if (before && !/^0+$/.test(before)) return { ref: before, why: `the commit before this push to ${integration}` };
+	return { ref: "HEAD^", why: `the first push to ${integration}, so the commit before HEAD` };
 }
 
 async function main(): Promise<void> {
