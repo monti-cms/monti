@@ -16,9 +16,43 @@ async function trashFromEditor(page: Page) {
 	await expect(page.getByRole("banner").getByRole("button", { name: "복원" })).toBeVisible();
 }
 
-// Flow 5 (🔴): trash a post, restore it, then delete for good, one post from its row and the rest by emptying the trash.
-// Which entries can be deleted, what stays behind and the 30 days are checked below this layer.
-test("a trashed post is restored to the list, and trashed posts are deleted for good", async ({ page }) => {
+/** Writes a post with a new category, publishes it and checks the site shows it; returns its address on the site. */
+async function writeAndPublish(page: Page, title: string, slug: string) {
+	await page.goto("/studio");
+	await page.getByRole("button", { name: "새 글 쓰기" }).click();
+	await page.getByRole("textbox", { name: "Title" }).fill(title);
+	await page.getByRole("textbox", { name: "본문 편집기" }).click();
+	await page.keyboard.type("곧 휴지통으로 갈 글입니다.");
+	await page.getByRole("button", { name: "저장", exact: true }).click();
+	await expect(page).toHaveURL(/\/studio\/entries\/[^/]+\/edit$/);
+	await page.getByRole("button", { name: "Category 비어 있음" }).click();
+	await page.getByRole("combobox", { name: "Category" }).fill("휴지통 흐름");
+	await page.getByText("'휴지통 흐름' 추가").click();
+	await page.getByRole("dialog").getByRole("button", { name: "저장" }).click();
+	await expect(page.getByRole("dialog")).toBeHidden();
+	await page.getByRole("button", { name: "발행하기" }).click();
+	await expect(page.getByRole("button", { name: "발행됨" })).toBeDisabled();
+	const address = `/ko/posts/${slug}`;
+	expect((await page.request.get(address)).status()).toBe(200);
+	return address;
+}
+
+// Flow 5 (🔴): a published post that goes to the trash leaves the site; trash a post, restore it, then delete for good, one post from its row and
+// the rest by emptying the trash. Which entries can be deleted, what stays behind and the 30 days are checked below this layer.
+test("a trashed post leaves the site, is restored to the list, and trashed posts are deleted for good", async ({
+	page,
+}) => {
+	const published = await writeAndPublish(page, "발행한 글", "발행한-글");
+	// A published post asks first, since it leaves the site.
+	await page.getByRole("button", { name: "더보기" }).click();
+	await page.getByRole("menuitem", { name: "휴지통으로" }).click();
+	await page
+		.getByRole("alertdialog", { name: "휴지통으로 옮길까요?" })
+		.getByRole("button", { name: "휴지통으로" })
+		.click();
+	await expect(page.getByRole("banner").getByRole("button", { name: "복원" })).toBeVisible();
+	expect((await page.request.get(published)).status()).toBe(404);
+
 	await writeAndTrash(page, "되살릴 글");
 	await writeAndTrash(page, "지울 글");
 

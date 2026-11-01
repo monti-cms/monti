@@ -38,9 +38,11 @@ test("TRANS-N4 an English translation is added to a published post, published, a
 	await expect(page.getByRole("button", { name: "발행됨" })).toBeDisabled();
 	await expect(languages.getByRole("link", { name: "영어 · 발행됨" })).toBeVisible();
 
-	const site = await page.request.get("/en/posts/번역할-글");
-	expect(site.status()).toBe(200);
-	const html = await site.text();
-	expect(html).toContain("An English paragraph.");
-	expect(html).not.toContain("한국어 문단입니다.");
+	// The English address draws the translation's body, not the original's. The text is looked for in the article: other parts of the page
+	// (the summary, the language links) can hold either language.
+	const post = "/en/posts/번역할-글";
+	expect((await page.request.get(post)).status()).toBe(200);
+	await page.goto(post);
+	await expect(page.getByRole("article")).toContainText("An English paragraph.");
+	await expect(page.getByRole("article")).not.toContainText("한국어 문단입니다.");
 });
