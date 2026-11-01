@@ -1,4 +1,5 @@
-import { matchRoute } from "@monti-cms/core/testing";
+// From its own module, not the `@monti-cms/core/testing` barrel: the barrel also brings the Postgres store and the test server.
+import { matchRoute } from "../../../core/src/http/router";
 
 /**
  * What is wrong with a route of the fake API (`"METHOD /v1/path/:param"`), or `undefined` when the core API serves it with that method. The screen and
