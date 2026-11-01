@@ -112,8 +112,20 @@ export const translationsContract: ContractSuite = (factory) => {
 			it.skipIf(!thirdLocale)("TRANS-N1 creates a translation of a translation from the source", async () => {
 				const source = await createPost("nested-source");
 				const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+				await service.saveDraft(translation.id, {
+					collection: contentCollection,
+					slug: translation.workingSlug,
+					metadata: translatedMetadata("English title", "English summary"),
+					format: "paragraphs",
+					body: "Translated body",
+					expectedVersion: translation.version,
+				} as never);
 				const nested = (await service.createTranslation({ sourceId: translation.id, locale: thirdLocale ?? "" })).entry;
 				expect(nested.translationGroupId).toBe(source.id);
+				// It starts from the source's text, not from the translation it was asked on.
+				expect(contentOf(nested.working.doc)).toEqual(
+					contentOf(withTranslationHints(testSite, readStoredDocument(source.working.doc) as StoredDocument)),
+				);
 			});
 
 			it.skipIf(!relation && !commonSelect)("TRANS-N3 rejects saving a shared field on a translation", async () => {
