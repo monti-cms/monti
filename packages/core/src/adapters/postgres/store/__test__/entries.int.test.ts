@@ -1,13 +1,19 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, fillRequiredMetadata, recordRelationField } from "../../../../../test/any-site";
+import {
+	contentCollection,
+	fillRequiredMetadata,
+	recordRelationField,
+	requiredMetadata,
+} from "../../../../../test/any-site";
 import { testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
 import { withActor } from "../../../../core/actor";
 import type { Collection } from "../../../../core/collections";
-import { seedEntry, seedSave } from "../../../../core/store/__test__/seed";
+import { publishDraft, seedEntry, seedSave } from "../../../../core/store/__test__/seed";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../../services";
+import { createContentService } from "../../../../services/content-service";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../__test__/test-database";
 import { createContentStore, migrateContentStore } from "../../content-store";
 
@@ -16,6 +22,7 @@ describe("who made the latest change of an entry (Postgres)", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
+	let relationTarget: (to: Collection) => Promise<string>;
 
 	beforeAll(async () => {
 		const isolated = await createIsolatedTestPool();
@@ -23,7 +30,7 @@ describe("who made the latest change of an entry (Postgres)", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
-		fillRequiredMetadata(store);
+		({ relationTarget } = fillRequiredMetadata(store));
 	});
 
 	afterAll(async () => {
@@ -51,6 +58,80 @@ describe("who made the latest change of an entry (Postgres)", () => {
 		const read = await store.getEntry(entry.id);
 		expect(read.changedBy).toBe("Mina");
 		expect(read.changedAt?.getTime()).toBe(saved.changedAt?.getTime());
+	});
+
+	it("WRITE-S13 moves the modified date to the time of a save that changes the content", async () => {
+		const entry = await draft();
+		const long = new Date("2020-01-01T00:00:00Z");
+		await pool.query(`UPDATE "${schemaName}".entries SET updated_at = $2 WHERE id = $1`, [entry.id, long]);
+
+		const saved = await seedSave(store, entry.id, {
+			expectedVersion: entry.version,
+			metadata: entry.working.metadata,
+			text: "changed",
+		});
+
+		expect(saved.updatedAt.getTime()).toBeGreaterThan(long.getTime());
+		expect((await store.getEntry(entry.id)).updatedAt).toEqual(saved.updatedAt);
+	});
+
+	it("WRITE-S15 frees the address a draft moved away from, so another entry can take it", async () => {
+		const freed = `freed-${randomUUID()}`;
+		const first = await seedEntry(store, {
+			collection: contentCollection,
+			slug: freed,
+			metadata: { title: "First" },
+			text: "First",
+		});
+		await seedSave(store, first.id, {
+			expectedVersion: first.version,
+			slug: `moved-${randomUUID()}`,
+			metadata: first.working.metadata,
+			text: "First",
+		});
+
+		const second = await seedEntry(store, {
+			collection: contentCollection,
+			slug: freed,
+			metadata: { title: "Second" },
+			text: "Second",
+		});
+		expect(second.workingSlug).toBe(freed);
+	});
+
+	it("WRITE-P4 counts the address an entry deleted for good left behind as in use", async () => {
+		const slug = `left-behind-${randomUUID()}`;
+		const entry = await seedEntry(store, {
+			collection: contentCollection,
+			slug,
+			metadata: { title: "Gone" },
+			text: "Gone",
+		});
+		const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
+		const trashed = await store.trashEntry({ id: entry.id, expectedVersion: published.version });
+		await store.permanentDeleteEntry({ id: entry.id, expectedVersion: trashed.version });
+
+		const inUse = await store.slugsInUse({ collection: contentCollection, locale: entry.locale, slugs: [slug] });
+		expect([...inUse]).toEqual([slug]);
+	});
+
+	it("EVENT-D1 records a create that also publishes as the create, then the publish", async () => {
+		const { entry } = await createContentService(store, { site: testSite }).createDraft(
+			{
+				collection: contentCollection,
+				slug: `published-on-create-${randomUUID()}`,
+				metadata: await requiredMetadata(contentCollection, "Published on create", relationTarget),
+				doc: docOf("Body"),
+			},
+			{ publishImmediately: true },
+		);
+		expect(entry.status).toBe("published");
+
+		const events = await pool.query<{ kind: string }>(
+			`SELECT kind FROM "${schemaName}".cms_events WHERE entry_id = $1 ORDER BY seq`,
+			[entry.id],
+		);
+		expect(events.rows.map((row) => row.kind)).toEqual(["created", "published"]);
 	});
 });
 
@@ -296,5 +377,123 @@ describe("ContentStore References", () => {
 
 		const refsAfterFail = await store.getWorkingReferences({ entryId: entryValid.id });
 		expect(refsAfterFail).toEqual(refsUpdated);
+	});
+
+	it("WRITE-S11 refuses a relation to an entry that does not exist when the body also links to it", async () => {
+		const missing = buildReference({
+			targetId: randomUUID(),
+			occurrences: [
+				{ type: "metadata", path: relationPath },
+				{ type: "body", blockId: "b1" },
+			],
+		});
+		const snapshot = buildSnapshot({ references: [missing] });
+
+		await expect(store.createEntryWithReferences({ snapshot, references: [missing] })).rejects.toMatchObject({
+			code: "invalid_reference",
+		});
+		const created = await pool.query(`SELECT 1 FROM "${schemaName}".entries WHERE working_slug = $1`, [snapshot.slug]);
+		expect(created.rows).toEqual([]);
+	});
+
+	/** An entry of the content collection, in the trash. */
+	const trashedTarget = async () => {
+		const target = await seedEntry(store, {
+			collection: contentCollection,
+			slug: `trashed-target-${randomUUID()}`,
+			metadata: { title: "Trashed target" },
+			text: "Target",
+		});
+		await store.trashEntry({ id: target.id, expectedVersion: target.version });
+		return target;
+	};
+
+	it("WRITE-S14 refuses a save that points a field at an entry in the trash, says so, and writes nothing", async () => {
+		const target = await trashedTarget();
+		const source = await store.createEntryWithReferences({ snapshot: buildSnapshot(), references: [] });
+		// The body links to it too: the field still makes it a relation.
+		const relation = buildReference({
+			targetId: target.id,
+			occurrences: [
+				{ type: "metadata", path: relationPath },
+				{ type: "body", blockId: "b1" },
+			],
+		});
+
+		await expect(
+			store.saveWorkingWithReferences({
+				entryId: source.id,
+				expectedVersion: source.version,
+				snapshot: buildSnapshot({ text: "Points at the trash", references: [relation] }),
+				references: [relation],
+			}),
+		).rejects.toMatchObject({ code: "invalid_reference", notice: { key: "entry.reference.trashed" } });
+		const after = await store.getEntry(source.id);
+		expect(after.version).toBe(source.version);
+		expect(after.working).toEqual(source.working);
+		expect(await store.getWorkingReferences({ entryId: source.id })).toEqual([]);
+	});
+
+	it("WRITE-S14 saves a body link to an entry in the trash, and indexes it", async () => {
+		const target = await trashedTarget();
+		const source = await store.createEntryWithReferences({ snapshot: buildSnapshot(), references: [] });
+		const link = buildReference({ targetId: target.id, occurrences: [{ type: "body", blockId: "b1" }] });
+
+		const saved = await store.saveWorkingWithReferences({
+			entryId: source.id,
+			expectedVersion: source.version,
+			snapshot: buildSnapshot({ text: "Links to the trash", references: [link] }),
+			references: [link],
+		});
+
+		expect(saved.version).toBe(source.version + 1);
+		expect(await store.getWorkingReferences({ entryId: source.id })).toEqual([link]);
+	});
+
+	/** An entry whose draft points at `targetId` through the relation field. */
+	const referrer = async (targetId: string) => {
+		const ref = buildReference({ targetId });
+		return store.createEntryWithReferences({ snapshot: buildSnapshot({ references: [ref] }), references: [ref] });
+	};
+
+	it("TRASH-D2 lists the entries in the trash that point at an entry only when asked", async () => {
+		const target = await seedEntry(store, {
+			collection: contentCollection,
+			slug: `pointed-at-${randomUUID()}`,
+			metadata: { title: "Pointed at" },
+			text: "Target",
+		});
+		const live = await referrer(target.id);
+		const trashed = await referrer(target.id);
+		await store.trashEntry({ id: trashed.id, expectedVersion: trashed.version });
+
+		const sources = async (includeTrashed?: boolean) =>
+			(await store.getIncomingReferences({ targetId: target.id, ...(includeTrashed ? { includeTrashed } : {}) }))
+				.map((item) => `${item.sourceId}:${item.sourceStatus}`)
+				.sort();
+
+		expect(await sources()).toEqual([`${live.id}:draft`]);
+		expect(await sources(true)).toEqual([`${live.id}:draft`, `${trashed.id}:trashed`].sort());
+	});
+
+	it("WRITE-W9 does not count the published version of an archived entry as a use on the site", async () => {
+		const target = await seedEntry(store, {
+			collection: contentCollection,
+			slug: `archived-use-${randomUUID()}`,
+			metadata: { title: "Used" },
+			text: "Target",
+		});
+		const archived = await referrer(target.id);
+		// An entry that was published with the relation and then archived: its published references stay for unarchiving.
+		await pool.query(
+			`INSERT INTO "${schemaName}".entry_references (entry_id, state, kind, target_id, target_entry_id, target_media_id, is_stale, occurrences)
+			 SELECT entry_id, 'published', kind, target_id, target_entry_id, target_media_id, is_stale, occurrences
+			 FROM "${schemaName}".entry_references WHERE entry_id = $1 AND state = 'working'`,
+			[archived.id],
+		);
+		await pool.query(`UPDATE "${schemaName}".entries SET status = 'archived' WHERE id = $1`, [archived.id]);
+
+		const uses = await store.getIncomingReferences({ targetId: target.id });
+		expect(uses.map((item) => `${item.sourceId}:${item.state}`)).toEqual([`${archived.id}:working`]);
 	});
 });

@@ -3,7 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
 import { testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
-import { publishDraft, seedEntry } from "../../../../core/store/__test__/seed";
+import { publishDraft, seedEntry, seedSave } from "../../../../core/store/__test__/seed";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
+import { createContentService } from "../../../../services/content-service";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../__test__/test-database";
 import { createContentStore, migrateContentStore } from "../../content-store";
 
@@ -95,6 +97,70 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 
 			const published = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
 			expect(published.publishedAt).toEqual(original);
+		});
+	});
+
+	describe("addresses", () => {
+		it("WRITE-P4 a publish that changes the body keeps the public address the entry already has", async () => {
+			const post = await seedEntry(store, {
+				collection: content,
+				slug: "kept-address",
+				metadata: { title: "Kept" },
+				text: "First",
+			});
+			const first = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
+			const saved = await seedSave(store, post.id, {
+				expectedVersion: first.version,
+				metadata: first.working.metadata,
+				text: "Second",
+			});
+			await publishDraft(testSite, store, { id: post.id, expectedVersion: saved.version });
+
+			const found = await store.getPublishedEntryBySlug({ collection: content, slug: "kept-address" });
+			expect(found.status).toBe("current");
+		});
+	});
+
+	describe("body links by address", () => {
+		/** A paragraph of links written as addresses, as the document keeps a link nothing resolved at save. */
+		const linksTo = (...hrefs: string[]): StoredDocument => ({
+			type: "doc",
+			version: STORED_DOCUMENT_VERSION,
+			content: [
+				{
+					type: "paragraph",
+					content: hrefs.flatMap((href, index) => [
+						...(index > 0 ? [{ type: "text", text: " " }] : []),
+						{ type: "text", text: `link ${index}`, marks: [{ type: "link", attrs: { href } }] },
+					]),
+				},
+			],
+		});
+
+		it("WRITE-P1 a link to the address of an entry in the trash only warns, and one to an address nobody holds blocks", async () => {
+			const target = await seedEntry(store, {
+				collection: content,
+				slug: "link-trashed-target",
+				metadata: { title: "Trashed" },
+				text: "Target",
+			});
+			const published = await publishDraft(testSite, store, { id: target.id, expectedVersion: target.version });
+			await store.trashEntry({ id: target.id, expectedVersion: published.version });
+			const toTrash = testSite.contentPath(content, "link-trashed-target") as string;
+			const toNobody = testSite.contentPath(content, "link-nobody-holds") as string;
+			const source = await seedEntry(store, {
+				collection: content,
+				slug: "link-trashed-source",
+				metadata: { title: "Source" },
+				doc: linksTo(toTrash, toNobody),
+			});
+
+			const checked = await createContentService(store, { site: testSite }).checkPublish({ id: source.id });
+
+			const links = (issues: readonly { code: string; message?: string }[]) =>
+				issues.filter((issue) => issue.code.endsWith("internal_link")).map((issue) => `${issue.code} ${issue.message}`);
+			expect(links(checked.issues)).toEqual([`unresolved_internal_link ${toNobody}`]);
+			expect(links(checked.warnings)).toEqual([`unpublished_internal_link ${toTrash}`]);
 		});
 	});
 });

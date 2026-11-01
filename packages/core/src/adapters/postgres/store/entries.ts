@@ -438,7 +438,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]> => {
 			if (params.addresses.length === 0) return [];
 			// A body link (`/posts/slug`) is the default-language URL. Current, former and reserved addresses all name an entry; a trashed entry is not one a new
-			// link can be made to (saving a reference to it is refused), so its address is left as written.
+			// link can be made to (a field relation to it is refused), so its address is left as written.
 			const rows = await db
 				.selectFrom("content_addresses as a")
 				.innerJoin("entries as e", "e.id", "a.entry_id")
