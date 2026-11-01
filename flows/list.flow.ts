@@ -31,7 +31,9 @@ test("LIST-C1 posts picked in the list get a tag together", async ({ page }) => 
 	await bulkBar.getByRole("button", { name: "바꾸기" }).click();
 	await page.getByRole("menuitem", { name: "Tags" }).click();
 	await page.getByRole("menuitemcheckbox", { name: /^리액트/ }).click();
-	await expect(
-		page.getByRole("row", { name: /^정리 글 다 선택/ }).getByRole("cell", { name: "리액트", exact: true }),
-	).toBeVisible();
+	const tagged = page.getByRole("row", { name: /^정리 글 다 선택/ }).getByRole("cell", { name: "리액트", exact: true });
+	await expect(tagged).toBeVisible();
+	// The list shows the change before the server answers, so the tag is looked for again after a reload: it is what the server kept.
+	await page.reload();
+	await expect(tagged).toBeVisible();
 });

@@ -88,8 +88,8 @@ test("DATA-R1 a full backup exported from the admin restores a deleted post into
 	await sheet.getByRole("button", { name: "복원", exact: true }).click();
 	await expect(sheet.getByRole("heading", { name: "백업을 복원했어요" })).toBeVisible();
 
-	// The post is back, at its address, with its body.
-	const restored = await page.request.get(address);
-	expect(restored.status()).toBe(200);
-	expect(await restored.text()).toContain(BODY);
+	// The post is back, at its address, with its body. The body is looked for in the page's article: the summary filled from it is elsewhere in the page.
+	expect((await page.request.get(address)).status()).toBe(200);
+	await page.goto(address);
+	await expect(page.getByRole("article")).toContainText(BODY);
 });
