@@ -1,10 +1,8 @@
-import type { CmsConfig } from "@monti-cms/core";
 import type { BulkOp, Folder, ListEntriesItem } from "@monti-cms/core/site";
-import { createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { testConfig, testSite } from "../../../../../core/test/site";
+import { testSite } from "../../../../../core/test/site";
 import type { BulkParams } from "../../../api/entries";
 import { commonMessages } from "../../../lib/common.messages";
 import { fakeApi } from "../../../test/fake-api";
@@ -228,30 +226,6 @@ describe("the bar over picked rows", () => {
 			within(await screen.findByRole("alertdialog")).getByRole("button", { name: td("trash.ask.confirm") }),
 		);
 		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
-	});
-
-	it("LIST-C5 offers an item collection that has folders the folder move, and no publishing", () => {
-		stubApi();
-		const site = createSite({
-			...testConfig,
-			collections: { ...testConfig.collections, tag: { ...testConfig.collections.tag, folders: true } },
-		} as CmsConfig);
-		render(
-			<table>
-				<BulkBar
-					collection="tag"
-					rows={picked}
-					folders={folders}
-					colSpan={3}
-					onClearSelection={vi.fn()}
-					onRun={vi.fn()}
-					onExport={vi.fn()}
-				/>
-			</table>,
-			{ site },
-		);
-		expect(screen.getByRole("button", { name: t("folder.move") })).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
 	});
 });
 

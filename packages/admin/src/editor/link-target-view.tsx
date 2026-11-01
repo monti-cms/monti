@@ -10,6 +10,23 @@ import { editorMessages } from "./messages";
 const nameOf = (tc: TranslatorFor<typeof commonMessages>, target: LinkTarget) => target.title || tc("untitled");
 
 /**
+ * What the link bubble says of the entry: its name, the line under it, and the label of the link, which names where it opens. An entry that is not
+ * published says so after its address, and opens in the admin.
+ */
+export function linkTargetText(
+	t: TranslatorFor<typeof editorMessages>,
+	tc: TranslatorFor<typeof commonMessages>,
+	target: LinkTarget,
+): { name: string; address: string; label: string } {
+	const name = nameOf(tc, target);
+	return {
+		name,
+		address: `${target.path ?? ""}${target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}`,
+		label: target.published ? t("link.targetOpenSite", { title: name }) : t("link.targetOpenAdmin", { title: name }),
+	};
+}
+
+/**
  * Where an internal link goes, shown in the link bubble: the title and the address of the entry, which opens the entry (its page on the site when it is
  * published, otherwise the entry in the admin). The document holds only the id of the entry, so the entry is looked up (`useLinkTarget`).
  */
@@ -45,9 +62,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 		);
 	}
 	const { target } = state;
-	const label = target.published
-		? t("link.targetOpenSite", { title: nameOf(tc, target) })
-		: t("link.targetOpenAdmin", { title: nameOf(tc, target) });
+	const { name, address, label } = linkTargetText(t, tc, target);
 	return (
 		<Box as="span" paddingX={4} minWidth={0} maxWidth="menu">
 			<TextButton
@@ -62,11 +77,10 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 			>
 				<Stack as="span" gap={0}>
 					<Text variant="caption" tone="default" truncate>
-						{nameOf(tc, target)}
+						{name}
 					</Text>
 					<Text variant="caption" tone="muted" truncate>
-						{target.path ?? ""}
-						{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}
+						{address}
 					</Text>
 				</Stack>
 			</TextButton>

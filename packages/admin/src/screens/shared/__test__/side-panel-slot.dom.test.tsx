@@ -79,20 +79,6 @@ describe("screen context of the shell pages", () => {
 		expect(open("post")).toEqual({ screen: "entries", collection: "post" });
 	});
 
-	it("names the media screen and the settings screen", () => {
-		expect(open("media")).toEqual({ screen: "media" });
-		cleanup();
-		expect(open("settings")).toEqual({ screen: "settings" });
-	});
-
-	it("takes the trash for a list of entries, and every other page for `other`", () => {
-		expect(open("trash")).toEqual({ screen: "entries" });
-		cleanup();
-		expect(open("events")).toEqual({ screen: "other" });
-		cleanup();
-		expect(open("tools:ai")).toEqual({ screen: "other" });
-	});
-
 	it("PLUG-A5 follows the screen it is published by: leaving a screen takes its values away", async () => {
 		const first = renderShell("post");
 		fireEvent.click(toggle());

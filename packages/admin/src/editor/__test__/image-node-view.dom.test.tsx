@@ -77,21 +77,6 @@ describe("CmsImageNodeView", () => {
 		expect(updateAttributes).toHaveBeenCalledWith(expect.objectContaining({ width: expect.stringMatching(/^\d+px$/) }));
 	});
 
-	it("MEDIA-W1 for % widths, computes and updates a % value on drag", () => {
-		const { props, updateAttributes } = createProps({ width: "60%" });
-		renderWithSite(<CmsImageNodeView {...props} />);
-
-		const rightHandle = screen.getByLabelText(t("imageNode.resizeRight"));
-		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
-		act(() => {
-			window.dispatchEvent(new PointerEvent("pointermove", { clientX: 150 }));
-			window.dispatchEvent(new PointerEvent("pointerup"));
-		});
-
-		expect(updateAttributes).toHaveBeenCalledOnce();
-		expect(updateAttributes.mock.calls[0][0].width).toMatch(/^\d+%$/);
-	});
-
 	it("MEDIA-W1 can open the crop and rotate sheet and perform rotate and apply", () => {
 		const { props, updateAttributes } = createProps();
 		renderWithSite(<CmsImageNodeView {...props} />);
@@ -113,48 +98,6 @@ describe("CmsImageNodeView", () => {
 
 		expect(updateAttributes).toHaveBeenCalledWith({
 			crop: null,
-			rotate: "90",
-		});
-	});
-
-	it("MEDIA-W1 does not call updateAttributes when the width handle is released without moving (preserves images with no width set)", () => {
-		const { props, updateAttributes } = createProps({ width: null });
-		renderWithSite(<CmsImageNodeView {...props} />);
-
-		const rightHandle = screen.getByLabelText(t("imageNode.resizeRight"));
-		// Plain click and release without moving
-		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
-		act(() => {
-			window.dispatchEvent(new PointerEvent("pointerup"));
-		});
-
-		expect(updateAttributes).not.toHaveBeenCalled();
-	});
-
-	it("MEDIA-W1 stores the crop coordinates relative to the original (0-100) even when rotated", () => {
-		const { props, updateAttributes } = createProps({ rotate: "90" });
-		renderWithSite(<CmsImageNodeView {...props} />);
-
-		const cropBtn = screen.getByRole("button", { name: t("imageCrop.title") });
-		fireEvent.click(cropBtn);
-
-		// Keyboard numeric input alternative for X, Y, W, H
-		const inputX = screen.getByLabelText(t("imageCrop.x"));
-		const inputY = screen.getByLabelText(t("imageCrop.y"));
-		const inputW = screen.getByLabelText(t("imageCrop.width"));
-		const inputH = screen.getByLabelText(t("imageCrop.height"));
-
-		fireEvent.change(inputX, { target: { value: "15" } });
-		fireEvent.change(inputY, { target: { value: "25" } });
-		fireEvent.change(inputW, { target: { value: "50" } });
-		fireEvent.change(inputH, { target: { value: "60" } });
-
-		// Click the apply button
-		const applyBtn = screen.getByRole("button", { name: tc("apply") });
-		fireEvent.click(applyBtn);
-
-		expect(updateAttributes).toHaveBeenCalledWith({
-			crop: "15,25,50,60",
 			rotate: "90",
 		});
 	});

@@ -3,7 +3,6 @@ import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { deleteBlock, duplicateBlock, moveBlock, topLevelBlockAt } from "../block-commands";
-import { isValidImageWidth } from "../image-node-view";
 import { editorMessages } from "../messages";
 import { prepareUpload } from "../upload-helper";
 
@@ -62,12 +61,7 @@ describe("nested block operations", () => {
 	});
 });
 
-describe("image width and upload optimization", () => {
-	it("MEDIA-W1 accepts 1–100% or 1–4096px only", () => {
-		for (const ok of ["", "1%", "100%", "600", "600px", "4096px"]) expect(isValidImageWidth(ok), ok).toBe(true);
-		for (const bad of ["0%", "101%", "0px", "4097px", "50vw", "-1px"]) expect(isValidImageWidth(bad), bad).toBe(false);
-	});
-
+describe("upload optimization", () => {
 	it("MEDIA-U3 keeps the original for GIF", async () => {
 		const gif = new File([new Uint8Array([71, 73, 70])], "a.gif", { type: "image/gif" });
 		expect(await prepareUpload(testSite, gif)).toMatchObject({

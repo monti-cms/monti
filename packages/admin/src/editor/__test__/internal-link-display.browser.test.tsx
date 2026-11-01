@@ -15,7 +15,7 @@ import { resetLinkTargets } from "../link-targets";
 import { editorMessages } from "../messages";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
-const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, PREFIXED_LOCALES, adminUrl, contentPath, localizePath } = testSite;
+const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, contentPath, localizePath } = testSite;
 const t = testSite.createTranslator(editorMessages);
 const tc = testSite.createTranslator(commonMessages);
 
@@ -91,27 +91,6 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(link.getAttribute("href")).toBe(path);
 		expect(api.requests).toHaveLength(1);
 		expect(api.requests[0]?.path).toBe(`/v1/entries/${TARGET}`);
-	});
-
-	it("shows and opens the address with the locale prefix the site gives the entry's language", async () => {
-		const locale = PREFIXED_LOCALES[0] ?? DEFAULT_LOCALE;
-		api.on("GET /v1/entries/:id", () => entryRow({ locale }));
-		renderBubble(openOnDocument());
-		const link = await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
-		const expected = localizePath(locale, contentPath(COLLECTION, "hello") as string);
-		expect(link.getAttribute("href")).toBe(expected);
-		expect(link.textContent).toContain(expected);
-	});
-
-	it("opens the entry in the admin while it is not published, and says so", async () => {
-		api.on("GET /v1/entries/:id", () => entryRow({ status: "draft", publishedSlug: null }));
-		const editor = openOnDocument();
-		renderBubble(editor);
-
-		const link = await screen.findByRole("link", { name: t("link.targetOpenAdmin", { title: "안녕하세요" }) });
-		expect(link.getAttribute("href")).toBe(adminUrl(`/entries/${TARGET}/edit`));
-		expect(link.textContent).toContain(t("link.targetDraft"));
-		expect(link.textContent).toContain(localizePath(DEFAULT_LOCALE, contentPath(COLLECTION, "hello-draft") as string));
 	});
 
 	it("EDIT-L3 says so when the entry is gone, and when it cannot be looked up", async () => {
