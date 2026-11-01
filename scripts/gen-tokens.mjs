@@ -1,6 +1,7 @@
 // Generates the admin's design tokens from the design system's `packages/ui/tokens/tokens.json`. Run from the repo root: `pnpm gen:tokens`.
+// `pnpm gen:tokens --check` (CI) writes nothing and fails, naming each file, when a file differs from what the script would write.
 //
-// Writes four files, all generated, never edited by hand (a test in `@monti-cms/ui` fails when they differ from this script's output):
+// Writes four files, all generated, never edited by hand:
 //   - `packages/ui/styles/tokens.css`       the values: every token as a `--monti-*` custom property, light and dark.
 //   - `packages/ui/styles/theme.css`        the Tailwind names: the part between the BEGIN and END markers (`bg-monti-tool`, `gap-monti-12`, `text-monti-body` ...).
 //                                           The rest of the file is hand-written and stays as it is.
@@ -11,7 +12,10 @@
 //
 // The class names follow the design system's role names one to one, with a `monti-` prefix on every class: the admin runs on the site's own pages, next
 // to the site's Tailwind classes, so none of ours may look like a Tailwind class.
-import { readFileSync, writeFileSync } from "node:fs";
+//
+// It writes nothing, and names the role, when the tokens break a rule of the design system (see `tokenProblems`): a text role people must read under
+// 4.5:1 on its ground, or a value declared twice, so overriding a scale step would not restyle every role on it.
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -307,15 +311,21 @@ const MANAGER_ROLES = {
 	inputTextColor: "fg-default",
 };
 
-/** Storybook's theme values, in light and dark, with every reference resolved to the hex it points at. */
-function managerThemeModule(json) {
+/** A color token's value in a mode, with every reference followed to the literal it points at. */
+function colorResolver(json, what) {
 	const tokens = new Map(json.color.tokens.map((token) => [token.name, token.value]));
 	const resolve = (name, mode) => {
 		const value = tokens.get(name)?.[mode];
-		if (value === undefined) throw new Error(`manager theme: no color token ${name}`);
+		if (value === undefined) throw new Error(`${what}: no color token ${name}`);
 		const reference = /^\{([\w-]+)\}$/.exec(value);
 		return reference ? resolve(reference[1], mode) : value;
 	};
+	return resolve;
+}
+
+/** Storybook's theme values, in light and dark, with every reference resolved to the hex it points at. */
+function managerThemeModule(json) {
+	const resolve = colorResolver(json, "manager theme");
 	// Biome prefers single quotes around a string that holds double quotes (a font stack), and the file is checked against this output.
 	const quote = (text) => (text.includes('"') && !text.includes("'") ? `'${text}'` : JSON.stringify(text));
 	const radius = (name) => Number.parseInt(json.radius.tokens.find((token) => token.name === name).value, 10);
@@ -339,6 +349,99 @@ function managerThemeModule(json) {
 	].join("\n");
 }
 
+/** Text roles the contrast rule leaves out: `fg-faint` is for placeholders and meta only (3.4:1 on paper in light). */
+const NOT_READ = new Set(["fg-faint"]);
+/** The ground a text role is read on: the page, except the text written on the black fill. */
+const groundOf = (role) => (role === "fg-on-emphasis" ? "bg-emphasis" : "bg-page");
+
+/** The WCAG contrast ratio of two `#rrggbb` colors. */
+function contrast(a, b) {
+	const luminance = (hex) => {
+		const [r, g, b] = [1, 3, 5].map((i) => {
+			const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
+			return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+		});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (hi + 0.05) / (lo + 0.05);
+}
+
+/** The `--monti-*` declarations of each mode's block of the values file, in order. */
+function declarations(tokens) {
+	const blocks = {};
+	for (const [selector, mode] of [
+		[LIGHT, "light"],
+		[DARK, "dark"],
+	]) {
+		const start = tokens.indexOf(`${selector} {`);
+		const body = tokens.slice(start, tokens.indexOf("\n}", start));
+		blocks[mode] = [...body.matchAll(/^\t(--monti-[\w-]+): (.+);$/gm)].map(([, name, value]) => ({ name, value }));
+	}
+	return blocks;
+}
+
+/**
+ * What breaks a rule of the design system, one line each, naming the role:
+ * - a text role people must read is under 4.5:1 on its ground, in either mode (`NOT_READ` is left out);
+ * - a value is declared twice: a name twice in one mode's block (a token written twice in the JSON), or a role repeated in the dark block with the
+ *   light block's value. A role is declared once and reads the scale step it names (`var(--monti-gray-11)`), so a site that overrides a step restyles
+ *   every role on it in both modes; and every scale step is given in both modes.
+ */
+export function tokenProblems(json, tokens) {
+	const problems = [];
+	const resolve = colorResolver(json, "contrast");
+	for (const { name } of json.color.tokens) {
+		if (!name.startsWith("fg-") || NOT_READ.has(name)) continue;
+		for (const mode of ["light", "dark"]) {
+			const color = resolve(name, mode);
+			const ground = resolve(groundOf(name), mode);
+			if (!/^#[\da-f]{6}$/i.test(color) || !/^#[\da-f]{6}$/i.test(ground)) {
+				problems.push(`${name} (${mode}): ${color} on ${groundOf(name)} ${ground} is not a #rrggbb color to measure`);
+				continue;
+			}
+			const ratio = contrast(color, ground);
+			if (ratio < 4.5)
+				problems.push(
+					`${name} (${mode}): ${color} on ${groundOf(name)} ${ground} is ${ratio.toFixed(2)}:1, under 4.5:1`,
+				);
+		}
+	}
+
+	const blocks = declarations(tokens);
+	const light = new Map();
+	for (const mode of ["light", "dark"]) {
+		const seen = new Set();
+		for (const { name, value } of blocks[mode]) {
+			if (seen.has(name)) problems.push(`${name.slice("--monti-".length)} is declared twice in the ${mode} block`);
+			seen.add(name);
+			if (mode === "light") light.set(name, value);
+			else if (light.get(name) === value)
+				problems.push(
+					`${name.slice("--monti-".length)} is declared twice: the dark block repeats its light value ${value}`,
+				);
+		}
+	}
+	const dark = new Map(blocks.dark.map(({ name, value }) => [name, value]));
+	const reference = (value) => /^\{([\w-]+)\}$/.exec(value)?.[1];
+	for (const { name, value } of json.color.tokens) {
+		const own = `--monti-${name}`;
+		if (!reference(value.light)) {
+			if (!dark.has(own)) problems.push(`${name} is a scale step with no dark value of its own`);
+			continue;
+		}
+		for (const mode of ["light", "dark"]) {
+			const step = reference(value[mode]);
+			const written = mode === "light" ? light.get(own) : (dark.get(own) ?? light.get(own));
+			if (step && written !== `var(--monti-${step})`)
+				problems.push(
+					`${name} (${mode}) names ${step} but is written ${written}, so overriding ${step} does not restyle it`,
+				);
+		}
+	}
+	return problems;
+}
+
 /** The generated files' text, from `tokens.json` and the current `theme.css` (whose hand-written parts are kept). */
 export function generate({
 	json = JSON.parse(readFileSync(TOKENS_JSON, "utf8")),
@@ -347,8 +450,12 @@ export function generate({
 	const start = themeSource.indexOf(BEGIN);
 	const end = themeSource.indexOf(END);
 	if (start === -1 || end === -1 || end < start) throw new Error(`theme.css needs the markers:\n${BEGIN}\n${END}`);
+	const tokens = tokensCss(json);
+	const problems = tokenProblems(json, tokens);
+	if (problems.length > 0)
+		throw new Error(`the tokens break the design system's rules:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
 	return {
-		tokens: tokensCss(json),
+		tokens,
 		layout: layoutModule(json),
 		managerTheme: managerThemeModule(json),
 		theme: themeSource.slice(0, start) + themeBlock(json) + themeSource.slice(end + END.length),
@@ -356,12 +463,31 @@ export function generate({
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-	const { tokens, theme, layout, managerTheme } = generate();
-	writeFileSync(TOKENS_CSS, tokens);
-	writeFileSync(THEME_CSS, theme);
-	writeFileSync(TOKENS_TS, layout);
-	writeFileSync(MANAGER_THEME_TS, managerTheme);
-	console.log(
-		"wrote packages/ui/styles/tokens.css, packages/ui/styles/theme.css, packages/ui/src/tokens.generated.ts and packages/ui/.storybook/manager-theme.generated.ts",
-	);
+	let generated;
+	try {
+		generated = generate();
+	} catch (error) {
+		console.error(`gen:tokens: ${error.message}`);
+		process.exit(1);
+	}
+	const files = [
+		[TOKENS_CSS, generated.tokens],
+		[THEME_CSS, generated.theme],
+		[TOKENS_TS, generated.layout],
+		[MANAGER_THEME_TS, generated.managerTheme],
+	];
+	const relative = (file) => path.relative(ROOT, file);
+	if (process.argv.includes("--check")) {
+		const stale = files.filter(([file, text]) => !existsSync(file) || readFileSync(file, "utf8") !== text);
+		if (stale.length > 0) {
+			console.error(
+				`gen:tokens --check: these files differ from what scripts/gen-tokens.mjs writes from tokens.json (run \`pnpm gen:tokens\`, never edit them by hand):\n${stale.map(([file]) => `  - ${relative(file)}`).join("\n")}`,
+			);
+			process.exit(1);
+		}
+		console.log(`gen:tokens --check: ${files.length} generated files match tokens.json`);
+	} else {
+		for (const [file, text] of files) writeFileSync(file, text);
+		console.log(`wrote ${files.map(([file]) => relative(file)).join(", ")}`);
+	}
 }

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Matches the requirement tables (`docs/testing/requirements/*.md`) with the tests that carry their IDs. A requirement row starts with its ID
- * (`| TRASH-R1 | …`) and names in its fifth cell the layer that checks it (`L1`…`L4`, or `—` for a promise with no code yet). A test carries
+ * (`| TRASH-R1 | …`) and names in its fifth cell the layer that checks it (`L1`…`L4`, `CI` for a promise a CI check keeps instead of a test, such
+ * as a lint rule or a generator's `--check`, or `—` for a promise with no code yet). A test carries
  * an ID as the start of its title: `it("TRASH-R1 restores an entry as a draft", …)`.
  *
  *   node scripts/test-metrics/requirements.mjs          # each requirement with the tests that carry it, by layer
@@ -56,7 +57,8 @@ const readRequirements = () => {
 			if (!ID.test(cells[0])) continue;
 			if (requirements.has(cells[0])) throw new Error(`${cells[0]} is written twice (${name})`);
 			const layer = cells[4];
-			if (layer !== "—" && !LAYERS.includes(layer)) throw new Error(`${cells[0]} names no layer: "${layer}" (${name})`);
+			if (layer !== "—" && layer !== "CI" && !LAYERS.includes(layer))
+				throw new Error(`${cells[0]} names no layer: "${layer}" (${name})`);
 			requirements.set(cells[0], { id: cells[0], importance, layer, file: name, tests: [] });
 		}
 	}
@@ -96,6 +98,8 @@ for (const test of readTests()) {
 for (const requirement of requirements.values()) {
 	if (requirement.layer === "—") {
 		if (requirement.tests.length > 0) problems.push(`${requirement.id} has no code yet (—) but tests carry it`);
+	} else if (requirement.layer === "CI") {
+		if (requirement.tests.length > 0) problems.push(`${requirement.id} is kept by a CI check (CI) but tests carry it`);
 	} else if (!requirement.tests.some((test) => test.layer === requirement.layer)) {
 		problems.push(`${requirement.id} is checked at ${requirement.layer}, and no ${requirement.layer} test carries it`);
 	}

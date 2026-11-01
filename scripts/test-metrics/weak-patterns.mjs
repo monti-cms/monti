@@ -23,12 +23,12 @@ const asCheck = process.argv.includes("--check");
  * is either fixed or written into `EXEMPT` with its reason. Lower it when uses are fixed; a package joins once its tests are overhauled.
  */
 const CEILING = {
-	core: 2,
-	admin: 170,
+	core: 0,
+	admin: 169,
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
-	ui: 4,
+	ui: 1,
 	seo: 1,
 	nextjs: 0,
 	"storage-s3": 0,
@@ -174,12 +174,6 @@ const EXEMPT = [
 		file: "packages/core/src/adapters/postgres/__test__/store-contract-files.int.test.ts",
 		count: 1,
 		why: "checks that every store contract suite has the test file that runs it: the test files are what it checks",
-	},
-	{
-		pattern: "source-read",
-		file: "packages/core/src/render/__test__/render-css.int.test.ts",
-		count: 1,
-		why: "reads the shipped `render.css`: the stylesheet is the product, not source code",
 	},
 	{
 		pattern: "fetch-stub",

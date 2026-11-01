@@ -31,6 +31,9 @@ jobs:
       - run: pnpm check:korean
       # Admin UI is styled with token utilities and built from the parts of @monti-cms/ui (no one-off CSS, raw pixel sizes or parts built in a screen).
       - run: pnpm check:design
+      # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
+      # declaration per role).
+      - run: pnpm gen:tokens --check
       # The tests of overhauled packages (docs/testing.md) gain no new weak pattern or reference blog name.
       - run: pnpm check:tests
       - run: pnpm typecheck
@@ -70,7 +73,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The L3 tests that need layout, focus or the editor run in Chromium (Vitest browser mode, `*.browser.test.tsx`); headless needs only the shell.
-      # `pnpm test:run` takes every `packages/*/vitest.browser.config.ts` (admin's and ui's) from the root `vitest.config.ts`.
+      # `pnpm test:run` takes every `packages/*/vitest.browser.config.ts` (admin's, core's and ui's) from the root `vitest.config.ts`.
       - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm test:run --shard=${{ matrix.shard }}/3
 
