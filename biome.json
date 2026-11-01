@@ -324,6 +324,45 @@
 		},
 		{
 			"includes": [
+				"packages/admin/src/**",
+				"!packages/admin/src/**/__test__/**",
+				"!packages/admin/src/test/**",
+				"!packages/admin/src/**/*.test.ts",
+				"!packages/admin/src/**/*.test.tsx"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"next",
+											"next/**",
+											"next-auth",
+											"next-auth/**",
+											"@auth/core",
+											"@auth/core/**",
+											"@monti-cms/nextjs",
+											"@monti-cms/nextjs/**"
+										],
+										"message": "The admin is framework-neutral: it reaches the router through the injected AdminRouter (src/router) and the server through AdminServer (src/host/server.ts). Next-specific code lives in @monti-cms/nextjs."
+									},
+									{
+										"group": ["@monti-cms/mdx", "@monti-cms/mdx/**"],
+										"message": "The admin knows no text notation: the MDX source panel and the mdx format come from @monti-cms/mdx through the plugin slots (sourcePanels, formats), and @monti-cms/mdx depends on the admin, so importing it would be a cycle."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
 				"packages/*/src/**",
 				"!**/__test__/**",
 				"!packages/*/src/test/**",
@@ -331,6 +370,27 @@
 				"!**/*.test.tsx"
 			],
 			"plugins": ["./biome-plugins/title-key.grit"]
+		},
+		{
+			"includes": [
+				"packages/*/src/**",
+				"!**/__test__/**",
+				"!packages/*/src/test/**",
+				"!**/*.test.ts",
+				"!**/*.test.tsx",
+				"!**/*.stories.tsx",
+				"!packages/core/src/**",
+				"!packages/auth/src/**",
+				"!packages/nextjs/src/route-handler.ts",
+				"!packages/nextjs/src/auth/**",
+				"!packages/*/src/**/plugin.ts",
+				"!packages/*/src/**/server.ts"
+			],
+			"plugins": ["./biome-plugins/admin-api-url.grit"]
+		},
+		{
+			"includes": ["packages/*/src/**/*.stories.tsx"],
+			"plugins": ["./biome-plugins/story-visual-tags.grit"]
 		}
 	],
 	"assist": {

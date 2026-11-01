@@ -1,0 +1,16 @@
+// The admin API lives under `/api/monti`, after the site's `basePath`. The admin and its extensions build every address with `adminApiUrl("/v1/...")`
+// (or `adminFetch`, which uses it), so a site mounted under a `basePath` still reaches its API. These are the shapes of an address built by hand: a
+// string or template that names the prefix, or the prefix constant (`CMS_API_PATH`) itself. `biome.json` applies this to the packages' sources, and
+// leaves out what defines or serves the routes (the core, the login package, the Next adapter's route handler and login, a plugin's `plugin.ts` and
+// `server.ts`) and tests, stories and test helpers, which fake the API by its addresses.
+or {
+	or {
+		JsStringLiteralExpression(),
+		JsTemplateExpression(),
+		JsxString()
+	} as $s where { $s <: r"(?s).*/api/monti\b.*" },
+	`CMS_API_PATH`
+} as $m where {
+	register_diagnostic(span=$m, message="An admin API address is built with adminApiUrl or adminFetch, which add the site basePath and the /api/monti prefix: do not write the prefix or CMS_API_PATH by hand.")
+}
+
