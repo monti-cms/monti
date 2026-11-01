@@ -1,23 +1,30 @@
 import { describe, expect, it } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import { entryPath, publicHref } from "../entry-address";
 import { hasUnpublishedChanges } from "../entry-status";
 
-const entry = { collection: "post", workingSlug: "first-post", publishedSlug: "first-post" };
+const entry = { collection: contentCollection, workingSlug: "first-post", publishedSlug: "first-post" };
+
+/** A collection of the site that has no public page. */
+const withoutPage = testSite.COLLECTIONS.find((name) => testSite.contentPath(name, "x") === null);
 
 describe("entry address", () => {
 	it("WRITE-W8 writes the public path of the draft, and leaves the slug as dots for an entry that has none yet", () => {
-		expect(entryPath(testSite, entry)).toBe("/posts/first-post");
-		expect(entryPath(testSite, { ...entry, workingSlug: null })).toBe("/posts/…");
+		const path = entryPath(testSite, entry);
+		expect(path).toContain("/first-post");
+		expect(entryPath(testSite, { ...entry, workingSlug: null })).toBe(path?.replace("first-post", "…"));
+		expect(entryPath(testSite, { ...entry, workingSlug: "renamed" })).toBe(path?.replace("first-post", "renamed"));
 	});
 
 	it("WRITE-W8 is nothing for a collection with no public page", () => {
-		expect(entryPath(testSite, { ...entry, collection: "category" })).toBeNull();
+		expect(withoutPage).toBeTypeOf("string");
+		expect(entryPath(testSite, { ...entry, collection: withoutPage as string })).toBeNull();
 	});
 
 	it("WRITE-W8 opens the published address, and nothing for an entry that was never published", () => {
-		expect(publicHref(testSite, { ...entry, workingSlug: "renamed" })).toBe("/posts/first-post");
+		expect(publicHref(testSite, { ...entry, workingSlug: "renamed" })).toBe(entryPath(testSite, entry));
 		expect(publicHref(testSite, { ...entry, publishedSlug: null })).toBeNull();
 	});
 });
@@ -28,8 +35,8 @@ describe("unpublished changes", () => {
 		status: "published" as const,
 		workingSlug: "first-post",
 		publishedSlug: "first-post",
-		working: { metadata: { title: "글", summary: "요약" }, doc },
-		published: { metadata: { summary: "요약", title: "글" }, doc: docOf("첫 문단") },
+		working: { metadata: { title: "글", intro: "소개" }, doc },
+		published: { metadata: { intro: "소개", title: "글" }, doc: docOf("첫 문단") },
 	};
 
 	it("WRITE-W4 has none while the saved draft is what was published, whatever the order of the keys", () => {

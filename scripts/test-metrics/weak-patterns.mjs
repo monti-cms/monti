@@ -24,7 +24,7 @@ const asCheck = process.argv.includes("--check");
  */
 const CEILING = {
 	core: 0,
-	admin: 149,
+	admin: 0,
 	auth: 0,
 	mdx: 0,
 	blocks: 35,
@@ -165,6 +165,24 @@ const EXEMPT = [
 		why: "reads a published package.json (peers, exports)",
 	})),
 	{
+		pattern: "class-name",
+		file: "packages/admin/src/host/__test__/admin-theme-provider.dom.test.tsx",
+		count: 10,
+		why: "the `dark` class on `html` is what the provider puts there and gives back, and what the admin's and the site's styles read",
+	},
+	{
+		pattern: "data-attribute",
+		file: "packages/admin/src/__test__/css-confinement.test.ts",
+		count: 1,
+		why: "a selector the built stylesheet must hold: dark tokens follow the host's `[data-theme=dark]` marker, read from the CSS text",
+	},
+	{
+		pattern: "class-name",
+		file: "packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		count: 2,
+		why: "SCHEMA-F2 promises a red apply button before values are deleted; the visual stories do not run on every push (#334)",
+	},
+	{
 		pattern: "fetch-stub",
 		file: "packages/admin/src/test/fake-api.ts",
 		count: 1,
@@ -206,11 +224,79 @@ const EXEMPT = [
 		count: 1,
 		why: "the mock is how the test sees that the module was loaded, which is the behavior under test",
 	},
+	...[
+		["data-attribute", 6],
+		["query-selector", 3],
+	].map(([pattern, count]) => ({
+		pattern,
+		file: "packages/admin/src/editor/__test__/footnotes.dom.test.ts",
+		count,
+		why: "the editor's styles draw a footnote's number and its missing and unused flags from these attributes (`content: attr(data-footnote-number)`); the chips have no role",
+	})),
+	{
+		pattern: "query-selector",
+		file: "packages/admin/src/editor/__test__/table-resize.dom.test.ts",
+		count: 1,
+		why: "the column widths the table is laid out with live on its `col` elements, which have no role",
+	},
+	...[
+		["packages/admin/src/editor/code-block/__test__/code-block-features.browser.test.tsx", 2, 1],
+		["packages/admin/src/editor/code-block/__test__/code-block-view.browser.test.tsx", 5, 2],
+	].flatMap(([file, attributes, selectors]) =>
+		[
+			["data-attribute", attributes],
+			["query-selector", selectors],
+		].map(([pattern, count]) => ({
+			pattern,
+			file,
+			count,
+			why: "a code block's line numbers answer only the mouse (keyboard users have the Line effects button), so a line row has no role or name: its line attribute is the handle",
+		})),
+	),
+	...["data-attribute", "query-selector"].map((pattern) => ({
+		pattern,
+		file: "packages/admin/src/editor/drag/__test__/drop-indicator.dom.test.ts",
+		count: 3,
+		why: "the drop line is an `aria-hidden` drawing the drag plugin adds outside the document, with no role; the attribute marks that element",
+	})),
+	{
+		pattern: "class-name",
+		file: "packages/admin/src/screens/entries/__test__/source-sync.browser.test.ts",
+		count: 1,
+		why: "builds the box DOM Tiptap's React node view makes (`.react-renderer`), which is what `followCollapsed` matches boxes by",
+	},
+	{
+		pattern: "query-selector",
+		file: "packages/admin/src/screens/entries/__test__/source-sync.browser.test.ts",
+		count: 1,
+		why: "the active-block mark is a ProseMirror decoration class (`ACTIVE_BLOCK_CLASS`) the source pane's styles paint; it has no role or state",
+	},
 	{
 		pattern: "long-wait",
 		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",
 		count: 1,
 		why: "the upper bound of an `expect.poll`, which returns as soon as the condition holds",
+	},
+	{
+		pattern: "test-id",
+		file: "packages/admin/src/screens/__test__/entry-list-screen.dom.test.tsx",
+		count: 1,
+		why: "the blank area under the rows is a right-click target hidden from assistive tech (`aria-hidden`), so it has no role or name to find it by",
+	},
+	...[
+		"packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx",
+		"packages/admin/src/screens/schema/__test__/collections-flows.dom.test.tsx",
+	].map((file) => ({
+		pattern: "own-module-mock",
+		file,
+		count: 1,
+		why: "replaces only `reloadPage` of `schema/reload.ts`: jsdom cannot reload a page; the message a save leaves for the next page goes through the real module",
+	})),
+	{
+		pattern: "own-module-mock",
+		file: "packages/admin/src/screens/media/__test__/media-flows.dom.test.tsx",
+		count: 1,
+		why: "the upload resizes with canvas and sends with XMLHttpRequest progress, which jsdom lacks and the fake API (fetch) cannot answer; the tests drive progress and the shrink result through it",
 	},
 ];
 

@@ -1,12 +1,15 @@
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
-import { testSite } from "../../../../../core/test/site";
-import { anchorIdsOf, codeLink, codeLinkTargetsOf, codeNode, storedDoc, text } from "../../../test/stored-doc";
+import { testConfig } from "../../../../../core/test/site";
+import { anchorIdsOf, codeNode, storedDoc, text } from "../../../test/stored-doc";
 import { duplicateBlock } from "../../block-commands";
 import { buildEditorExtensions } from "../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 import { findAnchor } from "../link-commands";
+import { codeLink, codeLinkTargetsOf, lineRefSite } from "./line-ref-site";
+
+const site = lineRefSite(testConfig);
 
 let editor: Editor | null = null;
 afterEach(() => {
@@ -22,11 +25,11 @@ const SOURCE = storedDoc(
 );
 
 const mount = (doc = SOURCE) => {
-	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: storedToTiptap(testSite, doc) });
+	editor = new Editor({ extensions: buildEditorExtensions(site), content: storedToTiptap(site, doc) });
 	return editor;
 };
 
-const save = (instance: Editor) => tiptapToStored(testSite, instance.getJSON());
+const save = (instance: Editor) => tiptapToStored(site, instance.getJSON());
 
 /** Position of the n-th code block. */
 const codeBlockAt = (instance: Editor, nth = 0) => {

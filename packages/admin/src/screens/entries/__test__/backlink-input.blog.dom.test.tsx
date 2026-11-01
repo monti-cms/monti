@@ -1,3 +1,4 @@
+// Blog-only: a backlink field (a post or memo in a `collection` item, which holds one kind by its conditional `itemKind`) exists only in the blog config.
 import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -28,6 +29,11 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
+/** Titles of the series records the test makes. */
+const SERIES_A = "시리즈 A";
+const SERIES_B = "시리즈 B";
+const NEW_SERIES = "새 메모 시리즈";
+
 const field: BacklinkField = {
 	kind: "backlink",
 	label: "모음집",
@@ -42,7 +48,7 @@ const shared = {
 			state: "working" as const,
 			sourceId: "c1",
 			sourceCollection: "collection",
-			sourceTitle: "시리즈 A",
+			sourceTitle: SERIES_A,
 			sourceSlug: "a",
 			sourceStatus: "draft" as const,
 			kind: "entry" as const,
@@ -69,14 +75,14 @@ const collectionEntry = (id: string, metadata: Record<string, unknown>): EntryDa
 /** The series the search finds; `api` keeps the requests. */
 function stubApi() {
 	const entries: Record<string, EntryData> = {
-		c1: { ...collectionEntry("c1", { title: "시리즈 A", itemIds: ["post-1"] }), workingSlug: "a" },
-		c2: { ...collectionEntry("c2", { title: "시리즈 B", itemIds: [] }), workingSlug: "b" },
+		c1: { ...collectionEntry("c1", { title: SERIES_A, itemIds: ["post-1"] }), workingSlug: "a" },
+		c2: { ...collectionEntry("c2", { title: SERIES_B, itemIds: [] }), workingSlug: "b" },
 	};
 	return fakeApi()
 		.on("GET /v1/entries/search", () => ({
 			items: [
-				{ id: "c1", title: "시리즈 A", slug: "a", status: "draft" },
-				{ id: "c2", title: "시리즈 B", slug: "b", status: "draft" },
+				{ id: "c1", title: SERIES_A, slug: "a", status: "draft" },
+				{ id: "c2", title: SERIES_B, slug: "b", status: "draft" },
 			],
 		}))
 		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
@@ -119,7 +125,7 @@ function Picking({
 }
 
 const enabledInput = async () => {
-	const input = await screen.findByRole("combobox", { name: "모음집" });
+	const input = await screen.findByRole("combobox", { name: field.label });
 	await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
 	return input;
 };
@@ -130,10 +136,10 @@ describe("adding to a collection (inverse relation)", () => {
 		const set = vi.fn();
 		render(<Picking set={set} />);
 		const input = await enabledInput();
-		fireEvent.input(input, { target: { value: "시리즈 B" }, inputType: "insertText" });
-		fireEvent.click(await screen.findByRole("option", { name: "시리즈 B" }));
-		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
-		expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c2", title: "시리즈 B" }], remove: [] });
+		fireEvent.input(input, { target: { value: SERIES_B }, inputType: "insertText" });
+		fireEvent.click(await screen.findByRole("option", { name: SERIES_B }));
+		expect(screen.getByText(SERIES_B)).toBeInTheDocument();
+		expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c2", title: SERIES_B }], remove: [] });
 		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(0);
 	});
 
@@ -154,8 +160,8 @@ describe("adding to a collection (inverse relation)", () => {
 				pick={{ change, error: undefined, set: vi.fn() }}
 			/>
 		);
-		const { rerender } = render(view({ add: [{ id: "c2", title: "시리즈 B" }], remove: [] }));
-		expect(await screen.findByText("시리즈 B")).toBeInTheDocument();
+		const { rerender } = render(view({ add: [{ id: "c2", title: SERIES_B }], remove: [] }));
+		expect(await screen.findByText(SERIES_B)).toBeInTheDocument();
 		await waitFor(() => expect(api.sent("GET /v1/entries/:id/relations")).toHaveLength(1));
 		rerender(view(undefined));
 		await waitFor(() => expect(api.sent("GET /v1/entries/:id/relations")).toHaveLength(2));
@@ -210,27 +216,23 @@ describe("adding a memo to a collection", () => {
 	it("WRITE-W5 adding opens the add sheet for a memo-holding collection, creates it as that collection, and picks it", async () => {
 		const set = vi.fn();
 		const input = await openList(set);
-		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
-		fireEvent.click(
-			await screen.findByRole("option", { name: tEntries("relation.create", { label: "새 메모 시리즈" }) }),
-		);
+		fireEvent.input(input, { target: { value: NEW_SERIES }, inputType: "insertText" });
+		fireEvent.click(await screen.findByRole("option", { name: tEntries("relation.create", { label: NEW_SERIES }) }));
 		// Does not create from the name alone; opens the add sheet with the name filled in.
 		const panel = await screen.findByRole("dialog", {
 			name: tScreens("list.add", { label: testSite.schemaOf("collection").label }),
 		});
-		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeInTheDocument();
+		expect(within(panel).getByDisplayValue(NEW_SERIES)).toBeInTheDocument();
 		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		fireEvent.click(within(panel).getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(api.sent("POST /v1/entries").length).toBeGreaterThan(0));
 		// The new series is made empty; putting the memo in it is a pick the memo's save writes.
 		expect(api.sent("POST /v1/entries")[0]?.body).toMatchObject({
 			collection: "collection",
-			metadata: { title: "새 메모 시리즈", itemKind: "memo" },
+			metadata: { title: NEW_SERIES, itemKind: "memo" },
 			doc: emptyStoredDocument(),
 		});
 		expect(api.sent("POST /v1/entries")[0]?.body.metadata.memoIds).toBeUndefined();
-		await waitFor(() =>
-			expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c9", title: "새 메모 시리즈" }], remove: [] }),
-		);
+		await waitFor(() => expect(set).toHaveBeenLastCalledWith({ add: [{ id: "c9", title: NEW_SERIES }], remove: [] }));
 	});
 });

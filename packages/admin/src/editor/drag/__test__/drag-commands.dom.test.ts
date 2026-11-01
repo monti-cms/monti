@@ -1,10 +1,13 @@
+import { type CmsConfig, defineBlock } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/site";
 import { Editor } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
-import { testSite } from "../../../../../core/test/site";
-import { para, tiptapOfNodes } from "../../../test/stored-doc";
+import { testConfig, testSite } from "../../../../../core/test/site";
+import { para, storedDoc } from "../../../test/stored-doc";
 import { buildEditorExtensions } from "../../extensions";
+import { storedToTiptap } from "../../tiptap-content";
 import { selectedBlocks, setBlockSelection } from "../block-selection";
 import { calculateDropPosition, canDropBlockNode, moveBlockNode, moveBlockSet, sourceRangeOf } from "../drag-commands";
 
@@ -192,25 +195,49 @@ describe("moves that do not leave the source empty (sourceRangeOf)", () => {
 	});
 
 	it("EDIT-D1 moving the only paragraph of a column into another column leaves an empty paragraph", () => {
-		const editor = createTestEditor(
-			tiptapOfNodes({
-				type: "columns",
-				content: [
-					{ type: "column", content: [para("왼쪽")] },
-					{ type: "column", content: [para("오른쪽")] },
-				],
-			}) as unknown as string,
-		);
+		// Two side-by-side bodies (the shape of the blocks extension's columns), defined here so the test runs on any site config.
+		const columns = defineBlock({
+			name: "test-columns",
+			label: "Columns",
+			syntax: { kind: "container", directive: "test-columns" },
+			component: "TestColumns",
+			attributes: {},
+			children: { blocks: ["test-column"], min: 2, max: 4 },
+			editor: { view: "node", insertable: true },
+		});
+		const column = defineBlock({
+			name: "test-column",
+			label: "Column",
+			syntax: { kind: "container", directive: "test-column" },
+			component: "TestColumn",
+			attributes: {},
+			parent: "test-columns",
+			editor: { view: "node" },
+		});
+		const site = createSite({ ...testConfig, blocks: [...(testConfig.blocks ?? []), columns, column] } as CmsConfig);
+		const editor = new Editor({
+			extensions: buildEditorExtensions(site),
+			content: storedToTiptap(
+				site,
+				storedDoc({
+					type: columns.name,
+					content: [
+						{ type: column.name, content: [para("왼쪽")] },
+						{ type: column.name, content: [para("오른쪽")] },
+					],
+				}),
+			),
+		});
 		const from = nodePos(editor, (text, type) => type === "paragraph" && text === "왼쪽");
 		const right = nodePos(editor, (text, type) => type === "paragraph" && text === "오른쪽");
 		const target = right + (editor.state.doc.nodeAt(right)?.nodeSize ?? 0);
 		expect(sourceRangeOf(editor.state.doc, from)?.fill?.type.name).toBe("paragraph");
 
 		apply(editor, moveBlockNode(editor.state, from, target));
-		const columns = editor.state.doc.firstChild;
-		expect(columns?.child(0).textContent).toBe("");
-		expect(columns?.child(1).childCount).toBe(2);
-		expect(columns?.child(1).textContent).toBe("오른쪽왼쪽");
+		const moved = editor.state.doc.firstChild;
+		expect(moved?.child(0).textContent).toBe("");
+		expect(moved?.child(1).childCount).toBe(2);
+		expect(moved?.child(1).textContent).toBe("오른쪽왼쪽");
 		editor.destroy();
 	});
 });

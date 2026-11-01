@@ -1,10 +1,12 @@
+import { type CmsConfig, defineBlock } from "@monti-cms/core";
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
+import { createSite } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { testSite } from "../../../../../core/test/site";
+import { testConfig } from "../../../../../core/test/site";
 import { AdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
@@ -16,6 +18,38 @@ import { storedToTiptap, tiptapToStored } from "../../tiptap-content";
 
 afterEach(cleanup);
 
+/**
+ * A group of 2 to 8 named panes (the shape of the blocks extension's tabs) and a box with a body, defined here so the tests run on any site
+ * config. The hook reads only the definitions.
+ */
+const panes = defineBlock({
+	name: "test-panes",
+	label: "Panes",
+	syntax: { kind: "container", directive: "test-panes" },
+	component: "TestPanes",
+	attributes: { defaultValue: { type: "string", label: "Default pane", childValue: "label" } },
+	children: { blocks: ["test-pane"], min: 2, max: 8 },
+	editor: { view: "node", insertable: true },
+});
+const pane = defineBlock({
+	name: "test-pane",
+	label: "Pane",
+	syntax: { kind: "container", directive: "test-pane" },
+	component: "TestPane",
+	attributes: { label: { type: "string", label: "Name", required: true, translatable: true } },
+	parent: "test-panes",
+	editor: { view: "node" },
+});
+const box = defineBlock({
+	name: "test-box",
+	label: "Box",
+	syntax: { kind: "container", directive: "test-box" },
+	component: "TestBox",
+	attributes: {},
+	editor: { view: "node", insertable: true },
+});
+const site = createSite({ ...testConfig, blocks: [...(testConfig.blocks ?? []), panes, pane, box] } as CmsConfig);
+
 function Harness({
 	doc,
 	onReady,
@@ -26,8 +60,8 @@ function Harness({
 	allowance?: EditorAllowance;
 }) {
 	const editor = useEditor({
-		extensions: buildEditorExtensions(testSite, {}, allowance),
-		content: storedToTiptap(testSite, doc),
+		extensions: buildEditorExtensions(site, {}, allowance),
+		content: storedToTiptap(site, doc),
 		immediatelyRender: true,
 	});
 	useEffect(() => {
@@ -54,6 +88,7 @@ const mount = async (
 				}}
 			/>
 		</AdminComponentsProvider>,
+		{ site },
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	await waitFor(ready);
@@ -69,20 +104,20 @@ const countTransactions = (editor: Editor) => {
 	return counter;
 };
 
-/** The bodies of the two tabs: test data. */
+/** The bodies of the two panes: test data. */
 const BODIES = ["첫째", "둘째"] as const;
 const tabsNode = (): CmsNode => ({
-	type: "tabs",
+	type: panes.name,
 	attrs: { defaultValue: "둘" },
 	content: [
-		{ type: "tab", attrs: { label: "하나" }, content: [para(BODIES[0])] },
-		{ type: "tab", attrs: { label: "둘" }, content: [para(BODIES[1])] },
+		{ type: pane.name, attrs: { label: "하나" }, content: [para(BODIES[0])] },
+		{ type: pane.name, attrs: { label: "둘" }, content: [para(BODIES[1])] },
 	],
 });
 const TABS = storedDoc(tabsNode());
 
 /** The stored document the editor content is saved as. */
-const savedDoc = (editor: Editor) => tiptapToStored(testSite, editor.getJSON());
+const savedDoc = (editor: Editor) => tiptapToStored(site, editor.getJSON());
 /** The default tab the saved tabs block names. */
 const savedDefault = (editor: Editor) => savedDoc(editor).content[0]?.attrs?.defaultValue;
 
@@ -168,7 +203,8 @@ function CustomTab() {
 	);
 }
 
-const mountTabs = (doc = TABS) => mount(doc, () => screen.getAllByRole("tab"), { tabs: CustomTabs, tab: CustomTab });
+const mountTabs = (doc = TABS) =>
+	mount(doc, () => screen.getAllByRole("tab"), { [panes.name]: CustomTabs, [pane.name]: CustomTab });
 /** A view without markup of its own is drawn once the tab bodies are. */
 const bodyDrawn = () => screen.getByText(BODIES[0]);
 
@@ -256,13 +292,13 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 			);
 		}
 		const editor = await mount(TABS, () => screen.getByRole("button", { name: "probe" }), {
-			tabs: () => (
+			[panes.name]: () => (
 				<BlockFrame>
 					<Probe />
 					<Content />
 				</BlockFrame>
 			),
-			tab: CustomTab,
+			[pane.name]: CustomTab,
 		});
 		const before = savedDoc(editor);
 		fireEvent.click(screen.getByRole("button", { name: "probe" }));
@@ -294,10 +330,10 @@ describe("useBlockEditor", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(TABS, bodyDrawn, { tabs: Spy, tab: CustomTab });
+		const editor = await mount(TABS, bodyDrawn, { [panes.name]: Spy, [pane.name]: CustomTab });
 		let block = seen as unknown as ReturnType<typeof useBlockEditor>;
-		expect(block.name).toBe("tabs");
-		expect(block.definition).toBe(testSite.ADDED_BLOCKS.find((definition) => definition.name === "tabs"));
+		expect(block.name).toBe(panes.name);
+		expect(block.definition).toBe(site.ADDED_BLOCKS.find((definition) => definition.name === panes.name));
 		// A block has the id its document gave it, and keeps it through a change of the document.
 		const id = block.id;
 		expect(id).toBe(TABS.content[0]?.id);
@@ -313,8 +349,8 @@ describe("useBlockEditor", () => {
 		expect(editor.state.doc.nodeAt(block.raw.getPos() as number)).toBe(block.raw.node);
 		expect(block.raw.node.childCount).toBe(2);
 		expect(block.children.map((child) => [child.index, child.name, child.values.label])).toEqual([
-			[0, "tab", "하나"],
-			[1, "tab", "둘"],
+			[0, pane.name, "하나"],
+			[1, pane.name, "둘"],
 		]);
 	});
 });
@@ -332,7 +368,7 @@ describe("useBlockEditor commands", () => {
 				</BlockFrame>
 			);
 		}
-		const editor = await mount(SOURCE, bodyDrawn, { tabs: Spy, tab: CustomTab });
+		const editor = await mount(SOURCE, bodyDrawn, { [panes.name]: Spy, [pane.name]: CustomTab });
 		return { editor, block: () => seen as unknown as ReturnType<typeof useBlockEditor> };
 	};
 
@@ -364,8 +400,8 @@ describe("useBlockEditor commands", () => {
 	});
 });
 
-/** A callout view with one button that adds a code block to the callout's body. */
-function CalloutWithCode() {
+/** A box view with one button that adds a code block to the box's body. */
+function BoxWithCode() {
 	const block = useBlockEditor();
 	const [code, setCode] = useState("");
 	return (
@@ -386,9 +422,9 @@ function CalloutWithCode() {
 }
 
 describe("a block view adding body content the body's allowed list does not allow", () => {
-	const callout = storedDoc({ type: "callout", content: [para("안")] });
-	const mountCallout = (allowance?: EditorAllowance) =>
-		mount(callout, () => screen.getByRole("button", { name: "add code" }), { callout: CalloutWithCode }, allowance);
+	const boxDoc = storedDoc({ type: box.name, content: [para("안")] });
+	const mountBox = (allowance?: EditorAllowance) =>
+		mount(boxDoc, () => screen.getByRole("button", { name: "add code" }), { [box.name]: BoxWithCode }, allowance);
 	const codeBlocks = (editor: Editor) => {
 		let count = 0;
 		editor.state.doc.descendants((node) => {
@@ -398,14 +434,14 @@ describe("a block view adding body content the body's allowed list does not allo
 	};
 
 	it("PLUG-A10 adds a code block when the list allows it, or when the body has no list", async () => {
-		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout", "codeBlock"] }));
+		const editor = await mountBox(editorAllowance(site, { blocks: [box.name, "codeBlock"] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("added"));
 		expect(codeBlocks(editor)).toBe(1);
 	});
 
 	it("PLUG-A10 fails with invalid_state and writes nothing when the list does not allow code blocks", async () => {
-		const editor = await mountCallout(editorAllowance(testSite, { blocks: ["callout"] }));
+		const editor = await mountBox(editorAllowance(site, { blocks: [box.name] }));
 		click("add code");
 		await waitFor(() => expect(screen.getByLabelText("code-result").textContent).toBe("invalid_state"));
 		expect(codeBlocks(editor)).toBe(0);

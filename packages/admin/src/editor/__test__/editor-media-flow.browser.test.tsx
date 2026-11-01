@@ -366,11 +366,13 @@ describe("flow: pick in the editor (29–30)", () => {
 		await waitFor(() => expect(imageNodes(editor)[0]?.mediaId).toBe("new-media"));
 	});
 
+	/** The label of the media field: the test's data. */
+	const COVER_LABEL = "대표 이미지";
 	const coverProps = (onChange: (value: string) => void, value = "") =>
 		({
 			collection: "posts",
 			name: "cover",
-			field: { kind: "media", label: "대표 이미지" },
+			field: { kind: "media", label: COVER_LABEL },
 			id: "cover",
 			value,
 			invalid: false,
@@ -383,7 +385,8 @@ describe("flow: pick in the editor (29–30)", () => {
 		const onChange = vi.fn();
 		renderWithSite(<MediaImageInput {...coverProps(onChange)} />);
 		fireEvent.click(screen.getByRole("button", { name: /./ }));
-		const dialog = await screen.findByRole("dialog", { name: "대표 이미지" });
+		// The library is named after the field it picks for.
+		const dialog = await screen.findByRole("dialog", { name: COVER_LABEL });
 		expect(within(dialog).queryByRole("button", { name: t("picker.insert") })).toBeNull();
 		fireEvent.click(await within(dialog).findByRole("button", { name: /cover-react/ }));
 		fireEvent.click(within(dialog).getByRole("button", { name: t("picker.pick") }));

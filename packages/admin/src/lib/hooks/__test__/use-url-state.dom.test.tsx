@@ -14,7 +14,7 @@ function Probe() {
 	const [state, update] = useUrlState(PARAMS);
 	return (
 		<div>
-			<output data-testid="state">{JSON.stringify(state)}</output>
+			<output aria-label="state">{JSON.stringify(state)}</output>
 			<button type="button" onClick={() => update({ page: 3 })}>
 				page
 			</button>
@@ -28,7 +28,7 @@ function Probe() {
 	);
 }
 
-const shown = () => JSON.parse(screen.getByTestId("state").textContent ?? "{}");
+const shown = () => JSON.parse(screen.getByRole("status", { name: "state" }).textContent ?? "{}");
 
 describe("useUrlState", () => {
 	it("ADMIN-U1 writes a change to the address and leaves defaults and foreign parameters alone", () => {

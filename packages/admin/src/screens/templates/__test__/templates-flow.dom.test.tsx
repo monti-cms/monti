@@ -1,8 +1,10 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { Editor } from "@tiptap/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { editorMessages } from "../../../editor/messages";
 import { commonMessages } from "../../../lib/common.messages";
 import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
@@ -21,39 +23,27 @@ const { render } = nav;
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
-// The body editor has its own tests. Here it is a title slot and one button that edits the body.
-vi.mock("../../../editor/tiptap-editor", () => ({
-	CmsEditor: ({
-		doc,
-		onChange,
-		titleField,
-	}: {
-		doc: { content: unknown[] };
-		onChange: (doc: unknown) => void;
-		titleField?: React.ReactNode;
-	}) => (
-		<div>
-			{titleField}
-			<button
-				type="button"
-				onClick={() =>
-					onChange({
-						...doc,
-						content: [
-							...doc.content,
-							{ type: "paragraph", id: "zzzz9999", content: [{ type: "text", text: "덧붙인 문단" }] },
-						],
-					})
-				}
-			>
-				edit body
-			</button>
-		</div>
-	),
-}));
-
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
+const te = testSite.createTranslator(editorMessages);
+
+/** What the person writes at the end of the body. */
+const ADDED = "덧붙인 문단";
+/**
+ * Edits the body in the real editor: a paragraph at its end, through the editor's own commands, as typing would end (jsdom has no layout for
+ * ProseMirror's input handling). The editor has its own tests; here it is only the source of a body change.
+ */
+const editBody = () => {
+	const surface = screen.getByLabelText(te("toolbar.editorLabel")) as HTMLElement & { editor?: Editor };
+	if (!surface.editor) throw new Error("the body surface has no editor");
+	const { editor } = surface;
+	act(() => {
+		editor.commands.insertContentAt(editor.state.doc.content.size, {
+			type: "paragraph",
+			content: [{ type: "text", text: ADDED }],
+		});
+	});
+};
 
 const DOC: StoredDocument = {
 	type: "doc",
@@ -203,13 +193,13 @@ describe("flow: templates · the editor page", () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		fireEvent.change(name, { target: { value: "긴 글" } });
-		fireEvent.click(screen.getByRole("button", { name: "edit body" }));
+		editBody();
 		pressSave();
 
 		await waitFor(() => expect(sent("PATCH", `/templates/${FIRST.id}`)).toHaveLength(1));
 		const [body] = sent("PATCH", `/templates/${FIRST.id}`);
 		expect(body).toMatchObject({ name: "긴 글", expectedVersion: FIRST.version });
-		expect(body.doc.content.at(-1).content[0].text).toBe("덧붙인 문단");
+		expect(body.doc.content.at(-1).content[0].text).toBe(ADDED);
 		expect(body).not.toHaveProperty("mdx");
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(tc("saved")));
 		await waitFor(() => expect(screen.queryByText(t("editor.unsaved"))).toBeNull());
@@ -261,7 +251,7 @@ describe("flow: templates · the editor page", () => {
 describe("flow: templates · a new template", () => {
 	it("TPL-N1 will not save without a name: it says so and sends nothing", async () => {
 		await renderEditor();
-		fireEvent.click(screen.getByRole("button", { name: "edit body" }));
+		editBody();
 		pressSave();
 		await screen.findByText(t("editor.nameRequired"));
 		expect(requested("POST", "/templates")).toHaveLength(0);

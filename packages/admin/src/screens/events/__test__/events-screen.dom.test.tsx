@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import type { EventCounts, EventDeliveryItem, EventsList } from "../../../api/events";
 import { commonMessages } from "../../../lib/common.messages";
@@ -29,7 +30,7 @@ const item = (
 		eventId,
 		kind,
 		entryId: `entry-${eventId}`,
-		collection: "post",
+		collection: contentCollection,
 		occurredAt: "2026-01-01T00:00:00.000Z",
 		workingSlug: `slug-${eventId}`,
 		...(kind === "deleted" ? { title: `Title ${eventId}` } : {}),

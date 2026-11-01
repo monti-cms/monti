@@ -7,9 +7,7 @@ import {
 	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
 } from "@monti-cms/core/document";
-import type { JSONContent } from "@tiptap/core";
 import { testSite } from "../../../core/test/site";
-import { storedToTiptap } from "../editor/tiptap-content";
 
 /**
  * Test helpers for documents that are built by hand (a table, a footnote, a block with attributes, ...): the admin has no text notation for them, so a test
@@ -21,9 +19,6 @@ export const storedDoc = (...content: CmsNode[]): StoredDocument => {
 	const doc = canonicalDocument(testSite, { type: "doc", version: STORED_DOCUMENT_VERSION, content });
 	return { ...doc, content: assignBlockIds(doc.content, []) };
 };
-
-/** The editor's JSON for a document of `content`. */
-export const tiptapOfNodes = (...content: CmsNode[]): JSONContent => storedToTiptap(testSite, storedDoc(...content));
 
 /** A text node. */
 export const text = (value: string, marks?: CmsMark[]): CmsNode => ({
@@ -92,16 +87,3 @@ export const anchorIdsOf = (doc: StoredDocument): string[] => {
 	});
 	return ids;
 };
-
-/** The targets (`to`) of the code links of a document, in document order. */
-export const codeLinkTargetsOf = (doc: StoredDocument): string[] => {
-	const targets: string[] = [];
-	walk(doc.content, (node) => {
-		for (const mark of node.marks ?? [])
-			if (mark.type === "code-ref" && typeof mark.attrs?.to === "string") targets.push(mark.attrs.to);
-	});
-	return targets;
-};
-
-/** A text node linked to the code line labelled `to`. */
-export const codeLink = (value: string, to: string): CmsNode => text(value, [{ type: "code-ref", attrs: { to } }]);

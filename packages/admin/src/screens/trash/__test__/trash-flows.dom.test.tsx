@@ -24,7 +24,8 @@ const t = testSite.createTranslator(trashMessages);
 const tc = testSite.createTranslator(commonMessages);
 
 const first = entry("first", "첫 번째 글", { slug: "first-post", locales: [testSite.DEFAULT_LOCALE, secondLocale] });
-const about = entry("about", "옛 소개 글", { slug: "about-old", deletedAt: ago(7), everPublished: true });
+const ABOUT = "옛 소개 글";
+const about = entry("about", ABOUT, { slug: "about-old", deletedAt: ago(7), everPublished: true });
 const translation = entry("react-en", "React 19 migration", {
 	isSource: false,
 	locale: secondLocale,
@@ -34,8 +35,10 @@ const translation = entry("react-en", "React 19 migration", {
 	deletedAt: ago(12),
 });
 const react = entry("react", "리액트 19 마이그레이션", { translationGroupId: "react", deletedAt: ago(14) });
-const tag = entry("tag", "임시", { collection: record, slug: "temp", deletedAt: ago(27), usages: 4 });
-const series = folder("series", "시리즈 원고");
+/** An item that entries point at. */
+const POINTED = "임시";
+const tag = entry("pointed", POINTED, { collection: record, slug: "temp", deletedAt: ago(27), usages: 4 });
+const series = folder("drafts", "시리즈 원고");
 const image = media("img", "winter-01.jpg", { path: ["Blog Assets"] });
 const episode1 = inside(entry("ep1", "시리즈 1화", { slug: "series-1", everPublished: true }), "시리즈 원고");
 const episode2 = inside(entry("ep2", "시리즈 2화", { slug: "series-2" }), "시리즈 원고");
@@ -43,19 +46,19 @@ const episode2 = inside(entry("ep2", "시리즈 2화", { slug: "series-2" }), "�
 let backend: TrashBackend;
 let api: FakeApi;
 
-const referrers = (collection: string) => [
-	{ entryId: "r1", title: "첫 번째 글", collection, trashed: false },
-	{ entryId: "r2", title: "발행 후 고친 글", collection, trashed: false },
-	{ entryId: "r3", title: "가을 사진 정리", collection, trashed: false },
-	{ entryId: "r4", title: "연습장", collection, trashed: true },
-];
+/** The titles of the four entries pointing at the item: three in use, the last in the trash. */
+const pointingTitles = ["첫 번째 글", "발행 후 고친 글", "가을 사진 정리", "연습장"] as const;
+const referrers = (collection: string) =>
+	pointingTitles.map((title, i) => ({ entryId: `r${i + 1}`, title, collection, trashed: i === 3 }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	window.localStorage.clear();
 	nav.setSearch("");
-	backend = new TrashBackend([first, series, image, about, react, translation, tag], { series: [episode1, episode2] });
-	backend.referrers = { tag: referrers(content) };
+	backend = new TrashBackend([first, series, image, about, react, translation, tag], {
+		[series.id]: [episode1, episode2],
+	});
+	backend.referrers = { [tag.id]: referrers(content) };
 	api = backend
 		.mount(fakeApi())
 		// The rail's count of failed deliveries.
@@ -95,10 +98,10 @@ const moreOf = (target: HTMLElement) => within(target).getByRole("button", { nam
 describe("flow: looking around the trash (T3)", () => {
 	it("TRASH-B1 opens a folder to its inside and goes back up: trail, title, folder actions, the way up, and no dates", async () => {
 		await renderTrash();
-		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: "시리즈 원고" }));
+		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: series.name }));
 		await screen.findByRole("row", { name: /시리즈 1화/ });
-		expect(lastList().get("folder")).toBe("series");
-		expect(screen.getByRole("heading", { level: 1, name: "시리즈 원고" })).toBeInTheDocument();
+		expect(lastList().get("folder")).toBe(series.id);
+		expect(screen.getByRole("heading", { level: 1, name: series.name })).toBeInTheDocument();
 		expect(
 			within(screen.getByRole("navigation", { name: t("trail.label") })).getByRole("link", { name: t("trail.root") }),
 		).toBeInTheDocument();
@@ -120,7 +123,7 @@ describe("flow: looking around the trash (T3)", () => {
 	it("TRASH-R5 restores one entry from inside a folder: the request, then a toast that says the folder was made again, and 열기 goes to the editor", async () => {
 		backend.onRestore = ({ items }) =>
 			items.map((item) => ({ type: item.type, id: item.id, ok: true, recreated: true }));
-		nav.setSearch("folder=series");
+		nav.setSearch(`folder=${series.id}`);
 		render(
 			<AdminQueryProvider>
 				<TrashScreen />
@@ -156,23 +159,21 @@ describe("flow: looking around the trash (T3)", () => {
 
 	it("TRASH-B1 opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
 		await renderTrash();
-		const link = within(row(/옛 소개 글/)).getByRole("link", { name: "옛 소개 글" });
+		const link = within(row(/옛 소개 글/)).getByRole("link", { name: ABOUT });
 		expect(link.getAttribute("href")).toBe(testSite.adminEntryEditHref("about"));
 
-		fireEvent.click(within(row(/임시/)).getByRole("button", { name: "임시" }));
-		const panel = await screen.findByRole("complementary", { name: "임시" });
+		fireEvent.click(within(row(/임시/)).getByRole("button", { name: POINTED }));
+		const panel = await screen.findByRole("complementary", { name: POINTED });
 		expect(within(panel).getByText(t("panel.state", { left: t("row.left", { count: 3 }) }))).toBeInTheDocument();
 		await within(panel).findByText(t("panel.pointing", { count: 4 }));
 		expect(
 			api
 				.sent("GET /v1/entries/:id/relations")
-				.some((request) => request.params.id === "tag" && request.query.get("includeTrashed") === "true"),
+				.some((request) => request.params.id === tag.id && request.query.get("includeTrashed") === "true"),
 		).toBe(true);
 		const pointing = within(panel).getAllByRole("link");
-		expect(pointing.map((a) => a.textContent).sort()).toEqual(
-			["첫 번째 글", "발행 후 고친 글", "가을 사진 정리", "연습장"].sort(),
-		);
-		expect(within(panel).getByRole("link", { name: "첫 번째 글" }).getAttribute("href")).toBe(
+		expect(pointing.map((a) => a.textContent).sort()).toEqual([...pointingTitles].sort());
+		expect(within(panel).getByRole("link", { name: pointingTitles[0] }).getAttribute("href")).toBe(
 			testSite.adminEntryEditHref("r1"),
 		);
 		// The one in the trash says so.
@@ -183,7 +184,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(within(panel).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeInTheDocument();
 		fireEvent.click(within(panel).getByRole("button", { name: tc("lifecycle.restore") }));
 		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
-		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: "tag", expectedVersion: 3 }] });
+		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: tag.id, expectedVersion: 3 }] });
 		// An item comes back as it was: no "draft" in the toast.
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("restore.done"), {}));
 	});
@@ -257,7 +258,7 @@ describe("flow: deleting for good (T5)", () => {
 
 		fireEvent.click(within(dialog).getByRole("button", { name: t("blocked.unlink") }));
 		await waitFor(() => expect(posted("/references/unlink")).toHaveLength(1));
-		expect(posted("/references/unlink")[0]).toEqual({ targetIds: ["tag"] });
+		expect(posted("/references/unlink")[0]).toEqual({ targetIds: [tag.id] });
 		// The line is done; the one in the trash is still open.
 		await waitFor(() => expect(within(dialog).queryByRole("button", { name: t("blocked.unlink") })).toBeNull());
 
@@ -266,12 +267,12 @@ describe("flow: deleting for good (T5)", () => {
 		fireEvent.click(confirm());
 		await waitFor(() => expect(posted("/trash/delete")).toHaveLength(1));
 		// The entry in the trash goes first, so nothing points at the item when its turn comes.
-		expect(posted("/trash/delete")[0].items.map((item: { id: string }) => item.id)).toEqual(["r4", "tag"]);
+		expect(posted("/trash/delete")[0].items.map((item: { id: string }) => item.id)).toEqual(["r4", tag.id]);
 	});
 
 	it("TRASH-D2 shows the blockers a refused delete names, with the same ways out", async () => {
 		backend.top = backend.top.map((unit) =>
-			unit.id === "tag" && unit.type === "entry" ? { ...unit, usages: 0 } : unit,
+			unit.id === tag.id && unit.type === "entry" ? { ...unit, usages: 0 } : unit,
 		);
 		backend.onDelete = ({ items }) =>
 			items.map((item) => ({

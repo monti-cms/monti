@@ -1,10 +1,10 @@
 import { StatusBarPluginCell } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, defaultLocale, secondLocale } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
-import { screensMessages } from "../../messages";
 import {
 	StatusBar,
 	type StatusBarContextValue,
@@ -15,15 +15,14 @@ import {
 import { statusBarMessages } from "../status-bar.messages";
 
 const tStatusBar = testSite.createTranslator(statusBarMessages);
-const tScreens = testSite.createTranslator(screensMessages);
 
 const { render: renderWithRouter } = createTestRouter();
 afterEach(cleanup);
 
 const context = (over: Partial<StatusBarContextValue> = {}): StatusBarContextValue => ({
-	collection: "post",
+	collection: contentCollection,
 	entryId: "e1",
-	locale: "ko",
+	locale: defaultLocale,
 	textIssues: null,
 	...over,
 });
@@ -72,7 +71,7 @@ describe("to-do cell (flow 1 steps 10 to 13)", () => {
 	it("WRITE-P1 counts the rows, and a row goes to its place when pressed", async () => {
 		const onOpen = vi.fn();
 		show(props({ todo: todo({ rows: [row("a", "요약 쓰기", "요약 · 비어 있음", onOpen), row("b", "이미지")] }) }));
-		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
+		fireEvent.click(bar().getByRole("button", { name: tStatusBar("todo.count", { count: 2 }) }));
 		const list = within(await screen.findByRole("dialog"));
 		expect(list.getByText(tStatusBar("todo.title"))).toBeInTheDocument();
 		fireEvent.click(list.getByRole("button", { name: /요약 쓰기/ }));
@@ -88,27 +87,23 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 		actionLabel: "고치기",
 		onAction: () => {},
 	});
-	const SpellCell = () => (
-		<StatusBarPluginCell
-			label="맞춤법"
-			findings={[finding("1", "몇일 → 며칠"), finding("2", "안되요 → 안 돼요")]}
-			settings={{ label: "설정", onClick: () => {} }}
-			fixAll={{ label: "모두 고치기", onClick: () => {} }}
-		/>
-	);
 
 	it("PLUG-A4 tells the plugin where it is: the language of the entry and the text findings", () => {
+		/** The plugin's own label: test data. */
+		const label = "검사";
+		/** A language the plugin does not check: another site locale, or any other code on a one-language site. */
+		const otherLocale = secondLocale ?? "zz";
 		const Where = () => {
 			const { locale, collection, textIssues } = useStatusBarContext();
-			return locale === "ko" ? (
-				<StatusBarPluginCell label="검사" findings={[finding("1", `${collection}:${textIssues?.count}`)]} />
+			return locale === defaultLocale ? (
+				<StatusBarPluginCell label={label} findings={[finding("1", `${collection}:${textIssues?.count}`)]} />
 			) : null;
 		};
 		const issues = { count: 3, items: [], fixAll: null };
-		show(props({ context: context({ locale: "ko", textIssues: issues }) }), { where: Where });
-		expect(bar().getByRole("button", { name: "검사 1" })).toBeInTheDocument();
+		show(props({ context: context({ locale: defaultLocale, textIssues: issues }) }), { where: Where });
+		expect(bar().getByRole("button", { name: `${label} 1` })).toBeInTheDocument();
 		cleanup();
-		show(props({ context: context({ locale: "en", textIssues: issues }) }), { where: Where });
-		expect(bar().queryByRole("button", { name: /검사/ })).toBeNull();
+		show(props({ context: context({ locale: otherLocale, textIssues: issues }) }), { where: Where });
+		expect(bar().queryByRole("button", { name: new RegExp(label) })).toBeNull();
 	});
 });

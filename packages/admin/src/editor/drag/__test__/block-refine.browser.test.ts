@@ -5,7 +5,6 @@ import { findBlockDOM, refineBlock } from "../block-resolve";
 
 const html = (markup: string) => {
 	const root = document.createElement("div");
-	root.className = "ProseMirror";
 	root.style.width = "500px";
 	root.innerHTML = markup;
 	document.body.replaceChildren(root);

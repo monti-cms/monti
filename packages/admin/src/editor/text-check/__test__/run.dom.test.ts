@@ -9,6 +9,9 @@ import { extractSegments } from "../extract";
 import { createTextCheckPlugin, type TextCheckMeta, textCheckIssues, textCheckPluginKey } from "../plugin";
 import { checkSegments, chunkSegments, placeIssues, TextCheckCache } from "../run";
 
+/** The language of the Korean test text, as a language tag. The text check reads it from the entry, not from the site's locales. */
+const LANGUAGE = "ko";
+
 let editor: Editor | null = null;
 afterEach(() => {
 	editor?.destroy();
@@ -47,9 +50,9 @@ const wordChecker = (word: string, suggestion: string, id = "words") =>
 
 /** Places cached results across the whole document (same path as the editor button check). */
 const checkDoc = async (current: Editor, checker: ReturnType<typeof wordChecker>, cache = new TextCheckCache()) => {
-	const segments = extractSegments(current.state.doc, { locale: "ko" });
-	await checkSegments({ checker, segments, locale: "ko", cache, signal: new AbortController().signal });
-	const issues = placeIssues({ checkers: [checker], segments, locale: "ko", cache });
+	const segments = extractSegments(current.state.doc, { locale: LANGUAGE });
+	await checkSegments({ checker, segments, locale: LANGUAGE, cache, signal: new AbortController().signal });
+	const issues = placeIssues({ checkers: [checker], segments, locale: LANGUAGE, cache });
 	const meta: TextCheckMeta = {
 		type: "replace",
 		checkerIds: [checker.id],
@@ -70,15 +73,15 @@ describe("checker definition", () => {
 	});
 
 	it("PLUG-T1 matches languages by their primary subtag", () => {
-		const ko = defineTextChecker({ id: "ko", label: "ko", locales: ["ko-KR"], check: async () => [] });
-		expect(supportsLocale(ko, "ko")).toBe(true);
-		expect(supportsLocale(ko, "en")).toBe(false);
-		expect(supportsLocale(defineTextChecker({ id: "any", label: "any", check: async () => [] }), "ja")).toBe(true);
+		const french = defineTextChecker({ id: "fr", label: "fr", locales: ["fr-CA"], check: async () => [] });
+		expect(supportsLocale(french, "fr")).toBe(true);
+		expect(supportsLocale(french, "en")).toBe(false);
+		expect(supportsLocale(defineTextChecker({ id: "any", label: "any", check: async () => [] }), "de")).toBe(true);
 	});
 });
 
 describe("batching and cache", () => {
-	const segment = (id: string, text: string): TextCheckSegment => ({ id, text, locale: "ko" });
+	const segment = (id: string, text: string): TextCheckSegment => ({ id, text, locale: LANGUAGE });
 
 	it("PLUG-T4 splits by paragraph and character limits", () => {
 		const list = [segment("a", "12345"), segment("b", "123"), segment("c", "1234567890"), segment("d", "1")];
@@ -97,14 +100,14 @@ describe("batching and cache", () => {
 		const current = open("가 틀린말\n\n나 틀린말\n\n가 틀린말\n");
 		const checker = defineTextChecker({ ...wordChecker("틀린말", "맞는 말"), limits: { maxSegments: 1 } });
 		const cache = new TextCheckCache();
-		const segments = extractSegments(current.state.doc, { locale: "ko" });
+		const segments = extractSegments(current.state.doc, { locale: LANGUAGE });
 		const signal = new AbortController().signal;
-		await checkSegments({ checker, segments, locale: "ko", cache, signal });
+		await checkSegments({ checker, segments, locale: LANGUAGE, cache, signal });
 		// Two paragraphs with the same text are sent once, one paragraph per batch.
 		expect(checker.check).toHaveBeenCalledTimes(2);
-		await checkSegments({ checker, segments, locale: "ko", cache, signal });
+		await checkSegments({ checker, segments, locale: LANGUAGE, cache, signal });
 		expect(checker.check).toHaveBeenCalledTimes(2);
-		expect(placeIssues({ checkers: [checker], segments, locale: "ko", cache })).toHaveLength(3);
+		expect(placeIssues({ checkers: [checker], segments, locale: LANGUAGE, cache })).toHaveLength(3);
 	});
 
 	it("PLUG-T2 drops invalid values in checker results and fills in missing ones", () => {

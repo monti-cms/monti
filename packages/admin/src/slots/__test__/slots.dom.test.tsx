@@ -1,6 +1,7 @@
 import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../core/test/any-site";
 import { testSite } from "../../../../core/test/site";
 import { NoticeError } from "../../api/client";
 import { renderWithSite } from "../../test/site";
@@ -39,7 +40,9 @@ function renderSlot(sources: SlotSource[], request: Partial<SlotRequest> = {}, {
 	const slot = (
 		<TooltipProvider>
 			<SlotRegistryProvider sources={sources}>
-				<Host request={{ slot: "field", target: "slug", collection: "post", getContext, apply, ...request }} />
+				<Host
+					request={{ slot: "field", target: "slug", collection: contentCollection, getContext, apply, ...request }}
+				/>
 			</SlotRegistryProvider>
 		</TooltipProvider>
 	);
@@ -51,7 +54,7 @@ describe("the fill action of a slot", () => {
 	it("PLUG-A3 renders nothing when no action is attached, and asks the source with the slot, target and collection", () => {
 		const source = vi.fn<SlotSource>(() => []);
 		renderSlot([source]);
-		expect(source).toHaveBeenCalledWith({ slot: "field", target: "slug", collection: "post" });
+		expect(source).toHaveBeenCalledWith({ slot: "field", target: "slug", collection: contentCollection });
 		expect(screen.queryByRole("button")).toBeNull();
 	});
 

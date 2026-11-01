@@ -13,13 +13,8 @@ export type { BlockConverter, ConverterContext } from "./types";
 
 /**
  * Block converter registry of a site. A block with an edit UI adds one more converter line here.
- * If two converters have the same `cmsTypes` or `tiptapTypes`, the registry test fails.
- * (However, detailed branch converters with `matches` may share the same cmsType.)
- * @internal The registry test reads the whole list.
+ * Converters with `matches` (code fence blocks, picked by language) may share a cmsType with the default one.
  */
-export const blockConvertersOf = (site: Pick<Site, "ADDED_BLOCKS">): readonly BlockConverter[] =>
-	registryOf(site).converters;
-
 const registryOf = perSite((site: Pick<Site, "ADDED_BLOCKS">) => {
 	const converters: readonly BlockConverter[] = [
 		imageConverter,
@@ -43,7 +38,7 @@ const registryOf = perSite((site: Pick<Site, "ADDED_BLOCKS">) => {
 			byTiptapType.set(type, converter);
 		}
 	}
-	return { converters, byCmsType, byTiptapType };
+	return { byCmsType, byTiptapType };
 });
 
 export const converterForCms = (
