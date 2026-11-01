@@ -1,7 +1,7 @@
 import { packageTests } from "../../vitest.shared";
 
 /**
- * The L3 tests of ui that need a real browser (`*.browser.test.tsx`): pointer drags and focus moves. They run in Chromium; the rest of L3 runs in
+ * The L3 tests of ui that need a real browser (`*.browser.test.ts(x)`): pointer drags, focus moves and the measuring of the visual checks. They run in Chromium; the rest of L3 runs in
  * jsdom (`vitest.dom.config.ts`).
  */
 export default packageTests({
