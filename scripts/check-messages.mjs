@@ -84,7 +84,8 @@ const isBundle = (value) =>
 const ALL_RULES = ["file-name", "missing-key", "unreferenced"];
 /**
  * The packages checked, with their rules. The core looks its block labels and error texts up by names built at run time (a block's name, an error
- * code), which the reference rule cannot see, so it is checked for names and keys only.
+ * code), which the reference rule cannot see, so it is checked for names and keys only. The auth package has no dictionary of its own to check: it
+ * builds `cms.auth` when it starts, from the button labels each login provider brings, and a provider from another package may bring English only.
  */
 const PACKAGES = {
 	admin: ALL_RULES,
