@@ -90,6 +90,21 @@ const migrations: SchemaMigration[] = [
 	{ id: "author-default", op: "setDefault", collection: "post", field: "author", value: "Staff" },
 ];
 
+/** A body with a link to another entry. */
+const linkTo = (entryId: string): StoredDocument => ({
+	type: "doc",
+	version: STORED_DOCUMENT_VERSION,
+	content: [
+		{
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "See " } as CmsNode,
+				{ type: "text", text: "the other entry", marks: [{ type: "link", attrs: { entryId } }] } as CmsNode,
+			],
+		},
+	],
+});
+
 interface BodyRow {
 	entry_id: string;
 	state: "working" | "published";
@@ -321,6 +336,18 @@ describe("schema changes", () => {
 			} as never;
 			expect((await checkSchemaChange(store, diff)).impacts[0]).toMatchObject({ checked: false, entries: 0 });
 		});
+
+		it("SCHEMA-F4 counts the same when the bodies are read one at a time", async () => {
+			await baseline();
+			const store = storeFor(siteAfter);
+			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
+			const options = { site: siteAfter, transforms: plan.pending };
+			const whole = await checkSchemaChange(store, plan.diff, options);
+			const paged = await checkSchemaChange(store, plan.diff, { ...options, batchSize: 1 });
+			// The working and published copies of the four posts.
+			expect(whole.bodiesRead).toBe(6);
+			expect(paged).toEqual(whole);
+		});
 	});
 
 	describe("applying", () => {
@@ -378,6 +405,8 @@ describe("schema changes", () => {
 			const done = await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
 			expect(done.result.applied).toEqual(migrations.map((item) => item.id));
 			expect(done.result.dryRun).toBe(false);
+			// What the report says: A, B, C and D rewritten (both copies of A and B), nothing skipped, dropped or trashed.
+			expect(done.result).toMatchObject({ entries: 4, bodies: 6, skipped: [], dropped: [], trashed: [] });
 
 			const rowsAfter = await rows();
 			const a = rowsAfter.get(`${ids.a}/working`);
@@ -471,6 +500,72 @@ describe("schema changes", () => {
 			const renamed = many.filter((id) => after.get(`${id}/working`)?.metadata.excerpt !== undefined);
 			expect(renamed).toHaveLength(many.length);
 			expect(many.some((id) => "summary" in (after.get(`${id}/working`)?.metadata ?? {}))).toBe(false);
+		});
+
+		it("SCHEMA-F5 keeps the body links of a transformed entry as they were", async () => {
+			await baseline();
+			const linked = (
+				await serviceFor(siteBefore).createDraft({
+					collection: "post",
+					slug: "e",
+					metadata: { title: "E", summary: "Summary E" },
+					doc: linkTo(ids.category),
+				} as never)
+			).entry.id;
+			const before = await references(linked);
+			expect(before.map((ref) => ref.target_id)).toEqual([ids.category]);
+			await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
+			expect((await rows()).get(`${linked}/working`)?.metadata).toMatchObject({ excerpt: "Summary E" });
+			expect(await references(linked)).toEqual(before);
+		});
+
+		it("SCHEMA-F5 does not overwrite an edit saved while the apply runs", async () => {
+			await baseline();
+			const entry = await storeFor(siteBefore).getEntry(ids.d);
+			const edited = { title: "D, edited" };
+			const waitsForALock = async () =>
+				Number(
+					(
+						await pool.query<{ n: string }>(
+							`SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1`,
+							[`%"${schemaName}"%`],
+						)
+					).rows[0]?.n,
+				) > 0;
+			let save: Promise<unknown> | undefined;
+			let saved = false;
+			await storeFor(siteAfter).applySchemaChange({
+				transformIds: ["author-default"],
+				collections: ["post"],
+				schema: snapshotSchema(siteAfter),
+				unlinkRewrite: async () => null,
+				rewrite: async (body) => {
+					if (body.entryId !== ids.d) return null;
+					// The writer saves D after the apply has read it and before the apply writes it back.
+					save = serviceFor(siteBefore)
+						.saveDraft(ids.d, {
+							collection: "post",
+							slug: "d",
+							metadata: edited,
+							doc: docOf("Body of d"),
+							expectedVersion: entry.version,
+						} as never)
+						.then(() => {
+							saved = true;
+						});
+					await expect.poll(async () => saved || (await waitsForALock())).toBe(true);
+					const metadata = { ...body.metadata, author: "Staff" };
+					return {
+						metadata,
+						doc: body.doc,
+						contentHash: computeContentHash(metadata as never, body.doc),
+						references: [],
+						changedBy: ["author-default"],
+					};
+				},
+			});
+			await save;
+			expect((await rows()).get(`${ids.d}/working`)?.metadata).toEqual(edited);
 		});
 
 		it("SCHEMA-F5 is idempotent: a second apply runs nothing and changes nothing", async () => {
@@ -712,20 +807,6 @@ describe("removing a collection with its entries", () => {
 
 	const drop: SchemaMigration = { id: "drop-memo", op: "dropCollection", collection: "memo" };
 
-	const linkTo = (entryId: string): StoredDocument => ({
-		type: "doc",
-		version: STORED_DOCUMENT_VERSION,
-		content: [
-			{
-				type: "paragraph",
-				content: [
-					{ type: "text", text: "See " } as CmsNode,
-					{ type: "text", text: "the memo", marks: [{ type: "link", attrs: { entryId } }] } as CmsNode,
-				],
-			},
-		],
-	});
-
 	let pool: Pool;
 	let schemaName: string;
 	const siteBefore = createSite(before as CmsConfig);
@@ -877,6 +958,61 @@ describe("removing a collection with its entries", () => {
 		expect(removal?.drop?.addresses).toBeGreaterThanOrEqual(2);
 	});
 
+	it("SCHEMA-D3 counts each removed collection on its own: one that holds nothing counts nothing", async () => {
+		const scrap = defineCollection({ label: "Scrap", kind: "document", path: "/scrap/:slug", fields: { title, slug } });
+		const withScrap = createSite(
+			defineSite({ collections: { memo, post: post(true), scrap }, locales, defaultLocale: "en" }) as CmsConfig,
+		);
+		await applySchemaChange({ site: withScrap, store: storeFor(withScrap), migrations: [] });
+		const store = storeFor(siteAfter);
+		const dropScrap: SchemaMigration = { id: "drop-scrap", op: "dropCollection", collection: "scrap" };
+		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop, dropScrap] });
+		const impact = await checkSchemaChange(store, plan.diff, { site: siteAfter, transforms: plan.pending });
+		const dropOf = (collection: string) =>
+			impact.impacts.find((item) => item.change.kind === "collection_removed" && item.change.collection === collection)
+				?.drop;
+		expect(dropOf("scrap")).toMatchObject({
+			entries: 0,
+			trashed: 0,
+			translations: 0,
+			folders: 0,
+			addresses: 0,
+			bodyLinks: 0,
+			unlinked: { count: 0, sample: [] },
+		});
+		expect(dropOf("memo")).toMatchObject({ entries: 3, folders: 1, unlinked: { count: 1 } });
+	});
+
+	it("SCHEMA-D4 refuses the removal and changes nothing when an entry pointing in cannot be unlinked", async () => {
+		// The new schema shortens the title, so p1, which points at m1, cannot be written again without the relation.
+		const strict = createSite(
+			defineSite({
+				collections: {
+					post: defineCollection({
+						label: "Post",
+						kind: "document",
+						path: "/posts/:slug",
+						fields: { title: { ...title, max: 5 }, slug },
+					}),
+				},
+				locales,
+				defaultLocale: "en",
+			}) as CmsConfig,
+		);
+		const error = await applySchemaChange({ site: strict, store: storeFor(strict), migrations: [drop] }).catch(
+			(caught: unknown) => caught,
+		);
+		expect(error).toBeInstanceOf(SchemaChangeError);
+		expect((error as Error).message).toContain(ids.p1);
+		expect(await memoEntries()).toBe(4);
+		const p1 = await pool.query<{ metadata: Record<string, unknown> }>(
+			`SELECT metadata FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
+			[ids.p1],
+		);
+		expect(p1.rows[0]?.metadata.memoId).toBe(ids.m1);
+		expect(await count("cms_migrations", "name = 'schema:drop-memo'")).toBe(0);
+	});
+
 	it("SCHEMA-D3 names the entries of other collections that point at it, with the first titles", async () => {
 		const store = storeFor(siteAfter);
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
@@ -953,6 +1089,7 @@ describe("removing a collection with its entries", () => {
 
 		const store = storeFor(siteAfter);
 		const postsBefore = await count("entries", "collection = 'post'");
+		const addressesBefore = await count("content_addresses", "collection = 'memo'");
 		const done = await applySchemaChange({ site: siteAfter, store, migrations: [drop] });
 
 		// The dropped ids are out of both bodies of p1 and out of p4, and nothing references them any more.
@@ -968,7 +1105,7 @@ describe("removing a collection with its entries", () => {
 		expect(await saved()).toBe(savedBefore + 2);
 
 		expect(done.result.dropped).toEqual([
-			expect.objectContaining({ collection: "memo", entries: 3, trashed: 1, translations: 1, folders: 1 }),
+			{ collection: "memo", entries: 3, trashed: 1, translations: 1, folders: 1, addresses: addressesBefore },
 		]);
 		expect(done.result.applied).toEqual(["drop-memo"]);
 		expect(await memoEntries()).toBe(0);
