@@ -1,6 +1,7 @@
 import type { RelationField } from "@monti-cms/core";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
@@ -10,8 +11,8 @@ import { entriesMessages } from "../messages";
 
 const t = testSite.createTranslator(entriesMessages);
 
-/** Label of the relation target (`post`). Input hints use the target collection's label (the collection name if not in config). */
-const TARGET = testSite.isCollection("post") ? testSite.schemaOf("post").label : "post";
+/** The relation target: the site's content collection. Input hints use its label. */
+const TARGET = testSite.schemaOf(contentCollection).label;
 
 const POSTS = [
 	{ id: "p1", title: "첫 글", status: "published" },
@@ -21,6 +22,8 @@ const POSTS = [
 ];
 
 let api: FakeApi;
+const titleOf = (id: string) => POSTS.find((post) => post.id === id)?.title ?? id;
+
 /** The queries of the search requests the pickers sent (the server search is `GET /v1/entries/search`). */
 const searches = () => api.sent("GET /v1/entries/search").map((request) => request.query);
 
@@ -44,7 +47,7 @@ afterEach(() => {
 });
 
 const props = (field: RelationField, value: FieldInputProps["value"], onChange = vi.fn()): FieldInputProps => ({
-	collection: "post",
+	collection: contentCollection,
 	form: EMPTY_FORM,
 	name: "rel",
 	field,
@@ -64,15 +67,14 @@ const openList = async (name: string) => {
 const optionNames = async () => (await screen.findAllByRole("option")).map((option) => option.textContent);
 
 describe("replacement post (single relation)", () => {
-	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
+	const field: RelationField = { kind: "relation", label: "최신 글", to: contentCollection };
 
 	it("WRITE-W3 pressing opens the first posts minus itself, and picking switches to that ID", async () => {
 		const onChange = vi.fn();
 		render(<EntryPicker {...props(field, null, onChange)} />);
-		await openList("최신 글");
+		await openList(field.label);
 
 		// The list holds the other posts, never the entry being edited.
-		const titleOf = (id: string) => POSTS.find((post) => post.id === id)?.title;
 		const third = await screen.findByRole("option", { name: titleOf("p3") });
 		expect(screen.getByRole("option", { name: titleOf("p1") })).toBeInTheDocument();
 		expect(screen.queryByRole("option", { name: titleOf("self") })).toBeNull();
@@ -82,14 +84,14 @@ describe("replacement post (single relation)", () => {
 });
 
 describe("relation picker search on the server", () => {
-	const field: RelationField = { kind: "relation", label: "최신 글", to: "post" };
+	const field: RelationField = { kind: "relation", label: "최신 글", to: contentCollection };
 
 	it("LIST-F7 asks the server for the typed text after a pause, instead of loading the whole list", async () => {
 		render(<EntryPicker {...props(field, null)} />);
-		const input = await openList("최신 글");
+		const input = await openList(field.label);
 		await waitFor(() => expect(searches().length).toBeGreaterThan(0));
 		// The first request is the first posts of the collection: no text, no paging through everything.
-		expect(searches()[0]?.get("collection")).toBe("post");
+		expect(searches()[0]?.get("collection")).toBe(contentCollection);
 		expect(searches()[0]?.has("query")).toBe(false);
 
 		fireEvent.input(input, { target: { value: "둘째" }, inputType: "insertText" });
@@ -99,7 +101,7 @@ describe("relation picker search on the server", () => {
 
 	it("WRITE-W3 keeps the picked post visible when the search does not return it", async () => {
 		render(<EntryPicker {...props(field, "p2")} />);
-		const input = (await screen.findByRole("combobox", { name: "최신 글" })) as HTMLInputElement;
+		const input = (await screen.findByRole("combobox", { name: field.label })) as HTMLInputElement;
 		await waitFor(() => expect(input.value).toBe(`둘째 글${t("entry.unpublished")}`));
 		// It was looked up by id, once, whatever the text says.
 		expect(searches().some((query) => query.getAll("id").join() === "p2")).toBe(true);
@@ -110,7 +112,7 @@ describe("relation picker search on the server", () => {
 });
 
 describe("collection post list (ordered multi relation)", () => {
-	const field: RelationField = { kind: "relation", label: "게시글", to: "post", many: true, ordered: true };
+	const field: RelationField = { kind: "relation", label: "게시글", to: contentCollection, many: true, ordered: true };
 
 	it("WRITE-W3 shows number and title in saved order and flags unpublished posts", async () => {
 		render(<OrderedEntryList {...props(field, ["p3", "p2"])} />);
@@ -129,20 +131,20 @@ describe("collection post list (ordered multi relation)", () => {
 		const onChange = vi.fn();
 		const { rerender } = render(<OrderedEntryList {...props(field, ["p3"], onChange)} />);
 		await openList(t("entry.editList", { target: TARGET }));
-		fireEvent.click(await screen.findByRole("option", { name: "첫 글" }));
+		fireEvent.click(await screen.findByRole("option", { name: titleOf("p1") }));
 		expect(onChange).toHaveBeenLastCalledWith(["p3", "p1"]);
 
 		rerender(<OrderedEntryList {...props(field, ["p3", "p1"], onChange)} />);
-		fireEvent.click(await screen.findByRole("option", { name: "셋째 글" }));
+		fireEvent.click(await screen.findByRole("option", { name: titleOf("p3") }));
 		expect(onChange).toHaveBeenLastCalledWith(["p1"]);
 	});
 
 	it("WRITE-W3 up, down and remove buttons change the order and the list", async () => {
 		const onChange = vi.fn();
 		render(<OrderedEntryList {...props(field, ["p1", "p2", "p3"], onChange)} />);
-		fireEvent.click(await screen.findByRole("button", { name: t("entry.up", { title: "셋째 글" }) }));
+		fireEvent.click(await screen.findByRole("button", { name: t("entry.up", { title: titleOf("p3") }) }));
 		expect(onChange).toHaveBeenLastCalledWith(["p1", "p3", "p2"]);
-		fireEvent.click(screen.getByRole("button", { name: t("entry.remove", { title: "첫 글" }) }));
+		fireEvent.click(screen.getByRole("button", { name: t("entry.remove", { title: titleOf("p1") }) }));
 		expect(onChange).toHaveBeenLastCalledWith(["p2", "p3"]);
 	});
 });

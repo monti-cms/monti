@@ -225,6 +225,18 @@ const EXEMPT = [
 		why: "the mock is how the test sees that the module was loaded, which is the behavior under test",
 	},
 	{
+		pattern: "class-name",
+		file: "packages/admin/src/screens/entries/__test__/source-sync.browser.test.ts",
+		count: 1,
+		why: "builds the box DOM Tiptap's React node view makes (`.react-renderer`), which is what `followCollapsed` matches boxes by",
+	},
+	{
+		pattern: "query-selector",
+		file: "packages/admin/src/screens/entries/__test__/source-sync.browser.test.ts",
+		count: 1,
+		why: "the active-block mark is a ProseMirror decoration class (`ACTIVE_BLOCK_CLASS`) the source pane's styles paint; it has no role or state",
+	},
+	{
 		pattern: "long-wait",
 		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",
 		count: 1,

@@ -1,6 +1,8 @@
+import { SUMMARY_ROLE } from "@monti-cms/core";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, requiredFields } from "../../../../../core/test/any-site";
 import { testSite } from "../../../../../core/test/site";
 import type { CmsIssue } from "../../../api/error-message";
 import { commonMessages } from "../../../lib/common.messages";
@@ -17,7 +19,7 @@ import { statusBarMessages } from "../../shared/status-bar.messages";
 import { entryCompareMessages } from "../entry-compare.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { type EntryData, formFingerprint, formFromEntry } from "../entry-form";
+import { type EntryData, type EntryForm, type EntryFormPatch, formFingerprint, formFromEntry } from "../entry-form";
 import { shortDate } from "../entry-stamps";
 import { entriesMessages } from "../messages";
 
@@ -28,8 +30,27 @@ const tStatusBar = testSite.createTranslator(statusBarMessages);
 const tEntryCompare = testSite.createTranslator(entryCompareMessages);
 const tShared = testSite.createTranslator(sharedMessages);
 const tPublishReadiness = testSite.createTranslator(publishReadinessMessages);
-const TITLE_LABEL = testSite.titleField("post").field.label;
-const CATEGORY_LABEL = testSite.storedField("post", "categoryId")?.field.label ?? "";
+const TITLE_LABEL = testSite.titleField(contentCollection).field.label;
+/** A relation the collection needs before publishing (the blog's category, another site's author): the to-do a refused publish names. */
+const REQUIRED_RELATION = requiredFields(contentCollection).find(({ field }) => field.kind === "relation");
+if (!REQUIRED_RELATION) throw new Error(`${contentCollection} has no required relation field`);
+/** The collection's summary: the second property the compare screen counts as changed, after the title. */
+const SUMMARY = testSite.roleField(contentCollection, SUMMARY_ROLE);
+if (!SUMMARY) throw new Error(`${contentCollection} has no summary field`);
+const SUMMARY_NAME = SUMMARY.name;
+/** The time of day of a moment on a 24-hour clock in the site's time zone (the blog's is 9 hours ahead of UTC, another site's may be UTC). */
+const siteClock = (iso: string) =>
+	new Intl.DateTimeFormat("en-GB", {
+		timeZone: testSite.CMS_TIME_ZONE,
+		hour: "2-digit",
+		minute: "2-digit",
+		hourCycle: "h23",
+	}).format(new Date(iso));
+/** Where the entry's slug puts it on the public site. */
+const PUBLIC_PATH = testSite.localizePath(
+	testSite.DEFAULT_LOCALE,
+	testSite.contentPath(contentCollection, "first-post") ?? "",
+);
 const tCommon = testSite.createTranslator(commonMessages);
 
 // One describe for each row of flow 1 that this screen owns (the canvas rows "글 쓰고 발행하기", "다른 곳에서 먼저 저장" and "다시 열었을 때 임시 저장본"). They
@@ -47,13 +68,16 @@ const imageIds = BODY.content.filter((node) => node.type === "image").map((node)
 
 const draft: EntryData = {
 	id: "entry-1",
-	collection: "post",
+	collection: contentCollection,
 	status: "draft",
 	version: 4,
 	folderId: null,
 	workingSlug: "first-post",
 	publishedSlug: null,
-	working: { metadata: { title: "첫 번째 글", categoryId: "cat-1", summary: "한 줄 소개" }, doc: BODY },
+	working: {
+		metadata: { title: "첫 번째 글", [REQUIRED_RELATION.name]: "rel-1", [SUMMARY_NAME]: "한 줄 소개" },
+		doc: BODY,
+	},
 };
 
 /** A server with one entry: it checks the version of a save and a publish, as the real one does. */
@@ -117,7 +141,11 @@ const told = (issue: { code: string; path?: string; message?: string; position?:
 	text: "서버 문구",
 	...(issue.path ? { where: issue.path } : {}),
 });
-const missingCategory = told({ code: "missing_field", path: "categoryId", message: "카테고리" });
+const missingRelation = told({
+	code: "missing_field",
+	path: REQUIRED_RELATION.name,
+	message: REQUIRED_RELATION.field.label,
+});
 const noAlt = (index: number) =>
 	told({ code: "missing_image_alt", path: "body", position: { blockId: imageIds[index] as string } });
 
@@ -127,7 +155,6 @@ const title = () => screen.findByRole("textbox", { name: TITLE_LABEL });
 const bar = async () => within(await screen.findByRole("region", { name: tScreens("column.status") }));
 const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 const header = () => within(screen.getByRole("banner"));
-const status = () => screen.getByTestId("entry-status-chip").textContent;
 /** The header's status mark reads `name` (a status has no role of its own; the header's buttons are told apart by role). */
 const headerStatus = (name: string) => header().findByText(name, { ignore: "button, button *" });
 /** The notice strip (a `status` region) whose sentence is `sentence`. */
@@ -180,7 +207,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 	});
 
 	it("WRITE-P1 blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
-		server.publishRefusal = [missingCategory, noAlt(0), noAlt(1)];
+		server.publishRefusal = [missingRelation, noAlt(0), noAlt(1)];
 		renderEdit();
 		await title();
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
@@ -196,13 +223,13 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(
 			await (await bar()).findByRole("button", { name: tStatusBar("todo.count", { count: 2 }) }),
 		).toBeInTheDocument();
-		const pickCategory = tPublishReadiness("field.pick", { name: CATEGORY_LABEL });
-		fireEvent.click(list.getByRole("button", { name: startingWith(pickCategory, pickCategory) }));
+		const pickRelation = tPublishReadiness("field.pick", { name: REQUIRED_RELATION.field.label });
+		fireEvent.click(list.getByRole("button", { name: startingWith(pickRelation, pickRelation) }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
 	it("WRITE-P1 lists the to-dos fixed along the way as check rows, and says nothing is left when they are all gone", async () => {
-		server.checkAnswer = { issues: [missingCategory, noAlt(0), noAlt(1)], warnings: [] };
+		server.checkAnswer = { issues: [missingRelation, noAlt(0), noAlt(1)], warnings: [] };
 		renderEdit();
 		fireEvent.click(await (await bar()).findByRole("button", { name: tStatusBar("todo.count", { count: 2 }) }));
 		await screen.findByRole("dialog");
@@ -235,7 +262,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		// The toast's own button: the action of the call that told the publish.
 		const [, options] = toast.mock.calls.find(([message]) => message === tEntryEditorShell("published")) ?? [];
 		(options as { action: { onClick: () => void } }).action.onClick();
-		expect(window.open).toHaveBeenCalledWith("/posts/first-post", "_blank", "noopener");
+		expect(window.open).toHaveBeenCalledWith(PUBLIC_PATH, "_blank", "noopener");
 
 		const done = await header().findByRole("button", { name: tEntryEditorShell("publishedState") });
 		expect(done.hasAttribute("disabled")).toBe(true);
@@ -295,16 +322,19 @@ describe("flow: write and publish (steps 09–15)", () => {
 
 describe("flow: saved elsewhere first", () => {
 	const changedAt = "2026-10-26T01:41:00.000Z";
+	/** What this screen typed, and the title the other save left on the server. */
+	const MINE = "내 입력";
+	const THEIRS = "서버 최신 제목";
 	/** Someone else saved version 9 while this screen holds version 4; the first save meets the conflict. */
 	async function conflicted() {
 		renderEdit();
-		fireEvent.change(await title(), { target: { value: "내 입력" } });
+		fireEvent.change(await title(), { target: { value: MINE } });
 		server.entry = {
 			...draft,
 			version: 9,
 			changedAt,
 			working: {
-				metadata: { ...draft.working.metadata, title: "서버 최신 제목", summary: "다른 곳에서 쓴 소개" },
+				metadata: { ...draft.working.metadata, title: THEIRS, [SUMMARY_NAME]: "다른 곳에서 쓴 소개" },
 				doc: BODY,
 			},
 		};
@@ -314,8 +344,8 @@ describe("flow: saved elsewhere first", () => {
 
 	it("WRITE-C1 shows a notice strip above the editor, not a dialog: the time it was saved, and compare and load the server version", async () => {
 		const strip = within(await conflicted());
-		// 01:41 UTC is 10:41 in the site's time zone.
-		expect(strip.getByText(tEntryCompare("conflict.title", { time: "10:41" }))).toBeInTheDocument();
+		// The time is the site's: 01:41 UTC is 10:41 on the blog.
+		expect(strip.getByText(tEntryCompare("conflict.title", { time: siteClock(changedAt) }))).toBeInTheDocument();
 		expect(strip.getByText(tEntryCompare("conflict.meta"))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(strip.getByRole("link", { name: tEntryCompare("compare") }).getAttribute("href")).toBe(
@@ -323,16 +353,16 @@ describe("flow: saved elsewhere first", () => {
 		);
 		expect(strip.getByRole("button", { name: tEntryCompare("loadServer") })).toBeInTheDocument();
 		expect((await bar()).getAllByText(tStatusBar("save.conflict")).length).toBeGreaterThan(0);
-		expect(((await title()) as HTMLInputElement).value).toBe("내 입력");
+		expect(((await title()) as HTMLInputElement).value).toBe(MINE);
 	});
 
 	it("WRITE-C2 loads the server version from the strip without reloading the page, and drops the local copy", async () => {
 		const strip = within(await conflicted());
 		// The refused save kept the input in the browser.
-		expect(backup()?.snapshot).toMatchObject({ title: "내 입력" });
+		expect(backup()?.snapshot).toMatchObject({ title: MINE });
 		fireEvent.click(strip.getByRole("button", { name: tEntryCompare("loadServer") }));
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("서버 최신 제목"));
+		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe(THEIRS));
 		await waitFor(() => expect(backup()).toBeUndefined());
 		expect(saves()).toHaveLength(1);
 	});
@@ -344,12 +374,14 @@ describe("flow: saved elsewhere first", () => {
 			await screen.findByRole("heading", { level: 1, name: tEntryCompare("heading.conflict") }),
 		).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: tEntryCompare("back") }).getAttribute("href")).toBe(EDIT_HREF);
-		expect(screen.getByText("/posts/first-post")).toBeInTheDocument();
+		expect(screen.getByText(PUBLIC_PATH)).toBeInTheDocument();
 		const mine = within(screen.getByRole("region", { name: tEntryCompare("side.mine") }));
-		const theirSide = screen.getByRole("region", { name: tEntryCompare("side.server", { version: 9, time: "10:41" }) });
+		const theirSide = screen.getByRole("region", {
+			name: tEntryCompare("side.server", { version: 9, time: siteClock(changedAt) }),
+		});
 		const theirs = within(theirSide);
-		expect(mine.getByRole("heading", { level: 2, name: "내 입력" })).toBeInTheDocument();
-		expect(theirs.getByRole("heading", { level: 2, name: "서버 최신 제목" })).toBeInTheDocument();
+		expect(mine.getByRole("heading", { level: 2, name: MINE })).toBeInTheDocument();
+		expect(theirs.getByRole("heading", { level: 2, name: THEIRS })).toBeInTheDocument();
 		// The properties that differ are on top of each side; the title is counted with them: the title and the summary.
 		// The changed words are marked apart, so the value is read as the side's text.
 		expect(theirSide.textContent).toContain("다른 곳에서 쓴 소개");
@@ -364,11 +396,11 @@ describe("flow: saved elsewhere first", () => {
 
 	it("WRITE-C3 picks the server version on the compare screen, and goes back to the editor with it", async () => {
 		await conflicted();
-		expect(backup()?.snapshot).toMatchObject({ title: "내 입력" });
+		expect(backup()?.snapshot).toMatchObject({ title: MINE });
 		act(() => nav.setSearch("compare=conflict"));
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("loadServer") }));
 		await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(EDIT_HREF));
-		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("서버 최신 제목"));
+		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe(THEIRS));
 		await waitFor(() => expect(backup()).toBeUndefined());
 	});
 
@@ -379,7 +411,7 @@ describe("flow: saved elsewhere first", () => {
 		await waitFor(() => expect(saves()).toHaveLength(2));
 		expect(saves()[1]?.body).toMatchObject({
 			expectedVersion: 9,
-			metadata: expect.objectContaining({ title: "내 입력" }),
+			metadata: expect.objectContaining({ title: MINE }),
 		});
 		await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(EDIT_HREF));
 		expect(server.entry.version).toBe(10);
@@ -392,7 +424,7 @@ describe("flow: saved elsewhere first", () => {
 		await screen.findByRole("heading", { level: 1, name: tEntryCompare("heading.conflict") });
 		act(() => nav.setSearch(""));
 		expect(await screen.findByRole("alert")).toBeInTheDocument();
-		expect(((await title()) as HTMLInputElement).value).toBe("내 입력");
+		expect(((await title()) as HTMLInputElement).value).toBe(MINE);
 	});
 
 	it("WRITE-C3 leaves the compare address when there is nothing to compare", async () => {
@@ -406,10 +438,12 @@ describe("flow: saved elsewhere first", () => {
 describe("flow: browser draft on reopening", () => {
 	const savedAt = Date.parse("2026-10-26T01:12:00.000Z");
 	/** `savedAt` as the strips write it, in the site's time zone. */
-	const KEPT_AT = tEntryCompare("stamp", { month: "10", day: "26", time: "10:12" });
-	function keepDraft(over: Record<string, unknown> = {}, baseVersion = 4) {
+	const KEPT_AT = tEntryCompare("stamp", { month: "10", day: "26", time: siteClock("2026-10-26T01:12:00.000Z") });
+	/** The title the browser kept. */
+	const KEPT = "브라우저에 남은 제목";
+	function keepDraft(over: EntryFormPatch = {}, baseVersion = 4) {
 		const base = formFromEntry(testSite, draft);
-		const snapshot = { ...base, title: "브라우저에 남은 제목", summary: "임시 소개", ...over };
+		const snapshot: EntryForm = { ...base, title: KEPT, [SUMMARY_NAME]: "임시 소개", ...over };
 		idb.keep(testSite, {
 			key: BACKUP_KEY,
 			entryId: "entry-1",
@@ -441,7 +475,7 @@ describe("flow: browser draft on reopening", () => {
 		keepDraft();
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryCompare("load") }));
-		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("브라우저에 남은 제목"));
+		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe(KEPT));
 		expect(screen.queryByRole("button", { name: tEntryCompare("discard") })).toBeNull();
 		expect((await bar()).getByRole("button", { name: tEntries("save.dirty") })).toBeInTheDocument();
 
@@ -462,14 +496,14 @@ describe("flow: browser draft on reopening", () => {
 		act(() => nav.setSearch("compare=draft"));
 		expect(await screen.findByRole("heading", { level: 1, name: tEntryCompare("heading.draft") })).toBeInTheDocument();
 		const left = within(screen.getByRole("region", { name: tEntryCompare("side.draft", { stamp: KEPT_AT }) }));
-		expect(left.getByRole("heading", { level: 2, name: "브라우저에 남은 제목" })).toBeInTheDocument();
-		const changed = tEntryCompare("stamp", { month: "10", day: "26", time: "09:58" });
+		expect(left.getByRole("heading", { level: 2, name: KEPT })).toBeInTheDocument();
+		const changed = tEntryCompare("stamp", { month: "10", day: "26", time: siteClock("2026-10-26T00:58:00.000Z") });
 		expect(screen.getByRole("region", { name: tEntryCompare("side.saved", { stamp: changed }) })).toBeInTheDocument();
 		const statusBar = within(screen.getByRole("region", { name: tScreens("column.status") }));
 		expect(statusBar.getByText(tEntries("save.local-only"))).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tEntryCompare("loadDraft") }));
 		await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(EDIT_HREF));
-		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe("브라우저에 남은 제목"));
+		await waitFor(async () => expect(((await title()) as HTMLInputElement).value).toBe(KEPT));
 	});
 
 	it("WRITE-R2 discards the draft from the compare screen and goes back to the editor with the server's copy", async () => {

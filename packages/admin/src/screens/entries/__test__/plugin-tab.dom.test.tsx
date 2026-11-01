@@ -3,6 +3,7 @@ import { type Collection, createSite } from "@monti-cms/core/site";
 import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../../core/test/any-site";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
 import { fakeApi } from "../../../test/fake-api";
@@ -71,12 +72,17 @@ describe("properties panel: the tab a plugin places fields in", () => {
 			...testConfig,
 			collections: {
 				...collections,
-				post: { ...collections.post, fields: { ...collections.post?.fields, note: fields.view({ view: "note" }) } },
+				[contentCollection]: {
+					...collections[contentCollection],
+					fields: { ...collections[contentCollection]?.fields, note: fields.view({ view: "note" }) },
+				},
 			},
 		} as unknown as CmsConfig);
 		const Custom = ({ form }: FieldViewProps) => <p>preview: {String(form.title)}</p>;
 		const panel = (
-			<EntryFormProvider value={{ collection: "post", form: { ...EMPTY_FORM, title: "Title" }, setForm: vi.fn() }}>
+			<EntryFormProvider
+				value={{ collection: contentCollection, form: { ...EMPTY_FORM, title: "Title" }, setForm: vi.fn() }}
+			>
 				<InspectorPanel
 					incomingReferences={[]}
 					isLoadingIncomingReferences={false}

@@ -31,7 +31,6 @@ const heading = (value: string): CmsNode => ({
 	attrs: { level: 2 },
 	content: [{ type: "text", text: value }],
 });
-const callout = (...content: CmsNode[]): CmsNode => ({ type: "callout", attrs: { type: "note" }, content });
 const quote = (...content: CmsNode[]): CmsNode => ({ type: "blockquote", content });
 const list = (...items: string[]): CmsNode => ({
 	type: "bulletList",
@@ -111,11 +110,11 @@ describe("pairing translation blocks with source blocks", () => {
 
 	it("TRANS-S3 pairs the blocks inside paired boxes, by link and then by kind", () => {
 		const source = blocksOf(
-			block(callout(block(para("X"), "x"), block(heading("Y"), "y"), block(para("Z"), "z")), "k"),
+			block(quote(block(para("X"), "x"), block(heading("Y"), "y"), block(para("Z"), "z")), "k"),
 			block(para("after"), "p"),
 		);
 		const translation = blocksOf(
-			block(callout(block(para("X'"), "t2"), block(heading("Y'"), "t3", "y"), block(para("Z'"), "t4", "z")), "t1", "k"),
+			block(quote(block(para("X'"), "t2"), block(heading("Y'"), "t3", "y"), block(para("Z'"), "t4", "z")), "t1", "k"),
 			block(para("after'"), "t5", "p"),
 		);
 		expect(partnersOf(translation, source)).toEqual([
@@ -125,7 +124,7 @@ describe("pairing translation blocks with source blocks", () => {
 	});
 
 	it("TRANS-S3 treats lists and tables as one block, and boxes whose body is blocks as boxes", () => {
-		const [first, second] = blocksOf(list("one", "two"), callout(para("inside")));
+		const [first, second] = blocksOf(list("one", "two"), quote(para("inside")));
 		expect(first?.children).toBeNull();
 		expect(second?.children?.map((child) => child.kind)).toEqual(["paragraph"]);
 	});
@@ -133,7 +132,7 @@ describe("pairing translation blocks with source blocks", () => {
 
 describe("the block the cursor is in", () => {
 	it("TRANS-S3 is the innermost block holding the position, inside boxes", () => {
-		const blocks = blocksOf(para("before"), callout(para("first"), para("second")));
+		const blocks = blocksOf(para("before"), quote(para("first"), para("second")));
 		const box = blocks[1] as SyncBlock;
 		const inner = box.children?.[1] as SyncBlock;
 		expect(blockPathAt(blocks, inner.pos + 2)).toEqual([box, inner]);
