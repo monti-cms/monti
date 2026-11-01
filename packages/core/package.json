@@ -39,6 +39,8 @@
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"test:mutation": "stryker run",
 		"typecheck": "tsc --noEmit -p .",
+		"gen:db-types": "tsx scripts/gen-db-types.ts",
+		"check:migrations": "tsx scripts/check-migrations.ts",
 		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {

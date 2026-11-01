@@ -81,7 +81,7 @@
 
 ### ID를 달지 않은 테스트
 
-- `store-contract.preferences-transfer`의 PreferenceStore 5개: 관리자 설정을 저장하는 곳이다. 설정(흐름 11)의 표에서 다룬다.
+- 저장소 계약 `preferences-transfer.contract`의 PreferenceStore 5개: 관리자 설정을 저장하는 곳이다. 설정(흐름 11)의 표에서 다룬다.
 - `cli/import-boundary` 8개: 설정 파일이 브라우저 번들에 들어가지 않는지 보는 `monti doctor`의 검사다. 이름만 import이고 데이터와는 다르다.
 
 ### 캔버스와 대조 (2026-10-31)

@@ -13,7 +13,7 @@ import {
 import type { EventStore } from "../../../core/store/ports";
 import type { Entry } from "../../../core/store/types";
 import type { Site } from "../../../site";
-import type { EventPayload } from "../db/database";
+import type { EventPayload } from "../db/column-types";
 import { dbOn } from "../db/kysely";
 import type { StoreContext } from "./context";
 

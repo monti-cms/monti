@@ -13,12 +13,20 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The integration branch that feature branches are cut from and merged into. `check:migrations` compares with it. It becomes `main` once the
+  # overhaul merges.
+  MONTI_BASE_BRANCH: overhaul
+
 jobs:
   check:
     name: lint · typecheck · build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The full history, for `check:migrations` to reach its base (the merge base with the integration branch, or the commit before the push).
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -38,6 +46,10 @@ jobs:
       - run: pnpm check:messages
       # The tests of overhauled packages (docs/testing.md) gain no new weak pattern or reference blog name.
       - run: pnpm check:tests
+      # A migration step on the base branch is not renamed or deleted, and the step list is the step files (a store records steps by name).
+      - run: pnpm check:migrations
+        env:
+          MONTI_PUSH_BEFORE: ${{ github.event.before }}
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses, and exports only tests use (a test seam is tagged @internal).
       - run: pnpm knip
@@ -74,6 +86,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # `db/database.ts` is what `gen:db-types` writes from a freshly migrated schema. It needs the database, so it runs here, on one shard.
+      - if: matrix.shard == 1
+        run: pnpm gen:db-types --check
       # The L3 tests that need layout, focus or the editor run in Chromium (Vitest browser mode, `*.browser.test.tsx`); headless needs only the shell.
       # `pnpm test:run` takes every `packages/*/vitest.browser.config.ts` (admin's, core's and ui's) from the root `vitest.config.ts`.
       - run: pnpm exec playwright install --with-deps --only-shell chromium

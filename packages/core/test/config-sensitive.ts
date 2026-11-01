@@ -6,7 +6,8 @@ import path from "node:path";
  * whose result can depend on the config. A test that never reads the config gives the same result under any config, and the default run covers it.
  *
  * The rule: a test file is config-sensitive when its own text, or the text of a test helper it imports (relative imports inside a `test` or `__test__` folder,
- * with `transitive: true`), reads the config through one of these:
+ * with `transitive: true`; a relative `import.meta.glob` counts as importing each file it matches, as the store contract loads its suites), reads the config
+ * through one of these:
  *  - `any-site` (the helpers that look collections, fields and blocks up from the config; a file named `any-site*` is also selected),
  *  - `testConfig` (the config object itself),
  *  - the config-derived lists and lookups of `testSite` (`COLLECTIONS`, `schemaOf`, `isItemCollection`, `DEFAULT_LOCALE`, ...).
@@ -21,6 +22,8 @@ export const READS_CONFIG =
 
 const SOURCE_EXT = [".ts", ".tsx"];
 const IMPORT = /(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']*)["']/g;
+/** `import.meta.glob("./*.contract.ts")` and the like: a relative pattern whose only wildcard is `*` within one file name. */
+const GLOB = /import\.meta\.glob(?:<[^(]*>)?\(\s*["'](\.{1,2}\/[^"'*]*\*[^"'/]*)["']/g;
 const isTestHelper = (file: string) => /[\\/](?:__test__|test)[\\/]/.test(file);
 
 const walk = (dir: string): string[] =>
@@ -29,6 +32,17 @@ const walk = (dir: string): string[] =>
 		const full = path.join(dir, entry.name);
 		return entry.isDirectory() ? walk(full) : [full];
 	});
+
+/** The files a relative glob pattern matches, next to `from`. */
+const resolveGlob = (from: string, pattern: string): string[] => {
+	const dir = path.resolve(path.dirname(from), path.dirname(pattern));
+	const [head, tail] = path.basename(pattern).split("*") as [string, string];
+	if (!fs.existsSync(dir)) return [];
+	return fs
+		.readdirSync(dir)
+		.filter((name) => name.startsWith(head) && name.endsWith(tail) && name.length >= head.length + tail.length)
+		.map((name) => path.join(dir, name));
+};
 
 const resolveImport = (from: string, spec: string): string | undefined => {
 	const base = path.resolve(path.dirname(from), spec);
@@ -65,10 +79,10 @@ export function configSensitiveTests(options: {
 		const result =
 			READS_CONFIG.test(text) ||
 			(transitive &&
-				[...text.matchAll(IMPORT)].some((match) => {
-					const dep = resolveImport(file, match[1] ?? "");
-					return dep !== undefined && dep !== siteFile && isTestHelper(dep) && reads(dep, trail);
-				}));
+				[
+					...[...text.matchAll(IMPORT)].map((match) => resolveImport(file, match[1] ?? "")),
+					...[...text.matchAll(GLOB)].flatMap((match) => resolveGlob(file, match[1] ?? "")),
+				].some((dep) => dep !== undefined && dep !== siteFile && isTestHelper(dep) && reads(dep, trail)));
 		trail.delete(file);
 		memo.set(file, result);
 		return result;

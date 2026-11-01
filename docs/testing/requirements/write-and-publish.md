@@ -128,7 +128,7 @@
 ### ID를 달지 않은 테스트
 
 - **본문 형식**: `mdx`의 `roundtrip`, `editor-roundtrip`, `standard-write`. 본문 형식의 표에서 다룬다.
-- **블록 id**: `store-contract.entries`의 "block ids in the store", `content-service`의 "9. Block ids", `entries-doc`의 블록 id. 번역의 표에서 다룬다.
+- **블록 id**: 저장소 계약 `entries.contract`의 "block ids in the store", `content-service`의 "9. Block ids", `entries-doc`의 블록 id. 번역의 표에서 다룬다.
 - **다른 기능**: 영구 삭제(`entry-editor-store`의 "status changes, duplicate and delete"; 상태 바꾸기와 복제는 WRITE-W9, W10), 언어 탭과 원문 패널(번역), 목록
   조회와 거르기(`http/entries`의 GET), 사이드 패널(플러그인).
 - **React 배관**: `entry-editor-store`의 "snapshot and view", `use-entry-editor`의 "selectors". 고친 값 하나가 화면 전체를 다시 그리지 않는지를

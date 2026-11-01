@@ -40,15 +40,6 @@ describe("migrations", () => {
 			(row) => row.name,
 		);
 
-	it("DB-M3 has exactly the baseline as its step list (a guard against renaming a step)", () => {
-		expect([...CONTENT_STORE_MIGRATIONS]).toEqual([
-			"0001_baseline",
-			"0002_media_folders",
-			"0003_translation_source_hashes",
-			"0004_trash",
-		]);
-	});
-
 	it("DB-M4 fills the hashes the translation filter compares for bodies written before they were kept, and every new body has them", async () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const store = createContentStore(pool, { site: testSite, schema: schemaName });

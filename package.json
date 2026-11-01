@@ -9,6 +9,8 @@
 		"lint": "pnpm exec biome check .",
 		"lint:fix": "pnpm exec biome check . --write",
 		"gen:tokens": "node scripts/gen-tokens.mjs",
+		"gen:db-types": "pnpm --filter @monti-cms/core gen:db-types",
+		"check:migrations": "pnpm --filter @monti-cms/core check:migrations",
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:design": "node scripts/check-design.mjs",
 		"check:messages": "node scripts/check-messages.mjs",
