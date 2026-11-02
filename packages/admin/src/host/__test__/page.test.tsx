@@ -68,7 +68,8 @@ describe("admin addresses", () => {
 
 	it("ADMIN-U1 hands an address under a plugin's name to that plugin's screen, never a core address", async () => {
 		expect(
-			((await open("ai", "review", "p1")) as { props: { plugin: string; screen: string; params: string[] } }).props,
+			((await open("ai", "review", "p1")) as unknown as { props: { plugin: string; screen: string; params: string[] } })
+				.props,
 		).toMatchObject({
 			plugin: "ai",
 			screen: "review",
