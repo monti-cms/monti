@@ -104,6 +104,29 @@ describe("proposal card", () => {
 		await within(card).findByText(t("status.reverted", { time: "10:53" }).split(" · ")[0] ?? "", { exact: false });
 		expect(server.posts).toEqual(["apply", "revert"]);
 	});
+
+	it("ASSIST-R1 lists the first files of a long card of new alt texts and sends the rest to the review page", async () => {
+		const alt = (id: string) =>
+			item(id, {
+				operation: "media.updateText",
+				target: { kind: "media", id: `m-${id}`, spot: "alt" },
+				preview: { before: null, after: `Alt ${id}` },
+				subject: { title: `${id}.jpg` },
+				shown: undefined,
+			});
+		const files = ["a", "b", "c", "d", "e"].map(alt);
+		server.proposal = { ...PROPOSAL, items: files };
+		render(
+			<SiteWrapper>
+				<AgentProposal initial={server.proposal} />
+			</SiteWrapper>,
+		);
+		const card = await screen.findByTestId("agent-proposal");
+		expect(within(card).getByText("c.jpg")).toBeInTheDocument();
+		expect(within(card).queryByText("d.jpg")).not.toBeInTheDocument();
+		expect(within(card).getByText(t("moreFiles", { count: 2 }))).toBeInTheDocument();
+		expect(within(card).getByRole("button", { name: t("review") })).toBeInTheDocument();
+	});
 });
 
 describe("proposal review", () => {

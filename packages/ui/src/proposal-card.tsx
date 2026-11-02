@@ -69,14 +69,14 @@ function ProposalCard({
 	);
 }
 
-/** One group of changes in a card: its name in bold, where (subtle), and how many at the end in mono ("Tidy · Edited after publishing · 3 places"). */
+/** One group of changes in a card: its name in bold, where (subtle), and how many at the end in mono ("Tidy · Edited after publishing · 3 places"). With only a `detail` it is a subtle line ("and 97 more"). */
 function ProposalRow({
 	name,
 	detail,
 	count,
 	tone = "default",
 }: {
-	name: ReactNode;
+	name?: ReactNode;
 	detail?: ReactNode;
 	count?: ReactNode;
 	/** `danger` for an item that could not be applied ("Not moved"). */
@@ -84,7 +84,9 @@ function ProposalRow({
 }) {
 	return (
 		<div data-slot="proposal-row" className={ROW}>
-			<span className={cn("font-semibold", tone === "danger" && "font-normal text-monti-danger")}>{name}</span>
+			{name !== undefined && (
+				<span className={cn("font-semibold", tone === "danger" && "font-normal text-monti-danger")}>{name}</span>
+			)}
 			{detail !== undefined && <span className={cn(tone === "default" && "text-monti-subtle")}>{detail}</span>}
 			<span className="grow" />
 			{count !== undefined && <span className="text-monti-micro text-monti-subtle">{count}</span>}

@@ -108,6 +108,7 @@ const api =
 		// The card reads the proposal again from the server: answer it as the conversation sent it.
 		if (path.endsWith("/v1/ai/proposals/p1")) return PROPOSAL;
 		if (path.endsWith("/v1/ai/proposals/p2")) return ALT_PROPOSAL;
+		if (path.endsWith("/v1/ai/proposals/p3")) return MANY_ALT_PROPOSAL;
 		return {};
 	};
 
@@ -196,6 +197,17 @@ const ALT_PROPOSAL = {
 		["cover-cache.png", "밝은 종이 위에 놓인 캐시 글 제목"],
 		["seoul-night.jpg", "비 갠 밤, 불 켜진 서울 골목과 젖은 보도"],
 	].map(([name, alt], index) => item(`a${index}`, "media.updateText", "defaultAlt", name ?? "", null, alt)),
+};
+const MANY_ALT_PROPOSAL = {
+	...ALT_PROPOSAL,
+	id: "p3",
+	request: "대체 텍스트 없는 이미지 다 채워 줘",
+	items: [
+		...ALT_PROPOSAL.items,
+		...Array.from({ length: 97 }, (_, index) =>
+			item(`m${index}`, "media.updateText", "defaultAlt", `photo-${index + 4}.jpg`, null, "창가에 놓인 화분"),
+		),
+	],
 };
 /** An answer that proposed: the tool lines, the proposal and the words. */
 const proposing = (proposal: typeof PROPOSAL): Chunk[] => [
@@ -334,6 +346,18 @@ export const ProposalAltText: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
 		await within(canvasElement).findByTestId("agent-proposal");
+	},
+};
+
+/** New alt texts for a hundred files: the card shows the first three, "외 97개", and "상세 보기" for the rest. */
+export const ProposalManyAltTexts: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(proposing(MANY_ALT_PROPOSAL as typeof PROPOSAL))),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		const card = await within(canvasElement).findByTestId("agent-proposal");
+		await within(card).findByText("외 97개");
+		expect(within(card).getByRole("button", { name: "상세 보기" })).toBeTruthy();
 	},
 };
 

@@ -31,7 +31,7 @@ export function groupsOf(view: Pick<ProposalView, "items">): ProposalGroup[] {
 	return [...groups].map(([key, group]) => ({ key, ...group }));
 }
 
-/** A proposal made only of new alt texts or captions: the card shows each file's new text instead of groups, and has no review page (flow 2 · 19). */
+/** A proposal made only of new alt texts or captions: the card shows each file's new text instead of groups (the first few, with the rest on the review page; flow 2 · 19). */
 export const isMediaTextOnly = (view: Pick<ProposalView, "items">): boolean =>
 	view.items.length > 0 && view.items.every((item) => item.operation === "media.updateText");
 

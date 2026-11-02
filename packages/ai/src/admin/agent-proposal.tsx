@@ -11,6 +11,9 @@ import { useProposal } from "./use-proposal";
 /** The review page of a proposal (`/admin/ai/review/<id>`). */
 export const reviewHref = (id: string) => `/ai/review/${encodeURIComponent(id)}`;
 
+/** Files a card of new texts shows; the rest are on the review page. */
+const FIRST_FILES = 3;
+
 /**
  * A proposal in the conversation (flow 2 · 11, 16, 19): the groups of changes (or, for alt texts, each file's new text), where it stands, and what can be done
  * — open the review page, discard, apply (with the progress), and once applied undo all, with the items that could not be applied and why. The card keeps
@@ -33,6 +36,9 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 	const busy = progress !== null;
 	// Files are counted as files ("Apply 3"); anything else as changes ("Apply 19").
 	const allMedia = view.items.every((item) => item.target.kind === "media");
+	// A card of new texts lists its files; when there are more than fit, it shows the first ones and sends the rest to the review page.
+	const hidden = textOnly ? Math.max(0, view.items.length - FIRST_FILES) : 0;
+	const reviewable = !textOnly || hidden > 0;
 
 	const first = groups[0];
 	const summary =
@@ -60,9 +66,9 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 			footer={
 				view.status === "pending" ? (
 					<ProposalActions
-						{...(textOnly
-							? {}
-							: { reviewLabel: t("review"), onReview: () => router.navigate(site.adminHref(reviewHref(view.id))) })}
+						{...(reviewable
+							? { reviewLabel: t("review"), onReview: () => router.navigate(site.adminHref(reviewHref(view.id))) }
+							: {})}
 						discardLabel={t("discard")}
 						onDiscard={() => void proposal.discard()}
 						applyLabel={t(allMedia ? "apply.files" : "apply", { count: waiting })}
@@ -94,16 +100,21 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 					: undefined
 			}
 		>
-			{textOnly
-				? view.items.map((item) => (
+			{textOnly ? (
+				<>
+					{view.items.slice(0, FIRST_FILES).map((item) => (
 						<ProposalItem key={item.id} title={item.subject?.title ?? item.target.id}>
 							<Ins>{String(item.preview.after ?? "")}</Ins>
 						</ProposalItem>
-					))
-				: groups.map((group) => {
-						const words = groupWords(site, group);
-						return <ProposalRow key={group.key} name={words.name} detail={words.detail} count={words.count} />;
-					})}
+					))}
+					{hidden > 0 && <ProposalRow detail={t("moreFiles", { count: hidden })} />}
+				</>
+			) : (
+				groups.map((group) => {
+					const words = groupWords(site, group);
+					return <ProposalRow key={group.key} name={words.name} detail={words.detail} count={words.count} />;
+				})
+			)}
 		</ProposalCard>
 	);
 }
