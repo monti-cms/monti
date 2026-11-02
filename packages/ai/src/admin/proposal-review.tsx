@@ -170,8 +170,9 @@ function Group({
 					<ReviewCompare
 						key={item.id}
 						included={item.included && item.state !== "stale"}
-						onIncludedChange={(included) => changeable(item) && onInclude({ [item.id]: included })}
+						onIncludedChange={(included) => onInclude({ [item.id]: included })}
 						includeLabel={t("review.include")}
+						readOnly={!changeable(item)}
 						label={item.subject?.title ?? ""}
 						before={<Del>{textOf(item.preview.before) ?? t("review.empty")}</Del>}
 						after={<Ins>{textOf(item.preview.after) ?? t("review.empty")}</Ins>}
@@ -180,9 +181,10 @@ function Group({
 					<ReviewItem
 						key={item.id}
 						included={item.included && item.state !== "stale"}
-						// A settled proposal keeps its checks as they were applied; they no longer change anything.
-						onIncludedChange={(included) => changeable(item) && onInclude({ [item.id]: included })}
+						onIncludedChange={(included) => onInclude({ [item.id]: included })}
 						includeLabel={t("review.include")}
+						// A settled proposal keeps its checks as they were applied, and a change that moved meanwhile cannot be put back in.
+						readOnly={!changeable(item)}
 						title={item.subject?.title ?? item.target.id}
 						path={item.subject?.path}
 						end={endOf(item, group)}

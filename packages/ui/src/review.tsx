@@ -46,20 +46,21 @@ function IncludeCheck({
 	included,
 	onIncludedChange,
 	label,
-	disabled,
+	readOnly = false,
 }: {
 	included: boolean;
 	onIncludedChange?: (included: boolean) => void;
 	label: string;
-	disabled?: boolean;
+	/** Kept as it was (an applied proposal, a change that can no longer be applied): same look, but it cannot be changed and says so. */
+	readOnly?: boolean;
 }) {
 	return (
 		<Checkbox
 			checked={included}
 			onCheckedChange={(checked) => onIncludedChange?.(checked === true)}
 			aria-label={label}
-			disabled={disabled}
-			className="mt-[3px]"
+			readOnly={readOnly}
+			className={cn("mt-[3px]", readOnly && "cursor-default")}
 		/>
 	);
 }
@@ -73,7 +74,7 @@ function ReviewItem({
 	included,
 	onIncludedChange,
 	includeLabel,
-	disabled,
+	readOnly,
 	title,
 	path,
 	end,
@@ -86,7 +87,8 @@ function ReviewItem({
 	onIncludedChange?: (included: boolean) => void;
 	/** The name of the check for a screen reader ("Include"). */
 	includeLabel: string;
-	disabled?: boolean;
+	/** The check can no longer change: the proposal was applied, or this change cannot be applied any more. */
+	readOnly?: boolean;
 	title: ReactNode;
 	path?: ReactNode;
 	end?: ReactNode;
@@ -101,7 +103,7 @@ function ReviewItem({
 			)}
 			{...props}
 		>
-			<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} disabled={disabled} />
+			<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} readOnly={readOnly} />
 			<div className="flex min-w-0 flex-col gap-monti-6">
 				<div className="flex min-w-0 items-baseline gap-monti-8 whitespace-nowrap">
 					<span className="truncate font-semibold">{title}</span>
@@ -136,6 +138,7 @@ function ReviewCompare({
 	included,
 	onIncludedChange,
 	includeLabel,
+	readOnly,
 	label,
 	note,
 	before,
@@ -144,6 +147,7 @@ function ReviewCompare({
 	included: boolean;
 	onIncludedChange?: (included: boolean) => void;
 	includeLabel: string;
+	readOnly?: boolean;
 	label: ReactNode;
 	/** A word under the field's name ("mostly rewritten"), in the warning tone. */
 	note?: ReactNode;
@@ -156,7 +160,12 @@ function ReviewCompare({
 			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
 		>
 			<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
-				<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} />
+				<IncludeCheck
+					included={included}
+					onIncludedChange={onIncludedChange}
+					label={includeLabel}
+					readOnly={readOnly}
+				/>
 				<span className="flex flex-col">
 					{label}
 					{note !== undefined && <b className="font-mono font-normal text-monti-meta text-monti-warning">{note}</b>}

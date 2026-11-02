@@ -123,4 +123,26 @@ describe("proposal review", () => {
 		await waitFor(() => expect(server.patches).toEqual([{ b: false }]));
 		await within(page).findByRole("button", { name: t("apply", { count: 1 }) });
 	});
+
+	it("ASSIST-R2 keeps the checks of an applied proposal read-only: clicking one changes nothing", async () => {
+		server.proposal = {
+			...PROPOSAL,
+			status: "applied",
+			settledAt: "2026-11-03T10:52:00.000Z",
+			items: [item("a", { state: "applied" }), item("b", { state: "applied" })],
+		};
+		render(
+			<SiteWrapper>
+				<ProposalReviewScreen params={["p1"]} />
+			</SiteWrapper>,
+		);
+		const page = await screen.findByTestId("proposal-review");
+		await within(page).findByText("Post a");
+		const [first] = within(page).getAllByRole("checkbox", { name: t("review.include") });
+		expect(first).toHaveAttribute("aria-readonly", "true");
+		fireEvent.click(first as HTMLElement);
+		expect(first).toHaveAttribute("aria-checked", "true");
+		expect(server.patches).toEqual([]);
+		expect(within(page).queryByRole("button", { name: t("apply", { count: 0 }) })).not.toBeInTheDocument();
+	});
 });
