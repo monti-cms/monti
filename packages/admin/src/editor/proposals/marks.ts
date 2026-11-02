@@ -14,6 +14,9 @@ export interface BlockProposal {
 	readonly block: CmsNode;
 	/** The blocks that take its place; none removes it. */
 	readonly nodes: readonly CmsNode[];
+	/** The requests left in its card, and whether the assistant is working on one: its block then has the request marker in the margin. */
+	readonly requests?: number;
+	readonly working?: boolean;
 }
 
 export interface ProposalMarksState {
@@ -29,6 +32,16 @@ export const proposalMarksKey = new PluginKey<ProposalMarksState>("cmsProposalMa
 
 /** The attribute on every decoration of a proposal, so a click on one finds it. */
 export const PROPOSAL_ATTRIBUTE = "data-proposal-item";
+
+/** The attribute of the empty place at the start of a block where its request marker is drawn (the editor's React tree renders the marker into it). */
+export const MARKER_ATTRIBUTE = "data-proposal-marker";
+
+const markerWidget = (id: string) => () => {
+	const element = document.createElement("span");
+	element.setAttribute(MARKER_ATTRIBUTE, id);
+	element.contentEditable = "false";
+	return element;
+};
 
 const isInline = (node: CmsNode) => node.type === "text" || node.type === "hardBreak";
 
@@ -124,6 +137,17 @@ function decorate(doc: ProseMirrorNode, proposals: readonly BlockProposal[], cur
 		const { node, pos } = found;
 		const attrs = { [PROPOSAL_ATTRIBUTE]: proposal.id };
 		const lineClass = proposal.id === current ? PROPOSAL_MARK_CLASSES.current : "";
+		if ((proposal.requests ?? 0) > 0 || proposal.working) {
+			// The marker hangs in the block's margin: the block is its positioning box.
+			decorations.push(Decoration.node(pos, pos + node.nodeSize, { class: "relative" }));
+			decorations.push(
+				Decoration.widget(pos + 1, markerWidget(proposal.id), {
+					side: -1,
+					ignoreSelection: true,
+					key: `marker:${proposal.id}`,
+				}),
+			);
+		}
 		if (proposal.nodes.length === 0) {
 			// The block goes: all of it in the strike-through.
 			decorations.push(

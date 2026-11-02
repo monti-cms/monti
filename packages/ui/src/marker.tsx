@@ -29,8 +29,14 @@ const markerVariants = cva(
 			},
 			/** Its card is open. */
 			active: { true: "" },
-			/** It hangs in the left margin of the block it belongs to, 12px from it (the block is `relative`). */
-			margin: { true: "absolute top-monti-6 right-[calc(100%+12px)]" },
+			/**
+			 * It hangs in the left margin of the block it belongs to (the block is `relative`): 12px from it, or with `proposal` 20px, clear of the blue line
+			 * the block of the proposal being looked at has 18px out (`CurrentProposal`).
+			 */
+			margin: {
+				true: "absolute top-monti-6 right-[calc(100%+12px)]",
+				proposal: "absolute top-[7px] right-[calc(100%+20px)]",
+			},
 		},
 		compoundVariants: [
 			{ tone: "request", active: true, className: "bg-monti-emphasis text-monti-on-emphasis" },

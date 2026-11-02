@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EditorProposalView } from "../agent/entry-proposals";
-import { aiKeys, listEntryProposals, settleProposal } from "./api";
+import { aiKeys, askProposalItem, listEntryProposals, settleProposal } from "./api";
 import { proposalMessages } from "./proposal.messages";
 
 /** The id of the top-level blocks of the editor's document. */
@@ -69,6 +69,7 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 						blockId: view.blockId,
 						block: view.block as CmsNode,
 						nodes: view.nodes as readonly CmsNode[],
+						thread: view.thread,
 					}),
 				),
 		[views, hidden],
@@ -115,6 +116,30 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				}
 				void settle(byProposal);
 			},
+			onAsk: async (item: EditorProposalItem, text: string) => {
+				const view = byId.get(item.id);
+				if (!view) return null;
+				try {
+					const { item: next } = await askProposalItem(site, view.proposalId, item.id, text, t("error.ask"));
+					// The new change takes the old one's place at once; the list is read again behind it.
+					if (entryId) {
+						client.setQueryData<{ items: EditorProposalView[] }>(aiKeys.entryProposals(entryId), (data) =>
+							data
+								? {
+										items: data.items.flatMap((candidate) =>
+											candidate.id === item.id ? (next ? [next] : []) : [candidate],
+										),
+									}
+								: data,
+						);
+					}
+					refresh([view.proposalId]);
+					return next?.id ?? null;
+				} catch (error) {
+					toast.error(errorText(site, error, t("error.ask")));
+					throw error;
+				}
+			},
 			...(ask
 				? {
 						onOpen: (item: EditorProposalItem) => {
@@ -124,7 +149,7 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 					}
 				: {}),
 		}),
-		[items, byId, settle, ask],
+		[items, byId, settle, ask, site, t, client, entryId, refresh],
 	);
 
 	/** Accepted changes taken back out with ⌘Z wait again: they are drawn again and not reported. */

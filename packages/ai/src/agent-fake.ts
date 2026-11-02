@@ -45,6 +45,24 @@ export function createFakeAgentModel() {
 	return new MockLanguageModelV4({
 		provider: "fake",
 		modelId: "fake-agent",
+		// A request in a change's card (`rewrite`): the block as it is, with "(again)" at the end, and a reply that says so.
+		doGenerate: async ({ prompt }) => {
+			const asked = JSON.stringify(prompt);
+			const block = /The block as it is now:\\n(.*?)\\n/.exec(asked)?.[1] ?? "";
+			return {
+				content: [
+					{
+						type: "tool-call",
+						toolCallId: "fake-rewrite",
+						toolName: "rewrite",
+						input: JSON.stringify({ text: `${block} (again)`, reply: "(fake) Wrote it again." }),
+					},
+				],
+				finishReason: { unified: "tool-calls", raw: undefined },
+				usage: USAGE,
+				warnings: [],
+			};
+		},
 		doStream: async ({ prompt, tools }) => {
 			const offered = new Set((tools ?? []).map((tool) => tool.name));
 			const editorTool = EDITOR_TOOLS.find((name) => offered.has(name) && resultOf(prompt, name) === undefined);

@@ -1,6 +1,6 @@
 import { type AdminRequest, type Cms, CmsError, type WriteApplied } from "@monti-cms/core/server";
 import { refreshStale } from "./apply";
-import { type Proposal, type ProposalItem, type ProposalStore, planOf } from "./proposals";
+import { type Proposal, type ProposalItem, type ProposalStore, planOf, type SpotMessage } from "./proposals";
 
 type Auth = AdminRequest["auth"];
 
@@ -71,6 +71,8 @@ export interface EditorProposalView {
 	/** The block as planned against, and the blocks that take its place (none removes it), as stored. */
 	readonly block: unknown;
 	readonly nodes: readonly unknown[];
+	/** What was said about it in its card. */
+	readonly thread: readonly SpotMessage[];
 }
 
 /** The body changes of the proposals that the editor of entry `entryId` shows: waiting, put in, and not changed meanwhile. */
@@ -89,6 +91,7 @@ export const editorProposalViews = (proposals: readonly Proposal[], entryId: str
 					blockId: change.blockId,
 					block: change.block,
 					nodes: change.nodes,
+					thread: item.thread ?? [],
 				},
 			];
 		}),

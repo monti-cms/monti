@@ -21,6 +21,8 @@ interface BodyChange {
 	/** The block as it was planned against, and the id of the block after it: what reverting a change accepted in the editor needs. */
 	readonly block: CmsNode;
 	readonly next: string | null;
+	/** The body format the change was written in: a request to change it again is answered in the same one. */
+	readonly format: string;
 }
 
 const docOf = (entry: Entry, content: readonly CmsNode[]): StoredDocument => ({ ...entry.working.doc, content });
@@ -111,7 +113,7 @@ export const updateEntryBody = defineOperation({
 						})
 					).doc.content
 				: [];
-			const change: BodyChange = { blockId: block.id, nodes, block, next: blocks[index + 1]?.id ?? null };
+			const change: BodyChange = { blockId: block.id, nodes, block, next: blocks[index + 1]?.id ?? null, format };
 			plans.push({
 				target: { kind: "entry", id, spot: bodySpot(block.id) },
 				preview: { before, after: after.trim() ? after : null },

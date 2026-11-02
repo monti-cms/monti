@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { docOf, tiptapOf } from "../../../test/mdx";
 import { BLOCK_ID_ATTRIBUTE } from "../../block-ids";
-import { type BlockProposal, blocksById, drawable, proposalMarksKey, proposalMarksPlugin } from "../marks";
+import {
+	type BlockProposal,
+	blocksById,
+	drawable,
+	MARKER_ATTRIBUTE,
+	proposalMarksKey,
+	proposalMarksPlugin,
+} from "../marks";
 import { acceptInEditor } from "../use-proposal-marks";
 
 const BODY = "I decided to rebuild the blog.\n\nThe list keeps the title.\n\nSettings stayed as they were.";
@@ -87,5 +94,18 @@ describe("proposals in the editor", () => {
 		expect(drawable(editor.state.doc, proposals).map((proposal) => proposal.id)).toEqual(["reword", "remove"]);
 		editor.commands.insertContentAt(3, "really ");
 		expect(drawable(editor.state.doc, proposals).map((proposal) => proposal.id)).toEqual(["remove"]);
+	});
+
+	it("ASSIST-E3 leaves a place for the request marker in the margin of a block whose card has requests, and none for the others", () => {
+		const { editor, proposals } = open();
+		const withRequests = proposals.map((proposal) =>
+			proposal.id === "reword" ? { ...proposal, requests: 1 } : proposal,
+		);
+		editor.view.dispatch(editor.state.tr.setMeta(proposalMarksKey, { proposals: withRequests, current: "reword" }));
+		const places = (proposalMarksKey.getState(editor.state)?.decorations.find() ?? []).filter(
+			(decoration) => (decoration.spec as { key?: string }).key?.startsWith("marker:") === true,
+		);
+		expect(places.map((decoration) => (decoration.spec as { key?: string }).key)).toEqual(["marker:reword"]);
+		expect(MARKER_ATTRIBUTE).toBe("data-proposal-marker");
 	});
 });

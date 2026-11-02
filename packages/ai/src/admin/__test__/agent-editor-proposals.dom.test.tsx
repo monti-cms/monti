@@ -12,6 +12,7 @@ const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 
 
 let editor: Editor;
 let settled: { id: string; body: unknown }[];
+let asked: unknown[];
 beforeEach(() => {
 	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOf("One.\n\nTwo.") });
 	const ids: string[] = [];
@@ -19,6 +20,7 @@ beforeEach(() => {
 		ids.push(String(node.attrs.blockId));
 	});
 	settled = [];
+	asked = [];
 	const view = (id: string, blockId: string) => ({
 		id,
 		proposalId: "p1",
@@ -27,13 +29,23 @@ beforeEach(() => {
 		blockId,
 		block: { type: "paragraph", id: blockId, content: [{ type: "text", text: "x" }] },
 		nodes: [],
+		thread: [],
+	});
+	const remade = () => ({
+		...view("a2", ids[0] ?? ""),
+		thread: [{ author: "admin", text: "shorter", at: "2026-11-03T10:58:00Z" }],
 	});
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (input: string, init?: RequestInit) => {
 			const url = String(input);
+			// After a request in the card, the server lists the change that took the first one's place.
 			if (url.includes("/v1/ai/proposals?entry="))
-				return json({ items: [view("a", ids[0] ?? ""), view("b", ids[1] ?? "")] });
+				return json({ items: [asked.length > 0 ? remade() : view("a", ids[0] ?? ""), view("b", ids[1] ?? "")] });
+			if (/\/v1\/ai\/proposals\/p1\/items\/a\/ask$/.test(url)) {
+				asked.push(JSON.parse(String(init?.body)));
+				return json({ item: remade() });
+			}
 			const settle = url.match(/\/v1\/ai\/proposals\/([^/]+)\/settle$/);
 			if (settle) {
 				settled.push({ id: settle[1] ?? "", body: JSON.parse(String(init?.body)) });
@@ -95,5 +107,20 @@ describe("the agent's proposals in the editor", () => {
 		await waitFor(() => expect(result.current.proposals?.items.map((item) => item.id)).toEqual(["a", "b"]));
 		act(() => result.current.onSaved?.());
 		expect(settled).toEqual([]);
+	});
+
+	it("ASSIST-E3 sends a request in a card and puts the change that took its place where the old one was", async () => {
+		const { result } = mount();
+		act(() => result.current.onEditor?.(editor));
+		await waitFor(() => expect(result.current.proposals?.items).toHaveLength(2));
+		const [first] = result.current.proposals?.items ?? [];
+		let next: string | null = null;
+		await act(async () => {
+			next = (await result.current.proposals?.onAsk?.(first as never, "shorter")) ?? null;
+		});
+		expect(asked).toEqual([{ text: "shorter" }]);
+		expect(next).toBe("a2");
+		await waitFor(() => expect(result.current.proposals?.items.map((item) => item.id)).toEqual(["a2", "b"]));
+		expect(result.current.proposals?.items[0]?.thread?.map((message) => message.text)).toEqual(["shorter"]);
 	});
 });
