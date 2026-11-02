@@ -30,7 +30,7 @@
 
 ### 코드
 
-`ReviewQuote`(인용한 요청), `ReviewGroup`(`title`, `meta`, `actions`), `ReviewItem`(`included`·`onIncludedChange`·`includeLabel`, `title`, `path`, `end`, 바뀌는 글은 `children`, 그사이 바뀐 항목은 `muted`), `ReviewCompareHead`(나란히의 "지금 / 제안"), `ReviewCompare`(나란히 한 항목: 체크와 이름, 지금, 제안), `ReviewMore`(긴 묶음의 "N편 더 보기 / 접기", 꺾쇠가 뒤집힌다). 적용된 제안이나 그사이 바뀐 항목의 체크는 `readOnly`다(모양은 그대로, 바꿀 수 없다). 머리는 `PageHeader`(`trail`에 뒤로 가기, `meta`에 날짜), 진행 막대는 `Progress inline`이다.
+`ReviewQuote`(인용한 요청), `ReviewGroup`(`title`, `meta`, `actions`), `ReviewItem`(`included`·`onIncludedChange`·`includeLabel`, `title`, `path`, `end`, 바뀌는 글은 `children`, 그사이 바뀐 항목은 `muted`), `ReviewCompareHead`(나란히의 "지금 / 제안"), `ReviewCompare`(나란히 한 항목: 체크와 이름, 지금, 제안), `ReviewMore`(긴 묶음의 "N편 더 보기 / 접기", 꺾쇠가 뒤집힌다). 적용된 제안이나 그사이 바뀐 항목의 체크는 `readOnly`다(회색 체크, 바꿀 수 없다). 머리는 `PageHeader`(`trail`에 뒤로 가기, `meta`에 날짜), 진행 막대는 `Progress inline`이다.
 
 ## 입력 상자
 
