@@ -483,7 +483,8 @@ export const measureCenter = (): CenterMeasures => {
  * The controls are anything a pointer or a key picks, and the chips and status bar cells that are sized like one. Left out: a control that is not
  * shown, a control displayed inline (a link in running text has no box of its own), an underlined tab (a border at the bottom only: the underline is
  * not an edge of the text's box), one taller than 48px (a tile, a card), one with less than 6px of room around its line (a text button is as tall as
- * its line), and one whose text is on more than one line or on lines that do not overlap (a title over a caption).
+ * its line), and one whose text is on more than one line or on lines that do not overlap (a title over a caption). A text set on the baseline of a
+ * larger text beside it (a mono tag after a menu row's name) follows that baseline, not the center: only the larger text is measured.
  */
 export const findOffCenterText = ({ monoFont, controls }: CenterMeasures): Finding[] => {
 	const tolerance = 0.5;
@@ -530,9 +531,18 @@ export const findOffCenterText = ({ monoFont, controls }: CenterMeasures): Findi
 		if (stacked || nodes.some((node) => node.lines.length > 1)) continue;
 		if (bottom - top < Math.max(...lines.map((line) => line.height)) + 6) continue;
 
+		const baselineOf = (node: (typeof nodes)[number]) =>
+			(node.lines[0]?.top ?? 0) + node.ink.latin.fontBoundingBoxAscent;
+		const ridesOnLarger = (node: (typeof nodes)[number]) =>
+			nodes.some(
+				(other) =>
+					(other.lines[0]?.height ?? 0) > (node.lines[0]?.height ?? 0) &&
+					Math.abs(baselineOf(other) - baselineOf(node)) <= 0.5,
+			);
+
 		for (const node of nodes) {
 			const line = node.lines[0];
-			if (!line) continue;
+			if (!line || ridesOnLarger(node)) continue;
 			const ink = HANGUL.test(node.text) ? node.ink.hangul : /[A-Za-z]/.test(node.text) ? node.ink.latin : null;
 			if (!ink) continue;
 			const baseline = line.top + ink.fontBoundingBoxAscent;
