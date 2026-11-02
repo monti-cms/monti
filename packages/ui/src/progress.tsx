@@ -7,9 +7,25 @@ import { cn } from "./cn";
  * How far a long step is: a 3px bar that fills to `value` (0–100), on a `border-default` track, radius 2. A step whose length cannot be measured
  * (getting ready, finishing up) has no bar: it says so in words instead.
  */
-function Progress({ value, label, className }: { value: number; label: string; className?: string }) {
+function Progress({
+	value,
+	label,
+	inline = false,
+	className,
+}: {
+	value: number;
+	label: string;
+	/** Beside words in a row ("적용 중 9 / 17"): 120px instead of the full width. */
+	inline?: boolean;
+	className?: string;
+}) {
 	return (
-		<ProgressPrimitive.Root value={value} aria-label={label} data-slot="progress" className={cn("w-full", className)}>
+		<ProgressPrimitive.Root
+			value={value}
+			aria-label={label}
+			data-slot="progress"
+			className={cn(inline ? "w-[120px]" : "w-full", className)}
+		>
 			<ProgressPrimitive.Track className="relative h-[3px] w-full overflow-hidden rounded-[2px] bg-(--monti-border-default)">
 				<ProgressPrimitive.Indicator className="h-full bg-(--monti-fg-default) transition-[width] duration-300" />
 			</ProgressPrimitive.Track>

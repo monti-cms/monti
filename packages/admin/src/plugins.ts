@@ -39,6 +39,12 @@ export interface AdminPlugin {
 	 */
 	readonly pages?: Readonly<Record<string, ComponentType>>;
 	/**
+	 * Screens of their own, outside the Tools tabs, by name: `<admin path>/<plugin name>/<screen>/<param>` renders `screens[screen]` with the address's segments
+	 * after the screen name (`params`, at most one). Framed by the admin (sidebar), with no title of its own: the screen draws its header. The AI plugin's
+	 * proposal review is one. Client components.
+	 */
+	readonly screens?: Readonly<Record<string, ComponentType<{ readonly params: readonly string[] }>>>;
+	/**
 	 * What the plugin adds to the admin: field inputs and views, list cells, block views, marks, editor extensions, code fence previews, text checkers, source
 	 * panels, formats and icons (`AdminComponents`). Give a function of the site when they depend on the site config (its options, its language).
 	 */

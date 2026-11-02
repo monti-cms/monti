@@ -1,6 +1,7 @@
 import { agentPanel } from "./agent-panel";
 import { AiSlotProvider } from "./ai-slot-provider";
 import { ModelSection } from "./model-section";
+import { ProposalReviewScreen } from "./proposal-review";
 import { aiComponents } from "./provider";
 
 /**
@@ -12,6 +13,8 @@ export default defineAdminPlugin({
 	panel: agentPanel,
 	// The quick-task model, on Tools › API keys after the saved keys.
 	keySections: { models: ModelSection },
+	// The review page of a proposal: `/admin/ai/review/<id>`.
+	screens: { review: ProposalReviewScreen },
 	components: aiComponents,
 	Provider: AiSlotProvider,
 });
