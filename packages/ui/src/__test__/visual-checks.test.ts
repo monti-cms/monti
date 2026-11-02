@@ -32,10 +32,11 @@ describe("the icon check", () => {
 		lines,
 		enclosing,
 	});
-	const icon = (top: number, height = 14, plate = { width: 14, height }) => ({
+	const icon = (top: number, height = 14, plate = { width: 14, height }, decorative = false) => ({
 		...shown,
 		...line(top, height, 14),
 		plate,
+		decorative,
 	});
 	const control = (icons: Control["icons"], texts: TextMeasure[], tag = "button"): Control => ({
 		...named(tag, texts.map((t) => t.text).join(" ")),
@@ -64,6 +65,12 @@ describe("the icon check", () => {
 		expect(find(control([icon(50, 20, { width: 100, height: 120 })], [text([line(130, 20)], "안내서.pdf")]))).toEqual(
 			[],
 		);
+	});
+
+	it("UI-T5 leaves alone an icon in a block hidden from screen readers: a file tile's preview, the icon over its extension", () => {
+		expect(
+			find(control([icon(0, 20, { width: 20, height: 20 }, true)], [text([line(26, 20)], "price-list.pdf")])),
+		).toEqual([]);
 	});
 
 	it("UI-T5 ignores a screen-reader label, an icon alone and text alone", () => {

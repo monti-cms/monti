@@ -280,6 +280,8 @@ export interface IconMeasures {
 				Drawn & {
 					/** The icon's own plate: the outermost element around it that holds no text. */
 					readonly plate: { readonly width: number; readonly height: number };
+					/** The icon sits in a block hidden from screen readers between it and the control (a file tile's preview with its extension): a picture. */
+					readonly decorative: boolean;
 				})[];
 			readonly texts: readonly TextMeasure[];
 		})[];
@@ -300,10 +302,15 @@ export const measureIcons = (): IconMeasures => {
 			while (plate.parentElement && plate.parentElement !== control && !plate.parentElement.textContent?.trim())
 				plate = plate.parentElement;
 			const plateBox = plate.getBoundingClientRect();
+			let decorative = false;
+			for (let el = icon.parentElement; el && el !== control; el = el.parentElement) {
+				if (el.getAttribute("aria-hidden") === "true") decorative = true;
+			}
 			return {
 				...drawn(icon),
 				...boxOf(icon.getBoundingClientRect()),
 				plate: { width: plateBox.width, height: plateBox.height },
+				decorative,
 			};
 		});
 		const texts: TextMeasure[] = [];
@@ -334,7 +341,8 @@ export const measureIcons = (): IconMeasures => {
  * A button, link or tab that holds an svg icon and visible text must draw them on one line: the icon's box and the text's box overlap vertically. A
  * `display: block` svg inside an inline parent drops onto a line of its own, which this catches. Text that is visually hidden (a screen-reader label:
  * a box of 1px or less, or not shown) does not count, an icon without text, or text without an icon, is left to the other checks, and so is a picture:
- * an icon inside a plate more than twice its size (a tile's thumbnail with the file's name under it) is not meant to sit on the line of the text.
+ * an icon inside a plate more than twice its size (a tile's thumbnail with the file's name under it), or inside a block hidden from screen readers (a file
+ * tile's preview, the icon over its extension), is not meant to sit on the line of the text.
  */
 export const findSplitIcons = ({ controls }: IconMeasures): Finding[] => {
 	const findings: Finding[] = [];
@@ -348,7 +356,7 @@ export const findSplitIcons = ({ controls }: IconMeasures): Finding[] => {
 			.flatMap((node) => node.lines.filter((line) => line.width > 0 && line.height > 0));
 		if (lines.length === 0) continue;
 		for (const icon of icons) {
-			if (icon.plate.width > icon.width * 2 || icon.plate.height > icon.height * 2) continue;
+			if (icon.decorative || icon.plate.width > icon.width * 2 || icon.plate.height > icon.height * 2) continue;
 			if (lines.some((line) => Math.min(icon.bottom, line.bottom) - Math.max(icon.top, line.top) >= 1)) continue;
 			findings.push({
 				check: "icon",
