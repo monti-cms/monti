@@ -47,13 +47,18 @@ function PickListLabel({ className, ...props }: Omit<React.ComponentProps<"span"
 	return <span role="presentation" data-slot="pick-list-label" className={cn(MENU_LABEL, className)} {...props} />;
 }
 
-/** The rule between two groups of a {@link PickList}. */
+/** The rule between two groups of a {@link PickList}, with more room than a menu's since the dialog rows are taller. */
 function PickListSeparator({
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "role" | "children" | "aria-hidden">) {
 	return (
-		<span aria-hidden="true" data-slot="pick-list-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
+		<span
+			aria-hidden="true"
+			data-slot="pick-list-separator"
+			className={cn(MENU_SEPARATOR, "my-monti-10", className)}
+			{...props}
+		/>
 	);
 }
 
