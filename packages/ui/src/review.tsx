@@ -100,7 +100,7 @@ function ReviewItem({
 		<div
 			data-slot="review-item"
 			className={cn(
-				"grid grid-cols-[14px_minmax(0,1fr)] items-start gap-x-monti-16 border-monti-muted border-b px-monti-12 py-monti-10 hover:bg-monti-muted",
+				"-mx-monti-12 grid grid-cols-[14px_minmax(0,1fr)] items-start gap-x-monti-16 border-monti-muted border-b px-monti-12 py-monti-10 hover:bg-monti-muted",
 				className,
 			)}
 			{...props}
@@ -180,7 +180,7 @@ function ReviewCompare({
 }
 
 /**
- * The way to the rest of a long group, 12px under its rows: "6 more ⌄" while folded, "Show fewer ⌃" once open (the same place, the caret turned over).
+ * The way to the rest of a long group, 12px under its rows and on the line of their titles: "6 more ⌄" while folded, "Show fewer ⌃" once open (the same place, the caret turned over).
  */
 function ReviewMore({
 	open,
@@ -196,11 +196,15 @@ function ReviewMore({
 	lessLabel: string;
 }) {
 	return (
-		<div data-slot="review-more" className="mt-monti-12">
-			<TextButton variant="quiet" aria-expanded={open} onClick={() => onOpenChange(!open)}>
-				{open ? lessLabel : moreLabel}
-				<Caret className={cn("transition-transform", open && "rotate-180")} />
-			</TextButton>
+		// The same columns as a row, so it starts on the line of the rows' titles.
+		<div data-slot="review-more" className="mt-monti-12 grid grid-cols-[14px_minmax(0,1fr)] gap-x-monti-16">
+			<span />
+			<span>
+				<TextButton variant="quiet" aria-expanded={open} onClick={() => onOpenChange(!open)}>
+					{open ? lessLabel : moreLabel}
+					<Caret className={cn("transition-transform", open && "rotate-180")} />
+				</TextButton>
+			</span>
 		</div>
 	);
 }
