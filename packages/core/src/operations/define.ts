@@ -92,6 +92,16 @@ export interface WriteOperationDefinition<Schema extends z.ZodType> {
 	readonly revert: (plan: WritePlan, undo: unknown, context: OperationContext) => Promise<void>;
 	/** Where the target stands now (the same measure as `WritePlan.base`), or `null` when it no longer exists. */
 	readonly baseOf: (target: WriteTarget, context: OperationContext) => Promise<string | null>;
+	/**
+	 * For a change the admin accepted in the entry editor and saved there: what `apply` would have returned (the base now, and what reverting needs), so it
+	 * can be undone like an applied one. `placed` names the blocks the editor put in the target's place, for a body change. Without it, a change of this
+	 * operation cannot be accepted in the editor.
+	 */
+	readonly adopt?: (
+		plan: WritePlan,
+		made: { readonly placed?: readonly string[] },
+		context: OperationContext,
+	) => Promise<WriteApplied>;
 }
 
 /** A read operation. Made by {@link defineOperation}. */

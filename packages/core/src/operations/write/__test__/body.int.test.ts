@@ -119,4 +119,34 @@ describe("body edits", () => {
 		});
 		expect(await paragraphs(entry.id)).toEqual(["Person's wording.", "Other block."]);
 	});
+
+	it("AGENT-W6 records a change the admin accepted in the editor and saved, so reverting it puts the block back", async () => {
+		const entry = await seed("Before the edit.\n\nAfter it.");
+		const [planned] = await plan(entry.id, [{ find: "Before the edit.", replace: "Edited in the editor." }]);
+		const { nodes } = planned!.change as { nodes: { id?: string }[] };
+		// The editor puts the planned blocks in place and saves the entry as a person does.
+		const current = await store.getEntry(entry.id);
+		await cms.contentService().saveDraft(entry.id, {
+			collection: current.collection,
+			slug: current.workingSlug,
+			metadata: current.working.metadata,
+			doc: { ...current.working.doc, content: [...(nodes as never[]), ...current.working.doc.content.slice(1)] },
+			expectedVersion: current.version,
+		} as never);
+		expect(await paragraphs(entry.id)).toEqual(["Edited in the editor.", "After it."]);
+
+		const adopted = await cms.writes.adopt(
+			op,
+			planned!,
+			{ placed: nodes.map((node) => node.id ?? "") },
+			{ auth: admin },
+		);
+		expect(await cms.writes.baseOf(op, planned!.target, { auth: admin })).toBe(adopted.base);
+		await cms.writes.revert(op, planned!, adopted.undo, { auth: admin, agent });
+		expect(await paragraphs(entry.id)).toEqual(["Before the edit.", "After it."]);
+		// A move to a folder is never accepted in the editor.
+		await expect(cms.writes.adopt("entries.moveToFolder", planned!, {}, { auth: admin })).rejects.toMatchObject({
+			code: "invalid_input",
+		});
+	});
 });

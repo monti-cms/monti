@@ -27,6 +27,8 @@ import { sidePanelSlotMessages } from "./side-panel-slot.messages";
 export interface PanelRequest {
 	/** The words to send at once. Without them the panel opens with its box focused and empty. */
 	readonly text?: string;
+	/** Something of the panel's own to show, by its id (the assistant: a conversation, which the bubble of its proposals opens). */
+	readonly open?: string;
 }
 
 interface AdminPanelState {

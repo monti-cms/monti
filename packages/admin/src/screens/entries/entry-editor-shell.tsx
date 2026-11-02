@@ -81,6 +81,8 @@ export function EntryEditorShell({
 	const tc = useTranslator(commonMessages);
 	const propCollection = propCollectionProp ?? site.DEFAULT_COLLECTION;
 	const router = useAdminRouter();
+	// What the editor extensions do after a save (they are made below, from the entry this hook loads).
+	const extensionsSavedRef = useRef<(() => void) | null>(null);
 	const editor = useEntryEditor({
 		adminId,
 		target:
@@ -91,6 +93,7 @@ export function EntryEditorShell({
 		onSaved: (saved, { created }) => {
 			if (created)
 				window.history.replaceState({ ...window.history.state }, "", withBasePath(site.adminEntryEditHref(saved.id)));
+			extensionsSavedRef.current?.();
 		},
 	});
 	const { entry, collection, form, load, publishIssues, translation } = editor;
@@ -241,6 +244,7 @@ export function EntryEditorShell({
 		[collection, titleKey, entry?.locale, entry?.id],
 	);
 	const extensions = useEditorExtensions({ translateLocales, getEntry });
+	extensionsSavedRef.current = extensions.onSaved;
 
 	const refreshIncoming = useCallback(
 		async (targetId: string) => {

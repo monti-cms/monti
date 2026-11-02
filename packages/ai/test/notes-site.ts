@@ -56,6 +56,8 @@ export function notesSite(initial: Record<string, string> = { a: "one", b: "two"
 			seen.push(currentAgent());
 		},
 		baseOf: async (target) => notes.get(target.id) ?? null,
+		// Accepted in the editor: the editor already wrote the text, so reverting puts back what was planned against.
+		adopt: async (plan) => ({ base: notes.get(plan.target.id) ?? "", undo: { text: plan.preview.before } }),
 	});
 	const cms = fakeCms({
 		config: testConfig as never,

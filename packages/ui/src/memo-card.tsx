@@ -1,9 +1,10 @@
 "use client";
 
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { ComponentProps, KeyboardEvent, ReactElement, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
-import { MENU_CARD } from "./menu-parts";
+import { MENU_CARD, MENU_MOTION } from "./menu-parts";
 import { SendButton } from "./send-button";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -186,4 +187,37 @@ function MemoDiff({
 	);
 }
 
-export { MemoCard, MemoDiff, MemoMessage, MemoThread };
+/**
+ * A `MemoCard` opened under a place in the text: `anchor` finds the element it hangs from (the block of a mark), 8px below its start. It is asked again
+ * whenever the card is placed, so a block the editor draws anew keeps its card. Pressing outside or Esc
+ * closes it through `onOpenChange`.
+ */
+function MemoCardPopover({
+	anchor,
+	open,
+	onOpenChange,
+	...card
+}: ComponentProps<typeof MemoCard> & {
+	anchor: () => Element | null;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) {
+	return (
+		<PopoverPrimitive.Root open={open} onOpenChange={onOpenChange}>
+			<PopoverPrimitive.Portal>
+				<PopoverPrimitive.Positioner
+					anchor={anchor}
+					side="bottom"
+					align="start"
+					sideOffset={8}
+					className="isolate z-50"
+				>
+					{/* The text keeps the focus: the card opens beside what is being read, and its buttons are a press away. */}
+					<PopoverPrimitive.Popup render={<MemoCard {...card} />} className={MENU_MOTION} initialFocus={false} />
+				</PopoverPrimitive.Positioner>
+			</PopoverPrimitive.Portal>
+		</PopoverPrimitive.Root>
+	);
+}
+
+export { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread };

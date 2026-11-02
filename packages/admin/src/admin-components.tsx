@@ -1,6 +1,6 @@
 "use client";
 
-import type { StoredDocument } from "@monti-cms/core/document";
+import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { ListEntriesItem } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
@@ -19,6 +19,7 @@ import type { BrowserFormat } from "./browser-format";
 import type { EditorMarkSpec } from "./editor/added-marks";
 import type { BlockView } from "./editor/blocks/use-block-editor";
 import type { ActiveInlineMark } from "./editor/inline-marks";
+import { useProposalMarks } from "./editor/proposals/use-proposal-marks";
 import { useTextCheckEditor } from "./editor/text-check/extension";
 import type { TextIssues } from "./editor/text-check/findings";
 import type { BlockAction } from "./editor/tiptap-editor";
@@ -78,6 +79,29 @@ export interface EditorMenuItem {
  * What an edit screen extension adds: rows in the ⋯ menu of the header, an action in the block menu, actions for the selection menu and slash menu,
  * and functions to receive when the editor is created and destroyed.
  */
+/** A change the assistant proposed for a block of the open entry (docs/design/agent-editor.md): the editor draws it as the blue pencil until it is accepted or discarded. */
+export interface EditorProposalItem {
+	readonly id: string;
+	/** The words of the request it came from: the bubble's name. */
+	readonly request: string;
+	/** The top-level block it replaces. */
+	readonly blockId: string;
+	/** The block as the proposal was planned against. A block that reads otherwise in the editor was changed meanwhile, and the proposal is not drawn. */
+	readonly block: CmsNode;
+	/** The blocks that take its place, as stored; none removes the block. */
+	readonly nodes: readonly CmsNode[];
+}
+
+/** Proposals an extension shows in the open entry, and what it hears back. */
+export interface EditorProposals {
+	readonly items: readonly EditorProposalItem[];
+	/** The admin accepted one: it is in the document now (unsaved), with `placed` the ids of the blocks put in its block's place. */
+	readonly onAccept: (item: EditorProposalItem, placed: readonly string[]) => void;
+	readonly onDiscard: (items: readonly EditorProposalItem[]) => void;
+	/** The bubble's name was pressed while it showed `item`: open where it came from (its conversation). */
+	readonly onOpen?: (item: EditorProposalItem) => void;
+}
+
 export interface EditorExtensionResult {
 	/** Document-wide tools (a row that writes a draft, translates everything): rows in the ⋯ menu of the header. */
 	readonly menuItems?: readonly EditorMenuItem[];
@@ -87,6 +111,10 @@ export interface EditorExtensionResult {
 	readonly selectionActions?: readonly EditorSelectionAction[];
 	readonly insertActions?: readonly EditorInsertAction[];
 	readonly onEditor?: (editor: Editor | null) => void;
+	/** Proposals of the assistant for the open entry, drawn in the text with the bubble and card. */
+	readonly proposals?: EditorProposals;
+	/** The entry was saved: what is in the editor is on the server now. */
+	readonly onSaved?: () => void;
 }
 
 export type EditorExtension = (context: EditorExtensionContext) => EditorExtensionResult;
@@ -342,13 +370,21 @@ const NO_CHECKERS: readonly TextChecker[] = [];
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
 export function useEditorExtensions(
 	context: EditorExtensionContext,
-): Required<EditorExtensionResult> & { readonly textIssues: TextIssues | null } {
+): Required<Omit<EditorExtensionResult, "proposals">> & { readonly textIssues: TextIssues | null } {
 	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
 	const extensionResults = editorExtensions.map((extension) => extension(context));
 	const textCheck = useTextCheckEditor(textCheckers, context);
-	const results = [...extensionResults, textCheck];
+	const proposalSources = extensionResults.flatMap((result) => (result.proposals ? [result.proposals] : []));
+	const proposals = useProposalMarks(proposalSources);
+	const results: EditorExtensionResult[] = [...extensionResults, textCheck, proposals];
 	const editorCallbacks = results.flatMap((result) => (result.onEditor ? [result.onEditor] : []));
+	const savedCallbacks = results.flatMap((result) => (result.onSaved ? [result.onSaved] : []));
+	const savedRef = useRef(savedCallbacks);
+	savedRef.current = savedCallbacks;
+	const onSaved = useCallback(() => {
+		for (const callback of savedRef.current) callback();
+	}, []);
 	const callbacksRef = useRef(editorCallbacks);
 	callbacksRef.current = editorCallbacks;
 	const onEditor = useCallback((editor: Editor | null) => {
@@ -362,6 +398,7 @@ export function useEditorExtensions(
 		selectionActions: results.flatMap((result) => result.selectionActions ?? []),
 		insertActions: results.flatMap((result) => result.insertActions ?? []),
 		onEditor,
+		onSaved,
 		textIssues: textCheck.textIssues,
 	};
 }

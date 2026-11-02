@@ -84,6 +84,11 @@ export const updateEntryFields = defineOperation({
 		const entry = await liveEntry(context, plan.target.id);
 		await saveField(context, entry, field, (undo as { value: unknown }).value);
 	},
+	adopt: async (plan, _made, context) => {
+		const { field } = plan.change as { field: string };
+		const entry = await liveEntry(context, plan.target.id);
+		return { base: spotBase(fieldValue(entry, field)), undo: { value: plan.preview.before } };
+	},
 	baseOf: async (target, context) => {
 		const entry = await context.cms
 			.store()

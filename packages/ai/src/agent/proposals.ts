@@ -34,7 +34,13 @@ export interface ProposalItem {
 	/** The error code of a failed item, or why an item is stale or kept. */
 	readonly reason?: string;
 	/** After applying: the target's base right after, and what reverting needs. */
-	readonly applied?: { readonly base: string; readonly undo: unknown; readonly at: string };
+	readonly applied?: {
+		readonly base: string;
+		readonly undo: unknown;
+		readonly at: string;
+		/** Accepted in the entry editor and saved there, not applied from the review. */
+		readonly inEditor?: boolean;
+	};
 }
 
 /** The write changes one run of the agent proposed, kept with its conversation. */

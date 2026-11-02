@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { ProposalBubble } from "./proposal-bubble";
+import { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
 import { Stack } from "./stack";
 
 /**
@@ -54,3 +54,20 @@ export const OneProposal: Story = {
 
 /** Without a way to open the conversation the name is plain. */
 export const NotOpenable: Story = { args: { onOpen: undefined } };
+
+/** In its dock (`ProposalBubbleDock`): at the bottom of a scrolling column, centered, staying put as the text scrolls under it. */
+export const Docked: Story = {
+	tags: ["visual"],
+	render: (args) => (
+		<div className="h-80 w-[640px] overflow-y-auto border border-monti-default">
+			<div className="flex flex-col gap-monti-16 p-monti-16">
+				{Array.from({ length: 12 }, (_, index) => (
+					<p key={index}>문단 {index + 1}. 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌다.</p>
+				))}
+			</div>
+			<ProposalBubbleDock>
+				<ProposalBubble {...args} />
+			</ProposalBubbleDock>
+		</div>
+	),
+};
