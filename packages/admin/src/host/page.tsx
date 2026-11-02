@@ -32,6 +32,9 @@ export interface AdminPageProps {
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  * - `/admin/<plugin name>/<screen>[/<param>]` a plugin's own screen (`defineAdminPlugin({ screens })`)
  */
+/** The first segments of the core's addresses: a plugin named like one of them has no screens. */
+const CORE_SEGMENTS = new Set(["trash", "media", "settings", "login", "tools", "templates", "entries"]);
+
 export async function AdminPage({ cms, server, params, searchParams }: AdminPageProps) {
 	const path = (await params).path ?? [];
 	const [first, second, third, ...rest] = path;
@@ -75,7 +78,8 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 	if (first === "entries" && second && third === "edit") {
 		return <EditEntryPage cms={cms} server={server} params={Promise.resolve({ id: second })} />;
 	}
-	if (first && second) {
+	// A plugin's screen, under its name; the core's own first segments never are one.
+	if (first && second && !CORE_SEGMENTS.has(first)) {
 		return <PluginScreenPage cms={cms} server={server} plugin={first} screen={second} params={third ? [third] : []} />;
 	}
 	server.notFound();
