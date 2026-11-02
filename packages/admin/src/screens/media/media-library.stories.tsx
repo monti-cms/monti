@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
 import type { MediaItem } from "../../api/media";
 import { writePreference } from "../../lib/utils/site-storage";
@@ -195,7 +195,8 @@ export const DraggingOverFolder: Story = {
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		drag(await tile(canvasElement, /^covers/), "dragenter", [new File(["x"], "a.png", { type: "image/png" })]);
-		await waitFor(() => body().getByText("covers"));
+		// The drop pill names the folder the files go into.
+		await waitFor(() => expect(body().getByText("에 올려요").parentElement?.textContent).toContain("covers"));
 	},
 };
 

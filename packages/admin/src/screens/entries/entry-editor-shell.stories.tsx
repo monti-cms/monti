@@ -433,7 +433,8 @@ export const PluginCellLeftOut: Story = {
 export const PublishFailed: Story = {
 	render: screen(() => server({ publish: answer(500, { error: { message: "발행하지 못했어요." } }) })),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행" }, LONG));
+		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행하기" }, LONG));
+		await within(document.body).findAllByText(/발행하지 못했어요/, undefined, LONG);
 	},
 };
 

@@ -33,10 +33,35 @@ export const settle = async (page: Page, id: string) => {
 	});
 };
 
-/** Opens a story, waits for it to settle and returns once the page can be measured or shot. */
+/**
+ * Listens, from before the story loads, for a play function or a story that throws. Storybook reports such an error in its panel and still finishes the
+ * render (the page shows no error), so without this a story whose play fails would pass every check, with its last state unchecked.
+ */
+const LISTEN_FOR_ERRORS = () => {
+	const holder = window as unknown as {
+		__STORYBOOK_ADDONS_CHANNEL__?: { on: (event: string, listener: (error: unknown) => void) => void };
+		__montiStoryError?: string;
+	};
+	const record = (error: unknown) => {
+		holder.__montiStoryError ??=
+			error instanceof Error ? error.message : String((error as { message?: unknown })?.message ?? error);
+	};
+	const hook = () => {
+		const channel = holder.__STORYBOOK_ADDONS_CHANNEL__;
+		if (!channel) return void setTimeout(hook, 10);
+		channel.on("playFunctionThrewException", record);
+		channel.on("storyThrewException", record);
+	};
+	hook();
+};
+
+/** Opens a story, waits for it to settle and returns once the page can be measured or shot. A story or play function that threw fails here. */
 export const openStory = async (page: Page, id: string) => {
+	await page.addInitScript(LISTEN_FOR_ERRORS);
 	await page.goto(`/iframe.html?id=${id}&viewMode=story`);
 	await settle(page, id);
+	const thrown = await page.evaluate(() => (window as { __montiStoryError?: string }).__montiStoryError);
+	if (thrown) throw new Error(`${id}: the story or its play function threw: ${thrown.split("\n")[0]}`);
 };
 
 /** The toolbar's switch: the tokens' dark selector, `.dark` on `html`. */
