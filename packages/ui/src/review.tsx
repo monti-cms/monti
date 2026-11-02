@@ -53,7 +53,7 @@ function IncludeCheck({
 	included: boolean;
 	onIncludedChange?: (included: boolean) => void;
 	label: string;
-	/** Kept as it was (an applied proposal, a change that can no longer be applied): same look, but it cannot be changed and says so. */
+	/** Kept as it was (an applied proposal, a change that can no longer be applied): the read-only check, which cannot be changed. */
 	readOnly?: boolean;
 }) {
 	return (
@@ -62,7 +62,7 @@ function IncludeCheck({
 			onCheckedChange={(checked) => onIncludedChange?.(checked === true)}
 			aria-label={label}
 			readOnly={readOnly}
-			className={cn("mt-[3px]", readOnly && "cursor-default")}
+			className="mt-[3px]"
 		/>
 	);
 }

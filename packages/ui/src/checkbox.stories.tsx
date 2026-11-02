@@ -21,7 +21,7 @@ export const Playground: Story = {
 	),
 };
 
-/** Off, on, mixed (some of a list picked), and the AI versions (the assistant chose); plain, disabled and invalid. */
+/** Off, on, mixed (some of a list picked), and the AI versions (the assistant chose); plain, disabled, read-only and invalid. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={12}>
@@ -33,6 +33,8 @@ export const States: Story = {
 				{ name: "proposal · mixed", props: { indeterminate: true, proposal: true } },
 				{ name: "disabled", props: { disabled: true } },
 				{ name: "disabled · checked", props: { disabled: true, defaultChecked: true } },
+				{ name: "read-only", props: { readOnly: true } },
+				{ name: "read-only · checked", props: { readOnly: true, defaultChecked: true } },
 				{ name: "invalid", props: { "aria-invalid": true } },
 				{ name: "invalid · checked", props: { "aria-invalid": true, defaultChecked: true } },
 			].map(({ name, props }) => (
