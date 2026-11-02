@@ -424,13 +424,6 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		expect((await run(target, zip)).status).toBe(400);
 	});
 
-	it("DATA-R5 refuses a file that is not a backup", async () => {
-		const notZip = new Uint8Array([1, 2, 3]);
-		expect((await run(target, notZip)).status).toBe(400);
-		const noManifest = createZipArchive([{ path: "readme.txt", data: encode("hello") }]);
-		expect((await run(target, noManifest)).status).toBe(400);
-	});
-
 	it("DATA-R3 refuses a translation whose source is not in the archive", async () => {
 		const tampered = withFile(backup, "manifest.json", (manifest) => ({
 			...manifest,

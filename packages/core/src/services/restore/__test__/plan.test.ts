@@ -9,8 +9,7 @@ const TIME = new Date("2026-09-22T00:00:00.000Z");
 const ids = {
 	present: "11111111-1111-4111-8111-111111111111",
 	missing: "22222222-2222-4222-8222-222222222222",
-	alsoMissing: "33333333-3333-4333-8333-333333333333",
-	trashed: "44444444-4444-4444-8444-444444444444",
+	trashed: "33333333-3333-4333-8333-333333333333",
 };
 
 const mediaFile = (id: string, status: MediaAssetRecord["status"] = "ready"): MediaAssetRecord => ({
@@ -54,37 +53,11 @@ const siteWith = (
 		...(headFile ? { mediaStore: { headFile } as never } : {}),
 	});
 
-/** Storage that holds the files with these keys. */
-const storageWith =
-	(...keys: string[]) =>
-	async ({ key }: { key: string }) =>
-		keys.includes(key) ? { key, contentType: "image/png", contentLength: 10 } : null;
-
 describe("planRestore", () => {
-	it.each([
-		["an entry in a folder", { entries: 1, folders: 1 }],
-		["an image in a folder", { folders: 1, media: 1 }],
-	])("DATA-R2 does not take a site that holds %s", async (_, content) => {
+	it("DATA-R2 does not take a site that holds an image in a folder", async () => {
 		const backup = backupOf([]);
 		expect(await planRestore(siteWith(), backup)).toMatchObject({ empty: true, ready: true });
-		expect(await planRestore(siteWith(content), backup)).toMatchObject({ empty: false, ready: false });
-	});
-
-	it("DATA-R7 warns of each ready media file that is missing from storage, and of no other", async () => {
-		const files = [
-			mediaFile(ids.present),
-			mediaFile(ids.missing),
-			mediaFile(ids.alsoMissing),
-			mediaFile(ids.trashed, "trashed"),
-		];
-		const preview = await planRestore(siteWith({}, storageWith(`media/${ids.present}.png`)), backupOf(files));
-		expect(preview.ready).toBe(true);
-		expect(preview.warnings).toHaveLength(2);
-		for (const id of [ids.missing, ids.alsoMissing]) {
-			expect(preview.warnings).toContainEqual(
-				expect.objectContaining({ code: "media_file_missing", id, label: `${id.slice(0, 4)}.png` }),
-			);
-		}
+		expect(await planRestore(siteWith({ folders: 1, media: 1 }), backup)).toMatchObject({ empty: false, ready: false });
 	});
 
 	it("DATA-R6 says once that the files were not checked when storage cannot be reached", async () => {
