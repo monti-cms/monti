@@ -1,21 +1,17 @@
 import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/server";
 import { aiModelsQuerySchema } from "../../connection";
 import { isFakeAi, listModels } from "../../provider";
-import { savedProvider } from "../../settings";
+import { keyConnection } from "../../settings";
 import { aiStoreFor } from "../../store";
 
 /**
- * Model list of a generation connection's address (`GET {address}/models`). A saved connection is called by `providerId`; before saving, by address and key.
- * The key is never returned to the browser. If the address gives no list, the list is empty and the screen has the user type the name.
+ * The models of one AI key (`GET {service address}/models`, with the key). The key is never returned to the browser. A service that gives no list
+ * answers an empty one, and the menu lets the person type the name.
  */
 export const POST = adminRoute(async ({ request, cms }) => {
-	const query = parseWith(aiModelsQuerySchema, await readJsonBody(request));
-	const saved = query.providerId ? await savedProvider(aiStoreFor(cms), query.providerId) : null;
-	if (saved && saved.kind !== "chat") return ok({ items: [] });
-	const url = query.url || saved?.url;
-	if (!url) return ok({ items: isFakeAi() ? [{ id: "fake-generator" }] : [] });
-	// A key typed in the form, or one chosen from the store. If neither, the stored key of the connection, unless the address changed (it is not sent to a different address).
-	const chosen = query.keyId ? await aiStoreFor(cms).apiKeys().read(query.keyId) : null;
-	const apiKey = query.apiKey ?? chosen ?? (saved && saved.url === url ? saved.apiKey : null);
-	return ok({ items: await listModels(cms.site, url, apiKey, request.signal) });
+	const { keyId } = parseWith(aiModelsQuerySchema, await readJsonBody(request));
+	if (isFakeAi()) return ok({ items: [{ id: "fake-agent" }] });
+	const connection = await keyConnection(aiStoreFor(cms), keyId);
+	if (!connection) return ok({ items: [] });
+	return ok({ items: await listModels(cms.site, connection.baseUrl, connection.apiKey || null, request.signal) });
 });

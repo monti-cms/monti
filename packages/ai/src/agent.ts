@@ -16,9 +16,10 @@ import { agentSystemPrompt } from "./agent-prompt";
 import type { AgentRequest } from "./agent-request";
 import { type AgentRunStatus, type AgentRunValue, type AgentUsage, fitsRun, NO_USAGE, titleOf } from "./agent-store";
 import { createAgentTools } from "./agent-tools";
+import { type AgentModelChoice, CREDIT_EXHAUSTED } from "./connection";
 import { AiError } from "./errors";
 import { AI_PLUGIN_NAME } from "./name";
-import { modelFailureMessage } from "./provider";
+import { AGENT_PROVIDER, isCreditError, modelFailureMessage } from "./provider";
 import { type AgentRuntime, noToolsError } from "./settings";
 import type { AiStore } from "./store";
 
@@ -107,6 +108,7 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 	if (body.runId && !existing) throw new AiError("not_found", t("unknownRun"));
 	const runId = existing?.id ?? randomUUID();
 	const before = existing?.usage ?? NO_USAGE;
+	const model: AgentModelChoice = { keyId: runtime.keyId, model: runtime.modelName, thinking: runtime.thinking };
 	const title = existing?.title ?? titleOf(messages);
 
 	let failure: string | undefined;
@@ -125,6 +127,7 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 			status,
 			messages: all,
 			usage,
+			model,
 			...(failure ? { error: failure } : {}),
 		};
 		return store.agentRuns.save(runId, value);
@@ -141,6 +144,9 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 		messages: await convertToModelMessages(messages, { tools, ignoreIncompleteToolCalls: true }),
 		tools,
 		stopWhen: isStepCount(MAX_AGENT_STEPS),
+		...(runtime.thinking === "off"
+			? {}
+			: { providerOptions: { [AGENT_PROVIDER]: { reasoningEffort: runtime.thinking } } }),
 		// The retry of a failed request is the model wrapper's (once per step), not the SDK's.
 		maxRetries: 0,
 		abortSignal: signal,
@@ -153,13 +159,15 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 		messageMetadata: ({ part }) => {
 			if (part.type === "start") return { runId };
 			if (part.type === "finish") {
-				usage = addUsage(before, usageOf(part.totalUsage));
+				const spent = usageOf(part.totalUsage);
+				usage = addUsage(before, spent);
+				void runtime.recordUsage(spent.totalTokens).catch((error) => log.error("could not count tokens", runId, error));
 				return { runId, usage };
 			}
 			return undefined;
 		},
 		onError: (error) => {
-			failure = modelFailureMessage(error);
+			failure = isCreditError(error) ? CREDIT_EXHAUSTED : modelFailureMessage(error);
 			log.warn(`agent run ${runId} failed: ${failure}`);
 			return failure;
 		},
@@ -186,7 +194,7 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 	try {
 		await (existing
 			? save("running", messages)
-			: store.agentRuns.create(runId, { adminId: auth.userId, title, status: "running", messages, usage }));
+			: store.agentRuns.create(runId, { adminId: auth.userId, title, status: "running", messages, usage, model }));
 	} catch (error) {
 		release(false);
 		stream.cancel().catch(() => undefined);

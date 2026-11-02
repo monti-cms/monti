@@ -1,4 +1,4 @@
-import { type ApiKeyList, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { type ApiKeyList, type ApiKeyView, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { apiKeysMessages } from "../screens/api-keys/messages";
 import { adminFetch } from "./client";
@@ -13,14 +13,18 @@ export const apiKeysKeys = {
 export const listApiKeys = (site: Site, signal?: AbortSignal, fallback?: string) =>
 	adminFetch<ApiKeyList>(site, "/v1/api-keys", { signal, fallback });
 
-export const createApiKey = (site: Site, input: { name: string; value: string }, fallback?: string) =>
-	adminFetch(site, "/v1/api-keys", { method: "POST", json: input, fallback });
+/** Adds a key of a service (checked with the service first). `url` for a service at an address of the site's choosing; `value` may be left out where the service needs none. */
+export const createApiKey = (
+	site: Site,
+	input: { service: string; url?: string; name: string; value?: string },
+	fallback?: string,
+) => adminFetch<ApiKeyView>(site, "/v1/api-keys", { method: "POST", json: input, fallback });
 
 /** Renames a key (`name`) or replaces its value (`value`). */
 export const updateApiKey = (
 	site: Site,
 	id: string,
-	input: { expectedVersion: number } & ({ name: string } | { value: string }),
+	input: { expectedVersion: number; name?: string; value?: string },
 	fallback?: string,
 ) => adminFetch(site, `/v1/api-keys/${encodeURIComponent(id)}`, { method: "PATCH", json: input, fallback });
 
@@ -38,9 +42,9 @@ export const deleteApiKey = (
 	});
 };
 
-/** Assigns a key to a plugin slot, or clears it (`{ use: "none" }`). A typed key is saved in the same request. */
-export const putApiKeySlot = (site: Site, plugin: string, slot: string, key: unknown, fallback?: string) =>
-	adminFetch(site, "/v1/api-keys/slots", { method: "PUT", json: { plugin, slot, key }, fallback });
+/** Chooses which key of its service a plugin's slot reads (`null`: the first one again). */
+export const putApiKeySlot = (site: Site, plugin: string, slot: string, keyId: string | null, fallback?: string) =>
+	adminFetch(site, "/v1/api-keys/slots", { method: "PUT", json: { plugin, slot, keyId }, fallback });
 
 /** The saved keys, cached for 30 seconds. */
 export function useApiKeys() {

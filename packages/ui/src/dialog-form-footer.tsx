@@ -5,7 +5,7 @@ import { TextButton } from "./text-button";
 
 /**
  * The footer of a dialog that holds a form: a Cancel text button and one pill, right-aligned like every modal's actions. The pill shows `busyLabel`
- * (the labels' "saving") while the request runs. Put it inside the `<form>`; the dialog closes through `onCancel`.
+ * (the labels' "saving") with a spinner while the request runs, keeping its fill. Put it inside the `<form>`; the dialog closes through `onCancel`.
  */
 export function DialogFormFooter({
 	onCancel,
@@ -26,7 +26,7 @@ export function DialogFormFooter({
 	return (
 		<DialogFooter>
 			<TextButton onClick={onCancel}>{cancelLabel ?? labels.cancel}</TextButton>
-			<Button type="submit" disabled={disabled || busy}>
+			<Button type="submit" disabled={disabled} loading={busy}>
 				{busy ? (busyLabel ?? labels.saving) : (submitLabel ?? labels.save)}
 			</Button>
 		</DialogFooter>

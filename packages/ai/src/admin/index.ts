@@ -1,6 +1,6 @@
 import { agentPanel } from "./agent-panel";
-import { AiManager } from "./ai-manager";
 import { AiSlotProvider } from "./ai-slot-provider";
+import { ModelSection } from "./model-section";
 import { aiComponents } from "./provider";
 
 /**
@@ -9,8 +9,9 @@ import { aiComponents } from "./provider";
  */
 // The slot actions come from a query the AI screens share, so they need the plugin's own provider.
 export default defineAdminPlugin({
-	pages: { ai: AiManager },
 	panel: agentPanel,
+	// The quick-task model, on Tools › API keys after the saved keys.
+	keySections: { models: ModelSection },
 	components: aiComponents,
 	Provider: AiSlotProvider,
 });

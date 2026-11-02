@@ -26,7 +26,7 @@ export interface AdminPageProps {
  * - `/admin` list · `/admin/trash` trash · `/admin/media` media
  * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file)
  * - `/admin/tools/<tab>` Tools, one tab per address: `templates` (body templates), `data` (backup, import and restore), `events` (activity log), `api-keys`, and a plugin's
- *   page for each `nav` item (e.g. the AI plugin's `/admin/tools/ai`). `/admin/tools` goes to the first tab.
+ *   page for each `nav` item (`/admin/tools/<path>`). `/admin/tools` goes to the first tab.
  * - `/admin/templates/new` new template · `/admin/templates/<id>/edit` edit one (a page of its own; the list is the tools page's `templates` tab)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */

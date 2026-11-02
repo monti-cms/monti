@@ -55,6 +55,7 @@ export {
 	type PluginConfigView,
 	type PluginContributions,
 	type PluginId,
+	type PluginKeyService,
 	type PluginKeySlot,
 	type PluginLabel,
 	type PluginNamed,

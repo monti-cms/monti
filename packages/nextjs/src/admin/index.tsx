@@ -87,7 +87,7 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  *
  * - `/admin` list · `/admin/trash` trash · `/admin/media` media
  * - `/admin/settings/<tab>` Settings: the schema file (`collections`, `locales`, `site`, `admin`)
- * - `/admin/tools/<tab>` Tools: `templates`, `data` (backup, import and restore), `events` (activity log), `api-keys`, and a plugin's page for each `nav` item (e.g. the AI plugin's `/admin/tools/ai`); `/admin/tools` goes to the first tab
+ * - `/admin/tools/<tab>` Tools: `templates`, `data` (backup, import and restore), `events` (activity log), `api-keys`, and a plugin's page for each `nav` item (`/admin/tools/<path>`); `/admin/tools` goes to the first tab
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */
 export function CmsAdminPage({ cms, ...props }: CmsAdminPageProps & { cms: Cms }) {

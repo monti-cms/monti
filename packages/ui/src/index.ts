@@ -37,6 +37,13 @@ export const CompareSide = close(open.CompareSide);
 export const CompareText = close(open.CompareText);
 export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
+export const ModelMenu = close(open.ModelMenu);
+export const ModelMenuButton = close(open.ModelMenuButton);
+export const MenuField = close(open.MenuField);
+export const SavedValue = close(open.SavedValue);
+export const SecretInput = close(open.SecretInput);
+export const TableSection = close(open.TableSection);
+export const TableSectionRow = close(open.TableSectionRow);
 export const CropStage = close(open.CropStage);
 export const Spinner = close(open.Spinner);
 export const Shortcut = close(open.Shortcut);
@@ -59,6 +66,9 @@ export type {
 	ChangesItem,
 	FormatMark,
 	MediaPickerFolder,
+	ModelMenuGroup,
+	ModelMenuItem,
+	ModelMenuThinking,
 	MontiIcon,
 	PatchLine,
 	ToolCallDetail,
@@ -185,6 +195,8 @@ export const MenuTick = close(open.MenuTick);
 export const MenuValue = close(open.MenuValue);
 export const PickList = close(open.PickList);
 export const PickListItem = close(open.PickListItem);
+export const PickListLabel = close(open.PickListLabel);
+export const PickListSeparator = close(open.PickListSeparator);
 export const Popover = close(open.Popover);
 export const PopoverContent = close(open.PopoverContent);
 export const PopoverDescription = close(open.PopoverDescription);

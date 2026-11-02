@@ -1,154 +1,128 @@
 "use client";
 
-import { useCmsMutation, useTranslator } from "@monti-cms/admin";
-import {
-	Box,
-	Button,
-	commonMessages,
-	FormField,
-	FormFieldLabel,
-	Grid,
-	Heading,
-	Inline,
-	Stack,
-	Text,
-	TextButton,
-} from "@monti-cms/admin/kit";
+import { useTranslator } from "@monti-cms/admin";
+import { ModelMenu, ModelMenuButton, type ModelMenuGroup, usePreference } from "@monti-cms/admin/kit";
 import { useState } from "react";
-import type { AiProviderView, AiSettingsView } from "../connection";
+import type { AgentModelChoice, AiModelChoice, AiSettingsView } from "../connection";
+import { canThink, THINKING_LEVELS, type ThinkingLevel } from "../service-models";
 import { agentPanelMessages } from "./agent-panel.messages";
-import { setAiAgentModel } from "./api";
-import { OptionSelect } from "./custom-editor";
-import { ModelCombobox, useModelList } from "./model-combobox";
+import { liveRecent, modelValue, parseModelValue, withRecent } from "./model-groups";
+import { useKeyModels } from "./use-ai-settings";
 
-/** The value of the connection select that means "no choice": the first ready connection with its default model. */
-const DEFAULT_CONNECTION = "";
+const RECENT_CODEC = {
+	parse: (raw: string): AiModelChoice[] => {
+		try {
+			const parsed = JSON.parse(raw) as unknown;
+			return Array.isArray(parsed) ? (parsed as AiModelChoice[]) : [];
+		} catch {
+			return [];
+		}
+	},
+	serialize: (value: AiModelChoice[]) => JSON.stringify(value),
+};
+
+/** The level a model that thinks starts at. */
+export const DEFAULT_THINKING: ThinkingLevel = "medium";
+
+/** Whether the model of a choice can think, from the service of its key. */
+export function thinks(settings: AiSettingsView, choice: AiModelChoice): boolean {
+	const key = settings.keys.find((entry) => entry.id === choice.keyId);
+	return key ? canThink(key.service, choice.model) : false;
+}
 
 /**
- * The connection and model the assistant runs on, on the Connections tab of the AI screen. Each model shows what the connection check found out about its
- * tool calling, because the assistant is off for a model that can't call tools. Saved with the whole settings version, like a connection.
+ * The model button at the start of the chat input (flow 2 · 23): the model of this conversation and, for a model that thinks, its level. Its menu has a
+ * search line, the recent models (the default first, marked default), then the models of each key with its count; a model a run found unable to use
+ * tools is left out. "Thinking ›" opens the levels. Picking applies to this conversation only.
  */
 export function AgentModelPicker({
 	settings,
-	onSaved,
-	onConflict,
+	value,
+	onChange,
+	open: openProp,
+	onOpenChange,
 }: {
 	settings: AiSettingsView;
-	onSaved: (saved: AiSettingsView) => void;
-	onConflict: () => void;
+	/** `null` while no model is chosen and there is no default (only keys without a default model). */
+	value: AgentModelChoice | null;
+	onChange: (next: AgentModelChoice) => void;
+	/** Opens the menu from outside ("Send with another model"). */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }) {
 	const t = useTranslator(agentPanelMessages);
-	const tc = useTranslator(commonMessages);
-	const chosen = settings.agent.setting;
-	const chatConnections = settings.providers.filter((provider) => provider.kind === "chat");
-	const [providerId, setProviderId] = useState(chosen?.providerId ?? DEFAULT_CONNECTION);
-	const [model, setModel] = useState(chosen?.model ?? "");
-	const provider: AiProviderView | undefined = chatConnections.find((item) => item.id === providerId);
-	const list = useModelList(provider ? { providerId: provider.id } : null);
+	const [ownOpen, setOwnOpen] = useState(false);
+	const open = openProp ?? ownOpen;
+	const setOpen = onOpenChange ?? setOwnOpen;
+	const [stored, setRecent] = usePreference("agent-recent-models", RECENT_CODEC, []);
+	const lists = useKeyModels(settings.keys, open);
+	const keyName = (keyId: string) => settings.keys.find((key) => key.id === keyId)?.name ?? "";
+	// A model a run found unable to use tools cannot run the assistant, so it is not offered.
+	const usable = (choice: AiModelChoice) => settings.toolSupport[choice.keyId]?.[choice.model] !== false;
 
-	// The models the connection lists, and those the check tried even if the list cannot be read.
-	const checked = provider ? Object.keys(provider.toolSupport) : [];
-	const models = provider
-		? [
-				...(list.models ?? []),
-				...checked.filter((id) => !list.models?.some((item) => item.id === id)).map((id) => ({ id })),
-			]
-		: [];
-	const hints = Object.fromEntries(
-		Object.entries(provider?.toolSupport ?? {}).map(([id, tools]) => [
-			id,
-			tools ? t("picker.hint.yes") : t("picker.hint.no"),
-		]),
-	);
-	const tools = provider && model ? provider.toolSupport[model] : undefined;
-
-	const dirty =
-		providerId !== (chosen?.providerId ?? DEFAULT_CONNECTION) ||
-		(providerId !== DEFAULT_CONNECTION && model !== chosen?.model);
-	const save = useCmsMutation({
-		fn: (_: undefined, { site: current }) =>
-			setAiAgentModel(
-				current,
-				{
-					expectedVersion: settings.version,
-					agent: provider && model ? { providerId: provider.id, model } : null,
-				},
-				t("picker.saveFailed"),
-			),
-		success: tc("saved"),
-		failure: t("picker.saveFailed"),
-		onSuccess: onSaved,
-		onError: onConflict,
-	});
-
-	if (chatConnections.length === 0) return null;
+	const fallback = settings.assistant;
+	const recent: AiModelChoice[] = [
+		...(fallback ? [{ keyId: fallback.keyId, model: fallback.model }] : []),
+		...liveRecent(stored, settings.keys).filter(
+			(entry) => usable(entry) && (!fallback || modelValue(entry) !== modelValue(fallback)),
+		),
+	];
+	const inRecent = new Set(recent.map(modelValue));
+	const groups: ModelMenuGroup[] = [
+		{
+			key: "recent",
+			label: t("menu.recent"),
+			items: recent.map((entry, index) => ({
+				value: modelValue(entry),
+				model: entry.model,
+				hint: index === 0 && fallback ? t("menu.default") : keyName(entry.keyId),
+			})),
+		},
+		...lists.map(({ key, models }) => ({
+			key: key.id,
+			label: key.name,
+			count: models.length,
+			items: models
+				.map((model) => ({ keyId: key.id, model }))
+				.filter((choice) => usable(choice) && !inRecent.has(modelValue(choice)))
+				.map((choice) => ({ value: modelValue(choice), model: choice.model })),
+		})),
+	];
+	const thinking = value !== null && thinks(settings, value);
+	const levelLabel = (level: ThinkingLevel) => t(`thinking.${level}`);
 	return (
-		<Box border="bottom" paddingX={16} paddingY={12} shrink={false}>
-			<Stack gap={8}>
-				<Heading as="h2" variant="label">
-					{t("picker.title")}
-				</Heading>
-				<Grid gap={16} columns={2}>
-					<FormField>
-						<FormFieldLabel htmlFor="agent-connection">{t("picker.connection")}</FormFieldLabel>
-						<OptionSelect
-							id="agent-connection"
-							value={providerId}
-							options={[
-								{ value: DEFAULT_CONNECTION, label: t("picker.default") },
-								...chatConnections.map((item) => ({ value: item.id, label: item.name })),
-							]}
-							onChange={(next) => {
-								setProviderId(next);
-								setModel(chatConnections.find((item) => item.id === next)?.defaultModel ?? "");
-							}}
-						/>
-					</FormField>
-					<FormField>
-						<FormFieldLabel htmlFor="agent-model">{t("picker.model")}</FormFieldLabel>
-						{provider ? (
-							<ModelCombobox
-								id="agent-model"
-								value={model}
-								onChange={setModel}
-								models={models}
-								loading={list.loading}
-								error={list.error}
-								hints={hints}
-							/>
-						) : (
-							<Text variant="caption" tone="muted">
-								{settings.agent.effective
-									? `${settings.agent.effective.model} · ${settings.agent.effective.providerName}`
-									: ""}
-							</Text>
-						)}
-					</FormField>
-				</Grid>
-				<Inline gap={8} justify="between">
-					<Text variant="caption" tone={tools === false ? "danger" : "muted"}>
-						{provider && model
-							? t(tools === undefined ? "picker.tools.unknown" : tools ? "picker.tools.yes" : "picker.tools.no")
-							: ""}
-					</Text>
-					<Inline gap={8}>
-						{chosen && (
-							<TextButton
-								type="button"
-								onClick={() => {
-									setProviderId(DEFAULT_CONNECTION);
-									setModel("");
-								}}
-							>
-								{t("picker.reset")}
-							</TextButton>
-						)}
-						<Button type="button" size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate(undefined)}>
-							{t("picker.save")}
-						</Button>
-					</Inline>
-				</Inline>
-			</Stack>
-		</Box>
+		<ModelMenu
+			open={open}
+			onOpenChange={setOpen}
+			value={value ? modelValue(value) : null}
+			onValueChange={(picked) => {
+				const choice = parseModelValue(picked);
+				setRecent(withRecent(stored, choice));
+				const level = value && value.thinking !== "off" ? value.thinking : DEFAULT_THINKING;
+				onChange({ ...choice, thinking: thinks(settings, choice) ? level : "off" });
+			}}
+			groups={groups}
+			searchLabel={t("menu.search")}
+			emptyText={lists.some((list) => list.loading) ? t("menu.loading") : t("menu.empty")}
+			{...(thinking && value
+				? {
+						thinking: {
+							label: t("thinking.label"),
+							value: value.thinking,
+							options: THINKING_LEVELS.map((level) => ({ value: level, label: levelLabel(level) })),
+							onValueChange: (level: string) => onChange({ ...value, thinking: level as ThinkingLevel }),
+						},
+					}
+				: {})}
+			trigger={
+				<ModelMenuButton
+					label={t("menu.label")}
+					model={value?.model ?? t("menu.label")}
+					{...(thinking && value && value.thinking !== "off"
+						? { thinking: t("thinking.button", { level: levelLabel(value.thinking) }) }
+						: {})}
+				/>
+			}
+		/>
 	);
 }

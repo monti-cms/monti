@@ -1,42 +1,41 @@
 import { randomUUID } from "node:crypto";
-import {
-	type ApiKeyChoiceInput,
-	type ApiKeyList,
-	type ApiKeySlotView,
-	type ApiKeyUse,
-	type ApiKeyView,
-	keyNameCandidate,
-} from "../core/api-keys";
+import type { ApiKeyList, ApiKeyServiceView, ApiKeySlotView, ApiKeyUse, ApiKeyView } from "../core/api-keys";
 import { CmsError } from "../core/store";
+import type { PluginKeyService } from "../plugin/define";
 import type { PluginStorage, StorageItem } from "../plugin/storage";
 import type { PluginSecrets } from "../secrets";
 
 /**
  * The central API key store of one CMS instance (`cms.apiKeys`). Named keys are kept in the core's own storage, encrypted with the core's own key
- * (the reserved scope `core-keys`, derived from the server config's `secret`). A plugin that needs a key keeps the key's id, not its value, and reads the value
- * on the server when it calls the service.
+ * (the reserved scope `core-keys`, derived from the server config's `secret`).
  *
- * Where a key is used is one list of assignments, each an item of a plugin (`<plugin>:<ref>`) that points at a key:
- * - a **slot** is an assignment with a fixed ref (`slot:<id>`), declared once by the plugin (`keySlots`) and assigned in the admin;
- * - another use has a ref of the plugin's own choosing (`connection:<id>`) and is reported by the plugin whenever its items change (`setUses`); the text the
- *   admin shows for it comes from the plugin's `keyUses`.
+ * A key is a whole connection: it names the service it is for (declared by a plugin's `keyServices`) and, for a service at an address of the site's
+ * choosing, that address. A key is checked with its service before it is saved. Whoever needs a service uses a key of it:
+ * - a plugin's **slot** (`keySlots`) reads the key chosen for it, or else the first key of its service;
+ * - another use (the AI plugin's quick-task model) is reported by the plugin whenever it changes (`setUses`); the text the admin shows for it comes
+ *   from the plugin's `keyUses`.
  *
- * The value is never part of a view and never leaves the server. Reads change nothing.
+ * The value is never part of a view and never leaves the server. Reads change nothing. The tokens the services count are added up per key and month.
  */
 
 const KEYS = "keys";
 const NAMES = "names";
 const ASSIGNMENTS = "assignments";
+const USAGE = "usage";
 const SLOT_REF = "slot:";
 
 interface StoredKey {
 	name: string;
-	/** Encrypted value. */
-	secret: string;
+	/** Where the key comes in the list: one more than the last key's when it was added (two keys can be added in the same millisecond). */
+	order: number;
+	service: string;
+	url: string;
+	/** Encrypted value, or `null` for a service that needs no key. */
+	secret: string | null;
 	tail: string;
 }
 
-/** An assignment points at a key. The place it is for is the item's key (`<plugin>:<ref>`). The text shown for it is worked out when the keys are read. */
+/** An assignment points at a key. The place it is for is the item's key (`<plugin>:<ref>`). */
 interface StoredAssignment {
 	keyId: string;
 }
@@ -46,60 +45,82 @@ interface StoredName {
 	keyId: string;
 }
 
+/** Tokens of one key in one month (`<key id>/<YYYY-MM>`). */
+interface StoredUsage {
+	tokens: number;
+}
+
 /** The last four characters of a value, if it is long enough that they say little about it. */
 const tailOf = (value: string): string => (value.length >= 12 ? value.slice(-4) : "");
 
 const nameKeyOf = (name: string) => name.toLowerCase();
 
+/** The month usage is counted in, in UTC: `2026-11`. */
+export const usageMonth = (now: Date): string => now.toISOString().slice(0, 7);
+
+const usageKey = (keyId: string, month: string) => `${keyId}/${month}`;
+
 /** One key slot of a plugin: where its server code reads the key, and what the admin sets. */
 export interface ApiKeySlot {
-	/** The value of the key assigned to the slot, for the server code that calls the service. `null` when none is assigned, the key was deleted, or it cannot be decrypted. Never send it to a browser. */
-	read(): Promise<string | null>;
-	/** Assigns a saved key, or clears the slot with `null`. */
-	set(keyId: string | null): Promise<void>;
 	/**
-	 * Assigns what a form chose: a saved key, a typed value saved as a new key (named after the slot's service, `Service 2` ... when taken) in the same
-	 * transaction as the assignment, or none (clears it).
+	 * The value of the key the slot reads (the one chosen for it, or else the first key of its service), for the server code that calls the service.
+	 * `null` when the service has no key or it cannot be decrypted. Never send it to a browser.
 	 */
-	assign(choice: ApiKeyChoiceInput): Promise<void>;
+	read(): Promise<string | null>;
+	/** Chooses which key of the service the slot reads, or goes back to the first one with `null`. */
+	set(keyId: string | null): Promise<void>;
+}
+
+/** A key's details for the server code that calls its service. Never send `value` to a browser. */
+export interface ApiKeyAccess {
+	readonly id: string;
+	readonly service: string;
+	readonly url: string;
+	/** `null` when the key has no value (a service that needs none) or it cannot be decrypted. */
+	readonly value: string | null;
+	readonly readable: boolean;
 }
 
 export interface ApiKeys {
 	/** Whether keys can be saved (the server config has a `secret`). */
 	readonly available: boolean;
-	/** What the admin API answers: every key with the places that use it, whether keys can be saved, and the slots the installed plugins declare. */
+	/** What the admin API answers: every key with the places that use it, the services keys can be added for, whether keys can be saved, and the slots. */
 	view(): Promise<ApiKeyList>;
-	/** Every key with the places that use it, by name. */
+	/** Every key with the places that use it, in the order they were added. */
 	list(): Promise<ApiKeyView[]>;
 	get(id: string): Promise<ApiKeyView | null>;
-	/** The keys the installed plugins ask for (`Plugin.keySlots`), each with the key assigned to it or `null`. */
+	/** The services keys can be added for (`ServerPlugin.keyServices` of the installed plugins). */
+	services(): Promise<ApiKeyServiceView[]>;
+	/** The keys the installed plugins ask for (`Plugin.keySlots`), each with the key it reads or `null`. */
 	slots(): Promise<ApiKeySlotView[]>;
 	/** A slot of an installed plugin. It throws `not_found` when the plugin has no such slot. */
 	slot(plugin: string, slot: string): ApiKeySlot;
-	/** Saves a key under a name. A name another key has (in any case) fails with `key_name_taken`; no `secret` in the server config fails with `secret_not_configured`. */
-	add(input: { name: string; value: string }): Promise<ApiKeyView>;
-	/** Saves a key under `baseName`, or `baseName 2`, `baseName 3`, ... when that name is taken. */
-	addNamed(input: { baseName: string; value: string }): Promise<ApiKeyView>;
 	/**
-	 * Turns what a form sent for a place's key into the id to keep: the id of a saved key (which must exist), the id of a key just saved from the typed value
-	 * (named `baseName`, or `baseName 2`, ... when taken), or `null` for no key.
+	 * Checks a key with its service and saves it. A service nobody declares, a missing address or value, or a key the service refuses (`key_rejected`)
+	 * fails; a name another key has (in any case) fails with `key_name_taken`; no `secret` in the server config fails with `secret_not_configured`.
 	 */
-	choose(choice: ApiKeyChoiceInput, options: { baseName: string }): Promise<string | null>;
-	/** Renames and/or replaces the value. `expectedVersion` is the version read last; a different one fails with `conflict`. */
+	add(input: { service: string; url?: string; name: string; value?: string }): Promise<ApiKeyView>;
+	/** Renames and/or replaces the value (checked with the service first). `expectedVersion` is the version read last; a different one fails with `conflict`. */
 	update(id: string, input: { expectedVersion: number; name?: string; value?: string }): Promise<ApiKeyView>;
 	/**
-	 * Deletes a key and forgets where it was used, in one transaction. A key that something uses is kept and the call fails with `key_in_use` (`details.uses` lists the
-	 * places that would stop working) unless `force` is set: then the plugins that used it keep its id and find no key behind it.
+	 * Deletes a key, forgets where it was used and what it counted, in one transaction. A key that something uses is kept and the call fails with
+	 * `key_in_use` (`details.uses` lists the places that would stop working) unless `force` is set.
 	 */
 	remove(id: string, input: { expectedVersion: number; force?: boolean }): Promise<void>;
-	/** The value of a key, for the server code that calls a service with it. `null` if there is no such key or it cannot be decrypted. Never send it to a browser. */
-	read(id: string): Promise<string | null>;
+	/** A key's service, address and value, for the server code that calls the service. `null` if there is no such key. Never send the value to a browser. */
+	access(id: string): Promise<ApiKeyAccess | null>;
+	/** Adds what a service counted for one call to the key's tokens this month. A key that is gone is skipped. */
+	recordUsage(id: string, tokens: number): Promise<void>;
 	/**
-	 * Tells the store every item a plugin uses a key for (`ref`: a stable reference such as `connection:<id>`), replacing what it told before. An item that names a key
-	 * that does not exist is left out. A plugin calls it whenever the items change (a connection is saved or deleted). Only references are stored: the text the admin shows
-	 * comes from the plugin's `keyUses` when the keys are read, so it follows the admin language and the item's current name, and an item that no longer exists drops out.
+	 * Tells the store every item a plugin uses a key for (`ref`: a stable reference such as `quick`), replacing what it told before. An item that names a key
+	 * that does not exist is left out. Only references are stored: the text the admin shows comes from the plugin's `keyUses` when the keys are read.
 	 */
 	setUses(plugin: string, uses: readonly { ref: string; keyId: string }[]): Promise<void>;
+}
+
+/** A service as the store uses it: what the admin lists, with the plugin that declares it and its check. */
+export interface DeclaredKeyService extends PluginKeyService {
+	readonly plugin: string;
 }
 
 export interface ApiKeysOptions {
@@ -109,7 +130,12 @@ export interface ApiKeysOptions {
 	 * The text for each item of a plugin that uses keys, in the admin language (the plugin's `keyUses`). `null` for an item that does not exist any more: its
 	 * use is not shown. A plugin that gives none is shown by its name.
 	 */
-	readonly labels?: (plugin: string, refs: readonly string[]) => Promise<Readonly<Record<string, string | null>>>;
+	readonly labels?: (
+		plugin: string,
+		refs: readonly string[],
+	) => Promise<Readonly<Record<string, string | { label: string; value?: string } | null>>>;
+	/** The services the installed plugins declare (`ServerPlugin.keyServices`), with their labels in the admin language. */
+	readonly services?: () => Promise<readonly DeclaredKeyService[]>;
 	/** The slots the installed plugins declare (`Plugin.keySlots`), with their labels in the admin language. */
 	readonly declared?: () => readonly {
 		readonly plugin: string;
@@ -117,7 +143,7 @@ export interface ApiKeysOptions {
 		readonly label: string;
 		readonly service: string;
 	}[];
-	/** Called after a slot was assigned or cleared and the change is saved (the slot's `onChange`). */
+	/** Called after a slot's choice was changed and saved (the slot's `onChange`). */
 	readonly onSlotChange?: (plugin: string, slot: string) => Promise<void> | void;
 	/**
 	 * Runs work in one transaction with the key store (`cms.transaction`): it hands the work a storage that reads and writes through the transaction. Every
@@ -126,51 +152,75 @@ export interface ApiKeysOptions {
 	readonly transact?: <T>(work: (storage: () => PluginStorage) => Promise<T>) => Promise<T>;
 }
 
-interface Uses {
-	uses: ApiKeyUse[];
-	slots: ApiKeyUse[];
-}
-
 const slotRowKey = (plugin: string, slot: string) => `${plugin}:${SLOT_REF}${slot}`;
 
-/** The store on one storage (the pool's, or a transaction's). Writes are not wrapped in a transaction here: {@link createApiKeys} does that. */
-function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys {
+/** What a key will be saved as, once its service accepted it. */
+interface Checked {
+	service: string;
+	url: string;
+	value: string | null;
+}
+
+/** The writes of the store on one storage (the pool's, or a transaction's). The service checks are made before, outside any transaction. */
+interface KeyWrites {
+	insert(input: { name: string } & Checked): Promise<ApiKeyView>;
+	change(id: string, input: { expectedVersion: number; name?: string; value?: string }): Promise<ApiKeyView>;
+	remove(id: string, input: { expectedVersion: number; force?: boolean }): Promise<void>;
+	setUses(plugin: string, uses: readonly { ref: string; keyId: string }[]): Promise<void>;
+	setSlot(plugin: string, slot: string, keyId: string | null): Promise<void>;
+	recordUsage(id: string, tokens: number): Promise<void>;
+}
+
+function storeOn(options: ApiKeysOptions, storage: () => PluginStorage) {
 	const { secrets } = options;
 	const keys = () => storage().collection<StoredKey>(KEYS);
 	const names = () => storage().collection<StoredName>(NAMES);
 	const assignments = () => storage().collection<StoredAssignment>(ASSIGNMENTS);
+	const usage = () => storage().collection<StoredUsage>(USAGE);
 	const declared = () => options.declared?.() ?? [];
+	const month = () => usageMonth(new Date());
 
-	const usesByKey = async (): Promise<Map<string, Uses>> => {
-		const rows = (await assignments().list()).map((item) => {
-			const at = item.key.indexOf(":");
-			return { keyId: item.value.keyId, plugin: item.key.slice(0, at), ref: item.key.slice(at + 1) };
-		});
-		const grouped = new Map<string, Uses>();
-		const of = (keyId: string): Uses => {
-			let found = grouped.get(keyId);
-			if (!found) {
-				found = { uses: [], slots: [] };
-				grouped.set(keyId, found);
-			}
-			return found;
-		};
-		const items = new Map<string, string[]>();
-		for (const row of rows) {
-			if (row.ref.startsWith(SLOT_REF)) {
-				// A slot is a use of an installed plugin: the declaration is what makes it a slot.
-				const id = row.ref.slice(SLOT_REF.length);
-				const place = declared().find((entry) => entry.plugin === row.plugin && entry.slot === id);
-				if (!place) continue;
-				const use = { plugin: place.plugin, ref: place.slot, label: place.label };
-				of(row.keyId).uses.push(use);
-				of(row.keyId).slots.push(use);
-			} else {
-				items.set(row.plugin, [...(items.get(row.plugin) ?? []), row.ref]);
-			}
+	const decrypt = (item: StorageItem<StoredKey>): string | null =>
+		item.value.secret === null ? null : secrets.decrypt(item.value.secret);
+	const readableOf = (item: StorageItem<StoredKey>) => item.value.secret === null || decrypt(item) !== null;
+
+	/** Keys in the order they were added, which is how the admin lists them and which key of a service a slot reads first. */
+	const sortKeys = (items: StorageItem<StoredKey>[]) =>
+		[...items].sort((a, b) => a.value.order - b.value.order || a.key.localeCompare(b.key));
+
+	/** For each slot, the key it reads: the one chosen for it if it is still a key of the slot's service, or else the first key of the service. */
+	const slotKeys = async (): Promise<Map<string, StorageItem<StoredKey>>> => {
+		const [all, rows] = await Promise.all([keys().list(), assignments().list({ prefix: "" })]);
+		const sorted = sortKeys(all);
+		const chosen = new Map(rows.map((row) => [row.key, row.value.keyId]));
+		const found = new Map<string, StorageItem<StoredKey>>();
+		for (const entry of declared()) {
+			const rowKey = slotRowKey(entry.plugin, entry.slot);
+			const pick = sorted.find((item) => item.key === chosen.get(rowKey) && item.value.service === entry.service);
+			const key = pick ?? sorted.find((item) => item.value.service === entry.service);
+			if (key) found.set(rowKey, key);
 		}
-		const labels = new Map<string, Readonly<Record<string, string | null>>>();
-		for (const [plugin, refs] of items) {
+		return found;
+	};
+
+	const usesByKey = async (): Promise<Map<string, ApiKeyUse[]>> => {
+		const grouped = new Map<string, ApiKeyUse[]>();
+		const add = (keyId: string, use: ApiKeyUse) => grouped.set(keyId, [...(grouped.get(keyId) ?? []), use]);
+		const bySlot = await slotKeys();
+		for (const entry of declared()) {
+			const key = bySlot.get(slotRowKey(entry.plugin, entry.slot));
+			if (key) add(key.key, { plugin: entry.plugin, ref: `${SLOT_REF}${entry.slot}`, label: entry.label });
+		}
+		const rows = (await assignments().list())
+			.map((item) => {
+				const at = item.key.indexOf(":");
+				return { keyId: item.value.keyId, plugin: item.key.slice(0, at), ref: item.key.slice(at + 1) };
+			})
+			.filter((row) => !row.ref.startsWith(SLOT_REF));
+		const refsOf = new Map<string, string[]>();
+		for (const row of rows) refsOf.set(row.plugin, [...(refsOf.get(row.plugin) ?? []), row.ref]);
+		const labels = new Map<string, Readonly<Record<string, string | { label: string; value?: string } | null>>>();
+		for (const [plugin, refs] of refsOf) {
 			labels.set(
 				plugin,
 				(await options.labels?.(plugin, refs).catch(() => undefined)) ??
@@ -178,32 +228,50 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 			);
 		}
 		for (const row of rows) {
-			if (row.ref.startsWith(SLOT_REF)) continue;
 			const label = labels.get(row.plugin)?.[row.ref];
 			// The item is gone: it is not shown (its plugin drops it the next time it tells the store its items).
 			if (label === null) continue;
-			of(row.keyId).uses.push({ plugin: row.plugin, ref: row.ref, label: label ?? row.plugin });
+			const text = typeof label === "object" ? label : { label: label ?? row.plugin };
+			add(row.keyId, {
+				plugin: row.plugin,
+				ref: row.ref,
+				label: text.label,
+				...(text.value ? { value: text.value } : {}),
+			});
 		}
 		return grouped;
 	};
 
-	const view = (item: StorageItem<StoredKey>, found: Uses | undefined): ApiKeyView => ({
+	const usageOf = async (keyId: string): Promise<number> =>
+		(await usage().get(usageKey(keyId, month())))?.value.tokens ?? 0;
+
+	const view = (item: StorageItem<StoredKey>, uses: readonly ApiKeyUse[] | undefined, tokens: number): ApiKeyView => ({
 		id: item.key,
 		name: item.value.name,
+		service: item.value.service,
+		url: item.value.url,
 		tail: item.value.tail,
-		readable: secrets.decrypt(item.value.secret) !== null,
+		readable: readableOf(item),
+		usage: tokens,
 		version: item.version,
 		createdAt: item.createdAt.toISOString(),
 		updatedAt: item.updatedAt.toISOString(),
-		uses: found?.uses ?? [],
-		slots: found?.slots ?? [],
+		uses: uses ?? [],
 	});
 
 	const list = async (): Promise<ApiKeyView[]> => {
-		const [items, places] = await Promise.all([keys().list(), usesByKey()]);
-		return items
-			.map((item) => view(item, places.get(item.key)))
-			.sort((a, b) => a.name.localeCompare(b.name) || a.createdAt.localeCompare(b.createdAt));
+		const [items, places, counted] = await Promise.all([keys().list(), usesByKey(), usage().list()]);
+		const thisMonth = new Map(
+			counted
+				.filter((row) => row.key.endsWith(`/${month()}`))
+				.map((row) => [row.key.slice(0, row.key.lastIndexOf("/")), row.value.tokens]),
+		);
+		return sortKeys(items).map((item) => view(item, places.get(item.key), thisMonth.get(item.key) ?? 0));
+	};
+
+	const get = async (id: string): Promise<ApiKeyView | null> => {
+		const item = await keys().get(id);
+		return item ? view(item, (await usesByKey()).get(id), await usageOf(id)) : null;
 	};
 
 	/** Takes a name for a key: the name index has one row per lowercase name, so two writers of the same name cannot both succeed. */
@@ -223,109 +291,38 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 		if (row && row.value.keyId === keyId) await names().delete(row.key, { expectedVersion: row.version });
 	};
 
-	const create = async (name: string, value: string): Promise<ApiKeyView> => {
-		const secret = secrets.encrypt(value);
-		const id = randomUUID();
-		await claimName(name, id);
-		const item = await keys().set(id, { name, secret, tail: tailOf(value) }, { expectedVersion: 0 });
-		return view(item, undefined);
-	};
-
-	const addNamed: ApiKeys["addNamed"] = async ({ baseName, value }) => {
-		for (let attempt = 1; ; attempt++) {
-			try {
-				return await create(keyNameCandidate(baseName, attempt), value);
-			} catch (error) {
-				if ((error as { code?: unknown }).code !== "key_name_taken") throw error;
-			}
-		}
-	};
-
-	const read: ApiKeys["read"] = async (id) => {
-		const item = await keys().get(id);
-		return item ? secrets.decrypt(item.value.secret) : null;
-	};
-
-	const assertKeyExists = async (id: string) => {
-		if (!(await keys().get(id))) {
-			throw new CmsError("The chosen key does not exist (it may have been deleted); pick another", "invalid_input", {
-				notice: { key: "key.missing" },
-			});
-		}
-	};
-
-	const choose: ApiKeys["choose"] = async (choice, { baseName }) => {
-		if (choice.use === "none") return null;
-		if (choice.use === "saved") {
-			await assertKeyExists(choice.keyId);
-			return choice.keyId;
-		}
-		return (await addNamed({ baseName, value: choice.value })).id;
-	};
-
 	const declaredSlot = (plugin: string, slot: string) => {
 		const found = declared().find((entry) => entry.plugin === plugin && entry.slot === slot);
 		if (!found) throw new CmsError(`The plugin "${plugin}" has no key slot "${slot}" (is it installed?)`, "not_found");
 		return found;
 	};
 
-	const slotOf = (plugin: string, slot: string): ApiKeySlot => {
-		const rowKey = slotRowKey(plugin, slot);
-		const set: ApiKeySlot["set"] = async (keyId) => {
-			declaredSlot(plugin, slot);
-			const current = await assignments().get(rowKey);
-			if (keyId === null) {
-				if (current) await assignments().delete(rowKey, { expectedVersion: current.version });
-				return;
-			}
-			await assertKeyExists(keyId);
-			await assignments().set(rowKey, { keyId }, { expectedVersion: current?.version ?? 0 });
-		};
-		return {
-			read: async () => {
-				const row = await assignments().get(rowKey);
-				return row ? read(row.value.keyId) : null;
-			},
-			set,
-			assign: async (choice) => set(await choose(choice, { baseName: declaredSlot(plugin, slot).service })),
-		};
-	};
-
-	const slots: ApiKeys["slots"] = async () => {
-		const [all, places] = await Promise.all([list(), assignments().list()]);
-		const byId = new Map(all.map((key) => [key.id, key]));
-		const assigned = new Map(places.map((row) => [row.key, row.value.keyId]));
-		return declared().map((entry) => {
-			const key = byId.get(assigned.get(slotRowKey(entry.plugin, entry.slot)) ?? "");
-			return {
-				plugin: entry.plugin,
-				slot: entry.slot,
-				label: entry.label,
-				service: entry.service,
-				key: key ? { id: key.id, name: key.name, tail: key.tail, readable: key.readable } : null,
-			};
-		});
-	};
-
-	return {
-		available: secrets.available,
-		view: async () => ({ items: await list(), secretsAvailable: secrets.available, slots: await slots() }),
-		list,
-		get: async (id) => {
-			const item = await keys().get(id);
-			return item ? view(item, (await usesByKey()).get(id)) : null;
+	const writes: KeyWrites = {
+		insert: async ({ name, service, url, value }) => {
+			const id = randomUUID();
+			await claimName(name, id);
+			const order = Math.max(0, ...(await keys().list()).map((item) => item.value.order)) + 1;
+			const item = await keys().set(
+				id,
+				{
+					name,
+					order,
+					service,
+					url,
+					secret: value === null ? null : secrets.encrypt(value),
+					tail: value ? tailOf(value) : "",
+				},
+				{ expectedVersion: 0 },
+			);
+			return view(item, undefined, 0);
 		},
-		slots,
-		slot: slotOf,
-		add: ({ name, value }) => create(name, value),
-		addNamed,
-		choose,
-		update: async (id, { expectedVersion, name, value }) => {
+		change: async (id, { expectedVersion, name, value }) => {
 			const current = await keys().get(id);
 			if (!current) throw new CmsError("Key not found", "not_found");
 			const renamed = name !== undefined && nameKeyOf(name) !== nameKeyOf(current.value.name);
 			if (renamed) await claimName(name, id);
 			const next: StoredKey = {
+				...current.value,
 				name: name ?? current.value.name,
 				secret: value === undefined ? current.value.secret : secrets.encrypt(value),
 				tail: value === undefined ? current.value.tail : tailOf(value),
@@ -338,12 +335,12 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 				throw error;
 			}
 			if (renamed) await releaseName(current.value.name, id);
-			return view(saved, (await usesByKey()).get(id));
+			return view(saved, (await usesByKey()).get(id), await usageOf(id));
 		},
 		remove: async (id, { expectedVersion, force = false }) => {
 			const current = await keys().get(id);
 			if (!current) throw new CmsError("Key not found", "not_found");
-			const found = (await usesByKey()).get(id)?.uses ?? [];
+			const found = (await usesByKey()).get(id) ?? [];
 			if (found.length > 0 && !force) {
 				throw new CmsError(
 					`${found.length} place${found.length === 1 ? "" : "s"} use this key and would stop working`,
@@ -360,8 +357,10 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 			for (const item of await assignments().list()) {
 				if (item.value.keyId === id) await assignments().delete(item.key, { expectedVersion: item.version });
 			}
+			for (const item of await usage().list({ prefix: `${id}/` })) {
+				await usage().delete(item.key, { expectedVersion: item.version });
+			}
 		},
-		read,
 		setUses: async (plugin, places) => {
 			const existing = new Set((await keys().list()).map((item) => item.key));
 			const wanted = new Map(
@@ -374,40 +373,177 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 			for (const item of current) {
 				if (!wanted.has(item.key)) await assignments().delete(item.key, { expectedVersion: item.version });
 			}
-			const versions = new Map(current.map((item) => [item.key, item.version]));
+			const rows = new Map(current.map((item) => [item.key, item]));
 			for (const [key, place] of wanted) {
-				await assignments().set(key, { keyId: place.keyId }, { expectedVersion: versions.get(key) ?? 0 });
+				const row = rows.get(key);
+				// Telling the same again writes nothing.
+				if (row?.value.keyId === place.keyId) continue;
+				await assignments().set(key, { keyId: place.keyId }, { expectedVersion: row?.version ?? 0 });
 			}
 		},
+		setSlot: async (plugin, slot, keyId) => {
+			const entry = declaredSlot(plugin, slot);
+			const rowKey = slotRowKey(plugin, slot);
+			const current = await assignments().get(rowKey);
+			if (keyId === null) {
+				if (current) await assignments().delete(rowKey, { expectedVersion: current.version });
+				return;
+			}
+			const key = await keys().get(keyId);
+			if (!key || key.value.service !== entry.service) {
+				throw new CmsError("The chosen key does not exist or is for another service; pick another", "invalid_input", {
+					notice: { key: "key.missing" },
+				});
+			}
+			await assignments().set(rowKey, { keyId }, { expectedVersion: current?.version ?? 0 });
+		},
+		recordUsage: async (id, tokens) => {
+			if (!(tokens > 0) || !(await keys().get(id))) return;
+			const rowKey = usageKey(id, month());
+			for (let attempt = 0; ; attempt++) {
+				const current = await usage().get(rowKey);
+				try {
+					await usage().set(
+						rowKey,
+						{ tokens: (current?.value.tokens ?? 0) + Math.round(tokens) },
+						{ expectedVersion: current?.version ?? 0 },
+					);
+					return;
+				} catch (error) {
+					if (attempt >= 2 || (error as { code?: unknown }).code !== "conflict") throw error;
+				}
+			}
+		},
+	};
+
+	return {
+		keys,
+		list,
+		get,
+		writes,
+		slotKeys,
+		decrypt,
+		readableOf,
+		declaredSlot,
 	};
 }
 
 export function createApiKeys(options: ApiKeysOptions): ApiKeys {
-	const direct = keysOn(options, options.storage);
-	const { transact, onSlotChange } = options;
-	const inTx = <T>(work: (keys: ApiKeys) => Promise<T>): Promise<T> =>
-		transact ? transact((storage) => work(keysOn(options, storage))) : work(direct);
-	/** A slot whose change is saved first, then reported to the plugin that owns it. */
-	const slotOf = (plugin: string, slot: string): ApiKeySlot => {
-		const reported = async (change: () => Promise<void>) => {
-			await change();
-			await onSlotChange?.(plugin, slot);
-		};
-		return {
-			read: () => direct.slot(plugin, slot).read(),
-			set: (keyId) => reported(() => inTx((keys) => keys.slot(plugin, slot).set(keyId))),
-			assign: (choice) => reported(() => inTx((keys) => keys.slot(plugin, slot).assign(choice))),
-		};
+	const { transact, onSlotChange, secrets } = options;
+	const direct = storeOn(options, options.storage);
+	const inTx = <T>(work: (writes: KeyWrites) => Promise<T>): Promise<T> =>
+		transact ? transact((storage) => work(storeOn(options, storage).writes)) : work(direct.writes);
+	const declaredServices = async () => (await options.services?.()) ?? [];
+
+	const services = async (): Promise<ApiKeyServiceView[]> =>
+		(await declaredServices())
+			.map(({ id, label, group, hint, url, keyPlaceholder, keyOptional }) => ({
+				id,
+				label,
+				group,
+				...(hint ? { hint } : {}),
+				...(url ? { url: { placeholder: url.placeholder } } : {}),
+				...(keyPlaceholder ? { keyPlaceholder } : {}),
+				...(keyOptional ? { keyOptional } : {}),
+			}))
+			.sort((a, b) => (a.group === b.group ? 0 : a.group === "ai" ? -1 : 1));
+
+	const slots = async (): Promise<ApiKeySlotView[]> => {
+		const bySlot = await direct.slotKeys();
+		return (options.declared?.() ?? []).map((entry) => {
+			const key = bySlot.get(slotRowKey(entry.plugin, entry.slot));
+			return {
+				plugin: entry.plugin,
+				slot: entry.slot,
+				label: entry.label,
+				service: entry.service,
+				key: key ? { id: key.key, name: key.value.name, tail: key.value.tail, readable: direct.readableOf(key) } : null,
+			};
+		});
 	};
-	if (!transact) return { ...direct, slot: slotOf };
+
+	/** Asks the service whether it takes the key. The answer decides; a check that cannot reach the service says so instead of guessing. */
+	const check = async (service: DeclaredKeyService, url: string, value: string | null) => {
+		if (!service.check) return;
+		const answer = await service.check({ url, value });
+		if (answer === "rejected") {
+			throw new CmsError("The service did not accept this key", "key_rejected", { notice: { key: "key.rejected" } });
+		}
+	};
+
+	const serviceOf = async (id: string): Promise<DeclaredKeyService> => {
+		const found = (await declaredServices()).find((service) => service.id === id);
+		if (!found) throw new CmsError(`No installed plugin offers the service "${id}"`, "invalid_input");
+		return found;
+	};
+
+	const assertSecrets = () => {
+		// Fails with `secret_not_configured` before a service is asked anything.
+		if (!secrets.available) secrets.encrypt("");
+	};
+
+	const add: ApiKeys["add"] = async ({ service: serviceId, url, name, value }) => {
+		assertSecrets();
+		const service = await serviceOf(serviceId);
+		const address = service.url ? (url ?? "").trim().replace(/\/+$/, "") : "";
+		if (service.url && !address) {
+			throw new CmsError(`The service "${serviceId}" needs an address`, "invalid_input");
+		}
+		if (!value && !service.keyOptional) throw new CmsError(`The service "${serviceId}" needs a key`, "invalid_input");
+		await check(service, address, value ?? null);
+		return inTx((writes) => writes.insert({ name, service: service.id, url: address, value: value ?? null }));
+	};
+
+	const update: ApiKeys["update"] = async (id, input) => {
+		if (input.value !== undefined) {
+			const current = await direct.keys().get(id);
+			if (!current) throw new CmsError("Key not found", "not_found");
+			const service = (await declaredServices()).find((entry) => entry.id === current.value.service);
+			if (service) await check(service, current.value.url, input.value);
+		}
+		return inTx((writes) => writes.change(id, input));
+	};
+
+	const slotOf = (plugin: string, slot: string): ApiKeySlot => ({
+		read: async () => {
+			direct.declaredSlot(plugin, slot);
+			const key = (await direct.slotKeys()).get(slotRowKey(plugin, slot));
+			return key ? direct.decrypt(key) : null;
+		},
+		set: async (keyId) => {
+			await inTx((writes) => writes.setSlot(plugin, slot, keyId));
+			await onSlotChange?.(plugin, slot);
+		},
+	});
+
 	return {
-		...direct,
-		add: (input) => inTx((keys) => keys.add(input)),
-		addNamed: (input) => inTx((keys) => keys.addNamed(input)),
-		choose: (choice, where) => inTx((keys) => keys.choose(choice, where)),
-		update: (id, input) => inTx((keys) => keys.update(id, input)),
-		remove: (id, input) => inTx((keys) => keys.remove(id, input)),
-		setUses: (plugin, uses) => inTx((keys) => keys.setUses(plugin, uses)),
+		available: secrets.available,
+		view: async () => ({
+			items: await direct.list(),
+			secretsAvailable: secrets.available,
+			services: await services(),
+			slots: await slots(),
+		}),
+		list: direct.list,
+		get: direct.get,
+		services,
+		slots,
 		slot: slotOf,
+		add,
+		update,
+		remove: (id, input) => inTx((writes) => writes.remove(id, input)),
+		access: async (id) => {
+			const item = await direct.keys().get(id);
+			if (!item) return null;
+			return {
+				id: item.key,
+				service: item.value.service,
+				url: item.value.url,
+				value: direct.decrypt(item),
+				readable: direct.readableOf(item),
+			};
+		},
+		recordUsage: (id, tokens) => direct.writes.recordUsage(id, tokens),
+		setUses: (plugin, uses) => inTx((writes) => writes.setUses(plugin, uses)),
 	};
 }

@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { MENU_LABEL, MENU_SEPARATOR } from "./menu-parts";
 
 /**
  * A short list of kinds to pick one from, drawn as menu rows without the floating card (the kind of a new field: text, choice, media, link).
@@ -41,4 +42,19 @@ function PickListItem({
 	);
 }
 
-export { PickList, PickListItem };
+/** The name of a group of rows in a {@link PickList} ("AI", "Plugins"): mono, small, like a menu's. */
+function PickListLabel({ className, ...props }: Omit<React.ComponentProps<"span">, "role">) {
+	return <span role="presentation" data-slot="pick-list-label" className={cn(MENU_LABEL, className)} {...props} />;
+}
+
+/** The rule between two groups of a {@link PickList}. */
+function PickListSeparator({
+	className,
+	...props
+}: Omit<React.ComponentProps<"span">, "role" | "children" | "aria-hidden">) {
+	return (
+		<span aria-hidden="true" data-slot="pick-list-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
+	);
+}
+
+export { PickList, PickListItem, PickListLabel, PickListSeparator };

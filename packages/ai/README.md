@@ -10,6 +10,8 @@ The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing 
 
 ## Registration
 
+The admin AI screen (connections, actions, shared texts) is gone: a key is the connection (see Service keys). Edits it stored earlier (action overrides, screen actions, shared texts) still apply but have no screen; the actions become assistant requests next.
+
 Add `ai()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
 actions added by other plugins (block extensions, SEO extension, and so on) attach by themselves too. List an action by name (key) in
 `actions` only to change or turn it off.
@@ -56,8 +58,6 @@ puts the result in at once (the first candidate).
   or the site default if none) to the top of the instruction.
 - If the prompt snippet `styleGuide` (`ai({ snippets: { styleGuide: … } })`) exists, it goes into the polish and draft instructions.
   If not, nothing is added.
-- On the admin AI screen, actions are ordered: field actions first, then built-in actions, then other plugins' actions, then actions
-  added in the config.
 - `aiPresets.name(options)` returns a function that builds an action from the site config (`AiActionFactory`). It stays off if there is
   nowhere to attach it.
 
@@ -76,9 +76,6 @@ and `seoDescription` attach this way.
 - Values in a `value`-kind input (the field's current value) are removed from candidates and choices. The input name doesn't matter.
 - Attach points are fixed places in the admin UI (next to a field, body image, media, code block, translation, selection menu, insert
   menu, body block). The place must be able to fill the required inputs.
-- The admin AI screen only edits enabled, request intake, connection, model, inputs to send, instruction, threshold, and check values.
-  Only the edited values are kept in the DB (the `action-overrides` collection of the plugin storage). "Reset to default" only resets the input fields; saving is a
-  separate click.
 - Running: `POST /api/monti/v1/ai/run { action, input | inputs, env }`. In the admin UI, call by name, as in
   `useAiAction("summary").run({ title, body })` or
   `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). Called as they are, any name is
@@ -96,9 +93,7 @@ The model reads and writes a text format, and MDX is that format. The admin hold
 ## Result checks
 
 - **Built-in checks**: only those usable by any action. Format (`pattern`), length (`maxLength`), existing values only (`exists`, a
-  value among the action's choices), and within choices (`oneOf`, one of a fixed list). On the admin AI screen you turn them on or off,
-  edit their values, and add or delete format, length, and within-choices checks on any action (checks set by the definition can only
-  be turned off).
+  value among the action's choices), and within choices (`oneOf`, one of a fixed list).
 - **Code checks (`defineValidator`)**: checks specific to one action are written as functions and put into the action definition's
   `checks`. The admin screen shows the `label` and only lets you turn them on or off. They run on the server after the built-in checks,
   in the listed order, once per value (one candidate, or the whole text or MDX result). `undefined` or `true` passes; `false` or a
@@ -142,16 +137,19 @@ const unusedAddress = defineValidator({
 
 ## Service keys
 
-A connection does not hold a key. It refers to a key in the central API key store (Tools > API keys, `cms.apiKeys` in the core), which keeps the keys encrypted with the server `secret`. In the connection form you either use a saved key or enter a new one; a new key is saved into the store, named after the connection ("OpenRouter", then "OpenRouter 2" if that name is taken), and the connection keeps its id. The new key and the connection are saved in one transaction, so a failed save leaves no stray key. The value never goes back to the browser, only the key's name and its last four characters. Connections that use the same key share it, so replacing the value in the API keys tab changes every connection at once, and deleting a key that connections use asks first and lists them (they stop working until another key is chosen). If the address of a connection changes and the form says nothing about the key, the key is not carried over to the new address.
+A key is the whole connection. Keys live in the central API key store (Tools > API keys, `cms.apiKeys` in the core), encrypted with the server `secret`. The plugin offers keys for Anthropic, OpenAI, OpenRouter, Google and an OpenAI-compatible address (an Ollama server, say: the key carries the address and may have no value), all called through their OpenAI-compatible endpoints (`keyServices`). Adding a key checks it with its service first (its model list): a key the service refuses (401, 403) is not saved (`key_rejected`). The value never goes back to the browser, only the key's name, service and last four characters, and the tokens each answer counts are added up per key and month.
 
+- **Models**: the assistant's model is picked in the chat input for each conversation, with a thinking level for a model that can think (sent as the reasoning effort). A new conversation starts on the service's default of the first key that has one (Anthropic `claude-sonnet-5-5`, OpenAI `gpt-5`, Google `gemini-2.5-pro`). The quick-task model (summary, tags, alt text, translation fill: the AI actions) is set once, in the Models section of Tools > API keys (`PUT /api/monti/v1/ai/settings { expectedVersion, quick: { keyId, model } }`); without a choice it is the service's quick default of the first key that has one. Decision actions (System One) have no service among the keys and do not run.
+- **Uses**: the plugin tells the key store which keys the quick tasks and a new conversation use, so deleting such a key lists them first.
 - **Changing the secret**: see "Plugin secrets" and "API key store" in the core README.
 
 ## Admin agent (read only)
 
-`POST /api/monti/v1/ai/agent { runId?, messages, context: { screen, collection?, entryId?, selectedIds? } }` runs the assistant and answers with the AI SDK UI message stream (`useChat` reads it; the message metadata carries `runId`, and at the end the `usage` of the whole conversation). Every `read` operation of the core and the plugins (`cms.operations()`) is a tool named with `_` for `.` (`entries_list`), run as the signed-in admin. A failed operation is a tool result `{ error: { code, message } }`, a result over 20,000 characters is cut with a note to narrow the query, and the same tool with the same input a third time in a row is not run. `editor_read` and `editor_selection` have no `execute` and are offered only when `context.entryId` is set: the browser answers them. A run is at most 12 model steps; a failed model request is retried once per step.
+`POST /api/monti/v1/ai/agent { runId?, messages, model?, context: { screen, collection?, entryId?, selectedIds? } }` runs the assistant and answers with the AI SDK UI message stream (`useChat` reads it; the message metadata carries `runId`, and at the end the `usage` of the whole conversation). Every `read` operation of the core and the plugins (`cms.operations()`) is a tool named with `_` for `.` (`entries_list`), run as the signed-in admin. A failed operation is a tool result `{ error: { code, message } }`, a result over 20,000 characters is cut with a note to narrow the query, and the same tool with the same input a third time in a row is not run. `editor_read` and `editor_selection` have no `execute` and are offered only when `context.entryId` is set: the browser answers them. A run is at most 12 model steps; a failed model request is retried once per step.
 
-- **Model**: `agent` in the AI settings (`PUT /api/monti/v1/ai/settings { expectedVersion, agent: { providerId, model } | null }`), else the first ready chat connection with its default model.
-- **Tool calling**: the connection check also sends a request with a trivial tool and stores, per connection and model, whether the model called it (`providers[].toolSupport` in the settings view). The agent refuses a model known not to (`agent_unavailable`, 409); a model never checked is tried, and a "tools not supported" answer is stored and refused the same way. AI actions keep working with such a model.
+- **Model**: `model: { keyId, model, thinking }` in the request (the chat input's pick, stored with the conversation), else the built-in default (see Service keys). Without a usable key the request is refused (`service_unavailable`).
+- **Tool calling**: a model never tried is tried; a "tools not supported" answer is stored per key and model (`toolSupport` in the settings view) and refused (`agent_unavailable`, 409), and the model menu leaves such a model out.
+- **Credit**: a service that refuses for lack of credit ends the stream with `credit_exhausted`; the panel says so with the key's name and offers "Send with another model".
 - **Conversations**: stored in the plugin storage (`agent-runs`) with their messages, status (`running`, `done`, `failed`, `stopped`) and usage. `GET /api/monti/v1/ai/agent/runs` lists the signed-in admin's own (newest first, `page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}` returns one, only to that admin. A conversation stores up to 1,000,000 characters of messages, and an admin keeps their latest 100.
 - `CMS_AI_FAKE=1` uses a scripted model that calls `site_describe` and answers with the collection names.
 
@@ -170,11 +168,10 @@ then text inputs. An action whose result must have a specific shape to pass its 
   one event per line).
 - **Prompt snippet**: text inserted into several actions' instructions as `{{snippet.key}}` (style guide, tone, audience, and so on).
   There are two kinds.
-  - Config snippet: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
-    and only the content is edited in the "Shared text" tab of the admin AI screen ("Reset to default" resets the input field to the
-    config snippet). It can't be deleted. An instruction (`prompt`) in the config can only use config snippets (checked when the config is
+  - Config snippet: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key, the name and
+    the content. An instruction (`prompt`) in the config can only use config snippets (checked when the config is
     built).
-  - Added snippet: in the "Shared text" tab, "Add shared text" lets you add a key (starts with a letter; letters, digits, and `_`), a name, and
+  - Added snippet (stored earlier from the removed "Shared text" tab): a key (starts with a letter; letters, digits, and `_`), a name, and
     the content. The key can't be changed after creation and must not clash with config snippets or other snippets. It can be used by
     instructions edited in the admin screen and by UI actions. It can't be deleted while an action's instruction uses it (the action
     name is shown).
@@ -188,17 +185,8 @@ then text inputs. An action whose result must have a specific shape to pass its 
   `draft` (slash menu and the ⋯ menu of an empty document; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
   automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Prompt snippets added in the
   admin screen go into the instruction as `{{snippet.key}}` in the admin screen.
-- **Try it**: on the admin AI screen, run an action before saving from the bottom right of the action. The fields are built from the
-  action's input kinds (text, MDX, and code get multi-line fields, current value gets a single-line field, an image takes a media ID
-  or site path, and locale uses the site config's locale picker). Only the inputs to send, required inputs, and locale inputs are
-  shown, and it doesn't run if a required field is empty.
 - **Multiple translation actions**: if several actions attach to `translation`, each gets a button (the action name) next to the block
   handle, and "Translate all" lets you pick the action to use.
-- **UI actions**: "Add action" on the admin AI screen creates an action without code. In the right-hand panel you edit the name, where
-  it attaches (next to a field, selection menu, insert menu, body block, body image, media), result shape, engine and connection,
-  instruction, what to send, and checks together, try it before saving, then save everything at once. For relation and select fields
-  (tags, category, and so on), you can also pick the decide engine (System One). It is stored in the DB (the `custom-actions` collection). The
-  initial thresholds for relation and select field actions are `CUSTOM_PICK_DEFAULTS` (multiple: 0.6, 5 items; single: 0.3, 2 items).
 
 ## Block actions
 
@@ -237,7 +225,7 @@ block's source, are left as is.
 | --- | --- |
 | `@monti-cms/ai` | `ai`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
 | `@monti-cms/ai/server` | Server side (API routes). Loaded by the core. It is an empty entry point in browser bundles |
-| `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton`, `aiClient` |
+| `@monti-cms/ai/admin` | Admin side (assistant panel, the Models section of the API keys page, provider), `useAiAction`, `AiButton`, `aiClient` |
 
 ## Development
 

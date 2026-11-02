@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { agentModelSchema } from "./connection";
 
 /** Where the admin is when they ask: the agent reads it as context, and offers the editor tools only when an entry is open. */
 export const agentContextSchema = z.object({
@@ -30,6 +31,8 @@ export const agentRequestSchema = z.object({
 	/** The whole conversation so far, ending with what the admin just asked (or the result of an editor tool the browser answered). */
 	messages: z.array(messageSchema).min(1).max(MAX_AGENT_MESSAGES),
 	context: agentContextSchema,
+	/** The model the conversation runs on, picked in the chat input. Without it, the built-in default. */
+	model: agentModelSchema.optional(),
 });
 
 export type AgentRequest = z.output<typeof agentRequestSchema>;

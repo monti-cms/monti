@@ -26,8 +26,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { runAiActionMany, useAiActions } from "./ai-slot-provider";
 import { aiTranslateMessages } from "./ai-translate.messages";
 import { applyTranslation, collectUnits, type TranslateUnit, unitAt } from "./ai-translate-units";
-import { OptionSelect } from "./custom-editor";
 import { useMdxFormat } from "./mdx-format";
+import { OptionSelect } from "./option-select";
 
 /**
  * AI translation in the translation editor. A block that still has a notice (`untranslated`) is a "not yet translated place".

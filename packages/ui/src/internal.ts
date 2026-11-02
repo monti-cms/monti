@@ -172,6 +172,8 @@ export { Marker, Untranslated } from "./marker";
 export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
+export type { ModelMenuGroup, ModelMenuItem, ModelMenuThinking } from "./model-menu";
+export { MenuField, ModelMenu, ModelMenuButton } from "./model-menu";
 export type { MontiIcon } from "./monti-icon";
 export { NavLink, NavLinkHandle } from "./nav-link";
 export { Option } from "./option";
@@ -198,7 +200,7 @@ export {
 	PaginationPrevious,
 } from "./pagination";
 export { Patch, type PatchLine } from "./patch";
-export { PickList, PickListItem } from "./pick-list";
+export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
@@ -210,6 +212,7 @@ export { RailLayout } from "./rail-layout";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
+export { SavedValue, SecretInput } from "./secret-input";
 export { Section } from "./section";
 export { Segmented, type SegmentedOption } from "./segmented";
 export {
@@ -282,6 +285,7 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
+export { TableSection, TableSectionRow } from "./table-section";
 export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";

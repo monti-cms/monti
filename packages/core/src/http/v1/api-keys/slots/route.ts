@@ -1,12 +1,9 @@
 import { assignKeySlotBodySchema } from "../../../../core/api-keys";
 import { adminRoute, ok, parseWith, readJsonBody } from "../../handler";
 
-/**
- * Assigns a key to the slot of an installed plugin (`Plugin.keySlots`), or clears it (`key: { use: "none" }`). A typed key is saved in the same transaction as the
- * assignment, named after the slot's service.
- */
+/** Chooses which key of its service the slot of an installed plugin (`Plugin.keySlots`) reads, or goes back to the first one (`keyId: null`). */
 export const PUT = adminRoute(async ({ request, cms }) => {
 	const body = parseWith(assignKeySlotBodySchema, await readJsonBody(request));
-	await cms.apiKeys.slot(body.plugin, body.slot).assign(body.key);
+	await cms.apiKeys.slot(body.plugin, body.slot).set(body.keyId);
 	return ok(await cms.apiKeys.view());
 });

@@ -12,7 +12,7 @@ import {
 	resolveAction,
 	validatorLabel,
 } from "./action";
-import { type CustomBase, type CustomValue, customDefinition } from "./custom";
+import type { CustomBase, CustomValue } from "./custom";
 import type { AiApply, AiCheck, AiEngine, AiPick, AiResult } from "./definition";
 
 /**
@@ -109,10 +109,3 @@ export const viewOf = (
 	updatedAt: row ? row.updatedAt.toISOString() : null,
 	overridden: Object.keys(custom ? custom.override : readOverride(row?.value)),
 });
-
-/** Name (key) of a new, unsaved screen action. The server assigns a new name when saving. */
-export const NEW_CUSTOM_KEY = "custom_new";
-
-/** The shape of a new, unsaved screen action. The admin screen rebuilds it each time the basic info is chosen. */
-export const draftCustomView = (site: Site, base: CustomBase): AiActionView =>
-	viewOf(site, resolveAction(NEW_CUSTOM_KEY, customDefinition(site, base), {}), undefined, { base, override: {} });

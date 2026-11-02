@@ -1,13 +1,12 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Error messages for AI connection settings and shared texts. */
+/** Texts of the AI settings: what the API keys screen says a key is used for, and errors of the quick-task model. */
 export const settingsMessages = defineMessages("cms-ai.settings", {
 	en: {
-		keyUse: "AI connection “{name}”",
-		unknownConnection: "This connection doesn't exist.",
-		urlAndModel: "Enter an address and a model.",
-		keyAgain: "Enter the key again.",
-		key: "Enter the key.",
+		"use.quick": "Quick tasks",
+		"use.assistant": "Assistant",
+		"use.default": "{model} · default",
+		unknownKey: "This key doesn't exist or isn't for an AI service.",
 		"snippet.textTooLong": "The text can be up to {max} characters.",
 		"snippet.labelRequired": "Enter a name.",
 		"snippet.labelTooLong": "The name can be up to {max} characters.",
@@ -20,11 +19,10 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
 		"snippet.inUse": "Actions use this shared text, so it can't be deleted: {users}",
 	},
 	ko: {
-		keyUse: "AI 연결 “{name}”",
-		unknownConnection: "없는 연결이에요.",
-		urlAndModel: "주소와 모델을 넣으세요.",
-		keyAgain: "키를 다시 넣으세요.",
-		key: "키를 넣으세요.",
+		"use.quick": "빠른 작업",
+		"use.assistant": "어시스턴트",
+		"use.default": "{model} · 기본",
+		unknownKey: "없는 키이거나 AI 서비스의 키가 아니에요.",
 		"snippet.textTooLong": "내용은 {max}자까지 쓸 수 있어요.",
 		"snippet.labelRequired": "이름을 넣으세요.",
 		"snippet.labelTooLong": "이름은 {max}자까지 쓸 수 있어요.",
