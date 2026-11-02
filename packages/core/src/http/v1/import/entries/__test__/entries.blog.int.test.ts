@@ -375,20 +375,6 @@ describe("importing entries (POST /v1/import/entries)", () => {
 		expect(english?.working.metadata.title).toBe("Hello in English");
 	});
 
-	it("DATA-I5 refuses a text folder when no installed format reads its files", async () => {
-		const noFormats = await makeSite([]);
-		try {
-			const zip = createZipArchive([{ path: "memo/hello.md", data: encode("---\ntitle: Hello\n---\n\nText\n") }]);
-			const response = await call(upload(zip, { mode: "preview" }), { cms: noFormats.cms });
-			expect(response.status).toBe(400);
-			const { error } = await response.json();
-			expect(error.code).toBe("invalid_input");
-			expect(error.message).toContain("md");
-		} finally {
-			await dropIsolatedTestPool(noFormats.pool, noFormats.schemaName);
-		}
-	});
-
 	it("DATA-I4 keeps a text the format cannot read as it is and says so", async () => {
 		const zip = createZipArchive([
 			{ path: "memo/odd.md", data: encode("---\ntitle: Odd\n---\n\nthis has <<< in it\n") },

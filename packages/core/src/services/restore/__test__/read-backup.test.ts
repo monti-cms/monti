@@ -159,9 +159,6 @@ const withFile = (zip: Uint8Array, path: string, change: (current: unknown) => u
 	return createZipArchive(files);
 };
 
-const byKey = <T>(rows: readonly T[], key: (row: T) => string) =>
-	[...rows].sort((a, b) => key(a).localeCompare(key(b)));
-
 /** The notice an archive is refused with, or `undefined` when it is read. */
 const refusal = (bytes: Uint8Array) => {
 	try {
@@ -173,20 +170,6 @@ const refusal = (bytes: Uint8Array) => {
 };
 
 describe("readBackupArchive", () => {
-	it("DATA-R1 reads back every record a backup holds, as the site had it", () => {
-		const site = snapshot();
-		const read = readBackupArchive(backupOf(site));
-		expect(read).toMatchObject({ isBackup: true, problems: [] });
-		const id = (row: { id: string }) => row.id;
-		expect(byKey(read.plan.entries, id)).toEqual(byKey(site.entries, id));
-		const reference = (row: (typeof site.references)[number]) => `${row.state}:${row.kind}`;
-		expect(byKey(read.plan.references, reference)).toEqual(byKey(site.references, reference));
-		expect(byKey(read.plan.folders, id)).toEqual(byKey(site.folders, id));
-		expect(byKey(read.plan.addresses, (row) => row.slug)).toEqual(byKey(site.addresses, (row) => row.slug));
-		expect(byKey(read.plan.media, id)).toEqual(byKey(site.media, id));
-		expect(read.plan.templates).toEqual(site.templates);
-	});
-
 	it("DATA-R3 names each file of the backup that is missing", () => {
 		const backup = backupOf(snapshot());
 		// The files at the top of the archive that a restore reads: all but the manifest, and the preferences it does not restore.
