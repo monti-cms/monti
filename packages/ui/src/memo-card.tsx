@@ -188,7 +188,8 @@ function MemoDiff({
 }
 
 /**
- * A `MemoCard` opened under a place in the text: `anchor` is the element it hangs from (the block of a mark), 8px below its start. Pressing outside or Esc
+ * A `MemoCard` opened under a place in the text: `anchor` finds the element it hangs from (the block of a mark), 8px below its start. It is asked again
+ * whenever the card is placed, so a block the editor draws anew keeps its card. Pressing outside or Esc
  * closes it through `onOpenChange`.
  */
 function MemoCardPopover({
@@ -197,12 +198,12 @@ function MemoCardPopover({
 	onOpenChange,
 	...card
 }: ComponentProps<typeof MemoCard> & {
-	anchor: Element | null;
+	anchor: () => Element | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
 	return (
-		<PopoverPrimitive.Root open={open && anchor !== null} onOpenChange={onOpenChange}>
+		<PopoverPrimitive.Root open={open} onOpenChange={onOpenChange}>
 			<PopoverPrimitive.Portal>
 				<PopoverPrimitive.Positioner
 					anchor={anchor}

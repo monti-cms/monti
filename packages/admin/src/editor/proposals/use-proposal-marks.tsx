@@ -181,7 +181,7 @@ export function useProposalMarks(sources: readonly EditorProposals[]): {
 				</ProposalBubbleDock>
 				{opened && editor && (
 					<MemoCardPopover
-						anchor={anchorOf(opened.item.id)}
+						anchor={() => anchorOf(opened.item.id)}
 						open
 						onOpenChange={(open) => {
 							if (!open) setCard(null);

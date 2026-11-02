@@ -88,8 +88,8 @@ export const UnderBlock: Story = {
 				<p ref={setAnchor}>블로그를 다시 만든 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</p>
 				<MemoCardPopover
 					{...(args as Required<NonNullable<Story["args"]>>)}
-					anchor={anchor}
-					open
+					anchor={() => anchor}
+					open={anchor !== null}
 					onOpenChange={() => undefined}
 				>
 					<Thread />

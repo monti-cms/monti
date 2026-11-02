@@ -679,13 +679,19 @@ export const ProposalCardOpen: Story = {
 	tags: ["visual"],
 	render: withProposals,
 	play: async ({ canvasElement }) => {
+		await settled(canvasElement);
 		await page(canvasElement).findByText("1 / 2", undefined, LONG);
 		const mark = await waitFor(() => {
 			const found = canvasElement.querySelector("[data-proposal-item='i1']");
 			if (!found) throw new Error("no mark yet");
 			return found as HTMLElement;
 		}, LONG);
-		await userEvent.click(mark);
+		// The editor finds what was pressed by where: a click needs the coordinates a pointer has (userEvent's are 0, 0).
+		const box = mark.getBoundingClientRect();
+		const at = { clientX: box.left + 4, clientY: box.top + box.height / 2, button: 0 };
+		fireEvent.mouseDown(mark, at);
+		fireEvent.mouseUp(mark, at);
+		fireEvent.click(mark, at);
 		await within(document.body).findByText("요청 · 문단 1", undefined, LONG);
 	},
 };
