@@ -90,6 +90,16 @@ export interface EditorProposalItem {
 	readonly block: CmsNode;
 	/** The blocks that take its place, as stored; none removes the block. */
 	readonly nodes: readonly CmsNode[];
+	/** What the admin and the assistant said about it in its card, oldest first. */
+	readonly thread?: readonly EditorProposalMessage[];
+}
+
+/** One message of a proposal's card. */
+export interface EditorProposalMessage {
+	readonly author: "admin" | "assistant";
+	readonly text: string;
+	/** When it was said (ISO). */
+	readonly at: string;
 }
 
 /** Proposals an extension shows in the open entry, and what it hears back. */
@@ -98,6 +108,11 @@ export interface EditorProposals {
 	/** The admin accepted one: it is in the document now (unsaved), with `placed` the ids of the blocks put in its block's place. */
 	readonly onAccept: (item: EditorProposalItem, placed: readonly string[]) => void;
 	readonly onDiscard: (items: readonly EditorProposalItem[]) => void;
+	/**
+	 * The admin wrote in a proposal's card ("keep the end, shorten the start"): the assistant makes it again. Resolves with the id of the proposal that took
+	 * its place (drawn and kept open in the card), or `null` when nothing is proposed there any more. Without it, the card has no reply row.
+	 */
+	readonly onAsk?: (item: EditorProposalItem, text: string) => Promise<string | null>;
 	/** The bubble's name was pressed while it showed `item`: open where it came from (its conversation). */
 	readonly onOpen?: (item: EditorProposalItem) => void;
 }

@@ -126,6 +126,18 @@ export const includeProposalItems = (site: Site, id: string, include: Record<str
 export const listEntryProposals = (site: Site, entryId: string, options: AiRequestOptions = {}) =>
 	adminFetch<{ items: EditorProposalView[] }>(site, `/v1/ai/proposals?entry=${segment(entryId)}`, options);
 
+/** `POST /v1/ai/proposals/:id/items/:itemId/ask`: the assistant writes one body change again; the change that took its place (`null`: none any more). */
+export const askProposalItem = (site: Site, id: string, itemId: string, text: string, fallback?: string) =>
+	adminFetch<{ item: EditorProposalView | null }>(
+		site,
+		`/v1/ai/proposals/${segment(id)}/items/${segment(itemId)}/ask`,
+		{
+			method: "POST",
+			json: { text },
+			fallback,
+		},
+	);
+
 /** `POST /v1/ai/proposals/:id/settle`: what the admin accepted (and saved) and discarded in the editor. */
 export const settleProposal = (site: Site, id: string, settlement: EditorSettlement, fallback?: string) =>
 	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}/settle`, {

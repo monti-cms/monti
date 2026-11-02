@@ -643,6 +643,15 @@ const proposalPlugin: EditorExtension = () => {
 					blockId: first?.id ?? "",
 					block: first as never,
 					nodes: docOf("첫 문단입니다. 도입부는 이렇게 씁니다.").content.map((node) => ({ ...node, id: first?.id })),
+					// What was said in the card: a request to make it again, and the assistant's answer (flow 2 · 09).
+					thread: [
+						{ author: "admin", text: "‘~씁니다’는 그대로 두고 앞만 줄여 줘.", at: "2026-11-03T10:58:00" },
+						{
+							author: "assistant",
+							text: "끝은 그대로 두고 ‘글의 도입부를’만 ‘도입부는’으로 줄였어요.",
+							at: "2026-11-03T10:58:30",
+						},
+					],
 				},
 				{
 					id: "i2",
@@ -655,6 +664,8 @@ const proposalPlugin: EditorExtension = () => {
 			onAccept: () => undefined,
 			onDiscard: () => undefined,
 			onOpen: () => undefined,
+			// The assistant answers a request in the card after a moment; the proposal stays where it is.
+			onAsk: (item) => new Promise<string | null>((resolve) => setTimeout(() => resolve(item.id), 1500)),
 		},
 	};
 };
@@ -666,7 +677,7 @@ const withProposals = () => (
 	</PageFrame>
 );
 
-/** Proposals in the text (flow 2 · 08): the blue pencil in the first paragraph, the second paragraph struck through, and the bubble over the status bar. */
+/** Proposals in the text (flow 2 · 08): the blue pencil in the first paragraph (with its request marker in the margin), the second paragraph struck through, and the bubble over the status bar. */
 export const Proposals: Story = {
 	tags: ["visual"],
 	render: withProposals,
@@ -675,7 +686,7 @@ export const Proposals: Story = {
 	},
 };
 
-/** A mark pressed (flow 2 · 09, without the thread yet): the card under its paragraph with discard and accept. */
+/** A mark pressed (flow 2 · 09): the card under its paragraph with discard and accept, what was said in it, and the row to ask again. */
 export const ProposalCardOpen: Story = {
 	tags: ["visual"],
 	render: withProposals,

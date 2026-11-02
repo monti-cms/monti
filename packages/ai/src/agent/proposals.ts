@@ -33,6 +33,8 @@ export interface ProposalItem {
 	readonly state: ProposalItemState;
 	/** The error code of a failed item, or why an item is stale or kept. */
 	readonly reason?: string;
+	/** What the admin and the assistant said about this one change in the editor's card (docs/design/agent.md §7), oldest first. */
+	readonly thread?: readonly SpotMessage[];
 	/** After applying: the target's base right after, and what reverting needs. */
 	readonly applied?: {
 		readonly base: string;
@@ -41,6 +43,14 @@ export interface ProposalItem {
 		/** Accepted in the entry editor and saved there, not applied from the review. */
 		readonly inEditor?: boolean;
 	};
+}
+
+/** One message of a change's card: the admin asking for it to be made again, or the assistant saying what it did. */
+export interface SpotMessage {
+	readonly author: "admin" | "assistant";
+	readonly text: string;
+	/** When it was said (ISO). */
+	readonly at: string;
 }
 
 /** The write changes one run of the agent proposed, kept with its conversation. */
