@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Caret } from "./caret";
 import { Count } from "./count";
 import { PageColumn, PageHeader } from "./page-header";
 import { Del, Ins } from "./proposal-marks";
-import { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewQuote } from "./review";
+import { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote } from "./review";
 import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { TextButton } from "./text-button";
 
@@ -69,10 +68,7 @@ export const OneLine: Story = {
 						path="/react-18"
 						end={<Count>폴더 없음 → 2024</Count>}
 					/>
-					<TextButton variant="quiet">
-						6편 더 보기
-						<Caret />
-					</TextButton>
+					<ReviewMore open={false} onOpenChange={() => undefined} moreLabel="6편 더 보기" lessLabel="접기" />
 				</ReviewGroup>
 			</>,
 		),

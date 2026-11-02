@@ -90,6 +90,7 @@ export {
 	ReviewCompareHead,
 	ReviewGroup,
 	ReviewItem,
+	ReviewMore,
 	ReviewQuote,
 	Select,
 	SelectContent,

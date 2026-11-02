@@ -281,6 +281,7 @@ export const ReviewCompare = close(open.ReviewCompare);
 export const ReviewCompareHead = close(open.ReviewCompareHead);
 export const ReviewGroup = close(open.ReviewGroup);
 export const ReviewItem = close(open.ReviewItem);
+export const ReviewMore = close(open.ReviewMore);
 export const ReviewQuote = close(open.ReviewQuote);
 export const Suggest = close(open.Suggest);
 export const SuggestLabel = close(open.SuggestLabel);

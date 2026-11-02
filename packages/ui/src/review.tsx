@@ -1,8 +1,10 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
+import { Caret } from "./caret";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
+import { TextButton } from "./text-button";
 
 /** What the admin asked, quoted under the title of the review page. */
 function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
@@ -177,4 +179,30 @@ function ReviewCompare({
 	);
 }
 
-export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewQuote };
+/**
+ * The way to the rest of a long group, 12px under its rows: "6 more ⌄" while folded, "Show fewer ⌃" once open (the same place, the caret turned over).
+ */
+function ReviewMore({
+	open,
+	onOpenChange,
+	moreLabel,
+	lessLabel,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	/** "6 more". */
+	moreLabel: string;
+	/** "Show fewer". */
+	lessLabel: string;
+}) {
+	return (
+		<div data-slot="review-more" className="mt-monti-12">
+			<TextButton variant="quiet" aria-expanded={open} onClick={() => onOpenChange(!open)}>
+				{open ? lessLabel : moreLabel}
+				<Caret className={cn("transition-transform", open && "rotate-180")} />
+			</TextButton>
+		</div>
+	);
+}
+
+export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote };

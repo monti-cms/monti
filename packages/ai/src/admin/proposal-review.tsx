@@ -4,7 +4,6 @@ import { ChevronLeft } from "@carbon/icons-react";
 import { errorText, useAskPanel, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Button,
-	Caret,
 	Count,
 	Del,
 	EmptyState,
@@ -16,6 +15,7 @@ import {
 	ReviewCompareHead,
 	ReviewGroup,
 	ReviewItem,
+	ReviewMore,
 	ReviewQuote,
 	Tabs,
 	TabsList,
@@ -194,13 +194,15 @@ function Group({
 					</ReviewItem>
 				),
 			)}
-			{!all && group.items.length > FIRST_ROWS && (
-				<TextButton variant="quiet" onClick={() => setAll(true)}>
-					{t("review.more", {
+			{group.items.length > FIRST_ROWS && (
+				<ReviewMore
+					open={all}
+					onOpenChange={setAll}
+					moreLabel={t("review.more", {
 						count: t(files ? "count.files" : "count.entries", { count: group.items.length - FIRST_ROWS }),
 					})}
-					<Caret />
-				</TextButton>
+					lessLabel={t("review.less")}
+				/>
 			)}
 		</ReviewGroup>
 	);
