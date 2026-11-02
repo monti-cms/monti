@@ -16,8 +16,8 @@ function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
 }
 
 /**
- * A group of changes on the review page: its name in bold, what and how much in mono ("글 2편 · 되돌릴 수 있음"), and at the end what applies to the whole
- * group (the "한 줄 / 나란히" tabs, "11편 모두 빼기"). The group's rows follow it.
+ * A group of changes on the review page: its name in bold, what and how much in mono ("2 entries · can be undone"), and at the end what applies to the whole
+ * group (the "One line / Side by side" tabs, "Leave out all 11"). The group's rows follow it.
  */
 function ReviewGroup({
 	title,
@@ -66,7 +66,7 @@ function IncludeCheck({
 
 /**
  * One change on the review page: the check that puts it in or leaves it out, what it is about (an entry's title in bold and its address in mono), at the end
- * its field or how it went ("요약", "이 사이에 고쳐짐 · 다시 만들기", "✓ 2024로 옮김"), and under it the change itself ("비어 있음 → …"). A row whose change
+ * its field or how it went ("Summary", "changed meanwhile · Make again", "✓ moved to 2024"), and under it the change itself ("empty → …"). A row whose change
  * cannot be applied any more is `muted`.
  */
 function ReviewItem({
@@ -84,7 +84,7 @@ function ReviewItem({
 }: Omit<ComponentProps<"div">, "title"> & {
 	included: boolean;
 	onIncludedChange?: (included: boolean) => void;
-	/** The name of the check for a screen reader ("포함"). */
+	/** The name of the check for a screen reader ("Include"). */
 	includeLabel: string;
 	disabled?: boolean;
 	title: ReactNode;
@@ -117,7 +117,7 @@ function ReviewItem({
 	);
 }
 
-/** The column names over side-by-side changes ("지금", "제안"). */
+/** The column names over side-by-side changes ("Now", "Proposed"). */
 function ReviewCompareHead({ before, after }: { before: ReactNode; after: ReactNode }) {
 	return (
 		<div
@@ -145,7 +145,7 @@ function ReviewCompare({
 	onIncludedChange?: (included: boolean) => void;
 	includeLabel: string;
 	label: ReactNode;
-	/** A word under the field's name ("거의 다시 씀"), in the warning tone. */
+	/** A word under the field's name ("mostly rewritten"), in the warning tone. */
 	note?: ReactNode;
 	before: ReactNode;
 	after: ReactNode;

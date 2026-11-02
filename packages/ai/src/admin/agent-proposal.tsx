@@ -31,7 +31,7 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 	);
 	const failed = view.items.filter((item) => item.included && (item.state === "failed" || item.state === "stale"));
 	const busy = progress !== null;
-	// Files are counted as files ("3개 적용"); anything else as changes ("19건 적용").
+	// Files are counted as files ("Apply 3"); anything else as changes ("Apply 19").
 	const allMedia = view.items.every((item) => item.target.kind === "media");
 
 	const first = groups[0];

@@ -151,7 +151,8 @@ The sidebar has a head row (the site name, a link that opens the site, and a fol
 | A template | `<admin path>/templates/new`, `<admin path>/templates/<id>/edit` | The page of one template, outside the Tools page: the name over the body, the save button in the header (⌘S or Ctrl+S does the same) and "Unsaved" once something changed, and a status bar with the character count. Its back link returns to the Templates tab. |
 | Data (tab of Tools) | `<admin path>/tools/data` | Backup, and entry import from one zip (a full backup on an empty site opens the restore sheet). |
 | Activity log (tab of Tools) | `<admin path>/tools/events` | Event deliveries. The tab carries the failed-delivery count. |
-| One per plugin page (tab of Tools) | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`), as a tab after the built-in ones. |
+| One per plugin page (tab of Tools) | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry, as a tab after the built-in ones. |
+| A plugin's own screen | `<admin path>/<plugin name>/<screen>[/<param>]` | A plugin's `screens` entry, framed by the admin with no tabs (the AI plugin's proposal review is `/admin/ai/review/<id>`). The core's addresses come first. |
 
 `<admin path>/settings` goes to the first tab, and `<admin path>/tools` to the first tab of Tools.
 

@@ -18,7 +18,9 @@ import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
+import { usePublishScreenContext } from "../shared/screen-context";
 import { DockedPanel } from "../shared/side-panel";
+import { useAskPanel } from "../shared/side-panel-slot";
 import { isInsideFolder, useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { placeNamer } from "./media-item";
@@ -46,6 +48,9 @@ export function MediaLibrary() {
 	const router = useAdminRouter();
 	const queryClient = useQueryClient();
 	const library = useMediaLibrary();
+	const ask = useAskPanel();
+	// The picked files go to the assistant with a request, and its chip says how many.
+	usePublishScreenContext({ selectedIds: [...library.picked] });
 	const { state, update, folders, items, trail, currentFolder } = library;
 	const actions = useMediaActions(library);
 	const fileInput = useRef<HTMLInputElement>(null);
@@ -231,6 +236,7 @@ export function MediaLibrary() {
 						newFolderHere();
 					}}
 					onTrash={() => actions.trash.mutate(pickedFiles)}
+					{...(ask ? { onRequest: () => ask({ text: t("bulk.altTextRequest", { count: library.picked.size }) }) } : {})}
 				/>
 				<PageBody>
 					<Stack as="div" direction="row" gap={0} grow minHeight={0} position="relative">

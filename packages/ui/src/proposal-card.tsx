@@ -7,7 +7,7 @@ const ROW = "flex items-baseline gap-monti-8 border-monti-muted border-t px-[14p
 const FOOT = "flex items-center gap-[14px] border-monti-default border-t px-[14px] py-monti-10 text-monti-note";
 
 /**
- * A proposal in the conversation: the head says what it is and how much ("제안 · 4묶음 · 19건") and where it stands ("검토 대기"), then one row per group of
+ * A proposal in the conversation: the head says what it is and how much ("Proposal · 4 groups · 19") and where it stands ("Waiting for review"), then one row per group of
  * changes, then the foot with what can be done (`ProposalActions` while it waits, `ProposalResult` once applied). `after` holds rows under the foot (the
  * items that could not be applied, with their reason). A discarded proposal is `muted`.
  */
@@ -24,9 +24,9 @@ function ProposalCard({
 	...props
 }: Omit<ComponentProps<"section">, "title"> & {
 	title: ReactNode;
-	/** How much it changes ("4묶음 · 19건"). */
+	/** How much it changes ("4 groups · 19"). */
 	summary?: ReactNode;
-	/** Where it stands ("검토 대기", "적용됨", "버림"). */
+	/** Where it stands ("Waiting for review", "Applied", "Discarded"). */
 	status?: ReactNode;
 	statusTone?: "warning" | "success" | "subtle";
 	/** Discarded: the card is faint. */
@@ -69,7 +69,7 @@ function ProposalCard({
 	);
 }
 
-/** One group of changes in a card: its name in bold, where (subtle), and how many at the end in mono ("다듬기 · 발행 후 고친 글 · 3곳"). */
+/** One group of changes in a card: its name in bold, where (subtle), and how many at the end in mono ("Tidy · Edited after publishing · 3 places"). */
 function ProposalRow({
 	name,
 	detail,
@@ -79,7 +79,7 @@ function ProposalRow({
 	name: ReactNode;
 	detail?: ReactNode;
 	count?: ReactNode;
-	/** `danger` for an item that could not be applied ("못 옮김"). */
+	/** `danger` for an item that could not be applied ("Not moved"). */
 	tone?: "default" | "danger";
 }) {
 	return (
@@ -102,7 +102,7 @@ function ProposalItem({ title, children }: { title: ReactNode; children: ReactNo
 	);
 }
 
-/** The foot of a waiting proposal: "상세 보기" (when there is a review screen), then "버리기" and the black apply pill with its count. */
+/** The foot of a waiting proposal: "Details" (when there is a review screen), then "Discard" and the black apply pill with its count. */
 function ProposalActions({
 	reviewLabel,
 	onReview,
@@ -139,7 +139,7 @@ function ProposalActions({
 	);
 }
 
-/** The foot of an applied proposal: how many were applied ✓, how many could not be, when, and "모두 되돌리기" (or that it was undone). */
+/** The foot of an applied proposal: how many were applied ✓, how many could not be, when, and "Undo all" (or that it was undone). */
 function ProposalResult({
 	appliedLabel,
 	failedLabel,

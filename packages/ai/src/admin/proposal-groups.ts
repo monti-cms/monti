@@ -46,7 +46,7 @@ export function fieldLabel(site: Site, collection: string | undefined, field: st
 	return typeof label === "string" && label ? label : field;
 }
 
-/** How a group reads in a card and on the review page: its name ("요약 채우기", "2024 폴더로 옮기기"), where (the entry, when there is one), and how many. */
+/** How a group reads in a card and on the review page: its name ("Fill summary", "Move to 2024"), where (the entry, when there is one), and how many. */
 export function groupWords(site: Site, group: ProposalGroup): { name: string; detail?: string; count: string } {
 	const t = site.createTranslator(proposalMessages);
 	const [first] = group.items;
@@ -79,7 +79,7 @@ export function groupWords(site: Site, group: ProposalGroup): { name: string; de
 	}
 }
 
-/** Why an item could not be applied or reverted, in words ("그 사이 고쳐짐", "그 사이 휴지통으로 감"). */
+/** Why an item could not be applied or reverted, in words ("changed meanwhile", "went to the trash meanwhile"). */
 export function reasonWords(site: Site, reason: string | undefined): string {
 	const t = site.createTranslator(proposalMessages);
 	switch (reason) {

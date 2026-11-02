@@ -15,7 +15,7 @@ function Progress({
 }: {
 	value: number;
 	label: string;
-	/** Beside words in a row ("적용 중 9 / 17"): 120px instead of the full width. */
+	/** Beside words in a row ("Applying 9 / 17"): 120px instead of the full width. */
 	inline?: boolean;
 	className?: string;
 }) {

@@ -36,7 +36,7 @@ import {
 } from "./proposal-groups";
 import { useProposal } from "./use-proposal";
 
-/** Rows a long group shows before "N편 더 보기". */
+/** Rows a long group shows before "N more". */
 const FIRST_ROWS = 5;
 
 const two = (n: number) => String(n).padStart(2, "0");
@@ -118,7 +118,7 @@ function useRowEnd() {
 	};
 }
 
-/** One group of the review: its rows one line each, or side by side for text fields, with "N편 모두 빼기" and "N편 더 보기" for long groups. */
+/** One group of the review: its rows one line each, or side by side for text fields, with "Leave out all N" and "N more" for long groups. */
 function Group({
 	group,
 	open,
@@ -206,8 +206,8 @@ function Group({
 
 /**
  * The review page of a proposal (flow 2 · 12–15, `/admin/ai/review/<id>`): the request quoted, then each group of changes with a check per change, one line
- * each or side by side. At the top right "버리기" and "N건 적용"; while it applies, the progress; then how many were applied and failed, and "모두 되돌리기".
- * Items whose target changed since the plan are left out ("이 사이에 고쳐짐") with "다시 만들기".
+ * each or side by side. At the top right "Discard" and "Apply N"; while it applies, the progress; then how many were applied and failed, and "Undo all".
+ * Items whose target changed since the plan are left out ("changed meanwhile") with "Make again".
  */
 export function ProposalReviewScreen({ params }: { readonly params: readonly string[] }) {
 	const site = useSite();
@@ -216,10 +216,10 @@ export function ProposalReviewScreen({ params }: { readonly params: readonly str
 	const proposal = useProposal(id);
 	const { view, progress } = proposal;
 	const back = (
-		<AdminLink href={site.adminHref("/")} className="inline-flex items-center gap-monti-6">
+		<TextButton variant="quiet" render={<AdminLink href={site.adminHref("/")} />}>
 			<ChevronLeft aria-hidden />
 			{t("review.back")}
-		</AdminLink>
+		</TextButton>
 	);
 	if (!view) {
 		return (
