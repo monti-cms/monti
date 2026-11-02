@@ -3,7 +3,10 @@
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { Ins, ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "@monti-cms/admin/kit";
 import { useAdminRouter } from "@monti-cms/admin/router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import type { ProposalView } from "../agent/proposal-view";
+import { aiKeys } from "./api";
 import { proposalMessages } from "./proposal.messages";
 import { groupsOf, groupWords, isMediaTextOnly, reasonWords, timeOf } from "./proposal-groups";
 import { useProposal } from "./use-proposal";
@@ -24,6 +27,12 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 	const router = useAdminRouter();
 	const t = useTranslator(proposalMessages);
 	const proposal = useProposal(initial.id, initial);
+	const client = useQueryClient();
+	// A proposal that arrives or grows may change the open entry: its editor reads its waiting changes again.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the proposal arrives and each time it grows
+	useEffect(() => {
+		void client.invalidateQueries({ queryKey: [...aiKeys.all, "entry-proposals"] });
+	}, [client, initial.id, initial.items.length]);
 	const view = proposal.view ?? initial;
 	const { progress } = proposal;
 	const groups = groupsOf(view);

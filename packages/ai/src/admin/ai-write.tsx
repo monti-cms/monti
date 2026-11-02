@@ -3,6 +3,7 @@
 import { Renew } from "@carbon/icons-react";
 import {
 	type BrowserFormat,
+	diffWords,
 	type EditorExtension,
 	type EditorInsertAction,
 	type EditorSelectionAction,
@@ -47,7 +48,6 @@ import { aiCommonMessages } from "./ai-common.messages";
 import { streamAiAction, useAiActions } from "./ai-slot-provider";
 import { aiWriteMessages } from "./ai-write.messages";
 import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./mdx-format";
-import { diffWords } from "./word-diff";
 
 /**
  * AI action that writes into the body. If the attach target is `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If

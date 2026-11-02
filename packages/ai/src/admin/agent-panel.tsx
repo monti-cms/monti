@@ -226,14 +226,15 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 		if (rememberedRun) void open(rememberedRun, true);
 	}, []);
 
-	// A screen opened the panel for something: send its words, or put the admin in the box.
+	// A screen opened the panel for something: a conversation to show, words to send, or the admin to put in the box.
 	const incoming = usePanelRequest();
 	// biome-ignore lint/correctness/useExhaustiveDependencies: handles each request once, when it arrives
 	useEffect(() => {
 		if (!incoming) return;
 		incoming.take();
 		setView("chat");
-		if (incoming.request.text) send(incoming.request.text, true);
+		if (incoming.request.open) void open(incoming.request.open);
+		else if (incoming.request.text) send(incoming.request.text, true);
 		else inputRef.current?.querySelector("textarea")?.focus();
 	}, [incoming]);
 

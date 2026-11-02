@@ -132,6 +132,7 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 			apply: fakeOperationRunner.apply,
 			revert: fakeOperationRunner.revert,
 			baseOf: fakeOperationRunner.baseOf,
+			adopt: fakeOperationRunner.adopt,
 		},
 	};
 	const fake: CmsHost<Config> = {

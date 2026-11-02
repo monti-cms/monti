@@ -629,3 +629,63 @@ export const CompareDraft: Story = {
 		await within(document.body).findByRole("heading", { level: 1, name: "임시 저장본과 비교" }, LONG);
 	},
 };
+
+/** The assistant's proposals for this entry, as a plugin hands them to the editor: the first paragraph shortened, the second one removed. */
+const proposalPlugin: EditorExtension = () => {
+	const [first, , second] = draft.working.doc.content;
+	return {
+		proposals: {
+			items: [
+				{
+					id: "i1",
+					request: "더 짧게 다듬어 줘. 말투는 그대로.",
+					blockId: first?.id ?? "",
+					block: first as never,
+					nodes: docOf("첫 문단입니다. 도입부는 이렇게 씁니다.").content.map((node) => ({ ...node, id: first?.id })),
+				},
+				{
+					id: "i2",
+					request: "더 짧게 다듬어 줘. 말투는 그대로.",
+					blockId: second?.id ?? "",
+					block: second as never,
+					nodes: [],
+				},
+			],
+			onAccept: () => undefined,
+			onDiscard: () => undefined,
+			onOpen: () => undefined,
+		},
+	};
+};
+const withProposals = () => (
+	<PageFrame api={server()} pathname="/admin/entries/entry-1/edit">
+		<AdminComponentsProvider components={{ editorExtensions: [proposalPlugin] }}>
+			<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+		</AdminComponentsProvider>
+	</PageFrame>
+);
+
+/** Proposals in the text (flow 2 · 08): the blue pencil in the first paragraph, the second paragraph struck through, and the bubble over the status bar. */
+export const Proposals: Story = {
+	tags: ["visual"],
+	render: withProposals,
+	play: async ({ canvasElement }) => {
+		await page(canvasElement).findByText("1 / 2", undefined, LONG);
+	},
+};
+
+/** A mark pressed (flow 2 · 09, without the thread yet): the card under its paragraph with discard and accept. */
+export const ProposalCardOpen: Story = {
+	tags: ["visual"],
+	render: withProposals,
+	play: async ({ canvasElement }) => {
+		await page(canvasElement).findByText("1 / 2", undefined, LONG);
+		const mark = await waitFor(() => {
+			const found = canvasElement.querySelector("[data-proposal-item='i1']");
+			if (!found) throw new Error("no mark yet");
+			return found as HTMLElement;
+		}, LONG);
+		await userEvent.click(mark);
+		await within(document.body).findByText("요청 · 문단 1", undefined, LONG);
+	},
+};

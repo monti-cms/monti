@@ -32,7 +32,7 @@ export interface RunOperationOptions {
 }
 
 /** The write steps of the operations of one instance (`cms.writes`). */
-export type OperationWrites = Pick<OperationRunner, "plan" | "apply" | "revert" | "baseOf">;
+export type OperationWrites = Pick<OperationRunner, "plan" | "apply" | "revert" | "baseOf" | "adopt">;
 
 /** The operations of one instance. */
 export interface OperationRunner {
@@ -51,6 +51,16 @@ export interface OperationRunner {
 	revert(name: string, plan: WritePlan, undo: unknown, options: WriteRunOptions): Promise<void>;
 	/** Where a write's target stands now, or `null` when it no longer exists. */
 	baseOf(name: string, target: WriteTarget, options: RunOperationOptions): Promise<string | null>;
+	/**
+	 * Records a change the admin accepted in the entry editor and saved: what reverting it needs, as `apply` returns it. An operation that cannot be accepted
+	 * in the editor is `invalid_input`.
+	 */
+	adopt(
+		name: string,
+		plan: WritePlan,
+		made: { readonly placed?: readonly string[] },
+		options: RunOperationOptions,
+	): Promise<WriteApplied>;
 }
 
 /** What applying and reverting take: who runs it, and the agent conversation and proposal it comes from. */
@@ -151,5 +161,10 @@ export function createOperations(parts: {
 			return withActor(actorOf(options.auth), () => operation.revert(plan, undo, contextOf(options)), options.agent);
 		},
 		baseOf: async (name, target, options) => (await findWrite(name)).baseOf(target, contextOf(options)),
+		adopt: async (name, plan, made, options) => {
+			const operation = await findWrite(name);
+			if (!operation.adopt) throw new CmsError(`"${name}" cannot be accepted in the editor`, "invalid_input");
+			return operation.adopt(plan, made, contextOf(options));
+		},
 	};
 }

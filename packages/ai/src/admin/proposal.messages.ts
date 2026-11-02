@@ -70,6 +70,7 @@ export const proposalMessages = defineMessages("cms-ai.proposal", {
 		"error.apply": "Couldn't apply the proposal.",
 		"error.revert": "Couldn't undo the proposal.",
 		"error.discard": "Couldn't discard the proposal.",
+		"error.settle": "Couldn't record what was accepted in the editor.",
 	},
 	ko: {
 		title: "제안",
@@ -139,5 +140,6 @@ export const proposalMessages = defineMessages("cms-ai.proposal", {
 		"error.apply": "제안을 적용하지 못했어요.",
 		"error.revert": "제안을 되돌리지 못했어요.",
 		"error.discard": "제안을 버리지 못했어요.",
+		"error.settle": "편집기에서 받은 것을 기록하지 못했어요.",
 	},
 });

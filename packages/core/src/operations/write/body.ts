@@ -18,6 +18,9 @@ const blockIdOf = (spot: string | undefined): string | null => (spot?.startsWith
 interface BodyChange {
 	readonly blockId: string;
 	readonly nodes: readonly CmsNode[];
+	/** The block as it was planned against, and the id of the block after it: what reverting a change accepted in the editor needs. */
+	readonly block: CmsNode;
+	readonly next: string | null;
 }
 
 const docOf = (entry: Entry, content: readonly CmsNode[]): StoredDocument => ({ ...entry.working.doc, content });
@@ -108,7 +111,7 @@ export const updateEntryBody = defineOperation({
 						})
 					).doc.content
 				: [];
-			const change: BodyChange = { blockId: block.id, nodes };
+			const change: BodyChange = { blockId: block.id, nodes, block, next: blocks[index + 1]?.id ?? null };
 			plans.push({
 				target: { kind: "entry", id, spot: bodySpot(block.id) },
 				preview: { before, after: after.trim() ? after : null },
@@ -145,6 +148,11 @@ export const updateEntryBody = defineOperation({
 		const kept = current.filter((node) => !placed.includes(node.id ?? ""));
 		const at = found < 0 ? kept.length : found;
 		await saveBody(context, entry, [...kept.slice(0, at), block, ...kept.slice(at)]);
+	},
+	adopt: async (plan, { placed = [] }, context) => {
+		const { blockId, block, next } = plan.change as BodyChange;
+		const entry = await liveEntry(context, plan.target.id);
+		return { base: blockBase(blockOf(entry, blockId)), undo: { block, placed, next } };
 	},
 	baseOf: async (target, context) => {
 		const blockId = blockIdOf(target.spot);

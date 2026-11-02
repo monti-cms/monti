@@ -1,5 +1,6 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
+import type { EditorProposalView, EditorSettlement } from "../agent/entry-proposals";
 import type { RunOutcome } from "../agent/outcome";
 import type { ProgressLine } from "../agent/progress";
 import type { ProposalView } from "../agent/proposal-view";
@@ -49,6 +50,7 @@ export const aiKeys = {
 	settings: () => [...aiKeys.all, "settings"] as const,
 	models: (keyId: string) => [...aiKeys.all, "models", keyId] as const,
 	proposal: (id: string) => [...aiKeys.all, "proposal", id] as const,
+	entryProposals: (entryId: string) => [...aiKeys.all, "entry-proposals", entryId] as const,
 };
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -119,6 +121,18 @@ export const getProposal = (site: Site, id: string, options: AiRequestOptions = 
 /** `PATCH /v1/ai/proposals/:id`: puts items in or leaves them out. */
 export const includeProposalItems = (site: Site, id: string, include: Record<string, boolean>, fallback?: string) =>
 	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}`, { method: "PATCH", json: { include }, fallback });
+
+/** `GET /v1/ai/proposals?entry=`: the body changes waiting for one entry, for its editor. */
+export const listEntryProposals = (site: Site, entryId: string, options: AiRequestOptions = {}) =>
+	adminFetch<{ items: EditorProposalView[] }>(site, `/v1/ai/proposals?entry=${segment(entryId)}`, options);
+
+/** `POST /v1/ai/proposals/:id/settle`: what the admin accepted (and saved) and discarded in the editor. */
+export const settleProposal = (site: Site, id: string, settlement: EditorSettlement, fallback?: string) =>
+	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}/settle`, {
+		method: "POST",
+		json: settlement,
+		fallback,
+	});
 
 /** `POST /v1/ai/proposals/:id/discard` */
 export const discardProposal = (site: Site, id: string, fallback?: string) =>

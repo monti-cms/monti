@@ -29,6 +29,8 @@ export {
 	type EditorExtensionResult,
 	type EditorInsertAction,
 	type EditorMenuItem,
+	type EditorProposalItem,
+	type EditorProposals,
 	type EditorSelectionAction,
 	type FieldInputEntry,
 	type FieldInputParts,
@@ -49,6 +51,7 @@ export {
 	ToolbarButton,
 } from "./editor/blocks/shared";
 export { formatMeta, parseMeta } from "./editor/code-block/meta";
+export { type DiffPart, diffWords } from "./editor/proposals/word-diff";
 export * from "./hooks/public";
 export { type AdminPanel, type AdminPanelProps, type AdminPlugin, defineAdminPlugin } from "./plugins";
 export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { Marker } from "./marker";
-import { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
+import { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 import { Highlight } from "./proposal-marks";
 import { Stack } from "./stack";
 import { Text } from "./text";
@@ -76,6 +76,27 @@ export const UnderMark: Story = {
 			<WithReply {...args} />
 		</Stack>
 	),
+};
+
+/** Opened under a place in the text (`MemoCardPopover`): it hangs 8px under the start of the block it is about. */
+export const UnderBlock: Story = {
+	tags: ["visual"],
+	render: (args) => {
+		const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+		return (
+			<div className="max-w-md">
+				<p ref={setAnchor}>블로그를 다시 만든 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</p>
+				<MemoCardPopover
+					{...(args as Required<NonNullable<Story["args"]>>)}
+					anchor={anchor}
+					open
+					onOpenChange={() => undefined}
+				>
+					<Thread />
+				</MemoCardPopover>
+			</div>
+		);
+	},
 };
 
 /** A longer conversation: the discard and accept stay in the head. */

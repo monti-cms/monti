@@ -268,10 +268,12 @@ export const Fill = close(open.Fill);
 export const Highlight = close(open.Highlight);
 export const Ins = close(open.Ins);
 export const MemoCard = close(open.MemoCard);
+export const MemoCardPopover = close(open.MemoCardPopover);
 export const MemoDiff = close(open.MemoDiff);
 export const MemoMessage = close(open.MemoMessage);
 export const MemoThread = close(open.MemoThread);
 export const ProposalBubble = close(open.ProposalBubble);
+export const ProposalBubbleDock = close(open.ProposalBubbleDock);
 export const ProposalCard = close(open.ProposalCard);
 export const ProposalItem = close(open.ProposalItem);
 export const ProposalActions = close(open.ProposalActions);
@@ -382,6 +384,7 @@ export {
 	Combobox,
 	cn,
 	DEFAULT_UI_LABELS,
+	PROPOSAL_MARK_CLASSES,
 	SearchBox,
 	SearchToggle,
 	Segmented,
