@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { type AdminRequest, type Cms, pluginLog } from "@monti-cms/core/server";
 import {
 	convertToModelMessages,
+	createUIMessageStream,
 	createUIMessageStreamResponse,
+	type InferUIMessageChunk,
 	isStepCount,
 	type LanguageModelUsage,
 	streamText,
@@ -10,18 +12,19 @@ import {
 	type UIMessage,
 	type UIMessageChunk,
 } from "ai";
-import { agentMessages } from "./agent.messages";
-import { withAgentRetry } from "./agent-model";
-import { agentSystemPrompt } from "./agent-prompt";
-import type { AgentRequest } from "./agent-request";
-import { type AgentRunStatus, type AgentRunValue, type AgentUsage, fitsRun, NO_USAGE, titleOf } from "./agent-store";
-import { createAgentTools } from "./agent-tools";
-import { type AgentModelChoice, CREDIT_EXHAUSTED } from "./connection";
-import { AiError } from "./errors";
-import { AI_PLUGIN_NAME } from "./name";
-import { AGENT_PROVIDER, isCreditError, modelFailureMessage } from "./provider";
-import { type AgentRuntime, noToolsError } from "./settings";
-import type { AiStore } from "./store";
+import { agentMessages } from "../agent.messages";
+import { withAgentRetry } from "../agent-model";
+import type { AgentRequest } from "../agent-request";
+import { type AgentRunStatus, type AgentRunValue, type AgentUsage, fitsRun, NO_USAGE, titleOf } from "../agent-store";
+import { type AgentModelChoice, CREDIT_EXHAUSTED } from "../connection";
+import { AiError } from "../errors";
+import { AI_PLUGIN_NAME } from "../name";
+import { AGENT_PROVIDER, isCreditError, modelFailureMessage } from "../provider";
+import { type AgentRuntime, noToolsError } from "../settings";
+import type { AiStore } from "../store";
+import { agentSystemPrompt } from "./prompt";
+import { type ProposalView, proposalView } from "./proposal-view";
+import { createAgentTools } from "./tools";
 
 const log = pluginLog(AI_PLUGIN_NAME);
 
@@ -35,7 +38,13 @@ export interface AgentMessageMetadata {
 	usage?: AgentUsage;
 }
 
-export type AgentMessage = UIMessage<AgentMessageMetadata>;
+/** The data parts the agent's answer carries besides text and tool calls: the proposals of the run, each as it is now (a later part with the same id replaces it). */
+export interface AgentDataParts {
+	proposal: ProposalView;
+	[key: string]: unknown;
+}
+
+export type AgentMessage = UIMessage<AgentMessageMetadata, AgentDataParts>;
 
 const usageOf = (usage: LanguageModelUsage): AgentUsage => ({
 	inputTokens: usage.inputTokens ?? 0,
@@ -48,6 +57,24 @@ const addUsage = (a: AgentUsage, b: AgentUsage): AgentUsage => ({
 	outputTokens: a.outputTokens + b.outputTokens,
 	totalTokens: a.totalTokens + b.totalTokens,
 });
+
+/** The conversation with the proposals of this request put on its last answer, each as a data part in its latest state. */
+function withProposals(messages: AgentMessage[], proposals: ReadonlyMap<string, ProposalView>): AgentMessage[] {
+	const last = messages.at(-1);
+	if (proposals.size === 0 || last?.role !== "assistant") return messages;
+	const parts = last.parts.filter((part) => part.type !== "data-proposal" || !proposals.has(part.id ?? ""));
+	for (const view of proposals.values()) parts.push({ type: "data-proposal", id: view.id, data: view });
+	return [...messages.slice(0, -1), { ...last, parts }];
+}
+
+/** The words of the admin's last message: what a proposal of this request quotes. */
+function lastUserText(messages: readonly AgentMessage[]): string {
+	const last = messages.findLast((message) => message.role === "user");
+	return (last?.parts ?? [])
+		.flatMap((part) => (part.type === "text" ? [part.text] : []))
+		.join(" ")
+		.trim();
+}
 
 /** The conversation kept to what a stored run may hold: the oldest messages go first. */
 function fitted(messages: AgentMessage[]): AgentMessage[] {
@@ -133,14 +160,37 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 		return store.agentRuns.save(runId, value);
 	};
 
-	const tools = await createAgentTools({ cms, auth, signal, entryId: body.context.entryId });
+	// Proposals of this run go to the panel as data parts; until the answer stream is open they wait here.
+	const waiting: ProposalView[] = [];
+	// The last view of each proposal of this request, stored with the answer so a reopened conversation shows them as they were.
+	const proposals = new Map<string, ProposalView>();
+	let sendProposal = (view: ProposalView) => {
+		waiting.push(view);
+	};
+	const tools = await createAgentTools({
+		cms,
+		auth,
+		signal,
+		entryId: body.context.entryId,
+		run: {
+			adminId: auth.userId,
+			runId,
+			request: lastUserText(messages),
+			proposals: store.proposals,
+			onProposal: (proposal) => {
+				const view = proposalView(proposal);
+				proposals.set(view.id, view);
+				sendProposal(view);
+			},
+		},
+	});
 	const result = streamText({
 		model: withAgentRetry(runtime.model, {
 			onToolsUnsupported: () => {
 				unsupported = true;
 			},
 		}),
-		system: agentSystemPrompt(site, body.context),
+		system: agentSystemPrompt(site, body.context, await store.getWritingRules()),
 		messages: await convertToModelMessages(messages, { tools, ignoreIncompleteToolCalls: true }),
 		tools,
 		stopWhen: isStepCount(MAX_AGENT_STEPS),
@@ -178,7 +228,9 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 				: isAborted || isCancelled || outcome.status === "aborted"
 					? "stopped"
 					: "done";
-			await save(status, fitted(all)).catch((error) => log.error("could not store agent run", runId, error));
+			await save(status, fitted(withProposals(all, proposals))).catch((error) =>
+				log.error("could not store agent run", runId, error),
+			);
 		},
 	});
 
@@ -201,5 +253,13 @@ export async function startAgentRun({ cms, auth, store, runtime, body, signal }:
 		throw error;
 	}
 	release(true);
-	return createUIMessageStreamResponse({ stream });
+	return createUIMessageStreamResponse({
+		stream: createUIMessageStream<AgentMessage>({
+			execute: ({ writer }) => {
+				sendProposal = (view) => writer.write({ type: "data-proposal", id: view.id, data: view });
+				for (const view of waiting.splice(0)) sendProposal(view);
+				writer.merge(stream as ReadableStream<InferUIMessageChunk<AgentMessage>>);
+			},
+		}),
+	});
 }

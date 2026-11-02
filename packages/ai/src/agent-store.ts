@@ -139,14 +139,20 @@ export function createAgentRunStore(collection: PluginCollection<AgentRunValue>)
 			return true;
 		},
 
-		/** Deletes this admin's conversations not opened or asked in for `days` days. `null` keeps them all. */
-		async sweep(adminId: string, days: number | null, now = new Date()): Promise<void> {
-			if (days === null) return;
+		/** Deletes this admin's conversations not opened or asked in for `days` days, and returns their ids. `null` keeps them all. */
+		async sweep(adminId: string, days: number | null, now = new Date()): Promise<string[]> {
+			if (days === null) return [];
 			const before = now.getTime() - days * DAY_MS;
+			const removed: string[] = [];
 			for (const item of await ownedBy(adminId)()) {
 				if (lastUsed(item) >= before) continue;
-				await collection.delete(item.key, { expectedVersion: item.version }).catch(() => undefined);
+				const deleted = await collection.delete(item.key, { expectedVersion: item.version }).then(
+					() => true,
+					() => false,
+				);
+				if (deleted) removed.push(toRun(item).id);
 			}
+			return removed;
 		},
 
 		/** This admin's conversations, newest first, one page. */

@@ -276,6 +276,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 			events: dispatcher.events,
 			operations: operations.list,
 			runOperation: operations.run,
+			writes: { plan: operations.plan, apply: operations.apply, revert: operations.revert, baseOf: operations.baseOf },
 			handle: lazyHandle(() => self() as unknown as Cms),
 			read: createRead({
 				site,

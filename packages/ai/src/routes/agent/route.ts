@@ -1,5 +1,5 @@
 import { adminRoute, parseWith, readJsonBody } from "@monti-cms/core/server";
-import { startAgentRun } from "../../agent";
+import { startAgentRun } from "../../agent/engine";
 import { agentRequestSchema } from "../../agent-request";
 import { loadAgentRuntime, unopenedDaysOf } from "../../settings";
 import { aiStoreFor } from "../../store";
@@ -14,6 +14,6 @@ export const POST = adminRoute(async ({ request, cms, auth }) => {
 	const store = aiStoreFor(cms);
 	const runtime = await loadAgentRuntime(cms.site, store, body.model);
 	// A new conversation is a moment to let go of the ones left unopened too long.
-	if (!body.runId) await store.agentRuns.sweep(auth.userId, await unopenedDaysOf(store));
+	if (!body.runId) await store.sweepRuns(auth.userId, await unopenedDaysOf(store));
 	return startAgentRun({ cms, auth, store, runtime, body, signal: request.signal });
 });

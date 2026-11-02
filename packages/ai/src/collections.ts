@@ -4,6 +4,8 @@ export const AI_COLLECTIONS = {
 	agentTools: "agent-tools",
 	/** Conversations of the admin agent, one item per run, keyed `<admin id>/<run id>`. */
 	agentRuns: "agent-runs",
+	/** The write changes each agent run proposed, one item per proposal, keyed `<admin id>/<proposal id>`. */
+	agentProposals: "agent-proposals",
 	/** The AI settings: one item, `default` (the quick-task model, how long unopened conversations stay). */
 	settings: "settings",
 } as const;

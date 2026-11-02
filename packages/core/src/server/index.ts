@@ -18,6 +18,7 @@ export type {
 	HandleOptions,
 	PublicServerConfig,
 } from "../cms";
+export type { AgentAttribution } from "../core/actor";
 export type { ImageWarningResolvers, InputBody, TextImport } from "../core/snapshot";
 // Snapshot helpers and the public API options.
 export {
@@ -78,8 +79,17 @@ export {
 	type Operation,
 	type OperationContext,
 	type OperationKind,
+	type WriteApplied,
+	type WritePlan,
+	type WriteTarget,
 } from "../operations";
-export type { OperationInfo, OperationRunner, RunOperationOptions } from "../operations/registry";
+export type {
+	OperationInfo,
+	OperationRunner,
+	OperationWrites,
+	RunOperationOptions,
+	WriteRunOptions,
+} from "../operations/registry";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "../plugin/content-lookup";
 export type { PluginContext } from "../plugin/context";
 export { defineServerPlugin } from "../plugin/define";

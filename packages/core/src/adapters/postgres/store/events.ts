@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import type { PoolClient } from "pg";
-import { currentActor } from "../../../core/actor";
+import { currentActor, currentAgent } from "../../../core/actor";
 import {
 	type ContentChange,
 	type ContentChangeKind,
@@ -48,7 +48,7 @@ export async function recordEvents(
 				locale: row.locale,
 				content_hash: row.contentHash,
 				version: row.version,
-				payload: JSON.stringify({ ...row.payload, actor: currentActor() }),
+				payload: JSON.stringify({ ...row.payload, actor: currentActor(), agent: currentAgent() }),
 			})
 			.execute();
 	}
@@ -92,6 +92,7 @@ const changeOf = (row: EventColumns): ContentChange => ({
 	workingSlug: row.payload.workingSlug,
 	title: row.payload.title,
 	actor: row.payload.actor ?? null,
+	agent: row.payload.agent ?? null,
 	version: row.version,
 	contentHash: row.content_hash,
 	occurredAt: row.occurred_at,
