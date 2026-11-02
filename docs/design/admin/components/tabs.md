@@ -33,6 +33,6 @@
 
 ### 코드
 
-`Chip`(`onRemove`는 ×를 더하고, `removeLabel`은 스크린 리더용 이름을 붙이며, `proposal`은 AI가 정한 모양이다). 칩 행은 없다. 목록은 필터를 열 이름 뒤의 점으로 보인다. `FilterButton`은 아직 켜지지 않은 조건이다. 이름과, 값 목록을 여는 꺾쇠가 있다. 값을 고르면 `Chip`이 된다.
+`Chip`(`onRemove`는 ×를 더하고, `removeLabel`은 스크린 리더용 이름을 붙이며, `proposal`은 AI가 정한 모양이다). 칩 행은 없다. 목록은 필터를 열 이름 뒤의 점으로 보인다. `FilterButton`은 아직 켜지지 않은 조건이다. 이름과, 값 목록을 여는 꺾쇠가 있다. 값을 고르면 `Chip`이 된다. `filled`는 정해진 값을 잉크로 보인다(설정의 "30일 뒤 ▾").
 
 DS README는 칩 부품을 `Badge(filter)`라고 부른다. 그런 export는 없다.

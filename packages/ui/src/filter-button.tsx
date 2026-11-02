@@ -6,7 +6,7 @@ import { cn } from "./cn";
 
 /**
  * A condition that is not on yet, in a filter row: its name and a caret, opening a list of values (tag ▾, language ▾, sort ▾). Once a value is
- * picked it becomes a `Chip`. With `filled` it shows a value that is set, in ink (a setting's "30일 뒤 ▾"). Open a menu or popover from it with `render` on the trigger: `<DropdownMenuTrigger render={<FilterButton />}>`.
+ * picked it becomes a `Chip`. With `filled` it shows a value that is set, in ink (a setting's "after 30 days ▾"). Open a menu or popover from it with `render` on the trigger: `<DropdownMenuTrigger render={<FilterButton />}>`.
  */
 function FilterButton({
 	filled = false,
@@ -14,7 +14,7 @@ function FilterButton({
 	children,
 	...props
 }: ButtonPrimitive.Props & {
-	/** It shows a value that is set ("30일 뒤 ▾"), in ink rather than the subtle gray of a condition not on yet. */
+	/** It shows a value that is set ("after 30 days ▾"), in ink rather than the subtle gray of a condition not on yet. */
 	filled?: boolean;
 }) {
 	return (

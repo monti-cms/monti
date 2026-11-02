@@ -48,7 +48,7 @@ export const operationOf = (toolName: string): string => toolName.replaceAll("_"
 
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
-/** One tool call as a mono line that says what it did ("글 목록 읽음 · 게시글 148편"). It opens to show the input and the result. */
+/** One tool call as a mono line that says what it did ("Read the entry list · posts 148"). It opens to show the input and the result. */
 function ToolLine({ part, live }: { part: ToolPart; live: boolean }) {
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
@@ -69,7 +69,7 @@ function ToolLine({ part, live }: { part: ToolPart; live: boolean }) {
 	);
 }
 
-/** What a message of the admin was about, from its metadata: the rows they had picked ("고른 글 2편"). */
+/** What a message of the admin was about, from its metadata: the rows they had picked ("2 picked"). */
 function useContextLabel(message: AgentMessage): string | undefined {
 	const t = useTranslator(agentPanelMessages);
 	const picked = message.metadata?.picked;

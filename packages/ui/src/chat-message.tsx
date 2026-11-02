@@ -21,7 +21,7 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 /**
  * One message of a conversation: what the admin asked (`user`, a bubble at the right) or what the assistant answered (`assistant`, plain text, `streaming`
  * while it is still being written). Put them in a column; the bubble moves to the right edge of it. A message of the admin can say what it was about
- * (`context`, "고른 글 2편" in mono 11 over the words) or be a default request they pressed (`request`, a blue spark before the words).
+ * (`context`, "2 picked" in mono 11 over the words) or be a default request they pressed (`request`, a blue spark before the words).
  */
 export function ChatMessage({
 	author = "assistant",

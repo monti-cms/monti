@@ -33,7 +33,7 @@ const titleOfEntry = (output: unknown): string => {
 const filenameOf = (output: unknown): string => String(record(output).filename ?? "");
 
 /**
- * The words of one operation: what it is while it runs ("글 목록 읽는 중"), and what it did with what it found ("글 목록 읽음 · 게시글 148편"). The
+ * The words of one operation: what it is while it runs ("Reading the entry list"), and what it did with what it found ("Read the entry list · posts 148"). The
  * found part is left out when the answer does not say (a result cut for length).
  */
 interface OperationWords {
@@ -141,8 +141,8 @@ const WORDS: Record<string, OperationWords> = {
 };
 
 /**
- * The words of a tool line: what the call did in the admin's language ("글 목록 읽음 · 게시글 148편", "요약 확인 중"), "실패" after a call that failed and
- * "여기서 멈춤" after one the run never finished. An operation of a plugin, which has no words here, shows its name (`spelling.check`).
+ * The words of a tool line: what the call did in the admin's language ("Read the entry list · posts 148", "Reading an entry"), "failed" after a call that failed and
+ * "stopped here" after one the run never finished. An operation of a plugin, which has no words here, shows its name (`spelling.check`).
  */
 export function toolLineText(
 	site: Site,

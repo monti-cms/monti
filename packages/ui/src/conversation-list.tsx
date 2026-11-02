@@ -13,7 +13,7 @@ function ConversationList({ className, ...props }: ComponentProps<"div">) {
 	);
 }
 
-/** The day of a group of past conversations ("오늘", "이전"): mono 11 in the subtle gray, lined up with the rows' words. */
+/** The day of a group of past conversations ("Today", "Earlier"): mono 11 in the subtle gray, lined up with the rows' words. */
 function ConversationGroupLabel({ className, ...props }: ComponentProps<"span">) {
 	return (
 		<span
@@ -28,8 +28,8 @@ function ConversationGroupLabel({ className, ...props }: ComponentProps<"span">)
 }
 
 /**
- * One past conversation: what was asked first (one line, cut), and under it in mono when it was and what came of it ("10:58 · 첫 번째 글 · 받음 5곳").
- * Pressing it opens the conversation. `current` marks the one open now. `menu` is its ⋯ button (a menu with 지우기), at the top right; it shows while the
+ * One past conversation: what was asked first (one line, cut), and under it in mono when it was and what came of it ("10:58 · First post · 5 accepted").
+ * Pressing it opens the conversation. `current` marks the one open now. `menu` is its ⋯ button (a menu with Delete), at the top right; it shows while the
  * row is pointed at, focused or current, or while its menu is open.
  */
 function ConversationRow({

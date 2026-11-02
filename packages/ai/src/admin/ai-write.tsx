@@ -52,7 +52,7 @@ import { diffWords } from "./word-diff";
 /**
  * AI action that writes into the body. If the attach target is `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If
  * `block` (next to the block handle, e.g. fix a diagram), it fixes that block's source, shows what changed and then replaces the block. Selected text
- * goes to the assistant instead: the format card's "✦ 요청" (and ⌘J) opens the panel on it.
+ * goes to the assistant instead: the format card's "✦ Ask" (and ⌘J) opens the panel on it.
  * The result is streamed and shown gradually. Applying happens only when the user clicks.
  */
 
@@ -383,7 +383,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 		};
 	}, [data, format]);
 
-	// Selected text goes to the assistant: the card's "✦ 요청" and ⌘J open the panel, which reads the selection from the editor.
+	// Selected text goes to the assistant: the card's "✦ Ask" and ⌘J open the panel, which reads the selection from the editor.
 	const ask = useAskPanel();
 	const selectionActions = useMemo<EditorSelectionAction[]>(
 		() => (ask ? [{ id: "ai:request", label: t("ask"), run: () => ask({}) }] : []),

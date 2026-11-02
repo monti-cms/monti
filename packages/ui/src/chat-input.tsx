@@ -37,7 +37,7 @@ export function ChatInput({
 	sendLabel: string;
 	stopLabel: string;
 	aside?: ReactNode;
-	/** What the message will be about, over the text: a `Chip` of the picked rows ("고른 글 2편 ×"). */
+	/** What the message will be about, over the text: a `Chip` of the picked rows ("2 picked ×"). */
 	context?: ReactNode;
 }) {
 	const blank = value.trim() === "";
@@ -71,7 +71,7 @@ export function ChatInput({
 				rows={2}
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={onKeyDown}
-				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default leading-[1.6] outline-none placeholder:text-monti-faint"
+				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 			/>
 			<div className="mt-monti-4 flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>

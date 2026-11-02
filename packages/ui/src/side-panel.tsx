@@ -52,7 +52,7 @@ export function SidePanel({
 	bar?: ReactNode;
 	/** Icon buttons at the end of the head, before the close button. */
 	actions?: ReactNode;
-	/** A back button before the title, for a view inside the panel (the assistant's past conversations): its name ("대화로 돌아가기") and what it does. */
+	/** A back button before the title, for a view inside the panel (the assistant's past conversations): its name ("Back to the conversation") and what it does. */
 	back?: { label: string; onClick: () => void };
 	onClose?: () => void;
 	/** Pinned under the body. */

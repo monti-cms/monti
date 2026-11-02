@@ -125,7 +125,7 @@ function StartRequests({ screen, onSend }: { screen: AdminScreen; onSend: (text:
 
 const two = (n: number) => String(n).padStart(2, "0");
 
-/** The day of a conversation from another day, over its messages ("10. 24 (금)"); nothing for one had today. */
+/** The day of a conversation from another day, over its messages ("10. 24 (Fri)"); nothing for one had today. */
 function dayOf(site: Site, createdAt: string | undefined): string | undefined {
 	if (!createdAt) return undefined;
 	const at = new Date(createdAt);

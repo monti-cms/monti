@@ -13,7 +13,7 @@ import { regexRuns, sameStructure, uniqueSlug } from "./validators";
  * ```
  *
  * Field actions find the field to attach to by field kind, role and relation target, not by field name. They read the body, so they attach only to collections
- * that have a body. The prompt can be edited in the admin AI screen, and the preset option `prompt` can change its initial value.
+ * that have a body. The preset option `prompt` replaces its prompt.
  */
 
 /** Translator of the preset labels in the site's admin language. */
@@ -526,7 +526,7 @@ const styleGuideOf = (site: AiSiteView, option: string | undefined) =>
 	option ?? (site.snippetKeys.includes("styleGuide") ? "styleGuide" : undefined);
 
 /**
- * Actions enabled by default (name -> creating function). The order is the admin AI screen's order (field actions first). Not enabled
+ * Actions enabled by default (name -> creating function). The order is the actions list's order (field actions first). Not enabled
  * if the site has no attach point.
  */
 export const DEFAULT_AI_ACTIONS = {

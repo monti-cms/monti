@@ -50,7 +50,7 @@ function SuggestList({ className, children, ...props }: ComponentProps<"div">) {
 	);
 }
 
-/** The name of a group of {@link Suggest} rows ("이 목록에서", "최근"): mono 11 in the subtle gray, lined up with the rows' words. */
+/** The name of a group of {@link Suggest} rows ("In this list", "Recent"): mono 11 in the subtle gray, lined up with the rows' words. */
 function SuggestLabel({ className, ...props }: ComponentProps<"span">) {
 	return (
 		<span

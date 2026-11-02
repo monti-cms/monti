@@ -74,7 +74,7 @@ export type AiActionResultOf<K extends AiActionKey<Config>, Config extends CmsCo
 export interface AiRegistry {
 	/** Actions to run (default actions + actions added by other plugins + actions in the config, `resolveAiActions`). Empty without the AI plugin. */
 	readonly actions: Readonly<Record<string, AiActionDefinition>>;
-	/** Prompt snippet definitions (defaults). Values edited in the admin screen are applied by the server. */
+	/** Prompt snippets of the plugin config (`ai({ snippets })`). */
 	readonly snippets: Readonly<Record<string, AiSnippet>>;
 	readonly snippetKeys: readonly string[];
 	/** Site description that goes into the instruction at the start of every action. */

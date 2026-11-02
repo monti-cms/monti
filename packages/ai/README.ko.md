@@ -3,14 +3,14 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.plugin("ai").storage`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
+AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.plugin("ai").storage`: 컬렉션 `settings`·`agent-tools`·`agent-runs`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
 이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `ai()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
 
 ## 등록
 
-관리자 AI 화면(연결·기능·공용 문구)은 없어졌다. 키 하나가 연결이다(서비스 키 참고). 그 화면이 저장해 둔 값(고친 기능 값, 화면 기능, 공용 문구)은 그대로 쓰이지만 고칠 화면은 없다. 기능은 다음 단계에서 어시스턴트 요청으로 바뀐다.
+관리자 AI 화면은 없다. 키 하나가 연결이고(서비스 키 참고), 기능은 설정에 적힌 그대로다. 예전 화면이 저장해 둔 값(고친 기능 값, 화면 기능, 공용 문구)은 더 읽지 않는다.
 
 `monti.config.ts`의 `plugins`에 `ai()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
 더한 기능도 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 기능 이름(key)으로 적는다.
@@ -136,7 +136,7 @@ const unusedAddress = defineValidator({
 - **모델**: 요청의 `model: { keyId, model, thinking }`(입력창에서 고른 것. 대화와 함께 저장한다). 없으면 내장 기본(서비스 키 참고). 쓸 수 있는 키가 없으면 거절한다(`service_unavailable`).
 - **도구 호출**: 써 본 적 없는 모델은 시도해 보고, "도구를 지원하지 않는다"는 답이 오면 키·모델마다 저장한 뒤(설정 보기의 `toolSupport`) 거절한다(`agent_unavailable`, 409). 모델 메뉴는 그런 모델을 보이지 않는다.
 - **크레딧**: 서비스가 크레딧 부족으로 거절하면 스트림이 `credit_exhausted`로 끝나고, 패널이 키 이름과 함께 알리며 "다른 모델로 보내기"를 보인다.
-- **대화**: 플러그인 저장소(`agent-runs`)에 메시지, 상태(`running`, `done`, `failed`, `stopped`), 사용량과 함께 저장된다. `GET /api/monti/v1/ai/agent/runs`는 로그인한 관리자 자신의 대화를 최신순으로(`page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}`는 그 관리자에게만 대화 하나를 돌려준다. 대화 하나는 메시지 1,000,000자까지 저장하고, 관리자마다 최근 100개를 둔다.
+- **대화**: 플러그인 저장소(`agent-runs`)에 메시지, 상태(`running`, `done`, `failed`, `stopped`), 사용량과 함께 저장된다. `GET /api/monti/v1/ai/agent/runs`는 로그인한 관리자 자신의 대화를 마지막으로 열거나 물은 순서로(`page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}`는 그 관리자에게만 대화 하나를 돌려주고 연 것으로 표시하며, `DELETE /api/monti/v1/ai/agent/runs/{id}`는 지운다. 대화 하나는 메시지 1,000,000자까지 저장하고, 관리자마다 최근 100개를 둔다. 설정한 날수(`PUT /api/monti/v1/ai/settings { expectedVersion, unopenedDays: 7 | 30 | 90 | null }`, 고르기 전에는 30일, `null`은 지우지 않음) 동안 열지도 묻지도 않은 대화는 목록을 읽거나 새 대화를 시작할 때 지운다.
 - `CMS_AI_FAKE=1`이면 `site_describe`를 부르고 컬렉션 이름으로 답하는 대본 모델을 쓴다.
 
 ## 가짜 연결(개발 전용)
@@ -150,21 +150,12 @@ MDX 결과는 MDX 입력을 그대로(흘려받기는 글로 시작하는 문단
 
 - **흘려받기**: 기능 정의 `stream: true`(생성 방식의 글·MDX 결과)면 결과가 조금씩 보인다. 화면에서는
   `useAiAction("이름").stream(입력, { onText })`. API는 `/ai/run`에 `stream: true`(한 줄에 사건 하나인 JSON).
-- **프롬프트 조각**: 여러 기능의 지시문에 `{{snippet.키}}`로 넣는 글(문체 가이드·말투·독자 등). 두 가지가 있다.
-  - 설정 조각: `ai({ snippets: { styleGuide: { label: "문체 가이드", text: "…" } } })`. 키·이름·내용을 설정이 정한다.
-    설정의 지시문(`prompt`)은 설정 조각만 쓸 수 있다(설정을 만들 때 확인한다).
-  - 더한 조각(없어진 "공용 문구" 탭에서 저장해 둔 것): 키(영문자로 시작, 영문자·숫자·`_`)·이름·내용을 적어 더한다. 키는 만든 뒤
-    바꿀 수 없고, 설정 조각·다른 조각과 겹치지 않아야 한다. 관리자 화면에서 고친 지시문과 화면 기능이 쓸 수 있다.
-    지시문에서 쓰는 기능이 있으면 삭제하지 못한다(그 기능 이름을 알린다).
-
-  둘 다 AI 설정 표의 `shared` 줄(저장된 줄 이름은 그대로 둔다)에 `{ texts: { 키: 고친 내용 }, added: [{ key, label, text }] }`로 둔다(예전 모양도 읽는다).
-  API는 `/ai/snippets`: `GET`(목록, `source: "config" | "added"`), `POST { expectedVersion, key, label, text }`(더하기),
-  `PATCH { expectedVersion, key, label?, text }`(하나 고치기), `PUT { expectedVersion, texts }`(여럿 고치기),
-  `DELETE ?key=&expectedVersion=`(삭제). 모두 바뀐 목록을 돌려주고, 버전이 다르면 409다.
+- **프롬프트 조각**: 여러 기능의 지시문에 `{{snippet.키}}`로 넣는 글(문체 가이드·말투·독자 등). 설정에 적는다:
+  `ai({ snippets: { styleGuide: { label: "문체 가이드", text: "…" } } })`. 키·이름·내용을 설정이 정한다.
+  지시문(`prompt`)은 이 조각만 쓸 수 있다(설정을 만들 때 확인한다).
 - **문체 다듬기·초안 쓰기**: `polish`(본문에서 글자를 고르면 뜨는 메뉴, 바뀐 곳을 보인 뒤 바꾸기),
   `draft`(슬래시 메뉴·빈 문서의 ⋯ 메뉴, 커서 자리에 넣기). 프롬프트 조각 `styleGuide`가 있으면 저절로, 다른 키면
-  `aiPresets.polish({ styleGuide: "키" })`로 문체 가이드를 넣는다. 관리자 화면에서 더한 조각은 관리자 화면에서 지시문에
-  `{{snippet.키}}`로 넣는다.
+  `aiPresets.polish({ styleGuide: "키" })`로 문체 가이드를 넣는다.
 - **번역 기능 여럿**: 붙을 곳이 `translation`인 기능이 여럿이면 블록 손잡이 옆에 기능마다 버튼(기능 이름)이 붙고,
   `모두 번역`에서 쓸 기능을 고른다.
 

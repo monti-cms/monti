@@ -21,7 +21,7 @@ import { PluginPanelSlot } from "./side-panel";
 import { sidePanelSlotMessages } from "./side-panel-slot.messages";
 
 /**
- * What a screen hands the panel when it opens it for something (the list's "✦ 요청", the format card's "요청"): the words to send, or none to let the
+ * What a screen hands the panel when it opens it for something (the list's "✦ Ask", the format card's "Ask"): the words to send, or none to let the
  * admin write them. The panel reads the rest of the context (the picked rows, the selection) from where the admin is.
  */
 export interface PanelRequest {

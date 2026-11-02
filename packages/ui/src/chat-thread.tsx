@@ -17,7 +17,7 @@ function ChatThread({ className, children, ...props }: ComponentProps<"div">) {
 	);
 }
 
-/** The day a conversation opened again was had ("10. 24 (금)"), centered over its messages in mono 11. */
+/** The day a conversation opened again was had ("10. 24 (Fri)"), centered over its messages in mono 11. */
 function ChatDate({ className, ...props }: ComponentProps<"span">) {
 	return (
 		<span

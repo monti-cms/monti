@@ -118,7 +118,7 @@ export function BulkBar({
 	onClearSelection: () => void;
 	/** Applies an action to the picked rows and tells the writer how it went. */
 	onRun: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void> | void;
-	/** Opens the assistant on the picked rows ("✦ 요청"); without it the bar has no request (no assistant). */
+	/** Opens the assistant on the picked rows ("✦ Ask"); without it the bar has no request (no assistant). */
 	onRequest?: () => void;
 	/** Opens the export of the picked rows. */
 	onExport: (ids: string[]) => void;
