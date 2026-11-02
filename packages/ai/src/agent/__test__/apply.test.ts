@@ -1,8 +1,8 @@
 import type { Cms } from "@monti-cms/core/server";
 import { describe, expect, it } from "vitest";
+import { admin, notesSite } from "../../../test/notes-site";
 import { applyProposal, discardProposal, includeItems, refreshStale, revertProposal } from "../apply";
 import { itemOf } from "../proposals";
-import { admin, notesSite } from "./fixture";
 
 /** A proposal of run `run-1` changing each named note to the given text. */
 async function propose(site: ReturnType<typeof notesSite>, changes: Record<string, string>) {

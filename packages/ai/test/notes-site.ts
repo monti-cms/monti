@@ -1,10 +1,10 @@
 import { type AnyOperation, CmsError, defineOperation } from "@monti-cms/core/server";
 import { fakeCms } from "@monti-cms/core/testing";
 import { z } from "zod";
-import { currentAgent } from "../../../../core/src/core/actor";
-import { testConfig, testSite } from "../../../test/site";
-import { AI_PLUGIN_NAME } from "../../name";
-import { createAiStore } from "../../store";
+import { currentAgent } from "../../core/src/core/actor";
+import { AI_PLUGIN_NAME } from "../src/name";
+import { createAiStore } from "../src/store";
+import { testConfig, testSite } from "./site";
 
 export const admin = { userId: "u", accountId: "a", isAdmin: true, name: "Mina Park" };
 

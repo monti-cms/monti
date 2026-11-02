@@ -2,8 +2,8 @@ import type { Cms } from "@monti-cms/core/server";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
+import { admin, notesSite } from "../../../test/notes-site";
 import { startAgentRun } from "../engine";
-import { admin, notesSite } from "./fixture";
 
 type StreamPart =
 	Awaited<ReturnType<MockLanguageModelV4["doStream"]>>["stream"] extends ReadableStream<infer Part> ? Part : never;

@@ -1,8 +1,8 @@
 import type { Cms } from "@monti-cms/core/server";
 import { describe, expect, it } from "vitest";
+import { admin, notesSite } from "../../../test/notes-site";
 import type { Proposal } from "../proposals";
 import { createAgentTools } from "../tools";
-import { admin, notesSite } from "./fixture";
 
 /** Runs one tool of the agent the way the SDK does, with the input the model gave. */
 const call = (tools: Awaited<ReturnType<typeof createAgentTools>>, name: string, input: unknown) =>
