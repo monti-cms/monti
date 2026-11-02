@@ -22,6 +22,7 @@ const ready: AiSettingsView = {
 	assistant: { keyId: "a", model: "claude-sonnet-5-5", keyName: "Anthropic 개인" },
 	toolSupport: { o: { "meta/llama-3-8b": false } },
 	fake: false,
+	unopenedDays: 30,
 };
 const noKey: AiSettingsView = { ...ready, keys: [], quick: null, assistant: null, toolSupport: {} };
 
@@ -36,6 +37,62 @@ const MODELS: Record<string, string[]> = {
 	],
 };
 
+const at = (daysAgo: number, time: string) => {
+	const day = new Date();
+	day.setDate(day.getDate() - daysAgo);
+	return `${day.toISOString().slice(0, 10)}T${time}:00`;
+};
+const run = (id: string, title: string, when: string) => ({
+	id,
+	title,
+	status: "done",
+	usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+	createdAt: when,
+	updatedAt: when,
+});
+/** The past conversations: two of today, three earlier. */
+const RUNS = [
+	run("r5", "더 짧게 다듬어 줘. 말투는 그대로.", at(0, "10:58")),
+	run(
+		"r4",
+		"이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고, ‘발행 후 고친 글’은 더 짧게 다듬어 줘.",
+		at(0, "10:52"),
+	),
+	run("r3", "쓰지 않는 태그 정리해 줘", at(9, "15:20")),
+	run("r2", "이 글 영어로 옮겨 줘", at(11, "09:10")),
+	run("r1", "지난달 많이 읽힌 글 알려 줘", at(30, "18:02")),
+];
+/** A conversation of another day, as opening it from the list gives it. */
+const OLD_RUN = {
+	...RUNS[2],
+	model: { keyId: "a", model: "claude-opus-5-5", thinking: "high" },
+	messages: [
+		{ id: "u1", role: "user", parts: [{ type: "text", text: "쓰지 않는 태그 정리해 줘" }] },
+		{
+			id: "a1",
+			role: "assistant",
+			parts: [
+				{ type: "step-start" },
+				{
+					type: "tool-entries_list",
+					toolCallId: "c1",
+					state: "output-available",
+					input: { collection: "tag" },
+					output: { items: [], total: 38 },
+				},
+				{
+					type: "tool-entries_usages",
+					toolCallId: "c2",
+					state: "output-available",
+					input: { id: "t1" },
+					output: { total: 0 },
+				},
+				{ type: "text", text: "글에 한 번도 안 쓰인 태그가 4개예요." },
+			],
+		},
+	],
+};
+
 const api =
 	(view: AiSettingsView): FakeApi =>
 	(path, method, body) => {
@@ -43,31 +100,22 @@ const api =
 		if (path === "/api/monti/v1/ai/models") {
 			return { items: (MODELS[(body as { keyId: string }).keyId] ?? []).map((id) => ({ id })) };
 		}
-		if (path.startsWith("/api/monti/v1/ai/agent/runs?"))
-			return {
-				items: [
-					{
-						id: "r1",
-						title: "How many posts are drafts?",
-						status: "done",
-						usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
-						createdAt: "2026-10-26T09:00:00.000Z",
-						updatedAt: "2026-10-26T09:00:00.000Z",
-					},
-				],
-				total: 1,
-			};
+		if (path.startsWith("/api/monti/v1/ai/agent/runs?")) return { items: RUNS, total: RUNS.length };
+		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "GET") return OLD_RUN;
+		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "DELETE") return { deleted: true };
 		return {};
 	};
 
 type Chunk = Record<string, unknown>;
 /** The server's answer as the AI SDK's UI message stream, one chunk per event. */
-const sse = (chunks: Chunk[]) =>
+const sse = (chunks: Chunk[], { open = false }: { open?: boolean } = {}) =>
 	new Response(
 		new ReadableStream({
 			start(controller) {
 				const encoder = new TextEncoder();
 				for (const chunk of chunks) controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+				// An answer still being written stays open.
+				if (open) return;
 				controller.enqueue(encoder.encode("data: [DONE]\n\n"));
 				controller.close();
 			},
@@ -75,29 +123,29 @@ const sse = (chunks: Chunk[]) =>
 		{ headers: { "content-type": "text/event-stream" } },
 	);
 
-const conversation: Chunk[] = [
-	{ type: "start", messageId: "m1", messageMetadata: { runId: "r1" } },
+/** The first part of the answer to "요약이 비어 있는 글 찾아 줘": the list read, and the next read started. */
+const working: Chunk[] = [
+	{ type: "start", messageId: "m1", messageMetadata: { runId: "r9" } },
 	{ type: "start-step" },
+	{ type: "tool-input-available", toolCallId: "c1", toolName: "entries_list", input: { collection: "post" } },
+	{ type: "tool-output-available", toolCallId: "c1", output: { items: [], total: 148 } },
 	{
 		type: "tool-input-available",
-		toolCallId: "c1",
-		toolName: "entries_list",
-		input: { collection: "post", status: "draft" },
-	},
-	{ type: "tool-output-available", toolCallId: "c1", output: { items: [{ id: "a" }, { id: "b" }], total: 2 } },
-	{ type: "tool-input-available", toolCallId: "c2", toolName: "entries_get", input: { id: "gone" } },
-	{
-		type: "tool-output-available",
 		toolCallId: "c2",
-		output: { error: { code: "not_found", message: "No such entry" } },
+		toolName: "entries_list",
+		input: { collection: "post", field: ["summary:empty"] },
 	},
+];
+const conversation: Chunk[] = [
+	...working,
+	{ type: "tool-output-available", toolCallId: "c2", output: { items: [{ id: "a" }, { id: "b" }], total: 2 } },
 	{ type: "text-start", id: "t" },
-	{ type: "text-delta", id: "t", delta: "Two posts are drafts. One entry I tried to open no longer exists." },
+	{ type: "text-delta", id: "t", delta: "요약이 빈 글은 두 편이에요. ‘캐시 다시 보기’와 ‘서울의 밤’이에요." },
 	{ type: "text-end", id: "t" },
 	{ type: "finish-step" },
 	{
 		type: "finish",
-		messageMetadata: { runId: "r1", usage: { inputTokens: 1200, outputTokens: 80, totalTokens: 1280 } },
+		messageMetadata: { runId: "r9", usage: { inputTokens: 1200, outputTokens: 80, totalTokens: 1280 } },
 	},
 ];
 
@@ -107,6 +155,14 @@ function AgentAnswer({ answer }: { answer: () => Response }) {
 		const base = window.fetch;
 		window.fetch = (input, init) =>
 			String(input).endsWith("/v1/ai/agent") && init?.method === "POST" ? Promise.resolve(answer()) : base(input, init);
+	});
+	return null;
+}
+/** Each story starts with no conversation remembered in this browser (the panel opens the last one again otherwise). */
+function Fresh() {
+	useState(() => {
+		for (const key of Object.keys(window.localStorage))
+			if (key.includes("agent-run")) window.localStorage.removeItem(key);
 	});
 	return null;
 }
@@ -124,10 +180,11 @@ const panel =
 	) =>
 	() => (
 		<PageFrame api={api(view)}>
+			<Fresh />
 			{answer && <AgentAnswer answer={answer} />}
 			<ScreenContextProvider>
 				<Where {...where}>
-					<div style={{ width: 380, height: "100svh", display: "flex", flexDirection: "column" }}>
+					<div style={{ width: 380, height: "100svh", display: "flex" }}>
 						<AgentPanel onClose={() => undefined} />
 					</div>
 				</Where>
@@ -137,27 +194,41 @@ const panel =
 
 const send = async (canvasElement: HTMLElement, text: string) => {
 	const canvas = within(canvasElement);
+	// The model has loaded: the box can send.
+	await canvas.findByRole("button", { name: "모델 고르기" });
 	await userEvent.type(await canvas.findByRole("textbox"), text);
 	await userEvent.click(await canvas.findByRole("button", { name: /보내기|Send/ }));
 };
 
 // --- Stories ---
 
-/** Nothing asked yet: what the assistant can do, and the model it runs on (the default, thinking at the default level). */
-export const Empty: Story = { render: panel(ready) };
+/** Nothing asked yet, on the post list (flow 2 · 01): this list's default requests, the recent ones, and the model it runs on. */
+export const Empty: Story = { tags: ["visual"], render: panel(ready) };
 
-/** Over the entry editor the empty state says it can read the open entry. */
+/** On the entry editor the default requests are about the open entry, and the box asks about it. */
 export const EmptyOverEntry: Story = {
+	tags: ["visual"],
 	render: panel(ready, undefined, { screen: "entry", collection: "post", entryId: "e1" }),
 };
 
-/** An answer with a tool call that worked, one that failed, the streamed text and the usage of the conversation. */
-export const ConversationWithToolCalls: Story = {
+/** A default request pressed, while the assistant works (flow 2 · 02): what it read so far, the read under way, and the stop button. */
+export const Working: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(working, { open: true })),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await within(canvasElement).findByText("글 목록 읽음 · 게시글 148편");
+		await within(canvasElement).findByRole("button", { name: "멈추기" });
+	},
+};
+
+/** The answer: the tool lines say what was read, then the words. A line opens to show the input and the result. */
+export const Answered: Story = {
 	render: panel(ready, () => sse(conversation)),
 	play: async ({ canvasElement }) => {
-		await send(canvasElement, "Which posts are drafts?");
-		await within(canvasElement).findByText(/Two posts are drafts/);
-		expect(within(canvasElement).getAllByRole("button", { name: /entries\./ })).toHaveLength(2);
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await within(canvasElement).findByText(/요약이 빈 글은 두 편이에요/);
+		expect(within(canvasElement).getByText("글 목록 읽음 · 게시글 2편")).toBeTruthy();
 	},
 };
 
@@ -165,17 +236,65 @@ export const ConversationWithToolCalls: Story = {
 export const ToolCallOpen: Story = {
 	render: panel(ready, () => sse(conversation)),
 	play: async ({ canvasElement }) => {
-		await send(canvasElement, "Which posts are drafts?");
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: /entries\.list/ }));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /게시글 148편/ }));
 		await within(canvasElement).findAllByText(/"collection": "post"/);
 	},
 };
 
-/** The past conversations menu. */
+/** Cut off while working (flow 2 · 06): what it got done stays, the read under way stopped there, and "이어서 하기" goes on from it. */
+export const Cut: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse([...working, { type: "error", errorText: "terminated" }])),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await within(canvasElement).findByText("연결이 끊겼어요");
+		await within(canvasElement).findByText("글 목록 읽기 · 여기서 멈춤");
+	},
+};
+
+/** On the entry editor (flow 2 · 07): the box asks about this entry. */
+export const OnEntry: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(conversation), { screen: "entry", collection: "post", entryId: "e1" }),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "이 글에서 고칠 곳 찾아 줘" }));
+		await within(canvasElement).findByText(/요약이 빈 글은 두 편이에요/);
+		await userEvent.type(within(canvasElement).getByRole("textbox"), "더 짧게 다듬어 줘. 말투는 그대로.");
+	},
+};
+
+/** Rows picked in the list (flow 2 · 10): the box shows them as a chip; × leaves them out of the request. The message says what it was about. */
+export const PickedRows: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(conversation), { screen: "entries", collection: "post", selectedIds: ["a", "b"] }),
+	play: async ({ canvasElement }) => {
+		await within(canvasElement).findByText("고른 글 2편");
+		await userEvent.type(
+			within(canvasElement).getByRole("textbox"),
+			"이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮겨 줘.",
+		);
+	},
+};
+
+/** The past conversations (flow 2 · 25): today's and the earlier ones, the open one marked, a ⋯ that deletes, and how long unopened ones stay. */
 export const PastConversations: Story = {
+	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: /지난 대화|Past conversations/ }));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "지난 대화" }));
+		await within(canvasElement).findByText("쓰지 않는 태그 정리해 줘");
+	},
+};
+
+/** A conversation of another day opened again (flow 2 · 26): its day over it, its messages and its model as they were. */
+export const Reopened: Story = {
+	tags: ["visual"],
+	render: panel(ready),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "지난 대화" }));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^쓰지 않는 태그 정리해 줘/ }));
+		await within(canvasElement).findByText("태그 읽음 · 38개");
 	},
 };
 

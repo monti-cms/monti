@@ -48,20 +48,6 @@ export const slotsAsk = (attach: readonly { readonly slot: AiSlot }[]): boolean 
  */
 export type { AiApply, AiEngine, AiPick, AiResult } from "@monti-cms/core/ai-contract";
 
-/**
- * Result checks. Set per action as a list (all shown in the action editor); candidates that do not pass are discarded.
- * Fixed checks include only those usable by any action.
- * - `pattern`: only values matching the regex
- * - `maxLength`: only values not over the maximum length
- * - `exists`: only values that actually exist in the choices (`choices`)
- * - `oneOf`: only values that are one of a given list (`items`)
- *
- * Checks that differ per action (slug duplicates, regex execution, translation structure, etc.) are built as code checks (`defineValidator`) and put in the action's `checks`.
- * Only its name (`{ kind: "code", name }`) and the enabled state remain in the edited value.
- */
-export const AI_CHECK_KINDS = ["pattern", "maxLength", "exists", "oneOf"] as const;
-export type AiCheckKind = (typeof AI_CHECK_KINDS)[number];
-
 /** Code check name (lowercase, digits, hyphen). */
 export const CODE_CHECK_NAME = /^[a-z][a-z0-9-]*$/;
 
@@ -83,9 +69,19 @@ const patternSchemaOf = (t: CoreText) =>
 			{ error: () => t("check.invalidRegex") },
 		);
 
-/** One check. Fixed checks are toggled per action, and format and length edit a value. */
 const enabled = z.boolean().default(true);
-export const aiCheckSchemaOf = (t: CoreText) =>
+
+/**
+ * Result checks. Set per action as a list; candidates that do not pass are discarded.
+ * Fixed checks include only those usable by any action.
+ * - `pattern`: only values matching the regex
+ * - `maxLength`: only values not over the maximum length
+ * - `exists`: only values that actually exist in the choices (`choices`)
+ * - `oneOf`: only values that are one of a given list (`items`)
+ *
+ * Checks that differ per action (slug duplicates, regex execution, translation structure, etc.) are built as code checks (`defineValidator`) and put in the action's `checks`.
+ */
+const aiCheckSchemaOf = (t: CoreText) =>
 	z.discriminatedUnion("kind", [
 		z.object({ kind: z.literal("pattern"), enabled, pattern: patternSchemaOf(t) }),
 		z.object({ kind: z.literal("maxLength"), enabled, max: z.number().int().min(1).max(5000) }),
@@ -94,28 +90,14 @@ export const aiCheckSchemaOf = (t: CoreText) =>
 		z.object({ kind: z.literal("code"), enabled, name: z.string().max(60).regex(CODE_CHECK_NAME) }),
 	]);
 
-/** The check schema with English messages: reads definitions and stored values where no message is shown. */
+/** The check schema with English messages: reads definitions, where no message is shown. */
 export const aiCheckSchema = aiCheckSchemaOf(englishCoreText);
 export type AiCheck = z.output<typeof aiCheckSchema>;
 export type AiCheckInput = z.input<typeof aiCheckSchema>;
 
-/** The name that points to one check in the check list. One per name for code checks, one per kind for the others. */
-export const checkKey = (check: Pick<AiCheck, "kind"> & { name?: string }) =>
-	check.kind === "code" ? `code:${check.name}` : check.kind;
-
-/** Checks any action can add in the admin UI, with initial values. The rest are set by the action definition. */
-export const ADDABLE_CHECKS = {
-	pattern: { kind: "pattern", enabled: true, pattern: ".+" },
-	maxLength: { kind: "maxLength", enabled: true, max: 100 },
-	oneOf: { kind: "oneOf", enabled: true, items: ["value"] },
-} as const satisfies Partial<Record<AiCheckKind, AiCheck>>;
-export type AddableCheckKind = keyof typeof ADDABLE_CHECKS;
-export const isAddableCheck = (kind: string): kind is AddableCheckKind => Object.hasOwn(ADDABLE_CHECKS, kind);
-
 /** Number of choices that can be asked of the decision model at once. */
 export const MAX_DECISION_OPTIONS = 255;
 
-export const MAX_PROMPT_LENGTH = 4000;
 export const MAX_REQUEST_LENGTH = 1000;
 
 /** One candidate shown as a result in a slot. `value` is the value to apply and `label` is the displayed text. */

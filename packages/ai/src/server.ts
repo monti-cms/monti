@@ -1,6 +1,4 @@
 import { defineServerPlugin } from "@monti-cms/core/server";
-import * as resetAction from "./routes/actions/[key]/reset/route";
-import * as action from "./routes/actions/[key]/route";
 import * as actions from "./routes/actions/route";
 import * as agent from "./routes/agent/route";
 import * as agentRun from "./routes/agent/runs/[id]/route";
@@ -8,7 +6,6 @@ import * as agentRuns from "./routes/agent/runs/route";
 import * as models from "./routes/models/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
-import * as snippets from "./routes/snippets/route";
 import { aiKeyServices } from "./services";
 import { getAiSettingsView, keyUseLabels } from "./settings";
 import { aiStoreFor } from "./store";
@@ -17,15 +14,12 @@ import { aiStoreFor } from "./store";
 export default defineServerPlugin({
 	routes: [
 		{ pattern: "v1/ai/actions", module: actions },
-		{ pattern: "v1/ai/actions/[key]", module: action },
-		{ pattern: "v1/ai/actions/[key]/reset", module: resetAction },
 		{ pattern: "v1/ai/agent", module: agent },
 		{ pattern: "v1/ai/agent/runs", module: agentRuns },
 		{ pattern: "v1/ai/agent/runs/[id]", module: agentRun },
 		{ pattern: "v1/ai/models", module: models },
 		{ pattern: "v1/ai/run", module: run },
 		{ pattern: "v1/ai/settings", module: settings },
-		{ pattern: "v1/ai/snippets", module: snippets },
 	],
 	// The AI services a key can be for, each checked with its service before the key is saved.
 	keyServices: ({ cms }) => aiKeyServices(cms.site),

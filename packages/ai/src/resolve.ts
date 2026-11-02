@@ -18,7 +18,7 @@ import { DEFAULT_AI_ACTIONS } from "./presets";
  * 3. `actions` in the config: the same name overrides, `false` removes, a new name adds.
  *
  * The factory function looks at the site config to find where to attach. If there is nowhere to attach and it returns `undefined`, the action is not turned on.
- * Order: field actions first, then the order above within them (the order of the admin AI screen).
+ * Order: field actions first, then the order above within them (the order of the actions list).
  */
 
 /** An AI action contribution of a plugin. */

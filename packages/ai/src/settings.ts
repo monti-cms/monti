@@ -13,6 +13,9 @@ import {
 	type AiModelView,
 	type AiSettingsView,
 	aiModelChoiceSchema,
+	DEFAULT_UNOPENED_DAYS,
+	type UnopenedDays,
+	unopenedDaysSchema,
 } from "./connection";
 import { AiError } from "./errors";
 import { AI_PLUGIN_NAME } from "./name";
@@ -42,6 +45,8 @@ export interface AiSettingsStore {
 const storedSchema = z.object({
 	/** The quick-task model, when the admin chose one. */
 	quick: aiModelChoiceSchema.optional(),
+	/** Days an unopened conversation is kept, when the admin chose; `null` keeps them all. */
+	unopenedDays: unopenedDaysSchema.optional(),
 });
 
 /**
@@ -75,12 +80,21 @@ function defaultOf(
 
 async function load(store: AiSettingsStore) {
 	const row = await store.getAiSettings();
-	const { quick: chosen } = storedSchema.parse(row?.value ?? {});
+	const stored = storedSchema.parse(row?.value ?? {});
+	const { quick: chosen } = stored;
 	const keys = aiKeysOf(await store.apiKeys().list());
 	const chosenKey = chosen ? keys.find((key) => key.id === chosen.keyId) : undefined;
 	const quick: AiModelView | null =
 		chosen && chosenKey ? { ...chosen, keyName: chosenKey.name } : defaultOf(keys, "quick");
-	return { version: row?.version ?? 0, keys, chosen, quick, assistant: defaultOf(keys, "assistant") };
+	return {
+		version: row?.version ?? 0,
+		stored,
+		keys,
+		chosen,
+		quick,
+		assistant: defaultOf(keys, "assistant"),
+		unopenedDays: stored.unopenedDays === undefined ? DEFAULT_UNOPENED_DAYS : stored.unopenedDays,
+	};
 }
 
 /**
@@ -88,7 +102,7 @@ async function load(store: AiSettingsStore) {
  * which change on the API keys screen without the AI plugin hearing of it.
  */
 export async function getAiSettingsView(_site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
-	const { version, keys, quick, assistant } = await load(store);
+	const { version, keys, quick, assistant, unopenedDays } = await load(store);
 	await usesOf(store, quick, assistant);
 	return {
 		version,
@@ -97,6 +111,7 @@ export async function getAiSettingsView(_site: Site, store: AiSettingsStore): Pr
 		assistant,
 		toolSupport: (await store.getToolSupport?.()) ?? {},
 		fake: isFakeAi(),
+		unopenedDays,
 	};
 }
 
@@ -148,10 +163,26 @@ export async function setQuickModel(
 	if (!keys.some((key) => key.id === quick.keyId)) {
 		throw new AiError("invalid_input", site.createTranslator(settingsMessages)("unknownKey"));
 	}
-	await store.saveAiSettings({ expectedVersion, value: { quick } });
+	const { stored } = await load(store);
+	await store.saveAiSettings({ expectedVersion, value: { ...stored, quick } });
 	await reportKeyUses(store);
 	return getAiSettingsView(site, store);
 }
+
+/** Chooses how long a conversation nobody opened is kept. */
+export async function setUnopenedDays(
+	site: Site,
+	store: AiSettingsStore,
+	expectedVersion: number,
+	unopenedDays: UnopenedDays,
+): Promise<AiSettingsView> {
+	const { stored } = await load(store);
+	await store.saveAiSettings({ expectedVersion, value: { ...stored, unopenedDays } });
+	return getAiSettingsView(site, store);
+}
+
+/** Days an unopened conversation is kept, as the settings say (the default when never chosen); `null` keeps them all. */
+export const unopenedDaysOf = async (store: AiSettingsStore): Promise<UnopenedDays> => (await load(store)).unopenedDays;
 
 /** The service, address and value of an AI key, or `null` when it is not one or cannot be used. */
 async function aiAccess(

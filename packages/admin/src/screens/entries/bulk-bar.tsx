@@ -104,6 +104,7 @@ export function BulkBar({
 	onClearSelection,
 	onRun,
 	onExport,
+	onRequest,
 }: {
 	collection: string;
 	/** The rows picked. */
@@ -117,6 +118,8 @@ export function BulkBar({
 	onClearSelection: () => void;
 	/** Applies an action to the picked rows and tells the writer how it went. */
 	onRun: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void> | void;
+	/** Opens the assistant on the picked rows ("✦ Ask"); without it the bar has no request (no assistant). */
+	onRequest?: () => void;
 	/** Opens the export of the picked rows. */
 	onExport: (ids: string[]) => void;
 }) {
@@ -218,6 +221,7 @@ export function BulkBar({
 				clearLabel={t("clear")}
 				onClear={onClearSelection}
 				selectAll={selectAll}
+				{...(onRequest ? { request: { label: t("request"), onClick: onRequest } } : {})}
 				more={
 					more.length > 0
 						? {

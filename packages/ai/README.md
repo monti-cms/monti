@@ -3,14 +3,14 @@
 English | [한국어](README.ko.md)
 
 The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and decide), AI buttons next to fields, AI translation in the
-translation editor, the AI page of the admin Tools group (`<admin path>/tools/ai`, `/admin/tools/ai` by default), the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage
-(`cms.plugin("ai").storage`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
+translation editor, the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage (`cms.plugin("ai").storage`: collections
+`settings`, `agent-tools` and `agent-runs`). If you don't register the plugin, none of these exist.
 
 The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `ai()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
 
 ## Registration
 
-The admin AI screen (connections, actions, shared texts) is gone: a key is the connection (see Service keys). Edits it stored earlier (action overrides, screen actions, shared texts) still apply but have no screen; the actions become assistant requests next.
+There is no admin AI screen: a key is the connection (see Service keys), and the actions are what the config says. Edits stored by the old screen (action overrides, screen actions, shared texts) are no longer read.
 
 Add `ai()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
 actions added by other plugins (block extensions, SEO extension, and so on) attach by themselves too. List an action by name (key) in
@@ -150,7 +150,7 @@ A key is the whole connection. Keys live in the central API key store (Tools > A
 - **Model**: `model: { keyId, model, thinking }` in the request (the chat input's pick, stored with the conversation), else the built-in default (see Service keys). Without a usable key the request is refused (`service_unavailable`).
 - **Tool calling**: a model never tried is tried; a "tools not supported" answer is stored per key and model (`toolSupport` in the settings view) and refused (`agent_unavailable`, 409), and the model menu leaves such a model out.
 - **Credit**: a service that refuses for lack of credit ends the stream with `credit_exhausted`; the panel says so with the key's name and offers "Send with another model".
-- **Conversations**: stored in the plugin storage (`agent-runs`) with their messages, status (`running`, `done`, `failed`, `stopped`) and usage. `GET /api/monti/v1/ai/agent/runs` lists the signed-in admin's own (newest first, `page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}` returns one, only to that admin. A conversation stores up to 1,000,000 characters of messages, and an admin keeps their latest 100.
+- **Conversations**: stored in the plugin storage (`agent-runs`) with their messages, status (`running`, `done`, `failed`, `stopped`) and usage. `GET /api/monti/v1/ai/agent/runs` lists the signed-in admin's own (the last opened or asked in first, `page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}` returns one, only to that admin, and marks it opened, and `DELETE /api/monti/v1/ai/agent/runs/{id}` deletes it. A conversation stores up to 1,000,000 characters of messages, and an admin keeps their latest 100. A conversation nobody opened or asked in for the days the settings say (`PUT /api/monti/v1/ai/settings { expectedVersion, unopenedDays: 7 | 30 | 90 | null }`, 30 until chosen, `null` keeps them) is deleted when the list is read or a new conversation starts.
 - `CMS_AI_FAKE=1` uses a scripted model that calls `site_describe` and answers with the collection names.
 
 ## Fake connection (development only)
@@ -166,25 +166,12 @@ then text inputs. An action whose result must have a specific shape to pass its 
 - **Streaming**: with `stream: true` in the action definition (text or MDX results from the generate engine), the result appears
   gradually. In the UI, use `useAiAction("name").stream(input, { onText })`. In the API, pass `stream: true` to `/ai/run` (JSON with
   one event per line).
-- **Prompt snippet**: text inserted into several actions' instructions as `{{snippet.key}}` (style guide, tone, audience, and so on).
-  There are two kinds.
-  - Config snippet: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key, the name and
-    the content. An instruction (`prompt`) in the config can only use config snippets (checked when the config is
-    built).
-  - Added snippet (stored earlier from the removed "Shared text" tab): a key (starts with a letter; letters, digits, and `_`), a name, and
-    the content. The key can't be changed after creation and must not clash with config snippets or other snippets. It can be used by
-    instructions edited in the admin screen and by UI actions. It can't be deleted while an action's instruction uses it (the action
-    name is shown).
-
-  Both are stored in the `shared` item (the stored row name is kept) of the `settings` collection as `{ texts: { key: edited content }, added: [{ key, label, text }] }`
-  (the old shape is still read). The API is `/ai/snippets`: `GET` (list, `source: "config" | "added"`),
-  `POST { expectedVersion, key, label, text }` (add), `PATCH { expectedVersion, key, label?, text }` (edit one),
-  `PUT { expectedVersion, texts }` (edit many), and `DELETE ?key=&expectedVersion=` (delete). All return the updated list, and a
-  version mismatch returns 409.
+- **Prompt snippet**: text inserted into several actions' instructions as `{{snippet.key}}` (style guide, tone, audience, and so on),
+  written in the config: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key, the name
+  and the content. An instruction (`prompt`) can only use these snippets (checked when the config is built).
 - **Polish and draft**: `polish` (the menu that appears when you select text in the body; shows the changes, then applies them) and
   `draft` (slash menu and the ⋯ menu of an empty document; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
-  automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Prompt snippets added in the
-  admin screen go into the instruction as `{{snippet.key}}` in the admin screen.
+  automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`.
 - **Multiple translation actions**: if several actions attach to `translation`, each gets a button (the action name) next to the block
   handle, and "Translate all" lets you pick the action to use.
 

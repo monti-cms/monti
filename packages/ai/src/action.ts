@@ -21,13 +21,8 @@ import {
 	type AiResult,
 	type AiSlot,
 	aiCheckSchema,
-	aiCheckSchemaOf,
 	CODE_CHECK_NAME,
 	type CoreText,
-	checkKey,
-	englishCoreText,
-	isAddableCheck,
-	MAX_PROMPT_LENGTH,
 	MAX_REQUEST_LENGTH,
 	slotsAsk,
 } from "./definition";
@@ -41,7 +36,7 @@ import {
  * - **Attach point (`attach`)**: a fixed place in the admin UI (beside a field, image, media, code block, translation). An action can attach
  *   only when the material that place provides can fill its inputs (checked by the types and `defineSite`).
  *
- * The admin AI screen only edits enabled state, extra requests, connection, model, inputs to send, prompt, threshold and check values; only edited values are stored in the DB.
+ * The definition is the whole action: nothing about it is edited or stored in the admin.
  * The definition is read by both server and browser. The function of a code check (`defineValidator`) is only called on the server.
  */
 
@@ -123,10 +118,9 @@ export const validatorLabel = (check: Pick<AiValidator, "label">, site: Pick<Sit
 
 const isValidator = (check: AiCheckInput | AiValidator): check is AiValidator => "run" in check;
 
-/** One prompt snippet (e.g. a style guide). Inserted into prompts as `{{snippet.name}}` and edited in the admin AI screen. */
+/** One prompt snippet (e.g. a style guide), written in the plugin config. Inserted into prompts as `{{snippet.name}}`. */
 export interface AiSnippet {
 	readonly label: string;
-	/** Default text. If an edited value exists in the admin UI, that is used. */
 	readonly text: string;
 }
 
@@ -221,34 +215,10 @@ export type AiActionInput<D> = D extends { readonly input: infer I }
 	: never;
 
 // ---------------------------------------------------------------------------
-// Edited values and the definition to run
+// The definition to run
 // ---------------------------------------------------------------------------
 
-/** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
-export const aiActionOverrideSchemaOf = (t: CoreText) =>
-	z
-		.object({
-			enabled: z.boolean(),
-			hidden: z.boolean(),
-			label: z.string().trim().min(1).max(60),
-			askInstruction: z.boolean(),
-			/** Id of the connection to use. If `null`, the first connection matching the mode. */
-			providerId: z.string().max(60).nullable(),
-			/** Model name to use. If empty, the connection's default model. */
-			modelName: z.string().trim().max(200),
-			prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH),
-			send: z.array(z.string().max(40)).max(20),
-			threshold: z.number().min(0.01).max(0.99),
-			maxCount: z.number().int().min(1).max(20),
-			checks: z.array(aiCheckSchemaOf(t)).max(10),
-		})
-		.partial();
-
-/** The edited-value schema with English messages: reads stored values and builds definitions, where no message is shown. */
-export const aiActionOverrideSchema = aiActionOverrideSchemaOf(englishCoreText);
-export type AiActionOverride = z.output<typeof aiActionOverrideSchema>;
-
-/** The action to run: the definition with edited values applied. */
+/** The action to run: the definition with its defaults filled in. */
 export interface ResolvedAiAction {
 	readonly key: string;
 	readonly label: string;
@@ -264,36 +234,15 @@ export interface ResolvedAiAction {
 	readonly threshold: number;
 	readonly maxCount: number;
 	readonly checks: readonly AiCheck[];
-	/** Checks set by the action definition (`checkKey`). The admin UI can only turn these off; the rest (checks the user added) can be removed. */
-	readonly definedChecks: readonly string[];
 	/** Code check name -> check. Pointed to by the `{ kind: "code" }` entries of `checks`. */
 	readonly validators: Readonly<Record<string, AiValidator>>;
 	readonly askInstruction: boolean;
 	readonly stream: boolean;
 	readonly enabled: boolean;
-	readonly providerId: string | null;
-	readonly modelName: string;
 	readonly attach: readonly AiAttach[];
 	/** Answer for the fake connection to use (`AiActionDefinition.fake`). */
 	readonly fake?: (input: Readonly<Record<string, string>>) => string;
 }
-
-/** Names of editable values. */
-export const EDITABLE_KEYS = [
-	"enabled",
-	"hidden",
-	"label",
-	"askInstruction",
-	"providerId",
-	"modelName",
-	"prompt",
-	"send",
-	"threshold",
-	"maxCount",
-	"checks",
-] as const satisfies readonly (keyof AiActionOverride & keyof ResolvedAiAction)[];
-
-export type AiActionEditable = Pick<ResolvedAiAction, (typeof EDITABLE_KEYS)[number]>;
 
 const defaultChecks = (definition: AiActionDefinition): AiCheck[] =>
 	(definition.checks ?? []).map((check) =>
@@ -302,71 +251,35 @@ const defaultChecks = (definition: AiActionDefinition): AiCheck[] =>
 			: aiCheckSchema.parse(check),
 	);
 
-/**
- * Applies edited values onto the definition. Checks keep the definition's kinds in the definition's order with the user's edited enabled state and values applied, then
- * the user-added checks (format, length, in-choices; one per kind) are appended.
- * Inputs to send keep only names present in the definition, and required inputs are always sent.
- */
-export function resolveAction(
-	key: string,
-	definition: AiActionDefinition,
-	override: AiActionOverride = {},
-): ResolvedAiAction {
+/** The definition with its defaults filled in. Inputs to send keep only names present in the definition, and required inputs are always sent. */
+export function resolveAction(key: string, definition: AiActionDefinition): ResolvedAiAction {
 	const inputNames = Object.keys(definition.input);
-	const base = defaultChecks(definition);
 	const required = inputNames.filter((name) => definition.input[name]?.required);
-	const chosen = override.send ?? definition.send ?? inputNames;
+	const chosen = definition.send ?? inputNames;
 	const send = inputNames.filter((name) => chosen.includes(name) || required.includes(name));
 	return {
 		key,
-		label: override.label?.trim() || definition.label,
-		hidden: override.hidden ?? definition.hidden ?? false,
+		label: definition.label,
+		hidden: definition.hidden ?? false,
 		input: definition.input,
 		send,
-		prompt: override.prompt ?? definition.prompt,
+		prompt: definition.prompt,
 		result: definition.result,
 		apply: definition.apply ?? (definition.result === "note" ? "none" : "replace"),
 		engine: definition.engine ?? "generate",
 		...(definition.choices ? { choices: definition.choices } : {}),
 		pick: definition.pick ?? "many",
-		threshold: override.threshold ?? definition.threshold ?? 0.6,
-		maxCount: override.maxCount ?? definition.maxCount ?? 5,
-		checks: [
-			...base.map((check) => {
-				const mine = override.checks?.find((item) => checkKey(item) === checkKey(check));
-				return mine ? ({ ...check, ...mine } as AiCheck) : check;
-			}),
-			...(override.checks ?? []).filter(
-				(check, index, all) =>
-					isAddableCheck(check.kind) &&
-					!base.some((item) => item.kind === check.kind) &&
-					all.findIndex((item) => item.kind === check.kind) === index,
-			),
-		],
-		definedChecks: base.map(checkKey),
+		threshold: definition.threshold ?? 0.6,
+		maxCount: definition.maxCount ?? 5,
+		checks: defaultChecks(definition),
 		validators: Object.fromEntries((definition.checks ?? []).filter(isValidator).map((check) => [check.name, check])),
 		// Only a slot that has a place to type a request asks for one; on a field, image or media it is always off.
-		askInstruction:
-			(override.askInstruction ?? definition.askInstruction ?? false) && slotsAsk(definition.attach ?? []),
+		askInstruction: (definition.askInstruction ?? false) && slotsAsk(definition.attach ?? []),
 		stream: definition.stream ?? false,
-		enabled: override.enabled ?? definition.enabled ?? true,
-		providerId: override.providerId ?? null,
-		modelName: override.modelName ?? "",
+		enabled: definition.enabled ?? true,
 		attach: definition.attach ?? [],
 		...(definition.fake ? { fake: definition.fake } : {}),
 	};
-}
-
-/** Keeps only the edited values that differ from the definition (defaults). This is the shape stored in the DB. */
-export function overrideFrom(definition: AiActionDefinition, edited: Partial<AiActionEditable>): AiActionOverride {
-	const base = resolveAction("", definition);
-	const override: Record<string, unknown> = {};
-	for (const key of EDITABLE_KEYS) {
-		const value = edited[key];
-		if (value === undefined) continue;
-		if (JSON.stringify(value) !== JSON.stringify(base[key])) override[key] = value;
-	}
-	return aiActionOverrideSchema.parse(override);
 }
 
 // ---------------------------------------------------------------------------
@@ -483,10 +396,6 @@ export const aiRunBodySchemaOf = (t: CoreText) =>
 			env: aiRunEnvSchema.default({}),
 			/** Extra request given at run time. Appended to the prompt only if the action has `askInstruction`. */
 			request: z.string().max(MAX_REQUEST_LENGTH).optional(),
-			/** Tests with unsaved edited values (the AI screen's `Test`). */
-			draft: z.unknown().optional(),
-			/** Unsaved base info of a custom action (when testing a new action before saving). Sent together with `draft`. */
-			draftBase: z.unknown().optional(),
 			/** Streams the result (`application/x-ndjson`). Only for a single input of a streamable action. */
 			stream: z.boolean().optional(),
 		})

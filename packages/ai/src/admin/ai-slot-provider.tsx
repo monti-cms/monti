@@ -38,10 +38,6 @@ export interface AiRunOptions {
 	env?: AiRunEnv;
 	/** Extra request entered at run time. */
 	request?: string;
-	/** Unsaved edited values (Test in the AI screen). */
-	draft?: unknown;
-	/** Unsaved basic info of a screen action (testing a new action). */
-	draftBase?: unknown;
 	signal?: AbortSignal;
 }
 
@@ -49,8 +45,6 @@ const requestBody = (action: string, options: AiRunOptions) => ({
 	action,
 	env: options.env ?? {},
 	...(options.request?.trim() ? { request: options.request.trim() } : {}),
-	...(options.draft !== undefined ? { draft: options.draft } : {}),
-	...(options.draftBase !== undefined ? { draftBase: options.draftBase } : {}),
 });
 
 /** Runs an action by name. */

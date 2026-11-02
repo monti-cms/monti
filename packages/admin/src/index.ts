@@ -64,3 +64,4 @@ export {
 	type ScreenContextValue,
 	useScreenContext,
 } from "./screens/shared/screen-context";
+export { type PanelRequest, useAskPanel, usePanelRequest } from "./screens/shared/side-panel-slot";

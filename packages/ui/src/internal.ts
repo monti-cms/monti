@@ -36,6 +36,7 @@ export { ChangesGroup, type ChangesItem } from "./changes-group";
 export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
+export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
 export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
@@ -92,6 +93,7 @@ export {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "./context-menu";
+export { ConversationGroupLabel, ConversationList, ConversationRow, ConversationRowMore } from "./conversation-list";
 export { Count } from "./count";
 export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
@@ -269,7 +271,7 @@ export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { StatusBarList } from "./status-bar-list";
-export { Suggest } from "./suggest";
+export { Suggest, SuggestLabel, SuggestList } from "./suggest";
 export { Switch } from "./switch";
 export {
 	ListScroll,

@@ -55,7 +55,7 @@ export interface AiRunDeps {
 	content: AiContentLookup;
 	/** Locale code -> name written in that language (language input of the instructions). */
 	languageName: (code: string) => string;
-	/** Prompt snippets (with edited values applied). Fills `{{snippet.name}}` in the instructions. */
+	/** Prompt snippets of the plugin config, by key. Fills `{{snippet.name}}` in the instructions. */
 	snippets?: Readonly<Record<string, string>>;
 	signal?: AbortSignal;
 }

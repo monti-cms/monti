@@ -1,14 +1,13 @@
 import { adminRoute, CmsError, cmsErrorText, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/server";
 import type { Site } from "@monti-cms/core/site";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
-import { actionWithDraft, getAction } from "../../actions";
+import { getAction, snippetTexts } from "../../actions";
 import { coreMessages } from "../../core.messages";
 import { AiError } from "../../errors";
 import { AI_PLUGIN_NAME } from "../../name";
 import { type AiCall, type AiRunDeps, runAiAction, streamAiAction } from "../../run";
 import { runMessages } from "../../run.messages";
 import { loadAiRuntime } from "../../settings";
-import { loadSnippets } from "../../snippets";
 import { aiStoreFor } from "../../store";
 import { aiRunDeps } from "../ai-route";
 
@@ -71,7 +70,7 @@ function streamResponse(site: Site, run: (send: (event: StreamEvent) => void) =>
 /**
  * Runs an AI action by name and returns the result (candidates, text, MDX, memo). Does not change values. Applying happens when the user clicks on screen.
  * If `inputs` (several inputs) is sent, returns a result or failure reason per input in order (translation's Translate all). Problems that would be the same for the other inputs, such as key, credit or request-count
- * problems, stop the whole request. The AI screen's Test sends `draft`, the edited value that is not saved yet.
+ * problems, stop the whole request.
  * With `stream`, the result is streamed bit by bit (only one input of a streaming action).
  */
 export const POST = adminRoute(async ({ request, cms }) => {
@@ -79,16 +78,13 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	const t = site.createTranslator(runMessages);
 	const store = aiStoreFor(cms);
 	const body = parseWith(aiRunBodySchemaOf(site.createTranslator(coreMessages)), await readJsonBody(request));
-	const action =
-		body.draft === undefined
-			? await getAction(site, store, body.action)
-			: await actionWithDraft(site, store, body.action, body.draft, body.draftBase);
-	if (body.draft === undefined && !action.enabled) throw new AiError("service_unavailable", t("disabled"));
+	const action = getAction(site, body.action);
+	if (!action.enabled) throw new AiError("service_unavailable", t("disabled"));
 
 	const runtime = await loadAiRuntime(site, store, action);
 	const deps = {
 		...aiRunDeps(cms, runtime, request.signal, new URL(request.url).origin),
-		snippets: await loadSnippets(site, store),
+		snippets: snippetTexts(site),
 	};
 	const model = action.engine === "decide" ? runtime.decider?.model : runtime.generator?.model;
 	const started = Date.now();

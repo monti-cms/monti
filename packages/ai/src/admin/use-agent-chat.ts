@@ -19,10 +19,15 @@ import { answerEditorTool, isEditorTool } from "./agent-editor-tools";
 import { agentPanelMessages } from "./agent-panel.messages";
 import { useMdxFormat } from "./mdx-format";
 
-/** What the server puts on a message of its answer: the conversation it belongs to, and what the conversation has used so far. */
+/**
+ * What a message carries besides its parts. The server puts on its answer the conversation it belongs to and what the conversation has used so far; the
+ * panel puts on the admin's message what it was about (the rows they had picked) and whether it was a default request they pressed.
+ */
 export interface AgentMessageMetadata {
 	readonly runId?: string;
 	readonly usage?: AgentUsage;
+	readonly picked?: { readonly screen: string; readonly count: number };
+	readonly request?: boolean;
 }
 
 export type AgentMessage = UIMessage<AgentMessageMetadata>;
@@ -60,10 +65,13 @@ export interface AgentChat extends UseChatHelpers<AgentMessage> {
 
 /**
  * The conversation with the assistant: `useChat` over `POST /v1/ai/agent`, sending where the admin is and the conversation's model (`null`: the
- * built-in default) with each request. The two editor tools the server
+ * built-in default) with each request. The picked rows go with it unless the admin took them off the box (`withPicked`). The two editor tools the server
  * declares while an entry is open are answered here, from the editor on screen. `reopen` continues a stored conversation; `reset` starts a new one.
  */
-export function useAgentChat(model: AgentModelChoice | null): AgentChat {
+export function useAgentChat(
+	model: AgentModelChoice | null,
+	{ withPicked = true }: { withPicked?: boolean } = {},
+): AgentChat {
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
 	const screen = useScreenContext();
@@ -79,8 +87,9 @@ export function useAgentChat(model: AgentModelChoice | null): AgentChat {
 		format: typeof format;
 		noEditor: string;
 		model: AgentModelChoice | null;
-	}>({ screen, openEditor, runId: undefined, format, noEditor: t("tool.noEditor"), model });
-	latest.current = { ...latest.current, screen, openEditor, format, noEditor: t("tool.noEditor"), model };
+		withPicked: boolean;
+	}>({ screen, openEditor, runId: undefined, format, noEditor: t("tool.noEditor"), model, withPicked });
+	latest.current = { ...latest.current, screen, openEditor, format, noEditor: t("tool.noEditor"), model, withPicked };
 	const answer = useRef<(args: { tool: string; toolCallId: string; output?: unknown; errorText?: string }) => void>(
 		() => undefined,
 	);
@@ -100,7 +109,7 @@ export function useAgentChat(model: AgentModelChoice | null): AgentChat {
 					throw apiErrorOf(site, response.status, body, "");
 				},
 				prepareSendMessagesRequest: ({ messages }) => {
-					const { screen: where, runId, model: chosen } = latest.current;
+					const { screen: where, runId, model: chosen, withPicked: picked } = latest.current;
 					const { screen: name, collection, entryId, selectedIds } = where;
 					return {
 						body: {
@@ -111,7 +120,7 @@ export function useAgentChat(model: AgentModelChoice | null): AgentChat {
 								screen: name,
 								...(collection ? { collection } : {}),
 								...(entryId ? { entryId } : {}),
-								...(selectedIds && selectedIds.length > 0 ? { selectedIds } : {}),
+								...(picked && selectedIds && selectedIds.length > 0 ? { selectedIds } : {}),
 							},
 						},
 					};

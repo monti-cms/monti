@@ -1,6 +1,6 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
-import type { AgentModelChoice, AiModelChoice, AiModelInfo, AiSettingsView } from "../connection";
+import type { AgentModelChoice, AiModelChoice, AiModelInfo, AiSettingsView, UnopenedDays } from "../connection";
 import type { AiRunResult } from "../definition";
 
 /** Request options every function takes: cancellation, and the text for a failure the server gave no message for. */
@@ -26,6 +26,8 @@ export interface AgentRunView {
 	/** The model it ran on last. */
 	model?: AgentModelChoice;
 	error?: string;
+	/** When it was last opened from the past conversations. */
+	openedAt?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -60,9 +62,20 @@ export const setAiQuickModel = (
 	fallback?: string,
 ) => adminFetch<AiSettingsView>(site, "/v1/ai/settings", { method: "PUT", json, fallback });
 
-/** `GET /v1/ai/agent/runs`: the newest conversations of the signed-in admin. */
+/** `PUT /v1/ai/settings`: how long a conversation nobody opened is kept. */
+export const setUnopenedDays = (
+	site: Site,
+	json: { expectedVersion: number; unopenedDays: UnopenedDays },
+	fallback?: string,
+) => adminFetch<AiSettingsView>(site, "/v1/ai/settings", { method: "PUT", json, fallback });
+
+/** `GET /v1/ai/agent/runs`: the conversations of the signed-in admin, the last used first. */
 export const listAgentRuns = (site: Site, options: AiRequestOptions = {}) =>
-	adminFetch<{ items: AgentRunView[]; total: number }>(site, "/v1/ai/agent/runs?pageSize=20", options);
+	adminFetch<{ items: AgentRunView[]; total: number }>(site, "/v1/ai/agent/runs?pageSize=50", options);
+
+/** `DELETE /v1/ai/agent/runs/:id` */
+export const deleteAgentRun = (site: Site, id: string, fallback?: string) =>
+	adminFetch<{ deleted: true }>(site, `/v1/ai/agent/runs/${segment(id)}`, { method: "DELETE", fallback });
 
 /** `GET /v1/ai/agent/runs/:id` */
 export const getAgentRun = (site: Site, id: string, options: AiRequestOptions = {}) =>
