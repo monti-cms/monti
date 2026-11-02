@@ -13,6 +13,8 @@ export interface ProposalGroup {
 
 const groupKey = (item: ProposalItemView): string => {
 	if (item.operation === "entries.moveToFolder") return `${item.operation}:${String(item.preview.after)}`;
+	// The body changes of one entry are one group, however many blocks they touch.
+	if (item.operation === "entries.updateBody") return `${item.operation}:${item.target.id}`;
 	if (item.operation === "entries.updateFields" || item.operation === "media.updateText") {
 		return `${item.operation}:${item.target.spot ?? ""}`;
 	}
@@ -60,6 +62,12 @@ export function groupWords(site: Site, group: ProposalGroup): { name: string; de
 			const filling = group.items.every((item) => isEmpty(item.preview.before));
 			return { name: t(filling ? "group.fill" : "group.change", { field: label }), ...single, count: entries };
 		}
+		case "entries.updateBody":
+			return {
+				name: t("group.body"),
+				...(first?.subject?.title ? { detail: first.subject.title } : {}),
+				count: t("count.places", { count: many }),
+			};
 		case "entries.moveToFolder": {
 			const folder = first?.shown?.after;
 			return { name: folder ? t("group.move", { folder }) : t("group.unfolder"), ...single, count: entries };

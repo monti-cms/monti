@@ -8,6 +8,7 @@ import * as proposalApply from "./routes/proposals/[id]/apply/route";
 import * as proposalDiscard from "./routes/proposals/[id]/discard/route";
 import * as proposalRevert from "./routes/proposals/[id]/revert/route";
 import * as proposal from "./routes/proposals/[id]/route";
+import * as proposals from "./routes/proposals/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
 import * as writingRules from "./routes/writing-rules/route";
@@ -23,6 +24,7 @@ export default defineServerPlugin({
 		{ pattern: "v1/ai/agent/runs", module: agentRuns },
 		{ pattern: "v1/ai/agent/runs/[id]", module: agentRun },
 		{ pattern: "v1/ai/models", module: models },
+		{ pattern: "v1/ai/proposals", module: proposals },
 		{ pattern: "v1/ai/proposals/[id]", module: proposal },
 		{ pattern: "v1/ai/proposals/[id]/apply", module: proposalApply },
 		{ pattern: "v1/ai/proposals/[id]/revert", module: proposalRevert },

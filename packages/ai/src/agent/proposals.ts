@@ -123,6 +123,19 @@ export function createProposalStore(collection: PluginCollection<ProposalValue>)
 				.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 		},
 
+		/** The proposals that wait for review and change the entry `entryId`, oldest first. */
+		async pendingFor(adminId: string, entryId: string): Promise<Proposal[]> {
+			return (await collection.list({ prefix: `${adminId}/` }))
+				.filter(
+					(item) =>
+						item.value.adminId === adminId &&
+						item.value.status === "pending" &&
+						item.value.items.some((change) => change.target.kind === "entry" && change.target.id === entryId),
+				)
+				.map(toProposal)
+				.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+		},
+
 		async create(id: string, value: Omit<ProposalValue, "status" | "items">): Promise<Proposal> {
 			return toProposal(
 				await collection.set(
