@@ -300,7 +300,8 @@ export const SlotAdded: Story = {
 		const form = await dialog();
 		await userEvent.type(form.getByLabelText(/^키\*?$/), "brn-live-0000000004410");
 		await userEvent.click(form.getByRole("button", { name: "추가" }));
-		await page(canvasElement).findByText("··· 4410");
+		// The new key's row, and the slot's row that now names it.
+		await page(canvasElement).findAllByText("··· 4410");
 	},
 };
 

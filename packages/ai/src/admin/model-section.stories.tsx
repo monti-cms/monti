@@ -110,6 +110,7 @@ export const QuickModelChanged: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: /빠른 작업/ }));
 		await userEvent.click(await within(document.body).findByRole("menuitemradio", { name: /gpt-5-mini/ }));
-		await within(canvasElement).findByText("OpenAI 회사");
+		// The quick model's row names its service now, as the assistant's row already did.
+		await within(canvasElement).findAllByText("OpenAI 회사");
 	},
 };

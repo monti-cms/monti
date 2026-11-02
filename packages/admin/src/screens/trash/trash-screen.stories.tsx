@@ -196,7 +196,8 @@ export const Picked: Story = {
 	play: async ({ canvasElement }) => {
 		for (const name of [/옛 소개 글/, /연습장/])
 			await userEvent.click(within(await rowNamed(canvasElement, name)).getByRole("checkbox", { name: "고르기" }));
-		await within(canvasElement).findByRole("toolbar", { name: "2개 선택" });
+		// The table head turns into the bar of the picked rows.
+		await within(canvasElement).findByText("2개 선택");
 	},
 };
 

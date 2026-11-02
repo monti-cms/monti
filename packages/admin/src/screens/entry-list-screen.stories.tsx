@@ -82,8 +82,8 @@ type ListOptions = {
 /** The admin API of the list screens: entries (list and trash), folders and saved list settings. */
 const server =
 	({ items = posts, total, folders: folderList = [], list, extra }: ListOptions = {}): FakeApi =>
-	(path, method) => {
-		const extraAnswer = extra?.(path, method);
+	(path, method, body) => {
+		const extraAnswer = extra?.(path, method, body);
 		if (extraAnswer !== undefined) return extraAnswer;
 		const url = new URL(path, "http://admin");
 		if (url.pathname === "/api/monti/v1/preferences") return {};
@@ -472,7 +472,21 @@ export const TrashDialog: Story = {
 /** Main board mode 휴지통으로 옮김: a draft goes at once, and the toast can undo it. */
 export const RowTrashed: Story = {
 	tags: ["visual"],
-	render: listScreen(server()),
+	render: listScreen(
+		server({
+			// The bulk API moves the row to the trash.
+			extra: (path, method, body) =>
+				path === "/api/monti/v1/bulk" && method === "POST"
+					? {
+							results: ((body as { items?: { id: string }[] })?.items ?? []).map((item) => ({
+								id: item.id,
+								ok: true,
+								version: 2,
+							})),
+						}
+					: undefined,
+		}),
+	),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "쓰는 중인 글");
 		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통/ }));

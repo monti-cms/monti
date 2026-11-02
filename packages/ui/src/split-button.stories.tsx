@@ -1,6 +1,6 @@
 import { CalendarSettings } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DropdownMenuItem } from "./dropdown-menu";
 import { SplitButton } from "./split-button";
 
@@ -39,7 +39,9 @@ export const MenuOpen: Story = {
 	],
 	play: async ({ canvasElement }) => {
 		await userEvent.click(within(canvasElement).getByRole("button", { name: "발행 방식" }));
-		await expect(await within(document.body).findByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
+		const item = await within(document.body).findByRole("menuitem", { name: "오늘 날짜로 다시 발행" });
+		// The menu fades in: it is visible once its opening has run.
+		await waitFor(() => expect(item).toBeVisible());
 	},
 };
 
