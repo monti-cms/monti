@@ -18,9 +18,15 @@ function DescriptionList({ className, ...props }: React.ComponentProps<"dl">) {
 function DescriptionItem({
 	label,
 	children,
+	mono = false,
 	className,
 	...props
-}: Omit<React.ComponentProps<"div">, "children"> & { label: React.ReactNode; children: React.ReactNode }) {
+}: Omit<React.ComponentProps<"div">, "children"> & {
+	label: React.ReactNode;
+	children: React.ReactNode;
+	/** The value is an identifier or a model name, in mono. */
+	mono?: boolean;
+}) {
 	return (
 		<div
 			data-slot="description-item"
@@ -28,7 +34,7 @@ function DescriptionItem({
 			{...props}
 		>
 			<dt className="text-monti-subtle">{label}</dt>
-			<dd className="m-0 min-w-0 break-words text-monti-muted">{children}</dd>
+			<dd className={cn("m-0 min-w-0 break-words text-monti-muted", mono && "font-mono")}>{children}</dd>
 		</div>
 	);
 }

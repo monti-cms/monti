@@ -40,8 +40,8 @@ export type {
 	PreferencesBody,
 } from "./core/api";
 export { LIST_SORT_FIELDS, PAGE_SIZES, TRANSLATION_FILTERS } from "./core/api";
-export type { ApiKeyChoiceInput, ApiKeyList, ApiKeySlotView, ApiKeyView } from "./core/api-keys";
-export { apiKeyChoiceSchema } from "./core/api-keys";
+export type { ApiKeyList, ApiKeyServiceView, ApiKeySlotView, ApiKeyUse, ApiKeyView } from "./core/api-keys";
+export { freeKeyName } from "./core/api-keys";
 export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export * from "./core/collections";
 export { canTransition, type LifecycleAction } from "./core/domain/lifecycle";

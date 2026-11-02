@@ -9,10 +9,8 @@ import {
 	Output,
 	RetryError,
 	streamText,
-	ToolChoiceViolationError,
-	tool,
 } from "ai";
-import { z } from "zod";
+import type { z } from "zod";
 import type { AiInputKind } from "./action";
 import type { AiModelInfo } from "./connection";
 import type { AiResult } from "./definition";
@@ -173,7 +171,8 @@ function extractJson(text: string): unknown {
 
 export function createGenerator(
 	site: ProviderSite,
-	config: { baseUrl: string; apiKey: string; model: string },
+	/** `onUsage`: told the tokens the service counted for each answer. */
+	config: { baseUrl: string; apiKey: string; model: string; onUsage?: (tokens: number) => void },
 ): AiProvider {
 	const t = site.createTranslator(providerMessages);
 	const create = (supportsStructuredOutputs: boolean) =>
@@ -205,10 +204,12 @@ export function createGenerator(
 			abortSignal: request.signal,
 		};
 		if (mode !== "text") {
-			const { output } = await generateText({ ...base, output: Output.object({ schema: request.schema }) });
+			const { output, totalUsage } = await generateText({ ...base, output: Output.object({ schema: request.schema }) });
+			config.onUsage?.(totalUsage.totalTokens ?? 0);
 			return output as T;
 		}
-		const { text, finishReason } = await generateText(base);
+		const { text, finishReason, totalUsage } = await generateText(base);
+		config.onUsage?.(totalUsage.totalTokens ?? 0);
 		if (finishReason === "length") throw new TruncatedAnswerError();
 		return request.schema.parse(extractJson(text));
 	};
@@ -247,8 +248,11 @@ export function createGenerator(
 						fix: t("service.problem.fix"),
 						detail: failureNote(error),
 					});
-				} else if (part.type === "finish" && part.finishReason === "length") {
-					throw new AiError("upstream_failed", t("tooLong"), { fix: t("tooLong.fix") });
+				} else if (part.type === "finish") {
+					config.onUsage?.(part.totalUsage.totalTokens ?? 0);
+					if (part.finishReason === "length") {
+						throw new AiError("upstream_failed", t("tooLong"), { fix: t("tooLong.fix") });
+					}
 				}
 			}
 		},
@@ -275,49 +279,6 @@ export function createGenerator(
 				fix: t("unreadable.fix"),
 				detail: lastError === undefined ? undefined : failureNote(lastError),
 			});
-		},
-	};
-}
-
-const decisionAnswerSchema = z.union([
-	z.object({ type: z.literal("noul"), noul: z.number() }),
-	z.object({ type: z.literal("choice"), choice: z.string(), probabilities: z.record(z.string(), z.number()) }),
-]);
-
-export function createDecider(site: ProviderSite, config: { url: string; apiKey: string; model: string }): AiDecider {
-	const t = site.createTranslator(providerMessages);
-	return {
-		name: "decisions",
-		model: config.model,
-		async decide(request) {
-			let response: Response;
-			try {
-				response = await fetch(config.url, {
-					method: "POST",
-					headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-					body: JSON.stringify({ model: config.model, state: request.state, questions: request.questions }),
-					signal: request.signal,
-				});
-			} catch (error) {
-				if (isAbort(error)) throw error;
-				throw new AiError("upstream_failed", t("deciderUnreachable"));
-			}
-			const text = await response.text();
-			if (!response.ok) throw providerError(site, response.status, text);
-			const parsed = z.object({ answers: z.record(z.string(), decisionAnswerSchema) }).safeParse(
-				(() => {
-					try {
-						return JSON.parse(text);
-					} catch {
-						return null;
-					}
-				})(),
-			);
-			if (!parsed.success) {
-				log.error("the decision response has an unexpected shape:", text.slice(0, 500));
-				throw new AiError("upstream_failed", t("deciderShape"));
-			}
-			return parsed.data.answers;
 		},
 	};
 }
@@ -455,10 +416,13 @@ export function createFakeDecider(): AiDecider {
 	};
 }
 
-/** The model of a chat connection as the AI SDK takes it, for the admin agent's tool-calling loop. */
+/** The provider name of the agent's model: the key its options (`reasoningEffort`) go under. */
+export const AGENT_PROVIDER = "cms-ai";
+
+/** A model of an AI key as the AI SDK takes it, for the admin agent's tool-calling loop. */
 export function createAgentModel(config: { baseUrl: string; apiKey: string; model: string }): LanguageModel {
 	return createOpenAICompatible({
-		name: "cms-ai",
+		name: AGENT_PROVIDER,
 		baseURL: config.baseUrl,
 		apiKey: config.apiKey,
 		supportsStructuredOutputs: false,
@@ -483,6 +447,18 @@ export const isToolsUnsupportedError = (error: unknown): boolean => {
 	);
 };
 
+/** Whether a failed model request was refused for lack of credit (402, or a service that says so in other words). */
+export function isCreditError(error: unknown): boolean {
+	const inner = unwrap(error);
+	if (!APICallError.isInstance(inner)) return false;
+	return (
+		inner.statusCode === 402 ||
+		/credit balance|insufficient (credit|funds|balance)|out of credit/i.test(
+			`${inner.message} ${inner.responseBody ?? ""}`,
+		)
+	);
+}
+
 /** The words of a failed model request for the person: what the service said (or the error's own message), short. */
 export function modelFailureMessage(error: unknown): string {
 	const inner = unwrap(error);
@@ -490,39 +466,4 @@ export function modelFailureMessage(error: unknown): string {
 	if (inner instanceof Error) return inner.message;
 	const record = inner as { message?: unknown } | null;
 	return typeof record?.message === "string" ? record.message : String(inner);
-}
-
-/**
- * The tool-support probe of a connection check: one request with a trivial tool the model is told to call. `true` if it called it, `false` if it
- * answered without (or the service says tools are not supported), `null` when the request failed for another reason (so nothing is concluded).
- */
-export async function checkToolSupport(
-	config: { baseUrl: string; apiKey: string; model: string },
-	signal?: AbortSignal,
-): Promise<boolean | null> {
-	try {
-		const result = await generateText({
-			model: createAgentModel(config),
-			system: "This is a connection check. Call the tool.",
-			prompt: "ping",
-			tools: {
-				ping: tool({
-					description: "Answers pong.",
-					inputSchema: z.object({}),
-					execute: async () => "pong",
-				}),
-			},
-			toolChoice: "required",
-			maxOutputTokens: 4_000,
-			maxRetries: 1,
-			abortSignal: signal,
-		});
-		return result.steps.some((step) => step.toolCalls.length > 0);
-	} catch (caught) {
-		const error = unwrap(caught);
-		if (isAbort(error)) throw error;
-		log.warn(`${config.model} tool check failed: ${failureNote(error)}`);
-		// Told to call the tool and answered without: the model does not call tools.
-		return ToolChoiceViolationError.isInstance(error) || isToolsUnsupportedError(error) ? false : null;
-	}
 }

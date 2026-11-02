@@ -1,168 +1,170 @@
+import { definePlugin } from "@monti-cms/core";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testSite } from "../../test/site";
-import { resolveAction } from "../action";
-import type { AiProviderInput } from "../connection";
+import { testConfig, testSite } from "../../test/site";
 import { AI_PLUGIN_NAME } from "../name";
-import { aiRegistryOf } from "../registry";
-import { addAiProvider, connectionRef, loadAiRuntime, removeAiProvider, updateAiProvider } from "../settings";
+import { aiKeyServices } from "../services";
+import { getAiSettingsView, keyConnection, keyUseLabels, loadAgentRuntime, setQuickModel } from "../settings";
 import { createAiStore } from "../store";
 
-/** An instance with a server secret, so its API key store works. */
-const cmsWith = (secret = "test-secret", previousSecrets: string[] = []) =>
-	fakeCms({ server: { secret, previousSecrets } });
+/** The AI services as the key store sees them, without their checks (the checks call the services; they have their own test below). */
+const services = definePlugin({
+	name: "services",
+	server: async () => ({
+		default: {
+			keyServices: () => [
+				...aiKeyServices(testSite).map(({ check: _check, ...service }) => service),
+				{ id: "bareun", label: "바른 맞춤법", group: "plugin" as const },
+			],
+		},
+	}),
+});
 
-/** The settings store over the instance's own plugin storage and key store, writing through its transactions like the app does. */
-function memoryStore(cms = cmsWith()) {
-	const store = createAiStore(cms.plugin(AI_PLUGIN_NAME).storage, {
-		site: testSite,
-		apiKeys: () => cms.apiKeys,
-		transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
-	});
-	return Object.assign(store, { cms });
+/** An instance with a server secret and the AI services, and the AI settings store over it. */
+function setup() {
+	const cms = fakeCms({ config: { ...testConfig, plugins: [services] } as never, server: { secret: "test-secret" } });
+	const store = createAiStore(cms.plugin(AI_PLUGIN_NAME).storage, { site: testSite, apiKeys: () => cms.apiKeys });
+	const add = (
+		service: string,
+		name: string,
+		extra: { url?: string; value?: string } = { value: `${service}-key-0000000001` },
+	) => cms.apiKeys.add({ service, name, ...extra });
+	return { cms, store, add };
 }
 
-/** The settings row as stored. */
-const storedValue = async (store: ReturnType<typeof memoryStore>) => (await store.getAiSettings())?.value;
-
-const chat = (patch: Partial<AiProviderInput> = {}): AiProviderInput => ({
-	name: "OpenRouter",
-	kind: "chat",
-	url: "https://example.test/v1/",
-	key: { use: "new", value: "sk-chat-0000000000001234" },
-	defaultModel: "m-default",
-	...patch,
-});
-
-const decisions = (patch: Partial<AiProviderInput> = {}): AiProviderInput => ({
-	name: "TypeSafe",
-	kind: "decisions",
-	url: "https://api.example.test/v1/systemone",
-	key: { use: "new", value: "ts-key-0000000000009999" },
-	defaultModel: "jev-latest",
-	...patch,
-});
-
-const spec = (key: string, patch: { providerId?: string; modelName?: string } = {}) => {
-	const definition = aiRegistryOf(testSite).actions[key];
-	if (!definition) throw new Error(`Missing action: ${key}`);
-	return resolveAction(key, definition, patch);
-};
-
-describe("AI connection settings", () => {
+describe("AI keys are the connections", () => {
 	beforeEach(() => vi.stubEnv("CMS_AI_FAKE", ""));
 	afterEach(() => {
 		vi.unstubAllEnvs();
 		vi.unstubAllGlobals();
 	});
 
-	it("KEY-A1 saves a typed key into the key store, keeps only its id in the connection, and gives the screen the last four characters", async () => {
-		const store = memoryStore();
-		const view = await addAiProvider(testSite, store, 0, chat());
-		expect(JSON.stringify(await storedValue(store))).not.toContain("sk-chat");
-		expect(((await storedValue(store)) as { providers: Array<{ url: string }> }).providers[0]?.url).toBe(
-			"https://example.test/v1",
-		);
-		expect(view.providers[0]).toMatchObject({
-			name: "OpenRouter",
-			key: { name: "OpenRouter", tail: "1234" },
-			ready: true,
+	it("KEY-K1 lists only the keys of AI services, and starts the quick tasks and a new conversation on the first key with a default model", async () => {
+		const { store, add } = setup();
+		await add("bareun", "바른 맞춤법");
+		await add("openrouter", "OpenRouter");
+		const anthropic = await add("anthropic", "Anthropic 개인");
+		const view = await getAiSettingsView(testSite, store);
+		expect(view.keys.map((key) => `${key.service}:${key.name}`)).toEqual([
+			"openrouter:OpenRouter",
+			"anthropic:Anthropic 개인",
+		]);
+		// OpenRouter has no model every account can run, so the defaults come from the Anthropic key.
+		expect(view.quick).toEqual({ keyId: anthropic.id, model: "claude-haiku-5-5", keyName: "Anthropic 개인" });
+		expect(view.assistant).toEqual({ keyId: anthropic.id, model: "claude-sonnet-5-5", keyName: "Anthropic 개인" });
+	});
+
+	it("KEY-K1 has no model to run on with no key, or only keys without a default", async () => {
+		const { store, add } = setup();
+		expect(await getAiSettingsView(testSite, store)).toMatchObject({ keys: [], quick: null, assistant: null });
+		await add("openai-compatible", "Local", { url: "http://localhost:11434/v1" });
+		expect(await getAiSettingsView(testSite, store)).toMatchObject({ quick: null, assistant: null });
+	});
+
+	it("KEY-K2 keeps the chosen quick-task model, refuses a key that is not an AI service's, and tells the key store what uses each key", async () => {
+		const { cms, store, add } = setup();
+		const anthropic = await add("anthropic", "Anthropic 개인");
+		const openai = await add("openai", "OpenAI 회사");
+		const speller = await add("bareun", "바른 맞춤법");
+		await expect(setQuickModel(testSite, store, 0, { keyId: speller.id, model: "x" })).rejects.toMatchObject({
+			code: "invalid_input",
 		});
-		expect(JSON.stringify(view)).not.toContain("sk-chat");
-
-		const [key] = await store.cms.apiKeys.list();
-		expect(await store.cms.apiKeys.read(key?.id ?? "")).toBe("sk-chat-0000000000001234");
-		expect(key?.uses.map((use) => use.ref)).toEqual([connectionRef(view.providers[0]?.id ?? "")]);
-		// Only the reference is stored, never text in some language.
-		expect(JSON.stringify(await store.cms.plugin("core-keys").storage.collection("uses").list())).not.toContain(
-			"OpenRouter",
+		const view = await setQuickModel(testSite, store, 0, { keyId: openai.id, model: "gpt-5-mini" });
+		expect(view.quick).toEqual({ keyId: openai.id, model: "gpt-5-mini", keyName: "OpenAI 회사" });
+		const uses = Object.fromEntries(
+			(await cms.apiKeys.list()).map((key) => [key.name, key.uses.map((use) => use.ref)]),
 		);
+		expect(uses).toEqual({
+			"Anthropic 개인": ["assistant:claude-sonnet-5-5"],
+			"OpenAI 회사": ["quick:gpt-5-mini"],
+			"바른 맞춤법": [],
+		});
+		expect(anthropic.id).not.toBe(openai.id);
 	});
 
-	it("KEY-A2 names a second typed key after its connection with a number when the name is taken, and lets connections share a saved key", async () => {
-		const store = memoryStore();
-		await addAiProvider(testSite, store, 0, chat());
-		const second = await addAiProvider(
-			testSite,
-			store,
-			1,
-			chat({ key: { use: "new", value: "sk-chat-0000000000005555" } }),
-		);
-		expect((await store.cms.apiKeys.list()).map((key) => key.name)).toEqual(["OpenRouter", "OpenRouter 2"]);
-
-		const firstKey = second.providers[0]?.key?.id ?? "";
-		const shared = await addAiProvider(
-			testSite,
-			store,
-			2,
-			chat({ name: "Other", key: { use: "saved", keyId: firstKey } }),
-		);
-		expect(shared.providers[2]?.key?.id).toBe(firstKey);
-		expect((await store.cms.apiKeys.get(firstKey))?.uses).toHaveLength(2);
+	it("KEY-K2 words each use with the model it serves, in the admin language", () => {
+		expect(keyUseLabels(testSite, ["quick:gpt-5-mini", "assistant:claude-sonnet-5-5", "connection:old"])).toEqual({
+			"quick:gpt-5-mini": { label: "빠른 작업", value: "gpt-5-mini" },
+			"assistant:claude-sonnet-5-5": { label: "어시스턴트", value: "claude-sonnet-5-5 · 기본" },
+			"connection:old": null,
+		});
 	});
 
-	it("KEY-A2 keeps several connections, keeps the key when none is sent, and does not carry the key to a different URL", async () => {
-		const store = memoryStore();
-		await addAiProvider(testSite, store, 0, chat());
-		const added = await addAiProvider(
-			testSite,
-			store,
-			1,
-			chat({ name: "OpenCode Go", url: "https://go.example.test/v1" }),
-		);
-		expect(added.providers.map((provider) => provider.name)).toEqual(["OpenRouter", "OpenCode Go"]);
-		const id = added.providers[0]?.id ?? "";
-
-		const kept = await updateAiProvider(testSite, store, 2, id, chat({ key: undefined, defaultModel: "other" }));
-		expect(kept.providers[0]).toMatchObject({ key: { tail: "1234" }, defaultModel: "other" });
-
-		const moved = await updateAiProvider(
-			testSite,
-			store,
-			3,
-			id,
-			chat({ key: undefined, url: "https://elsewhere.test/v1" }),
-		);
-		expect(moved.providers[0]?.key).toBeNull();
-
-		const removed = await removeAiProvider(testSite, store, 4, id);
-		expect(removed.providers.map((provider) => provider.name)).toEqual(["OpenCode Go"]);
-		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "conflict" });
+	it("KEY-K3 calls a key's service at its own address, or the address the key carries, with the key's value", async () => {
+		const { store, add } = setup();
+		const anthropic = await add("anthropic", "Anthropic", { value: "sk-ant-0000000000001234" });
+		const local = await add("openai-compatible", "Local", { url: "http://localhost:11434/v1/" });
+		const speller = await add("bareun", "바른 맞춤법");
+		expect(await keyConnection(store, anthropic.id)).toMatchObject({
+			baseUrl: "https://api.anthropic.com/v1",
+			apiKey: "sk-ant-0000000000001234",
+			service: "anthropic",
+		});
+		expect(await keyConnection(store, local.id)).toMatchObject({ baseUrl: "http://localhost:11434/v1", apiKey: "" });
+		expect(await keyConnection(store, speller.id)).toBeNull();
 	});
 
-	it("KEY-A2 removes a key it just saved when the connection cannot be saved (version conflict)", async () => {
-		const store = memoryStore();
-		await addAiProvider(testSite, store, 0, chat());
+	it("KEY-K3 counts the tokens of a call against the key", async () => {
+		const { cms, store, add } = setup();
+		const anthropic = await add("anthropic", "Anthropic");
+		await (await keyConnection(store, anthropic.id))?.record(1500);
+		expect((await cms.apiKeys.get(anthropic.id))?.usage).toBe(1500);
+	});
+
+	it("KEY-K4 runs a conversation on its own model, drops thinking for a model that cannot, and refuses with no key or a model that cannot use tools", async () => {
+		const { store, add } = setup();
+		await expect(loadAgentRuntime(testSite, store)).rejects.toMatchObject({ code: "service_unavailable" });
+		const anthropic = await add("anthropic", "Anthropic");
+		const router = await add("openrouter", "OpenRouter");
+		const fallback = await loadAgentRuntime(testSite, store);
+		expect(fallback).toMatchObject({ keyId: anthropic.id, modelName: "claude-sonnet-5-5", thinking: "off" });
+		const thinking = await loadAgentRuntime(testSite, store, {
+			keyId: anthropic.id,
+			model: "claude-opus-5-5",
+			thinking: "high",
+		});
+		expect(thinking).toMatchObject({ modelName: "claude-opus-5-5", thinking: "high" });
+		const plain = await loadAgentRuntime(testSite, store, {
+			keyId: router.id,
+			model: "deepseek/deepseek-chat",
+			thinking: "high",
+		});
+		expect(plain.thinking).toBe("off");
+		await store.saveToolSupport({ keyId: router.id, model: "meta/llama-3-8b", supported: false });
 		await expect(
-			addAiProvider(testSite, store, 0, chat({ name: "Again", key: { use: "new", value: "sk-another-000000000001" } })),
-		).rejects.toMatchObject({
-			code: "conflict",
+			loadAgentRuntime(testSite, store, { keyId: router.id, model: "meta/llama-3-8b", thinking: "off" }),
+		).rejects.toMatchObject({ code: "agent_unavailable" });
+	});
+});
+
+describe("AI key check", () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	const checkOf = (id: string) => {
+		const found = aiKeyServices(testSite).find((service) => service.id === id)?.check;
+		if (!found) throw new Error(`no check for ${id}`);
+		return found;
+	};
+
+	it("KEY-C1 asks the service's model list with the key: a refusal is a wrong key, a missing list is no verdict, anything else cannot reach it", async () => {
+		const calls: { url: string; headers: Record<string, string> }[] = [];
+		const answers = [401, 200, 404, 500];
+		vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+			calls.push({ url, headers: init.headers as Record<string, string> });
+			return new Response("{}", { status: answers.shift() ?? 200 });
 		});
-		expect(await store.cms.apiKeys.list()).toHaveLength(1);
-	});
-
-	it("KEY-A2 deleting a connection frees its key's usage; the key itself stays in the store", async () => {
-		const store = memoryStore();
-		const view = await addAiProvider(testSite, store, 0, chat());
-		await removeAiProvider(testSite, store, 1, view.providers[0]?.id ?? "");
-		const [key] = await store.cms.apiKeys.list();
-		expect(key?.uses).toEqual([]);
-	});
-
-	it("KEY-A2 replacing a key's value changes what every connection that uses it sends", async () => {
-		const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => Response.json({ answers: {} }));
-		vi.stubGlobal("fetch", fetchMock);
-		const store = memoryStore();
-		const view = await addAiProvider(testSite, store, 0, decisions());
-		const key = view.providers[0]?.key;
-		await store.cms.apiKeys.update(key?.id ?? "", { expectedVersion: 1, value: "ts-key-replaced-000000" });
-		const runtime = await loadAiRuntime(testSite, store, spec("tags"));
-		await runtime.decider?.decide({ state: { t: "x" }, questions: {} });
-		expect(JSON.stringify(fetchMock.mock.calls[0]?.[1]?.headers)).toContain("ts-key-replaced-000000");
-	});
-
-	it("KEY-A3 refuses to save a typed key when the instance has no secret, and says how to fix it", async () => {
-		const store = memoryStore(fakeCms());
-		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "secret_not_configured" });
+		const anthropic = checkOf("anthropic");
+		expect(await anthropic({ url: "", value: "sk-ant-wrong" })).toBe("rejected");
+		expect(await anthropic({ url: "", value: "sk-ant-right" })).toBe("ok");
+		expect(await checkOf("openai-compatible")({ url: "http://localhost:11434/v1", value: null })).toBe("ok");
+		await expect(checkOf("openai")({ url: "", value: "sk-x" })).rejects.toMatchObject({ code: "upstream_failed" });
+		expect(calls.map((call) => call.url)).toEqual([
+			"https://api.anthropic.com/v1/models",
+			"https://api.anthropic.com/v1/models",
+			"http://localhost:11434/v1/models",
+			"https://api.openai.com/v1/models",
+		]);
+		expect(calls[0]?.headers).toMatchObject({ Authorization: "Bearer sk-ant-wrong", "x-api-key": "sk-ant-wrong" });
+		expect(calls[2]?.headers).toEqual({});
 	});
 });

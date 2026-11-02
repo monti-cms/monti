@@ -211,6 +211,20 @@
 
 `Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 mono "25 per page ▾"다. 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
 
+## 제목 있는 표 (도구 › API 키)
+
+도구 화면의 한 페이지에 표가 여럿 있을 때(저장된 키 · 모델 · 플러그인) 쓰는 묶음이다. 표마다 제목이 있다: 라벨 글자(13px) 굵게, 그 뒤에 개수(`Count`, 기다리는 것이 있으면 경고색), 아래에 `border-default` 선 하나. 첫 표는 도구 줄 아래 32px, 다음 표는 앞 표 아래 40px에서 시작한다.
+
+- 행은 위아래 16px, 좌우 12px이고 아래에 `border-muted` 선이 있다. 포인터를 올리면 `bg-muted`다.
+- 행의 왼쪽은 제목(본문 글자, 잉크)과 그 아래 2px 떨어진 mono 12 한 줄이다. 제목 바로 뒤에 짧은 mono 개수(`··· a1b2`)나 흐린 덧말("· 검색 키")을 붙일 수 있다.
+- 아래 줄은 상태를 말한다: 쓰는 양("이번 달 1.24M 토큰", `fg-muted`), 할 말이 없으면 `fg-faint`("이번 달 사용 없음", 이때 제목도 `fg-muted`), 쓸 수 없으면 위험색("읽을 수 없어요"), 식별자면 `fg-subtle`.
+- 행의 끝은 둘 중 하나다. 글자 버튼(편집은 밑줄, 지우기는 조용한 글자)이 각자 한 열을 차지하거나, 320px 칸 하나(`MenuField`)가 온다. 칸은 행 제목이 이름이다.
+- 행이 없으면 "없음" 한 줄을 흐리게 둔다.
+
+### 코드
+
+`TableSection`(`title`, `count`, `countTone`)과 `TableSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
+
 ## 휴지통 안의 폴더
 
 - 지운 폴더는 한 행으로 보인다(폴더 아이콘, "게시글 폴더 · 글 2"). 버린 날과 남은 날은 폴더 전체의 것이다.

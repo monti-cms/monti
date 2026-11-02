@@ -2,6 +2,7 @@ import type { AdminPluginShape } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 import type { AdminComponents } from "./admin-components";
+import type { KeySections } from "./screens/api-keys/key-sections";
 import type { StatusCells } from "./screens/shared/status-bar";
 import type { SlotSource } from "./slots/registry";
 
@@ -52,6 +53,11 @@ export interface AdminPlugin {
 	 * site when the cells depend on the site config. The components are client components, so give them from a `"use client"` module.
 	 */
 	readonly statusCells?: StatusCells | ((site: Site) => StatusCells);
+	/**
+	 * Sections the plugin adds to the API keys page, by name, after the saved keys: the AI plugin's Models section. Each renders a `TableSection` from
+	 * `@monti-cms/admin/kit`. The components are client components, so give them from a `"use client"` module.
+	 */
+	readonly keySections?: KeySections;
 	/**
 	 * A side panel (see {@link AdminPanel}). The admin shows one panel for now: when several plugins declare one, the plugin registered last wins. Give a
 	 * function of the site when the label depends on the site config.

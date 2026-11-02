@@ -105,8 +105,8 @@ export interface PluginKeySlot {
 	/** Lowercase letters, digits and `-`. Unique within the plugin. */
 	readonly id: string;
 	/**
-	 * The name of the service the key is for, the same in every language ("Speller", "GitHub"). A key entered for this slot is saved under it (`Speller`, then
-	 * `Speller 2` when taken), so the stored name never depends on the admin language.
+	 * The id of the service the key is for (`bareun`), declared by this or another plugin's `server.keyServices`. The slot reads the key the admin chose for it,
+	 * or else the first key of the service.
 	 */
 	readonly service: string;
 	/**
@@ -114,6 +114,29 @@ export interface PluginKeySlot {
 	 * the core calls it with the site of the instance each time the slots are listed. A plain string is shown as it is.
 	 */
 	readonly label: PluginLabel;
+}
+
+/** A service API keys are for (`ServerPlugin.keyServices`). */
+export interface PluginKeyService {
+	/** Lowercase letters, digits and `-`, unique over all plugins (`anthropic`, `bareun`). */
+	readonly id: string;
+	/** In the admin language ("Anthropic", "OpenAI-compatible address"). */
+	readonly label: string;
+	/** Where the add dialog lists it: AI services first, then the ones plugins ask for. */
+	readonly group: "ai" | "plugin";
+	/** A short word after the label in the list (`Ollama`, the plugin's name). */
+	readonly hint?: string;
+	/** The service lives at an address the site chooses: the dialog asks for it, with this example. */
+	readonly url?: { readonly placeholder: string };
+	/** What a key of the service looks like, as the key field's placeholder (`sk-ant-…`). */
+	readonly keyPlaceholder?: string;
+	/** The service may need no key (a local model server). */
+	readonly keyOptional?: boolean;
+	/**
+	 * Asks the service whether it takes a key, before the key is saved: `rejected` when the service refuses it. Throw when the service cannot be reached;
+	 * the admin shows the message.
+	 */
+	readonly check?: (input: { url: string; value: string | null }) => Promise<"ok" | "rejected">;
 }
 
 export interface PluginNavItem {
@@ -185,9 +208,18 @@ export interface ServerPlugin {
 	readonly migrate?: (scope: PluginScope) => Promise<void>;
 	/**
 	 * What the admin shows for each item of this plugin that uses an API key (`cms.apiKeys.setUses(plugin, [{ ref, keyId }])`): the text for each `ref`, in the admin language
-	 * (`cms.site.createTranslator`) and with the item's name as it is now, or `null` when the item does not exist any more (its use is dropped). Called whenever the keys are listed.
+	 * (`cms.site.createTranslator`), optionally with what of the item the key serves (`{ label: "Quick tasks", value: "claude-haiku-5-5" }`), or `null` when the item does
+	 * not exist any more (its use is dropped). Called whenever the keys are listed.
 	 */
-	readonly keyUses?: (refs: readonly string[], scope: PluginScope) => Promise<Readonly<Record<string, string | null>>>;
+	readonly keyUses?: (
+		refs: readonly string[],
+		scope: PluginScope,
+	) => Promise<Readonly<Record<string, string | { label: string; value?: string } | null>>>;
+	/**
+	 * The services this plugin offers keys for (an AI service, the service a key slot of the plugin calls), with labels in the admin language. The admin's
+	 * "+ Add key" lists them, and a key is checked with its service (`check`) before it is saved. Ids are shared by all plugins.
+	 */
+	readonly keyServices?: (scope: PluginScope) => readonly PluginKeyService[];
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
 	readonly features?: (scope: PluginScope) => Promise<Readonly<Record<string, boolean>>>;
 	/**

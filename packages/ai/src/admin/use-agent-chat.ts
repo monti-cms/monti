@@ -14,6 +14,7 @@ import {
 import { DefaultChatTransport, getToolName, isToolUIPart, type UIMessage } from "ai";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { AgentUsage } from "../agent-store";
+import type { AgentModelChoice } from "../connection";
 import { answerEditorTool, isEditorTool } from "./agent-editor-tools";
 import { agentPanelMessages } from "./agent-panel.messages";
 import { useMdxFormat } from "./mdx-format";
@@ -58,10 +59,11 @@ export interface AgentChat extends UseChatHelpers<AgentMessage> {
 }
 
 /**
- * The conversation with the assistant: `useChat` over `POST /v1/ai/agent`, sending where the admin is with each request. The two editor tools the server
+ * The conversation with the assistant: `useChat` over `POST /v1/ai/agent`, sending where the admin is and the conversation's model (`null`: the
+ * built-in default) with each request. The two editor tools the server
  * declares while an entry is open are answered here, from the editor on screen. `reopen` continues a stored conversation; `reset` starts a new one.
  */
-export function useAgentChat(): AgentChat {
+export function useAgentChat(model: AgentModelChoice | null): AgentChat {
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
 	const screen = useScreenContext();
@@ -76,8 +78,9 @@ export function useAgentChat(): AgentChat {
 		runId: string | undefined;
 		format: typeof format;
 		noEditor: string;
-	}>({ screen, openEditor, runId: undefined, format, noEditor: t("tool.noEditor") });
-	latest.current = { ...latest.current, screen, openEditor, format, noEditor: t("tool.noEditor") };
+		model: AgentModelChoice | null;
+	}>({ screen, openEditor, runId: undefined, format, noEditor: t("tool.noEditor"), model });
+	latest.current = { ...latest.current, screen, openEditor, format, noEditor: t("tool.noEditor"), model };
 	const answer = useRef<(args: { tool: string; toolCallId: string; output?: unknown; errorText?: string }) => void>(
 		() => undefined,
 	);
@@ -97,12 +100,13 @@ export function useAgentChat(): AgentChat {
 					throw apiErrorOf(site, response.status, body, "");
 				},
 				prepareSendMessagesRequest: ({ messages }) => {
-					const { screen: where, runId } = latest.current;
+					const { screen: where, runId, model: chosen } = latest.current;
 					const { screen: name, collection, entryId, selectedIds } = where;
 					return {
 						body: {
 							...(runId ? { runId } : {}),
 							messages,
+							...(chosen ? { model: chosen } : {}),
 							context: {
 								screen: name,
 								...(collection ? { collection } : {}),

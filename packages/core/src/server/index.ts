@@ -8,7 +8,7 @@
 // Config file: the instance and its options.
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
 // Plugins: route scaffolding, errors, storage and the plugin helpers.
-export type { ApiKeys } from "../api-keys/api-keys";
+export type { ApiKeyAccess, ApiKeys } from "../api-keys/api-keys";
 export type {
 	BulkService,
 	Cms,

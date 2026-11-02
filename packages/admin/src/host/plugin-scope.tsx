@@ -5,15 +5,16 @@ import { type ReactNode, useMemo } from "react";
 import { AdminComponentsProvider } from "../admin-components";
 import type { LoadedAdminPlugin } from "../internal-plugins";
 import type { AdminPlugin } from "../plugins";
+import { KeySectionsProvider } from "../screens/api-keys/key-sections";
 import { ScreenContextProvider } from "../screens/shared/screen-context";
 import { AdminPanelProvider } from "../screens/shared/side-panel-slot";
 import { StatusCellsProvider } from "../screens/shared/status-bar";
 import { SlotRegistryProvider } from "../slots/registry";
 
-/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `statusCells`, its `panel` and its `slots`. */
+/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `statusCells`, its `keySections`, its `panel` and its `slots`. */
 function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; readonly children: ReactNode }) {
 	const site = useSite();
-	const { components, slots, Provider, statusCells, panel } = plugin;
+	const { components, slots, Provider, statusCells, panel, keySections } = plugin;
 	const resolved = useMemo(
 		() => (typeof components === "function" ? components(site) : components),
 		[components, site],
@@ -26,6 +27,7 @@ function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; reado
 	let inner = children;
 	if (resolvedPanel) inner = <AdminPanelProvider panel={resolvedPanel}>{inner}</AdminPanelProvider>;
 	if (cells) inner = <StatusCellsProvider cells={cells}>{inner}</StatusCellsProvider>;
+	if (keySections) inner = <KeySectionsProvider sections={keySections}>{inner}</KeySectionsProvider>;
 	if (slots && slots.length > 0) inner = <SlotRegistryProvider sources={slots}>{inner}</SlotRegistryProvider>;
 	if (resolved) inner = <AdminComponentsProvider components={resolved}>{inner}</AdminComponentsProvider>;
 	return Provider ? <Provider>{inner}</Provider> : inner;

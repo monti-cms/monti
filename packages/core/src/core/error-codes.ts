@@ -39,6 +39,8 @@ export const ERROR_STATUS = {
 	agent_unavailable: 409,
 	// The content or the schema is understood but not acceptable.
 	validation_failed: 422,
+	/** The service a key is for did not accept it. */
+	key_rejected: 422,
 	publish_validation_failed: 422,
 	invalid_slug_format: 422,
 	slug_too_long: 422,

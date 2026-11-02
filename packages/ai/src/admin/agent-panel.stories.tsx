@@ -12,18 +12,37 @@ type Story = StoryObj<typeof meta>;
 
 // --- Fixtures ---
 
-const settings = (effective: AiSettingsView["agent"]["effective"]): AiSettingsView => ({
+const ready: AiSettingsView = {
 	version: 1,
-	providers: [],
-	agent: { setting: null, effective },
+	keys: [
+		{ id: "a", name: "Anthropic 개인", service: "anthropic", ready: true },
+		{ id: "o", name: "OpenRouter", service: "openrouter", ready: true },
+	],
+	quick: { keyId: "a", model: "claude-haiku-5-5", keyName: "Anthropic 개인" },
+	assistant: { keyId: "a", model: "claude-sonnet-5-5", keyName: "Anthropic 개인" },
+	toolSupport: { o: { "meta/llama-3-8b": false } },
 	fake: false,
-});
-const ready = settings({ providerId: "p1", providerName: "OpenRouter", model: "google/gemini-2.5-flash", tools: true });
+};
+const noKey: AiSettingsView = { ...ready, keys: [], quick: null, assistant: null, toolSupport: {} };
+
+const MODELS: Record<string, string[]> = {
+	a: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"],
+	o: [
+		"anthropic/claude-opus-5-5",
+		"deepseek/deepseek-chat",
+		"google/gemini-2.5-pro",
+		"openai/gpt-5",
+		"meta/llama-3-8b",
+	],
+};
 
 const api =
 	(view: AiSettingsView): FakeApi =>
-	(path, method) => {
+	(path, method, body) => {
 		if (path === "/api/monti/v1/ai/settings" && method === "GET") return view;
+		if (path === "/api/monti/v1/ai/models") {
+			return { items: (MODELS[(body as { keyId: string }).keyId] ?? []).map((id) => ({ id })) };
+		}
 		if (path.startsWith("/api/monti/v1/ai/agent/runs?"))
 			return {
 				items: [
@@ -108,9 +127,7 @@ const panel =
 			{answer && <AgentAnswer answer={answer} />}
 			<ScreenContextProvider>
 				<Where {...where}>
-					<div
-						style={{ width: 400, height: "100svh", borderInlineStart: "1px solid var(--monti-border-muted, #8884)" }}
-					>
+					<div style={{ width: 380, height: "100svh", display: "flex", flexDirection: "column" }}>
 						<AgentPanel onClose={() => undefined} />
 					</div>
 				</Where>
@@ -126,7 +143,7 @@ const send = async (canvasElement: HTMLElement, text: string) => {
 
 // --- Stories ---
 
-/** Nothing asked yet: what the assistant can do, and the model it runs on. */
+/** Nothing asked yet: what the assistant can do, and the model it runs on (the default, thinking at the default level). */
 export const Empty: Story = { render: panel(ready) };
 
 /** Over the entry editor the empty state says it can read the open entry. */
@@ -162,12 +179,71 @@ export const PastConversations: Story = {
 	},
 };
 
-/** No ready connection: one line with what to do, a link to the AI screen, and no box to type in. */
-export const CannotRunNoConnection: Story = { render: panel(settings(null)) };
+/** No key of an AI service (flow 2 · 22): the panel says so and sends the admin to the API keys; no box to type in. */
+export const NoKey: Story = { tags: ["visual"], render: panel(noKey) };
 
-/** The chosen model can't call tools (the connection check found out): which model, and where to pick another. */
-export const CannotRunNoToolSupport: Story = {
-	render: panel(settings({ providerId: "p1", providerName: "OpenRouter", model: "small-model", tools: false })),
+const openMenu = async (canvasElement: HTMLElement) => {
+	await userEvent.click(await within(canvasElement).findByRole("button", { name: "모델 고르기" }));
+	await within(document.body).findByRole("menu");
+};
+
+/** The model menu (flow 2 · 23): a search line, the recent models with the default first, the models of each key, and 생각 ›. */
+export const ModelMenuOpen: Story = {
+	tags: ["visual"],
+	render: panel(ready),
+	play: async ({ canvasElement }) => {
+		await openMenu(canvasElement);
+		await within(document.body).findByText("claude-opus-5-5");
+	},
+};
+
+/** 생각 › opens the levels at the side, the current one ticked (flow 2 · 23b). */
+export const ThinkingLevels: Story = {
+	tags: ["visual"],
+	render: panel(ready),
+	play: async ({ canvasElement }) => {
+		await openMenu(canvasElement);
+		await userEvent.click(await within(document.body).findByRole("menuitem", { name: /생각/ }));
+		await within(document.body).findByRole("menuitemradio", { name: "높음" });
+	},
+};
+
+/** 높음 picked: the menu closes and the button says "· 생각 높음" (flow 2 · 23c). */
+export const ThinkingHigh: Story = {
+	tags: ["visual"],
+	render: panel(ready),
+	play: async ({ canvasElement }) => {
+		await openMenu(canvasElement);
+		await userEvent.click(await within(document.body).findByRole("menuitem", { name: /생각/ }));
+		await userEvent.click(await within(document.body).findByRole("menuitemradio", { name: "높음" }));
+		await within(canvasElement).findByText(/생각 높음/);
+	},
+};
+
+/** A model that cannot think: no 생각 row, and nothing about it on the button (flow 2 · 23d). */
+export const ModelWithoutThinking: Story = {
+	tags: ["visual"],
+	render: panel(ready),
+	play: async ({ canvasElement }) => {
+		await openMenu(canvasElement);
+		await userEvent.click(await within(document.body).findByRole("menuitemradio", { name: /deepseek\/deepseek-chat/ }));
+		await openMenu(canvasElement);
+	},
+};
+
+/** The service is out of credit (flow 2 · 24): a notice in the conversation with the key, and "다른 모델로 보내기". */
+export const OutOfCredit: Story = {
+	tags: ["visual"],
+	render: panel(ready, () =>
+		sse([
+			{ type: "start", messageId: "m1" },
+			{ type: "error", errorText: "credit_exhausted" },
+		]),
+	),
+	play: async ({ canvasElement }) => {
+		await send(canvasElement, "이 두 편에 요약 써 줘");
+		await within(canvasElement).findByText(/크레딧이 부족해요/);
+	},
 };
 
 /** The request failed for another reason: it says so and offers to try again. */

@@ -1,4 +1,5 @@
 import { CmsError, type PluginCollection } from "@monti-cms/core/server";
+import type { AgentModelChoice } from "./connection";
 
 /** Most conversations kept for one admin; the oldest go when a new one starts. */
 export const MAX_RUNS_PER_ADMIN = 100;
@@ -26,6 +27,8 @@ export interface AgentRunValue {
 	/** The UI messages, as the panel holds them (tool calls and results included). */
 	messages: unknown[];
 	usage: AgentUsage;
+	/** The model it ran on last, so a conversation opened again goes on with it. */
+	model?: AgentModelChoice;
 	/** Why it failed, when it did. */
 	error?: string;
 }
@@ -117,22 +120,22 @@ export function createAgentRunStore(collection: PluginCollection<AgentRunValue>)
 	};
 }
 
-/** For each connection id, the models checked so far: `true` if the model called the check's tool, `false` if it did not (or the service said it cannot). */
+/** For each key id, the models tried so far: `true` if the model called the check's tool, `false` if it did not (or the service said it cannot). */
 export type ToolSupport = Record<string, Record<string, boolean>>;
 
-/** What the connection check learned about tool calling, in the AI plugin's storage: one item per connection id. */
+/** What runs learned about tool calling, in the AI plugin's storage: one item per key id. */
 export function createToolSupportStore(collection: PluginCollection<Record<string, boolean>>) {
 	return {
 		async getToolSupport(): Promise<ToolSupport> {
 			return Object.fromEntries((await collection.list()).map((item) => [item.key, item.value]));
 		},
 
-		async saveToolSupport(params: { providerId: string; model: string; supported: boolean }): Promise<void> {
+		async saveToolSupport(params: { keyId: string; model: string; supported: boolean }): Promise<void> {
 			for (let attempt = 0; ; attempt++) {
-				const current = await collection.get(params.providerId);
+				const current = await collection.get(params.keyId);
 				try {
 					await collection.set(
-						params.providerId,
+						params.keyId,
 						{ ...current?.value, [params.model]: params.supported },
 						{ expectedVersion: current?.version ?? 0 },
 					);
@@ -141,12 +144,6 @@ export function createToolSupportStore(collection: PluginCollection<Record<strin
 					if (attempt >= 2 || !(error instanceof CmsError) || error.code !== "conflict") throw error;
 				}
 			}
-		},
-
-		/** Forgets a connection's results: it was removed, or its address changed, so they may no longer hold. */
-		async clearToolSupport(providerId: string): Promise<void> {
-			const current = await collection.get(providerId);
-			if (current) await collection.delete(providerId, { expectedVersion: current.version }).catch(() => undefined);
 		},
 	};
 }

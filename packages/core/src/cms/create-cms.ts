@@ -88,6 +88,13 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
 				})),
 			);
+		const keyServices: ApiKeysOptions["services"] = async () =>
+			(await plugins.load()).flatMap((plugin) =>
+				(plugin.keyServices?.(plugins.scopeOf(plugin.name)) ?? []).map((service) => ({
+					...service,
+					plugin: plugin.name,
+				})),
+			);
 		const slotChanged = (plugin: string, slot: string) => plugins.keySlotChanged(plugin, slot);
 		const inTransaction = <T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T> =>
 			connections.database.transaction(work);
@@ -101,6 +108,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 				storage,
 				secrets: vault.forPlugin(API_KEYS_SCOPE),
 				labels: keyLabels,
+				services: keyServices,
 				declared: declaredSlots,
 				...(notify ? { onSlotChange: slotChanged } : {}),
 				...(transact ? { transact } : {}),
