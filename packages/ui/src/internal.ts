@@ -207,12 +207,13 @@ export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
 export { ProposalBubble } from "./proposal-bubble";
-export { ProposalCard, ProposalItem } from "./proposal-card";
+export { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RailLayout } from "./rail-layout";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
+export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote } from "./review";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
 export { SavedValue, SecretInput } from "./secret-input";
 export { Section } from "./section";

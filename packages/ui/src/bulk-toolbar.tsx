@@ -2,6 +2,7 @@ import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { PageToolbar, PageToolbarEnd, type SelectAll, ToolbarDivider } from "./page-header";
+import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
 /**
@@ -14,6 +15,7 @@ function BulkToolbar({
 	selectAll,
 	clearLabel,
 	onClear,
+	request,
 	className,
 	children,
 	...props
@@ -24,6 +26,8 @@ function BulkToolbar({
 	/** The text of the button that clears the pick. */
 	clearLabel: string;
 	onClear: () => void;
+	/** The assistant's request on the picked tiles ("✦ Alt text"), first after the count, in the proposal blue. */
+	request?: { label: string; onClick: () => void };
 	/** The actions: text buttons, menu buttons. */
 	children?: React.ReactNode;
 }) {
@@ -48,6 +52,15 @@ function BulkToolbar({
 				</span>
 			)}
 			<b className="font-bold">{label}</b>
+			{request && (
+				<>
+					<ToolbarDivider />
+					<TextButton onClick={request.onClick} className="inline-flex items-center gap-monti-4 text-monti-proposal">
+						<Spark className="size-monti-icon-xs" />
+						{request.label}
+					</TextButton>
+				</>
+			)}
 			{children && <ToolbarDivider />}
 			{children}
 			<PageToolbarEnd>

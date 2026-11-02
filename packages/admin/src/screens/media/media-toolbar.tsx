@@ -159,8 +159,11 @@ function PickBar({
 	onMove,
 	onNewFolder,
 	onTrash,
+	onRequest,
 }: {
 	library: MediaLibraryView;
+	/** Asks the assistant for the picked files' alt text ("✦ Alt text"); without it there is no assistant. */
+	onRequest?: () => void;
 	/** The folder every picked file is in (`null` for the top level), or `undefined` when they are in different folders or not all of them are on this page. */
 	pickedFolder: string | null | undefined;
 	onMove: (folderId: string | null) => void;
@@ -180,6 +183,7 @@ function PickBar({
 			}}
 			clearLabel={t("bulk.clear")}
 			onClear={() => library.setPicked(new Set())}
+			{...(onRequest ? { request: { label: t("bulk.altText"), onClick: onRequest } } : {})}
 		>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<TextButton />}>
@@ -219,6 +223,7 @@ export function MediaToolbar(props: {
 	onMove: (folderId: string | null) => void;
 	onNewFolder: () => void;
 	onTrash: () => void;
+	onRequest?: () => void;
 }) {
 	return props.library.picked.size > 0 ? <PickBar {...props} /> : <FilterBar library={props.library} />;
 }

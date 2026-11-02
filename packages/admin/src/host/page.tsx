@@ -4,6 +4,7 @@ import NewEntryPage from "../screens/entries/new/page";
 import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
 import EntryListPage from "../screens/page";
+import PluginScreenPage from "../screens/plugin/page";
 import SettingsPage from "../screens/settings/page";
 import TemplateEditPage from "../screens/templates/edit-page";
 import ToolsPage from "../screens/tools/page";
@@ -29,7 +30,11 @@ export interface AdminPageProps {
  *   page for each `nav` item (`/admin/tools/<path>`). `/admin/tools` goes to the first tab.
  * - `/admin/templates/new` new template · `/admin/templates/<id>/edit` edit one (a page of its own; the list is the tools page's `templates` tab)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
+ * - `/admin/<plugin name>/<screen>[/<param>]` a plugin's own screen (`defineAdminPlugin({ screens })`)
  */
+/** The first segments of the core's addresses: a plugin named like one of them has no screens. */
+const CORE_SEGMENTS = new Set(["trash", "media", "settings", "login", "tools", "templates", "entries"]);
+
 export async function AdminPage({ cms, server, params, searchParams }: AdminPageProps) {
 	const path = (await params).path ?? [];
 	const [first, second, third, ...rest] = path;
@@ -72,6 +77,10 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 	}
 	if (first === "entries" && second && third === "edit") {
 		return <EditEntryPage cms={cms} server={server} params={Promise.resolve({ id: second })} />;
+	}
+	// A plugin's screen, under its name; the core's own first segments never are one.
+	if (first && second && !CORE_SEGMENTS.has(first)) {
+		return <PluginScreenPage cms={cms} server={server} plugin={first} screen={second} params={third ? [third] : []} />;
 	}
 	server.notFound();
 }

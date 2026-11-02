@@ -25,6 +25,9 @@ export interface ProposalItem {
 	readonly base: string;
 	/** What the operation needs to apply it. */
 	readonly change: unknown;
+	/** What the target was called when planned, and the preview in words where it holds ids (see `WritePlan`). */
+	readonly subject?: WritePlan["subject"];
+	readonly shown?: WritePlan["shown"];
 	/** The admin can leave an item out before applying. */
 	readonly included: boolean;
 	readonly state: ProposalItemState;
@@ -72,6 +75,8 @@ export const itemOf = (id: string, operation: string, plan: WritePlan): Proposal
 	preview: plan.preview,
 	base: plan.base,
 	change: plan.change,
+	...(plan.subject ? { subject: plan.subject } : {}),
+	...(plan.shown ? { shown: plan.shown } : {}),
 	included: true,
 	state: "pending",
 });

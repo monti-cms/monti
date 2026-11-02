@@ -11,6 +11,8 @@ export interface ProposalView {
 		readonly operation: string;
 		readonly target: Proposal["items"][number]["target"];
 		readonly preview: Proposal["items"][number]["preview"];
+		readonly subject?: Proposal["items"][number]["subject"];
+		readonly shown?: Proposal["items"][number]["shown"];
 		readonly included: boolean;
 		readonly state: ProposalItemState;
 		readonly reason?: string;
@@ -30,6 +32,8 @@ export const proposalView = (proposal: Proposal): ProposalView => ({
 		operation: item.operation,
 		target: item.target,
 		preview: item.preview,
+		...(item.subject ? { subject: item.subject } : {}),
+		...(item.shown ? { shown: item.shown } : {}),
 		included: item.included,
 		state: item.state,
 		...(item.reason ? { reason: item.reason } : {}),

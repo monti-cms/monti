@@ -65,4 +65,16 @@ describe("admin addresses", () => {
 	it("ADMIN-U1 is a 404 for deeper tools paths", async () => {
 		await expect(open("tools", "ai", "x")).rejects.toThrow("not-found");
 	});
+
+	it("ADMIN-U1 hands an address under a plugin's name to that plugin's screen, never a core address", async () => {
+		expect(
+			((await open("ai", "review", "p1")) as unknown as { props: { plugin: string; screen: string; params: string[] } })
+				.props,
+		).toMatchObject({
+			plugin: "ai",
+			screen: "review",
+			params: ["p1"],
+		});
+		await expect(open("media", "x")).rejects.toThrow("not-found");
+	});
 });

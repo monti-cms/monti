@@ -112,7 +112,7 @@
 
 ### 코드
 
-`BulkToolbar`는 머리 행이 없는 격자의 막대다. `PageToolbar` 행(48px, `inset`)에 굵은 개수, 구분선, `children`인 동작, 끝의 `clearLabel`이 있다. `selectAll`은 표처럼 왼쪽 여백에 걸린다. `BulkBar`는 목록의 머리 행을 같은 자리에서 대신한다. 같은 40px에 아래 선도 같다. `label`("3 selected"), `request`(어시스턴트 요청: 반짝이와 그 라벨), `children`인 가장 많이 쓰는 동작(텍스트 버튼과 메뉴 버튼), `more`(나머지를 담은 ⋯. 위험한 것은 맨 끝에 빨강으로), 끝의 `clearLabel`과 `onClear`(고른 것을 푸는 버튼)를 받는다. `colSpan`은 ⋯ 열을 포함한 표의 열 수다. 목록 표의 한 행이므로 표의 `colSpan` 열에 걸친다. 표는 이 행이 아니라 자기 열에서 너비를 가져온다.
+`BulkToolbar`는 머리 행이 없는 격자의 막대다. `PageToolbar` 행(48px, `inset`)에 굵은 개수, 구분선, `request`(어시스턴트 요청: 파란 반짝이와 그 라벨, 미디어의 "✦ 대체 텍스트"), `children`인 동작, 끝의 `clearLabel`이 있다. `selectAll`은 표처럼 왼쪽 여백에 걸린다. `BulkBar`는 목록의 머리 행을 같은 자리에서 대신한다. 같은 40px에 아래 선도 같다. `label`("3 selected"), `request`(어시스턴트 요청: 반짝이와 그 라벨), `children`인 가장 많이 쓰는 동작(텍스트 버튼과 메뉴 버튼), `more`(나머지를 담은 ⋯. 위험한 것은 맨 끝에 빨강으로), 끝의 `clearLabel`과 `onClear`(고른 것을 푸는 버튼)를 받는다. `colSpan`은 ⋯ 열을 포함한 표의 열 수다. 목록 표의 한 행이므로 표의 `colSpan` 열에 걸친다. 표는 이 행이 아니라 자기 열에서 너비를 가져온다.
 
 ## 격자 칸
 

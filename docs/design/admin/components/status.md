@@ -44,7 +44,7 @@
 
 ### 코드
 
-`Progress`: `value`는 0부터 100까지다. `border-default` 트랙 위에 radius 2인 3px 막대를 잉크로 채운다.
+`Progress`: `value`는 0부터 100까지다. `border-default` 트랙 위에 radius 2인 3px 막대를 잉크로 채운다. `inline`이면 글 옆에 놓이는 120px 막대다(검토 화면의 "적용 중 9 / 17").
 
 ## 알림 띠
 
