@@ -9,6 +9,7 @@ import {
 	errorNotice,
 	type ErrorNotice as Notice,
 	type Site,
+	useAskPanel,
 	useSite,
 	useTranslator,
 } from "@monti-cms/admin";
@@ -49,14 +50,13 @@ import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./md
 import { diffWords } from "./word-diff";
 
 /**
- * AI action that writes into the body. If the attach target is `selection` (selection menu, e.g. polish style), it polishes the chosen text,
- * shows what changed and then replaces it; if `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If `block` (next to the block
- * handle, e.g. fix a diagram), it fixes that block's source, shows what changed and then replaces the block.
+ * AI action that writes into the body. If the attach target is `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If
+ * `block` (next to the block handle, e.g. fix a diagram), it fixes that block's source, shows what changed and then replaces the block. Selected text
+ * goes to the assistant instead: the format card's "✦ 요청" (and ⌘J) opens the panel on it.
  * The result is streamed and shown gradually. Applying happens only when the user clicks.
  */
 
 type Job =
-	| { mode: "selection"; action: AiActionView; editor: Editor; from: number; to: number; source: string }
 	| { mode: "insert"; action: AiActionView; editor: Editor; from: number; to: number }
 	| {
 			mode: "block";
@@ -74,15 +74,6 @@ type RunState =
 	| { status: "running"; text: string }
 	| { status: "done"; text: string }
 	| { status: "error"; text: string; notice: Notice };
-
-/** MDX of the selection. A paragraph with only part selected contains only that part. */
-function selectionMdx(site: Site, format: BrowserFormat, editor: Editor, from: number, to: number): string {
-	const slice = editor.state.doc.slice(from, to);
-	const nodes = (slice.content.toJSON() ?? []) as JSONContent[];
-	// Selecting inside one paragraph yields only a text fragment. It has to be wrapped in a paragraph to be MDX.
-	const content = slice.content.firstChild?.isInline ? [{ type: "paragraph", content: nodes }] : nodes;
-	return textOfContent(site, format, content);
-}
 
 /** Result MDX as editor content. If the edit was inside one paragraph and the result is one paragraph, inserts only the text (the paragraph is not split). */
 function contentFor(
@@ -128,14 +119,12 @@ function WriteDialog({
 		setState({ status: "running", text: "" });
 		const entry = getEntry?.();
 		const input: Record<string, unknown> =
-			job.mode === "selection"
-				? { selection: job.source, title: entry?.title || undefined }
-				: job.mode === "block"
-					? { block: job.source, title: entry?.title || undefined }
-					: {
-							title: entry?.title || undefined,
-							body: textOfContent(site, format, editor.getJSON().content ?? []) || undefined,
-						};
+			job.mode === "block"
+				? { block: job.source, title: entry?.title || undefined }
+				: {
+						title: entry?.title || undefined,
+						body: textOfContent(site, format, editor.getJSON().content ?? []) || undefined,
+					};
 		try {
 			const result = await streamAiAction(
 				site,
@@ -166,8 +155,8 @@ function WriteDialog({
 
 	// A draft (insert) has no text to fix, so it always asks for a request. An action with ask-for-request on also asks first.
 	const askRequest = job.mode === "insert" || action.askInstruction;
-	// Polish and block fix, where the text to fix is set, run as soon as they open. A block action with ask-for-request on asks for a request first.
-	const fixed = job.mode === "selection" || (job.mode === "block" && !action.askInstruction);
+	// A block fix, where the text to fix is set, runs as soon as it opens. A block action with ask-for-request on asks for a request first.
+	const fixed = job.mode === "block" && !action.askInstruction;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs only once when opened
 	useEffect(() => {
 		if (fixed) void run();
@@ -200,8 +189,8 @@ function WriteDialog({
 	const result = "text" in state ? state.text : "";
 	// Even on failure, any text received is shown.
 	const showResult = running || state.status === "done" || (state.status === "error" && !!state.text);
-	// Fixed text (polish) is viewed from the changes; block and draft from the rendered shape.
-	const [view, setView] = useState<"preview" | "source">(job.mode === "selection" ? "source" : "preview");
+	// A block and a draft are viewed from the rendered shape first.
+	const [view, setView] = useState<"preview" | "source">("preview");
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -389,32 +378,30 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 		const ready = new Set(data?.usable ?? []);
 		const actions = format ? (data?.items ?? []).filter((action) => action.enabled && ready.has(action.key)) : [];
 		return {
-			selection: actions.filter((action) => action.attach.some((attach) => attach.slot === "selection")),
 			insert: actions.filter((action) => action.attach.some((attach) => attach.slot === "insert")),
 			block: actions.filter((action) => action.attach.some((attach) => attach.slot === "block")),
 		};
 	}, [data, format]);
 
+	// Selected text goes to the assistant: the card's "✦ 요청" and ⌘J open the panel, which reads the selection from the editor.
+	const ask = useAskPanel();
 	const selectionActions = useMemo<EditorSelectionAction[]>(
-		() =>
-			usable.selection.map((action) => ({
-				id: `ai:${action.key}`,
-				label: action.label,
-				run: (current) => {
-					const { from, to } = current.state.selection;
-					if (from === to || !format) return;
-					setJob({
-						mode: "selection",
-						action,
-						editor: current,
-						from,
-						to,
-						source: selectionMdx(site, format, current, from, to),
-					});
-				},
-			})),
-		[usable.selection, format, site],
+		() => (ask ? [{ id: "ai:request", label: t("ask"), run: () => ask({}) }] : []),
+		[ask, t],
 	);
+	useEffect(() => {
+		if (!editor || !ask) return;
+		const dom = editor.view.dom;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== "j")
+				return;
+			if (editor.state.selection.empty) return;
+			event.preventDefault();
+			ask({});
+		};
+		dom.addEventListener("keydown", onKeyDown);
+		return () => dom.removeEventListener("keydown", onKeyDown);
+	}, [editor, ask]);
 
 	const insertActions = useMemo<EditorInsertAction[]>(
 		() =>

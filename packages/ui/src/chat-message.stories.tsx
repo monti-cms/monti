@@ -39,3 +39,15 @@ export const LongText: Story = {
 		</Stack>
 	),
 };
+
+/** What the admin's message was about: the rows they had picked, over the words. */
+export const WithContext: Story = {
+	args: { author: "user", context: "고른 글 2편", children: "이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮겨 줘." },
+	decorators: [(Story) => <Stack maxWidth="panel">{Story()}</Stack>],
+};
+
+/** A default request the admin pressed: a blue spark before the words. */
+export const Request: Story = {
+	args: { author: "user", request: true, children: "고른 이미지 3개에 대체 텍스트 채워 줘" },
+	decorators: [(Story) => <Stack maxWidth="panel">{Story()}</Stack>],
+};

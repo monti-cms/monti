@@ -1,6 +1,6 @@
 "use client";
 
-import { Close } from "@carbon/icons-react";
+import { ChevronLeft, Close } from "@carbon/icons-react";
 import { type ComponentProps, type FormEventHandler, type ReactNode, useId } from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
@@ -35,8 +35,10 @@ export function SidePanel({
 	title,
 	bar,
 	actions,
+	back,
 	onClose,
 	footer,
+	composer,
 	width = "side",
 	bleed = false,
 	onSubmit,
@@ -50,9 +52,13 @@ export function SidePanel({
 	bar?: ReactNode;
 	/** Icon buttons at the end of the head, before the close button. */
 	actions?: ReactNode;
+	/** A back button before the title, for a view inside the panel (the assistant's past conversations): its name ("대화로 돌아가기") and what it does. */
+	back?: { label: string; onClick: () => void };
 	onClose?: () => void;
 	/** Pinned under the body. */
 	footer?: ReactNode;
+	/** The box to type in, pinned under the body with no line over it (the assistant's chat input), 12px above it and 16 at the sides and below. */
+	composer?: ReactNode;
 	width?: keyof typeof SIDE_PANEL_WIDTH;
 	/** The body keeps no padding or gap of its own: for content that lays out its own sections edge to edge (tabs, bands). */
 	bleed?: boolean;
@@ -68,10 +74,19 @@ export function SidePanel({
 			{children}
 		</div>
 	);
-	const foot = footer && (
-		<footer data-slot="side-panel-footer" className={PANEL_FOOT}>
-			{footer}
-		</footer>
+	const foot = (
+		<>
+			{footer && (
+				<footer data-slot="side-panel-footer" className={PANEL_FOOT}>
+					{footer}
+				</footer>
+			)}
+			{composer && (
+				<div data-slot="side-panel-composer" className="shrink-0 px-monti-16 pt-monti-12 pb-monti-16">
+					{composer}
+				</div>
+			)}
+		</>
 	);
 	return (
 		<aside
@@ -86,6 +101,11 @@ export function SidePanel({
 		>
 			{title && (
 				<header data-slot="side-panel-header" className={PANEL_HEAD}>
+					{back && (
+						<IconButton label={back.label} side="bottom" onClick={back.onClick} className="-ml-monti-12">
+							<ChevronLeft aria-hidden />
+						</IconButton>
+					)}
 					<h2 id={titleId} className={PANEL_TITLE}>
 						{title}
 					</h2>

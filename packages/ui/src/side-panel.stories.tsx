@@ -6,8 +6,7 @@ import { ChatMessage } from "./chat-message";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { IconButton } from "./icon-button";
 import { SidePanel } from "./side-panel";
-import { Stack } from "./stack";
-import { Suggest } from "./suggest";
+import { Suggest, SuggestLabel, SuggestList } from "./suggest";
 import { Text } from "./text";
 import { ToolCallLine } from "./tool-call-line";
 
@@ -100,24 +99,35 @@ export const Details: Story = {
 };
 
 /**
- * The assistant's empty panel: no text of its own. The body holds requests to start from, pushed down to just above the input: the group
- * "이 글에서" (saved requests) and "최근" (asked before). The frame's body padding is taken back so the groups sit 12px from the panel's edges and 4px above the input.
+ * The assistant's empty panel: no text of its own. The body (`bleed`) holds the requests to start from at the bottom, just over the box to type in,
+ * which sits in the `composer` with no line over it.
  */
 export const Empty: Story = {
 	render: (args) => (
-		<SidePanel {...args} onClose={() => undefined} footer={input}>
-			<Stack gap={2} className="-mx-monti-24 mt-auto -mb-monti-20 px-monti-12 pt-monti-12 pb-monti-4">
-				<Text variant="micro" tone="subtle" className="px-monti-12 pb-monti-6">
-					이 글에서
-				</Text>
+		<SidePanel {...args} onClose={() => undefined} bleed composer={input}>
+			<SuggestList>
+				<SuggestLabel>이 글에서</SuggestLabel>
 				<Suggest kind="request">요약 써 줘</Suggest>
 				<Suggest kind="request">영어로 옮겨 줘</Suggest>
-				<Text variant="micro" tone="subtle" className="px-monti-12 pt-monti-12 pb-monti-6">
-					최근
-				</Text>
+				<SuggestLabel>최근</SuggestLabel>
 				<Suggest kind="recent">첫 문단을 더 짧게 다듬어 줘</Suggest>
 				<Suggest kind="recent">작년 글은 2024 폴더로 옮겨 줘</Suggest>
-			</Stack>
+			</SuggestList>
+		</SidePanel>
+	),
+};
+
+/** A view inside the panel (the assistant's past conversations): a back button before the title returns to the main view. */
+export const BackView: Story = {
+	render: (args) => (
+		<SidePanel
+			{...args}
+			title="지난 대화"
+			back={{ label: "대화로 돌아가기", onClick: () => undefined }}
+			onClose={() => undefined}
+			bleed
+		>
+			{null}
 		</SidePanel>
 	),
 };
@@ -125,7 +135,7 @@ export const Empty: Story = {
 /** A body longer than the panel scrolls, under the head and above the foot. */
 export const Scrolling: Story = {
 	render: (args) => (
-		<SidePanel {...args} onClose={() => undefined} footer={input}>
+		<SidePanel {...args} onClose={() => undefined} composer={input}>
 			{Array.from({ length: 8 }, (_, index) => (
 				<div key={index} style={{ display: "contents" }}>
 					<ChatMessage author="user">질문 {index + 1}</ChatMessage>

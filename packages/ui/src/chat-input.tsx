@@ -6,7 +6,7 @@ import { SendButton } from "./send-button";
 
 /**
  * The box a conversation is typed in: a rounded box with a text area, and under it a row with `aside` at the start (the model picker) and a round send
- * button at the end that becomes a stop button while the answer is being written (`busy`). Enter sends, Shift+Enter breaks the line (not while an input
+ * button at the end that becomes a stop button while the answer is being written (`busy`). `context` sits over the text: what the message will be about. Enter sends, Shift+Enter breaks the line (not while an input
  * method is composing). Nothing is sent while the text is blank or the box is `disabled`. The words are the app's.
  */
 export function ChatInput({
@@ -21,6 +21,7 @@ export function ChatInput({
 	sendLabel,
 	stopLabel,
 	aside,
+	context,
 	className,
 	...props
 }: Omit<ComponentProps<"form">, "onSubmit" | "children"> & {
@@ -36,6 +37,8 @@ export function ChatInput({
 	sendLabel: string;
 	stopLabel: string;
 	aside?: ReactNode;
+	/** What the message will be about, over the text: a `Chip` of the picked rows ("고른 글 2편 ×"). */
+	context?: ReactNode;
 }) {
 	const blank = value.trim() === "";
 	const submit = () => {
@@ -50,7 +53,7 @@ export function ChatInput({
 		<form
 			data-slot="chat-input"
 			className={cn(
-				"rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-disabled:opacity-45",
+				"rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
 				className,
 			)}
 			onSubmit={(event) => {
@@ -59,6 +62,7 @@ export function ChatInput({
 			}}
 			{...props}
 		>
+			{context && <div className="mb-monti-6 flex flex-wrap gap-monti-6">{context}</div>}
 			<textarea
 				aria-label={label}
 				placeholder={placeholder}
@@ -67,7 +71,7 @@ export function ChatInput({
 				rows={2}
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={onKeyDown}
-				className="field-sizing-content max-h-40 min-h-10 w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
+				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default leading-[1.6] outline-none placeholder:text-monti-faint"
 			/>
 			<div className="mt-monti-4 flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>

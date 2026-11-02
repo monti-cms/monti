@@ -26,6 +26,19 @@ export const aiQuickRequestSchema = z.object({
 	quick: aiModelChoiceSchema,
 });
 
+/** The days a conversation nobody opened is kept, as the past conversations offer them; `null` keeps every conversation. */
+export const UNOPENED_DAYS = [7, 30, 90] as const;
+/** What a site that never chose keeps unopened conversations for. */
+export const DEFAULT_UNOPENED_DAYS = 30;
+export const unopenedDaysSchema = z.union([z.literal(7), z.literal(30), z.literal(90), z.null()]);
+export type UnopenedDays = z.output<typeof unopenedDaysSchema>;
+
+/** `PUT /v1/ai/settings`: how long a conversation nobody opened is kept. */
+export const aiUnopenedRequestSchema = z.object({
+	expectedVersion: z.number().int().min(0),
+	unopenedDays: unopenedDaysSchema,
+});
+
 /** A key of an AI service, as the model menus list it. */
 export interface AiKeyView {
 	id: string;
@@ -52,6 +65,8 @@ export interface AiSettingsView {
 	toolSupport: Record<string, Record<string, boolean>>;
 	/** Using the fake development model (`CMS_AI_FAKE=1`). Everything works without a key. */
 	fake: boolean;
+	/** Days a conversation nobody opened is kept before it is deleted; `null` keeps them all. */
+	unopenedDays: UnopenedDays;
 }
 
 /** `POST /v1/ai/models`: the models of one key. */

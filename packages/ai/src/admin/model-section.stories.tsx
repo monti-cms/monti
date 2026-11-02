@@ -54,6 +54,7 @@ const SETTINGS: AiSettingsView = {
 	assistant: { keyId: "a", model: "claude-sonnet-5-5", keyName: "Anthropic 개인" },
 	toolSupport: {},
 	fake: false,
+	unopenedDays: 30,
 };
 
 const MODELS: Record<string, string[]> = {

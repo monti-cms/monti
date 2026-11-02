@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { Caret } from "./caret";
 import { ChatInput } from "./chat-input";
+import { Chip } from "./chip";
 import { TextButton } from "./text-button";
 
 const meta = {
@@ -56,6 +57,18 @@ export const WithModelPicker: Story = {
 				claude-sonnet-5-5
 				<Caret />
 			</TextButton>
+		),
+	},
+};
+
+/** What the message will be about, over the text: the picked rows, which × leaves out. */
+export const WithContext: Story = {
+	args: {
+		value: "이 두 편 요약 채워 줘",
+		context: (
+			<Chip onRemove={() => undefined} removeLabel="고른 글 빼기">
+				고른 글 2편
+			</Chip>
 		),
 	},
 };

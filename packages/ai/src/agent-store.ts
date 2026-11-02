@@ -31,6 +31,8 @@ export interface AgentRunValue {
 	model?: AgentModelChoice;
 	/** Why it failed, when it did. */
 	error?: string;
+	/** When the admin last opened it from the past conversations (ISO). A conversation unopened for the days the settings say is deleted. */
+	openedAt?: string;
 }
 
 export interface AgentRun extends AgentRunValue {
@@ -40,6 +42,12 @@ export interface AgentRun extends AgentRunValue {
 }
 
 export type AgentRunSummary = Omit<AgentRun, "messages" | "adminId">;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** When a conversation was last touched: opened from the past conversations, or asked in. */
+const lastUsed = (item: { value: AgentRunValue; updatedAt: Date }): number =>
+	Math.max(item.updatedAt.getTime(), item.value.openedAt ? Date.parse(item.value.openedAt) : 0);
 
 const keyOf = (adminId: string, id: string) => `${adminId}/${id}`;
 
@@ -103,9 +111,47 @@ export function createAgentRunStore(collection: PluginCollection<AgentRunValue>)
 			}
 		},
 
+		/** Marks a conversation opened now and returns it, or `null` (also for another admin's). */
+		async open(adminId: string, id: string, now = new Date()): Promise<AgentRun | null> {
+			const key = keyOf(adminId, id);
+			for (let attempt = 0; ; attempt++) {
+				const item = await collection.get(key);
+				if (!item || item.value.adminId !== adminId) return null;
+				try {
+					return toRun(
+						await collection.set(
+							key,
+							{ ...item.value, openedAt: now.toISOString() },
+							{ expectedVersion: item.version },
+						),
+					);
+				} catch (error) {
+					if (attempt >= 2 || !(error instanceof CmsError) || error.code !== "conflict") throw error;
+				}
+			}
+		},
+
+		/** Deletes a conversation of this admin. `false` when there is none. */
+		async remove(adminId: string, id: string): Promise<boolean> {
+			const item = await collection.get(keyOf(adminId, id));
+			if (!item || item.value.adminId !== adminId) return false;
+			await collection.delete(item.key, { expectedVersion: item.version });
+			return true;
+		},
+
+		/** Deletes this admin's conversations not opened or asked in for `days` days. `null` keeps them all. */
+		async sweep(adminId: string, days: number | null, now = new Date()): Promise<void> {
+			if (days === null) return;
+			const before = now.getTime() - days * DAY_MS;
+			for (const item of await ownedBy(adminId)()) {
+				if (lastUsed(item) >= before) continue;
+				await collection.delete(item.key, { expectedVersion: item.version }).catch(() => undefined);
+			}
+		},
+
 		/** This admin's conversations, newest first, one page. */
 		async list(adminId: string, page: { page: number; pageSize: number }) {
-			const owned = (await ownedBy(adminId)()).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+			const owned = (await ownedBy(adminId)()).sort((a, b) => lastUsed(b) - lastUsed(a));
 			const start = (page.page - 1) * page.pageSize;
 			return {
 				items: owned.slice(start, start + page.pageSize).map((item): AgentRunSummary => {

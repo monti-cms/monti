@@ -20,11 +20,23 @@ import type { AdminPanel } from "../../plugins";
 import { PluginPanelSlot } from "./side-panel";
 import { sidePanelSlotMessages } from "./side-panel-slot.messages";
 
+/**
+ * What a screen hands the panel when it opens it for something (the list's "✦ 요청", the format card's "요청"): the words to send, or none to let the
+ * admin write them. The panel reads the rest of the context (the picked rows, the selection) from where the admin is.
+ */
+export interface PanelRequest {
+	/** The words to send at once. Without them the panel opens with its box focused and empty. */
+	readonly text?: string;
+}
+
 interface AdminPanelState {
 	readonly panel: AdminPanel;
 	/** Whether the sheet is open on a narrow screen. Held here, so the button and the pane agree. */
 	readonly sheetOpen: boolean;
 	readonly setSheetOpen: (open: boolean) => void;
+	/** The request a screen handed the panel and the panel has not taken yet, with a number so the same words twice are two requests. */
+	readonly request: { readonly id: number; readonly value: PanelRequest } | null;
+	readonly setRequest: (request: { readonly id: number; readonly value: PanelRequest } | null) => void;
 }
 
 const AdminPanelContext = createContext<AdminPanelState | null>(null);
@@ -32,7 +44,8 @@ const AdminPanelContext = createContext<AdminPanelState | null>(null);
 /** Gives the screens the panel a plugin declared. With several, the innermost provider (the plugin registered last) wins. */
 export function AdminPanelProvider({ panel, children }: { panel: AdminPanel; children: ReactNode }) {
 	const [sheetOpen, setSheetOpen] = useState(false);
-	const value = useMemo(() => ({ panel, sheetOpen, setSheetOpen }), [panel, sheetOpen]);
+	const [request, setRequest] = useState<AdminPanelState["request"]>(null);
+	const value = useMemo(() => ({ panel, sheetOpen, setSheetOpen, request, setRequest }), [panel, sheetOpen, request]);
 	return <AdminPanelContext.Provider value={value}>{children}</AdminPanelContext.Provider>;
 }
 
@@ -77,6 +90,37 @@ export function useSidePanel(): SidePanel | null {
 	);
 	const toggle = useCallback(() => setOpen(!open), [open, setOpen]);
 	return state ? { panel: state.panel, open, narrow, setOpen, toggle } : null;
+}
+
+let nextRequestId = 0;
+
+/**
+ * Opens the plugin's panel for something: `ask({})` opens it with its box focused, `ask({ text })` sends the words. `null` when no plugin has a panel,
+ * so a screen shows its button only when it can do something.
+ */
+export function useAskPanel(): ((request: PanelRequest) => void) | null {
+	const state = useContext(AdminPanelContext);
+	const side = useSidePanel();
+	const setRequest = state?.setRequest;
+	const setOpen = side?.setOpen;
+	const ask = useCallback(
+		(request: PanelRequest) => {
+			nextRequestId += 1;
+			setRequest?.({ id: nextRequestId, value: request });
+			setOpen?.(true);
+		},
+		[setRequest, setOpen],
+	);
+	return state ? ask : null;
+}
+
+/** The request a screen handed the panel, for the panel's component, and `take` to mark it handled. `null` while there is none. */
+export function usePanelRequest(): { readonly request: PanelRequest; readonly take: () => void } | null {
+	const state = useContext(AdminPanelContext);
+	const current = state?.request;
+	const setRequest = state?.setRequest;
+	const take = useCallback(() => setRequest?.(null), [setRequest]);
+	return current ? { request: current.value, take } : null;
 }
 
 /** Ctrl or Cmd with `.` opens and closes the panel. */

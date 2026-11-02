@@ -29,6 +29,7 @@ import { AdminFrame, AdminNavProvider } from "./shared/admin-frame";
 import { collectionNoun } from "./shared/noun.messages";
 import { usePublishScreenContext } from "./shared/screen-context";
 import { DockedPanel } from "./shared/side-panel";
+import { useAskPanel } from "./shared/side-panel-slot";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
 /**
@@ -85,6 +86,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 	const { state, data, folders } = list;
 	const { items } = data;
 	const record = list.recordTarget;
+	const ask = useAskPanel();
 	// The rows picked in the list, for the side panel; ids of rows that left the page (a filter, a search) are not offered.
 	usePublishScreenContext({
 		collection: state.collection,
@@ -107,6 +109,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 								onClearSelection={() => list.setSelectedIds(new Set())}
 								onRun={list.mutations.bulk}
 								onExport={list.exportEntries}
+								{...(ask ? { onRequest: () => ask({}) } : {})}
 							/>
 						)}
 						collection={state.collection}
