@@ -105,6 +105,9 @@ const api =
 		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "GET") return OLD_RUN;
 		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "DELETE") return { deleted: true };
 		if (path.endsWith("/discard")) return { ...PROPOSAL, status: "discarded", settledAt: "2026-11-03T10:52:00.000Z" };
+		// The card reads the proposal again from the server: answer it as the conversation sent it.
+		if (path.endsWith("/v1/ai/proposals/p1")) return PROPOSAL;
+		if (path.endsWith("/v1/ai/proposals/p2")) return ALT_PROPOSAL;
 		return {};
 	};
 
