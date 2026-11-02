@@ -16,7 +16,7 @@ export const GET = adminRoute<{ id: string }>(async ({ params, cms, auth }) => {
 
 /** Deletes one of the admin's conversations. */
 export const DELETE = adminRoute<{ id: string }>(async ({ params, cms, auth }) => {
-	const removed = await aiStoreFor(cms).agentRuns.remove(auth.userId, params.id);
+	const removed = await aiStoreFor(cms).removeRun(auth.userId, params.id);
 	if (!removed) throw new AiError("not_found", cms.site.createTranslator(agentMessages)("unknownRun"));
 	return ok({ deleted: true });
 });

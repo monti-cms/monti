@@ -4,8 +4,13 @@ import * as agent from "./routes/agent/route";
 import * as agentRun from "./routes/agent/runs/[id]/route";
 import * as agentRuns from "./routes/agent/runs/route";
 import * as models from "./routes/models/route";
+import * as proposalApply from "./routes/proposals/[id]/apply/route";
+import * as proposalDiscard from "./routes/proposals/[id]/discard/route";
+import * as proposalRevert from "./routes/proposals/[id]/revert/route";
+import * as proposal from "./routes/proposals/[id]/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
+import * as writingRules from "./routes/writing-rules/route";
 import { aiKeyServices } from "./services";
 import { getAiSettingsView, keyUseLabels } from "./settings";
 import { aiStoreFor } from "./store";
@@ -18,8 +23,13 @@ export default defineServerPlugin({
 		{ pattern: "v1/ai/agent/runs", module: agentRuns },
 		{ pattern: "v1/ai/agent/runs/[id]", module: agentRun },
 		{ pattern: "v1/ai/models", module: models },
+		{ pattern: "v1/ai/proposals/[id]", module: proposal },
+		{ pattern: "v1/ai/proposals/[id]/apply", module: proposalApply },
+		{ pattern: "v1/ai/proposals/[id]/revert", module: proposalRevert },
+		{ pattern: "v1/ai/proposals/[id]/discard", module: proposalDiscard },
 		{ pattern: "v1/ai/run", module: run },
 		{ pattern: "v1/ai/settings", module: settings },
+		{ pattern: "v1/ai/writing-rules", module: writingRules },
 	],
 	// The AI services a key can be for, each checked with its service before the key is saved.
 	keyServices: ({ cms }) => aiKeyServices(cms.site),

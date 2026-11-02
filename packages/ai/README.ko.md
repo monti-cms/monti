@@ -129,14 +129,16 @@ const unusedAddress = defineValidator({
 - **쓰는 곳**: 빠른 작업과 새 대화가 쓰는 키를 키 저장소에 알려서, 그 키를 지우려 하면 먼저 그것을 보여 준다.
 - **비밀 값 바꾸기**: core README의 "플러그인 비밀 값"과 "API 키 저장소"를 본다.
 
-## 관리자 에이전트(읽기 전용)
+## 관리자 에이전트
 
-`POST /api/monti/v1/ai/agent { runId?, messages, model?, context: { screen, collection?, entryId?, selectedIds? } }`는 어시스턴트를 돌리고 AI SDK UI 메시지 스트림으로 답한다(`useChat`이 읽는다. 메시지 메타데이터에 `runId`가 있고, 끝에 대화 전체의 `usage`가 붙는다). core와 플러그인의 모든 `read` 오퍼레이션(`cms.operations()`)이 `.`를 `_`로 바꾼 이름(`entries_list`)의 도구가 되고, 로그인한 관리자 권한으로 실행된다. 실패한 오퍼레이션은 `{ error: { code, message } }` 도구 결과가 되고, 20,000자를 넘는 결과는 질의를 좁히라는 안내와 함께 잘리며, 같은 도구를 같은 입력으로 세 번째 연달아 부르면 실행하지 않는다. `editor_read`, `editor_selection`은 `execute`가 없고 `context.entryId`가 있을 때만 주어진다. 브라우저가 답한다. 한 번의 실행은 모델 요청 최대 12단계이고, 실패한 모델 요청은 단계마다 한 번 다시 시도한다.
+`POST /api/monti/v1/ai/agent { runId?, messages, model?, context: { screen, collection?, entryId?, selectedIds? } }`는 어시스턴트를 돌리고 AI SDK UI 메시지 스트림으로 답한다(`useChat`이 읽는다. 메시지 메타데이터에 `runId`가 있고, 끝에 대화 전체의 `usage`가 붙는다). 설계는 `docs/design/agent.md`에 있다. core와 플러그인의 모든 오퍼레이션(`cms.operations()`)이 `.`를 `_`로 바꾼 이름(`entries_list`)의 도구가 되고, 로그인한 관리자 권한으로 실행된다. `read`는 실행되고, 같은 실행에서 계획한 변경이 적용된 것처럼 본다. `write`는 사이트를 바꾸지 않는다. 계획만 하고(`cms.writes.plan`), 그 변경은 실행의 제안에 항목으로 쌓여 `data-proposal` 파트로 패널에 가고 대화와 함께 저장된다. 실패한 오퍼레이션은 `{ error: { code, message } }` 도구 결과가 되고, 20,000자를 넘는 결과는 질의를 좁히라는 안내와 함께 잘리며, 같은 도구를 같은 입력으로 세 번째 연달아 부르면 실행하지 않는다. `editor_read`, `editor_selection`은 `execute`가 없고 `context.entryId`가 있을 때만 주어진다. 브라우저가 답한다. 한 번의 실행은 모델 요청 최대 12단계이고, 실패한 모델 요청은 단계마다 한 번 다시 시도한다.
 
 - **모델**: 요청의 `model: { keyId, model, thinking }`(입력창에서 고른 것. 대화와 함께 저장한다). 없으면 내장 기본(서비스 키 참고). 쓸 수 있는 키가 없으면 거절한다(`service_unavailable`).
 - **도구 호출**: 써 본 적 없는 모델은 시도해 보고, "도구를 지원하지 않는다"는 답이 오면 키·모델마다 저장한 뒤(설정 보기의 `toolSupport`) 거절한다(`agent_unavailable`, 409). 모델 메뉴는 그런 모델을 보이지 않는다.
 - **크레딧**: 서비스가 크레딧 부족으로 거절하면 스트림이 `credit_exhausted`로 끝나고, 패널이 키 이름과 함께 알리며 "다른 모델로 보내기"를 보인다.
 - **대화**: 플러그인 저장소(`agent-runs`)에 메시지, 상태(`running`, `done`, `failed`, `stopped`), 사용량과 함께 저장된다. `GET /api/monti/v1/ai/agent/runs`는 로그인한 관리자 자신의 대화를 마지막으로 열거나 물은 순서로(`page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}`는 그 관리자에게만 대화 하나를 돌려주고 연 것으로 표시하며, `DELETE /api/monti/v1/ai/agent/runs/{id}`는 지운다. 대화 하나는 메시지 1,000,000자까지 저장하고, 관리자마다 최근 100개를 둔다. 설정한 날수(`PUT /api/monti/v1/ai/settings { expectedVersion, unopenedDays: 7 | 30 | 90 | null }`, 고르기 전에는 30일, `null`은 지우지 않음) 동안 열지도 묻지도 않은 대화는 목록을 읽거나 새 대화를 시작할 때 지운다.
+- **제안**: 플러그인 저장소(`agent-proposals`)에 쓴 실행마다 하나씩, 요청을 인용해 저장한다. `GET /api/monti/v1/ai/proposals/{id}`는 제안 하나를 돌려주며, 그사이 대상이 바뀐 대기 항목을 `stale`로 표시한다. `PATCH … { include: { <항목 id>: boolean } }`는 항목을 넣거나 뺀다. `POST …/apply`는 넣은 대기 항목을 관리자로서 하나씩 적용하고, 각 변경에 에이전트의 것으로 기록하며(활동 기록에 `agent: { runId, proposalId }`), 걸음마다 JSON 한 줄과 끝에 제안을 답한다. 실패한 항목은 이유를 남기고 나머지는 계속한다. `POST …/revert`는 적용한 항목을 되돌리되 적용한 뒤 바뀐 항목은 그대로 둔다. `POST …/discard`는 아무것도 바꾸지 않고 대기 중인 제안을 닫는다. 대화를 지우면 그 제안도 지운다.
+- **글 쓰는 방식**: 에이전트가 글을 쓸 때 따르는 텍스트 하나다. 배포된 사이트에서도 바꿀 수 있도록 데이터베이스에 둔다. `GET /api/monti/v1/ai/writing-rules`, `PUT … { expectedVersion, text }`(4,000자까지).
 - `CMS_AI_FAKE=1`이면 `site_describe`를 부르고 컬렉션 이름으로 답하는 대본 모델을 쓴다.
 
 ## 가짜 연결(개발 전용)

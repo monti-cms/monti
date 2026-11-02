@@ -10,7 +10,7 @@ import type { AuthContext } from "../adapters/auth";
  */
 /**
  * A change the admin agent carried out on the admin's behalf: the conversation it came from and the proposal the admin applied. The activity log marks such a
- * change with ✦ and links the conversation; the trash shows "✦ 버림" for an item it trashed.
+ * change with ✦ and links the conversation; the trash shows a blue ✦ on the date of an item it trashed.
  */
 export interface AgentAttribution {
 	readonly runId: string;

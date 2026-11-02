@@ -10,6 +10,6 @@ import { aiStoreFor } from "../../../store";
 export const GET = adminRoute(async ({ request, cms, auth }) => {
 	const query = parseWith(agentRunsQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
 	const store = aiStoreFor(cms);
-	await store.agentRuns.sweep(auth.userId, await unopenedDaysOf(store));
+	await store.sweepRuns(auth.userId, await unopenedDaysOf(store));
 	return ok(await store.agentRuns.list(auth.userId, query));
 });

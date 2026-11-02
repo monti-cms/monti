@@ -47,6 +47,18 @@ const joined = (head: string, tail: string | undefined) => (tail ? `${head} · $
 const counted = (t: Translate, key: string, n: number | undefined, extra: Record<string, string> = {}) =>
 	n === undefined ? undefined : t(key, { count: n, ...extra });
 
+/** The words of a write: it proposes, never changes ("Proposed · entry fields · 2 places"); how many changes the answer says it proposed. */
+const proposing = (what: string): OperationWords => ({
+	running: (t) => t("write.running", { what: t(what) }),
+	done: (t, _site, _input, output) => {
+		const proposed = count(record(output).proposed);
+		return proposed === 0
+			? t("write.none", { what: t(what) })
+			: joined(t("write.done", { what: t(what) }), counted(t, "count.places", proposed));
+	},
+	name: (t) => t("write.done", { what: t(what) }),
+});
+
 const WORDS: Record<string, OperationWords> = {
 	"entries.list": {
 		running: (t) => t("entries.list.running"),
@@ -128,6 +140,11 @@ const WORDS: Record<string, OperationWords> = {
 		done: (t) => t("templates.done"),
 		name: (t) => t("templates.name"),
 	},
+	"entries.updateFields": proposing("write.fields"),
+	"entries.moveToFolder": proposing("write.move"),
+	"entries.trash": proposing("write.trash"),
+	"media.updateText": proposing("write.mediaText"),
+	"media.trash": proposing("write.mediaTrash"),
 	"editor.read": {
 		running: (t) => t("editor.read.running"),
 		done: (t) => t("editor.read.done"),
