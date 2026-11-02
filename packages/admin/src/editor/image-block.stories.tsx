@@ -170,9 +170,12 @@ export const ImageCard: Story = {
 	},
 };
 
-/** Opened from the to-dos (or by "next image"): the alt text alone in a card over the picture, and "next image" while another image still has none. */
+/**
+ * Opened from the to-dos (or by "next image"): the alt text alone in a card over the picture, and "next image" while another image still has none. The
+ * frame is a 900px window, so the body runs past its foot on purpose.
+ */
 export const NextImage: Story = {
-	tags: ["visual"],
+	tags: ["visual", "visual-allow-clipped"],
 	render: () => (
 		<Editor
 			blocks={[
