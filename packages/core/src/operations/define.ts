@@ -59,6 +59,13 @@ export interface WritePlan {
 	readonly base: string;
 	/** What `apply` needs, in the operation's own terms. */
 	readonly change: unknown;
+	/**
+	 * What the target is called when the change was planned, for the screens: an entry's title, address and collection, a media file's name. Stored with the
+	 * proposal, so a conversation opened later shows it as it was.
+	 */
+	readonly subject?: { readonly title: string; readonly path?: string; readonly collection?: string };
+	/** `preview` in words where its values are ids (a folder's name for its id; `null` for none). */
+	readonly shown?: { readonly before: string | null; readonly after: string | null };
 }
 
 /** What applying one planned change leaves: the target's base right after the change, and what reverting it needs. */

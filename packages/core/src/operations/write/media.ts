@@ -52,6 +52,7 @@ export const updateMediaText = defineOperation({
 					preview: { before, after },
 					base: spotBase(before),
 					change: { spot, value: after },
+					subject: { title: media.filename },
 				});
 			}
 		}
@@ -91,12 +92,13 @@ export const trashMedia = defineOperation({
 	plan: async ({ ids }, context) => {
 		const plans: WritePlan[] = [];
 		for (const id of ids) {
-			await liveMedia(context, id);
+			const media = await liveMedia(context, id);
 			plans.push({
 				target: { kind: "media", id, spot: "trash" },
 				preview: { before: "live", after: "trash" },
 				base: TRASH_BASE.live,
 				change: {},
+				subject: { title: media.filename },
 			});
 		}
 		return plans;

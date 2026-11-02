@@ -14,6 +14,26 @@ async function liveEntry(context: OperationContext, id: string): Promise<Entry> 
 	return entry;
 }
 
+/** What an entry is called in a proposal: its title, its draft address and its collection. */
+const subjectOf = (context: OperationContext, entry: Entry): WritePlan["subject"] => ({
+	title:
+		(context.cms.site.isCollection(entry.collection)
+			? context.cms.site.titleOfValues(entry.collection as never, entry.working.metadata as never)
+			: null) ?? "",
+	...(entry.workingSlug ? { path: `/${entry.workingSlug}` } : {}),
+	collection: entry.collection,
+});
+
+/** The name of a folder of a collection for a proposal, or `null` for none (or a folder that is gone). */
+async function folderName(context: OperationContext, collection: string, id: string | null): Promise<string | null> {
+	if (!id) return null;
+	const folders = await context.cms
+		.store()
+		.listFolders({ collection })
+		.catch(() => []);
+	return folders.find((folder) => folder.id === id)?.name ?? null;
+}
+
 /** Saves the draft of `entry` with one field set to `value`, keeping the rest of the draft as it is. Returns the entry after the save. */
 async function saveField(context: OperationContext, entry: Entry, field: string, value: unknown): Promise<Entry> {
 	const metadata = { ...(entry.working.metadata as Record<string, unknown>) };
@@ -62,6 +82,7 @@ export const updateEntryFields = defineOperation({
 				preview: { before, after: after ?? null },
 				base: spotBase(before),
 				change: { field, value: after ?? null },
+				subject: subjectOf(context, entry),
 			});
 		}
 		return plans;
@@ -123,6 +144,11 @@ export const moveEntriesToFolder = defineOperation({
 				preview: { before: entry.folderId, after: folderId },
 				base: spotBase(entry.folderId),
 				change: { folderId },
+				subject: subjectOf(context, entry),
+				shown: {
+					before: await folderName(context, entry.collection, entry.folderId),
+					after: await folderName(context, entry.collection, folderId),
+				},
 			});
 		}
 		return plans;
@@ -160,12 +186,13 @@ export const trashEntries = defineOperation({
 	plan: async ({ ids }, context) => {
 		const plans: WritePlan[] = [];
 		for (const id of ids) {
-			await liveEntry(context, id);
+			const entry = await liveEntry(context, id);
 			plans.push({
 				target: { kind: "entry", id, spot: "trash" },
 				preview: { before: "live", after: "trash" },
 				base: TRASH_BASE.live,
 				change: {},
+				subject: subjectOf(context, entry),
 			});
 		}
 		return plans;
