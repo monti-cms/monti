@@ -11,7 +11,9 @@ import {
 } from "@monti-cms/admin/kit";
 import { getToolName, isToolUIPart } from "ai";
 import type { ReactNode } from "react";
+import type { ProposalView } from "../agent/proposal-view";
 import { agentPanelMessages } from "./agent-panel.messages";
+import { AgentProposal } from "./agent-proposal";
 import { type ToolLineState, toolLineText } from "./tool-labels";
 import type { AgentMessage } from "./use-agent-chat";
 
@@ -116,6 +118,13 @@ export function MessageView({
 	message.parts.forEach((part, index) => {
 		if (isToolUIPart(part)) {
 			lines.push(<ToolLine key={part.toolCallId} part={part as ToolPart} live={live} />);
+			return;
+		}
+		if (part.type === "data-proposal") {
+			flush(`${message.id}:lines:${index}`);
+			const { id, data } = part as unknown as { id: string; data: ProposalView };
+			// The answer sends the proposal again each time it grows: a new size starts the card from the newer one.
+			blocks.push(<AgentProposal key={`${message.id}:proposal:${id}:${data.items.length}`} initial={data} />);
 			return;
 		}
 		if (part.type === "text" && part.text) {

@@ -103,6 +103,7 @@ const api =
 		if (path.startsWith("/api/monti/v1/ai/agent/runs?")) return { items: RUNS, total: RUNS.length };
 		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "GET") return OLD_RUN;
 		if (path.startsWith("/api/monti/v1/ai/agent/runs/") && method === "DELETE") return { deleted: true };
+		if (path.endsWith("/discard")) return { ...PROPOSAL, status: "discarded", settledAt: "2026-11-03T10:52:00.000Z" };
 		return {};
 	};
 
@@ -136,6 +137,76 @@ const working: Chunk[] = [
 		input: { collection: "post", field: ["summary:empty"] },
 	},
 ];
+const item = (
+	id: string,
+	operation: string,
+	spot: string,
+	title: string,
+	before: unknown,
+	after: unknown,
+	extra = {},
+) => ({
+	id,
+	operation,
+	target: { kind: operation.startsWith("media") ? "media" : "entry", id: `t-${id}`, spot },
+	preview: { before, after },
+	subject: { title, path: `/${id}`, collection: "post" },
+	included: true,
+	state: "pending",
+	...extra,
+});
+/** A proposal of four groups (flow 2 · 11): a summary filled on two posts, eleven moved, three images to the trash, one title tidied. */
+const PROPOSAL = {
+	id: "p1",
+	runId: "r9",
+	request: "이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고, 쓰지 않는 이미지도 지워 줘.",
+	status: "pending",
+	createdAt: "2026-11-03T10:51:00.000Z",
+	items: [
+		item("e1", "entries.updateFields", "title", "발행 후 고친 글", "발행 후에 고친 글", "발행 후 고친 글"),
+		item(
+			"e2",
+			"entries.updateFields",
+			"summary",
+			"타입 정리 메모",
+			null,
+			"자주 헷갈리는 타입 세 가지를 예시로 정리한 메모.",
+		),
+		item("e3", "entries.updateFields", "summary", "쓰는 중인 글", null, "글보다 도구를 고친 이야기."),
+		...Array.from({ length: 11 }, (_, index) =>
+			item(`m${index}`, "entries.moveToFolder", "folder", `작년 글 ${index + 1}`, null, "f2024", {
+				shown: { before: null, after: "2024" },
+			}),
+		),
+		...["old-cover.png", "scan-01.jpg", "tmp.gif"].map((name, index) =>
+			item(`x${index}`, "media.trash", "trash", name, "live", "trash"),
+		),
+	],
+};
+const ALT_PROPOSAL = {
+	...PROPOSAL,
+	id: "p2",
+	request: "고른 이미지 3개에 대체 텍스트 채워 줘",
+	items: [
+		["desk-morning.jpg", "아침 햇빛이 드는 책상 위 노트북과 커피"],
+		["cover-cache.png", "밝은 종이 위에 놓인 캐시 글 제목"],
+		["seoul-night.jpg", "비 갠 밤, 불 켜진 서울 골목과 젖은 보도"],
+	].map(([name, alt], index) => item(`a${index}`, "media.updateText", "defaultAlt", name ?? "", null, alt)),
+};
+/** An answer that proposed: the tool lines, the proposal and the words. */
+const proposing = (proposal: typeof PROPOSAL): Chunk[] => [
+	{ type: "start", messageId: "m1", messageMetadata: { runId: "r9" } },
+	{ type: "start-step" },
+	{ type: "tool-input-available", toolCallId: "c1", toolName: "entries_updateFields", input: {} },
+	{ type: "tool-output-available", toolCallId: "c1", output: { proposed: proposal.items.length } },
+	{ type: "data-proposal", id: proposal.id, data: proposal },
+	{ type: "text-start", id: "t" },
+	{ type: "text-delta", id: "t", delta: "제안을 만들었어요. 보고 적용해 주세요." },
+	{ type: "text-end", id: "t" },
+	{ type: "finish-step" },
+	{ type: "finish", messageMetadata: { runId: "r9" } },
+];
+
 const conversation: Chunk[] = [
 	...working,
 	{ type: "tool-output-available", toolCallId: "c2", output: { items: [{ id: "a" }, { id: "b" }], total: 2 } },
@@ -239,6 +310,26 @@ export const ToolCallOpen: Story = {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: /게시글 148편/ }));
 		await within(canvasElement).findAllByText(/"collection": "post"/);
+	},
+};
+
+/** A request that proposed changes (flow 2 · 11): the card in the answer with its groups, "상세 보기", "버리기" and "19건 적용". */
+export const ProposalWaiting: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(proposing(PROPOSAL))),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await within(canvasElement).findByTestId("agent-proposal");
+	},
+};
+
+/** New alt texts for three files (flow 2 · 19): each file's text in the card, and "3개 적용". */
+export const ProposalAltText: Story = {
+	tags: ["visual"],
+	render: panel(ready, () => sse(proposing(ALT_PROPOSAL as typeof PROPOSAL))),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
+		await within(canvasElement).findByTestId("agent-proposal");
 	},
 };
 

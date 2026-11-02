@@ -1,5 +1,7 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
+import type { ProgressLine } from "../agent/progress";
+import type { ProposalView } from "../agent/proposal-view";
 import type { AgentModelChoice, AiModelChoice, AiModelInfo, AiSettingsView, UnopenedDays } from "../connection";
 import type { AiRunResult } from "../definition";
 
@@ -43,6 +45,7 @@ export const aiKeys = {
 	actions: () => [...aiKeys.all, "actions"] as const,
 	settings: () => [...aiKeys.all, "settings"] as const,
 	models: (keyId: string) => [...aiKeys.all, "models", keyId] as const,
+	proposal: (id: string) => [...aiKeys.all, "proposal", id] as const,
 };
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -105,3 +108,49 @@ export const openAiRunStream = (json: unknown, signal?: AbortSignal) =>
 		body: JSON.stringify(json),
 		signal,
 	});
+
+/** `GET /v1/ai/proposals/:id`: a proposal, with the items whose target changed since marked stale. */
+export const getProposal = (site: Site, id: string, options: AiRequestOptions = {}) =>
+	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}`, options);
+
+/** `PATCH /v1/ai/proposals/:id`: puts items in or leaves them out. */
+export const includeProposalItems = (site: Site, id: string, include: Record<string, boolean>, fallback?: string) =>
+	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}`, { method: "PATCH", json: { include }, fallback });
+
+/** `POST /v1/ai/proposals/:id/discard` */
+export const discardProposal = (site: Site, id: string, fallback?: string) =>
+	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}/discard`, { method: "POST", fallback });
+
+/**
+ * `POST /v1/ai/proposals/:id/apply` or `…/revert`: runs it and reads the answer line by line, calling `onProgress` for each step. Resolves with the proposal at
+ * the end; a failure of the whole run rejects with its message.
+ */
+export async function runProposal(
+	id: string,
+	action: "apply" | "revert",
+	onProgress: (done: number, total: number) => void,
+	fallback: string,
+): Promise<ProposalView> {
+	const response = await fetch(adminApiUrl(`/v1/ai/proposals/${segment(id)}/${action}`), {
+		method: "POST",
+		credentials: "same-origin",
+	});
+	if (!response.ok || !response.body) throw new Error(fallback);
+	const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+	let buffer = "";
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		buffer += value;
+		const lines = buffer.split("\n");
+		buffer = lines.pop() ?? "";
+		for (const line of lines) {
+			if (!line.trim()) continue;
+			const parsed = JSON.parse(line) as ProgressLine;
+			if (parsed.type === "progress") onProgress(parsed.done, parsed.total);
+			else if (parsed.type === "done") return parsed.proposal;
+			else throw new Error(parsed.message || fallback);
+		}
+	}
+	throw new Error(fallback);
+}
