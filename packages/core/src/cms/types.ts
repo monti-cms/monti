@@ -5,7 +5,7 @@ import type { ContentStore } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
 import type { MediaStore } from "../media/store";
-import type { OperationInfo, RunOperationOptions } from "../operations/registry";
+import type { OperationInfo, OperationWrites, RunOperationOptions } from "../operations/registry";
 import type { PluginContext } from "../plugin/context";
 import type { OwnedPluginRoute } from "../plugin/define";
 import type { LoadedServerPlugin } from "../plugin/server";
@@ -180,6 +180,11 @@ export interface Cms<
 	 * and the changes it makes are recorded under that admin. An unknown name is `not_found`. The admin routes and the agent both call this.
 	 */
 	runOperation(name: string, input: unknown, options: RunOperationOptions): Promise<unknown>;
+	/**
+	 * The write operations' four steps (docs/design/agent.md §3): plan a change without making it, apply a planned change, revert an applied one, and read where
+	 * a target stands now. The admin agent plans; applying and reverting come from the admin's review.
+	 */
+	readonly writes: OperationWrites;
 	/**
 	 * Serves one request of the admin API (`/api/monti/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
 	 * `Request` and returns a `Response`, so any host that speaks them can mount it. `@monti-cms/nextjs` mounts it in a Next.js route file (`createRouteHandler(cms)`). Unknown paths return 404 and a known

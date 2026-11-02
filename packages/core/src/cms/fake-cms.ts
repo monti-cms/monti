@@ -124,7 +124,16 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 		cms: () => fake as unknown as Cms,
 		plugins: plugins.load,
 	});
-	const fakeOperations = { operations: fakeOperationRunner.list, runOperation: fakeOperationRunner.run };
+	const fakeOperations = {
+		operations: fakeOperationRunner.list,
+		runOperation: fakeOperationRunner.run,
+		writes: {
+			plan: fakeOperationRunner.plan,
+			apply: fakeOperationRunner.apply,
+			revert: fakeOperationRunner.revert,
+			baseOf: fakeOperationRunner.baseOf,
+		},
+	};
 	const fake: CmsHost<Config> = {
 		...cms,
 		plugins: plugins.load,

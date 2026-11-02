@@ -4,7 +4,7 @@ import { testConfig, testSite } from "../../../test/site";
 import type { AuthContext } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
 import { currentActor } from "../../core/actor";
-import { CORE_OPERATIONS, defineOperation, type OperationContext } from "..";
+import { type AnyOperation, CORE_OPERATIONS, defineOperation, type OperationContext } from "..";
 import { OPERATION_NAME } from "../define";
 import { inputJsonSchema } from "../registry";
 
@@ -23,7 +23,7 @@ const whoAmIDefinition = {
 };
 const whoAmI = defineOperation(whoAmIDefinition);
 
-const withOperations = (...plugins: { name: string; operations: ReturnType<typeof defineOperation>[] }[]) =>
+const withOperations = (...plugins: { name: string; operations: AnyOperation[] }[]) =>
 	fakeCms({ config: testConfig, plugins });
 
 describe("defineOperation", () => {

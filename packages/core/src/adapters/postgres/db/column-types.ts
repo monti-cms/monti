@@ -25,4 +25,6 @@ export interface EventPayload {
 	title: string | null;
 	/** Who made the change; absent on events recorded before the field existed. */
 	actor?: string | null;
+	/** The agent conversation and proposal the change came from, when the admin agent carried it out; absent otherwise. */
+	agent?: { runId: string; proposalId: string } | null;
 }

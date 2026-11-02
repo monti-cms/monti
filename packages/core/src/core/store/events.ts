@@ -1,3 +1,4 @@
+import type { AgentAttribution } from "../actor";
 import type { Entry, EntryStatus } from "./types";
 
 /**
@@ -55,6 +56,8 @@ export interface ContentChange {
 	readonly contentHash: string | null;
 	/** Who made the change (see `currentActor`), or `null` when it was made outside a request or the actor is not known. */
 	readonly actor: string | null;
+	/** The agent conversation and proposal the change came from (`currentAgent`), or `null` for a change a person made. */
+	readonly agent: AgentAttribution | null;
 	/** When the change was committed. */
 	readonly occurredAt: Date;
 }
