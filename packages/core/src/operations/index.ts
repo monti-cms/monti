@@ -4,6 +4,7 @@ import { getFolder, listFolders } from "./read/folders";
 import { getMedia, listMedia } from "./read/media";
 import { describeSite, readSchema } from "./read/site";
 import { getTemplate, listTemplates } from "./read/templates";
+import { updateEntryBody } from "./write/body";
 import { moveEntriesToFolder, trashEntries, updateEntryFields } from "./write/entries";
 import { trashMedia, updateMediaText } from "./write/media";
 
@@ -35,6 +36,7 @@ export const CORE_OPERATIONS: readonly AnyOperation[] = [
 	listTemplates,
 	getTemplate,
 	updateEntryFields,
+	updateEntryBody,
 	moveEntriesToFolder,
 	trashEntries,
 	updateMediaText,

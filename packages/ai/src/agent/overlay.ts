@@ -22,6 +22,22 @@ function patch(target: Json, item: ProposalItem): void {
 		target.proposedTrash = true;
 		return;
 	}
+	if (spot?.startsWith("body:")) {
+		// A body change: the body text the read gave (`working.body`, with a format) reads with the block's new text in place.
+		const working = isObject(target.working) ? target.working : undefined;
+		const { before, after: next } = item.preview as { before: unknown; after: unknown };
+		if (working && typeof working.body === "string" && typeof before === "string") {
+			working.body =
+				typeof next === "string"
+					? working.body.replace(before, () => next)
+					: // A removed block takes its blank line with it.
+						working.body
+							.replace(before, "")
+							.replace(/\n{3,}/g, "\n\n")
+							.trim();
+		}
+		return;
+	}
 	if (!spot) return;
 	for (const holder of [target.metadata, isObject(target.working) ? target.working.metadata : undefined]) {
 		if (isObject(holder)) holder[spot] = after;

@@ -114,6 +114,7 @@ function useRowEnd() {
 		if (group.operation === "entries.updateFields") {
 			return <Count>{fieldLabel(site, item.subject?.collection, item.target.spot)}</Count>;
 		}
+		if (group.operation === "entries.updateBody") return <Count>{t("review.body")}</Count>;
 		return null;
 	};
 }
@@ -137,7 +138,9 @@ function Group({
 	const words = groupWords(site, group);
 	const files = group.operation.startsWith("media.");
 	const texts =
-		(group.operation === "entries.updateFields" || group.operation === "media.updateText") &&
+		(group.operation === "entries.updateFields" ||
+			group.operation === "entries.updateBody" ||
+			group.operation === "media.updateText") &&
 		group.items.every((item) => typeof item.preview.after === "string" || item.preview.after === null);
 	const shown = all ? group.items : group.items.slice(0, FIRST_ROWS);
 	const changeable = (item: ProposalItemView) => open && item.state === "pending";

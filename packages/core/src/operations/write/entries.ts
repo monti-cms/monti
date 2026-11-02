@@ -4,25 +4,9 @@ import type { Entry } from "../../core/store";
 import { CmsError } from "../../core/store/errors";
 import { defineOperation, type OperationContext, type WritePlan } from "../define";
 import { spotBase } from "./base";
+import { liveEntry, subjectOf } from "./entry-common";
 
 const entryId = z.string().min(1).describe("The id of an entry");
-
-/** The entry as a write plans against it: it must exist and be out of the trash. */
-async function liveEntry(context: OperationContext, id: string): Promise<Entry> {
-	const entry = await context.cms.store().getEntry(id);
-	if (entry.deletedAt) throw new CmsError(`Entry ${id} is in the trash`, "invalid_status");
-	return entry;
-}
-
-/** What an entry is called in a proposal: its title, its draft address and its collection. */
-const subjectOf = (context: OperationContext, entry: Entry): WritePlan["subject"] => ({
-	title:
-		(context.cms.site.isCollection(entry.collection)
-			? context.cms.site.titleOfValues(entry.collection as never, entry.working.metadata as never)
-			: null) ?? "",
-	...(entry.workingSlug ? { path: `/${entry.workingSlug}` } : {}),
-	collection: entry.collection,
-});
 
 /** The name of a folder of a collection for a proposal, or `null` for none (or a folder that is gone). */
 async function folderName(context: OperationContext, collection: string, id: string | null): Promise<string | null> {
