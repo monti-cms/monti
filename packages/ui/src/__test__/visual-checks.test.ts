@@ -178,6 +178,21 @@ describe("the center check", () => {
 		expect(check(control("12", 4))).toEqual([]);
 	});
 
+	it("UI-T6 measures a smaller text on the baseline of a larger one by the larger text alone, and a smaller text off it by its own center", () => {
+		// A menu row: the name on a 16px line (baseline 23, centered), then a smaller tag (ascent 10, ink 8 high) on a 13px line set on the same baseline.
+		const small = {
+			hangul: { fontBoundingBoxAscent: 10, actualBoundingBoxAscent: 8, actualBoundingBoxDescent: 0 },
+			latin: { fontBoundingBoxAscent: 10, actualBoundingBoxAscent: 7, actualBoundingBoxDescent: 0 },
+		};
+		const row = (tagTop: number) =>
+			control("이름", 10, {
+				texts: [node("이름", [line(10, 16)]), node("지움", [line(tagTop, 13)], { ink: small })],
+			});
+		expect(check(row(13))).toEqual([]);
+		// A pixel lower it no longer shares the name's baseline, and its own ink is measured.
+		expect(check(row(14))).toEqual([{ check: "center", detail: expect.stringContaining('"지움" ink is') }]);
+	});
+
 	it("UI-T6 ignores a control that is not shown, and text that is hidden or drawn in an svg", () => {
 		expect(check(control("Save", 4, { width: 0, height: 0 }))).toEqual([]);
 		expect(
