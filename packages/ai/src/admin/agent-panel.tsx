@@ -210,12 +210,13 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			else setOpenError(errorText(site, error, t("run.openFailed")));
 		}
 	};
-	const startNew = () => {
+	/** Lets go of the open conversation; `stay` keeps the panel on the past conversations (the open one was deleted there). */
+	const startNew = (stay = false) => {
 		chat.reset();
 		rememberRun("");
 		setPicked(null);
 		setOpenedAt(undefined);
-		setView("chat");
+		if (!stay) setView("chat");
 	};
 	const restored = useRef(false);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: restores once, when the panel appears
@@ -297,7 +298,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 					current={runId}
 					onPick={(id) => void open(id)}
 					onDeleted={(id) => {
-						if (id === runId) startNew();
+						if (id === runId) startNew(true);
 					}}
 				/>
 			</SidePanel>
@@ -316,7 +317,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 					<IconButton label={t("history.label")} side="bottom" onClick={() => setView("history")}>
 						<RecentlyViewed aria-hidden />
 					</IconButton>
-					<IconButton label={t("conversation.new")} side="bottom" onClick={startNew}>
+					<IconButton label={t("conversation.new")} side="bottom" onClick={() => startNew()}>
 						<Add aria-hidden />
 					</IconButton>
 				</>
