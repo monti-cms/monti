@@ -53,6 +53,8 @@ const preview: Preview = {
 		// (`Tier/Name`); Controls, Patterns and Monti hold groups (`Tier/Group/Name`). `storySort` must be written inline, so the parity test reads it here.
 		options: {
 			storySort: {
+				// Inside each place of the order, and for everything it does not name (the screens and their stories), A to Z.
+				method: "alphabetical",
 				order: [
 					"Foundations",
 					["Colors", "Type", "Spacing", "Radius", "Sizes", "Shadows"],
