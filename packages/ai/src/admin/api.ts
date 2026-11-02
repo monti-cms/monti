@@ -1,5 +1,6 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
+import type { RunOutcome } from "../agent/outcome";
 import type { ProgressLine } from "../agent/progress";
 import type { ProposalView } from "../agent/proposal-view";
 import type { AgentModelChoice, AiModelChoice, AiModelInfo, AiSettingsView, UnopenedDays } from "../connection";
@@ -30,6 +31,8 @@ export interface AgentRunView {
 	error?: string;
 	/** When it was last opened from the past conversations. */
 	openedAt?: string;
+	/** What came of it (its latest proposal), when it proposed something. */
+	outcome?: RunOutcome;
 	createdAt: string;
 	updatedAt: string;
 }

@@ -42,7 +42,8 @@ const at = (daysAgo: number, time: string) => {
 	day.setDate(day.getDate() - daysAgo);
 	return `${day.toISOString().slice(0, 10)}T${time}:00`;
 };
-const run = (id: string, title: string, when: string) => ({
+const run = (id: string, title: string, when: string, outcome?: Record<string, unknown>) => ({
+	...(outcome ? { outcome } : {}),
 	id,
 	title,
 	status: "done",

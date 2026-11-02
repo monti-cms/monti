@@ -136,7 +136,24 @@ export function AgentHistory({
 			<ConversationRow
 				key={run.id}
 				title={run.title || t("history.untitled")}
-				meta={when}
+				meta={
+					run.outcome ? (
+						<>
+							{when} ·{" "}
+							{run.outcome.kind === "pending" ? (
+								<Text variant="meta" tone="warning">
+									{t("history.outcome.pending")}
+								</Text>
+							) : run.outcome.kind === "applied" ? (
+								t("history.outcome.applied", { count: run.outcome.count })
+							) : (
+								t(`history.outcome.${run.outcome.kind}`)
+							)}
+						</>
+					) : (
+						when
+					)
+				}
 				current={run.id === current}
 				onClick={() => onPick(run.id)}
 				menu={
