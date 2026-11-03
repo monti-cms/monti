@@ -1,7 +1,6 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import {} from "./page-header";
 import { Separator } from "./separator";
 
 /**
@@ -68,11 +67,11 @@ function LanguageRow({
  */
 function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: React.ReactNode }) {
 	return (
-		<span data-slot="language-source" className="inline-flex items-center">
+		<span data-slot="language-source" className="inline-flex items-center gap-monti-12">
 			<span className="font-semibold text-monti-default text-monti-note">{flag}</span>
 			{children && (
 				<>
-					<Separator orientation="vertical" length="control" flush className="mx-monti-12" />
+					<Separator orientation="vertical" length="control" flush />
 					{children}
 				</>
 			)}
