@@ -89,7 +89,8 @@
 	"files": [
 		"dist",
 		"README.md",
-		"render.css"
+		"render.css",
+		"chart.css"
 	],
 	"publishConfig": {
 		"exports": {

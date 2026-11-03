@@ -1,5 +1,4 @@
-import { type CartesianChartSpec, chartColor, type NormalizedChartSpec } from "./types";
-import type { ChartConfig } from "./ui";
+import { type CartesianChartSpec, type ChartConfig, chartColor, type NormalizedChartSpec } from "./types";
 
 /** Sets the name and color for each series (each slice for pie charts). Colors are theme variables (`--chart-1` to `--chart-5`, see `chartColor`). */
 export const toChartConfig = (spec: NormalizedChartSpec): ChartConfig => {

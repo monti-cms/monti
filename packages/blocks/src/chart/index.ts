@@ -12,7 +12,7 @@ export { chartMessages } from "./messages";
  * plugins: [chart()]
  * ```
  *
- * The editor edits with a code input and a preview. The preview is drawn by this extension with recharts (install the optional dependency `recharts`).
+ * The editor edits with a code input and a preview. The preview is drawn by the same default chart as the public page, with recharts (install the optional dependency `recharts`).
  * A site can replace it via `fencePreviews.chart`. The public page is drawn by this extension's default `Chart` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`). Chart colors are the CSS variables `--chart-1` to `--chart-5` (defaults from this package's `render.css` if unset).
  */

@@ -114,3 +114,6 @@ export type NormalizeChartResult = {
 	spec?: NormalizedChartSpec;
 	errors: ChartRenderError[];
 };
+
+/** Name and color of each series (each slice for a pie chart), keyed by the series key. */
+export type ChartConfig = Record<string, { readonly label?: string; readonly color?: string }>;

@@ -749,7 +749,6 @@ const DRAWING = new Map([
 	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],
-	["blocks/src/chart/ui.tsx", "chart geometry (recharts selectors, aspect ratio, tooltip and legend boxes, swatches)"],
 	["blocks/src/chart/view.tsx", "the public page's chart, styled by render.css"],
 	["blocks/src/code-explorer/view.tsx", "draws the explorer as the public post does"],
 	["blocks/src/collapsible/view.tsx", "draws the collapsible as the public post does"],
