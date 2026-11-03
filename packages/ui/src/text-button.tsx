@@ -14,7 +14,7 @@ import { Spinner } from "./spinner";
  * and, for `underline`, a 1px rule under it say what it is. The design system draws no hover for it; the text turns ink (and the rule too), as an icon button's does.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
  * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, and it is `aria-busy`. A label row shows the
- * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone`).
+ * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
 	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",

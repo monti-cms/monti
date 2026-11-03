@@ -75,7 +75,7 @@ function FormField({
 			role="group"
 			data-slot="field"
 			className={cn(
-				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[tone=proposal]:data-loading:opacity-100 **:data-[tone=proposal]:opacity-0 hover:**:data-[tone=proposal]:opacity-100 focus-within:**:data-[tone=proposal]:opacity-100",
+				"group/field flex w-full flex-col gap-monti-2 *:data-[slot=label-row]:**:data-[tone=proposal]:opacity-0 data-[invalid=true]:text-monti-danger *:data-[slot=label-row]:**:data-[tone=proposal]:data-loading:opacity-100 hover:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100 focus-within:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100",
 				ruled && "border-monti-muted border-b py-monti-10",
 				className,
 			)}
@@ -119,7 +119,7 @@ function FormFieldLabel({
 	);
 	if (changed) {
 		return (
-			<div data-slot="field-label-row" className="flex h-3.5 items-center gap-monti-8">
+			<div data-slot="label-row" className="flex h-3.5 items-center gap-monti-8">
 				{label}
 				<ChangeDot label={changed.label} />
 				{changed.onUndo && (
@@ -141,7 +141,7 @@ function FormFieldLabel({
 	}
 	if (!action) return label;
 	return (
-		<div className="flex items-baseline justify-between gap-monti-8">
+		<div data-slot="label-row" className="flex items-baseline justify-between gap-monti-8">
 			{label}
 			{action}
 		</div>
