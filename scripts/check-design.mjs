@@ -721,10 +721,6 @@ const DRAWING = new Map([
 		"admin/src/editor/inline-bubble.tsx",
 		"the bubble floats at the selection (fixed coordinates, z-index, measured by ref)",
 	],
-	[
-		"admin/src/editor/internal-link-popup.tsx",
-		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
-	],
 	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
 	[
 		"admin/src/editor/tiptap-editor.tsx",

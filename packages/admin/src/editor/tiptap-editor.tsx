@@ -129,7 +129,7 @@ export function CmsEditor({
 	});
 	const linkMenu = useInternalLinkMenu({ site, t, editorRef });
 	const { slash, slashRangeRef, extraCommands, inlineCommands, closeSlash } = slashMenu;
-	const { link, linkItems, isLinkLoading, linkError, closeLink, chooseLink } = linkMenu;
+	const { link, linkItems, isLinkLoading, linkError, closeLink, chooseLink, highlightLink } = linkMenu;
 
 	// The template list is asked for the first time the menu opens.
 	const slashOpen = slash !== null;
@@ -344,6 +344,7 @@ export function CmsEditor({
 					coords={link.coords}
 					selectedIndex={link.index}
 					onSelect={chooseLink}
+					onHighlight={highlightLink}
 					onClose={() => {
 						closeLink();
 						editor.chain().focus().run();

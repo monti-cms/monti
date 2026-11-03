@@ -103,6 +103,8 @@ export function useInternalLinkMenu({
 		isLinkLoading,
 		linkError,
 		closeLink: () => setLink(null),
+		/** The pointer is on the row at this index. */
+		highlightLink: (index: number) => setLink((open) => (open ? { ...open, index } : open)),
 		syncLink,
 		chooseLink,
 		handleKey,
