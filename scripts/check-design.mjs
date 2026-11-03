@@ -682,10 +682,6 @@ const DRAWING = new Map([
 		"the default custom block is drawn in the document: a frame with the component name above its body",
 	],
 	[
-		"admin/src/editor/blocks/block-issues.tsx",
-		"a notice under a block inside the document; block views stay free of UI packages",
-	],
-	[
 		"admin/src/editor/blocks/fence-preview/fence-preview-node-view.tsx",
 		"the preview block is drawn inside the document",
 	],
