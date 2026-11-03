@@ -6,7 +6,16 @@ import { Marker, MemoCardPopover, MemoMessage, MemoThread, ProposalBubble, Propo
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
-import { type ReactNode, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	Fragment,
+	type ReactNode,
+	type SetStateAction,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { createPortal } from "react-dom";
 import type {
 	EditorExtensionContext,
@@ -102,7 +111,10 @@ const sameValue = (a: unknown, b: unknown) => (blank(a) && blank(b)) || JSON.str
 interface SpotRequest {
 	readonly words: string;
 	readonly blockId: string;
+	/** What is being worked on now. */
 	readonly sent?: string;
+	/** What was sent and stopped before an answer, oldest first: it stays in the card, as in the chat. */
+	readonly stopped?: readonly string[];
 }
 
 /**
@@ -280,6 +292,8 @@ export function useProposalMarks(
 
 	// The requests being worked on, by proposal id or selection key: what stops them.
 	const running = useRef(new Map<string, AbortController>());
+	// Requests in a proposal's card that were stopped before an answer, by proposal: they stay in its thread (this page only; the server never had them).
+	const [stoppedAsks, setStoppedAsks] = useState<ReadonlyMap<string, readonly string[]>>(new Map());
 	const stop = (id: string) => running.current.get(id)?.abort();
 
 	const ask = async (entry: AnyEntry, text: string) => {
@@ -294,8 +308,10 @@ export function useProposalMarks(
 			setCard((open) => (open === entry.item.id ? next : open));
 			setCurrent((now) => (now === entry.item.id ? next : now));
 		} catch {
-			// Stopped, or the source says why: what was written goes back in the box.
-			setDraft(text);
+			// Stopped: what was asked stays in the thread, marked stopped. Failed: the source says why, and what was written goes back in the box.
+			if (controller.signal.aborted)
+				setStoppedAsks((before) => new Map([...before, [entry.item.id, [...(before.get(entry.item.id) ?? []), text]]]));
+			else setDraft(text);
 		} finally {
 			running.current.delete(entry.item.id);
 			setAsking((before) => new Map([...before].filter(([id]) => id !== entry.item.id)));
@@ -357,11 +373,14 @@ export function useProposalMarks(
 		dispatchSpot({ spotWorking: { key, working: true } });
 		const controller = new AbortController();
 		running.current.set(spotId(key), controller);
-		// Not answered (stopped, or failed): the words stay marked and what was written goes back in the box.
+		// Not answered: the words stay marked. Stopped, what was asked stays in the card, marked stopped; failed, it goes back in the box.
 		const giveBack = () => {
-			setSpots((before) => new Map([...before, [key, spot]]));
+			const stopped = controller.signal.aborted;
+			setSpots(
+				(before) => new Map([...before, [key, stopped ? { ...spot, stopped: [...(spot.stopped ?? []), text] } : spot]]),
+			);
 			dispatchSpot({ spotWorking: { key, working: false } });
-			setDraft(text);
+			if (!stopped) setDraft(text);
 		};
 		try {
 			// The assistant reads the entry as stored: what the admin wrote last is saved first.
@@ -383,7 +402,8 @@ export function useProposalMarks(
 	// A card of selected words closed before anything was sent leaves no request behind.
 	const closeCard = () => {
 		const key = spotKeyOf(card);
-		if (key && spots.get(key)?.sent === undefined) dropSpot(key);
+		const spot = key ? spots.get(key) : undefined;
+		if (key && spot?.sent === undefined && (spot?.stopped ?? []).length === 0) dropSpot(key);
 		setCard(null);
 	};
 
@@ -433,6 +453,15 @@ export function useProposalMarks(
 		editor?.view.dom.querySelector<HTMLElement>(`[${PROPOSAL_ATTRIBUTE}="${CSS.escape(id)}"]`) ?? null;
 	const openSpotKey = spotKeyOf(card);
 	const openSpot = openSpotKey ? spots.get(openSpotKey) : undefined;
+	/** Requests stopped before an answer: each with the assistant's line saying it stopped. */
+	const stoppedMessages = (texts: readonly string[] | undefined) =>
+		(texts ?? []).map((text, index) => (
+			// biome-ignore lint/suspicious/noArrayIndexKey: stopped requests are only ever added at the end
+			<Fragment key={`stopped:${index}`}>
+				<MemoMessage author={t("me")}>{text}</MemoMessage>
+				<MemoMessage author={t("assistant")} ai time={t("stopped")} />
+			</Fragment>
+		));
 	const spotCard =
 		openSpotKey && openSpot && editor ? (
 			<MemoCardPopover
@@ -442,7 +471,7 @@ export function useProposalMarks(
 					if (!open) closeCard();
 				}}
 				reply={{
-					placeholder: openSpot.sent === undefined ? t("request") : t("reply"),
+					placeholder: openSpot.sent === undefined && !openSpot.stopped?.length ? t("request") : t("reply"),
 					value: draft,
 					onValueChange: setDraft,
 					onSend: (text: string) => void sendSpot(openSpotKey, text),
@@ -453,10 +482,15 @@ export function useProposalMarks(
 						: {}),
 				}}
 			>
-				{openSpot.sent !== undefined && (
+				{(openSpot.sent !== undefined || (openSpot.stopped ?? []).length > 0) && (
 					<MemoThread>
-						<MemoMessage author={t("me")}>{openSpot.sent}</MemoMessage>
-						<MemoMessage author={t("assistant")} ai time={t("working")} />
+						{stoppedMessages(openSpot.stopped)}
+						{openSpot.sent !== undefined && (
+							<>
+								<MemoMessage author={t("me")}>{openSpot.sent}</MemoMessage>
+								<MemoMessage author={t("assistant")} ai time={t("working")} />
+							</>
+						)}
 					</MemoThread>
 				)}
 			</MemoCardPopover>
@@ -563,6 +597,7 @@ export function useProposalMarks(
 								</MemoMessage>
 							))
 						)}
+						{stoppedMessages(stoppedAsks.get(opened.item.id))}
 						{openedAsking !== undefined && (
 							<>
 								<MemoMessage author={t("me")}>{openedAsking}</MemoMessage>

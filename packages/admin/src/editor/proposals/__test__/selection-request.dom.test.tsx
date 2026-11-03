@@ -122,7 +122,7 @@ describe("a request on selected words", () => {
 		expect(spots(editor)[0]?.working).toBe(false);
 	});
 
-	it("ASSIST-E4 stops a request being worked on: the request is cut off, the words stay marked and what was written comes back", async () => {
+	it("ASSIST-E4 stops a request being worked on: the request is cut off, and it stays in the card marked stopped, with the words still marked", async () => {
 		let stopped: AbortSignal | null = null;
 		const onAskAt = vi.fn(
 			(_spot: { words: string; blockId: string }, _text: string, signal: AbortSignal) =>
@@ -138,9 +138,15 @@ describe("a request on selected words", () => {
 		await waitFor(() => expect(onAskAt).toHaveBeenCalled());
 
 		fireEvent.click(screen.getByRole("button", { name: t("stop") }));
-		await waitFor(() => expect(box()).toHaveValue("one sentence"));
+		await waitFor(() => expect(screen.getByRole("dialog")).toHaveTextContent(t("stopped")));
+		expect(screen.getByRole("dialog")).toHaveTextContent("one sentence");
 		expect((stopped as AbortSignal | null)?.aborted).toBe(true);
 		expect(spots(editor)).toMatchObject([{ working: false }]);
-		expect(screen.queryByRole("button", { name: t("stop") })).toBeNull();
+		expect(latest.requests).toBeNull();
+
+		// Closed now, the stopped request is still there: its words stay marked.
+		fireEvent.keyDown(screen.getByRole("textbox", { name: t("reply") }), { key: "Escape" });
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(spots(editor)).toHaveLength(1);
 	});
 });
