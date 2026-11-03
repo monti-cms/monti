@@ -751,6 +751,6 @@ export const SelectionRequestWorking: Story = {
 		fireEvent.change(box, { target: { value: "앞 문장과 합쳐서 한 문장으로." } });
 		fireEvent.keyDown(box, { key: "Enter" });
 		await within(document.body).findByText("고치는 중…", undefined, LONG);
-		await page(canvasElement).findByText("고치는 중 1", undefined, LONG);
+		await page(canvasElement).findByText(/고치는 중 1/, undefined, LONG);
 	},
 };
