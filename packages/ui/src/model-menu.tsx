@@ -19,6 +19,7 @@ import {
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { MENU_EMPTY, MenuShortcut, MenuValue } from "./menu-parts";
+import { SELECT_TRIGGER } from "./select";
 
 /** One model of the menu. `value` is what `onValueChange` gets back (a key and a model, as the caller writes them). */
 export interface ModelMenuItem {
@@ -194,7 +195,7 @@ export function ModelMenuButton({
 }
 
 /**
- * A value picked from a menu, drawn as a field (the quick-task model, a plugin's key): an underline with the value (in mono with `mono`), a quieter
+ * A value picked from a menu, drawn as a field in the look of a closed `SelectTrigger` (the quick-task model, a plugin's key): an underline with the value (in mono with `mono`), a quieter
  * `meta` after it (the key of a model, the last characters of a key), and a caret. Without a value it shows `placeholder`, faint, or in the warning ink
  * with `warning` (a key a plugin still needs). It opens a menu, or a dialog when there is nothing to pick yet.
  */
@@ -204,6 +205,7 @@ export function MenuField({
 	mono = false,
 	placeholder,
 	warning = false,
+	size = "sm",
 	...props
 }: Omit<React.ComponentProps<"button">, "children" | "className" | "style" | "value"> & {
 	value?: ReactNode;
@@ -211,14 +213,17 @@ export function MenuField({
 	mono?: boolean;
 	placeholder?: ReactNode;
 	warning?: boolean;
+	/** As a `SelectTrigger`'s: `sm` (note text, the default: a settings row) or `default` (body text, beside a form's inputs). */
+	size?: "sm" | "default";
 }) {
 	const empty = value === undefined || value === null || value === "";
 	return (
 		<button
 			type="button"
 			data-slot="menu-field"
+			data-size={size}
 			data-warning={(empty && warning) || undefined}
-			className="flex w-full items-center justify-between gap-monti-8 rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-left text-monti-default text-monti-note outline-none transition-colors focus-visible:border-monti-contrast disabled:text-monti-faint aria-expanded:border-monti-contrast data-warning:text-monti-warning"
+			className={cn(SELECT_TRIGGER, "w-full data-warning:text-monti-warning")}
 			{...props}
 		>
 			<span className="flex min-w-0 items-baseline gap-monti-6">

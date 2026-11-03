@@ -120,7 +120,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 ### 코드
 
-`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색)을 받는 버튼이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
+`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
 
 ## 필수 필드 (`.mt-label > .req`)
 
