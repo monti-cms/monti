@@ -11,26 +11,17 @@ if (process.platform !== "linux" && !process.env.MONTI_VISUAL_BASELINES)
 	);
 
 /**
- * Visual regression of the design system's catalog: every story in light and dark, compared with the PNGs under `baselines/`.
- * The baselines are made on the Linux image CI runs in (`pnpm test:visual:docker`), never on a developer's machine: text is drawn
- * differently per operating system, so a shot taken elsewhere would never match.
+ * Visual regression of the design system's catalog and the screens that opt in: each story compared with its PNG under `baselines/`
+ * (`shots.spec.ts`, which compares the images itself, letting a part move by 1px). The baselines are made on the Linux image CI runs in
+ * (`pnpm test:visual:docker`), never on a developer's machine: text is drawn differently per operating system, so a shot taken elsewhere would
+ * never match.
  */
 export default defineConfig({
 	...shared,
 	testMatch: "shots.spec.ts",
-	// `MONTI_VISUAL_BASELINES` points the baselines elsewhere (the Docker run writes them to a mounted folder).
-	snapshotPathTemplate: `${process.env.MONTI_VISUAL_BASELINES ?? path.join(here, "baselines")}/{arg}{ext}`,
+	globalSetup: path.join(here, "clear-changed.ts"),
 	reporter: process.env.CI
 		? [["list"], ["html", { outputFolder: path.join(here, "report"), open: "never" }]]
 		: [["list"]],
 	workers: process.env.CI ? 4 : undefined,
-	expect: {
-		toHaveScreenshot: {
-			animations: "disabled",
-			caret: "hide",
-			// Sub-pixel anti-aliasing noise passes; a moved edge or a changed color does not.
-			maxDiffPixelRatio: 0.002,
-			threshold: 0.2,
-		},
-	},
 });

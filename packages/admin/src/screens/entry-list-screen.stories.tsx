@@ -189,7 +189,6 @@ export const Loading: Story = {
 };
 
 export const LoadFailed: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ list: () => serverError() })),
 };
 
@@ -200,7 +199,6 @@ export const RowsSelected: Story = {
 };
 
 export const RowMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "첫 번째 글");
@@ -216,7 +214,6 @@ const openColumn = async (canvasElement: HTMLElement, name: string) => {
 
 /** Every state of the status column is one of four values, ticked in the status menu, which stays open for the next. */
 export const StatusMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 3 }), "collection=post&status=editing"),
 	play: ({ canvasElement }) => openColumn(canvasElement, "상태"),
 };
@@ -244,33 +241,28 @@ export const StatusMenuHoldsStill: Story = {
 
 /** A relation's menu: a search row, "none", a rule, then the items with how many rows each has. */
 export const TagMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "태그"),
 };
 
 /** The languages, a rule, and the translation state under its own name. */
 export const LanguageMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 3 }), "collection=post&translation=changed"),
 	play: ({ canvasElement }) => openColumn(canvasElement, "언어"),
 };
 
 export const TitleMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "제목"),
 };
 
 /** The sorted column's name is in ink with its arrow; the menu is closed. */
 export const TitleSorted: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&sortField=title&sortDirection=asc"),
 };
 
 /** The date menu: sort, then today, the last 7 and 30 days and a period, one at a time with the ✓. */
 export const UpdatedMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
 };
@@ -284,14 +276,12 @@ const openCalendar = async (canvasElement: HTMLElement) => {
 
 /** "Pick a period": the first day clicked starts it, the second sets it and the calendar stays open showing it. */
 export const UpdatedRangeOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
 /** A period that is on: the calendar shows its two days filled and the days between banded, and the column has its dot. */
 export const UpdatedRangePicked: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
@@ -312,7 +302,6 @@ export const UpdatedRangeSet: Story = {
 
 /** The + at the end of the head row lists only the columns that are off, as plain rows. */
 export const ColumnAddOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		const head = within((await within(canvasElement).findAllByRole("rowgroup"))[0] as HTMLElement);
@@ -332,7 +321,6 @@ export const Filtered: Story = {
 
 /** The footer holds the range, the page size beside it (its menu opens upward) and the pager. */
 export const PageSizeOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "페이지당 행 수" }));
@@ -366,7 +354,6 @@ export const BulkBarHoldsRows: Story = {
 
 /** The bulk bar's ⋯ has the rest of the actions, the trash last in red. */
 export const BulkMoreOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -393,7 +380,6 @@ const tagRows = [
 
 /** 바꾸기 › 태그: a tag every picked row holds is ticked, one only some hold is a bar with how many, the rest are empty; picking one changes all the rows. */
 export const BulkChangeOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ items: tagRows, folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -405,7 +391,6 @@ export const BulkChangeOpen: Story = {
 
 /** The right-click menu of several picked rows: the same actions by the same names, the fields at the second level with no 바꾸기 above them. */
 export const RowMenuSeveralOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ items: tagRows, folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -416,7 +401,6 @@ export const RowMenuSeveralOpen: Story = {
 };
 
 export const BulkFolderMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -427,7 +411,6 @@ export const BulkFolderMenuOpen: Story = {
 
 /** The pager on a later page: first and last, the current page with its neighbours, gaps between. */
 export const PagerOnPageFour: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&page=4"),
 };
 
@@ -460,7 +443,6 @@ const postsWithTranslation = posts.map((post) =>
 
 /** Main board mode 휴지통 확인: a published post asks, and says the English translation goes with it. */
 export const TrashDialog: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ items: postsWithTranslation })),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "첫 번째 글");
@@ -471,7 +453,6 @@ export const TrashDialog: Story = {
 
 /** Main board mode 휴지통으로 옮김: a draft goes at once, and the toast can undo it. */
 export const RowTrashed: Story = {
-	tags: ["visual"],
 	render: listScreen(
 		server({
 			// The bulk API moves the row to the trash.
@@ -504,7 +485,6 @@ const openFolderRowMenu = async (canvasElement: HTMLElement, name: string) => {
 
 /** Main board mode 폴더 우클릭: open, rename, move, and 폴더 지우기 last in red. */
 export const FolderMenuOpen: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await openFolderRowMenu(canvasElement, "뉴스");
@@ -535,7 +515,6 @@ const folderServer = (published: number) => {
 
 /** Main board mode 폴더 지우기 확인: a folder that holds a published post asks, and says how many come down. */
 export const FolderTrashDialog: Story = {
-	tags: ["visual"],
 	render: listScreen(folderServer(1)),
 	play: async ({ canvasElement }) => {
 		await openFolderRowMenu(canvasElement, "뉴스");
@@ -546,7 +525,6 @@ export const FolderTrashDialog: Story = {
 
 /** Main board mode 폴더 지움: a folder of drafts goes at once, and the toast can undo it. */
 export const FolderTrashed: Story = {
-	tags: ["visual"],
 	render: listScreen(folderServer(0)),
 	play: async ({ canvasElement }) => {
 		await openFolderRowMenu(canvasElement, "뉴스");
@@ -557,7 +535,6 @@ export const FolderTrashed: Story = {
 
 /** Main board mode 새 폴더 (flow 5 step 01): "+ 폴더" puts a new row at the top with the name selected, ready to type over. */
 export const NewFolder: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "+ 폴더" }));
@@ -567,7 +544,6 @@ export const NewFolder: Story = {
 
 /** Rename in place (flow 5 step 04): the folder's name becomes the same field, over the same row. */
 export const RenamingFolder: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await openFolderRowMenu(canvasElement, "뉴스");
@@ -584,13 +560,11 @@ export const InFolder: Story = {
 
 /** Main board mode 폴더 안 검색 (flow 5 step 03): the words look in this folder; "모든 폴더" widens it. */
 export const InFolderSearch: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders, total: 2 }), "collection=post&folder=f-news&search=리액트"),
 };
 
 /** The search widened to every folder. */
 export const InFolderSearchAllFolders: Story = {
-	tags: ["visual"],
 	render: listScreen(server({ folders, total: 4 }), "collection=post&folder=f-news&search=리액트&scope=all"),
 };
 
@@ -656,7 +630,6 @@ export const ItemCollection: Story = { render: tagScreen(tagServer()) };
 
 /** An item collection's bar: no publish or archive, only what an item can have done. It replaces the column names like any list's. */
 export const ItemRowsSelected: Story = {
-	tags: ["visual"],
 	render: tagScreen(tagServer()),
 	play: async ({ canvasElement }) => {
 		const c = within(canvasElement);

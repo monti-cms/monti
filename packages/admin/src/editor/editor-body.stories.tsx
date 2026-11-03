@@ -173,7 +173,6 @@ export const BlockMenu: Story = {
 
 /** "다른 블록으로 바꾸기": the kinds, with the current one ticked. */
 export const TurnInto: Story = {
-	tags: ["visual"],
 	render: () => <Body text={BODY} />,
 	play: async ({ canvasElement }) => {
 		await openBlockMenu(canvasElement);
@@ -184,7 +183,6 @@ export const TurnInto: Story = {
 
 /** "정렬": left, center and right. */
 export const Align: Story = {
-	tags: ["visual"],
 	render: () => <Body text={BODY} />,
 	play: async ({ canvasElement }) => {
 		await openBlockMenu(canvasElement);

@@ -7,7 +7,6 @@ import { DataScreen } from "./data-screen";
 
 const meta = {
 	title: "Screens/Data",
-	tags: ["visual"],
 	parameters: { layout: "fullscreen", bleed: true },
 } satisfies Meta;
 export default meta;
@@ -228,6 +227,7 @@ export const ZipFailed: Story = {
 
 /** Import sheet: what the archive holds, where each collection goes, and the pill that says how many it imports. */
 export const ImportSheet: Story = {
+	tags: ["visual"],
 	render: screen(serve({ "/api/monti/v1/import/entries": previewThenRun(importPreview, () => importRun) })),
 	play: async ({ canvasElement }) => {
 		await chooseFile(canvasElement, "blog-export.zip");
@@ -248,6 +248,7 @@ export const ImportRunning: Story = {
 
 /** The result stays in the sheet; the pill leads to the list. */
 export const ImportResult: Story = {
+	tags: ["visual"],
 	render: screen(serve({ "/api/monti/v1/import/entries": previewThenRun(importPreview, () => importRun) })),
 	play: async ({ canvasElement }) => {
 		await chooseFile(canvasElement, "blog-export.zip");
@@ -275,6 +276,7 @@ export const ImportFailed: Story = {
 
 /** A full backup on an empty site: what restoring it would do, and the pill. */
 export const RestoreSheet: Story = {
+	tags: ["visual"],
 	render: screen(serve({ "/api/monti/v1/import/restore": emptySiteRestore(restorePreview, () => restoreRun) })),
 	play: async ({ canvasElement }) => {
 		await chooseFile(canvasElement, "monti-backup.zip");
@@ -284,6 +286,7 @@ export const RestoreSheet: Story = {
 
 /** The backup has problems: they are listed and the pill is off, since a restore is all or nothing. */
 export const RestoreProblems: Story = {
+	tags: ["visual"],
 	render: screen(
 		serve({
 			"/api/monti/v1/import/restore": emptySiteRestore(

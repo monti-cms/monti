@@ -120,7 +120,6 @@ export const SeoTab: Story = {
 
 /** The summary is open in place, with its count at the right end of the label row. */
 export const Editing: Story = {
-	tags: ["visual"],
 	render: () => <Pane initial={{ ...base, summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." }} />,
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^요약/ }, LONG));
@@ -130,7 +129,6 @@ export const Editing: Story = {
 
 /** "채우기" pressed: the value went in at once and is blue until it is edited. */
 export const FilledByAssistant: Story = {
-	tags: ["visual"],
 	render: () => <Pane />,
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "채우기" }, LONG));

@@ -1,5 +1,5 @@
-# Automated checks. On every push: lint, type check, unused code and package build; tests (Postgres service); and the example app bundle check. The
-# design system's visual regression runs only on a push that asks for it (see the `visual` job).
+# Automated checks. On every push: lint, type check, unused code and package build; tests (Postgres service); the example app bundle check; and
+# the design system's visual regression (see the `visual` job).
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -150,17 +150,19 @@ jobs:
           name: flows-report
           path: flows/test-results
 
-  # The design system's catalog in light and dark, compared with the shots under packages/ui/visual/baselines. It runs in Playwright's own Linux
-  # image, at the version of the installed @playwright/test (a test checks the tag), because the baselines are made on that image and no other:
-  # text is drawn differently per operating system.
-  # Off by default until monti-cms/monti#334 makes it stable (a 1px shift fails a story, and the audit flags icons that sit right): it runs only
-  # when the last commit of the push has `[visual]` in its message.
+  # The design system's catalog (light and dark) and the screens that opt in (light), compared with the shots under packages/ui/visual/baselines.
+  # It runs in Playwright's own Linux image, at the version of the installed @playwright/test (a test checks the tag), because the baselines are
+  # made on that image and no other: text is drawn differently per operating system. Split in four, each part with its share of the shots and
+  # of the audit.
   visual:
-    name: visual regression
-    if: contains(github.event.head_commit.message, '[visual]')
+    name: visual regression (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -170,45 +172,71 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @monti-cms/ui build-storybook
-      - name: Look for the baselines
-        id: baselines
-        run: |
-          if [ -n "$(find packages/ui/visual/baselines -name '*.png' -print -quit 2>/dev/null)" ]; then
-            echo "exist=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exist=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=No visual baselines yet::Nothing was compared. The shots of this run are in the visual-baselines artifact; commit them to packages/ui/visual/baselines."
-          fi
+      # A story that differs leaves its new shot and a line of how much differs in packages/ui/visual/changed; the `visual baselines` job puts
+      # the full set of new baselines together from the four parts.
       - name: Compare with the baselines
-        if: steps.baselines.outputs.exist == 'true'
-        run: pnpm --filter @monti-cms/ui visual:run
-      # After a failed comparison, or when there are no baselines yet: the same run again, writing the shots. If the change is meant, the
-      # artifact is what goes into packages/ui/visual/baselines (download it and replace the folder). It keeps its own output folder and
-      # reporter: Playwright empties both at the start of a run, and the failed comparison's diffs and report must survive for the upload below.
-      - name: Make the baselines this code would have
-        if: failure() || steps.baselines.outputs.exist == 'false'
-        continue-on-error: true
-        run: pnpm --filter @monti-cms/ui visual:run --update-snapshots --reporter=list --output="$RUNNER_TEMP/visual-update"
-        env:
-          MONTI_VISUAL_BASELINES: ${{ github.workspace }}/visual-baselines
-      - name: Upload the new baselines
-        if: failure() || steps.baselines.outputs.exist == 'false'
+        run: pnpm --filter @monti-cms/ui visual:run --shard=${{ matrix.shard }}/4
+      # The checks over every story (overflow, clipped text, type sizes, an icon off its text's line), with no image compared. They gate the
+      # job whether or not the comparison above passed.
+      - name: Audit every story
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @monti-cms/ui visual:audit --shard=${{ matrix.shard }}/4
+      - name: Upload the changed shots
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: visual-baselines
-          path: visual-baselines
+          name: visual-changed-${{ matrix.shard }}
+          path: packages/ui/visual/changed
           if-no-files-found: ignore
       - name: Upload the differences
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-diff
+          name: visual-diff-${{ matrix.shard }}
           path: |
             packages/ui/visual/test-results
             packages/ui/visual/report
           if-no-files-found: ignore
-      # The checks over every story (overflow, clipped text, type sizes, an icon off its text's line), with no image compared. They need no
-      # baselines, so they gate the job whether or not any exist yet, and whether or not the comparison above passed.
-      - name: Audit every story
-        if: ${{ !cancelled() }}
-        run: pnpm --filter @monti-cms/ui visual:audit
+
+  # After a part failed: the baselines this code would have, put together without shooting again (a changed shot where a story differs, the
+  # committed one elsewhere), and a table of what differs and by how much on the run's summary page. If the change is meant, the
+  # `visual-baselines` artifact is what goes into packages/ui/visual/baselines (packages/ui/README.md says how).
+  visual-baselines:
+    name: visual baselines
+    needs: visual
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: packages/ui/visual/baselines
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: visual-changed-*
+          path: changed
+          merge-multiple: true
+      - name: Put the baselines together
+        id: baselines
+        run: |
+          if [ -z "$(find changed -name '*.png' -print -quit 2>/dev/null)" ]; then
+            echo "No shot differs: the failure is elsewhere (the audit, or a story that did not open)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "| Theme | Story | Difference |"
+            echo "| --- | --- | --- |"
+            sort changed/report-*.tsv | awk -F '\t' '{ printf "| %s | %s | %s |\n", $1, $2, $3 }'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat changed/shots-*.txt | while read -r name; do
+            from="changed/$name"
+            [ -f "$from" ] || from="packages/ui/visual/baselines/$name"
+            mkdir -p "visual-baselines/$(dirname "$name")"
+            cp "$from" "visual-baselines/$name"
+          done
+          echo "made=true" >> "$GITHUB_OUTPUT"
+      - name: Upload the new baselines
+        if: steps.baselines.outputs.made == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines
+          path: visual-baselines

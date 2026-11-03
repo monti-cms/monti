@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { Finding } from "./checks";
+import { THEMES, type Theme } from "./page";
 
 /** What a story is in Storybook's `index.json`. */
 export interface StoryEntry {
@@ -33,6 +34,13 @@ export const isShot = (entry: StoryEntry): boolean =>
 	entry.type === "story" &&
 	!entry.tags.includes(OPT_OUT_TAG) &&
 	(entry.importPath.startsWith("./src/") || entry.tags.includes(OPT_IN_TAG));
+
+/**
+ * The themes a story is shot in: the catalog in light and dark, a screen in light only. Dark changes only the color tokens, and the catalog shows
+ * every part in it, so a screen shot in dark would only repeat what the catalog already compares.
+ */
+export const themesOf = (entry: StoryEntry): readonly Theme[] =>
+	entry.importPath.startsWith("./src/") ? THEMES : ["light"];
 
 /** The checks a story lets through, by its tags (see {@link ALLOW_CLIPPED_TAG}). */
 export const allowedChecks = (entry: StoryEntry): readonly Finding["check"][] => [

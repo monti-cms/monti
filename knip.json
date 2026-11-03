@@ -12,7 +12,7 @@
 			]
 		},
 		"packages/ui": {
-			"entry": ["visual/playwright.config.ts", "visual/audit.config.ts", "visual/*.spec.ts"]
+			"entry": ["visual/playwright.config.ts", "visual/audit.config.ts", "visual/clear-changed.ts", "visual/*.spec.ts"]
 		},
 		"packages/admin": {
 			"entry": [

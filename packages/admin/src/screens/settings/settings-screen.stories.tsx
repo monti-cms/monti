@@ -22,12 +22,11 @@ import {
 
 /**
  * The Settings page, one story per stage of the Settings and Languages boards of the canvas (flow 11): the site tab, the languages tab and the admin tab,
- * the page while it loads and when it cannot, and the lock variants. Every story is shot by the visual checks.
+ * the page while it loads and when it cannot, and the lock variants. The stories that change the layout are shot by the visual checks.
  */
 const meta = {
 	title: "Screens/Settings",
 	parameters: { layout: "fullscreen", bleed: true },
-	tags: ["visual"],
 } satisfies Meta;
 export default meta;
 
@@ -42,7 +41,7 @@ const editSite: Play = async ({ canvasElement }) => {
 };
 
 /** Stage 기본: the site tab with two changes. */
-export const Site = story(server(), "site", undefined, { play: editSite });
+export const Site = { ...story(server(), "site", undefined, { play: editSite }), tags: ["visual"] };
 
 /** Stage 호스트 추가: "+ 호스트" adds an empty row with the caret in it. */
 export const SiteHostAdded = story(server(), "site", undefined, {
@@ -87,7 +86,7 @@ export const SiteLeaveConfirm = story(server(), "site", undefined, {
 });
 
 /** Stage 읽기 전용: the lock beside the titles of the sections that cannot be changed, no save group. */
-export const SiteReadOnly = story(server({ state: readOnlyState() }), "site");
+export const SiteReadOnly = { ...story(server({ state: readOnlyState() }), "site"), tags: ["visual"] };
 
 // ----- the languages tab (board Locales) -----
 
@@ -98,7 +97,7 @@ const openFinder = async (canvasElement: HTMLElement) => {
 };
 
 /** Stage 기본: the source language on top with 원문 and 바꾸기, the others with a handle and a ×. */
-export const Locales = story(server(), "locales");
+export const Locales = { ...story(server(), "locales"), tags: ["visual"] };
 
 /** Stage 언어 찾기: "+ 언어 추가" opens the finder; "zh" lists the variants, the last row is 직접 입력. */
 export const LocalesFind = story(server(), "locales", undefined, {
@@ -173,24 +172,27 @@ const removeEnglish = previewOf({
 });
 
 /** Stage 빼기 검토: a language with translations taken out; the review sheet asks what happens to them. */
-export const LocalesRemoveReview = story(server({ preview: removeEnglish }), "locales", undefined, {
-	play: async ({ canvasElement }) => {
-		const row = await languages(canvasElement).findByTestId("locale-en");
-		await userEvent.click(within(row).getByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
-		const sheet = await openReview(canvasElement);
-		await within(sheet).findByTestId("impact-locale_removed:en");
-		expect(within(sheet).getByText(tReview("note.locale"))).toBeTruthy();
-	},
-});
+export const LocalesRemoveReview = {
+	...story(server({ preview: removeEnglish }), "locales", undefined, {
+		play: async ({ canvasElement }) => {
+			const row = await languages(canvasElement).findByTestId("locale-en");
+			await userEvent.click(within(row).getByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
+			const sheet = await openReview(canvasElement);
+			await within(sheet).findByTestId("impact-locale_removed:en");
+			expect(within(sheet).getByText(tReview("note.locale"))).toBeTruthy();
+		},
+	}),
+	tags: ["visual"],
+};
 
 /** Stage 읽기 전용: no handles, no ×, no 바꾸기, no "+ 언어 추가"; a lock beside the title. */
 export const LocalesReadOnly = story(server({ state: readOnlyState() }), "locales");
 
 // ----- the admin tab -----
 
-export const Admin = story(server(), "admin");
+export const Admin = { ...story(server(), "admin"), tags: ["visual"] };
 
 // ----- while it loads and when it cannot -----
 
-export const Loading = story(() => "pending", "collections");
+export const Loading = { ...story(() => "pending", "collections"), tags: ["visual"] };
 export const LoadFailed = story(() => answer(500), "collections");

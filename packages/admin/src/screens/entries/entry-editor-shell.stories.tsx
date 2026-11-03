@@ -234,7 +234,6 @@ export const PublishedLoaded: Story = { tags: ["visual"], render: screen(() => s
 
 /** Published, then changed: the status reads "수정 중" and the publish button is ready again. */
 export const PublishedEditing: Story = {
-	tags: ["visual"],
 	render: screen(() => server({ entry: editing })),
 };
 
@@ -250,7 +249,6 @@ export const NotFound: Story = {
 
 /** The save button is in the header all the time; after a change the status bar says there is something to save. */
 export const UnsavedChanges: Story = {
-	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
@@ -294,7 +292,6 @@ const conflicted = async (canvasElement: HTMLElement) => {
 };
 
 export const SaveConflict: Story = {
-	tags: ["visual"],
 	render: screen(conflictServer),
 	play: async ({ canvasElement }) => conflicted(canvasElement),
 };
@@ -311,7 +308,6 @@ export const CompareConflict: Story = {
 };
 
 export const PublishMenuOpen: Story = {
-	tags: ["visual"],
 	render: screen(() => server({ entry: editing })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행 방식" }, LONG));
@@ -326,7 +322,6 @@ const sourcePlugin: EditorExtension = () => ({
 
 /** The header's ⋯ menu: copy, archive and export, then the document tools (a plugin's row, the body width, the theme), and the trash at the bottom (board `moreMenu` "열림"). */
 export const MoreMenuOpen: Story = {
-	tags: ["visual"],
 	render: () => (
 		<PageFrame api={server()} pathname="/admin/entries/entry-1/edit">
 			<AdminComponentsProvider components={{ editorExtensions: [sourcePlugin] }}>
@@ -342,7 +337,6 @@ export const MoreMenuOpen: Story = {
 
 /** "본문 폭 ▸" open at the side of the ⋯ menu, the chosen step ticked (board `moreMenu` "본문 폭"). */
 export const MoreMenuWidth: Story = {
-	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
@@ -355,7 +349,6 @@ export const MoreMenuWidth: Story = {
 
 /** The publish check finds missing required fields: the status bar counts them. */
 export const PublishNotReady: Story = {
-	tags: ["visual"],
 	render: screen(() => server({ issues: [missingTitle, missingSummary] })),
 	play: async ({ canvasElement }) => {
 		await page(canvasElement).findByRole("button", { name: /^할 일 2/ }, LONG);
@@ -373,7 +366,6 @@ export const PublishReadinessOpen: Story = {
 
 /** Publishing is refused by the server: the to-do list opens by itself. */
 export const PublishBlocked: Story = {
-	tags: ["visual"],
 	render: screen(() =>
 		server({
 			issues: [],
@@ -388,7 +380,6 @@ export const PublishBlocked: Story = {
 
 /** A spell-check plugin fills the status bar's plugin cell with its findings; its list opens from the cell. */
 export const PluginCellOpen: Story = {
-	tags: ["visual"],
 	render: screenWith(() => server({ entry: withTranslations })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: /^맞춤법 2/ }, LONG));
@@ -415,7 +406,6 @@ export const PluginCellInTranslation: Story = {
 
 /** An English translation: the spell check does not cover English, so the plugin leaves its cell out and the bar has only the core cells. */
 export const PluginCellLeftOut: Story = {
-	tags: ["visual"],
 	render: screenWith(
 		() =>
 			server({
@@ -462,7 +452,6 @@ export const TranslationEditing: Story = {
 
 /** EditorTranslate board stage 번역 지우기: in a translation the header's ⋯ ends with 이 번역 휴지통으로 and the language that stays. */
 export const TranslationTrashMenu: Story = {
-	tags: ["visual"],
 	render: screen(
 		() =>
 			server({
@@ -479,7 +468,6 @@ export const TranslationTrashMenu: Story = {
 
 /** A published post asks before it goes to the trash (a draft goes at once). */
 export const DeleteConfirm: Story = {
-	tags: ["visual"],
 	render: screen(() => server({ entry: published })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
@@ -557,7 +545,6 @@ const libraryApi = (path: string) => {
 
 /** The cover image field's picker (board ImageInsert "대표 이미지"): titled with the field, "고르기", opened in the folder of the image the field holds, which is marked. */
 export const ImagePicker: Story = {
-	tags: ["visual"],
 	render: () => (
 		<PageFrame
 			api={server({

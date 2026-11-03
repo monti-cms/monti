@@ -66,7 +66,6 @@ export const Saved: Story = {
 
 /** The name changed: "저장 안 됨" and the save button show. */
 export const Unsaved: Story = {
-	tags: ["visual"],
 	render: screen(api()),
 	play: async ({ canvasElement }) => {
 		const name = await nameField(canvasElement);

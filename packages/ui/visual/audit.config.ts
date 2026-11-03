@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
 import { shared } from "./shared";
 
@@ -8,6 +9,8 @@ import { shared } from "./shared";
 export default defineConfig({
 	...shared,
 	testMatch: "audit.spec.ts",
+	// Its own folder: Playwright empties the output folder at the start of a run, and the comparison's diffs before it must survive for upload.
+	outputDir: path.join(import.meta.dirname, "test-results-audit"),
 	reporter: [["list"]],
 	workers: process.env.CI ? 4 : undefined,
 });

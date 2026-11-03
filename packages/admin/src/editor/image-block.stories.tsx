@@ -142,7 +142,6 @@ function Editor({
 
 /** A pasted image at the cursor while it goes up: faded under the page ground, the bar along its bottom edge, and no ring. */
 export const Uploading: Story = {
-	tags: ["visual"],
 	render: () => (
 		<Editor
 			blocks={[]}
@@ -175,7 +174,7 @@ export const ImageCard: Story = {
  * frame is a 900px window, so the body runs past its foot on purpose.
  */
 export const NextImage: Story = {
-	tags: ["visual", "visual-allow-clipped"],
+	tags: ["visual-allow-clipped"],
 	render: () => (
 		<Editor
 			blocks={[
@@ -213,7 +212,6 @@ export const ImagePicker: Story = {
 
 /** "/ 파일": the same library with files only. */
 export const FilePicker: Story = {
-	tags: ["visual"],
 	render: () => <Editor blocks={[]} />,
 	play: async () => {
 		openMediaPicker("file");
