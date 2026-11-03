@@ -79,3 +79,34 @@ export const ReviewSheet: Story = {
 		</Box>
 	),
 };
+
+/** A plugin's key places: the plugin's name (and the place, when it has several), its code in mono under it, the key field at the end. */
+export const PluginKeys: Story = {
+	render: () => (
+		<ListSection title="플러그인" count={3} countTone="warning">
+			<ListSectionRow
+				title="바른 맞춤법"
+				meta="bareun"
+				metaTone="subtle"
+				labelId="slot-bareun"
+				control={<MenuField aria-labelledby="slot-bareun" placeholder="키 없음" warning />}
+			/>
+			<ListSectionRow
+				title="Algolia 검색"
+				detail="검색 키"
+				meta="algolia"
+				metaTone="subtle"
+				labelId="slot-search"
+				control={<MenuField aria-labelledby="slot-search" placeholder="키 없음" warning />}
+			/>
+			<ListSectionRow
+				title="Algolia 검색"
+				detail="관리 키"
+				meta="algolia"
+				metaTone="subtle"
+				labelId="slot-admin"
+				control={<MenuField aria-labelledby="slot-admin" value="Algolia" meta="··· 4410" />}
+			/>
+		</ListSection>
+	),
+};

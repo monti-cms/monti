@@ -94,9 +94,9 @@
 | "이미지" | `FormField`, 문장 `Text`, "바깥 이미지 6개도 옮기기" `Option spread` + `Switch` |  |
 | "알아 두세요" | `FormField`, 문장 `Text`(컴포넌트 이름은 `mono`) |  |
 | 가져온 뒤 | `Text variant="heading"` "21편을 가져왔어요.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
-| 복원 요약 | `DescriptionList` + `DescriptionItem`(이름 칸 120px): "글" · "폴더" · "미디어" · "주소" · "템플릿" | 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). `DescriptionList`는 이름 칸이 76px이고 값이 흐리다. 120px 이름 칸과 잉크 값은 아직 없다. @monti-cms/ui에서 먼저 만든다. |
-| 복원 막힘 문제 목록 | 문장 하나 "문제가 2개 있어서 복원하지 않아요.", 그 아래 문제마다 한 행: 이름 줄("이 사이트에 없는 필드 `series`", 이름은 mono), 그 아래 주황 한 줄("글 14편이 이 값을 가지고 있어요") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 이름 줄 아래 경고 한 줄을 다는 행 부품이 아직 없다(`MapRow`의 경고 줄과 같은 모양이지만 고르기가 없다). @monti-cms/ui에서 먼저 만든다. |
-| 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…", 막히면 `disabled`). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
+| 복원 요약 | `DescriptionList variant="summary"` + `DescriptionItem`: "글" · "폴더" · "미디어" · "주소" · "템플릿" | 이름 칸 120px, 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). |
+| 복원 막힘 문제 목록 | 문장 하나 `Text` "문제가 2개 있어서 복원하지 않아요.", 그 아래 문제마다 `IssueRow`(`name` "이 사이트에 없는 필드", `code` "series", `warning` "글 14편이 이 값을 가지고 있어요") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 고르기는 없다. 고치는 곳은 가져오기 흐름이다(발의 "가져오기로 열기"). 그 길을 설명하는 문장은 두지 않는다. |
+| 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…"). 복원이 막히면 알약은 "가져오기로 열기"이고 누를 수 있다. 같은 파일을 가져오기 흐름으로 연다(없는 필드는 필드 메뉴로 맞추고, 겹치는 주소에는 "-2"가 붙는다). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
 
 ### 흐름 9 · 데이터
 
@@ -114,7 +114,7 @@
 | "가져오는 중" | 9.08 | 시트 `SheetHeader closable={false}`, 알약 `loading` "가져오는 중 12/21" |  |
 | "가져옴" | 9.09 | 시트: 결과 문장, 주소를 바꾼 글 목록, 발 "되돌리기" · "목록에서 보기" |  |
 | "복원" | 9.12 | 시트 "있던 그대로 복원": 백업 요약, 알약 "복원". 사이드바 `fresh`(빈 사이트) |  |
-| "복원 막힘" | 9.13 | 시트: 문제 목록, 알약 `disabled` |  |
+| "복원 막힘" | 9.13 | 시트: 문장과 문제 목록(`IssueRow`), 알약 "가져오기로 열기" | Patterns/List/MapRow |
 | "복원 중" | 9.14 | 시트 `SheetHeader closable={false}`, 알약 `loading` "복원하는 중…" |  |
 | "복원함" | 9.15 | `toast` "글 148편을 복원했어요"와 `action` "목록 보기" | Controls/Status/Toast |
 
@@ -134,7 +134,7 @@
 | 표 묶음 "저장된 키" · "모델" · "플러그인" | `ListSection`(`title`, `count`, 기다리는 키가 있으면 `countTone="warning"`) | 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
 | 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
 | "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
-| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "· 검색 키", `meta` 플러그인 코드 `metaTone="subtle"`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 플러그인 코드는 mono다. `ListSectionRow`에 mono `meta`가 아직 없다. @monti-cms/ui에서 먼저 만든다. 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
+| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", `meta` 플러그인 코드 `metaTone="subtle"`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 플러그인 코드는 mono다(`ListSectionRow`의 `meta`는 늘 mono 12다). 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
 
 스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 

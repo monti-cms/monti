@@ -97,7 +97,7 @@ export { ConversationGroupLabel, ConversationList, ConversationRow, Conversation
 export { Count } from "./count";
 export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
-export { DescriptionItem, DescriptionList } from "./description-list";
+export { CountRow, DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,
 	DialogClose,
@@ -171,7 +171,7 @@ export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
 export { ListSection, ListSectionRow } from "./list-section";
 export { LockMark } from "./lock-mark";
-export { MapRow } from "./map-row";
+export { IssueRow, MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";

@@ -1,5 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MapRow, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Stack } from "./index";
+import {
+	Box,
+	IssueRow,
+	MapRow,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Stack,
+	Text,
+} from "./index";
 
 /** A row of "match the fields" in an import: the key from the file, an arrow, the field it goes into, and an example or a warning under it. */
 const meta = {
@@ -47,5 +58,20 @@ export const Rows: Story = {
 				{pick("skip")}
 			</MapRow>
 		</Stack>
+	),
+};
+
+/** What keeps a backup from being restored: one row per problem, its name with the identifier in mono, what it touches in the warning color. */
+export const Issues: Story = {
+	render: () => (
+		<Box width="sheet">
+			<Stack gap={16}>
+				<Text>문제가 2개 있어서 복원하지 않아요.</Text>
+				<div>
+					<IssueRow name="이 사이트에 없는 필드" code="series" warning="글 14편이 이 값을 가지고 있어요" />
+					<IssueRow name="겹치는 주소" code="/about" warning="두 글이 같은 주소를 써요" />
+				</div>
+			</Stack>
+		</Box>
 	),
 };

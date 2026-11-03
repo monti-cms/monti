@@ -39,7 +39,7 @@
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "고른 글 2개 내보내기") | 입력은 두 가지 고르기뿐이라 시트가 아니라 창이다. |
 | "보관 파일의 용도" | `FormFieldSet` + `FormFieldLegend variant="field"`, `RadioGroup` + `RadioItem`(`label` "백업용" · "공개용", `description` "초안 포함" · "발행본만") | 하나를 고른다. 처음에는 백업용. |
 | "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="meta" tone="subtle"` ".mdx". |
-| "담기는 것" | `Label`, 그 아래 줄마다 왼쪽 이름, 오른쪽 개수 `Text variant="meta"` | "글과 분류 2", "번역 1", "폴더 · 주소 · 미디어 정보(파일 제외) 1 · 3 · 4". 이름과 개수를 양끝에 두는 줄 부품이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| "담기는 것" | `Label`, 그 아래 종류마다 `CountRow`(`label` 왼쪽 이름, `count` 오른쪽 mono 개수) | 종류마다 한 줄이다: "글 1", "분류 1", "번역 1", "폴더 1", "주소 3", "미디어 정보(파일 제외) 4". 두 종류를 한 줄에 더하지 않는다(보드의 "글과 분류 2" 대신, 2026-11-04 소유자 결정). |
 | "취소" · "내보내기" | `DialogFooter`: `DialogClose`(`TextButton`) "취소", `Button variant="primary"` "내보내기"(만드는 동안 `loading`) | 만들면 파일을 받고 창이 닫힌다. |
 
 ## 메뉴

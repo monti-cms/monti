@@ -70,7 +70,7 @@
 
 ### 코드
 
-`DescriptionList`와 `DescriptionItem`: 값이 한 줄로 맞도록 레이블 열은 폭 76px이다. 긴 값은 줄을 바꾼다. 레이블은 조용하고 값은 한 단계 진하며, 둘 다 보통 굵기다.
+`DescriptionList`와 `DescriptionItem`: 값이 한 줄로 맞도록 레이블 열은 폭 76px이다. 긴 값은 줄을 바꾼다. 레이블은 조용하고 값은 한 단계 진하며, 둘 다 보통 굵기다. `variant="summary"`는 무엇이 얼마나 담겼는지 세는 요약이다(복원 미리보기). 레이블 열은 120px, 값은 잉크이고, 값 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`를 둘 수 있다. `CountRow`(`label`, `count`)는 종류마다 개수를 세는 한 줄이다(내보내기의 "담기는 것"). 왼쪽에 종류, 오른쪽 끝에 mono 개수, 위아래 6px. 두 종류를 한 줄에 더하지 않는다.
 
 ## 팝오버
 
