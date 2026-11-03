@@ -1,0 +1,548 @@
+{
+	"root": "screen",
+	"elements": {
+		"screen": {
+			"type": "Stack",
+			"props": {
+				"gap": 32,
+				"minHeight": "screen",
+				"paddingTop": 48,
+				"paddingBottom": 24,
+				"paddingX": 16,
+				"background": "page"
+			},
+			"children": ["center", "version"]
+		},
+		"center": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"align": "center",
+				"justify": "center"
+			},
+			"children": ["frame"]
+		},
+		"frame": {
+			"type": "Box",
+			"props": {
+				"width": "full",
+				"maxWidth": "side-panel"
+			},
+			"children": ["column"]
+		},
+		"column": {
+			"type": "Stack",
+			"props": {
+				"gap": 32
+			},
+			"children": ["head", "body"]
+		},
+		"head": {
+			"type": "Stack",
+			"props": {
+				"gap": 20
+			},
+			"children": ["site", "rule"]
+		},
+		"site": {
+			"type": "Heading",
+			"props": {
+				"as": "h1",
+				"variant": "page",
+				"text": {
+					"$state": "/siteName"
+				}
+			},
+			"children": []
+		},
+		"rule": {
+			"type": "Box",
+			"props": {
+				"border": "bottom-contrast"
+			},
+			"children": []
+		},
+		"body": {
+			"type": "Stack",
+			"props": {
+				"gap": 24
+			},
+			"children": ["title", "sign-in", "first-admin", "closed"]
+		},
+		"title": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "title",
+				"text": {
+					"$state": "/title"
+				}
+			},
+			"visible": {
+				"$state": "/title"
+			},
+			"children": []
+		},
+		"sign-in": {
+			"type": "Stack",
+			"props": {
+				"gap": 12
+			},
+			"visible": {
+				"$state": "/mode",
+				"eq": "sign-in"
+			},
+			"children": ["sign-in-ways", "form-error", "denied"]
+		},
+		"sign-in-ways": {
+			"type": "Stack",
+			"props": {
+				"gap": 20
+			},
+			"children": ["password-form", "or", "buttons"]
+		},
+		"password-form": {
+			"type": "Form",
+			"props": {
+				"method": "post",
+				"action": {
+					"$state": "/password/action"
+				}
+			},
+			"visible": {
+				"$state": "/password/action"
+			},
+			"children": ["password-column"]
+		},
+		"password-column": {
+			"type": "Stack",
+			"props": {
+				"gap": 32
+			},
+			"children": ["password-fields", "sign-in-submit"]
+		},
+		"password-fields": {
+			"type": "Stack",
+			"props": {
+				"gap": 24
+			},
+			"children": ["email-field", "password-field"]
+		},
+		"sign-in-submit": {
+			"type": "Button",
+			"props": {
+				"type": "submit",
+				"variant": "primary",
+				"width": "full",
+				"disabled": {
+					"$state": "/locked"
+				},
+				"text": {
+					"$state": "/text/signInSubmit"
+				}
+			},
+			"children": []
+		},
+		"or": {
+			"type": "Separator",
+			"props": {
+				"label": {
+					"$state": "/text/or"
+				}
+			},
+			"visible": [
+				{
+					"$state": "/password/action"
+				},
+				{
+					"$state": "/hasButtons"
+				}
+			],
+			"children": []
+		},
+		"buttons": {
+			"type": "Stack",
+			"props": {
+				"gap": 8
+			},
+			"visible": {
+				"$state": "/hasButtons"
+			},
+			"repeat": {
+				"statePath": "/buttons",
+				"key": "id"
+			},
+			"children": ["button-form"]
+		},
+		"button-form": {
+			"type": "Form",
+			"props": {
+				"method": "post",
+				"action": {
+					"$item": "action"
+				}
+			},
+			"children": ["button"]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"type": "submit",
+				"variant": {
+					"$cond": {
+						"$item": "primary"
+					},
+					"$then": "primary",
+					"$else": "secondary"
+				},
+				"width": "full",
+				"icon": {
+					"$item": "icon"
+				},
+				"text": {
+					"$item": "label"
+				}
+			},
+			"children": []
+		},
+		"form-error": {
+			"type": "FormFieldError",
+			"props": {
+				"text": {
+					"$state": "/errors/form"
+				}
+			},
+			"visible": {
+				"$state": "/errors/form"
+			},
+			"children": []
+		},
+		"denied": {
+			"type": "Stack",
+			"props": {
+				"gap": 8,
+				"align": "start"
+			},
+			"visible": {
+				"$state": "/denied"
+			},
+			"children": ["denied-error", "denied-form"]
+		},
+		"denied-error": {
+			"type": "FormFieldError",
+			"props": {
+				"text": {
+					"$state": "/denied/text"
+				}
+			},
+			"children": []
+		},
+		"denied-form": {
+			"type": "Form",
+			"props": {
+				"method": "post",
+				"action": {
+					"$state": "/denied/action"
+				}
+			},
+			"children": ["other-account"]
+		},
+		"other-account": {
+			"type": "TextButton",
+			"props": {
+				"type": "submit",
+				"text": {
+					"$state": "/text/otherAccount"
+				}
+			},
+			"children": []
+		},
+		"first-admin": {
+			"type": "Form",
+			"props": {
+				"method": "post",
+				"action": {
+					"$state": "/first/action"
+				}
+			},
+			"visible": {
+				"$state": "/mode",
+				"eq": "first-admin"
+			},
+			"children": ["first-column"]
+		},
+		"first-column": {
+			"type": "Stack",
+			"props": {
+				"gap": 12
+			},
+			"children": ["first-main", "form-error"]
+		},
+		"first-main": {
+			"type": "Stack",
+			"props": {
+				"gap": 32
+			},
+			"children": ["first-fields", "create-submit"]
+		},
+		"first-fields": {
+			"type": "Stack",
+			"props": {
+				"gap": 24
+			},
+			"children": ["email-field", "new-password-field", "confirm-field"]
+		},
+		"create-submit": {
+			"type": "Button",
+			"props": {
+				"type": "submit",
+				"variant": "primary",
+				"width": "full",
+				"text": {
+					"$state": "/text/createFirstAdmin"
+				}
+			},
+			"children": []
+		},
+		"closed": {
+			"type": "Stack",
+			"props": {
+				"gap": 16
+			},
+			"visible": {
+				"$state": "/mode",
+				"eq": "closed"
+			},
+			"children": ["closed-error", "closed-form"]
+		},
+		"closed-error": {
+			"type": "FormFieldError",
+			"props": {
+				"text": {
+					"$state": "/text/errorClosed"
+				}
+			},
+			"children": []
+		},
+		"closed-form": {
+			"type": "Form",
+			"props": {
+				"method": "get",
+				"action": {
+					"$state": "/closed/href"
+				}
+			},
+			"children": ["go-to-sign-in"]
+		},
+		"go-to-sign-in": {
+			"type": "Button",
+			"props": {
+				"type": "submit",
+				"variant": "secondary",
+				"width": "full",
+				"text": {
+					"$state": "/text/goToSignIn"
+				}
+			},
+			"children": []
+		},
+		"email-field": {
+			"type": "FormField",
+			"props": {},
+			"children": ["email-label", "email-input", "email-error"]
+		},
+		"email-label": {
+			"type": "FormFieldLabel",
+			"props": {
+				"htmlFor": "email",
+				"text": {
+					"$state": "/text/email"
+				}
+			},
+			"children": []
+		},
+		"email-input": {
+			"type": "Input",
+			"props": {
+				"id": "email",
+				"name": "email",
+				"type": "email",
+				"autoComplete": "username",
+				"required": true,
+				"invalid": {
+					"$cond": {
+						"$state": "/errors/email"
+					},
+					"$then": true,
+					"$else": false
+				},
+				"defaultValue": {
+					"$state": "/values/email"
+				}
+			},
+			"children": []
+		},
+		"email-error": {
+			"type": "FormFieldError",
+			"props": {
+				"id": "email-error",
+				"text": {
+					"$state": "/errors/email"
+				}
+			},
+			"visible": {
+				"$state": "/errors/email"
+			},
+			"children": []
+		},
+		"password-field": {
+			"type": "FormField",
+			"props": {},
+			"children": ["password-label", "password-input", "password-error"]
+		},
+		"password-label": {
+			"type": "FormFieldLabel",
+			"props": {
+				"htmlFor": "password",
+				"text": {
+					"$state": "/text/password"
+				}
+			},
+			"children": []
+		},
+		"password-input": {
+			"type": "Input",
+			"props": {
+				"id": "password",
+				"name": "password",
+				"type": "password",
+				"autoComplete": "current-password",
+				"required": true,
+				"invalid": {
+					"$cond": {
+						"$state": "/errors/password"
+					},
+					"$then": true,
+					"$else": false
+				},
+				"defaultValue": {
+					"$state": "/values/password"
+				}
+			},
+			"children": []
+		},
+		"password-error": {
+			"type": "FormFieldError",
+			"props": {
+				"id": "password-error",
+				"text": {
+					"$state": "/errors/password"
+				}
+			},
+			"visible": {
+				"$state": "/errors/password"
+			},
+			"children": []
+		},
+		"new-password-field": {
+			"type": "FormField",
+			"props": {},
+			"children": ["password-label", "new-password-input", "password-error"]
+		},
+		"new-password-input": {
+			"type": "Input",
+			"props": {
+				"id": "password",
+				"name": "password",
+				"type": "password",
+				"autoComplete": "new-password",
+				"required": true,
+				"minLength": {
+					"$state": "/first/minLength"
+				},
+				"placeholder": {
+					"$state": "/first/passwordHint"
+				},
+				"invalid": {
+					"$cond": {
+						"$state": "/errors/password"
+					},
+					"$then": true,
+					"$else": false
+				},
+				"defaultValue": {
+					"$state": "/values/password"
+				}
+			},
+			"children": []
+		},
+		"confirm-field": {
+			"type": "FormField",
+			"props": {},
+			"children": ["confirm-label", "confirm-input", "confirm-error"]
+		},
+		"confirm-label": {
+			"type": "FormFieldLabel",
+			"props": {
+				"htmlFor": "confirm",
+				"text": {
+					"$state": "/text/confirmPassword"
+				}
+			},
+			"children": []
+		},
+		"confirm-input": {
+			"type": "Input",
+			"props": {
+				"id": "confirm",
+				"name": "confirm",
+				"type": "password",
+				"autoComplete": "new-password",
+				"required": true,
+				"minLength": {
+					"$state": "/first/minLength"
+				},
+				"invalid": {
+					"$cond": {
+						"$state": "/errors/confirm"
+					},
+					"$then": true,
+					"$else": false
+				},
+				"defaultValue": {
+					"$state": "/values/confirm"
+				}
+			},
+			"children": []
+		},
+		"confirm-error": {
+			"type": "FormFieldError",
+			"props": {
+				"id": "confirm-error",
+				"text": {
+					"$state": "/errors/confirm"
+				}
+			},
+			"visible": {
+				"$state": "/errors/confirm"
+			},
+			"children": []
+		},
+		"version": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "micro",
+				"tone": "faint",
+				"align": "center",
+				"text": {
+					"$state": "/version"
+				}
+			},
+			"visible": {
+				"$state": "/version"
+			},
+			"children": []
+		}
+	}
+}

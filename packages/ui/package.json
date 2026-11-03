@@ -8,6 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./internal": "./src/internal.ts",
+		"./spec": "./src/spec/registry.tsx",
+		"./screens/*": "./src/screens/*",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
 	},
@@ -19,12 +21,15 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
+		"@json-render/core": "0.21.1",
+		"@json-render/react": "0.21.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
 		"react-day-picker": "^10.0.1",
 		"sonner": "^2.0.8",
-		"tailwind-merge": "^3.4.0"
+		"tailwind-merge": "^3.4.0",
+		"zod": "^4.6.5"
 	},
 	"peerDependencies": {
 		"@carbon/icons-react": ">=11.90.0",
@@ -62,6 +67,11 @@
 				"types": "./dist/internal.d.ts",
 				"default": "./dist/internal.js"
 			},
+			"./spec": {
+				"types": "./dist/spec/registry.d.ts",
+				"default": "./dist/spec/registry.js"
+			},
+			"./screens/*": "./dist/screens/*",
 			"./theme.css": "./styles/theme.css",
 			"./tokens.css": "./styles/tokens.css"
 		}

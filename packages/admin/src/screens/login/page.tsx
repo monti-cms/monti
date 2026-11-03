@@ -1,8 +1,11 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
+import spec from "@monti-cms/ui/screens/login.spec.json";
+import { ScreenSpec, type ScreenSpecDocument } from "@monti-cms/ui/spec";
 import type { AdminServer } from "../../host/server";
-import { type LoginButton, type LoginError, type LoginMode, LoginView } from "./login-view";
+import { loginState } from "./login-state";
+import type { LoginButton, LoginError, LoginMode } from "./login-view";
 import { loginMessages } from "./messages";
 
 /** The `error` of the address, as the screen tells it: Auth.js's `CredentialsSignin`, or a reason from the first-admin route. */
@@ -79,7 +82,9 @@ export default async function AdminLoginPage({
 								...(error ? { error } : {}),
 							};
 
-	return <LoginView t={t} siteName={site.config.site?.name?.trim() || "Monti"} mode={mode} />;
+	// The look is `login.spec.json` drawn with the design system's parts; this page says only what it shows and where its forms post.
+	const state = loginState(t, { siteName: site.config.site?.name?.trim() || "Monti", mode });
+	return <ScreenSpec spec={spec as ScreenSpecDocument} state={state} />;
 }
 
 /** The login methods that are one button each (every method but the email and password form). */
