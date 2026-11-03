@@ -8,9 +8,11 @@ import {
 	ChangeLines,
 	ChangeNote,
 	Checkbox,
+	Highlight,
 	Option,
 	RadioGroup,
 	RadioItem,
+	Text,
 	TextButton,
 } from "./index";
 
@@ -87,6 +89,38 @@ export const Address: Story = {
 				<ChangeLine what="발행된 글" then="148편 주소 바뀜" tone="warning" />
 			</ChangeLines>
 			<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
+		</ChangeGroup>
+	),
+};
+
+/** A short value that was removed: before and after as lines, the after "없음". */
+export const Removed: Story = {
+	render: () => (
+		<ChangeGroup kind="edit" tag="고침" title="이름과 링크" identifier="다른 호스트 이름">
+			<ChangeLines>
+				<ChangeLine what="전" then="www.example.dev" />
+				<ChangeLine what="후" then="없음" />
+			</ChangeLines>
+		</ChangeGroup>
+	),
+};
+
+/**
+ * A long text (the writing rules): too long for a line, so each version sits under its label and wraps. The words that differ are highlighted, as in
+ * `Compare`: an added sentence on the after side, a removed one on the before side.
+ */
+export const LongText: Story = {
+	render: () => (
+		<ChangeGroup kind="edit" tag="고침" title="글 쓰는 방식" identifier="말투와 규칙">
+			<ChangeLabel>전</ChangeLabel>
+			<Text variant="note" tone="muted">
+				'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.
+			</Text>
+			<ChangeLabel>후</ChangeLabel>
+			<Text variant="note">
+				'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.{" "}
+				<Highlight>숫자는 아라비아 숫자로 쓴다.</Highlight>
+			</Text>
 		</ChangeGroup>
 	),
 };

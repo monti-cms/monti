@@ -57,7 +57,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있어요", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
-| 운영 검토 | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`, 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
+| 운영 검토 | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
 
 ### 흐름 2 · 어시스턴트
 
@@ -81,12 +81,6 @@
 | "운영 검토" | 11.13 | 운영 검토 `Sheet`(바로 저장 2 · PR 1과 `Patch`), ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet, Patterns/List/ListSection › ReviewSheet, Monti/Change/Patch |
 | "읽기 전용" | 11.15 | 미리보기와 공개 주소 절 제목 뒤 `LockMark`, 그 값은 글, 스위치 `disabled`, 저장 묶음 없음. screens.md는 공개 주소만 잠긴다고 적지만 보드는 미리보기도 잠근다 | Primitives/LockMark |
 | "읽기 전용 저장" | 11.15b | "읽기 전용"에 더해 사이트 이름 `FormFieldLabel changed`와 알약 "저장" | Controls/Field/Field |
-
-### 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- **더한 줄만 보이는 결과**(`.note.is-add`): 앞에 초록 +가 붙는 한 줄. `ChangeNote`에 이 모양이 없다([change.md](../components/change.md)).
 
 ## 설정 · 언어 (Locales)
 
