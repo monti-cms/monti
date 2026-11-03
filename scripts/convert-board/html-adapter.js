@@ -4,7 +4,11 @@
 // first): `parts`, the rules that read an element as a part, and `known`, the classes the design system has. Another tool (Figma, a PDF) gets its own
 // adapter and shares everything after it.
 //
-// It is a plain script: `window.readBoard(rootSelector)` returns the tree.
+// It is a plain script: `window.readBoard(rootSelector, page)` returns the tree. `page` is the layout the board's root gets as the page (the pack's
+// `board.page`, `{ minHeight: "screen" }` for a page as tall as the window).
+//
+// The layout it reads is the tool's own vocabulary, the props a pack's layout entry takes: `direction`, `align`, `justify`, `grow`, `width`, `maxWidth`,
+// `minWidth`, `minHeight`.
 
 const { parts: PARTS, known: KNOWN } = window.boardPack ?? { parts: [], known: /^$/ };
 
@@ -35,13 +39,21 @@ function changes(el, property) {
 	return written !== without;
 }
 
-/** The looks an element shapes by hand: inline style that is not spacing or the screen's layout, and classes the design system does not have. */
-function looksOf(el, part, root = false) {
+/**
+ * The looks an element shapes by hand: inline style that is not spacing or the screen's layout, and classes the design system does not have. Inside a
+ * part, a distance is a look too: the part spaces its own inside, so a margin the board adds there is not the design system's.
+ */
+function looksOf(el, part, root = false, inPart = false) {
 	const looks = [];
 	for (const declaration of (el.getAttribute("style") ?? "").split(";")) {
 		const [name, ...value] = declaration.split(":");
 		const property = name?.trim();
-		if (!property || SPACING.test(property) || LAYOUT.test(property)) continue;
+		if (!property || LAYOUT.test(property)) continue;
+		if (SPACING.test(property)) {
+			if (inPart && changes(el, property))
+				looks.push(`${property}: ${value.join(":").trim()} (a distance inside a part)`);
+			continue;
+		}
 		if (!part && SCREEN_LAYOUT.test(property)) continue;
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.
 		if (/^(position|top|right|bottom|left)$/.test(property)) continue;
@@ -56,7 +68,7 @@ function looksOf(el, part, root = false) {
 }
 
 /** The screen's own layout of a group: how it aligns its children, whether it grows, its width and height. */
-function layoutOf(el, root) {
+function layoutOf(el, page) {
 	const style = getComputedStyle(el);
 	const flex = style.display.includes("flex");
 	const align = { center: "center", "flex-end": "end", end: "end", "flex-start": "start", baseline: "baseline" }[
@@ -67,9 +79,19 @@ function layoutOf(el, root) {
 	if (flex && align) layout.align = align;
 	if (flex && justify) layout.justify = justify;
 	if (Number.parseFloat(style.flexGrow) > 0) layout.grow = true;
-	if (style.maxWidth !== "none") layout.maxWidth = Math.round(Number.parseFloat(style.maxWidth));
-	if (root) layout.minHeight = "screen";
-	return layout;
+	// A size the board writes in px is the region's; a width the box only takes from its parent is not.
+	for (const [property, name] of [
+		["width", "width"],
+		["max-width", "maxWidth"],
+		["min-width", "minWidth"],
+	]) {
+		const written = el.style.getPropertyValue(property);
+		const value = property === "max-width" ? style.maxWidth : written;
+		if (value && value !== "none" && (property === "max-width" || written.endsWith("px"))) {
+			layout[name] = Math.round(Number.parseFloat(value));
+		}
+	}
+	return { ...layout, ...page };
 }
 
 /** The axis a group's children run along, as laid out. */
@@ -102,10 +124,11 @@ function isSpacer(el) {
 	return !drawsLine && style.backgroundColor === "rgba(0, 0, 0, 0)";
 }
 
-function read(el, where, root = false) {
+function read(el, where, page = undefined, inPart = false) {
+	const root = page !== undefined;
 	const rule = PARTS.find((each) => each.match(el));
 	const here = `${where} › ${label(el)}`;
-	const looks = looksOf(el, rule, root);
+	const looks = looksOf(el, rule, root, inPart);
 	if (rule) {
 		const props = Object.fromEntries(
 			Object.entries(rule.props?.(el) ?? {}).filter(([, value]) => value != null && value !== ""),
@@ -114,7 +137,7 @@ function read(el, where, root = false) {
 		const named = el.id ? { id: el.id } : {};
 		if (rule.leaf) return { where: here, part: rule.part, props, looks, ...named };
 		const node = { where: here, part: rule.part, props, looks, ...named };
-		node.children = drawnChildren(el).map((child, index) => readChild(child, `${here}[${index}]`));
+		node.children = drawnChildren(el).map((child, index) => readChild(child, `${here}[${index}]`, true));
 		return node;
 	}
 	if (el.tagName.toLowerCase() === "svg") return { where: here, looks };
@@ -123,7 +146,7 @@ function read(el, where, root = false) {
 	return framed(el, {
 		where: here,
 		direction: directionOf(el),
-		layout: layoutOf(el, root),
+		layout: layoutOf(el, page),
 		looks,
 		...measured(el, here),
 	});
@@ -168,9 +191,9 @@ function framed(el, node) {
 	return out;
 }
 
-function readChild(node, where) {
+function readChild(node, where, inPart = false) {
 	if (node.nodeType === Node.TEXT_NODE) return { where, text: node.textContent.trim() };
-	return read(node, where);
+	return read(node, where, undefined, inPart);
 }
 
 /** A group's children with the distance before each and after the last, along the group's axis, spacers folded into the distances. */
@@ -206,8 +229,8 @@ function measured(el, where) {
 	return { children, after: aligned ? undefined : Math.round(last - edge) };
 }
 
-window.readBoard = (selector) => {
+window.readBoard = (selector, page = {}) => {
 	const root = document.querySelector(selector);
 	if (!root) throw new Error(`no element "${selector}" in the board`);
-	return read(root, "board", true);
+	return read(root, "board", page);
 };

@@ -6,8 +6,13 @@ export default {
 	screens: ["../screens", "../../../admin/src"],
 	/** What `gen:screen-catalog` writes and the other scripts read. */
 	catalog: "catalog.generated.json",
-	/** HTML boards: the classes file loaded before the adapter, the element the board is drawn in, and the window it is drawn at. */
-	board: { classes: "html-board.js", root: ".mt", viewport: { width: 1440, height: 900 } },
+	/** HTML boards: the classes file loaded before the adapter, the element the board is drawn in, the window it is drawn at, and the layout the board's root gets as the page. */
+	board: {
+		classes: "html-board.js",
+		root: ".mt",
+		viewport: { width: 1440, height: 900 },
+		page: { minHeight: "screen" },
+	},
 	/**
 	 * Modules a dictionary imports that the scripts stand in for: `defineMessages` only returns what it is given, and `josa` is used only by texts that
 	 * are functions, which a board's words are never matched against.

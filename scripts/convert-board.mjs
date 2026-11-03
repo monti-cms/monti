@@ -60,7 +60,10 @@ try {
 	await page.waitForTimeout(1000);
 	await page.addScriptTag({ path: path.join(PACK, pack.board.classes) });
 	await page.addScriptTag({ path: path.join(ROOT, "scripts/convert-board/html-adapter.js") });
-	drawn = await page.evaluate((selector) => window.readBoard(selector), option("root") ?? pack.board.root);
+	drawn = await page.evaluate(
+		([selector, layout]) => window.readBoard(selector, layout),
+		[option("root") ?? pack.board.root, pack.board.page ?? {}],
+	);
 } finally {
 	await browser.close();
 }
