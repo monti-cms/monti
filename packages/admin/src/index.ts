@@ -27,6 +27,7 @@ export {
 	type EditorExtension,
 	type EditorExtensionContext,
 	type EditorExtensionResult,
+	type EditorFieldProposalItem,
 	type EditorInsertAction,
 	type EditorMenuItem,
 	type EditorProposalItem,

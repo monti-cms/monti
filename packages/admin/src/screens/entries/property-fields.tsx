@@ -12,7 +12,7 @@ import type {
 } from "@monti-cms/core";
 import type { PanelGroup } from "@monti-cms/core/site";
 import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator } from "@monti-cms/core/site";
-import { Affix, IconButton, Inline, PropertyGroup, PropertyRow, Text, TextButton } from "@monti-cms/ui";
+import { Affix, Del, IconButton, Inline, Ins, PropertyGroup, PropertyRow, Text, TextButton } from "@monti-cms/ui";
 import {
 	type FocusEvent,
 	memo,
@@ -27,6 +27,7 @@ import {
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
 import { getEntry } from "../../api/entries";
 import { fieldIssueLine } from "../../api/error-message";
+import { FIELD_PROPOSAL_ATTRIBUTE } from "../../editor/proposals/use-proposal-marks";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
@@ -39,6 +40,7 @@ import {
 	type IncomingReference,
 	useWrittenPick,
 } from "./field-inputs";
+import { useFieldProposals } from "./field-proposals";
 import { FieldView } from "./field-views";
 import { MediaValue } from "./media-image-input";
 import { entriesMessages } from "./messages";
@@ -124,6 +126,8 @@ interface ShellProps {
 	extras?: ReactNode;
 	slot?: SlotRequest | null;
 	focus: FocusRequest;
+	/** Pressing the value opens something else than the input (the card of the assistant's change drawn in it). */
+	onPick?: () => void;
 }
 
 /** One property row: the label with its actions, the value at rest, the input in place. */
@@ -143,6 +147,7 @@ function PropertyShell({
 	extras,
 	slot,
 	focus,
+	onPick,
 }: ShellProps) {
 	const { editing, open, done, rowRef, onBlur } = useEditInPlace(controlId);
 	const jump = focus.path === name;
@@ -170,7 +175,7 @@ function PropertyShell({
 			value={display}
 			empty={isEmpty}
 			proposal={assisted}
-			onEdit={readOnly ? undefined : open}
+			onEdit={readOnly ? undefined : (onPick ?? open)}
 			editing={isOpen}
 			note={note}
 			error={issue ? fieldIssueLine(issue) : failure}
@@ -223,6 +228,34 @@ function ValueDisplay({ field, value }: { field: ValueField; value: FieldInputPr
 		default:
 			return <>{text}</>;
 	}
+}
+
+/**
+ * A field the assistant proposed a new value for (flow 2 · 08): the old value struck through and the new one in the blue pencil, as in the body. Pressing it
+ * opens the change's card under it.
+ */
+function ProposedValue({
+	field,
+	name,
+	before,
+	value,
+}: {
+	field: ValueField;
+	name: string;
+	before: unknown;
+	value: unknown;
+}) {
+	const shown = (one: unknown) => <ValueDisplay field={field} value={one as FieldInputProps["value"]} />;
+	return (
+		<span {...{ [FIELD_PROPOSAL_ATTRIBUTE]: name }}>
+			{!isBlank(before) && (
+				<>
+					<Del>{shown(before)}</Del>{" "}
+				</>
+			)}
+			<Ins>{shown(value)}</Ins>
+		</span>
+	);
 }
 
 /** The kinds that always have a value to read: a select reads its default. */
@@ -301,7 +334,8 @@ function ValuePropertyView({
 	const Aside = parts?.Aside;
 	const Empty = parts?.Empty;
 	const Input = parts?.Input;
-	const empty = isBlank(field.value) && !alwaysHasValue(definition);
+	const proposal = useFieldProposals().byField.get(field.name);
+	const empty = !proposal && isBlank(field.value) && !alwaysHasValue(definition);
 	const canFillFromBody =
 		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
 	const max = definition.kind === "text" ? definition.max : undefined;
@@ -334,7 +368,9 @@ function ValuePropertyView({
 			label={field.label}
 			isEmpty={empty}
 			display={
-				empty ? (
+				proposal ? (
+					<ProposedValue field={definition} name={field.name} before={proposal.before} value={proposal.value} />
+				) : empty ? (
 					Empty ? (
 						<Empty {...props} />
 					) : (
@@ -354,6 +390,7 @@ function ValuePropertyView({
 			extras={extras}
 			slot={Input === null ? undefined : field.slotRequest}
 			focus={focus}
+			{...(proposal ? { onPick: proposal.open } : {})}
 		/>
 	);
 }

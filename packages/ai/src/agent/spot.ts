@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type AdminRequest, type Cms, CmsError } from "@monti-cms/core/server";
+import { type AdminRequest, type Cms, CmsError, type WritePlan } from "@monti-cms/core/server";
 import { generateText, type LanguageModel, tool } from "ai";
 import { z } from "zod";
 import { itemOf, type Proposal, type ProposalItem, type ProposalStore, type SpotMessage } from "./proposals";
@@ -14,6 +14,14 @@ const system = (format: string, rules: string | null) =>
 	[
 		"You change one block of an entry's body again, as the admin asks in the card on that block.",
 		`Answer only by calling \`rewrite\` with the block's whole new text, written in the ${format} format, and a one-sentence reply.`,
+		"Change only what the admin asks; keep the rest of your earlier proposal. The reply is in the admin's language, plain and short.",
+		...(rules ? ["", "The site's writing rules:", rules] : []),
+	].join("\n");
+
+const fieldSystem = (field: string, rules: string | null) =>
+	[
+		`You change the value of the field "${field}" of an entry again, as the admin asks in the card under it.`,
+		"Answer only by calling `rewrite` with the field's whole new value as plain text, and a one-sentence reply.",
 		"Change only what the admin asks; keep the rest of your earlier proposal. The reply is in the admin's language, plain and short.",
 		...(rules ? ["", "The site's writing rules:", rules] : []),
 	].join("\n");
@@ -99,8 +107,8 @@ export interface AskAtSpot {
 }
 
 /**
- * A request in the card of one change (docs/design/agent.md §7, flow 2 · 09): a small run whose context is that block, the change and the card's thread.
- * The assistant writes the block again; the new change takes the old one's place in the proposal, under a new id, with the thread kept and the two new
+ * A request in the card of one change (docs/design/agent.md §7, flow 2 · 09): a small run whose context is that block (or text field), the change and the
+ * card's thread. The assistant writes the block (or the field's value) again; the new change takes the old one's place in the proposal, under a new id, with the thread kept and the two new
  * messages added. When its answer is the block as it is, the change is left out (there is nothing to propose any more).
  */
 export async function askAtSpot({
@@ -120,33 +128,52 @@ export async function askAtSpot({
 	if (proposal.status !== "pending") throw new CmsError("The proposal is no longer open", "invalid_status");
 	const item = proposal.items.find((candidate) => candidate.id === itemId);
 	if (!item || item.state !== "pending") throw new CmsError("No waiting change with this id", "not_found");
-	if (item.operation !== "entries.updateBody")
-		throw new CmsError("Only a body change can be asked about here", "invalid_input");
-	const { format } = item.change as { format: string };
-	const current = typeof item.preview.before === "string" ? item.preview.before : "";
-	const proposed = typeof item.preview.after === "string" ? item.preview.after : null;
 	const thread = item.thread ?? [];
-
-	const answer = await rewrite({
-		model,
-		system: system(format, rules),
-		prompt: prompt({ request: proposal.request, current, proposed, thread, text }),
-		recordUsage,
-		signal,
-	});
-
-	// Planned against the block as it is stored now: if it changed since the first plan, this is refused like any stale change.
-	const plans = await cms.writes.plan(
-		"entries.updateBody",
-		{ id: item.target.id, format, edits: [{ find: current, replace: answer.text }] },
-		{ auth },
-	);
+	const proposed = typeof item.preview.after === "string" ? item.preview.after : null;
+	let plans: readonly WritePlan[];
+	let reply: string;
+	if (item.operation === "entries.updateBody") {
+		const { format } = item.change as { format: string };
+		const current = typeof item.preview.before === "string" ? item.preview.before : "";
+		const answer = await rewrite({
+			model,
+			system: system(format, rules),
+			prompt: prompt({ request: proposal.request, current, proposed, thread, text }),
+			recordUsage,
+			signal,
+		});
+		reply = answer.reply;
+		// Planned against the block as it is stored now: if it changed since the first plan, this is refused like any stale change.
+		plans = await cms.writes.plan(
+			"entries.updateBody",
+			{ id: item.target.id, format, edits: [{ find: current, replace: answer.text }] },
+			{ auth },
+		);
+	} else if (item.operation === "entries.updateFields" && proposed !== null) {
+		// A text field (a summary, an SEO description): its value is written again as plain text.
+		const { field } = item.change as { field: string };
+		const current = typeof item.preview.before === "string" ? item.preview.before : "";
+		const answer = await rewrite({
+			model,
+			system: fieldSystem(field, rules),
+			prompt: prompt({ request: proposal.request, current, proposed, thread, text }).replace(
+				"The block as it is now:",
+				"The field as it is now:",
+			),
+			recordUsage,
+			signal,
+		});
+		reply = answer.reply;
+		plans = await cms.writes.plan(
+			"entries.updateFields",
+			{ id: item.target.id, fields: { [field]: answer.text } },
+			{ auth },
+		);
+	} else {
+		throw new CmsError("Only a body change or a text field can be asked about here", "invalid_input");
+	}
 	const at = new Date().toISOString();
-	const said: SpotMessage[] = [
-		...thread,
-		{ author: "admin", text, at },
-		{ author: "assistant", text: answer.reply, at },
-	];
+	const said: SpotMessage[] = [...thread, { author: "admin", text, at }, { author: "assistant", text: reply, at }];
 	const [plan] = plans;
 	const next: ProposalItem = plan
 		? { ...itemOf(randomUUID(), item.operation, plan), thread: said }

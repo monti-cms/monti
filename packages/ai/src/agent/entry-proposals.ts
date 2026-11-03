@@ -61,38 +61,55 @@ export async function settleInEditor(
 	});
 }
 
-/** A body change waiting in the entry editor, with what the editor needs to draw and accept it. */
-export interface EditorProposalView {
+/** What every change waiting in the entry editor carries: where it came from and what was said about it. */
+interface EditorProposalViewBase {
 	readonly id: string;
 	readonly proposalId: string;
 	readonly runId: string;
 	readonly request: string;
-	readonly blockId: string;
-	/** The block as planned against, and the blocks that take its place (none removes it), as stored. */
-	readonly block: unknown;
-	readonly nodes: readonly unknown[];
 	/** What was said about it in its card. */
 	readonly thread: readonly SpotMessage[];
 }
 
-/** The body changes of the proposals that the editor of entry `entryId` shows: waiting, put in, and not changed meanwhile. */
+/** A body change waiting in the entry editor, with what the editor needs to draw and accept it. */
+export interface EditorBodyProposalView extends EditorProposalViewBase {
+	readonly kind: "body";
+	readonly blockId: string;
+	/** The block as planned against, and the blocks that take its place (none removes it), as stored. */
+	readonly block: unknown;
+	readonly nodes: readonly unknown[];
+}
+
+/** A field change waiting in the entry editor (a summary, an SEO description): the value it was planned against and the new one. */
+export interface EditorFieldProposalView extends EditorProposalViewBase {
+	readonly kind: "field";
+	readonly field: string;
+	readonly before: unknown;
+	readonly value: unknown;
+}
+
+export type EditorProposalView = EditorBodyProposalView | EditorFieldProposalView;
+
+/** The changes of the proposals that the editor of entry `entryId` shows (its body and its fields): waiting, put in, and not changed meanwhile. */
 export const editorProposalViews = (proposals: readonly Proposal[], entryId: string): EditorProposalView[] =>
 	proposals.flatMap((proposal) =>
-		proposal.items.flatMap((item) => {
-			if (item.operation !== "entries.updateBody" || item.target.id !== entryId) return [];
-			if (item.state !== "pending" || !item.included) return [];
-			const change = item.change as { blockId: string; block: unknown; nodes: readonly unknown[] };
-			return [
-				{
-					id: item.id,
-					proposalId: proposal.id,
-					runId: proposal.runId,
-					request: proposal.request,
-					blockId: change.blockId,
-					block: change.block,
-					nodes: change.nodes,
-					thread: item.thread ?? [],
-				},
-			];
+		proposal.items.flatMap((item): EditorProposalView[] => {
+			if (item.target.id !== entryId || item.state !== "pending" || !item.included) return [];
+			const base = {
+				id: item.id,
+				proposalId: proposal.id,
+				runId: proposal.runId,
+				request: proposal.request,
+				thread: item.thread ?? [],
+			};
+			if (item.operation === "entries.updateBody") {
+				const change = item.change as { blockId: string; block: unknown; nodes: readonly unknown[] };
+				return [{ ...base, kind: "body", blockId: change.blockId, block: change.block, nodes: change.nodes }];
+			}
+			if (item.operation === "entries.updateFields") {
+				const change = item.change as { field: string; value: unknown };
+				return [{ ...base, kind: "field", field: change.field, before: item.preview.before, value: change.value }];
+			}
+			return [];
 		}),
 	);

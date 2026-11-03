@@ -2,7 +2,7 @@ import type { Cms } from "@monti-cms/core/server";
 import { describe, expect, it } from "vitest";
 import { admin, notesSite } from "../../../test/notes-site";
 import { discardProposal, revertProposal } from "../apply";
-import { proposalsForEntry, settleInEditor } from "../entry-proposals";
+import { editorProposalViews, proposalsForEntry, settleInEditor } from "../entry-proposals";
 import { itemOf } from "../proposals";
 
 describe("the proposals an entry editor shows", () => {
@@ -69,5 +69,47 @@ describe("the proposals an entry editor shows", () => {
 		const undone = await revertProposal(cms, admin, site.store.proposals, "p");
 		expect(undone.status).toBe("reverted");
 		expect(site.notes.get("a")).toBe("one");
+	});
+
+	it("AGENT-E4 gives the editor the body and field changes of the entry, each with what it needs to be drawn, and leaves out other operations", () => {
+		const at = { kind: "entry" as const, id: "e1" };
+		const proposal = {
+			id: "p",
+			adminId: admin.userId,
+			runId: "run-p",
+			request: "tidy",
+			status: "pending" as const,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			items: [
+				itemOf("body", "entries.updateBody", {
+					target: { ...at, spot: "body:b1" },
+					preview: { before: "x", after: "y" },
+					base: "b",
+					change: { blockId: "b1", block: { type: "paragraph" }, nodes: [] },
+				}),
+				itemOf("summary", "entries.updateFields", {
+					target: { ...at, spot: "summary" },
+					preview: { before: null, after: "A short summary." },
+					base: "s",
+					change: { field: "summary", value: "A short summary." },
+				}),
+				itemOf("folder", "entries.moveToFolder", {
+					target: at,
+					preview: { before: null, after: "f" },
+					base: "f",
+					change: {},
+				}),
+			],
+		};
+		expect(editorProposalViews([proposal], "e1").map((view) => [view.kind, view.id])).toEqual([
+			["body", "body"],
+			["field", "summary"],
+		]);
+		expect(editorProposalViews([proposal], "e1")[1]).toMatchObject({
+			field: "summary",
+			before: null,
+			value: "A short summary.",
+		});
 	});
 });

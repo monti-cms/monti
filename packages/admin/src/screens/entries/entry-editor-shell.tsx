@@ -36,7 +36,9 @@ import { EntryEditorRecoveryStrips } from "./entry-editor-recovery";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import { InspectorSidePanel, TranslationSourcePanel } from "./entry-editor-side-panels";
 import { EntryEditorLoadError, EntryEditorLoading } from "./entry-editor-states";
+import type { EntryFormPatch } from "./entry-form";
 import { formText, titleKeyOf } from "./entry-form";
+import { FieldProposalsProvider } from "./field-proposals";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { readOpenEntry, readOpenSelection } from "./open-editor-read";
@@ -244,7 +246,20 @@ export function EntryEditorShell({
 		[collection, titleKey, entry?.locale, entry?.id],
 	);
 	const saveForExtensions = useCallback(async () => (await editor.save()).ok, [editor]);
-	const extensions = useEditorExtensions({ translateLocales, getEntry, save: saveForExtensions });
+	// The form as the extensions see it: what the assistant's field changes are drawn against and accepted into.
+	const fieldsForExtensions = useMemo(
+		() => ({
+			values: form as Readonly<Record<string, unknown>>,
+			set: (patch: Readonly<Record<string, unknown>>) => editor.setForm(patch as EntryFormPatch),
+		}),
+		[form, editor],
+	);
+	const extensions = useEditorExtensions({
+		translateLocales,
+		getEntry,
+		save: saveForExtensions,
+		fields: fieldsForExtensions,
+	});
 	extensionsSavedRef.current = extensions.onSaved;
 
 	const refreshIncoming = useCallback(
@@ -517,118 +532,120 @@ export function EntryEditorShell({
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
 			<OpenEditorContext.Provider value={openEditor}>
-				<Stack gap={0} height="screen" overflow="clip" background="page">
-					<EntryEditorHeader
-						editor={editor}
-						commands={commands}
-						isInspectorOpen={isInspectorOpen}
-						onToggleInspector={() => setIsInspectorOpen((open) => !open)}
-						menuItems={menuItems}
-					/>
-
-					<EntryEditorBanners
-						editor={editor}
-						visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
-						sourceProblem={sourceProblems[0]}
-						sourceChanged={sourceChanged && Boolean(translationSource)}
-						onCompareSource={() => setIsSourceCompareOpen(true)}
-					/>
-					<EntryEditorRecoveryStrips editor={editor} />
-
-					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
-						{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
-						<Inline
-							ref={setArea}
-							container
-							align="stretch"
-							gap={0}
-							grow
-							minWidth={0}
-							minHeight={0}
-							overflow="hidden"
-							position="relative"
-						>
-							{translationSource && isSourcePaneOpen && (
-								<TranslationSourcePanel
-									source={translationSource}
-									paneRef={setSourcePane}
-									onClose={() => toggleSourcePane(false)}
-								/>
-							)}
-							<EditorScroller
-								scrollerRef={setEditorScroller}
-								highlightActive={Boolean(translationSource)}
-								inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
-							>
-								<CmsEditor
-									doc={form.doc}
-									allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
-									titleField={
-										<Stack gap={16}>
-											{languageTabs}
-											<div>{titleInput}</div>
-										</Stack>
-									}
-									templates
-									sourceView={isSourceMode ? sourceEditor : undefined}
-									editable={!isReadOnly}
-									onChange={editor.setBody}
-									blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
-									selectionActions={extensions.selectionActions}
-									insertActions={extensions.insertActions}
-									onEditor={(editor) => {
-										visualEditorRef.current = editor;
-										extensions.onEditor?.(editor);
-									}}
-									onCompositionStart={() => editor.setComposing(true)}
-									onCompositionEnd={() => editor.setComposing(false)}
-								/>
-								{extensions.overlay}
-							</EditorScroller>
-
-							{isInspectorOpen && (
-								<InspectorSidePanel
-									editor={editor}
-									incomingItems={incoming.items}
-									isLoadingIncoming={incoming.loading}
-									onRefreshIncoming={refreshIncoming}
-									focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
-									onFocused={() => setPendingFieldPath(null)}
-								/>
-							)}
-						</Inline>
-						<SidePanelPane />
-					</Inline>
-
-					<StatusBar
-						save={{
-							// A draft kept only in this browser, not loaded yet, is what the entry stands at: the bar says so until it is answered.
-							status: saveStatus === "saved" && editor.recovery !== null ? "local-only" : saveStatus,
-							savedAt,
-							backupAvailable: editor.recoveryCopyAvailable,
-							onSave: () => void commands.handleSaveNow(),
-						}}
-						todo={todo}
-						requests={extensions.requests}
-						chars={chars}
-						context={{
-							collection,
-							...(entry?.id ? { entryId: entry.id } : {}),
-							locale: entry?.locale ?? site.DEFAULT_LOCALE,
-							textIssues: extensions.textIssues,
-						}}
-					/>
-
-					{commands.confirmDialog}
-					{translationSource && (
-						<SourceChangeDialog
-							open={isSourceCompareOpen}
-							onOpenChange={setIsSourceCompareOpen}
-							before={confirmed?.baseDoc}
-							after={translationSource.doc}
+				<FieldProposalsProvider value={extensions.fieldProposals}>
+					<Stack gap={0} height="screen" overflow="clip" background="page">
+						<EntryEditorHeader
+							editor={editor}
+							commands={commands}
+							isInspectorOpen={isInspectorOpen}
+							onToggleInspector={() => setIsInspectorOpen((open) => !open)}
+							menuItems={menuItems}
 						/>
-					)}
-				</Stack>
+
+						<EntryEditorBanners
+							editor={editor}
+							visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
+							sourceProblem={sourceProblems[0]}
+							sourceChanged={sourceChanged && Boolean(translationSource)}
+							onCompareSource={() => setIsSourceCompareOpen(true)}
+						/>
+						<EntryEditorRecoveryStrips editor={editor} />
+
+						<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
+							{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
+							<Inline
+								ref={setArea}
+								container
+								align="stretch"
+								gap={0}
+								grow
+								minWidth={0}
+								minHeight={0}
+								overflow="hidden"
+								position="relative"
+							>
+								{translationSource && isSourcePaneOpen && (
+									<TranslationSourcePanel
+										source={translationSource}
+										paneRef={setSourcePane}
+										onClose={() => toggleSourcePane(false)}
+									/>
+								)}
+								<EditorScroller
+									scrollerRef={setEditorScroller}
+									highlightActive={Boolean(translationSource)}
+									inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+								>
+									<CmsEditor
+										doc={form.doc}
+										allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
+										titleField={
+											<Stack gap={16}>
+												{languageTabs}
+												<div>{titleInput}</div>
+											</Stack>
+										}
+										templates
+										sourceView={isSourceMode ? sourceEditor : undefined}
+										editable={!isReadOnly}
+										onChange={editor.setBody}
+										blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
+										selectionActions={extensions.selectionActions}
+										insertActions={extensions.insertActions}
+										onEditor={(editor) => {
+											visualEditorRef.current = editor;
+											extensions.onEditor?.(editor);
+										}}
+										onCompositionStart={() => editor.setComposing(true)}
+										onCompositionEnd={() => editor.setComposing(false)}
+									/>
+									{extensions.overlay}
+								</EditorScroller>
+
+								{isInspectorOpen && (
+									<InspectorSidePanel
+										editor={editor}
+										incomingItems={incoming.items}
+										isLoadingIncoming={incoming.loading}
+										onRefreshIncoming={refreshIncoming}
+										focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
+										onFocused={() => setPendingFieldPath(null)}
+									/>
+								)}
+							</Inline>
+							<SidePanelPane />
+						</Inline>
+
+						<StatusBar
+							save={{
+								// A draft kept only in this browser, not loaded yet, is what the entry stands at: the bar says so until it is answered.
+								status: saveStatus === "saved" && editor.recovery !== null ? "local-only" : saveStatus,
+								savedAt,
+								backupAvailable: editor.recoveryCopyAvailable,
+								onSave: () => void commands.handleSaveNow(),
+							}}
+							todo={todo}
+							requests={extensions.requests}
+							chars={chars}
+							context={{
+								collection,
+								...(entry?.id ? { entryId: entry.id } : {}),
+								locale: entry?.locale ?? site.DEFAULT_LOCALE,
+								textIssues: extensions.textIssues,
+							}}
+						/>
+
+						{commands.confirmDialog}
+						{translationSource && (
+							<SourceChangeDialog
+								open={isSourceCompareOpen}
+								onOpenChange={setIsSourceCompareOpen}
+								before={confirmed?.baseDoc}
+								after={translationSource.doc}
+							/>
+						)}
+					</Stack>
+				</FieldProposalsProvider>
 			</OpenEditorContext.Provider>
 		</EntryEditorProvider>
 	);
