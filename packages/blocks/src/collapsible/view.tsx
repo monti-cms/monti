@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,6 +9,7 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
+import { ChevronDown, ChevronRight } from "@monti-cms/admin/icons";
 import { cn, IconButton, Inline, Label, Switch } from "@monti-cms/admin/kit";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";

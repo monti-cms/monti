@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft } from "@carbon/icons-react";
 import { errorText, useAskPanel, useSite, useTranslator } from "@monti-cms/admin";
+import { ChevronLeft } from "@monti-cms/admin/icons";
 import {
 	Button,
 	Count,

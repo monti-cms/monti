@@ -1,5 +1,5 @@
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { OverflowMenuHorizontal } from "./icons";
 import { FilePreview, FolderTile, Grid, IconButton, Image, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */

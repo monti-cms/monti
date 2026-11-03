@@ -1,11 +1,11 @@
 "use client";
 
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
-import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { cn } from "./cn";
 import { BACKDROP, useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
+import { Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { PANEL_BODY, PANEL_FOOT, PANEL_HEAD, PANEL_TITLE } from "./side-panel";
 

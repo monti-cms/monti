@@ -1,6 +1,5 @@
 "use client";
 
-import { Checkmark, ChevronRight, Copy, Information, ListNumbered, Row } from "@carbon/icons-react";
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -15,6 +14,7 @@ import {
 	SelectValue,
 	Text,
 } from "@monti-cms/ui";
+import { Checkmark, ChevronRight, Copy, Information, ListNumbered, Row } from "@monti-cms/ui/icons";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { useCallback, useId, useRef, useState } from "react";
 import { codeAnchorRef } from "../added-marks";

@@ -1,10 +1,10 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { useProposalDescription } from "./proposal-cue";
 

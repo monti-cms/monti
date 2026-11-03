@@ -2,16 +2,6 @@
 
 // The header of the entry editor screen: the collection as a way back, the address and status, save, preview and publish, and the properties and "more" menus.
 
-import {
-	Archive,
-	ChevronLeft,
-	Contrast,
-	Copy,
-	Download,
-	OverflowMenuHorizontal,
-	RightPanelOpen,
-	TrashCan,
-} from "@carbon/icons-react";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
@@ -29,6 +19,16 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import {
+	Archive,
+	ChevronLeft,
+	Contrast,
+	Copy,
+	Download,
+	OverflowMenuHorizontal,
+	RightPanelOpen,
+	TrashCan,
+} from "@monti-cms/ui/icons";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import type { EditorMenuItem } from "../../admin-components";

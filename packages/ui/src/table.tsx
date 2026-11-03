@@ -2,10 +2,10 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { Folder } from "@carbon/icons-react";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
+import { Folder } from "./icons";
 
 function Table({
 	className,

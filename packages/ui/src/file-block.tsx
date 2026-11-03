@@ -1,8 +1,8 @@
 "use client";
 
-import { Document } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Document } from "./icons";
 
 /**
  * A file in the body of an entry: a one-line box with the file icon (16px), the name, and the kind and size in mono at the end ("PDF · 1.2 MB").

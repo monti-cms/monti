@@ -1,6 +1,5 @@
 "use client";
 
-import { Download } from "@carbon/icons-react";
 import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
@@ -32,6 +31,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Download } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {

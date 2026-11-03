@@ -1,6 +1,6 @@
-import { Grid, List } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Grid, List } from "./icons";
 import { Segmented } from "./segmented";
 import { Stack } from "./stack";
 

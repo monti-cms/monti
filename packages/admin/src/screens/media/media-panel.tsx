@@ -1,6 +1,5 @@
 "use client";
 
-import { Copy, FolderMoveTo, TrashCan } from "@carbon/icons-react";
 import type { FolderListItem } from "@monti-cms/core/site";
 import { formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
@@ -26,6 +25,7 @@ import {
 	Textarea,
 	TextButton,
 } from "@monti-cms/ui";
+import { Copy, FolderMoveTo, TrashCan } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";

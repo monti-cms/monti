@@ -1,5 +1,5 @@
-import { Add } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Add } from "./icons";
 import { NavLink, RailLayout, Section, Text, TextButton } from "./index";
 
 /** A page part with a list of links beside it, as the collections sit beside their editor in Settings. Narrow, the content wraps under the links. */

@@ -1,11 +1,11 @@
 "use client";
 
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
 import { IconButton } from "./icon-button";
+import { OverflowMenuHorizontal } from "./icons";
 import { PageToolbar, type SelectAll } from "./page-header";
 import { Separator } from "./separator";
 import { Spark } from "./spark";

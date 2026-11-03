@@ -7,6 +7,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./icons": "./src/icons.ts",
 		"./host": "./src/host/index.tsx",
 		"./router": "./src/router/index.tsx",
 		"./editor": "./src/editor/public.ts",
@@ -86,6 +87,10 @@
 			".": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"./icons": {
+				"types": "./dist/icons.d.ts",
+				"default": "./dist/icons.js"
 			},
 			"./host": {
 				"types": "./dist/host/index.d.ts",

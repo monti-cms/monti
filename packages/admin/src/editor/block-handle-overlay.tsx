@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	BlockHandle,
@@ -19,6 +18,7 @@ import {
 	Icon,
 	MenuShortcut,
 } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type React from "react";
 import { type ReactNode, useRef, useState } from "react";

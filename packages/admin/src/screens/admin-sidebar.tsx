@@ -1,6 +1,5 @@
 "use client";
 
-import { Image, SettingsAdjust, Tools, TrashCan } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -23,6 +22,7 @@ import {
 	Text,
 	useSidebar,
 } from "@monti-cms/ui";
+import { Image, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { type DragEvent, Fragment, type ReactNode, useState } from "react";
 import { AdminLink as Link } from "../router";
 import { ScreenModeSwitch } from "../ui/screen-mode";

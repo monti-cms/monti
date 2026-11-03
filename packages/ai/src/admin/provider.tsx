@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdminComponents } from "@monti-cms/admin";
-import { Spark } from "@monti-cms/admin/kit";
+import { Spark } from "@monti-cms/admin/icons";
 import { useAgentProposalsExtension } from "./agent-editor-proposals";
 import { useAgentMediaProposals } from "./agent-media-proposals";
 import { useAiTranslateExtension } from "./ai-translate";

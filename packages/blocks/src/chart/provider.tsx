@@ -1,7 +1,7 @@
 "use client";
 
-import { ChartColumn } from "@carbon/icons-react";
 import type { AdminComponents } from "@monti-cms/admin";
+import { ChartColumn } from "@monti-cms/admin/icons";
 
 /** Adds the chart block's menu icon and editor preview to the admin UI. */
 export const chartComponents: AdminComponents = {

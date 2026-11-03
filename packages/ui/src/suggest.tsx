@@ -1,6 +1,6 @@
-import { RecentlyViewed } from "@carbon/icons-react";
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
+import { RecentlyViewed } from "./icons";
 import { Spark } from "./spark";
 
 /**

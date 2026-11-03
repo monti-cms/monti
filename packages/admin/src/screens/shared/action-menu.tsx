@@ -1,6 +1,5 @@
 "use client";
 
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
 import {
@@ -27,6 +26,7 @@ import {
 	IconButton,
 	MenuShortcut,
 } from "@monti-cms/ui";
+import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
 import { cloneElement, type ReactElement, type ReactNode } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
 import { sharedMessages } from "./messages";

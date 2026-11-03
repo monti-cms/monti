@@ -1,9 +1,9 @@
 "use client";
 
-import { Edit, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@carbon/icons-react";
 import type { Folder, FolderTrashResult } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { toast } from "@monti-cms/ui";
+import { Edit, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@monti-cms/ui/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { errorText } from "../../api/client";

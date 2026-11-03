@@ -1,5 +1,5 @@
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight, TrashCan } from "./icons";
 import { FloatingBar, FloatingBarButton, Separator } from "./index";
 
 /** The small floating row of tools: 3px inside, 2px between 28px buttons, a rule between groups, the floating shadow. */

@@ -1,6 +1,5 @@
 "use client";
 
-import { FitToWidth } from "@carbon/icons-react";
 import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -11,6 +10,7 @@ import {
 	DropdownMenuSubTrigger,
 	MenuValue,
 } from "@monti-cms/ui";
+import { FitToWidth } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { stringCodec, usePreference } from "../lib/hooks/use-preference";
 import type { TranslatorFor } from "../translator";

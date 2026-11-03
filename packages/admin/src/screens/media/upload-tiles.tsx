@@ -1,8 +1,8 @@
 "use client";
 
-import { Document } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { FilePreview, Image, Tile } from "@monti-cms/ui";
+import { Document } from "@monti-cms/ui/icons";
 import { useEffect, useMemo } from "react";
 import { extensionOf, isUploadableImage, type UploadEntry, uploadTileView } from "./media-upload";
 import { mediaMessages } from "./messages";

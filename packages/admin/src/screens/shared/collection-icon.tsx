@@ -1,151 +1,10 @@
 "use client";
 
-import {
-	Add,
-	AppConnectivity,
-	Archive,
-	Book,
-	Bookmark,
-	Box,
-	Bullhorn,
-	Calendar,
-	CenterCircle,
-	Chat,
-	CloseOutline,
-	CodeReference,
-	ColorPalette,
-	Compass,
-	Dashboard,
-	DataBase,
-	DataTable,
-	Document,
-	DocumentBlank,
-	DocumentView,
-	Edit,
-	Email,
-	Favorite,
-	Fire,
-	Flag,
-	Flash,
-	Folder,
-	Gift,
-	Globe,
-	Hashtag,
-	Idea,
-	Image,
-	Layers,
-	Link,
-	List,
-	Location,
-	Music,
-	Notebook,
-	NotebookReference,
-	Package,
-	Password,
-	Pin,
-	Plug,
-	Portfolio,
-	Quotes,
-	Rocket,
-	Rss,
-	Screen,
-	Search,
-	Settings,
-	Shapes,
-	ShoppingBag,
-	Sigma,
-	SquareOutline,
-	Star,
-	Subtract,
-	Tag,
-	Terminal,
-	TextHighlight,
-	Ticket,
-	Time,
-	User,
-	UserMultiple,
-	Video,
-	WarningAlt,
-} from "@carbon/icons-react";
 import { useSite } from "@monti-cms/core/site";
-import { type MontiIcon, Spark } from "@monti-cms/ui";
+import type { MontiIcon } from "@monti-cms/ui";
+import { Document, iconsByName, Tag } from "@monti-cms/ui/icons";
 import { useCallback } from "react";
 import { useAdminComponents } from "../../admin-components";
-
-/**
- * Built-in icons selectable by a collection definition's `icon`, a block definition's `editor.icon`, or a code-line effect's
- * `icon`, by their IBM Carbon icon name (`document`, `warning--alt`, `text--highlight`) and `spark` for the assistant's ✦.
- * Only frequently used ones are included so not every icon is bundled. For other names, plugins/the site
- * register them through `icons` of `AdminComponentsProvider`. For an unknown collection icon name, publishable collections use a document icon and taxonomy collections a tag icon.
- */
-export const ICONS: Readonly<Record<string, MontiIcon>> = {
-	add: Add,
-	"app-connectivity": AppConnectivity,
-	archive: Archive,
-	book: Book,
-	bookmark: Bookmark,
-	box: Box,
-	bullhorn: Bullhorn,
-	calendar: Calendar,
-	"center--circle": CenterCircle,
-	chat: Chat,
-	"close--outline": CloseOutline,
-	"code--reference": CodeReference,
-	"color-palette": ColorPalette,
-	compass: Compass,
-	dashboard: Dashboard,
-	edit: Edit,
-	"square--outline": SquareOutline,
-	"data--base": DataBase,
-	document: Document,
-	"document--blank": DocumentBlank,
-	"document--view": DocumentView,
-	email: Email,
-	favorite: Favorite,
-	fire: Fire,
-	flag: Flag,
-	flash: Flash,
-	folder: Folder,
-	gift: Gift,
-	globe: Globe,
-	hashtag: Hashtag,
-	idea: Idea,
-	image: Image,
-	layers: Layers,
-	link: Link,
-	list: List,
-	location: Location,
-	music: Music,
-	notebook: Notebook,
-	"notebook--reference": NotebookReference,
-	package: Package,
-	password: Password,
-	pin: Pin,
-	plug: Plug,
-	portfolio: Portfolio,
-	quotes: Quotes,
-	rocket: Rocket,
-	rss: Rss,
-	screen: Screen,
-	search: Search,
-	settings: Settings,
-	shapes: Shapes,
-	"shopping--bag": ShoppingBag,
-	sigma: Sigma,
-	star: Star,
-	subtract: Subtract,
-	"data-table": DataTable,
-	tag: Tag,
-	terminal: Terminal,
-	"text--highlight": TextHighlight,
-	ticket: Ticket,
-	time: Time,
-	user: User,
-	"user--multiple": UserMultiple,
-	video: Video,
-	"warning--alt": WarningAlt,
-	spark: Spark,
-};
 
 /**
  * Function that picks an icon by name. Looks at registered icons (`AdminComponents.icons`) first, then the built-in icons.
@@ -153,7 +12,7 @@ export const ICONS: Readonly<Record<string, MontiIcon>> = {
  */
 export function useIconByName(): (name: string | undefined) => MontiIcon | undefined {
 	const { icons } = useAdminComponents();
-	return useCallback((name) => (name ? (icons?.[name] ?? ICONS[name]) : undefined), [icons]);
+	return useCallback((name) => (name ? (icons?.[name] ?? iconsByName[name]) : undefined), [icons]);
 }
 
 export function CollectionIcon({ collection }: { collection: string }) {

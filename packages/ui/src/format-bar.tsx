@@ -1,10 +1,10 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { Link } from "@carbon/icons-react";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
 import { BAR_BUTTON, FloatingBarButton } from "./floating-bar";
+import { Link } from "./icons";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";

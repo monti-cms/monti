@@ -1,11 +1,11 @@
 "use client";
 
-import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import { Box, FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
+import { CodeReference, OpenPanelLeft } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EditorMenuItem, useAdminComponents, useEditorExtensions } from "../../admin-components";

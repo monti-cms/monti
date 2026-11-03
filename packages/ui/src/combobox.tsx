@@ -1,12 +1,12 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
-import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVE, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
+import { Close } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";

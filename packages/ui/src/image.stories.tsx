@@ -1,5 +1,5 @@
-import { Image as ImageIcon } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Image as ImageIcon } from "./icons";
 import { Image, Inline, Stack } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */

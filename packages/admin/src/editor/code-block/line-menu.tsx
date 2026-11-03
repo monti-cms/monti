@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronSort, Code, CollapseAll, TextHighlight, View } from "@carbon/icons-react";
 import {
 	COLLAPSE,
 	type CodeLineEffect,
@@ -18,6 +17,7 @@ import {
 	DropdownMenuSeparator,
 	MenuShortcut,
 } from "@monti-cms/ui";
+import { ChevronSort, Code, CollapseAll, TextHighlight, View } from "@monti-cms/ui/icons";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { codeBlockMessages } from "./messages";
 

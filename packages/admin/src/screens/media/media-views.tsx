@@ -1,6 +1,5 @@
 "use client";
 
-import { Document, FolderParent } from "@carbon/icons-react";
 import { type FolderListItem, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -20,6 +19,7 @@ import {
 	Text,
 	Tile,
 } from "@monti-cms/ui";
+import { Document, FolderParent } from "@monti-cms/ui/icons";
 import type { DragEvent, KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { EntriesTableFolderRows } from "../entries-table-folder-rows";

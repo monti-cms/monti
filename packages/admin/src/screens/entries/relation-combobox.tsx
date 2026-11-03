@@ -1,6 +1,5 @@
 "use client";
 
-import { Add } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Combobox,
@@ -17,6 +16,7 @@ import {
 	Text,
 	useComboboxAnchor,
 } from "@monti-cms/ui";
+import { Add } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { EmptyState } from "../shared/empty-state";

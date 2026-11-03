@@ -1,15 +1,14 @@
 "use client";
 
-import { Renew } from "@carbon/icons-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-	Spark,
 	TextButton,
 	useUiLabels,
 } from "@monti-cms/ui";
+import { Renew, Spark } from "@monti-cms/ui/icons";
 import type * as React from "react";
 import type { ReactNode } from "react";
 import { ErrorNoticeView } from "../ui/error-notice";

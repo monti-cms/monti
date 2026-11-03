@@ -1,8 +1,8 @@
-import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Affix } from "./affix";
 import { FormField, FormFieldError, FormFieldLabel } from "./field";
 import { IconButton } from "./icon-button";
+import { Renew } from "./icons";
 import { Stack } from "./stack";
 
 /** Only the middle is typed: the fixed ends are faint mono text with no line, and the underline is under the typed part only. A click anywhere in the field puts the caret at the end of the typed part. */

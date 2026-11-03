@@ -53,7 +53,7 @@ export default defineAdminPlugin({
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
+블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`, 로그인 방법의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 `components`의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
@@ -63,7 +63,8 @@ import { View } from "@carbon/icons-react";
 export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
-`@monti-cms/blocks`의 각 블록과 `@monti-cms/ai`도 같은 방식으로 선언한다.
+Monti 자신의 패키지는 모든 아이콘을 한 목록 `@monti-cms/admin/icons`(디자인 시스템의 `@monti-cms/ui/icons`)에서 가져오고, Carbon을 직접
+가져오지 않는다. 이 저장소에서는 `pnpm check:design`이 이를 지킨다.
 
 ## 본문은 저장 문서
 

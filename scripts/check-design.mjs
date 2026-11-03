@@ -38,6 +38,8 @@
  *   off-system          Every class word in the admin UI packages (stories and test helpers too) is in the design system: a known role per
  *                       namespace, the weights, radius and shadows it keeps, no line height or letter spacing of its own, and on screens the
  *                       spacing scale. The roles are read from `packages/ui/styles/theme.css`; `OWN_TYPE` and `OWN_COLORS` name the exceptions.
+ *   icon-list           Only `packages/ui/src/icons.ts`, the one list of icons, imports `@carbon/icons-react` (stories and tests too, in
+ *                       every package). Code takes icons from `@monti-cms/ui/icons`, or `@monti-cms/admin/icons` in an extension.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -965,6 +967,23 @@ function checkThemeNames() {
 }
 checkThemeNames();
 
+/** Every icon comes from the one list: no other file of any package imports Carbon. */
+function checkIconList() {
+	const list = "packages/ui/src/icons.ts";
+	for (const pkg of readdirSync(path.join(root, "packages"))) {
+		const dir = path.join(root, "packages", pkg, "src");
+		if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) continue;
+		for (const file of sourcesUnder(dir, ["node_modules", "dist"])) {
+			if (rel(file) === list) continue;
+			const lexed = lex(readFileSync(file, "utf8"));
+			for (const { specifier, line, type } of specifiers(lexed))
+				if (!type && specifier.startsWith("@carbon/icons-react"))
+					add(file, line, "icon-list", `imports \`${specifier}\`; take the icon from \`@monti-cms/ui/icons\``);
+		}
+	}
+}
+checkIconList();
+
 /** Role names per namespace, read from the generated theme, so adding a role to `tokens.json` is all it takes. */
 const rolesOf = (namespace) =>
 	new Set([...themeCss.matchAll(new RegExp(`--${namespace}-monti-([a-z-]+?)(?:--[a-z-]+)?:`, "g"))].map((m) => m[1]));
@@ -1097,6 +1116,7 @@ const HINTS = {
 	"theme-names":
 		"The theme and the token files define only the admin's own names (monti-), and the theme clears Tailwind's.",
 	"off-system": "Use the type roles, color roles, radius, weights and spacing scale of packages/ui/styles/theme.css.",
+	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

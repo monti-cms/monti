@@ -1,7 +1,7 @@
-import { SettingsAdjust, Upload } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box } from "./box";
 import { Caret } from "./caret";
+import { SettingsAdjust, Upload } from "./icons";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
 import { Text } from "./text";

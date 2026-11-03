@@ -1,6 +1,6 @@
-import { Archive, Copy, Folder, Launch, Tag, TrashCan, Undo } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Archive, Copy, Folder, Launch, Tag, TrashCan, Undo } from "./icons";
 import {
 	ContextMenu,
 	ContextMenuContent,

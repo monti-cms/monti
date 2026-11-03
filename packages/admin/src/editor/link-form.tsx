@@ -1,8 +1,8 @@
 "use client";
 
-import { Unlink } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Button, FormFieldError, Inline, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Unlink } from "@monti-cms/ui/icons";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";

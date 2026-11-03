@@ -1,9 +1,9 @@
 "use client";
 
-import { View, ViewOff } from "@carbon/icons-react";
 import type * as React from "react";
 import { useState } from "react";
 import { cn } from "./cn";
+import { View, ViewOff } from "./icons";
 import { Input } from "./input";
 import { TextButton } from "./text-button";
 

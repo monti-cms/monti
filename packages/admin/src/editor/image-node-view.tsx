@@ -1,13 +1,5 @@
 "use client";
 
-import {
-	Crop,
-	Image as ImageIcon,
-	SettingsAdjust,
-	TextAlignCenter,
-	TextAlignLeft,
-	TextAlignRight,
-} from "@carbon/icons-react";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -31,6 +23,14 @@ import {
 	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
+import {
+	Crop,
+	Image as ImageIcon,
+	SettingsAdjust,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+} from "@monti-cms/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEditorState } from "@tiptap/react";
 import type React from "react";

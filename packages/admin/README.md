@@ -53,7 +53,7 @@ Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugin
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon`, a code line effect's `icon` and a login method's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
 The admin package includes only the commonly used icons, so register other names with `icons` of the same `components`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
@@ -63,7 +63,8 @@ import { View } from "@carbon/icons-react";
 export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
-Each block of `@monti-cms/blocks` and `@monti-cms/ai` declare theirs the same way.
+Monti's own packages take every icon from one list, `@monti-cms/admin/icons` (the design system's `@monti-cms/ui/icons`), and never import
+Carbon directly; `pnpm check:design` enforces it in this repository.
 
 ## The body is a stored document
 

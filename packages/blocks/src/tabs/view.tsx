@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, Pen, Star, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,6 +9,7 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
+import { Add, Pen, Star, TrashCan } from "@monti-cms/admin/icons";
 import { cn } from "@monti-cms/admin/kit";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";

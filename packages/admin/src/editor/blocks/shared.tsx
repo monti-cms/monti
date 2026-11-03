@@ -1,6 +1,5 @@
 "use client";
 
-import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	cn,
@@ -14,6 +13,7 @@ import {
 	PopoverTrigger,
 	Stack,
 } from "@monti-cms/ui";
+import { SettingsAdjust } from "@monti-cms/ui/icons";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
 import { blocksMessages } from "./messages";

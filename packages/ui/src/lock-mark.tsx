@@ -1,5 +1,5 @@
-import { Locked } from "@carbon/icons-react";
 import { cn } from "./cn";
+import { Locked } from "./icons";
 
 /**
  * The lock after a read-only value or a section title: this cannot be changed. 12px and faint, 6px from the text before it. `label` names it for screen

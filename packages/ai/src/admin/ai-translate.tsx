@@ -1,6 +1,5 @@
 "use client";
 
-import { StopFilledAlt, Translate } from "@carbon/icons-react";
 import {
 	type EditorExtension,
 	type EditorMenuItem,
@@ -10,6 +9,7 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
+import { StopFilledAlt, Translate } from "@monti-cms/admin/icons";
 import {
 	Dialog,
 	DialogContent,

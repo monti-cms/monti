@@ -1,6 +1,5 @@
 "use client";
 
-import { FolderParent, Reset, TrashCan } from "@carbon/icons-react";
 import { trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -26,6 +25,7 @@ import {
 	TrashRowDate,
 	TrashRowTitle,
 } from "@monti-cms/ui";
+import { FolderParent, Reset, TrashCan } from "@monti-cms/ui/icons";
 import type { KeyboardEvent } from "react";
 import type { TrashEntryJson, TrashItemJson } from "../../api/trash";
 import { commonMessages } from "../../lib/common.messages";

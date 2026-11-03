@@ -1,11 +1,11 @@
 "use client";
 
-import { Upload } from "@carbon/icons-react";
 import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from "./dialog";
+import { Upload } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { TextButton } from "./text-button";

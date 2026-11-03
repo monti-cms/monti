@@ -4,7 +4,6 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "@carbon/icons-react";
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
@@ -17,6 +16,7 @@ import {
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { ICON_BUTTON, IconButton } from "./icon-button";
+import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "./icons";
 import { useUiLabels } from "./labels";
 import { NAV_ROW, NAV_ROW_END } from "./nav-link";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";

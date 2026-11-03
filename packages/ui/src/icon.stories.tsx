@@ -1,6 +1,6 @@
-import { CheckmarkOutline, Document, WarningAlt } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Icon } from "./icon";
+import { CheckmarkOutline, Document, WarningAlt } from "./icons";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 

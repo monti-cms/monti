@@ -1,6 +1,6 @@
-import { Add, Search } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
+import { Add, Search } from "./icons";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
 

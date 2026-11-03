@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
@@ -11,6 +10,7 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { ChevronLeft, ChevronRight } from "./icons";
 import { useUiLabels } from "./labels";
 import { TextButton } from "./text-button";
 

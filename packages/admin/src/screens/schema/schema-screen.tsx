@@ -1,6 +1,5 @@
 "use client";
 
-import { Locked } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
@@ -23,6 +22,7 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { Locked } from "@monti-cms/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";

@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Close } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { DragHandle, IconButton, OrderedRow, Text } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Close } from "@monti-cms/ui/icons";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
 import type { RelationEntry } from "./use-relation-search";

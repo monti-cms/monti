@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, ChevronDown, ChevronRight, Close } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fieldTraits, useTranslator } from "@monti-cms/core/site";
@@ -29,6 +28,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Add, ChevronDown, ChevronRight, Close } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { AddFieldSheet } from "./add-field";

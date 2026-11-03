@@ -284,7 +284,6 @@ export {
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
-export { Spark } from "./spark";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";

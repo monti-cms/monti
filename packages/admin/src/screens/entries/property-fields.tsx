@@ -1,6 +1,5 @@
 "use client";
 
-import { Renew } from "@carbon/icons-react";
 import type { BacklinkField, ConditionalField, RelationField, SlugField, ValueField, ViewField } from "@monti-cms/core";
 import type { PanelGroup } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
@@ -15,6 +14,7 @@ import {
 	PropertyGroup,
 	Text,
 } from "@monti-cms/ui";
+import { Renew } from "@monti-cms/ui/icons";
 import { type FocusEvent, memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
 import { getEntry } from "../../api/entries";

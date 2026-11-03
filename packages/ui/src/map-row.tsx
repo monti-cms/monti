@@ -1,6 +1,6 @@
-import { ArrowRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { ArrowRight } from "./icons";
 
 /**
  * A row of "match the fields" in an import: the key from the file (mono) on the left, an arrow, and what it goes into on the right (a `Select`),

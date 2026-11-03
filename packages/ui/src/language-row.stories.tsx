@@ -1,5 +1,5 @@
-import { Close } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Close } from "./icons";
 import { DragHandle, IconButton, LanguageRow, LanguageSource, Stack, TextButton } from "./index";
 
 /**

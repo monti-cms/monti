@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, RecentlyViewed } from "@carbon/icons-react";
 import {
 	type AdminPanel,
 	type AdminPanelProps,
@@ -12,6 +11,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/admin";
+import { Add, RecentlyViewed, Spark } from "@monti-cms/admin/icons";
 import {
 	Box,
 	Button,
@@ -22,7 +22,6 @@ import {
 	ErrorNote,
 	IconButton,
 	SidePanel,
-	Spark,
 	Stack,
 	Suggest,
 	SuggestLabel,

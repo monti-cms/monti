@@ -1,10 +1,10 @@
-import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { Affix } from "./affix";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldLegend, FormFieldSet } from "./field";
+import { Renew } from "./icons";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";

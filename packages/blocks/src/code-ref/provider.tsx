@@ -1,6 +1,5 @@
 "use client";
 
-import { Code, Unlink } from "@carbon/icons-react";
 import { type AdminComponents, type Site, type Translator, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
@@ -12,6 +11,7 @@ import {
 	startLinkFromText,
 	unlinkRef,
 } from "@monti-cms/admin/editor";
+import { Code, Unlink } from "@monti-cms/admin/icons";
 import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import { codeRefBlock } from "./definition";

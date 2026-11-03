@@ -1,6 +1,6 @@
-import { Folder } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Folder } from "./icons";
 import { Spark } from "./spark";
 
 /**

@@ -1,8 +1,8 @@
 "use client";
 
-import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Label, Stack, Text, Textarea } from "@monti-cms/ui";
+import { Close } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import { type FormEvent, useId, useState } from "react";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";

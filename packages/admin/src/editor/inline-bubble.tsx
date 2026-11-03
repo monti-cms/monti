@@ -1,17 +1,5 @@
 "use client";
 
-import {
-	ChatOperational,
-	Close,
-	Edit,
-	Link,
-	OverflowMenuHorizontal,
-	TrashCan,
-	TypePattern,
-	Unlink,
-	View,
-	ViewOff,
-} from "@carbon/icons-react";
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
@@ -35,6 +23,18 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import {
+	ChatOperational,
+	Close,
+	Edit,
+	Link,
+	OverflowMenuHorizontal,
+	TrashCan,
+	TypePattern,
+	Unlink,
+	View,
+	ViewOff,
+} from "@monti-cms/ui/icons";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";

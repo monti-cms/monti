@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft } from "@carbon/icons-react";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
@@ -20,6 +19,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
 import { errorText, isConflict } from "../../api/client";

@@ -1,8 +1,8 @@
 "use client";
 
-import { Add } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, EntryStatus, Inline, TabLink, TabLinks, Text, TextButton, toast } from "@monti-cms/ui";
+import { Add } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";

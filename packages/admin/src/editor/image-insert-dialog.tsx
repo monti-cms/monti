@@ -1,6 +1,5 @@
 "use client";
 
-import { Image as ImageIcon } from "@carbon/icons-react";
 import { type FolderListItem, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Button,
@@ -18,6 +17,7 @@ import {
 	Text,
 	Tile,
 } from "@monti-cms/ui";
+import { Image as ImageIcon } from "@monti-cms/ui/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mediaNotConfiguredMessage } from "../api/error-message";

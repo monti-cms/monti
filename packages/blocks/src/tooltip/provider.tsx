@@ -1,6 +1,5 @@
 "use client";
 
-import { ChatOperational, Close, Edit } from "@carbon/icons-react";
 import { type AdminComponents, type Site, type Translator, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
@@ -14,6 +13,7 @@ import {
 	removeInlineMark,
 	runFormatItem,
 } from "@monti-cms/admin/editor";
+import { ChatOperational, Close, Edit } from "@monti-cms/admin/icons";
 import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import { keywordList } from "../shared/text";
 import { tooltipBlock } from "./definition";

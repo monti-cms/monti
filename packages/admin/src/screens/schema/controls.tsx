@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Close, Undo } from "@carbon/icons-react";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
@@ -24,6 +23,7 @@ import {
 	Text,
 	Textarea,
 } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Close, Undo } from "@monti-cms/ui/icons";
 import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";

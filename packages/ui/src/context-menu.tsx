@@ -1,9 +1,9 @@
 "use client";
 
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
-import { ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { ChevronRight } from "./icons";
 import {
 	MENU_CARD,
 	MENU_ITEM,

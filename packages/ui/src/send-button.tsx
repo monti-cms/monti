@@ -1,8 +1,8 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { ArrowUp, StopFilledAlt } from "@carbon/icons-react";
 import { cn } from "./cn";
+import { ArrowUp, StopFilledAlt } from "./icons";
 
 /**
  * The round button that sends a message: black, with an arrow up. While the answer is being written (`busy`) it is a stop button, with a square.

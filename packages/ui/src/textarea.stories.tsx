@@ -1,6 +1,6 @@
-import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconButton } from "./icon-button";
+import { Renew } from "./icons";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 import { Textarea } from "./textarea";

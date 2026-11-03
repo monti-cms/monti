@@ -1,11 +1,11 @@
 "use client";
 
-import { Checkmark, Close } from "@carbon/icons-react";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { CodeBlock } from "./code-block";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
+import { Checkmark, Close } from "./icons";
 import { Spinner } from "./spinner";
 import { Text } from "./text";
 

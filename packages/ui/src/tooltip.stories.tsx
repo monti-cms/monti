@@ -1,5 +1,5 @@
-import { Save } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Save } from "./icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./index";
 
 /** The name of an icon button: a small black pill, one or two words, with its keys after it in mono when it has them. */

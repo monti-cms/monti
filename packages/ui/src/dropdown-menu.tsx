@@ -1,9 +1,9 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { ChevronRight, Search } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { ChevronRight, Search } from "./icons";
 import {
 	MENU_CARD,
 	MENU_ITEM,

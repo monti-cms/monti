@@ -1,6 +1,6 @@
-import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconButton } from "./icon-button";
+import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "./icons";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
 

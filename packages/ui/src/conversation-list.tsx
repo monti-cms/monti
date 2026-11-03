@@ -1,6 +1,6 @@
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { OverflowMenuHorizontal } from "./icons";
 
 /** The past conversations of the assistant panel: groups of {@link ConversationRow} by day under a {@link ConversationGroupLabel}. It scrolls. */
 function ConversationList({ className, ...props }: ComponentProps<"div">) {

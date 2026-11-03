@@ -1,6 +1,6 @@
-import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "./icons";
 import {
 	Caret,
 	DropdownMenu,

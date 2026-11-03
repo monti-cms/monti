@@ -1,9 +1,9 @@
 "use client";
 
-import { ChevronLeft, Close } from "@carbon/icons-react";
 import { type ComponentProps, type FormEventHandler, type ReactNode, useId } from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
+import { ChevronLeft, Close } from "./icons";
 import { useUiLabels } from "./labels";
 
 /**

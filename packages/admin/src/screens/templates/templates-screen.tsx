@@ -1,6 +1,5 @@
 "use client";
 
-import { Add } from "@carbon/icons-react";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -16,6 +15,7 @@ import {
 	TableRow,
 	Text,
 } from "@monti-cms/ui";
+import { Add } from "@monti-cms/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { errorText } from "../../api/client";
 import { listTemplates, templatesKeys } from "../../api/templates";

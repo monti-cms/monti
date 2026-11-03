@@ -1,6 +1,5 @@
 "use client";
 
-import { Restart } from "@carbon/icons-react";
 import {
 	type CropBox,
 	isFullCrop,
@@ -28,6 +27,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Restart } from "@monti-cms/ui/icons";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";

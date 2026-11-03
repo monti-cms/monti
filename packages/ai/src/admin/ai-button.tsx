@@ -1,7 +1,8 @@
 "use client";
 
 import { errorText, useSite, useTranslator } from "@monti-cms/admin";
-import { Spark, TextButton, toast } from "@monti-cms/admin/kit";
+import { Spark } from "@monti-cms/admin/icons";
+import { TextButton, toast } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
 import { type ReactNode, useState } from "react";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";

@@ -1,6 +1,5 @@
 "use client";
 
-import { AppConnectivity, Template } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Command,
@@ -14,6 +13,7 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
+import { AppConnectivity, Template } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { editorMessages } from "./messages";

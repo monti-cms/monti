@@ -3,7 +3,6 @@
 // The compare screen of an entry: the version the person holds beside the server's copy, with what differs marked and the two ways out. It stands
 // in for the editor while the address asks for it (`?compare=conflict` or `?compare=draft`), so what the editor holds is still there when it comes back.
 
-import { ChevronLeft } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Button,
@@ -27,6 +26,7 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { entryPath } from "../shared/entry-address";

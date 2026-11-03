@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, Close } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ArrowDown, ArrowUp, Close } from "./icons";
 import { DragHandle, IconButton, OrderedRow, Stack, Text } from "./index";
 
 /** One item of an ordered list a writer arranges (the posts of a series): a quiet box with a handle, the item, and move up · down · take out. */

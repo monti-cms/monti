@@ -1,7 +1,7 @@
-import { CalendarSettings } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DropdownMenuItem } from "./dropdown-menu";
+import { CalendarSettings } from "./icons";
 import { SplitButton } from "./split-button";
 
 const meta = {

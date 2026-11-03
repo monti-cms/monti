@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -15,6 +14,7 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { Add, FolderAdd } from "@monti-cms/ui/icons";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { AdminEntriesTable } from "./admin-entries-table";

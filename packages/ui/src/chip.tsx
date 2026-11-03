@@ -1,8 +1,8 @@
 "use client";
 
-import { Close } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { ProposalNote } from "./proposal-cue";
 import { Spark } from "./spark";

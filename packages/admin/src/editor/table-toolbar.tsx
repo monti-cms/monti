@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { FloatingBar, Inline, Separator } from "@monti-cms/ui";
+import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";

@@ -1,6 +1,6 @@
-import { Document, Image as ImageIcon, Settings, Tools, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Document, Image as ImageIcon, Settings, Tools, TrashCan } from "./icons";
 import {
 	Box,
 	Count,

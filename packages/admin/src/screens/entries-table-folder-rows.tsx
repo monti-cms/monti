@@ -2,10 +2,10 @@
 // status: its folder icon starts the title's cell, then the name and, faint, how many things are directly inside. A folder being made or renamed has its
 // name as a field in the same place (no dialog).
 
-import { Folder as FolderIcon, FolderOpen, FolderParent } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Inline, RowActions, RowLink, RowThumb, TableCell, TableRow, Text } from "@monti-cms/ui";
+import { Folder as FolderIcon, FolderOpen, FolderParent } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { ACTIONS_SIZE } from "./entries-table-widths";

@@ -100,7 +100,6 @@ export {
 	SelectTrigger,
 	SelectValue,
 	SidePanel,
-	Spark,
 	SplitButton,
 	Stack,
 	Suggest,

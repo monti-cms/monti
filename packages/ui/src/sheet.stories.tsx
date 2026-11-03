@@ -1,5 +1,5 @@
-import { Calendar, ListBoxes, TextShortParagraph } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Calendar, ListBoxes, TextShortParagraph } from "./icons";
 import {
 	Button,
 	FormField,

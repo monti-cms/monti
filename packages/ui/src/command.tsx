@@ -1,9 +1,9 @@
 "use client";
 
-import { Search } from "@carbon/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Search } from "./icons";
 import {
 	COMMAND_ITEM,
 	MENU_EMPTY,

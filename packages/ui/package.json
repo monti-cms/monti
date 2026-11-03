@@ -7,6 +7,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./icons": "./src/icons.ts",
 		"./internal": "./src/internal.ts",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
@@ -57,6 +58,10 @@
 			".": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"./icons": {
+				"types": "./dist/icons.d.ts",
+				"default": "./dist/icons.js"
 			},
 			"./internal": {
 				"types": "./dist/internal.d.ts",

@@ -1,5 +1,5 @@
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
 import { Box, FloatingBar, FloatingBarButton, Image, ResizeCorner, Separator, Stack } from "./index";
 
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(

@@ -1,5 +1,5 @@
-import { ArrowRight, Calendar, Image, Link, ListBoxes, TextShortParagraph } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ArrowRight, Calendar, Image, Link, ListBoxes, TextShortParagraph } from "./icons";
 import { Box, PickList, PickListItem, PickListLabel, PickListSeparator } from "./index";
 
 /** Menu rows without the floating card, placed on a sheet: pick one kind to go to the next step. The picked row keeps the selected ground. */

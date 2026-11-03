@@ -1,5 +1,5 @@
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { OverflowMenuHorizontal } from "./icons";
 import {
 	Box,
 	EntryStatus,

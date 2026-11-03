@@ -1,5 +1,5 @@
-import { Launch } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Launch } from "./icons";
 import {
 	Button,
 	DescriptionItem,

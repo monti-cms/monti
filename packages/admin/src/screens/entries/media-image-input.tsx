@@ -1,8 +1,8 @@
 "use client";
 
-import { DocumentBlank, Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, FormFieldError, Image, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
+import { DocumentBlank, Image as ImageIcon } from "@monti-cms/ui/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { errorText } from "../../api/client";

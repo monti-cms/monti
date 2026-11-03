@@ -1,6 +1,6 @@
-import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
+import { Renew, Spark } from "./icons";
 import {
 	Affix,
 	Box,
@@ -25,7 +25,6 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	Spark,
 	Switch,
 	Text,
 	Textarea,

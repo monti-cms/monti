@@ -1,7 +1,7 @@
 "use client";
 
-import { WorkflowAutomation } from "@carbon/icons-react";
 import type { AdminComponents } from "@monti-cms/admin";
+import { WorkflowAutomation } from "@monti-cms/admin/icons";
 
 /** The Mermaid diagram block's menu icon and editor preview. */
 export const mermaidComponents: AdminComponents = {

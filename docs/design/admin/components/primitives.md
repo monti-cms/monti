@@ -38,7 +38,7 @@
 
 ### 코드
 
-`Icon`: `icon`은 모양(Carbon 아이콘, 어시스턴트는 `Spark`), `size`는 `xs`, `sm`, `md`, `lg` 중 하나, 그리고 `tone`과 `label`.
+`Icon`: `icon`은 모양(아이콘 목록 `@monti-cms/ui/icons`의 Carbon 아이콘, 어시스턴트는 `Spark`), `size`는 `xs`, `sm`, `md`, `lg` 중 하나, 그리고 `tone`과 `label`.
 
 ## 폼 라벨 (`.mt-label`)
 

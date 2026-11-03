@@ -1,8 +1,8 @@
 "use client";
 
-import { Upload } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Button, Inline, PageBody, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Upload } from "@monti-cms/ui/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorText } from "../../api/client";

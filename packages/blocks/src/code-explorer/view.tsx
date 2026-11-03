@@ -1,6 +1,5 @@
 "use client";
 
-import { DocumentAdd, DocumentBlank, Folder, FolderAdd, FolderTree, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -13,6 +12,7 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
+import { DocumentAdd, DocumentBlank, Folder, FolderAdd, FolderTree, TrashCan } from "@monti-cms/admin/icons";
 import {
 	cn,
 	commonMessages,

@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, TrashCan } from "@carbon/icons-react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import {
 	horizontalListSortingStrategy,
@@ -33,6 +32,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { ArrowLeft, ArrowRight, TrashCan } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { tabLabel } from "../entries/layout-groups";

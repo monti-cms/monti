@@ -233,7 +233,7 @@
 
 ## 아이콘 크기
 
-아이콘은 IBM Carbon에서만 가져온다(`@carbon/icons` 11.90.0, Apache-2.0). 다른 아이콘 세트를 더하거나 아이콘을 손으로 그리지 않는다.
+아이콘은 IBM Carbon에서만 가져온다(`@carbon/icons` 11.90.0, Apache-2.0). 다른 아이콘 세트를 더하거나 아이콘을 손으로 그리지 않는다. 쓰는 아이콘은 모두 한 목록 `packages/ui/src/icons.ts`에 있다. 코드는 아이콘을 `@monti-cms/ui/icons`(확장은 `@monti-cms/admin/icons`)에서만 가져오고, 새 아이콘은 먼저 그 목록에 더한다. `pnpm check:design`이 다른 곳에서 Carbon을 가져오는 것을 막는다(`icon-list`). 이름으로 고르는 아이콘(설정의 `icon: "user--multiple"`, 로그인 방법의 `icon: "logo--github"`)은 같은 파일의 `iconsByName`이 Carbon 이름으로 찾는다.
 
 | 토큰 | 값 | 쓰임 |
 |---|---|---|

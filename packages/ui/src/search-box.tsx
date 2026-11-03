@@ -1,7 +1,6 @@
 "use client";
 
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { Close, Search } from "@carbon/icons-react";
 import { type FocusEvent, type KeyboardEvent, useRef, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
@@ -14,6 +13,7 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { Close, Search } from "./icons";
 import { useUiLabels } from "./labels";
 
 type SearchTarget<T extends string> = { value: T; label: string };

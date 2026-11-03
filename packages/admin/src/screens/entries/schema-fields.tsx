@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Renew } from "@carbon/icons-react";
 import type {
 	BacklinkField,
 	ConditionalField,
@@ -42,6 +41,7 @@ import {
 	TextButton,
 	FormField as UiField,
 } from "@monti-cms/ui";
+import { ChevronDown, ChevronRight, Renew } from "@monti-cms/ui/icons";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
 	type FieldInputEntry,

@@ -3,11 +3,11 @@
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
-import { ArrowRight, type ArrowUp, TrashCan, Undo } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, FieldRow, IconButton, Stack } from "@monti-cms/ui";
+import { ArrowRight, type ArrowUp, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { schemaChangesMessages } from "./changes.messages";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
