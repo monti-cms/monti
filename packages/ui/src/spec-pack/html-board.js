@@ -5,6 +5,13 @@
 const role = (el) => [...el.classList].find((name) => name.startsWith("text-"))?.slice(5);
 
 /** The design system's classes and the part each one draws, first match wins. `props` reads the element's own values. */
+/** The rows a list's head row goes with: the next `.mt-table` among the elements after it (the board's runtime may wrap either). */
+const tableAfter = (el) => {
+	const all = [...document.querySelectorAll(".mt-list-head, .mt-table")];
+	const next = all[all.indexOf(el) + 1];
+	return next?.matches(".mt-table") ? next : null;
+};
+
 /** The name of an icon of the design system's list with this svg's shape (`icon-key.js`, `window.boardData.icons`), if there is one. */
 const iconName = (el) => window.boardData?.icons?.[window.iconShapeKey?.(el.innerHTML)];
 
@@ -53,7 +60,7 @@ const parts = [
 		props: (el) => ({ active: el.classList.contains("is-on") || undefined }),
 		asProps: ["color", "font-weight"],
 	},
-	{ match: (el) => el.matches(".mt-count"), part: "Count" },
+	{ match: (el) => el.matches(".mt-count") && !el.matches(".mt-row > *, footer"), part: "Count" },
 	{ match: (el) => el.matches(".mt-sidebar-foot"), part: "SidebarFoot" },
 	{
 		match: (el) => el.matches(".mt-sidebar-foot > .mt-seg, .mt-sidebar-foot > .mt-icon-btn"),
@@ -75,6 +82,117 @@ const parts = [
 		part: "PageHeader",
 		slots: (el) => ({ title: el.querySelector(":scope > h1"), meta: el.querySelector(":scope > .meta") }),
 		children: (el) => el.querySelector(":scope > .end"),
+	},
+	// A list: the head row and the rows are neighbours in a board and one table in the design system.
+	{
+		match: (el) => el.matches(".mt-list-head") && tableAfter(el) !== null,
+		part: "List",
+		group: (el) => [el, tableAfter(el)],
+	},
+	{
+		match: (el) => el.matches(".mt-list-head"),
+		part: "ListHead",
+		props: (el) => ({
+			columns: [...el.querySelectorAll(".mt-col")]
+				.filter((column) => column.closest(".mt-col-wrap")?.style.display !== "none")
+				.map((column) => ({
+					id: column.textContent.trim(),
+					label: column.textContent.trim(),
+					...(column.classList.contains("is-sort") ? { sort: "desc" } : {}),
+				})),
+		}),
+		leaf: true,
+		asProps: ["grid-template-columns", "column-gap"],
+	},
+	{ match: (el) => el.matches(".mt-table"), part: "TableBody", asProps: ["list-style", "margin", "padding"] },
+	{ match: (el) => el.matches(".mt-row"), part: "TableRow", asProps: ["grid-template-columns", "column-gap"] },
+	// The check a board shows on the row under the pointer is that state's, not the row's.
+	{ match: (el) => el.matches(".mt-row > .mt-check:not(.is-on)"), ignore: true },
+	{
+		match: (el) => el.matches(".mt-row > .mt-check"),
+		part: "RowMark",
+		props: () => ({ checked: true }),
+		leaf: true,
+		asProps: ["position", "left", "top", "opacity"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > a"),
+		part: "TitleCell",
+		props: (el) => ({
+			title: el.querySelector(".mt-row-title")?.textContent.trim(),
+			address: el.querySelector(".mt-row-sub")?.textContent.trim(),
+			folder: el.classList.contains("mt-row-folder") || undefined,
+		}),
+		leaf: true,
+		asProps: ["order", "min-width", "text-decoration", "display", "align-items", "gap", "overflow", "white-space"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > span.text-note"),
+		part: "TableCell",
+		props: () => ({ tone: "subtle", truncate: true }),
+		asProps: ["order", "color", "white-space", "overflow", "text-overflow", "display", "min-width"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > .mt-count"),
+		part: "CountCell",
+		props: (el) => ({ align: el.style.textAlign === "right" ? "end" : undefined }),
+		asProps: ["order", "white-space", "color", "text-align"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > .mt-text-btn"),
+		part: "ActionsCell",
+		leaf: true,
+		asProps: ["order", "font-size", "justify-self"],
+	},
+	{ match: (el) => el.matches(".mt-row > span"), part: "TableCell", asProps: ["order", "display"] },
+	{
+		match: (el) => el.matches(".mt-status"),
+		part: "EntryStatus",
+		props: (el) => ({
+			status:
+				["editing", "draft", "archived", "failed"].find((name) => el.classList.contains(`mt-status--${name}`)) ??
+				"published",
+			quiet: el.classList.contains("mt-status--quiet") || undefined,
+		}),
+		asProps: ["font-size", "line-height"],
+	},
+	// Under a list: the range, the page size, the page buttons.
+	{
+		match: (el) => el.matches("footer.mt-table-head"),
+		part: "ListFooter",
+		asProps: ["display", "align-items", "gap", "padding-top"],
+	},
+	{ match: (el) => el.matches("footer.mt-table-head > span:empty"), ignore: true },
+	{ match: (el) => el.matches("footer.mt-table-head > span"), part: "Count" },
+	{
+		match: (el) => el.matches(".mt-per-page"),
+		part: "PageSize",
+		props: (el) => ({ shown: el.textContent.trim() }),
+		leaf: true,
+	},
+	{ match: (el) => el.matches(".mt-pager"), part: "Pager" },
+	{
+		match: (el) => el.matches(".mt-page"),
+		part: "PageButton",
+		props: (el) => ({
+			step: el.classList.contains("mt-page--prev")
+				? "previous"
+				: el.classList.contains("mt-page--next")
+					? "next"
+					: undefined,
+			current: el.classList.contains("is-on") || undefined,
+			off: el.classList.contains("is-off") || undefined,
+			page: el.classList.contains("mt-page--wide") ? undefined : el.textContent.trim(),
+		}),
+		leaf: true,
+	},
+	// The page's search, before it is opened: a secondary pill with the magnifier.
+	{
+		match: (el) =>
+			el.matches(".mt-page-header .mt-btn--secondary") && iconName(el.querySelector("svg") ?? el) === "search",
+		part: "SearchToggle",
+		props: (el) => ({ label: el.textContent.trim() }),
+		leaf: true,
 	},
 	// An empty list's steps.
 	{ match: (el) => el.matches(".mt-empty"), part: "EmptySteps", asProps: ["border-top"] },
@@ -145,6 +263,6 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover))$/;
 
 window.boardPack = { parts, known };

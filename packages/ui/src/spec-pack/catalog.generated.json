@@ -15,6 +15,128 @@
 			},
 			"events": []
 		},
+		"List": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"TitleCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"address": {
+					"kind": "text",
+					"type": "string"
+				},
+				"folder": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"CountCell": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"align": {
+					"kind": "variant",
+					"enum": ["end", "start"]
+				}
+			},
+			"events": []
+		},
+		"ActionsCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"RowMark": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"checked": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"PageSize": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"shown": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Pager": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"PageButton": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"current": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"off": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"page": {
+					"kind": "text",
+					"type": "string"
+				},
+				"step": {
+					"kind": "variant",
+					"enum": ["next", "previous"]
+				}
+			},
+			"events": []
+		},
 		"EmptySteps": {
 			"kind": "part",
 			"bind": false,

@@ -16,7 +16,7 @@ export interface Conversion {
 	/** What the drawing has outside the design system, one line each with where it is: a part the design system lacks, a space off the spacing steps, a look shaped by hand. Never fixed here. */
 	readonly outside: readonly string[];
 	/** The drawn texts no dictionary text matches, each read from `data` until someone names it (`/drawn/<id>`). */
-	readonly data: Readonly<Record<string, Record<string, string>>>;
+	readonly data: Readonly<Record<string, Record<string, unknown>>>;
 }
 
 /**
@@ -28,7 +28,7 @@ export interface Conversion {
 export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<Record<string, string>>): Conversion {
 	const elements: Record<string, SpecElement> = {};
 	const outside: string[] = [];
-	const drawnTexts: Record<string, string> = {};
+	const drawnTexts: Record<string, unknown> = {};
 	const used = new Map<string, number>();
 	/** The drawing's ids of elements (an input's), each with the spec element it became; and the references that wait for them. */
 	const drawnIds = new Map<string, string>();
@@ -103,7 +103,13 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 			const rule = part.props[name];
 			if (!rule) continue;
 			if (rule.kind === "ref") pendingRefs.push({ element: id, prop: name, drawnId: String(value) });
-			else props[name] = rule.kind === "text" && typeof value === "string" ? textOf(value) : value;
+			else if (rule.kind === "text" && typeof value === "string") props[name] = textOf(value);
+			else if (rule.kind === "data" || rule.kind === "state") {
+				// What only the data gives (a list's columns), as the board drew it: read from the data until the screen gives its own.
+				const key = idFor(name);
+				drawnTexts[key] = value as string;
+				props[name] = { state: `/drawn/${key}` };
+			} else props[name] = value as SpecValue;
 		}
 		// The drawing's own id of this element, for a label that names it.
 		if (typeof node.id === "string") drawnIds.set(node.id, id);

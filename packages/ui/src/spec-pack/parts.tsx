@@ -312,6 +312,86 @@ function EmptyStep({ number, title, className }: { number?: string; title?: stri
 	);
 }
 
+/** A list: its head row and its rows in one table, so the columns line up (a board draws them as two neighbours). */
+function List({ children }: { children?: React.ReactNode }) {
+	return <Table container="none">{children}</Table>;
+}
+
+/** A row's title cell: the title (the way into it) and its address, or a folder's name and what it holds. */
+function TitleCell({ title, address, folder }: { title?: string; address?: string; folder?: boolean }) {
+	return (
+		<TableCell truncate>
+			<RowTitle folder={folder} title={<RowLink>{title}</RowLink>} address={address} />
+		</TableCell>
+	);
+}
+
+/** A cell of a count, a language's or a date's: mono and quiet. */
+function CountCell({ align, children }: { align?: "start" | "end"; children?: React.ReactNode }) {
+	return (
+		<TableCell align={align}>
+			<Count>{children}</Count>
+		</TableCell>
+	);
+}
+
+/** The ⋯ at the end of a row. */
+function ActionsCell({ label }: { label?: string }) {
+	return (
+		<TableCell align="end">
+			<RowActions>
+				<IconButton label={label ?? ""}>
+					<Icon name="overflow-menu--horizontal" />
+				</IconButton>
+			</RowActions>
+		</TableCell>
+	);
+}
+
+/** A row's check, in the left margin. */
+function RowMark({ checked, label }: { checked?: boolean; label?: string }) {
+	return <RowCheck checked={checked ?? false} label={label ?? ""} />;
+}
+
+/** How many rows a page holds, as the board shows it ("25개씩"). */
+function PageSize({ shown, label }: { shown?: string; label?: string }) {
+	return <PageSizeMenu label={label ?? ""} value={0} options={[{ value: 0, label: shown ?? "" }]} />;
+}
+
+/** The page buttons under a list. */
+function Pager({ children }: { children?: React.ReactNode }) {
+	return (
+		<Pagination>
+			<PaginationContent>{children}</PaginationContent>
+		</Pagination>
+	);
+}
+
+/** One page button: `current`, the page shown; `step`, the previous or next page (`off` at the first or last). */
+function PageButton({
+	step,
+	current,
+	off,
+	page,
+}: {
+	step?: "previous" | "next";
+	current?: boolean;
+	off?: boolean;
+	page?: string;
+}) {
+	return (
+		<PaginationItem>
+			{step === "previous" ? (
+				<PaginationPrevious disabled={off} />
+			) : step === "next" ? (
+				<PaginationNext disabled={off} />
+			) : (
+				<PaginationLink isActive={current}>{page}</PaginationLink>
+			)}
+		</PaginationItem>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -332,6 +412,14 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	List,
+	TitleCell,
+	CountCell,
+	ActionsCell,
+	RowMark,
+	PageSize,
+	Pager,
+	PageButton,
 	EmptySteps,
 	EmptyStep,
 	ChangeDot,
@@ -421,6 +509,14 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	List: { kind: "part", props: {} },
+	TitleCell: { kind: "part", props: { title: "text", address: "text", folder: "flag" } },
+	CountCell: { kind: "part", props: { align: "variant" } },
+	ActionsCell: { kind: "part", props: { label: "text" } },
+	RowMark: { kind: "part", props: { checked: "flag", label: "text" } },
+	PageSize: { kind: "part", props: { shown: "text", label: "text" } },
+	Pager: { kind: "part", props: {} },
+	PageButton: { kind: "part", props: { step: "variant", current: "flag", off: "flag", page: "text" } },
 	EmptySteps: { kind: "part", props: {} },
 	EmptyStep: { kind: "part", props: { number: "text", title: "text" } },
 	ChangeDot: { kind: "part", props: { tone: "variant", label: "text" } },

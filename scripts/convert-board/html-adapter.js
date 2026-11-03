@@ -94,6 +94,16 @@ function layoutOf(el, page) {
 	return { ...layout, ...page };
 }
 
+/** A group whose one child the board centres with automatic side margins (`margin: 0 auto`): the group centres it. */
+function centred(el) {
+	const only = drawnChildren(el).filter((child) => child.nodeType === Node.ELEMENT_NODE);
+	if (only.length !== 1 || directionOf(el) === "row") return {};
+	const margin = (side) => only[0].style.getPropertyValue(`margin-${side}`) || only[0].style.margin.split(" ")[1];
+	return margin("left") === "auto" && (margin("right") === "auto" || only[0].style.margin.split(" ").length <= 3)
+		? { align: "center" }
+		: {};
+}
+
 /** The axis a group's children run along, as laid out. */
 function directionOf(el) {
 	const style = getComputedStyle(el);
@@ -111,7 +121,12 @@ function drawnChildren(el) {
 			else if (shown(child)) out.push(child);
 		}
 	}
-	return out;
+	// A flex or grid container draws its children in their `order`, not as written: read them as drawn.
+	const order = (node) => (node.nodeType === Node.ELEMENT_NODE ? Number(getComputedStyle(node).order) || 0 : 0);
+	return out
+		.map((node, index) => [node, index])
+		.sort((a, b) => order(a[0]) - order(b[0]) || a[1] - b[1])
+		.map(([node]) => node);
 }
 
 /** An empty element that only holds a height or a width: a spacer, measured as a distance and not drawn. */
@@ -125,7 +140,8 @@ function isSpacer(el) {
 }
 
 function read(el, where, page = undefined, inPart = false) {
-	const rule = PARTS.find((each) => each.match(el));
+	// A rule that groups an element with its neighbours is read where they are measured; each member is read by its own rule.
+	const rule = PARTS.find((each) => !each.group && each.match(el));
 	// A board drawn inside a board (its own page root) is read as a page too: its height and ground are the page's.
 	const root = page !== undefined || rule?.frame === true;
 	const here = `${where} › ${label(el)}`;
@@ -159,7 +175,7 @@ function read(el, where, page = undefined, inPart = false) {
 	return framed(el, {
 		where: here,
 		direction: directionOf(el),
-		layout: layoutOf(el, page),
+		layout: { ...layoutOf(el, page), ...centred(el) },
 		looks,
 		...measured(el, here),
 	});
@@ -220,9 +236,29 @@ function measured(el, where) {
 	const justify = border.display.includes("flex") ? border.justifyContent : "normal";
 	const aligned = !/^(normal|flex-start|start|stretch)$/.test(justify);
 	const children = [];
+	const taken = new Set();
 	for (const [index, child] of drawnChildren(el).entries()) {
+		if (taken.has(child)) continue;
 		if (child.nodeType === Node.TEXT_NODE) {
 			children.push({ where: `${where}[${index}]`, text: child.textContent.trim() });
+			continue;
+		}
+		// Siblings the design system holds in one part (a list's head row and its rows in one table): read as that part, measured as one.
+		const group = PARTS.find((rule) => rule.group && rule.match(child));
+		if (group) {
+			const members = group.group(child).filter(Boolean);
+			for (const member of members) taken.add(member);
+			const first = members[0].getBoundingClientRect();
+			const last = members[members.length - 1].getBoundingClientRect();
+			children.push({
+				where: `${where}[${index}] (${group.part})`,
+				part: group.part,
+				props: {},
+				looks: [],
+				children: members.map((member, at) => read(member, `${where}[${index + at}]`, undefined, true)),
+				before: Math.round(start(first) - edge),
+			});
+			edge = end(last);
 			continue;
 		}
 		if (getComputedStyle(child).position === "absolute") {
@@ -239,7 +275,24 @@ function measured(el, where) {
 			continue;
 		}
 		const rect = child.getBoundingClientRect();
-		if (isSpacer(child)) continue;
+		if (isSpacer(child)) {
+			// A spacer that grows is the layout taking the room left (a footer pushed down), not a distance: what comes before it is a region that
+			// grows, and what follows is placed after that region.
+			if (Number.parseFloat(getComputedStyle(child).flexGrow) > 0 && children.length > 0) {
+				const [first, ...rest] = children;
+				children.splice(0, children.length, {
+					where: `${where} (region)`,
+					direction: row ? "row" : "column",
+					layout: { grow: true },
+					looks: [],
+					children: [{ ...first, before: undefined }, ...rest],
+					before: first.before,
+					after: 0,
+				});
+				edge = end(rect);
+			}
+			continue;
+		}
 		const before = aligned && children.length === 0 ? undefined : Math.round(start(rect) - edge);
 		children.push({ ...read(child, `${where}[${index}]`), before });
 		edge = end(rect);
