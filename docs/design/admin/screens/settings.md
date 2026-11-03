@@ -82,7 +82,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 절 | `Section`("콘텐츠 언어"). 읽기 전용이면 제목 뒤 `LockMark` | |
-| 언어 행 | `LanguageRow`(`name` 원어 이름, `code`, `label` 표시 이름, 바뀐 행은 `dot`, 뺄 행은 `gone`) | 이름은 언어 코드에서 오는 글이다. 다른 행은 끌기 손잡이(`handle`에 `LanguageRowHandle`)로 순서를 바꾼다. |
+| 언어 행 | `LanguageRow`(`name` 원어 이름, `code`, `label` 표시 이름, 바뀐 행은 `dot`, 뺄 행은 `gone`) | 이름은 언어 코드에서 오는 글이다. 다른 행은 끌기 손잡이(`handle`에 `DragHandle`)로 순서를 바꾼다. |
 | 원문 행의 "원문 │ 바꾸기" | `LanguageSource` | 굵은 "원문", 구분선, 조용한 밑줄 버튼 "바꾸기". "바꾸기"는 `DropdownMenu`(`DropdownMenuRadioGroup`, 지금 원문에 ✓)를 연다. 고르면 그 언어가 맨 위로 가고 두 행에 바뀜 점이 붙는다. 원문 행은 손잡이 자리를 비운다. |
 | 다른 행의 × | `TextButton variant="quiet"`(`aria-label` "… 빼기") | 누르면 행에 취소선(`gone`)을 긋고 바뀐 곳에 더한다. 번역이 있는 언어는 저장 때 검토에서 처리를 고른다. |
 | "+ 언어 추가" | `TextButton` + `Popover`(`PopoverContent padding="menu"`) 안의 `Command`(`shouldFilter={false}`, `CommandInput`, `CommandList`, `CommandItem` 코드 mono · 원어 이름 · 끝에 표시 이름, `CommandSeparator`, 마지막 "직접 입력") | 코드를 고르면 그 자리에서 행이 생긴다. "직접 입력"은 창을 연다. |

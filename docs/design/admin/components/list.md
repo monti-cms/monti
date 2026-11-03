@@ -252,4 +252,4 @@
 
 ### 코드
 
-`LanguageRow`(이름, `code`, `label`, `dot`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `LanguageRowHandle`(손잡이), `LanguageSource`(굵은 표시, 구분선, 조용한 밑줄 버튼 하나). 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`, "직접 입력" 창은 `DialogTitle`이 `of`("새 언어 · tlh")를 받는 `Dialog`다.
+`LanguageRow`(이름, `code`, `label`, `dot`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `DragHandle`(손잡이), `LanguageSource`(굵은 표시, 구분선, 조용한 밑줄 버튼 하나). 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`, "직접 입력" 창은 `DialogTitle`이 `of`("새 언어 · tlh")를 받는 `Dialog`다.

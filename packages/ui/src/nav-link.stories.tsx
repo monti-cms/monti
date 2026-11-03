@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { NavLink, NavLinkHandle } from "./nav-link";
+import { DragHandle } from "./drag-handle";
+import { NavLink } from "./nav-link";
 
 const COLLECTIONS = [
 	{ id: "post", name: "게시글", dot: true },
@@ -20,7 +21,7 @@ function Rail({ handled = false }: { handled?: boolean }) {
 					active={open === item.id}
 					dot={item.dot ? "바뀜" : undefined}
 					note={item.id}
-					handle={handled ? <NavLinkHandle aria-label={`끌어서 순서 바꾸기: ${item.name}`} /> : undefined}
+					handle={handled ? <DragHandle aria-label={`끌어서 순서 바꾸기: ${item.name}`} /> : undefined}
 					onSelect={() => setOpen(item.id)}
 				>
 					{item.name}

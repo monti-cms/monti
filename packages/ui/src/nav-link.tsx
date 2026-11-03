@@ -1,12 +1,11 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { Grip } from "./grip";
 
 /**
  * One link of a page's own navigation, such as the collections beside the settings editor: 36px, the name, and at the end the identifier (`note`, mono,
  * quiet). The open one is on the current ground and semibold; the others are muted, and pointing at one gives it the selected ground. `dot` is the name of
- * the change dot that follows the name when this link holds an unsaved change. With `handle` (a {@link NavLinkHandle}) the link can be dragged: the handle
+ * the change dot that follows the name when this link holds an unsaved change. With `handle` (a {@link DragHandle}) the link can be dragged: the handle
  * shows in the left margin while the pointer or the keyboard is on the link; `drag` carries the sortable's transform while it is moved.
  */
 function NavLink({
@@ -39,7 +38,7 @@ function NavLink({
 			{...props}
 		>
 			{handle && (
-				<span className="absolute top-1/2 left-0.5 z-10 -translate-y-1/2 opacity-0 focus-within:opacity-100 group-hover/nav:opacity-100">
+				<span className="absolute top-1/2 left-0.5 z-10 flex size-5 -translate-y-1/2 opacity-0 *:size-full focus-within:opacity-100 group-hover/nav:opacity-100">
 					{handle}
 				</span>
 			)}
@@ -57,21 +56,4 @@ function NavLink({
 	);
 }
 
-/** The drag handle of a {@link NavLink}: six dots, faint until pointed at. Give it the sortable's `ref` and listeners, and a name that says whose link it moves. */
-function NavLinkHandle({ className, ...props }: Omit<React.ComponentProps<"button">, "children" | "type">) {
-	return (
-		<button
-			type="button"
-			data-slot="nav-link-handle"
-			className={cn(
-				"flex size-5 cursor-grab touch-none items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-				className,
-			)}
-			{...props}
-		>
-			<Grip />
-		</button>
-	);
-}
-
-export { NavLink, NavLinkHandle };
+export { NavLink };

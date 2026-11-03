@@ -11,11 +11,11 @@ import {
 	Box,
 	ChatError,
 	CodeBlock,
+	DragHandle,
 	Heading,
 	Icon,
 	Inline,
 	NavLink,
-	NavLinkHandle,
 	RailLayout,
 	Section,
 	Stack,
@@ -175,7 +175,7 @@ function CollectionNavItem({
 			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
 			handle={
 				writable ? (
-					<NavLinkHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}

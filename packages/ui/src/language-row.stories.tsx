@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
+import { DragHandle } from "./drag-handle";
+import { LanguageRow, LanguageSource } from "./language-row";
 import { TextButton } from "./text-button";
 
 /**
@@ -50,7 +51,7 @@ export const List: Story = {
 				code="en"
 				label="영어"
 				handled
-				handle={<LanguageRowHandle aria-label="English 끌어서 순서 바꾸기" />}
+				handle={<DragHandle aria-label="English 끌어서 순서 바꾸기" />}
 			>
 				{remove("English")}
 			</LanguageRow>
@@ -60,7 +61,7 @@ export const List: Story = {
 				label="일본어"
 				dot="새로"
 				handled
-				handle={<LanguageRowHandle aria-label="日本語 끌어서 순서 바꾸기" />}
+				handle={<DragHandle aria-label="日本語 끌어서 순서 바꾸기" />}
 			>
 				{remove("日本語")}
 			</LanguageRow>
@@ -93,7 +94,7 @@ export const SourceChanged: Story = {
 				label="한국어"
 				dot="원문 바뀜"
 				handled
-				handle={<LanguageRowHandle aria-label="한국어 끌어서 순서 바꾸기" />}
+				handle={<DragHandle aria-label="한국어 끌어서 순서 바꾸기" />}
 			>
 				{remove("한국어")}
 			</LanguageRow>

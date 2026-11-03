@@ -1,6 +1,5 @@
 import type * as React from "react";
 import { cn } from "./cn";
-import { Grip } from "./grip";
 
 const COLUMNS = "grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1fr)_32px] items-center gap-monti-8";
 
@@ -33,7 +32,7 @@ function OptionTable({
 }
 
 /**
- * One choice: `handle` (an {@link OptionRowHandle}) to drag it by, its `value` and `label` (inputs that read as text until focused) and, at the end, `action`
+ * One choice: `handle` (an {@link DragHandle}) to drag it by, its `value` and `label` (inputs that read as text until focused) and, at the end, `action`
  * (the × that takes it out). `drag` carries the sortable's transform while the row is moved. A table whose rows cannot be moved gives no handle.
  */
 function OptionRow({
@@ -72,21 +71,4 @@ function OptionRow({
 	);
 }
 
-/** The drag handle of an {@link OptionRow}: six dots in the row's first column. Give it the sortable's `ref` and listeners, and a name that says whose row it moves. */
-function OptionRowHandle({ className, ...props }: Omit<React.ComponentProps<"button">, "children" | "type">) {
-	return (
-		<button
-			type="button"
-			data-slot="option-row-handle"
-			className={cn(
-				"flex cursor-grab touch-none items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-				className,
-			)}
-			{...props}
-		>
-			<Grip />
-		</button>
-	);
-}
-
-export { OptionRow, OptionRowHandle, OptionTable };
+export { OptionRow, OptionTable };

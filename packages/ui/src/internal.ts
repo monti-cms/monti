@@ -112,6 +112,7 @@ export {
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
 export { DotNote } from "./dot-note";
+export { DragHandle } from "./drag-handle";
 export { DropArea } from "./drop-area";
 export {
 	DropdownMenu,
@@ -164,7 +165,7 @@ export { Image } from "./image";
 export { Input } from "./input";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
-export { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
+export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
@@ -177,9 +178,9 @@ export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { ModelMenuGroup, ModelMenuItem, ModelMenuThinking } from "./model-menu";
 export { MenuField, ModelMenu, ModelMenuButton } from "./model-menu";
 export type { MontiIcon } from "./monti-icon";
-export { NavLink, NavLinkHandle } from "./nav-link";
+export { NavLink } from "./nav-link";
 export { Option } from "./option";
-export { OptionRow, OptionRowHandle, OptionTable } from "./option-table";
+export { OptionRow, OptionTable } from "./option-table";
 export {
 	PageBody,
 	PageColumn,

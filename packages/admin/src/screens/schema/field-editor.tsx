@@ -11,6 +11,7 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
+	DragHandle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
@@ -23,7 +24,6 @@ import {
 	Inline,
 	Input,
 	OptionRow,
-	OptionRowHandle,
 	OptionTable,
 	Stack,
 	Text,
@@ -212,7 +212,7 @@ function OptionEditorRow({
 			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
 			handle={
 				canDrag ? (
-					<OptionRowHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}

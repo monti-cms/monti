@@ -77,7 +77,7 @@
 | 표시 이름 · 이름 · 도움말 | `FormField` + `Input` · `Input mono` · `Textarea` | |
 | 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch`, "발행 안 된 시리즈" `Select` | |
 | 글자 설정 | "여러 줄" `Switch`, "최대 글자 수" · "줄 수" `Input mono width="number"`, "안내 문구" `Input`, "비어 있으면 본문에서 채우기" `Switch` | |
-| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `OptionRowHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 줄 끝 `TextButton variant="quiet"` "기본값 · 메모" + `Caret` + `DropdownMenu`로 기본값을 고른다. |
+| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 줄 끝 `TextButton variant="quiet"` "기본값 · 메모" + `Caret` + `DropdownMenu`로 기본값을 고른다. |
 | 선택지마다 다른 필드 | `Option spread` + `Switch` | |
 | 필수 | `Option spread` + `Switch`(라벨 뒤 흐린 "!") | |
 | 언어 | `FormField` + `Segmented`("모두 같음" · "언어마다" · "원문 따름") | 셋 중 하나를 고르는 짧은 선택이다([choice.md](../components/choice.md) "몇 개 중 하나"). |

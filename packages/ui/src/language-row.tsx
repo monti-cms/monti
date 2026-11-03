@@ -1,13 +1,12 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { Grip } from "./grip";
 import { ToolbarDivider } from "./page-header";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
  * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the quiet × that
- * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link LanguageRowHandle}); a list whose rows can
+ * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link DragHandle}); a list whose rows can
  * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed").
  */
 function LanguageRow({
@@ -61,23 +60,6 @@ function LanguageRow({
 	);
 }
 
-/** The drag handle of a {@link LanguageRow}: six dots, faint until pointed at. Give it the sortable's `ref` and listeners, and a name that says whose row it moves. */
-function LanguageRowHandle({ className, ...props }: Omit<React.ComponentProps<"button">, "children" | "type">) {
-	return (
-		<button
-			type="button"
-			data-slot="language-row-handle"
-			className={cn(
-				"flex cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-				className,
-			)}
-			{...props}
-		>
-			<Grip />
-		</button>
-	);
-}
-
 /**
  * The end of the source language's row: the bold flag that says it is the source, a rule, and `children`, the one quiet underlined text button that changes it.
  * The state and the button that changes it stand together at the end, apart from the pale language info at the start. Without `children` (a list that cannot be
@@ -97,4 +79,4 @@ function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: 
 	);
 }
 
-export { LanguageRow, LanguageRowHandle, LanguageSource };
+export { LanguageRow, LanguageSource };

@@ -23,6 +23,7 @@ import {
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	DragHandle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
@@ -31,7 +32,6 @@ import {
 	Inline,
 	Input,
 	LanguageRow,
-	LanguageRowHandle,
 	LanguageSource,
 	LockMark,
 	MenuShortcut,
@@ -281,7 +281,7 @@ function OtherRow({
 			drag={{ transform: CSS.Translate.toString(transform) ?? undefined, transition, active: isDragging }}
 			handle={
 				editable ? (
-					<LanguageRowHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}

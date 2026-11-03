@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { DragHandle } from "./drag-handle";
 import { Input } from "./input";
-import { OptionRow, OptionRowHandle, OptionTable } from "./option-table";
+import { OptionRow, OptionTable } from "./option-table";
 import { TextButton } from "./text-button";
 
 const ROWS = [
@@ -35,7 +36,7 @@ export const Playground: Story = {
 				{ROWS.map((row) => (
 					<OptionRow
 						key={row.value}
-						handle={<OptionRowHandle aria-label={`끌어서 순서 바꾸기: ${row.value}`} />}
+						handle={<DragHandle aria-label={`끌어서 순서 바꾸기: ${row.value}`} />}
 						value={<Input appearance="inline" mono aria-label="값" defaultValue={row.value} />}
 						label={<Input appearance="inline" aria-label="라벨" defaultValue={row.label} />}
 						action={

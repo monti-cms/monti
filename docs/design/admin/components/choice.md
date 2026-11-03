@@ -37,4 +37,4 @@
 
 ### 코드
 
-`OptionTable`(`valueLabel`, `labelLabel`)과 `OptionRow` 행(`value`, `label`, `OptionRowHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환에 쓰는 `drag`).
+`OptionTable`(`valueLabel`, `labelLabel`)과 `OptionRow` 행(`value`, `label`, `DragHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환에 쓰는 `drag`).
