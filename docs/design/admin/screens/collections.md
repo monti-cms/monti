@@ -1,6 +1,6 @@
 # 설정 · 컬렉션
 
-설정의 컬렉션 탭이다. 컬렉션 흐름은 모두 Schema 보드 하나의 단계다. 필드 탭과 기본 탭, 그리고 그 시트들이다.
+설정의 컬렉션 탭이다. 컬렉션 흐름은 모두 Schema 보드 하나의 단계다. 필드 탭과 기본 탭, 그리고 그 시트들이다. 에디터 탭은 따로 된 CollectionEditor 보드다.
 
 ## 설정 · 컬렉션 · 필드 (Schema)
 
@@ -71,7 +71,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "새 컬렉션"), 발은 "취소" · `Button` "만들기" | 오류가 있으면 "만들기"가 비활성. |
-| 이름 · 식별자 | `FormField` + `FormFieldLabel required` + `Input` / `Input mono` | 이미 쓰는 식별자면 `aria-invalid`와 `FormFieldError` "이미 쓰는 이름이에요." |
+| 이름 · 식별자 | `FormField` + `FormFieldLabel required` + `Input` / `Input mono`, 식별자 라벨 뒤 `LockMark` | 식별자는 만든 뒤 바꿀 수 없다. 이미 쓰는 식별자면 `aria-invalid`와 `FormFieldError` "이미 쓰는 이름이에요." |
 | 종류 | `FormFieldSet` + `FormFieldLegend variant="field"` "종류" + `RadioGroup`과 `RadioItem`(`description` "게시글, 노트처럼 본문이 있어요" · "카테고리, 태그처럼 짧아요") | 문서 · 항목 중 하나. |
 | 공개 주소 | `Option spread` + `Switch`, 그 아래 `Affix`(`prefix` "/", `suffix` "/:slug") | |
 
@@ -159,3 +159,19 @@
 | `tab` "필드" · "기본" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
 | `sheetKind` "관계" · "글자" · "고르기" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 시트의 `PickListItem selected`와 그 종류의 설정 | Controls/Menu/PickList |
 | `withRail` | 11.11 | ✦ 어시스턴트 열기(미리보기 중에는 패널에 가려진다) |  |
+
+## 설정 · 컬렉션 · 에디터 (CollectionEditor)
+
+- 보드: `CollectionEditor.dc.html`. 상태: [screens.md › CollectionEditor](../screens.md#collectioneditor).
+- 공통 틀: 위 Schema의 머리(`ChangesGroup`), 컬렉션 목록, 컬렉션 탭과 같다. 이 화면은 컬렉션 탭의 "에디터"가 고른 탭이다. 에디터 탭은 본문이 있는 컬렉션에만 있다.
+
+### 기본 틀
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 묶음 "블록" · "서식" · "제목 단계" | `Section stacked`(제목은 묶음 이름) | 이 컬렉션의 편집기가 쓸 수 있는 것을 묶음마다 고른다. 처음에는 모두 켜져 있다. |
+| "모두 허용" | 블록 묶음 제목 뒤 `TextButton variant="quiet"` | 누르면 그 묶음을 모두 켠다. |
+| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 바뀐 곳이 된다. 끈 항목은 흐린 글자. |
+| 바뀐 항목 | 이름 뒤 `Text variant="caption" tone="warning"` "· 바뀜" | 저장한 값과 다를 때만. |
+
+스토리: Patterns/Frame/Section, Controls/Button/TextButton, Primitives/Grid, Controls/Choice/Option, Controls/Choice/Checkbox, Primitives/Text.

@@ -25,7 +25,7 @@
 | 제목 칸 | `TrashRowTitle`(`title`, `address`, `folder`, `meta`, `metaTone`) | 첫 줄은 조용한 잉크의 제목과 mono 주소, 둘째 줄은 담은 것("KO · EN", "글 2", "이미지 · 2.4 MB · Blog Assets"). 할 말이 없어도 빈 줄을 지킨다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 되돌아오지 못하게 막는 것이 있으면 `metaTone="warning"`("원문이 휴지통에 있어요 · …"). 검색 결과의 폴더 안 항목은 `meta` 앞에 "시리즈 원고 폴더 안". |
 | 종류 칸 | `Text variant="note" tone="subtle"` | "게시글", "메모", "태그", "미디어". |
 | 버린 날 칸 | `TrashRowDate`(`date`, `left`, `urgent`) | 날짜 아래 남은 날("30일 남음"). 사흘 이하면 `urgent`로 경고 색. 폴더 안의 행은 비운다. |
-| 행 동작 | `RowActions` 안의 `TextButton` "복원"과 `IconButton`(`label` "더보기") + `DropdownMenu`("영구 삭제", `variant="danger"`) | 원문이 휴지통에 있는 번역은 "원문 복원"이 된다. ⋯는 보드에서 글자 버튼이지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. 영구 삭제는 `AlertDialog`로 묻는다. |
+| 행 동작 | `RowActions` 안의 `TextButton` "복원"과 `IconButton`(`label` "더보기") + `DropdownMenu`("영구 삭제", `variant="danger"`) | 원문이 휴지통에 있는 번역은 "원문 복원"(`TextButton variant="ink"`)이 된다. 다른 글이 가리켜 남은 행(비운 뒤)은 "영구 삭제"(`TextButton variant="danger"`)가 된다. ⋯는 보드에서 글자 버튼이지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
 | "상위 폴더로" | `RowTitle folder` | 휴지통 안의 폴더에서 첫 행. |
 | 빈 휴지통 | `Text variant="note" tone="subtle"` "휴지통이 비었어요." | 열 이름 행과 표 대신 이 한 줄. |
@@ -53,7 +53,7 @@
 | 상태 줄 | `DotNote` "휴지통 · 3일 남음 · 읽기 전용" | 패널은 읽기만 한다. |
 | 미리보기 (미디어) | `Image`(4:3), 파일이면 `FilePreview framed` | |
 | 정보 | `DescriptionList` + `DescriptionItem` | 항목: 컬렉션 · 이름 · 주소 · 버린 날. 미디어: 종류 · 크기 · 폴더 · 대체 텍스트 · 버린 날. |
-| "가리키는 글 · 4" / "쓰는 곳" | `Label`, 그 아래 `ChangeLines`(`what` 글 이름 링크, `then` 어느 필드인지) | 글 이름과 어느 필드인지("태그", "휴지통 · 태그"). 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". |
+| "가리키는 글 · 4" / "쓰는 곳" | `Label`, 6px 아래 글마다 한 행: 왼쪽 글 이름 `TextButton variant="ink" size="note"`(링크), 오른쪽 컬렉션 `Text variant="micro" tone="subtle"` | 행은 메모 크기(13px)이고 행 사이 선이 없다. 오른쪽은 그 글의 컬렉션("게시글", "휴지통 · 게시글"). 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". |
 | 발 | `SidePanel`의 `footer`: `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 영구 삭제는 `AlertDialog`로 묻는다. |
 
 ### 창
@@ -61,7 +61,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 한 번 공개된 주소는 남겨 둔다고 적는다. |
-| 영구 삭제가 막힘 | `AlertDialogContent size="wide"` 안에 `ChangeGroup kind="drop"`(`tag` "지움", `title` "임시", `identifier` "태그"), `ChangeLines`의 `ChangeLine`(`what` "가리키는 글 4편 · …", `then`에 `TextButton` "연결 끊기" / "같이 삭제", `tone="warning"`), `ChangeNote` | 막는 것을 그 줄의 버튼으로 풀기 전까지 `AlertDialogAction`은 `disabled`. 글 링크는 `TextButton variant="underline"`. |
+| 영구 삭제가 막힘 | `AlertDialogContent size="wide"` 안에 `ChangeGroup kind="drop"`(`tag` "지움", `title` "임시", `identifier` "태그"), `ChangeLines`의 `ChangeLine`(`what` "가리키는 글 4편 · …", `then`에 `TextButton variant="inherit"` "연결 끊기" / "같이 삭제", `tone="warning"`), `ChangeNote` | 막는 것을 그 줄의 버튼으로 풀기 전까지 `AlertDialogAction`은 `disabled`. 글 링크는 `TextButton variant="underline"`. |
 | 휴지통 비우기 확인 | `AlertDialog`(`AlertDialogTitle` "휴지통을 비울까요?"), `AlertDialogAction variant="danger"` "비우기" | 다른 글이 가리키는 것은 남기고 이유를 보인다고 적는다. |
 
 ## 흐름 5 · 휴지통

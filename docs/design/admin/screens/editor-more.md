@@ -15,7 +15,7 @@
 | 빠지는 글자 | `Del` | 파란 취소선. 문단 전체가 빠지면 문단 전체를 감싼다. |
 | 들어오는 글자 | `Ins` | 옅은 파란 바탕, 파란 글자. |
 | 요청 표시 "✦ 1" | `Marker tone="request" margin="proposal"`(카드가 열리면 `active`) | 누르면 그 블록 아래에 메모 카드가 열리고 다시 누르면 닫힌다. 어시스턴트가 고치는 동안 개수 대신 "…"가 보인다. 보고 있는 제안의 파란 선을 가리지 않도록 블록에서 20px 떨어진다. |
-| 요청이 걸린 글자 | `Highlight` | 요청을 단 평범한 본문 글에 강조 바탕을 깐다. |
+| 요청이 걸린 글자 | `Highlight`의 모양 | 요청을 단 평범한 본문 글에 강조 바탕을 깐다. 편집기 본문은 이 모양을 decoration 클래스로 입힌다. `PROPOSAL_MARK_CLASSES`에 이 강조 클래스가 아직 없다. @monti-cms/ui에서 먼저 내보낸다. |
 | 메모 카드 (기다리는 제안) | `MemoCardPopover`(`anchor` 그 블록, `onDiscard` "버리기", `onAccept` "받기", `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage`(어시스턴트는 `ai`) | 머리에 "버리기"와 검은 알약 "받기"가 늘 있다. 카드는 그 글자 바로 아래에 붙으므로 `where`는 비운다. 바깥, Esc, 표시를 다시 누르면 닫힌다. 열려도 포커스는 글에 남는다. |
 | 메모 카드 (보내기 전) | `MemoCardPopover`(`reply` "요청", `reply.focus`) | 방금 고른 글자에 대한 요청이다. 머리와 대화 없이 입력 줄 하나만 있고 커서가 그 안에 있다. |
 | 메모 카드 (고치는 중) | `MemoCardPopover`(머리 없음), `MemoThread` + `MemoMessage ai`("고치는 중…"), `reply.stop` "멈추기" | 어시스턴트가 일하는 동안 보내기 버튼이 멈추기가 된다. |
@@ -61,8 +61,8 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "‹ 편집기로" | `TextButton variant="quiet"`(`href`, 앞 아이콘) | 비교하지 않고 편집기로 돌아간다. |
-| 제목 "서버 최신본과 비교" · "임시 저장본과 비교" | `Text variant="title"` | |
-| 주소 `/posts/first-post` | `Text variant="meta" mono tone="subtle"` | 읽기만 한다. |
+| 제목 "서버 최신본과 비교" · "임시 저장본과 비교" | `Heading as="h1" variant="title"` | 이 화면의 제목이다. |
+| 주소 `/posts/first-post` | `Text variant="meta" tone="faint"` | 읽기만 한다. |
 | "다른 곳 3" | `Text variant="note"` | 서로 다른 속성, 제목, 본문 블록의 수. |
 | 구분선 | `Separator orientation="vertical" length="control"` | |
 | 곁 동작 "서버 최신본 불러오기" · "버리기" | `TextButton` | |
@@ -75,7 +75,7 @@
 | 두 단 | `Compare` 안 `CompareSide` 둘(`label` "내 입력 · 저장 안 됨" · "서버 최신본 · v4 · 10:41 저장", 또는 "임시 저장본 · 이 브라우저 · 10. 26 10:12" · "서버 저장본 · 10. 26 09:58") | 틈 없이 선 하나를 두고 나란히 놓는다. 높이는 상태 표시줄까지 채운다. |
 | 다른 속성 "요약" | `CompareSide`의 `properties`에 `CompareProperty`(값이 없으면 `empty` "비어 있음") | 서로 다른 속성만 나열한다. |
 | 제목 | `CompareTitle` | 페이지 크기 글자. |
-| 본문 | `CompareBody` 안 `CompareHeading`, `CompareParagraph` | 읽히는 모양 그대로(읽기 크기). |
+| 본문 | `CompareBody` 안 `CompareHeading`, `CompareParagraph`, 코드 블록은 `CompareCode` | 읽히는 모양 그대로(읽기 크기). |
 | 다른 말 | `CompareText changed` | 양쪽 모두 같은 강조 바탕. 한쪽에만 있는 블록은 그 블록 전체가 `changed`다. |
 
 #### 상태 표시줄

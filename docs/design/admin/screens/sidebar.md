@@ -19,7 +19,7 @@
 | 글 폴더 트리 "시리즈 원고 2" | `SidebarMenuSub` > `SidebarMenuSubButton`(`depth`, `isActive`), 개수는 `Count` | 그 컬렉션이 열려 있을 때만 그 아래에 보인다. 폴더 안이면 컬렉션 행은 현재 위치로 남고, 열린 폴더가 `isActive`로 굵어진다. 36px 들여쓰기는 행 안쪽 여백이라 바탕은 위 행과 같은 폭이다. |
 | "미디어" | `SidebarMenuButton`(`href`, `isActive`) | |
 | 미디어 폴더 트리 "Blog Assets 14 · covers 6 · …" | `SidebarMenuSub` > `SidebarMenuSubButton`(`depth`, `isActive`, 파일을 끌어 올 때 `dropTarget`), 개수는 `Count` | 미디어가 열려 있을 때만 보인다. 파일을 폴더 행 위로 끌면 그 폴더로 옮긴다. |
-| 아래 묶음 "휴지통 · 도구 · 설정" | `SidebarFooter` > `SidebarMenu` > `SidebarMenuButton` | 휴지통 개수는 `SidebarMenuBadge`, 도구 개수(실패한 전송)도 `SidebarMenuBadge`. 새로 설치한 사이트는 개수가 없다. |
+| 아래 묶음 "휴지통 · 도구 · 설정" | `SidebarFooter` > `SidebarMenu` > `SidebarMenuButton` | 휴지통 개수는 `SidebarMenuBadge`, 도구 개수(실패한 전송)는 경고 색 `SidebarMenuBadge tone="warning"`. 새로 설치한 사이트는 개수가 없다. |
 | 접힌 동안의 이름 | `SidebarMenuButton`의 `tooltip`("도구 1") | 이름과 개수를 툴팁이 말한다. |
 | 접힌 동안의 도구 표시 | `SidebarMenuButton`의 `railDot`("실패한 전송") | 도구에 실패가 있으면 아이콘 오른쪽 위에 점. 휴지통 개수는 점으로 바꾸지 않는다. |
 | 화면 모드 | `SidebarFoot` 안의 `SidebarScreenMode`(`value`, `onValueChange`, `labels`) | 펼치면 세 칸 토글(`Segmented tone="tool"`: 시스템 · 밝게 · 어둡게, 아이콘 화면 · 해 · 달), 지금 모드는 눌린 칸(`bg-current`). 접히면 아이콘 버튼 하나가 지금 모드를 보이고, 누르면 위로 작은 메뉴가 열려 지금 모드에 ✓. 한 번 누르면 바뀐다. 이름은 [sidebar.md](../components/sidebar.md)의 "시스템 · 밝게 · 어둡게"를 따른다. 보드의 "라이트 · 다크"는 바꾼다. |

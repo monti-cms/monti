@@ -13,7 +13,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 주소 `/en/first-post` | `Text variant="meta" mono tone="subtle"` | 번역 글의 주소. 읽기만 한다. |
+| 주소 `/en/first-post` | `Text variant="meta" tone="faint"` | 번역 글의 주소. 읽기만 한다. |
 | 발행 상태 | `EntryStatus` | 이 언어 글의 상태(초안 · 발행됨 · 수정 중). |
 | "저장" · "미리보기" · "발행하기 ▾" · 속성 | [editor.md](editor.md)의 머리 줄과 같다 | 발행은 흐린 블록이 남아 있으면 막힌다(할 일로 알린다). 라벨은 "저장". 단축키는 툴팁에만 있다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록으로 간다) · "내보내기" │ "이 번역 휴지통으로"(`variant="danger"`, 아래 줄 "한국어 원문은 그대로"). 보드는 "이 번역 휴지통으로"를 보통 행으로 그렸다. 메뉴 규칙을 따라 맨 아래 위험 행으로 둔다. |
@@ -43,7 +43,7 @@
 | "원문 바뀜 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 `marker`로 `Marker tone="changed"`, 끝 동작 "✦ 다시 번역" · "✦ 번역" · "지우기", `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
-스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
+스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner, Patterns/Frame/ResizablePane, Primitives/Box.
 
 ### 뜨는 자리
 
@@ -59,7 +59,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 창 | `.mt-tool`(빠진 부품) | 원문 보기가 "옆 창"일 때 왼쪽에 도구 바탕으로 원문을 놓는다. 위에 "한국어 원문 · 읽기 전용"(`Text variant="meta"`), 제목은 `Heading variant="display"`, 본문은 읽기 크기. 고칠 수 없다. 원문은 글로만 보인다. |
+| 창 | `ResizablePane` 안의 `Box background="tool"` | 원문 보기가 "옆 창"일 때 왼쪽에 도구 바탕으로 원문을 놓는다. 위에 "한국어 원문 · 읽기 전용"(`Text variant="meta"`), 제목은 `Heading variant="display"`, 본문은 읽기 크기. 고칠 수 없다. 원문은 글로만 보인다. |
 | 원문에서 바뀐 말 | `Highlight` | 원문이 바뀐 동안 새 글에 강조 바탕. |
 
 ### 흐름 3 · 번역
@@ -94,16 +94,16 @@
 |---|---|---|
 | 언어 탭 | `TabLinks` + `TabLink` | EditorTranslate와 같다. 보드는 여기만 창 맨 위 탭(`.mt-tabs--bar`)으로 그렸다. 편집기의 언어 탭과 같은 부품으로 맞춘다. |
 | 원문 보기 | `Segmented size="sm" inline`, "나란히"가 골라짐 | "끔"과 "옆 창"은 EditorTranslate로 돌아간다. |
-| 머리 행 (원문 · 한국어 · 10. 26 수정 / 번역 · English · 09. 20 수정) | `.mt-pair--head`(빠진 부품) |  |
-| 블록 한 행 | `.mt-pair`(빠진 부품): 왼쪽 여백에 블록 종류와 상태, 가운데 원문(도구 바탕, 고칠 수 없음), 오른쪽 번역 | 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 고치는 칸은 `.dst.is-on`. 원문 칸은 글로만 보인다. |
-| 제목 행 | `.mt-pair--title`(빠진 부품) 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. |
-| 여백의 상태 "원문 바뀜" · "원문에 추가" | `.mt-pair`의 여백 줄(빠진 부품) | 원문 쪽 바뀐 말은 `.mt-src-changed` 밑줄. |
+| 머리 행 (원문 · 한국어 · 10. 26 수정 / 번역 · English · 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 이름은 잉크 선 아래 mono 작은 줄. |
+| 블록 한 행 | `CompareRow`(`name` 블록 종류, `source` 원문, `translation` 번역) | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 쓰고 있는 행은 `current`. 원문 칸은 글로만 보인다. |
+| 제목 행 | `CompareRow` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. `CompareRow`에 제목 행이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| 여백의 상태 "원문 바뀜" · "원문에 추가" | `CompareRow`의 `note` | 둘 다 주황. 원문 쪽 바뀐 말은 `Highlight`. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
-| 코드 블록의 번역 칸 | `.mt-shared`(빠진 부품): "원문과 같은 코드"와 `TextButton variant="underline"` "English에서만 따로 고치기" | 누르는 순간 이 언어용 사본을 만든다. |
+| 코드 블록의 번역 칸 | 원문 블록을 흐린 글자로, 아래 `TextButton variant="underline"` "English에서만 따로 고치기" | 누르는 순간 이 언어용 사본을 만든다. 원문과 같은 블록을 흐리게 보이는 부품이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |
 
-스토리: Controls/Tabs/Tabs, Controls/Choice/Segmented, Primitives/Text, Primitives/Label, Controls/Field/Field, Controls/Field/Input, Controls/Button/TextButton, Monti/Translation/Marks.
+스토리: Controls/Tabs/Tabs, Controls/Choice/Segmented, Monti/Change/Compare, Monti/Proposal/Marks, Primitives/Text, Primitives/Label, Controls/Field/Field, Controls/Field/Input, Controls/Button/TextButton, Monti/Translation/Marks.
 
 ### 흐름 3 · 번역
 
@@ -115,6 +115,7 @@
 
 ### 보드의 이름을 부품으로
 
-- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 여백의 상태는 "원문 바뀜" · "원문에 추가" 모두 주황, 원문에서 바뀐 글은 `Highlight`.
-- `.mt-shared` 원문과 같음: 원문 블록을 흐린 글자로, 아래 "English에서만 따로 고치기" `TextButton`.
+- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 제목 행(`.mt-pair--title`)은 아직 부품이 없다.
+- `.mt-src-changed` 원문에서 바뀐 말: `Highlight`.
+- `.mt-shared` 원문과 같음: 아직 부품이 없다. 원문 블록을 흐린 글자로, 아래 "English에서만 따로 고치기" `TextButton`.
 - 본문 블록: 블록 패키지의 블록 그대로.

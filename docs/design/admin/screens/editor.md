@@ -10,7 +10,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "‹ 게시글" | `TextButton variant="quiet"`(`href`, 앞 아이콘) | 목록으로 돌아간다. |
-| 주소 `/posts/…` | `Text variant="meta" mono tone="subtle"` | 읽기만 한다. 고치는 곳은 속성 패널의 "주소"다. |
+| 주소 `/posts/…` | `Text variant="meta" tone="faint"` | 읽기만 한다. 고치는 곳은 속성 패널의 "주소"다. |
 | 발행 상태 | `EntryStatus`(`published`·`editing`·`draft`) | 상태 말과 점. |
 | "저장" | `TextButton` | 누르면 저장한다. 라벨은 "저장"이고, 단축키는 툴팁에만 있다(보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다). |
 | "미리보기" | `Button variant="secondary"` | 공개 화면을 연다. 볼 것이 없으면 비활성. |
@@ -29,12 +29,12 @@
 | 제목 | 편집기 제목 칸(`Input appearance="inline" size="display"`와 같은 모양) | 늘 입력 칸이다. 포커스는 캐럿만 보인다. |
 | 본문 블록 | `Block`(메뉴가 열린 블록은 `active`) | 글자 모양은 편집기의 것. |
 | 블록 손잡이 | `BlockHandle`(`trigger`로 `DropdownMenuTrigger`를 감싼다, 메뉴가 열린 동안 `active`) | +는 아래에 빈 블록을 넣고 "/" 메뉴를 연다. 그립을 누르면 블록 메뉴, 끌면 옮긴다. |
-| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 끝에 마크다운 단축 `MenuShortcut`, 제목 단계 아이콘은 `HeadingIcon`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
+| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 끝에 마크다운 단축 `MenuShortcut`, 행에 아이콘은 없다) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
 | 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드 / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. |
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`, `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
 | 이미지 도구 행 | `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
-| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
+| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Input`(플레이스홀더 "본문 맞춤"), "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
 | 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `TextButton tone="proposal" size="micro"` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
 
@@ -45,13 +45,13 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. |
-| 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`) | 다른 탭에 제안이 있으면 탭 이름 뒤 `ChangeDot tone="proposal"`. |
-| "빈 칸 채우기" (탭 줄 끝) | `TextButton tone="proposal"`(`Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. |
+| 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`, 탭마다 `dot`) | 다른 탭에 제안이 있으면 그 탭에 `dot` "proposal"(파란 점), 고칠 곳이 있으면 `dot` "warning"(주황 점). |
+| "빈 칸 채우기" (탭 줄 끝) | `TextButton tone="proposal"`(`Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. `PropertyPanel`에 탭 줄 끝 자리가 아직 없다. @monti-cms/ui에서 먼저 만든다. |
 | 속성 한 행 | `FormField` + `FormFieldLabel`(`htmlFor`, 라벨 줄 끝 `action`) + 입력 부품 + `FormFieldError` | 라벨은 mono 11, 값은 13. 라벨 줄 끝의 어시스턴트 버튼은 포인터나 키보드가 행 안에 있을 때만 보인다. |
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
 | 주소 | `Affix`(슬러그만, 끝 `action`은 다시 만들기 `IconButton`), mono | 늘 입력 칸이다. "/posts/"는 붙이지 않는다. 전체 주소는 머리의 주소 줄에 있고, 패널 폭은 긴 슬러그에 쓴다. 고정 글자가 없으니 밑줄은 아이콘까지 행 전체다. |
 | 발행일 | `Text variant="meta"` | 읽기만 한다. 날짜는 "발행하기 ▾"가 정한다. |
-| 대표 이미지 | 그림이 있으면 `Image`(4:3, `radius-sm`)와 파일 이름 `Text variant="caption" tone="subtle"`, 없으면 "비어 있음"(`Text tone="faint"`) | 누르면 `MediaPicker`를 담은 `Dialog`가 열린다(이미지를 고르는 창이므로 여기만 "누르면 열린다"). |
+| 대표 이미지 | 그림이 있으면 `Image ratio="photo" radius="sm"`(4:3)와 파일 이름 `Text variant="caption" tone="subtle"`, 없으면 "비어 있음"(`Text tone="faint"`) | 누르면 `MediaPicker`를 담은 `Dialog`가 열린다(이미지를 고르는 창이므로 여기만 "누르면 열린다"). |
 | 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="micro"`("✦ 채우기", 값이 있으면 "↻ 다시"). "비어 있으면 본문에서 채우기"를 켠 필드는 입력 줄 끝(`Textarea`·`Input`의 `action`)에 `IconButton`(`Renew`, 이름 "본문에서 가져오기")이 늘 있다. 주소의 다시 만들기와 같은 자리다. 둘 다 다른 값에서 이 값을 다시 만든다. 라벨 줄에는 어시스턴트의 일만 있다. |
 | 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
 | 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. |
@@ -68,7 +68,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
-| 저장 상태 | `StatusBarCell render={<span />}`(편집 충돌이면 `tone`) | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌". 소리 알림은 `StatusBarAnnouncer`. |
+| 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌". 누를 일이 있으면 칸이 버튼이다(저장 전 변경사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 `StatusBarAnnouncer`. |
 | "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 가고, 끝의 동작 하나("✦ 채우기"는 `TodoItem proposal`). 발행을 막는 행은 `blocking`. 남은 것이 없으면 "할 일 없음"과 ✓ 행만. |
 | 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
@@ -82,7 +82,7 @@
 | `pub` | 머리의 `EntryStatus`와 발행 알약(초안 `Button`, 발행된 글 `SplitButton`) | Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton |
 | `save` | 저장 칸의 글, "편집 충돌"이면 충돌 `Banner` | Patterns/Frame/Banner |
 
-스토리: Controls/Button/TextButton, Primitives/Text, Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton, Controls/Menu/DropdownMenu, Controls/Button/IconButton, Primitives/Separator, Controls/Overlay/AlertDialog, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Field/Input, Monti/EditorTools/BlockHandle, Primitives/HeadingIcon, Monti/EditorTools/FloatingBar, Monti/EditorTools/FormatBar, Controls/Menu/Command, Patterns/Frame/UploadingImage, Monti/EditorTools/BlockBar, Controls/Overlay/Popover, Controls/Overlay/Sheet, Patterns/Sheet/CropStage, Controls/Field/Field, Controls/Field/Select, Controls/Field/Textarea, Controls/Choice/Option, Controls/Choice/Switch, Patterns/Frame/FileBlock, Patterns/Sheet/MediaPicker, Controls/Overlay/Dialog, Monti/Proposal/PropertyPanel, Controls/Overlay/SidePanel, Primitives/AI mark, Controls/Field/Affix, Patterns/Frame/Image, Controls/Field/Combobox, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
+스토리: Controls/Button/TextButton, Primitives/Text, Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton, Controls/Menu/DropdownMenu, Controls/Button/IconButton, Primitives/Separator, Controls/Overlay/AlertDialog, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Field/Input, Monti/EditorTools/BlockHandle, Monti/EditorTools/FloatingBar, Monti/EditorTools/FormatBar, Controls/Menu/Command, Patterns/Frame/UploadingImage, Monti/EditorTools/BlockBar, Controls/Overlay/Popover, Controls/Overlay/Sheet, Patterns/Sheet/CropStage, Controls/Field/Field, Controls/Field/Select, Controls/Field/Textarea, Controls/Choice/Option, Controls/Choice/Switch, Patterns/Frame/FileBlock, Patterns/Sheet/MediaPicker, Controls/Overlay/Dialog, Monti/Proposal/PropertyPanel, Controls/Overlay/SidePanel, Primitives/AI mark, Controls/Field/Affix, Patterns/Frame/Image, Controls/Field/Combobox, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
 
 ## 뜨는 자리
 
@@ -94,7 +94,7 @@
 |---|---|---|
 | 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
 | 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
-| 휴지통에 있는 글 | `Banner`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
 
 ## 흐름 1 · 글 쓰고 발행하기
 

@@ -1,16 +1,61 @@
-# 도구 (Data, ApiKeys, Events)
+# 도구 (Templates, TemplateEditor, Data, ApiKeys, Events)
 
-도구 화면 셋(데이터, 활동 기록, API 키)은 같은 틀을 쓴다.
+도구 화면 넷(템플릿, 데이터, 활동 기록, API 키)은 같은 틀을 쓴다. 템플릿 편집기는 도구 틀 밖의 따로 된 페이지다.
 
-## 도구 틀 (세 화면 공통)
+## 도구 틀 (네 화면 공통)
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" |  |
-| 페이지 단 | `PageColumn` | 데이터와 API 키는 `width="content"`, 활동 기록은 `width="list"`. |
-| 제목 행 "도구" | `PageHeader` | API 키 화면만 검은 알약 하나("+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
+| 페이지 단 | `PageColumn` | 템플릿, 데이터, API 키는 `width="content"`, 활동 기록은 `width="list"`. |
+| 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
 | 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 개수는 `TabLink count`("템플릿 3"), 실패한 전송 수는 `countTone="warning"`("활동 기록 1"). 플러그인이 더한 도구 페이지도 탭이 된다. |
 | ✦ 어시스턴트 열기 | 공통 틀 | 사이드 패널이 열린 동안에는 가려진다. |
+
+## 템플릿 (Templates)
+
+- 보드: `Templates.dc.html`. 상태: [screens.md › Templates](../screens.md#templates). 사이드바의 "도구"가 이 탭을 연다.
+- 공통 틀: 도구 틀, 메뉴, 토스트.
+
+### 기본 틀
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| "+ 템플릿 추가" | `PageHeader`의 `children`에 `Button variant="primary"`(앞 아이콘 +) | 새 템플릿 편집기로 간다. |
+| 표 | `Table`(`TableBody`, `TableRow twoLine`, `TableCell`) | 열 이름 행은 없다. |
+| 이름 · 제목들 | 이름 `RowLink`(템플릿 편집기로), 아래 `Text variant="note" tone="subtle" truncate`("서론 · 본론 · 결론") | 아래 줄은 템플릿의 제목들을 한 줄로 늘어놓는다. 행 어디를 눌러도 편집기가 열린다. |
+| 고친 날 "10. 20 고침" | `Count` | |
+| ⋯ | `RowActions` 안 `IconButton`(`label` "더보기") + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 늘 보인다. 보드는 포인터가 있는 행에만 글자 버튼으로 그렸지만 [list.md](../components/list.md)와 [button.md](../components/button.md)를 따른다. |
+
+스토리: Controls/Button/Button, Patterns/List/Table, Primitives/Text, Controls/Status/Count, Controls/Button/IconButton, Controls/Menu/DropdownMenu.
+
+## 템플릿 편집기 (TemplateEditor)
+
+- 보드: `TemplateEditor.dc.html`. 상태: [screens.md › TemplateEditor](../screens.md#templateeditor).
+- 공통 틀: 사이드바와 도구 틀이 없는 따로 된 페이지다. 본문(블록 손잡이, 블록 메뉴, "/" 메뉴, 서식 카드)은 [editor.md](editor.md)의 글 단과 같다. 알림 띠는 [common.md](common.md).
+
+### 기본 틀
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 머리 줄 | 높이 `height-header`, 아래 가는 선 하나 | 편집기 머리와 같은 줄이다. |
+| "‹ 템플릿" | `TextButton variant="quiet"`(앞 아이콘, 템플릿 목록으로) | |
+| "저장 안 됨" | `EntryStatus status="editing"` | 바뀐 것이 있는 동안만. |
+| "저장" | `Button variant="primary"`(저장하는 동안 `loading`) | 늘 있다. 발행이 없으므로 이 페이지의 검은 알약 하나다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
+| ⋯ | `IconButton` + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 새 템플릿에는 없다. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
+| ✦ 어시스턴트 열기 | [common.md](common.md)의 ✦ 어시스턴트 열기 | 머리 줄 끝. |
+| 이름 | `Input appearance="inline" size="display"`(플레이스홀더와 이름 "템플릿 이름"), 아래 잉크 선 `Box border="bottom-contrast"` | 라벨 없이 글 제목 자리에 놓인다. 비었으면 `FormFieldError`. |
+| 본문 | 편집기 본문 | 읽기 폭. 블록과 메뉴는 [editor.md](editor.md)와 같다. |
+| 상태 표시줄 | `StatusBar`: `StatusBarSpacer` 뒤 `StatusBarCell end`(글자 수) | 글자 수만 있다. |
+
+스토리: Controls/Button/TextButton, Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Primitives/Separator, Controls/Field/Input, Primitives/Box, Patterns/Frame/StatusBar.
+
+### 뜨는 자리
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 머리 바로 아래. 저장이 거절됐을 때만. |
 
 ## 데이터 (Data)
 
@@ -30,7 +75,7 @@
 | "zip 파일 고르기" | `Button variant="secondary"`, 뒤에 숨은 `Input type="file" srOnly` | 파일을 고르거나 놓으면 읽기 시작한다. 옆에 받는 종류 `Text variant="meta" tone="subtle"`("Monti 백업 · .md/.mdx 묶음"). |
 | 고른 파일 줄 | 파일 이름 `Text variant="note" mono`, 그 옆 상태 `Text variant="note"`("읽는 중…" `tone="subtle"`, "읽지 못했어요" `tone="danger"`) |  |
 
-스토리: Patterns/Frame/Section, Controls/Button/Button, Primitives/Text, Controls/Choice/Option, Controls/Choice/Checkbox, Controls/Field/Input, Controls/Overlay/Sheet, Controls/Field/Field, Patterns/List/MapRow, Controls/Field/Select, Controls/Choice/Segmented, Controls/Choice/Switch, Controls/Button/TextButton.
+스토리: Patterns/Frame/Section, Controls/Button/Button, Primitives/Text, Controls/Choice/Option, Controls/Choice/Checkbox, Controls/Field/Input, Controls/Overlay/Sheet, Controls/Field/Field, Patterns/List/MapRow, Controls/Field/Select, Controls/Choice/Segmented, Controls/Choice/Switch, Controls/Button/TextButton, Patterns/Frame/DescriptionList.
 
 ### 뜨는 자리
 
@@ -40,7 +85,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`) | 일하는 동안(가져오는 중, 복원 중) `closable={false}`. |
+| 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`) | 일하는 동안(가져오는 중, 복원 중) `SheetHeader closable={false}`. |
 | 제목 | `SheetTitle of`(파일 이름, `ofMono`) | "가져오기 · blog-export.zip", "있던 그대로 복원 · monti-backup-1020.zip". |
 | 찾은 것 요약 | `Text`("글 24편을 찾았어요"), 그 아래 `Text variant="note" tone="subtle"` | 건너뛰기와 -2 규칙을 한 줄로. |
 | "들어갈 곳" | `FormField` + `FormFieldLabel`, 행은 `MapRow`(`name` "posts/", `example` "24편", 자식 `Select`) | 폴더마다 어느 컬렉션으로 갈지. |
@@ -49,8 +94,8 @@
 | "이미지" | `FormField`, 문장 `Text`, "바깥 이미지 6개도 옮기기" `Option spread` + `Switch` |  |
 | "알아 두세요" | `FormField`, 문장 `Text`(컴포넌트 이름은 `mono`) |  |
 | 가져온 뒤 | `Text variant="heading"` "21편을 가져왔어요.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
-| 복원 요약 | `DescriptionList`(`DescriptionItem` "글" 148 뒤에 `Count` "초안 12 · 발행 130 …") | |
-| 복원 막힘 문제 목록 | 문장 하나 "문제가 2개 있어서 복원하지 않아요.", 그 아래 `ChangeLines`(`ChangeLine tone="warning"`: "이 사이트에 없는 필드 series" → "글 14편") | 아무것도 쓰지 않았다는 문장 하나. |
+| 복원 요약 | `DescriptionList` + `DescriptionItem`(이름 칸 120px): "글" · "폴더" · "미디어" · "주소" · "템플릿" | 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). `DescriptionList`는 이름 칸이 76px이고 값이 흐리다. 120px 이름 칸과 잉크 값은 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| 복원 막힘 문제 목록 | 문장 하나 "문제가 2개 있어서 복원하지 않아요.", 그 아래 문제마다 한 행: 이름 줄("이 사이트에 없는 필드 `series`", 이름은 mono), 그 아래 주황 한 줄("글 14편이 이 값을 가지고 있어요") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 이름 줄 아래 경고 한 줄을 다는 행 부품이 아직 없다(`MapRow`의 경고 줄과 같은 모양이지만 고르기가 없다). @monti-cms/ui에서 먼저 만든다. |
 | 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…", 막히면 `disabled`). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
 
 ### 흐름 9 · 데이터
@@ -66,11 +111,11 @@
 | "못 읽음" | 9.11 | 파일 줄 "읽지 못했어요"(`tone="danger"`) |  |
 | "가져오기" | 9.06 | 시트: 요약, "들어갈 곳", "필드 맞추기" |  |
 | "가져오기 아래" | 9.07 | 시트 아래쪽: "발행", "이미지", "알아 두세요" |  |
-| "가져오는 중" | 9.08 | 시트 `closable={false}`, 알약 `loading` "가져오는 중 12/21" |  |
+| "가져오는 중" | 9.08 | 시트 `SheetHeader closable={false}`, 알약 `loading` "가져오는 중 12/21" |  |
 | "가져옴" | 9.09 | 시트: 결과 문장, 주소를 바꾼 글 목록, 발 "되돌리기" · "목록에서 보기" |  |
 | "복원" | 9.12 | 시트 "있던 그대로 복원": 백업 요약, 알약 "복원". 사이드바 `fresh`(빈 사이트) |  |
 | "복원 막힘" | 9.13 | 시트: 문제 목록, 알약 `disabled` |  |
-| "복원 중" | 9.14 | 시트 `closable={false}`, 알약 `loading` "복원하는 중…" |  |
+| "복원 중" | 9.14 | 시트 `SheetHeader closable={false}`, 알약 `loading` "복원하는 중…" |  |
 | "복원함" | 9.15 | `toast` "글 148편을 복원했어요"와 `action` "목록 보기" | Controls/Status/Toast |
 
 ## API 키 (ApiKeys)
@@ -87,9 +132,9 @@
 | "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 `disabled`. |
 | 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없어요" 또는 "키를 저장할 수 없어요", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
 | 표 묶음 "저장된 키" · "모델" · "플러그인" | `ListSection`(`title`, `count`, 기다리는 키가 있으면 `countTone="warning"`) | 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
-| 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `detail` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
-| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `detail` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
-| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 뒤에 "· 검색 키", `detail` 플러그인 코드 `mono`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
+| 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
+| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
+| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "· 검색 키", `meta` 플러그인 코드 `metaTone="subtle"`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 플러그인 코드는 mono다. `ListSectionRow`에 mono `meta`가 아직 없다. @monti-cms/ui에서 먼저 만든다. 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
 
 스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 
@@ -153,12 +198,12 @@
 | 실패 알림 | `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 목록 바로 위, 단 안에. 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
 | 날짜 묶음 "오늘 · 10. 26" | `Text variant="meta" tone="subtle"`, 표 안쪽 12px에 맞춘다 |  |
 | 목록 | `Table` + `TableBody` + `TableRow` + `TableCell`, 아래 `ListFooter`와 `Pagination` | 행 어디를 눌러도 자세히 패널이 열린다(`RowLink`). 열린 행은 `selected`. |
-| 시각 | `TableCell` 안 `Text variant="meta" mono tone="subtle"` |  |
+| 시각 | `TableCell` 안 `Count` |  |
 | 무엇 · 어디 | `Text`(잉크) 두 줄: 무엇 "“더 짧게 다듬어 줘…”", 아래 `Text variant="meta" tone="subtle" truncate` "어시스턴트 제안 · 첫 번째 글 · 본문 5곳". AI 제안은 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}` |  |
 | 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: `EntryStatus status="failed"` "실패", `Text variant="meta"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
 | 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없어요", "아직 기록이 없어요"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
 
-스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
+스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
 
 ### 뜨는 자리
 

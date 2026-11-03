@@ -5,9 +5,23 @@
 ## 어시스턴트 패널 · 상태 (AssistantPanel)
 
 - 보드: `AssistantPanel.dc.html`. 상태와 흐름 단계: [screens.md › AssistantPanel](../screens.md#assistantpanel).
-- 공통 틀: 위 Assistant의 패널, 대화, 입력 상자. 여기서는 상태마다 더해지는 것을 적는다.
+- 공통 틀: [common.md](common.md)의 사이드 패널. 대화와 입력 상자의 틀은 아래 "대화" 표에 한 번 적고, 그 아래 표에 상태마다 더해지는 것을 적는다.
 
 ### 기본 틀
+
+#### 대화
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 대화 | `ChatThread` | 패널 높이를 채우고 입력 상자 바로 위에서 위로 쌓인다. 말과 답 사이는 24px. |
+| 내 말 | `ChatMessage author="user"` | 오른쪽의 종이 말풍선. |
+| 답 하나 | `ChatAnswer` | 도구 줄, 답의 글, 카드를 12px 간격으로 담는다. |
+| 도구 줄 묶음 | `ToolCallLines` | 이어서 부른 도구 줄을 한 묶음으로. 글이 끼면 묶음이 나뉜다. |
+| 끝난 도구 줄 | `ToolCallLine status="done"`(`details`가 있으면 눌러 연다) | ✓와 한 일 "글 목록 읽음 · 게시글 6편". 연 줄은 보낸 값과 결과를 보인다. |
+| 답의 글 | `ChatMessage`(어시스턴트, 쓰는 동안 `streaming`) | 바탕 없는 글. 쓰는 동안 끝에 깜박이는 캐럿. |
+| 입력 상자 | `ChatInput`(`label` "어시스턴트에게 묻기", `placeholder` 화면마다 "사이트에 대해 물어보세요" · "이 글에 대해 물어보세요", `aside`에 `ModelMenuButton`) | Enter로 보내고 Shift+Enter로 줄을 바꾼다. 비었으면 보내지 않는다. |
+
+#### 상태마다 더해지는 자리
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
@@ -24,7 +38,7 @@
 | 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "상세 보기"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "상세 보기". |
 | 지운 제안 (다시 연 대화) | `ProposalCard` 안에 `ProposalRow`(`detail`에 `Del`로 태그들, `count` "글 0편") |  |
 | 설정 · 스키마 제안 | 도구 줄과 답의 글만 | 제안은 그 화면에 파랗게 표시된다. 카드는 없다. |
-| 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest request` · `Suggest recent` | |
+| 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest kind="request"` · `Suggest kind="recent"` | |
 | 키가 없을 때 | `Text variant="title"` "AI 연결이 없어요", `Text variant="note" tone="subtle"`, `Button variant="primary"`(`render`로 API 키 화면 링크) "API 키 넣기" | 입력 상자는 없다. |
 | 지난 대화 목록 | `ConversationList`, `ConversationGroupLabel` "오늘" · "이전", `ConversationRow`(`title`, `meta` "10:52 · 적용 16건", 지금 대화는 `current`, `menu`에 `ConversationRowMore` + `DropdownMenu` "지우기") | 행을 누르면 그 대화를 연다. 지우기는 묻지 않는다. |
 | 지난 대화의 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `FilterButton filled` "30일 뒤" + `DropdownMenu`(`DropdownMenuRadioGroup` 7일 · 30일 · 90일 · 지우지 않음) | 날수는 메뉴에서 고른다. |
@@ -74,6 +88,22 @@
 |---|---|---|---|
 | "스키마 변경" | 11.11 | 스키마 제안의 도구 줄과 답("저장하면 PR로 올라가요") |  |
 
+## 어시스턴트 패널 · 목록에서 (Assistant)
+
+- 보드: `Assistant.dc.html`. 상태: [screens.md › Assistant](../screens.md#assistant). 흐름에서는 AssistantPanel 상태가 이 보드를 대신한다.
+- 공통 틀: 뒤의 목록은 [list.md](list.md). 패널, 대화, 입력 상자는 위 AssistantPanel과 같다. 여기에는 이 보드에만 있는 두 자리를 적는다.
+
+### 기본 틀
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 답의 글 목록 | 답의 글 아래 번호 목록, 글마다 이름 `TextButton variant="underline"`(편집기로)과 mono 주소 | 누르면 그 글이 열린다. 답 안에 글 링크 목록을 그리는 부품이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| 글마다 바뀌는 카드 | `ProposalCard`(`title` "제안", `summary` "요약 채우기 · 글 2편", `status` "검토 대기" · "적용됨") | 글마다 한 행: 이름(굵게) · 흐린 주소 · 끝에 필드("요약"), 그 아래 `Del` 옛 값과 `Ins` 새 값. 이 행 모양이 아직 없다(`ProposalItem`은 mono 파일 이름 한 줄뿐이다). @monti-cms/ui에서 먼저 만든다. |
+| 카드의 발 (검토 대기) | `ProposalActions`(`reviewLabel` "검토", `discardLabel` "버리기", `applyLabel` "적용") | "검토"는 제안 검토 화면으로 간다. |
+| 카드의 발 (적용됨) | `ProposalResult`(`appliedLabel` "✓ 2편에 적용", `time`, `undoLabel` "되돌리기") | |
+
+스토리: Monti/Assistant/ChatMessage, Controls/Button/TextButton, Monti/Proposal/ProposalCard, Monti/Proposal/Marks.
+
 ## 어시스턴트 · 제안 검토 (ProposalReview)
 
 - 보드: `ProposalReview.dc.html`. 상태와 흐름 단계: [screens.md › ProposalReview](../screens.md#proposalreview).
@@ -91,6 +121,7 @@
 | 요청 | `ReviewQuote` | 따옴표로 인용한 요청. |
 | 묶음 | `ReviewGroup`(`title` "다듬기", `meta` "발행 후 고친 글 · 3곳 · 되돌릴 수 있음", `actions`) | 묶음 전체의 일은 `actions`: `TextButton variant="underline"` "편집기에서 보기", `Separator orientation="vertical" length="control"`, 보기 전환 "한 줄 · 나란히"(`Tabs` + `TabsList variant="line"`), 또는 `TextButton` "11편 모두 빼기", "모두 펼치기". |
 | 항목 (한 줄) | `ReviewItem`(`included`, `onIncludedChange`, `includeLabel` "포함", `title`, `path` mono, `end` 필드나 결과, `children`에 `Del` · `Ins`) | 체크로 넣고 뺀다. `end`: "요약", "폴더 없음 → 2024", 결과 뒤 "✓ 2024로 옮김"이나 빨간 "못 옮김 · 그 사이 휴지통으로 감". 체크는 `ReviewItem`이 그린다. |
+| 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1", 그 아래 경고 메모 `Count tone="warning"` "거의 다시 씀". 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. 이 한 단 모양이 아직 없다(`ReviewItem`은 글 하나, `ReviewCompare`는 두 단). @monti-cms/ui에서 먼저 만든다. |
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
 | 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `note`에 `Count tone="warning"` "거의 다시 씀", `before`, `after`) |  |
 | 긴 묶음 | `ReviewMore`(`moreLabel` "6편 더 보기", `lessLabel` "접기") | 다섯 줄이 넘을 때. |
@@ -118,6 +149,6 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `view` "한 줄" | 3.13 | 다듬기 묶음이 `ReviewItem` + `Del` · `Ins` | Monti/Proposal/Review, Monti/Proposal/Marks |
-| `stage` "검토" | 3.13 | "버리기"와 적용 알약, "11편 모두 빼기" |  |
+| `view` "한 줄" | 3.13 | 번역 묶음의 항목: 글마다 `ReviewItem`과 펼치는 `Collapsible` | Monti/Proposal/Review, Patterns/Frame/Collapsible |
+| `stage` "검토" | 3.13 | "버리기"와 적용 알약 "3편 적용", 묶음의 "모두 펼치기" |  |
 | `kind` "번역" | 3.13 | 번역 · English 묶음 하나, 글마다 펼치는 항목 |  |

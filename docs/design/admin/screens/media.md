@@ -25,7 +25,7 @@
 | "사용 여부 ▾" | `FilterButton` + `DropdownMenu` | 종류와 같다. |
 | "대체 텍스트 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "없음" · "있음", 개수) | 고르면 `Chip`("대체 텍스트: 없음 ×")이 된다. 종류가 "파일"이면 이 버튼은 없다(파일에는 대체 텍스트가 없다). |
 | 찾는 곳 "Blog Assets │ 모든 폴더" | `Separator orientation="vertical" length="control" flush` 뒤 `Segmented size="sm" inline` | 검색어나 대체 텍스트 조건이 걸린 동안, 폴더 안에서만 보인다. |
-| 정렬 "최근 올린순 ▾" | `PageToolbarEnd` 안 `FilterButton filled` + `DropdownMenu`(`DropdownMenuRadioGroup`) | 고르면 적용하고 닫힌다. |
+| 정렬 "최근 올린순 ▾" | `PageToolbarEnd` 안 `FilterButton` + `DropdownMenu`(`DropdownMenuRadioGroup`) | 고르면 적용하고 닫힌다. |
 | 보기 "격자 │ 목록" | `Segmented size="sm" inline` | 격자와 목록을 바꾼다. |
 
 #### 고른 동안의 막대 (도구 행 자리)
@@ -41,8 +41,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "✦ 제안 3" | `PageToolbar inset` 안 `Text tone="proposal"`(앞에 `Spark`) | 남은 제안 수. |
-| "모두 버리기" · "모두 받기" | `TextButton variant="quiet"`, `Button variant="primary" size="sm"` | 모든 제안을 한 번에 다룬다. 하나씩 받기와 버리기는 메모 카드에 있다. |
+| 줄 "✦ 제안 3 · 모두 버리기 · 모두 받기" | `ProposalBar`(`label` "제안 3", `discardAllLabel` "모두 버리기", `acceptAllLabel` "모두 받기") | 앞의 ✦와 남은 제안 수는 파랑. 끝의 둘은 모든 제안을 한 번에 다룬다. 하나씩 받기와 버리기는 메모 카드에 있다. |
 
 #### 격자
 
@@ -60,7 +59,7 @@
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. |
 | 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
 | 제안 메모 카드 | `MemoCardPopover`(`where` "대체 텍스트 · desk-morning.jpg", `onDiscard`, `onAccept`, `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage` | 제안 표시를 누르면 그 타일에 열린다. 받기와 버리기는 머리에 있고 그 파일만 다룬다. |
-| 저장소 없음 | `Empty`(제목 "미디어 저장소가 없어요"), "연결 방법" `TextButton variant="underline"` | "올리기"는 비활성으로 남는다. |
+| 저장소 없음 | `Text weight="semibold"` "미디어 저장소가 없어요", 그 아래 `Text variant="note" tone="subtle"` 한 줄, 끝에 `TextButton variant="underline"` "연결 방법" | 상자도 빈 상태 부품도 없이 두 줄이다. "올리기"는 비활성으로 남는다. |
 
 #### 목록 보기
 
@@ -68,8 +67,8 @@
 |---|---|---|
 | 표 | `Table`, `TableBody`, `TableRow`, `TableCell` | 열 이름 행은 없다. 조건과 순서는 위 도구 행에 있다. |
 | 그림 열 | `RowThumb` | 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
-| 이름 | `RowTitle` + `RowLink` | 행 어디를 눌러도 열린다. 폴더 행은 이름 뒤에 개수. |
-| 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안 `Text variant="meta"`(mono) | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
+| 이름 | `RowTitle` | 행 어디를 눌러도 열린다(`TableRow`가 연다). 폴더 행은 이름 뒤에 개수. |
+| 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 
 #### 오른쪽 클릭과 확인
@@ -81,7 +80,7 @@
 | 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. |
 | 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
 
-스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/Separator, Controls/Choice/Segmented, Patterns/List/BulkBar, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Patterns/List/Empty, Patterns/List/Table, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
+스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/Separator, Controls/Choice/Segmented, Patterns/List/BulkBar, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBar, Patterns/List/Table, Controls/Status/Count, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
 
 ### 뜨는 자리
 
@@ -142,11 +141,11 @@
 | `mode` "찾는 중" | 6.15 | `SearchBox`(검색어 "cover"), 찾는 곳 `Segmented`가 "모든 폴더", 세부 줄 앞에 폴더 경로, 폴더 행 없음 | Controls/Field/SearchBox, Controls/Choice/Segmented |
 | `mode` "필터 걸림" | 6.23 | `Chip` "대체 텍스트: 없음 ×", 찾는 곳 `Segmented` | Controls/Choice/Segmented |
 | `mode` "대체 텍스트 없는 것 고름" | 6.24 | `BulkBar`(3개, `request` "✦ 대체 텍스트") | Patterns/List/BulkBar |
-| `mode` "대체 텍스트 제안" | 6.25 | 제안 줄, `Tile proposal` 셋 | Patterns/List/Tile |
+| `mode` "대체 텍스트 제안" | 6.25 | `ProposalBar`, `Tile proposal` 셋 | Monti/Proposal/ProposalBar, Patterns/List/Tile |
 | `mode` "대체 텍스트 메모" | 6.26 | `MemoCardPopover`가 한 타일에 열림 | Monti/Proposal/MemoCard |
 | `mode` "휴지통으로 옮김" | 6.27 | 그 타일이 빠지고 `toast` + "되돌리기" | Controls/Status/Toast |
 | `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
-| `mode` "저장소 없음" | 6.31 | `Empty`와 "연결 방법", 도구 행 없음, "올리기" 비활성 | Patterns/List/Empty |
+| `mode` "저장소 없음" | 6.31 | 저장소 없음의 두 줄과 "연결 방법", 도구 행 없음, "올리기" 비활성 | Primitives/Text, Controls/Button/TextButton |
 | `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "종류 파일" | 6.33 | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
 | `mode` "PDF 올리는 중" | 6.34 | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 | Patterns/List/FilePreview, Patterns/List/Tile |
