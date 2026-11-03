@@ -27,7 +27,7 @@
 | 버린 날 칸 | `TrashRowDate`(`date`, `left`, `urgent`) | 날짜 아래 남은 날("30일 남음"). 사흘 이하면 `urgent`로 경고 색. 폴더 안의 행은 비운다. |
 | 행 동작 | `RowActions` 안의 `TextButton` "복원"과 `IconButton`(`label` "더보기") + `DropdownMenu`("영구 삭제", `variant="danger"`) | 원문이 휴지통에 있는 번역은 "원문 복원"이 된다. ⋯는 보드에서 글자 버튼이지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
-| "상위 폴더로" | 폴더 행 모양([list.md](list.md)의 "부품 없음") | 휴지통 안의 폴더에서 첫 행. |
+| "상위 폴더로" | `RowTitle folder` | 휴지통 안의 폴더에서 첫 행. |
 | 빈 휴지통 | `Text variant="note" tone="subtle"` "휴지통이 비었어요." | 열 이름 행과 표 대신 이 한 줄. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Overlay/AlertDialog, Patterns/List/Table, Patterns/List/TrashRow, Primitives/Text, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/ListHead, Patterns/List/BulkBar, Controls/Overlay/SidePanel, Patterns/Panel/DotNote, Patterns/Frame/Image, Patterns/List/FilePreview, Patterns/Frame/DescriptionList, Primitives/Label, Controls/Button/Button, Monti/Change/ChangeGroup.
@@ -94,4 +94,3 @@
 
 - **어시스턴트가 버린 표시** `.mt-spark`(버린 날 앞, `fg-proposal`): `TrashRowDate`에는 이 표시와, 누르면 대화를 여는 동작이 없다.
 - **패널 안의 링크 행** `.mt-panel-body .mt-row`(글 이름과 끝의 `.text-micro` 덧말): "가리키는 글"과 "쓰는 곳"의 행. 이 모양을 그리는 부품이 없다.
-- **폴더 행** `.mt-row-folder`: "상위 폴더로" 행. [list.md](list.md)와 같다.

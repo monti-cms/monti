@@ -2,6 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { Folder } from "@carbon/icons-react";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
@@ -217,23 +218,31 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 }
 
 /**
- * The title cell of a row: the title in ink over its address in mono, both on one line each. The other columns are gray, so the ink alone makes
- * the title the emphasis.
+ * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns
+ * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title.
  */
 function RowTitle({
 	title,
 	address,
+	folder = false,
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
 	title: React.ReactNode;
-	/** Under the title: `/first-post`, a folder path. */
+	/** After the title: `/first-post`, or what a folder holds ("글 2"). */
 	address?: React.ReactNode;
+	/** The row is a folder: its icon leads the line. */
+	folder?: boolean;
 }) {
 	return (
-		<span data-slot="row-title" className={cn("flex min-w-0 flex-col gap-monti-4", className)} {...props}>
-			<span className="truncate text-monti-body text-monti-default">{title}</span>
-			{address && <span className="truncate font-mono text-monti-faint text-monti-meta">{address}</span>}
+		<span data-slot="row-title" className={cn("flex min-w-0 items-baseline gap-monti-12", className)} {...props}>
+			<span className="flex min-w-0 items-baseline gap-monti-8">
+				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
+				<span className="min-w-0 truncate text-monti-body text-monti-default">{title}</span>
+			</span>
+			{address && (
+				<span className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta">{address}</span>
+			)}
 		</span>
 	);
 }

@@ -39,13 +39,13 @@
 | 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow`, `TableCell`) | 고른 행은 `TableRow selected`, 어시스턴트가 고른 행은 `proposal`도. 오른쪽 클릭 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
 | 행 체크 | `RowCheck`(`checked`, `onCheckedChange`, `label` "고르기", 어시스턴트가 고른 행은 `proposal`과 이름 "AI가 고름") | 포인터가 행 위에 있을 때와 고른 행에만 보인다. |
 | 상태 칸 | `EntryStatus quiet` | 발행됨도 조용한 색으로 적는다. |
-| 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 행 어디를 눌러도 글이 열린다. |
+| 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 제목 뒤 같은 줄에 주소. 행 어디를 눌러도 글이 열린다. |
 | 카테고리 · 태그 · 텍스트 필드 칸 | `Text variant="note" truncate`, 셀 `title`에 전부 | 끝은 늘 "…". |
 | 언어 · 수정일 칸 | `Text variant="meta" mono tone="subtle"` | 언어는 "KO +1", 날짜는 "10. 26". |
 | 행 ⋯ | `RowActions` 안의 `IconButton`(`label` "행 메뉴") + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. |
 | 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로" | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |
-| 폴더 행 | 폴더 행 모양(아래 "부품 없음"), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 16px 폴더 아이콘, 이름, "글 2". 누르면 폴더 안으로. |
+| 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `address` "글 2"), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · `ContextMenuSub` "옮기기" │ "폴더 지우기"(`variant="danger"`) | |
 | 새 폴더 · 이름 바꾸기 | `RenameField`(`value`, `onValueChange`, `onCommit`, `onCancel`, `label` "폴더 이름") | 행 안에서 "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 지키고 Esc는 버린다. 행 높이가 변하지 않는다. |
 | "상위 폴더로" | 폴더 행 모양 | 폴더 안의 첫 행. |
@@ -165,7 +165,6 @@
 
 보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
 
-- **폴더 행** `.mt-row-folder`: 제목 칸 앞의 16px 폴더 아이콘, 8px 뒤 이름, 그 뒤 같은 줄의 개수("글 2", mono `fg-faint`). `RowTitle`은 주소를 제목 아래 줄에 두므로 맞지 않는다. "상위 폴더로" 행도 이 모양이다.
 - **오른쪽 클릭 메뉴의 세 상태 체크와 검색** `.mt-menu--ctx` 안의 `.mt-menu-search`와 `.mt-check.is-mixed`: 여러 행 메뉴의 "태그 ▸"가 쓴다. `ContextMenu`에는 `DropdownMenuCheckboxItem mixed`와 `DropdownMenuSearch`에 해당하는 행이 없다.
 
 ## 빈 목록 (Empty)

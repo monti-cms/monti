@@ -18,7 +18,7 @@ import {
 } from "./index";
 
 /**
- * A list's table: a head row, rows with a rule under each; the title in ink over its mono address, the other columns gray. The check hangs in the left
+ * A list's table: a head row, rows with a rule under each; the title in ink and its mono address after it on one line, the other columns gray. The check hangs in the left
  * margin and shows with the pointer; the ⋯ is always there. A picked row is filled with the selected ground; the assistant's picks with the proposal tint.
  */
 const meta = {
@@ -60,7 +60,7 @@ const rows = (pick: (id: string) => { selected?: boolean; proposal?: boolean }) 
 	POSTS.map((post) => {
 		const state = pick(post.id);
 		return (
-			<TableRow key={post.id} selected={state.selected} proposal={state.proposal} twoLine>
+			<TableRow key={post.id} selected={state.selected} proposal={state.proposal}>
 				<TableCell>
 					<RowCheck
 						checked={!!state.selected}
@@ -106,6 +106,29 @@ const Frame = ({ children, dimmed }: { children: React.ReactNode; dimmed?: boole
 );
 
 export const Rows: Story = { render: () => <Frame>{rows(() => ({}))}</Frame> };
+
+/** A folder first: its icon before the name, what it holds after it; the status cell stays empty. */
+export const Folder: Story = {
+	render: () => (
+		<Frame>
+			<TableRow>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} address="글 2" />
+				</TableCell>
+				<TableCell />
+				<TableCell>
+					<RowActions>
+						<IconButton label="더 보기">
+							<OverflowMenuHorizontal />
+						</IconButton>
+					</RowActions>
+				</TableCell>
+			</TableRow>
+			{rows(() => ({}))}
+		</Frame>
+	),
+};
 
 /** Picked rows: the selected ground, the rule between them a step darker. */
 export const Picked: Story = { render: () => <Frame>{rows((id) => ({ selected: id !== "3" }))}</Frame> };
