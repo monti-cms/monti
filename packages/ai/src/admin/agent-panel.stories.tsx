@@ -294,7 +294,6 @@ export const Empty: Story = { tags: ["visual"], render: panel(ready) };
 
 /** On the entry editor the default requests are about the open entry, and the box asks about it. */
 export const EmptyOverEntry: Story = {
-	tags: ["visual"],
 	render: panel(ready, undefined, { screen: "entry", collection: "post", entryId: "e1" }),
 };
 
@@ -341,7 +340,6 @@ export const ProposalWaiting: Story = {
 
 /** New alt texts for three files (flow 2 · 19): each file's text in the card, and "3개 적용". */
 export const ProposalAltText: Story = {
-	tags: ["visual"],
 	render: panel(ready, () => sse(proposing(ALT_PROPOSAL as typeof PROPOSAL))),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
@@ -351,7 +349,6 @@ export const ProposalAltText: Story = {
 
 /** New alt texts for a hundred files: the card shows the first three, "외 97개", and "상세 보기" for the rest. */
 export const ProposalManyAltTexts: Story = {
-	tags: ["visual"],
 	render: panel(ready, () => sse(proposing(MANY_ALT_PROPOSAL as typeof PROPOSAL))),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
@@ -363,7 +360,6 @@ export const ProposalManyAltTexts: Story = {
 
 /** Cut off while working (flow 2 · 06): what it got done stays, the read under way stopped there, and "이어서 하기" goes on from it. */
 export const Cut: Story = {
-	tags: ["visual"],
 	render: panel(ready, () => sse([...working, { type: "error", errorText: "terminated" }])),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }));
@@ -385,7 +381,6 @@ export const OnEntry: Story = {
 
 /** Rows picked in the list (flow 2 · 10): the box shows them as a chip; × leaves them out of the request. The message says what it was about. */
 export const PickedRows: Story = {
-	tags: ["visual"],
 	render: panel(ready, () => sse(conversation), { screen: "entries", collection: "post", selectedIds: ["a", "b"] }),
 	play: async ({ canvasElement }) => {
 		await within(canvasElement).findByText("고른 글 2편");
@@ -408,7 +403,6 @@ export const PastConversations: Story = {
 
 /** A conversation of another day opened again (flow 2 · 26): its day over it, its messages and its model as they were. */
 export const Reopened: Story = {
-	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "지난 대화" }));
@@ -427,7 +421,6 @@ const openMenu = async (canvasElement: HTMLElement) => {
 
 /** The model menu (flow 2 · 23): a search line, the recent models with the default first, the models of each key, and 생각 ›. */
 export const ModelMenuOpen: Story = {
-	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
 		await openMenu(canvasElement);
@@ -437,7 +430,6 @@ export const ModelMenuOpen: Story = {
 
 /** 생각 › opens the levels at the side, the current one ticked (flow 2 · 23b). */
 export const ThinkingLevels: Story = {
-	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
 		await openMenu(canvasElement);
@@ -448,7 +440,6 @@ export const ThinkingLevels: Story = {
 
 /** 높음 picked: the menu closes and the button says "· 생각 높음" (flow 2 · 23c). */
 export const ThinkingHigh: Story = {
-	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
 		await openMenu(canvasElement);
@@ -460,7 +451,6 @@ export const ThinkingHigh: Story = {
 
 /** A model that cannot think: no 생각 row, and nothing about it on the button (flow 2 · 23d). */
 export const ModelWithoutThinking: Story = {
-	tags: ["visual"],
 	render: panel(ready),
 	play: async ({ canvasElement }) => {
 		await openMenu(canvasElement);
@@ -471,7 +461,6 @@ export const ModelWithoutThinking: Story = {
 
 /** The service is out of credit (flow 2 · 24): a notice in the conversation with the key, and "다른 모델로 보내기". */
 export const OutOfCredit: Story = {
-	tags: ["visual"],
 	render: panel(ready, () =>
 		sse([
 			{ type: "start", messageId: "m1" },

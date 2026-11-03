@@ -119,13 +119,13 @@ const drag = (element: Element, type: "dragenter" | "drop", files: File[]) => {
 };
 
 // 폴더 안: the sub-folders and the files of Blog Assets.
-export const InFolder: Story = { tags: ["visual"], render: screen(backendOf()) };
+export const InFolder: Story = { render: screen(backendOf()) };
 
 // 최상위: the folders and the files in no folder.
 export const TopLevel: Story = { tags: ["visual"], render: screen(backendOf(), { search: "" }) };
 
 // 하위 폴더: a folder with its own path above the title.
-export const SubFolder: Story = { tags: ["visual"], render: screen(backendOf(), { search: "folder=covers" }) };
+export const SubFolder: Story = { render: screen(backendOf(), { search: "folder=covers" }) };
 
 // 목록 보기: name, use, type, size, dimensions and day.
 export const ListView: Story = { tags: ["visual"], render: screen(backendOf(), { view: "list" }) };
@@ -138,7 +138,6 @@ export const Loading: Story = {
 
 // 새 폴더: the name opens in place with "새 폴더" selected.
 export const NewFolder: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -149,7 +148,6 @@ export const NewFolder: Story = {
 
 // 폴더 우클릭: open, rename, move, delete the folder.
 export const FolderMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		rightClick(await tile(canvasElement, /^covers/));
@@ -159,7 +157,6 @@ export const FolderMenu: Story = {
 
 // 파일 메뉴: open, used in, to folder, the trash.
 export const FileMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		rightClick(await tile(canvasElement, /^desk-morning/));
@@ -169,7 +166,6 @@ export const FileMenu: Story = {
 
 // 빈 곳 우클릭: upload and new folder.
 export const BlankMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -191,7 +187,6 @@ export const DraggingOver: Story = {
 
 // 폴더 위로 끌기: only that folder is picked out, and the hint names it.
 export const DraggingOverFolder: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		drag(await tile(canvasElement, /^covers/), "dragenter", [new File(["x"], "a.png", { type: "image/png" })]);
@@ -257,7 +252,6 @@ export const Uploading: Story = {
 
 // 올리기 실패: a format that is not taken (a blank tile with the red line) and a picture that is over the limit (its own picture, faded, no red line) stay in place.
 export const UploadsFailed: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -270,7 +264,6 @@ export const UploadsFailed: Story = {
 
 // 받지 않는 형식: a file that is not a picture and not a type the site takes keeps its file icon and extension, with the red line and what is taken.
 export const UploadsRejectedType: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -301,7 +294,6 @@ export const OpenPdf: Story = {
 
 // 바꾸기 메뉴: the panel's ⋯.
 export const PanelMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await tile(canvasElement, /^desk-morning/));
@@ -313,7 +305,6 @@ export const PanelMenu: Story = {
 
 // 파일 바꾸기: the question before the file is replaced, with how many places use it.
 export const ReplaceDialog: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await tile(canvasElement, /^desk-morning/));
@@ -343,7 +334,6 @@ export const Picking: Story = {
 
 // 폴더로 옮기기: the bar's menu.
 export const MoveMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -356,7 +346,6 @@ export const MoveMenu: Story = {
 
 // 필터 열기: alt text, none or has, with the counts.
 export const AltFilterMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -366,11 +355,10 @@ export const AltFilterMenu: Story = {
 };
 
 // 필터 걸림: the chip with its ×, and the place to look.
-export const AltFilterOn: Story = { tags: ["visual"], render: screen(backendOf(), { search: "folder=blog&alt=none" }) };
+export const AltFilterOn: Story = { render: screen(backendOf(), { search: "folder=blog&alt=none" }) };
 
 // 대체 텍스트 없는 것 고름: every file that matches is picked.
 export const AltFilterAllPicked: Story = {
-	tags: ["visual"],
 	render: screen(backendOf(), { search: "folder=blog&alt=none" }),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^seoul-night/);
@@ -382,13 +370,11 @@ export const AltFilterAllPicked: Story = {
 
 // 찾는 중: the search widened to all folders, with each result's folder path.
 export const Searching: Story = {
-	tags: ["visual"],
 	render: screen(backendOf(), { search: "folder=blog&search=cover&scope=all" }),
 };
 
 // 정렬: the order menu, newest upload first by default.
 export const SortMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -399,7 +385,6 @@ export const SortMenu: Story = {
 
 // 종류 열기: images and files with their counts.
 export const KindMenu: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
@@ -409,11 +394,10 @@ export const KindMenu: Story = {
 };
 
 // 종류 파일: files only; the alt text condition is gone.
-export const KindFiles: Story = { tags: ["visual"], render: screen(backendOf(), { search: "folder=blog&kind=file" }) };
+export const KindFiles: Story = { render: screen(backendOf(), { search: "folder=blog&kind=file" }) };
 
 // 휴지통으로 옮김: the toast with its undo.
 export const MovedToTrash: Story = {
-	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		// The file menu has no trash row: a file goes from the panel's ⋯ (or the Del key, or the bar).
@@ -441,7 +425,6 @@ const trashesFolders = () => {
 
 // 폴더 지움 (flow 6 · 11): a folder goes to the trash at once, as one item with its files, and the toast can undo it.
 export const FolderTrashed: Story = {
-	tags: ["visual"],
 	render: screen(trashesFolders()),
 	play: async ({ canvasElement }) => {
 		rightClick(await tile(canvasElement, /^diagrams/));
@@ -459,7 +442,6 @@ const keepsUsedFiles = () => {
 
 // 폴더 일부 남김 (flow 6 · 12): files in use stay, and the toast offers to show them.
 export const FolderTrashedPartly: Story = {
-	tags: ["visual"],
 	render: screen(keepsUsedFiles()),
 	play: async ({ canvasElement }) => {
 		rightClick(await tile(canvasElement, /^covers/));
@@ -480,7 +462,6 @@ const keepsUsedFilesOnly = () => {
 
 // 일부 남김 (flow 6 · 28): two picked files go to the trash from the bar; the one in use stays, and the toast says so.
 export const FileKept: Story = {
-	tags: ["visual"],
 	render: screen(keepsUsedFilesOnly()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^notes-scan/);

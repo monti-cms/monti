@@ -155,7 +155,6 @@ export const AddKey: Story = {
 
 /** 02b: an OpenAI-compatible address adds the address field; the name follows its host. */
 export const AddCompatible: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		const form = await openAdd(canvasElement, "OpenAI 호환 주소");
@@ -165,7 +164,6 @@ export const AddCompatible: Story = {
 
 /** 03: 추가 asks the service first. */
 export const Checking: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST, () => "pending")),
 	play: async ({ canvasElement }) => {
 		const form = await openAdd(canvasElement);
@@ -176,7 +174,6 @@ export const Checking: Story = {
 
 /** 04: the service refuses the key: one line under it, the dialog stays open. */
 export const Rejected: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST, () => answer(422, { error: { code: "key_rejected", message: "맞지 않는 키예요." } }))),
 	play: async ({ canvasElement }) => {
 		const form = await openAdd(canvasElement);
@@ -188,7 +185,6 @@ export const Rejected: Story = {
 
 /** 05: a key with the service's name exists: the name is prefilled "Anthropic 2", with a line under it. */
 export const NameTaken: Story = {
-	tags: ["visual"],
 	render: screen(keysApi({ ...LIST, items: [...KEYS, key("k4", "Anthropic", "anthropic", "3f9e", 0)] })),
 	play: async ({ canvasElement }) => {
 		const form = await openAdd(canvasElement);
@@ -198,7 +194,6 @@ export const NameTaken: Story = {
 
 /** 06: added: a new row and a toast. */
 export const Added: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		const form = await openAdd(canvasElement);
@@ -224,7 +219,6 @@ export const Edit: Story = {
 
 /** 08: 바꾸기 opens an empty key field in place; 그대로 goes back. */
 export const EditReplace: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		const form = await openEdit(canvasElement);
@@ -234,7 +228,6 @@ export const EditReplace: Story = {
 
 /** 09: a new key is checked like an added one. */
 export const EditChecking: Story = {
-	tags: ["visual"],
 	render: screen((path, method) => (method === "PATCH" ? "pending" : keysApi(LIST)(path, method))),
 	play: async ({ canvasElement }) => {
 		const form = await openEdit(canvasElement);
@@ -246,7 +239,6 @@ export const EditChecking: Story = {
 
 /** 10: saved: the row's new last characters and a toast. */
 export const EditSaved: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		const form = await openEdit(canvasElement);
@@ -259,7 +251,6 @@ export const EditSaved: Story = {
 
 /** 11: deleting a key in use lists what stops. */
 export const DeleteUsed: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: "지우기 Anthropic 개인" }));
@@ -269,7 +260,6 @@ export const DeleteUsed: Story = {
 
 /** 11b: a key nothing uses is asked about too: it cannot be undone. */
 export const DeleteUnused: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: "지우기 예전 Gemini 키" }));
@@ -291,7 +281,6 @@ export const SlotAdd: Story = {
 
 /** 12b: the key is in: the row names it, and a toast. */
 export const SlotAdded: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(LIST)),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(
@@ -308,11 +297,10 @@ export const SlotAdded: Story = {
 const UNREADABLE: ApiKeyList = { ...LIST, items: KEYS.map((item) => ({ ...item, readable: false })) };
 
 /** 14: the server secret changed: a banner says why, and each row says it cannot be read. */
-export const Unreadable: Story = { tags: ["visual"], render: screen(keysApi(UNREADABLE)) };
+export const Unreadable: Story = { render: screen(keysApi(UNREADABLE)) };
 
 /** 14b: 편집 of such a key opens with the key field and asks for it again. */
 export const EnterAgain: Story = {
-	tags: ["visual"],
 	render: screen(keysApi(UNREADABLE)),
 	play: async ({ canvasElement }) => {
 		await openEdit(canvasElement);
@@ -321,7 +309,6 @@ export const EnterAgain: Story = {
 
 /** 15: no MONTI_SECRET: a banner, and 키 추가 is off. */
 export const NoSecret: Story = {
-	tags: ["visual"],
 	render: screen(keysApi({ ...LIST, items: [], secretsAvailable: false })),
 };
 

@@ -50,7 +50,6 @@ export const LoadFailed: Story = { render: screen(() => answer(500)) };
 
 /** The `⋯` of a row: duplicate and delete. */
 export const RowMenu: Story = {
-	tags: ["visual"],
 	render: screen(api(templates)),
 	play: async ({ canvasElement }) => {
 		const [more] = await within(canvasElement).findAllByRole("button", { name: "더보기: 복제, 지우기" });

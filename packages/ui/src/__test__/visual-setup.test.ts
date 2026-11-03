@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedChecks, isShot, type StoryEntry } from "../../visual/stories";
+import { allowedChecks, isShot, type StoryEntry, themesOf } from "../../visual/stories";
 
 describe("which stories are shot", () => {
 	const story = (importPath: string, tags: string[] = []): StoryEntry => ({
@@ -21,6 +21,11 @@ describe("which stories are shot", () => {
 	it("UI-T3 lets a screen story in with the `visual` tag, and a catalog story out with `no-visual`", () => {
 		expect(isShot(story("../admin/src/screens/entries/entries.stories.tsx", ["visual"]))).toBe(true);
 		expect(isShot(story("./src/button.stories.tsx", ["no-visual"]))).toBe(false);
+	});
+
+	it("UI-T3 shoots the catalog in light and dark, and a screen in light only", () => {
+		expect(themesOf(story("./src/button.stories.tsx"))).toEqual(["light", "dark"]);
+		expect(themesOf(story("../admin/src/screens/entries/entries.stories.tsx", ["visual"]))).toEqual(["light"]);
 	});
 
 	it("UI-T3 lets a story through only the checks its tags name", () => {

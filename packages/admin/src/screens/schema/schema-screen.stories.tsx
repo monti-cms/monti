@@ -30,12 +30,11 @@ import { rememberSaved } from "./reload";
 
 /**
  * The collections of Settings, one story per stage of the Schema board of the canvas (flow 4) except the production, PR and read-only-production stages
- * (not in this epic). Every story is shot by the visual checks.
+ * (not in this epic). The stories that change the layout are shot by the visual checks.
  */
 const meta = {
 	title: "Screens/Schema",
 	parameters: { layout: "fullscreen", bleed: true },
-	tags: ["visual"],
 } satisfies Meta;
 export default meta;
 
@@ -63,10 +62,10 @@ const steps =
 // ----- the collection, its tabs -----
 
 /** Stage 보통: the fields tab, the tree of the post collection with the panel preview closed. */
-export const Fields = story(server(), "collections", FIELDS, { play: preview(false) });
+export const Fields = { ...story(server(), "collections", FIELDS, { play: preview(false) }), tags: ["visual"] };
 
 /** Board CollectionBasics (stage 보통, tab 기본): the view and the structure, and the block that deletes the collection. */
-export const Basics = story(server(), "collections", BASICS);
+export const Basics = { ...story(server(), "collections", BASICS), tags: ["visual"] };
 
 // ----- a new collection (steps 01-06) -----
 
@@ -81,7 +80,10 @@ const newCollection =
 	};
 
 /** Stage 새 컬렉션: the sheet on the right with the name and the identifier typed. */
-export const NewCollection = story(server(), "collections", FIELDS, { play: newCollection("note") });
+export const NewCollection = {
+	...story(server(), "collections", FIELDS, { play: newCollection("note") }),
+	tags: ["visual"],
+};
 
 /** Stage 새 컬렉션 오류: an identifier that is taken shows the one error line and keeps 만들기 off. */
 export const NewCollectionError = story(server(), "collections", FIELDS, { play: newCollection("memo") });
@@ -189,11 +191,14 @@ const newReview = previewOf({
 		},
 	],
 });
-export const NewCollectionReview = story(server({ preview: newReview }), "collections", FIELDS, {
-	play: steps(create, async ({ canvasElement }) => {
-		await openReview(canvasElement);
+export const NewCollectionReview = {
+	...story(server({ preview: newReview }), "collections", FIELDS, {
+		play: steps(create, async ({ canvasElement }) => {
+			await openReview(canvasElement);
+		}),
 	}),
-});
+	tags: ["visual"],
+};
 
 /** The server after the collection is saved: 노트 is in the file. */
 const withNote = () => {
@@ -266,9 +271,12 @@ const changeFields: Play = async ({ canvasElement }) => {
 };
 
 /** Stage 필드 바꿈: the fields tab with three changes counted in the title row. */
-export const FieldsChanged = story(server(), "collections", FIELDS, {
-	play: steps(preview(false), changeFields),
-});
+export const FieldsChanged = {
+	...story(server(), "collections", FIELDS, {
+		play: steps(preview(false), changeFields),
+	}),
+	tags: ["visual"],
+};
 
 /** Stage 미리보기: the panel preview beside the tree, labelled as the draft that is not saved. */
 export const FieldsPreview = story(server(), "collections", FIELDS, {
@@ -388,12 +396,15 @@ const fieldChanges = previewOf({
 });
 
 /** Stage 필드 검토: one block per change, the values kept, moved or deleted, and the entries touched. */
-export const FieldsReview = story(server({ preview: fieldChanges }), "collections", FIELDS, {
-	play: steps(preview(false), changeFields, async ({ canvasElement }) => {
-		const sheet = await openReview(canvasElement);
-		await within(sheet).findByTestId(`impact-${RENAME}`);
+export const FieldsReview = {
+	...story(server({ preview: fieldChanges }), "collections", FIELDS, {
+		play: steps(preview(false), changeFields, async ({ canvasElement }) => {
+			const sheet = await openReview(canvasElement);
+			await within(sheet).findByTestId(`impact-${RENAME}`);
+		}),
 	}),
-});
+	tags: ["visual"],
+};
 
 /** Stage 값 지우기: choosing to delete the values turns the apply into the red 지우고 적용. */
 export const FieldsReviewDrop = story(server({ preview: fieldChanges }), "collections", FIELDS, {
@@ -463,11 +474,14 @@ const pathReview = previewOf({
 });
 
 /** Stage 주소 검토: before and after, and how many published entries change address. */
-export const PathReview = story(server({ preview: pathReview }), "collections", BASICS, {
-	play: steps(editPath, async ({ canvasElement }) => {
-		await openReview(canvasElement);
+export const PathReview = {
+	...story(server({ preview: pathReview }), "collections", BASICS, {
+		play: steps(editPath, async ({ canvasElement }) => {
+			await openReview(canvasElement);
+		}),
 	}),
-});
+	tags: ["visual"],
+};
 
 // ----- deleting a collection (steps 15-19) -----
 
@@ -516,14 +530,17 @@ export const DeletePending = story(deleteServer, "collections", MEMO, {
 });
 
 /** Stage 지우기 검토 (step 17): what goes, what is cut and what breaks; 지우고 적용 is on from the start. */
-export const DeleteReview = story(deleteServer, "collections", MEMO, {
-	play: steps(pressDelete, async ({ canvasElement }) => {
-		// The board's review has no toast: it belongs to the moment of the press.
-		toast.dismiss();
-		const sheet = await openReview(canvasElement, tReview("drop.apply"));
-		await within(sheet).findByTestId("impact-collection_removed:memo");
+export const DeleteReview = {
+	...story(deleteServer, "collections", MEMO, {
+		play: steps(pressDelete, async ({ canvasElement }) => {
+			// The board's review has no toast: it belongs to the moment of the press.
+			toast.dismiss();
+			const sheet = await openReview(canvasElement, tReview("drop.apply"));
+			await within(sheet).findByTestId("impact-collection_removed:memo");
+		}),
 	}),
-});
+	tags: ["visual"],
+};
 
 /** Stage 지운 뒤 (step 19): the collection is gone from the list, and the toast says what went. */
 export const DeleteDone = story(
@@ -547,7 +564,7 @@ export const DeleteDone = story(
 // ----- the file cannot be edited here -----
 
 /** Stage 읽기 전용: the basics tab with the lock beside 구조 and no way to change or delete. */
-export const ReadOnly = story(server({ state: readOnlyState() }), "collections", BASICS);
+export const ReadOnly = { ...story(server({ state: readOnlyState() }), "collections", BASICS), tags: ["visual"] };
 
 /** Stage 읽기 전용 필드: a field opened in the sheet, with its settings as text. */
 export const ReadOnlyField = story(server({ state: readOnlyState() }), "collections", FIELDS, {

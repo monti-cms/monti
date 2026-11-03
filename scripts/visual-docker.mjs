@@ -8,7 +8,8 @@
  *   pnpm test:visual:docker --baselines <dir> [--update]   # read or write the baselines of another folder (a trial run)
  *
  * The repo is copied into the container (without node_modules, so the host's install is never touched), installed and built there. Only the
- * baselines (after `--update`) and, after a failed comparison, the diff images (packages/ui/visual/test-results) are copied back. An update
+ * baselines (after `--update`) and, after a failed comparison, the diff images (packages/ui/visual/test-results) and the changed shots with their
+ * report (packages/ui/visual/changed) are copied back. An update
  * starts from an empty folder and, once it has succeeded, replaces the light and dark folders of the baselines, so the shot of a story that
  * was renamed or deleted does not stay behind.
  */
@@ -36,13 +37,15 @@ if (folder !== -1 && !args[folder + 1]) {
 }
 const baselines = folder === -1 ? path.join(visual, "baselines") : path.resolve(args[folder + 1] ?? "");
 const results = path.join(visual, "test-results");
+const changed = path.join(visual, "changed");
 mkdirSync(baselines, { recursive: true });
 mkdirSync(results, { recursive: true });
+rmSync(changed, { recursive: true, force: true });
 
 const inside = `
 set -e
 mkdir /work
-tar -C /src --exclude=node_modules --exclude=.git --exclude=.claude --exclude=storybook-static --exclude=test-results --exclude=./examples -cf - . | tar -C /work -xf -
+tar -C /src --exclude=node_modules --exclude=.git --exclude=.claude --exclude=storybook-static --exclude=test-results --exclude=changed --exclude=./examples -cf - . | tar -C /work -xf -
 cd /work
 npm install --global pnpm@${pnpm}
 HUSKY=0 pnpm install --frozen-lockfile
@@ -82,6 +85,7 @@ try {
 	}
 	// There is no such folder after a run with no failure.
 	spawnSync("docker", ["cp", `${container}:/work/packages/ui/visual/test-results/.`, results], { stdio: "ignore" });
+	spawnSync("docker", ["cp", `${container}:/work/packages/ui/visual/changed`, changed], { stdio: "ignore" });
 } finally {
 	docker("rm", "--force", "--volumes", container);
 	if (fresh) rmSync(fresh, { recursive: true, force: true });

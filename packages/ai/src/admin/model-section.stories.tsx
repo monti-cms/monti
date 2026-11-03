@@ -95,7 +95,6 @@ export const Loaded: Story = { tags: ["visual"], render: screen };
 
 /** 13: the quick-task model's menu, grouped by key. */
 export const QuickModelMenu: Story = {
-	tags: ["visual"],
 	render: screen,
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: /빠른 작업/ }));
@@ -105,7 +104,6 @@ export const QuickModelMenu: Story = {
 
 /** 13b: a pick applies at once, with a toast. */
 export const QuickModelChanged: Story = {
-	tags: ["visual"],
 	render: screen,
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: /빠른 작업/ }));
