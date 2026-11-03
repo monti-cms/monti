@@ -15,6 +15,153 @@
 			},
 			"events": []
 		},
+		"ListBody": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"TwoLineTitleCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"note": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"TrashTitleCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"address": {
+					"kind": "text",
+					"type": "string"
+				},
+				"folder": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"meta": {
+					"kind": "text",
+					"type": "string"
+				},
+				"metaTone": {
+					"kind": "variant",
+					"enum": ["default", "warning"]
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"TrashDateCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"date": {
+					"kind": "text",
+					"type": "string"
+				},
+				"left": {
+					"kind": "text",
+					"type": "string"
+				},
+				"urgent": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"RowButtonsCell": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"MoreButton": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"PageToolbar": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"inset": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"TabLinks": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"variant": {
+					"kind": "variant",
+					"enum": ["line", "toolbar"]
+				}
+			},
+			"events": []
+		},
+		"Tab": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"count": {
+					"kind": "text",
+					"type": "string"
+				},
+				"countTone": {
+					"kind": "variant",
+					"enum": ["default", "warning"]
+				},
+				"current": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"List": {
 			"kind": "part",
 			"bind": false,

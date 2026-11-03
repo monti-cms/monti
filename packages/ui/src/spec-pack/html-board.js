@@ -5,6 +5,12 @@
 const role = (el) => [...el.classList].find((name) => name.startsWith("text-"))?.slice(5);
 
 /** The design system's classes and the part each one draws, first match wins. `props` reads the element's own values. */
+/** Whether a list's rows have a head row before them. */
+const headBefore = (el) => {
+	const all = [...document.querySelectorAll(".mt-list-head, .mt-table")];
+	return all[all.indexOf(el) - 1]?.matches(".mt-list-head") ?? false;
+};
+
 /** The rows a list's head row goes with: the next `.mt-table` among the elements after it (the board's runtime may wrap either). */
 const tableAfter = (el) => {
 	const all = [...document.querySelectorAll(".mt-list-head, .mt-table")];
@@ -104,8 +110,72 @@ const parts = [
 		leaf: true,
 		asProps: ["grid-template-columns", "column-gap"],
 	},
+	{
+		match: (el) => el.matches(".mt-table") && !headBefore(el),
+		part: "ListBody",
+		asProps: ["list-style", "margin", "padding"],
+	},
 	{ match: (el) => el.matches(".mt-table"), part: "TableBody", asProps: ["list-style", "margin", "padding"] },
-	{ match: (el) => el.matches(".mt-row"), part: "TableRow", asProps: ["grid-template-columns", "column-gap"] },
+	{
+		match: (el) => el.matches(".mt-row"),
+		part: "TableRow",
+		// Rows 16px above and below are the two-line rows (a title over a line).
+		props: (el) => ({ twoLine: el.style.paddingTop === "var(--space-16)" || undefined }),
+		asProps: ["grid-template-columns", "column-gap", "align-items", "padding-top", "padding-bottom"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > a:has(> .text-note)"),
+		part: "TwoLineTitleCell",
+		props: (el) => ({
+			title: el.querySelector(".mt-row-title")?.textContent.trim(),
+			note: el.querySelector(".text-note")?.textContent.trim(),
+		}),
+		leaf: true,
+		asProps: ["min-width", "text-decoration", "display", "flex-direction", "gap"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > span:has(.mt-row-title):has(> .text-note)"),
+		part: "TrashTitleCell",
+		props: (el) => {
+			const meta = el.querySelector(":scope > .text-note");
+			return {
+				title: el.querySelector(".mt-row-title")?.textContent.trim(),
+				address: el.querySelector(".mt-row-sub")?.textContent.trim(),
+				meta: meta?.textContent.trim(),
+				folder: el.querySelector(":scope > span > span:first-child:not([style*='display: none']) svg")
+					? true
+					: undefined,
+				metaTone: /--fg-warning/.test(meta?.getAttribute("style") ?? "") ? "warning" : undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["min-width", "display", "flex-direction", "gap"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > span:has(> .mt-count):has(> .text-meta)"),
+		part: "TrashDateCell",
+		props: (el) => {
+			const left = el.querySelector(".text-meta");
+			return {
+				date: el.querySelector(".mt-count")?.textContent.trim(),
+				left: left?.textContent.trim(),
+				urgent: /--fg-warning/.test(left?.getAttribute("style") ?? "") || undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["display", "flex-direction", "align-items", "gap"],
+	},
+	{
+		match: (el) => el.matches(".mt-row > span:has(> .mt-text-btn)"),
+		part: "RowButtonsCell",
+		asProps: ["display", "align-items", "gap", "justify-content", "min-width"],
+	},
+	{
+		match: (el) => el.matches(".mt-text-btn") && el.textContent.trim() === "⋯" && !el.matches(".mt-row > *"),
+		part: "MoreButton",
+		leaf: true,
+		asProps: ["font-size"],
+	},
 	// The check a board shows on the row under the pointer is that state's, not the row's.
 	{ match: (el) => el.matches(".mt-row > .mt-check:not(.is-on)"), ignore: true },
 	{
@@ -142,7 +212,7 @@ const parts = [
 		match: (el) => el.matches(".mt-row > .mt-text-btn"),
 		part: "ActionsCell",
 		leaf: true,
-		asProps: ["order", "font-size", "justify-self"],
+		asProps: ["order", "font-size", "justify-self", "opacity"],
 	},
 	{ match: (el) => el.matches(".mt-row > span"), part: "TableCell", asProps: ["order", "display"] },
 	{
@@ -155,6 +225,31 @@ const parts = [
 			quiet: el.classList.contains("mt-status--quiet") || undefined,
 		}),
 		asProps: ["font-size", "line-height"],
+	},
+	// A page's tab row: each tab a page of its own, with its count.
+	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
+	{
+		match: (el) => el.matches(".mt-tabs"),
+		part: "TabLinks",
+		props: (el) => ({ variant: el.closest(".mt-toolbar") ? "toolbar" : undefined }),
+	},
+	{
+		match: (el) => el.matches(".mt-tabs > a"),
+		part: "Tab",
+		props: (el) => {
+			const count = el.querySelector(".mt-count");
+			return {
+				label: [...el.childNodes]
+					.filter((node) => node.nodeType === Node.TEXT_NODE)
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+				current: el.classList.contains("is-on") || undefined,
+				count: count?.textContent.trim(),
+				countTone: count?.classList.contains("mt-count--warn") ? "warning" : undefined,
+			};
+		},
+		leaf: true,
 	},
 	// Under a list: the range, the page size, the page buttons.
 	{
@@ -227,7 +322,13 @@ const parts = [
 		props: (el) => ({ label: el.textContent.trim() }),
 		leaf: true,
 	},
-	{ match: (el) => el.matches(".mt-text-btn"), part: "TextButton", props: (el) => ({ type: el.getAttribute("type") }) },
+	{
+		match: (el) => el.matches(".mt-text-btn"),
+		part: "TextButton",
+		props: (el) => ({
+			variant: ["danger", "ink", "underline", "quiet"].find((name) => el.classList.contains(`mt-text-btn--${name}`)),
+		}),
+	},
 	{
 		match: (el) => el.matches(".mt-btn"),
 		part: "Button",
@@ -263,6 +364,9 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover))$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta)$/;
 
-window.boardPack = { parts, known };
+/** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
+const frame = ["flex-wrap"];
+
+window.boardPack = { parts, known, frame };

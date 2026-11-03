@@ -11,7 +11,7 @@ import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { ListHead } from "../list-head";
-import { PageColumn, PageHeader } from "../page-header";
+import { PageColumn, PageHeader, PageToolbar } from "../page-header";
 import {
 	ListFooter,
 	PageSizeMenu,
@@ -42,10 +42,12 @@ import {
 	SidebarRailToggle,
 	SidebarScreenMode as SidebarScreenModePart,
 } from "../sidebar";
-import { Stack as StackPart } from "../stack";
+import { Inline, Stack as StackPart } from "../stack";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
+import { TabLink, TabLinks } from "../tabs";
 import { Heading, Text } from "../text";
 import { TextButton } from "../text-button";
+import { TrashRowDate, TrashRowTitle } from "../trash-row";
 
 /** An icon by its Carbon name in the design system's icon list (`iconsByName`), in a part that takes its icon as children (a button, an icon button). */
 function Icon({ name }: { name: IconName }) {
@@ -392,6 +394,96 @@ function PageButton({
 	);
 }
 
+/** A table with no head row: its rows only. */
+function ListBody({ children }: { children?: React.ReactNode }) {
+	return (
+		<Table container="none">
+			<TableBody>{children}</TableBody>
+		</Table>
+	);
+}
+
+/** A title cell of two lines: the title (the way in) and a quiet line under it (a template's sections). */
+function TwoLineTitleCell({ title, note }: { title?: string; note?: string }) {
+	return (
+		<TableCell truncate>
+			<RowLink>{title}</RowLink>
+			<Text as="div" variant="note" tone="subtle" truncate>
+				{note}
+			</Text>
+		</TableCell>
+	);
+}
+
+/** A trash row's title cell: the title, its address, and the line under it. */
+function TrashTitleCell({
+	title,
+	address,
+	meta,
+	folder,
+	metaTone,
+}: {
+	title?: string;
+	address?: string;
+	meta?: string;
+	folder?: boolean;
+	metaTone?: "default" | "warning";
+}) {
+	return (
+		<TableCell truncate>
+			<TrashRowTitle title={title} address={address} meta={meta} folder={folder} metaTone={metaTone} />
+		</TableCell>
+	);
+}
+
+/** A trash row's day it was thrown away, and the days left. */
+function TrashDateCell({ date, left, urgent }: { date?: string; left?: string; urgent?: boolean }) {
+	return (
+		<TableCell align="end">
+			<TrashRowDate date={date} left={left} urgent={urgent} />
+		</TableCell>
+	);
+}
+
+/** A row's own buttons at its end (a word button, then ⋯). */
+function RowButtonsCell({ children }: { children?: React.ReactNode }) {
+	return (
+		<TableCell align="end">
+			<RowActions>
+				<Inline gap={16}>{children}</Inline>
+			</RowActions>
+		</TableCell>
+	);
+}
+
+/** The ⋯ of a row: an icon button. */
+function MoreButton({ label }: { label?: string }) {
+	return (
+		<IconButton label={label ?? ""}>
+			<Icon name="overflow-menu--horizontal" />
+		</IconButton>
+	);
+}
+
+/** One tab of a page's tab row: a page of its own, with its count. */
+function Tab({
+	label,
+	current,
+	count,
+	countTone,
+}: {
+	label?: string;
+	current?: boolean;
+	count?: string;
+	countTone?: "default" | "warning";
+}) {
+	return (
+		<TabLink current={current} count={count} countTone={countTone}>
+			{label}
+		</TabLink>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -412,6 +504,15 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	ListBody,
+	TwoLineTitleCell,
+	TrashTitleCell,
+	TrashDateCell,
+	RowButtonsCell,
+	MoreButton,
+	PageToolbar,
+	TabLinks,
+	Tab,
 	List,
 	TitleCell,
 	CountCell,
@@ -509,6 +610,18 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	ListBody: { kind: "part", props: {} },
+	TwoLineTitleCell: { kind: "part", props: { title: "text", note: "text" } },
+	TrashTitleCell: {
+		kind: "part",
+		props: { title: "text", address: "text", meta: "text", folder: "flag", metaTone: "variant" },
+	},
+	TrashDateCell: { kind: "part", props: { date: "text", left: "text", urgent: "flag" } },
+	RowButtonsCell: { kind: "part", props: {} },
+	MoreButton: { kind: "part", props: { label: "text" } },
+	PageToolbar: { kind: "part", props: { inset: "flag" } },
+	TabLinks: { kind: "part", props: { variant: "variant" } },
+	Tab: { kind: "part", props: { label: "text", current: "flag", count: "text", countTone: "variant" } },
 	List: { kind: "part", props: {} },
 	TitleCell: { kind: "part", props: { title: "text", address: "text", folder: "flag" } },
 	CountCell: { kind: "part", props: { align: "variant" } },

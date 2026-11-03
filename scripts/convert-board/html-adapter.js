@@ -10,7 +10,7 @@
 // The layout it reads is the tool's own vocabulary, the props a pack's layout entry takes: `direction`, `align`, `justify`, `grow`, `width`, `maxWidth`,
 // `minWidth`, `minHeight`.
 
-const { parts: PARTS, known: KNOWN } = window.boardPack ?? { parts: [], known: /^$/ };
+const { parts: PARTS, known: KNOWN, frame: FRAME = [] } = window.boardPack ?? { parts: [], known: /^$/ };
 
 /** Inline style properties that are spacing (measured as distances), and the screen's own layout of a group (open: the screen decides it, and the
  * spec writes it on its Stack). On a part, layout is a look: a part is placed by the group around it. Every other property is a look. */
@@ -58,7 +58,8 @@ function looksOf(el, part, root = false, inPart = false) {
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.
 		if (/^(position|top|right|bottom|left)$/.test(property)) continue;
 		// The board's frame is the page itself: its height and ground are the window's.
-		if (root && /^(min-height|height|background)$/.test(property)) continue;
+		// The board's frame is the page itself: its height and ground are the window's, and what the pack names (`frame`) the app's frame does.
+		if (root && (/^(min-height|height|background)$/.test(property) || FRAME.includes(property))) continue;
 		if (part && (part.asProps?.includes(property) || !changes(el, property))) continue;
 		looks.push(`${property}: ${value.join(":").trim()}${part ? " (on a part)" : ""}`);
 	}
