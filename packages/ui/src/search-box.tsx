@@ -5,6 +5,7 @@ import { Close, Search } from "@carbon/icons-react";
 import { type FocusEvent, type KeyboardEvent, useRef, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
+import { CHIP_REMOVE } from "./chip";
 import { cn } from "./cn";
 import {
 	DropdownMenu,
@@ -99,7 +100,7 @@ function SearchBox<T extends string = string>({
 						onValueChange("");
 						field.current?.focus();
 					}}
-					className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0 text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+					className={CHIP_REMOVE}
 				>
 					<Close aria-hidden className="size-4" />
 				</button>
