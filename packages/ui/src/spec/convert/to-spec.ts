@@ -1,12 +1,12 @@
 import type { Catalog } from "../check";
 import {
-	type DataValue,
 	type ScreenSpecDocument,
 	SPACING_STEPS,
 	type SpacingStep,
 	type SpecChild,
 	type SpecElement,
 	type SpecValue,
+	type StateValue,
 	type TextValue,
 } from "../format";
 import type { DrawnNode } from "./drawn";
@@ -31,6 +31,9 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	const outside: string[] = [];
 	const drawnTexts: Record<string, string> = {};
 	const used = new Map<string, number>();
+	/** The drawing's ids of elements (an input's), each with the spec element it became; and the references that wait for them. */
+	const drawnIds = new Map<string, string>();
+	const pendingRefs: { element: string; prop: string; drawnId: string }[] = [];
 	const idFor = (base: string) => {
 		const name = base.charAt(0).toLowerCase() + base.slice(1);
 		const count = (used.get(name) ?? 0) + 1;
@@ -38,12 +41,12 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		return count === 1 ? name : `${name}${count}`;
 	};
 
-	const textOf = (text: string): TextValue | DataValue => {
+	const textOf = (text: string): TextValue | StateValue => {
 		const key = dictionary[text];
 		if (key !== undefined) return { text: key };
 		const id = idFor("text");
 		drawnTexts[id] = text;
-		return { data: `/drawn/${id}` };
+		return { state: `/drawn/${id}` };
 	};
 
 	const spacing = (px: number | undefined, where: string): SpecChild[] => {
@@ -95,9 +98,13 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		}
 		const props: Record<string, SpecValue> = {};
 		for (const [name, value] of Object.entries(node.props ?? {})) {
-			if (!part.props[name]) continue;
-			props[name] = typeof value === "string" && name === "label" ? textOf(value) : value;
+			const rule = part.props[name];
+			if (!rule) continue;
+			if (rule.kind === "ref") pendingRefs.push({ element: id, prop: name, drawnId: String(value) });
+			else props[name] = rule.kind === "text" && typeof value === "string" ? textOf(value) : value;
 		}
+		// The drawing's own id of this element, for a label that names it.
+		if (typeof node.id === "string") drawnIds.set(node.id, id);
 		let specChildren: SpecChild[];
 		if (children.some((child) => (child.before ?? 0) > 0) || (node.after ?? 0) > 0) {
 			// A part whose children the drawing spaces itself (a form): they go in a Stack inside it.
@@ -120,5 +127,13 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	};
 
 	const rootId = convert(root);
+	// A label names its field by the drawing's id; in the spec it is a reference to that field's element.
+	for (const { element, prop, drawnId } of pendingRefs) {
+		const target = drawnIds.get(drawnId);
+		const props = { ...elements[element]?.props };
+		if (target) props[prop] = `@${target}`;
+		else outside.push(`${element}: it names "${drawnId}", which is not an element of the drawing`);
+		elements[element] = { ...(elements[element] as SpecElement), props };
+	}
 	return { spec: { root: rootId, elements }, outside, data: { drawn: drawnTexts } };
 }

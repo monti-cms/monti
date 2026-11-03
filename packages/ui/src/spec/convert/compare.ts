@@ -1,4 +1,4 @@
-import { isSpacing, type ScreenSpecDocument, type SpecChild } from "../format";
+import { isSpacing, refOf, type ScreenSpecDocument, type SpecChild } from "../format";
 
 /** One place in a spec's tree, as the comparison reads it: the part, the props that choose its look, and what is inside in order. */
 interface Shape {
@@ -7,29 +7,14 @@ interface Shape {
 	readonly slots: Readonly<Record<string, readonly Shape[]>>;
 }
 
-/** A prop that chooses a look (a variant, a size, a direction): a plain value. A value read from the data or the dictionary is content, not arrangement. */
+/**
+ * A prop that chooses a look or a place (a variant, a flag, a size, a direction): a plain value. Words, values of the state, references to other elements
+ * and the element's tag (`as`) say what it is or holds, not where it is.
+ */
 const chooses = (name: string, value: unknown) =>
-	!ATTRIBUTES.has(name) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean");
-
-/** Props that name or wire an element (its id, its input type, the field a label points at): not its look or its place. */
-const ATTRIBUTES = new Set([
-	"id",
-	"name",
-	"type",
-	"htmlFor",
-	"autoComplete",
-	"placeholder",
-	"required",
-	"minLength",
-	"disabled",
-	"src",
-	"alt",
-	"href",
-	"as",
-	"method",
-	"action",
-	"label",
-]);
+	name !== "as" &&
+	refOf(value) === undefined &&
+	(typeof value === "string" || typeof value === "number" || typeof value === "boolean");
 
 function shapeOf(spec: ScreenSpecDocument, child: SpecChild): Shape | undefined {
 	if (isSpacing(child)) return { label: `Spacing ${child.spacing}`, children: [], slots: {} };

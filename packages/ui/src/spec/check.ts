@@ -1,17 +1,21 @@
 import {
 	isAction,
-	isData,
 	isItem,
 	isSpacing,
-	isText,
+	isState,
+	isTemplate,
+	isWords,
+	refOf,
 	type ScreenSpecDocument,
 	SPACING_STEPS,
 	type SpecChild,
 	type SpecValue,
+	templateRead,
+	type Visible,
 } from "./format";
 
-/** Who decides a prop (parts.tsx, `CATALOG`): the design system (`variant`, `flag`), the screen (`layout`, `layout-number`), or what it says or wires. */
-export type PropKind = "variant" | "flag" | "layout" | "layout-number" | "data" | "text" | "attribute";
+/** Who decides a prop (parts.tsx, `CATALOG`): the design system (`variant`, `flag`), the screen (`layout`, `layout-number`), or what it reads, says or refers to. */
+export type PropKind = "variant" | "flag" | "layout" | "layout-number" | "data" | "text" | "ref" | "state" | "action";
 
 /** One prop of an entry: its kind and the values it takes. */
 export interface CatalogProp {
@@ -24,6 +28,8 @@ export interface CatalogProp {
 /** One entry of `screen-catalog.generated.json`: a part, or a layout container the screen arranges with. */
 export interface CatalogPart {
 	readonly kind: "part" | "layout";
+	/** It may take an element `bind` (the data a field holds and sends). */
+	readonly bind: boolean;
 	readonly children: boolean;
 	readonly slots: readonly string[];
 	readonly props: Readonly<Record<string, CatalogProp>>;
@@ -31,27 +37,51 @@ export interface CatalogPart {
 }
 export type Catalog = Readonly<Record<string, CatalogPart>>;
 
-const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible", "repeat"]);
+const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible", "repeat", "bind"]);
 const show = (value: unknown) => JSON.stringify(value);
 
 /** Whether a value written in the spec fits a prop of its kind. A value read from the data is checked again when it is drawn. */
-function fits(value: SpecValue, rule: CatalogProp): boolean {
-	const read = isData(value) || isItem(value);
+function fits(value: SpecValue, rule: CatalogProp, elements: ScreenSpecDocument["elements"]): boolean {
+	const read = isState(value) || isItem(value);
 	const plain = rule.enum ? rule.enum.includes(value as string | number) : typeof value === rule.type;
 	switch (rule.kind) {
-		// A list or an object (a list head's columns) comes only from the data.
+		// A list, an object or a picture's address comes only from the state.
 		case "data":
+		case "state":
 			return read;
 		// A size is the screen's own number, written in its spec.
 		case "layout-number":
 			return typeof value === "number";
+		// Words are a dictionary text, a template or a value of the state: never written out in the spec.
 		case "text":
-			return read || isText(value) || typeof value === "string";
-		case "attribute":
-			return read || isAction(value) || plain;
+			return isWords(value);
+		case "ref": {
+			const target = refOf(value);
+			return target !== undefined && target in elements;
+		}
+		case "action":
+			return isAction(value);
 		default:
 			return read || plain;
 	}
+}
+
+/** What a template, a visibility or a repeat reads, checked to be one of the shapes a spec has. */
+function wordsProblem(value: unknown): string | undefined {
+	if (!isWords(value)) return `${show(value)} is not words: { "text" }, { "template", "values" } or { "state" }`;
+	if (isTemplate(value)) {
+		for (const [name, read] of Object.entries(value.values ?? {})) {
+			if (templateRead(read) === undefined)
+				return `the value "${name}" of a template reads "$state.path" or "$item.path", not ${show(read)}`;
+		}
+	}
+	return undefined;
+}
+
+function visibleProblem(visible: Visible | undefined): string | undefined {
+	if (visible === undefined || isState(visible) || isItem(visible)) return undefined;
+	if ("not" in visible) return visibleProblem(visible.not);
+	return `${show(visible)} is not { "state" }, { "item" } or { "not" }`;
 }
 
 /**
@@ -82,15 +112,42 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 		for (const [name, value] of Object.entries(element.props ?? {})) {
 			const rule = part.props[name];
 			if (!rule) problems.push(`${id}.props.${name}: ${element.type} has no prop "${name}" a spec may write`);
-			else if (!fits(value, rule)) {
+			else if (!fits(value, rule, spec.elements)) {
+				const wanted = {
+					text: 'words: { "text" }, { "template", "values" } or { "state" }',
+					ref: "a reference to an element of the spec (@id)",
+					action: 'an action by name ({ "action" })',
+					data: 'a value of the state ({ "state" })',
+					state: 'a value of the state ({ "state" })',
+				}[rule.kind as string];
 				problems.push(
-					`${id}.props.${name}: ${show(value)} is not ${rule.enum ? `a choice (${rule.enum.join(" | ")})` : `a ${rule.type}`}`,
+					`${id}.props.${name}: ${show(value)} is not ${wanted ?? (rule.enum ? `a choice (${rule.enum.join(" | ")})` : `a ${rule.type}`)}`,
 				);
+			} else if (rule.kind === "text") {
+				const problem = wordsProblem(value);
+				if (problem) problems.push(`${id}.props.${name}: ${problem}`);
 			}
+		}
+		if (element.bind !== undefined) {
+			if (!part.bind) problems.push(`${id}.bind: ${element.type} holds no data to bind`);
+			else if (typeof element.bind !== "string" || !element.bind.startsWith("/")) {
+				problems.push(`${id}.bind: ${show(element.bind)} is not a pointer into the state (/form/email)`);
+			}
+		}
+		const visible = visibleProblem(element.visible);
+		if (visible) problems.push(`${id}.visible: ${visible}`);
+		if (element.repeat !== undefined && !isState(element.repeat)) {
+			problems.push(`${id}.repeat: ${show(element.repeat)} is not a list of the state ({ "state" })`);
 		}
 		for (const [slot, ids] of Object.entries(element.slots ?? {})) {
 			if (!part.slots.includes(slot)) problems.push(`${id}.slots.${slot}: ${element.type} has no slot "${slot}"`);
-			for (const child of ids) if (typeof child === "string") use(child, `${id}.slots.${slot}`);
+			ids.forEach((child, index) => {
+				if (typeof child === "string") use(child, `${id}.slots.${slot}`);
+				else {
+					const problem = wordsProblem(child);
+					if (problem) problems.push(`${id}.slots.${slot}[${index}]: ${problem}`);
+				}
+			});
 		}
 		const children = element.children ?? [];
 		if (children.length > 0 && !part.children) problems.push(`${id}.children: ${element.type} takes no children`);
@@ -107,6 +164,10 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 				if (next !== undefined && isSpacing(next)) problems.push(`${where}: two Spacings in a row; write one`);
 			} else if (part.kind === "layout")
 				problems.push(`${where}: a container's children are elements and Spacing, not text`);
+			else {
+				const problem = wordsProblem(child);
+				if (problem) problems.push(`${where}: ${problem}`);
+			}
 		});
 	}
 	for (const id of Object.keys(spec.elements)) {

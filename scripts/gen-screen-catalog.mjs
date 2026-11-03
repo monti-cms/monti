@@ -101,8 +101,14 @@ function ruleOf(partName, entryKind, name, kind, type) {
 			return values?.type === "number" ? { kind, type: "number" } : wrong("a layout number is a number");
 		case "text":
 			return values?.type === "string" ? { kind, type: "string" } : wrong("a text is a string");
-		case "attribute":
-			return values ? { kind, ...values } : wrong("an attribute is a plain value");
+		case "ref":
+			return values?.type === "string" ? { kind, type: "string" } : wrong("a reference is the name of an element");
+		case "state":
+			return values ? { kind } : wrong("a value from the state is a plain value");
+		case "action":
+			return values?.type === "string"
+				? { kind, type: "string" }
+				: wrong("an action is an address the page gives by name");
 		default:
 			return wrong(`"${kind}" is not a kind`);
 	}
@@ -118,7 +124,14 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 	const component = checker.getTypeOfSymbolAtLocation(part, partsDeclaration);
 	const [parameter] = component.getCallSignatures()[0]?.getParameters() ?? [];
 	const propsType = parameter ? checker.getTypeOfSymbolAtLocation(parameter, partsDeclaration) : undefined;
-	const entry = { kind: declaration.kind, children: false, slots: [], props: {}, events: [] };
+	const entry = {
+		kind: declaration.kind,
+		bind: declaration.bind === "yes",
+		children: false,
+		slots: [],
+		props: {},
+		events: [],
+	};
 	const typed = new Map((propsType?.getProperties() ?? []).map((prop) => [prop.name, prop]));
 	// Children and named places come from the type: they hold elements, not values.
 	for (const [name, prop] of typed) {

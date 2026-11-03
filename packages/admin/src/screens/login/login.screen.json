@@ -81,14 +81,14 @@
 			},
 			"children": [
 				{
-					"data": "/siteName"
+					"state": "/siteName"
 				}
 			]
 		},
 		"version": {
 			"type": "Text",
 			"visible": {
-				"data": "/version"
+				"state": "/version"
 			},
 			"props": {
 				"as": "p",
@@ -98,17 +98,16 @@
 			},
 			"children": [
 				{
-					"data": "/version"
+					"state": "/version"
 				}
 			]
 		},
 		"passwordForm": {
 			"type": "Form",
 			"visible": {
-				"data": "/password"
+				"state": "/password"
 			},
 			"props": {
-				"method": "post",
 				"action": {
 					"action": "password"
 				}
@@ -136,7 +135,7 @@
 		"emailLabel": {
 			"type": "FormFieldLabel",
 			"props": {
-				"htmlFor": "email"
+				"for": "@emailInput"
 			},
 			"children": [
 				{
@@ -146,12 +145,9 @@
 		},
 		"emailInput": {
 			"type": "Input",
+			"bind": "/form/email",
 			"props": {
-				"id": "email",
-				"name": "email",
-				"type": "email",
-				"autoComplete": "username",
-				"required": true
+				"type": "email"
 			}
 		},
 		"password": {
@@ -161,7 +157,7 @@
 		"passwordLabel": {
 			"type": "FormFieldLabel",
 			"props": {
-				"htmlFor": "password"
+				"for": "@passwordInput"
 			},
 			"children": [
 				{
@@ -171,18 +167,14 @@
 		},
 		"passwordInput": {
 			"type": "Input",
+			"bind": "/form/password",
 			"props": {
-				"id": "password",
-				"name": "password",
-				"type": "password",
-				"autoComplete": "current-password",
-				"required": true
+				"type": "password"
 			}
 		},
 		"submit": {
 			"type": "Button",
 			"props": {
-				"type": "submit",
 				"variant": "primary",
 				"width": "full"
 			},
@@ -195,7 +187,7 @@
 		"or": {
 			"type": "Separator",
 			"visible": {
-				"data": "/both"
+				"state": "/both"
 			},
 			"props": {
 				"label": {
@@ -206,10 +198,9 @@
 		"githubForm": {
 			"type": "Form",
 			"visible": {
-				"data": "/github"
+				"state": "/github"
 			},
 			"props": {
-				"method": "post",
 				"action": {
 					"action": "github"
 				}
@@ -219,20 +210,17 @@
 		"githubButton": {
 			"type": "Button",
 			"props": {
-				"type": "submit",
 				"variant": {
-					"data": "/github/variant"
+					"state": "/github/variant"
 				},
 				"width": "full"
 			},
 			"children": [
 				"githubIcon",
 				{
-					"text": "signIn",
-					"params": {
-						"provider": {
-							"data": "/github/name"
-						}
+					"template": "signIn",
+					"values": {
+						"provider": "$github.name"
 					}
 				}
 			]
@@ -240,13 +228,12 @@
 		"githubIcon": {
 			"type": "Image",
 			"visible": {
-				"data": "/github/icon"
+				"state": "/github/icon"
 			},
 			"props": {
 				"src": {
-					"data": "/github/icon"
+					"state": "/github/icon"
 				},
-				"alt": "",
 				"size": "icon",
 				"radius": "none"
 			}

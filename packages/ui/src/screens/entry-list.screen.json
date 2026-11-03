@@ -18,7 +18,7 @@
 				],
 				"meta": [
 					{
-						"data": "/addressRule"
+						"state": "/addressRule"
 					}
 				]
 			},
@@ -26,9 +26,6 @@
 		},
 		"addFolder": {
 			"type": "TextButton",
-			"props": {
-				"type": "button"
-			},
 			"children": [
 				{
 					"text": "addFolder"
@@ -44,16 +41,14 @@
 				"aria-label": {
 					"text": "search"
 				},
-				"value": "",
 				"targets": {
-					"data": "/searchTargets"
+					"state": "/searchTargets"
 				}
 			}
 		},
 		"writeNew": {
 			"type": "Button",
 			"props": {
-				"type": "button",
 				"variant": "primary"
 			},
 			"children": [
@@ -84,7 +79,7 @@
 			"type": "ListHead",
 			"props": {
 				"columns": {
-					"data": "/columns"
+					"state": "/columns"
 				}
 			}
 		},
@@ -95,9 +90,9 @@
 		"folderRow": {
 			"type": "TableRow",
 			"repeat": {
-				"data": "/folders"
+				"state": "/folders"
 			},
-			"children": ["folderLead", "folderTitle", "folderEnd"]
+			"children": ["folderLead", "folderTitle", "folderGap1", "folderGap2", "folderGap3", "folderGap4", "folderEnd"]
 		},
 		"folderLead": {
 			"type": "TableCell"
@@ -105,7 +100,6 @@
 		"folderTitle": {
 			"type": "TableCell",
 			"props": {
-				"colSpan": 5,
 				"truncate": true
 			},
 			"children": ["folderName"]
@@ -119,11 +113,9 @@
 				"title": ["folderLink"],
 				"address": [
 					{
-						"text": "folderCount",
-						"params": {
-							"count": {
-								"item": "/count"
-							}
+						"template": "folderCount",
+						"values": {
+							"count": "$item.count"
 						}
 					}
 				]
@@ -131,11 +123,6 @@
 		},
 		"folderLink": {
 			"type": "RowLink",
-			"props": {
-				"href": {
-					"item": "/href"
-				}
-			},
 			"children": [
 				{
 					"item": "/name"
@@ -171,7 +158,7 @@
 		"row": {
 			"type": "TableRow",
 			"repeat": {
-				"data": "/rows"
+				"state": "/rows"
 			},
 			"children": ["status", "title", "category", "tags", "locales", "updated", "end"]
 		},
@@ -184,11 +171,9 @@
 			"props": {
 				"checked": false,
 				"label": {
-					"text": "pick",
-					"params": {
-						"title": {
-							"item": "/title"
-						}
+					"template": "pick",
+					"values": {
+						"title": "$item.title"
 					}
 				}
 			}
@@ -229,11 +214,6 @@
 		},
 		"titleLink": {
 			"type": "RowLink",
-			"props": {
-				"href": {
-					"item": "/href"
-				}
-			},
 			"children": [
 				{
 					"item": "/title"
@@ -330,14 +310,10 @@
 			"type": "Count",
 			"children": [
 				{
-					"text": "range",
-					"params": {
-						"range": {
-							"data": "/range"
-						},
-						"total": {
-							"data": "/total"
-						}
+					"template": "range",
+					"values": {
+						"range": "$range",
+						"total": "$total"
 					}
 				}
 			]
@@ -348,13 +324,11 @@
 				"label": {
 					"text": "pageSize"
 				},
-				"value": {
-					"data": "/pageSize"
-				},
 				"options": {
-					"data": "/pageSizes"
+					"state": "/pageSizes"
 				}
-			}
+			},
+			"bind": "/pageSize"
 		},
 		"pagerRow": {
 			"type": "Stack",
@@ -380,27 +354,21 @@
 		"previousLink": {
 			"type": "PaginationPrevious",
 			"props": {
-				"href": {
-					"data": "/previous/href"
-				},
 				"disabled": {
-					"data": "/previous/disabled"
+					"state": "/previous/disabled"
 				}
 			}
 		},
 		"page": {
 			"type": "PaginationItem",
 			"repeat": {
-				"data": "/pages"
+				"state": "/pages"
 			},
 			"children": ["pageLink"]
 		},
 		"pageLink": {
 			"type": "PaginationLink",
 			"props": {
-				"href": {
-					"item": "/href"
-				},
 				"isActive": {
 					"item": "/current"
 				}
@@ -416,12 +384,19 @@
 			"children": ["nextLink"]
 		},
 		"nextLink": {
-			"type": "PaginationNext",
-			"props": {
-				"href": {
-					"data": "/next/href"
-				}
-			}
+			"type": "PaginationNext"
+		},
+		"folderGap1": {
+			"type": "TableCell"
+		},
+		"folderGap2": {
+			"type": "TableCell"
+		},
+		"folderGap3": {
+			"type": "TableCell"
+		},
+		"folderGap4": {
+			"type": "TableCell"
 		}
 	}
 }

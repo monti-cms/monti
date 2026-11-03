@@ -9,6 +9,8 @@ export interface DrawnNode {
 	/** The design system part the drawing names (by the tool's own marking: a DS class, a component name). Absent for a plain group or a text. */
 	readonly part?: string;
 	readonly props?: Readonly<Record<string, string | number | boolean>>;
+	/** The drawing's own name for the element, when another one names it (a field a label is for). Never in the spec: it becomes a reference. */
+	readonly id?: string;
 	/** A run of text, as drawn. */
 	readonly text?: string;
 	/** A plain group: the axis its children run along. */

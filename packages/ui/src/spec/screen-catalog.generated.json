@@ -1,6 +1,7 @@
 {
 	"Box": {
 		"kind": "part",
+		"bind": false,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -13,6 +14,7 @@
 	},
 	"Stack": {
 		"kind": "layout",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -53,27 +55,25 @@
 	},
 	"Form": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"action": {
-				"kind": "attribute",
+				"kind": "action",
 				"type": "string"
-			},
-			"method": {
-				"kind": "attribute",
-				"enum": ["get", "post"]
 			}
 		},
 		"events": []
 	},
 	"Heading": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"as": {
-				"kind": "attribute",
+				"kind": "variant",
 				"enum": ["h1", "h2", "h3", "h4"]
 			},
 			"tone": {
@@ -93,6 +93,7 @@
 	},
 	"Text": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -101,7 +102,7 @@
 				"enum": ["center", "end", "start"]
 			},
 			"as": {
-				"kind": "attribute",
+				"kind": "variant",
 				"enum": ["code", "dd", "div", "dt", "label", "li", "p", "span", "time"]
 			},
 			"lines": {
@@ -133,6 +134,7 @@
 	},
 	"FormField": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -140,11 +142,12 @@
 	},
 	"FormFieldLabel": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
-		"slots": ["action"],
+		"slots": [],
 		"props": {
-			"htmlFor": {
-				"kind": "attribute",
+			"for": {
+				"kind": "ref",
 				"type": "string"
 			}
 		},
@@ -152,44 +155,25 @@
 	},
 	"Input": {
 		"kind": "part",
-		"children": true,
-		"slots": ["action"],
+		"bind": true,
+		"children": false,
+		"slots": [],
 		"props": {
-			"autoComplete": {
-				"kind": "attribute",
-				"type": "string"
-			},
-			"id": {
-				"kind": "attribute",
-				"type": "string"
-			},
-			"minLength": {
-				"kind": "attribute",
-				"type": "number"
-			},
 			"mono": {
 				"kind": "flag",
 				"type": "boolean"
-			},
-			"name": {
-				"kind": "attribute",
-				"type": "string"
 			},
 			"placeholder": {
 				"kind": "text",
 				"type": "string"
 			},
-			"required": {
-				"kind": "attribute",
-				"type": "boolean"
-			},
 			"size": {
 				"kind": "variant",
-				"enum": ["default", "display", "inherit", "sm", "title"]
+				"enum": ["default", "sm"]
 			},
 			"type": {
-				"kind": "attribute",
-				"type": "string"
+				"kind": "variant",
+				"enum": ["email", "password", "text"]
 			},
 			"width": {
 				"kind": "variant",
@@ -200,18 +184,15 @@
 	},
 	"FormFieldError": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
-		"props": {
-			"id": {
-				"kind": "attribute",
-				"type": "string"
-			}
-		},
+		"props": {},
 		"events": []
 	},
 	"Button": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -227,10 +208,6 @@
 				"kind": "variant",
 				"enum": ["md", "sm"]
 			},
-			"type": {
-				"kind": "attribute",
-				"enum": ["button", "reset", "submit"]
-			},
 			"variant": {
 				"kind": "variant",
 				"enum": ["danger", "outline-danger", "primary", "secondary"]
@@ -244,6 +221,7 @@
 	},
 	"Separator": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -260,13 +238,10 @@
 	},
 	"Image": {
 		"kind": "part",
+		"bind": false,
 		"children": false,
 		"slots": [],
 		"props": {
-			"alt": {
-				"kind": "text",
-				"type": "string"
-			},
 			"fit": {
 				"kind": "variant",
 				"enum": ["contain", "cover"]
@@ -280,14 +255,14 @@
 				"enum": ["fill", "icon", "row", "thumb", "thumb-lg"]
 			},
 			"src": {
-				"kind": "attribute",
-				"type": "string"
+				"kind": "state"
 			}
 		},
 		"events": []
 	},
 	"Icon": {
 		"kind": "part",
+		"bind": false,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -300,6 +275,7 @@
 	},
 	"PageColumn": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -312,6 +288,7 @@
 	},
 	"PageHeader": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": ["meta", "title", "trail"],
 		"props": {},
@@ -319,6 +296,7 @@
 	},
 	"TextButton": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -330,10 +308,6 @@
 				"kind": "variant",
 				"enum": ["proposal"]
 			},
-			"type": {
-				"kind": "attribute",
-				"enum": ["button", "reset", "submit"]
-			},
 			"variant": {
 				"kind": "variant",
 				"enum": ["danger", "inherit", "ink", "plain", "quiet", "underline"]
@@ -343,6 +317,7 @@
 	},
 	"ListHead": {
 		"kind": "part",
+		"bind": false,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -359,6 +334,7 @@
 	},
 	"ListScroll": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -366,6 +342,7 @@
 	},
 	"Table": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -382,6 +359,7 @@
 	},
 	"TableBody": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -394,6 +372,7 @@
 	},
 	"TableRow": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -414,16 +393,13 @@
 	},
 	"TableCell": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"align": {
 				"kind": "variant",
 				"enum": ["center", "end", "start"]
-			},
-			"colSpan": {
-				"kind": "attribute",
-				"type": "number"
 			},
 			"tone": {
 				"kind": "variant",
@@ -442,6 +418,7 @@
 	},
 	"RowCheck": {
 		"kind": "part",
+		"bind": false,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -462,18 +439,15 @@
 	},
 	"RowLink": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
-		"props": {
-			"href": {
-				"kind": "attribute",
-				"type": "string"
-			}
-		},
+		"props": {},
 		"events": []
 	},
 	"RowTitle": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": ["address", "title"],
 		"props": {
@@ -486,6 +460,7 @@
 	},
 	"RowActions": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -493,6 +468,7 @@
 	},
 	"EntryStatus": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -509,6 +485,7 @@
 	},
 	"Count": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -521,6 +498,7 @@
 	},
 	"IconButton": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
@@ -531,16 +509,13 @@
 			"tone": {
 				"kind": "variant",
 				"enum": ["danger"]
-			},
-			"type": {
-				"kind": "attribute",
-				"enum": ["button", "reset", "submit"]
 			}
 		},
 		"events": []
 	},
 	"SearchToggle": {
 		"kind": "part",
+		"bind": true,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -559,16 +534,13 @@
 			"targets": {
 				"kind": "data",
 				"fields": ["value", "label"]
-			},
-			"value": {
-				"kind": "attribute",
-				"type": "string"
 			}
 		},
 		"events": ["onTargetChange", "onValueChange"]
 	},
 	"ListFooter": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -576,6 +548,7 @@
 	},
 	"PageSizeMenu": {
 		"kind": "part",
+		"bind": true,
 		"children": false,
 		"slots": [],
 		"props": {
@@ -586,16 +559,13 @@
 			"options": {
 				"kind": "data",
 				"fields": ["value", "label"]
-			},
-			"value": {
-				"kind": "attribute",
-				"type": "number"
 			}
 		},
 		"events": ["onValueChange"]
 	},
 	"Pagination": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -603,6 +573,7 @@
 	},
 	"PaginationContent": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -610,6 +581,7 @@
 	},
 	"PaginationItem": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {},
@@ -617,16 +589,13 @@
 	},
 	"PaginationLink": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"disabled": {
 				"kind": "flag",
 				"type": "boolean"
-			},
-			"href": {
-				"kind": "attribute",
-				"type": "string"
 			},
 			"isActive": {
 				"kind": "flag",
@@ -637,32 +606,26 @@
 	},
 	"PaginationPrevious": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"disabled": {
 				"kind": "flag",
 				"type": "boolean"
-			},
-			"href": {
-				"kind": "attribute",
-				"type": "string"
 			}
 		},
 		"events": []
 	},
 	"PaginationNext": {
 		"kind": "part",
+		"bind": false,
 		"children": true,
 		"slots": [],
 		"props": {
 			"disabled": {
 				"kind": "flag",
 				"type": "boolean"
-			},
-			"href": {
-				"kind": "attribute",
-				"type": "string"
 			}
 		},
 		"events": []

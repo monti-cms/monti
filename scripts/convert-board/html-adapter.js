@@ -11,14 +11,14 @@ const PARTS = [
 	{
 		match: (el) => el.matches(".mt-label"),
 		part: "FormFieldLabel",
-		props: (el) => ({ htmlFor: el.getAttribute("for") }),
+		props: (el) => ({ for: el.getAttribute("for") }),
 	},
 	{
 		match: (el) => el.matches(".mt-input"),
 		part: "Input",
-		props: (el) => ({ id: el.id, type: el.getAttribute("type"), autoComplete: el.getAttribute("autocomplete") }),
+		props: (el) => ({ type: el.getAttribute("type") }),
 	},
-	{ match: (el) => el.matches(".mt-error"), part: "FormFieldError", props: (el) => ({ id: el.id || undefined }) },
+	{ match: (el) => el.matches(".mt-error"), part: "FormFieldError" },
 	{
 		match: (el) => el.matches(".mt-rule-label"),
 		part: "Separator",
@@ -163,8 +163,10 @@ function read(el, where, root = false) {
 		const props = Object.fromEntries(
 			Object.entries(rule.props?.(el) ?? {}).filter(([, value]) => value != null && value !== ""),
 		);
-		if (rule.leaf) return { where: here, part: rule.part, props, looks };
-		const node = { where: here, part: rule.part, props, looks };
+		// The drawing's own id goes with the node, for a label that names it; it never reaches the spec.
+		const named = el.id ? { id: el.id } : {};
+		if (rule.leaf) return { where: here, part: rule.part, props, looks, ...named };
+		const node = { where: here, part: rule.part, props, looks, ...named };
 		node.children = drawnChildren(el).map((child, index) => readChild(child, `${here}[${index}]`));
 		return node;
 	}
