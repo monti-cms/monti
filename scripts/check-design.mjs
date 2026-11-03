@@ -706,10 +706,6 @@ const DRAWING = new Map([
 		"the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together",
 	],
 	[
-		"admin/src/editor/code-block/line-menu.tsx",
-		"a menu beside the picked lines (absolute position inside the block, never takes focus from the code)",
-	],
-	[
 		"admin/src/editor/file-node-view.tsx",
 		"the file card is a block inside the document, with its name written in place",
 	],
