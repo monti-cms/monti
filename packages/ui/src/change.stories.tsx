@@ -12,7 +12,6 @@ import {
 	Option,
 	RadioGroup,
 	RadioItem,
-	Text,
 	TextButton,
 } from "./index";
 
@@ -106,21 +105,24 @@ export const Removed: Story = {
 };
 
 /**
- * A long text (the writing rules): too long for a line, so each version sits under its label and wraps. The words that differ are highlighted, as in
- * `Compare`: an added sentence on the after side, a removed one on the before side.
+ * A long text (the writing rules): the same lines as a short value, the value wrapping and still right-aligned. The words that differ are
+ * highlighted: an added sentence on the after side, a removed one on the before side.
  */
 export const LongText: Story = {
 	render: () => (
 		<ChangeGroup kind="edit" tag="고침" title="글 쓰는 방식" identifier="말투와 규칙">
-			<ChangeLabel>전</ChangeLabel>
-			<Text variant="note" tone="muted">
-				'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.
-			</Text>
-			<ChangeLabel>후</ChangeLabel>
-			<Text variant="note">
-				'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.{" "}
-				<Highlight>숫자는 아라비아 숫자로 쓴다.</Highlight>
-			</Text>
+			<ChangeLines>
+				<ChangeLine what="전" then="'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다." />
+				<ChangeLine
+					what="후"
+					then={
+						<>
+							'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.{" "}
+							<Highlight>숫자는 아라비아 숫자로 쓴다.</Highlight>
+						</>
+					}
+				/>
+			</ChangeLines>
 		</ChangeGroup>
 	),
 };

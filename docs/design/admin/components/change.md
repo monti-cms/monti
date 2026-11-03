@@ -24,7 +24,7 @@
 
 `ChangeGroup`은 `.mt-change` 블록이다. `kind`는 `new`, `edit`, `drop` 중 하나이고(태그 색), `tag`는 앱의 말("New", "Edit", "Removed"), 그리고 `title`과 `identifier`(스키마에 적힌 그대로의 키, "summary → excerpt")가 있다. 자식은 이미 저장된 데이터를 어떻게 할지다. 선택지는 라디오나 체크가 있는 `Option` 행이다. `ChangeLabel`은 변경의 한 부분("what goes", "keep a copy")에 이름을 붙이며, 그 이름이 가리키는 `ChangeLines` 위에 흐린 잉크의 작은 mono로 놓인다. `ChangeNote`는 한 줄짜리 결과다(되돌릴 수 없으면 `danger`). `ChangeLines`는 `ChangeLine`을 담는다(`what`, `then`, 그리고 `default`, `danger`, `warning` 중 하나인 `tone`). `ChangeActions`는 변경 끝에 한 행으로 놓이는 버튼들이다.
 
-코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`(묶음 머리, 코드는 `ListSection`)이 아니다. 시안의 `.note.is-add` 줄(앞에 초록 +)은 쓰지 않는다. 바뀐 값은 더하기든 빼기든 바꾸기든 전·후로 보인다. 짧은 값은 `ChangeLines` 안의 `ChangeLine` "전" · "후" 두 줄이고, 지운 값의 "후"는 "없음"이다. 한 줄에 들어가지 않는 긴 글(말투와 규칙)은 `ChangeLabel` "전" · "후" 아래에 글을 `Text variant="note"`로 줄바꿈해 쓰고, 달라진 낱말은 `Compare`처럼 `Highlight`로 칠한다(더한 문장은 "후"에, 지운 문장은 "전"에). DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
+코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`(묶음 머리, 코드는 `ListSection`)이 아니다. 시안의 `.note.is-add` 줄(앞에 초록 +)은 쓰지 않는다. 바뀐 값은 더하기든 빼기든 바꾸기든 전·후로 보인다. 짧은 값은 `ChangeLines` 안의 `ChangeLine` "전" · "후" 두 줄이고, 지운 값의 "후"는 "없음"이다. 긴 글(말투와 규칙)도 같은 줄이다. "전" · "후"는 왼쪽에, 값은 오른쪽 정렬로 두고, 값이 길면 오른쪽 정렬 그대로 줄바꿈한다. 둘 사이는 적어도 40px 띄운다. 달라진 낱말은 `Highlight`(베이지)로 칠한다(더한 문장은 "후"에, 지운 문장은 "전"에). 사람이 바꾼 것이라 파란색은 쓰지 않는다. 파란색은 AI 제안에만 쓴다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
 
 ## 나눈 검토 (`.mt-change-group`)
 
