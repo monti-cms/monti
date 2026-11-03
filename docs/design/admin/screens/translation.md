@@ -1,13 +1,13 @@
 # 번역 화면
 
-번역 편집기와 원문 나란히 보기, 그리고 흐름에 쓰이지 않는 초안 보드 셋이다. 부품 규칙은 [translation.md](../components/translation.md)에 있다.
+번역 편집기와 원문 나란히 보기다. 부품 규칙은 [translation.md](../components/translation.md)에 있다.
 
 ## 글 편집기 · 번역 (EditorTranslate)
 
 - 보드: `EditorTranslate.dc.html`. 상태와 흐름 단계: [screens.md › EditorTranslate](../screens.md#editortranslate).
 - 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 머리 줄, 블록 손잡이, 속성 패널, 상태 표시줄 틀은 [editor.md](editor.md)와 같다. 아래에는 번역에서 다른 것만 적는다.
 
-### 자리
+### 기본 틀
 
 #### 머리 줄
 
@@ -17,19 +17,6 @@
 | 발행 상태 | `EntryStatus` | 이 언어 글의 상태(초안 · 발행됨 · 수정 중). |
 | "저장" · "미리보기" · "발행하기 ▾" · 속성 | [editor.md](editor.md)의 머리 줄과 같다 | 발행은 흐린 블록이 남아 있으면 막힌다(할 일로 알린다). 라벨은 "저장". 단축키는 툴팁에만 있다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록으로 간다) · "내보내기" │ "이 번역 휴지통으로"(`variant="danger"`, 아래 줄 "한국어 원문은 그대로"). 보드는 "이 번역 휴지통으로"를 보통 행으로 그렸다. 메뉴 규칙을 따라 맨 아래 위험 행으로 둔다. |
-
-#### 알림 띠
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 원문이 바뀜 | `Banner`(`title` "원문이 바뀌었어요", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 확인"이 바뀜 표시를 한 번에 모두 확인한다. 바뀐 블록은 블록마다 "바뀜" 표시의 카드로 본다. |
-
-#### 원문 옆 창
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 창 | `.mt-tool`(빠진 부품) | 원문 보기가 "옆 창"일 때 왼쪽에 도구 바탕으로 원문을 놓는다. 위에 "한국어 원문 · 읽기 전용"(`Text variant="meta"`), 제목은 `Heading variant="display"`, 본문은 읽기 크기. 고칠 수 없다. 원문은 글로만 보인다. |
-| 원문에서 바뀐 말 | `Highlight` | 원문이 바뀐 동안 새 글에 강조 바탕. |
 
 #### 글 단
 
@@ -56,24 +43,44 @@
 | "원문 바뀜 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 `marker`로 `Marker tone="changed"`, 끝 동작 "✦ 다시 번역" · "✦ 번역" · "지우기", `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
-### 상태
+스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `stage` "새 번역" | 제목과 모든 블록이 `Untranslated`, "✦ 번역" 버튼, 할 일 칸 "할 일 1" |
-| `stage` "번역 제안" | 블록이 `Fill`, `ProposalBubble`("번역", 1 / 6), 할 일 칸 "제안 6" |
-| `stage` "블록 고르기" | 흐린 블록 둘, 그중 하나에 `BlockHandle`과 흐린 블록 메뉴 |
-| `stage` "발행 막힘" | 흐린 블록 하나, 할 일 `StatusBarList` 열림, `toast.error`와 "이동" |
-| `stage` "발행됨" | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었어요"와 "보기" |
-| `stage` "원문 바뀜" | 원문 바뀜 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 `Highlight`, 블록마다 `Marker tone="changed"`, "원문 바뀜" `StatusBarList` 열림 |
-| `stage` "바뀜 카드" | "바뀜" `Marker active`와 `MemoCard` + `MemoDiff` |
-| `stage` "다시 번역" | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 |
-| `stage` "번역 지우기" | ⋯ `DropdownMenu` 열림 |
-| `dark` | 어두운 테마 |
+### 뜨는 자리
 
-토스트의 말은 상태 표시줄 규칙을 따른다: "발행할 수 없어요. 아래 할 일 N개를 먼저 고쳐요."(보드는 "흐린 블록 1개를 먼저 정해요."라고 적었다).
+흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
 
-### 빠진 부품
+#### 알림 띠
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 원문이 바뀜 | `Banner`(`title` "원문이 바뀌었어요", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 확인"이 바뀜 표시를 한 번에 모두 확인한다. 바뀐 블록은 블록마다 "바뀜" 표시의 카드로 본다. |
+
+#### 원문 옆 창
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 창 | `.mt-tool`(빠진 부품) | 원문 보기가 "옆 창"일 때 왼쪽에 도구 바탕으로 원문을 놓는다. 위에 "한국어 원문 · 읽기 전용"(`Text variant="meta"`), 제목은 `Heading variant="display"`, 본문은 읽기 크기. 고칠 수 없다. 원문은 글로만 보인다. |
+| 원문에서 바뀐 말 | `Highlight` | 원문이 바뀐 동안 새 글에 강조 바탕. |
+
+### 흐름 3 · 번역
+
+단계: 3.02, 3.03, 3.04, 3.06, 3.07, 3.09, 3.10, 3.11, 3.15. 단계마다 보이는 것은 [flows/03-translation.md](../flows/03-translation.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `stage` "새 번역" | 3.02 | 제목과 모든 블록이 `Untranslated`, "✦ 번역" 버튼, 할 일 칸 "할 일 1" | Monti/Translation/Marks |
+| `stage` "번역 제안" | 3.03 | 블록이 `Fill`, `ProposalBubble`("번역", 1 / 6), 할 일 칸 "제안 6" | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble |
+| `stage` "블록 고르기" | 3.04 | 흐린 블록 둘, 그중 하나에 `BlockHandle`과 흐린 블록 메뉴 | Monti/EditorTools/BlockHandle |
+| `stage` "발행 막힘" | 3.06 | 흐린 블록 하나, 할 일 `StatusBarList` 열림, `toast.error`와 "이동" | Patterns/Frame/StatusBarList, Controls/Status/Toast |
+| `stage` "발행됨" | 3.07 | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었어요"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
+| `stage` "원문 바뀜" | 3.09 | 원문 바뀜 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 `Highlight`, 블록마다 `Marker tone="changed"`, "원문 바뀜" `StatusBarList` 열림 | Patterns/Frame/Banner, Controls/Status/ChangeDot, Monti/Proposal/Marks, Monti/Translation/Marks, Patterns/Frame/StatusBarList |
+| `stage` "바뀜 카드" | 3.10 | "바뀜" `Marker active`와 `MemoCard` + `MemoDiff` | Monti/Translation/Marks, Monti/Proposal/MemoCard |
+| `stage` "다시 번역" | 3.11 | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble, Controls/Status/EntryStatus |
+| `stage` "번역 지우기" | 3.15 | ⋯ `DropdownMenu` 열림 | Controls/Menu/DropdownMenu |
+
+### 부품 없음
+
+보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
 
 - `.mt-tool`: 원문 옆 창(도구 바탕, 읽기 전용 원문).
 - `.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`: 본문 블록([editor-tools.md](../components/editor-tools.md)의 "본문 블록").
@@ -83,7 +90,7 @@
 - 보드: `TranslatePaired.dc.html`. 상태와 흐름 단계: [screens.md › TranslatePaired](../screens.md#translatepaired).
 - 공통 틀: [common.md](common.md). 머리 줄과 상태 표시줄은 위 EditorTranslate와 같다.
 
-### 자리
+### 기본 틀
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
@@ -98,29 +105,20 @@
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |
 
-### 상태
+스토리: Controls/Tabs/Tabs, Controls/Choice/Segmented, Primitives/Text, Primitives/Label, Controls/Field/Field, Controls/Field/Input, Controls/Button/TextButton, Monti/Translation/Marks.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| (상태 prop 없음) | 한 화면뿐이다. 바뀐 문단, 원문에 더해진 문단, 이미지, 코드, 표, 목록을 한 번에 보인다. |
-| `dark` | 어두운 테마 |
+### 흐름 3 · 번역
 
-### 빠진 부품
+단계: 3.05. 단계마다 보이는 것은 [flows/03-translation.md](../flows/03-translation.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| (상태 prop 없음) | 3.05 | 한 화면뿐이다. 바뀐 문단, 원문에 더해진 문단, 이미지, 코드, 표, 목록을 한 번에 보인다. |  |
+
+### 부품 없음
+
+보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
 
 - `.mt-pair`, `.mt-pair--head`, `.mt-pair--title`, `.mt-src-changed`: 짝 보기([translation.md](../components/translation.md)의 "나란히 보기", "아직 `@monti-cms/ui`에 없다").
 - `.mt-shared`: 원문과 같음.
 - `.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`: 본문 블록.
-
-## 초안 보드: Translate, TranslateFill, TranslateUpdate
-
-- 보드: `Translate.dc.html`(`compare`), `TranslateFill.dc.html`(`state` "흐린 원문" · "제안 도착"), `TranslateUpdate.dc.html`(`state` "요청 전" · "제안 도착"). 흐름 단계: 없음([screens.md](../screens.md#translate)).
-
-세 보드는 EditorTranslate의 초기 초안이다. 어떤 흐름도 쓰지 않으므로 지도가 없다. 같은 일은 위 EditorTranslate와 TranslatePaired의 부품으로 한다.
-
-| 초안에서 보이는 일 | 지도의 자리 |
-|---|---|
-| 원문이 바뀐 블록 보기 (Translate `compare`, TranslateUpdate) | EditorTranslate의 "바뀜 카드"(`MemoCard` + `MemoDiff`)와 "원문이 바뀜" `Banner`의 "모두 확인" |
-| 흐린 글 모두 옮기기 (TranslateFill "흐린 원문") | EditorTranslate의 "✦ 번역"(`TextButton`) |
-| 바뀐 곳 다시 옮기기 (TranslateUpdate "요청 전") | 바뀜 카드의 [✦ 다시 번역]과 상태 표시줄의 "원문 바뀜" 목록 |
-| 제안 도착 (TranslateFill · TranslateUpdate "제안 도착") | EditorTranslate의 "번역 제안" · "다시 번역" 상태(`Fill`, `CurrentProposal`, `ProposalBubble`) |
-| 원문 보기 전환 | `Segmented size="sm" inline` "끔 · 옆 창 · 나란히" |

@@ -6,7 +6,7 @@
 - 공통 틀: [common.md](common.md)의 사이드바, 페이지 단(`PageColumn width="list"`), 제목 행, 사이드 패널, 작은 폼 창, 토스트, 메뉴.
 - 카테고리와 태그는 항목 컬렉션(`item`)이다. 하는 일은 만들기, 고치기, 합치기, 휴지통으로 옮기기다.
 
-### 자리
+### 기본 틀
 
 #### 제목 행
 
@@ -28,6 +28,21 @@
 | ⋯ | `RowActions` + `DropdownMenu` | 모든 행에 늘 보인다. 보드는 열린 행에만 그렸지만 [list.md](../components/list.md)를 따른다. |
 | 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `colSpan`) | 동작은 "합치기" · "휴지통으로"(`TextButton`) 둘이다. 합치기는 둘 이상 골랐을 때 보인다. |
 
+#### 합치기
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "어느 이름으로 합칠까요?", `DialogFooter`) | 남길 이름을 고르고 결과를 한 줄로 보인다. 합쳐진 태그는 휴지통으로 가서 되돌릴 수 있으므로 알약은 primary다. |
+| 남길 이름 | `RadioGroup` + `RadioItem`(`label` 이름과 주소, `hint` "글 12") | 처음에는 글이 더 많은 쪽이 골라져 있다. |
+| 결과 한 줄 | `DialogDescription` | "React를 쓰던 글 3편이 리액트로 바뀌고, React는 휴지통으로 가요. 주소 /tag/react-en은 사라져요." |
+| "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨어요" + "되돌리기". |
+
+스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Patterns/List/BulkBar, Patterns/List/Table, Primitives/Text, Controls/Button/TextButton, Controls/Menu/DropdownMenu, Controls/Overlay/Dialog, Controls/Choice/Radio, Controls/Status/Toast, Controls/Overlay/SidePanel, Controls/Button/IconButton, Controls/Tabs/Tabs, Controls/Field/Field, Controls/Field/Input, Controls/Field/Textarea.
+
+### 뜨는 자리
+
+흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
+
 #### 옆 패널 (항목 열기)
 
 | 자리 | 부품 | 이렇게 쓴다 |
@@ -40,25 +55,13 @@
 | 쓰는 글 | `FormFieldLabel` 아래 `Text mono`("3편") + `TextButton variant="underline"` "목록에서 보기 →" | 그 항목으로 거른 글 목록으로 간다. |
 | 발 | `SidePanel footer`: `Text variant="note" tone="subtle"`("바뀐 곳 없음") + `Button variant="primary"` "저장" | 바뀐 것이 없으면 저장은 비활성이다. |
 
-#### 합치기
+### 흐름 7 · 목록 정리
 
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "어느 이름으로 합칠까요?", `DialogFooter`) | 남길 이름을 고르고 결과를 한 줄로 보인다. 합쳐진 태그는 휴지통으로 가서 되돌릴 수 있으므로 알약은 primary다. |
-| 남길 이름 | `RadioGroup` + `RadioItem`(`label` 이름과 주소, `hint` "글 12") | 처음에는 글이 더 많은 쪽이 골라져 있다. |
-| 결과 한 줄 | `DialogDescription` | "React를 쓰던 글 3편이 리액트로 바뀌고, React는 휴지통으로 가요. 주소 /tag/react-en은 사라져요." |
-| "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨어요" + "되돌리기". |
+단계: 7.06, 7.07, 7.08, 7.09. 단계마다 보이는 것은 [flows/07-list-tidy-up.md](../flows/07-list-tidy-up.md)에 있다.
 
-### 상태
-
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `stage` "카테고리" | 카테고리 목록(설명이 있는 두 줄 행), 첫 행이 옆 패널에 열림 |
-| `stage` "태그" | 태그 목록과 `ListHead`("글 수" 내림차순), 쓰는 글 없는 태그는 흐린 "쓰는 글 없음" |
-| `stage` "태그 고름" | 두 행 `selected`, `BulkBar`("합치기" · "휴지통으로") |
-| `stage` "태그 합치기" | 합치기 `Dialog` |
-| `stage` "태그 합침" | 합쳐진 태그가 빠지고 남은 태그의 글 수가 늘어남, `toast` + "되돌리기" |
-
-### 빠진 부품
-
-- 없음.
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `stage` "태그" | 7.06 | 태그 목록과 `ListHead`("글 수" 내림차순), 쓰는 글 없는 태그는 흐린 "쓰는 글 없음" | Patterns/List/ListHead |
+| `stage` "태그 고름" | 7.07 | 두 행 `selected`, `BulkBar`("합치기" · "휴지통으로") | Patterns/List/BulkBar |
+| `stage` "태그 합치기" | 7.08 | 합치기 `Dialog` | Controls/Overlay/Dialog |
+| `stage` "태그 합침" | 7.09 | 합쳐진 태그가 빠지고 남은 태그의 글 수가 늘어남, `toast` + "되돌리기" | Controls/Status/Toast |

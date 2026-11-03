@@ -2,69 +2,12 @@
 
 어시스턴트 패널과 제안 검토 화면이다. 부품 규칙은 [assistant.md](../components/assistant.md)와 [proposal.md](../components/proposal.md)에 있다.
 
-## 어시스턴트 패널 (Assistant)
-
-- 보드: `Assistant.dc.html`(목록 Main 옆에 연 패널). 상태와 흐름 단계: [screens.md › Assistant](../screens.md#assistant).
-- 공통 틀: [common.md](common.md)의 사이드 패널. 패널 안의 모든 상태는 아래 AssistantPanel에 있다. 이 보드는 "제안 카드"와 "적용됨"을 목록 화면 위에서 보인다.
-
-### 자리
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 패널 | `SidePanel width="assistant"`(`title` "어시스턴트", `onClose`, `actions`에 `IconButton` "지난 대화" · "새 대화", `composer`에 입력 상자) | 화면 오른쪽에 붙고 ✦ 버튼을 가린다. |
-| 대화 | `ChatThread` | 아래에 붙어 위로 쌓인다. |
-| 내 말 | `ChatMessage author="user"` | 오른쪽 종이 말풍선. |
-| 도구 줄 | `ToolCallLines` 안에 `ToolCallLine status="done"` | "글 목록 읽음 · 게시글 6편". |
-| 어시스턴트의 답 | `ChatAnswer` 안에 `ChatMessage author="assistant"` | 바탕 없는 글. 글 이름은 `TextButton variant="underline"`(편집기로 간다)과 mono 주소 `Text variant="meta" mono`. |
-| 제안 카드 | `ProposalCard`(`title` "제안", `summary` "요약 채우기 · 글 2편", `status` "검토 대기" `statusTone="warning"`, 적용 뒤 "적용됨" `statusTone="success"`) | 묶음마다 `ProposalRow` 한 줄("요약 채우기 · 고른 글 · 2편"). 보드는 글마다 "비어 있음 → 새 요약"을 그렸다. [assistant.md](../components/assistant.md)를 따라 묶음 줄만 두고, 글별 내용은 검토 화면에서 본다. |
-| 카드 아래 (기다림) | `ProposalActions`: "상세 보기"(검토 화면이 있을 때) · "버리기" · [적용] | 검은 알약은 [적용] 하나다. |
-| 카드 아래 (적용됨) | `ProposalResult`: "✓ 2편에 적용" · 시각 · "모두 되돌리기" | 보드의 "되돌리기"는 문서를 따라 "모두 되돌리기"로 맞춘다. |
-| 입력 상자 | `ChatInput`(`label` "어시스턴트에게 묻기", `placeholder` "사이트에 대해 물어보세요", `aside`에 `ModelMenuButton`과 `ModelMenu layout="chat"`) | Enter로 보낸다. 글이 비면 보내기만 흐리다. |
-
-### 상태
-
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `proposal` "검토 대기" | `ProposalCard` 상태 "검토 대기"와 `ProposalActions` |
-| `proposal` "적용됨" | 상태 "적용됨"과 `ProposalResult` |
-| `dark` | 어두운 테마 |
-
-### 빠진 부품
-
-없다.
-
-## 어시스턴트 · 처음 열었을 때 (AssistantFirst)
-
-- 보드: `AssistantFirst.dc.html`(글 편집기 옆에 연 빈 패널). 상태와 흐름 단계: [screens.md › AssistantFirst](../screens.md#assistantfirst).
-- 공통 틀: 위 Assistant와 같다.
-
-### 자리
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 패널 머리 | `SidePanel width="assistant"`, `actions`에 `IconButton` "지난 대화"만 | 대화가 없으니 "새 대화"가 없다. |
-| 빈 패널 | `SuggestList` | 입력 상자 바로 위, 아래에 붙는다. 설명 글이 없다. |
-| 묶음 이름 "이 글에서" · "최근" | `SuggestLabel` | 첫 묶음은 지금 화면의 기본 요청이다. |
-| 시작할 요청 | `Suggest request`("요약 써 줘", "영어로 옮겨 줘"), `Suggest recent`(전에 물은 것 둘) | 누르면 그 말로 바로 묻는다. |
-| 입력 상자 | `ChatInput`(`placeholder` "이 글에 대해 물어보세요") | 위 Assistant와 같다. |
-
-### 상태
-
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| (상태 prop 없음) | 빈 패널 하나 |
-| `dark` | 어두운 테마 |
-
-### 빠진 부품
-
-없다.
-
 ## 어시스턴트 패널 · 상태 (AssistantPanel)
 
 - 보드: `AssistantPanel.dc.html`. 상태와 흐름 단계: [screens.md › AssistantPanel](../screens.md#assistantpanel).
 - 공통 틀: 위 Assistant의 패널, 대화, 입력 상자. 여기서는 상태마다 더해지는 것을 적는다.
 
-### 자리
+### 기본 틀
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
@@ -81,7 +24,7 @@
 | 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "상세 보기"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "상세 보기". |
 | 지운 제안 (다시 연 대화) | `ProposalCard` 안에 `ProposalRow`(`detail`에 `Del`로 태그들, `count` "글 0편") |  |
 | 설정 · 스키마 제안 | 도구 줄과 답의 글만 | 제안은 그 화면에 파랗게 표시된다. 카드는 없다. |
-| 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest request` · `Suggest recent` | AssistantFirst와 같다. |
+| 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest request` · `Suggest recent` | |
 | 키가 없을 때 | `Text variant="title"` "AI 연결이 없어요", `Text variant="note" tone="subtle"`, `Button variant="primary"`(`render`로 API 키 화면 링크) "API 키 넣기" | 입력 상자는 없다. |
 | 지난 대화 목록 | `ConversationList`, `ConversationGroupLabel` "오늘" · "이전", `ConversationRow`(`title`, `meta` "10:52 · 적용 16건", 지금 대화는 `current`, `menu`에 `ConversationRowMore` + `DropdownMenu` "지우기") | 행을 누르면 그 대화를 연다. 지우기는 묻지 않는다. |
 | 지난 대화의 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `FilterButton filled` "30일 뒤" + `DropdownMenu`(`DropdownMenuRadioGroup` 7일 · 30일 · 90일 · 지우지 않음) | 날수는 메뉴에서 고른다. |
@@ -90,43 +33,53 @@
 | 모델 버튼 | `ModelMenuButton` | mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 메뉴가 열리면 잉크. |
 | 모델 메뉴 | `ModelMenu layout="chat"`(검색 행, `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 끝의 "기본" · 키 이름 `hint`, `thinking`의 "생각 ›" 둘째 단계 "끔" · "낮음" · "보통" · "높음") | 생각을 지원하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 목록은 키로 묶는다. 도구를 쓸 수 있는 모델만 나온다. |
 
-### 상태
+스토리: Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Monti/Assistant/ChatError, Controls/Button/TextButton, Controls/Button/Button, Monti/Proposal/ProposalCard, Monti/Proposal/Marks, Monti/Assistant/Suggest, Primitives/Text, Monti/Assistant/ConversationList, Controls/Menu/DropdownMenu, Patterns/List/FilterButton, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu.
 
-| `view` | 더해지는 것 |
-|---|---|
-| "처음" | `SuggestList`, 입력 상자 |
-| "묻는 중" | 내 말, `ToolCallLine` done 하나와 running 하나, `ChatInput busy` |
-| "목록 거름" | 도구 줄 셋과 답 |
-| "글 엶" | 이어서 "첫 번째 글 열어 줘", 도구 줄 "화면 이동", 답. 플레이스홀더 "이 글에 대해 물어보세요" |
-| "이동 막힘" | 이어서 옮기지 못한 이동의 답과 "저장하고 열기" |
-| "실패" | `ToolCallLine status="failed"`와 `ChatError` "연결이 끊겼어요" |
-| "글에서 요청" | "글 엶"에 입력 상자의 글 "더 짧게 다듬어 줘. 말투는 그대로." |
-| "맡기기" | "둘 다 골라 줘" 답, 입력 상자의 긴 요청과 `Chip` "고른 글 2편" |
-| "제안 카드" | 여러 묶음 `ProposalCard`와 `ProposalActions` |
-| "적용됨" | 같은 카드의 `ProposalResult`와 못 한 항목 |
-| "대체 텍스트" | `ChatMessage request`와 파일 `ProposalCard` |
-| "설정 제안" | 설정 제안의 도구 줄과 답 |
-| "스키마 변경" | 스키마 제안의 도구 줄과 답("저장하면 PR로 올라가요") |
-| "키 없음" | 키가 없을 때의 줄과 "API 키 넣기". 입력 상자 없음 |
-| "모델 고르기" | `ModelMenu` 열림 |
-| "생각 고르기" | `ModelMenu`의 "생각 ›" 둘째 단계 열림 |
-| "생각 높음" | `ModelMenuButton`에 "· 생각 높음" |
-| "생각 없는 모델" | 다른 모델에 ✓, "생각" 행과 버튼의 "· 생각"이 없음 |
-| "크레딧 부족" | 내 말 아래 `ChatError` "Anthropic 크레딧이 부족해요" |
-| "지난 대화" | 머리 `back`, `ConversationList`, 발의 `FilterButton`. 입력 상자 없음 |
-| "다시 연 대화" | `ChatDate`, 지운 제안 카드, 모델 "claude-opus-5-5 · 생각 높음" |
-| `dark` | 어두운 테마 |
+### 흐름 2 · 어시스턴트
 
-### 빠진 부품
+단계: 2.01, 2.02, 2.03, 2.04, 2.07, 2.10, 2.11, 2.16, 2.19, 2.21, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.25, 2.26, 2.05, 2.06, 2.24. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
 
-없다.
+함께 열리는 화면: `Main`([list.md](list.md)), `EditorNotion`([editor.md](editor.md)), `Media`([media.md](media.md)), `SettingsProposal`([settings.md](settings.md)).
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| "처음" | 2.01 | `SuggestList`, 입력 상자 | Monti/Assistant/Suggest |
+| "묻는 중" | 2.02 | 내 말, `ToolCallLine` done 하나와 running 하나, `ChatInput busy` | Monti/Assistant/ToolCallLine, Monti/Assistant/ChatInput |
+| "목록 거름" | 2.03 | 도구 줄 셋과 답 |  |
+| "글 엶" | 2.04 | 이어서 "첫 번째 글 열어 줘", 도구 줄 "화면 이동", 답. 플레이스홀더 "이 글에 대해 물어보세요" |  |
+| "이동 막힘" | 2.05 | 이어서 옮기지 못한 이동의 답과 "저장하고 열기" |  |
+| "실패" | 2.06 | `ToolCallLine status="failed"`와 `ChatError` "연결이 끊겼어요" | Monti/Assistant/ToolCallLine, Monti/Assistant/ChatError |
+| "글에서 요청" | 2.07 | "글 엶"에 입력 상자의 글 "더 짧게 다듬어 줘. 말투는 그대로." |  |
+| "맡기기" | 2.10 | "둘 다 골라 줘" 답, 입력 상자의 긴 요청과 `Chip` "고른 글 2편" |  |
+| "제안 카드" | 2.11 | 여러 묶음 `ProposalCard`와 `ProposalActions` | Monti/Proposal/ProposalCard |
+| "적용됨" | 2.16 | 같은 카드의 `ProposalResult`와 못 한 항목 | Monti/Proposal/ProposalCard |
+| "대체 텍스트" | 2.19 | `ChatMessage request`와 파일 `ProposalCard` | Monti/Assistant/ChatMessage, Monti/Proposal/ProposalCard |
+| "설정 제안" | 2.21 | 설정 제안의 도구 줄과 답 |  |
+| "키 없음" | 2.22 | 키가 없을 때의 줄과 "API 키 넣기". 입력 상자 없음 |  |
+| "모델 고르기" | 2.23 | `ModelMenu` 열림 | Controls/Menu/ModelMenu |
+| "생각 고르기" | 2.23b | `ModelMenu`의 "생각 ›" 둘째 단계 열림 | Controls/Menu/ModelMenu |
+| "생각 높음" | 2.23c | `ModelMenuButton`에 "· 생각 높음" | Controls/Menu/ModelMenu |
+| "생각 없는 모델" | 2.23d | 다른 모델에 ✓, "생각" 행과 버튼의 "· 생각"이 없음 |  |
+| "크레딧 부족" | 2.24 | 내 말 아래 `ChatError` "Anthropic 크레딧이 부족해요" | Monti/Assistant/ChatError |
+| "지난 대화" | 2.25 | 머리 `back`, `ConversationList`, 발의 `FilterButton`. 입력 상자 없음 | Monti/Assistant/ConversationList, Patterns/List/FilterButton |
+| "다시 연 대화" | 2.26 | `ChatDate`, 지운 제안 카드, 모델 "claude-opus-5-5 · 생각 높음" | Monti/Assistant/ChatThread |
+
+### 흐름 11 · 설정
+
+단계: 11.11. 단계마다 보이는 것은 [flows/11-settings.md](../flows/11-settings.md)에 있다.
+
+함께 열리는 화면: `Schema`([collections.md](collections.md)).
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| "스키마 변경" | 11.11 | 스키마 제안의 도구 줄과 답("저장하면 PR로 올라가요") |  |
 
 ## 어시스턴트 · 제안 검토 (ProposalReview)
 
 - 보드: `ProposalReview.dc.html`. 상태와 흐름 단계: [screens.md › ProposalReview](../screens.md#proposalreview).
 - 공통 틀: [common.md](common.md)의 사이드바, 페이지 단(`PageColumn width="content"`), 제목 행, ✦ 어시스턴트 열기. 사이드바에서 고른 행은 없다.
 
-### 자리
+### 기본 틀
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
@@ -144,27 +97,27 @@
 | 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 유지 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
 | 결과 뒤의 체크 | `ReviewItem readOnly` | 회색 체크, 바꿀 수 없다. |
 
-### 상태
+스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Button/Button, Primitives/Text, Controls/Status/Count, Controls/Status/Progress, Monti/Proposal/Review, Primitives/Separator, Controls/Tabs/Tabs, Monti/Proposal/Marks, Patterns/Frame/Collapsible, Controls/Field/Caret, Monti/Translation/Marks.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `view` "한 줄" | 다듬기 묶음이 `ReviewItem` + `Del` · `Ins` |
-| `view` "나란히" | 다듬기 묶음이 `ReviewCompareHead` + `ReviewCompare` |
-| `stage` "검토" | "버리기"와 적용 알약, "11편 모두 빼기" |
-| `stage` "적용 중" | `Count` "9 / 17"과 `Progress inline` |
-| `stage` "결과" | 적용 수, 못 한 수, "모두 되돌리기", 체크는 `readOnly`, 항목 결과 |
-| `kind` "여러 작업" | 다듬기 · 요약 채우기 · 2024 폴더로 옮기기 · 휴지통으로 보내기 묶음 |
-| `kind` "번역" | 번역 · English 묶음 하나, 글마다 펼치는 항목 |
-| `withRail` | ✦ 어시스턴트 열기 |
-| `dark` | 어두운 테마 |
+### 흐름 2 · 어시스턴트
 
-### 빠진 부품
+단계: 2.12, 2.13, 2.14, 2.15. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
 
-없다.
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `view` "한 줄" | 2.12, 2.14, 2.15 | 다듬기 묶음이 `ReviewItem` + `Del` · `Ins` | Monti/Proposal/Review, Monti/Proposal/Marks |
+| `view` "나란히" | 2.13 | 다듬기 묶음이 `ReviewCompareHead` + `ReviewCompare` | Monti/Proposal/Review |
+| `stage` "검토" | 2.12, 2.13 | "버리기"와 적용 알약, "11편 모두 빼기" |  |
+| `stage` "적용 중" | 2.14 | `Count` "9 / 17"과 `Progress inline` | Controls/Status/Count, Controls/Status/Progress |
+| `stage` "결과" | 2.15 | 적용 수, 못 한 수, "모두 되돌리기", 체크는 `readOnly`, 항목 결과 |  |
+| `kind` "여러 작업" | 2.12, 2.13, 2.14, 2.15 | 다듬기 · 요약 채우기 · 2024 폴더로 옮기기 · 휴지통으로 보내기 묶음 |  |
 
-## 어시스턴트 · 제안 검토 · 나란히 (ProposalReviewSide)
+### 흐름 3 · 번역
 
-- 보드: `ProposalReviewSide.dc.html`. 상태와 흐름 단계: [screens.md › ProposalReviewSide](../screens.md#proposalreviewside).
+단계: 3.13. 단계마다 보이는 것은 [flows/03-translation.md](../flows/03-translation.md)에 있다.
 
-ProposalReview를 `view` "나란히"로 가져다 쓴 보드다. 자리와 부품은 위 ProposalReview와 같다. 상태 prop은 없다.
-
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `view` "한 줄" | 3.13 | 다듬기 묶음이 `ReviewItem` + `Del` · `Ins` | Monti/Proposal/Review, Monti/Proposal/Marks |
+| `stage` "검토" | 3.13 | "버리기"와 적용 알약, "11편 모두 빼기" |  |
+| `kind` "번역" | 3.13 | 번역 · English 묶음 하나, 글마다 펼치는 항목 |  |

@@ -3,7 +3,7 @@
 - 보드: `EditorNotion.dc.html`. 상태와 흐름 단계: [screens.md › EditorNotion](../screens.md#editornotion).
 - 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 편집기는 `PageHeader`를 쓰지 않는다. 머리가 편집기 자신의 줄이다.
 
-## 자리
+## 기본 틀
 
 ### 머리 줄
 
@@ -19,14 +19,6 @@
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록" · "복제" · "보관" · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기", "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. |
 | 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
 | 휴지통 글의 머리 | `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 저장 · 미리보기 · 발행 · ⋯ 대신 보인다. 영구 삭제는 `AlertDialog`로 묻는다. |
-
-### 알림 띠 (머리 바로 아래, 가장자리에서 가장자리까지)
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
-| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
-| 휴지통에 있는 글 | `Banner`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
 
 ### 글 단
 
@@ -81,28 +73,81 @@
 | 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
 
-## 상태
+### 늘 있는 자리의 값
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `state` "글자 고름 + 블록 메뉴" | `FloatingBar`, `BlockHandle active`, 블록 메뉴 `DropdownMenu` |
-| `state` "블록 바꾸기" · "블록 정렬" | 블록 메뉴의 `DropdownMenuSub`가 열림 |
-| `state` "/ 를 쳤을 때" · "템플릿 고르기" | "/" 메뉴 `Command`(템플릿은 "템플릿 · 이 자리에 넣어요" 그룹만) |
-| `doc` "새 글" | 빈 제목과 "/ 를 눌러 블록 넣기" 줄 |
-| `pub` | 머리의 `EntryStatus`와 발행 알약(초안 `Button`, 발행된 글 `SplitButton`) |
-| `pubMenu` | `SplitButton`의 메뉴 |
-| `moreMenu` "열림" · "본문 폭" | ⋯ `DropdownMenu`, 그 안의 "본문 폭" `DropdownMenuSub` |
-| `langMenu` "열림" · "언어 하나뿐" | "+ 언어" `DropdownMenu` |
-| `save` | 저장 칸의 글, "편집 충돌"이면 충돌 `Banner` |
-| `dialog` "편집 충돌" · "임시 저장본 복구" | 해당 `Banner` |
-| `trashed` | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) |
-| `img` "올리는 중" · "설정" · "파일" | `UploadingImage` · `FloatingBar`와 설정 `Popover` · `FileBlock` |
-| `fix` "요약" | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" |
-| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="micro"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). |
-| `todo` · `todoOpen` | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) |
-| `pluginOpen` | 플러그인 칸의 `StatusBarList` |
-| `panel` · `panelTab` | `PropertyPanel`과 고른 탭 |
-| `panelFill` | 탭 줄 끝 "빈 칸 채우기" |
-| `seriesPending` | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") |
-| `toast` "발행 막힘" · "발행됨" | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" |
+흐름마다 값만 바뀐다.
 
+| 값 | 바뀌는 것 | 스토리 |
+|---|---|---|
+| `pub` | 머리의 `EntryStatus`와 발행 알약(초안 `Button`, 발행된 글 `SplitButton`) | Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton |
+| `save` | 저장 칸의 글, "편집 충돌"이면 충돌 `Banner` | Patterns/Frame/Banner |
+
+스토리: Controls/Button/TextButton, Primitives/Text, Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton, Controls/Menu/DropdownMenu, Controls/Button/IconButton, Primitives/Separator, Controls/Overlay/AlertDialog, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Field/Input, Monti/EditorTools/BlockHandle, Primitives/HeadingIcon, Monti/EditorTools/FloatingBar, Monti/EditorTools/FormatBar, Controls/Menu/Command, Patterns/Frame/UploadingImage, Monti/EditorTools/BlockBar, Controls/Overlay/Popover, Controls/Overlay/Sheet, Patterns/Sheet/CropStage, Controls/Field/Field, Controls/Field/Select, Controls/Field/Textarea, Controls/Choice/Option, Controls/Choice/Switch, Patterns/Frame/FileBlock, Patterns/Sheet/MediaPicker, Controls/Overlay/Dialog, Monti/Proposal/PropertyPanel, Controls/Overlay/SidePanel, Primitives/AI mark, Controls/Field/Affix, Patterns/Frame/Image, Controls/Field/Combobox, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
+
+## 뜨는 자리
+
+흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
+
+### 알림 띠 (머리 바로 아래, 가장자리에서 가장자리까지)
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
+| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
+| 휴지통에 있는 글 | `Banner`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+
+## 흐름 1 · 글 쓰고 발행하기
+
+단계: 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16, 1.18. 단계마다 보이는 것은 [flows/01-write-and-publish.md](../flows/01-write-and-publish.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `state` "글자 고름 + 블록 메뉴" | 1.03 | `FloatingBar`, `BlockHandle active`, 블록 메뉴 `DropdownMenu` | Monti/EditorTools/FloatingBar, Monti/EditorTools/BlockHandle, Controls/Menu/DropdownMenu |
+| `state` "블록 바꾸기" · "블록 정렬" | 1.04, 1.05 | 블록 메뉴의 `DropdownMenuSub`가 열림 | Controls/Menu/DropdownMenu |
+| `state` "/ 를 쳤을 때" · "템플릿 고르기" | 1.02 | "/" 메뉴 `Command`(템플릿은 "템플릿 · 이 자리에 넣어요" 그룹만) | Controls/Menu/Command |
+| `doc` "새 글" | 1.02 | 빈 제목과 "/ 를 눌러 블록 넣기" 줄 |  |
+| `pubMenu` | 1.15 | `SplitButton`의 메뉴 | Controls/Button/SplitButton |
+| `dialog` "편집 충돌" · "임시 저장본 복구" | 1.16, 1.18 | 해당 `Banner` | Patterns/Frame/Banner |
+| `fix` "요약" | 1.11 | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" | Controls/Field/Textarea |
+| `fix` "대체 텍스트" | 1.12 | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="micro"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). | Monti/EditorTools/BlockHandle, Controls/Overlay/Popover, Controls/Button/TextButton |
+| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `pluginOpen` | 1.06 | 플러그인 칸의 `StatusBarList` | Patterns/Frame/StatusBarList |
+| `panel` · `panelTab` | 1.08 | `PropertyPanel`과 고른 탭 | Monti/Proposal/PropertyPanel |
+| `seriesPending` | 1.07 | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") | Controls/Button/TextButton |
+| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+
+## 흐름 2 · 어시스턴트
+
+단계: 2.04, 2.07, 2.05. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
+
+함께 열리는 화면: `AssistantPanel`([assistant.md](assistant.md)).
+
+이 화면에서는 기본 틀만 쓴다.
+
+## 흐름 3 · 번역
+
+단계: 3.01, 3.08, 3.14. 단계마다 보이는 것은 [flows/03-translation.md](../flows/03-translation.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `langMenu` "열림" · "언어 하나뿐" | 3.01, 3.14 | "+ 언어" `DropdownMenu` | Controls/Menu/DropdownMenu |
+| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+
+## 흐름 5 · 휴지통
+
+단계: 5.18. 단계마다 보이는 것은 [flows/05-trash.md](../flows/05-trash.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `trashed` | 5.18 | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) | Patterns/Frame/Banner |
+| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+
+## 흐름 6 · 미디어
+
+단계: 6.05, 6.06, 6.38. 단계마다 보이는 것은 [flows/06-media.md](../flows/06-media.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `img` "올리는 중" · "설정" · "파일" | 6.05, 6.06, 6.38 | `UploadingImage` · `FloatingBar`와 설정 `Popover` · `FileBlock` | Patterns/Frame/UploadingImage, Monti/EditorTools/FloatingBar, Controls/Overlay/Popover, Patterns/Frame/FileBlock |
+| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |

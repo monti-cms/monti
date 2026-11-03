@@ -5,7 +5,7 @@
 - 보드: `EditorProposal.dc.html`. 상태와 흐름 단계: [screens.md › EditorProposal](../screens.md#editorproposal).
 - 공통 틀: 머리 줄, 언어 탭, 제목, 본문 블록, 속성 패널의 틀, 상태 표시줄은 [editor.md](editor.md)와 같다. 여기에는 제안이 더하는 자리만 적는다. 보드의 머리 "저장 ⌘S"도 editor.md를 따라 라벨 "저장"이다.
 
-### 자리
+### 기본 틀
 
 #### 본문의 제안
 
@@ -37,28 +37,24 @@
 | "요청 1 · 고치는 중 1" | `StatusBarCell` | 남긴 요청 수와 고치는 중인 수. 누르면 다음 요청으로 가서 그 메모 카드를 연다. 스크린 리더 이름은 "요청 1개, 고치는 중 1개, 다음 요청 열기". |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | |
 
-### 상태
+스토리: Monti/Proposal/Marks, Monti/Translation/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Monti/Proposal/PropertyPanel, Controls/Field/Textarea, Patterns/Frame/StatusBar.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `request` "고치는 중" | 첫 문단의 기다리는 제안과 요청 표시 "1", 마지막 문단의 요청 표시 "…"(고치는 중), 상태 표시줄 "요청 1 · 고치는 중 1" |
-| `request` "보내기 전" | 마지막 문단의 보내기 전 `MemoCardPopover`(입력 줄만), 요청 표시 "…" 없음, 상태 표시줄 "요청 1" |
-| `request` "고치는 중 · 카드" | 마지막 문단의 요청 표시 `active`와 고치는 중 `MemoCardPopover`(멈추기) |
-| `memoCard` | `request` "고치는 중"일 때 첫 문단의 기다리는 제안 `MemoCardPopover`와 그 표시 `active` |
-| `panelTab` "기본" | 속성 기본 탭, 요약 입력칸에 제안 값(`proposal`) |
-| `panelTab` "SEO" | SEO 탭, SEO 설명 입력칸에 제안 값(`proposal`), 제목은 "제목과 같음 · 10/60" |
-| `dark` | 어두운 테마 |
+### 흐름 2 · 어시스턴트
 
-### 빠진 부품
+단계: 2.08, 2.09. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
 
-- 없음.
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `request` "고치는 중" | 2.08, 2.09 | 첫 문단의 기다리는 제안과 요청 표시 "1", 마지막 문단의 요청 표시 "…"(고치는 중), 상태 표시줄 "요청 1 · 고치는 중 1" |  |
+| `memoCard` | 2.09 | `request` "고치는 중"일 때 첫 문단의 기다리는 제안 `MemoCardPopover`와 그 표시 `active` | Monti/Proposal/MemoCard |
+| `panelTab` "기본" | 2.08, 2.09 | 속성 기본 탭, 요약 입력칸에 제안 값(`proposal`) |  |
 
 ## 글 편집기 · 비교 (EditorCompare)
 
 - 보드: `EditorCompare.dc.html`. 상태와 흐름 단계: [screens.md › EditorCompare](../screens.md#editorcompare).
 - 공통 틀: 상태 표시줄은 [editor.md](editor.md)와 같은 `StatusBar`다. 편집기 주소에 `?compare=conflict`나 `?compare=draft`가 붙은 화면이고, 편집기의 저장하지 않은 입력은 그대로 남는다.
 
-### 자리
+### 기본 틀
 
 #### 머리 줄
 
@@ -90,14 +86,13 @@
 | 상태 "편집 충돌" · "브라우저에만 임시 저장됨" | `StatusBarCell render={<span />}`(`tone` 충돌은 위험, 임시 저장본은 경고) | 알리기만 한다. |
 | "다른 곳 3" | `StatusBarSpacer` 뒤 `StatusBarCell end` | |
 
-### 상태
+스토리: Controls/Button/TextButton, Primitives/Text, Primitives/Separator, Controls/Button/Button, Monti/Change/Compare, Patterns/Frame/StatusBar.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `mode` "편집 충돌" | 제목 "서버 최신본과 비교", 왼쪽 "내 입력 · 저장 안 됨", 오른쪽 "서버 최신본 · v4 · 10:41 저장", 곁 동작 "서버 최신본 불러오기", 주 동작 "내 입력으로 저장", 상태 "편집 충돌"(위험) |
-| `mode` "임시 저장본" | 제목 "임시 저장본과 비교", 왼쪽 "임시 저장본 · 이 브라우저 · 10. 26 10:12", 오른쪽 "서버 저장본 · 10. 26 09:58", 곁 동작 "버리기", 주 동작 "임시 저장본 불러오기", 상태 "브라우저에만 임시 저장됨"(경고) |
-| `dark` | 어두운 테마 |
+### 흐름 1 · 글 쓰고 발행하기
 
-### 빠진 부품
+단계: 1.17, 1.19. 단계마다 보이는 것은 [flows/01-write-and-publish.md](../flows/01-write-and-publish.md)에 있다.
 
-- 없음.
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `mode` "편집 충돌" | 1.17 | 제목 "서버 최신본과 비교", 왼쪽 "내 입력 · 저장 안 됨", 오른쪽 "서버 최신본 · v4 · 10:41 저장", 곁 동작 "서버 최신본 불러오기", 주 동작 "내 입력으로 저장", 상태 "편집 충돌"(위험) |  |
+| `mode` "임시 저장본" | 1.19 | 제목 "임시 저장본과 비교", 왼쪽 "임시 저장본 · 이 브라우저 · 10. 26 10:12", 오른쪽 "서버 저장본 · 10. 26 09:58", 곁 동작 "버리기", 주 동작 "임시 저장본 불러오기", 상태 "브라우저에만 임시 저장됨"(경고) |  |

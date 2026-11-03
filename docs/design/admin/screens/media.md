@@ -5,7 +5,7 @@
 - 보드: `Media.dc.html`. 상태와 흐름 단계: [screens.md › Media](../screens.md#media).
 - 공통 틀: [common.md](common.md)의 사이드바, 페이지 단(`PageColumn width="list"`), 제목 행, ✦ 어시스턴트 열기, 사이드 패널, 토스트, 메뉴.
 
-### 자리
+### 기본 틀
 
 #### 제목 행
 
@@ -72,6 +72,21 @@
 | 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안 `Text variant="meta"`(mono) | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 
+#### 오른쪽 클릭과 확인
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · "옮기기"(`ContextMenuSub`) │ "폴더 지우기"(`variant="danger"`) | 열린 동안 그 타일은 선택 바탕을 유지한다. 폴더 지우기는 곧바로 옮기고 `toast`에 "되돌리기", 쓰는 곳이 있는 파일이 남으면 "보기". |
+| 빈 곳 오른쪽 클릭 | `ContextMenu`: "올리기" · "새 폴더" | |
+| 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. |
+| 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
+
+스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/Separator, Controls/Choice/Segmented, Patterns/List/BulkBar, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Patterns/List/Empty, Patterns/List/Table, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
+
+### 뜨는 자리
+
+흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
+
 #### 옆 패널 (파일 열기)
 
 | 자리 | 부품 | 이렇게 쓴다 |
@@ -88,64 +103,62 @@
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `Stack`, 행마다 `TextButton`(`href` 그 글) + `Text variant="micro" tone="subtle"`(자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). |
 | 저장 | `SidePanel footer`의 `Button variant="primary"` | 파일(PDF)은 발에서 "파일 바꾸기" · "휴지통으로"(`TextButton`)가 알약 앞에 온다. |
 
-#### 오른쪽 클릭과 확인
+### 흐름 2 · 어시스턴트
 
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · "옮기기"(`ContextMenuSub`) │ "폴더 지우기"(`variant="danger"`) | 열린 동안 그 타일은 선택 바탕을 유지한다. 폴더 지우기는 곧바로 옮기고 `toast`에 "되돌리기", 쓰는 곳이 있는 파일이 남으면 "보기". |
-| 빈 곳 오른쪽 클릭 | `ContextMenu`: "올리기" · "새 폴더" | |
-| 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. |
-| 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
+단계: 2.19. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
 
-### 상태
+함께 열리는 화면: `AssistantPanel`([assistant.md](assistant.md)).
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `mode` "최상위" | 경로 없음, `FolderTile` 행(상위 폴더 없음), 어느 폴더에도 없는 파일 `Tile` |
-| `mode` "폴더 안" | 경로, "상위 폴더로" `FolderTile`, 하위 폴더, 파일 `Tile`(기본값) |
-| `mode` "필터 열기" | "대체 텍스트 ▾" `DropdownMenu` |
-| `mode` "새 폴더" | 폴더 행 끝 `FolderTile` + `RenameField` |
-| `mode` "폴더 우클릭" | 폴더 `ContextMenu` |
-| `mode` "폴더 지움" | 폴더가 빠지고 `toast` "…휴지통으로 옮겼어요" + "되돌리기" |
-| `mode` "폴더 일부 남김" | `toast` "…4개는 쓰는 곳이 있어 남겼어요" + "보기" |
-| `mode` "빈 곳 우클릭" | 빈 곳 `ContextMenu` |
-| `mode` "파일 메뉴" | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` |
-| `mode` "하위 폴더" | 경로 두 단계, 제목 "covers", 파일 격자 |
-| `mode` "목록 보기" | 격자 대신 `Table`, 보기 `Segmented`가 "목록" |
-| `mode` "끌어 놓기" | `DropArea over`, `toast.dropHint` "여기에 올려요" |
-| `mode` "폴더 위로 끌기" | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올려요" |
-| `mode` "올리는 중" | `Tile status="uploading"`과 대기 타일 |
-| `mode` "올리기 실패" | `Tile status="failed"`(빼기), `Tile status="interrupted"`(줄여서 다시 · 빼기) |
-| `mode` "파일 열기" | 옆 패널 `SidePanel`, 그 타일 `current` |
-| `mode` "바꾸기 메뉴" | 패널 ⋯ `DropdownMenu` |
-| `mode` "파일 바꾸기" | `AlertDialog`(옛 파일 → 새 파일) |
-| `mode` "여러 개 선택" | `BulkBar`, 고른 `Tile selected` |
-| `mode` "폴더로 옮기기" | `BulkBar`의 "폴더로" `DropdownMenu` |
-| `mode` "찾는 중" | `SearchBox`(검색어 "cover"), 찾는 곳 `Segmented`가 "모든 폴더", 세부 줄 앞에 폴더 경로, 폴더 행 없음 |
-| `mode` "필터 걸림" | `Chip` "대체 텍스트: 없음 ×", 찾는 곳 `Segmented` |
-| `mode` "대체 텍스트 없는 것 고름" | `BulkBar`(3개, `request` "✦ 대체 텍스트") |
-| `mode` "대체 텍스트 제안" | 제안 줄, `Tile proposal` 셋 |
-| `mode` "대체 텍스트 메모" | `MemoCardPopover`가 한 타일에 열림 |
-| `mode` "휴지통으로 옮김" | 그 타일이 빠지고 `toast` + "되돌리기" |
-| `mode` "일부 남김" | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" |
-| `mode` "저장소 없음" | `Empty`와 "연결 방법", 도구 행 없음, "올리기" 비활성 |
-| `mode` "종류 열기" | "종류 ▾" `DropdownMenu` |
-| `mode` "종류 파일" | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 |
-| `mode` "PDF 올리는 중" | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 |
-| `mode` "받지 않는 형식" | `FilePreview`가 든 `Tile status="failed"`(빼기) |
-| `mode` "PDF 열기" | 파일용 옆 패널(대체 텍스트와 캡션 없음, 발에 "파일 바꾸기" · "휴지통으로") |
-| `withRail` | 켜져 있고 옆 패널이 없을 때만 ✦ 모서리 버튼이 보인다. 다른 보드가 이 보드를 가져다 쓸 때 끈다 |
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `mode` "대체 텍스트 없는 것 고름" | 2.19 | `BulkBar`(3개, `request` "✦ 대체 텍스트") | Patterns/List/BulkBar |
+| `withRail` | 2.19 | 켜져 있고 옆 패널이 없을 때만 ✦ 모서리 버튼이 보인다. 다른 보드가 이 보드를 가져다 쓸 때 끈다 |  |
 
-### 빠진 부품
+### 흐름 6 · 미디어
 
-- 없음. 보드의 자리는 모두 위 부품으로 된다.
+단계: 6.01, 6.02, 6.03, 6.04, 6.07, 6.08, 6.09, 6.10, 6.13, 6.14, 6.15, 6.16, 6.17, 6.11, 6.12, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.32, 6.33, 6.34, 6.35, 6.36, 6.31. 단계마다 보이는 것은 [flows/06-media.md](../flows/06-media.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `mode` "최상위" | 6.07 | 경로 없음, `FolderTile` 행(상위 폴더 없음), 어느 폴더에도 없는 파일 `Tile` | Patterns/List/Tile |
+| `mode` "폴더 안" | 6.08 | 경로, "상위 폴더로" `FolderTile`, 하위 폴더, 파일 `Tile`(기본값) | Patterns/List/Tile |
+| `mode` "필터 열기" | 6.22 | "대체 텍스트 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
+| `mode` "새 폴더" | 6.09 | 폴더 행 끝 `FolderTile` + `RenameField` | Patterns/List/Tile, Patterns/List/RenameField |
+| `mode` "폴더 우클릭" | 6.10 | 폴더 `ContextMenu` | Controls/Menu/ContextMenu |
+| `mode` "폴더 지움" | 6.11 | 폴더가 빠지고 `toast` "…휴지통으로 옮겼어요" + "되돌리기" | Controls/Status/Toast |
+| `mode` "폴더 일부 남김" | 6.12 | `toast` "…4개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
+| `mode` "빈 곳 우클릭" | 6.13 | 빈 곳 `ContextMenu` | Controls/Menu/ContextMenu |
+| `mode` "파일 메뉴" | 6.17 | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` | Controls/Menu/ContextMenu |
+| `mode` "목록 보기" | 6.14 | 격자 대신 `Table`, 보기 `Segmented`가 "목록" | Patterns/List/Table, Controls/Choice/Segmented |
+| `mode` "끌어 놓기" | 6.01 | `DropArea over`, `toast.dropHint` "여기에 올려요" | Patterns/List/DropArea, Controls/Status/Toast |
+| `mode` "폴더 위로 끌기" | 6.02 | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올려요" | Patterns/List/Tile, Controls/Status/Toast |
+| `mode` "올리는 중" | 6.03 | `Tile status="uploading"`과 대기 타일 | Patterns/List/Tile |
+| `mode` "올리기 실패" | 6.04 | `Tile status="failed"`(빼기), `Tile status="interrupted"`(줄여서 다시 · 빼기) | Patterns/List/Tile |
+| `mode` "파일 열기" | 6.16 | 옆 패널 `SidePanel`, 그 타일 `current` | Controls/Overlay/SidePanel |
+| `mode` "바꾸기 메뉴" | 6.18 | 패널 ⋯ `DropdownMenu` | Controls/Menu/DropdownMenu |
+| `mode` "파일 바꾸기" | 6.19 | `AlertDialog`(옛 파일 → 새 파일) | Controls/Overlay/AlertDialog |
+| `mode` "여러 개 선택" | 6.20 | `BulkBar`, 고른 `Tile selected` | Patterns/List/BulkBar, Patterns/List/Tile |
+| `mode` "폴더로 옮기기" | 6.21 | `BulkBar`의 "폴더로" `DropdownMenu` | Patterns/List/BulkBar, Controls/Menu/DropdownMenu |
+| `mode` "찾는 중" | 6.15 | `SearchBox`(검색어 "cover"), 찾는 곳 `Segmented`가 "모든 폴더", 세부 줄 앞에 폴더 경로, 폴더 행 없음 | Controls/Field/SearchBox, Controls/Choice/Segmented |
+| `mode` "필터 걸림" | 6.23 | `Chip` "대체 텍스트: 없음 ×", 찾는 곳 `Segmented` | Controls/Choice/Segmented |
+| `mode` "대체 텍스트 없는 것 고름" | 6.24 | `BulkBar`(3개, `request` "✦ 대체 텍스트") | Patterns/List/BulkBar |
+| `mode` "대체 텍스트 제안" | 6.25 | 제안 줄, `Tile proposal` 셋 | Patterns/List/Tile |
+| `mode` "대체 텍스트 메모" | 6.26 | `MemoCardPopover`가 한 타일에 열림 | Monti/Proposal/MemoCard |
+| `mode` "휴지통으로 옮김" | 6.27 | 그 타일이 빠지고 `toast` + "되돌리기" | Controls/Status/Toast |
+| `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
+| `mode` "저장소 없음" | 6.31 | `Empty`와 "연결 방법", 도구 행 없음, "올리기" 비활성 | Patterns/List/Empty |
+| `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
+| `mode` "종류 파일" | 6.33 | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
+| `mode` "PDF 올리는 중" | 6.34 | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 | Patterns/List/FilePreview, Patterns/List/Tile |
+| `mode` "받지 않는 형식" | 6.35 | `FilePreview`가 든 `Tile status="failed"`(빼기) | Patterns/List/FilePreview, Patterns/List/Tile |
+| `mode` "PDF 열기" | 6.36 | 파일용 옆 패널(대체 텍스트와 캡션 없음, 발에 "파일 바꾸기" · "휴지통으로") |  |
 
 ## 이미지 넣기 (ImageInsert)
 
 - 보드: `ImageInsert.dc.html`. 상태와 흐름 단계: [screens.md › ImageInsert](../screens.md#imageinsert).
 - 공통 틀: 뒤의 편집기는 [editor.md](editor.md). 창은 [common.md](common.md)의 작은 폼 창과 같은 표면이다.
 
-### 자리
+### 기본 틀
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
@@ -156,16 +169,14 @@
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 글자 버튼이다. 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 `confirmDisabled`. |
 
-### 상태
+스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview.
 
-| 상태 · prop | 더해지는 것 |
-|---|---|
-| `stage` "라이브러리" | 제목 "라이브러리", "모든 이미지", 이미지 `Tile`, 알약 "넣기" |
-| `stage` "대표 이미지" | 제목 "대표 이미지", 폴더 "covers"가 골라짐, 알약 "고르기" |
-| `stage` "파일" | 제목 "파일", "모든 파일", 파일 `Tile`(`FilePreview`), 알약 "넣기" |
+### 흐름 6 · 미디어
 
-[screens.md](../screens.md#imageinsert)는 "파일"에 형식 필터가 있다고 적지만 보드에는 없다. 보드를 따른다(필터 없음).
+단계: 6.29, 6.30, 6.37. 단계마다 보이는 것은 [flows/06-media.md](../flows/06-media.md)에 있다.
 
-### 빠진 부품
-
-- 없음.
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `stage` "라이브러리" | 6.29 | 제목 "라이브러리", "모든 이미지", 이미지 `Tile`, 알약 "넣기" | Patterns/List/Tile |
+| `stage` "대표 이미지" | 6.30 | 제목 "대표 이미지", 폴더 "covers"가 골라짐, 알약 "고르기" |  |
+| `stage` "파일" | 6.37 | 제목 "파일", "모든 파일", 파일 `Tile`(`FilePreview`), 알약 "넣기" | Patterns/List/Tile, Patterns/List/FilePreview |
