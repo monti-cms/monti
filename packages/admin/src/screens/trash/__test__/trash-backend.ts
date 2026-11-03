@@ -7,7 +7,6 @@ import type {
 	TrashReferrer,
 	TrashRestoreOutcome,
 } from "../../../api/trash";
-import type { FakeApi } from "../../../test/fake-api";
 import { kindOf } from "./trash-fixtures";
 
 /** The units a restore or a delete names. */
@@ -16,7 +15,7 @@ type Targets = { items: { type: TrashItemJson["type"]; id: string }[] };
 /**
  * The trash API as the screens see it, over a list of units: the top of the trash, the inside of a folder, a search, restore, delete, empty and unlink.
  * Tests and stories hand it their units; a test swaps `onRestore` / `onDelete` to make the server refuse something. It keeps the state, so a list read
- * again after a restore no longer holds what came back. `mount` puts its routes on a {@link FakeApi}.
+ * again after a restore no longer holds what came back.
  */
 export class TrashBackend {
 	/** The units at the top of the trash. */
@@ -33,20 +32,8 @@ export class TrashBackend {
 		this.children = children;
 	}
 
-	/** Answers the trash routes of `api` from this backend. */
-	mount(api: FakeApi): FakeApi {
-		return api
-			.on("GET /v1/trash", ({ query }) => this.list(query))
-			.on("POST /v1/trash/restore", ({ body }) => ({ results: this.restore(body) }))
-			.on("POST /v1/trash/delete", ({ body }) => ({ results: this.delete(body) }))
-			.on("POST /v1/trash/empty", () => this.empty())
-			.on("POST /v1/references/unlink", ({ body }) => this.unlink(body))
-			.on("GET /v1/entries/:id/relations", ({ params }) => ({ incomingReferences: this.relations(params.id ?? "") }));
-	}
-
 	/**
-	 * Answers a request of the story frame (`PageFrame`'s `api`), or `undefined` for one that is not the trash's. The stories still use the frame's own
-	 * fetch; tests go through {@link mount}.
+	 * Answers a request of the story frame (`PageFrame`'s `api`), or `undefined` for one that is not the trash's.
 	 */
 	handle(url: URL, method: string, body?: Targets & { targetIds?: string[] }): { body: unknown } | undefined {
 		const path = url.pathname.replace("/api/monti/v1", "");

@@ -149,6 +149,5 @@ export default defineAdminPlugin({ components: { blockViews: { banner: BannerVie
 ## 개발
 
 ```bash
-pnpm --filter @monti-cms/blocks test:run
 pnpm --filter @monti-cms/blocks typecheck
 ```

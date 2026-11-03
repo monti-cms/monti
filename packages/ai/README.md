@@ -216,12 +216,3 @@ block's source, are left as is.
 | `@monti-cms/ai` | `ai`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
 | `@monti-cms/ai/server` | Server side (API routes). Loaded by the core. It is an empty entry point in browser bundles |
 | `@monti-cms/ai/admin` | Admin side (assistant panel, the Models section of the API keys page, provider), `useAiAction`, `AiButton`, `aiClient` |
-
-## Development
-
-```bash
-pnpm --filter @monti-cms/ai test:run
-```
-
-The tests are only the API key storage checks (`KEY-A1`–`KEY-A3` in `src/__test__/settings.test.ts`). The rest were removed on 2026-11-01
-because the package is being rewritten around the agent (#312), which brings its own tests.

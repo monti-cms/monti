@@ -3,7 +3,7 @@ import { type Proposal, type ProposalItem, type ProposalStore, planOf } from "./
 
 type Auth = AdminRequest["auth"];
 
-const codeOf = (error: unknown): string => (error instanceof CmsError ? error.code : "internal_error");
+export const codeOf = (error: unknown): string => (error instanceof CmsError ? error.code : "internal_error");
 
 /** Whether the target of a pending item still stands where it did when it was planned. */
 async function stillThere(cms: Cms, auth: Auth, item: ProposalItem): Promise<boolean> {

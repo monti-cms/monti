@@ -203,6 +203,7 @@ export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel } from "./property-list";
+export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
 export { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES } from "./proposal-marks";

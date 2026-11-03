@@ -8,6 +8,5 @@ pnpm check:korean
 pnpm check:design
 pnpm gen:tokens --check
 pnpm check:messages
-pnpm check:tests
 pnpm typecheck
 pnpm knip

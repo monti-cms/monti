@@ -26,6 +26,7 @@ import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { placeNamer } from "./media-item";
 import { blankMenu, fileMenu, folderMenu } from "./media-menus";
 import { MediaPanel } from "./media-panel";
+import { useMediaProposalCards } from "./media-proposals";
 import { MediaToolbar } from "./media-toolbar";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
@@ -49,6 +50,7 @@ export function MediaLibrary() {
 	const queryClient = useQueryClient();
 	const library = useMediaLibrary();
 	const ask = useAskPanel();
+	const proposalCards = useMediaProposalCards();
 	// The picked files go to the assistant with a request, and its chip says how many.
 	usePublishScreenContext({ selectedIds: [...library.picked] });
 	const { state, update, folders, items, trail, currentFolder } = library;
@@ -227,17 +229,25 @@ export function MediaLibrary() {
 						if (file && media) setReplacing({ media, file });
 					}}
 				/>
-				<MediaToolbar
-					library={library}
-					pickedFolder={pickedFolder}
-					onMove={(folderId) => actions.move.mutate({ files: pickedFiles, folderId })}
-					onNewFolder={() => {
-						setMoveAfter({ files: pickedFiles, named: false });
-						newFolderHere();
-					}}
-					onTrash={() => actions.trash.mutate(pickedFiles)}
-					{...(ask ? { onRequest: () => ask({ text: t("bulk.altTextRequest", { count: library.picked.size }) }) } : {})}
-				/>
+				{/* While proposals wait on the tiles and nothing is picked, their toolbar takes the place of the filters (flow 6 · 25). */}
+				{proposalCards.bar && library.picked.size === 0 ? (
+					proposalCards.bar
+				) : (
+					<MediaToolbar
+						library={library}
+						pickedFolder={pickedFolder}
+						onMove={(folderId) => actions.move.mutate({ files: pickedFiles, folderId })}
+						onNewFolder={() => {
+							setMoveAfter({ files: pickedFiles, named: false });
+							newFolderHere();
+						}}
+						onTrash={() => actions.trash.mutate(pickedFiles)}
+						{...(ask
+							? { onRequest: () => ask({ text: t("bulk.altTextRequest", { count: library.picked.size }) }) }
+							: {})}
+					/>
+				)}
+				{proposalCards.card}
 				<PageBody>
 					<Stack as="div" direction="row" gap={0} grow minHeight={0} position="relative">
 						<Stack gap={0} grow minWidth={0}>
@@ -272,6 +282,7 @@ export function MediaLibrary() {
 								<>
 									{library.view === "grid" ? (
 										<MediaGrid
+											proposals={proposalCards}
 											library={library}
 											uploads={uploads}
 											drop={drop}

@@ -159,7 +159,7 @@ Then `providers: [github({ ... }), gitlab({ ... })]`. The login page shows one b
 
 ### Other credentials providers
 
-`password()` is a credentials provider like any other. One written by a package of its own looks the same: a `LoginProvider` whose `setup` returns an Auth.js `Credentials` provider (with the `id` of the `LoginProvider`), whose users live in `context.storage(plugin)`, and whose `authorize` does the hashing and the rate limit. The login page shows an email and password form for any provider the core lists with `credentials: true`, and `signIn` forwards the posted `email` and `password` to `/callback/<id>`. A compile-checked example is in `src/__test__/providers.test.ts`.
+`password()` is a credentials provider like any other. One written by a package of its own looks the same: a `LoginProvider` whose `setup` returns an Auth.js `Credentials` provider (with the `id` of the `LoginProvider`), whose users live in `context.storage(plugin)`, and whose `authorize` does the hashing and the rate limit. The login page shows an email and password form for any provider the core lists with `credentials: true`, and `signIn` forwards the posted `email` and `password` to `/callback/<id>`.
 
 ## Sign-in flow
 

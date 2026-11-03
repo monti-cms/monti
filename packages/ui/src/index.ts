@@ -266,6 +266,7 @@ export const MemoCardPopover = close(open.MemoCardPopover);
 export const MemoDiff = close(open.MemoDiff);
 export const MemoMessage = close(open.MemoMessage);
 export const MemoThread = close(open.MemoThread);
+export const ProposalBar = close(open.ProposalBar);
 export const ProposalBubble = close(open.ProposalBubble);
 export const ProposalBubbleDock = close(open.ProposalBubbleDock);
 export const ProposalCard = close(open.ProposalCard);

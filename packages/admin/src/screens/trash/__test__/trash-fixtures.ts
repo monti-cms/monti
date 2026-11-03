@@ -14,11 +14,8 @@ export const STORY_NOW = new Date("2026-10-27T12:30:00+09:00");
 
 const expires = (deletedAt: string): string => trashExpiresAt(new Date(deletedAt)).toISOString();
 
-/** A document collection, an item collection (tags), and the language a translation is in, whatever the site's config. */
+/** A document collection, whatever the site's config. */
 export const content = testSite.DEFAULT_COLLECTION;
-export const record = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name)) ?? content;
-export const other = testSite.COLLECTIONS.find((name) => name !== content && name !== record);
-export const secondLocale = testSite.LOCALES.find((locale) => locale !== testSite.DEFAULT_LOCALE) ?? "en";
 
 export const entry = (id: string, title: string, fields: Partial<TrashEntryJson> = {}): TrashEntryJson => {
 	const deletedAt = fields.deletedAt ?? ago(0);

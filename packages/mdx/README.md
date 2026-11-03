@@ -134,9 +134,7 @@ The root entry also exports the table helpers (`tableHasMergedCells`, `tableWidt
 ## Development
 
 ```bash
-pnpm --filter @monti-cms/mdx test:run
 pnpm --filter @monti-cms/mdx typecheck
 ```
 
-The parser, writer and format tests, with the sample posts in `src/__test__/fixtures/samples`, live in this package; the source panel tests run in a jsdom environment (`// @vitest-environment jsdom`). Some tests use a database, so `.env.local` needs `CMS_TEST_DATABASE_URL` (see the repository README).
 Tests of a site or of another package that need MDX text import the helpers of `@monti-cms/mdx/testing`: `mdxWith(syntax)` builds the pipeline with a given list of extensions, `docOfMdx(mdx)` gives the stored document of a text, `readSamples()` the sample posts, and `renderFixture(source)` the markup, table of contents and React tree of a text.

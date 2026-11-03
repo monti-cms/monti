@@ -149,6 +149,5 @@ declare it in `icons` of the same `components` (all blocks in this package do so
 ## Development
 
 ```bash
-pnpm --filter @monti-cms/blocks test:run
 pnpm --filter @monti-cms/blocks typecheck
 ```

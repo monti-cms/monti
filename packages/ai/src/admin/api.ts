@@ -1,6 +1,6 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
-import type { EditorProposalView, EditorSettlement } from "../agent/entry-proposals";
+import type { EditorProposalView, EditorSettlement, MediaProposalView } from "../agent/entry-proposals";
 import type { RunOutcome } from "../agent/outcome";
 import type { ProgressLine } from "../agent/progress";
 import type { ProposalView } from "../agent/proposal-view";
@@ -51,6 +51,7 @@ export const aiKeys = {
 	models: (keyId: string) => [...aiKeys.all, "models", keyId] as const,
 	proposal: (id: string) => [...aiKeys.all, "proposal", id] as const,
 	entryProposals: (entryId: string) => [...aiKeys.all, "entry-proposals", entryId] as const,
+	mediaProposals: () => [...aiKeys.all, "media-proposals"] as const,
 };
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -145,6 +146,10 @@ export const askProposalItem = (
 			...(signal ? { signal } : {}),
 		},
 	);
+
+/** `GET /v1/ai/proposals?media`: the alt text changes waiting on the media library's tiles. */
+export const listMediaProposals = (site: Site, options: AiRequestOptions = {}) =>
+	adminFetch<{ items: MediaProposalView[] }>(site, "/v1/ai/proposals?media", options);
 
 /** `POST /v1/ai/spots`: the assistant writes the block that holds selected words again, as a proposal of its own (`null`: nothing to propose). */
 export const askAtSelection = (
