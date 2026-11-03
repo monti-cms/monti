@@ -64,7 +64,7 @@
 | 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
 | 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. |
 | 태그 (관계 여럿) | `Combobox` + `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`) | 고른 값은 칩, 끝의 입력 칸에서 더한다. |
-| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음", 그 뒤 `TextButton tone="proposal"`(✦ "추천") | "추천"은 어시스턴트가 값을 고른다. 고른 값은 `proposal`(파란 글자)로 남고 라벨 줄 끝이 `TextButton tone="proposal" size="micro"` "↻ 다시"가 된다. |
+| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음" | 다른 필드처럼 라벨 줄 끝에 "✦ 채우기"(`TextButton tone="proposal" size="micro"`)가 그 필드를 가리킬 때만 보인다. 고른 값은 `proposal`(파란 글자)로 남고 버튼은 "↻ 다시"가 된다. 보드의 값 옆 "✦ 추천"은 이 버튼으로 바뀐다(2026-11-03 소유자 결정). |
 | 고르기 필드 (`select`) | `Select` + `SelectTrigger size="sm" width="full"` | 늘 트리거가 있다. 누르면 목록. |
 | 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
 | 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="sm"`, `Textarea size="sm"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
