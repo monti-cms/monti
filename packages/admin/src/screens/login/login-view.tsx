@@ -45,7 +45,8 @@ export type LoginMode =
 			readonly kind: "first-admin";
 			readonly action: string;
 			readonly minPasswordLength: number;
-			readonly error?: LoginError;
+			/** The route reports one reason per post; the board shows the password and the confirmation refused together. */
+			readonly errors?: readonly LoginError[];
 	  }
 	/** The first admin was created elsewhere in the meantime: say so and lead back to the sign-in form. */
 	| { readonly kind: "closed"; readonly signInHref: string }
@@ -168,34 +169,40 @@ function SignIn({
 	);
 }
 
-function FirstAdmin({ t, action, minPasswordLength, error }: Extract<LoginMode, { kind: "first-admin" }> & { t: T }) {
+function FirstAdmin({
+	t,
+	action,
+	minPasswordLength,
+	errors = [],
+}: Extract<LoginMode, { kind: "first-admin" }> & { t: T }) {
+	const has = (error: LoginError) => errors.includes(error);
 	return (
 		<form method="post" action={action}>
 			<Stack gap={12}>
 				<Stack gap={32}>
 					<Stack gap={24}>
-						<EmailField t={t} error={error === "email" ? t("errorEmail") : undefined} />
+						<EmailField t={t} error={has("email") ? t("errorEmail") : undefined} />
 						<PasswordField
 							id="password"
 							label={t("password")}
 							autoComplete="new-password"
 							minLength={minPasswordLength}
 							placeholder={t("passwordHint", { min: minPasswordLength })}
-							error={error === "password" ? t("errorPassword", { min: minPasswordLength }) : undefined}
+							error={has("password") ? t("errorPassword", { min: minPasswordLength }) : undefined}
 						/>
 						<PasswordField
 							id="confirm"
 							label={t("confirmPassword")}
 							autoComplete="new-password"
 							minLength={minPasswordLength}
-							error={error === "confirm" ? t("errorConfirm") : undefined}
+							error={has("confirm") ? t("errorConfirm") : undefined}
 						/>
 					</Stack>
 					<Button type="submit" variant="primary" width="full">
 						{t("createFirstAdmin")}
 					</Button>
 				</Stack>
-				{error === "other" || error === "credentials" ? <FormFieldError>{t("errorOther")}</FormFieldError> : null}
+				{has("other") || has("credentials") ? <FormFieldError>{t("errorOther")}</FormFieldError> : null}
 			</Stack>
 		</form>
 	);
@@ -203,7 +210,7 @@ function FirstAdmin({ t, action, minPasswordLength, error }: Extract<LoginMode, 
 
 function Closed({ t, signInHref }: Extract<LoginMode, { kind: "closed" }> & { t: T }) {
 	return (
-		<Stack gap={16}>
+		<Stack gap={16} paddingTop={16}>
 			<FormFieldError>{t("errorClosed")}</FormFieldError>
 			<form method="get" action={signInHref}>
 				<Button type="submit" variant="secondary" width="full">

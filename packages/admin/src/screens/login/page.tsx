@@ -66,7 +66,7 @@ export default async function AdminLoginPage({
 						kind: "first-admin",
 						action: adminApiUrl("/v1/session/first-admin"),
 						minPasswordLength: accounts?.minPasswordLength ?? 0,
-						...(error ? { error } : {}),
+						...(error ? { errors: [error] } : {}),
 					}
 				: providers.length === 0
 					? { kind: "no-login" }

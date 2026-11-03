@@ -1,4 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/site";
 
 /** Login screen text. */
 export const loginMessages = defineMessages("cms-admin.login", {
@@ -25,7 +26,7 @@ export const loginMessages = defineMessages("cms-admin.login", {
 		errorOther: "Signing in did not work. Try again.",
 	},
 	ko: {
-		signIn: "{provider}로 로그인",
+		signIn: ({ provider }) => `${josa(String(provider), "으로", "로")} 로그인`,
 		or: "또는",
 		notAdmin: "{name} 계정은 관리자가 아니에요.",
 		otherAccount: "다른 계정으로 로그인",
