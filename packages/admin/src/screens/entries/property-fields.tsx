@@ -24,7 +24,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { type FocusEvent, memo, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type FocusEvent, memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
 import { getEntry } from "../../api/entries";
 import { fieldIssueLine } from "../../api/error-message";
@@ -103,6 +103,7 @@ function PropertyShell({
 	focus,
 }: ShellProps) {
 	const [focused, setFocused] = useState(false);
+	const labelId = useId();
 	const jump = focus.path === name;
 	useEffect(() => {
 		if (!jump) return;
@@ -115,8 +116,9 @@ function PropertyShell({
 		if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
 	}, []);
 	const row = (trigger: ReactNode, failure: ReactNode) => (
-		<FormField ruled onFocus={() => setFocused(true)} onBlur={onBlur}>
+		<FormField ruled aria-labelledby={labelId} onFocus={() => setFocused(true)} onBlur={onBlur}>
 			<FormFieldLabel
+				id={labelId}
 				htmlFor={editable ? controlId : undefined}
 				action={
 					(focused && extras) || trigger ? (
@@ -450,9 +452,10 @@ const ViewProperty = memo(function ViewProperty({ name }: { name: string }) {
 	const entry = useEntryFormSelector((state) => state.entry);
 	const field = site.schemaOf(collection).fields[name] as ViewField;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
+	const labelId = useId();
 	return field.label ? (
-		<FormField ruled>
-			<FormFieldLabel>{field.label}</FormFieldLabel>
+		<FormField ruled aria-labelledby={labelId}>
+			<FormFieldLabel id={labelId}>{field.label}</FormFieldLabel>
 			{view}
 		</FormField>
 	) : (
