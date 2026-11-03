@@ -183,7 +183,16 @@ function Box({ border, className }: { border: "top" | "bottom" | "bottom-contras
 }
 
 /**
- * The parts a screen spec can name, by the name it uses. `pnpm gen:screen-catalog` reads their prop types into `screen-catalog.generated.json`, which
+ * Monti's screen pack: what the screen spec tool (`../spec`) needs from Monti's design system. The tool knows no part, token or class of its own; this
+ * folder gives them: the parts and their kinds here, the spacing classes (`spacing.ts`), the renderer (`index.tsx`), the HTML board's classes
+ * (`html-board.js`) and the scripts' settings (`pack.mjs`).
+ *
+ * `SCREEN`: the steps of the spacing scale (the design system's spacing tokens but 0) and the layout entry a plain group becomes.
+ */
+export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
+
+/**
+ * The parts a screen spec can name, by the name it uses. `pnpm gen:screen-catalog` reads their prop types into `catalog.generated.json`, which
  * `checkSpec` checks a spec against; add a part here and run it.
  */
 export const parts = {
@@ -244,6 +253,8 @@ export const parts = {
  * - `state`: a value only the state gives (a picture's address).
  * - `action`: a thing the screen does, by name (`{ "action": "signIn" }`).
  *
+ * `role` says what the renderer does for an entry beyond drawing it: a `form` makes a `button` inside it its submit.
+ *
  * `bind: "yes"` lets an entry take an element `bind` (`/form/email`): the data the field holds and sends. No raw HTML attribute (an id, an input's name, an
  * address) is ever written in a spec.
  */
@@ -262,7 +273,7 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
-	Form: { kind: "part", props: { action: "action" } },
+	Form: { kind: "part", role: "form", props: { action: "action" } },
 	Heading: { kind: "part", props: { as: "variant", variant: "variant", tone: "variant", truncate: "flag" } },
 	Text: {
 		kind: "part",
@@ -295,6 +306,7 @@ export const CATALOG = {
 	FormFieldError: { kind: "part", props: {} },
 	Button: {
 		kind: "part",
+		role: "button",
 		props: { variant: "variant", size: "variant", width: "variant", disabled: "flag", loading: "flag" },
 	},
 	Separator: { kind: "part", props: { label: "text", length: "variant" } },

@@ -1,15 +1,17 @@
-import {
-	GAP,
-	MARGIN_LEFT,
-	MARGIN_TOP,
-	PADDING_BOTTOM,
-	PADDING_LEFT,
-	PADDING_RIGHT,
-	PADDING_TOP,
-} from "../tokens.generated";
 import { isSpacing, type SpacingStep, type SpecChild } from "./format";
 
 export type Direction = "column" | "row";
+
+/**
+ * The classes a design system's pack gives for each spacing step: a container's gap, its padding at the start and the end of its axis, and the margin
+ * before a child. Every step of the pack's scale has one of each.
+ */
+export interface SpacingClassTable {
+	readonly gap: Readonly<Record<number, string>>;
+	readonly paddingStart: Readonly<Record<Direction, Readonly<Record<number, string>>>>;
+	readonly paddingEnd: Readonly<Record<Direction, Readonly<Record<number, string>>>>;
+	readonly marginBefore: Readonly<Record<Direction, Readonly<Record<number, string>>>>;
+}
 
 /** What a container's `Spacing` items become: classes on the container, and a margin class on some of its children (by their place in `children`). */
 export interface SpacingClasses {
@@ -17,21 +19,28 @@ export interface SpacingClasses {
 	readonly margins: ReadonlyMap<number, string>;
 }
 
-const PADDING_START = { column: PADDING_TOP, row: PADDING_LEFT } as const;
-const PADDING_END = { column: PADDING_BOTTOM, row: PADDING_RIGHT } as const;
-const MARGIN_BEFORE = { column: MARGIN_TOP, row: MARGIN_LEFT } as const;
-
 /**
- * Turns a container's `Spacing` items into token classes, so the app's DOM has no element for empty space and no style of its own. A first or last Spacing
- * is the container's padding on that end of its axis. The ones between children are the container's gap when they are all the same size, and otherwise
- * a margin on the child after each (a gap and margins together would add up). A child's margin goes with it when it is hidden.
+ * Turns a container's `Spacing` items into the pack's token classes, so the app's DOM has no element for empty space and no style of its own. A first or
+ * last Spacing is the container's padding on that end of its axis. The ones between children are the container's gap when they are all the same size,
+ * and otherwise a margin on the child after each (a gap and margins together would add up). A child's margin goes with it when it is hidden.
  */
-export function spacingClasses(children: readonly SpecChild[], direction: Direction): SpacingClasses {
+export function spacingClasses(
+	children: readonly SpecChild[],
+	direction: Direction,
+	table: SpacingClassTable,
+): SpacingClasses {
 	const container: string[] = [];
+	const classOf = (classes: Readonly<Record<number, string>>, step: SpacingStep) => {
+		const name = classes[step];
+		if (name === undefined) throw new Error(`the pack has no class for the spacing step ${step}`);
+		return name;
+	};
 	const first = children[0];
 	const last = children[children.length - 1];
-	if (first !== undefined && isSpacing(first)) container.push(PADDING_START[direction][first.spacing]);
-	if (last !== undefined && last !== first && isSpacing(last)) container.push(PADDING_END[direction][last.spacing]);
+	if (first !== undefined && isSpacing(first)) container.push(classOf(table.paddingStart[direction], first.spacing));
+	if (last !== undefined && last !== first && isSpacing(last)) {
+		container.push(classOf(table.paddingEnd[direction], last.spacing));
+	}
 
 	const between = new Map<number, SpacingStep>();
 	children.forEach((child, index) => {
@@ -39,7 +48,7 @@ export function spacingClasses(children: readonly SpecChild[], direction: Direct
 	});
 	const sizes = new Set(between.values());
 	const margins = new Map<number, string>();
-	if (sizes.size === 1) container.push(GAP[[...sizes][0] as SpacingStep]);
-	else for (const [index, step] of between) margins.set(index, MARGIN_BEFORE[direction][step]);
+	if (sizes.size === 1) container.push(classOf(table.gap, [...sizes][0] as SpacingStep));
+	else for (const [index, step] of between) margins.set(index, classOf(table.marginBefore[direction], step));
 	return { container, margins };
 }

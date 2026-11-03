@@ -1,12 +1,14 @@
-// Generates the screen spec's catalog from the real prop types of the parts it can name (`packages/ui/src/spec/parts.tsx`). Run from the repo root:
-// `pnpm gen:screen-catalog`. `pnpm gen:screen-catalog --check` (CI) writes nothing and fails when the catalog differs from what the script would write.
+// Generates a design system pack's screen catalog from the real prop types of the parts it names. Run from the repo root:
+// `pnpm gen:screen-catalog [--pack <dir>]` (the pack in `packages/ui/src/spec-pack` by default). `--check` (CI) writes nothing and fails when the catalog
+// differs from what the script would write.
 //
-// Writes `packages/ui/src/spec/screen-catalog.generated.json`: for each entry its kind (`part` or `layout`), the props a spec may set with each prop's
+// Reads the pack's `parts.tsx`: its `parts`, its `CATALOG` (each entry's kind, role and props' kinds) and its `SCREEN` (the spacing steps and the layout
+// entry a group becomes). Writes the pack's `catalog.generated.json`: the spacing steps, the group, and for each entry its kind (`part` or `layout`), the props a spec may set with each prop's
 // kind and values, the named places (`slots`: its `ReactNode` props), its events and whether it takes children. Only the props `CATALOG` gives a kind are
 // in (default deny), and each kind is checked against the prop's real type: a layout size on a part, or a variant whose type is not a list of choices,
 // stops the build.
 //
-// TypeScript 7 has no compiler API in JavaScript yet, so this reads the types with TypeScript 5 (`typescript-api` in packages/ui).
+// TypeScript 7 has no compiler API in JavaScript yet, so this reads the types with TypeScript 5 (`typescript-api`, resolved from the pack's package).
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -14,10 +16,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const UI = path.join(ROOT, "packages/ui");
-const PARTS = path.join(UI, "src/spec/parts.tsx");
-const OUT = path.join(UI, "src/spec/screen-catalog.generated.json");
-const ts = createRequire(path.join(UI, "package.json"))("typescript-api");
+const packAt = process.argv.indexOf("--pack");
+const PACK = path.resolve(ROOT, packAt === -1 ? "packages/ui/src/spec-pack" : process.argv[packAt + 1]);
+const PARTS = path.join(PACK, "parts.tsx");
+const OUT = path.join(PACK, "catalog.generated.json");
+const ts = createRequire(PARTS)("typescript-api");
 
 const program = ts.createProgram([PARTS], {
 	jsx: ts.JsxEmit.ReactJSX,
@@ -44,13 +47,23 @@ function constant(name) {
 /** A literal in parts.tsx (`{ kind: "part", props: { variant: "variant" } }`) as a plain value. */
 function literal(node) {
 	if (ts.isStringLiteral(node)) return node.text;
+	if (ts.isNumericLiteral(node)) return Number(node.text);
+	if (ts.isArrayLiteralExpression(node)) return node.elements.map(literal);
 	if (ts.isObjectLiteralExpression(node)) {
 		return Object.fromEntries(node.properties.map((property) => [property.name.text, literal(property.initializer)]));
 	}
-	throw new Error(`parts.tsx: \`CATALOG\` holds only strings and objects, not "${node.getText()}"`);
+	throw new Error(
+		`parts.tsx: \`CATALOG\` and \`SCREEN\` hold only strings, numbers, lists and objects, not "${node.getText()}"`,
+	);
 }
 
 const declared = literal(constant("CATALOG").initializer);
+/** `SCREEN`: the pack's spacing steps and the layout entry a group becomes. */
+const screen = literal(constant("SCREEN").initializer);
+if (declared[screen.group]?.kind !== "layout") {
+	console.error(`parts.tsx: \`SCREEN.group\` is "${screen.group}", which is not a layout entry of \`CATALOG\``);
+	process.exit(1);
+}
 const partsDeclaration = constant("parts");
 const isFunction = (type) =>
 	(type.isUnion() ? type.types : [type]).some((member) => member.getCallSignatures().length > 0);
@@ -126,6 +139,7 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 	const propsType = parameter ? checker.getTypeOfSymbolAtLocation(parameter, partsDeclaration) : undefined;
 	const entry = {
 		kind: declaration.kind,
+		...(declaration.role ? { role: declaration.role } : {}),
 		bind: declaration.bind === "yes",
 		children: false,
 		slots: [],
@@ -182,7 +196,7 @@ if (problems.length > 0) {
 // Written as Biome formats it, so \`pnpm lint\` and \`--check\` agree.
 const text = execFileSync("pnpm", ["exec", "biome", "format", `--stdin-file-path=${OUT}`], {
 	cwd: ROOT,
-	input: JSON.stringify(catalog, null, "\t"),
+	input: JSON.stringify({ spacing: screen.spacing, group: screen.group, entries: catalog }, null, "\t"),
 	encoding: "utf8",
 });
 if (process.argv.includes("--check")) {

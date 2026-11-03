@@ -7,7 +7,6 @@ import {
 	isWords,
 	refOf,
 	type ScreenSpecDocument,
-	SPACING_STEPS,
 	type SpecChild,
 	type SpecValue,
 	templateRead,
@@ -28,6 +27,8 @@ export interface CatalogProp {
 /** One entry of `screen-catalog.generated.json`: a part, or a layout container the screen arranges with. */
 export interface CatalogPart {
 	readonly kind: "part" | "layout";
+	/** What the renderer does for it beyond drawing: a `form` makes a `button` in it its submit. */
+	readonly role?: "form" | "button";
 	/** It may take an element `bind` (the data a field holds and sends). */
 	readonly bind: boolean;
 	readonly children: boolean;
@@ -35,7 +36,16 @@ export interface CatalogPart {
 	readonly props: Readonly<Record<string, CatalogProp>>;
 	readonly events: readonly string[];
 }
-export type Catalog = Readonly<Record<string, CatalogPart>>;
+/**
+ * A design system's catalog (`catalog.generated.json` of its pack): the steps of its spacing scale, the layout container groups are drawn with, and its
+ * entries by the name a spec uses.
+ */
+export interface Catalog {
+	readonly spacing: readonly number[];
+	/** The layout entry a plain group becomes (a board's group, a form's inside). */
+	readonly group: string;
+	readonly entries: Readonly<Record<string, CatalogPart>>;
+}
 
 const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible", "repeat", "bind"]);
 const show = (value: unknown) => JSON.stringify(value);
@@ -104,7 +114,7 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 		for (const key of Object.keys(element)) {
 			if (!ELEMENT_KEYS.has(key)) problems.push(`${id}.${key}: an element has no "${key}"`);
 		}
-		const part = catalog[element.type];
+		const part = catalog.entries[element.type];
 		if (!part) {
 			problems.push(`${id}.type: there is no part "${element.type}"`);
 			continue;
@@ -157,8 +167,8 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 			else if (isSpacing(child)) {
 				if (part.kind !== "layout")
 					problems.push(`${where}: Spacing is only for a layout container's children (Stack)`);
-				if (!(SPACING_STEPS as readonly number[]).includes(child.spacing)) {
-					problems.push(`${where}: ${child.spacing} is not a spacing step (${SPACING_STEPS.join(" ")})`);
+				if (!catalog.spacing.includes(child.spacing)) {
+					problems.push(`${where}: ${child.spacing} is not a spacing step (${catalog.spacing.join(" ")})`);
 				}
 				const next = children[index + 1];
 				if (next !== undefined && isSpacing(next)) problems.push(`${where}: two Spacings in a row; write one`);

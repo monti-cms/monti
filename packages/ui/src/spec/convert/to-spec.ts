@@ -1,13 +1,12 @@
 import type { Catalog } from "../check";
-import {
-	type ScreenSpecDocument,
-	SPACING_STEPS,
-	type SpacingStep,
-	type SpecChild,
-	type SpecElement,
-	type SpecValue,
-	type StateValue,
-	type TextValue,
+import type {
+	ScreenSpecDocument,
+	SpacingStep,
+	SpecChild,
+	SpecElement,
+	SpecValue,
+	StateValue,
+	TextValue,
 } from "../format";
 import type { DrawnNode } from "./drawn";
 
@@ -52,9 +51,9 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	const spacing = (px: number | undefined, where: string): SpecChild[] => {
 		if (px === undefined || Math.round(px) === 0) return [];
 		const step = Math.round(px);
-		if ((SPACING_STEPS as readonly number[]).includes(step)) return [{ spacing: step as SpacingStep }];
+		if (catalog.spacing.includes(step)) return [{ spacing: step as SpacingStep }];
 		outside.push(
-			`${where}: a distance of ${step}px is not a spacing step (${SPACING_STEPS.join(" ")}): express it as layout (a region's size or alignment), or fix the board to a token`,
+			`${where}: a distance of ${step}px is not a spacing step (${catalog.spacing.join(" ")}): express it as layout (a region's size or alignment), or fix the board to a token`,
 		);
 		return [];
 	};
@@ -83,13 +82,13 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 			const id = idFor("stack");
 			const props = { ...(node.direction === "row" ? { direction: "row" } : {}), ...node.layout };
 			elements[id] = {
-				type: "Stack",
+				type: catalog.group,
 				...(Object.keys(props).length > 0 ? { props } : {}),
 				children: spaced(node, children),
 			};
 			return id;
 		}
-		const part = catalog[node.part];
+		const part = catalog.entries[node.part];
 		const id = idFor(node.part);
 		if (!part) {
 			outside.push(`${node.where}: "${node.part}" is not a design system part`);
@@ -109,7 +108,7 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		if (children.some((child) => (child.before ?? 0) > 0) || (node.after ?? 0) > 0) {
 			// A part whose children the drawing spaces itself (a form): they go in a Stack inside it.
 			const stack = idFor("stack");
-			elements[stack] = { type: "Stack", children: spaced(node, children) };
+			elements[stack] = { type: catalog.group, children: spaced(node, children) };
 			specChildren = [stack];
 		} else {
 			specChildren = children.map((child) =>

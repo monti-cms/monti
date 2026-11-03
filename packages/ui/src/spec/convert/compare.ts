@@ -1,3 +1,4 @@
+import type { Catalog } from "../check";
 import { isSpacing, refOf, type ScreenSpecDocument, type SpecChild } from "../format";
 
 /** One place in a spec's tree, as the comparison reads it: the part, the props that choose its look, and what is inside in order. */
@@ -16,7 +17,7 @@ const chooses = (name: string, value: unknown) =>
 	refOf(value) === undefined &&
 	(typeof value === "string" || typeof value === "number" || typeof value === "boolean");
 
-function shapeOf(spec: ScreenSpecDocument, child: SpecChild): Shape | undefined {
+function shapeOf(spec: ScreenSpecDocument, catalog: Catalog, child: SpecChild): Shape | undefined {
 	if (isSpacing(child)) return { label: `Spacing ${child.spacing}`, children: [], slots: {} };
 	if (typeof child !== "string") return undefined;
 	const element = spec.elements[child];
@@ -29,13 +30,13 @@ function shapeOf(spec: ScreenSpecDocument, child: SpecChild): Shape | undefined 
 		list.flatMap((item) => {
 			const inner = typeof item === "string" ? spec.elements[item] : undefined;
 			// A form groups for behavior, which a board does not draw: what is inside it (and the plain column that spaces it) is compared in its place.
-			if (inner?.type === "Form") {
+			if (inner && catalog.entries[inner.type]?.role === "form") {
 				const only = inner.children?.length === 1 ? spec.elements[inner.children[0] as string] : undefined;
 				return shapes(
-					only?.type === "Stack" && only.props === undefined ? (only.children ?? []) : (inner.children ?? []),
+					only?.type === catalog.group && only.props === undefined ? (only.children ?? []) : (inner.children ?? []),
 				);
 			}
-			const shape = shapeOf(spec, item);
+			const shape = shapeOf(spec, catalog, item);
 			return shape ? [shape] : [];
 		});
 	return {
@@ -52,6 +53,7 @@ function shapeOf(spec: ScreenSpecDocument, child: SpecChild): Shape | undefined 
 export function compareStructure(
 	board: ScreenSpecDocument,
 	spec: ScreenSpecDocument,
+	catalog: Catalog,
 	names: { readonly left: string; readonly right: string } = { left: "the board", right: "the spec" },
 ): string[] {
 	const differences: string[] = [];
@@ -75,7 +77,7 @@ export function compareStructure(
 		}
 	};
 	const root = (doc: ScreenSpecDocument) =>
-		[shapeOf(doc, doc.root)].filter((shape): shape is Shape => shape !== undefined);
+		[shapeOf(doc, catalog, doc.root)].filter((shape): shape is Shape => shape !== undefined);
 	walk(root(board), root(spec), "");
 	return differences;
 }

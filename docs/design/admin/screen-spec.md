@@ -4,6 +4,19 @@
 
 목표는 시안과 같은 **배치**다. 어느 부품이, 어떤 순서로, 어느 묶음과 패턴의 칸에, 어떤 간격 토큰으로 놓이는지가 같으면 된다. 픽셀이 같은 것은 목표가 아니다. 시안은 "무엇이 어디에"의 기준이고, 시안에 우연히 적힌 숫자(열 너비 92px 같은 것)는 어디에도 옮기지 않는다.
 
+## 도구와 팩
+
+이 도구는 디자인 시스템 하나에 묶이지 않는다. 디자인 시스템마다 다른 것은 **팩** 하나에 모으고, 도구는 팩을 받아 똑같이 돈다.
+
+- **도구(고정 프로그램):** 형식(`packages/ui/src/spec/format.ts`), 검사(`check.ts`), Spacing 변환(`spacing.ts`), 렌더러 뼈대(`render.tsx`의 `createScreenSpec`), 변환기의 공통 부분과 구조 비교(`convert/`), 스크립트(`gen-screen-catalog`, `check:screens`, `convert:board`, HTML 어댑터). 디자인 시스템의 부품 이름, 클래스, 아이콘 세트를 하나도 적지 않는다. `pnpm check:screens`가 이것도 검사한다.
+- **팩(디자인 시스템마다 하나):** Monti의 팩은 `packages/ui/src/spec-pack`이다.
+  - `parts.tsx`: 명세가 쓸 부품, 각 부품과 prop의 종류(`CATALOG`), 간격 단계와 묶음이 될 배치 항목(`SCREEN`).
+  - `spacing.ts`: 간격 단계마다의 클래스.
+  - `index.tsx`: 팩으로 만든 렌더러(`@monti-cms/ui/spec`의 `ScreenSpec`).
+  - `html-board.js`: HTML 시안의 클래스와 부품.
+  - `pack.mjs`: 스크립트 설정(카탈로그 위치, 시안 창 크기, 사전 읽기).
+- 팩을 만드는 일은 판단이 필요해서 AI가 맡는다(`.claude/skills/screen-pack`). 사람이 확인하면 그 디자인 시스템의 팩이 된다. 화면마다의 변환은 도구가 기계적으로 한다.
+
 ## 닫힌 것과 열린 것
 
 - **닫힘(디자인 시스템만):** 부품과 그 variant, 색, 글자, 간격은 토큰으로만 쓴다. 빈 공간은 Spacing으로만 만든다.
@@ -21,7 +34,7 @@
 - `visible`: `{ "state" }`(값이 있으면 보임), `{ "not": … }`.
 - `className`, `style`, 픽셀 숫자는 없다. 픽셀을 받는 prop(`Table.width`, `TableCell.size`, `ListHead.end`)은 카탈로그에 없다. 열 너비도 명세에 없다. 표는 `Table`의 기본 동작으로 너비를 정한다(열은 내용 너비, 줄여 쓰는 제목 열이 남은 자리). 그 기본이 틀려 보이면 명세가 아니라 `Table`을 고친다. 사람이 끌어서 바꾼 너비는 실행 중의 데이터이고 명세 밖이다.
 - 데이터로만 채우는 prop: 목록이나 객체를 받는 prop(열 이름, 쪽 크기 선택지)은 `{ "state" }`로만 받고, 항목은 `CATALOG`가 `data:` 종류로 정한 필드만 가진다. 보이는 것만 담고 생김새는 담지 않는다. 너비나 색 같은 필드가 오면 그리지 않고 멈춘다.
-- 아이콘은 디자인 시스템 아이콘 표(`packages/ui/src/icons.ts`)의 이름으로만 고른다: `{ "type": "Icon", "props": { "name": "more" } }`.
+- 아이콘은 디자인 시스템 아이콘 목록(`packages/ui/src/icons.ts`의 `iconsByName`)의 이름으로만 고른다: `{ "type": "Icon", "props": { "name": "overflow-menu--horizontal" } }`.
 - `Stack`은 방향과 화면의 배치(`align`, `justify`, `grow`, `maxWidth`, `minHeight: "screen"`)만 가진다. 배치는 빈 공간을 만드는 길이 아니다.
 - 선은 디자인 시스템의 선 부품 `Box`(`border`만, `bottom-contrast`는 제목 아래 잉크 선)로 그린다.
 
@@ -36,7 +49,7 @@
 
 ## 종류 (`CATALOG`)
 
-`packages/ui/src/spec/parts.tsx`의 `CATALOG`가 항목마다 종류를, prop마다 종류를 정한다. 종류가 없는 prop은 TypeScript 타입에 있어도 명세에 쓸 수 없다(기본 금지). 부품이나 prop을 더하는 일은 그 종류, 곧 "디자인 시스템이 정하나, 화면이 정하나"를 정하는 일이다.
+팩의 `parts.tsx`(Monti는 `packages/ui/src/spec-pack/parts.tsx`)의 `CATALOG`가 항목마다 종류를, prop마다 종류를 정한다. 종류가 없는 prop은 TypeScript 타입에 있어도 명세에 쓸 수 없다(기본 금지). 부품이나 prop을 더하는 일은 그 종류, 곧 "디자인 시스템이 정하나, 화면이 정하나"를 정하는 일이다.
 
 - 항목: `part`(생김새는 디자인 시스템이 정한다) 또는 `layout`(화면이 배치하는 컨테이너, 지금은 `Stack`).
 - `variant`: 부품의 생김새 선택지. 디자인 시스템이 정한다.
@@ -57,7 +70,7 @@
 
 ## 카탈로그와 검사
 
-- `pnpm gen:screen-catalog`가 `CATALOG`와 부품들의 실제 prop 타입을 읽어 `screen-catalog.generated.json`을 만든다. 선택지는 타입의 유니언 그대로다.
+- `pnpm gen:screen-catalog`가 `CATALOG`와 부품들의 실제 prop 타입을 읽어 팩의 `catalog.generated.json`을 만든다. 선택지는 타입의 유니언 그대로다.
 - `pnpm check:screens`(CI)는 모든 `*.screen.json`을 검사한다. 없는 부품, 없는 prop, 없는 값, 없는 칸, 토큰 밖 Spacing, 연달은 Spacing은 요소와 자리를 적고 실패한다.
 - `ScreenSpec`은 json-render처럼 브라우저에서만 그리거나 실행 중에 화면을 만들지 않는다. 그리기 전에 같은 검사를 하고, 문제가 있거나 사전에 없는 글자 키, 페이지가 주지 않은 동작이 나오면 멈춘다. 몰래 건너뛰지 않는다.
 
@@ -80,7 +93,7 @@
 
 `pnpm convert:board <보드 주소>`가 시안의 한 상태를 명세로 바꾼다. 두 부분으로 나뉜다.
 
-- **어댑터(도구마다 하나):** 시안을 도구와 상관없는 트리(`packages/ui/src/spec/convert/drawn.ts`)로 읽는다. 어느 부품이 어디에, 얼마나 떨어져 있는지만 담는다. 지금 있는 것은 HTML 보드용(`scripts/convert-board/html-adapter.js`) 하나다. 디자인 시스템 클래스(`.mt-btn--primary`)를 부품으로 읽고, 간격을 재고, 손으로 쓴 스타일을 찾는다. HTML 보드는 이번 시안의 경우일 뿐이고, Figma나 PDF 시안은 각자 어댑터를 새로 만든다.
+- **어댑터(도구마다 하나):** 시안을 도구와 상관없는 트리(`packages/ui/src/spec/convert/drawn.ts`)로 읽는다. 어느 부품이 어디에, 얼마나 떨어져 있는지만 담는다. 지금 있는 것은 HTML 보드용(`scripts/convert-board/html-adapter.js`) 하나다. 간격을 재고, 화면 배치와 손으로 쓴 스타일을 가린다. 어느 클래스가 어느 부품인지(`.mt-btn--primary`)는 팩의 `html-board.js`가 알려 준다. HTML 보드는 이번 시안의 경우일 뿐이고, Figma나 PDF 시안은 각자 어댑터를 새로 만든다.
 - **공통 부분:** `toSpec`이 트리를 명세로 바꾼다. 묶음은 `Stack`, 거리는 `Spacing`이 된다. 글자는 사전(`--dictionary`)에 같은 글이 있으면 그 키가 되고, 없으면 데이터 값(`/drawn/…`)으로 남는다.
 - **문:** 디자인 시스템 밖의 것이 하나라도 있으면 실패하고 목록을 낸다. 디자인 시스템에 없는 부품, 토큰 밖 간격, 부품에 손으로 그린 모양이다. 화면의 배치 값(영역 너비, 가운데 정렬, 맨 아래 붙이기)은 묻지 않고 `Stack`의 props로 옮긴다. 시안의 `<form>`은 동작이라 묶음으로만 읽는다. 몰래 고치지 않는다. 사람이 정해 디자인 시스템이나 시안을 고치고 다시 변환한다.
 - **구조 비교:** `--compare <명세>`가 변환한 명세와 다른 명세의 배치 차이를 자리와 함께 적는다(`compareStructure`). 요소를 이름 짓거나 잇는 값(id, 입력 종류, 연결된 필드)과 동작을 위한 `Form` 묶음은 비교하지 않는다.

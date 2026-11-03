@@ -1,64 +1,12 @@
-// The HTML board adapter, run inside the page of a rendered board (a `.dc.html` board of the canvas, in the state to convert). It reads the drawing into
-// the tool-neutral tree of `packages/ui/src/spec/convert/drawn.ts`. Everything that knows HTML boards is here: the design system's CSS classes and the
-// part each names, which inline styles are spacing and which are looks, and how to measure distances. Another tool (Figma, a PDF) gets its own adapter
-// and shares everything after it.
+// The HTML board adapter, run inside the page of a rendered board (an HTML page in the state to convert). It reads the drawing into the tool-neutral
+// tree of `packages/ui/src/spec/convert/drawn.ts`: which inline styles are spacing, which are the screen's layout and which are looks, and how far apart
+// things are. Which classes name which parts is the design system's, so it comes from the pack (`window.boardPack`, the pack's `html-board.js`, loaded
+// first): `parts`, the rules that read an element as a part, and `known`, the classes the design system has. Another tool (Figma, a PDF) gets its own
+// adapter and shares everything after it.
 //
 // It is a plain script: `window.readBoard(rootSelector)` returns the tree.
 
-/** The design system's classes and the part each one draws, first match wins. `props` reads the element's own values. */
-const PARTS = [
-	{ match: (el) => el.matches(".mt-field"), part: "FormField", walk: "parts" },
-	{
-		match: (el) => el.matches(".mt-label"),
-		part: "FormFieldLabel",
-		props: (el) => ({ for: el.getAttribute("for") }),
-	},
-	{
-		match: (el) => el.matches(".mt-input"),
-		part: "Input",
-		props: (el) => ({ type: el.getAttribute("type") }),
-	},
-	{ match: (el) => el.matches(".mt-error"), part: "FormFieldError" },
-	{
-		match: (el) => el.matches(".mt-rule-label"),
-		part: "Separator",
-		props: (el) => ({ label: el.textContent.trim() }),
-		leaf: true,
-	},
-	{ match: (el) => el.matches(".mt-text-btn"), part: "TextButton", props: (el) => ({ type: el.getAttribute("type") }) },
-	{
-		match: (el) => el.matches(".mt-btn"),
-		part: "Button",
-		props: (el) => ({
-			type: el.getAttribute("type"),
-			variant: ["primary", "secondary", "danger", "outline-danger"].find((name) =>
-				el.classList.contains(`mt-btn--${name}`),
-			),
-			size: el.classList.contains("mt-btn--sm") ? "sm" : undefined,
-		}),
-	},
-	{
-		match: (el) => /^H[1-4]$/.test(el.tagName) && [...el.classList].some((name) => name.startsWith("text-")),
-		part: "Heading",
-		props: (el) => ({ as: el.tagName.toLowerCase(), variant: role(el) }),
-	},
-	{
-		match: (el) => [...el.classList].some((name) => name.startsWith("text-")),
-		part: "Text",
-		props: (el) => ({
-			as: el.tagName.toLowerCase(),
-			variant: role(el),
-			tone: /var\(--fg-([a-z]+)\)/.exec(el.style.color)?.[1],
-			align: { center: "center", right: "end", left: "start" }[el.style.textAlign],
-		}),
-		// What the board writes inline that is one of the part's own props.
-		asProps: ["color", "text-align"],
-	},
-	{ match: (el) => el.tagName.toLowerCase() === "svg" && el.closest(".mt-btn"), part: "Image", leaf: true },
-];
-
-/** The classes this adapter reads: any other class on an element is a look of its own. */
-const KNOWN = /^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+)|text-[a-z]+|dark)$/;
+const { parts: PARTS, known: KNOWN } = window.boardPack ?? { parts: [], known: /^$/ };
 
 /** Inline style properties that are spacing (measured as distances), and the screen's own layout of a group (open: the screen decides it, and the
  * spec writes it on its Stack). On a part, layout is a look: a part is placed by the group around it. Every other property is a look. */
@@ -67,14 +15,13 @@ const LAYOUT = /^(display|flex-direction|box-sizing)$/;
 const SCREEN_LAYOUT =
 	/^(width|max-width|min-width|min-height|align-items|justify-content|flex|flex-grow|position|top|right|bottom|left)$/;
 
-const role = (el) => [...el.classList].find((name) => name.startsWith("text-"))?.slice(5);
 const shown = (el) => {
 	const style = getComputedStyle(el);
 	const box = el.getBoundingClientRect();
 	return style.display !== "none" && style.visibility !== "hidden" && (box.width > 0 || box.height > 0);
 };
 const label = (el) => {
-	const classes = [...el.classList].filter((name) => name !== "mt").slice(0, 2);
+	const classes = [...el.classList].slice(0, 2);
 	return `${el.tagName.toLowerCase()}${classes.map((name) => `.${name}`).join("")}`;
 };
 

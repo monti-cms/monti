@@ -1,12 +1,11 @@
 /**
- * The screen spec: a screen written as data, drawn by `ScreenSpec` with the design system's parts. It names parts, their options and what they read; it never
+ * The screen spec: a screen written as data, drawn with a design system's parts by the renderer `createScreenSpec` makes from that system's pack. It names parts, their options and what they read; it never
  * carries a class, a style, a distance in pixels or a raw HTML attribute, so a screen written this way cannot leave the design system. The rules are in
  * docs/design/admin/screen-spec.md.
  */
 
-/** The steps of the spacing scale a `Spacing` can take (the design system's spacing tokens, without 0). */
-export const SPACING_STEPS = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48] as const;
-export type SpacingStep = (typeof SPACING_STEPS)[number];
+/** A step of the design system's spacing scale, in px. Which steps there are is the pack's (`catalog.spacing`): the checker holds a spec to them. */
+export type SpacingStep = number;
 
 /** A value read from the screen's data (its state) by a JSON pointer (`/user/email`). */
 export interface StateValue {

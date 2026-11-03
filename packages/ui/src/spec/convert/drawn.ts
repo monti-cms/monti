@@ -4,7 +4,7 @@
  * style of the tool, so everything after the adapter is the same for every tool.
  */
 export interface DrawnNode {
-	/** Where the adapter found it, for a person to look up in the drawing ("form › div.mt-field[1]"). */
+	/** Where the adapter found it, for a person to look up in the drawing ("form › div.field[1]"). */
 	readonly where: string;
 	/** The design system part the drawing names (by the tool's own marking: a DS class, a component name). Absent for a plain group or a text. */
 	readonly part?: string;

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ScreenSpecDocument } from "../spec/format";
-import { ScreenSpec } from "../spec/render";
+import { ScreenSpec } from "../spec-pack";
 import spec from "./entry-list.screen.json";
 
 /** The post list drawn from `entry-list.screen.json` alone: a pilot of screens written as data, beside the `Main` board's first state. */

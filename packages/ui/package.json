@@ -9,7 +9,7 @@
 		".": "./src/index.ts",
 		"./icons": "./src/icons.ts",
 		"./internal": "./src/internal.ts",
-		"./spec": "./src/spec/render.tsx",
+		"./spec": "./src/spec-pack/index.tsx",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
 	},
@@ -70,8 +70,8 @@
 				"default": "./dist/internal.js"
 			},
 			"./spec": {
-				"types": "./dist/spec/render.d.ts",
-				"default": "./dist/spec/render.js"
+				"types": "./dist/spec-pack/index.d.ts",
+				"default": "./dist/spec-pack/index.js"
 			},
 			"./theme.css": "./styles/theme.css",
 			"./tokens.css": "./styles/tokens.css"
