@@ -23,6 +23,9 @@ coverage
 examples/blog/vendor
 examples/**/AGENTS.md
 
+# Flow test run output (traces of failed runs)
+e2e/test-results
+
 # misc
 .DS_Store
 *.pem

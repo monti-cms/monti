@@ -1,6 +1,7 @@
 import { ai } from "@monti-cms/ai";
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
+import { password } from "@monti-cms/auth/password";
 import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "@monti-cms/blocks";
 // The two heavy blocks have their own entry points, so an app that does not use them never loads (or installs) mermaid and recharts.
 import { chart } from "@monti-cms/blocks/chart";
@@ -76,9 +77,10 @@ export const cms = defineConfig({
 	// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.
 	database: postgres(),
 
-	// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app; its callback URL is `<site URL>/api/monti/auth/callback/github`) and MONTI_ADMIN_GITHUB_ID (the admin's
-	// numeric GitHub id). Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.
-	auth: auth({ providers: [github()] }),
+	// The admin login: an email and password (the first admin is created on the login screen; the accounts are in the database), or GitHub: AUTH_GITHUB_ID and
+	// AUTH_GITHUB_SECRET (the OAuth app; its callback URL is `<site URL>/api/monti/auth/callback/github`) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id).
+	// Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.
+	auth: auth({ providers: [password(), github()] }),
 
 	// Media uploads: mock dummy storage for previewing the media library UI.
 	storage: dummyStorage(),
