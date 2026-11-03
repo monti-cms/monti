@@ -26,6 +26,7 @@ export const loginMessages = defineMessages("cms-admin.login", {
 		errorPassword: "Needs at least {min} characters.",
 		errorClosed: "An admin already exists.",
 		errorOther: "Signing in did not work. Try again.",
+		errorCreate: "Creating the admin did not work. Try again.",
 	},
 	ko: {
 		signIn: ({ provider }) => `${josa(String(provider), "으로", "로")} 로그인`,
@@ -50,5 +51,6 @@ export const loginMessages = defineMessages("cms-admin.login", {
 		errorPassword: "{min}자 이상이어야 해요.",
 		errorClosed: "이미 관리자가 있어요.",
 		errorOther: "로그인하지 못했어요. 다시 시도해 주세요.",
+		errorCreate: "만들지 못했어요. 다시 시도해 주세요.",
 	},
 });

@@ -213,7 +213,7 @@ function FirstAdmin({
 						{t("createFirstAdmin")}
 					</SubmitButton>
 				</Stack>
-				{has("other") || has("credentials") ? <FormFieldError>{t("errorOther")}</FormFieldError> : null}
+				{has("other") || has("credentials") ? <FormFieldError>{t("errorCreate")}</FormFieldError> : null}
 			</Stack>
 		</form>
 	);
