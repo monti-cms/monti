@@ -8,6 +8,7 @@ import {
 	Input,
 	Separator,
 	Stack,
+	SubmitButton,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
@@ -136,9 +137,9 @@ function SignIn({
 									error={passwordError}
 								/>
 							</Stack>
-							<Button type="submit" variant="primary" width="full" disabled={locked}>
+							<SubmitButton variant="primary" width="full" disabled={locked} pendingLabel={t("signingIn")}>
 								{t("signInSubmit")}
-							</Button>
+							</SubmitButton>
 						</Stack>
 					</form>
 				) : null}
@@ -150,10 +151,14 @@ function SignIn({
 							return (
 								<form key={button.id} method="post" action={button.action}>
 									{/* The one black pill: the password form's button, or the first method when there is no form. */}
-									<Button type="submit" variant={!passwordAction && index === 0 ? "primary" : "secondary"} width="full">
+									<SubmitButton
+										variant={!passwordAction && index === 0 ? "primary" : "secondary"}
+										width="full"
+										pendingLabel={t("signingIn")}
+									>
 										{Mark ? <Mark aria-hidden /> : null}
 										{t("signIn", { provider: button.name })}
-									</Button>
+									</SubmitButton>
 								</form>
 							);
 						})}
@@ -204,9 +209,9 @@ function FirstAdmin({
 							/>
 						</Stack>
 					</Stack>
-					<Button type="submit" variant="primary" width="full">
+					<SubmitButton variant="primary" width="full" pendingLabel={t("creating")}>
 						{t("createFirstAdmin")}
-					</Button>
+					</SubmitButton>
 				</Stack>
 				{has("other") || has("credentials") ? <FormFieldError>{t("errorOther")}</FormFieldError> : null}
 			</Stack>

@@ -13,7 +13,7 @@
 | "이메일" | `FormField` + `FormFieldLabel` + `Input`(`autoComplete="username"`) | 모든 필드가 필수인 짧은 폼이라 `*`를 붙이지 않는다([field.md](../components/field.md)). |
 | "비밀번호" | `FormField` + `FormFieldLabel` + `Input type="password"`(로그인은 `current-password`, 첫 관리자는 `new-password`) + `FormFieldError reserve` | 오류 줄은 비어 있어도 자리를 지킨다(아래 4px, 높이 20px). 오류가 떠도 버튼이 움직이지 않는다. 필드와 버튼 사이는 12px다. 틀리면 `aria-invalid`와 오류 한 줄("이메일 또는 비밀번호가 맞지 않아요.", "1분 뒤에 다시 시도해 주세요.", "10자 이상이어야 해요."). 첫 관리자의 길이 조건 "10자 이상"은 그 줄의 회색 설명이다(`hint`). 꼭 알아야 하는 규칙이라 입력하는 동안에도 보여야 하고, 오류가 오면 같은 자리에서 오류로 바뀐다. |
 | "비밀번호 확인" | `FormField` + `FormFieldLabel` + `Input type="password"`(`new-password`) + `FormFieldError reserve` | 첫 관리자에서만. 비밀번호 필드와 16px 떨어진다. 다르면 "두 비밀번호가 같지 않아요." |
-| "로그인" · "생성" | `Button variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`. |
+| "로그인" · "생성" | `SubmitButton variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`이고 글자가 "로그인 중…", "생성 중…"으로 바뀐다. GitHub 버튼도 `SubmitButton`이다. |
 | "또는" 줄 | `Separator label="또는"` | 비밀번호와 GitHub가 둘 다 있을 때만. |
 | "GitHub로 로그인" | `Button width="full"`(앞에 GitHub 아이콘: auth가 주는 이름 `logo--github`를 `iconsByName`으로 찾아 버튼 글자색으로 그린다). 비밀번호 폼이 있으면 `variant="secondary"`, GitHub만 있으면 `variant="primary"` | GitHub 인증으로 간다. 검은 알약은 화면에 하나다. |
 | GitHub 권한 없음 | `FormFieldError`(필드 밖에서도 쓴다) "octo-kim은 관리자가 아니에요.", 그 아래 `TextButton` "다른 계정으로 로그인" | |

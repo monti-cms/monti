@@ -25,7 +25,7 @@
 
 ### 코드
 
-`@monti-cms/ui`의 `Button`: `variant`는 `primary`, `secondary`, `danger`, `outline-danger` 중 하나다. `size`는 `md`나 `sm`이다. `loading`은 고리를 보여 준다.
+`@monti-cms/ui`의 `Button`: `variant`는 `primary`, `secondary`, `danger`, `outline-danger` 중 하나다. `size`는 `md`나 `sm`이다. `loading`은 고리를 보여 준다. `SubmitButton`은 폼을 그냥 보내는(스크립트가 받지 않는) 버튼이다. 보낸 순간부터 다음 페이지가 올 때까지 `loading`이고, 글자는 `pendingLabel`("로그인 중…")로 바뀐다.
 
 버튼은 단축키를 보여 주지 않는다. "저장 ⌘S"가 아니라 "저장"이다. Windows에서는 "저장 Ctrl+S"가 되어 라벨로는 너무 길다. 단축키는 툴팁과 메뉴 행 끝에서만 보여 주고, 관리자 화면이 돌아가는 시스템에 맞춰 적는다(메뉴의 "단축키" 참고).
 
