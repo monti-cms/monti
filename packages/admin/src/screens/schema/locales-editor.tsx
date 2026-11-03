@@ -38,6 +38,7 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	ReadValue,
 	Section,
 	Stack,
 	Text,
@@ -53,7 +54,6 @@ import { SortableList } from "./fields-tree-dnd";
 import { customLocaleCode, findLocaleCodes, localeFromCode, localeName, sourceFirst } from "./locale-names";
 import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import { type Locale, localesOf, type Obj, sameJson, setProp } from "./schema-model";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */

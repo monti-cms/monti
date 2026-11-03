@@ -21,7 +21,9 @@ export interface DrawnNode {
 		readonly align?: "start" | "center" | "end" | "baseline" | "stretch";
 		readonly justify?: "start" | "center" | "end" | "between";
 		readonly grow?: boolean;
+		readonly wrap?: boolean;
 		readonly maxWidth?: number;
+		readonly minWidth?: number;
 		readonly minHeight?: "screen";
 	};
 	readonly children?: readonly DrawnNode[];

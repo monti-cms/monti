@@ -86,6 +86,8 @@ export interface FormFieldChange {
 	undoName?: string;
 	/** Puts the saved value back. Without it the row has the dot only (a switch, which is undone by turning it back). */
 	onUndo?: () => void;
+	/** The undo button is drawn without `onUndo` (a screen spec's look, before its behavior is wired). */
+	undoShown?: boolean;
 	/** The undo button cannot be pressed (the screen is read-only). */
 	undoDisabled?: boolean;
 	/** `proposal`: the value is the assistant's and nobody has taken it yet; the dot is blue and the button discards it ("discard"). */
@@ -116,7 +118,7 @@ function FormFieldLabel({
 			<div data-slot="label-row" className="flex h-3.5 items-center gap-monti-8">
 				{label}
 				<ChangeDot tone={changed.tone} label={changed.label} />
-				{changed.onUndo && (
+				{(changed.onUndo || changed.undoShown) && (
 					<TextButton
 						variant="underline"
 						quiet

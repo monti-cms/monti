@@ -15,6 +15,7 @@ import {
 	Icon,
 	Inline,
 	NavLink,
+	RailAction,
 	RailLayout,
 	Section,
 	Stack,
@@ -437,11 +438,7 @@ function SchemaEditor({
 													))}
 												</SortableList>
 												{writable && (
-													<Box paddingTop={12} paddingX={10}>
-														<TextButton quiet onClick={() => setCreating(true)}>
-															{t("collection.create")}
-														</TextButton>
-													</Box>
+													<RailAction onClick={() => setCreating(true)}>{t("collection.create")}</RailAction>
 												)}
 											</>
 										}

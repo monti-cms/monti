@@ -6,6 +6,7 @@ import {
 	Button,
 	Inline,
 	LockMark,
+	ReadValue,
 	Sheet,
 	SheetBody,
 	SheetContent,
@@ -40,7 +41,6 @@ import { type CollectionEditing, KindOptions, kindChoices, LOCALIZED_KINDS } fro
 import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 import { schemaFieldsMessages } from "./fields.messages";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import {
 	allFieldNames,
 	FIELD_KEY_ORDER,

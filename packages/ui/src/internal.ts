@@ -220,7 +220,8 @@ export {
 } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES, RequestAnchor } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
-export { RailLayout } from "./rail-layout";
+export { RailAction, RailLayout } from "./rail-layout";
+export { ReadValue } from "./read-value";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export {

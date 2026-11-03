@@ -12,6 +12,7 @@ import {
 	Inline,
 	Input,
 	Option,
+	ReadValue,
 	Segmented,
 	Select,
 	SelectContent,
@@ -28,7 +29,6 @@ import { type ComponentProps, createContext, type ReactNode, useContext, useId, 
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import { nameProblem, type Obj, type Rename, sameJson, sectionOf } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */

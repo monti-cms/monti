@@ -7,11 +7,13 @@ import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
 import { Count } from "../count";
+import { DangerBlock, DangerRow } from "../danger-block";
 import { DragHandle } from "../drag-handle";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
 import { FilterButton } from "../filter-button";
+import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
 import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
@@ -19,6 +21,8 @@ import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
 import { ListHead } from "../list-head";
 import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
+import { LockMark } from "../lock-mark";
+import { NavLink } from "../nav-link";
 import { Option } from "../option";
 import { PageColumn, PageHeader, PageToolbar } from "../page-header";
 import {
@@ -31,6 +35,8 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "../pagination";
+import { RailAction, RailLayout } from "../rail-layout";
+import { ReadValue as ReadValuePart } from "../read-value";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
 import { Select, SelectTrigger, SelectValue } from "../select";
@@ -55,6 +61,7 @@ import {
 	SidebarScreenMode as SidebarScreenModePart,
 } from "../sidebar";
 import { Inline, Stack as StackPart } from "../stack";
+import { Switch } from "../switch";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { TabLink, TabLinks } from "../tabs";
 import { Heading, Text } from "../text";
@@ -175,6 +182,7 @@ function Stack({
 	align,
 	justify,
 	grow,
+	wrap,
 	width,
 	maxWidth,
 	minWidth,
@@ -187,6 +195,8 @@ function Stack({
 	justify?: "start" | "center" | "end" | "between";
 	/** Takes the room its parent leaves on the parent's axis (the region that pushes a line to the bottom of the page). */
 	grow?: boolean;
+	/** A row whose children go on to the next line when they do not fit (fields side by side on a wide page). */
+	wrap?: boolean;
 	/** The region's width in px, decided by the screen (a side column). */
 	width?: number;
 	/** The region's widest in px, decided by the screen (a form of 360). */
@@ -205,6 +215,7 @@ function Stack({
 			align={align}
 			justify={justify}
 			grow={grow}
+			wrap={wrap}
 			gap={0}
 			minHeight={minHeight}
 			width={sized && width === undefined ? "full" : undefined}
@@ -607,10 +618,7 @@ function SaveGroup({
 /** A field's label with the dot of a change and, at the end of its row, the quiet undo. */
 function ChangedLabel({ label, undo, for: field }: { label?: string; undo?: string; for?: string }) {
 	return (
-		<FormFieldLabelPart
-			htmlFor={field}
-			changed={{ label: "", undoLabel: undo ?? "", onUndo: undo ? () => {} : undefined }}
-		>
+		<FormFieldLabelPart htmlFor={field} changed={{ label: "", undoLabel: undo ?? "", undoShown: Boolean(undo) }}>
 			{label}
 		</FormFieldLabelPart>
 	);
@@ -732,6 +740,68 @@ function IconOnlyButton({ icon, label }: { icon?: IconName; label?: string }) {
 	return <IconButton label={label ?? ""}>{icon && <Icon name={icon} />}</IconButton>;
 }
 
+/** A list beside the content (the collections): `rail`, the list, and the content after it. */
+function Rail({ label, rail, children }: { label?: string; rail?: React.ReactNode; children?: React.ReactNode }) {
+	return (
+		<RailLayout label={label ?? ""} rail={rail}>
+			{children}
+		</RailLayout>
+	);
+}
+
+/** One entry of a list beside the content: its name, a mono note (its identifier), the open one `active`, a changed one with a dot. */
+function NavEntry({ label, note, active, dot }: { label?: string; note?: string; active?: boolean; dot?: string }) {
+	return (
+		<NavLink active={active} note={note} dot={dot}>
+			{label}
+		</NavLink>
+	);
+}
+
+/** A setting turned on or off at once: its words at the start, the switch at the end. */
+function OptionSwitch({ label, checked }: { label?: string; checked?: boolean }) {
+	return (
+		<Option spread>
+			{label}
+			<Switch checked={checked ?? false} />
+		</Option>
+	);
+}
+
+/** Children in equal columns (a collection's editor options, three across). */
+function GridBox({ columns, children }: { columns?: 1 | 2 | 3 | 4 | 6; children?: React.ReactNode }) {
+	return <Grid columns={columns}>{children}</Grid>;
+}
+
+/** What cannot be undone, apart at the end of a page: its title in danger, its rows under it. */
+function DangerSection({ title, children }: { title?: string; children?: React.ReactNode }) {
+	return <DangerBlock title={title}>{children}</DangerBlock>;
+}
+
+/** One thing that cannot be undone: its name, a detail, and its button. */
+function DangerLine({ name, meta, action }: { name?: string; meta?: string; action?: React.ReactNode }) {
+	return <DangerRow name={name} meta={meta} action={action} />;
+}
+
+/** The quiet button under a list beside the content ("+ New collection"). */
+function RailAdd({ label }: { label?: string }) {
+	return <RailAction>{label}</RailAction>;
+}
+
+/** A value shown as text under its label, with no field (what cannot be edited here); `mono` for an identifier or an address. */
+function ReadValue({ label, mono, children }: { label?: string; mono?: boolean; children?: React.ReactNode }) {
+	return (
+		<ReadValuePart label={label ?? ""} mono={mono ?? false}>
+			{children}
+		</ReadValuePart>
+	);
+}
+
+/** The lock after a value nobody can change. */
+function Lock({ label }: { label?: string }) {
+	return <LockMark label={label ?? ""} />;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -752,6 +822,15 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	GridBox,
+	RailAdd,
+	ReadValue,
+	DangerSection,
+	DangerLine,
+	Lock,
+	Rail,
+	NavEntry,
+	OptionSwitch,
 	Panel,
 	IconOnlyButton,
 	DragHandle,
@@ -871,6 +950,7 @@ export const CATALOG = {
 			align: "layout",
 			justify: "layout",
 			grow: "layout",
+			wrap: "layout",
 			minHeight: "layout",
 			width: "layout-number",
 			maxWidth: "layout-number",
@@ -878,6 +958,15 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	GridBox: { kind: "part", props: { columns: "variant" } },
+	RailAdd: { kind: "part", props: { label: "text" } },
+	ReadValue: { kind: "part", props: { label: "text", mono: "flag" } },
+	DangerSection: { kind: "part", props: { title: "text" } },
+	DangerLine: { kind: "part", props: { name: "text", meta: "text" } },
+	Lock: { kind: "part", props: { label: "text" } },
+	Rail: { kind: "part", props: { label: "text" } },
+	NavEntry: { kind: "part", props: { label: "text", note: "text", active: "flag", dot: "text" } },
+	OptionSwitch: { kind: "part", props: { label: "text", checked: "flag" } },
 	Panel: { kind: "part", props: { title: "text", closable: "flag", width: "variant" } },
 	IconOnlyButton: { kind: "part", props: { icon: "variant", label: "text" } },
 	DragHandle: { kind: "part", props: { "aria-label": "text" } },

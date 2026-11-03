@@ -15,6 +15,147 @@
 			},
 			"events": []
 		},
+		"GridBox": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"columns": {
+					"kind": "variant",
+					"enum": [1, 2, 3, 4, 6]
+				}
+			},
+			"events": []
+		},
+		"RailAdd": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ReadValue": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"mono": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"DangerSection": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"DangerLine": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["action"],
+			"props": {
+				"meta": {
+					"kind": "text",
+					"type": "string"
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Lock": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Rail": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": ["rail"],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"NavEntry": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"active": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"dot": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"OptionSwitch": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"checked": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"Panel": {
 			"kind": "part",
 			"bind": false,
@@ -935,6 +1076,10 @@
 				"width": {
 					"kind": "layout-number",
 					"type": "number"
+				},
+				"wrap": {
+					"kind": "layout",
+					"type": "boolean"
 				}
 			},
 			"events": []

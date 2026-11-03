@@ -13,6 +13,7 @@ import {
 	LockMark,
 	PageToolbar,
 	PageToolbarEnd,
+	ReadValue,
 	Section,
 	Stack,
 	Tabs,
@@ -31,7 +32,6 @@ import { schemaFieldsMessages } from "./fields.messages";
 import { FieldsCard, usePreviewOpen, useWide } from "./fields-tree";
 import { schemaMessages } from "./messages";
 import { PublicPathField } from "./public-path-field";
-import { ReadValue } from "./read-value";
 import {
 	type Allowed,
 	allowedOf,

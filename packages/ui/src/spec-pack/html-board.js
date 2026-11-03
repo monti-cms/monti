@@ -55,7 +55,7 @@ const parts = [
 		asProps: ["gap", "border-top", "padding-top"],
 	},
 	{
-		match: (el) => el.matches(".mt-nav"),
+		match: (el) => el.matches(".mt-sidebar .mt-nav"),
 		part: "SidebarItem",
 		props: (el) => ({ active: el.classList.contains("is-on") || undefined }),
 	},
@@ -486,6 +486,101 @@ const parts = [
 		asProps: ["color", "cursor", "display"],
 	},
 	{ match: (el) => el.matches(".mt-row > span > svg"), part: "DragHandle", leaf: true, asProps: ["display"] },
+	// A list beside the content (the collections of the settings).
+	{
+		match: (el) => el.matches("div:has(> nav:not(.mt-sidebar) > .mt-nav)"),
+		part: "Rail",
+		slots: (el) => ({ rail: el.querySelector(":scope > nav") }),
+		children: (el) => [...el.children].filter((child) => !child.matches("nav")),
+		asProps: ["display", "flex-wrap", "gap"],
+	},
+	{
+		match: (el) => el.matches("nav:not(.mt-sidebar) > .mt-nav"),
+		part: "NavEntry",
+		props: (el) => {
+			const shown = (node) => node && getComputedStyle(node).display !== "none";
+			return {
+				label: el.querySelector(":scope > span:first-child")?.textContent.trim(),
+				note: el.querySelector(".n")?.textContent.trim(),
+				active: el.classList.contains("is-on") || undefined,
+				dot: shown(el.querySelector(".mt-change-dot")) ? "changed" : undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["color"],
+	},
+	// What cannot be undone, at the end of a collection's page.
+	{
+		match: (el) => el.matches(".col-blk:has(> h2[style*='--fg-danger'])"),
+		part: "DangerSection",
+		props: (el) => ({ title: el.querySelector(":scope > h2")?.textContent.trim() }),
+		slots: () => ({}),
+		children: (el) => [...el.children].filter((child) => !child.matches("h2")),
+		asProps: ["border-bottom", "border-top", "margin-top", "padding-top"],
+	},
+	{
+		match: (el) => el.matches(".col-blk:has(> h2[style*='--fg-danger']) > div"),
+		part: "DangerLine",
+		props: (el) => ({
+			name: el.querySelector(":scope > span > span:first-child")?.textContent.trim(),
+			meta: el.querySelector(".text-meta")?.textContent.replace(/^·\s*/, "").trim(),
+		}),
+		slots: (el) => ({ action: [el.querySelector(":scope > .mt-btn")] }),
+		children: () => [],
+		asProps: ["display", "align-items", "gap"],
+	},
+	// The quiet button under a list beside the content.
+	{
+		match: (el) => el.matches("nav:not(.mt-sidebar) > .mt-text-btn--quiet"),
+		part: "RailAdd",
+		props: (el) => ({ label: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["padding", "text-align"],
+	},
+	// A value under its label with no field.
+	{
+		match: (el) => el.matches(".mt-field:has(> .mt-label + :is(p, span:not([class])):last-child)"),
+		part: "ReadValue",
+		props: (el) => ({
+			label: el.querySelector(":scope > .mt-label")?.textContent.trim(),
+			mono: el.querySelector(":scope > p")?.classList.contains("mt-mono") || undefined,
+		}),
+		slots: () => ({}),
+		// A plain value is the part's text; one in its own colour (a warning) is a text of its own.
+		children: (el) => el.querySelector(":scope > p") ?? [el.querySelector(":scope > span:last-child")],
+		asProps: ["margin", "gap"],
+	},
+	// Options in equal columns.
+	{
+		match: (el) => el.matches(".opt-grid"),
+		part: "GridBox",
+		props: (el) => ({ columns: getComputedStyle(el).gridTemplateColumns.split(" ").length }),
+	},
+	// The lock after a value nobody can change.
+	{
+		match: (el) => el.matches(".mt-field svg:not(.mt-btn svg, .mt-text-btn svg)") && !iconName(el),
+		part: "Lock",
+		leaf: true,
+		asProps: ["color", "vertical-align"],
+	},
+	// A collection's block: a stacked section (its title over its fields); the last one has no line under it.
+	{
+		match: (el) => el.matches(".col-blk, .col-grp"),
+		part: "Section",
+		props: (el) => ({ stacked: true, last: /^0(px)?$/.test(el.style.borderBottom.split(" ")[0] ?? "") || undefined }),
+		slots: (el) => ({ title: el.querySelector(":scope > h2") }),
+		children: (el) => [...el.children].filter((child) => !child.matches("h2")),
+		asProps: ["border-bottom"],
+	},
+	{
+		match: (el) => el.matches(".mt-option:has(> .mt-switch)"),
+		part: "OptionSwitch",
+		props: (el) => ({
+			label: el.querySelector(":scope > span:not(.mt-switch)")?.textContent.trim(),
+			checked: el.querySelector(".mt-switch.is-on") ? true : undefined,
+		}),
+		leaf: true,
+	},
 	// A page's tab row: each tab a page of its own, with its count.
 	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
 	{
@@ -566,7 +661,8 @@ const parts = [
 	{ match: (el) => el.matches(".mt-icon-btn--corner"), ignore: true },
 	// The assistant's ✦ is the design system's own mark, not a Carbon icon.
 	{ match: (el) => el.matches("svg.mt-spark"), part: "Icon", props: () => ({ name: "spark" }), leaf: true },
-	{ match: (el) => el.matches(".mt-field"), part: "FormField", walk: "parts" },
+	// A switch with what it turns on under it is two lines of a page, not one field.
+	{ match: (el) => el.matches(".mt-field:not(:has(> .mt-option))"), part: "FormField", walk: "parts" },
 	{
 		match: (el) => el.matches(".mt-label"),
 		part: "FormFieldLabel",
@@ -626,7 +722,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

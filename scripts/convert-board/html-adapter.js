@@ -17,7 +17,7 @@ const { parts: PARTS, known: KNOWN, frame: FRAME = [] } = window.boardPack ?? { 
 const SPACING = /^(margin|padding|gap|row-gap|column-gap)(-|$)/;
 const LAYOUT = /^(display|flex-direction|box-sizing)$/;
 const SCREEN_LAYOUT =
-	/^(width|max-width|min-width|min-height|align-items|justify-content|flex|flex-grow|position|top|right|bottom|left)$/;
+	/^(width|max-width|min-width|min-height|align-items|justify-content|flex|flex-grow|flex-wrap|position|top|right|bottom|left)$/;
 
 const shown = (el) => {
 	const style = getComputedStyle(el);
@@ -55,6 +55,7 @@ function looksOf(el, part, root = false, inPart = false) {
 			continue;
 		}
 		if (!part && SCREEN_LAYOUT.test(property)) continue;
+		if (part && property === "flex" && el.dataset.sized !== undefined) continue;
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.
 		if (/^(position|top|right|bottom|left)$/.test(property)) continue;
 		// The board's frame is the page itself: its height and ground are the window's.
@@ -80,6 +81,7 @@ function layoutOf(el, page) {
 	if (flex && align) layout.align = align;
 	if (flex && justify) layout.justify = justify;
 	if (Number.parseFloat(style.flexGrow) > 0) layout.grow = true;
+	if (style.flexWrap === "wrap") layout.wrap = true;
 	// A size the board writes in px is the region's; a width the box only takes from its parent is not.
 	for (const [property, name] of [
 		["width", "width"],
@@ -103,6 +105,18 @@ function centred(el) {
 	return margin("left") === "auto" && (margin("right") === "auto" || only[0].style.margin.split(" ").length <= 3)
 		? { align: "center" }
 		: {};
+}
+
+/**
+ * The size a board gives a part as its place in a flexible row (`flex: 1 1 180px`): a region's size, which the screen's layout holds, never the part.
+ * The part is read standing in a region of that size.
+ */
+function sizedPart(el, rule) {
+	if (!rule || rule.frame || rule.ignore || el.dataset.sized !== undefined) return undefined;
+	const flex = el.style.getPropertyValue("flex");
+	const basis = /\b(\d+)px\b/.exec(flex)?.[1];
+	if (!flex || !basis) return undefined;
+	return { grow: Number.parseFloat(getComputedStyle(el).flexGrow) > 0 || undefined, minWidth: Number(basis) };
 }
 
 /** The axis a group's children run along, as laid out. */
@@ -174,6 +188,13 @@ function read(el, where, page = undefined, inPart = false) {
 	// Inside a part, a plain group's own distances are measured as Spacing; only a part or a text there has none of its own to give.
 	const group = !rule && [...el.children].some((child) => shown(child));
 	const looks = looksOf(el, rule?.frame ? undefined : rule, root, inPart && !group);
+	const sized = sizedPart(el, rule);
+	if (sized) {
+		el.dataset.sized = "";
+		const node = read(el, where, page, inPart);
+		delete el.dataset.sized;
+		return { where: `${here} (region)`, direction: "column", layout: sized, looks: [], children: [node] };
+	}
 	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
 	if (rule?.ignore) return { where: here };
 	if (rule?.frame) {
