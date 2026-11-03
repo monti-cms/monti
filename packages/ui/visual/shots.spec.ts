@@ -70,13 +70,19 @@ for (const story of readShots(STORYBOOK_DIR)) {
 
 			write(path.join(CHANGED_DIR, name), shot);
 			appendFileSync(path.join(CHANGED_DIR, `report-${shard()}.tsv`), `${theme}\t${story.id}\t${summary(result)}\n`);
-			await info.attach(`${theme}-actual`, { body: shot, contentType: "image/png" });
+			// Kept in the test's output folder under readable names (the `visual-diff-<part>` artifact) and attached to the report.
+			const keep = async (label: string, data: Buffer) => {
+				const file = info.outputPath(`${theme}-${label}.png`);
+				write(file, data);
+				await info.attach(`${theme}-${label}`, { path: file, contentType: "image/png" });
+			};
+			await keep("actual", shot);
 			if (result) {
-				await info.attach(`${theme}-expected`, { path: baseline, contentType: "image/png" });
+				await keep("expected", readFileSync(baseline));
 				if (result.diff) {
 					const diff = new PNG({ width: result.diff.width, height: result.diff.height });
 					diff.data.set(result.diff.data);
-					await info.attach(`${theme}-diff`, { body: PNG.sync.write(diff), contentType: "image/png" });
+					await keep("diff", PNG.sync.write(diff));
 				}
 			}
 			expect.soft(summary(result), `${story.id} (${theme})`).toBe("the same");

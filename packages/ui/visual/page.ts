@@ -55,8 +55,15 @@ const LISTEN_FOR_ERRORS = () => {
 	hook();
 };
 
+/**
+ * The time every story sees. A part that marks today (the calendar) or says how long ago something was would otherwise change its picture with the
+ * day the run happens on. Timers keep running, so a story that waits still moves on.
+ */
+export const STORY_TIME = new Date("2026-10-29T03:00:00Z");
+
 /** Opens a story, waits for it to settle and returns once the page can be measured or shot. A story or play function that threw fails here. */
 export const openStory = async (page: Page, id: string) => {
+	await page.clock.setFixedTime(STORY_TIME);
 	await page.addInitScript(LISTEN_FOR_ERRORS);
 	await page.goto(`/iframe.html?id=${id}&viewMode=story`);
 	await settle(page, id);
