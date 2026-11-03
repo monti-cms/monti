@@ -198,12 +198,3 @@ ai({
 | `@monti-cms/ai` | `ai`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
 | `@monti-cms/ai/server` | 서버 쪽(API 경로). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
 | `@monti-cms/ai/admin` | 관리자 쪽(어시스턴트 패널, API 키 화면의 모델 묶음, 공급자), `useAiAction`, `AiButton`, `aiClient` |
-
-## 개발
-
-```bash
-pnpm --filter @monti-cms/ai test:run
-```
-
-테스트는 API 키 저장의 확인(`src/__test__/settings.test.ts`의 `KEY-A1`~`KEY-A3`)뿐이다. 나머지는 2026-11-01에 지웠다. 이 패키지는
-에이전트 중심으로 다시 짜고 있고(#312), 새 코드는 제 테스트와 함께 들어온다.

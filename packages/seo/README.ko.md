@@ -105,6 +105,5 @@ const { title, description, imageId, canonical, noindex } = seoOf(post, entry.me
 ## 개발
 
 ```sh
-pnpm --filter @monti-cms/seo test:run     # 예시 블로그 설정 + 다른 사이트 설정
 pnpm --filter @monti-cms/seo typecheck
 ```

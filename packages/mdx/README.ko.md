@@ -134,9 +134,7 @@ interface SyntaxExtension {
 ## 개발
 
 ```bash
-pnpm --filter @monti-cms/mdx test:run
 pnpm --filter @monti-cms/mdx typecheck
 ```
 
-해석기·쓰기·형식 테스트는 `src/__test__/fixtures/samples`의 예시 글과 함께 이 패키지에 있고, 원문 패널 테스트는 jsdom 환경(`// @vitest-environment jsdom`)에서 돈다. 데이터베이스를 쓰는 테스트가 있으므로 `.env.local`에 `CMS_TEST_DATABASE_URL`이 필요하다(저장소 README 참고).
 사이트나 다른 패키지의 테스트가 MDX 글을 필요로 하면 `@monti-cms/mdx/testing`의 도우미를 쓴다. `mdxWith(syntax)`는 주어진 확장 목록으로 파이프라인을 만들고, `docOfMdx(mdx)`는 글의 저장 문서를, `readSamples()`는 예시 글을, `renderFixture(source)`는 글의 마크업·목차·React 트리를 준다.

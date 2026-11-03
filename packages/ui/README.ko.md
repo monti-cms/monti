@@ -25,45 +25,15 @@ Monti의 디자인 시스템이다. 관리자와 그 확장이 쓰는 토큰과 
 pnpm --filter @monti-cms/ui storybook
 ```
 
-사이드바는 가장 작은 부품에서 제품 고유의 부품까지 다섯 단으로 나뉜다. **Foundations**(토큰 페이지), **Primitives**(레이아웃 원자, 글, 아이콘, AI 표시: Box, Stack, Grid, Text, Icon, Label, Separator …), **Controls**(사람이 조작하는 것, 묶음별: Button, Field, Choice, Tabs, Menu, Overlay, Status), **Patterns**(컨트롤로 조립한 것: List, Frame, Sheet), **Monti**(CMS에만 있는 것: EditorTools, Change, Proposal, Assistant, Translation). 스토리 제목은 Foundations와 Primitives에서는 `단/이름`, 나머지에서는 `단/묶음/이름`이고, 모든 스토리는 정확히 한 단에 놓인다(`.storybook/preview.tsx`의 `storySort`, `storybook-parity.test.ts`가 확인). 한 단 안과 화면들은, 사이드바도 각 부품의 스토리도 가나다(A→Z) 순이다.
+사이드바는 가장 작은 부품에서 제품 고유의 부품까지 다섯 단으로 나뉜다. **Foundations**(토큰 페이지), **Primitives**(레이아웃 원자, 글, 아이콘, AI 표시: Box, Stack, Grid, Text, Icon, Label, Separator …), **Controls**(사람이 조작하는 것, 묶음별: Button, Field, Choice, Tabs, Menu, Overlay, Status), **Patterns**(컨트롤로 조립한 것: List, Frame, Sheet), **Monti**(CMS에만 있는 것: EditorTools, Change, Proposal, Assistant, Translation). 스토리 제목은 Foundations와 Primitives에서는 `단/이름`, 나머지에서는 `단/묶음/이름`이고, 모든 스토리는 정확히 한 단에 놓인다(`.storybook/preview.tsx`의 `storySort`). 한 단 안과 화면들은, 사이드바도 각 부품의 스토리도 가나다(A→Z) 순이다.
 
 관리자의 화면 상태(불러오기 실패, 빈 목록, 열린 대화상자)는 `packages/admin`에서 같은 카탈로그에 더해지며, 다섯 단 뒤 `Screens` 아래에 놓인다.
 
-스토리는 관리자가 한국어로 보여 주는 모습 그대로 보여 준다. `<html lang="ko">`, 부품이 스스로 쓰는 말(`UiLabels`: 닫기, 취소, 저장 …)은 `.storybook/ko-labels.ts`에서, 예시 글은 한국어로. 도구 모음의 Language로 부품의 영어 기본값으로 바꿀 수 있다. 이 한국어 목록과 관리자의 사전이 다르면 `packages/admin`의 테스트가 실패한다.
-
-## 시각 회귀
-
-이 패키지 카탈로그의 모든 스토리를 밝은 테마와 어두운 테마로 찍어 `visual/baselines`의 PNG와 비교한다. 부품이 1px 안에서 옮겨졌거나 쪽이 1px 길어진 것은 같은 그림으로 보고, 새 색, 바뀐 글자, 더 멀리 옮겨진 부품, 1px 넘는 크기 변화는 실패시킨다(`visual/compare.ts`). 모든 스토리는 같은 고정 시각을 본다(`visual/page.ts`의 `STORY_TIME`). 그래서 달력의 오늘 표시나 "3분 전"이 실행한 날에 따라 바뀌지 않는다. 같은 화면에서 가로 스크롤, 상자에 잘린 글, 글자 크기가 `text-monti-*` 역할과 다른 요소, 고정폭을 요청(`font-mono`, `text-monti-meta`, `text-monti-micro`)했는데 다른 글꼴로 그려지는 요소, 버튼·링크·탭 안에서 글과 다른 줄에 놓인 아이콘, 높이가 정해진 한 줄짜리 컨트롤(버튼, 칩, 메뉴 행, 상태 표시줄 칸)의 글이 상자의 세로 가운데에서 0.5px(고정폭 글꼴의 글자는 0.75px)보다 더 벗어난 경우도 검사한다(글꼴 자체의 수치로 잰다. `visual/checks.ts`의 `findOffCenterText` 참고). 관리자 화면 스토리는 `visual` 태그를 달기 전까지 찍지 않고, 달면 밝은 테마로만 찍는다(어두운 테마는 색 토큰만 바꾸고, 그것은 카탈로그가 확인한다). 카탈로그 스토리를 빼려면 `no-visual`을 단다(규칙은 `visual/stories.ts`). 화면 스토리는 그 화면의 배치가 달라질 때만 태그를 단다. 불러온 상태, 빈 상태, 불러오는 중, 패널과 모드, 그 화면에만 있는 대화상자가 그렇다. 열린 메뉴, 확인 대화상자, 불러오기 실패, 토스트는 카탈로그 견본에 맡긴다.
-
-**점검.** `pnpm test:visual:audit`은 이 검사만, 빌드한 Storybook의 모든 스토리(찍지 않는 관리자 화면 포함)에 밝은 테마와 어두운 테마로 돌린다. 스토리나 그 플레이 함수(스토리를 연 뒤 클릭 같은 동작을 해 보는 부분)가 오류를 던지면 검사 전에 실패한다(Storybook은 그 오류를 자기 패널에만 보인다). 이미지를 비교하지 않으므로 어느 시스템에서나 돈다. 리디자인 에픽이 끝날 때마다 돌려서, 나온 항목은 고치거나 그 화면을 맡은 이슈에 적는다. `MONTI_STORYBOOK_DIR=<빌드 폴더>`로 다른 빌드(기준 브랜치)를 가리키면, 이 브랜치가 깨뜨린 것과 원래 있던 것을 가를 수 있다. 실행마다 비어 있는 포트에 자기 빌드를 띄우므로, 두 실행이 서로의 Storybook을 보는 일은 없다. CI에서는 `visual` 작업의 독립된 단계로 돌아서, 비교가 통과했든 아니든 작업을 실패시킬 수 있다.
-
-기준 이미지는 CI가 쓰는 Linux 이미지에서만 만든다. 글자가 시스템마다 다르게 그려지기 때문이다. 그래서 `pnpm test:visual`은 macOS와 Windows에서 실행을 거부하고, 기준 이미지는 CI에서 받는다.
-
-**CI에서는** `visual` 작업이 푸시마다 돌고, 네 부분으로 나뉘어 스토리를 나눠 맡는다. 점검은 매번 돌고, 스크린샷 비교는 푸시의 마지막 커밋 메시지에 `[visual]`이 있을 때만 돈다(리디자인 중에는 화면 변경 대부분이 의도한 것이라, 에픽이 끝날 때 돌리고 그때 기준 이미지를 새로 받는다. overhaul이 main에 합쳐질 때 다시 푸시마다 돌게 한다, monti-cms/monti#424). 다른 스토리(또는 기준 이미지가 아직 없는 스토리)는 새로 찍은 이미지를 남긴다. 한 부분이라도 실패하면 `visual baselines` 작업이 다시 찍지 않고 이 코드의 기준 이미지 전체를 모은다. 다른 스토리는 새 이미지로, 나머지는 커밋된 이미지로 채운다. 실행의 요약 쪽에는 다른 스토리와 얼마나 다른지(`412 px differ (0.04%)`)가 나온다. 의도한 변경이면 `visual/baselines`의 두 폴더를 `visual-baselines` 산출물로 바꾸고(없앤 스토리의 이미지가 남지 않게) 변경과 함께 커밋한다.
-
-```bash
-rm -rf packages/ui/visual/baselines/light packages/ui/visual/baselines/dark
-gh run download <run-id> --name visual-baselines --dir packages/ui/visual/baselines
-git add packages/ui/visual/baselines && git commit
-```
-
-의도한 것이 아니면 코드를 고친다. `visual-diff-<부분>` 산출물에 차이가 하나씩 있고, 다른 픽셀은 빨갛게 칠해져 있다.
-
-**내 컴퓨터에서.** Docker가 같은 Linux 이미지(설치된 Playwright 버전, CI와 같은 태그)를 실행한다. 저장소를 컨테이너로 복사하므로 호스트의 `node_modules`는 건드리지 않는다.
-
-```bash
-pnpm test:visual:docker                              # visual/baselines와 비교, 차이 이미지는 visual/test-results에 남는다
-pnpm test:visual:docker --baselines /tmp/shots --update   # 이미지를 내가 고른 폴더에 찍어 눈으로 본다
-```
-
-`--update` 실행은 대상 폴더의 `light`와 `dark`를 통째로 바꾸므로, 이름을 바꾸거나 지운 스토리의 이미지가 남지 않는다.
-
-이렇게 만든 이미지는 커밋하지 않는다. CI 러너와 Apple silicon Mac은 CPU 구조가 달라 글자 가장자리가 조금 다르게 그려진다. 커밋하는 것은 언제나 CI가 만든 이미지다.
+스토리는 관리자가 한국어로 보여 주는 모습 그대로 보여 준다. `<html lang="ko">`, 부품이 스스로 쓰는 말(`UiLabels`: 닫기, 취소, 저장 …)은 `.storybook/ko-labels.ts`에서, 예시 글은 한국어로. 도구 모음의 Language로 부품의 영어 기본값으로 바꿀 수 있다.
 
 ## 개발
 
 ```bash
-pnpm --filter @monti-cms/ui test:run   # 코드, jsdom에 렌더한 부품, Chromium에서 도는 포인터, 포커스, 시각 검사기 테스트
 pnpm gen:tokens   # tokens/tokens.json을 고친 뒤
 pnpm gen:tokens --check   # CI가 도는 것: 다른 생성 파일의 이름을 알리고 아무것도 쓰지 않는다
 ```
