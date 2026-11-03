@@ -1,12 +1,39 @@
+import { Add, Folder, OverflowMenuHorizontal, Search } from "@carbon/icons-react";
 import type * as React from "react";
 import { AuthPage } from "../auth-page";
 import { Button } from "../button";
+import { Count } from "../count";
+import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel } from "../field";
+import { IconButton } from "../icon-button";
 import { Image } from "../image";
 import { Input } from "../input";
+import { ListHead } from "../list-head";
+import { PageColumn, PageHeader } from "../page-header";
+import {
+	ListFooter,
+	PageSizeMenu,
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "../pagination";
 import { Separator } from "../separator";
 import { Stack as StackPart } from "../stack";
+import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { Heading, Text } from "../text";
+import { TextButton } from "../text-button";
+
+/** The icons a spec can name. A glyph is a component, so a spec names it and this table gives it. */
+const ICONS = { add: Add, folder: Folder, more: OverflowMenuHorizontal, search: Search } as const;
+
+/** An icon by name, in a part that takes its icon as children (a button, an icon button). */
+function Icon({ name }: { name: keyof typeof ICONS }) {
+	const Glyph = ICONS[name];
+	return <Glyph aria-hidden />;
+}
 
 /** A form that posts to an address: its `action` is the name of a thing the screen does. */
 function Form({
@@ -27,15 +54,22 @@ function Form({
  */
 function Stack({
 	direction = "column",
+	align,
+	justify,
+	grow,
 	className,
 	children,
 }: {
 	direction?: "column" | "row";
+	align?: "start" | "center" | "end" | "baseline" | "stretch";
+	justify?: "start" | "center" | "end" | "between";
+	/** Takes the room its parent leaves on the parent's axis. */
+	grow?: boolean;
 	className?: string;
 	children?: React.ReactNode;
 }) {
 	return (
-		<StackPart direction={direction} gap={0} className={className}>
+		<StackPart direction={direction} align={align} justify={justify} grow={grow} gap={0} className={className}>
 			{children}
 		</StackPart>
 	);
@@ -58,6 +92,31 @@ export const parts = {
 	Button,
 	Separator,
 	Image,
+	Icon,
+	PageColumn,
+	PageHeader,
+	TextButton,
+	ListHead,
+	ListScroll,
+	Table,
+	TableBody,
+	TableRow,
+	TableCell,
+	RowCheck,
+	RowLink,
+	RowTitle,
+	RowActions,
+	EntryStatus,
+	Count,
+	IconButton,
+	ListFooter,
+	PageSizeMenu,
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+	PaginationLink,
+	PaginationPrevious,
+	PaginationNext,
 };
 
 /** The parts whose children a spec spaces with `Spacing` items. */
@@ -80,4 +139,6 @@ export const HTML_PROPS = [
 	"src",
 	"alt",
 	"as",
+	"href",
+	"colSpan",
 ] as const;

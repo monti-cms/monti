@@ -4,13 +4,13 @@ import { type Catalog, checkSpec } from "./check";
 import {
 	isAction,
 	isData,
+	isItem,
 	isSpacing,
 	isText,
 	type ScreenSpecDocument,
 	type SpecChild,
 	type SpecElement,
 	type SpecValue,
-	type TextValue,
 	type Visible,
 } from "./format";
 import { parts } from "./parts";
@@ -59,20 +59,21 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 		checked.add(spec);
 	}
 
-	const translate = ({ text: key, params = {} }: TextValue, where: string) => {
-		const values = Object.fromEntries(
-			Object.entries(params).map(([name, value]) => [
-				name,
-				isData(value) ? String(read(data, value.data) ?? "") : value,
-			]),
-		);
-		const found = text(key, values);
-		if (found === undefined) throw new ScreenSpecError(`${where}: the dictionary has no text "${key}"`);
-		return found;
-	};
-	const resolve = (value: SpecValue, where: string): unknown => {
+	/** What a value reads: `item` is the item of the repeated element it sits in, if any. */
+	const resolve = (value: SpecValue, item: unknown, where: string): unknown => {
 		if (isData(value)) return read(data, value.data);
-		if (isText(value)) return translate(value, where);
+		if (isItem(value)) return read(item as ScreenSpecProps["data"], value.item);
+		if (isText(value)) {
+			const params = Object.fromEntries(
+				Object.entries(value.params ?? {}).map(([name, param]) => [
+					name,
+					typeof param === "object" ? String(resolve(param, item, where) ?? "") : param,
+				]),
+			);
+			const found = text(value.text, params);
+			if (found === undefined) throw new ScreenSpecError(`${where}: the dictionary has no text "${value.text}"`);
+			return found;
+		}
 		if (isAction(value)) {
 			const address = actions[value.action];
 			if (address === undefined) throw new ScreenSpecError(`${where}: the page gave no action "${value.action}"`);
@@ -80,10 +81,10 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 		}
 		return value;
 	};
-	const shows = (visible: Visible | undefined): boolean => {
+	const shows = (visible: Visible | undefined, item: unknown): boolean => {
 		if (visible === undefined) return true;
-		if ("not" in visible) return !shows(visible.not);
-		const value = read(data, visible.data);
+		if ("not" in visible) return !shows(visible.not, item);
+		const value = resolve(visible, item, "visible");
 		return !(
 			value === undefined ||
 			value === null ||
@@ -101,52 +102,76 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 		const inner = elementOf(ids[0] as string);
 		const direction = (element.props?.direction ?? "column") as Direction;
 		const innerDirection = (inner.props?.direction ?? "column") as Direction;
-		return inner.type === "Stack" && inner.visible === undefined && innerDirection !== direction ? ids[0] : undefined;
+		return inner.type === "Stack" &&
+			inner.visible === undefined &&
+			inner.repeat === undefined &&
+			innerDirection !== direction
+			? ids[0]
+			: undefined;
 	};
 
-	const draw = (id: string, extra: readonly (string | undefined)[] = []): ReactNode => {
+	/** Draws an element, once for each item of its list when it repeats. `key` tells apart the copies of a repeated element. */
+	const draw = (id: string, extra: readonly (string | undefined)[], item: unknown, key: string): ReactNode => {
 		const element = elementOf(id);
-		if (!shows(element.visible)) return null;
+		if (element.repeat) {
+			const items = resolve(element.repeat, item, `${id}.repeat`);
+			const list = Array.isArray(items) ? items : [];
+			return list.length === 0 ? null : list.map((each, index) => drawOne(id, element, extra, each, `${key}/${index}`));
+		}
+		return drawOne(id, element, extra, item, key);
+	};
+
+	const drawOne = (
+		id: string,
+		element: SpecElement,
+		extra: readonly (string | undefined)[],
+		item: unknown,
+		key: string,
+	): ReactNode => {
+		if (!shows(element.visible, item)) return null;
 		const part = parts[element.type as keyof typeof parts];
 		if (!part) throw new ScreenSpecError(`${id}.type: there is no part "${element.type}"`);
 		const children = element.children ?? [];
 		const classes = [...extra];
+		const childOf = (child: SpecChild, where: string): ReactNode => {
+			if (typeof child === "string") return draw(child, [], item, `${key}/${child}`);
+			if (isSpacing(child)) return null;
+			return resolve(child, item, where) as ReactNode;
+		};
 		let drawn: ReactNode[];
 		if (catalog[element.type]?.container) {
 			const direction = (element.props?.direction ?? "column") as Direction;
 			const { container, margins } = spacingClasses(children, direction);
 			const merged = mergedChild(element);
-			if (merged !== undefined) return draw(merged, [...classes, ...container]);
+			if (merged !== undefined) return draw(merged, [...classes, ...container], item, key);
 			classes.push(...container);
 			// A margin is the space after the child before it, so the first child shown has none.
 			let shown = false;
 			drawn = children.map((child: SpecChild, index) => {
 				if (typeof child !== "string") return null;
-				const node = draw(child, [shown ? margins.get(index) : undefined]);
+				const node = draw(child, [shown ? margins.get(index) : undefined], item, `${key}/${child}`);
 				if (node !== null) shown = true;
 				return node;
 			});
 		} else {
-			drawn = children.map((child, index) => {
-				if (typeof child === "string") return draw(child);
-				if (isSpacing(child)) return null;
-				return resolve(child, `${id}.children[${index}]`) as ReactNode;
-			});
+			drawn = children.map((child, index) => childOf(child, `${id}.children[${index}]`));
 		}
-		const props: Record<string, unknown> = { key: id };
+		const props: Record<string, unknown> = { key };
 		for (const [name, value] of Object.entries(element.props ?? {})) {
-			const resolved = resolve(value, `${id}.props.${name}`);
+			const resolved = resolve(value, item, `${id}.props.${name}`);
 			const choices = catalog[element.type]?.props[name]?.enum;
 			if (choices && resolved !== undefined && !choices.includes(resolved as string | number)) {
 				throw new ScreenSpecError(`${id}.props.${name}: the data gave ${JSON.stringify(resolved)}, not a choice`);
 			}
 			props[name] = resolved;
 		}
-		for (const [slot, ids] of Object.entries(element.slots ?? {})) props[slot] = ids.map((child) => draw(child));
+		for (const [slot, entries] of Object.entries(element.slots ?? {})) {
+			props[slot] = entries.map((child, index) => childOf(child, `${id}.slots.${slot}[${index}]`));
+		}
 		const className = cn(...classes);
 		if (className) props.className = className;
 		return createElement(part as (props: object) => ReactNode, props, ...drawn);
 	};
 
-	return draw(spec.root);
+	return draw(spec.root, [], undefined, spec.root);
 }

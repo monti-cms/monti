@@ -54,7 +54,9 @@ function strings(node) {
 const htmlProps = new Set(strings(constant("HTML_PROPS").initializer));
 const containers = new Set(strings(constant("CONTAINERS").initializer));
 const partsDeclaration = constant("parts");
-const SHAPING = /^(className|style|ref|key)$|ClassName$|^on[A-Z]/;
+const SHAPING = /^(className|style|ref|key)$|ClassName$/;
+const isFunction = (type) =>
+	(type.isUnion() ? type.types : [type]).some((member) => member.getCallSignatures().length > 0);
 const isReactNode = (type) => /\bReact(Node|Element|Portal)\b/.test(checker.typeToString(type));
 
 /** What a spec may write for one prop, or undefined when no spec value fits it (a function, an object). */
@@ -72,6 +74,10 @@ function ruleOf(type) {
 		member.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral | ts.TypeFlags.TemplateLiteral) ||
 		(member.isIntersection() && member.types.some((part) => part.flags & ts.TypeFlags.String));
 	if (types.every(stringLike)) return { type: "string" };
+	// A list or an object (a list head's columns, a menu's options): only the data can give it.
+	if (types.every((member) => member.flags & ts.TypeFlags.Object && member.getCallSignatures().length === 0)) {
+		return { type: "data" };
+	}
 	if (types.every((member) => member.flags & ts.TypeFlags.Number)) return { type: "number" };
 	return undefined;
 }
@@ -80,7 +86,7 @@ const catalog = {};
 for (const part of checker.getTypeAtLocation(partsDeclaration.name).getProperties()) {
 	const component = checker.getTypeOfSymbolAtLocation(part, partsDeclaration);
 	const [parameter] = component.getCallSignatures()[0]?.getParameters() ?? [];
-	const entry = { container: containers.has(part.name), children: false, slots: [], props: {} };
+	const entry = { container: containers.has(part.name), children: false, slots: [], props: {}, events: [] };
 	if (parameter) {
 		const propsType = checker.getTypeOfSymbolAtLocation(parameter, partsDeclaration);
 		for (const prop of propsType.getProperties()) {
@@ -93,7 +99,10 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 			);
 			if (SHAPING.test(prop.name) || !(own || htmlProps.has(prop.name))) continue;
 			const type = checker.getTypeOfSymbolAtLocation(prop, partsDeclaration);
-			if (isReactNode(type)) entry.slots.push(prop.name);
+			// A handler or a render function: a spec cannot hold one yet, so it is listed for the step that wires behavior by name.
+			if (/^on[A-Z]/.test(prop.name) || isFunction(type)) {
+				entry.events.push(prop.name);
+			} else if (isReactNode(type)) entry.slots.push(prop.name);
 			else {
 				const value = ruleOf(type);
 				if (value) entry.props[prop.name] = value;
@@ -101,6 +110,7 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 		}
 	}
 	entry.slots.sort();
+	entry.events.sort();
 	entry.props = Object.fromEntries(Object.entries(entry.props).sort(([a], [b]) => a.localeCompare(b)));
 	catalog[part.name] = entry;
 }

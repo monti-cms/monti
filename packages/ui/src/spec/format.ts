@@ -12,10 +12,15 @@ export interface DataValue {
 	readonly data: string;
 }
 
+/** A value of the item a repeated element is drawn for (`/title` of one row), by a JSON pointer into the item. */
+export interface ItemValue {
+	readonly item: string;
+}
+
 /** A text of the screen's dictionary, in the admin's language (`signIn`), with the values its placeholders take. */
 export interface TextValue {
 	readonly text: string;
-	readonly params?: Readonly<Record<string, string | number | DataValue>>;
+	readonly params?: Readonly<Record<string, string | number | DataValue | ItemValue>>;
 }
 
 /** A thing the screen does, by name (`signIn`): the page says what it is (the address a form posts to). */
@@ -23,7 +28,7 @@ export interface ActionValue {
 	readonly action: string;
 }
 
-export type SpecValue = string | number | boolean | DataValue | TextValue | ActionValue;
+export type SpecValue = string | number | boolean | DataValue | ItemValue | TextValue | ActionValue;
 
 /** Empty space in a container's children: between two children it is the space between them, first or last it is the container's inset on that end. */
 export interface SpacingItem {
@@ -31,18 +36,20 @@ export interface SpacingItem {
 }
 
 /** A child: another element by its id, empty space, or a text drawn as it is. */
-export type SpecChild = string | SpacingItem | DataValue | TextValue;
+export type SpecChild = string | SpacingItem | DataValue | ItemValue | TextValue;
 
 /** Shown only when this holds: `{ data }` when the value is there (not empty, not false), `{ not }` the opposite. */
-export type Visible = DataValue | { readonly not: Visible };
+export type Visible = DataValue | ItemValue | { readonly not: Visible };
 
 export interface SpecElement {
 	readonly type: string;
 	readonly props?: Readonly<Record<string, SpecValue>>;
 	readonly children?: readonly SpecChild[];
-	/** The pattern's named places (`AuthPage`'s `title`, `footer`), each filled with elements by id. */
-	readonly slots?: Readonly<Record<string, readonly string[]>>;
+	/** The pattern's named places (`AuthPage`'s `title`, a row title's `address`), each filled with elements by id or a text. */
+	readonly slots?: Readonly<Record<string, readonly Exclude<SpecChild, SpacingItem>[]>>;
 	readonly visible?: Visible;
+	/** Drawn once for each item of this list (`{ "data": "/rows" }`); inside it, `{ "item": "/title" }` reads the item. */
+	readonly repeat?: DataValue;
 }
 
 export interface ScreenSpecDocument {
@@ -53,6 +60,8 @@ export interface ScreenSpecDocument {
 export const isSpacing = (child: SpecChild): child is SpacingItem => typeof child === "object" && "spacing" in child;
 export const isData = (value: unknown): value is DataValue =>
 	typeof value === "object" && value !== null && "data" in value;
+export const isItem = (value: unknown): value is ItemValue =>
+	typeof value === "object" && value !== null && "item" in value;
 export const isText = (value: unknown): value is TextValue =>
 	typeof value === "object" && value !== null && "text" in value;
 export const isAction = (value: unknown): value is ActionValue =>

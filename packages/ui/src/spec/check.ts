@@ -1,6 +1,7 @@
 import {
 	isAction,
 	isData,
+	isItem,
 	isSpacing,
 	isText,
 	type ScreenSpecDocument,
@@ -18,12 +19,15 @@ export interface CatalogPart {
 }
 export type Catalog = Readonly<Record<string, CatalogPart>>;
 
-const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible"]);
+const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible", "repeat"]);
 const show = (value: unknown) => JSON.stringify(value);
 
 /** Whether a value written in the spec fits a prop: a value read from the data, a text or an action is checked when it is drawn. */
 function fits(value: SpecValue, rule: CatalogPart["props"][string]): boolean {
-	if (isData(value) || isText(value) || isAction(value)) return rule.enum === undefined || isData(value);
+	const read = isData(value) || isItem(value);
+	// A list or an object (a list head's columns) comes only from the data.
+	if (rule.type === "data") return read;
+	if (read || isText(value) || isAction(value)) return rule.enum === undefined || read;
 	if (rule.enum) return rule.enum.includes(value as string | number);
 	return typeof value === rule.type;
 }
@@ -64,7 +68,7 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 		}
 		for (const [slot, ids] of Object.entries(element.slots ?? {})) {
 			if (!part.slots.includes(slot)) problems.push(`${id}.slots.${slot}: ${element.type} has no slot "${slot}"`);
-			for (const child of ids) use(child, `${id}.slots.${slot}`);
+			for (const child of ids) if (typeof child === "string") use(child, `${id}.slots.${slot}`);
 		}
 		const children = element.children ?? [];
 		if (children.length > 0 && !part.children) problems.push(`${id}.children: ${element.type} takes no children`);

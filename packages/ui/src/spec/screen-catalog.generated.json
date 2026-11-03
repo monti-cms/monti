@@ -3,17 +3,28 @@
 		"container": false,
 		"children": true,
 		"slots": ["footer", "title"],
-		"props": {}
+		"props": {},
+		"events": []
 	},
 	"Stack": {
 		"container": true,
 		"children": true,
 		"slots": [],
 		"props": {
+			"align": {
+				"enum": ["baseline", "center", "end", "start", "stretch"]
+			},
 			"direction": {
 				"enum": ["column", "row"]
+			},
+			"grow": {
+				"type": "boolean"
+			},
+			"justify": {
+				"enum": ["between", "center", "end", "start"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Form": {
 		"container": false,
@@ -26,7 +37,8 @@
 			"method": {
 				"enum": ["get", "post"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Heading": {
 		"container": false,
@@ -48,7 +60,8 @@
 			"variant": {
 				"enum": ["display", "heading", "label", "page", "title"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Text": {
 		"container": false,
@@ -94,7 +107,8 @@
 			"weight": {
 				"enum": ["medium", "role", "semibold"]
 			}
-		}
+		},
+		"events": []
 	},
 	"FormField": {
 		"container": false,
@@ -104,13 +118,17 @@
 			"id": {
 				"type": "string"
 			}
-		}
+		},
+		"events": []
 	},
 	"FormFieldLabel": {
 		"container": false,
 		"children": true,
 		"slots": ["action"],
 		"props": {
+			"changed": {
+				"type": "data"
+			},
 			"hidden": {
 				"type": "boolean"
 			},
@@ -129,7 +147,8 @@
 			"tone": {
 				"enum": ["default", "muted", "subtle"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Input": {
 		"container": false,
@@ -187,17 +206,22 @@
 			"width": {
 				"enum": ["fit", "full", "number", "short"]
 			}
-		}
+		},
+		"events": []
 	},
 	"FormFieldError": {
 		"container": false,
 		"children": true,
 		"slots": [],
 		"props": {
+			"errors": {
+				"type": "data"
+			},
 			"id": {
 				"type": "string"
 			}
-		}
+		},
+		"events": []
 	},
 	"Button": {
 		"container": false,
@@ -228,7 +252,8 @@
 			"width": {
 				"enum": ["full"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Separator": {
 		"container": false,
@@ -247,7 +272,8 @@
 			"length": {
 				"enum": ["bar", "control", "full"]
 			}
-		}
+		},
+		"events": []
 	},
 	"Image": {
 		"container": false,
@@ -278,6 +304,474 @@
 			"src": {
 				"type": "string"
 			}
-		}
+		},
+		"events": ["fallback", "onLoad"]
+	},
+	"Icon": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"name": {
+				"enum": ["add", "folder", "more", "search"]
+			}
+		},
+		"events": []
+	},
+	"PageColumn": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			},
+			"width": {
+				"enum": ["content", "list"]
+			}
+		},
+		"events": []
+	},
+	"PageHeader": {
+		"container": false,
+		"children": true,
+		"slots": ["meta", "title", "trail"],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"TextButton": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"href": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"loading": {
+				"type": "boolean"
+			},
+			"mono": {
+				"type": "boolean"
+			},
+			"name": {
+				"type": "string"
+			},
+			"quiet": {
+				"type": "boolean"
+			},
+			"size": {
+				"enum": ["caption", "meta", "micro", "note"]
+			},
+			"tone": {
+				"enum": ["proposal"]
+			},
+			"type": {
+				"enum": ["button", "reset", "submit"]
+			},
+			"variant": {
+				"enum": ["danger", "inherit", "ink", "plain", "quiet", "underline"]
+			}
+		},
+		"events": []
+	},
+	"ListHead": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"add": {
+				"type": "data"
+			},
+			"columns": {
+				"type": "data"
+			},
+			"end": {
+				"type": "number"
+			},
+			"moveLabel": {
+				"type": "string"
+			},
+			"selectAll": {
+				"type": "data"
+			}
+		},
+		"events": ["onPlace", "onPreview", "onStep"]
+	},
+	"ListScroll": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"Table": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"columns": {
+				"type": "data"
+			},
+			"container": {
+				"enum": ["none", "scroll"]
+			},
+			"id": {
+				"type": "string"
+			},
+			"layout": {
+				"enum": ["auto", "fixed"]
+			},
+			"stickyHeader": {
+				"type": "boolean"
+			},
+			"width": {
+				"type": "number"
+			}
+		},
+		"events": []
+	},
+	"TableBody": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"dimmed": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"TableRow": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			},
+			"proposal": {
+				"type": "boolean"
+			},
+			"selected": {
+				"type": "boolean"
+			},
+			"twoLine": {
+				"type": "boolean"
+			}
+		},
+		"events": []
+	},
+	"TableCell": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"align": {
+				"enum": ["center", "end", "start"]
+			},
+			"colSpan": {
+				"type": "number"
+			},
+			"filler": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			},
+			"size": {
+				"type": "number"
+			},
+			"tone": {
+				"enum": ["muted", "subtle"]
+			},
+			"truncate": {
+				"type": "boolean"
+			},
+			"valign": {
+				"enum": ["top"]
+			},
+			"width": {
+				"enum": ["lg", "md", "sm", "xs"]
+			},
+			"wrap": {
+				"type": "boolean"
+			}
+		},
+		"events": []
+	},
+	"RowCheck": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"checked": {
+				"type": "boolean"
+			},
+			"label": {
+				"type": "string"
+			},
+			"proposal": {
+				"type": "boolean"
+			}
+		},
+		"events": ["onCheckedChange"]
+	},
+	"RowLink": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"href": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"type": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"RowTitle": {
+		"container": false,
+		"children": true,
+		"slots": ["address", "title"],
+		"props": {
+			"folder": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"RowActions": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"EntryStatus": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			},
+			"quiet": {
+				"type": "boolean"
+			},
+			"status": {
+				"enum": ["archived", "draft", "editing", "failed", "published"]
+			}
+		},
+		"events": []
+	},
+	"Count": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			},
+			"tone": {
+				"enum": ["danger", "default", "proposal", "warning"]
+			}
+		},
+		"events": []
+	},
+	"IconButton": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			},
+			"label": {
+				"type": "string"
+			},
+			"name": {
+				"type": "string"
+			},
+			"pressed": {
+				"type": "boolean"
+			},
+			"side": {
+				"enum": ["bottom", "left", "right", "top"]
+			},
+			"tone": {
+				"enum": ["danger"]
+			},
+			"type": {
+				"enum": ["button", "reset", "submit"]
+			}
+		},
+		"events": ["trigger"]
+	},
+	"ListFooter": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PageSizeMenu": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"label": {
+				"type": "string"
+			},
+			"options": {
+				"type": "data"
+			},
+			"value": {
+				"type": "number"
+			}
+		},
+		"events": ["onValueChange"]
+	},
+	"Pagination": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PaginationContent": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PaginationItem": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PaginationLink": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"href": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"isActive": {
+				"type": "boolean"
+			},
+			"type": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PaginationPrevious": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"href": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"isActive": {
+				"type": "boolean"
+			},
+			"text": {
+				"type": "string"
+			},
+			"type": {
+				"type": "string"
+			}
+		},
+		"events": []
+	},
+	"PaginationNext": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"href": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"isActive": {
+				"type": "boolean"
+			},
+			"text": {
+				"type": "string"
+			},
+			"type": {
+				"type": "string"
+			}
+		},
+		"events": []
 	}
 }
