@@ -6,7 +6,7 @@ import { SidePanel } from "./side-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 
 /**
- * The properties pane of the editor: a tab bar at the top (no head and no close button), then the list of properties: each is a `FormField ruled` whose input is there from the start. It is a `SidePanel` 300px wide whose
+ * The properties pane of the editor: a tab bar at the top (no head and no close button), then the list of properties: each is a `FormField` whose input is there from the start, and that input's underline is the row's only line. It is a `SidePanel` 300px wide whose
  * pinned row is the tab bar. `children` is the list of the picked tab.
  */
 function PropertyPanel({
@@ -62,7 +62,7 @@ function PropertyPanel({
 	);
 }
 
-/** A run of rows, with an optional quiet subheading above it ("Classification"). Every row has its hairline but the last row of the pane. */
+/** A run of rows, with an optional quiet subheading above it ("Classification"), 20px between rows. No rule of its own: each input draws its line. */
 function PropertyGroup({
 	title,
 	className,
@@ -74,7 +74,7 @@ function PropertyGroup({
 		<section
 			data-slot="property-group"
 			aria-labelledby={title ? titleId : undefined}
-			className={cn("flex flex-col last:**:data-[slot=field]:last:border-b-0", className)}
+			className={cn("flex flex-col", className)}
 			{...props}
 		>
 			{title && (
@@ -82,7 +82,7 @@ function PropertyGroup({
 					{title}
 				</h3>
 			)}
-			<div className="flex flex-col">{children}</div>
+			<div className="flex flex-col gap-monti-20 py-monti-10">{children}</div>
 		</section>
 	);
 }

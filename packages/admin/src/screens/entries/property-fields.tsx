@@ -116,7 +116,7 @@ function PropertyShell({
 		if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
 	}, []);
 	const row = (trigger: ReactNode, failure: ReactNode) => (
-		<FormField ruled aria-labelledby={labelId} onFocus={() => setFocused(true)} onBlur={onBlur}>
+		<FormField aria-labelledby={labelId} onFocus={() => setFocused(true)} onBlur={onBlur}>
 			<FormFieldLabel
 				id={labelId}
 				htmlFor={editable ? controlId : undefined}
@@ -454,7 +454,7 @@ const ViewProperty = memo(function ViewProperty({ name }: { name: string }) {
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
 	const labelId = useId();
 	return field.label ? (
-		<FormField ruled aria-labelledby={labelId}>
+		<FormField aria-labelledby={labelId}>
 			<FormFieldLabel id={labelId}>{field.label}</FormFieldLabel>
 			{view}
 		</FormField>

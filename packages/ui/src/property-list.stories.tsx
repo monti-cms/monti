@@ -34,7 +34,7 @@ import {
 } from "./index";
 
 /**
- * The editor's properties pane: the tab bar on top, then each property a `FormField ruled` whose input is there from the start (a pale underline
+ * The editor's properties pane: the tab bar on top, then each property a `FormField` whose input is there from the start (a pale underline
  * at rest, the ink underline on focus). The assistant's fill button ("✦ 채우기", "↻ 다시" once there is a value) sits at the end of the label row
  * and shows only while the pointer or the keyboard is in that row; what the assistant wrote waits inside the input as `proposal`.
  */
@@ -103,7 +103,7 @@ function TextRow({
 	const id = useId();
 	const action = fill === undefined ? undefined : <Fill filled={fill === "filled"} loading={fill === "loading"} />;
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id} action={action}>
 				{label}
 			</FormFieldLabel>
@@ -119,7 +119,7 @@ function TextRow({
 function AddressRow() {
 	const id = useId();
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id}>주소</FormFieldLabel>
 			<Affix
 				id={id}
@@ -137,7 +137,7 @@ function AddressRow() {
 
 function PublishedRow() {
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel>발행일</FormFieldLabel>
 			<Text variant="meta">2026. 10. 24 10:12</Text>
 		</FormField>
@@ -157,7 +157,7 @@ function CategoryRow({
 }) {
 	const id = useId();
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id} action={fill ? <Fill filled={fill === "filled"} /> : undefined}>
 				{label}
 			</FormFieldLabel>
@@ -181,7 +181,7 @@ function TagsRow() {
 	const id = useId();
 	const anchor = useComboboxAnchor();
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id}>태그</FormFieldLabel>
 			<Combobox items={TAGS} multiple defaultValue={["가을", "산"]}>
 				<ComboboxChips ref={anchor}>
@@ -211,7 +211,7 @@ function SelectRow({ proposal = false }: { proposal?: boolean }) {
 		{ value: "long", label: "긴 글" },
 	];
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id}>분량</FormFieldLabel>
 			<Select items={items} defaultValue="short">
 				<SelectTrigger id={id} size="sm" width="full" proposal={proposal}>
@@ -232,7 +232,7 @@ function SelectRow({ proposal = false }: { proposal?: boolean }) {
 function SwitchRow() {
 	const id = useId();
 	return (
-		<FormField ruled>
+		<FormField>
 			<FormFieldLabel htmlFor={id}>검색에서 숨기기</FormFieldLabel>
 			<Switch id={id} />
 		</FormField>
@@ -332,7 +332,7 @@ export const ReadOnlyValue: Story = {
 		<Panel>
 			{() => (
 				<PropertyGroup>
-					<FormField ruled>
+					<FormField>
 						<FormFieldLabel>대표 이미지</FormFieldLabel>
 						<Text variant="note">autumn-trail.jpg</Text>
 						<FormFieldDescription>원문과 함께 써요.</FormFieldDescription>

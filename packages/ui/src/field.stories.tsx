@@ -4,15 +4,7 @@ import { useState } from "react";
 import { Affix } from "./affix";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
-import {
-	FormField,
-	FormFieldDescription,
-	FormFieldError,
-	FormFieldGroup,
-	FormFieldLabel,
-	FormFieldLegend,
-	FormFieldSet,
-} from "./field";
+import { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldLegend, FormFieldSet } from "./field";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";
@@ -264,40 +256,6 @@ export const SetLegendAsFieldLabel: Story = {
 				</Option>
 			</Stack>
 		</FormFieldSet>
-	),
-};
-
-/**
- * `ruled`: a property row in a side panel (a fine rule under the row, 10px above and below). The value is the input from the start, at the
- * panel's `sm` size; what the assistant wrote is its `proposal`. A value nobody can change is text, with its reason in one quiet line.
- */
-export const Ruled: Story = {
-	render: () => (
-		<Stack gap={0}>
-			<FormField ruled>
-				<FormFieldLabel
-					htmlFor="p-slug"
-					action={
-						<TextButton tone="proposal" size="micro">
-							<Spark aria-hidden />
-							채우기
-						</TextButton>
-					}
-				>
-					주소
-				</FormFieldLabel>
-				<Input id="p-slug" size="sm" mono defaultValue="/first-post" />
-			</FormField>
-			<FormField ruled>
-				<FormFieldLabel htmlFor="p-summary">요약</FormFieldLabel>
-				<Textarea id="p-summary" size="sm" proposal rows={2} defaultValue="햇살이 드는 책상에서 쓴 첫 글." />
-			</FormField>
-			<FormField ruled>
-				<FormFieldLabel>원문 언어</FormFieldLabel>
-				<Text variant="note">한국어</Text>
-				<FormFieldDescription>원문과 함께 쓰는 필드예요.</FormFieldDescription>
-			</FormField>
-		</Stack>
 	),
 };
 
