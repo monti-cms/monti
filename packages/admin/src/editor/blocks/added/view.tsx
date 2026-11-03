@@ -112,7 +112,7 @@ export function DefaultBlockView() {
 	const names = Object.keys(definition.attributes);
 	const container = isContainer(definition);
 	return (
-		<BlockFrame data-monti-custom-block={definition.name} className="my-monti-24 rounded-monti-md border">
+		<BlockFrame boxed data-monti-custom-block={definition.name}>
 			{editable && names.length > 0 && (
 				<ContainerToolbar label={t("added.toolbar", { label: definition.label })}>
 					<BlockSettings>

@@ -433,8 +433,8 @@ export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, C
 `select`·`focus({ child, at })`·`remove`·`textAround`(블록 앞뒤 글, AI 맥락용)를 준다. 컨테이너의 자식 `children`은 `addChild`·`removeChild`·`moveChild`·`setChildValue`로 다루며,
 `definition.children.min`·`max`를 지키고 범위를 벗어나면 `limit` 코드의 `EditorResult`를, 편집기가 잠겨 있으면 `read_only`를 돌려준다. `transact(tx => ...)`는 현재 문서를 읽는 여러 편집을
 문서 변경 한 번(되돌리기 한 번)으로 묶는다. 예를 들어 탭 이름을 바꾸면서 그 탭을 가리키는 기본 탭도 함께 바꿀 때 쓴다. `raw`(`{ editor, node, getPos }`)는 하나뿐인 탈출구이자
-Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다),
-`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다. 자식 블록은 `[data-monti-block-content]`의 첫 요소 안에 놓인다.
+Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다. `padded`는 상자 블록의 안쪽 여백),
+`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다(`boxed`는 본문에 홀로 선 블록의 종이 바탕 가는 테두리 상자). 자식 블록은 `[data-monti-block-content]`의 첫 요소 안에 놓인다.
 
 `useEntryEditor(options)`는 화면을 뺀 항목 편집기다. 불러오기, 브라우저 복구본, 명시적 서버 저장, 발행, 상태 변경(보관·휴지통·복원), 복구와 충돌 상태를 맡는다.
 **서버 자동 저장이 아니다.** 편집하는 동안에는 브라우저에만 복구본이 남고(IndexedDB, 입력이 멈춘 뒤 기록하며 서버로 보내지 않는다),

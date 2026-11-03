@@ -43,7 +43,7 @@ export function CollapsibleNodeView() {
 	};
 
 	return (
-		<BlockFrame className="my-monti-24 rounded-monti-md border bg-monti-page">
+		<BlockFrame boxed>
 			<div
 				contentEditable={false}
 				className={cn(
@@ -67,13 +67,8 @@ export function CollapsibleNodeView() {
 				/>
 			</div>
 			<Content
-				className={cn(
-					"px-monti-12 pt-monti-8 pb-monti-12 text-monti-default",
-					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
-					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
-					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
-					!open && "hidden",
-				)}
+				padded
+				className={cn(!open && "hidden")}
 				// The read-only source view shows the collapsed body expanded too (`data-monti-collapsed`).
 				data-monti-collapsed={open ? undefined : ""}
 			/>
