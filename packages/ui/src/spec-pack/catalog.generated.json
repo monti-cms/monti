@@ -15,6 +15,136 @@
 			},
 			"events": []
 		},
+		"Panel": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": ["actions", "footer"],
+			"props": {
+				"closable": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				},
+				"width": {
+					"kind": "variant",
+					"enum": ["panel", "side"]
+				}
+			},
+			"events": []
+		},
+		"IconOnlyButton": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"icon": {
+					"kind": "variant",
+					"enum": [
+						"add",
+						"app-connectivity",
+						"archive",
+						"arrow--down",
+						"asleep",
+						"book",
+						"bookmark",
+						"box",
+						"bullhorn",
+						"calendar",
+						"center--circle",
+						"chat",
+						"chevron--left",
+						"chevron--right",
+						"close--outline",
+						"code--reference",
+						"color-palette",
+						"compass",
+						"dashboard",
+						"data--base",
+						"data-table",
+						"document",
+						"document--blank",
+						"document--view",
+						"edit",
+						"email",
+						"favorite",
+						"fire",
+						"flag",
+						"flash",
+						"folder",
+						"gift",
+						"globe",
+						"hashtag",
+						"idea",
+						"image",
+						"layers",
+						"light",
+						"link",
+						"list",
+						"location",
+						"logo--github",
+						"music",
+						"notebook",
+						"notebook--reference",
+						"overflow-menu--horizontal",
+						"package",
+						"password",
+						"pen",
+						"pin",
+						"plug",
+						"portfolio",
+						"quotes",
+						"rocket",
+						"rss",
+						"screen",
+						"search",
+						"settings",
+						"settings--adjust",
+						"shapes",
+						"shopping--bag",
+						"side-panel--close",
+						"sigma",
+						"spark",
+						"square--outline",
+						"star",
+						"subtract",
+						"tag",
+						"terminal",
+						"text--highlight",
+						"ticket",
+						"time",
+						"tools",
+						"trash-can",
+						"user",
+						"user--multiple",
+						"video",
+						"warning--alt"
+					]
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"DragHandle": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"aria-label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"LanguageList": {
 			"kind": "part",
 			"bind": false,

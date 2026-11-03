@@ -35,6 +35,7 @@ import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
 import { Select, SelectTrigger, SelectValue } from "../select";
 import { Separator } from "../separator";
+import { SidePanel } from "../side-panel";
 import {
 	SidebarContent,
 	SidebarFooter,
@@ -703,6 +704,34 @@ function LanguageSourceMark({ flag, children }: { flag?: string; children?: Reac
 	return <LanguageSource flag={flag}>{children}</LanguageSource>;
 }
 
+/** A panel beside the page: its title, its actions (⋯) and × in its head, what it holds, and its footer. */
+function Panel({
+	title,
+	closable,
+	width,
+	actions,
+	footer,
+	children,
+}: {
+	title?: string;
+	closable?: boolean;
+	width?: "side" | "panel";
+	actions?: React.ReactNode;
+	footer?: React.ReactNode;
+	children?: React.ReactNode;
+}) {
+	return (
+		<SidePanel title={title} closable={closable} width={width} actions={actions} footer={footer}>
+			{children}
+		</SidePanel>
+	);
+}
+
+/** An icon button by its icon's name (a head's ⋯, a page's search). */
+function IconOnlyButton({ icon, label }: { icon?: IconName; label?: string }) {
+	return <IconButton label={label ?? ""}>{icon && <Icon name={icon} />}</IconButton>;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -723,6 +752,9 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Panel,
+	IconOnlyButton,
+	DragHandle,
 	LanguageList,
 	LanguageLine,
 	LanguageSourceMark,
@@ -846,6 +878,9 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Panel: { kind: "part", props: { title: "text", closable: "flag", width: "variant" } },
+	IconOnlyButton: { kind: "part", props: { icon: "variant", label: "text" } },
+	DragHandle: { kind: "part", props: { "aria-label": "text" } },
 	LanguageList: { kind: "part", props: {} },
 	LanguageLine: {
 		kind: "part",

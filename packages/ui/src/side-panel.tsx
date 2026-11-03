@@ -37,6 +37,7 @@ export function SidePanel({
 	actions,
 	back,
 	onClose,
+	closable,
 	footer,
 	composer,
 	width = "side",
@@ -55,6 +56,8 @@ export function SidePanel({
 	/** A back button before the title, for a view inside the panel (the assistant's past conversations): its name ("Back to the conversation") and what it does. */
 	back?: { label: string; onClick: () => void };
 	onClose?: () => void;
+	/** The × is drawn without `onClose` (a screen spec's look, before its behavior is wired). */
+	closable?: boolean;
 	/** Pinned under the body. */
 	footer?: ReactNode;
 	/** The box to type in, pinned under the body with no line over it (the assistant's chat input), 12px above it and 16 at the sides and below. */
@@ -110,7 +113,7 @@ export function SidePanel({
 						{title}
 					</h2>
 					{actions}
-					{onClose && (
+					{(onClose || closable) && (
 						<IconButton label={labels.close} side="bottom" onClick={onClose}>
 							<Close aria-hidden />
 						</IconButton>

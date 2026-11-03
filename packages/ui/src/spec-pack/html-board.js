@@ -287,7 +287,7 @@ const parts = [
 		leaf: true,
 		asProps: ["order", "font-size", "justify-self", "opacity"],
 	},
-	{ match: (el) => el.matches(".mt-row > span"), part: "TableCell", asProps: ["order", "display"] },
+	{ match: (el) => el.matches(".mt-row > span"), part: "TableCell", asProps: ["order", "display", "color", "cursor"] },
 	{
 		match: (el) => el.matches(".mt-status"),
 		part: "EntryStatus",
@@ -448,6 +448,44 @@ const parts = [
 		leaf: true,
 		asProps: ["display", "align-items", "gap"],
 	},
+	// A panel beside the page.
+	{
+		match: (el) => el.matches("aside.mt-panel"),
+		part: "Panel",
+		props: (el) => ({
+			title: el.querySelector(".mt-panel-head > h2")?.textContent.trim(),
+			closable:
+				[...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].some((button) => button.textContent.trim() === "×") ||
+				undefined,
+		}),
+		slots: (el) => ({
+			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter(
+				(button) => button.textContent.trim() !== "×",
+			),
+			footer: el.querySelector(":scope > .mt-panel-foot"),
+		}),
+		children: (el) => el.querySelector(":scope > .mt-panel-body"),
+		asProps: ["flex", "flex-grow", "min-width", "box-sizing", "display", "flex-direction"],
+	},
+	{
+		match: (el) => el.matches(".mt-icon-btn") && el.textContent.trim() === "⋯",
+		part: "MoreButton",
+		leaf: true,
+		asProps: ["font-size"],
+	},
+	{
+		match: (el) => el.matches(".mt-icon-btn:has(> svg)") && iconName(el.querySelector("svg")) !== undefined,
+		part: "IconOnlyButton",
+		props: (el) => ({ icon: iconName(el.querySelector("svg")) }),
+		leaf: true,
+	},
+	// A row's drag handle, in its own cell.
+	{
+		match: (el) => el.matches(".mt-row > span:has(> svg):not(:has(*:not(svg, svg *)))"),
+		part: "TableCell",
+		asProps: ["color", "cursor", "display"],
+	},
+	{ match: (el) => el.matches(".mt-row > span > svg"), part: "DragHandle", leaf: true, asProps: ["display"] },
 	// A page's tab row: each tab a page of its own, with its count.
 	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
 	{
@@ -511,6 +549,7 @@ const parts = [
 		part: "SearchToggle",
 		props: (el) => ({ label: el.textContent.trim() }),
 		leaf: true,
+		asProps: ["padding", "width", "justify-content"],
 	},
 	// An empty list's steps.
 	{ match: (el) => el.matches(".mt-empty"), part: "EmptySteps", asProps: ["border-top"] },
@@ -581,13 +620,13 @@ const parts = [
 			align: { center: "center", right: "end", left: "start" }[el.style.textAlign],
 		}),
 		// What the board writes inline that is one of the part's own props.
-		asProps: ["color", "text-align"],
+		asProps: ["color", "text-align", "flex-grow"],
 	},
 ];
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];
