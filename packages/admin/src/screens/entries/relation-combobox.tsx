@@ -122,10 +122,8 @@ export function RelationCombobox({
 						onSearch(text);
 					}
 				},
-				// A closed list starts the next search from the first entries again.
-				onOpenChange: (open: boolean) => {
-					if (!open) onSearch("");
-				},
+				// Opening the list asks for the first entries; a closed list starts the next search from them again.
+				onOpenChange: () => onSearch(""),
 			}
 		: { onInputValueChange: setQuery };
 	const items: Item[] = canCreate

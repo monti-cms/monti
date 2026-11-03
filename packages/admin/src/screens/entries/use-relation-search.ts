@@ -47,6 +47,12 @@ export function useRelationSearch({
 	const site = useSite();
 	const tc = useTranslator(commonMessages);
 	const [query, setQuery] = useState("");
+	// The list is asked for only once the field is used (its list opened or text typed), so a page of relation fields sends no searches.
+	const [started, setStarted] = useState(false);
+	const search = useCallback((text: string) => {
+		setStarted(true);
+		setQuery(text);
+	}, []);
 	// Every entry seen so far (results, lookups, created ones) by id, and the ids a lookup already answered for.
 	const [known, setKnown] = useState<ReadonlyMap<string, RelationEntry>>(new Map());
 	const [resolved, setResolved] = useState<ReadonlySet<string>>(new Set());
@@ -83,7 +89,7 @@ export function useRelationSearch({
 	const searchQuery = useQuery({
 		queryKey: entriesKeys.search(params.toString()),
 		queryFn: ({ signal }) => searchEntries(site, params, signal),
-		enabled: enabled && listed,
+		enabled: enabled && listed && started,
 		retry: false,
 		placeholderData: keepPreviousData,
 	});
@@ -125,7 +131,7 @@ export function useRelationSearch({
 		/** Whether the last search failed. */
 		error: searchQuery.isError,
 		/** Sets the text to search for (debounced). */
-		search: setQuery,
+		search,
 		/** The entry with this id if it was seen, by search, lookup or `remember`. */
 		entryOf: (id: string): RelationEntry | undefined => known.get(id),
 		/** Whether the id was looked up and no entry answered (it was deleted, trashed or belongs to another collection). */
