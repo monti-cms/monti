@@ -55,7 +55,7 @@
 | 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. |
 | 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`) | 다른 탭에 제안이 있으면 탭 이름 뒤 `ChangeDot tone="proposal"`. |
 | "빈 칸 채우기" (탭 줄 끝) | `TextButton tone="proposal"`(`Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. |
-| 속성 한 행 | `PropertyRow`(`label`, `action`, `error`, `note`) | 라벨은 mono 11, 값은 13. 라벨 줄 끝 `action`은 포인터나 키보드가 행 안에 있을 때만 보인다. |
+| 속성 한 행 | `FormField ruled` + `FormFieldLabel`(`htmlFor`, 라벨 줄 끝 `action`) + 입력 부품 + `FormFieldError` | 라벨은 mono 11, 값은 13. 라벨 줄 끝의 어시스턴트 버튼은 포인터나 키보드가 행 안에 있을 때만 보인다. |
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
 | 주소 | `Affix`(`prefix` "/posts/", 끝 `action`은 다시 만들기 `IconButton`), mono | 늘 입력 칸이다. 바꿀 수 있는 부분만 밑줄. |
 | 발행일 | `Text variant="meta"` | 읽기만 한다. 날짜는 "발행하기 ▾"가 정한다. |
@@ -69,7 +69,7 @@
 | 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
 | 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="sm"`, `Textarea size="sm"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
 | 어시스턴트가 쓴 값, 받기를 기다리는 제안 | 각 입력 부품의 `proposal`(파란 글자, 파란 밑줄) | 제안은 입력칸 안에 들어 있고 바로 고칠 수 있다. 고치거나 받으면 보통 색, 버리면 옛 값으로 돌아간다. |
-| 사람이 바꿀 수 없는 값 (번역에서 원문과 함께 쓰는 필드) | `PropertyRow`에 글로만, `note` 한 줄 | 입력 부품이 없다. |
+| 사람이 바꿀 수 없는 값 (번역에서 원문과 함께 쓰는 필드) | `FormField ruled` + `FormFieldLabel` + `Text variant="note"`, 아래 `FormFieldDescription` 한 줄 | 입력 부품이 없다. |
 
 ### 상태 표시줄
 
@@ -106,6 +106,3 @@
 | `seriesPending` | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") |
 | `toast` "발행 막힘" · "발행됨" | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" |
 
-## 지금 코드와 다른 곳
-
-- `PropertyRow`는 값을 `<button>`으로 그리고, `onEdit`을 누르면 `editing`이 되어 그때만 입력 부품(`children`)을 보인다(`packages/ui/src/property-list.tsx`). 화면은 `useEditInPlace`로 이것을 쓴다(`packages/admin/src/screens/entries/property-fields.tsx`). 위 표는 값 자리에 입력 부품을 늘 둔다. 고칠 때 `PropertyRow`의 `onEdit` · `editing`을 없애고, 값 자리에 입력 부품을 늘 둔다.

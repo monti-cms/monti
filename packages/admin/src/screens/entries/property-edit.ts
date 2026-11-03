@@ -3,12 +3,11 @@
 import { createContext, useContext } from "react";
 
 /**
- * What a field input needs to know when it opens in place in the properties list: the assistant wrote its value and nobody has edited it (`proposal`: it
- * draws blue), and how it ends the edit (`done`: Enter, Escape, a closed list). Absent in a form, where the input is always there.
+ * What a field input needs to know in the properties list: the assistant wrote or proposes its value and nobody has edited it (`proposal`: it draws
+ * blue). Absent in a form, where the form field says it itself.
  */
 export interface PropertyEdit {
 	readonly proposal: boolean;
-	readonly done: () => void;
 }
 
 export const PropertyEditContext = createContext<PropertyEdit | null>(null);

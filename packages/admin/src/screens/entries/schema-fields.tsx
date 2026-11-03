@@ -51,7 +51,6 @@ import {
 } from "../../admin-components";
 import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
-import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import type { BacklinkChange } from "./backlink-changes";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
@@ -197,7 +196,7 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useAdminComponents();
-	// Opened in place in the properties list: the assistant's blue until edited, and Enter or Escape ends the edit.
+	// In the properties list: the assistant's blue until edited.
 	const edit = usePropertyEdit();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
 	if (registered && !isFieldInputParts(registered)) {
@@ -222,9 +221,6 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					onKeyDown={(event) => {
-						if (event.key === "Escape") edit?.done();
-					}}
 				/>
 			) : (
 				<Input
@@ -237,9 +233,6 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					onKeyDown={(event) => {
-						if ((event.key === "Enter" && !isComposingKey(event)) || event.key === "Escape") edit?.done();
-					}}
 				/>
 			);
 		case "select": {
@@ -253,10 +246,6 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					value={text || field.defaultValue}
 					items={items}
 					disabled={context.disabled}
-					defaultOpen={Boolean(edit)}
-					onOpenChange={(open) => {
-						if (!open) edit?.done();
-					}}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
 					<SelectTrigger id={id} size="sm" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>

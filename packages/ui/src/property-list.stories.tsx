@@ -1,16 +1,19 @@
 import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { FormField, FormFieldLabel } from "./field";
 import { Input } from "./input";
-import { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
+import { PropertyGroup, PropertyPanel } from "./property-list";
 import { Spark } from "./spark";
+import { Switch } from "./switch";
+import { Text } from "./text";
 import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
 
 /**
- * The editor's properties pane: a tab bar at the top (no head, no close button) and a read list. Each row is a label above its value; pressing the value opens
- * the field in place. The assistant's fill action sits at the right end of the label row and shows while the pointer or keyboard is in the row. A value the
- * assistant wrote is blue until it is edited.
+ * The editor's properties pane: a tab bar at the top (no head, no close button) and the properties, each a `FormField ruled` whose input is there from the
+ * start. The assistant's fill action sits at the right end of the label row and shows while the pointer or keyboard is in the row. A value the assistant
+ * wrote, or proposed, is blue in its input until it is edited.
  */
 const meta = {
 	title: "Patterns/List/PropertyPanel",
@@ -33,109 +36,113 @@ const tabs = [
 	{ value: "SEO", label: "SEO" },
 ];
 
+const fill = (
+	<TextButton tone="proposal" size="micro">
+		<Spark />
+		채우기
+	</TextButton>
+);
+
+/** One property: its label (with the label row's action) over its input. */
+function Row({
+	id,
+	label,
+	action,
+	children,
+}: {
+	id: string;
+	label: string;
+	action?: React.ReactNode;
+	children: React.ReactNode;
+}) {
+	return (
+		<FormField ruled>
+			<FormFieldLabel htmlFor={id} action={action}>
+				{label}
+			</FormFieldLabel>
+			{children}
+		</FormField>
+	);
+}
+
 export const Base: Story = {
 	tags: ["visual"],
 	render: (args) => (
 		<PropertyPanel {...args} tabs={tabs}>
 			<PropertyGroup>
-				<PropertyRow label="주소" value="/first-post" onEdit={() => undefined} />
-				<PropertyRow label="발행일" value="2026. 10. 01" onEdit={() => undefined} />
-				<PropertyRow
-					label="요약"
-					action={
-						<TextButton tone="proposal" size="micro" aria-label="요약 채우기">
-							<Spark />
-							채우기
-						</TextButton>
-					}
-					value="비어 있음"
-					empty
-					onEdit={() => undefined}
-				/>
+				<Row id="slug" label="주소">
+					<Input id="slug" size="sm" mono defaultValue="/first-post" />
+				</Row>
+				<FormField ruled>
+					<FormFieldLabel>발행일</FormFieldLabel>
+					<Text variant="meta">2026. 10. 01</Text>
+				</FormField>
+				<Row id="summary" label="요약" action={fill}>
+					<Textarea id="summary" size="sm" rows={1} placeholder="비어 있음" />
+				</Row>
 			</PropertyGroup>
 			<PropertyGroup title="분류">
-				<PropertyRow label="카테고리" value="개발" onEdit={() => undefined} />
-				<PropertyRow label="태그" value="리액트 · 프론트엔드" onEdit={() => undefined} />
-				<PropertyRow label="시리즈" value="없음" empty onEdit={() => undefined} />
+				<Row id="category" label="카테고리">
+					<Input id="category" size="sm" defaultValue="개발" />
+				</Row>
+				<Row id="tags" label="태그">
+					<Input id="tags" size="sm" defaultValue="리액트, 프론트엔드" />
+				</Row>
+				<Row id="series" label="시리즈">
+					<Input id="series" size="sm" placeholder="없음" />
+				</Row>
 			</PropertyGroup>
 		</PropertyPanel>
 	),
 };
 
-/** The summary is open in place: the count takes the action's place and the field is the underline field. */
+/** Writing the summary: the count stands at the end of the label row while the field has the focus. */
 export const Editing: Story = {
 	tags: ["visual"],
 	render: (args) => (
 		<PropertyPanel {...args} tabs={tabs}>
 			<PropertyGroup>
-				<PropertyRow label="주소" value="/first-post" onEdit={() => undefined} />
-				<PropertyRow
+				<Row
+					id="summary"
 					label="요약"
-					controlId="summary"
-					action={<span className="text-monti-micro text-monti-subtle">28 / 120</span>}
-					editing
+					action={
+						<Text variant="micro" tone="subtle">
+							28 / 120
+						</Text>
+					}
 				>
-					<Textarea id="summary" size="sm" rows={2} defaultValue="리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." />
-				</PropertyRow>
+					<Textarea
+						id="summary"
+						size="sm"
+						rows={2}
+						defaultValue="리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것."
+						autoFocus
+					/>
+				</Row>
 			</PropertyGroup>
 		</PropertyPanel>
 	),
 };
 
-/** The assistant filled the series: blue, with "↻ 다시" on the label row. Editing it, or saving, returns it to the ink. */
+/** The assistant filled the series: blue in its input, with "↻ 다시" on the label row. Editing it, or saving, returns it to the ink. */
 export const FilledByAssistant: Story = {
 	tags: ["visual"],
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup title="분류">
-				<PropertyRow label="카테고리" value="개발" onEdit={() => undefined} />
-				<PropertyRow
-					label="시리즈"
-					action={
-						<TextButton tone="proposal" size="micro" aria-label="시리즈 다시 채우기">
-							<Renew />
-							다시
-						</TextButton>
-					}
-					value="리액트 다시 만들기"
-					proposal
-					onEdit={() => undefined}
-				/>
-			</PropertyGroup>
-		</PropertyPanel>
-	),
-};
-
-/** While the request runs: the spinner and "쓰는 중…", visible without the pointer. */
-export const Writing: Story = {
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup>
-				<PropertyRow
-					label="요약"
-					action={
-						<TextButton tone="proposal" size="micro" loading aria-label="요약 채우는 중">
-							쓰는 중…
-						</TextButton>
-					}
-					value="비어 있음"
-					empty
-					onEdit={() => undefined}
-				/>
-			</PropertyGroup>
-		</PropertyPanel>
-	),
-};
-
-/** The assistant's value opened in place: the underline is blue until the first change. */
-export const FilledAndOpen: Story = {
 	render: function Render(args) {
 		const [value, setValue] = useState("리액트 다시 만들기");
 		const [proposal, setProposal] = useState(true);
 		return (
 			<PropertyPanel {...args} tabs={tabs}>
-				<PropertyGroup>
-					<PropertyRow label="시리즈" controlId="series" editing>
+				<PropertyGroup title="분류">
+					<Row
+						id="series"
+						label="시리즈"
+						action={
+							<TextButton tone="proposal" size="micro">
+								<Renew />
+								다시
+							</TextButton>
+						}
+					>
 						<Input
 							id="series"
 							size="sm"
@@ -146,24 +153,51 @@ export const FilledAndOpen: Story = {
 								setValue(event.target.value);
 							}}
 						/>
-					</PropertyRow>
+					</Row>
 				</PropertyGroup>
 			</PropertyPanel>
 		);
 	},
 };
 
-/** The SEO tab: a read list; an empty value says what it follows. */
+/** While the request runs: the ring and "쓰는 중…", visible without the pointer. */
+export const Writing: Story = {
+	render: (args) => (
+		<PropertyPanel {...args} tabs={tabs}>
+			<PropertyGroup>
+				<Row
+					id="summary"
+					label="요약"
+					action={
+						<TextButton tone="proposal" size="micro" loading>
+							쓰는 중…
+						</TextButton>
+					}
+				>
+					<Textarea id="summary" size="sm" rows={1} placeholder="비어 있음" />
+				</Row>
+			</PropertyGroup>
+		</PropertyPanel>
+	),
+};
+
+/** The SEO tab: an empty value says in its placeholder what it follows. */
 export const Seo: Story = {
 	tags: ["visual"],
 	args: { value: "SEO" },
 	render: (args) => (
 		<PropertyPanel {...args} tabs={tabs}>
 			<PropertyGroup>
-				<PropertyRow label="SEO 제목" value="제목과 같음 · 10/60" empty onEdit={() => undefined} />
-				<PropertyRow label="SEO 설명" value="요약과 같음" empty onEdit={() => undefined} />
-				<PropertyRow label="공유 이미지" value="대표 이미지와 같음" empty onEdit={() => undefined} />
-				<PropertyRow label="검색에서 숨기기" value="아니요" onEdit={() => undefined} />
+				<Row id="seo-title" label="SEO 제목">
+					<Input id="seo-title" size="sm" placeholder="제목과 같음 · 10/60" />
+				</Row>
+				<Row id="seo-description" label="SEO 설명">
+					<Textarea id="seo-description" size="sm" rows={1} placeholder="요약과 같음" />
+				</Row>
+				<FormField ruled>
+					<FormFieldLabel htmlFor="noindex">검색에서 숨기기</FormFieldLabel>
+					<Switch id="noindex" />
+				</FormField>
 			</PropertyGroup>
 		</PropertyPanel>
 	),

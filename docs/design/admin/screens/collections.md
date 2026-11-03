@@ -55,7 +55,7 @@
 |---|---|---|
 | 패널 | `SidePanel`(`width="panel"`, `title` "미리보기"와 흐린 "· 저장 안 됨", 닫기 ×) | 저장하지 않은 필드 목록으로 글의 속성 패널을 그린다. ✦ 버튼을 가린다. |
 | 탭 줄 "기본 · SEO" | `TabsList variant="bar"` | |
-| 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `PropertyRow`, 값 자리의 입력 부품, 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
+| 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField ruled`, 값 자리의 입력 부품, 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
 | 미리볼 수 없음 | `Text variant="note"` "고칠 곳이 있어 미리볼 수 없어요." + `TodoItem blocking`(`title` 필드 이름, 아래 줄 "선택지가 없어요") | 행을 누르면 그 필드로 간다. 저장 묶음의 알약이 비활성이 된다. |
 
 ### 새 컬렉션 시트

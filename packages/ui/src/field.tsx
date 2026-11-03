@@ -62,13 +62,21 @@ function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
  * A labeled field: the label above (mono 11), the control, then at most one line of error. The assistant's fill action sits on the label row
  * and shows only while the pointer or the keyboard is in this field.
  */
-function FormField({ className, ...props }: React.ComponentProps<"div">) {
+function FormField({
+	ruled = false,
+	className,
+	...props
+}: React.ComponentProps<"div"> & {
+	/** A row of the properties pane: a hairline under it and 10px above and below (the pane's last row has no line). */
+	ruled?: boolean;
+}) {
 	return (
 		<div
 			role="group"
 			data-slot="field"
 			className={cn(
-				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[tone=proposal]:opacity-0 hover:**:data-[tone=proposal]:opacity-100 focus-within:**:data-[tone=proposal]:opacity-100",
+				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[tone=proposal]:data-loading:opacity-100 **:data-[tone=proposal]:opacity-0 hover:**:data-[tone=proposal]:opacity-100 focus-within:**:data-[tone=proposal]:opacity-100",
+				ruled && "border-monti-muted border-b py-monti-10",
 				className,
 			)}
 			{...props}

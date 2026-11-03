@@ -66,7 +66,6 @@ export const ConversationRow = close(open.ConversationRow);
 export const ConversationRowMore = close(open.ConversationRowMore);
 export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);
-export const PropertyRow = close(open.PropertyRow);
 export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
 export type {
