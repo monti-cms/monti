@@ -112,18 +112,21 @@ export interface EditorProposals {
 	readonly onDiscard: (items: readonly EditorProposalItem[]) => void;
 	/**
 	 * The admin wrote in a proposal's card ("keep the end, shorten the start"): the assistant makes it again. Resolves with the id of the proposal that took
-	 * its place (drawn and kept open in the card), or `null` when nothing is proposed there any more. Without it, the card has no reply row.
+	 * its place (drawn and kept open in the card), or `null` when nothing is proposed there any more. Without it, the card has no reply row. `signal` aborts
+	 * when the admin stops the request (the card's stop button): the source then rejects, quietly.
 	 */
-	readonly onAsk?: (item: EditorProposalItem, text: string) => Promise<string | null>;
+	readonly onAsk?: (item: EditorProposalItem, text: string, signal: AbortSignal) => Promise<string | null>;
 	/** The bubble's name was pressed while it showed `item`: open where it came from (its conversation). */
 	readonly onOpen?: (item: EditorProposalItem) => void;
 	/**
 	 * The admin selected words and asked about them (⌘J or the format bar's "✦ Request"; flow 2 · 09b–c). The entry is saved first. Resolves with the id of
 	 * the proposal made for them (drawn and opened in its card), or `null` when nothing is proposed. Without it, there is no request on a selection.
+	 * `signal` aborts when the admin stops it, as for `onAsk`.
 	 */
 	readonly onAskAt?: (
 		spot: { readonly words: string; readonly blockId: string },
 		text: string,
+		signal: AbortSignal,
 	) => Promise<string | null>;
 }
 

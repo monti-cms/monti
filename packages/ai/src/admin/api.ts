@@ -127,7 +127,14 @@ export const listEntryProposals = (site: Site, entryId: string, options: AiReque
 	adminFetch<{ items: EditorProposalView[] }>(site, `/v1/ai/proposals?entry=${segment(entryId)}`, options);
 
 /** `POST /v1/ai/proposals/:id/items/:itemId/ask`: the assistant writes one body change again; the change that took its place (`null`: none any more). */
-export const askProposalItem = (site: Site, id: string, itemId: string, text: string, fallback?: string) =>
+export const askProposalItem = (
+	site: Site,
+	id: string,
+	itemId: string,
+	text: string,
+	fallback?: string,
+	signal?: AbortSignal,
+) =>
 	adminFetch<{ item: EditorProposalView | null }>(
 		site,
 		`/v1/ai/proposals/${segment(id)}/items/${segment(itemId)}/ask`,
@@ -135,15 +142,24 @@ export const askProposalItem = (site: Site, id: string, itemId: string, text: st
 			method: "POST",
 			json: { text },
 			fallback,
+			...(signal ? { signal } : {}),
 		},
 	);
 
 /** `POST /v1/ai/spots`: the assistant writes the block that holds selected words again, as a proposal of its own (`null`: nothing to propose). */
-export const askAtSelection = (site: Site, entry: string, words: string, text: string, fallback?: string) =>
+export const askAtSelection = (
+	site: Site,
+	entry: string,
+	words: string,
+	text: string,
+	fallback?: string,
+	signal?: AbortSignal,
+) =>
 	adminFetch<{ item: EditorProposalView | null }>(site, "/v1/ai/spots", {
 		method: "POST",
 		json: { entry, words, text },
 		fallback,
+		...(signal ? { signal } : {}),
 	});
 
 /** `POST /v1/ai/proposals/:id/settle`: what the admin accepted (and saved) and discarded in the editor. */

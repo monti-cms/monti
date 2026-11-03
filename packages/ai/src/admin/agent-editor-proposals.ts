@@ -117,11 +117,11 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				}
 				void settle(byProposal);
 			},
-			onAsk: async (item: EditorProposalItem, text: string) => {
+			onAsk: async (item: EditorProposalItem, text: string, signal: AbortSignal) => {
 				const view = byId.get(item.id);
 				if (!view) return null;
 				try {
-					const { item: next } = await askProposalItem(site, view.proposalId, item.id, text, t("error.ask"));
+					const { item: next } = await askProposalItem(site, view.proposalId, item.id, text, t("error.ask"), signal);
 					// The new change takes the old one's place at once; the list is read again behind it.
 					if (entryId) {
 						client.setQueryData<{ items: EditorProposalView[] }>(aiKeys.entryProposals(entryId), (data) =>
@@ -137,15 +137,16 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 					refresh([view.proposalId]);
 					return next?.id ?? null;
 				} catch (error) {
-					toast.error(errorText(site, error, t("error.ask")));
+					// A request the admin stopped needs no word.
+					if (!signal.aborted) toast.error(errorText(site, error, t("error.ask")));
 					throw error;
 				}
 			},
 			...(entryId
 				? {
-						onAskAt: async (spot: { words: string }, text: string) => {
+						onAskAt: async (spot: { words: string }, text: string, signal: AbortSignal) => {
 							try {
-								const { item: next } = await askAtSelection(site, entryId, spot.words, text, t("error.ask"));
+								const { item: next } = await askAtSelection(site, entryId, spot.words, text, t("error.ask"), signal);
 								// The new change is drawn at once; the list is read again behind it.
 								if (next)
 									client.setQueryData<{ items: EditorProposalView[] }>(aiKeys.entryProposals(entryId), (data) =>
@@ -154,7 +155,7 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 								refresh(next ? [next.proposalId] : []);
 								return next?.id ?? null;
 							} catch (error) {
-								toast.error(errorText(site, error, t("error.ask")));
+								if (!signal.aborted) toast.error(errorText(site, error, t("error.ask")));
 								throw error;
 							}
 						},

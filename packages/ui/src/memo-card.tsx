@@ -36,7 +36,8 @@ function WithShortcut({
  * The card that opens under a mark in the text: a note left for the assistant, or a source that changed. Three parts. The head (48px) holds the two ways
  * to deal with it, always in this order: a quiet text to discard, then one black pill to accept, after what kind of note it is when the place does not say
  * so (`where`, "Source changed"). The card hangs right under its words, so the head does not name the paragraph. A note with nothing to deal with yet
- * (words just selected to ask about) has no head, and opens on its reply row with the caret in it (`reply.focus`). There is no close
+ * (words just selected to ask about) has no head, and opens on its reply row with the caret in it (`reply.focus`). While the assistant works on what
+ * was sent, the reply row's button stops it (`reply.stop`). There is no close
  * button; pressing outside, Esc, or the mark again closes it. The body is a `MemoThread` of messages or a `MemoDiff`. `reply` adds the row at the
  * bottom where the note goes on ("Continue"). The key combinations show as tooltips on the head's buttons.
  */
@@ -72,6 +73,8 @@ function MemoCard({
 		sendLabel: string;
 		/** Puts the caret in the box when the card opens: the card is there to be written in. */
 		focus?: boolean;
+		/** While the assistant works on what was sent: the send button is the stop button (a square), as in the chat. */
+		stop?: { label: string; onStop: () => void };
 	};
 	children?: ReactNode;
 }) {
@@ -119,7 +122,11 @@ function MemoCard({
 						onKeyDown={onKeyDown}
 						className="min-w-0 grow border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 					/>
-					<SendButton size="sm" label={reply.sendLabel} disabled={blank} onClick={send} />
+					{reply.stop ? (
+						<SendButton size="sm" busy label={reply.stop.label} onClick={reply.stop.onStop} />
+					) : (
+						<SendButton size="sm" label={reply.sendLabel} disabled={blank} onClick={send} />
+					)}
 				</div>
 			)}
 		</div>

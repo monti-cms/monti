@@ -76,6 +76,27 @@ function NewRequest() {
 	);
 }
 
+function WorkingCard() {
+	const [value, setValue] = useState("");
+	return (
+		<MemoCard
+			reply={{
+				placeholder: "이어서 요청",
+				value,
+				onValueChange: setValue,
+				onSend: () => setValue(""),
+				sendLabel: "보내기",
+				stop: { label: "멈추기", onStop: () => undefined },
+			}}
+		>
+			<Thread />
+		</MemoCard>
+	);
+}
+
+/** A request being worked on (flow 2 · 09c): the send button is the stop button, as in the chat. */
+export const Working: Story = { render: () => <WorkingCard /> };
+
 /** Words just selected to ask about (flow 2 · 09b): nothing to discard or accept yet, only the box, with the caret in it. */
 export const NewRequestOnSelection: Story = { render: () => <NewRequest /> };
 

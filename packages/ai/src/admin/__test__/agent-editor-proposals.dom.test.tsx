@@ -130,7 +130,7 @@ describe("the agent's proposals in the editor", () => {
 		const [first] = result.current.proposals?.items ?? [];
 		let next: string | null = null;
 		await act(async () => {
-			next = (await result.current.proposals?.onAsk?.(first as never, "shorter")) ?? null;
+			next = (await result.current.proposals?.onAsk?.(first as never, "shorter", new AbortController().signal)) ?? null;
 		});
 		expect(asked).toEqual([{ text: "shorter" }]);
 		expect(next).toBe("a2");
@@ -144,7 +144,12 @@ describe("the agent's proposals in the editor", () => {
 		await waitFor(() => expect(result.current.proposals?.items).toHaveLength(2));
 		let next: string | null = null;
 		await act(async () => {
-			next = (await result.current.proposals?.onAskAt?.({ words: "Two", blockId: "x" }, "longer")) ?? null;
+			next =
+				(await result.current.proposals?.onAskAt?.(
+					{ words: "Two", blockId: "x" },
+					"longer",
+					new AbortController().signal,
+				)) ?? null;
 		});
 		expect(asked).toEqual([{ entry: "e1", words: "Two", text: "longer" }]);
 		expect(next).toBe("s1");

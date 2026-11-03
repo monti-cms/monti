@@ -121,4 +121,26 @@ describe("a request on selected words", () => {
 		expect(onAskAt).not.toHaveBeenCalled();
 		expect(spots(editor)[0]?.working).toBe(false);
 	});
+
+	it("ASSIST-E4 stops a request being worked on: the request is cut off, the words stay marked and what was written comes back", async () => {
+		let stopped: AbortSignal | null = null;
+		const onAskAt = vi.fn(
+			(_spot: { words: string; blockId: string }, _text: string, signal: AbortSignal) =>
+				new Promise<string | null>((_resolve, reject) => {
+					stopped = signal;
+					signal.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+				}),
+		);
+		const { editor } = setUp(onAskAt);
+		await waitFor(() => expect(latest.run).toBeTypeOf("function"));
+		act(() => latest.run?.(editor));
+		write(await waitFor(box), "one sentence");
+		await waitFor(() => expect(onAskAt).toHaveBeenCalled());
+
+		fireEvent.click(screen.getByRole("button", { name: t("stop") }));
+		await waitFor(() => expect(box()).toHaveValue("one sentence"));
+		expect((stopped as AbortSignal | null)?.aborted).toBe(true);
+		expect(spots(editor)).toMatchObject([{ working: false }]);
+		expect(screen.queryByRole("button", { name: t("stop") })).toBeNull();
+	});
 });

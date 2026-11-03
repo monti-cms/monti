@@ -216,19 +216,26 @@ export function useProposalMarks(
 		setCard(null);
 	};
 
+	// The requests being worked on, by proposal id or selection key: what stops them.
+	const running = useRef(new Map<string, AbortController>());
+	const stop = (id: string) => running.current.get(id)?.abort();
+
 	const ask = async (entry: { item: EditorProposalItem; source: EditorProposals }, text: string) => {
 		if (!entry.source.onAsk) return;
 		setDraft("");
 		setAsking((before) => new Map([...before, [entry.item.id, text]]));
+		const controller = new AbortController();
+		running.current.set(entry.item.id, controller);
 		try {
-			const next = await entry.source.onAsk(entry.item, text);
+			const next = await entry.source.onAsk(entry.item, text, controller.signal);
 			// The card stays open on the proposal that took its place.
 			setCard((open) => (open === entry.item.id ? next : open));
 			setCurrent((now) => (now === entry.item.id ? next : now));
 		} catch {
-			// The source says why; what was written goes back in the box.
+			// Stopped, or the source says why: what was written goes back in the box.
 			setDraft(text);
 		} finally {
+			running.current.delete(entry.item.id);
 			setAsking((before) => new Map([...before].filter(([id]) => id !== entry.item.id)));
 		}
 	};
@@ -286,25 +293,28 @@ export function useProposalMarks(
 		setDraft("");
 		setSpots((before) => new Map([...before, [key, { ...spot, sent: text }]]));
 		dispatchSpot({ spotWorking: { key, working: true } });
-		// The assistant reads the entry as stored: what the admin wrote last is saved first.
-		const saved = save ? await save() : true;
-		if (!saved) {
+		const controller = new AbortController();
+		running.current.set(spotId(key), controller);
+		// Not answered (stopped, or failed): the words stay marked and what was written goes back in the box.
+		const giveBack = () => {
 			setSpots((before) => new Map([...before, [key, spot]]));
 			dispatchSpot({ spotWorking: { key, working: false } });
 			setDraft(text);
-			return;
-		}
+		};
 		try {
-			const next = await askAt({ words: spot.words, blockId: spot.blockId }, text);
+			// The assistant reads the entry as stored: what the admin wrote last is saved first.
+			const saved = save ? await save() : true;
+			if (!saved || controller.signal.aborted) return giveBack();
+			const next = await askAt({ words: spot.words, blockId: spot.blockId }, text, controller.signal);
 			dropSpot(key);
 			// The card goes on with the proposal that answers it.
 			setCard((open) => (open === spotId(key) ? next : open));
 			if (next) setCurrent(next);
 		} catch {
-			// The source says why; what was written goes back in the box.
-			setSpots((before) => new Map([...before, [key, spot]]));
-			dispatchSpot({ spotWorking: { key, working: false } });
-			setDraft(text);
+			// The source says why when it failed.
+			giveBack();
+		} finally {
+			running.current.delete(spotId(key));
 		}
 	};
 
@@ -376,6 +386,9 @@ export function useProposalMarks(
 					onSend: (text: string) => void sendSpot(openSpotKey, text),
 					sendLabel: t("send"),
 					focus: openSpot.sent === undefined,
+					...(openSpot.sent !== undefined
+						? { stop: { label: t("stop"), onStop: () => stop(spotId(openSpotKey)) } }
+						: {}),
 				}}
 			>
 				{openSpot.sent !== undefined && (
@@ -464,6 +477,9 @@ export function useProposalMarks(
 									onValueChange: setDraft,
 									onSend: (text: string) => void ask(opened, text),
 									sendLabel: t("send"),
+									...(openedAsking !== undefined
+										? { stop: { label: t("stop"), onStop: () => stop(opened.item.id) } }
+										: {}),
 								},
 							}
 						: {})}
