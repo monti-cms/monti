@@ -51,4 +51,4 @@
 
 ### 코드
 
-`PickList`(listbox)와 그 선택지인 `PickListItem` 행(고르면 더 열리는 행은 끝에 `mark`, 짧은 덧말도 `mark`로 둔다: "Ollama", 플러그인 이름). 고른 행은 선택 바탕과 잉크를 쓰고, 나머지는 흐리다. `aria-label`로 이름을 붙인다. 묶음이 있으면 `PickListLabel`(메뉴의 묶음 이름과 같은 mono 11)과 묶음 사이의 `PickListSeparator`를 쓴다. 창 안의 행이 메뉴보다 크므로 구분선 위아래 간격은 메뉴(5px)보다 넓은 10px이다. "키 추가"의 서비스 고르기("AI", "플러그인")가 이렇다.
+`PickList`(listbox)와 그 선택지인 `PickListItem` 행(메뉴 행과 같은 `MENU_ROW` 모양. 고르면 더 열리는 행은 끝에 `mark`, 짧은 덧말도 `mark`로 둔다: "Ollama", 플러그인 이름). 고른 행은 선택 바탕과 잉크를 쓰고, 나머지는 흐리다. `aria-label`로 이름을 붙인다. 묶음이 있으면 `PickListLabel`(메뉴의 묶음 이름과 같은 mono 11)과 묶음 사이의 `PickListSeparator`를 쓴다. 창 안의 행이 메뉴보다 크므로 구분선 위아래 간격은 메뉴(5px)보다 넓은 10px이다. "키 추가"의 서비스 고르기("AI", "플러그인")가 이렇다.

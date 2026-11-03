@@ -20,7 +20,8 @@ export const SUB_ALIGN_OFFSET = -7;
 export const MENU_MOTION =
 	"origin-(--transform-origin) duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in";
 
-const ROW =
+/** The row every list draws: a menu, a searchable list and a pick list share it, and each adds how its current row is marked. */
+export const MENU_ROW =
 	"flex min-w-0 cursor-default select-none items-center gap-[10px] rounded-monti-md px-[9px] py-[7px] text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
 
 /**
@@ -28,13 +29,13 @@ const ROW =
  * level is open, take the selected background. A row that is the current value of a pick-one list does not: it ends in a {@link MenuTick}.
  */
 export const MENU_ITEM = cn(
-	ROW,
+	MENU_ROW,
 	"data-highlighted:bg-monti-selected data-highlighted:text-monti-default data-popup-open:bg-monti-selected data-popup-open:text-monti-default data-disabled:pointer-events-none data-disabled:text-monti-faint data-disabled:[&>svg]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-highlighted:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
 /** The same row inside a searchable list (cmdk marks the row it is on with `data-selected`). */
 export const COMMAND_ITEM = cn(
-	ROW,
+	MENU_ROW,
 	"data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-[selected=true]:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
