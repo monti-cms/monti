@@ -1,0 +1,283 @@
+{
+	"AuthPage": {
+		"container": false,
+		"children": true,
+		"slots": ["footer", "title"],
+		"props": {}
+	},
+	"Stack": {
+		"container": true,
+		"children": true,
+		"slots": [],
+		"props": {
+			"direction": {
+				"enum": ["column", "row"]
+			}
+		}
+	},
+	"Form": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"action": {
+				"type": "string"
+			},
+			"method": {
+				"enum": ["get", "post"]
+			}
+		}
+	},
+	"Heading": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"as": {
+				"enum": ["h1", "h2", "h3", "h4"]
+			},
+			"id": {
+				"type": "string"
+			},
+			"tone": {
+				"enum": ["danger", "default", "faint", "inherit", "muted", "proposal", "subtle", "success", "warning"]
+			},
+			"truncate": {
+				"type": "boolean"
+			},
+			"variant": {
+				"enum": ["display", "heading", "label", "page", "title"]
+			}
+		}
+	},
+	"Text": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"align": {
+				"enum": ["center", "end", "start"]
+			},
+			"as": {
+				"enum": ["code", "dd", "div", "dt", "label", "li", "p", "span", "time"]
+			},
+			"htmlFor": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"italic": {
+				"type": "boolean"
+			},
+			"lines": {
+				"enum": [2, 3]
+			},
+			"mono": {
+				"type": "boolean"
+			},
+			"preserveLines": {
+				"type": "boolean"
+			},
+			"srOnly": {
+				"type": "boolean"
+			},
+			"tone": {
+				"enum": ["danger", "default", "faint", "inherit", "muted", "proposal", "subtle", "success", "warning"]
+			},
+			"truncate": {
+				"type": "boolean"
+			},
+			"variant": {
+				"enum": ["body", "caption", "display", "heading", "label", "meta", "micro", "note", "page", "reading", "title"]
+			},
+			"weight": {
+				"enum": ["medium", "role", "semibold"]
+			}
+		}
+	},
+	"FormField": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		}
+	},
+	"FormFieldLabel": {
+		"container": false,
+		"children": true,
+		"slots": ["action"],
+		"props": {
+			"hidden": {
+				"type": "boolean"
+			},
+			"htmlFor": {
+				"type": "string"
+			},
+			"id": {
+				"type": "string"
+			},
+			"required": {
+				"type": "boolean"
+			},
+			"size": {
+				"enum": ["body", "caption", "label", "micro"]
+			},
+			"tone": {
+				"enum": ["default", "muted", "subtle"]
+			}
+		}
+	},
+	"Input": {
+		"container": false,
+		"children": true,
+		"slots": ["action"],
+		"props": {
+			"align": {
+				"enum": ["center", "end", "start"]
+			},
+			"alt": {
+				"type": "string"
+			},
+			"appearance": {
+				"enum": ["inline", "line"]
+			},
+			"autoComplete": {
+				"type": "string"
+			},
+			"disabled": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			},
+			"minLength": {
+				"type": "number"
+			},
+			"mono": {
+				"type": "boolean"
+			},
+			"name": {
+				"type": "string"
+			},
+			"placeholder": {
+				"type": "string"
+			},
+			"proposal": {
+				"type": "boolean"
+			},
+			"required": {
+				"type": "boolean"
+			},
+			"size": {
+				"enum": ["default", "display", "inherit", "sm", "title"]
+			},
+			"src": {
+				"type": "string"
+			},
+			"srOnly": {
+				"type": "boolean"
+			},
+			"type": {
+				"type": "string"
+			},
+			"width": {
+				"enum": ["fit", "full", "number", "short"]
+			}
+		}
+	},
+	"FormFieldError": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"id": {
+				"type": "string"
+			}
+		}
+	},
+	"Button": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"disabled": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			},
+			"loading": {
+				"type": "boolean"
+			},
+			"name": {
+				"type": "string"
+			},
+			"size": {
+				"enum": ["md", "sm"]
+			},
+			"type": {
+				"enum": ["button", "reset", "submit"]
+			},
+			"variant": {
+				"enum": ["danger", "outline-danger", "primary", "secondary"]
+			},
+			"width": {
+				"enum": ["full"]
+			}
+		}
+	},
+	"Separator": {
+		"container": false,
+		"children": true,
+		"slots": [],
+		"props": {
+			"flush": {
+				"type": "boolean"
+			},
+			"id": {
+				"type": "string"
+			},
+			"label": {
+				"type": "string"
+			},
+			"length": {
+				"enum": ["bar", "control", "full"]
+			}
+		}
+	},
+	"Image": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"alt": {
+				"type": "string"
+			},
+			"border": {
+				"type": "boolean"
+			},
+			"fit": {
+				"enum": ["contain", "cover"]
+			},
+			"loading": {
+				"enum": ["eager", "lazy"]
+			},
+			"radius": {
+				"enum": ["lg", "md", "none", "sm"]
+			},
+			"ratio": {
+				"enum": ["auto", "banner", "photo", "share", "square", "wide"]
+			},
+			"size": {
+				"enum": ["fill", "icon", "row", "thumb", "thumb-lg"]
+			},
+			"src": {
+				"type": "string"
+			}
+		}
+	}
+}

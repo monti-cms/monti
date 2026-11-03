@@ -1,11 +1,10 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
-import spec from "@monti-cms/ui/screens/login.spec.json";
 import { ScreenSpec, type ScreenSpecDocument } from "@monti-cms/ui/spec";
 import type { AdminServer } from "../../host/server";
-import { loginState } from "./login-state";
-import type { LoginButton, LoginError, LoginMode } from "./login-view";
+import spec from "./login.screen.json";
+import { type LoginButton, type LoginError, type LoginMode, LoginView } from "./login-view";
 import { loginMessages } from "./messages";
 
 /** The `error` of the address, as the screen tells it: Auth.js's `CredentialsSignin`, or a reason from the first-admin route. */
@@ -17,7 +16,8 @@ const ERRORS: Record<string, LoginError> = {
 };
 
 /**
- * Reads the session and the login methods and hands the screen what to show (`LoginView` draws it).
+ * Reads the session and the login methods and hands the screen what to show. The first sign-in screen (no error, at most one button) is drawn from
+ * `login.screen.json`, a pilot of screens written as data; every other state is still drawn by `LoginView`.
  * Sign in and out are plain form posts to the core API (its `v1/session/*` routes), not server actions: a server action cannot carry the
  * CMS instance, because the values it closes over must be serializable.
  */
@@ -82,10 +82,35 @@ export default async function AdminLoginPage({
 								...(error ? { error } : {}),
 							};
 
-	// The look is `login.spec.json` drawn with the design system's parts; this page says only what it shows and where its forms post.
-	const state = loginState(t, { siteName: site.config.site?.name?.trim() || "Monti", mode });
-	return <ScreenSpec spec={spec as ScreenSpecDocument} state={state} />;
+	const siteName = site.config.site?.name?.trim() || "Monti";
+	if (mode.kind === "sign-in" && !mode.error && !mode.denied && !mode.locked && mode.buttons.length <= 1) {
+		const [button] = mode.buttons;
+		return (
+			<ScreenSpec
+				// A JSON import types its numbers as `number`; `ScreenSpec` checks the spec against the catalog before it draws.
+				spec={spec as ScreenSpecDocument}
+				data={{
+					siteName,
+					password: Boolean(mode.passwordAction),
+					both: Boolean(mode.passwordAction && button),
+					github: button && {
+						name: button.name,
+						icon: button.icon,
+						variant: mode.passwordAction ? "secondary" : "primary",
+					},
+				}}
+				text={(key, params) => (key in loginMessages.messages.en ? t(key as LoginKey, params) : undefined)}
+				actions={{
+					...(mode.passwordAction ? { password: mode.passwordAction } : {}),
+					...(button ? { github: button.action } : {}),
+				}}
+			/>
+		);
+	}
+	return <LoginView t={t} siteName={siteName} mode={mode} />;
 }
+
+type LoginKey = keyof typeof loginMessages.messages.en;
 
 /** The login methods that are one button each (every method but the email and password form). */
 const buttonsOf = (

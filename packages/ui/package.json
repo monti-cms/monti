@@ -8,8 +8,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./internal": "./src/internal.ts",
-		"./spec": "./src/spec/registry.tsx",
-		"./screens/*": "./src/screens/*",
+		"./spec": "./src/spec/render.tsx",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
 	},
@@ -21,15 +20,12 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
-		"@json-render/core": "0.21.1",
-		"@json-render/react": "0.21.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
 		"react-day-picker": "^10.0.1",
 		"sonner": "^2.0.8",
-		"tailwind-merge": "^3.4.0",
-		"zod": "^4.6.5"
+		"tailwind-merge": "^3.4.0"
 	},
 	"peerDependencies": {
 		"@carbon/icons-react": ">=11.90.0",
@@ -50,6 +46,7 @@
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
 		"typescript": "^7.0.2",
+		"typescript-api": "npm:typescript@5.9.3",
 		"vite": "^8.3.0"
 	},
 	"files": [
@@ -68,10 +65,9 @@
 				"default": "./dist/internal.js"
 			},
 			"./spec": {
-				"types": "./dist/spec/registry.d.ts",
-				"default": "./dist/spec/registry.js"
+				"types": "./dist/spec/render.d.ts",
+				"default": "./dist/spec/render.js"
 			},
-			"./screens/*": "./dist/screens/*",
 			"./theme.css": "./styles/theme.css",
 			"./tokens.css": "./styles/tokens.css"
 		}

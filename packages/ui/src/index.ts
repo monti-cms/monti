@@ -7,6 +7,7 @@ import { type Closed, close } from "./closed";
 import * as open from "./internal";
 
 export const Affix = close(open.Affix);
+export const AuthPage = close(open.AuthPage);
 export const AlertDialog = close(open.AlertDialog);
 export const AlertDialogAction = close(open.AlertDialogAction);
 export const AlertDialogCancel = close(open.AlertDialogCancel);

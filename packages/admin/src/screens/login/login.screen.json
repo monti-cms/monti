@@ -1,0 +1,79 @@
+{
+	"root": "page",
+	"elements": {
+		"page": {
+			"type": "AuthPage",
+			"slots": { "title": ["site"], "footer": ["version"] },
+			"children": ["body"]
+		},
+		"site": { "type": "Heading", "props": { "as": "h1", "variant": "page" }, "children": [{ "data": "/siteName" }] },
+		"version": {
+			"type": "Text",
+			"visible": { "data": "/version" },
+			"props": { "as": "p", "variant": "micro", "tone": "faint", "align": "center" },
+			"children": [{ "data": "/version" }]
+		},
+		"body": {
+			"type": "Stack",
+			"children": ["passwordForm", { "spacing": 20 }, "or", { "spacing": 20 }, "githubForm"]
+		},
+		"passwordForm": {
+			"type": "Form",
+			"visible": { "data": "/password" },
+			"props": { "method": "post", "action": { "action": "password" } },
+			"children": ["passwordStack"]
+		},
+		"passwordStack": {
+			"type": "Stack",
+			"children": ["email", { "spacing": 24 }, "password", { "spacing": 32 }, "submit"]
+		},
+		"email": { "type": "FormField", "children": ["emailLabel", "emailInput"] },
+		"emailLabel": { "type": "FormFieldLabel", "props": { "htmlFor": "email" }, "children": [{ "text": "email" }] },
+		"emailInput": {
+			"type": "Input",
+			"props": { "id": "email", "name": "email", "type": "email", "autoComplete": "username", "required": true }
+		},
+		"password": { "type": "FormField", "children": ["passwordLabel", "passwordInput"] },
+		"passwordLabel": {
+			"type": "FormFieldLabel",
+			"props": { "htmlFor": "password" },
+			"children": [{ "text": "password" }]
+		},
+		"passwordInput": {
+			"type": "Input",
+			"props": {
+				"id": "password",
+				"name": "password",
+				"type": "password",
+				"autoComplete": "current-password",
+				"required": true
+			}
+		},
+		"submit": {
+			"type": "Button",
+			"props": { "type": "submit", "variant": "primary", "width": "full" },
+			"children": [{ "text": "signInSubmit" }]
+		},
+		"or": {
+			"type": "Separator",
+			"visible": { "data": "/both" },
+			"props": { "label": { "text": "or" } }
+		},
+		"githubForm": {
+			"type": "Form",
+			"visible": { "data": "/github" },
+			"props": { "method": "post", "action": { "action": "github" } },
+			"children": ["githubButton"]
+		},
+		"githubButton": {
+			"type": "Button",
+			"props": { "type": "submit", "variant": { "data": "/github/variant" }, "width": "full" },
+			"children": ["githubIcon", { "text": "signIn", "params": { "provider": { "data": "/github/name" } } }]
+		},
+		"githubIcon": {
+			"type": "Image",
+			"visible": { "data": "/github/icon" },
+			"props": { "src": { "data": "/github/icon" }, "alt": "", "size": "icon", "radius": "none" }
+		}
+	}
+}
