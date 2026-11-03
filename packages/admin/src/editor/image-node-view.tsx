@@ -1,6 +1,13 @@
 "use client";
 
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
+import {
+	Crop,
+	Image as ImageIcon,
+	SettingsAdjust,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+} from "@carbon/icons-react";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -11,6 +18,7 @@ import {
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	Image,
 	Input,
 	Option,
 	Popover,
@@ -450,28 +458,29 @@ export function ImageBlockView() {
 							/>
 						</div>
 					) : (
-						<div className="relative overflow-hidden rounded-monti-md bg-monti-muted">
-							<img
-								src={resolved && "url" in resolved ? resolved.url : ""}
-								alt={alt || ""}
-								className="h-auto w-full rounded-monti-md object-contain"
-								onLoad={(e) => {
-									const { naturalWidth, naturalHeight } = e.currentTarget;
-									if (naturalWidth > 0 && naturalHeight > 0) {
-										setAspectRatio(naturalWidth / naturalHeight);
-									}
-								}}
-							/>
-						</div>
+						<Image
+							src={resolved && "url" in resolved ? resolved.url : null}
+							alt={alt || ""}
+							ratio="auto"
+							fit="contain"
+							loading="eager"
+							onLoad={(e) => {
+								const { naturalWidth, naturalHeight } = e.currentTarget;
+								if (naturalWidth > 0 && naturalHeight > 0) {
+									setAspectRatio(naturalWidth / naturalHeight);
+								}
+							}}
+						/>
 					)
 				) : isChecking ? (
 					<Text as="p" tone="subtle" role="status">
 						{t("imageNode.loading")}
 					</Text>
 				) : (
-					<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
-						{t("imageNode.unavailable")}
-					</div>
+					<>
+						<Image src={null} alt="" ratio="wide" fallback={ImageIcon} />
+						<Text srOnly>{t("imageNode.unavailable")}</Text>
+					</>
 				)}
 				{/* The corner handles at the bottom of the picture: dragging one changes the width. */}
 				{showTools && (
