@@ -96,6 +96,8 @@ export interface FormFieldChange {
 	onUndo?: () => void;
 	/** The undo button cannot be pressed (the screen is read-only). */
 	undoDisabled?: boolean;
+	/** `proposal`: the value is the assistant's and nobody has taken it yet; the dot is blue and the button discards it ("discard"). */
+	tone?: "warning" | "proposal";
 }
 
 /**
@@ -121,7 +123,7 @@ function FormFieldLabel({
 		return (
 			<div data-slot="label-row" className="flex h-3.5 items-center gap-monti-8">
 				{label}
-				<ChangeDot label={changed.label} />
+				<ChangeDot tone={changed.tone} label={changed.label} />
 				{changed.onUndo && (
 					<TextButton
 						variant="underline"

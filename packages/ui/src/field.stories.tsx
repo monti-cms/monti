@@ -1,6 +1,7 @@
 import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Affix } from "./affix";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import {
@@ -15,6 +16,7 @@ import {
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";
+import { Del } from "./proposal-marks";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
 import { Text } from "./text";
@@ -176,6 +178,35 @@ export const Changed: Story = {
 					점만 있는 줄
 				</FormFieldLabel>
 				<Input id="c-dot" mono defaultValue="/preview" />
+			</FormField>
+		</FormFieldGroup>
+	),
+};
+
+/**
+ * A value the assistant proposed and nobody has taken yet: the same label row as a change, with the blue dot and "버리기", the value in blue in the
+ * control, and the saved value struck through under it.
+ */
+export const Proposed: Story = {
+	render: () => (
+		<FormFieldGroup>
+			<FormField>
+				<FormFieldLabel
+					htmlFor="p-preview"
+					changed={{
+						tone: "proposal",
+						label: "AI 제안",
+						undoLabel: "버리기",
+						undoName: "미리보기 경로 제안 버리기",
+						onUndo: () => {},
+					}}
+				>
+					미리보기 경로
+				</FormFieldLabel>
+				<Affix id="p-preview" prefix="/" defaultValue="draft" proposal />
+				<Text variant="meta" mono>
+					<Del>/preview</Del>
+				</Text>
 			</FormField>
 		</FormFieldGroup>
 	),
