@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Label } from "./label";
+import { Del } from "./proposal-marks";
 import { TextButton } from "./text-button";
 
 function FormFieldSet({
@@ -244,8 +245,14 @@ function FormFieldError({
 	);
 }
 
+/** The saved value an assistant's proposal would replace, struck through in blue right under the control. */
+function FormFieldWas({ className, ...props }: React.ComponentProps<"del">) {
+	return <Del data-slot="field-was" className={cn("block pt-monti-4 text-monti-caption", className)} {...props} />;
+}
+
 export {
 	FormField,
+	FormFieldWas,
 	FormFieldLabel,
 	FormFieldDescription,
 	FormFieldError,

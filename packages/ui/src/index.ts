@@ -177,6 +177,7 @@ export const FormFieldLabel = close(open.FormFieldLabel);
 export const FormFieldLegend = close(open.FormFieldLegend);
 export const FormFieldSet = close(open.FormFieldSet);
 export const FormFieldTitle = close(open.FormFieldTitle);
+export const FormFieldWas = close(open.FormFieldWas);
 export const IconButton = close(open.IconButton);
 export const Input = close(open.Input);
 export const Label = close(open.Label);

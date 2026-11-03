@@ -360,7 +360,7 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-select"),
 		part: "SelectBox",
-		props: (el) => ({ value: el.textContent.trim() }),
+		props: (el) => ({ value: el.textContent.trim(), proposal: el.classList.contains("is-ai") || undefined }),
 		leaf: true,
 	},
 	{
@@ -391,6 +391,7 @@ const parts = [
 		props: (el) => ({
 			prefix: el.querySelector(".fix:first-child")?.textContent.trim(),
 			suffix: el.querySelector(".fix:last-child:not(:first-child)")?.textContent.trim(),
+			proposal: el.querySelector(".is-ai") ? true : undefined,
 		}),
 		leaf: true,
 	},
@@ -431,6 +432,26 @@ const parts = [
 	{
 		match: (el) => el.matches(".end:has(> .mt-text-btn > .mt-count--warn) > :not(.mt-text-btn:has(> .mt-count--warn))"),
 		ignore: true,
+	},
+	// A field's label row with the assistant's proposal: a blue dot and the button that discards it.
+	{
+		match: (el) => el.matches(".mt-label-row:has(> .mt-proposal-dot)"),
+		part: "ChangedLabel",
+		props: (el) => ({
+			label: el.querySelector(".mt-label")?.textContent.trim(),
+			undo: el.querySelector(".mt-text-btn")?.textContent.trim(),
+			proposal: true,
+			for: el.querySelector(".mt-label")?.getAttribute("for"),
+		}),
+		leaf: true,
+	},
+	// The saved value a proposal would replace, struck through under the field.
+	{
+		match: (el) => el.matches(".mt-field > .mt-del"),
+		part: "Was",
+		props: (el) => ({ text: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["padding-top"],
 	},
 	// A field's label with the dot of a change and its undo.
 	{
@@ -722,7 +743,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

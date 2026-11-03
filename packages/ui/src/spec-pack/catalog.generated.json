@@ -58,6 +58,19 @@
 			},
 			"events": []
 		},
+		"Was": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"text": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"DangerSection": {
 			"kind": "part",
 			"bind": false,
@@ -448,6 +461,10 @@
 					"kind": "text",
 					"type": "string"
 				},
+				"proposal": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"undo": {
 					"kind": "text",
 					"type": "string"
@@ -482,6 +499,10 @@
 			"children": false,
 			"slots": [],
 			"props": {
+				"proposal": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"size": {
 					"kind": "variant",
 					"enum": ["default", "sm"]
@@ -548,6 +569,10 @@
 				"prefix": {
 					"kind": "text",
 					"type": "string"
+				},
+				"proposal": {
+					"kind": "flag",
+					"type": "boolean"
 				},
 				"suffix": {
 					"kind": "text",

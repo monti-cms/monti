@@ -145,6 +145,7 @@ export {
 	FormFieldLegend,
 	FormFieldSet,
 	FormFieldTitle,
+	FormFieldWas,
 } from "./field";
 export { FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";

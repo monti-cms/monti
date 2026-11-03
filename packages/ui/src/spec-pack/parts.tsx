@@ -11,7 +11,7 @@ import { DangerBlock, DangerRow } from "../danger-block";
 import { DragHandle } from "../drag-handle";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
-import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
+import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFieldWas } from "../field";
 import { FilterButton } from "../filter-button";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
@@ -527,10 +527,21 @@ function OptionCheck({ label, note, checked }: { label?: string; note?: string; 
 }
 
 /** A closed select showing its value (a key's state, a language). */
-function SelectBox({ value, size, width }: { value?: string; size?: "sm" | "default"; width?: "fit" | "full" }) {
+function SelectBox({
+	value,
+	size,
+	width,
+	proposal,
+}: {
+	value?: string;
+	size?: "sm" | "default";
+	width?: "fit" | "full";
+	/** The assistant picked the value and nobody has touched it. */
+	proposal?: boolean;
+}) {
 	return (
 		<Select items={[{ value: "shown", label: value ?? "" }]} value="shown">
-			<SelectTrigger size={size} width={width}>
+			<SelectTrigger size={size} width={width} proposal={proposal}>
 				<SelectValue />
 			</SelectTrigger>
 		</Select>
@@ -562,8 +573,24 @@ function Banner({
 }
 
 /** A field with fixed words before or after what is typed (`/` before an address). */
-function AffixField({ prefix, suffix, placeholder }: { prefix?: string; suffix?: string; placeholder?: string }) {
-	return <Affix prefix={prefix} suffix={suffix} placeholder={placeholder} />;
+function AffixField({
+	prefix,
+	suffix,
+	placeholder,
+	proposal,
+}: {
+	prefix?: string;
+	suffix?: string;
+	placeholder?: string;
+	/** The assistant wrote what is typed and nobody has touched it. */
+	proposal?: boolean;
+}) {
+	return <Affix prefix={prefix} suffix={suffix} placeholder={placeholder} proposal={proposal} />;
+}
+
+/** The saved value an assistant's proposal would replace, struck through under the field. */
+function Was({ text }: { text?: string }) {
+	return <FormFieldWas>{text}</FormFieldWas>;
 }
 
 /** The short upright rule between two things on a line. */
@@ -616,9 +643,28 @@ function SaveGroup({
 }
 
 /** A field's label with the dot of a change and, at the end of its row, the quiet undo. */
-function ChangedLabel({ label, undo, for: field }: { label?: string; undo?: string; for?: string }) {
+function ChangedLabel({
+	label,
+	undo,
+	proposal,
+	for: field,
+}: {
+	label?: string;
+	undo?: string;
+	/** The value is the assistant's and nobody has taken it yet: the dot is blue and the button discards it. */
+	proposal?: boolean;
+	for?: string;
+}) {
 	return (
-		<FormFieldLabelPart htmlFor={field} changed={{ label: "", undoLabel: undo ?? "", undoShown: Boolean(undo) }}>
+		<FormFieldLabelPart
+			htmlFor={field}
+			changed={{
+				label: "",
+				undoLabel: undo ?? "",
+				undoShown: Boolean(undo),
+				tone: proposal ? "proposal" : undefined,
+			}}
+		>
 			{label}
 		</FormFieldLabelPart>
 	);
@@ -825,6 +871,7 @@ export const parts = {
 	GridBox,
 	RailAdd,
 	ReadValue,
+	Was,
 	DangerSection,
 	DangerLine,
 	Lock,
@@ -961,6 +1008,7 @@ export const CATALOG = {
 	GridBox: { kind: "part", props: { columns: "variant" } },
 	RailAdd: { kind: "part", props: { label: "text" } },
 	ReadValue: { kind: "part", props: { label: "text", mono: "flag" } },
+	Was: { kind: "part", props: { text: "text" } },
 	DangerSection: { kind: "part", props: { title: "text" } },
 	DangerLine: { kind: "part", props: { name: "text", meta: "text" } },
 	Lock: { kind: "part", props: { label: "text" } },
@@ -993,12 +1041,12 @@ export const CATALOG = {
 		kind: "part",
 		props: { label: "text", count: "state", discardLabel: "text", saveLabel: "text", saveDisabled: "flag" },
 	},
-	ChangedLabel: { kind: "part", props: { label: "text", undo: "text", for: "ref" } },
+	ChangedLabel: { kind: "part", props: { label: "text", undo: "text", proposal: "flag", for: "ref" } },
 	TwoLineCell: { kind: "part", props: { title: "text", sub: "text", proposal: "flag" } },
-	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant" } },
+	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant", proposal: "flag" } },
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
 	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },
-	AffixField: { kind: "part", props: { prefix: "text", suffix: "text", placeholder: "text" } },
+	AffixField: { kind: "part", props: { prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" } },
 	VerticalRule: { kind: "part", props: {} },
 	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
 	OptionCheck: { kind: "part", props: { label: "text", note: "text", checked: "flag" } },
