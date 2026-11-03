@@ -571,6 +571,65 @@ const parts = [
 		children: (el) => el.querySelector(":scope > p") ?? [el.querySelector(":scope > span:last-child")],
 		asProps: ["margin", "gap"],
 	},
+	// A list of fields in tabbed pages: the tab row and the box under it are neighbours in a board, one part in the design system.
+	{
+		match: (el) => el.matches("nav.mt-ftabs") && el.nextElementSibling?.matches(".mt-ftabs-body"),
+		part: "Folder",
+		group: (el) => [el, el.nextElementSibling],
+	},
+	{
+		match: (el) => el.matches("nav.mt-ftabs"),
+		part: "FolderTabRow",
+		props: (el) => ({ add: el.querySelector(":scope > .add")?.getAttribute("aria-label") }),
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll(":scope > .tab")],
+		asProps: ["margin-top"],
+	},
+	{
+		match: (el) => el.matches(".mt-ftabs > .tab"),
+		part: "FolderTabItem",
+		props: (el) => ({
+			label: [...el.childNodes]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			count: el.querySelector(".n")?.textContent.trim(),
+			locked: el.querySelector(":scope > svg[role=img]") ? true : undefined,
+			fixed: el.closest(".is-readonly") || !el.querySelector(".handle") ? true : undefined,
+		}),
+		leaf: true,
+	},
+	{ match: (el) => el.matches(".mt-ftabs-body"), part: "FolderBody", asProps: ["margin-top"] },
+	{ match: (el) => el.matches("ul.mt-tree"), part: "FieldTree" },
+	{
+		match: (el) => el.matches(".mt-tree > li"),
+		part: "FieldLine",
+		props: (el) => {
+			const text = (selector) => el.querySelector(selector)?.textContent.trim() || undefined;
+			const own = (node) =>
+				[...(node?.childNodes ?? [])]
+					.filter((child) => child.nodeType === Node.TEXT_NODE || child.classList?.contains("sc-interp"))
+					.map((child) => child.textContent)
+					.join("")
+					.trim() || undefined;
+			const ink = /--fg-([a-z]+)/.exec(el.querySelector(".name")?.getAttribute("style") ?? "")?.[1];
+			const lock = el.querySelector(".kind > svg");
+			return {
+				name: own(el.querySelector(".name")),
+				label: own(el.querySelector(".label")),
+				description: text(".label > span:not(.text-micro)"),
+				note: text(".label > .text-micro"),
+				kind: own(el.querySelector(".kind")),
+				depth: el.classList.contains("d2") ? 1 : el.classList.contains("d3") ? 2 : undefined,
+				group: el.classList.contains("is-group") || undefined,
+				tone: ["warning", "success", "danger", "faint"].includes(ink) ? ink : undefined,
+				locked: lock && getComputedStyle(lock).display !== "none" ? lock.getAttribute("aria-label") : undefined,
+				fixed: el.closest(".is-readonly") ? true : undefined,
+			};
+		},
+		leaf: true,
+	},
 	// Options in equal columns.
 	{
 		match: (el) => el.matches(".opt-grid"),
@@ -743,7 +802,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

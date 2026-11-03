@@ -12,7 +12,9 @@ import { DragHandle } from "../drag-handle";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFieldWas } from "../field";
+import { FieldRow, FieldTree as FieldTreePart } from "../field-tree";
 import { FilterButton } from "../filter-button";
+import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "../folder-tabs";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
 import { type IconName, iconsByName } from "../icons";
@@ -860,6 +862,97 @@ function Box({ border, className }: { border: "top" | "bottom" | "bottom-contras
  *
  * `SCREEN`: the steps of the spacing scale (the design system's spacing tokens but 0) and the layout entry a plain group becomes.
  */
+/** The open tab of a `Folder`, which its body is the panel of. */
+const FolderOpen = React.createContext("");
+
+/** A list of fields split into tabbed pages: its `FolderTabRow` and then its `FolderBody`; `open` names the open tab. */
+function Folder({ open, children }: { open?: string; children?: React.ReactNode }) {
+	return (
+		<FolderOpen.Provider value={open ?? ""}>
+			<FolderTabs value={open ?? ""}>{children}</FolderTabs>
+		</FolderOpen.Provider>
+	);
+}
+
+/** The row of a folder's tabs; `add` names the button after them that adds one. */
+function FolderTabRow({ add, children }: { add?: string; children?: React.ReactNode }) {
+	return <FolderTabsList add={add ? <FolderTabsAdd aria-label={add} /> : undefined}>{children}</FolderTabsList>;
+}
+
+/** One tab of a folder: its name, how many fields it holds, `locked` for one a plugin placed, `fixed` for one that is not dragged. */
+function FolderTabItem({
+	label,
+	count,
+	locked,
+	fixed,
+}: {
+	label?: string;
+	count?: string;
+	locked?: boolean;
+	fixed?: boolean;
+}) {
+	return (
+		<FolderTab value={label ?? ""} count={count} locked={locked} draggable={!fixed}>
+			{label}
+		</FolderTab>
+	);
+}
+
+/** The box under a folder's tabs, holding the open tab's fields. */
+function FolderBody({ children }: { children?: React.ReactNode }) {
+	const open = React.useContext(FolderOpen);
+	return <FolderTabsBody value={open}>{children}</FolderTabsBody>;
+}
+
+/** The outline of a collection's fields: its `FieldLine`s. */
+function FieldTree({ children }: { children?: React.ReactNode }) {
+	return <FieldTreePart>{children}</FieldTreePart>;
+}
+
+/**
+ * One line of a field outline: the key (`name`), what the admin sees (`label`, its help after it as `description`, a short `note`), the `kind` at the end.
+ * `depth` 1 for a field in a group; `group` for a group's own line; `tone` colours the name for a change; `locked` names the lock of a field a plugin
+ * placed; `fixed` for a line with no grip (nothing can be moved).
+ */
+function FieldLine({
+	name,
+	label,
+	description,
+	note,
+	kind,
+	depth,
+	group,
+	tone,
+	locked,
+	fixed,
+}: {
+	name?: string;
+	label?: string;
+	description?: string;
+	note?: string;
+	kind?: string;
+	depth?: 0 | 1 | 2;
+	group?: boolean;
+	tone?: "warning" | "success" | "danger" | "faint";
+	locked?: string;
+	fixed?: boolean;
+}) {
+	return (
+		<FieldRow
+			name={name}
+			label={label}
+			description={description}
+			note={note}
+			kind={kind}
+			depth={depth}
+			group={group}
+			tone={tone}
+			locked={locked}
+			grip={!fixed}
+		/>
+	);
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -868,6 +961,12 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Folder,
+	FolderTabRow,
+	FolderTabItem,
+	FolderBody,
+	FieldTree,
+	FieldLine,
 	GridBox,
 	RailAdd,
 	ReadValue,
@@ -1005,6 +1104,26 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Folder: { kind: "part", props: { open: "text" } },
+	FolderTabRow: { kind: "part", props: { add: "text" } },
+	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },
+	FolderBody: { kind: "part", props: {} },
+	FieldTree: { kind: "part", props: {} },
+	FieldLine: {
+		kind: "part",
+		props: {
+			name: "text",
+			label: "text",
+			description: "text",
+			note: "text",
+			kind: "text",
+			depth: "variant",
+			group: "flag",
+			tone: "variant",
+			locked: "text",
+			fixed: "flag",
+		},
+	},
 	GridBox: { kind: "part", props: { columns: "variant" } },
 	RailAdd: { kind: "part", props: { label: "text" } },
 	ReadValue: { kind: "part", props: { label: "text", mono: "flag" } },

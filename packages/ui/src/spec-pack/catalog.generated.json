@@ -15,6 +15,122 @@
 			},
 			"events": []
 		},
+		"Folder": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"open": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"FolderTabRow": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"add": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"FolderTabItem": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"count": {
+					"kind": "text",
+					"type": "string"
+				},
+				"fixed": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"locked": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"FolderBody": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"FieldTree": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"FieldLine": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"depth": {
+					"kind": "variant",
+					"enum": [0, 1, 2]
+				},
+				"description": {
+					"kind": "text",
+					"type": "string"
+				},
+				"fixed": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"group": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"kind": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"locked": {
+					"kind": "text",
+					"type": "string"
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				},
+				"tone": {
+					"kind": "variant",
+					"enum": ["danger", "faint", "success", "warning"]
+				}
+			},
+			"events": []
+		},
 		"GridBox": {
 			"kind": "part",
 			"bind": false,
