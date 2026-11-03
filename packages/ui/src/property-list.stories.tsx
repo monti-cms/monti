@@ -123,7 +123,6 @@ function AddressRow() {
 			<FormFieldLabel htmlFor={id}>주소</FormFieldLabel>
 			<Affix
 				id={id}
-				prefix="/posts/"
 				defaultValue="autumn-trail"
 				action={
 					<IconButton label="제목으로 다시 만들기">
