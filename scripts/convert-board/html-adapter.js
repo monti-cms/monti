@@ -108,7 +108,32 @@ function centred(el) {
 /** The axis a group's children run along, as laid out. */
 function directionOf(el) {
 	const style = getComputedStyle(el);
-	return style.display.includes("flex") && style.flexDirection.startsWith("row") ? "row" : "column";
+	// A grid of several column tracks lays its children out along a row.
+	if (style.display.includes("grid")) return gridColumns(el) > 1 ? "row" : "column";
+	if (style.display.includes("flex")) return style.flexDirection.startsWith("row") ? "row" : "column";
+	// Children that flow like words (inline ones) run along a line.
+	const elements = drawnChildren(el).filter((child) => child.nodeType === Node.ELEMENT_NODE);
+	return elements.length > 0 && elements.every((child) => getComputedStyle(child).display.startsWith("inline"))
+		? "row"
+		: "column";
+}
+
+/** What `measured` read, with the element's own looks and any the reading found (a two-way grid). */
+function withLooks({ gridLooks = [], ...read }, looks) {
+	return { ...read, looks: [...looks, ...gridLooks] };
+}
+
+/** How many column tracks a grid has, as laid out. */
+function gridColumns(el) {
+	return getComputedStyle(el)
+		.gridTemplateColumns.split(" ")
+		.filter((track) => track !== "none" && track !== "").length;
+}
+
+/** A grid whose children fill more than one row and more than one column: a layout of its own, which a column or a row cannot say. */
+function isTwoWayGrid(el) {
+	if (!getComputedStyle(el).display.includes("grid") || gridColumns(el) < 2) return false;
+	return drawnChildren(el).filter((child) => child.nodeType === Node.ELEMENT_NODE).length > gridColumns(el);
 }
 
 /** The children that are drawn: elements shown, and text runs; the board runtime's own wrappers (`sc-if`) are seen through. */
@@ -152,7 +177,7 @@ function read(el, where, page = undefined, inPart = false) {
 	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
 	if (rule?.ignore) return { where: here };
 	if (rule?.frame) {
-		return framed(el, { where: here, direction: directionOf(el), layout: {}, looks, ...measured(el, here) });
+		return framed(el, { where: here, direction: directionOf(el), layout: {}, ...withLooks(measured(el, here), looks) });
 	}
 	if (rule) {
 		const props = Object.fromEntries(
@@ -182,8 +207,7 @@ function read(el, where, page = undefined, inPart = false) {
 		where: here,
 		direction: directionOf(el),
 		layout: { ...layoutOf(el, page), ...centred(el) },
-		looks,
-		...measured(el, here),
+		...withLooks(measured(el, here), looks),
 	});
 }
 
@@ -233,6 +257,13 @@ function readChild(node, where, inPart = false) {
 
 /** A group's children with the distance before each and after the last, along the group's axis, spacers folded into the distances. */
 function measured(el, where) {
+	if (isTwoWayGrid(el)) {
+		// Its children are read in order; the grid itself is reported once, not as distances that run back on every row.
+		return {
+			children: drawnChildren(el).map((child, index) => readChild(child, `${where}[${index}]`)),
+			gridLooks: ["a grid of rows and columns, which the layout has no word for"],
+		};
+	}
 	const row = directionOf(el) === "row";
 	const box = el.getBoundingClientRect();
 	const start = (rect) => (row ? rect.left : rect.top);
