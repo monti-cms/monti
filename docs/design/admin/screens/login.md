@@ -16,7 +16,7 @@
 | "로그인" · "생성" | `Button variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`. |
 | "또는" 줄 | `Separator label="또는"` | 비밀번호와 GitHub가 둘 다 있을 때만. |
 | "GitHub로 로그인" | `Button width="full"`(앞에 GitHub 아이콘). 비밀번호 폼이 있으면 `variant="secondary"`, GitHub만 있으면 `variant="primary"` | GitHub 인증으로 간다. 검은 알약은 화면에 하나다. |
-| GitHub 권한 없음 | `FormFieldError`와 같은 빨간 한 줄 "octo-kim은 관리자가 아니에요.", 그 아래 `TextButton` "다른 계정으로 로그인" | |
+| GitHub 권한 없음 | `FormFieldError`(필드 밖에서도 쓴다) "octo-kim은 관리자가 아니에요.", 그 아래 `TextButton` "다른 계정으로 로그인" | |
 | 이미 관리자가 있음 | 빨간 한 줄 "이미 관리자가 있어요.", `Button variant="secondary"` "로그인하기" | 로그인 화면으로 간다. |
 | 버전 "Monti 0.2" | `Text variant="micro" tone="faint"` | 화면 맨 아래. |
 
@@ -33,13 +33,7 @@
 | "잠김" | 8.07 | `FormFieldError` "1분 뒤에 다시 시도해 주세요.", "로그인" `disabled` | Controls/Field/Field |
 | "첫 관리자" | 8.01 | 안내 제목 "첫 관리자 만들기", 이메일, 비밀번호(플레이스홀더 "10자 이상"), 비밀번호 확인, "생성". GitHub 줄은 없다. |  |
 | "첫 관리자 오류" | 8.02 | 비밀번호 `FormFieldError` "10자 이상이어야 해요.", 확인 `FormFieldError` "두 비밀번호가 같지 않아요." | Controls/Field/Field |
-| "이미 있음" | 8.04 | 빨간 한 줄과 "로그인하기" `Button variant="secondary"`만 | Controls/Button/Button |
+| "이미 있음" | 8.04 | `FormFieldError` "이미 관리자가 있어요."와 "로그인하기" `Button variant="secondary"`만 | Controls/Field/Field › FormError, Controls/Button/Button |
 | "GitHub만" | 8.08 | "GitHub로 로그인" `Button variant="primary"`만 | Controls/Button/Button |
-| "GitHub 권한 없음" | 8.09 | "GitHub로 로그인"(primary), 빨간 한 줄, "다른 계정으로 로그인" `TextButton` | Controls/Button/TextButton |
+| "GitHub 권한 없음" | 8.09 | "GitHub로 로그인"(primary), `FormFieldError`, "다른 계정으로 로그인" `TextButton` | Controls/Field/Field › FormError |
 | "로그인 없음" | 8.10 | 안내 제목 "로그인이 설정되지 않았어요"만. 폼도 버튼도 없다. |  |
-
-## 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- 필드 밖의 빨간 한 줄(`.mt-error`를 폼 아래에 따로 쓴 것: "GitHub 권한 없음", "이미 있음"): `FormFieldError`는 필드에 묶인 오류다. 폼 전체의 오류 한 줄을 그릴 부품을 정해야 한다.

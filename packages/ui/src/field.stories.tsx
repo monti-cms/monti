@@ -1,6 +1,7 @@
 import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import {
 	FormField,
@@ -265,6 +266,17 @@ export const Ruled: Story = {
 				<Text variant="note">한국어</Text>
 				<FormFieldDescription>원문과 함께 쓰는 필드예요.</FormFieldDescription>
 			</FormField>
+		</Stack>
+	),
+};
+
+/** An error of the whole form, not of one field (a GitHub account that is not the admin): the same red line, under the button, and a way out. */
+export const FormError: Story = {
+	render: () => (
+		<Stack gap={8} className="max-w-sm">
+			<Button width="full">GitHub로 로그인</Button>
+			<FormFieldError className="mt-monti-4">octo-kim은 관리자가 아니에요.</FormFieldError>
+			<TextButton className="self-start">다른 계정으로 로그인</TextButton>
 		</Stack>
 	),
 };
