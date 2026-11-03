@@ -55,7 +55,9 @@ function Stack({
 	align,
 	justify,
 	grow,
+	width,
 	maxWidth,
+	minWidth,
 	minHeight,
 	className,
 	children,
@@ -65,13 +67,18 @@ function Stack({
 	justify?: "start" | "center" | "end" | "between";
 	/** Takes the room its parent leaves on the parent's axis (the region that pushes a line to the bottom of the page). */
 	grow?: boolean;
-	/** The screen's own width for this region in px (a form of 360): the screen's layout, not the design system's, so it is written in the screen's spec. */
+	/** The region's width in px, decided by the screen (a side column). */
+	width?: number;
+	/** The region's widest in px, decided by the screen (a form of 360). */
 	maxWidth?: number;
+	/** The region's narrowest in px, decided by the screen. */
+	minWidth?: number;
 	/** `screen`: at least as tall as the window (a page that stands alone). */
 	minHeight?: "screen";
 	className?: string;
 	children?: React.ReactNode;
 }) {
+	const sized = maxWidth !== undefined || minWidth !== undefined;
 	return (
 		<StackPart
 			direction={direction}
@@ -80,9 +87,9 @@ function Stack({
 			grow={grow}
 			gap={0}
 			minHeight={minHeight}
-			width={maxWidth === undefined ? undefined : "full"}
+			width={sized && width === undefined ? "full" : undefined}
 			className={className}
-			style={maxWidth === undefined ? undefined : { maxWidth }}
+			style={width === undefined && !sized ? undefined : { width, maxWidth, minWidth }}
 		>
 			{children}
 		</StackPart>
@@ -140,41 +147,131 @@ export const parts = {
 };
 
 /**
- * The props a spec fills from the data (a list, an object), with the fields each item may have. They carry what a screen shows, never how it looks: a
- * width, a color or a class is not a field here, so it cannot come in this way. A list or object prop missing from this table is not in the catalog.
+ * What a spec may write on each entry, and who decides it. An entry is a `part` (its look is the design system's) or a `layout` (a container the screen
+ * arranges with). Each prop has a kind; a prop with no kind here cannot be written in a spec, whatever its TypeScript type has (default deny). Adding a
+ * prop is deciding its kind, which says whether the design system or the screen decides it:
+ *
+ * - `variant`: a choice among the part's looks (a union of literals). The design system decides.
+ * - `flag`: an on/off of the part (a boolean).
+ * - `layout`: how a layout container arranges (direction, alignment, growing). Only on `layout` entries. The screen decides.
+ * - `layout-number`: a region's size in px (`maxWidth`). Only on `layout` entries; the catalog will not build with one on a part. Never a distance:
+ *   a distance is a `Spacing` item.
+ * - `event`: a handler, wired later by the element's id. A spec never writes one.
+ * - `data`: a list or an object only the data gives, with the fields each item may have (`data:id,label`). What a screen shows, never a look.
+ * - `text`: words the screen shows (a label, a placeholder), from the dictionary or the data.
+ * - `attribute`: what names or wires an element (its id, its input type, the field a label is for, an address).
  */
-export const DATA_FIELDS = {
-	"ListHead.columns": ["id", "label", "sort", "filtered"],
-	"PageSizeMenu.options": ["value", "label"],
-	"SearchToggle.targets": ["value", "label"],
+export const CATALOG = {
+	Stack: {
+		kind: "layout",
+		props: {
+			direction: "layout",
+			align: "layout",
+			justify: "layout",
+			grow: "layout",
+			minHeight: "layout",
+			width: "layout-number",
+			maxWidth: "layout-number",
+			minWidth: "layout-number",
+		},
+	},
+	Box: { kind: "part", props: { border: "variant" } },
+	Form: { kind: "part", props: { action: "attribute", method: "attribute" } },
+	Heading: { kind: "part", props: { as: "attribute", variant: "variant", tone: "variant", truncate: "flag" } },
+	Text: {
+		kind: "part",
+		props: {
+			as: "attribute",
+			variant: "variant",
+			tone: "variant",
+			weight: "variant",
+			align: "variant",
+			lines: "variant",
+			mono: "flag",
+			truncate: "flag",
+		},
+	},
+	FormField: { kind: "part", props: {} },
+	FormFieldLabel: { kind: "part", props: { htmlFor: "attribute" } },
+	Input: {
+		kind: "part",
+		props: {
+			id: "attribute",
+			name: "attribute",
+			type: "attribute",
+			autoComplete: "attribute",
+			required: "attribute",
+			minLength: "attribute",
+			placeholder: "text",
+			size: "variant",
+			width: "variant",
+			mono: "flag",
+		},
+	},
+	FormFieldError: { kind: "part", props: { id: "attribute" } },
+	Button: {
+		kind: "part",
+		props: {
+			type: "attribute",
+			variant: "variant",
+			size: "variant",
+			width: "variant",
+			disabled: "flag",
+			loading: "flag",
+		},
+	},
+	Separator: { kind: "part", props: { label: "text", length: "variant" } },
+	Image: { kind: "part", props: { src: "attribute", alt: "text", size: "variant", radius: "variant", fit: "variant" } },
+	Icon: { kind: "part", props: { name: "variant" } },
+	PageColumn: { kind: "part", props: { width: "variant" } },
+	PageHeader: { kind: "part", props: {} },
+	TextButton: { kind: "part", props: { type: "attribute", variant: "variant", size: "variant", tone: "variant" } },
+	ListHead: {
+		kind: "part",
+		props: {
+			columns: "data:id,label,sort,filtered",
+			moveLabel: "text",
+			onPlace: "event",
+			onStep: "event",
+			onPreview: "event",
+		},
+	},
+	ListScroll: { kind: "part", props: {} },
+	Table: { kind: "part", props: { container: "variant", layout: "variant" } },
+	TableBody: { kind: "part", props: { dimmed: "flag" } },
+	TableRow: { kind: "part", props: { selected: "flag", proposal: "flag", twoLine: "flag" } },
+	TableCell: {
+		kind: "part",
+		props: { align: "variant", tone: "variant", width: "variant", truncate: "flag", colSpan: "attribute" },
+	},
+	RowCheck: { kind: "part", props: { checked: "flag", proposal: "flag", label: "text", onCheckedChange: "event" } },
+	RowLink: { kind: "part", props: { href: "attribute" } },
+	RowTitle: { kind: "part", props: { folder: "flag" } },
+	RowActions: { kind: "part", props: {} },
+	EntryStatus: { kind: "part", props: { status: "variant", quiet: "flag" } },
+	Count: { kind: "part", props: { tone: "variant" } },
+	IconButton: { kind: "part", props: { type: "attribute", tone: "variant", label: "text" } },
+	SearchToggle: {
+		kind: "part",
+		props: {
+			label: "text",
+			"aria-label": "text",
+			placeholder: "text",
+			value: "attribute",
+			targets: "data:value,label",
+			onValueChange: "event",
+			onTargetChange: "event",
+		},
+	},
+	ListFooter: { kind: "part", props: {} },
+	PageSizeMenu: {
+		kind: "part",
+		props: { label: "text", value: "attribute", options: "data:value,label", onValueChange: "event" },
+	},
+	Pagination: { kind: "part", props: {} },
+	PaginationContent: { kind: "part", props: {} },
+	PaginationItem: { kind: "part", props: {} },
+	PaginationLink: { kind: "part", props: { href: "attribute", isActive: "flag", disabled: "flag" } },
+	PaginationPrevious: { kind: "part", props: { href: "attribute", disabled: "flag" } },
+	PaginationNext: { kind: "part", props: { href: "attribute", disabled: "flag" } },
 };
-
-/**
- * Props that take a number of pixels (a column's width, a table's total width). A spec never writes a size, so they are not in the catalog; a width a
- * screen needs is a design system choice (a token, a part's variant) first.
- */
-export const PIXEL_PROPS = ["Table.width", "TableCell.size", "ListHead.end"];
-
-/** The parts whose children a spec spaces with `Spacing` items. */
-export const CONTAINERS: ReadonlySet<string> = new Set(["Stack"]);
-
-/**
- * The props a part inherits from an HTML element that a spec may set. Every other inherited prop is left out of the catalog; the props a part declares
- * itself are all in, but `className`, `style` and handlers.
- */
-export const HTML_PROPS = [
-	"id",
-	"name",
-	"type",
-	"htmlFor",
-	"autoComplete",
-	"placeholder",
-	"required",
-	"minLength",
-	"disabled",
-	"src",
-	"alt",
-	"as",
-	"href",
-	"colSpan",
-] as const;

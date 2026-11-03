@@ -10,31 +10,48 @@ import {
 	type SpecValue,
 } from "./format";
 
-/** One part of `screen-catalog.generated.json`. */
+/** Who decides a prop (parts.tsx, `CATALOG`): the design system (`variant`, `flag`), the screen (`layout`, `layout-number`), or what it says or wires. */
+export type PropKind = "variant" | "flag" | "layout" | "layout-number" | "data" | "text" | "attribute";
+
+/** One prop of an entry: its kind and the values it takes. */
+export interface CatalogProp {
+	readonly kind: PropKind;
+	readonly enum?: readonly (string | number)[];
+	readonly type?: string;
+	readonly fields?: readonly string[];
+}
+
+/** One entry of `screen-catalog.generated.json`: a part, or a layout container the screen arranges with. */
 export interface CatalogPart {
-	readonly container: boolean;
+	readonly kind: "part" | "layout";
 	readonly children: boolean;
 	readonly slots: readonly string[];
-	readonly props: Readonly<
-		Record<
-			string,
-			{ readonly enum?: readonly (string | number)[]; readonly type?: string; readonly fields?: readonly string[] }
-		>
-	>;
+	readonly props: Readonly<Record<string, CatalogProp>>;
+	readonly events: readonly string[];
 }
 export type Catalog = Readonly<Record<string, CatalogPart>>;
 
 const ELEMENT_KEYS = new Set(["type", "props", "children", "slots", "visible", "repeat"]);
 const show = (value: unknown) => JSON.stringify(value);
 
-/** Whether a value written in the spec fits a prop: a value read from the data, a text or an action is checked when it is drawn. */
-function fits(value: SpecValue, rule: CatalogPart["props"][string]): boolean {
+/** Whether a value written in the spec fits a prop of its kind. A value read from the data is checked again when it is drawn. */
+function fits(value: SpecValue, rule: CatalogProp): boolean {
 	const read = isData(value) || isItem(value);
-	// A list or an object (a list head's columns) comes only from the data.
-	if (rule.type === "data") return read;
-	if (read || isText(value) || isAction(value)) return rule.enum === undefined || read;
-	if (rule.enum) return rule.enum.includes(value as string | number);
-	return typeof value === rule.type;
+	const plain = rule.enum ? rule.enum.includes(value as string | number) : typeof value === rule.type;
+	switch (rule.kind) {
+		// A list or an object (a list head's columns) comes only from the data.
+		case "data":
+			return read;
+		// A size is the screen's own number, written in its spec.
+		case "layout-number":
+			return typeof value === "number";
+		case "text":
+			return read || isText(value) || typeof value === "string";
+		case "attribute":
+			return read || isAction(value) || plain;
+		default:
+			return read || plain;
+	}
 }
 
 /**
@@ -64,7 +81,7 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 		}
 		for (const [name, value] of Object.entries(element.props ?? {})) {
 			const rule = part.props[name];
-			if (!rule) problems.push(`${id}.props.${name}: ${element.type} has no prop "${name}"`);
+			if (!rule) problems.push(`${id}.props.${name}: ${element.type} has no prop "${name}" a spec may write`);
 			else if (!fits(value, rule)) {
 				problems.push(
 					`${id}.props.${name}: ${show(value)} is not ${rule.enum ? `a choice (${rule.enum.join(" | ")})` : `a ${rule.type}`}`,
@@ -81,13 +98,15 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 			const where = `${id}.children[${index}]`;
 			if (typeof child === "string") use(child, where);
 			else if (isSpacing(child)) {
-				if (!part.container) problems.push(`${where}: Spacing is only for a container's children (Stack)`);
+				if (part.kind !== "layout")
+					problems.push(`${where}: Spacing is only for a layout container's children (Stack)`);
 				if (!(SPACING_STEPS as readonly number[]).includes(child.spacing)) {
 					problems.push(`${where}: ${child.spacing} is not a spacing step (${SPACING_STEPS.join(" ")})`);
 				}
 				const next = children[index + 1];
 				if (next !== undefined && isSpacing(next)) problems.push(`${where}: two Spacings in a row; write one`);
-			} else if (part.container) problems.push(`${where}: a container's children are elements and Spacing, not text`);
+			} else if (part.kind === "layout")
+				problems.push(`${where}: a container's children are elements and Spacing, not text`);
 		});
 	}
 	for (const id of Object.keys(spec.elements)) {

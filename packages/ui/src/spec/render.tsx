@@ -166,7 +166,7 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 			return resolve(child, item, where) as ReactNode;
 		};
 		let drawn: ReactNode[];
-		if (catalog[element.type]?.container) {
+		if (catalog[element.type]?.kind === "layout") {
 			const direction = (element.props?.direction ?? "column") as Direction;
 			const { container, margins } = spacingClasses(children, direction);
 			const merged = mergedChild(element);

@@ -50,7 +50,9 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		if (px === undefined || Math.round(px) === 0) return [];
 		const step = Math.round(px);
 		if ((SPACING_STEPS as readonly number[]).includes(step)) return [{ spacing: step as SpacingStep }];
-		outside.push(`${where}: a space of ${step}px is not a spacing step (${SPACING_STEPS.join(" ")})`);
+		outside.push(
+			`${where}: a distance of ${step}px is not a spacing step (${SPACING_STEPS.join(" ")}): express it as layout (a region's size or alignment), or fix the board to a token`,
+		);
 		return [];
 	};
 
