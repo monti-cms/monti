@@ -8,6 +8,7 @@ function Separator({
 	orientation = "horizontal",
 	length = "full",
 	flush = false,
+	label,
 	...props
 }: SeparatorPrimitive.Props & {
 	/**
@@ -17,7 +18,24 @@ function Separator({
 	length?: "full" | "control" | "bar";
 	/** No room of its own at its sides: the row's gap spaces it (a page toolbar, a bulk bar). */
 	flush?: boolean;
+	/** A horizontal rule with a word in its middle ("또는", between two ways to sign in): the caption size, faint, 12px from each side's line. */
+	label?: string;
 }) {
+	if (label && orientation === "horizontal")
+		return (
+			<SeparatorPrimitive
+				data-slot="separator"
+				orientation={orientation}
+				aria-label={label}
+				className={cn(
+					"flex w-full items-center gap-monti-12 text-monti-caption text-monti-faint before:h-px before:flex-1 before:bg-(--monti-border-default) before:content-[''] after:h-px after:flex-1 after:bg-(--monti-border-default) after:content-['']",
+					className,
+				)}
+				{...props}
+			>
+				<span aria-hidden>{label}</span>
+			</SeparatorPrimitive>
+		);
 	return (
 		<SeparatorPrimitive
 			data-slot="separator"

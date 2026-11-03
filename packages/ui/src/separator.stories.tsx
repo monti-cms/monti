@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "./button";
 import { Separator } from "./separator";
 import { Stack } from "./stack";
 import { Text } from "./text";
@@ -56,6 +57,19 @@ export const InBar: Story = {
 			<Text>링크</Text>
 			<Separator orientation="vertical" length="bar" flush />
 			<Text>각주</Text>
+		</Stack>
+	),
+};
+
+/** A word in the middle of a horizontal rule: between the two ways to sign in. */
+export const WithLabel: Story = {
+	render: () => (
+		<Stack gap={20} className="max-w-sm">
+			<Button width="full">로그인</Button>
+			<Separator label="또는" />
+			<Button variant="secondary" width="full">
+				GitHub로 로그인
+			</Button>
 		</Stack>
 	),
 };
