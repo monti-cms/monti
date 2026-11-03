@@ -619,6 +619,12 @@ export const CompareDraft: Story = {
 	},
 };
 
+/** A request the assistant works on until it is stopped, then refused, as a real request is when its signal aborts. */
+const untilStopped = (signal: AbortSignal) =>
+	new Promise<string | null>((_resolve, reject) => {
+		signal.addEventListener("abort", () => reject(new DOMException("Stopped", "AbortError")));
+	});
+
 /** The assistant's proposals for this entry, as a plugin hands them to the editor: the first paragraph shortened, the second one removed. */
 const proposalPlugin: EditorExtension = () => {
 	const [first, , second] = draft.working.doc.content;
@@ -662,8 +668,9 @@ const proposalPlugin: EditorExtension = () => {
 			onAccept: () => undefined,
 			onDiscard: () => undefined,
 			onOpen: () => undefined,
-			// The assistant answers a request in the card after a moment; the proposal stays where it is.
-			onAsk: (item) => new Promise<string | null>((resolve) => setTimeout(() => resolve(item.id), 1500)),
+			// A request in the card is worked on until it is stopped: a story has no assistant to answer it, and an answer that changed nothing would
+			// only make the request vanish from the card.
+			onAsk: (_item, _text, signal) => untilStopped(signal),
 		},
 	};
 };
@@ -684,24 +691,15 @@ export const Proposals: Story = {
 	},
 };
 
-/** A mark pressed (flow 2 · 09): the card under its paragraph with discard and accept, what was said in it, and the row to ask again. */
+/** A mark or its request marker pressed (flow 2 · 09): the card under its paragraph with discard and accept, what was said in it, and the row to ask again. */
 export const ProposalCardOpen: Story = {
 	tags: ["visual"],
 	render: withProposals,
 	play: async ({ canvasElement }) => {
 		await settled(canvasElement);
 		await page(canvasElement).findByText("1 / 3", undefined, LONG);
-		const mark = await waitFor(() => {
-			const found = canvasElement.querySelector("[data-proposal-item='i1']");
-			if (!found) throw new Error("no mark yet");
-			return found as HTMLElement;
-		}, LONG);
-		// The editor finds what was pressed by where: a click needs the coordinates a pointer has (userEvent's are 0, 0).
-		const box = mark.getBoundingClientRect();
-		const at = { clientX: box.left + 4, clientY: box.top + box.height / 2, button: 0 };
-		fireEvent.mouseDown(mark, at);
-		fireEvent.mouseUp(mark, at);
-		fireEvent.click(mark, at);
+		// Its request marker in the margin opens the card, as pressing the mark does.
+		await userEvent.click(await page(canvasElement).findByRole("button", { name: "요청 1개" }, LONG));
 		await within(document.body).findByRole("dialog", undefined, LONG);
 	},
 };
@@ -714,7 +712,7 @@ const selectionPlugin: EditorExtension = (context) => {
 			...(base.proposals as NonNullable<typeof base.proposals>),
 			items: base.proposals?.items.slice(0, 1) ?? [],
 			fieldItems: [],
-			onAskAt: () => new Promise<string | null>(() => undefined),
+			onAskAt: (_spot, _text, signal) => untilStopped(signal),
 		},
 	};
 };
@@ -774,5 +772,19 @@ export const ProposalFieldCard: Story = {
 		await settled(canvasElement);
 		await userEvent.click(await page(canvasElement).findByText("한 줄 소개.", undefined, LONG));
 		await within(document.body).findByRole("dialog", undefined, LONG);
+	},
+};
+
+/** The request stopped (the card's ■): what was asked stays in the card, marked "멈춤", and the words stay marked; the box is free for the next one. */
+export const SelectionRequestStopped: Story = {
+	tags: ["visual"],
+	render: withSelectionRequests,
+	play: async ({ canvasElement }) => {
+		await askAboutSelection(canvasElement);
+		const box = within(document.body).getByRole("textbox", { name: "요청" });
+		fireEvent.change(box, { target: { value: "앞 문장과 합쳐서 한 문장으로." } });
+		fireEvent.keyDown(box, { key: "Enter" });
+		await userEvent.click(await within(document.body).findByRole("button", { name: "멈추기" }, LONG));
+		await within(document.body).findByText("멈춤", undefined, LONG);
 	},
 };
