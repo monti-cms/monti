@@ -76,7 +76,7 @@ function CropStage({
 								event.stopPropagation();
 								onGrip?.(event, "move");
 							}}
-							className="absolute cursor-move border-2 border-monti-emphasis"
+							className="absolute cursor-move border-2 border-monti-contrast"
 							style={{ left: `${crop.x}%`, top: `${crop.y}%`, width: `${crop.width}%`, height: `${crop.height}%` }}
 						>
 							{CORNERS.map(({ grip, place }) => (
