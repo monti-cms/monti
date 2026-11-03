@@ -15,6 +15,48 @@
 			},
 			"events": []
 		},
+		"ListSection": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"count": {
+					"kind": "text",
+					"type": "string"
+				},
+				"countTone": {
+					"kind": "variant",
+					"enum": ["default", "warning"]
+				}
+			},
+			"events": []
+		},
+		"ListSectionRows": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"ListSectionRow": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["actions", "control", "detail", "meta", "title", "titleCount"],
+			"props": {
+				"metaTone": {
+					"kind": "variant",
+					"enum": ["danger", "faint", "muted", "subtle"]
+				},
+				"muted": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
 		"Textarea": {
 			"kind": "part",
 			"bind": true,

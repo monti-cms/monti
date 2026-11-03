@@ -5,6 +5,13 @@
 const role = (el) => [...el.classList].find((name) => name.startsWith("text-"))?.slice(5);
 
 /** The design system's classes and the part each one draws, first match wins. `props` reads the element's own values. */
+/** The rows a list section's heading goes with: the next `div.mt-table` after it. */
+const rowsAfter = (el) => {
+	const all = [...document.querySelectorAll("h2.mt-table-head, div.mt-table")];
+	const next = all[all.indexOf(el) + 1];
+	return next?.matches("div.mt-table") ? next : null;
+};
+
 /** Whether a list's rows have a head row before them. */
 const headBefore = (el) => {
 	const all = [...document.querySelectorAll(".mt-list-head, .mt-table")];
@@ -90,6 +97,41 @@ const parts = [
 		children: (el) => el.querySelector(":scope > .end"),
 		// A header that keeps its place over the scrolling page (the page column's own: its body scrolls under it).
 		asProps: ["position", "top", "z-index", "background", "padding-top"],
+	},
+	// A list's section: its heading row and its rows are neighbours in a board, one section in the design system.
+	{
+		match: (el) => el.matches("h2.mt-table-head") && rowsAfter(el) !== null,
+		part: "ListSection",
+		group: (el) => [el, rowsAfter(el)],
+	},
+	{
+		match: (el) => el.matches("h2.mt-table-head") && rowsAfter(el) !== null,
+		part: "Text",
+		props: () => ({ as: "span" }),
+		slots: () => ({}),
+		children: (el) => el,
+		asProps: ["display", "align-items", "gap", "margin", "border-bottom", "font-weight", "padding-bottom"],
+	},
+	{ match: (el) => el.matches("div.mt-table"), part: "ListSectionRows" },
+	{
+		match: (el) => el.matches("div.mt-row"),
+		part: "ListSectionRow",
+		props: (el) => ({
+			metaTone: { faint: "faint", subtle: "subtle", danger: "danger" }[
+				/--fg-([a-z]+)/.exec(el.querySelector(".text-meta")?.getAttribute("style") ?? "")?.[1]
+			],
+			// A key nobody uses yet: its title quiet.
+			muted: el.querySelector(".mt-row-title > span[style*='--fg-muted']") ? true : undefined,
+		}),
+		slots: (el) => ({
+			// The row draws its title, its count and its meta line itself: each place takes the words, not the board's element.
+			title: el.querySelector(".mt-row-title > span:not(.mt-count)"),
+			titleCount: el.querySelector(".mt-row-title > .mt-count"),
+			meta: el.querySelector(".text-meta"),
+			actions: [...el.querySelectorAll(":scope > .mt-text-btn")],
+			control: [el.querySelector(":scope > .mt-select")],
+		}),
+		asProps: ["position", "grid-template-columns", "align-items", "column-gap", "padding-top", "padding-bottom"],
 	},
 	// A list: the head row and the rows are neighbours in a board and one table in the design system.
 	{

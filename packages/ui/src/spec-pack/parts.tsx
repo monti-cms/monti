@@ -16,6 +16,7 @@ import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { ListHead } from "../list-head";
+import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
 import { Option } from "../option";
 import { PageColumn, PageHeader, PageToolbar } from "../page-header";
 import {
@@ -629,6 +630,29 @@ function Textarea({
 	return <TextareaPart id={id} name={name} defaultValue={value} rows={rows} mono={mono} />;
 }
 
+/** A list's section: its heading (the first child, a board's heading row) over its rows. */
+function ListSection({
+	count,
+	countTone,
+	children,
+}: {
+	count?: string;
+	countTone?: "default" | "warning";
+	children?: React.ReactNode;
+}) {
+	const [heading, ...rows] = React.Children.toArray(children);
+	return (
+		<ListSectionPart title={heading} count={count} countTone={countTone}>
+			{rows}
+		</ListSectionPart>
+	);
+}
+
+/** A list section's rows, in its section. */
+function ListSectionRows({ children }: { children?: React.ReactNode }) {
+	return <>{children}</>;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -649,6 +673,9 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	ListSection,
+	ListSectionRows,
+	ListSectionRow,
 	Textarea,
 	SaveGroup,
 	ChangedLabel,
@@ -766,6 +793,9 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	ListSection: { kind: "part", props: { count: "text", countTone: "variant" } },
+	ListSectionRows: { kind: "part", props: {} },
+	ListSectionRow: { kind: "part", props: { metaTone: "variant", muted: "flag" } },
 	Textarea: { kind: "part", bind: "yes", props: { rows: "state", mono: "flag" } },
 	SaveGroup: {
 		kind: "part",

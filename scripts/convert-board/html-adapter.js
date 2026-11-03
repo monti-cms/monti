@@ -191,9 +191,15 @@ function read(el, where, page = undefined, inPart = false) {
 		// A part's named places, each an element of it whose inside fills the place; its children, from the element the rule names or its own.
 		const inside = (holder, at) =>
 			drawnChildren(holder).map((child, index) => readChild(child, `${at}[${index}]`, true));
-		const slots = Object.entries(rule.slots?.(el) ?? {}).filter(([, holder]) => holder);
-		if (slots.length > 0)
-			node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, inside(holder, `${here} › ${name}`)]));
+		// A place is filled with an element's inside, or (a list of elements) with those elements themselves.
+		const fill = (holder, name) =>
+			Array.isArray(holder)
+				? holder.filter(Boolean).map((member, index) => read(member, `${here} › ${name}[${index}]`, undefined, true))
+				: inside(holder, `${here} › ${name}`);
+		const slots = Object.entries(rule.slots?.(el) ?? {}).filter(([, holder]) =>
+			Array.isArray(holder) ? holder.length > 0 : holder,
+		);
+		if (slots.length > 0) node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, fill(holder, name)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
 		node.children = holder ? inside(holder, here) : [];
 		// The element the children come from is the part's own inside: what the board writes on it is read as on the part.
