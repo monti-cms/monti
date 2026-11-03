@@ -20,6 +20,7 @@ import {
 } from "./dropdown-menu";
 import { MENU_EMPTY, MenuShortcut, MenuValue } from "./menu-parts";
 import { SELECT_TRIGGER } from "./select";
+import { TextButton } from "./text-button";
 
 /** One model of the menu. `value` is what `onValueChange` gets back (a key and a model, as the caller writes them). */
 export interface ModelMenuItem {
@@ -180,17 +181,18 @@ export function ModelMenuButton({
 	label: string;
 }) {
 	return (
-		<button
-			type="button"
+		<TextButton
+			variant="quiet"
+			size="meta"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="flex min-w-0 items-center gap-monti-6 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-subtle outline-none hover:text-monti-default focus-visible:text-monti-default aria-expanded:text-monti-default"
+			className="flex min-w-0 items-center"
 			{...props}
 		>
 			<span className="min-w-0 truncate">{model}</span>
-			{thinking && <span className="shrink-0 text-monti-faint">· {thinking}</span>}
-			<Caret solo className="size-3.5 shrink-0" />
-		</button>
+			{thinking && <span className="ml-monti-6 shrink-0 text-monti-faint">· {thinking}</span>}
+			<Caret />
+		</TextButton>
 	);
 }
 

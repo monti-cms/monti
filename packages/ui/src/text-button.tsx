@@ -17,7 +17,7 @@ import { Spinner } from "./spinner";
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",
+	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",
 	{
 		variants: {
 			variant: {
@@ -42,6 +42,8 @@ const textButtonVariants = cva(
 			size: {
 				note: "text-monti-note",
 				caption: "text-monti-caption",
+				/** Mono 12, for a value that opens a menu of values (the model, rows per page). */
+				meta: "text-monti-meta",
 				/** The label's type (mono 11), for the assistant's button on a field's label row. */
 				micro:
 					"inline-flex items-center gap-monti-4 text-monti-micro [&_svg:not([data-slot=caret])]:mr-0 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",

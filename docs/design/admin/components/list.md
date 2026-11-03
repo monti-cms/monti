@@ -209,7 +209,7 @@
 
 ### 코드
 
-`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 mono "25 per page ▾"다. 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
+`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 mono "25 per page ▾"다(`TextButton variant="quiet" size="meta"`와 `Caret`). 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
 
 ## 제목 있는 표 (도구 › API 키)
 
