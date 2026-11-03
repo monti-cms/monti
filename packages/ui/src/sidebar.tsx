@@ -8,6 +8,7 @@ import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } f
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { BACKDROP } from "./dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -161,7 +162,7 @@ function Sidebar({
 		return (
 			<DrawerPrimitive.Root open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<DrawerPrimitive.Portal>
-					<DrawerPrimitive.Backdrop className="fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+					<DrawerPrimitive.Backdrop className={BACKDROP} />
 					<DrawerPrimitive.Popup
 						dir={dir}
 						data-sidebar="sidebar"

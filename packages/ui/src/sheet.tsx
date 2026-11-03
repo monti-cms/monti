@@ -4,7 +4,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { cn } from "./cn";
-import { useModalFocus } from "./dialog";
+import { BACKDROP, useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { PANEL_BODY, PANEL_FOOT, PANEL_HEAD, PANEL_TITLE } from "./side-panel";
@@ -26,16 +26,7 @@ function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
 }
 
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
-	return (
-		<SheetPrimitive.Backdrop
-			data-slot="sheet-overlay"
-			className={cn(
-				"fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <SheetPrimitive.Backdrop data-slot="sheet-overlay" className={cn(BACKDROP, className)} {...props} />;
 }
 
 /**

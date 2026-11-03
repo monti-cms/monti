@@ -5,8 +5,8 @@ import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import {
+	BACKDROP,
 	DIALOG_ACTIONS,
-	DIALOG_BACKDROP,
 	DIALOG_DESCRIPTION,
 	DIALOG_HEADER,
 	DIALOG_SURFACE,
@@ -29,11 +29,7 @@ function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
 
 function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdrop.Props) {
 	return (
-		<AlertDialogPrimitive.Backdrop
-			data-slot="alert-dialog-overlay"
-			className={cn(DIALOG_BACKDROP, className)}
-			{...props}
-		/>
+		<AlertDialogPrimitive.Backdrop data-slot="alert-dialog-overlay" className={cn(BACKDROP, className)} {...props} />
 	);
 }
 
