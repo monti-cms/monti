@@ -4,6 +4,7 @@ import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { FormFieldSet, PropertyPanel } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useFieldProposals } from "./field-proposals";
 import { tabLabel } from "./layout-groups";
 import { entriesMessages } from "./messages";
 import { PropertyFields } from "./property-fields";
@@ -61,6 +62,14 @@ export function InspectorPanel({
 	const tabs = useMemo(() => tabsFor(site, collection), [collection, site]);
 	const issuesIn = (name: string) =>
 		publishIssues.filter((issue) => issue.path && tabFor(site, collection, issue.path) === name).length;
+	const proposals = useFieldProposals();
+	const proposalsIn = (name: string) =>
+		[...proposals.byField.keys()].filter((field) => tabFor(site, collection, field) === name).length;
+
+	// The field the proposal bubble is on brings its tab forward, so its card has the field to hang from.
+	useEffect(() => {
+		if (proposals.current) setTab(tabFor(site, collection, proposals.current));
+	}, [proposals.current, collection, site]);
 
 	// The tab of the field the page wants to bring up opens first; the field then opens in it.
 	useEffect(() => {
@@ -82,7 +91,9 @@ export function InspectorPanel({
 			tabs={tabs.map((name) => ({
 				value: name,
 				label: tabLabel(site, name, collection),
-				dot: issuesIn(name) > 0 ? ("warning" as const) : undefined,
+				// A problem to fix outweighs a proposal to look at.
+				dot: issuesIn(name) > 0 ? ("warning" as const) : proposalsIn(name) > 0 ? ("proposal" as const) : undefined,
+				...(issuesIn(name) === 0 && proposalsIn(name) > 0 ? { dotLabel: t("panel.proposalDot") } : {}),
 			}))}
 		>
 			{site.isCollection(collection) && (

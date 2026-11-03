@@ -19,7 +19,7 @@ import type { BrowserFormat } from "./browser-format";
 import type { EditorMarkSpec } from "./editor/added-marks";
 import type { BlockView } from "./editor/blocks/use-block-editor";
 import type { ActiveInlineMark } from "./editor/inline-marks";
-import { useProposalMarks } from "./editor/proposals/use-proposal-marks";
+import { type FieldProposals, useProposalMarks } from "./editor/proposals/use-proposal-marks";
 import { useTextCheckEditor } from "./editor/text-check/extension";
 import type { TextIssues } from "./editor/text-check/findings";
 import type { BlockAction } from "./editor/tiptap-editor";
@@ -42,6 +42,11 @@ export interface EditorExtensionContext {
 	};
 	/** Saves the entry now (as ⌘S does). Resolves with whether it is saved: what the server reads is then what the editor shows. */
 	readonly save?: () => Promise<boolean>;
+	/** The entry's field values as the form holds them now (unsaved edits included), and the call that changes some of them, as an edit of the admin's. */
+	readonly fields?: {
+		readonly values: Readonly<Record<string, unknown>>;
+		readonly set: (patch: Readonly<Record<string, unknown>>) => void;
+	};
 }
 
 /** An action added to the format card that appears when text is selected (e.g. polishing the writing style). It is drawn as a "✦ label" button at the card's end. */
@@ -96,6 +101,19 @@ export interface EditorProposalItem {
 	readonly thread?: readonly EditorProposalMessage[];
 }
 
+/**
+ * A change the assistant proposed for a field of the open entry (a summary, an SEO description; flow 2 · 08): the properties panel draws the new value in
+ * the blue pencil until it is accepted or discarded. One whose field reads otherwise than `before` was changed meanwhile, and is not drawn.
+ */
+export interface EditorFieldProposalItem {
+	readonly id: string;
+	readonly request: string;
+	readonly field: string;
+	readonly before: unknown;
+	readonly value: unknown;
+	readonly thread?: readonly EditorProposalMessage[];
+}
+
 /** One message of a proposal's card. */
 export interface EditorProposalMessage {
 	readonly author: "admin" | "assistant";
@@ -107,17 +125,25 @@ export interface EditorProposalMessage {
 /** Proposals an extension shows in the open entry, and what it hears back. */
 export interface EditorProposals {
 	readonly items: readonly EditorProposalItem[];
+	/** The field changes: drawn in the properties panel, and stepped through by the bubble after the body's. */
+	readonly fieldItems?: readonly EditorFieldProposalItem[];
+	/** The admin accepted a field change: its value is in the form now (unsaved). */
+	readonly onAcceptField?: (item: EditorFieldProposalItem) => void;
 	/** The admin accepted one: it is in the document now (unsaved), with `placed` the ids of the blocks put in its block's place. */
 	readonly onAccept: (item: EditorProposalItem, placed: readonly string[]) => void;
-	readonly onDiscard: (items: readonly EditorProposalItem[]) => void;
+	readonly onDiscard: (items: readonly (EditorProposalItem | EditorFieldProposalItem)[]) => void;
 	/**
 	 * The admin wrote in a proposal's card ("keep the end, shorten the start"): the assistant makes it again. Resolves with the id of the proposal that took
 	 * its place (drawn and kept open in the card), or `null` when nothing is proposed there any more. Without it, the card has no reply row. `signal` aborts
 	 * when the admin stops the request (the card's stop button): the source then rejects, quietly.
 	 */
-	readonly onAsk?: (item: EditorProposalItem, text: string, signal: AbortSignal) => Promise<string | null>;
+	readonly onAsk?: (
+		item: EditorProposalItem | EditorFieldProposalItem,
+		text: string,
+		signal: AbortSignal,
+	) => Promise<string | null>;
 	/** The bubble's name was pressed while it showed `item`: open where it came from (its conversation). */
-	readonly onOpen?: (item: EditorProposalItem) => void;
+	readonly onOpen?: (item: EditorProposalItem | EditorFieldProposalItem) => void;
 	/**
 	 * The admin selected words and asked about them (⌘J or the format bar's "✦ Request"; flow 2 · 09b–c). The entry is saved first. Resolves with the id of
 	 * the proposal made for them (drawn and opened in its card), or `null` when nothing is proposed. Without it, there is no request on a selection.
@@ -412,13 +438,15 @@ export function useEditorExtensions(context: EditorExtensionContext): Required<
 	readonly textIssues: TextIssues | null;
 	/** `null` while there is no request in the entry. */
 	readonly requests: EditorRequests | null;
+	/** The field changes the properties panel draws. */
+	readonly fieldProposals: FieldProposals;
 } {
 	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
 	const extensionResults = editorExtensions.map((extension) => extension(context));
 	const textCheck = useTextCheckEditor(textCheckers, context);
 	const proposalSources = extensionResults.flatMap((result) => (result.proposals ? [result.proposals] : []));
-	const proposals = useProposalMarks(proposalSources, context.save);
+	const proposals = useProposalMarks(proposalSources, context.save, context.fields);
 	const results: EditorExtensionResult[] = [...extensionResults, textCheck, proposals];
 	const editorCallbacks = results.flatMap((result) => (result.onEditor ? [result.onEditor] : []));
 	const savedCallbacks = results.flatMap((result) => (result.onSaved ? [result.onSaved] : []));
@@ -443,5 +471,6 @@ export function useEditorExtensions(context: EditorExtensionContext): Required<
 		onSaved,
 		textIssues: textCheck.textIssues,
 		requests: proposals.requests,
+		fieldProposals: proposals.fieldProposals,
 	};
 }

@@ -13,6 +13,7 @@ const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 
 let editor: Editor;
 let settled: { id: string; body: unknown }[];
 let asked: unknown[];
+let form: Record<string, unknown> = {};
 beforeEach(() => {
 	editor = new Editor({ extensions: buildEditorExtensions(testSite), content: tiptapOf("One.\n\nTwo.") });
 	const ids: string[] = [];
@@ -21,7 +22,9 @@ beforeEach(() => {
 	});
 	settled = [];
 	asked = [];
+	form = {};
 	const view = (id: string, blockId: string) => ({
+		kind: "body",
 		id,
 		proposalId: "p1",
 		runId: "run-1",
@@ -49,6 +52,17 @@ beforeEach(() => {
 						reasked ? remade() : view("a", ids[0] ?? ""),
 						view("b", ids[1] ?? ""),
 						...(spot ? [{ ...view("s1", ids[1] ?? ""), proposalId: "p2" }] : []),
+						{
+							kind: "field",
+							id: "f1",
+							proposalId: "p3",
+							runId: "run-3",
+							request: "summarize",
+							field: "summary",
+							before: null,
+							value: "Short.",
+							thread: [],
+						},
 					],
 				});
 			}
@@ -80,6 +94,7 @@ const mount = () =>
 			useAgentProposalsExtension({
 				translateLocales: null,
 				getEntry: () => ({ title: "", collection: "post", entryId: "e1" }),
+				fields: { values: form, set: () => undefined },
 			}),
 		{
 			wrapper: SiteWrapper,
@@ -154,5 +169,27 @@ describe("the agent's proposals in the editor", () => {
 		expect(asked).toEqual([{ entry: "e1", words: "Two", text: "longer" }]);
 		expect(next).toBe("s1");
 		await waitFor(() => expect(result.current.proposals?.items.map((item) => item.id)).toEqual(["a", "b", "s1"]));
+	});
+
+	it("ASSIST-E5 hands the field changes to the editor and reports an accepted one at the save only while the form still holds its value", async () => {
+		const { result, rerender } = mount();
+		await waitFor(() => expect(result.current.proposals?.fieldItems?.map((item) => item.field)).toEqual(["summary"]));
+		const [summary] = result.current.proposals?.fieldItems ?? [];
+
+		// Accepted, then written over by the admin before the save: theirs, so not reported, and drawn again.
+		act(() => result.current.proposals?.onAcceptField?.(summary as never));
+		expect(result.current.proposals?.fieldItems).toEqual([]);
+		form = { summary: "Mine." };
+		rerender();
+		act(() => result.current.onSaved?.());
+		expect(settled).toEqual([]);
+		await waitFor(() => expect(result.current.proposals?.fieldItems).toHaveLength(1));
+
+		// Accepted and saved as it is: reported as accepted.
+		act(() => result.current.proposals?.onAcceptField?.(summary as never));
+		form = { summary: "Short." };
+		rerender();
+		act(() => result.current.onSaved?.());
+		await waitFor(() => expect(settled).toEqual([{ id: "p3", body: { accepted: [{ id: "f1", placed: [] }] } }]));
 	});
 });

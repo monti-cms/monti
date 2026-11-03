@@ -124,6 +124,50 @@ describe("a request in a change's card", () => {
 	});
 });
 
+describe("a request in a field change's card", () => {
+	it("AGENT-S1 writes a text field again from the card's words, and plans it as a field change", async () => {
+		const site = notesSite();
+		await site.store.proposals.create("p", { adminId: admin.userId, runId: "run-p", request: "summarize" });
+		await site.store.proposals.addItems(admin.userId, "p", [
+			itemOf("f1", "entries.updateFields", {
+				target: { kind: "entry", id: "e1", spot: "summary" },
+				preview: { before: null, after: "A long summary of the post." },
+				base: "x",
+				change: { field: "summary", value: "A long summary of the post." },
+			}),
+		]);
+		const plan = vi.fn(
+			async (_operation: string, input: { fields: Record<string, string> }): Promise<WritePlan[]> => [
+				{
+					target: { kind: "entry", id: "e1", spot: "summary" },
+					preview: { before: null, after: input.fields.summary },
+					base: "x",
+					change: { field: "summary", value: input.fields.summary },
+				},
+			],
+		);
+		const cms = { writes: { plan } } as unknown as Cms;
+		const { model, prompts } = modelAnswering("A short summary.", "Shortened it.");
+		const { proposal, itemId } = await askAtSpot({
+			cms,
+			auth: admin,
+			store: site.store.proposals,
+			model,
+			proposalId: "p",
+			itemId: "f1",
+			text: "shorter",
+		});
+		expect(plan).toHaveBeenCalledWith(
+			"entries.updateFields",
+			{ id: "e1", fields: { summary: "A short summary." } },
+			{ auth: admin },
+		);
+		expect(proposal.items[0]).toMatchObject({ id: itemId, change: { value: "A short summary." } });
+		expect(proposal.items[0]?.thread?.map((message) => message.text)).toEqual(["shorter", "Shortened it."]);
+		expect(prompts[0]).toContain("A long summary of the post.");
+	});
+});
+
 describe("a request on selected words", () => {
 	const BLOCK = "I kept the settings screen as it was. It changes rarely.";
 

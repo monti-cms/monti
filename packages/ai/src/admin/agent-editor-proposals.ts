@@ -3,6 +3,7 @@
 import {
 	type EditorExtensionContext,
 	type EditorExtensionResult,
+	type EditorFieldProposalItem,
 	type EditorProposalItem,
 	errorText,
 	useAskPanel,
@@ -14,7 +15,7 @@ import type { CmsNode } from "@monti-cms/core/document";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { EditorProposalView } from "../agent/entry-proposals";
+import type { EditorBodyProposalView, EditorFieldProposalView, EditorProposalView } from "../agent/entry-proposals";
 import { aiKeys, askAtSelection, askProposalItem, listEntryProposals, settleProposal } from "./api";
 import { proposalMessages } from "./proposal.messages";
 
@@ -62,9 +63,9 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 	const items = useMemo(
 		() =>
 			(views ?? [])
-				.filter((view) => !hidden.has(view.id))
+				.filter((view): view is EditorBodyProposalView => view.kind === "body" && !hidden.has(view.id))
 				.map(
-					(view: EditorProposalView): EditorProposalItem => ({
+					(view): EditorProposalItem => ({
 						id: view.id,
 						request: view.request,
 						blockId: view.blockId,
@@ -75,6 +76,26 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				),
 		[views, hidden],
 	);
+	const fieldItems = useMemo(
+		() =>
+			(views ?? [])
+				.filter((view): view is EditorFieldProposalView => view.kind === "field" && !hidden.has(view.id))
+				.map(
+					(view): EditorFieldProposalItem => ({
+						id: view.id,
+						request: view.request,
+						field: view.field,
+						before: view.before,
+						value: view.value,
+						thread: view.thread,
+					}),
+				),
+		[views, hidden],
+	);
+	// Field changes accepted and not saved yet, by item: its proposal and the value put in the form.
+	const acceptedFields = useRef(new Map<string, { item: EditorFieldProposalItem; proposalId: string }>());
+	const fieldsRef = useRef(context.fields);
+	fieldsRef.current = context.fields;
 
 	const refresh = useCallback(
 		(proposalIds: Iterable<string>) => {
@@ -101,13 +122,20 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 	const proposals = useMemo(
 		() => ({
 			items,
+			fieldItems,
+			onAcceptField: (item: EditorFieldProposalItem) => {
+				const proposalId = byId.get(item.id)?.proposalId;
+				if (!proposalId) return;
+				acceptedFields.current.set(item.id, { item, proposalId });
+				setHidden((current) => new Set([...current, item.id]));
+			},
 			onAccept: (item: EditorProposalItem, placed: readonly string[]) => {
 				const proposalId = byId.get(item.id)?.proposalId;
 				if (!proposalId) return;
 				accepted.current.set(item.id, { item, proposalId, placed });
 				setHidden((current) => new Set([...current, item.id]));
 			},
-			onDiscard: (discarded: readonly EditorProposalItem[]) => {
+			onDiscard: (discarded: readonly (EditorProposalItem | EditorFieldProposalItem)[]) => {
 				setHidden((current) => new Set([...current, ...discarded.map((item) => item.id)]));
 				const byProposal = new Map<string, { discarded: string[] }>();
 				for (const item of discarded) {
@@ -117,7 +145,7 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				}
 				void settle(byProposal);
 			},
-			onAsk: async (item: EditorProposalItem, text: string, signal: AbortSignal) => {
+			onAsk: async (item: EditorProposalItem | EditorFieldProposalItem, text: string, signal: AbortSignal) => {
 				const view = byId.get(item.id);
 				if (!view) return null;
 				try {
@@ -163,14 +191,14 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				: {}),
 			...(ask
 				? {
-						onOpen: (item: EditorProposalItem) => {
+						onOpen: (item: EditorProposalItem | EditorFieldProposalItem) => {
 							const runId = byId.get(item.id)?.runId;
 							if (runId) ask({ open: runId });
 						},
 					}
 				: {}),
 		}),
-		[items, byId, settle, ask, site, t, client, entryId, refresh],
+		[items, fieldItems, byId, settle, ask, site, t, client, entryId, refresh],
 	);
 
 	/** Accepted changes taken back out with ⌘Z wait again: they are drawn again and not reported. */
@@ -190,6 +218,18 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 			byProposal.set(proposalId, entry);
 		}
 		accepted.current.clear();
+		// A field change is reported only if the form still holds its value: one the admin edited again afterwards is theirs, and waits again.
+		const values = fieldsRef.current?.values ?? {};
+		for (const [id, { item, proposalId }] of acceptedFields.current) {
+			if (JSON.stringify(values[item.field] ?? null) !== JSON.stringify(item.value ?? null)) {
+				setHidden((current) => new Set([...current].filter((hiddenId) => hiddenId !== id)));
+				continue;
+			}
+			const entry = byProposal.get(proposalId) ?? { accepted: [] };
+			entry.accepted.push({ id, placed: [] });
+			byProposal.set(proposalId, entry);
+		}
+		acceptedFields.current.clear();
 		if (byProposal.size > 0) void settle(byProposal);
 	}, [settle, dropUndone]);
 

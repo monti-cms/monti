@@ -649,6 +649,16 @@ const proposalPlugin: EditorExtension = () => {
 					nodes: [],
 				},
 			],
+			// The summary written again (flow 2 · 08's properties panel): drawn in its row, and the bubble's last stop.
+			fieldItems: [
+				{
+					id: "f1",
+					request: "더 짧게 다듬어 줘. 말투는 그대로.",
+					field: "summary",
+					before: "글을 한 줄로 소개합니다.",
+					value: "한 줄 소개.",
+				},
+			],
 			onAccept: () => undefined,
 			onDiscard: () => undefined,
 			onOpen: () => undefined,
@@ -665,12 +675,12 @@ const withProposals = () => (
 	</PageFrame>
 );
 
-/** Proposals in the text (flow 2 · 08): the blue pencil in the first paragraph (with its request marker in the margin), the second paragraph struck through, and the bubble over the status bar. */
+/** Proposals in the text (flow 2 · 08): the blue pencil in the first paragraph (with its request marker in the margin), the second paragraph struck through, the summary in the properties panel, and the bubble over the status bar. */
 export const Proposals: Story = {
 	tags: ["visual"],
 	render: withProposals,
 	play: async ({ canvasElement }) => {
-		await page(canvasElement).findByText("1 / 2", undefined, LONG);
+		await page(canvasElement).findByText("1 / 3", undefined, LONG);
 	},
 };
 
@@ -680,7 +690,7 @@ export const ProposalCardOpen: Story = {
 	render: withProposals,
 	play: async ({ canvasElement }) => {
 		await settled(canvasElement);
-		await page(canvasElement).findByText("1 / 2", undefined, LONG);
+		await page(canvasElement).findByText("1 / 3", undefined, LONG);
 		const mark = await waitFor(() => {
 			const found = canvasElement.querySelector("[data-proposal-item='i1']");
 			if (!found) throw new Error("no mark yet");
@@ -703,6 +713,7 @@ const selectionPlugin: EditorExtension = (context) => {
 		proposals: {
 			...(base.proposals as NonNullable<typeof base.proposals>),
 			items: base.proposals?.items.slice(0, 1) ?? [],
+			fieldItems: [],
 			onAskAt: () => new Promise<string | null>(() => undefined),
 		},
 	};
@@ -752,5 +763,16 @@ export const SelectionRequestWorking: Story = {
 		fireEvent.keyDown(box, { key: "Enter" });
 		await within(document.body).findByText("고치는 중…", undefined, LONG);
 		await page(canvasElement).findByText(/고치는 중 1/, undefined, LONG);
+	},
+};
+
+/** A field change's value pressed (flow 2 · 08): the card under the summary row, with discard, accept and the row to ask again. */
+export const ProposalFieldCard: Story = {
+	tags: ["visual"],
+	render: withProposals,
+	play: async ({ canvasElement }) => {
+		await settled(canvasElement);
+		await userEvent.click(await page(canvasElement).findByText("한 줄 소개.", undefined, LONG));
+		await within(document.body).findByRole("dialog", undefined, LONG);
 	},
 };

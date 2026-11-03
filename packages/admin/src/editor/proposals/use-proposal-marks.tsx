@@ -6,9 +6,11 @@ import { Marker, MemoCardPopover, MemoMessage, MemoThread, ProposalBubble, Propo
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
+	EditorExtensionContext,
+	EditorFieldProposalItem,
 	EditorProposalItem,
 	EditorProposals,
 	EditorRequests,
@@ -71,6 +73,31 @@ const timeOf = (iso: string) => {
 		: `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
 };
 
+/** The attribute on a field's value in the properties panel while a change of it is drawn: where its card hangs. */
+export const FIELD_PROPOSAL_ATTRIBUTE = "data-field-proposal";
+
+/** A field change as the properties panel draws it: the values, whether the bubble is on it, and the way to open its card. */
+export interface FieldProposalView {
+	readonly id: string;
+	readonly before: unknown;
+	readonly value: unknown;
+	readonly current: boolean;
+	readonly open: () => void;
+}
+
+/** The field changes drawn now, by field name, and the field the bubble is on (its tab comes forward). */
+export interface FieldProposals {
+	readonly byField: ReadonlyMap<string, FieldProposalView>;
+	readonly current: string | null;
+}
+
+type AnyEntry = { readonly item: EditorProposalItem | EditorFieldProposalItem; readonly source: EditorProposals };
+const isField = (item: EditorProposalItem | EditorFieldProposalItem): item is EditorFieldProposalItem =>
+	"field" in item;
+/** Whether a form value reads as a stored one: an empty field is `""` in the form and missing (`null`) once stored. */
+const blank = (value: unknown) => value == null || value === "" || (Array.isArray(value) && value.length === 0);
+const sameValue = (a: unknown, b: unknown) => (blank(a) && blank(b)) || JSON.stringify(a) === JSON.stringify(b);
+
 /** Words selected to ask about: where they are, and what was asked once sent. */
 interface SpotRequest {
 	readonly words: string;
@@ -84,21 +111,30 @@ interface SpotRequest {
  * edit of the admin's, undone with ⌘Z until saved; the sources hear what was accepted and discarded. In the card the admin can ask for that one change
  * again (flow 2 · 09): the thread shows what was said, and a block with requests has the request marker in its margin ("…" while the assistant works).
  * Selected words can be asked about too (⌘J or the format bar's "✦ Request", flow 2 · 09b–c): they get the highlight and an empty card; sending saves the
- * entry first, and the answer comes as a proposal of its own. `requests` is what the status bar counts.
+ * entry first, and the answer comes as a proposal of its own. `requests` is what the status bar counts. Field changes (flow 2 · 08's summary) are drawn
+ * by the properties panel from `fieldProposals`; the bubble steps through them after the body's, and their card hangs under the field.
  */
 export function useProposalMarks(
 	sources: readonly EditorProposals[],
 	save?: () => Promise<boolean>,
+	fields?: EditorExtensionContext["fields"],
 ): {
 	readonly onEditor: (editor: Editor | null) => void;
 	readonly overlay: ReactNode;
 	readonly selectionActions: readonly EditorSelectionAction[];
 	readonly requests: EditorRequests | null;
+	readonly fieldProposals: FieldProposals;
 } {
 	const site = useSite();
 	const t = useTranslator(proposalMarksMessages);
 	const [editor, setEditor] = useState<Editor | null>(null);
-	const [current, setCurrent] = useState<string | null>(null);
+	const [current, setCurrentState] = useState<string | null>(null);
+	// Until the admin picks one, the bubble is on the first proposal drawn: the body's draw after the fields' while the editor starts.
+	const picked = useRef(false);
+	const setCurrent = useCallback((value: SetStateAction<string | null>) => {
+		picked.current = true;
+		setCurrentState(value);
+	}, []);
 	const [card, setCard] = useState<string | null>(null);
 	// The requests the assistant is working on, by the proposal they are about: what the admin wrote.
 	const [asking, setAsking] = useState<ReadonlyMap<string, string>>(new Map());
@@ -106,11 +142,17 @@ export function useProposalMarks(
 	const [spots, setSpots] = useState<ReadonlyMap<string, SpotRequest>>(new Map());
 	const askAt = sources.find((source) => source.onAskAt)?.onAskAt;
 	const items = useMemo(() => sources.flatMap((source) => source.items.map((item) => ({ item, source }))), [sources]);
+	const fieldItems = useMemo(
+		() => sources.flatMap((source) => (source.fieldItems ?? []).map((item) => ({ item, source }))),
+		[sources],
+	);
 	// What was written in one card does not follow to another.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: clears the box when another card opens
 	useEffect(() => setDraft(""), [card]);
 	const itemsRef = useRef(items);
 	itemsRef.current = items;
+	const fieldsRef = useRef(fields);
+	fieldsRef.current = fields;
 
 	useEffect(() => {
 		if (!editor) return;
@@ -123,7 +165,7 @@ export function useProposalMarks(
 		return () => {
 			if (!editor.isDestroyed) editor.unregisterPlugin(proposalMarksKey);
 		};
-	}, [editor]);
+	}, [editor, setCurrent]);
 
 	useEffect(() => {
 		if (!editor || editor.isDestroyed) return;
@@ -142,7 +184,7 @@ export function useProposalMarks(
 	}, [editor, items, current, asking]);
 
 	// The proposals drawn now, in the order of the text: what the bubble steps through.
-	const shown =
+	const bodyShown =
 		useEditorState({
 			editor,
 			selector: ({ editor: now }) => {
@@ -152,6 +194,11 @@ export function useProposalMarks(
 			equalityFn: (a, b) =>
 				a === b || (a !== null && b !== null && a.length === b.length && a.every((id, index) => id === b[index])),
 		}) ?? [];
+	// The field changes drawn now: those whose field still reads as they were planned against, after the body's.
+	const fieldShown = fieldItems
+		.filter(({ item }) => fields !== undefined && sameValue(fields.values[item.field], item.before))
+		.map(({ item }) => item.id);
+	const shown = [...bodyShown, ...fieldShown];
 
 	// The places the marks plugin left for request markers, read again after each change of the document or of the marks.
 	const [markerPlaces, setMarkerPlaces] = useState<readonly { id: string; element: Element }[]>([]);
@@ -175,17 +222,25 @@ export function useProposalMarks(
 		};
 	}, [editor]);
 
-	const entryOf = (id: string | null) => items.find(({ item }) => item.id === id);
+	const entryOf = (id: string | null): AnyEntry | undefined =>
+		items.find(({ item }) => item.id === id) ?? fieldItems.find(({ item }) => item.id === id);
 	const position = Math.max(0, shown.indexOf(current ?? ""));
 	// The first proposal is the one looked at until another is picked, so its block has the blue line from the start.
+	const first = shown[0] ?? null;
+	const missing = current !== null && !shown.includes(current);
 	useEffect(() => {
-		if (shown.length > 0 && (current === null || !shown.includes(current))) setCurrent(shown[0] ?? null);
-	}, [shown, current]);
+		if (first !== null && (current === null || missing || (!picked.current && current !== first)))
+			setCurrentState(first);
+	}, [first, current, missing]);
 	const focused = entryOf(shown[position] ?? null);
 
 	/** The element of the block a proposal replaces: where its card hangs from and what stepping scrolls to. */
 	const anchorOf = (id: string | null): HTMLElement | null => {
-		const found = id && editor ? blocksById(editor.state.doc).get(entryOf(id)?.item.blockId ?? "") : undefined;
+		const entry = entryOf(id);
+		if (entry && isField(entry.item))
+			return document.querySelector<HTMLElement>(`[${FIELD_PROPOSAL_ATTRIBUTE}="${CSS.escape(entry.item.field)}"]`);
+		const found =
+			entry && editor && !isField(entry.item) ? blocksById(editor.state.doc).get(entry.item.blockId) : undefined;
 		const dom = found && editor ? editor.view.nodeDOM(found.pos) : null;
 		return dom instanceof HTMLElement ? dom : null;
 	};
@@ -201,6 +256,13 @@ export function useProposalMarks(
 	const accept = (ids: readonly string[]) => {
 		if (!editor) return;
 		for (const id of ids) {
+			const field = fieldItems.find(({ item }) => item.id === id);
+			if (field) {
+				// Into the form, as an edit of the admin's: saved with the entry.
+				fieldsRef.current?.set({ [field.item.field]: field.item.value });
+				field.source.onAcceptField?.(field.item);
+				continue;
+			}
 			const entry = itemsRef.current.find(({ item }) => item.id === id);
 			if (!entry) continue;
 			const placed = acceptInEditor(editor, site, entry.item);
@@ -210,7 +272,7 @@ export function useProposalMarks(
 	};
 	const discard = (ids: readonly string[]) => {
 		for (const source of sources) {
-			const mine = source.items.filter((item) => ids.includes(item.id));
+			const mine = [...source.items, ...(source.fieldItems ?? [])].filter((item) => ids.includes(item.id));
 			if (mine.length > 0) source.onDiscard(mine);
 		}
 		setCard(null);
@@ -220,7 +282,7 @@ export function useProposalMarks(
 	const running = useRef(new Map<string, AbortController>());
 	const stop = (id: string) => running.current.get(id)?.abort();
 
-	const ask = async (entry: { item: EditorProposalItem; source: EditorProposals }, text: string) => {
+	const ask = async (entry: AnyEntry, text: string) => {
 		if (!entry.source.onAsk) return;
 		setDraft("");
 		setAsking((before) => new Map([...before, [entry.item.id, text]]));
@@ -513,5 +575,27 @@ export function useProposalMarks(
 		</>
 	);
 
-	return { onEditor: setEditor, overlay, selectionActions, requests };
+	const currentEntry = entryOf(current);
+	const fieldProposals: FieldProposals = {
+		byField: new Map(
+			fieldItems
+				.filter(({ item }) => fieldShown.includes(item.id))
+				.map(({ item }) => [
+					item.field,
+					{
+						id: item.id,
+						before: item.before,
+						value: item.value,
+						current: item.id === current,
+						open: () => {
+							setCurrent(item.id);
+							setCard(item.id);
+						},
+					},
+				]),
+		),
+		current: currentEntry && isField(currentEntry.item) ? currentEntry.item.field : null,
+	};
+
+	return { onEditor: setEditor, overlay, selectionActions, requests, fieldProposals };
 }
