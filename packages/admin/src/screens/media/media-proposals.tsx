@@ -29,6 +29,8 @@ export interface MediaProposalCards {
 	readonly bar: ReactNode;
 	/** The card of the tile pressed, under it. */
 	readonly card: ReactNode;
+	/** The file whose card is open: its tile is ringed in the proposal blue. */
+	readonly openFor: string | null;
 }
 
 /**
@@ -161,5 +163,6 @@ export function useMediaProposalCards(): MediaProposalCards {
 		},
 		bar,
 		card: cardNode,
+		openFor: opened?.mediaId ?? null,
 	};
 }

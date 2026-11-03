@@ -17,7 +17,7 @@ import { TextButton } from "./text-button";
  * - `status="interrupted"`: the file is fine but did not go up (too large, the network). Its picture stays, faded as while it goes up, with no ring; the
  *   detail line is red, the name is quiet, and `actions` are what can be done ("Shrink and retry", "Remove").
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
- *   is ringed and checked in blue.
+ *   is ringed and checked in blue; one whose card is open (`current`) is ringed in blue without the check.
  */
 function Tile({
 	preview,
@@ -89,7 +89,7 @@ function Tile({
 					className={cn(
 						"relative block aspect-[4/3] overflow-hidden rounded-monti-md bg-monti-muted",
 						selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
-						current && !selected && "ring-2 ring-monti-contrast",
+						current && !selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
 					)}
 				>
 					<span className={cn("block size-full", (uploading || interrupted) && "opacity-45")}>{preview}</span>

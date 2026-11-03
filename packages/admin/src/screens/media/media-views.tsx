@@ -48,7 +48,7 @@ export interface MediaViewProps {
 	folderMenuFor: (folder: FolderListItem) => MenuAction[];
 	onTrash: (media: MediaItem) => void;
 	/** The assistant's proposals on the tiles: the text to draw on a file, and the way to open its card. */
-	proposals?: Pick<MediaProposalCards, "proposalFor" | "open">;
+	proposals?: Pick<MediaProposalCards, "proposalFor" | "open" | "openFor">;
 }
 
 /** Where a file is while a search lists files from several folders: its path below the open folder; nothing for a file in the open folder. */
@@ -190,7 +190,7 @@ export function MediaGrid({
 										draggable
 										onDragStart={(event) => startDrag(event, media)}
 										aria-current={open?.id === media.id ? "true" : undefined}
-										current={open?.id === media.id}
+										current={open?.id === media.id || proposals?.openFor === media.id}
 										selected={picked.has(media.id)}
 										picking={picked.size > 0}
 										onSelectedChange={(on) => library.togglePicked(media.id, on)}
