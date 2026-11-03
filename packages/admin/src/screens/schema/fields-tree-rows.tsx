@@ -236,16 +236,10 @@ export function Row({
 				}}
 				changed={changed || mark?.kind === "edited"}
 				changedLabel={ts("changed")}
+				problems={issues.length > 0 ? t("field.problems", { count: issues.length }) : undefined}
 				onOpen={() => ctx.onOpen(place, name)}
 				openLabel={t("field.toggle", { name })}
 			>
-				{issues.length > 0 && (
-					<span
-						role="img"
-						aria-label={t("field.problems", { count: issues.length })}
-						className="absolute top-1/2 right-1 size-1.5 -translate-y-1/2 rounded-monti-full bg-monti-danger-emphasis"
-					/>
-				)}
 				<RowButtons buttons={buttons} />
 				{moving && top && (
 					<MoveDialog

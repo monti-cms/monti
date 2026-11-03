@@ -36,7 +36,7 @@
 
 ### 코드
 
-`ChangeDot`: `tone`은 `warning`(기본, `bg-warning-emphasis`)이나 `proposal`이다. `label`은 스크린 리더에게 점의 이름을 알려 준다. 없으면 점은 장식이다. 뜻은 근처의 말이나 `label`에도 있어야 한다.
+`ChangeDot`: `tone`은 `warning`(기본, `bg-warning-emphasis`), `proposal`, 저장 전에 고칠 문제인 `danger`(`bg-danger-emphasis`) 중 하나다. `label`은 스크린 리더에게 점의 이름을 알려 준다. 없으면 점은 장식이다. 뜻은 근처의 말이나 `label`에도 있어야 한다.
 
 ## 진행
 

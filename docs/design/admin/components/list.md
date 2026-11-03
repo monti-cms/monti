@@ -177,7 +177,7 @@
 
 ### 코드
 
-`FolderTabs`(`FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`와 함께): `FolderTab`은 끌 손잡이(제자리에 머무는 탭은 끈다), 이름, 담은 필드 수, 그리고 플러그인이 둔 탭이라 옮기거나 지울 수 없음을 뜻하는 `locked`를 가진다. `FolderTabsAdd`는 `aria-label`로 이름 붙인 16px 더하기 아이콘이다. `FolderTabEdit`은 이름을 제자리에서 고치는 동안의 고른 탭이다. 모양은 같고, 이름 자리에 입력란이 있다. 본문은 바깥 구분선이 없는 `FieldTree`이고, 왼쪽 위 모서리가 각지다. `FieldTree`는 컬렉션 필드의 개요다. 필드마다 한 줄(`FieldRow`)이고, 각 줄에 손잡이, 이름(mono), 라벨, 끝에 종류(mono. 필수를 뜻하는 "!" 같은 표시를 달 수 있다)가 있다. `nested`는 묶음이나 갈래 안의 필드를 들여 쓴다. `group`은 그 줄을 묶음의 줄로 만든다. 이름이 sans 굵게 들어간 회색 띠다. 옮길 수 없는 필드는 `grip`이 없고, 이름이 줄 맞도록 그 자리는 비워 둔다. `changed`는 저장하지 않은 변경이다.
+`FolderTabs`(`FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`와 함께): `FolderTab`은 끌 손잡이(제자리에 머무는 탭은 끈다), 이름, 담은 필드 수, 그리고 플러그인이 둔 탭이라 옮기거나 지울 수 없음을 뜻하는 `locked`를 가진다. `FolderTabsAdd`는 `aria-label`로 이름 붙인 16px 더하기 아이콘이다. `FolderTabEdit`은 이름을 제자리에서 고치는 동안의 고른 탭이다. 모양은 같고, 이름 자리에 입력란이 있다. 본문은 바깥 구분선이 없는 `FieldTree`이고, 왼쪽 위 모서리가 각지다. `FieldTree`는 컬렉션 필드의 개요다. 필드마다 한 줄(`FieldRow`)이고, 각 줄에 손잡이, 이름(mono), 라벨, 끝에 종류(mono. 필수를 뜻하는 "!" 같은 표시를 달 수 있다)가 있다. `nested`는 묶음이나 갈래 안의 필드를 들여 쓴다. `group`은 그 줄을 묶음의 줄로 만든다. 이름이 sans 굵게 들어간 회색 띠다. 옮길 수 없는 필드는 `grip`이 없고, 이름이 줄 맞도록 그 자리는 비워 둔다. `changed`는 저장하지 않은 변경이다. `problems`(그 이름)는 저장 전에 고칠 것이 있는 필드의 이름 뒤에 빨간 점을 붙인다.
 
 ## 적용한 필터
 
