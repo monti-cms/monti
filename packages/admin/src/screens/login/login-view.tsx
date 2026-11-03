@@ -12,7 +12,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { iconsByName } from "@monti-cms/ui/icons";
+import { iconNamed } from "@monti-cms/ui/icons";
 import type { TranslatorFor } from "../../translator";
 import type { loginMessages } from "./messages";
 
@@ -147,7 +147,7 @@ function SignIn({
 				{buttons.length > 0 ? (
 					<Stack gap={8}>
 						{buttons.map((button, index) => {
-							const Mark = button.icon ? iconsByName[button.icon] : undefined;
+							const Mark = button.icon ? iconNamed(button.icon) : undefined;
 							return (
 								<form key={button.id} method="post" action={button.action}>
 									{/* The one black pill: the password form's button, or the first method when there is no form. */}

@@ -248,6 +248,7 @@
 - 직접 만든 표시는 AI를 뜻하는 반짝이 ✦(`.mt-spark`, 코드에서는 `Spark`) 하나뿐이다. 블록 손잡이와 행 끌기 점은 아이콘이 아니라 손잡이이고, 지금 모양 그대로 둔다. 작업 중은 아이콘이 아니라 `.mt-spinner`(`Spinner`)로 보여 준다.
 - 딱 맞는 아이콘이 없으면 가장 가까운 Carbon 아이콘을 쓴다. 새로 그리지 않는다. 제목 단계는 Carbon `heading`에 작은 mono 숫자를 붙인 것이다(`.mt-ico-level`, "H2", 코드에서는 `HeadingIcon`).
 - lucide 이름을 Carbon 이름으로 바꾸는 표는 관리자 화면 코드가 쓰는 표와 같다.
+- 화면 명세도 아이콘을 같은 목록의 `iconsByName` 이름(Carbon 이름: `add`, `folder`, `overflow-menu--horizontal`, `search`)으로만 쓴다. 새 아이콘은 그 목록에 먼저 더한다.
 
 ## 정리한 값
 

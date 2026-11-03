@@ -2,7 +2,7 @@
 
 import { useSite } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
-import { Document, iconsByName, Tag } from "@monti-cms/ui/icons";
+import { Document, iconNamed, Tag } from "@monti-cms/ui/icons";
 import { useCallback } from "react";
 import { useAdminComponents } from "../../admin-components";
 
@@ -12,7 +12,7 @@ import { useAdminComponents } from "../../admin-components";
  */
 export function useIconByName(): (name: string | undefined) => MontiIcon | undefined {
 	const { icons } = useAdminComponents();
-	return useCallback((name) => (name ? (icons?.[name] ?? iconsByName[name]) : undefined), [icons]);
+	return useCallback((name) => (name ? (icons?.[name] ?? iconNamed(name)) : undefined), [icons]);
 }
 
 export function CollectionIcon({ collection }: { collection: string }) {

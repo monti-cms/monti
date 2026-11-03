@@ -148,7 +148,8 @@ function PageSizeMenu({
 	value: number;
 	/** Each size with how it reads ("25 per page"). */
 	options: readonly { value: number; label: string }[];
-	onValueChange: (value: number) => void;
+	/** Without it the menu is drawn and picks nothing. */
+	onValueChange?: (value: number) => void;
 }) {
 	return (
 		<DropdownMenu>
@@ -157,7 +158,7 @@ function PageSizeMenu({
 				<Caret />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="start">
-				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange(Number(next))}>
+				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange?.(Number(next))}>
 					{options.map((option) => (
 						<DropdownMenuRadioItem key={option.value} value={String(option.value)}>
 							{option.label}

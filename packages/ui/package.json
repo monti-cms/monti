@@ -9,6 +9,7 @@
 		".": "./src/index.ts",
 		"./icons": "./src/icons.ts",
 		"./internal": "./src/internal.ts",
+		"./spec": "./src/spec/render.tsx",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
 	},
@@ -46,6 +47,7 @@
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
 		"typescript": "^7.0.2",
+		"typescript-api": "npm:typescript@5.9.3",
 		"vite": "^8.3.0"
 	},
 	"files": [
@@ -66,6 +68,10 @@
 			"./internal": {
 				"types": "./dist/internal.d.ts",
 				"default": "./dist/internal.js"
+			},
+			"./spec": {
+				"types": "./dist/spec/render.d.ts",
+				"default": "./dist/spec/render.js"
 			},
 			"./theme.css": "./styles/theme.css",
 			"./tokens.css": "./styles/tokens.css"

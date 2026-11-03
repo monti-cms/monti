@@ -35,7 +35,8 @@ function SearchBox<T extends string = string>({
 	className,
 }: {
 	value: string;
-	onValueChange: (value: string) => void;
+	/** Without it the box is drawn and keeps no words. */
+	onValueChange?: (value: string) => void;
 	placeholder?: string;
 	"aria-label": string;
 	/** The places to look. Without them there is no picker. */
@@ -88,7 +89,7 @@ function SearchBox<T extends string = string>({
 				placeholder={placeholder}
 				value={value}
 				autoFocus={autoFocus}
-				onChange={(event) => onValueChange(event.target.value)}
+				onChange={(event) => onValueChange?.(event.target.value)}
 				className="min-w-0 flex-1 appearance-none truncate border-0 bg-transparent text-monti-body outline-none placeholder:text-monti-faint [&::-webkit-search-cancel-button]:hidden"
 			/>
 			{value !== "" && (
@@ -97,7 +98,7 @@ function SearchBox<T extends string = string>({
 					aria-label={labels.clear}
 					// The words go; the box stays, ready for new ones.
 					onClick={() => {
-						onValueChange("");
+						onValueChange?.("");
 						field.current?.focus();
 					}}
 					className={CHIP_REMOVE}

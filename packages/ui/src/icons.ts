@@ -325,10 +325,10 @@ export {
 
 /**
  * The icons a name picks, by their IBM Carbon name (`document`, `warning--alt`, `logo--github`) and `spark` for the assistant's ✦: a collection's or
- * a block's `icon` in the config, a code-line effect's `icon`, a login method's `icon`. Only the ones in use are named, so not every icon is bundled;
+ * a block's `icon` in the config, a code-line effect's `icon`, a login method's `icon`, an icon in a screen spec. Only the ones in use are named, so not every icon is bundled;
  * a site or plugin names more through `icons` of `AdminComponentsProvider`.
  */
-export const iconsByName: Readonly<Record<string, MontiIcon>> = {
+export const iconsByName = {
 	add: Add,
 	"app-connectivity": AppConnectivity,
 	archive: Archive,
@@ -395,5 +395,13 @@ export const iconsByName: Readonly<Record<string, MontiIcon>> = {
 	video: Video,
 	"warning--alt": WarningAlt,
 	"logo--github": LogoGithub,
+	"overflow-menu--horizontal": OverflowMenuHorizontal,
 	spark: Spark,
-};
+} as const satisfies Readonly<Record<string, MontiIcon>>;
+
+/** A name `iconsByName` knows; a screen spec names icons only by these. */
+export type IconName = keyof typeof iconsByName;
+
+/** The icon a name from outside the code picks (a config, a login method), or `undefined` for a name the list does not know. */
+export const iconNamed = (name: string): MontiIcon | undefined =>
+	Object.hasOwn(iconsByName, name) ? iconsByName[name as IconName] : undefined;
