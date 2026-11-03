@@ -15,7 +15,7 @@
 | 빠지는 글자 | `Del` | 파란 취소선. 문단 전체가 빠지면 문단 전체를 감싼다. |
 | 들어오는 글자 | `Ins` | 옅은 파란 바탕, 파란 글자. |
 | 요청 표시 "✦ 1" | `Marker tone="request" margin="proposal"`(카드가 열리면 `active`) | 누르면 그 블록 아래에 메모 카드가 열리고 다시 누르면 닫힌다. 어시스턴트가 고치는 동안 개수 대신 "…"가 보인다. 보고 있는 제안의 파란 선을 가리지 않도록 블록에서 20px 떨어진다. |
-| 요청이 걸린 글자 | `Highlight`의 모양 | 요청을 단 평범한 본문 글에 강조 바탕을 깐다. 편집기 본문은 이 모양을 decoration 클래스로 입힌다. `PROPOSAL_MARK_CLASSES`에 이 강조 클래스가 아직 없다. @monti-cms/ui에서 먼저 내보낸다. |
+| 요청이 걸린 글자 | `RequestAnchor`의 모양(`PROPOSAL_MARK_CLASSES.anchor`) | 요청을 단 평범한 본문 글 아래에 파란 점선 밑줄을 긋는다. 바탕은 없다. AI가 넣은 글자(`Ins`의 파란 바탕)로 보이지 않게 하려는 것이다. 편집기 본문은 이 모양을 decoration 클래스로 입힌다. 보드의 베이지 바탕 대신이다(2026-11-04 소유자 결정). |
 | 메모 카드 (기다리는 제안) | `MemoCardPopover`(`anchor` 그 블록, `onDiscard` "버리기", `onAccept` "받기", `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage`(어시스턴트는 `ai`) | 머리에 "버리기"와 검은 알약 "받기"가 늘 있다. 카드는 그 글자 바로 아래에 붙으므로 `where`는 비운다. 바깥, Esc, 표시를 다시 누르면 닫힌다. 열려도 포커스는 글에 남는다. |
 | 메모 카드 (보내기 전) | `MemoCardPopover`(`reply` "요청", `reply.focus`) | 방금 고른 글자에 대한 요청이다. 머리와 대화 없이 입력 줄 하나만 있고 커서가 그 안에 있다. |
 | 메모 카드 (고치는 중) | `MemoCardPopover`(머리 없음), `MemoThread` + `MemoMessage ai`("고치는 중…"), `reply.stop` "멈추기" | 어시스턴트가 일하는 동안 보내기 버튼이 멈추기가 된다. |

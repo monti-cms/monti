@@ -210,7 +210,7 @@ export { PropertyGroup, PropertyPanel } from "./property-list";
 export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
 export { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./proposal-card";
-export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES } from "./proposal-marks";
+export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES, RequestAnchor } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RailLayout } from "./rail-layout";
 export { RenameField } from "./rename-field";

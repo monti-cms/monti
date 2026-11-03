@@ -20,7 +20,7 @@ export interface BlockProposal {
 }
 
 /**
- * Words the admin selected to ask the assistant about (⌘J, flow 2 · 09b–c): drawn on the highlight background until the answer comes as a proposal. Its
+ * Words the admin selected to ask the assistant about (⌘J, flow 2 · 09b–c): drawn with the request underline until the answer comes as a proposal. Its
  * range follows the edits around it. While the assistant works, its block has the request marker ("…").
  */
 export interface SelectionRequest {
@@ -51,8 +51,8 @@ export type ProposalMarksMeta = {
 export const spotId = (key: string) => `spot:${key}`;
 export const spotKeyOf = (id: string | null): string | null => (id?.startsWith("spot:") ? id.slice(5) : null);
 
-/** The highlight of selected words (the `Highlight` part's look), on the text itself. */
-const HIGHLIGHT_CLASS = "rounded-monti-sm bg-monti-highlight cursor-pointer";
+/** The mark of the words a request is on (the `RequestAnchor` part's look), on the text itself. */
+const ANCHOR_CLASS = `${PROPOSAL_MARK_CLASSES.anchor} cursor-pointer`;
 
 export const proposalMarksKey = new PluginKey<ProposalMarksState>("cmsProposalMarks");
 
@@ -173,7 +173,7 @@ function decorate(
 	for (const spot of spots) {
 		if (spot.to <= spot.from) continue;
 		const id = spotId(spot.key);
-		decorations.push(Decoration.inline(spot.from, spot.to, { [PROPOSAL_ATTRIBUTE]: id, class: HIGHLIGHT_CLASS }));
+		decorations.push(Decoration.inline(spot.from, spot.to, { [PROPOSAL_ATTRIBUTE]: id, class: ANCHOR_CLASS }));
 		if (!spot.working) continue;
 		const block = topBlockAt(doc, spot.from);
 		if (!block) continue;

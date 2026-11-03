@@ -58,7 +58,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 필드 하나 채우기 (속성 패널, 이미지 카드의 대체 텍스트, 폼 필드, 캡션) | `TextButton tone="proposal" size="micro"`(일하는 동안 `loading`) | "✦ 채우기", 값이 있으면 "↻ 다시", 일하는 동안 "쓰는 중…". 라벨이 있으면 라벨 줄 끝(`FormFieldLabel action`), 라벨이 없는 캡션은 같은 줄 끝. 값은 제안 없이 곧바로 들어간다. |
-| 글 여러 곳을 한 번에 ("✦ 번역", "✦ 빈 칸 채우기") | `TextButton tone="proposal"`(앞에 `Spark`) | 누르면 어시스턴트가 여러 곳을 바꾸고, 바뀐 것은 파란 제안으로 남는다. 값 칸의 제안은 그 입력 부품의 `proposal`이다(`Input`, `Textarea`, `ComboboxInput`). |
+| 글 여러 곳을 한 번에 ("✦ 번역") | `TextButton tone="proposal"`(앞에 `Spark`) | 누르면 어시스턴트가 여러 곳을 바꾸고, 바뀐 것은 파란 제안으로 남는다. 값 칸의 제안은 그 입력 부품의 `proposal`이다(`Input`, `Textarea`, `ComboboxInput`). |
 | 고른 글자에 묻기 | `FormatBarRequest` | 서식 카드 끝 "✦ 요청". |
 | 할 일 행의 동작 | `TodoItem proposal` | 행 끝 "✦ 채우기", "✦ 번역". |
 | 메모 카드에서 받으며 다시 시키기 | `MemoCard`(`acceptSpark`) | 검은 작은 알약 "✦ 다시 번역". |

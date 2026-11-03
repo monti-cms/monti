@@ -1,6 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Box, Highlight, Marker, MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread, Text } from "./index";
+import {
+	Box,
+	Highlight,
+	Marker,
+	MemoCard,
+	MemoCardPopover,
+	MemoDiff,
+	MemoMessage,
+	MemoThread,
+	RequestAnchor,
+	Text,
+} from "./index";
 
 const noop = () => {};
 
@@ -115,7 +126,8 @@ export const UnderText: Story = {
 						2
 					</Marker>
 					<Text as="p" variant="reading">
-						Monti는 글을 쓰는 사람이 <Highlight>설정 파일을 열지 않아도</Highlight> 사이트를 고칠 수 있게 합니다.
+						Monti는 글을 쓰는 사람이 <RequestAnchor>설정 파일을 열지 않아도</RequestAnchor> 사이트를 고칠 수 있게
+						합니다.
 					</Text>
 				</Box>
 				<MemoCardPopover

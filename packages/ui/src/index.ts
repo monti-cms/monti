@@ -264,6 +264,7 @@ export const CurrentProposal = close(open.CurrentProposal);
 export const Del = close(open.Del);
 export const Fill = close(open.Fill);
 export const Highlight = close(open.Highlight);
+export const RequestAnchor = close(open.RequestAnchor);
 export const Ins = close(open.Ins);
 export const MemoCard = close(open.MemoCard);
 export const MemoCardPopover = close(open.MemoCardPopover);

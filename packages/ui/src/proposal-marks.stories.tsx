@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, CurrentProposal, Del, Fill, Highlight, Ins, Text } from "./index";
+import { Box, CurrentProposal, Del, Fill, Highlight, Ins, RequestAnchor, Text } from "./index";
 
-/** The blue pencil: text put in, text taken out, an empty place filled, the proposal being looked at; and the highlight. */
+/** The blue pencil: text put in, text taken out, an empty place filled, the proposal being looked at, the words a request is on; and the highlight. */
 const meta = {
 	title: "Monti/Proposal/Marks",
 	component: Ins,
@@ -47,7 +47,17 @@ export const Current: Story = {
 	),
 };
 
-/** The words a note to the assistant is about, or that differ between two versions. It keeps the text's own color. */
+/** The words a request is attached to: a blue dotted underline, no background, so they never read as text put in. Beside an `Ins` for contrast. */
+export const Anchor: Story = {
+	render: () => (
+		<Text as="p" variant="reading">
+			<Ins>설정 파일을 열지 않아도 됩니다.</Ins> <RequestAnchor>설정 화면은 그대로 두었다.</RequestAnchor> 자주 바꾸지
+			않는 것까지 덜어낼 필요는 없었다.
+		</Text>
+	),
+};
+
+/** The words that differ between two versions. It keeps the text's own color. */
 export const HighlightWords: Story = {
 	render: () => (
 		<Text as="p" variant="reading">
