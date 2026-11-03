@@ -10,10 +10,11 @@ Inputs you are given: the base and head refs (or a worktree and branch), and whi
 
 Do this:
 
-1. Read `docs/design/admin/README.md` (including the section "관리자 화면 UI 만들기", how to build admin UI), `docs/design/admin/tokens.md`, and the `docs/design/admin/components/` pages for every part the diff touches. Read the `screens.md` and `flows/` entries for the screens named.
+1. Read `docs/design/admin/README.md` (including the section "관리자 화면 UI 만들기", how to build admin UI), `docs/design/admin/tokens.md`, and the `docs/design/admin/components/` pages for every part the diff touches. Read the `screens.md` and `flows/` entries and the part map in `docs/design/admin/screens/` for the screens named.
 2. Get the diff (`git diff <base>...<head>`) and list the changed UI files in `packages/ui`, `packages/admin` and plugin screens.
 3. Run `node scripts/check-design.mjs` in that tree and include its findings.
 4. Read the changed code and check, beyond what the script sees:
+   - Each place against the screen's part map: the part and props it names and its "이렇게 쓴다" behavior. A part the map does not name for that place is a finding (an input shown only after a button press, too). Tests that pin a behavior the map does not have are findings too.
    - A part built in a screen that exists in `@monti-cms/ui`, or that belongs there.
    - Two parts doing one job (a second menu row, a second chip, a local button).
    - Sizes, gaps, weights and colors that differ from the docs or the existing part (the script cannot see token misuse, such as `bg-monti-selected` used for hover on paper).

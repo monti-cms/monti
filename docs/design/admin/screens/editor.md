@@ -1,0 +1,111 @@
+# 글 편집기 (EditorNotion)
+
+- 보드: `EditorNotion.dc.html`. 상태와 흐름 단계: [screens.md › EditorNotion](../screens.md#editornotion).
+- 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 편집기는 `PageHeader`를 쓰지 않는다. 머리가 편집기 자신의 줄이다.
+
+## 자리
+
+### 머리 줄
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| "‹ 게시글" | `TextButton variant="quiet"`(`href`, 앞 아이콘) | 목록으로 돌아간다. |
+| 주소 `/posts/…` | `Text variant="meta" mono tone="subtle"` | 읽기만 한다. 고치는 곳은 속성 패널의 "주소"다. |
+| 발행 상태 | `EntryStatus`(`published`·`editing`·`draft`) | 상태 말과 점. |
+| "저장" | `TextButton` | 누르면 저장한다. 라벨은 "저장"이고, 단축키는 툴팁에만 있다(보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다). |
+| "미리보기" | `Button variant="secondary"` | 공개 화면을 연다. 볼 것이 없으면 비활성. |
+| "발행하기 ▾" | `SplitButton`(`menu`에 `DropdownMenuItem` 둘: "발행하기" · "오늘 날짜로 다시 발행", 각각 아래에 발행일) | 한 번 발행한 글에만 ▾가 있다. 초안은 `Button variant="primary"` "발행하기". 바뀐 것이 없으면 "발행됨"으로 비활성. 발행하는 동안 `loading`. 발행일은 이 메뉴로만 정한다. |
+| 속성 | `IconButton pressed` | 속성 패널을 열고 닫는다. 열린 동안 눌린 바탕. |
+| ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록" · "복제" · "보관" · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기", "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
+| 휴지통 글의 머리 | `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 저장 · 미리보기 · 발행 · ⋯ 대신 보인다. 영구 삭제는 `AlertDialog`로 묻는다. |
+
+### 알림 띠 (머리 바로 아래, 가장자리에서 가장자리까지)
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
+| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
+| 휴지통에 있는 글 | `Banner`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+
+### 글 단
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 언어 탭 | `TabLinks` + `TabLink`(언어마다, 상태 점은 `EntryStatus` 표시만, 원문이 바뀐 언어는 `ChangeDot`) | 언어 하나가 글 하나다(주소가 바뀐다). |
+| "+ 언어" | `TextButton variant="quiet"` + `DropdownMenu`(`DropdownMenuLabel` "번역 추가", 언어 행 끝에 코드 `MenuShortcut`, 구분선, "언어 관리") | 고르면 그 언어의 새 번역을 만든다. 더할 언어가 없으면 메뉴에 "언어 추가 · 설정" 한 행. |
+| 제목 | 편집기 제목 칸(`Input appearance="inline" size="display"`와 같은 모양) | 늘 입력 칸이다. 포커스는 캐럿만 보인다. |
+| 본문 블록 | `Block`(메뉴가 열린 블록은 `active`) | 글자 모양은 편집기의 것. |
+| 블록 손잡이 | `BlockHandle`(`trigger`로 `DropdownMenuTrigger`를 감싼다, 메뉴가 열린 동안 `active`) | +는 아래에 빈 블록을 넣고 "/" 메뉴를 연다. 그립을 누르면 블록 메뉴, 끌면 옮긴다. |
+| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 끝에 마크다운 단축 `MenuShortcut`, 제목 단계 아이콘은 `HeadingIcon`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
+| 서식 카드 | `FormatBar`: `FormatButton`(B, I, U, S, 코드 / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `FormatBarSeparator` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. |
+| "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`, `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
+| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
+| 이미지 도구 행 | `BlockBar`: `BlockBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `BlockBarSeparator`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
+| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `AiAction` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
+| 캡션 | `Input appearance="inline" size="sm" align="center"`, 옆에 `AiAction` | 이미지 아래 그 자리에서 고친다. |
+| 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
+
+### 속성 패널
+
+글의 속성이다. **값 자리는 처음부터 기본 입력칸이다**(옅은 밑줄이 늘 보이고, 포커스하면 잉크 밑줄). 누르면 그 입력칸 안에 캐럿이 들어가거나 그 목록이 열리고, 다른 것으로 바뀌지 않는다. 보드는 쉴 때 밑줄 없는 글자로 그렸지만, 기본 입력칸을 따른다(2026-11-03 소유자 결정).
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. |
+| 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`) | 다른 탭에 제안이 있으면 탭 이름 뒤 `ChangeDot tone="proposal"`. |
+| "빈 칸 채우기" (탭 줄 끝) | `TextButton`(파란 ✦, `Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. |
+| 속성 한 행 | `PropertyRow`(`label`, `action`, `error`, `note`) | 라벨은 mono 11, 값은 13. 라벨 줄 끝 `action`은 포인터나 키보드가 행 안에 있을 때만 보인다. |
+| 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
+| 주소 | `Affix`(`prefix` "/posts/", 끝 `action`은 다시 만들기 `IconButton`), mono | 늘 입력 칸이다. 바꿀 수 있는 부분만 밑줄. |
+| 발행일 | `Text variant="meta"` | 읽기만 한다. 날짜는 "발행하기 ▾"가 정한다. |
+| 대표 이미지 | 그림이 있으면 `Image`(4:3, `radius-sm`)와 파일 이름 `Text variant="caption" tone="subtle"`, 없으면 "비어 있음"(`Text tone="faint"`) | 누르면 `MediaPicker`를 담은 `Dialog`가 열린다(이미지를 고르는 창이므로 여기만 "누르면 열린다"). |
+| 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `AiAction`("✦ 채우기", 값이 있으면 "↻ 다시"). |
+| 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
+| 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. |
+| 태그 (관계 여럿) | `Combobox` + `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`) | 고른 값은 칩, 끝의 입력 칸에서 더한다. |
+| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음", 그 뒤 `TextButton`(파란 ✦ "추천") | "추천"은 어시스턴트가 값을 고른다. 고른 값은 `proposal`(파란 글자)로 남고 라벨 줄 끝이 `AiAction` "↻ 다시"가 된다. |
+| 고르기 필드 (`select`) | `Select` + `SelectTrigger size="sm" width="full"` | 늘 트리거가 있다. 누르면 목록. |
+| 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
+| 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="sm"`, `Textarea size="sm"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
+| 어시스턴트가 쓴 값, 받기를 기다리는 제안 | 각 입력 부품의 `proposal`(파란 글자, 파란 밑줄) | 제안은 입력칸 안에 들어 있고 바로 고칠 수 있다. 고치거나 받으면 보통 색, 버리면 옛 값으로 돌아간다. |
+| 사람이 바꿀 수 없는 값 (번역에서 원문과 함께 쓰는 필드) | `PropertyRow`에 글로만, `note` 한 줄 | 입력 부품이 없다. |
+
+### 상태 표시줄
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
+| 저장 상태 | `StatusBarCell render={<span />}`(편집 충돌이면 `tone`) | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌". 소리 알림은 `StatusBarAnnouncer`. |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 가고, 끝의 동작 하나("✦ 채우기"는 `TodoItem proposal`). 발행을 막는 행은 `blocking`. 남은 것이 없으면 "할 일 없음"과 ✓ 행만. |
+| 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
+| 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
+
+## 상태
+
+| 상태 · prop | 더해지는 것 |
+|---|---|
+| `state` "글자 고름 + 블록 메뉴" | `FormatBar`, `BlockHandle active`, 블록 메뉴 `DropdownMenu` |
+| `state` "블록 바꾸기" · "블록 정렬" | 블록 메뉴의 `DropdownMenuSub`가 열림 |
+| `state` "/ 를 쳤을 때" · "템플릿 고르기" | "/" 메뉴 `Command`(템플릿은 "템플릿 · 이 자리에 넣어요" 그룹만) |
+| `doc` "새 글" | 빈 제목과 "/ 를 눌러 블록 넣기" 줄 |
+| `pub` | 머리의 `EntryStatus`와 발행 알약(초안 `Button`, 발행된 글 `SplitButton`) |
+| `pubMenu` | `SplitButton`의 메뉴 |
+| `moreMenu` "열림" · "본문 폭" | ⋯ `DropdownMenu`, 그 안의 "본문 폭" `DropdownMenuSub` |
+| `langMenu` "열림" · "언어 하나뿐" | "+ 언어" `DropdownMenu` |
+| `save` | 저장 칸의 글, "편집 충돌"이면 충돌 `Banner` |
+| `dialog` "편집 충돌" · "임시 저장본 복구" | 해당 `Banner` |
+| `trashed` | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) |
+| `img` "올리는 중" · "설정" · "파일" | `UploadingImage` · `BlockBar`와 설정 `Popover` · `FileBlock` |
+| `fix` "요약" | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" |
+| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover` |
+| `todo` · `todoOpen` | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) |
+| `pluginOpen` | 플러그인 칸의 `StatusBarList` |
+| `panel` · `panelTab` | `PropertyPanel`과 고른 탭 |
+| `panelFill` | 탭 줄 끝 "빈 칸 채우기" |
+| `seriesPending` | 시리즈 값이 `proposal`, 라벨 줄 끝 `AiAction filled` |
+| `toast` "발행 막힘" · "발행됨" | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" |
+
+## 지금 코드와 다른 곳
+
+- `PropertyRow`는 값을 `<button>`으로 그리고, `onEdit`을 누르면 `editing`이 되어 그때만 입력 부품(`children`)을 보인다(`packages/ui/src/property-list.tsx`). 화면은 `useEditInPlace`로 이것을 쓴다(`packages/admin/src/screens/entries/property-fields.tsx`). 위 표는 값 자리에 입력 부품을 늘 둔다. 고칠 때 `PropertyRow`의 `onEdit` · `editing`을 없애고, 값 자리에 입력 부품을 늘 둔다.
