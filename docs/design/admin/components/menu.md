@@ -43,7 +43,7 @@
 
 ### 코드
 
-`ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuGroup`, `ContextMenuLabel`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`와 함께). 값을 하나 더 고르는 행은 `ContextMenuSubTrigger`다(→는 둘째 단계를 열고, ←는 닫는다).
+`ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuGroup`, `ContextMenuLabel`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`와 함께). 값을 하나 더 고르는 행은 `ContextMenuSubTrigger`다(→는 둘째 단계를 열고, ←는 닫는다). 오른쪽 클릭 메뉴와 드롭다운 메뉴는 여는 방법만 다르고 행은 같은 부품이다. 그래서 체크 상자 행과 검색 줄은 드롭다운의 `DropdownMenuCheckboxItem box`(`mixed`)와 `DropdownMenuSearch`를 그대로 넣는다.
 
 ## 고르기 목록 (`.mt-picklist`)
 

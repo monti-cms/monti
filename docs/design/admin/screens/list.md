@@ -123,7 +123,7 @@
 | "휴지통 확인" | 5.10 | `AlertDialog`("휴지통으로 옮길까요?", `AlertDialogAction` `variant="danger"` "휴지통으로") | Controls/Overlay/AlertDialog |
 | "휴지통으로 옮김" | 5.09 | `toast` "휴지통으로 옮겼어요"와 `action` "되돌리기" | Controls/Status/Toast |
 | "행 메뉴" | 5.07 | 행 `ContextMenu`와 "폴더로" `ContextMenuSubContent`, 그 행은 호버 바탕 유지 | Controls/Menu/ContextMenu |
-| "여러 행 메뉴" | 5.08 | `BulkBar`와 여러 행 `ContextMenu`, 태그 둘째 단계(아래 "부품 없음") | Patterns/List/BulkBar, Controls/Menu/ContextMenu |
+| "여러 행 메뉴" | 5.08 | `BulkBar`와 여러 행 `ContextMenu`, 태그 둘째 단계(`DropdownMenuSearch`와 `DropdownMenuCheckboxItem box`, 일부 글에만 있는 태그는 `mixed`와 `MenuShortcut` "1/2") | Patterns/List/BulkBar, Controls/Menu/ContextMenu › SeveralTags |
 | "폴더 우클릭" | 5.04 | 폴더 `ContextMenu`, 폴더 행 호버 바탕 유지 | Controls/Menu/ContextMenu |
 | "새 폴더" | 5.01 | 맨 위 새 폴더 행의 `RenameField` | Patterns/List/RenameField |
 | "폴더 안" | 5.02 | `PageHeader`의 `trail` "게시글 /", 제목은 폴더 이름, "상위 폴더로" 행 | Patterns/Frame/PageHeader |
@@ -160,12 +160,6 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | "고른 글 내보냄" | 9.04 | `BulkBar`와 `toast` "2편을 내보냈어요" | Patterns/List/BulkBar, Controls/Status/Toast |
-
-### 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- **오른쪽 클릭 메뉴의 세 상태 체크와 검색** `.mt-menu--ctx` 안의 `.mt-menu-search`와 `.mt-check.is-mixed`: 여러 행 메뉴의 "태그 ▸"가 쓴다. `ContextMenu`에는 `DropdownMenuCheckboxItem mixed`와 `DropdownMenuSearch`에 해당하는 행이 없다.
 
 ## 빈 목록 (Empty)
 

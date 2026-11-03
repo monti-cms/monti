@@ -1,5 +1,6 @@
 import { Archive, Copy, Folder, Launch, Tag, TrashCan, Undo } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -11,6 +12,8 @@ import {
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
+	DropdownMenuCheckboxItem,
+	DropdownMenuSearch,
 	MenuShortcut,
 	Text,
 } from "./index";
@@ -98,6 +101,58 @@ export const Several: Story = {
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>
+			</ContextMenuContent>
+		</ContextMenu>
+	),
+};
+
+const TAGS = [
+	{ name: "리액트", held: "all" },
+	{ name: "성능", held: "some", count: "1/2" },
+	{ name: "타입스크립트", held: "none" },
+	{ name: "넥스트", held: "none" },
+] as const;
+
+/** The tags of the picked rows, one level beside: the dropdown menu's search row and check boxes, as they are. A tag some of them hold is mixed. */
+function TagsLevel() {
+	const [query, setQuery] = useState("");
+	return (
+		<ContextMenuSub defaultOpen>
+			<ContextMenuSubTrigger>태그</ContextMenuSubTrigger>
+			<ContextMenuSubContent>
+				<DropdownMenuSearch value={query} onValueChange={setQuery} label="태그 찾기" />
+				{TAGS.filter((tag) => tag.name.includes(query)).map((tag) => (
+					<DropdownMenuCheckboxItem
+						key={tag.name}
+						box
+						checked={tag.held === "all"}
+						mixed={tag.held === "some"}
+						closeOnClick={false}
+					>
+						{tag.name}
+						{"count" in tag && <MenuShortcut>{tag.count}</MenuShortcut>}
+					</DropdownMenuCheckboxItem>
+				))}
+			</ContextMenuSubContent>
+		</ContextMenuSub>
+	);
+}
+
+/** Several rows, their tags open: a right-click menu takes the dropdown menu's rows as they are. */
+export const SeveralTags: Story = {
+	render: () => (
+		<ContextMenu defaultOpen>
+			{Row}
+			<ContextMenuContent>
+				<ContextMenuGroup>
+					<ContextMenuLabel>2개 항목</ContextMenuLabel>
+					<ContextMenuItem>발행</ContextMenuItem>
+				</ContextMenuGroup>
+				<ContextMenuSeparator />
+				<ContextMenuSub>
+					<ContextMenuSubTrigger>카테고리</ContextMenuSubTrigger>
+				</ContextMenuSub>
+				<TagsLevel />
 			</ContextMenuContent>
 		</ContextMenu>
 	),
