@@ -133,6 +133,7 @@ export {
 } from "./dropdown-menu";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
+export { ErrorBox } from "./error-box";
 export {
 	FormField,
 	FormFieldDescription,

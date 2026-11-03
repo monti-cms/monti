@@ -69,6 +69,14 @@
 
 `Compare`는 `CompareSide` 둘을 담는다(`label`, `properties`, children으로 글). `CompareProperty`는 다른 속성이고(값이 없을 때의 말은 `empty`), `CompareTitle`은 글의 제목, `CompareBody`는 글의 블록이다. 블록에는 `CompareHeading`, `CompareParagraph`, `CompareCode`를 쓰고, 이어진 말에는 `CompareText`를 쓴다(`changed`를 주면 강조 바탕에 놓인다).
 
+## 오류 상자
+
+그 자리에 보여 줄 수 없는 이유다. 읽히지 않는 다이어그램이나 수식, 불러오지 못한 미리보기가 그렇다. 메시지를 그대로, 작은 mono 글자로 위험 잉크에, 위험 바탕과 옅은 위험 테두리 안에 둔다.
+
+### 코드
+
+`ErrorBox`: 메시지를 `children`으로 받는다. 줄바꿈을 지키고 긴 낱말은 자른다. `role="alert"`이다.
+
 ## 토스트
 
 동작 직후에 보여 주는 한 줄 결과다("발행되었어요", "발행할 수 없어요"). 창 아래쪽 가운데, 창 바닥에서 32px 위에 잉크 바탕으로 나타난다. 다음 단계가 있으면 오른쪽에 글자 버튼 하나를 둔다(발행 뒤의 "이동", "보기". 공개 페이지를 연다). 몇 초 뒤에 사라지므로, 사람이 꼭 봐야 할 것은 상태 줄이나 할 일에 남긴다.
