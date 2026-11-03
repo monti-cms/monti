@@ -36,7 +36,7 @@
 
 ### 코드
 
-`FloatingBar`는 선택한 글자 위에 뜨는 바다. 인라인 서식을 글자로 보이고(`FormatButton`, 그 서식이 주는 글자 B, I, U …로 그린다. `pressed`는 선택한 글자에 이미 있는 서식을 표시한다. `more`는 사이트가 더한 서식을 여는 ⋯이고 `trigger`를 받는다), 그룹 사이에 `FormatBarSeparator`를, 끝에 `FormatBarRequest`(파란 ✦, 선택한 글자에 대해 어시스턴트에게 묻는 말, 그 키 조합)를 둔다. `FormatBarButton`은 바의 28px 버튼이다. 이름을 툴팁으로 보이고(키 조합이 있으면 함께), `pressed`와, 무언가를 지우는 버튼에 쓰는 `danger`를 가진다. 눌러도 글자의 선택이나 포커스를 가져가지 않는다. `FormatMark`는 표시의 타입이다.
+`FloatingBar`는 선택한 글자 위에 뜨는 바다. 인라인 서식을 글자로 보이고(`FormatButton`, 그 서식이 주는 글자 B, I, U …로 그린다. `pressed`는 선택한 글자에 이미 있는 서식을 표시한다. `more`는 사이트가 더한 서식을 여는 ⋯이고 `trigger`를 받는다), 그룹 사이에 `FormatBarSeparator`를, 끝에 `FormatBarRequest`(파란 ✦, 선택한 글자에 대해 어시스턴트에게 묻는 말, 그 키 조합)를 둔다. `FloatingBarButton`은 바의 28px 버튼이다. 이름을 툴팁으로 보이고(키 조합이 있으면 함께), `pressed`와, 무언가를 지우는 버튼에 쓰는 `danger`를 가진다. 눌러도 글자의 선택이나 포커스를 가져가지 않는다. `FormatMark`는 표시의 타입이다.
 
 ## 블록 도구 행 (`.mt-block-bar`)
 
@@ -52,7 +52,7 @@
 
 ### 코드
 
-`FloatingBar`는 설정이 있는 블록 위에 뜨는 작은 도구 행이다. 안에 `BlockBarButton`을 넣고 그룹 사이에 `BlockBarSeparator`를 둔다. 뜨는 카드이고, 편집기가 블록 왼쪽 위에 놓는다. `BlockBarButton`은 28px 아이콘 버튼이다. `label`은 이름이자 툴팁이고, `shortcut`은 키 조합이며, `pressed`는 도구가 켜진 동안 바탕을 유지하고, `trigger`로 감싸면 카드나 메뉴의 트리거가 된다. `ResizeCorner`는 선택한 블록 아래 모서리의 네모 핸들이다. 끌면 블록 폭이 바뀐다(부모는 `relative`). `UploadingImage`는 올라가는 동안의 이미지 블록이다. 파일 자체의 그림을 흐리게 240px 높이로 보이고, 아래 가장자리를 따라 3px 막대가 있다. `CropStage`는 자르기 시트의 틀 안 그림이다. 도구 바탕에 테두리와 안쪽 4px를 두고, 높이는 최대 380px, 그림은 최대 360px이다. `crop`(그림 기준 %)이 있으면 그 밖의 그림은 배경막 아래에 놓이고, 자를 영역은 2px 잉크 상자에 모서리마다 네모 핸들이 있다. `onGrip`은 무엇을 눌렀는지(무대, 상자, 모서리) 알린다. `Image`는 모양이 정해진 틀 안에 그림을 그린다(`cover`는 잘라 내고, `contain`은 전부 보인다. `fallback`으로 파일 종류 아이콘을 둔다).
+`FloatingBar`는 설정이 있는 블록 위에 뜨는 작은 도구 행이다. 안에 `FloatingBarButton`을 넣고 그룹 사이에 `BlockBarSeparator`를 둔다. 뜨는 카드이고, 편집기가 블록 왼쪽 위에 놓는다. `FloatingBarButton`은 28px 아이콘 버튼이다. `label`은 이름이자 툴팁이고, `shortcut`은 키 조합이며, `pressed`는 도구가 켜진 동안 바탕을 유지하고, `trigger`로 감싸면 카드나 메뉴의 트리거가 된다. `ResizeCorner`는 선택한 블록 아래 모서리의 네모 핸들이다. 끌면 블록 폭이 바뀐다(부모는 `relative`). `UploadingImage`는 올라가는 동안의 이미지 블록이다. 파일 자체의 그림을 흐리게 240px 높이로 보이고, 아래 가장자리를 따라 3px 막대가 있다. `CropStage`는 자르기 시트의 틀 안 그림이다. 도구 바탕에 테두리와 안쪽 4px를 두고, 높이는 최대 380px, 그림은 최대 360px이다. `crop`(그림 기준 %)이 있으면 그 밖의 그림은 배경막 아래에 놓이고, 자를 영역은 2px 잉크 상자에 모서리마다 네모 핸들이 있다. `onGrip`은 무엇을 눌렀는지(무대, 상자, 모서리) 알린다. `Image`는 모양이 정해진 틀 안에 그림을 그린다(`cover`는 잘라 내고, `contain`은 전부 보인다. `fallback`으로 파일 종류 아이콘을 둔다).
 
 서식 바와 블록 바는 같은 뜬 행 모양을 쓴다. 안쪽 3px, 버튼 사이 2px, 강조 테두리, 뜬 그림자다.
 

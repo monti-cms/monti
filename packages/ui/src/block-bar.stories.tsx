@@ -1,7 +1,7 @@
 import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
-import { FloatingBar } from "./floating-bar";
+import { BlockBarSeparator, ResizeCorner } from "./block-bar";
+import { FloatingBar, FloatingBarButton } from "./floating-bar";
 import { Image } from "./image";
 import { Stack } from "./stack";
 
@@ -20,22 +20,22 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {
 	render: () => (
 		<FloatingBar aria-label="이미지 도구">
-			<BlockBarButton label="왼쪽">
+			<FloatingBarButton label="왼쪽">
 				<TextAlignLeft aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="가운데" pressed>
+			</FloatingBarButton>
+			<FloatingBarButton label="가운데" pressed>
 				<TextAlignCenter aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="오른쪽">
+			</FloatingBarButton>
+			<FloatingBarButton label="오른쪽">
 				<TextAlignRight aria-hidden />
-			</BlockBarButton>
+			</FloatingBarButton>
 			<BlockBarSeparator />
-			<BlockBarButton label="설정">
+			<FloatingBarButton label="설정">
 				<SettingsAdjust aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="자르기와 회전">
+			</FloatingBarButton>
+			<FloatingBarButton label="자르기와 회전">
 				<Crop aria-hidden />
-			</BlockBarButton>
+			</FloatingBarButton>
 		</FloatingBar>
 	),
 };
@@ -45,22 +45,22 @@ export const OnImage: Story = {
 	render: () => (
 		<Stack gap={8} className="max-w-md">
 			<FloatingBar aria-label="이미지 도구" className="self-start">
-				<BlockBarButton label="왼쪽">
+				<FloatingBarButton label="왼쪽">
 					<TextAlignLeft aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="가운데" pressed>
+				</FloatingBarButton>
+				<FloatingBarButton label="가운데" pressed>
 					<TextAlignCenter aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="오른쪽">
+				</FloatingBarButton>
+				<FloatingBarButton label="오른쪽">
 					<TextAlignRight aria-hidden />
-				</BlockBarButton>
+				</FloatingBarButton>
 				<BlockBarSeparator />
-				<BlockBarButton label="설정">
+				<FloatingBarButton label="설정">
 					<SettingsAdjust aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="자르기와 회전">
+				</FloatingBarButton>
+				<FloatingBarButton label="자르기와 회전">
 					<Crop aria-hidden />
-				</BlockBarButton>
+				</FloatingBarButton>
 			</FloatingBar>
 			<div className="relative">
 				<Image src={SAMPLE} alt="" ratio="photo" />

@@ -4,11 +4,11 @@ import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	BlockBarButton,
 	BlockBarSeparator,
 	Count,
 	cn,
 	FloatingBar,
+	FloatingBarButton,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
@@ -331,14 +331,14 @@ export function ImageBlockView() {
 				>
 					<FloatingBar aria-label={t("imageNode.toolbar")}>
 						{ALIGN_TOOLS(t).map((tool) => (
-							<BlockBarButton
+							<FloatingBarButton
 								key={tool.value}
 								label={tool.label}
 								pressed={(align || "center") === tool.value}
 								onClick={() => block.setValues({ align: tool.value })}
 							>
 								<tool.icon aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 						))}
 						<BlockBarSeparator />
 						<Popover
@@ -348,13 +348,13 @@ export function ImageBlockView() {
 								setAltOnly(false);
 							}}
 						>
-							<BlockBarButton
+							<FloatingBarButton
 								label={t("imageNode.settings")}
 								pressed={isEditing}
 								trigger={(button) => <PopoverTrigger render={button} />}
 							>
 								<SettingsAdjust aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 							{altOnly ? (
 								<PopoverContent
 									anchor={picture}
@@ -404,9 +404,9 @@ export function ImageBlockView() {
 							)}
 						</Popover>
 						{canRender && (
-							<BlockBarButton label={t("imageCrop.title")} onClick={() => setIsCropOpen(true)}>
+							<FloatingBarButton label={t("imageCrop.title")} onClick={() => setIsCropOpen(true)}>
 								<Crop aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 						)}
 					</FloatingBar>
 				</div>

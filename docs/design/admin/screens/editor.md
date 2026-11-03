@@ -41,7 +41,7 @@
 | 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드 / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `FormatBarSeparator` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. |
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`, `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
-| 이미지 도구 행 | `FloatingBar`: `BlockBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `BlockBarSeparator`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
+| 이미지 도구 행 | `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `BlockBarSeparator`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
 | 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
 | 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `TextButton tone="proposal" size="micro"` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |

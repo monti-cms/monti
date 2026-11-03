@@ -23,7 +23,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	FloatingBar,
-	FormatBarButton,
+	FloatingBarButton,
 	FormatBarRequest,
 	FormatBarSeparator,
 	FormatButton,
@@ -132,9 +132,9 @@ export function BubbleButton({
 	children: ReactNode;
 }) {
 	return (
-		<FormatBarButton label={label} pressed={pressed} tone={tone} onClick={onClick}>
+		<FloatingBarButton label={label} pressed={pressed} tone={tone} onClick={onClick}>
 			{children}
-		</FormatBarButton>
+		</FloatingBarButton>
 	);
 }
 

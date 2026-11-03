@@ -1,47 +1,8 @@
 "use client";
 
-import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import { cn } from "./cn";
-import { BAR_BUTTON, BAR_SEPARATOR } from "./floating-bar";
-import type { ShortcutKeys } from "./shortcut";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
-
-/** A tool of the bar: a 28px icon button. `label` is its name and its tooltip, and `shortcut` its key combination; `pressed` keeps the background while the tool is on. */
-function BlockBarButton({
-	label,
-	shortcut,
-	pressed,
-	trigger,
-	children,
-	...props
-}: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
-	label: string;
-	shortcut?: ShortcutKeys;
-	pressed?: boolean;
-	/** Wraps the button to make it the trigger of a card or menu: `trigger={(button) => <PopoverTrigger render={button} />}`. */
-	trigger?: (button: ReactElement) => ReactElement;
-	children: ReactNode;
-}) {
-	const button = (
-		<ButtonPrimitive
-			data-slot="block-bar-button"
-			type="button"
-			aria-label={label}
-			aria-pressed={pressed}
-			className={cn(BAR_BUTTON, "w-7")}
-			{...props}
-		/>
-	);
-	return (
-		<Tooltip>
-			<TooltipTrigger render={trigger ? trigger(button) : button}>{children}</TooltipTrigger>
-			<TooltipContent side="top" shortcut={shortcut}>
-				{label}
-			</TooltipContent>
-		</Tooltip>
-	);
-}
+import { BAR_SEPARATOR } from "./floating-bar";
 
 /** The line between two groups of tools. */
 function BlockBarSeparator() {
@@ -76,4 +37,4 @@ function ResizeCorner({
 	);
 }
 
-export { BlockBarButton, BlockBarSeparator, ResizeCorner };
+export { BlockBarSeparator, ResizeCorner };

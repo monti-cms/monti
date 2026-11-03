@@ -21,7 +21,7 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Banner } from "./banner";
-export { BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
+export { BlockBarSeparator, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
@@ -147,10 +147,9 @@ export { FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
-export { FloatingBar } from "./floating-bar";
+export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
-	FormatBarButton,
 	FormatBarRequest,
 	FormatBarSeparator,
 	FormatButton,
