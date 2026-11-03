@@ -48,8 +48,9 @@
 | "발행" | `FormField` + `Segmented size="sm" inline`("모두 초안" · "원래대로") |  |
 | "이미지" | `FormField`, 문장 `Text`, "바깥 이미지 6개도 옮기기" `Option spread` + `Switch` |  |
 | "알아 두세요" | `FormField`, 문장 `Text`(컴포넌트 이름은 `mono`) |  |
-| 가져온 뒤 | `Text variant="heading"` "21편을 가져왔어요.", 그 아래 `Text tone="subtle"` | 주소를 바꾼 글 목록은 아래 "부품 없음". |
-| 복원 요약, 복원 막힘 문제 목록 | 아래 "부품 없음" | 막힌 문제는 경고색 줄로 적는다. 아무것도 쓰지 않았다는 문장 하나. |
+| 가져온 뒤 | `Text variant="heading"` "21편을 가져왔어요.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
+| 복원 요약 | `DescriptionList`(`DescriptionItem` "글" 148 뒤에 `Count` "초안 12 · 발행 130 …") | |
+| 복원 막힘 문제 목록 | 문장 하나 "문제가 2개 있어서 복원하지 않아요.", 그 아래 `ChangeLines`(`ChangeLine tone="warning"`: "이 사이트에 없는 필드 series" → "글 14편") | 아무것도 쓰지 않았다는 문장 하나. |
 | 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…", 막히면 `disabled`). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
 
 ### 흐름 9 · 데이터
@@ -71,12 +72,6 @@
 | "복원 막힘" | 9.13 | 시트: 문제 목록, 알약 `disabled` |  |
 | "복원 중" | 9.14 | 시트 `closable={false}`, 알약 `loading` "복원하는 중…" |  |
 | "복원함" | 9.15 | `toast` "글 148편을 복원했어요"와 `action` "목록 보기" | Controls/Status/Toast |
-
-### 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- `.mt-map` 두 열 모양(`.mt-map-row` 두 칸): 복원 요약("글 148 · 초안 12 …"), 복원 막힘의 문제 줄, 가져온 뒤 "주소를 바꾼 글"(누르면 그 글로 가는 행). [field.md](../components/field.md)는 "요약 표는 같은 행을 두 열로 쓴다"고 하지만 `MapRow`에는 두 열 모양이 없다(늘 `Select` 칸을 받는다). 먼저 부품에 더한다. 활동 기록의 가져오기 자세히 패널도 같은 모양을 쓴다.
 
 ## API 키 (ApiKeys)
 
@@ -176,7 +171,7 @@
 | 자세히 패널 | `SidePanel width="side"`(`title` "\"첫 번째 글\" 발행", 머리 끝 닫기) | 목록 옆에 붙고 ✦ 버튼을 가린다. 목록을 보면서 쓰므로 시트가 아니라 사이드 패널이다. |
 | 묶음 "이벤트" · "항목" · "전송 · 2" | `Heading variant="label"`, 그 아래 `DescriptionList` + `DescriptionItem`("언제", "한 사람", "ID", "글", "컬렉션", "언어", "주소", "받는 곳", "상태", "시도 횟수", "마지막 오류") | 글 이름은 `TextButton variant="underline"`(`href`), 시각 · ID · 주소 · 오류는 `mono`. 전송 상태는 `EntryStatus`(`failed` "실패", `published` "보냄"). |
 | 전송 동작 | "다시 보내기" `TextButton variant="underline"`, "취소" `TextButton variant="quiet"` | 받는 곳마다 그 아래. |
-| 가져오기 자세히 | `SidePanel width="side"`(`title` "blog-export.zip 가져옴"), `DescriptionList`, "주소를 바꾼 글 · 2"(데이터의 "부품 없음"), `footer`에 "되돌리기" `TextButton`과 "목록에서 보기" `Button variant="primary"`(`href`) |  |
+| 가져오기 자세히 | `SidePanel width="side"`(`title` "blog-export.zip 가져옴"), `DescriptionList`, "주소를 바꾼 글 · 2"(데이터와 같은 `ChangeLines`), `footer`에 "되돌리기" `TextButton`과 "목록에서 보기" `Button variant="primary"`(`href`) |  |
 | 전송 취소 확인 | `AlertDialog`(`AlertDialogTitle` "이 전송을 취소할까요?", `AlertDialogDescription`의 받는 곳 `mono`), `AlertDialogCancel` "닫기", `AlertDialogAction` `Button variant="danger"` "취소하기" | 버튼 이름이 하는 일을 말한다("닫기" · "취소하기"). |
 
 ### 흐름 2 · 어시스턴트
@@ -221,8 +216,3 @@
 | "비어 있음" | 12.11 | 빈 목록 "아직 기록이 없어요" |  |
 | `filter` "전체" · "전송 실패" · "글 하나" | 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05, 12.06, 12.07, 12.08, 12.09, 12.09b, 12.10, 12.11 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
 
-### 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- `.mt-map` 두 열 모양: 가져오기 자세히의 "주소를 바꾼 글"(데이터와 같다).
