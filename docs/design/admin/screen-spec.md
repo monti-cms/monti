@@ -1,13 +1,17 @@
 # 화면 명세
 
-화면을 데이터(`*.screen.json`)로 적고, `@monti-cms/ui`의 `ScreenSpec`이 디자인 시스템 부품으로 그린다. 명세가 중심이고, 명세의 모양은 디자인 도구를 따르지 않는다. 지금은 로그인의 첫 상태 하나로 시범 중이다.
+화면을 데이터(`*.screen.json`)로 적고, `@monti-cms/ui`의 `ScreenSpec`이 디자인 시스템 부품으로 그린다. 명세가 중심이고, 명세의 모양은 디자인 도구를 따르지 않는다. 시안(HTML, Figma, PDF)은 변환기가 명세로 바꾼다. 렌더러는 생김새와 배치만 그린다. 동작은 나중에 요소 id와 카탈로그의 `events`에 붙인다. 지금은 로그인 첫 상태와 글 목록 첫 상태로 시범 중이다.
 
 ## 형식
 
-- 평평한 요소 표: `root`와 `elements`. 요소는 `type`(부품), `props`, `children`, `slots`(패턴의 칸), `visible`을 가진다.
+- 평평한 요소 표: `root`와 `elements`. 요소는 `type`(부품), `props`, `children`, `slots`(패턴의 칸, 요소나 글자), `visible`, `repeat`을 가진다.
+- `repeat`: `{ "data": "/rows" }`의 항목마다 그 요소를 한 번씩 그린다. 그 안에서 `{ "item": "/title" }`이 항목의 값을 읽는다.
 - 값: 그냥 값, `{ "data": "/경로" }`(화면 데이터), `{ "text": "키", "params": {…} }`(화면의 사전), `{ "action": "이름" }`(페이지가 넘기는 동작).
 - `visible`: `{ "data" }`(값이 있으면 보임), `{ "not": … }`.
-- `className`, `style`, 픽셀 숫자는 없다.
+- `className`, `style`, 픽셀 숫자는 없다. 픽셀을 받는 prop(`Table.width`, `TableCell.size`, `ListHead.end`)은 카탈로그에 없다.
+- 데이터로만 채우는 prop: 목록이나 객체를 받는 prop(열 이름, 쪽 크기 선택지)은 `{ "data" }`로만 받고, 항목은 `parts.tsx`의 `DATA_FIELDS`가 정한 필드만 가진다. 보이는 것만 담고 생김새는 담지 않는다. 너비나 색 같은 필드가 오면 그리지 않고 멈춘다.
+- 아이콘은 디자인 시스템 아이콘 표(`packages/ui/src/icons.ts`)의 이름으로만 고른다: `{ "type": "Icon", "props": { "name": "more" } }`.
+- `Stack`은 방향과 정렬(`align`, `justify`, `grow`)만 가진다. 정렬은 빈 공간을 만드는 길이 아니다.
 
 ## 빈 공간: Spacing
 
@@ -23,6 +27,11 @@
 - `packages/ui/src/spec/parts.tsx`에 명세가 쓸 수 있는 부품을 적는다. `pnpm gen:screen-catalog`가 그 부품들의 실제 prop 타입을 읽어 `screen-catalog.generated.json`을 만든다. 선택지는 타입의 유니언 그대로다.
 - `pnpm check:screens`(CI)는 모든 `*.screen.json`을 검사한다. 없는 부품, 없는 prop, 없는 값, 없는 칸, 토큰 밖 Spacing, 연달은 Spacing은 요소와 자리를 적고 실패한다.
 - `ScreenSpec`은 그리기 전에 같은 검사를 하고, 문제가 있거나 사전에 없는 글자 키, 페이지가 주지 않은 동작이 나오면 멈춘다. 몰래 건너뛰지 않는다.
+
+## 동작
+
+- 함수를 받지 않은 부품은 생김새만 그린다(행 체크, 쪽 크기 메뉴, 검색 버튼). 부품의 함수 prop은 그래서 모두 선택이다.
+- 카탈로그는 부품마다 함수 prop을 `events`로 적는다. 동작은 요소 id와 이 이름으로 붙인다.
 
 ## 서버
 

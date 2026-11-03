@@ -139,7 +139,8 @@ function RowCheck({
 	proposal = false,
 }: {
 	checked: boolean;
-	onCheckedChange: (checked: boolean) => void;
+	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
+	onCheckedChange?: (checked: boolean) => void;
 	/** The name of the check, for screen readers ("Select First post"). */
 	label: string;
 	/** The assistant picked this row. */
@@ -149,7 +150,7 @@ function RowCheck({
 		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2", ON_ROW)}>
 			<Checkbox
 				checked={checked}
-				onCheckedChange={(next) => onCheckedChange(next === true)}
+				onCheckedChange={(next) => onCheckedChange?.(next === true)}
 				aria-label={label}
 				proposal={proposal}
 				className="bg-monti-page"

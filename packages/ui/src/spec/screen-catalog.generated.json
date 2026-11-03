@@ -126,9 +126,6 @@
 		"children": true,
 		"slots": ["action"],
 		"props": {
-			"changed": {
-				"type": "data"
-			},
 			"hidden": {
 				"type": "boolean"
 			},
@@ -214,9 +211,6 @@
 		"children": true,
 		"slots": [],
 		"props": {
-			"errors": {
-				"type": "data"
-			},
 			"id": {
 				"type": "string"
 			}
@@ -389,20 +383,12 @@
 		"children": false,
 		"slots": [],
 		"props": {
-			"add": {
-				"type": "data"
-			},
 			"columns": {
-				"type": "data"
-			},
-			"end": {
-				"type": "number"
+				"type": "data",
+				"fields": ["id", "label", "sort", "filtered"]
 			},
 			"moveLabel": {
 				"type": "string"
-			},
-			"selectAll": {
-				"type": "data"
 			}
 		},
 		"events": ["onPlace", "onPreview", "onStep"]
@@ -423,9 +409,6 @@
 		"children": true,
 		"slots": [],
 		"props": {
-			"columns": {
-				"type": "data"
-			},
 			"container": {
 				"enum": ["none", "scroll"]
 			},
@@ -437,9 +420,6 @@
 			},
 			"stickyHeader": {
 				"type": "boolean"
-			},
-			"width": {
-				"type": "number"
 			}
 		},
 		"events": []
@@ -494,9 +474,6 @@
 			},
 			"id": {
 				"type": "string"
-			},
-			"size": {
-				"type": "number"
 			},
 			"tone": {
 				"enum": ["muted", "subtle"]
@@ -638,6 +615,36 @@
 		},
 		"events": ["trigger"]
 	},
+	"SearchToggle": {
+		"container": false,
+		"children": false,
+		"slots": [],
+		"props": {
+			"aria-label": {
+				"type": "string"
+			},
+			"autoFocus": {
+				"type": "boolean"
+			},
+			"label": {
+				"type": "string"
+			},
+			"placeholder": {
+				"type": "string"
+			},
+			"targetLabel": {
+				"type": "string"
+			},
+			"targets": {
+				"type": "data",
+				"fields": ["value", "label"]
+			},
+			"value": {
+				"type": "string"
+			}
+		},
+		"events": ["onTargetChange", "onValueChange"]
+	},
 	"ListFooter": {
 		"container": false,
 		"children": true,
@@ -658,7 +665,8 @@
 				"type": "string"
 			},
 			"options": {
-				"type": "data"
+				"type": "data",
+				"fields": ["value", "label"]
 			},
 			"value": {
 				"type": "number"

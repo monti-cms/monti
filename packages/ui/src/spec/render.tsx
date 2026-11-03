@@ -31,6 +31,28 @@ export interface ScreenSpecProps {
 	readonly actions?: Readonly<Record<string, string>>;
 }
 
+/**
+ * A list or object a prop takes from the data holds only the fields the catalog names for it, each a plain value: what a screen shows, never a width, a
+ * color or a part of its own.
+ */
+function checkData(value: unknown, fields: readonly string[], where: string) {
+	for (const each of Array.isArray(value) ? value : [value]) {
+		if (each === undefined || each === null) continue;
+		if (typeof each !== "object")
+			throw new ScreenSpecError(`${where}: the data gave ${JSON.stringify(each)}, not an item`);
+		for (const [field, inside] of Object.entries(each)) {
+			if (!fields.includes(field)) {
+				throw new ScreenSpecError(
+					`${where}: the data has "${field}", which is not one of its fields (${fields.join(", ")})`,
+				);
+			}
+			if (inside !== null && typeof inside === "object") {
+				throw new ScreenSpecError(`${where}.${field}: the data gave an object, not a plain value`);
+			}
+		}
+	}
+}
+
 /** The specs already checked, so each is checked once however often it is drawn. */
 const checked = new WeakSet<ScreenSpecDocument>();
 
@@ -159,7 +181,9 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 		const props: Record<string, unknown> = { key };
 		for (const [name, value] of Object.entries(element.props ?? {})) {
 			const resolved = resolve(value, item, `${id}.props.${name}`);
-			const choices = catalog[element.type]?.props[name]?.enum;
+			const rule = catalog[element.type]?.props[name];
+			if (rule?.fields) checkData(resolved, rule.fields, `${id}.props.${name}`);
+			const choices = rule?.enum;
 			if (choices && resolved !== undefined && !choices.includes(resolved as string | number)) {
 				throw new ScreenSpecError(`${id}.props.${name}: the data gave ${JSON.stringify(resolved)}, not a choice`);
 			}

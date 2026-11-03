@@ -3,128 +3,422 @@
 	"elements": {
 		"column": {
 			"type": "PageColumn",
-			"props": { "width": "list" },
+			"props": {
+				"width": "list"
+			},
 			"children": ["header", "list", "footer"]
 		},
 		"header": {
 			"type": "PageHeader",
-			"slots": { "title": [{ "text": "posts" }], "meta": [{ "data": "/addressRule" }] },
+			"slots": {
+				"title": [
+					{
+						"text": "posts"
+					}
+				],
+				"meta": [
+					{
+						"data": "/addressRule"
+					}
+				]
+			},
 			"children": ["addFolder", "search", "writeNew"]
 		},
-		"addFolder": { "type": "TextButton", "props": { "type": "button" }, "children": [{ "text": "addFolder" }] },
-		"search": {
-			"type": "Button",
-			"props": { "type": "button", "variant": "secondary" },
-			"children": ["searchIcon", { "text": "search" }]
+		"addFolder": {
+			"type": "TextButton",
+			"props": {
+				"type": "button"
+			},
+			"children": [
+				{
+					"text": "addFolder"
+				}
+			]
 		},
-		"searchIcon": { "type": "Icon", "props": { "name": "search" } },
+		"search": {
+			"type": "SearchToggle",
+			"props": {
+				"label": {
+					"text": "search"
+				},
+				"aria-label": {
+					"text": "search"
+				},
+				"value": "",
+				"targets": {
+					"data": "/searchTargets"
+				}
+			}
+		},
 		"writeNew": {
 			"type": "Button",
-			"props": { "type": "button", "variant": "primary" },
-			"children": ["addIcon", { "text": "writeNew" }]
+			"props": {
+				"type": "button",
+				"variant": "primary"
+			},
+			"children": [
+				"addIcon",
+				{
+					"text": "writeNew"
+				}
+			]
 		},
-		"addIcon": { "type": "Icon", "props": { "name": "add" } },
-
-		"list": { "type": "ListScroll", "children": ["table"] },
+		"addIcon": {
+			"type": "Icon",
+			"props": {
+				"name": "add"
+			}
+		},
+		"list": {
+			"type": "ListScroll",
+			"children": ["table"]
+		},
 		"table": {
 			"type": "Table",
-			"props": { "container": "none", "layout": "fixed", "columns": { "data": "/columnSizes" } },
+			"props": {
+				"container": "none",
+				"layout": "fixed"
+			},
 			"children": ["head", "body"]
 		},
 		"head": {
 			"type": "ListHead",
-			"props": { "columns": { "data": "/columns" }, "end": 54 }
-		},
-		"body": { "type": "TableBody", "children": ["folderRow", "row"] },
-
-		"folderRow": {
-			"type": "TableRow",
-			"repeat": { "data": "/folders" },
-			"children": ["folderLead", "folderTitle", "folderEnd"]
-		},
-		"folderLead": { "type": "TableCell" },
-		"folderTitle": { "type": "TableCell", "props": { "colSpan": 5 }, "children": ["folderName"] },
-		"folderName": {
-			"type": "RowTitle",
-			"props": { "folder": true },
-			"slots": {
-				"title": ["folderLink"],
-				"address": [{ "text": "folderCount", "params": { "count": { "item": "/count" } } }]
+			"props": {
+				"columns": {
+					"data": "/columns"
+				}
 			}
 		},
-		"folderLink": { "type": "RowLink", "props": { "href": { "item": "/href" } }, "children": [{ "item": "/name" }] },
-		"folderEnd": { "type": "TableCell", "props": { "align": "end" }, "children": ["folderActions"] },
-		"folderActions": { "type": "RowActions", "children": ["folderMore"] },
-		"folderMore": { "type": "IconButton", "props": { "label": { "text": "rowMenu" } }, "children": ["folderMoreIcon"] },
-		"folderMoreIcon": { "type": "Icon", "props": { "name": "more" } },
-
+		"body": {
+			"type": "TableBody",
+			"children": ["folderRow", "row"]
+		},
+		"folderRow": {
+			"type": "TableRow",
+			"repeat": {
+				"data": "/folders"
+			},
+			"children": ["folderLead", "folderTitle", "folderEnd"]
+		},
+		"folderLead": {
+			"type": "TableCell"
+		},
+		"folderTitle": {
+			"type": "TableCell",
+			"props": {
+				"colSpan": 5
+			},
+			"children": ["folderName"]
+		},
+		"folderName": {
+			"type": "RowTitle",
+			"props": {
+				"folder": true
+			},
+			"slots": {
+				"title": ["folderLink"],
+				"address": [
+					{
+						"text": "folderCount",
+						"params": {
+							"count": {
+								"item": "/count"
+							}
+						}
+					}
+				]
+			}
+		},
+		"folderLink": {
+			"type": "RowLink",
+			"props": {
+				"href": {
+					"item": "/href"
+				}
+			},
+			"children": [
+				{
+					"item": "/name"
+				}
+			]
+		},
+		"folderEnd": {
+			"type": "TableCell",
+			"props": {
+				"align": "end"
+			},
+			"children": ["folderActions"]
+		},
+		"folderActions": {
+			"type": "RowActions",
+			"children": ["folderMore"]
+		},
+		"folderMore": {
+			"type": "IconButton",
+			"props": {
+				"label": {
+					"text": "rowMenu"
+				}
+			},
+			"children": ["folderMoreIcon"]
+		},
+		"folderMoreIcon": {
+			"type": "Icon",
+			"props": {
+				"name": "more"
+			}
+		},
 		"row": {
 			"type": "TableRow",
-			"repeat": { "data": "/rows" },
+			"repeat": {
+				"data": "/rows"
+			},
 			"children": ["status", "title", "category", "tags", "locales", "updated", "end"]
 		},
-		"status": { "type": "TableCell", "children": ["check", "statusMark"] },
+		"status": {
+			"type": "TableCell",
+			"children": ["check", "statusMark"]
+		},
 		"check": {
 			"type": "RowCheck",
-			"props": { "checked": false, "label": { "text": "pick", "params": { "title": { "item": "/title" } } } }
+			"props": {
+				"checked": false,
+				"label": {
+					"text": "pick",
+					"params": {
+						"title": {
+							"item": "/title"
+						}
+					}
+				}
+			}
 		},
 		"statusMark": {
 			"type": "EntryStatus",
-			"props": { "status": { "item": "/status" }, "quiet": { "item": "/quiet" } },
-			"children": [{ "item": "/statusName" }]
+			"props": {
+				"status": {
+					"item": "/status"
+				},
+				"quiet": {
+					"item": "/quiet"
+				}
+			},
+			"children": [
+				{
+					"item": "/statusName"
+				}
+			]
 		},
-		"title": { "type": "TableCell", "children": ["titleLine"] },
-		"titleLine": { "type": "RowTitle", "slots": { "title": ["titleLink"], "address": [{ "item": "/address" }] } },
-		"titleLink": { "type": "RowLink", "props": { "href": { "item": "/href" } }, "children": [{ "item": "/title" }] },
-		"category": { "type": "TableCell", "children": ["categoryText"] },
+		"title": {
+			"type": "TableCell",
+			"children": ["titleLine"]
+		},
+		"titleLine": {
+			"type": "RowTitle",
+			"slots": {
+				"title": ["titleLink"],
+				"address": [
+					{
+						"item": "/address"
+					}
+				]
+			}
+		},
+		"titleLink": {
+			"type": "RowLink",
+			"props": {
+				"href": {
+					"item": "/href"
+				}
+			},
+			"children": [
+				{
+					"item": "/title"
+				}
+			]
+		},
+		"category": {
+			"type": "TableCell",
+			"children": ["categoryText"]
+		},
 		"categoryText": {
 			"type": "Text",
-			"props": { "variant": "note", "truncate": true },
-			"children": [{ "item": "/category" }]
+			"props": {
+				"variant": "note",
+				"truncate": true
+			},
+			"children": [
+				{
+					"item": "/category"
+				}
+			]
 		},
-		"tags": { "type": "TableCell", "children": ["tagsText"] },
-		"tagsText": { "type": "Text", "props": { "variant": "note", "truncate": true }, "children": [{ "item": "/tags" }] },
-		"locales": { "type": "TableCell", "children": ["localesCount"] },
-		"localesCount": { "type": "Count", "children": [{ "item": "/locales" }] },
-		"updated": { "type": "TableCell", "children": ["updatedCount"] },
-		"updatedCount": { "type": "Count", "children": [{ "item": "/updated" }] },
-		"end": { "type": "TableCell", "props": { "align": "end" }, "children": ["actions"] },
-		"actions": { "type": "RowActions", "children": ["more"] },
-		"more": { "type": "IconButton", "props": { "label": { "text": "rowMenu" } }, "children": ["moreIcon"] },
-		"moreIcon": { "type": "Icon", "props": { "name": "more" } },
-
-		"footer": { "type": "ListFooter", "children": ["range", "pageSize", "pagerRow"] },
+		"tags": {
+			"type": "TableCell",
+			"children": ["tagsText"]
+		},
+		"tagsText": {
+			"type": "Text",
+			"props": {
+				"variant": "note",
+				"truncate": true
+			},
+			"children": [
+				{
+					"item": "/tags"
+				}
+			]
+		},
+		"locales": {
+			"type": "TableCell",
+			"children": ["localesCount"]
+		},
+		"localesCount": {
+			"type": "Count",
+			"children": [
+				{
+					"item": "/locales"
+				}
+			]
+		},
+		"updated": {
+			"type": "TableCell",
+			"children": ["updatedCount"]
+		},
+		"updatedCount": {
+			"type": "Count",
+			"children": [
+				{
+					"item": "/updated"
+				}
+			]
+		},
+		"end": {
+			"type": "TableCell",
+			"props": {
+				"align": "end"
+			},
+			"children": ["actions"]
+		},
+		"actions": {
+			"type": "RowActions",
+			"children": ["more"]
+		},
+		"more": {
+			"type": "IconButton",
+			"props": {
+				"label": {
+					"text": "rowMenu"
+				}
+			},
+			"children": ["moreIcon"]
+		},
+		"moreIcon": {
+			"type": "Icon",
+			"props": {
+				"name": "more"
+			}
+		},
+		"footer": {
+			"type": "ListFooter",
+			"children": ["range", "pageSize", "pagerRow"]
+		},
 		"range": {
 			"type": "Count",
-			"children": [{ "text": "range", "params": { "range": { "data": "/range" }, "total": { "data": "/total" } } }]
+			"children": [
+				{
+					"text": "range",
+					"params": {
+						"range": {
+							"data": "/range"
+						},
+						"total": {
+							"data": "/total"
+						}
+					}
+				}
+			]
 		},
 		"pageSize": {
 			"type": "PageSizeMenu",
 			"props": {
-				"label": { "text": "pageSize" },
-				"value": { "data": "/pageSize" },
-				"options": { "data": "/pageSizes" }
+				"label": {
+					"text": "pageSize"
+				},
+				"value": {
+					"data": "/pageSize"
+				},
+				"options": {
+					"data": "/pageSizes"
+				}
 			}
 		},
 		"pagerRow": {
 			"type": "Stack",
-			"props": { "direction": "row", "justify": "end", "grow": true },
+			"props": {
+				"direction": "row",
+				"justify": "end",
+				"grow": true
+			},
 			"children": ["pager"]
 		},
-		"pager": { "type": "Pagination", "children": ["pages"] },
-		"pages": { "type": "PaginationContent", "children": ["previous", "page", "next"] },
-		"previous": { "type": "PaginationItem", "children": ["previousLink"] },
+		"pager": {
+			"type": "Pagination",
+			"children": ["pages"]
+		},
+		"pages": {
+			"type": "PaginationContent",
+			"children": ["previous", "page", "next"]
+		},
+		"previous": {
+			"type": "PaginationItem",
+			"children": ["previousLink"]
+		},
 		"previousLink": {
 			"type": "PaginationPrevious",
-			"props": { "href": { "data": "/previous/href" }, "disabled": { "data": "/previous/disabled" } }
+			"props": {
+				"href": {
+					"data": "/previous/href"
+				},
+				"disabled": {
+					"data": "/previous/disabled"
+				}
+			}
 		},
-		"page": { "type": "PaginationItem", "repeat": { "data": "/pages" }, "children": ["pageLink"] },
+		"page": {
+			"type": "PaginationItem",
+			"repeat": {
+				"data": "/pages"
+			},
+			"children": ["pageLink"]
+		},
 		"pageLink": {
 			"type": "PaginationLink",
-			"props": { "href": { "item": "/href" }, "isActive": { "item": "/current" } },
-			"children": [{ "item": "/number" }]
+			"props": {
+				"href": {
+					"item": "/href"
+				},
+				"isActive": {
+					"item": "/current"
+				}
+			},
+			"children": [
+				{
+					"item": "/number"
+				}
+			]
 		},
-		"next": { "type": "PaginationItem", "children": ["nextLink"] },
-		"nextLink": { "type": "PaginationNext", "props": { "href": { "data": "/next/href" } } }
+		"next": {
+			"type": "PaginationItem",
+			"children": ["nextLink"]
+		},
+		"nextLink": {
+			"type": "PaginationNext",
+			"props": {
+				"href": {
+					"data": "/next/href"
+				}
+			}
+		}
 	}
 }

@@ -53,6 +53,11 @@ function strings(node) {
 
 const htmlProps = new Set(strings(constant("HTML_PROPS").initializer));
 const containers = new Set(strings(constant("CONTAINERS").initializer));
+const pixelProps = new Set(strings(constant("PIXEL_PROPS").initializer));
+/** `DATA_FIELDS`: for each `Part.prop` filled from the data, the fields its items may have. */
+const dataFields = new Map(
+	constant("DATA_FIELDS").initializer.properties.map((property) => [property.name.text, strings(property.initializer)]),
+);
 const partsDeclaration = constant("parts");
 const SHAPING = /^(className|style|ref|key)$|ClassName$/;
 const isFunction = (type) =>
@@ -74,10 +79,6 @@ function ruleOf(type) {
 		member.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral | ts.TypeFlags.TemplateLiteral) ||
 		(member.isIntersection() && member.types.some((part) => part.flags & ts.TypeFlags.String));
 	if (types.every(stringLike)) return { type: "string" };
-	// A list or an object (a list head's columns, a menu's options): only the data can give it.
-	if (types.every((member) => member.flags & ts.TypeFlags.Object && member.getCallSignatures().length === 0)) {
-		return { type: "data" };
-	}
 	if (types.every((member) => member.flags & ts.TypeFlags.Number)) return { type: "number" };
 	return undefined;
 }
@@ -98,12 +99,16 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 				declaration.getSourceFile().fileName.startsWith(path.join(UI, "src")),
 			);
 			if (SHAPING.test(prop.name) || !(own || htmlProps.has(prop.name))) continue;
+			if (pixelProps.has(`${part.name}.${prop.name}`)) continue;
 			const type = checker.getTypeOfSymbolAtLocation(prop, partsDeclaration);
 			// A handler or a render function: a spec cannot hold one yet, so it is listed for the step that wires behavior by name.
 			if (/^on[A-Z]/.test(prop.name) || isFunction(type)) {
 				entry.events.push(prop.name);
 			} else if (isReactNode(type)) entry.slots.push(prop.name);
-			else {
+			else if (dataFields.has(`${part.name}.${prop.name}`)) {
+				// A list or an object (a list head's columns, a menu's options): only the data gives it, and only with these fields.
+				entry.props[prop.name] = { type: "data", fields: dataFields.get(`${part.name}.${prop.name}`) };
+			} else {
 				const value = ruleOf(type);
 				if (value) entry.props[prop.name] = value;
 			}

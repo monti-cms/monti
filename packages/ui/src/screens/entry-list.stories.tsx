@@ -50,14 +50,19 @@ const row = (
 
 const data = {
 	addressRule: "/posts/:slug",
-	columnSizes: [92, undefined, 140, 160, 64, 88, 54],
+	searchTargets: [
+		{ value: "all", label: "전체" },
+		{ value: "title", label: "제목" },
+		{ value: "slug", label: "주소" },
+		{ value: "body", label: "본문" },
+	],
 	columns: [
-		{ id: "status", label: "상태", size: 92 },
+		{ id: "status", label: "상태" },
 		{ id: "title", label: "제목" },
-		{ id: "category", label: "카테고리", size: 140 },
-		{ id: "tags", label: "태그", size: 160 },
-		{ id: "locale", label: "언어", size: 64 },
-		{ id: "updatedAt", label: "수정일", size: 88, sort: "desc" },
+		{ id: "category", label: "카테고리" },
+		{ id: "tags", label: "태그" },
+		{ id: "locale", label: "언어" },
+		{ id: "updatedAt", label: "수정일", sort: "desc" },
 	],
 	folders: [{ name: "시리즈 원고", count: 2, href: "#series" }],
 	rows: [

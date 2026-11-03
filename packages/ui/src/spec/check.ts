@@ -15,7 +15,12 @@ export interface CatalogPart {
 	readonly container: boolean;
 	readonly children: boolean;
 	readonly slots: readonly string[];
-	readonly props: Readonly<Record<string, { readonly enum?: readonly (string | number)[]; readonly type?: string }>>;
+	readonly props: Readonly<
+		Record<
+			string,
+			{ readonly enum?: readonly (string | number)[]; readonly type?: string; readonly fields?: readonly string[] }
+		>
+	>;
 }
 export type Catalog = Readonly<Record<string, CatalogPart>>;
 
