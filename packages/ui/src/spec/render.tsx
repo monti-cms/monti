@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import { createElement, Fragment, type ReactNode } from "react";
 import { type Catalog, checkSpec } from "./check";
 import {
 	isAction,
@@ -259,6 +259,10 @@ export function createScreenSpec(pack: ScreenPack) {
 			return createElement(part as (props: object) => ReactNode, props, ...drawn);
 		};
 
-		return draw(spec.root, [], { item: undefined, inForm: false }, spec.root);
+		const scope = { item: undefined, inForm: false };
+		const overlays = (spec.overlays ?? []).map((id) => draw(id, [], scope, id));
+		return overlays.length === 0
+			? draw(spec.root, [], scope, spec.root)
+			: createElement(Fragment, null, draw(spec.root, [], scope, spec.root), ...overlays);
 	};
 }

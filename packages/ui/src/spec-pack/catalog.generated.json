@@ -15,6 +15,44 @@
 			},
 			"events": []
 		},
+		"Sheet": {
+			"kind": "overlay",
+			"bind": false,
+			"children": true,
+			"slots": ["footer"],
+			"props": {
+				"of": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"SheetBody": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"blocks": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"SheetSplit": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": ["list"],
+			"props": {},
+			"events": []
+		},
 		"Folder": {
 			"kind": "part",
 			"bind": false,

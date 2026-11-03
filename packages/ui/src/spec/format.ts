@@ -67,6 +67,11 @@ export interface SpecElement {
 
 export interface ScreenSpecDocument {
 	readonly root: string;
+	/**
+	 * What opens over the screen (a sheet, a dialog), in the order they stack, each an element of an `overlay` part. The part draws its own backdrop and
+	 * place; the spec only says that it is open over the screen.
+	 */
+	readonly overlays?: readonly string[];
 	readonly elements: Readonly<Record<string, SpecElement>>;
 }
 

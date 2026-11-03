@@ -469,6 +469,40 @@ const parts = [
 		leaf: true,
 		asProps: ["display", "align-items", "gap"],
 	},
+	// A sheet over the screen: the dim behind it is the sheet's own.
+	{ match: (el) => el.matches(".mt-backdrop"), ignore: true },
+	{
+		match: (el) => el.matches("section.mt-sheet"),
+		part: "Sheet",
+		overlay: true,
+		props: (el) => {
+			const title = el.querySelector(".mt-panel-head > h2");
+			return {
+				title: [...(title?.childNodes ?? [])]
+					.filter((node) => node.nodeType === Node.TEXT_NODE)
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+				of: title?.querySelector(".text-meta")?.textContent.replace(/^·\s*/, "").trim(),
+			};
+		},
+		slots: (el) => ({ footer: el.querySelector(":scope > .mt-panel-foot") }),
+		children: (el) => [...el.children].filter((child) => !child.matches("header, footer")),
+		asProps: ["position", "z-index", "top", "right", "height", "width"],
+	},
+	{
+		match: (el) => el.matches(".mt-sheet .mt-panel-body"),
+		part: "SheetBody",
+		props: (el) => ({ blocks: el.style.paddingTop.includes("--space-4") || undefined }),
+		asProps: ["flex", "overflow", "padding-top", "gap"],
+	},
+	{
+		match: (el) => el.matches(".mt-sheet > div:has(> [role=listbox])"),
+		part: "SheetSplit",
+		slots: (el) => ({ list: el.querySelector(":scope > [role=listbox]") }),
+		children: (el) => [...el.children].filter((child) => !child.matches("[role=listbox]")),
+		asProps: ["flex", "display", "min-height"],
+	},
 	// A panel beside the page.
 	{
 		match: (el) => el.matches("aside.mt-panel"),
@@ -802,7 +836,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

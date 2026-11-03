@@ -26,7 +26,8 @@ export interface CatalogProp {
 
 /** One entry of `screen-catalog.generated.json`: a part, or a layout container the screen arranges with. */
 export interface CatalogPart {
-	readonly kind: "part" | "layout";
+	/** `overlay`: a part that opens over the screen (a sheet), placed only in the spec's `overlays`. */
+	readonly kind: "part" | "layout" | "overlay";
 	/** What the renderer does for it beyond drawing: a `form` makes a `button` in it its submit. */
 	readonly role?: "form" | "button";
 	/** It may take an element `bind` (the data a field holds and sends). */
@@ -109,6 +110,13 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 	};
 	if (!spec.elements[spec.root]) problems.push(`root: there is no element "${spec.root}"`);
 	used.set(spec.root, "root");
+	(spec.overlays ?? []).forEach((id, index) => {
+		const where = `overlays[${index}]`;
+		use(id, where);
+		const type = spec.elements[id]?.type;
+		if (type && catalog.entries[type] && catalog.entries[type].kind !== "overlay")
+			problems.push(`${where}: ${type} does not open over a screen; only an overlay part does`);
+	});
 
 	for (const [id, element] of Object.entries(spec.elements)) {
 		for (const key of Object.keys(element)) {
@@ -180,8 +188,10 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 			}
 		});
 	}
-	for (const id of Object.keys(spec.elements)) {
+	for (const [id, element] of Object.entries(spec.elements)) {
 		if (!used.has(id)) problems.push(`${id}: placed nowhere`);
+		else if (catalog.entries[element.type]?.kind === "overlay" && !used.get(id)?.startsWith("overlays["))
+			problems.push(`${id}: ${element.type} opens over the screen; place it in overlays, not in ${used.get(id)}`);
 	}
 	return problems;
 }

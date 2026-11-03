@@ -197,6 +197,8 @@ function read(el, where, page = undefined, inPart = false) {
 	}
 	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
 	if (rule?.ignore) return { where: here };
+	// What opens over the screen is read apart, as the root's overlay (see `readBoard`); where the board draws it, it takes no place.
+	if (rule?.overlay && el.dataset.overlay === undefined) return { where: here };
 	if (rule?.frame) {
 		return framed(el, { where: here, direction: directionOf(el), layout: {}, ...withLooks(measured(el, here), looks) });
 	}
@@ -379,5 +381,15 @@ function measured(el, where) {
 window.readBoard = (selector, page = {}) => {
 	const root = document.querySelector(selector);
 	if (!root) throw new Error(`no element "${selector}" in the board`);
-	return read(root, "board", page);
+	const node = read(root, "board", page);
+	// What opens over the screen (a sheet), read as the parts they are, in the order the board draws them.
+	const overlays = [...root.querySelectorAll("*")]
+		.filter((el) => shown(el) && PARTS.find((rule) => !rule.group && rule.match(el))?.overlay)
+		.map((el, index) => {
+			el.dataset.overlay = "";
+			const overlay = read(el, `board › overlay[${index}]`);
+			delete el.dataset.overlay;
+			return overlay;
+		});
+	return overlays.length > 0 ? { ...node, overlays } : node;
 };

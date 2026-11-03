@@ -33,6 +33,8 @@ export interface DrawnNode {
 	readonly before?: number;
 	/** In a group, the distance in px from its last child to the group's end. */
 	readonly after?: number;
+	/** On the drawing's root: what opens over it (a sheet), each an overlay part. */
+	readonly overlays?: readonly DrawnNode[];
 	/** What the drawing shapes by hand on it instead of through the design system ("max-width: var(--width-side-panel)", "class my-look"). */
 	readonly looks?: readonly string[];
 }

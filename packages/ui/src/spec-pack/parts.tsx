@@ -43,6 +43,15 @@ import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
 import { Select, SelectTrigger, SelectValue } from "../select";
 import { Separator } from "../separator";
+import {
+	SheetBody as SheetBodyPart,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	Sheet as SheetRoot,
+	SheetSplit as SheetSplitPart,
+	SheetTitle,
+} from "../sheet";
 import { SidePanel } from "../side-panel";
 import {
 	SidebarContent,
@@ -953,6 +962,46 @@ function FieldLine({
 	);
 }
 
+/**
+ * Work with several inputs, open over the screen from the right (add a field, review a save): its `title`, what it is about (`of`), its body
+ * (`SheetBody` or `SheetSplit`) and the `footer` with cancel and the one pill. It dims the screen under it.
+ */
+function Sheet({
+	title,
+	of,
+	footer,
+	children,
+}: {
+	title?: string;
+	of?: string;
+	footer?: React.ReactNode;
+	children?: React.ReactNode;
+}) {
+	return (
+		<SheetRoot open>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of={of} ofMono={false}>
+						{title}
+					</SheetTitle>
+				</SheetHeader>
+				{children}
+				{footer && <SheetFooter>{footer}</SheetFooter>}
+			</SheetContent>
+		</SheetRoot>
+	);
+}
+
+/** What a sheet is for, scrolling when it is long; `blocks` for a run of change blocks, which bring their own room above. */
+function SheetBody({ blocks, children }: { blocks?: boolean; children?: React.ReactNode }) {
+	return <SheetBodyPart blocks={blocks}>{children}</SheetBodyPart>;
+}
+
+/** A sheet's body in two: `list` on the left (the kinds of a new field), the work on the right. */
+function SheetSplit({ list, children }: { list?: React.ReactNode; children?: React.ReactNode }) {
+	return <SheetSplitPart list={list}>{children}</SheetSplitPart>;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -961,6 +1010,9 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Sheet,
+	SheetBody,
+	SheetSplit,
 	Folder,
 	FolderTabRow,
 	FolderTabItem,
@@ -1104,6 +1156,9 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Sheet: { kind: "overlay", props: { title: "text", of: "text" } },
+	SheetBody: { kind: "part", props: { blocks: "flag" } },
+	SheetSplit: { kind: "part", props: {} },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
 	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },

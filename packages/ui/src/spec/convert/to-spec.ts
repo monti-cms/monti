@@ -149,6 +149,7 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	};
 
 	const rootId = convert(root) ?? idFor("empty");
+	const overlays = (root.overlays ?? []).map((node) => convert(node)).filter((id): id is string => id !== undefined);
 	// A label names its field by the drawing's id; in the spec it is a reference to that field's element.
 	for (const { element, prop, drawnId } of pendingRefs) {
 		const target = drawnIds.get(drawnId);
@@ -157,5 +158,9 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		else outside.push(`${element}: it names "${drawnId}", which is not an element of the drawing`);
 		elements[element] = { ...(elements[element] as SpecElement), props };
 	}
-	return { spec: { root: rootId, elements }, outside, data: { drawn: drawnTexts } };
+	return {
+		spec: { root: rootId, ...(overlays.length > 0 ? { overlays } : {}), elements },
+		outside,
+		data: { drawn: drawnTexts },
+	};
 }

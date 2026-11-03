@@ -77,7 +77,9 @@ export function compareStructure(
 		}
 	};
 	const root = (doc: ScreenSpecDocument) =>
-		[shapeOf(doc, catalog, doc.root)].filter((shape): shape is Shape => shape !== undefined);
+		[doc.root, ...(doc.overlays ?? [])]
+			.map((id) => shapeOf(doc, catalog, id))
+			.filter((shape): shape is Shape => shape !== undefined);
 	walk(root(board), root(spec), "");
 	return differences;
 }
