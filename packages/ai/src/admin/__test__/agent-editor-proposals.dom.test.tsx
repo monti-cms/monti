@@ -40,11 +40,25 @@ beforeEach(() => {
 		vi.fn(async (input: string, init?: RequestInit) => {
 			const url = String(input);
 			// After a request in the card, the server lists the change that took the first one's place.
-			if (url.includes("/v1/ai/proposals?entry="))
-				return json({ items: [asked.length > 0 ? remade() : view("a", ids[0] ?? ""), view("b", ids[1] ?? "")] });
+			// After a request on selected words, the server lists the proposal that answers it too.
+			if (url.includes("/v1/ai/proposals?entry=")) {
+				const spot = asked.some((body) => (body as { words?: string }).words !== undefined);
+				const reasked = asked.some((body) => (body as { words?: string }).words === undefined);
+				return json({
+					items: [
+						reasked ? remade() : view("a", ids[0] ?? ""),
+						view("b", ids[1] ?? ""),
+						...(spot ? [{ ...view("s1", ids[1] ?? ""), proposalId: "p2" }] : []),
+					],
+				});
+			}
 			if (/\/v1\/ai\/proposals\/p1\/items\/a\/ask$/.test(url)) {
 				asked.push(JSON.parse(String(init?.body)));
 				return json({ item: remade() });
+			}
+			if (url.endsWith("/v1/ai/spots")) {
+				asked.push(JSON.parse(String(init?.body)));
+				return json({ item: { ...view("s1", ids[1] ?? ""), proposalId: "p2" } });
 			}
 			const settle = url.match(/\/v1\/ai\/proposals\/([^/]+)\/settle$/);
 			if (settle) {
@@ -116,11 +130,29 @@ describe("the agent's proposals in the editor", () => {
 		const [first] = result.current.proposals?.items ?? [];
 		let next: string | null = null;
 		await act(async () => {
-			next = (await result.current.proposals?.onAsk?.(first as never, "shorter")) ?? null;
+			next = (await result.current.proposals?.onAsk?.(first as never, "shorter", new AbortController().signal)) ?? null;
 		});
 		expect(asked).toEqual([{ text: "shorter" }]);
 		expect(next).toBe("a2");
 		await waitFor(() => expect(result.current.proposals?.items.map((item) => item.id)).toEqual(["a2", "b"]));
 		expect(result.current.proposals?.items[0]?.thread?.map((message) => message.text)).toEqual(["shorter"]);
+	});
+
+	it("ASSIST-E4 sends a request on selected words for the open entry and draws the proposal that answers it at once", async () => {
+		const { result } = mount();
+		act(() => result.current.onEditor?.(editor));
+		await waitFor(() => expect(result.current.proposals?.items).toHaveLength(2));
+		let next: string | null = null;
+		await act(async () => {
+			next =
+				(await result.current.proposals?.onAskAt?.(
+					{ words: "Two", blockId: "x" },
+					"longer",
+					new AbortController().signal,
+				)) ?? null;
+		});
+		expect(asked).toEqual([{ entry: "e1", words: "Two", text: "longer" }]);
+		expect(next).toBe("s1");
+		await waitFor(() => expect(result.current.proposals?.items.map((item) => item.id)).toEqual(["a", "b", "s1"]));
 	});
 });

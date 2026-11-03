@@ -1,6 +1,7 @@
 import { CodeReference } from "@carbon/icons-react";
 import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Editor } from "@tiptap/core";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
 import { AdminComponentsProvider, type EditorExtension } from "../../admin-components";
@@ -691,6 +692,65 @@ export const ProposalCardOpen: Story = {
 		fireEvent.mouseDown(mark, at);
 		fireEvent.mouseUp(mark, at);
 		fireEvent.click(mark, at);
-		await within(document.body).findByText("요청 · 문단 1", undefined, LONG);
+		await within(document.body).findByRole("dialog", undefined, LONG);
+	},
+};
+
+/** The same plugin without the removal, and with requests on selected words that the assistant is still working on (they never answer here). */
+const selectionPlugin: EditorExtension = (context) => {
+	const base = proposalPlugin(context);
+	return {
+		proposals: {
+			...(base.proposals as NonNullable<typeof base.proposals>),
+			items: base.proposals?.items.slice(0, 1) ?? [],
+			onAskAt: () => new Promise<string | null>(() => undefined),
+		},
+	};
+};
+const withSelectionRequests = () => (
+	<PageFrame api={server()} pathname="/admin/entries/entry-1/edit">
+		<AdminComponentsProvider components={{ editorExtensions: [selectionPlugin] }}>
+			<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+		</AdminComponentsProvider>
+	</PageFrame>
+);
+
+/** Selects "둘째 문단" in the second paragraph and presses ⌘J, as the format bar's "✦ 요청" does. */
+const askAboutSelection = async (canvasElement: HTMLElement) => {
+	await settled(canvasElement);
+	const dom = canvasElement.querySelector(".ProseMirror") as (HTMLElement & { editor?: Editor }) | null;
+	const editor = dom?.editor;
+	if (!dom || !editor) throw new Error("no editor");
+	let from = 0;
+	editor.state.doc.descendants((node, pos) => {
+		if (node.isText && node.text?.startsWith("둘째 문단")) from = pos;
+		return from === 0;
+	});
+	editor.commands.focus();
+	editor.commands.setTextSelection({ from, to: from + "둘째 문단".length });
+	fireEvent.keyDown(dom, { key: "j", metaKey: true });
+	await within(document.body).findByRole("textbox", { name: "요청" }, LONG);
+};
+
+/** Words selected and ⌘J pressed (flow 2 · 09b): the words on the highlight, and the empty card under them with only the box, the caret in it. */
+export const SelectionRequest: Story = {
+	tags: ["visual"],
+	render: withSelectionRequests,
+	play: async ({ canvasElement }) => {
+		await askAboutSelection(canvasElement);
+	},
+};
+
+/** The request sent (flow 2 · 09c): "…" in the margin, "고치는 중…" in the card, and "요청 1 · 고치는 중 1" in the status bar. */
+export const SelectionRequestWorking: Story = {
+	tags: ["visual"],
+	render: withSelectionRequests,
+	play: async ({ canvasElement }) => {
+		await askAboutSelection(canvasElement);
+		const box = within(document.body).getByRole("textbox", { name: "요청" });
+		fireEvent.change(box, { target: { value: "앞 문장과 합쳐서 한 문장으로." } });
+		fireEvent.keyDown(box, { key: "Enter" });
+		await within(document.body).findByText("고치는 중…", undefined, LONG);
+		await page(canvasElement).findByText(/고치는 중 1/, undefined, LONG);
 	},
 };

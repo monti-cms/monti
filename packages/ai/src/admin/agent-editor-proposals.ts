@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EditorProposalView } from "../agent/entry-proposals";
-import { aiKeys, askProposalItem, listEntryProposals, settleProposal } from "./api";
+import { aiKeys, askAtSelection, askProposalItem, listEntryProposals, settleProposal } from "./api";
 import { proposalMessages } from "./proposal.messages";
 
 /** The id of the top-level blocks of the editor's document. */
@@ -36,7 +36,8 @@ const stillIn = (editor: Editor | null, item: EditorProposalItem, placed: readon
 /**
  * The agent's proposals in the entry editor (docs/design/agent-editor.md): the body changes waiting for the open entry, drawn by the editor as the blue
  * pencil. A discarded change is reported at once; an accepted one when the entry is saved (and only if it is still in the document then: ⌘Z takes it back
- * out). The bubble's name opens the conversation the proposal came from.
+ * out). The bubble's name opens the conversation the proposal came from. Words selected in the editor can be asked about (`onAskAt`): the answer is a
+ * proposal of its own, added to the list at once.
  */
 export function useAgentProposalsExtension(context: EditorExtensionContext): EditorExtensionResult {
 	const site = useSite();
@@ -116,11 +117,11 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 				}
 				void settle(byProposal);
 			},
-			onAsk: async (item: EditorProposalItem, text: string) => {
+			onAsk: async (item: EditorProposalItem, text: string, signal: AbortSignal) => {
 				const view = byId.get(item.id);
 				if (!view) return null;
 				try {
-					const { item: next } = await askProposalItem(site, view.proposalId, item.id, text, t("error.ask"));
+					const { item: next } = await askProposalItem(site, view.proposalId, item.id, text, t("error.ask"), signal);
 					// The new change takes the old one's place at once; the list is read again behind it.
 					if (entryId) {
 						client.setQueryData<{ items: EditorProposalView[] }>(aiKeys.entryProposals(entryId), (data) =>
@@ -136,10 +137,30 @@ export function useAgentProposalsExtension(context: EditorExtensionContext): Edi
 					refresh([view.proposalId]);
 					return next?.id ?? null;
 				} catch (error) {
-					toast.error(errorText(site, error, t("error.ask")));
+					// A request the admin stopped needs no word.
+					if (!signal.aborted) toast.error(errorText(site, error, t("error.ask")));
 					throw error;
 				}
 			},
+			...(entryId
+				? {
+						onAskAt: async (spot: { words: string }, text: string, signal: AbortSignal) => {
+							try {
+								const { item: next } = await askAtSelection(site, entryId, spot.words, text, t("error.ask"), signal);
+								// The new change is drawn at once; the list is read again behind it.
+								if (next)
+									client.setQueryData<{ items: EditorProposalView[] }>(aiKeys.entryProposals(entryId), (data) =>
+										data ? { items: [...data.items, next] } : { items: [next] },
+									);
+								refresh(next ? [next.proposalId] : []);
+								return next?.id ?? null;
+							} catch (error) {
+								if (!signal.aborted) toast.error(errorText(site, error, t("error.ask")));
+								throw error;
+							}
+						},
+					}
+				: {}),
 			...(ask
 				? {
 						onOpen: (item: EditorProposalItem) => {

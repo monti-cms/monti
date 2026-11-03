@@ -19,14 +19,40 @@ export interface BlockProposal {
 	readonly working?: boolean;
 }
 
+/**
+ * Words the admin selected to ask the assistant about (⌘J, flow 2 · 09b–c): drawn on the highlight background until the answer comes as a proposal. Its
+ * range follows the edits around it. While the assistant works, its block has the request marker ("…").
+ */
+export interface SelectionRequest {
+	readonly key: string;
+	readonly from: number;
+	readonly to: number;
+	readonly working: boolean;
+}
+
 export interface ProposalMarksState {
 	readonly proposals: readonly BlockProposal[];
 	/** The proposal being looked at: its block gets the blue line in the margin. */
 	readonly current: string | null;
+	readonly spots: readonly SelectionRequest[];
 	readonly decorations: DecorationSet;
 }
 
-export type ProposalMarksMeta = { readonly proposals?: readonly BlockProposal[]; readonly current?: string | null };
+export type ProposalMarksMeta = {
+	readonly proposals?: readonly BlockProposal[];
+	readonly current?: string | null;
+	/** Adds a selection request, marks one working (or not), or takes one away. */
+	readonly addSpot?: SelectionRequest;
+	readonly spotWorking?: { readonly key: string; readonly working: boolean };
+	readonly removeSpot?: string;
+};
+
+/** The id a selection request goes by where proposals and requests share one name: the card that is open, the marker's place. */
+export const spotId = (key: string) => `spot:${key}`;
+export const spotKeyOf = (id: string | null): string | null => (id?.startsWith("spot:") ? id.slice(5) : null);
+
+/** The highlight of selected words (the `Highlight` part's look), on the text itself. */
+const HIGHLIGHT_CLASS = "rounded-monti-sm bg-monti-highlight cursor-pointer";
 
 export const proposalMarksKey = new PluginKey<ProposalMarksState>("cmsProposalMarks");
 
@@ -101,6 +127,14 @@ export function blocksById(doc: ProseMirrorNode): Map<string, { node: ProseMirro
 	return found;
 }
 
+/** The top-level block that holds a position. */
+export function topBlockAt(doc: ProseMirrorNode, pos: number): { node: ProseMirrorNode; pos: number } | null {
+	const resolved = doc.resolve(Math.min(Math.max(pos, 0), doc.content.size));
+	if (resolved.depth < 1) return null;
+	const node = resolved.node(1);
+	return { node, pos: resolved.before(1) };
+}
+
 /** The proposals that can be drawn: their block is there and reads as it did when they were planned, in the order of the document. */
 export function drawable(doc: ProseMirrorNode, proposals: readonly BlockProposal[]): BlockProposal[] {
 	const blocks = blocksById(doc);
@@ -128,9 +162,26 @@ const insWidget = (text: string, id: string, afterDel: boolean) => () => {
 	return holder;
 };
 
-function decorate(doc: ProseMirrorNode, proposals: readonly BlockProposal[], current: string | null): DecorationSet {
+function decorate(
+	doc: ProseMirrorNode,
+	proposals: readonly BlockProposal[],
+	current: string | null,
+	spots: readonly SelectionRequest[],
+): DecorationSet {
 	const blocks = blocksById(doc);
 	const decorations: Decoration[] = [];
+	for (const spot of spots) {
+		if (spot.to <= spot.from) continue;
+		const id = spotId(spot.key);
+		decorations.push(Decoration.inline(spot.from, spot.to, { [PROPOSAL_ATTRIBUTE]: id, class: HIGHLIGHT_CLASS }));
+		if (!spot.working) continue;
+		const block = topBlockAt(doc, spot.from);
+		if (!block) continue;
+		decorations.push(Decoration.node(block.pos, block.pos + block.node.nodeSize, { class: "relative" }));
+		decorations.push(
+			Decoration.widget(block.pos + 1, markerWidget(id), { side: -1, ignoreSelection: true, key: `marker:${id}` }),
+		);
+	}
 	for (const proposal of drawable(doc, proposals)) {
 		const found = blocks.get(proposal.blockId);
 		if (!found) continue;
@@ -198,22 +249,38 @@ export function proposalMarksPlugin(onPick: (id: string) => void): Plugin<Propos
 		state: EditorState,
 		proposals: readonly BlockProposal[],
 		current: string | null,
+		spots: readonly SelectionRequest[],
 	): ProposalMarksState => ({
 		proposals,
 		current,
-		decorations: decorate(state.doc, proposals, current),
+		spots,
+		decorations: decorate(state.doc, proposals, current, spots),
 	});
 	return new Plugin<ProposalMarksState>({
 		key: proposalMarksKey,
 		state: {
-			init: (_, state) => build(state, [], null),
+			init: (_, state) => build(state, [], null, []),
 			apply: (tr, value, _old, state) => {
 				const meta = tr.getMeta(proposalMarksKey) as ProposalMarksMeta | undefined;
 				if (!meta && !tr.docChanged) return value;
+				// The selected words follow the edits around them; words deleted whole are gone.
+				let spots = tr.docChanged
+					? value.spots
+							.map((spot) => ({ ...spot, from: tr.mapping.map(spot.from, 1), to: tr.mapping.map(spot.to, -1) }))
+							.filter((spot) => spot.to > spot.from)
+					: value.spots;
+				if (meta?.addSpot) spots = [...spots, meta.addSpot];
+				if (meta?.spotWorking) {
+					const { key, working } = meta.spotWorking;
+					spots = spots.map((spot) => (spot.key === key ? { ...spot, working } : spot));
+				}
+				const removed = meta?.removeSpot;
+				if (removed) spots = spots.filter((spot) => spot.key !== removed);
 				return build(
 					state,
 					meta?.proposals ?? value.proposals,
 					meta && "current" in meta ? (meta.current ?? null) : value.current,
+					spots,
 				);
 			},
 		},

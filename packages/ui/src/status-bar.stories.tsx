@@ -45,7 +45,7 @@ export const Playground: Story = {
 				/>
 				<TodoDone>요약, 태그 확인함</TodoDone>
 			</StatusBarList>
-			<StatusBarCell>요청 2 · 1 고치는 중</StatusBarCell>
+			<StatusBarCell detail="고치는 중 1">요청 1</StatusBarCell>
 			<StatusBarSpacer />
 			<StatusBarCell end render={<span />}>
 				1,240자
@@ -60,7 +60,7 @@ export const Cells: Story = {
 		<StatusBar {...args}>
 			<StatusBarAnnouncer>저장됨</StatusBarAnnouncer>
 			<StatusBarCell tone="warning">할 일 2</StatusBarCell>
-			<StatusBarCell>요청 2 · 1 고치는 중</StatusBarCell>
+			<StatusBarCell detail="고치는 중 1">요청 1</StatusBarCell>
 			<StatusBarSpacer />
 			<StatusBarCell end render={<span />}>
 				1,240자

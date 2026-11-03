@@ -18,7 +18,6 @@ export const aiWriteMessages = defineMessages("cms-ai.admin.write", {
 		after: "After",
 		now: "Now",
 		insertDescription: "AI action",
-		ask: "Ask",
 	},
 	ko: {
 		blockMismatch: "결과가 같은 블록 하나가 아니에요.",
@@ -36,6 +35,5 @@ export const aiWriteMessages = defineMessages("cms-ai.admin.write", {
 		after: "바뀐 뒤",
 		now: "지금",
 		insertDescription: "AI 기능",
-		ask: "요청",
 	},
 });

@@ -4,13 +4,30 @@ import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Marker, MemoCardPopover, MemoMessage, MemoThread, ProposalBubble, ProposalBubbleDock } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
+import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { EditorProposalItem, EditorProposals } from "../../admin-components";
+import type {
+	EditorProposalItem,
+	EditorProposals,
+	EditorRequests,
+	EditorSelectionAction,
+} from "../../admin-components";
 import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { storedToTiptap } from "../tiptap-content";
-import { blocksById, drawable, MARKER_ATTRIBUTE, proposalMarksKey, proposalMarksPlugin } from "./marks";
+import {
+	blocksById,
+	drawable,
+	MARKER_ATTRIBUTE,
+	PROPOSAL_ATTRIBUTE,
+	type ProposalMarksMeta,
+	proposalMarksKey,
+	proposalMarksPlugin,
+	spotId,
+	spotKeyOf,
+	topBlockAt,
+} from "./marks";
 import { proposalMarksMessages } from "./messages";
 
 /**
@@ -46,26 +63,6 @@ export function acceptInEditor(editor: Editor, site: Site, item: EditorProposalI
 	return placed;
 }
 
-/** What a block is called in a card's head: "paragraph 2", "heading 1", by its kind and its place among the blocks of that kind. */
-function useBlockName() {
-	const t = useTranslator(proposalMarksMessages);
-	return (editor: Editor, blockId: string): string => {
-		const found = blocksById(editor.state.doc).get(blockId);
-		if (!found) return t("block.other", { n: 1 });
-		const kind =
-			found.node.type.name === "paragraph" ? "paragraph" : found.node.type.name === "heading" ? "heading" : "other";
-		let n = 0;
-		editor.state.doc.forEach((node, pos) => {
-			const same =
-				kind === "other"
-					? node.type.name !== "paragraph" && node.type.name !== "heading"
-					: node.type.name === found.node.type.name;
-			if (same && pos <= found.pos) n++;
-		});
-		return t(`block.${kind}`, { n });
-	};
-}
-
 /** The time of day of an ISO date ("10:58"). */
 const timeOf = (iso: string) => {
 	const at = new Date(iso);
@@ -74,25 +71,40 @@ const timeOf = (iso: string) => {
 		: `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
 };
 
+/** Words selected to ask about: where they are, and what was asked once sent. */
+interface SpotRequest {
+	readonly words: string;
+	readonly blockId: string;
+	readonly sent?: string;
+}
+
 /**
  * The assistant's proposals in the open entry (docs/design/agent-editor.md, flow 2 · 08): the blue pencil in the text, the bubble over the status bar
  * ("↑ 1 / 5 ↓", discard all, accept all) and, from a mark, the card with discard and accept for that one. Accepting puts the change in the document as an
  * edit of the admin's, undone with ⌘Z until saved; the sources hear what was accepted and discarded. In the card the admin can ask for that one change
  * again (flow 2 · 09): the thread shows what was said, and a block with requests has the request marker in its margin ("…" while the assistant works).
+ * Selected words can be asked about too (⌘J or the format bar's "✦ Request", flow 2 · 09b–c): they get the highlight and an empty card; sending saves the
+ * entry first, and the answer comes as a proposal of its own. `requests` is what the status bar counts.
  */
-export function useProposalMarks(sources: readonly EditorProposals[]): {
+export function useProposalMarks(
+	sources: readonly EditorProposals[],
+	save?: () => Promise<boolean>,
+): {
 	readonly onEditor: (editor: Editor | null) => void;
 	readonly overlay: ReactNode;
+	readonly selectionActions: readonly EditorSelectionAction[];
+	readonly requests: EditorRequests | null;
 } {
 	const site = useSite();
 	const t = useTranslator(proposalMarksMessages);
-	const blockName = useBlockName();
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const [current, setCurrent] = useState<string | null>(null);
 	const [card, setCard] = useState<string | null>(null);
 	// The requests the assistant is working on, by the proposal they are about: what the admin wrote.
 	const [asking, setAsking] = useState<ReadonlyMap<string, string>>(new Map());
 	const [draft, setDraft] = useState("");
+	const [spots, setSpots] = useState<ReadonlyMap<string, SpotRequest>>(new Map());
+	const askAt = sources.find((source) => source.onAskAt)?.onAskAt;
 	const items = useMemo(() => sources.flatMap((source) => source.items.map((item) => ({ item, source }))), [sources]);
 	// What was written in one card does not follow to another.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: clears the box when another card opens
@@ -104,7 +116,7 @@ export function useProposalMarks(sources: readonly EditorProposals[]): {
 		if (!editor) return;
 		editor.registerPlugin(
 			proposalMarksPlugin((id) => {
-				setCurrent(id);
+				if (spotKeyOf(id) === null) setCurrent(id);
 				setCard(id);
 			}),
 		);
@@ -204,27 +216,134 @@ export function useProposalMarks(sources: readonly EditorProposals[]): {
 		setCard(null);
 	};
 
+	// The requests being worked on, by proposal id or selection key: what stops them.
+	const running = useRef(new Map<string, AbortController>());
+	const stop = (id: string) => running.current.get(id)?.abort();
+
 	const ask = async (entry: { item: EditorProposalItem; source: EditorProposals }, text: string) => {
 		if (!entry.source.onAsk) return;
 		setDraft("");
 		setAsking((before) => new Map([...before, [entry.item.id, text]]));
+		const controller = new AbortController();
+		running.current.set(entry.item.id, controller);
 		try {
-			const next = await entry.source.onAsk(entry.item, text);
+			const next = await entry.source.onAsk(entry.item, text, controller.signal);
 			// The card stays open on the proposal that took its place.
 			setCard((open) => (open === entry.item.id ? next : open));
 			setCurrent((now) => (now === entry.item.id ? next : now));
 		} catch {
-			// The source says why; what was written goes back in the box.
+			// Stopped, or the source says why: what was written goes back in the box.
 			setDraft(text);
 		} finally {
+			running.current.delete(entry.item.id);
 			setAsking((before) => new Map([...before].filter(([id]) => id !== entry.item.id)));
 		}
+	};
+
+	const dispatchSpot = (meta: ProposalMarksMeta) => {
+		if (editor && !editor.isDestroyed)
+			editor.view.dispatch(editor.state.tr.setMeta(proposalMarksKey, meta).setMeta("addToHistory", false));
+	};
+	const dropSpot = (key: string) => {
+		dispatchSpot({ removeSpot: key });
+		setSpots((before) => new Map([...before].filter(([one]) => one !== key)));
+	};
+
+	/** Opens a request on the selected words: the highlight and the empty card. Words across blocks, or none, are not asked about. */
+	const startSpot = (now: Editor) => {
+		const { from, to, empty } = now.state.selection;
+		if (empty || !askAt) return;
+		const block = topBlockAt(now.state.doc, from);
+		const blockId = block?.node.attrs[BLOCK_ID_ATTRIBUTE];
+		if (!block || typeof blockId !== "string" || to > block.pos + block.node.nodeSize) return;
+		const words = now.state.doc.textBetween(from, to, " ").trim();
+		if (!words) return;
+		const key = Math.random().toString(36).slice(2);
+		// The selection folds to the end of the words: the format bar goes, and the highlight is what marks them now.
+		now.view.dispatch(
+			now.state.tr
+				.setMeta(proposalMarksKey, { addSpot: { key, from, to, working: false } } satisfies ProposalMarksMeta)
+				.setMeta("addToHistory", false)
+				.setSelection(TextSelection.create(now.state.doc, to)),
+		);
+		setSpots((before) => new Map([...before, [key, { words, blockId }]]));
+		setCard(spotId(key));
+	};
+	const startRef = useRef(startSpot);
+	startRef.current = startSpot;
+
+	// ⌘J on selected words asks about them, as the format bar's button does.
+	useEffect(() => {
+		if (!editor || !askAt) return;
+		const dom = editor.view.dom;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== "j")
+				return;
+			if (editor.state.selection.empty) return;
+			event.preventDefault();
+			startRef.current(editor);
+		};
+		dom.addEventListener("keydown", onKeyDown);
+		return () => dom.removeEventListener("keydown", onKeyDown);
+	}, [editor, askAt]);
+
+	const sendSpot = async (key: string, text: string) => {
+		const spot = spots.get(key);
+		if (!spot || !askAt) return;
+		setDraft("");
+		setSpots((before) => new Map([...before, [key, { ...spot, sent: text }]]));
+		dispatchSpot({ spotWorking: { key, working: true } });
+		const controller = new AbortController();
+		running.current.set(spotId(key), controller);
+		// Not answered (stopped, or failed): the words stay marked and what was written goes back in the box.
+		const giveBack = () => {
+			setSpots((before) => new Map([...before, [key, spot]]));
+			dispatchSpot({ spotWorking: { key, working: false } });
+			setDraft(text);
+		};
+		try {
+			// The assistant reads the entry as stored: what the admin wrote last is saved first.
+			const saved = save ? await save() : true;
+			if (!saved || controller.signal.aborted) return giveBack();
+			const next = await askAt({ words: spot.words, blockId: spot.blockId }, text, controller.signal);
+			dropSpot(key);
+			// The card goes on with the proposal that answers it.
+			setCard((open) => (open === spotId(key) ? next : open));
+			if (next) setCurrent(next);
+		} catch {
+			// The source says why when it failed.
+			giveBack();
+		} finally {
+			running.current.delete(spotId(key));
+		}
+	};
+
+	// A card of selected words closed before anything was sent leaves no request behind.
+	const closeCard = () => {
+		const key = spotKeyOf(card);
+		if (key && spots.get(key)?.sent === undefined) dropSpot(key);
+		setCard(null);
 	};
 
 	const opened = entryOf(card);
 	const openedThread = opened?.item.thread ?? [];
 	const openedAsking = opened ? asking.get(opened.item.id) : undefined;
 	const markers = markerPlaces.map(({ id, element }) => {
+		// A selection request being worked on: "…" by its block, opening its card.
+		if (spotKeyOf(id) !== null)
+			return createPortal(
+				<Marker
+					tone="request"
+					margin="proposal"
+					active={card === id}
+					aria-label={t("marker.working", { count: 1 })}
+					onClick={() => setCard((open) => (open === id ? null : id))}
+				>
+					…
+				</Marker>,
+				element,
+				`marker:${id}`,
+			);
 		const entry = entryOf(id);
 		if (!entry) return null;
 		const requests = (entry.item.thread ?? []).filter((message) => message.author === "admin").length;
@@ -246,9 +365,78 @@ export function useProposalMarks(sources: readonly EditorProposals[]): {
 			`marker:${id}`,
 		);
 	});
-	const overlay =
-		shown.length === 0 || !focused ? null : (
-			<>
+
+	/** The element of a selection request's words: where its card hangs from. */
+	const spotAnchor = (id: string): HTMLElement | null =>
+		editor?.view.dom.querySelector<HTMLElement>(`[${PROPOSAL_ATTRIBUTE}="${CSS.escape(id)}"]`) ?? null;
+	const openSpotKey = spotKeyOf(card);
+	const openSpot = openSpotKey ? spots.get(openSpotKey) : undefined;
+	const spotCard =
+		openSpotKey && openSpot && editor ? (
+			<MemoCardPopover
+				anchor={() => spotAnchor(spotId(openSpotKey))}
+				open
+				onOpenChange={(open) => {
+					if (!open) closeCard();
+				}}
+				reply={{
+					placeholder: openSpot.sent === undefined ? t("request") : t("reply"),
+					value: draft,
+					onValueChange: setDraft,
+					onSend: (text: string) => void sendSpot(openSpotKey, text),
+					sendLabel: t("send"),
+					focus: openSpot.sent === undefined,
+					...(openSpot.sent !== undefined
+						? { stop: { label: t("stop"), onStop: () => stop(spotId(openSpotKey)) } }
+						: {}),
+				}}
+			>
+				{openSpot.sent !== undefined && (
+					<MemoThread>
+						<MemoMessage author={t("me")}>{openSpot.sent}</MemoMessage>
+						<MemoMessage author={t("assistant")} ai time={t("working")} />
+					</MemoThread>
+				)}
+			</MemoCardPopover>
+		) : null;
+
+	// The requests the status bar counts: answered ones are proposals with a request in their card; working ones are being asked again or sent from a selection.
+	const workingIds = [
+		...[...spots].filter(([, spot]) => spot.sent !== undefined).map(([key]) => spotId(key)),
+		...shown.filter((id) => asking.has(id)),
+	];
+	const answeredIds = shown.filter(
+		(id) => !asking.has(id) && (entryOf(id)?.item.thread ?? []).some((message) => message.author === "admin"),
+	);
+	const requestOrder = [...workingIds, ...answeredIds];
+	const nextRequest = useRef(0);
+	const requests: EditorRequests | null =
+		requestOrder.length === 0
+			? null
+			: {
+					answered: answeredIds.length,
+					working: workingIds.length,
+					onNext: () => {
+						const id = requestOrder[nextRequest.current % requestOrder.length] ?? null;
+						nextRequest.current += 1;
+						if (!id) return;
+						if (spotKeyOf(id) === null) setCurrent(id);
+						setCard(id);
+						(spotKeyOf(id) === null ? anchorOf(id) : spotAnchor(id))?.scrollIntoView({
+							block: "center",
+							behavior: "smooth",
+						});
+					},
+				};
+
+	const selectionActions = useMemo<EditorSelectionAction[]>(
+		() => (askAt ? [{ id: "proposal:request", label: t("request"), run: (now: Editor) => startRef.current(now) }] : []),
+		[askAt, t],
+	);
+
+	const overlay = (
+		<>
+			{shown.length > 0 && focused && (
 				<ProposalBubbleDock>
 					<ProposalBubble
 						name={focused.item.request}
@@ -265,61 +453,65 @@ export function useProposalMarks(sources: readonly EditorProposals[]): {
 						onAcceptAll={() => accept(shown)}
 					/>
 				</ProposalBubbleDock>
-				{markers}
-				{opened && editor && (
-					<MemoCardPopover
-						anchor={() => anchorOf(opened.item.id)}
-						open
-						onOpenChange={(open) => {
-							if (!open) setCard(null);
-						}}
-						where={t("where", { block: blockName(editor, opened.item.blockId) })}
-						discardLabel={t("discard")}
-						onDiscard={() => discard([opened.item.id])}
-						discardShortcut={["mod", "Backspace"]}
-						acceptLabel={t("accept")}
-						onAccept={() => accept([opened.item.id])}
-						acceptShortcut={["mod", "Enter"]}
-						{...(opened.source.onAsk
-							? {
-									reply: {
-										placeholder: t("reply"),
-										value: draft,
-										onValueChange: setDraft,
-										onSend: (text: string) => void ask(opened, text),
-										sendLabel: t("send"),
-									},
-								}
-							: {})}
-					>
-						<MemoThread>
-							{openedThread.length === 0 && openedAsking === undefined ? (
-								// Nothing said in the card yet: the request the proposal came from.
-								<MemoMessage author={t("me")}>{opened.item.request}</MemoMessage>
-							) : (
-								openedThread.map((message, index) => (
-									<MemoMessage
-										// biome-ignore lint/suspicious/noArrayIndexKey: messages are only ever added at the end
-										key={index}
-										author={message.author === "admin" ? t("me") : t("assistant")}
-										ai={message.author === "assistant"}
-										time={timeOf(message.at)}
-									>
-										{message.text}
-									</MemoMessage>
-								))
-							)}
-							{openedAsking !== undefined && (
-								<>
-									<MemoMessage author={t("me")}>{openedAsking}</MemoMessage>
-									<MemoMessage author={t("assistant")} ai time={t("working")} />
-								</>
-							)}
-						</MemoThread>
-					</MemoCardPopover>
-				)}
-			</>
-		);
+			)}
+			{markers}
+			{spotCard}
+			{opened && editor && shown.includes(opened.item.id) && (
+				<MemoCardPopover
+					anchor={() => anchorOf(opened.item.id)}
+					open
+					onOpenChange={(open) => {
+						if (!open) setCard(null);
+					}}
+					discardLabel={t("discard")}
+					onDiscard={() => discard([opened.item.id])}
+					discardShortcut={["mod", "Backspace"]}
+					acceptLabel={t("accept")}
+					onAccept={() => accept([opened.item.id])}
+					acceptShortcut={["mod", "Enter"]}
+					{...(opened.source.onAsk
+						? {
+								reply: {
+									placeholder: t("reply"),
+									value: draft,
+									onValueChange: setDraft,
+									onSend: (text: string) => void ask(opened, text),
+									sendLabel: t("send"),
+									...(openedAsking !== undefined
+										? { stop: { label: t("stop"), onStop: () => stop(opened.item.id) } }
+										: {}),
+								},
+							}
+						: {})}
+				>
+					<MemoThread>
+						{openedThread.length === 0 && openedAsking === undefined ? (
+							// Nothing said in the card yet: the request the proposal came from.
+							<MemoMessage author={t("me")}>{opened.item.request}</MemoMessage>
+						) : (
+							openedThread.map((message, index) => (
+								<MemoMessage
+									// biome-ignore lint/suspicious/noArrayIndexKey: messages are only ever added at the end
+									key={index}
+									author={message.author === "admin" ? t("me") : t("assistant")}
+									ai={message.author === "assistant"}
+									time={timeOf(message.at)}
+								>
+									{message.text}
+								</MemoMessage>
+							))
+						)}
+						{openedAsking !== undefined && (
+							<>
+								<MemoMessage author={t("me")}>{openedAsking}</MemoMessage>
+								<MemoMessage author={t("assistant")} ai time={t("working")} />
+							</>
+						)}
+					</MemoThread>
+				</MemoCardPopover>
+			)}
+		</>
+	);
 
-	return { onEditor: setEditor, overlay };
+	return { onEditor: setEditor, overlay, selectionActions, requests };
 }

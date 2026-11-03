@@ -6,11 +6,9 @@ import {
 	diffWords,
 	type EditorExtension,
 	type EditorInsertAction,
-	type EditorSelectionAction,
 	errorNotice,
 	type ErrorNotice as Notice,
 	type Site,
-	useAskPanel,
 	useSite,
 	useTranslator,
 } from "@monti-cms/admin";
@@ -52,7 +50,7 @@ import { contentOfText, documentOfText, textOfContent, useMdxFormat } from "./md
 /**
  * AI action that writes into the body. If the attach target is `insert` (slash menu, empty document, e.g. write a draft), it inserts at the cursor. If
  * `block` (next to the block handle, e.g. fix a diagram), it fixes that block's source, shows what changed and then replaces the block. Selected text
- * goes to the assistant instead: the format card's "✦ Ask" (and ⌘J) opens the panel on it.
+ * is asked about in place instead (the format bar's "✦ Request" and ⌘J, `useProposalMarks` in the admin).
  * The result is streamed and shown gradually. Applying happens only when the user clicks.
  */
 
@@ -383,26 +381,6 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 		};
 	}, [data, format]);
 
-	// Selected text goes to the assistant: the card's "✦ Ask" and ⌘J open the panel, which reads the selection from the editor.
-	const ask = useAskPanel();
-	const selectionActions = useMemo<EditorSelectionAction[]>(
-		() => (ask ? [{ id: "ai:request", label: t("ask"), run: () => ask({}) }] : []),
-		[ask, t],
-	);
-	useEffect(() => {
-		if (!editor || !ask) return;
-		const dom = editor.view.dom;
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== "j")
-				return;
-			if (editor.state.selection.empty) return;
-			event.preventDefault();
-			ask({});
-		};
-		dom.addEventListener("keydown", onKeyDown);
-		return () => dom.removeEventListener("keydown", onKeyDown);
-	}, [editor, ask]);
-
 	const insertActions = useMemo<EditorInsertAction[]>(
 		() =>
 			usable.insert.map((action) => ({
@@ -467,7 +445,6 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 		overlay: job && format && (
 			<WriteDialog job={job} format={format} getEntry={getEntry} onClose={() => setJob(null)} />
 		),
-		selectionActions,
 		insertActions,
 		blockActions,
 		onEditor: setEditor,

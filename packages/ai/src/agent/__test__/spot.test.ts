@@ -3,7 +3,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { admin, notesSite } from "../../../test/notes-site";
 import { itemOf } from "../proposals";
-import { askAtSpot } from "../spot";
+import { askAtSelection, askAtSpot } from "../spot";
 
 const USAGE = {
 	inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
@@ -121,5 +121,102 @@ describe("a request in a change's card", () => {
 		});
 		expect(proposal.items[0]).toMatchObject({ id: "i1", included: false });
 		expect(proposal.items[0]?.thread?.at(-1)?.text).toBe("Left it as it was.");
+	});
+});
+
+describe("a request on selected words", () => {
+	const BLOCK = "I kept the settings screen as it was. It changes rarely.";
+
+	/** A site whose body plan finds text in the one block `b2` and answers each edit as given. */
+	const setUpBlock = () => {
+		const site = notesSite();
+		const plan = vi.fn(
+			async (_operation: string, input: { edits: { find: string; replace: string }[] }): Promise<WritePlan[]> => {
+				const [edit] = input.edits;
+				if (!edit || !BLOCK.includes(edit.find)) throw new Error("No block of the body holds the text");
+				const after = BLOCK.replace(edit.find, edit.replace);
+				if (after === BLOCK) return [];
+				return [
+					{
+						target: { kind: "entry", id: "e1", spot: "body:b2" },
+						preview: { before: BLOCK, after },
+						base: "x",
+						change: { blockId: "b2", nodes: [], format: "paragraphs" },
+					},
+				];
+			},
+		);
+		const formats = async () => ({ list: () => [{ name: "paragraphs" }] });
+		const cms = { writes: { plan }, formats } as unknown as Cms;
+		return { site, cms, plan };
+	};
+
+	it("AGENT-S2 rewrites the block that holds the words, as a proposal of its own named by the request, with the two messages", async () => {
+		const { site, cms, plan } = setUpBlock();
+		const { model, prompts } = modelAnswering("I kept the settings screen: it changes rarely.", "Joined the two.");
+		const { proposal, itemId } = await askAtSelection({
+			cms,
+			auth: admin,
+			store: site.store.proposals,
+			model,
+			entryId: "e1",
+			words: "I kept the settings screen as it was.",
+			text: "join it with the next sentence",
+		});
+
+		expect(plan).toHaveBeenLastCalledWith(
+			"entries.updateBody",
+			{
+				id: "e1",
+				format: "paragraphs",
+				edits: [{ find: BLOCK, replace: "I kept the settings screen: it changes rarely." }],
+			},
+			{ auth: admin },
+		);
+		expect(proposal).toMatchObject({ request: "join it with the next sentence", status: "pending" });
+		expect(proposal.items).toHaveLength(1);
+		expect(proposal.items[0]?.id).toBe(itemId);
+		expect(proposal.items[0]?.thread?.map((message) => [message.author, message.text])).toEqual([
+			["admin", "join it with the next sentence"],
+			["assistant", "Joined the two."],
+		]);
+		// The model was given the whole block and the selected words.
+		expect(prompts[0]).toContain(BLOCK);
+		expect(prompts[0]).toContain("I kept the settings screen as it was.");
+		expect(await site.store.proposals.pendingFor(admin.userId, "e1")).toHaveLength(1);
+	});
+
+	it("AGENT-S2 proposes nothing when the answer is the block as it is", async () => {
+		const { site, cms } = setUpBlock();
+		const { model } = modelAnswering(BLOCK, "Left it.");
+		const { proposal, itemId } = await askAtSelection({
+			cms,
+			auth: admin,
+			store: site.store.proposals,
+			model,
+			entryId: "e1",
+			words: "It changes rarely.",
+			text: "leave it",
+		});
+		expect(itemId).toBeNull();
+		expect(proposal.status).toBe("discarded");
+		expect(await site.store.proposals.pendingFor(admin.userId, "e1")).toHaveLength(0);
+	});
+
+	it("AGENT-S2 refuses words that are not in the body, before asking the model", async () => {
+		const { site, cms } = setUpBlock();
+		const { model, prompts } = modelAnswering("x", "y");
+		await expect(
+			askAtSelection({
+				cms,
+				auth: admin,
+				store: site.store.proposals,
+				model,
+				entryId: "e1",
+				words: "nowhere",
+				text: "fix",
+			}),
+		).rejects.toThrow();
+		expect(prompts).toHaveLength(0);
 	});
 });

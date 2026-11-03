@@ -33,8 +33,11 @@ function WithShortcut({
 }
 
 /**
- * The card that opens under a mark in the text: a note left for the assistant, or a source that changed. Three parts. The head (48px) says where the
- * note is and holds the two ways to deal with it, always in this order: a quiet text to discard, then one black pill to accept. There is no close
+ * The card that opens under a mark in the text: a note left for the assistant, or a source that changed. Three parts. The head (48px) holds the two ways
+ * to deal with it, always in this order: a quiet text to discard, then one black pill to accept, after what kind of note it is when the place does not say
+ * so (`where`, "Source changed"). The card hangs right under its words, so the head does not name the paragraph. A note with nothing to deal with yet
+ * (words just selected to ask about) has no head, and opens on its reply row with the caret in it (`reply.focus`). While the assistant works on what
+ * was sent, the reply row's button stops it (`reply.stop`). There is no close
  * button; pressing outside, Esc, or the mark again closes it. The body is a `MemoThread` of messages or a `MemoDiff`. `reply` adds the row at the
  * bottom where the note goes on ("Continue"). The key combinations show as tooltips on the head's buttons.
  */
@@ -52,13 +55,13 @@ function MemoCard({
 	children,
 	...props
 }: Omit<ComponentProps<"div">, "children"> & {
-	/** Where the note is ("Request · paragraph 4"). */
-	where: string;
-	discardLabel: string;
-	onDiscard: () => void;
+	/** What kind of note it is, when the place does not say so ("Source changed"). */
+	where?: string;
+	discardLabel?: string;
+	onDiscard?: () => void;
 	discardShortcut?: ShortcutKeys;
-	acceptLabel: string;
-	onAccept: () => void;
+	acceptLabel?: string;
+	onAccept?: () => void;
 	acceptShortcut?: ShortcutKeys;
 	/** A spark before the accept label: accepting asks the assistant to do something ("✦ Translate again"). */
 	acceptSpark?: boolean;
@@ -68,8 +71,12 @@ function MemoCard({
 		onValueChange: (value: string) => void;
 		onSend: (value: string) => void;
 		sendLabel: string;
+		/** Puts the caret in the box when the card opens: the card is there to be written in. */
+		focus?: boolean;
+		/** While the assistant works on what was sent: the send button is the stop button (a square), as in the chat. */
+		stop?: { label: string; onStop: () => void };
 	};
-	children: ReactNode;
+	children?: ReactNode;
 }) {
 	const blank = reply ? reply.value.trim() === "" : true;
 	const send = () => {
@@ -82,24 +89,32 @@ function MemoCard({
 	};
 	return (
 		<div data-slot="memo-card" className={cn(MENU_CARD, "w-[420px] max-w-full overflow-hidden", className)} {...props}>
-			<div className="flex h-12 items-center gap-monti-16 border-monti-muted border-b pr-monti-10 pl-monti-16">
-				<span className="grow text-monti-caption text-monti-subtle">{where}</span>
-				<WithShortcut label={discardLabel} shortcut={discardShortcut}>
-					<TextButton className="text-monti-note" onClick={onDiscard}>
-						{discardLabel}
-					</TextButton>
-				</WithShortcut>
-				<WithShortcut label={acceptLabel} shortcut={acceptShortcut}>
-					<Button size="sm" onClick={onAccept}>
-						{acceptSpark && <Spark className="size-monti-icon-xs" />}
-						{acceptLabel}
-					</Button>
-				</WithShortcut>
-			</div>
+			{(where || onDiscard || onAccept) && (
+				<div className="flex h-12 items-center gap-monti-16 border-monti-muted border-b pr-monti-10 pl-monti-16">
+					<span className="grow text-monti-caption text-monti-subtle">{where}</span>
+					{discardLabel && onDiscard && (
+						<WithShortcut label={discardLabel} shortcut={discardShortcut}>
+							<TextButton className="text-monti-note" onClick={onDiscard}>
+								{discardLabel}
+							</TextButton>
+						</WithShortcut>
+					)}
+					{acceptLabel && onAccept && (
+						<WithShortcut label={acceptLabel} shortcut={acceptShortcut}>
+							<Button size="sm" onClick={onAccept}>
+								{acceptSpark && <Spark className="size-monti-icon-xs" />}
+								{acceptLabel}
+							</Button>
+						</WithShortcut>
+					)}
+				</div>
+			)}
 			{children}
 			{reply && (
 				<div className="flex min-h-12 items-center gap-monti-8 border-monti-muted border-t pr-monti-10 pl-monti-16">
 					<input
+						// biome-ignore lint/a11y/noAutofocus: a card opened to be written in (`reply.focus`) takes the caret, as the board draws it
+						autoFocus={reply.focus}
 						aria-label={reply.placeholder}
 						placeholder={reply.placeholder}
 						value={reply.value}
@@ -107,7 +122,11 @@ function MemoCard({
 						onKeyDown={onKeyDown}
 						className="min-w-0 grow border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 					/>
-					<SendButton size="sm" label={reply.sendLabel} disabled={blank} onClick={send} />
+					{reply.stop ? (
+						<SendButton size="sm" busy label={reply.stop.label} onClick={reply.stop.onStop} />
+					) : (
+						<SendButton size="sm" label={reply.sendLabel} disabled={blank} onClick={send} />
+					)}
 				</div>
 			)}
 		</div>

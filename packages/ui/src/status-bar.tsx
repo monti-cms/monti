@@ -54,6 +54,7 @@ const cellVariants = cva(
  * One cell of the status bar. It is as tall as the bar, so the whole height can be pressed, and the cell whose list is open takes the selected
  * background. A `<button>` by default (it opens a list: `render` it from the list's trigger); give it `render={<span />}` for a cell that only states
  * something, and an `href` (or the app's router link in `render`) for one that goes somewhere. `tone` colors the text of something to fix, and `dot` (on by default) puts the 6px dot before it: the dot marks what has to be dealt with before saving or publishing, so a cell that only counts findings turns it off.
+ * `detail` is a second, quieter part after a "·" ("Requests 1 · Working 1"): what the first part does not count.
  */
 function StatusBarCell({
 	end,
@@ -63,12 +64,14 @@ function StatusBarCell({
 	children,
 	render,
 	href,
+	detail,
 	...props
 }: useRender.ComponentProps<"button"> &
 	Pick<React.ComponentProps<"a">, "href" | "target" | "rel"> & {
 		end?: boolean;
 		tone?: "warning" | "danger";
 		dot?: boolean;
+		detail?: React.ReactNode;
 	}) {
 	const isButton = render === undefined && href === undefined;
 	const cell = (
@@ -84,6 +87,11 @@ function StatusBarCell({
 				/>
 			)}
 			{children}
+			{detail !== undefined && (
+				<span data-slot="status-bar-detail" className="text-monti-subtle">
+					· {detail}
+				</span>
+			)}
 		</>
 	);
 	return useRender({
