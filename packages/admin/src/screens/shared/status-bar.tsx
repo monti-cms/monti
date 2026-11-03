@@ -14,6 +14,8 @@ import {
 	TodoItem,
 } from "@monti-cms/ui";
 import { type ComponentType, createContext, type ReactNode, useContext, useMemo, useState } from "react";
+import type { EditorRequests } from "../../admin-components";
+import { proposalMarksMessages } from "../../editor/proposals/messages";
 import type { TextIssues } from "../../editor/text-check/findings";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
 import type { SaveStatus } from "../entries/entry-editor-types";
@@ -148,20 +150,40 @@ function TodoCell({ rows, done, open: controlledOpen, onOpenChange }: TodoCellPr
 	);
 }
 
+/**
+ * The requests left for the assistant in the entry (flow 2 · 09c): answered and being worked on, written so the two numbers add up ("Requests 1 ·
+ * Working 1"); one alone when the other is none. Pressing it goes to the next request and opens its card.
+ */
+function RequestCell({ answered, working, onNext }: EditorRequests) {
+	const t = useTranslator(proposalMarksMessages);
+	const workingText = t("requests.working", { n: working });
+	return (
+		<StatusBarCell
+			aria-label={t("requests.label", { answered, working })}
+			onClick={onNext}
+			{...(answered > 0 && working > 0 ? { detail: workingText } : {})}
+		>
+			{answered > 0 ? t("requests.answered", { n: answered }) : workingText}
+		</StatusBarCell>
+	);
+}
+
 export interface StatusBarProps {
 	readonly save: SaveCellProps;
 	/** `null` for an entry that cannot be published (trashed, archived), one not saved yet, and while there is no answer. */
 	readonly todo: TodoCellProps | null;
+	/** The requests left for the assistant; `null` (or left out) while there are none. */
+	readonly requests?: EditorRequests | null;
 	/** Characters of the body without whitespace. */
 	readonly chars: number;
 	readonly context: StatusBarContextValue;
 }
 
 /**
- * The bar at the bottom of the editor. Left to right: the save state, the to-do cell, the plugins' cells, then the character count. `context` is what
- * the plugins' cells read through `useStatusBarContext`.
+ * The bar at the bottom of the editor. Left to right: the save state, the to-do cell, the requests for the assistant, the plugins' cells, then the
+ * character count. `context` is what the plugins' cells read through `useStatusBarContext`.
  */
-export function StatusBar({ save, todo, chars, context }: StatusBarProps) {
+export function StatusBar({ save, todo, requests, chars, context }: StatusBarProps) {
 	const t = useTranslator(statusBarMessages);
 	const plugins = useContext(StatusCellsContext);
 	return (
@@ -169,6 +191,7 @@ export function StatusBar({ save, todo, chars, context }: StatusBarProps) {
 			<StatusBarFrame aria-label={t("label")}>
 				<SaveCell {...save} />
 				{todo && <TodoCell {...todo} />}
+				{requests && <RequestCell {...requests} />}
 				{Object.entries(plugins).map(([name, Cell]) => (
 					<Cell key={name} />
 				))}

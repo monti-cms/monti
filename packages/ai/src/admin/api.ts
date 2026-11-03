@@ -138,6 +138,14 @@ export const askProposalItem = (site: Site, id: string, itemId: string, text: st
 		},
 	);
 
+/** `POST /v1/ai/spots`: the assistant writes the block that holds selected words again, as a proposal of its own (`null`: nothing to propose). */
+export const askAtSelection = (site: Site, entry: string, words: string, text: string, fallback?: string) =>
+	adminFetch<{ item: EditorProposalView | null }>(site, "/v1/ai/spots", {
+		method: "POST",
+		json: { entry, words, text },
+		fallback,
+	});
+
 /** `POST /v1/ai/proposals/:id/settle`: what the admin accepted (and saved) and discarded in the editor. */
 export const settleProposal = (site: Site, id: string, settlement: EditorSettlement, fallback?: string) =>
 	adminFetch<ProposalView>(site, `/v1/ai/proposals/${segment(id)}/settle`, {

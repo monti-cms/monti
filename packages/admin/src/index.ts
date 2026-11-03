@@ -31,6 +31,7 @@ export {
 	type EditorMenuItem,
 	type EditorProposalItem,
 	type EditorProposals,
+	type EditorRequests,
 	type EditorSelectionAction,
 	type FieldInputEntry,
 	type FieldInputParts,

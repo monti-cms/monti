@@ -7,7 +7,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 /**
- * The card that opens under a mark in the text. The head says where the note is, then a quiet discard and one black accept, in that order (no close
+ * The card that opens under a mark in the text. The head holds a quiet discard and one black accept, in that order (no close
  * button: outside, Esc or the mark again closes it). The body is the conversation of the note or, for a changed source, the text before and after. The reply row
  * continues the note. Hover the head's buttons for their key combinations.
  */
@@ -15,7 +15,6 @@ const meta = {
 	title: "Monti/Proposal/MemoCard",
 	component: MemoCard,
 	args: {
-		where: "요청 · 문단 4",
 		discardLabel: "버리기",
 		discardShortcut: ["mod", "Backspace"],
 		onDiscard: () => undefined,
@@ -60,6 +59,25 @@ function WithReply(args: Story["args"]) {
 }
 
 export const Playground: Story = { render: (args) => <WithReply {...args} /> };
+
+function NewRequest() {
+	const [value, setValue] = useState("");
+	return (
+		<MemoCard
+			reply={{
+				placeholder: "요청",
+				value,
+				onValueChange: setValue,
+				onSend: () => setValue(""),
+				sendLabel: "보내기",
+				focus: true,
+			}}
+		/>
+	);
+}
+
+/** Words just selected to ask about (flow 2 · 09b): nothing to discard or accept yet, only the box, with the caret in it. */
+export const NewRequestOnSelection: Story = { render: () => <NewRequest /> };
 
 /** The mark in the margin and the card under it, as in the editor. */
 export const UnderMark: Story = {
@@ -125,7 +143,7 @@ export const LongThread: Story = {
 /** A translated block whose source changed: the text before and after (the words that differ marked), and "Confirm" and "Translate again". */
 export const SourceChanged: Story = {
 	args: {
-		where: "원문 바뀜 · 문단 2",
+		where: "원문 바뀜",
 		discardLabel: "확인",
 		discardShortcut: undefined,
 		acceptLabel: "다시 번역",

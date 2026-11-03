@@ -243,7 +243,8 @@ export function EntryEditorShell({
 		}),
 		[collection, titleKey, entry?.locale, entry?.id],
 	);
-	const extensions = useEditorExtensions({ translateLocales, getEntry });
+	const saveForExtensions = useCallback(async () => (await editor.save()).ok, [editor]);
+	const extensions = useEditorExtensions({ translateLocales, getEntry, save: saveForExtensions });
 	extensionsSavedRef.current = extensions.onSaved;
 
 	const refreshIncoming = useCallback(
@@ -608,6 +609,7 @@ export function EntryEditorShell({
 							onSave: () => void commands.handleSaveNow(),
 						}}
 						todo={todo}
+						requests={extensions.requests}
 						chars={chars}
 						context={{
 							collection,

@@ -13,6 +13,7 @@ import * as proposalSettle from "./routes/proposals/[id]/settle/route";
 import * as proposals from "./routes/proposals/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
+import * as spots from "./routes/spots/route";
 import * as writingRules from "./routes/writing-rules/route";
 import { aiKeyServices } from "./services";
 import { getAiSettingsView, keyUseLabels } from "./settings";
@@ -27,6 +28,7 @@ export default defineServerPlugin({
 		{ pattern: "v1/ai/agent/runs/[id]", module: agentRun },
 		{ pattern: "v1/ai/models", module: models },
 		{ pattern: "v1/ai/proposals", module: proposals },
+		{ pattern: "v1/ai/spots", module: spots },
 		{ pattern: "v1/ai/proposals/[id]", module: proposal },
 		{ pattern: "v1/ai/proposals/[id]/apply", module: proposalApply },
 		{ pattern: "v1/ai/proposals/[id]/revert", module: proposalRevert },

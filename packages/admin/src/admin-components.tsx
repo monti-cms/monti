@@ -40,6 +40,8 @@ export interface EditorExtensionContext {
 		readonly locale?: string;
 		readonly entryId?: string;
 	};
+	/** Saves the entry now (as ⌘S does). Resolves with whether it is saved: what the server reads is then what the editor shows. */
+	readonly save?: () => Promise<boolean>;
 }
 
 /** An action added to the format card that appears when text is selected (e.g. polishing the writing style). It is drawn as a "✦ label" button at the card's end. */
@@ -115,6 +117,24 @@ export interface EditorProposals {
 	readonly onAsk?: (item: EditorProposalItem, text: string) => Promise<string | null>;
 	/** The bubble's name was pressed while it showed `item`: open where it came from (its conversation). */
 	readonly onOpen?: (item: EditorProposalItem) => void;
+	/**
+	 * The admin selected words and asked about them (⌘J or the format bar's "✦ Request"; flow 2 · 09b–c). The entry is saved first. Resolves with the id of
+	 * the proposal made for them (drawn and opened in its card), or `null` when nothing is proposed. Without it, there is no request on a selection.
+	 */
+	readonly onAskAt?: (
+		spot: { readonly words: string; readonly blockId: string },
+		text: string,
+	) => Promise<string | null>;
+}
+
+/** The requests left in the open entry, as the status bar counts them, and the way to the next one. */
+export interface EditorRequests {
+	/** Requests the assistant answered: proposals with a request in their card. */
+	readonly answered: number;
+	/** Requests the assistant is working on. */
+	readonly working: number;
+	/** Goes to the next request and opens its card, the ones being worked on first. */
+	readonly onNext: () => void;
 }
 
 export interface EditorExtensionResult {
@@ -383,15 +403,19 @@ export function useSourceFormat(): BrowserFormat | undefined {
 const NO_CHECKERS: readonly TextChecker[] = [];
 
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
-export function useEditorExtensions(
-	context: EditorExtensionContext,
-): Required<Omit<EditorExtensionResult, "proposals">> & { readonly textIssues: TextIssues | null } {
+export function useEditorExtensions(context: EditorExtensionContext): Required<
+	Omit<EditorExtensionResult, "proposals">
+> & {
+	readonly textIssues: TextIssues | null;
+	/** `null` while there is no request in the entry. */
+	readonly requests: EditorRequests | null;
+} {
 	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
 	const extensionResults = editorExtensions.map((extension) => extension(context));
 	const textCheck = useTextCheckEditor(textCheckers, context);
 	const proposalSources = extensionResults.flatMap((result) => (result.proposals ? [result.proposals] : []));
-	const proposals = useProposalMarks(proposalSources);
+	const proposals = useProposalMarks(proposalSources, context.save);
 	const results: EditorExtensionResult[] = [...extensionResults, textCheck, proposals];
 	const editorCallbacks = results.flatMap((result) => (result.onEditor ? [result.onEditor] : []));
 	const savedCallbacks = results.flatMap((result) => (result.onSaved ? [result.onSaved] : []));
@@ -415,5 +439,6 @@ export function useEditorExtensions(
 		onEditor,
 		onSaved,
 		textIssues: textCheck.textIssues,
+		requests: proposals.requests,
 	};
 }
