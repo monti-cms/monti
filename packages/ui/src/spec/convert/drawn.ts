@@ -13,6 +13,14 @@ export interface DrawnNode {
 	readonly text?: string;
 	/** A plain group: the axis its children run along. */
 	readonly direction?: "column" | "row";
+	/** A plain group: the screen's own layout of it (open to the screen, written on its Stack). */
+	readonly layout?: {
+		readonly align?: "start" | "center" | "end" | "baseline" | "stretch";
+		readonly justify?: "start" | "center" | "end" | "between";
+		readonly grow?: boolean;
+		readonly maxWidth?: number;
+		readonly minHeight?: "screen";
+	};
 	readonly children?: readonly DrawnNode[];
 	/** In a group, the distance in px from the child before it (for the first child, from the group's start). */
 	readonly before?: number;

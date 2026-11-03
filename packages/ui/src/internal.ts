@@ -20,7 +20,6 @@ export {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
-export { AuthPage } from "./auth-page";
 export { Banner } from "./banner";
 export { ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";

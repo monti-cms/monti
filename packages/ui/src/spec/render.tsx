@@ -120,7 +120,12 @@ export function ScreenSpec({ spec, data, text, actions = {} }: ScreenSpecProps):
 	/** A container whose only child is a container of the other direction, between Spacings: both are drawn as one element, its padding on both axes. */
 	const mergedChild = (element: SpecElement): string | undefined => {
 		const ids = (element.children ?? []).filter((child): child is string => typeof child === "string");
-		if (element.type !== "Stack" || ids.length !== 1) return undefined;
+		// Only a container that is there for its padding: one child, at least one Spacing, and no layout of its own but its direction.
+		const onlyPadding =
+			ids.length === 1 &&
+			(element.children ?? []).length > 1 &&
+			Object.keys(element.props ?? {}).every((name) => name === "direction");
+		if (element.type !== "Stack" || !onlyPadding || element.visible !== undefined) return undefined;
 		const inner = elementOf(ids[0] as string);
 		const direction = (element.props?.direction ?? "column") as Direction;
 		const innerDirection = (inner.props?.direction ?? "column") as Direction;

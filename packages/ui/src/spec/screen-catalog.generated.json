@@ -1,9 +1,13 @@
 {
-	"AuthPage": {
+	"Box": {
 		"container": false,
-		"children": true,
-		"slots": ["footer", "title"],
-		"props": {},
+		"children": false,
+		"slots": [],
+		"props": {
+			"border": {
+				"enum": ["bottom", "bottom-contrast", "top"]
+			}
+		},
 		"events": []
 	},
 	"Stack": {
@@ -22,6 +26,12 @@
 			},
 			"justify": {
 				"enum": ["between", "center", "end", "start"]
+			},
+			"maxWidth": {
+				"type": "number"
+			},
+			"minHeight": {
+				"enum": ["screen"]
 			}
 		},
 		"events": []

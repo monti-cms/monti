@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { AuthPage } from "../auth-page";
+import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { Count } from "../count";
 import { EntryStatus } from "../entry-status";
@@ -55,22 +55,43 @@ function Stack({
 	align,
 	justify,
 	grow,
+	maxWidth,
+	minHeight,
 	className,
 	children,
 }: {
 	direction?: "column" | "row";
 	align?: "start" | "center" | "end" | "baseline" | "stretch";
 	justify?: "start" | "center" | "end" | "between";
-	/** Takes the room its parent leaves on the parent's axis. */
+	/** Takes the room its parent leaves on the parent's axis (the region that pushes a line to the bottom of the page). */
 	grow?: boolean;
+	/** The screen's own width for this region in px (a form of 360): the screen's layout, not the design system's, so it is written in the screen's spec. */
+	maxWidth?: number;
+	/** `screen`: at least as tall as the window (a page that stands alone). */
+	minHeight?: "screen";
 	className?: string;
 	children?: React.ReactNode;
 }) {
 	return (
-		<StackPart direction={direction} align={align} justify={justify} grow={grow} gap={0} className={className}>
+		<StackPart
+			direction={direction}
+			align={align}
+			justify={justify}
+			grow={grow}
+			gap={0}
+			minHeight={minHeight}
+			width={maxWidth === undefined ? undefined : "full"}
+			className={className}
+			style={maxWidth === undefined ? undefined : { maxWidth }}
+		>
 			{children}
 		</StackPart>
 	);
+}
+
+/** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
+function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
+	return <BoxPart border={border} className={className} />;
 }
 
 /**
@@ -78,7 +99,7 @@ function Stack({
  * `checkSpec` checks a spec against; add a part here and run it.
  */
 export const parts = {
-	AuthPage,
+	Box,
 	Stack,
 	Form,
 	Heading,

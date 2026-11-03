@@ -21,7 +21,8 @@ export interface Conversion {
 }
 
 /**
- * Turns what a drawing says into a screen spec, the same for every tool. A plain group becomes a `Stack` with its distances as `Spacing` items; a part
+ * Turns what a drawing says into a screen spec, the same for every tool. A plain group becomes a `Stack` with its distances as `Spacing` items and the
+ * screen's own layout of it (alignment, growing, a region's width) as its props; a part
  * keeps its props; a text becomes a dictionary text when one reads exactly the same (`dictionary`: text → key), otherwise a value read from the data.
  * Nothing outside the design system is fixed or dropped silently: a space off the steps is left out and listed, and so is every look shaped by hand.
  */
@@ -75,9 +76,10 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		const children = node.children ?? [];
 		if (node.part === undefined) {
 			const id = idFor("stack");
+			const props = { ...(node.direction === "row" ? { direction: "row" } : {}), ...node.layout };
 			elements[id] = {
 				type: "Stack",
-				...(node.direction === "row" ? { props: { direction: "row" } } : {}),
+				...(Object.keys(props).length > 0 ? { props } : {}),
 				children: spaced(node, children),
 			};
 			return id;

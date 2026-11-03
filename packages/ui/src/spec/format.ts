@@ -45,7 +45,7 @@ export interface SpecElement {
 	readonly type: string;
 	readonly props?: Readonly<Record<string, SpecValue>>;
 	readonly children?: readonly SpecChild[];
-	/** The pattern's named places (`AuthPage`'s `title`, a row title's `address`), each filled with elements by id or a text. */
+	/** The pattern's named places (a page header's `title`, a row title's `address`), each filled with elements by id or a text. */
 	readonly slots?: Readonly<Record<string, readonly Exclude<SpecChild, SpacingItem>[]>>;
 	readonly visible?: Visible;
 	/** Drawn once for each item of this list (`{ "data": "/rows" }`); inside it, `{ "item": "/title" }` reads the item. */
