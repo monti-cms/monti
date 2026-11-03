@@ -6,6 +6,7 @@ import type * as React from "react";
 import { cn } from "./cn";
 import {
 	COMMAND_ITEM,
+	MENU_EMPTY,
 	MENU_SCROLL,
 	MENU_SEARCH_FIELD,
 	MENU_SEARCH_ICON,
@@ -44,13 +45,7 @@ function CommandList({ className, ...props }: React.ComponentProps<typeof Comman
 }
 
 function CommandEmpty({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
-	return (
-		<CommandPrimitive.Empty
-			data-slot="command-empty"
-			className={cn("px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle", className)}
-			{...props}
-		/>
-	);
+	return <CommandPrimitive.Empty data-slot="command-empty" className={cn(MENU_EMPTY, className)} {...props} />;
 }
 
 /** Rows under a name (the `heading`), in the mono group-name look. */

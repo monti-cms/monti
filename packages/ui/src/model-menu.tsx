@@ -18,7 +18,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { MenuShortcut, MenuValue } from "./menu-parts";
+import { MENU_EMPTY, MenuShortcut, MenuValue } from "./menu-parts";
 
 /** One model of the menu. `value` is what `onValueChange` gets back (a key and a model, as the caller writes them). */
 export interface ModelMenuItem {
@@ -132,7 +132,7 @@ export function ModelMenu({
 							</Fragment>
 						))}
 					</DropdownMenuRadioGroup>
-					{shown.length === 0 && <p className="m-0 px-[9px] py-[7px] text-monti-faint text-monti-note">{emptyText}</p>}
+					{shown.length === 0 && <p className={cn("m-0", MENU_EMPTY)}>{emptyText}</p>}
 				</div>
 				{thinking && (
 					<>

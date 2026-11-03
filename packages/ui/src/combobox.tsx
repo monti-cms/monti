@@ -9,7 +9,7 @@ import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -146,10 +146,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 	return (
 		<ComboboxPrimitive.Empty
 			data-slot="combobox-empty"
-			className={cn(
-				"hidden w-full justify-center py-monti-8 text-center text-monti-body text-monti-muted group-data-empty/combobox-content:flex",
-				className,
-			)}
+			className={cn(MENU_EMPTY, "hidden w-full justify-center group-data-empty/combobox-content:flex", className)}
 			{...props}
 		/>
 	);

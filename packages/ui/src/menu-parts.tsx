@@ -63,6 +63,9 @@ export const MENU_SEARCH_ICON = "size-3.5 shrink-0 text-monti-subtle";
 export const MENU_SEARCH_FIELD =
 	"min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-hidden placeholder:text-monti-faint disabled:cursor-not-allowed disabled:opacity-45";
 
+/** The line a list card shows when nothing matches: centered, subtle, with room above and below. */
+export const MENU_EMPTY = "px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle";
+
 /** A long list: one column, 320px high at most, scrolling inside. */
 export const MENU_SCROLL = "flex max-h-80 flex-col overflow-y-auto overscroll-contain";
 
