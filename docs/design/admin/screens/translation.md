@@ -115,7 +115,7 @@
 
 ### 보드의 이름을 부품으로
 
-- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 제목 행(`.mt-pair--title`)은 아직 부품이 없다.
+- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 제목 행(`.mt-pair--title`)은 `CompareRow title`이다.
 - `.mt-src-changed` 원문에서 바뀐 말: `Highlight`.
-- `.mt-shared` 원문과 같음: 아직 부품이 없다. 원문 블록을 흐린 글자로, 아래 "English에서만 따로 고치기" `TextButton`.
+- `.mt-shared` 원문과 같음: `CompareShared`. 원문 블록을 흐린 글자로, 아래 "English에서만 따로 고치기" `TextButton`.
 - 본문 블록: 블록 패키지의 블록 그대로.
