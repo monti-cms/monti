@@ -17,9 +17,6 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^21.2.3
         version: 21.2.3
-      '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
       '@tailwindcss/node':
         specifier: ^4.3.3
         version: 4.3.3
@@ -6442,6 +6439,7 @@ snapshots:
   '@playwright/test@1.64.1':
     dependencies:
       playwright: 1.64.1
+    optional: true
 
   '@radix-ui/primitive@1.1.7': {}
 
@@ -9091,6 +9089,7 @@ snapshots:
   playwright@1.64.1:
     dependencies:
       playwright-core: 1.64.1
+    optional: true
 
   pluralize@8.0.0: {}
 
