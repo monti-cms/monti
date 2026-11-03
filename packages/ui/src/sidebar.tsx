@@ -18,6 +18,7 @@ import {
 } from "./dropdown-menu";
 import { ICON_BUTTON, IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
+import { NAV_ROW, NAV_ROW_END, NAV_ROW_HOVER } from "./nav-link";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Segmented } from "./segmented";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -459,9 +460,8 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 /**
- * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the current ground (one step
- * darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground, which is paler than the
- * current one, so a row that is only pointed at is never taken for the open one.
+ * One row of the rail ({@link NAV_ROW} on the cream ground): an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the
+ * current ground (one step darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground.
  * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
  */
 function SidebarMenuButton({
@@ -486,7 +486,9 @@ function SidebarMenuButton({
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-current data-active:font-semibold group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					NAV_ROW,
+					NAV_ROW_HOVER.tool,
+					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -527,11 +529,7 @@ function SidebarMenuBadge({
 		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
-			className={cn(
-				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums",
-				tone === "warning" ? "text-monti-warning" : "text-monti-subtle",
-				className,
-			)}
+			className={cn(NAV_ROW_END, tone === "warning" && "text-monti-warning", className)}
 			{...props}
 		/>
 	);

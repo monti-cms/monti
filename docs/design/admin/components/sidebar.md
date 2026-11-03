@@ -18,6 +18,8 @@
 
 부품: `SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`, `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 20px, 양옆 14px(접으면 6px라서 36px 행이 48px 레일을 채운다), 아래 16px이며, 행 사이는 2px다.
 
+`SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 다른 것은 호버 바탕뿐이다. 크림 위의 사이드바는 `bg-selected`, 종이 위의 `NavLink`는 `bg-muted`다. `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
+
 ## 머리 행
 
 사이트 이름(`text-title`)과 접기 버튼(`.mt-sidebar-head`)이다. 긴 이름은 말줄임표로 자른다. 사이트로 가는 링크는 없다.
