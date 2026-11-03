@@ -5,13 +5,13 @@ import {
 	FormFieldError,
 	FormFieldLabel,
 	Heading,
-	Image,
 	Input,
 	Separator,
 	Stack,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { iconsByName } from "@monti-cms/ui/icons";
 import type { TranslatorFor } from "../../translator";
 import type { loginMessages } from "./messages";
 
@@ -22,6 +22,7 @@ export type LoginError = "credentials" | "email" | "password" | "confirm" | "oth
 export interface LoginButton {
 	readonly id: string;
 	readonly name: string;
+	/** The icon's name in the design system's list (`logo--github`); an unknown name draws none. */
 	readonly icon?: string;
 	readonly action: string;
 }
@@ -144,15 +145,18 @@ function SignIn({
 				{passwordAction && buttons.length > 0 ? <Separator label={t("or")} /> : null}
 				{buttons.length > 0 ? (
 					<Stack gap={8}>
-						{buttons.map((button, index) => (
-							<form key={button.id} method="post" action={button.action}>
-								{/* The one black pill: the password form's button, or the first method when there is no form. */}
-								<Button type="submit" variant={!passwordAction && index === 0 ? "primary" : "secondary"} width="full">
-									{button.icon ? <Image src={button.icon} alt="" size="icon" radius="none" /> : null}
-									{t("signIn", { provider: button.name })}
-								</Button>
-							</form>
-						))}
+						{buttons.map((button, index) => {
+							const Mark = button.icon ? iconsByName[button.icon] : undefined;
+							return (
+								<form key={button.id} method="post" action={button.action}>
+									{/* The one black pill: the password form's button, or the first method when there is no form. */}
+									<Button type="submit" variant={!passwordAction && index === 0 ? "primary" : "secondary"} width="full">
+										{Mark ? <Mark aria-hidden /> : null}
+										{t("signIn", { provider: button.name })}
+									</Button>
+								</form>
+							);
+						})}
 					</Stack>
 				) : null}
 			</Stack>

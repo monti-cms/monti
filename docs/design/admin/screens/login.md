@@ -15,7 +15,7 @@
 | "비밀번호 확인" | `FormField` + `FormFieldLabel` + `Input type="password"`(`new-password`) + `FormFieldError reserve` | 첫 관리자에서만. 비밀번호 필드와 16px 떨어진다. 다르면 "두 비밀번호가 같지 않아요." |
 | "로그인" · "생성" | `Button variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`. |
 | "또는" 줄 | `Separator label="또는"` | 비밀번호와 GitHub가 둘 다 있을 때만. |
-| "GitHub로 로그인" | `Button width="full"`(앞에 GitHub 아이콘). 비밀번호 폼이 있으면 `variant="secondary"`, GitHub만 있으면 `variant="primary"` | GitHub 인증으로 간다. 검은 알약은 화면에 하나다. |
+| "GitHub로 로그인" | `Button width="full"`(앞에 GitHub 아이콘: auth가 주는 이름 `logo--github`를 `iconsByName`으로 찾아 버튼 글자색으로 그린다). 비밀번호 폼이 있으면 `variant="secondary"`, GitHub만 있으면 `variant="primary"` | GitHub 인증으로 간다. 검은 알약은 화면에 하나다. |
 | GitHub 권한 없음 | `FormFieldError`(필드 밖에서도 쓴다) "octo-kim은 관리자가 아니에요.", 그 아래 `TextButton` "다른 계정으로 로그인" | |
 | 이미 관리자가 있음 | 빨간 한 줄 "이미 관리자가 있어요.", `Button variant="secondary"` "로그인하기" | 로그인 화면으로 간다. |
 | 버전 "Monti 0.2" | `Text variant="micro" tone="faint"` | 화면 맨 아래. |
