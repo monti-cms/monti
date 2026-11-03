@@ -397,6 +397,17 @@ export const iconsByName = {
 	"logo--github": LogoGithub,
 	"overflow-menu--horizontal": OverflowMenuHorizontal,
 	spark: Spark,
+	// The sidebar's and the list's own icons, named for the boards drawn with them (`pnpm convert:board`).
+	"arrow--down": ArrowDown,
+	asleep: Asleep,
+	"chevron--left": ChevronLeft,
+	"chevron--right": ChevronRight,
+	light: Light,
+	"settings--adjust": SettingsAdjust,
+	"side-panel--close": SidePanelClose,
+	tools: Tools,
+	"trash-can": TrashCan,
+	pen: Pen,
 } as const satisfies Readonly<Record<string, MontiIcon>>;
 
 /** A name `iconsByName` knows; a screen spec names icons only by these. */

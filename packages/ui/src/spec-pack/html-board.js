@@ -5,7 +5,70 @@
 const role = (el) => [...el.classList].find((name) => name.startsWith("text-"))?.slice(5);
 
 /** The design system's classes and the part each one draws, first match wins. `props` reads the element's own values. */
+/** The name of an icon of the design system's list with this svg's shape (`icon-key.js`, `window.boardData.icons`), if there is one. */
+const iconName = (el) => window.boardData?.icons?.[window.iconShapeKey?.(el.innerHTML)];
+
 const parts = [
+	{
+		match: (el) => el.tagName.toLowerCase() === "svg" && iconName(el) !== undefined,
+		part: "Icon",
+		props: (el) => ({ name: iconName(el) }),
+		leaf: true,
+	},
+	// The sidebar, drawn flat; the pack's sidebar entries put the design system's layers in.
+	{ match: (el) => el.matches(".mt-tooltip") || el.matches(".mt-card:has(.mt-menu-item)"), ignore: true },
+	// The empty space that pushes the bottom list down is the sidebar's own: its content takes the height.
+	{ match: (el) => el.matches("nav.mt-sidebar > div:empty"), ignore: true },
+	{
+		match: (el) => el.matches("nav.mt-sidebar"),
+		part: "Sidebar",
+		props: (el) => ({ rail: el.classList.contains("is-rail") || undefined }),
+		asProps: ["min-height", "height", "flex-shrink"],
+	},
+	{ match: (el) => el.matches(".mt-sidebar-head"), part: "SidebarHeader" },
+	{ match: (el) => el.matches(".mt-sidebar-head > .mt-icon-btn"), part: "SidebarRailToggle", leaf: true },
+	{
+		match: (el) => el.matches("div:has(> .mt-nav)"),
+		part: "SidebarNav",
+		props: (el) => ({ place: el.querySelector(":scope > .mt-sidebar-foot") ? "bottom" : "top" }),
+		// The rows' gap, and the bottom list's line and room above it, are the menu's and the footer's own.
+		asProps: ["gap", "border-top", "padding-top"],
+	},
+	{
+		match: (el) => el.matches(".mt-nav"),
+		part: "SidebarItem",
+		props: (el) => ({ active: el.classList.contains("is-on") || undefined }),
+	},
+	{
+		match: (el) => el.matches(".mt-nav > .n"),
+		part: "SidebarCount",
+		props: (el) => ({ tone: /--fg-warning/.test(el.style.color) ? "warning" : undefined }),
+		asProps: ["color"],
+	},
+	{ match: (el) => el.matches(".mt-change-dot"), part: "ChangeDot", leaf: true },
+	{ match: (el) => el.matches(".mt-nav-sub"), part: "SidebarSub" },
+	{
+		match: (el) => el.matches(".mt-nav-sub > a"),
+		part: "SidebarSubItem",
+		props: (el) => ({ active: el.classList.contains("is-on") || undefined }),
+		asProps: ["color", "font-weight"],
+	},
+	{ match: (el) => el.matches(".mt-count"), part: "Count" },
+	{ match: (el) => el.matches(".mt-sidebar-foot"), part: "SidebarFoot" },
+	{
+		match: (el) => el.matches(".mt-sidebar-foot > .mt-seg, .mt-sidebar-foot > .mt-icon-btn"),
+		part: "SidebarScreenMode",
+		props: (el) => {
+			const on = [...el.querySelectorAll(":scope > button")].findIndex((button) => button.classList.contains("is-on"));
+			const icon = iconName(el.querySelector("svg") ?? el);
+			const value = on >= 0 ? ["system", "light", "dark"][on] : ({ light: "light", asleep: "dark" }[icon] ?? "system");
+			return { value, defaultOpen: document.querySelector(".mt-card .mt-menu-item") ? true : undefined };
+		},
+		leaf: true,
+		asProps: ["flex"],
+	},
+	// The assistant's ✦ is the design system's own mark, not a Carbon icon.
+	{ match: (el) => el.matches("svg.mt-spark"), part: "Icon", props: () => ({ name: "spark" }), leaf: true },
 	{ match: (el) => el.matches(".mt-field"), part: "FormField", walk: "parts" },
 	{
 		match: (el) => el.matches(".mt-label"),
@@ -58,6 +121,6 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+)|text-[a-z]+|dark|is-(error|disabled))$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host)$/;
 
 window.boardPack = { parts, known };

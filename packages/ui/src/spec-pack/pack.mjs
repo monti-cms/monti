@@ -6,9 +6,14 @@ export default {
 	screens: ["../screens", "../../../admin/src"],
 	/** What `gen:screen-catalog` writes and the other scripts read. */
 	catalog: "catalog.generated.json",
-	/** HTML boards: the classes file loaded before the adapter, the element the board is drawn in, the window it is drawn at, and the layout the board's root gets as the page. */
+	/**
+	 * HTML boards: the scripts loaded into the board's page before the adapter (`module` for an ES module), the data they read there (`window.boardData`:
+	 * the icon shapes, to name a board's icons), the element the board is drawn in, the window it is drawn at, and the layout the board's root gets as
+	 * the page.
+	 */
 	board: {
-		classes: "html-board.js",
+		scripts: [{ path: "icon-key.js", module: true }, { path: "html-board.js" }],
+		data: async () => ({ icons: (await import("./icon-shapes.mjs")).iconShapes() }),
 		root: ".mt",
 		viewport: { width: 1440, height: 900 },
 		page: { minHeight: "screen" },

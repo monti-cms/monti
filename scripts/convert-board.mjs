@@ -58,7 +58,16 @@ try {
 	const page = await browser.newPage({ viewport: pack.board.viewport });
 	await page.goto(url, { waitUntil: "networkidle" });
 	await page.waitForTimeout(1000);
-	await page.addScriptTag({ path: path.join(PACK, pack.board.classes) });
+	// The pack's own scripts and what they read (its board classes, its icon shapes), then the adapter.
+	await page.evaluate(
+		(data) => {
+			window.boardData = data;
+		},
+		(await pack.board.data?.()) ?? {},
+	);
+	for (const script of pack.board.scripts ?? []) {
+		await page.addScriptTag({ path: path.join(PACK, script.path), ...(script.module ? { type: "module" } : {}) });
+	}
 	await page.addScriptTag({ path: path.join(ROOT, "scripts/convert-board/html-adapter.js") });
 	drawn = await page.evaluate(
 		([selector, layout]) => window.readBoard(selector, layout),

@@ -1,6 +1,7 @@
-import type * as React from "react";
+import * as React from "react";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
+import { ChangeDot } from "../change-dot";
 import { Count } from "../count";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
@@ -22,6 +23,24 @@ import {
 } from "../pagination";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Separator } from "../separator";
+import {
+	SidebarContent,
+	SidebarFooter,
+	SidebarFoot as SidebarFootPart,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuBadge,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	Sidebar as SidebarPart,
+	SidebarProvider,
+	SidebarRailToggle,
+	SidebarScreenMode as SidebarScreenModePart,
+} from "../sidebar";
 import { Stack as StackPart } from "../stack";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { Heading, Text } from "../text";
@@ -181,6 +200,108 @@ function Stack({
 	);
 }
 
+/**
+ * The sidebar as a board draws it: flat, a header, a list of rows, a bottom list, a foot. The design system's sidebar nests more layers (a provider, a
+ * group, a menu, a menu item around each row); these entries put them in, so a board, a spec and the parts line up one to one.
+ */
+function Sidebar({
+	rail,
+	label,
+	className,
+	children,
+}: {
+	rail?: boolean;
+	label?: string;
+	className?: string;
+	children?: React.ReactNode;
+}) {
+	return (
+		<SidebarProvider rail={rail} className={className}>
+			<SidebarPart label={label ?? ""}>{children}</SidebarPart>
+		</SidebarProvider>
+	);
+}
+
+/** The foot of the sidebar's bottom list: the screen mode. */
+function SidebarFoot({ children }: { children?: React.ReactNode }) {
+	return <SidebarFootPart>{children}</SidebarFootPart>;
+}
+
+/** A list of rows: `top`, the content that takes the height (its group and menu), or `bottom`, the footer's menu with the foot under it. */
+function SidebarNav({ place = "top", children }: { place?: "top" | "bottom"; children?: React.ReactNode }) {
+	const all = React.Children.toArray(children);
+	const isFoot = (child: React.ReactNode) => React.isValidElement(child) && child.type === SidebarFoot;
+	const rows = all.filter((child) => !isFoot(child));
+	if (place === "bottom") {
+		return (
+			<SidebarFooter>
+				<SidebarMenu>{rows}</SidebarMenu>
+				{all.filter(isFoot)}
+			</SidebarFooter>
+		);
+	}
+	return (
+		<SidebarContent>
+			<SidebarGroup>
+				<SidebarGroupContent>
+					<SidebarMenu>{rows}</SidebarMenu>
+				</SidebarGroupContent>
+			</SidebarGroup>
+		</SidebarContent>
+	);
+}
+
+/** One row: its icon, its name and its count as children; `active`, the open one. */
+function SidebarItem({ active, children }: { active?: boolean; children?: React.ReactNode }) {
+	return (
+		<SidebarMenuItem>
+			<SidebarMenuButton isActive={active}>{children}</SidebarMenuButton>
+		</SidebarMenuItem>
+	);
+}
+
+/** The count at the end of a row. */
+function SidebarCount({ tone, children }: { tone?: "default" | "warning"; children?: React.ReactNode }) {
+	return <SidebarMenuBadge tone={tone}>{children}</SidebarMenuBadge>;
+}
+
+/** The folders under a row. */
+function SidebarSub({ children }: { children?: React.ReactNode }) {
+	return (
+		<SidebarMenuItem>
+			<SidebarMenuSub>{children}</SidebarMenuSub>
+		</SidebarMenuItem>
+	);
+}
+
+/** One folder under a row: its name and its count. */
+function SidebarSubItem({ active, children }: { active?: boolean; children?: React.ReactNode }) {
+	return (
+		<li>
+			<SidebarMenuSubButton isActive={active}>{children}</SidebarMenuSubButton>
+		</li>
+	);
+}
+
+/** The screen mode in the foot: three cells, or (folded) one button that opens them, `defaultOpen` drawn open. */
+function SidebarScreenMode({
+	value = "system",
+	label,
+	defaultOpen,
+}: {
+	value?: "system" | "light" | "dark";
+	label?: string;
+	defaultOpen?: boolean;
+}) {
+	return (
+		<SidebarScreenModePart
+			value={value}
+			defaultOpen={defaultOpen}
+			labels={{ label: label ?? "", system: "", light: "", dark: "" }}
+		/>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -201,6 +322,17 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	ChangeDot,
+	Sidebar,
+	SidebarHeader,
+	SidebarRailToggle,
+	SidebarNav,
+	SidebarItem,
+	SidebarCount,
+	SidebarSub,
+	SidebarSubItem,
+	SidebarFoot,
+	SidebarScreenMode,
 	Stack,
 	Form,
 	Heading,
@@ -277,6 +409,17 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	ChangeDot: { kind: "part", props: { tone: "variant", label: "text" } },
+	Sidebar: { kind: "part", props: { rail: "flag", label: "text" } },
+	SidebarHeader: { kind: "part", props: {} },
+	SidebarRailToggle: { kind: "part", props: {} },
+	SidebarNav: { kind: "part", props: { place: "variant" } },
+	SidebarItem: { kind: "part", props: { active: "flag" } },
+	SidebarCount: { kind: "part", props: { tone: "variant" } },
+	SidebarSub: { kind: "part", props: {} },
+	SidebarSubItem: { kind: "part", props: { active: "flag" } },
+	SidebarFoot: { kind: "part", props: {} },
+	SidebarScreenMode: { kind: "part", props: { value: "variant", label: "text", defaultOpen: "flag" } },
 	Form: { kind: "part", role: "form", props: { action: "action" } },
 	Heading: { kind: "part", props: { as: "variant", variant: "variant", tone: "variant", truncate: "flag" } },
 	Text: {

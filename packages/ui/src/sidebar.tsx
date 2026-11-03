@@ -351,7 +351,8 @@ function SidebarScreenMode({
 	defaultOpen,
 }: {
 	value: ScreenMode;
-	onValueChange: (mode: ScreenMode) => void;
+	/** Without it the modes are drawn and pick nothing (a screen spec's look, before its behavior is wired). */
+	onValueChange?: (mode: ScreenMode) => void;
 	labels: { label: string } & Record<ScreenMode, string>;
 	/** Opens the folded menu at first (for a story). */
 	defaultOpen?: boolean;
@@ -364,7 +365,7 @@ function SidebarScreenMode({
 					aria-label={labels.label}
 					tone="tool"
 					value={value}
-					onValueChange={onValueChange}
+					onValueChange={(mode) => onValueChange?.(mode)}
 					options={SCREEN_MODES.map((mode) => {
 						const Icon = SCREEN_MODE_ICONS[mode];
 						return { value: mode, label: <Icon aria-hidden />, "aria-label": labels[mode] };
@@ -380,7 +381,7 @@ function SidebarScreenMode({
 				<Icon aria-hidden />
 			</IconButton>
 			<DropdownMenuContent side="top" align="start">
-				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange(next as ScreenMode)}>
+				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange?.(next as ScreenMode)}>
 					{SCREEN_MODES.map((mode) => (
 						<DropdownMenuRadioItem key={mode} value={mode}>
 							{labels[mode]}

@@ -50,7 +50,7 @@ function looksOf(el, part, root = false, inPart = false) {
 		const property = name?.trim();
 		if (!property || LAYOUT.test(property)) continue;
 		if (SPACING.test(property)) {
-			if (inPart && changes(el, property))
+			if (inPart && !part?.asProps?.includes(property) && changes(el, property))
 				looks.push(`${property}: ${value.join(":").trim()} (a distance inside a part)`);
 			continue;
 		}
@@ -129,6 +129,8 @@ function read(el, where, page = undefined, inPart = false) {
 	const rule = PARTS.find((each) => each.match(el));
 	const here = `${where} › ${label(el)}`;
 	const looks = looksOf(el, rule, root, inPart);
+	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
+	if (rule?.ignore) return { where: here };
 	if (rule) {
 		const props = Object.fromEntries(
 			Object.entries(rule.props?.(el) ?? {}).filter(([, value]) => value != null && value !== ""),
