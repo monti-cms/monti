@@ -125,7 +125,7 @@ export const Stopped: Story = {
 						글 옮기기 · 여기서 멈춤
 					</ToolCallLine>
 				</ToolCallLines>
-				<ErrorNote title="연결이 끊겼어요" actions={<TextButton>이어서 하기</TextButton>}>
+				<ErrorNote title="연결이 끊겼어요" actions={<TextButton variant="underline">이어서 하기</TextButton>}>
 					여기까지 한 일은 위에 남아 있어요.
 				</ErrorNote>
 			</ChatAnswer>

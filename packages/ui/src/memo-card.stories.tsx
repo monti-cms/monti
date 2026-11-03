@@ -1,17 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import {
-	Box,
-	Highlight,
-	Ins,
-	Marker,
-	MemoCard,
-	MemoCardPopover,
-	MemoDiff,
-	MemoMessage,
-	MemoThread,
-	Text,
-} from "./index";
+import { Box, Highlight, Marker, MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread, Text } from "./index";
 
 const noop = () => {};
 
@@ -90,7 +79,7 @@ export const SourceChanged: Story = {
 	render: () => (
 		<MemoCard
 			where="원문 바뀜"
-			discardLabel="그대로 두기"
+			discardLabel="확인"
 			onDiscard={noop}
 			acceptLabel="다시 번역"
 			onAccept={noop}
@@ -99,10 +88,14 @@ export const SourceChanged: Story = {
 			<MemoDiff
 				beforeLabel="전"
 				afterLabel="후"
-				before="왼쪽 목록에서 컬렉션을 고릅니다."
+				before={
+					<>
+						왼쪽 목록에서 컬렉션을 <Highlight>고릅니다</Highlight>.
+					</>
+				}
 				after={
 					<>
-						왼쪽 목록에서 컬렉션을 고르고 <Ins>새 글을 씁니다</Ins>.
+						왼쪽 목록에서 컬렉션을 <Highlight>고르고 새 글을 씁니다</Highlight>.
 					</>
 				}
 			/>

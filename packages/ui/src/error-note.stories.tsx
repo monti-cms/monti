@@ -22,7 +22,7 @@ export const Refused: Story = {
 	args: {
 		title: "Anthropic 크레딧이 부족해요",
 		children: "Anthropic 개인 · 서비스 사이트에서 충전해 주세요.",
-		actions: <TextButton>다른 모델로 보내기</TextButton>,
+		actions: <TextButton variant="underline">다른 모델로 보내기</TextButton>,
 	},
 };
 
@@ -31,7 +31,7 @@ export const Disconnected: Story = {
 	args: {
 		title: "연결이 끊겼어요",
 		children: "여기까지 한 일은 위에 남아 있어요.",
-		actions: <TextButton>이어서 하기</TextButton>,
+		actions: <TextButton variant="underline">이어서 하기</TextButton>,
 	},
 };
 
@@ -40,6 +40,6 @@ export const Failed: Story = {
 	args: {
 		title: "요청을 보내지 못했어요",
 		children: "서버가 응답하지 않아요.",
-		actions: <TextButton>다시 시도</TextButton>,
+		actions: <TextButton variant="underline">다시 시도</TextButton>,
 	},
 };
