@@ -127,6 +127,7 @@ export {
 	toast,
 } from "@monti-cms/ui";
 export { apiKeysKeys, useApiKeys } from "./api/api-keys";
+export { mediaKeys } from "./api/media";
 export { commonMessages } from "./lib/common.messages";
 export { useHydratedQuery } from "./lib/hooks/use-hydrated-query";
 export { booleanCodec, usePreference } from "./lib/hooks/use-preference";

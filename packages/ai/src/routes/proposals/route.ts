@@ -1,11 +1,24 @@
 import { adminRoute, CmsError, ok } from "@monti-cms/core/server";
-import { editorProposalViews, proposalsForEntry } from "../../agent/entry-proposals";
+import {
+	editorProposalViews,
+	mediaProposalViews,
+	proposalsForEntry,
+	proposalsForMedia,
+} from "../../agent/entry-proposals";
 import { aiStoreFor } from "../../store";
 
-/** The body changes waiting in the signed-in admin's proposals for one entry (`?entry=<id>`): what the entry editor draws as the blue pencil. */
+/**
+ * The changes waiting in the signed-in admin's proposals for one entry (`?entry=<id>`: what the entry editor draws as the blue pencil), or for media files
+ * (`?media`: the alt texts the media library shows on its tiles).
+ */
 export const GET = adminRoute(async ({ request, cms, auth }) => {
-	const entry = new URL(request.url).searchParams.get("entry");
-	if (!entry) throw new CmsError("Name the entry with ?entry=", "invalid_input");
+	const params = new URL(request.url).searchParams;
+	if (params.has("media")) {
+		const found = await proposalsForMedia(cms, auth, aiStoreFor(cms).proposals);
+		return ok({ items: mediaProposalViews(found) });
+	}
+	const entry = params.get("entry");
+	if (!entry) throw new CmsError("Name the entry with ?entry= (or ask for ?media)", "invalid_input");
 	const found = await proposalsForEntry(cms, auth, aiStoreFor(cms).proposals, entry);
 	return ok({ items: editorProposalViews(found, entry) });
 });

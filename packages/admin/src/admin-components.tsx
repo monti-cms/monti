@@ -156,6 +156,25 @@ export interface EditorProposals {
 	) => Promise<string | null>;
 }
 
+/** An alt text the assistant proposed for a media file (flow 6 · 25): drawn on its tile until it is accepted or discarded. */
+export interface MediaProposalItem {
+	readonly id: string;
+	readonly request: string;
+	readonly mediaId: string;
+	readonly before: string | null;
+	readonly value: string;
+	readonly thread?: readonly EditorProposalMessage[];
+}
+
+/** The proposals on the media library's tiles, and what they hear back. A media file has no save to wait for: accepting applies at once. */
+export interface MediaProposals {
+	readonly items: readonly MediaProposalItem[];
+	readonly onAccept: (items: readonly MediaProposalItem[]) => void;
+	readonly onDiscard: (items: readonly MediaProposalItem[]) => void;
+	/** A request in a tile's card: resolves with the id of the proposal that took its place, or `null`. `signal` aborts when the admin stops it. */
+	readonly onAsk?: (item: MediaProposalItem, text: string, signal: AbortSignal) => Promise<string | null>;
+}
+
 /** The requests left in the open entry, as the status bar counts them, and the way to the next one. */
 export interface EditorRequests {
 	/** Requests the assistant answered: proposals with a request in their card. */
@@ -310,6 +329,8 @@ export interface AdminComponents {
 	readonly blockViews?: Readonly<Record<string, BlockView>>;
 	/** Edit screen extension (toolbar, block actions). */
 	readonly editorExtensions?: readonly EditorExtension[];
+	/** The assistant's proposals on the media library's tiles (flow 6 · 25): a hook, called by the library on every render. */
+	readonly mediaProposals?: () => MediaProposals | null;
 	/**
 	 * Text checkers (spelling, sentences, etc.; `defineTextChecker`, `remoteTextChecker`). The editor creates a toolbar button for each checker
 	 * and renders results as wavy underlines and a results window. If no checker checks that text's language, nothing is shown.
@@ -408,6 +429,10 @@ export function AdminComponentsProvider({
 			listCells: { ...parent.listCells, ...components.listCells },
 			sourcePanels: [...(parent.sourcePanels ?? []), ...(components.sourcePanels ?? [])],
 			formats: { ...parent.formats, ...components.formats },
+			// One source of media proposals: the inner one wins.
+			...((components.mediaProposals ?? parent.mediaProposals)
+				? { mediaProposals: components.mediaProposals ?? parent.mediaProposals }
+				: {}),
 		}),
 		[parent, components],
 	);

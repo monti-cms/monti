@@ -38,6 +38,8 @@ export {
 	type FieldInputParts,
 	type FieldViewProps,
 	type ListCellProps,
+	type MediaProposalItem,
+	type MediaProposals,
 	SOURCE_ERROR_ID,
 	type SourcePanelProps,
 	type SourcePanelRegistration,

@@ -1,5 +1,5 @@
 import { type AdminRequest, type Cms, CmsError, type WriteApplied } from "@monti-cms/core/server";
-import { refreshStale } from "./apply";
+import { codeOf, refreshStale } from "./apply";
 import { type Proposal, type ProposalItem, type ProposalStore, planOf, type SpotMessage } from "./proposals";
 
 type Auth = AdminRequest["auth"];
@@ -18,10 +18,20 @@ export async function proposalsForEntry(
 	return Promise.all(found.map((proposal) => refreshStale(cms, auth, store, proposal)));
 }
 
-/** What the entry editor reports after a save: the items accepted there (with the blocks the editor put in place of a body change) and those discarded. */
+/**
+ * What the admin did with items where they show: accepted in the entry editor and saved there (with the blocks the editor put in place of a body change),
+ * accepted where nothing waits for a save (a media tile's alt text: applied now), and discarded.
+ */
 export interface EditorSettlement {
 	readonly accepted?: readonly { readonly id: string; readonly placed?: readonly string[] }[];
+	readonly applied?: readonly string[];
 	readonly discarded?: readonly string[];
+}
+
+/** What the media library shows as proposals on its tiles (flow 6 · 25): the waiting media proposals, with spots changed since the plan marked stale. */
+export async function proposalsForMedia(cms: Cms, auth: Auth, store: ProposalStore): Promise<Proposal[]> {
+	const found = await store.pendingMedia(auth.userId);
+	return Promise.all(found.map((proposal) => refreshStale(cms, auth, store, proposal)));
 }
 
 /**
@@ -34,7 +44,7 @@ export async function settleInEditor(
 	auth: Auth,
 	store: ProposalStore,
 	id: string,
-	{ accepted = [], discarded = [] }: EditorSettlement,
+	{ accepted = [], applied = [], discarded = [] }: EditorSettlement,
 ): Promise<Proposal> {
 	const proposal = await store.get(auth.userId, id);
 	if (!proposal) throw new CmsError("No such proposal", "not_found");
@@ -45,10 +55,27 @@ export async function settleInEditor(
 		if (!item || item.state !== "pending") continue;
 		adopted.set(itemId, await cms.writes.adopt(item.operation, planOf(item), placed ? { placed } : {}, { auth }));
 	}
+	// Accepted where nothing waits for a save: applied here, the way the review applies.
+	const appliedNow = new Map<string, ProposalItem>();
+	for (const itemId of applied) {
+		const item = proposal.items.find((candidate) => candidate.id === itemId);
+		if (!item || item.state !== "pending") continue;
+		try {
+			const done = await cms.writes.apply(item.operation, planOf(item), {
+				auth,
+				agent: { runId: proposal.runId, proposalId: id },
+			});
+			appliedNow.set(itemId, { ...item, state: "applied", applied: { ...done, at: new Date().toISOString() } });
+		} catch (error) {
+			appliedNow.set(itemId, { ...item, state: "failed", reason: codeOf(error) });
+		}
+	}
 	const at = new Date().toISOString();
 	const left = new Set(discarded);
 	return store.update(auth.userId, id, (current) => {
 		const items = current.items.map((item): ProposalItem => {
+			const now = appliedNow.get(item.id);
+			if (now && item.state === "pending") return now;
 			const done = adopted.get(item.id);
 			if (done && item.state === "pending")
 				return { ...item, state: "applied", applied: { ...done, at, inEditor: true } };
@@ -111,5 +138,39 @@ export const editorProposalViews = (proposals: readonly Proposal[], entryId: str
 				return [{ ...base, kind: "field", field: change.field, before: item.preview.before, value: change.value }];
 			}
 			return [];
+		}),
+	);
+
+/** An alt text change waiting on a media tile (flow 6 · 25): the file, the text it was planned against and the new one. */
+export interface MediaProposalView {
+	readonly id: string;
+	readonly proposalId: string;
+	readonly runId: string;
+	readonly request: string;
+	readonly mediaId: string;
+	readonly before: string | null;
+	readonly value: string;
+	readonly thread: readonly SpotMessage[];
+}
+
+/** The alt text changes the media library shows: waiting and put in. Captions stay on the review page (a tile shows no caption). */
+export const mediaProposalViews = (proposals: readonly Proposal[]): MediaProposalView[] =>
+	proposals.flatMap((proposal) =>
+		proposal.items.flatMap((item): MediaProposalView[] => {
+			if (item.operation !== "media.updateText" || item.state !== "pending" || !item.included) return [];
+			const change = item.change as { spot: string; value: string };
+			if (change.spot !== "defaultAlt") return [];
+			return [
+				{
+					id: item.id,
+					proposalId: proposal.id,
+					runId: proposal.runId,
+					request: proposal.request,
+					mediaId: item.target.id,
+					before: typeof item.preview.before === "string" ? item.preview.before : null,
+					value: change.value,
+					thread: item.thread ?? [],
+				},
+			];
 		}),
 	);

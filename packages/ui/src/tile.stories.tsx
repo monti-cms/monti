@@ -125,6 +125,15 @@ export const Proposal: Story = {
 					onSelectedChange={() => {}}
 				/>
 			</Labelled>
+			<Labelled name="제안, 카드 열림">
+				<Tile
+					preview={preview}
+					title="desk-morning.jpg"
+					proposal="아침 책상 위의 노트북과 커피"
+					current
+					onSelectedChange={() => {}}
+				/>
+			</Labelled>
 			<Labelled name="제안, 고름">
 				<Tile
 					preview={preview}

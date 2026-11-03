@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
+import { AdminComponentsProvider, type MediaProposals } from "../../admin-components";
 import type { MediaItem } from "../../api/media";
 import { writePreference } from "../../lib/utils/site-storage";
 import { type FakeApi, PageFrame } from "../../stories/screen-frame";
@@ -481,4 +482,70 @@ export const NoStorage: Story = {
 			<MediaNotConfigured />
 		</PageFrame>
 	),
+};
+
+/** The assistant's alt texts for three files, as a plugin hands them to the library (flow 6 · 25); a request in a card waits until it is stopped. */
+const altProposals = (): MediaProposals => ({
+	items: [
+		{
+			id: "proposal-code",
+			request: "고른 이미지 3개에 대체 텍스트 채워 줘",
+			mediaId: "cybersecurity-code",
+			before: null,
+			value: "어두운 화면에 떠 있는 코드",
+		},
+		{
+			id: "proposal-seoul",
+			request: "고른 이미지 3개에 대체 텍스트 채워 줘",
+			mediaId: "seoul-night",
+			before: "",
+			value: "불 켜진 서울의 밤 거리",
+			thread: [
+				{ author: "admin", text: "거리가 아니라 강변이야.", at: "2026-11-03T10:58:00" },
+				{ author: "assistant", text: "“불 켜진 서울의 밤 거리”를 강변으로 고쳤어요.", at: "2026-11-03T10:58:20" },
+			],
+		},
+		{
+			id: "proposal-cafe",
+			request: "고른 이미지 3개에 대체 텍스트 채워 줘",
+			mediaId: "cafe-window",
+			before: "",
+			value: "비 오는 카페 창가",
+		},
+	],
+	onAccept: () => undefined,
+	onDiscard: () => undefined,
+	onAsk: (_item, _text, signal) =>
+		new Promise<string | null>((_resolve, reject) => {
+			signal.addEventListener("abort", () => reject(new DOMException("Stopped", "AbortError")));
+		}),
+});
+const withProposals = () => {
+	writePreference(testSite, "media-view", "grid");
+	return (
+		<PageFrame api={apiOf(backendOf())} pathname="/admin/media" search="folder=blog">
+			<AdminComponentsProvider components={{ mediaProposals: altProposals }}>
+				<MediaLibrary />
+			</AdminComponentsProvider>
+		</PageFrame>
+	);
+};
+
+/** Alt texts proposed (flow 6 · 25): the new text on each tile in the blue pencil, and "✦ 제안 3 · 모두 버리기 · 모두 받기" in place of the filters. */
+export const AltTextProposals: Story = {
+	tags: ["visual"],
+	render: withProposals,
+	play: async ({ canvasElement }) => {
+		await within(canvasElement).findByRole("toolbar", { name: "제안 3" });
+	},
+};
+
+/** A proposed tile pressed (flow 6 · 26): the card under it with discard and accept, what was said, and the row to ask again. */
+export const AltTextProposalCard: Story = {
+	tags: ["visual"],
+	render: withProposals,
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await tile(canvasElement, /^seoul-night/));
+		await body().findByRole("dialog");
+	},
 };
