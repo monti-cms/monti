@@ -15,6 +15,44 @@
 			},
 			"events": []
 		},
+		"Section": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": ["title"],
+			"props": {
+				"last": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"stacked": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"OptionCheck": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"checked": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"ListBody": {
 			"kind": "part",
 			"bind": false,

@@ -2,6 +2,7 @@ import * as React from "react";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { ChangeDot } from "../change-dot";
+import { Checkbox } from "../checkbox";
 import { Count } from "../count";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
@@ -11,6 +12,7 @@ import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { ListHead } from "../list-head";
+import { Option } from "../option";
 import { PageColumn, PageHeader, PageToolbar } from "../page-header";
 import {
 	ListFooter,
@@ -23,6 +25,7 @@ import {
 	PaginationPrevious,
 } from "../pagination";
 import { SearchToggle as SearchTogglePart } from "../search-box";
+import { Section } from "../section";
 import { Separator } from "../separator";
 import {
 	SidebarContent,
@@ -484,6 +487,21 @@ function Tab({
 	);
 }
 
+/** A choice of this time only (a backup's "include media"): a checkbox, its words, and a quiet note after them. */
+function OptionCheck({ label, note, checked }: { label?: string; note?: string; checked?: boolean }) {
+	return (
+		<Option>
+			<Checkbox checked={checked ?? false} />
+			{label}
+			{note && (
+				<Text variant="meta" tone="subtle">
+					{note}
+				</Text>
+			)}
+		</Option>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -504,6 +522,8 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Section,
+	OptionCheck,
 	ListBody,
 	TwoLineTitleCell,
 	TrashTitleCell,
@@ -610,6 +630,8 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
+	OptionCheck: { kind: "part", props: { label: "text", note: "text", checked: "flag" } },
 	ListBody: { kind: "part", props: {} },
 	TwoLineTitleCell: { kind: "part", props: { title: "text", note: "text" } },
 	TrashTitleCell: {

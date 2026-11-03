@@ -146,7 +146,9 @@ function read(el, where, page = undefined, inPart = false) {
 	// A board drawn inside a board (its own page root) is read as a page too: its height and ground are the page's.
 	const root = page !== undefined || rule?.frame === true;
 	const here = `${where} › ${label(el)}`;
-	const looks = looksOf(el, rule?.frame ? undefined : rule, root, inPart);
+	// Inside a part, a plain group's own distances are measured as Spacing; only a part or a text there has none of its own to give.
+	const group = !rule && [...el.children].some((child) => shown(child));
+	const looks = looksOf(el, rule?.frame ? undefined : rule, root, inPart && !group);
 	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
 	if (rule?.ignore) return { where: here };
 	if (rule?.frame) {
@@ -168,6 +170,8 @@ function read(el, where, page = undefined, inPart = false) {
 			node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, inside(holder, `${here} › ${name}`)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
 		node.children = holder ? inside(holder, here) : [];
+		// The element the children come from is the part's own inside: what the board writes on it is read as on the part.
+		if (holder && holder !== el) node.looks = [...looks, ...looksOf(holder, rule, false, true)];
 		return node;
 	}
 	if (el.tagName.toLowerCase() === "svg") return { where: here, looks };

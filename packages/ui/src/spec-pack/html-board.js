@@ -226,6 +226,29 @@ const parts = [
 		}),
 		asProps: ["font-size", "line-height"],
 	},
+	// A section of a settings or tools page: its title beside (or over) what it holds.
+	{
+		match: (el) => el.matches(".mt-section"),
+		part: "Section",
+		slots: (el) => ({ title: el.querySelector(":scope > h2") }),
+		children: (el) => el.querySelector(":scope > .body") ?? el,
+	},
+	{
+		match: (el) => el.matches(".mt-option"),
+		part: "OptionCheck",
+		props: (el) => ({
+			label: [...el.childNodes]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			note: el.querySelector(".text-meta")?.textContent.trim(),
+			checked: el.querySelector(".mt-check.is-on") ? true : undefined,
+		}),
+		leaf: true,
+		asProps: ["color"],
+	},
+	{ match: (el) => el.matches(".mt-mono"), part: "Text", props: () => ({ mono: true }) },
 	// A page's tab row: each tab a page of its own, with its count.
 	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
 	{
@@ -364,7 +387,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];
