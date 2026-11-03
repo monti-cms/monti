@@ -1,4 +1,4 @@
-// Checks every screen spec (`packages/*/src/**/*.screen.json`) against a design system pack's catalog (`pnpm gen:screen-catalog`), with the same
+// Checks every screen spec of a pack (`*.screen.json` in the folders its `pack.mjs` names) against a design system pack's catalog (`pnpm gen:screen-catalog`), with the same
 // `checkSpec` the renderer runs before it draws. Run from the repo root: `pnpm check:screens [--pack <dir>]`, or `pnpm check:screens <file>…` for some
 // files only. It prints each problem with its file, element and place (`login.screen.json: emailInput.props.variant: "big" is not a choice (…)`) and
 // fails when there is one.
@@ -66,7 +66,11 @@ function specs(dir) {
 }
 
 const named = args.filter((arg, index) => arg !== "--pack" && args[index - 1] !== "--pack");
-const screens = named.length > 0 ? named.map((file) => path.resolve(file)) : specs(path.join(ROOT, "packages"));
+// The pack says where its screens are (`screens`, folders relative to it); every `*.screen.json` in them is checked.
+const screens =
+	named.length > 0
+		? named.map((file) => path.resolve(file))
+		: (pack.screens ?? ["."]).flatMap((dir) => specs(path.resolve(PACK, dir)));
 let failed = 0;
 for (const file of screens) {
 	const problems = checkSpec(JSON.parse(readFileSync(file, "utf8")), catalog);

@@ -2,6 +2,8 @@
 // that the tool does not. Paths are relative to this folder.
 
 export default {
+	/** Where this pack's screen specs are: `check:screens` checks every `*.screen.json` in these folders. */
+	screens: ["../screens", "../../../admin/src"],
 	/** What `gen:screen-catalog` writes and the other scripts read. */
 	catalog: "catalog.generated.json",
 	/** HTML boards: the classes file loaded before the adapter, the element the board is drawn in, and the window it is drawn at. */
