@@ -18,7 +18,7 @@ import {
 } from "./dropdown-menu";
 import { ICON_BUTTON, IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
-import { NAV_ROW, NAV_ROW_END, NAV_ROW_HOVER } from "./nav-link";
+import { NAV_ROW, NAV_ROW_END } from "./nav-link";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Segmented } from "./segmented";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -487,7 +487,6 @@ function SidebarMenuButton({
 			{
 				className: cn(
 					NAV_ROW,
-					NAV_ROW_HOVER.tool,
 					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
