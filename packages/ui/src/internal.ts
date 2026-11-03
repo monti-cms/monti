@@ -25,7 +25,6 @@ export { ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
-export { BulkToolbar } from "./bulk-toolbar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";

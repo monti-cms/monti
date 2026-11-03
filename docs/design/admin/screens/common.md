@@ -45,6 +45,6 @@
 | 고른 글자에 묻기 | `FormatBarRequest` | 서식 카드 끝 "✦ 요청". |
 | 할 일 행의 동작 | `TodoItem proposal` | 행 끝 "✦ 채우기", "✦ 번역". |
 | 메모 카드에서 받으며 다시 시키기 | `MemoCard`(`acceptSpark`) | 검은 작은 알약 "✦ 다시 번역". |
-| 목록에서 고른 것에 시키기 | `BulkBar`·`BulkToolbar`의 `request` | "✦ 요청", 미디어는 "✦ 대체 텍스트". |
+| 목록에서 고른 것에 시키기 | `BulkBar`의 `request`(`TextButton tone="proposal"`) | "✦ 요청", 미디어는 "✦ 대체 텍스트". |
 | 빈 어시스턴트 패널의 시작 요청 | `Suggest` | 앞에 ✦가 붙은 한 줄. |
 

@@ -32,8 +32,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 막대 | `BulkToolbar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제") | 고르는 동안 도구 행을 대신한다. 모두 선택 체크는 일부만 골랐으면 `some`이다. 미디어 격자에는 열 이름 행이 없으므로 이 막대가 도구 행 자리에 온다. |
-| "✦ 대체 텍스트" | `BulkToolbar`의 `request` | 고른 파일의 대체 텍스트를 어시스턴트에게 맡긴다. |
+| 막대 | `BulkBar`(`colSpan` 없이, `label` "2개 선택", `selectAll`, `clearLabel` "선택 해제") | 고르는 동안 도구 행을 대신한다. 모두 선택 체크는 일부만 골랐으면 `some`이다. 미디어 격자에는 열 이름 행이 없으므로 이 막대가 도구 행 자리에 온다. |
+| "✦ 대체 텍스트" | `BulkBar`의 `request` | 고른 파일의 대체 텍스트를 어시스턴트에게 맡긴다. |
 | "폴더로 ▾" | `TextButton` + `Caret` + `DropdownMenu`(`DropdownMenuRadioGroup`: "최상위" · 폴더들, 구분선, "+ 새 폴더") | 고른 파일이 모두 한 폴더에 있으면 그 행에 ✓. 고르면 옮기고 닫힌다. |
 | "휴지통으로" | `TextButton` | 곧바로 옮기고 `toast`에 "되돌리기". 쓰는 곳이 있는 파일은 남기고 `toast`에 "보기". |
 
@@ -119,11 +119,11 @@
 | `mode` "파일 열기" | 옆 패널 `SidePanel`, 그 타일 `current` |
 | `mode` "바꾸기 메뉴" | 패널 ⋯ `DropdownMenu` |
 | `mode` "파일 바꾸기" | `AlertDialog`(옛 파일 → 새 파일) |
-| `mode` "여러 개 선택" | `BulkToolbar`, 고른 `Tile selected` |
-| `mode` "폴더로 옮기기" | `BulkToolbar`의 "폴더로" `DropdownMenu` |
+| `mode` "여러 개 선택" | `BulkBar`, 고른 `Tile selected` |
+| `mode` "폴더로 옮기기" | `BulkBar`의 "폴더로" `DropdownMenu` |
 | `mode` "찾는 중" | `SearchBox`(검색어 "cover"), 찾는 곳 `Segmented`가 "모든 폴더", 세부 줄 앞에 폴더 경로, 폴더 행 없음 |
 | `mode` "필터 걸림" | `Chip` "대체 텍스트: 없음 ×", 찾는 곳 `Segmented` |
-| `mode` "대체 텍스트 없는 것 고름" | `BulkToolbar`(3개, `request` "✦ 대체 텍스트") |
+| `mode` "대체 텍스트 없는 것 고름" | `BulkBar`(3개, `request` "✦ 대체 텍스트") |
 | `mode` "대체 텍스트 제안" | 제안 줄, `Tile proposal` 셋 |
 | `mode` "대체 텍스트 메모" | `MemoCardPopover`가 한 타일에 열림 |
 | `mode` "휴지통으로 옮김" | 그 타일이 빠지고 `toast` + "되돌리기" |

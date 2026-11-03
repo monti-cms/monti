@@ -3,7 +3,7 @@
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	BulkToolbar,
+	BulkBar,
 	Caret,
 	Chip,
 	DropdownMenu,
@@ -174,7 +174,7 @@ function PickBar({
 	const { picked, total } = library;
 	const current = pickedFolder === undefined ? "" : (pickedFolder ?? TOP);
 	return (
-		<BulkToolbar
+		<BulkBar
 			label={t("bulk.count", { count: picked.size })}
 			selectAll={{
 				state: selectAllState(picked.size, total),
@@ -213,7 +213,7 @@ function PickBar({
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<TextButton onClick={onTrash}>{t("bulk.trash")}</TextButton>
-		</BulkToolbar>
+		</BulkBar>
 	);
 }
 
