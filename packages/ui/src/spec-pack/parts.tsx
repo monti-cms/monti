@@ -551,6 +551,25 @@ function VerticalRule({ className }: { className?: string }) {
 	return <Separator orientation="vertical" length="control" className={className} />;
 }
 
+/** A cell of two lines: what it is in ink, and under it a quiet line (an event's "what" and "where"); the assistant's ✦ before what it made. */
+function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; proposal?: boolean }) {
+	return (
+		<TableCell truncate>
+			<Text as="div" truncate>
+				{proposal && (
+					<Text tone="proposal">
+						<Icon name="spark" />{" "}
+					</Text>
+				)}
+				{title}
+			</Text>
+			<Text as="div" variant="meta" tone="subtle" truncate>
+				{sub}
+			</Text>
+		</TableCell>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -571,6 +590,7 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	TwoLineCell,
 	SelectBox,
 	Filter,
 	Banner,
@@ -684,6 +704,7 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	TwoLineCell: { kind: "part", props: { title: "text", sub: "text", proposal: "flag" } },
 	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant" } },
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
 	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },

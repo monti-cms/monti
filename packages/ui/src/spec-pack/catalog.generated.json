@@ -15,6 +15,27 @@
 			},
 			"events": []
 		},
+		"TwoLineCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"proposal": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"sub": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"SelectBox": {
 			"kind": "part",
 			"bind": false,

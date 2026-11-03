@@ -134,6 +134,35 @@ const parts = [
 		asProps: ["min-width", "text-decoration", "display", "flex-direction", "gap"],
 	},
 	{
+		match: (el) => el.matches(".mt-row > span:has(> .mt-row-title):has(> .mt-row-sub)"),
+		part: "TwoLineCell",
+		props: (el) => {
+			const title = el.querySelector(".mt-row-title");
+			return {
+				title: [...title.childNodes]
+					.filter((node) => !node.classList?.contains("mt-fill"))
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+				sub: el.querySelector(".mt-row-sub")?.textContent.trim(),
+				proposal: title.querySelector(".mt-fill") ? true : undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["min-width", "display", "flex-direction", "gap"],
+	},
+	// A heading over a list's rows (a day's group, "오늘 · 10. 26"): quiet small words, not a heading.
+	{
+		match: (el) => el.matches(".mt-table-head:is(h2, h3)"),
+		part: "Text",
+		props: (el) => ({
+			as: "p",
+			variant: [...el.classList].find((name) => name.startsWith("text-"))?.slice(5),
+			tone: "subtle",
+		}),
+		asProps: ["color"],
+	},
+	{
 		match: (el) => el.matches(".mt-row > span:has(.mt-row-title):has(> .text-note)"),
 		part: "TrashTitleCell",
 		props: (el) => {
