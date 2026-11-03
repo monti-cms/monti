@@ -33,3 +33,21 @@
 | ⋯ 메뉴, 글자 버튼이 여는 메뉴 | `DropdownMenu`(`DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuCheckboxItem`, `DropdownMenuLabel`, `DropdownMenuSearch`, `DropdownMenuScroll`), 끝의 표시는 `MenuShortcut`·`MenuTick`·`MenuValue` | 할 수 있는 것만 둔다. 위험한 것은 맨 아래 `variant="danger"`. 둘째 단계까지만. 할 수 없는 행은 숨긴다. |
 | 행 오른쪽 클릭 | `ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`, `ContextMenuLabel`) | 같은 항목이 행의 ⋯에도 있다. 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
 | 검색이 있는 고르기 | `Popover`의 `PopoverContent padding="menu"` 안에 `Command`(`CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandEmpty`, `CommandFooter`) | 값이 많은 고르기(언어 코드, 태그, 링크할 글). |
+
+## AI 버튼
+
+어시스턴트에게 시키는 버튼은 하는 일에 따라 모양이 하나씩이다. ✦는 언제나 `Spark`다.
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 필드 하나 채우기 (속성 패널, 이미지 카드의 대체 텍스트, 폼 필드, 캡션) | `AiAction` | "✦ 채우기", 값이 있으면 "↻ 다시", 일하는 동안 "쓰는 중…". 라벨이 있으면 라벨 줄 끝(`FormFieldLabel action`), 라벨이 없는 캡션은 같은 줄 끝. 값은 제안 없이 곧바로 들어간다. |
+| 글 여러 곳을 한 번에 ("✦ 번역", "✦ 빈 칸 채우기", "✦ 추천") | `TextButton`(파란 글자, 앞에 `Spark`) | 누르면 어시스턴트가 여러 곳을 바꾸고, 바뀐 것은 파란 제안으로 남는다. |
+| 고른 글자에 묻기 | `FormatBarRequest` | 서식 카드 끝 "✦ 요청". |
+| 할 일 행의 동작 | `TodoItem proposal` | 행 끝 "✦ 채우기", "✦ 번역". |
+| 메모 카드에서 받으며 다시 시키기 | `MemoCard`(`acceptSpark`) | 검은 작은 알약 "✦ 다시 번역". |
+| 목록에서 고른 것에 시키기 | `BulkBar`·`BulkToolbar`의 `request` | "✦ 요청", 미디어는 "✦ 대체 텍스트". |
+| 빈 어시스턴트 패널의 시작 요청 | `Suggest` | 앞에 ✦가 붙은 한 줄. |
+
+### 빠진 것
+
+- `TextButton`에 파란 글자(`fg-proposal`)가 없다. 보드는 "✦ 번역", "✦ 빈 칸 채우기", "✦ 추천"을 파란 `.mt-text-btn`으로 그린다. 부품을 따로 만들지 않고 `TextButton`에 파란 색 옵션 하나를 더한다. 지금 코드의 `AiButton`(`packages/ai/src/admin/ai-button.tsx`)은 이것을 회색 알약(`Button variant="secondary"`)으로 그린다.

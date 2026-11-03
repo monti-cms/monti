@@ -43,7 +43,7 @@
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
 | 이미지 도구 행 | `BlockBar`: `BlockBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `BlockBarSeparator`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
 | 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `AiAction` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
-| 캡션 | `Input appearance="inline" size="sm" align="center"`, 옆에 `AiAction` | 이미지 아래 그 자리에서 고친다. |
+| 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `AiAction` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
 
 ### 속성 패널
@@ -98,7 +98,7 @@
 | `trashed` | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) |
 | `img` "올리는 중" · "설정" · "파일" | `UploadingImage` · `BlockBar`와 설정 `Popover` · `FileBlock` |
 | `fix` "요약" | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" |
-| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover` |
+| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`AiAction`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). |
 | `todo` · `todoOpen` | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) |
 | `pluginOpen` | 플러그인 칸의 `StatusBarList` |
 | `panel` · `panelTab` | `PropertyPanel`과 고른 탭 |
