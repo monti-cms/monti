@@ -76,8 +76,7 @@
 		"table": {
 			"type": "Table",
 			"props": {
-				"container": "none",
-				"layout": "fixed"
+				"container": "none"
 			},
 			"children": ["head", "body"]
 		},
@@ -106,7 +105,8 @@
 		"folderTitle": {
 			"type": "TableCell",
 			"props": {
-				"colSpan": 5
+				"colSpan": 5,
+				"truncate": true
 			},
 			"children": ["folderName"]
 		},
@@ -211,7 +211,10 @@
 		},
 		"title": {
 			"type": "TableCell",
-			"children": ["titleLine"]
+			"children": ["titleLine"],
+			"props": {
+				"truncate": true
+			}
 		},
 		"titleLine": {
 			"type": "RowTitle",

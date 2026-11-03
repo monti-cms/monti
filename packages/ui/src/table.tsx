@@ -42,6 +42,8 @@ function Table({
 				className={cn(
 					"w-full text-monti-body",
 					layout === "fixed" && "table-fixed",
+					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
+					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					className,
 				)}
@@ -284,6 +286,7 @@ function TableHead({
 	return (
 		<th
 			data-slot="table-head"
+			data-truncate={truncate || undefined}
 			className={cn(
 				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
@@ -316,6 +319,7 @@ function TableCell({
 	return (
 		<td
 			data-slot="table-cell"
+			data-truncate={truncate || undefined}
 			className={cn(
 				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
