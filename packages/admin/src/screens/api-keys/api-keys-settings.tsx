@@ -37,6 +37,8 @@ import {
 	FormFieldError,
 	FormFieldLabel,
 	Input,
+	ListSection,
+	ListSectionRow,
 	MenuField,
 	MenuShortcut,
 	PickList,
@@ -51,8 +53,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Stack,
-	TableSection,
-	TableSectionRow,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
@@ -125,9 +125,9 @@ export function ApiKeysSettings() {
 						)}
 					</Box>
 				) : (
-					<>
-						<TableSection title={t("section.keys")} count={list.items.length}>
-							{list.items.length === 0 && <TableSectionRow title={t("row.none")} muted />}
+					<Stack gap={40} paddingTop={32}>
+						<ListSection title={t("section.keys")} count={list.items.length}>
+							{list.items.length === 0 && <ListSectionRow title={t("row.none")} muted />}
 							{list.items.map((key) => (
 								<KeyRow
 									key={key.id}
@@ -136,12 +136,12 @@ export function ApiKeysSettings() {
 									onDelete={() => setOpen({ kind: "delete", key })}
 								/>
 							))}
-						</TableSection>
+						</ListSection>
 						{Object.entries(sections).map(([name, Section]) => (
 							<Section key={name} />
 						))}
 						<SlotSection list={list} onAdd={(slot) => setOpen({ kind: "add", service: slot.service, slot })} />
-					</>
+					</Stack>
 				)}
 			</Stack>
 			{list && open?.kind === "pick" && (
@@ -169,7 +169,7 @@ function KeyRow({ apiKey, onEdit, onDelete }: { apiKey: ApiKeyView; onEdit: () =
 	const site = useSite();
 	const unused = apiKey.readable && apiKey.usage === 0;
 	return (
-		<TableSectionRow
+		<ListSectionRow
 			data-testid={`api-key-${apiKey.name}`}
 			title={apiKey.name}
 			{...(apiKey.tail ? { titleCount: t("row.tail", { tail: apiKey.tail }) } : {})}
@@ -210,7 +210,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 	if (rows.length === 0) return null;
 	const missing = rows.filter((row) => !row.slot.key).length;
 	return (
-		<TableSection
+		<ListSection
 			title={t("section.plugins")}
 			{...(missing > 0 && list.secretsAvailable ? { count: missing, countTone: "warning" as const } : {})}
 		>
@@ -228,7 +228,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 					/>
 				);
 				return (
-					<TableSectionRow
+					<ListSectionRow
 						key={labelId}
 						data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 						title={title}
@@ -261,7 +261,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 					/>
 				);
 			})}
-		</TableSection>
+		</ListSection>
 	);
 }
 

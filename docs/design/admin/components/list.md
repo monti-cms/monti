@@ -223,7 +223,7 @@
 
 ### 코드
 
-`TableSection`(`title`, `count`, `countTone`)과 `TableSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
+`ListSection`(`title`, `count`, `countTone`, 행에 안쪽 여백이 없을 때 `flush`)은 제목과 개수가 붙은 행 목록이다. 자기 바깥 여백을 갖지 않고, 놓는 쪽의 `gap`이 묶음 사이를 띄운다. 행은 도구 화면의 `ListSectionRow`이거나 검토 시트의 `ChangeGroup`이다. 행 부품은 `ListSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
 
 ## 휴지통 안의 폴더
 

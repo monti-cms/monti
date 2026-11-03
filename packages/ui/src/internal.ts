@@ -166,6 +166,7 @@ export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
+export { ListSection, ListSectionRow } from "./list-section";
 export { LockMark } from "./lock-mark";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
@@ -287,7 +288,6 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
-export { TableSection, TableSectionRow } from "./table-section";
 export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";

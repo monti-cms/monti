@@ -4,13 +4,15 @@ import { cn } from "./cn";
 import { Count } from "./count";
 
 /**
- * A titled table of a tools page (API keys: saved keys · models · plugins): the title in label type, bold, with a count after it, a line under it, then
- * its {@link TableSectionRow}s. The first section sits 32px under the page's toolbar, the next ones 40px under the table above.
+ * A titled list of rows: the title in label type, bold, with a count after it, a line under it, then its rows: {@link ListSectionRow}s on a tools page
+ * (API keys: saved keys · models · plugins), `ChangeGroup`s in a review sheet ("바로 저장 2", "PR 1"). It keeps no room around itself; the page or
+ * sheet spaces its sections.
  */
-function TableSection({
+function ListSection({
 	title,
 	count,
 	countTone = "default",
+	flush = false,
 	children,
 	...props
 }: Omit<React.ComponentProps<"section">, "title" | "className" | "style" | "aria-labelledby"> & {
@@ -18,13 +20,18 @@ function TableSection({
 	/** How many rows, or how many need attention (`countTone="warning"`). */
 	count?: React.ReactNode;
 	countTone?: "default" | "warning";
+	/** The rows have no inset of their own (a review sheet's changes): the title starts at the edge with them, not 12px in. */
+	flush?: boolean;
 }) {
 	const titleId = useId();
 	return (
-		<section data-slot="table-section" aria-labelledby={titleId} className="mt-monti-40 first:mt-monti-32" {...props}>
+		<section data-slot="list-section" aria-labelledby={titleId} {...props}>
 			<h2
 				id={titleId}
-				className="m-0 flex items-baseline gap-monti-8 border-monti-default border-b px-monti-12 pb-monti-12 font-bold text-monti-label"
+				className={cn(
+					"m-0 flex items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-bold text-monti-label",
+					!flush && "px-monti-12",
+				)}
 			>
 				{title}
 				{count !== undefined && count !== null && <Count tone={countTone}>{count}</Count>}
@@ -35,10 +42,10 @@ function TableSection({
 }
 
 /**
- * One row of a {@link TableSection}: a title (body text in ink, or `muted`) with an optional count after it ("··· a1b2"), a meta line under it, and at
+ * One row of a {@link ListSection}: a title (body text in ink, or `muted`) with an optional count after it ("··· a1b2"), a meta line under it, and at
  * the end either text buttons (`actions`, each its own column) or one 320px control (`control`, a select or a model field).
  */
-function TableSectionRow({
+function ListSectionRow({
 	title,
 	titleCount,
 	detail,
@@ -69,7 +76,7 @@ function TableSectionRow({
 	return (
 		<div
 			role="listitem"
-			data-slot="table-section-row"
+			data-slot="list-section-row"
 			className={cn(
 				"relative grid items-center gap-monti-20 border-monti-muted border-b px-monti-12 py-monti-16 hover:bg-monti-muted",
 				control ? "grid-cols-[minmax(0,1fr)_320px]" : "auto-cols-auto grid-flow-col grid-cols-[minmax(0,1fr)]",
@@ -104,4 +111,4 @@ function TableSectionRow({
 	);
 }
 
-export { TableSection, TableSectionRow };
+export { ListSection, ListSectionRow };

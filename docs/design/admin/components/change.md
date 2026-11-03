@@ -24,13 +24,12 @@
 
 `ChangeGroup`은 `.mt-change` 블록이다. `kind`는 `new`, `edit`, `drop` 중 하나이고(태그 색), `tag`는 앱의 말("New", "Edit", "Removed"), 그리고 `title`과 `identifier`(스키마에 적힌 그대로의 키, "summary → excerpt")가 있다. 자식은 이미 저장된 데이터를 어떻게 할지다. 선택지는 라디오나 체크가 있는 `Option` 행이다. `ChangeLabel`은 변경의 한 부분("what goes", "keep a copy")에 이름을 붙이며, 그 이름이 가리키는 `ChangeLines` 위에 흐린 잉크의 작은 mono로 놓인다. `ChangeNote`는 한 줄짜리 결과다(되돌릴 수 없으면 `danger`). `ChangeLines`는 `ChangeLine`을 담는다(`what`, `then`, 그리고 `default`, `danger`, `warning` 중 하나인 `tone`). `ChangeActions`는 변경 끝에 한 행으로 놓이는 버튼들이다.
 
-코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`이 아니다. `.note.is-add` 줄은 `ChangeNote`에 짝이 없다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
+코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`(묶음 머리, 코드는 `ListSection`)이 아니다. `.note.is-add` 줄은 `ChangeNote`에 짝이 없다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
 
 ## 나눈 검토 (`.mt-change-group`)
 
-배포된 사이트에서 데이터베이스에 바로 저장되는 설정(글을 쓰는 방식)과 파일 설정을 함께 바꾸면, 시트의 블록이 가는 곳에 따라 "바로 저장"과 "PR"로 나뉜다. 머리는 문장이 아닌 한 단어이고, 13px 굵게, 오른쪽에 개수(mono 12), 아래에 잉크 선이 있다. 파일 변경(`.mt-patch`)은 "PR" 아래에만 온다. 한쪽만 바뀌었으면 나누지 않는다(글을 쓰는 방식만 바뀌었으면 시트가 없고 버튼은 "저장"이다).
+배포된 사이트에서 데이터베이스에 바로 저장되는 설정(글을 쓰는 방식)과 파일 설정을 함께 바꾸면, 시트의 블록이 가는 곳에 따라 "바로 저장"과 "PR"로 나뉜다. 머리는 문장이 아닌 한 단어다. 묶음 하나가 `ListSection flush`(`title` "바로 저장", `count` 2)이고, 그 행은 `role="listitem"`인 `ChangeGroup`이다. 머리 모양은 도구 화면의 표 묶음과 같다(제목 바로 뒤 개수, 회색 선). 시안의 오른쪽 끝 개수와 잉크 선은 따르지 않는다. 같은 일을 하는 머리를 한 모양으로 두기 위해서다. 파일 변경(`.mt-patch`)은 "PR" 아래에만 온다. 한쪽만 바뀌었으면 나누지 않는다(글을 쓰는 방식만 바뀌었으면 시트가 없고 버튼은 "저장"이다).
 
-아직 `@monti-cms/ui`에 없다.
 
 ## 컬렉션 삭제
 

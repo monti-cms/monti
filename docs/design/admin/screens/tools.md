@@ -91,12 +91,12 @@
 |---|---|---|
 | "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 `disabled`. |
 | 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없어요" 또는 "키를 저장할 수 없어요", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
-| 표 묶음 "저장된 키" · "모델" · "플러그인" | `TableSection`(`title`, `count`, 기다리는 키가 있으면 `countTone="warning"`) | 첫 표는 도구 줄 아래 32, 다음은 40. |
-| 저장된 키 한 행 | `TableSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `detail` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
-| "빠른 작업" 모델 | `TableSectionRow`(`title` "빠른 작업", `detail` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
-| 플러그인 키 자리 | `TableSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 뒤에 "· 검색 키", `detail` 플러그인 코드 `mono`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
+| 표 묶음 "저장된 키" · "모델" · "플러그인" | `ListSection`(`title`, `count`, 기다리는 키가 있으면 `countTone="warning"`) | 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
+| 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `detail` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
+| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `detail` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
+| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 뒤에 "· 검색 키", `detail` 플러그인 코드 `mono`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
 
-스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/TableSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
+스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 
 ### 뜨는 자리
 
@@ -127,7 +127,7 @@
 | "확인하는 중" | 10.03 | `DialogFormFooter busy` "확인하는 중…" | Controls/Overlay/DialogFormFooter |
 | "키 거절" | 10.04 | 키 `aria-invalid`와 `FormFieldError`, 창은 열린 채 | Controls/Field/Field |
 | "이름 겹침" | 10.05 | 이름 "Anthropic 2"와 `FormFieldDescription` | Controls/Field/Field |
-| "추가됨" | 10.06 | 새 `TableSectionRow`, `toast` "키를 추가했어요" | Patterns/List/TableSection, Controls/Status/Toast |
+| "추가됨" | 10.06 | 새 `ListSectionRow`, `toast` "키를 추가했어요" | Patterns/List/ListSection, Controls/Status/Toast |
 | "편집" | 10.07 | 편집 창: 서비스는 글, 키는 `SavedValue` | Controls/Field/SecretInput |
 | "편집 키 열기" | 10.08 | 키 자리가 `SecretInput keep`("그대로") | Controls/Field/SecretInput |
 | "편집 확인 중" | 10.09 | `SecretInput keep`, `DialogFormFooter busy` | Controls/Field/SecretInput, Controls/Overlay/DialogFormFooter |
