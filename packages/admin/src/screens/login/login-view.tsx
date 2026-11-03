@@ -125,7 +125,7 @@ function SignIn({
 			<Stack gap={20}>
 				{passwordAction ? (
 					<form method="post" action={passwordAction}>
-						<Stack gap={32}>
+						<Stack gap={12}>
 							<Stack gap={24}>
 								<EmailField t={t} error={error === "email" ? t("errorEmail") : undefined} />
 								<PasswordField
@@ -179,24 +179,26 @@ function FirstAdmin({
 	return (
 		<form method="post" action={action}>
 			<Stack gap={12}>
-				<Stack gap={32}>
+				<Stack gap={12}>
 					<Stack gap={24}>
 						<EmailField t={t} error={has("email") ? t("errorEmail") : undefined} />
-						<PasswordField
-							id="password"
-							label={t("password")}
-							autoComplete="new-password"
-							minLength={minPasswordLength}
-							placeholder={t("passwordHint", { min: minPasswordLength })}
-							error={has("password") ? t("errorPassword", { min: minPasswordLength }) : undefined}
-						/>
-						<PasswordField
-							id="confirm"
-							label={t("confirmPassword")}
-							autoComplete="new-password"
-							minLength={minPasswordLength}
-							error={has("confirm") ? t("errorConfirm") : undefined}
-						/>
+						<Stack gap={16}>
+							<PasswordField
+								id="password"
+								label={t("password")}
+								autoComplete="new-password"
+								minLength={minPasswordLength}
+								placeholder={t("passwordHint", { min: minPasswordLength })}
+								error={has("password") ? t("errorPassword", { min: minPasswordLength }) : undefined}
+							/>
+							<PasswordField
+								id="confirm"
+								label={t("confirmPassword")}
+								autoComplete="new-password"
+								minLength={minPasswordLength}
+								error={has("confirm") ? t("errorConfirm") : undefined}
+							/>
+						</Stack>
 					</Stack>
 					<Button type="submit" variant="primary" width="full">
 						{t("createFirstAdmin")}
@@ -268,7 +270,10 @@ function PasswordField({
 				aria-invalid={error ? true : undefined}
 				aria-describedby={error ? `${id}-error` : undefined}
 			/>
-			{error ? <FormFieldError id={`${id}-error`}>{error}</FormFieldError> : null}
+			{/* The line stays when empty: the error comes back after a send, and the button must not move. */}
+			<FormFieldError id={`${id}-error`} reserve>
+				{error}
+			</FormFieldError>
 		</FormField>
 	);
 }

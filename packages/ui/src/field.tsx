@@ -170,13 +170,20 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 	);
 }
 
+/**
+ * The error line under a field. `reserve` keeps the line (20px, 4px below the control) while it is empty, for a field whose error comes back
+ * after the form is sent (a password): the button under it does not move when the error appears.
+ */
 function FormFieldError({
 	className,
 	children,
 	errors,
+	reserve = false,
 	...props
 }: React.ComponentProps<"div"> & {
 	errors?: Array<{ message?: string } | undefined>;
+	/** Keep the empty line so the form does not move when the error appears. */
+	reserve?: boolean;
 }) {
 	const content = useMemo(() => {
 		if (children) {
@@ -200,7 +207,7 @@ function FormFieldError({
 		);
 	}, [children, errors]);
 
-	if (!content) {
+	if (!content && !reserve) {
 		return null;
 	}
 
@@ -208,7 +215,11 @@ function FormFieldError({
 		<div
 			role="alert"
 			data-slot="field-error"
-			className={cn("whitespace-pre-wrap font-normal text-monti-danger text-monti-label", className)}
+			className={cn(
+				"whitespace-pre-wrap font-normal text-monti-danger text-monti-label",
+				reserve && "mt-monti-4 min-h-5",
+				className,
+			)}
 			{...props}
 		>
 			{content}

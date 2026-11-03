@@ -11,8 +11,8 @@
 | 사이트 이름 "example.dev" | `Heading as="h1" variant="page"`, 그 아래 잉크 선 `Box border="bottom-contrast"` | 로고는 없고 이름을 글자로 쓴다. 잉크 선은 편집기 제목 아래 선과 같다. |
 | 안내 제목 ("첫 관리자 만들기", "로그인이 설정되지 않았어요") | `Text variant="title"` | 첫 관리자와 로그인 없음에서만 보인다. |
 | "이메일" | `FormField` + `FormFieldLabel` + `Input`(`autoComplete="username"`) | 모든 필드가 필수인 짧은 폼이라 `*`를 붙이지 않는다([field.md](../components/field.md)). |
-| "비밀번호" | `FormField` + `FormFieldLabel` + `Input type="password"`(로그인은 `current-password`, 첫 관리자는 `new-password`) + `FormFieldError` | 틀리면 `aria-invalid`와 오류 한 줄("이메일 또는 비밀번호가 맞지 않아요.", "1분 뒤에 다시 시도해 주세요.", "10자 이상이어야 해요."). 첫 관리자의 길이 조건 "10자 이상"은 플레이스홀더로 말한다. 보드는 이것을 필드 아래 설명 줄로 그리지만 [field.md](../components/field.md)를 따라 플레이스홀더로 옮긴다. |
-| "비밀번호 확인" | `FormField` + `FormFieldLabel` + `Input type="password"`(`new-password`) + `FormFieldError` | 첫 관리자에서만. 다르면 "두 비밀번호가 같지 않아요." |
+| "비밀번호" | `FormField` + `FormFieldLabel` + `Input type="password"`(로그인은 `current-password`, 첫 관리자는 `new-password`) + `FormFieldError reserve` | 오류 줄은 비어 있어도 자리를 지킨다(아래 4px, 높이 20px). 오류가 떠도 버튼이 움직이지 않는다. 필드와 버튼 사이는 12px다. 틀리면 `aria-invalid`와 오류 한 줄("이메일 또는 비밀번호가 맞지 않아요.", "1분 뒤에 다시 시도해 주세요.", "10자 이상이어야 해요."). 첫 관리자의 길이 조건 "10자 이상"은 플레이스홀더로 말한다. 보드는 이것을 필드 아래 설명 줄로 그리지만 [field.md](../components/field.md)를 따라 플레이스홀더로 옮긴다. |
+| "비밀번호 확인" | `FormField` + `FormFieldLabel` + `Input type="password"`(`new-password`) + `FormFieldError reserve` | 첫 관리자에서만. 비밀번호 필드와 16px 떨어진다. 다르면 "두 비밀번호가 같지 않아요." |
 | "로그인" · "생성" | `Button variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`. |
 | "또는" 줄 | `Separator label="또는"` | 비밀번호와 GitHub가 둘 다 있을 때만. |
 | "GitHub로 로그인" | `Button width="full"`(앞에 GitHub 아이콘). 비밀번호 폼이 있으면 `variant="secondary"`, GitHub만 있으면 `variant="primary"` | GitHub 인증으로 간다. 검은 알약은 화면에 하나다. |

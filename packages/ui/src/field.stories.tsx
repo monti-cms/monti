@@ -68,6 +68,31 @@ export const States: Story = {
 	),
 };
 
+/** A reserved error line: empty before the send, then the error; the button under it stays where it was. */
+export const ReservedError: Story = {
+	render: () => (
+		<Stack gap={32}>
+			{[undefined, "이메일 또는 비밀번호가 맞지 않아요."].map((error) => (
+				<Stack key={error ?? "empty"} gap={12}>
+					<FormField data-invalid={error ? "true" : undefined}>
+						<FormFieldLabel htmlFor={`r-${error ? "bad" : "ok"}`}>비밀번호</FormFieldLabel>
+						<Input
+							id={`r-${error ? "bad" : "ok"}`}
+							type="password"
+							aria-invalid={error ? true : undefined}
+							defaultValue="••••••••••"
+						/>
+						<FormFieldError reserve>{error}</FormFieldError>
+					</FormField>
+					<Button variant="primary" width="full">
+						로그인
+					</Button>
+				</Stack>
+			))}
+		</Stack>
+	),
+};
+
 function WithFill({ initial, focus = false }: { initial: string; focus?: boolean }) {
 	const [value, setValue] = useState(initial);
 	const [proposal, setProposal] = useState(false);
