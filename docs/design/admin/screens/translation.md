@@ -96,10 +96,10 @@
 | 원문 보기 | `Segmented size="sm" inline`, "나란히"가 골라짐 | "끔"과 "옆 창"은 EditorTranslate로 돌아간다. |
 | 머리 행 (원문 · 한국어 · 10. 26 수정 / 번역 · English · 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 이름은 잉크 선 아래 mono 작은 줄. |
 | 블록 한 행 | `CompareRow`(`name` 블록 종류, `source` 원문, `translation` 번역) | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 쓰고 있는 행은 `current`. 원문 칸은 글로만 보인다. |
-| 제목 행 | `CompareRow` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. `CompareRow`에 제목 행이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. |
 | 여백의 상태 "원문 바뀜" · "원문에 추가" | `CompareRow`의 `note` | 둘 다 주황. 원문 쪽 바뀐 말은 `Highlight`. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
-| 코드 블록의 번역 칸 | 원문 블록을 흐린 글자로, 아래 `TextButton variant="underline"` "English에서만 따로 고치기" | 누르는 순간 이 언어용 사본을 만든다. 원문과 같은 블록을 흐리게 보이는 부품이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
+| 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "English에서만 따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |
 

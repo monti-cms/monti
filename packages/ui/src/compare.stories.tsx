@@ -9,12 +9,12 @@ import {
 	CompareProperty,
 	CompareRow,
 	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,
 	Heading,
 	Highlight,
-	Stack,
 	Text,
 	TextButton,
 } from "./index";
@@ -114,11 +114,13 @@ export const TextOnly: Story = {
 	),
 };
 
+const CODE = "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}";
+
 /**
  * A translation next to its source, block by block (the translation's 나란히 view): the kind of each block on the left, the source on the tool ground,
  * the translation on the page. A block whose source changed since it was translated says so under its kind, and the words that changed are highlighted;
  * a block added to the source and not translated yet shows the source, faint, in the translation's place. A block the translation shares with its source
- * (code) shows it the same way, with the button that makes a copy of its own.
+ * (code) is `CompareShared`: the source's block, faint, with the button that makes a copy of its own. The title row is `title`.
  */
 export const TranslationRows: Story = {
 	render: () => (
@@ -127,6 +129,7 @@ export const TranslationRows: Story = {
 				<CompareRow head source="원문 · 한국어 · 10. 26 수정" translation="번역 · English · 09. 20 수정" />
 				<CompareRow
 					name="제목"
+					title
 					source={<Heading variant="page">첫 번째 글</Heading>}
 					translation={<Heading variant="page">The first post</Heading>}
 				/>
@@ -156,18 +159,11 @@ export const TranslationRows: Story = {
 				/>
 				<CompareRow
 					name="코드 블록"
-					source={
-						<CompareCode>{"export default function Post({ title }) {\n  return <h1>{title}</h1>;\n}"}</CompareCode>
-					}
+					source={<CompareCode>{CODE}</CompareCode>}
 					translation={
-						<Stack gap={8}>
-							<Text as="div" tone="faint">
-								<CompareCode>{"export default function Post({ title }) {\n  return <h1>{title}</h1>;\n}"}</CompareCode>
-							</Text>
-							<div>
-								<TextButton variant="underline">English에서만 따로 고치기</TextButton>
-							</div>
-						</Stack>
+						<CompareShared action={<TextButton variant="underline">English에서만 따로 고치기</TextButton>}>
+							<CompareCode>{CODE}</CompareCode>
+						</CompareShared>
 					}
 				/>
 				<CompareRow

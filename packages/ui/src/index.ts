@@ -34,6 +34,7 @@ export const CompareParagraph = close(open.CompareParagraph);
 export const CompareProperty = close(open.CompareProperty);
 export const CompareRow = close(open.CompareRow);
 export const CompareRows = close(open.CompareRows);
+export const CompareShared = close(open.CompareShared);
 export const CompareSide = close(open.CompareSide);
 export const CompareText = close(open.CompareText);
 export const CompareTitle = close(open.CompareTitle);

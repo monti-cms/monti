@@ -125,24 +125,28 @@ function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source
  * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block
- * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`.
+ * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`. The row of the entry's
+ * title is `title`: the two titles in `Heading variant="page"`, its name set lower to sit by them.
  */
 function CompareRow({
 	name,
 	note,
 	head = false,
+	title = false,
 	current = false,
 	source,
 	translation,
 	className,
 	...props
-}: Omit<React.ComponentProps<"div">, "children"> & {
+}: Omit<React.ComponentProps<"div">, "children" | "title"> & {
 	/** The kind of block ("문단"); empty on the head row. */
 	name?: React.ReactNode;
 	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. */
 	note?: React.ReactNode;
 	/** The head row: each side's name, date and language in the small mono line. */
 	head?: boolean;
+	/** The title row: the two titles at the page heading size. */
+	title?: boolean;
 	current?: boolean;
 	source: React.ReactNode;
 	translation: React.ReactNode;
@@ -151,6 +155,7 @@ function CompareRow({
 		<div
 			data-slot="compare-row"
 			data-current={current || undefined}
+			data-title={title || undefined}
 			className={cn(
 				"grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] items-stretch border-monti-muted border-b last:border-b-0",
 				head && "border-t border-t-monti-contrast font-mono text-monti-micro text-monti-subtle",
@@ -158,14 +163,53 @@ function CompareRow({
 			)}
 			{...props}
 		>
-			<span className="flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle">
+			<span
+				className={cn(
+					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle",
+					title && "pt-monti-20",
+				)}
+			>
 				{name}
 				{note && <span className="text-monti-warning">{note}</span>}
 			</span>
-			<div className={cn("min-w-0 bg-monti-tool px-monti-24 py-monti-16", !head && "text-monti-muted")}>{source}</div>
-			<div className={cn("min-w-0 border-monti-default border-l px-monti-24 py-monti-16", current && "bg-monti-block")}>
+			<div
+				className={cn(
+					"min-w-0 bg-monti-tool px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0 **:data-[slot=compare-code]:bg-monti-selected",
+					!head && "text-monti-muted",
+				)}
+			>
+				{source}
+			</div>
+			<div
+				className={cn(
+					"min-w-0 border-monti-default border-l px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0",
+					current && "bg-monti-block",
+				)}
+			>
 				{translation}
 			</div>
+		</div>
+	);
+}
+
+/**
+ * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
+ * `TextButton variant="underline"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`.
+ */
+function CompareShared({
+	action,
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div"> & { action: React.ReactNode }) {
+	return (
+		<div
+			data-slot="compare-shared"
+			className={cn("flex min-w-0 flex-col items-start gap-monti-8 text-monti-faint", className)}
+			{...props}
+		>
+			<div className="w-full">{children}</div>
+			{action}
 		</div>
 	);
 }
@@ -184,6 +228,7 @@ export {
 	CompareProperty,
 	CompareRow,
 	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,
