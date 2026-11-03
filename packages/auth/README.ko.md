@@ -159,7 +159,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 
 ### 다른 credentials 프로바이더
 
-`password()`는 평범한 credentials 프로바이더다. 따로 패키지로 만든 것도 모양이 같다. `setup`이 Auth.js `Credentials` 프로바이더(`id`는 `LoginProvider`의 것)를 돌려주고, 사용자는 `context.storage(plugin)`에 두고, 해시와 횟수 제한은 `authorize`에서 한다. 코어가 `credentials: true`로 내놓는 프로바이더마다 로그인 화면이 이메일·비밀번호 입력 칸을 보여 주고, `signIn`이 보낸 `email`과 `password`를 `/callback/<id>`로 넘긴다. 컴파일 검사를 거친 예가 `src/__test__/providers.test.ts`에 있다.
+`password()`는 평범한 credentials 프로바이더다. 따로 패키지로 만든 것도 모양이 같다. `setup`이 Auth.js `Credentials` 프로바이더(`id`는 `LoginProvider`의 것)를 돌려주고, 사용자는 `context.storage(plugin)`에 두고, 해시와 횟수 제한은 `authorize`에서 한다. 코어가 `credentials: true`로 내놓는 프로바이더마다 로그인 화면이 이메일·비밀번호 입력 칸을 보여 주고, `signIn`이 보낸 `email`과 `password`를 `/callback/<id>`로 넘긴다.
 
 ## 로그인 흐름
 

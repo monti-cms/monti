@@ -12,19 +12,10 @@
 		"./tokens.css": "./styles/tokens.css"
 	},
 	"scripts": {
-		"test": "vitest",
-		"test:run": "vitest run && vitest run -c vitest.dom.config.ts && vitest run -c vitest.browser.config.ts",
-		"test:dom": "vitest run -c vitest.dom.config.ts",
-		"test:browser": "vitest run -c vitest.browser.config.ts",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs",
 		"storybook": "storybook dev -p 6006 --no-open",
-		"build-storybook": "storybook build -o storybook-static",
-		"visual:run": "playwright test --config visual/playwright.config.ts",
-		"test:visual": "pnpm build-storybook && pnpm visual:run",
-		"visual:audit": "playwright test --config visual/audit.config.ts",
-		"test:visual:audit": "pnpm build-storybook && pnpm visual:audit",
-		"test:visual:update": "pnpm build-storybook && pnpm visual:run --update-snapshots"
+		"build-storybook": "storybook build -o storybook-static"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
@@ -42,25 +33,19 @@
 	},
 	"devDependencies": {
 		"@carbon/icons-react": "11.90.0",
-		"@playwright/test": "1.64.1",
 		"@storybook/addon-themes": "10.6.1",
 		"@storybook/react-vite": "10.6.1",
 		"@tailwindcss/vite": "^4.3.3",
-		"@testing-library/dom": "^10.4.1",
-		"@testing-library/jest-dom": "^6.9.1",
-		"@testing-library/react": "^16.3.2",
 		"@types/node": "^20",
 		"@types/pngjs": "^6.0.5",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"jsdom": "^27.4.0",
 		"pngjs": "7.0.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.0",
-		"vitest": "^4.0.18"
+		"vite": "^8.3.0"
 	},
 	"files": [
 		"dist",

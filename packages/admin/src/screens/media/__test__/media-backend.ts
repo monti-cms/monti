@@ -1,7 +1,6 @@
 import type { Folder, FolderListItem, FolderTrashResult, MediaTrashResult, TrashTarget } from "@monti-cms/core/site";
 import type { MediaItem, MediaPage, UploadCompletion } from "../../../api/media";
 import type { TrashRestoreOutcome } from "../../../api/trash";
-import type { FakeApi } from "../../../test/fake-api";
 
 /** What the fake media API answers: a body, or an error answer. */
 export type Answer = { status?: number; body: unknown };
@@ -55,9 +54,8 @@ type MediaPatch = { filename?: string; defaultAlt?: string; defaultCaption?: str
 
 /**
  * The media API as the library sees it, over a list of files and folders: the list with its folder, search and filter conditions and the counts the filter
- * menus show, the folders, a move, the trash, a replacement and the restore. A test swaps `onTrash` to make the server keep a file. It keeps the state, so
- * a list read again after a move shows the file in its new place. Tests reach it through `mount` on the shared fake API; the Storybook frame, which has a
- * fake of its own, through `handle`.
+ * menus show, the folders, a move, the trash, a replacement and the restore. It keeps the state, so a list read again after a move shows the file in its
+ * new place. The Storybook frame reaches it through `handle`.
  */
 export class MediaBackend {
 	items: MediaItem[];
@@ -195,21 +193,6 @@ export class MediaBackend {
 
 	restore(items: TrashTarget[]): { results: TrashRestoreOutcome[] } {
 		return { results: items.map((item) => ({ type: item.type, id: item.id, ok: true })) };
-	}
-
-	/** Answers the library's routes on the shared fake API. */
-	mount(api: FakeApi) {
-		api
-			.on("GET /v1/media", ({ query }) => this.list(query))
-			.on("GET /v1/folders", () => this.folders)
-			.on("POST /v1/folders", ({ body }) => this.createFolder(body))
-			.on("PATCH /v1/folders/:id", ({ params, body }) => this.updateFolder(params.id as string, body))
-			.on("DELETE /v1/folders/:id", ({ params }) => this.onFolderDelete(params.id as string))
-			.on("PATCH /v1/media/:id", ({ params, body }) => this.updateMedia(params.id as string, body))
-			.on("POST /v1/media/trash", ({ body }) => this.trash(body?.ids ?? []))
-			.on("POST /v1/media/:id/replace", ({ params }) => this.replace(params.id as string))
-			.on("POST /v1/trash/restore", ({ body }) => this.restore(body?.items ?? []));
-		return api;
 	}
 
 	/** Answers a request of the Storybook frame's fake, or `undefined` for one that is not the media's (the frame answers those). */

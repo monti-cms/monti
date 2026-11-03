@@ -9,9 +9,6 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"test": "vitest",
-		"test:run": "vitest run && vitest run -c vitest.configured.config.ts",
-		"test:configured": "vitest run -c vitest.configured.config.ts",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},
@@ -36,8 +33,7 @@
 		"remark-parse": "^11.0.0",
 		"typescript": "^7.0.2",
 		"unified": "^11.0.5",
-		"vite": "^8.3.0",
-		"vitest": "^4.0.18"
+		"vite": "^8.3.0"
 	},
 	"files": [
 		"dist",

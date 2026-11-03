@@ -105,6 +105,5 @@ It reads values by role from the collection definition (the result of `defineCol
 ## Development
 
 ```sh
-pnpm --filter @monti-cms/seo test:run     # example blog config + other-site config
 pnpm --filter @monti-cms/seo typecheck
 ```

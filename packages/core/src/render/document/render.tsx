@@ -113,12 +113,6 @@ const warnMissingComponent = (name: string, component: string): void => {
 	);
 };
 
-/**
- * Forgets which block names were already warned about (for tests).
- * @internal For tests, which share the module.
- */
-export const resetMissingComponentWarnings = (): void => warnedMissingComponents.clear();
-
 export const renderDocumentTree = (
 	nodes: readonly CmsNode[],
 	input: RenderInput,

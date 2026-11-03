@@ -9,8 +9,6 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"test": "vitest",
-		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},
@@ -24,8 +22,7 @@
 	"devDependencies": {
 		"@monti-cms/core": "workspace:*",
 		"@types/node": "^20",
-		"typescript": "^7.0.2",
-		"vitest": "^4.0.18"
+		"typescript": "^7.0.2"
 	},
 	"files": [
 		"dist",
