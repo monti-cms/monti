@@ -19,8 +19,8 @@ import {
 	PageToolbar,
 	PageToolbarEnd,
 	Segmented,
+	Separator,
 	TextButton,
-	ToolbarDivider,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { folderChoices, type MediaState, selectAllState, toggleKind, withKind } from "./media-state";
@@ -102,7 +102,7 @@ function FilterBar({ library }: { library: MediaLibraryView }) {
 				))}
 			{library.scoped && currentFolder && (
 				<>
-					<ToolbarDivider />
+					<Separator orientation="vertical" length="control" flush />
 					<Segmented
 						aria-label={t("scope.label")}
 						size="sm"

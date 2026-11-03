@@ -25,7 +25,6 @@ import {
 	FloatingBar,
 	FloatingBarButton,
 	FormatBarRequest,
-	FormatBarSeparator,
 	FormatButton,
 	type FormatMark,
 	Icon,
@@ -697,7 +696,7 @@ export function InlineBubble({
 		return groups.map((group, index) => (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the groups are fixed in number and order.
 			<Fragment key={index}>
-				{index > 0 && <FormatBarSeparator />}
+				{index > 0 && <Separator orientation="vertical" length="bar" />}
 				{group}
 			</Fragment>
 		));

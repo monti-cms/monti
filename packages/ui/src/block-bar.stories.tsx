@@ -1,8 +1,9 @@
 import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BlockBarSeparator, ResizeCorner } from "./block-bar";
+import { ResizeCorner } from "./block-bar";
 import { FloatingBar, FloatingBarButton } from "./floating-bar";
 import { Image } from "./image";
+import { Separator } from "./separator";
 import { Stack } from "./stack";
 
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -29,7 +30,7 @@ export const Playground: Story = {
 			<FloatingBarButton label="오른쪽">
 				<TextAlignRight aria-hidden />
 			</FloatingBarButton>
-			<BlockBarSeparator />
+			<Separator orientation="vertical" length="bar" />
 			<FloatingBarButton label="설정">
 				<SettingsAdjust aria-hidden />
 			</FloatingBarButton>
@@ -54,7 +55,7 @@ export const OnImage: Story = {
 				<FloatingBarButton label="오른쪽">
 					<TextAlignRight aria-hidden />
 				</FloatingBarButton>
-				<BlockBarSeparator />
+				<Separator orientation="vertical" length="bar" />
 				<FloatingBarButton label="설정">
 					<SettingsAdjust aria-hidden />
 				</FloatingBarButton>

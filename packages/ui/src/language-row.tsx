@@ -1,7 +1,8 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { ToolbarDivider } from "./page-header";
+import {} from "./page-header";
+import { Separator } from "./separator";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
@@ -71,7 +72,7 @@ function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: 
 			<span className="font-semibold text-monti-default text-monti-note">{flag}</span>
 			{children && (
 				<>
-					<ToolbarDivider className="mx-monti-12" />
+					<Separator orientation="vertical" length="control" flush className="mx-monti-12" />
 					{children}
 				</>
 			)}

@@ -1,7 +1,8 @@
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
-import { PageToolbar, PageToolbarEnd, type SelectAll, ToolbarDivider } from "./page-header";
+import { PageToolbar, PageToolbarEnd, type SelectAll } from "./page-header";
+import { Separator } from "./separator";
 import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
@@ -54,14 +55,14 @@ function BulkToolbar({
 			<b className="font-bold">{label}</b>
 			{request && (
 				<>
-					<ToolbarDivider />
+					<Separator orientation="vertical" length="control" flush />
 					<TextButton onClick={request.onClick} className="inline-flex items-center gap-monti-4 text-monti-proposal">
 						<Spark className="size-monti-icon-xs" />
 						{request.label}
 					</TextButton>
 				</>
 			)}
-			{children && <ToolbarDivider />}
+			{children && <Separator orientation="vertical" length="control" flush />}
 			{children}
 			<PageToolbarEnd>
 				<TextButton variant="quiet" onClick={onClear}>

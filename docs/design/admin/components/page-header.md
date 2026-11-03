@@ -26,7 +26,7 @@
 
 ### 코드
 
-`PageToolbar`(오른쪽 묶음은 `PageToolbarEnd`, 짧은 선은 `ToolbarDivider`). 칩 행 부품은 없다. 필터는 열 이름 뒤의 점으로 보인다.
+`PageToolbar`(오른쪽 묶음은 `PageToolbarEnd`, 짧은 선은 `Separator orientation="vertical" length="control" flush`). 칩 행 부품은 없다. 필터는 열 이름 뒤의 점으로 보인다.
 
 ## 넓은 창
 

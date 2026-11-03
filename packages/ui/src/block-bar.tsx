@@ -2,12 +2,6 @@
 
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
-import { BAR_SEPARATOR } from "./floating-bar";
-
-/** The line between two groups of tools. */
-function BlockBarSeparator() {
-	return <span data-slot="block-bar-separator" aria-hidden className={BAR_SEPARATOR} />;
-}
 
 /**
  * A square handle on a bottom corner of a selected block (an image); dragging it changes the block's width. The parent is `relative`; the handle
@@ -37,4 +31,4 @@ function ResizeCorner({
 	);
 }
 
-export { BlockBarSeparator, ResizeCorner };
+export { ResizeCorner };

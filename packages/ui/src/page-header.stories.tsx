@@ -3,7 +3,8 @@ import { Button } from "./button";
 import { Caret } from "./caret";
 import { Count } from "./count";
 import { FilterButton } from "./filter-button";
-import { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd, ToolbarDivider } from "./page-header";
+import { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd } from "./page-header";
+import { Separator } from "./separator";
 import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { TextButton } from "./text-button";
 
@@ -60,7 +61,7 @@ function Filters() {
 		<PageToolbarEnd>
 			<FilterButton>태그</FilterButton>
 			<FilterButton>언어</FilterButton>
-			<ToolbarDivider />
+			<Separator orientation="vertical" length="control" flush />
 			<FilterButton>최근 수정순</FilterButton>
 		</PageToolbarEnd>
 	);

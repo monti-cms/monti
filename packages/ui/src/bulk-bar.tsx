@@ -6,7 +6,8 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
 import type { SelectAll } from "./page-header";
-import { ToolbarDivider } from "./page-header";
+import {} from "./page-header";
+import { Separator } from "./separator";
 import { Spark } from "./spark";
 import { TableHead, TableHeader } from "./table";
 import { TextButton } from "./text-button";
@@ -72,7 +73,7 @@ function BulkBar({
 						<span className="font-bold text-monti-default">{label}</span>
 						{request && (
 							<>
-								<ToolbarDivider />
+								<Separator orientation="vertical" length="control" flush />
 								<TextButton
 									onClick={request.onClick}
 									className="inline-flex items-center gap-monti-4 text-monti-proposal"
@@ -82,11 +83,11 @@ function BulkBar({
 								</TextButton>
 							</>
 						)}
-						{(children || more) && <ToolbarDivider />}
+						{(children || more) && <Separator orientation="vertical" length="control" flush />}
 						{children}
 						{more && (
 							<>
-								{children && <ToolbarDivider />}
+								{children && <Separator orientation="vertical" length="control" flush />}
 								<DropdownMenu>
 									<DropdownMenuTrigger
 										aria-label={more.label}

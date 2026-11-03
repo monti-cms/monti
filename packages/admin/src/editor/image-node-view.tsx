@@ -4,7 +4,6 @@ import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	BlockBarSeparator,
 	Count,
 	cn,
 	FloatingBar,
@@ -18,6 +17,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
+	Separator,
 	Switch,
 	Text,
 	TextButton,
@@ -340,7 +340,7 @@ export function ImageBlockView() {
 								<tool.icon aria-hidden />
 							</FloatingBarButton>
 						))}
-						<BlockBarSeparator />
+						<Separator orientation="vertical" length="bar" />
 						<Popover
 							open={isEditing}
 							onOpenChange={(open) => {

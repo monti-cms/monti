@@ -4,7 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Link } from "@carbon/icons-react";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
-import { BAR_BUTTON, BAR_SEPARATOR, FloatingBarButton } from "./floating-bar";
+import { BAR_BUTTON, FloatingBarButton } from "./floating-bar";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -62,11 +62,6 @@ function FormatButton({
 	);
 }
 
-/** The line between two groups of formats. */
-function FormatBarSeparator() {
-	return <span data-slot="format-bar-separator" aria-hidden className={BAR_SEPARATOR} />;
-}
-
 /** The last button of the bar: a blue ✦ and the word that asks the assistant about the selected text. A button shows no shortcut. */
 function FormatBarRequest({
 	label,
@@ -91,4 +86,4 @@ function FormatBarRequest({
 	);
 }
 
-export { FormatBarRequest, FormatBarSeparator, FormatButton, type FormatMark };
+export { FormatBarRequest, FormatButton, type FormatMark };

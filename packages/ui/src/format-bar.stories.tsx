@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FloatingBar } from "./floating-bar";
-import { FormatBarRequest, FormatBarSeparator, FormatButton } from "./format-bar";
+import { FormatBarRequest, FormatButton } from "./format-bar";
 import { UiLabelsProvider } from "./labels";
 import { Highlight } from "./proposal-marks";
+import { Separator } from "./separator";
 import { Text } from "./text";
 
 /**
@@ -33,13 +34,13 @@ function Formats({ pressed = [] }: { pressed?: readonly string[] }) {
 			<FormatButton mark="underline" label="밑줄" shortcut={["mod", "U"]} pressed={on("underline")} />
 			<FormatButton mark="strike" label="취소선" pressed={on("strike")} />
 			<FormatButton mark="code" label="코드" pressed={on("code")} />
-			<FormatBarSeparator />
+			<Separator orientation="vertical" length="bar" />
 			<FormatButton mark="superscript" label="위 첨자" pressed={on("superscript")} />
 			<FormatButton mark="subscript" label="아래 첨자" pressed={on("subscript")} />
 			<FormatButton mark="link" label="링크" shortcut={["mod", "K"]} pressed={on("link")} />
 			<FormatButton mark="footnote" label="각주" pressed={on("footnote")} />
 			<FormatButton mark="more" label="사이트가 더한 서식" />
-			<FormatBarSeparator />
+			<Separator orientation="vertical" length="bar" />
 			<FormatBarRequest label="요청" />
 		</>
 	);
