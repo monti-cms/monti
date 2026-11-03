@@ -135,6 +135,49 @@ function ReviewCompareHead({ before, after }: { before: ReactNode; after: ReactN
 	);
 }
 
+type ReviewBlockProps = {
+	included: boolean;
+	onIncludedChange?: (included: boolean) => void;
+	includeLabel: string;
+	readOnly?: boolean;
+	/** The block's name ("요약", "문단 1"). */
+	label: ReactNode;
+	/** A word under the block's name ("mostly rewritten"), in the warning tone. */
+	note?: ReactNode;
+};
+
+/** The gutter of a change to one block: the check, then the block's name with its note under it. */
+function ReviewGutter({ included, onIncludedChange, includeLabel, readOnly, label, note }: ReviewBlockProps) {
+	return (
+		<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
+			<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} readOnly={readOnly} />
+			<span className="flex flex-col">
+				{label}
+				{note !== undefined && <b className="font-mono font-normal text-monti-meta text-monti-warning">{note}</b>}
+			</span>
+		</span>
+	);
+}
+
+/**
+ * One change to a block of an entry, on one line (the "한 줄" view of a group like 다듬기): the check and the block's name in the gutter, as in
+ * `ReviewCompare`, then the block's text with the words taken out (`Del`) and put in (`Ins`) where they are.
+ */
+function ReviewLine({ className, children, ...props }: ReviewBlockProps & { className?: string; children: ReactNode }) {
+	return (
+		<div
+			data-slot="review-line"
+			className={cn(
+				"-mx-monti-12 grid grid-cols-[104px_minmax(0,1fr)] items-stretch border-monti-muted border-b px-monti-12 hover:bg-monti-muted",
+				className,
+			)}
+		>
+			<ReviewGutter {...props} />
+			<div className="min-w-0 py-monti-12 text-monti-reading">{children}</div>
+		</div>
+	);
+}
+
 /** One change side by side: the check and the field's name in the gutter, the text as it is now (on the tool ground), and as proposed. */
 function ReviewCompare({
 	included,
@@ -145,14 +188,7 @@ function ReviewCompare({
 	note,
 	before,
 	after,
-}: {
-	included: boolean;
-	onIncludedChange?: (included: boolean) => void;
-	includeLabel: string;
-	readOnly?: boolean;
-	label: ReactNode;
-	/** A word under the field's name ("mostly rewritten"), in the warning tone. */
-	note?: ReactNode;
+}: ReviewBlockProps & {
 	before: ReactNode;
 	after: ReactNode;
 }) {
@@ -161,18 +197,14 @@ function ReviewCompare({
 			data-slot="review-compare"
 			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
 		>
-			<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
-				<IncludeCheck
-					included={included}
-					onIncludedChange={onIncludedChange}
-					label={includeLabel}
-					readOnly={readOnly}
-				/>
-				<span className="flex flex-col">
-					{label}
-					{note !== undefined && <b className="font-mono font-normal text-monti-meta text-monti-warning">{note}</b>}
-				</span>
-			</span>
+			<ReviewGutter
+				included={included}
+				onIncludedChange={onIncludedChange}
+				includeLabel={includeLabel}
+				readOnly={readOnly}
+				label={label}
+				note={note}
+			/>
 			<div className="min-w-0 bg-monti-tool px-monti-20 py-monti-12 text-monti-muted text-monti-reading">{before}</div>
 			<div className="min-w-0 border-monti-default border-l px-monti-20 py-monti-12 text-monti-reading">{after}</div>
 		</div>
@@ -209,4 +241,4 @@ function ReviewMore({
 	);
 }
 
-export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote };
+export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewLine, ReviewMore, ReviewQuote };

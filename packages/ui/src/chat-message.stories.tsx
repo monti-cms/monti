@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, ChatMessage } from "./index";
+import { Box, ChatEntryLink, ChatEntryList, ChatMessage, Stack } from "./index";
 
 /** A message: the admin's on the right in a paper bubble, the assistant's as plain text with no ground. */
 const meta = {
@@ -32,3 +32,20 @@ export const Assistant: Story = {
 
 /** The answer is still coming: a thin blinking caret after the last word. */
 export const Streaming: Story = { args: { author: "assistant", streaming: true, children: "요약이 빈 글 11편을 찾" } };
+
+/** An answer that names entries: a numbered list under its words, each name a link to the entry in the editor with its slug after it. */
+export const EntryList: Story = {
+	render: () => (
+		<Stack gap={12}>
+			<ChatMessage>요약이 빈 글은 두 편이에요.</ChatMessage>
+			<ChatEntryList>
+				<ChatEntryLink href="#edited-post" slug="/edited-post">
+					발행 후 고친 글
+				</ChatEntryLink>
+				<ChatEntryLink href="#draft-post" slug="/draft-post">
+					쓰는 중인 글
+				</ChatEntryLink>
+			</ChatEntryList>
+		</Stack>
+	),
+};

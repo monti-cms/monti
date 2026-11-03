@@ -1,5 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, Ins, ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./index";
+import {
+	Box,
+	Ins,
+	ProposalActions,
+	ProposalCard,
+	ProposalEntry,
+	ProposalItem,
+	ProposalResult,
+	ProposalRow,
+} from "./index";
 
 const noop = () => {};
 
@@ -170,6 +179,85 @@ export const FewFiles: Story = {
 			<ProposalItem title="harbor-night.png">
 				<Ins>불이 켜진 밤 항구와 정박한 배들</Ins>
 			</ProposalItem>
+		</ProposalCard>
+	),
+};
+
+/** A field filled on each entry (flow 6): the entry's name, slug and field, then the new text alone, since the old value was empty. */
+export const Entries: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="요약 채우기 · 글 2편"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="검토"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="적용"
+					onApply={noop}
+				/>
+			}
+		>
+			<ProposalEntry
+				name="발행 후 고친 글"
+				slug="/edited-post"
+				field="요약"
+				after="예시 코드를 고친 뒤 다시 정리한 메모. 바뀐 코드와 이유를 한 번에 봅니다."
+			/>
+			<ProposalEntry
+				name="쓰는 중인 글"
+				slug="/draft-post"
+				field="요약"
+				after="글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."
+			/>
+		</ProposalCard>
+	),
+};
+
+/** Many entries: the first three, then a quiet "외 4편" line; "검토" opens them all. A value that was there is struck through over the new one. */
+export const ManyEntries: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="요약 고치기 · 글 7편"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="검토"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="적용"
+					onApply={noop}
+				/>
+			}
+		>
+			<ProposalEntry
+				name="발행 후 고친 글"
+				slug="/edited-post"
+				field="요약"
+				before="예시 코드를 고친 메모입니다."
+				after="예시 코드를 고친 뒤 다시 정리한 메모."
+			/>
+			<ProposalEntry
+				name="쓰는 중인 글"
+				slug="/draft-post"
+				field="요약"
+				after="글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."
+			/>
+			<ProposalEntry
+				name="가을 산책"
+				slug="/autumn-walk"
+				field="요약"
+				before="산길을 걸었다."
+				after="단풍이 시작된 산길을 걸으며 본 것들."
+			/>
+			<ProposalRow detail="외 4편" />
 		</ProposalCard>
 	),
 };

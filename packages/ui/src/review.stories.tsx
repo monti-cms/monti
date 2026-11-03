@@ -8,6 +8,7 @@ import {
 	ReviewCompareHead,
 	ReviewGroup,
 	ReviewItem,
+	ReviewLine,
 	ReviewMore,
 	ReviewQuote,
 	Text,
@@ -113,6 +114,40 @@ export const Applied: Story = {
 					</Text>
 				}
 			/>
+		</ReviewGroup>
+	),
+};
+
+/** A group that changes blocks of one entry, on one line: the check and the block's name in the gutter, the text with its marks in place. */
+export const OneLine: Story = {
+	render: () => (
+		<ReviewGroup
+			title="다듬기"
+			meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
+			actions={
+				<>
+					<TextButton variant="underline">편집기에서 보기</TextButton>
+					<TextButton variant="ink">한 줄</TextButton>
+					<TextButton variant="quiet">나란히</TextButton>
+				</>
+			}
+		>
+			<ReviewLine included includeLabel="포함" label="요약">
+				예시 코드를 고친 뒤 다시 정리한 <Del>메모입니다.</Del> <Ins>메모.</Ins> 바뀐 코드와 <Del>그</Del> 이유를 한 번에{" "}
+				<Del>볼 수 있도록 정리했습니다.</Del> <Ins>봅니다.</Ins>
+			</ReviewLine>
+			<ReviewLine included includeLabel="포함" label="문단 1">
+				<Del>처음 글을</Del> 발행하고 나서 예시 코드에 오타가 있다는 걸 <Del>알게 되었습니다. 그래서</Del>{" "}
+				<Ins>알았습니다.</Ins> 코드를 <Del>고치고</Del> <Ins>고치면서</Ins> 글도 함께 손봤습니다.
+			</ReviewLine>
+			<ReviewLine included includeLabel="포함" label="문단 2" note="거의 다시 씀">
+				<Del>
+					바뀐 부분은 크게 두 가지입니다. 첫째, 함수 이름을 더 알기 쉽게 바꿨습니다. 둘째, 오류가 났을 때 무엇이
+					잘못되었는지 알려 주는 메시지를 추가했습니다.
+				</Del>
+				<br />
+				<Ins>함수 이름을 알기 쉽게 바꾸고, 오류가 나면 원인을 알려 주는 메시지를 넣었습니다.</Ins>
+			</ReviewLine>
 		</ReviewGroup>
 	),
 };

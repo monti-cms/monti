@@ -97,8 +97,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 답의 글 목록 | 답의 글 아래 번호 목록, 글마다 이름 `TextButton variant="underline"`(편집기로)과 mono 주소 | 누르면 그 글이 열린다. 답 안에 글 링크 목록을 그리는 부품이 아직 없다. @monti-cms/ui에서 먼저 만든다. |
-| 글마다 바뀌는 카드 | `ProposalCard`(`title` "제안", `summary` "요약 채우기 · 글 2편", `status` "검토 대기" · "적용됨") | 글마다 한 행: 이름(굵게) · 흐린 주소 · 끝에 필드("요약"), 그 아래 `Del` 옛 값과 `Ins` 새 값. 이 행 모양이 아직 없다(`ProposalItem`은 mono 파일 이름 한 줄뿐이다). @monti-cms/ui에서 먼저 만든다. |
+| 답의 글 목록 | 답의 글 아래 `ChatEntryList`, 글마다 `ChatEntryLink`(children 이름, `slug` 주소, `href` 또는 `render` 편집기로) | 번호 목록이다. 이름은 잉크 밑줄 링크, 뒤에 흐린 mono 주소. 누르면 그 글이 열린다. |
+| 글마다 바뀌는 카드 | `ProposalCard`(`title` "제안", `summary` "요약 채우기 · 글 2편", `status` "검토 대기" · "적용됨"), 글마다 `ProposalEntry`(`name`, `slug`, `field` "요약", `before` 옛 값, `after` 새 값) | 이름(굵게) · 흐린 mono 주소 · 끝에 필드, 그 아래 옛 값 `Del`과 새 값 `Ins`. 옛 값이 비었으면 줄 그은 "비어 있음" 없이 새 값만 보인다. 글이 넷 이상이면 처음 셋, 그 아래 `ProposalRow detail` "외 N편". "검토"가 전부를 보인다. |
 | 카드의 발 (검토 대기) | `ProposalActions`(`reviewLabel` "검토", `discardLabel` "버리기", `applyLabel` "적용") | "검토"는 제안 검토 화면으로 간다. |
 | 카드의 발 (적용됨) | `ProposalResult`(`appliedLabel` "✓ 2편에 적용", `time`, `undoLabel` "되돌리기") | |
 
@@ -121,7 +121,7 @@
 | 요청 | `ReviewQuote` | 따옴표로 인용한 요청. |
 | 묶음 | `ReviewGroup`(`title` "다듬기", `meta` "발행 후 고친 글 · 3곳 · 되돌릴 수 있음", `actions`) | 묶음 전체의 일은 `actions`: `TextButton variant="underline"` "편집기에서 보기", `Separator orientation="vertical" length="control"`, 보기 전환 "한 줄 · 나란히"(`Tabs` + `TabsList variant="line"`), 또는 `TextButton` "11편 모두 빼기", "모두 펼치기". |
 | 항목 (한 줄) | `ReviewItem`(`included`, `onIncludedChange`, `includeLabel` "포함", `title`, `path` mono, `end` 필드나 결과, `children`에 `Del` · `Ins`) | 체크로 넣고 뺀다. `end`: "요약", "폴더 없음 → 2024", 결과 뒤 "✓ 2024로 옮김"이나 빨간 "못 옮김 · 그 사이 휴지통으로 감". 체크는 `ReviewItem`이 그린다. |
-| 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1", 그 아래 경고 메모 `Count tone="warning"` "거의 다시 씀". 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. 이 한 단 모양이 아직 없다(`ReviewItem`은 글 하나, `ReviewCompare`는 두 단). @monti-cms/ui에서 먼저 만든다. |
+| 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1", 그 아래 경고 메모 `Count tone="warning"` "거의 다시 씀". 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | `ReviewLine`(`included`, `includeLabel` "포함", `label` 블록 이름, `note` 경고 메모, children 글). 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. |
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
 | 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `note`에 `Count tone="warning"` "거의 다시 씀", `before`, `after`) |  |
 | 긴 묶음 | `ReviewMore`(`moreLabel` "6편 더 보기", `lessLabel` "접기") | 다섯 줄이 넘을 때. |

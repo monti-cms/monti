@@ -14,7 +14,7 @@
 
 ### 코드
 
-`SuggestList`는 빈 패널이다. 패널 높이를 채우고 묶음을 아래에 붙이며, 넘치면 스크롤된다. `SuggestLabel`은 묶음 이름이다(mono 11, `fg-subtle`, 행의 글자와 줄을 맞춘다). `Suggest`는 그 한 행이다. 시작할 요청이다(`request`는 반짝이가 붙은 기본 요청, `recent`는 시계가 붙은 전에 했던 요청). `ChatThread`는 대화다. 24px 간격, 24px 안쪽 여백의 열이고 패널 아래에 붙어 위로 스크롤된다. `ChatDate`는 다시 연 대화의 날짜다. `ChatAnswer`는 어시스턴트의 답 하나다(도구 줄, 글, 카드, 오류 답장을 12px 간격으로). `ToolCallLines`는 이어 온 도구 줄의 묶음이다. `ChatMessage`: `user`는 오른쪽의 종이 말풍선이고, `assistant`는 바탕 없는 그냥 글이다. `context`는 말풍선 안 위의 "고른 글 2편", `request`는 앞의 파란 반짝이다. `streaming`은 답이 아직 오는 동안 마지막 단어 뒤에 깜박이는 얇은 커서를 보인다. `ToolCallLine`: 호출 하나를 mono 한 줄로 보인다. 어디까지 왔는지 표시(돌아가는 표시, ✓ 완료, 빨간 × 실패)하고, 한 일을 말로 적는다. `details`가 있으면 줄이 열려 입력과 결과를 보이고(꺾쇠는 가리키거나 포커스가 있거나 열렸을 때만 보인다), 없으면 그냥 줄이다. `statusLabel`은 스크린 리더용 상태 설명이고 그려지지 않는다.
+`SuggestList`는 빈 패널이다. 패널 높이를 채우고 묶음을 아래에 붙이며, 넘치면 스크롤된다. `SuggestLabel`은 묶음 이름이다(mono 11, `fg-subtle`, 행의 글자와 줄을 맞춘다). `Suggest`는 그 한 행이다. 시작할 요청이다(`request`는 반짝이가 붙은 기본 요청, `recent`는 시계가 붙은 전에 했던 요청). `ChatThread`는 대화다. 24px 간격, 24px 안쪽 여백의 열이고 패널 아래에 붙어 위로 스크롤된다. `ChatDate`는 다시 연 대화의 날짜다. `ChatAnswer`는 어시스턴트의 답 하나다(도구 줄, 글, 카드, 오류 답장을 12px 간격으로). `ToolCallLines`는 이어 온 도구 줄의 묶음이다. `ChatMessage`: `user`는 오른쪽의 종이 말풍선이고, `assistant`는 바탕 없는 그냥 글이다. `context`는 말풍선 안 위의 "고른 글 2편", `request`는 앞의 파란 반짝이다. `streaming`은 답이 아직 오는 동안 마지막 단어 뒤에 깜박이는 얇은 커서를 보인다. `ToolCallLine`: 호출 하나를 mono 한 줄로 보인다. 어디까지 왔는지 표시(돌아가는 표시, ✓ 완료, 빨간 × 실패)하고, 한 일을 말로 적는다. `details`가 있으면 줄이 열려 입력과 결과를 보이고(꺾쇠는 가리키거나 포커스가 있거나 열렸을 때만 보인다), 없으면 그냥 줄이다. `statusLabel`은 스크린 리더용 상태 설명이고 그려지지 않는다. `ChatEntryList`는 답이 가리키는 글의 번호 목록이다(답의 `ChatMessage` 아래, 행 높이 26px). 한 행은 `ChatEntryLink`다. 글 이름은 잉크 밑줄 링크(`href`, 라우터 링크는 `render`, 또는 `onClick`)로 편집기에서 그 글을 열고, 뒤에 `slug`가 흐린 mono로 붙는다.
 
 ## 제안 카드
 
@@ -22,7 +22,7 @@
 
 ### 코드
 
-`ProposalCard`: `title`, `summary`(mono 11의 양), `status`와 `statusTone`(`warning` 기다림, `success` 적용, `subtle` 되돌림·버림), `muted`(버림), 맨 아래 `footer`, 그 밑 `after`(못 한 항목). `ProposalRow`: 묶음 한 줄(`name`, `detail`, `count`, 못 한 항목은 `tone="danger"`, `detail`만 주면 흐린 "외 N개" 줄). `ProposalItem`: 파일 이름(mono)과 그 새 글. `ProposalActions`: 기다리는 제안의 맨 아래("상세 보기"는 검토 화면이 있을 때만, `busy`면 적용 알약이 일하는 중). `ProposalResult`: 적용된 제안의 맨 아래(적용 수 ✓, 못 한 수, 시각, "모두 되돌리기").
+`ProposalCard`: `title`, `summary`(mono 11의 양), `status`와 `statusTone`(`warning` 기다림, `success` 적용, `subtle` 되돌림·버림), `muted`(버림), 맨 아래 `footer`, 그 밑 `after`(못 한 항목). `ProposalRow`: 묶음 한 줄(`name`, `detail`, `count`, 못 한 항목은 `tone="danger"`, `detail`만 주면 흐린 "외 N개" 줄). `ProposalItem`: 파일 이름(mono)과 그 새 글. `ProposalEntry`: 글 하나의 바뀜(`name` 굵게, `slug` 흐린 mono, 끝에 `field`, 그 아래 `before`를 `Del`로, `after`를 `Ins`로). `before`가 비면 `Del` 줄 없이 새 값만 보인다. 카드는 처음 세 글만 보이고, 그 뒤는 `ProposalRow detail` "외 N편"이다. `ProposalActions`: 기다리는 제안의 맨 아래("상세 보기"는 검토 화면이 있을 때만, `busy`면 적용 알약이 일하는 중). `ProposalResult`: 적용된 제안의 맨 아래(적용 수 ✓, 못 한 수, 시각, "모두 되돌리기").
 
 ## 검토 화면
 
@@ -30,7 +30,7 @@
 
 ### 코드
 
-`ReviewQuote`(인용한 요청), `ReviewGroup`(`title`, `meta`, `actions`), `ReviewItem`(`included`·`onIncludedChange`·`includeLabel`, `title`, `path`, `end`, 바뀌는 글은 `children`, 그사이 바뀐 항목은 `muted`), `ReviewCompareHead`(나란히의 "지금 / 제안"), `ReviewCompare`(나란히 한 항목: 체크와 이름, 지금, 제안), `ReviewMore`(긴 묶음의 "N편 더 보기 / 접기", 꺾쇠가 뒤집힌다). 적용된 제안이나 그사이 바뀐 항목의 체크는 `readOnly`다(회색 체크, 바꿀 수 없다). 머리는 `PageHeader`(`trail`에 뒤로 가기, `meta`에 날짜), 진행 막대는 `Progress inline`이다.
+`ReviewQuote`(인용한 요청), `ReviewGroup`(`title`, `meta`, `actions`), `ReviewItem`(`included`·`onIncludedChange`·`includeLabel`, `title`, `path`, `end`, 바뀌는 글은 `children`, 그사이 바뀐 항목은 `muted`), `ReviewCompareHead`(나란히의 "지금 / 제안"), `ReviewCompare`(나란히 한 항목: 체크와 이름, 지금, 제안), `ReviewLine`(한 줄 보기의 블록 한 행: `ReviewCompare`와 같은 왼쪽 칸, 그 블록 글 안에 `Del` · `Ins`), `ReviewMore`(긴 묶음의 "N편 더 보기 / 접기", 꺾쇠가 뒤집힌다). 적용된 제안이나 그사이 바뀐 항목의 체크는 `readOnly`다(회색 체크, 바꿀 수 없다). 머리는 `PageHeader`(`trail`에 뒤로 가기, `meta`에 날짜), 진행 막대는 `Progress inline`이다.
 
 ## 입력 상자
 

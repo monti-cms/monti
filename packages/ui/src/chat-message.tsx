@@ -2,6 +2,7 @@ import { cva } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 import { Spark } from "./spark";
+import { TextButton } from "./text-button";
 
 const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap break-words", {
 	variants: {
@@ -56,5 +57,50 @@ export function ChatMessage({
 			{request && <Spark className="size-[13px] shrink-0 text-monti-proposal" />}
 			{context !== undefined || request ? <span>{children}</span> : children}
 		</div>
+	);
+}
+
+/**
+ * The entries an answer names, as a numbered list under its words: each is a `ChatEntryLink`. Goes after the answer's `ChatMessage`, in the same
+ * column of the answer.
+ */
+export function ChatEntryList({ className, ...props }: ComponentProps<"ol">) {
+	return (
+		<ol
+			data-slot="chat-entry-list"
+			className={cn("m-0 list-decimal pl-monti-20 text-monti-body text-monti-default *:py-[3px]", className)}
+			{...props}
+		/>
+	);
+}
+
+/**
+ * One entry in a `ChatEntryList`: its name as an underlined link in ink, which opens the entry in the editor (`href`, or the app's router link in
+ * `render`, or `onClick`), and its slug after it in faint mono.
+ */
+export function ChatEntryLink({
+	slug,
+	href,
+	render,
+	onClick,
+	children,
+}: Pick<ComponentProps<typeof TextButton>, "href" | "render" | "onClick"> & {
+	/** The entry's slug ("/edited-post"). */
+	slug?: ReactNode;
+	/** The entry's name. */
+	children: ReactNode;
+}) {
+	return (
+		<li data-slot="chat-entry-link">
+			<TextButton variant="underline" href={href} render={render} onClick={onClick} className="text-monti-default">
+				{children}
+			</TextButton>
+			{slug !== undefined && (
+				<>
+					{" "}
+					<span className="font-mono text-monti-faint text-monti-meta">{slug}</span>
+				</>
+			)}
+		</li>
 	);
 }
