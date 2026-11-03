@@ -44,23 +44,34 @@ function ComboboxInput({
 	showClear = false,
 	size = "default",
 	mono = false,
+	proposal = false,
 	...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
 	showTrigger?: boolean;
 	showClear?: boolean;
 	size?: "sm" | "default";
 	mono?: boolean;
+	/** The picked value is one the assistant chose and nobody has touched: blue text and a 1.5px blue line, as `Input proposal`. */
+	proposal?: boolean;
 }) {
 	return (
 		<div
 			data-slot="combobox-input"
 			className={cn(
-				"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger",
+				"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 				className,
 			)}
 		>
 			<ComboboxPrimitive.Input
-				render={<Input disabled={disabled} size={size} mono={mono} className="flex-1 border-b-0" />}
+				render={
+					<Input
+						disabled={disabled}
+						size={size}
+						mono={mono}
+						proposal={proposal}
+						className="flex-1 border-b-0 data-proposal:border-b-0"
+					/>
+				}
 				{...props}
 			/>
 			{showTrigger && (

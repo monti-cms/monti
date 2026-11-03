@@ -40,7 +40,7 @@
 
 ### 코드
 
-`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
+`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
