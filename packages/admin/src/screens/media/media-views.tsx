@@ -30,6 +30,7 @@ import { writeDraggedEntries } from "../shared/entry-drag";
 import { FolderNameField } from "../shared/folder-name-field";
 import { type FolderActions, folderKeyHandler } from "../shared/use-folder-actions";
 import { formatLabel, usageLabel } from "./media-item";
+import { MEDIA_PROPOSAL_ATTRIBUTE, type MediaProposalCards } from "./media-proposals";
 import { folderPathBelow } from "./media-state";
 import { extensionOf } from "./media-upload";
 import { mediaMessages } from "./messages";
@@ -46,6 +47,8 @@ export interface MediaViewProps {
 	menuFor: (media: MediaItem) => MenuAction[];
 	folderMenuFor: (folder: FolderListItem) => MenuAction[];
 	onTrash: (media: MediaItem) => void;
+	/** The assistant's proposals on the tiles: the text to draw on a file, and the way to open its card. */
+	proposals?: Pick<MediaProposalCards, "proposalFor" | "open">;
 }
 
 /** Where a file is while a search lists files from several folders: its path below the open folder; nothing for a file in the open folder. */
@@ -96,7 +99,16 @@ const onDelete = (media: MediaItem, trash: (media: MediaItem) => void) => (event
 };
 
 /** Grid view: the folders (with the way up), then the files, inside the frame that files can be dropped on. */
-export function MediaGrid({ library, uploads, drop, folderActions, menuFor, folderMenuFor, onTrash }: MediaViewProps) {
+export function MediaGrid({
+	library,
+	uploads,
+	drop,
+	folderActions,
+	menuFor,
+	folderMenuFor,
+	onTrash,
+	proposals,
+}: MediaViewProps) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	const detail = useDetail(library);
@@ -167,8 +179,13 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 						<UploadTiles uploads={uploads} />
 						{library.items.map((media) => {
 							const isImage = site.api.isImageType(media.mimeType);
+							const proposal = proposals?.proposalFor(media.id);
 							return (
-								<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<li />}>
+								<ActionContextMenu
+									key={media.id}
+									actions={menuFor(media)}
+									trigger={<li {...(proposal ? { [MEDIA_PROPOSAL_ATTRIBUTE]: media.id } : {})} />}
+								>
 									<Tile
 										draggable
 										onDragStart={(event) => startDrag(event, media)}
@@ -187,10 +204,12 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 										}
 										title={media.filename}
 										detail={detail(media)}
+										{...(proposal ? { proposal } : {})}
 										action={
 											<MoreActionsButton actions={menuFor(media)} label={t("tile.actions", { name: media.filename })} />
 										}
-										onClick={() => void library.openFile(media.id)}
+										// A file with a proposal opens its card; the file opens from its menu.
+										onClick={() => (proposal ? proposals?.open(media.id) : void library.openFile(media.id))}
 										onKeyDown={onDelete(media, onTrash)}
 									/>
 								</ActionContextMenu>

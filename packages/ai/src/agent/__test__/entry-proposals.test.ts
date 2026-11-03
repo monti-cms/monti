@@ -2,7 +2,7 @@ import type { Cms } from "@monti-cms/core/server";
 import { describe, expect, it } from "vitest";
 import { admin, notesSite } from "../../../test/notes-site";
 import { discardProposal, revertProposal } from "../apply";
-import { editorProposalViews, proposalsForEntry, settleInEditor } from "../entry-proposals";
+import { editorProposalViews, mediaProposalViews, proposalsForEntry, settleInEditor } from "../entry-proposals";
 import { itemOf } from "../proposals";
 
 describe("the proposals an entry editor shows", () => {
@@ -111,5 +111,56 @@ describe("the proposals an entry editor shows", () => {
 			before: null,
 			value: "A short summary.",
 		});
+	});
+
+	it("AGENT-E5 applies items accepted where nothing waits for a save at once, and records one that fails with its reason", async () => {
+		const site = notesSite({ a: "one", b: "two" });
+		await site.store.proposals.create("p", { adminId: admin.userId, runId: "run-p", request: "fix" });
+		await site.store.proposals.addItems(
+			admin.userId,
+			"p",
+			["a", "b"].map((note) =>
+				itemOf(`i-${note}`, "notes.set", {
+					target: { kind: "entry", id: note, spot: "text" },
+					preview: { before: site.notes.get(note), after: note.toUpperCase() },
+					base: site.notes.get(note) ?? "",
+					change: { text: note.toUpperCase() },
+				}),
+			),
+		);
+		// "b" was written over by a person, so applying it is refused.
+		site.notes.set("b", "two, by a person");
+		const cms = site.cms as unknown as Cms;
+		const settled = await settleInEditor(cms, admin, site.store.proposals, "p", { applied: ["i-a", "i-b"] });
+		expect(site.notes.get("a")).toBe("A");
+		expect(settled.items.map((item) => [item.id, item.state])).toEqual([
+			["i-a", "applied"],
+			["i-b", "failed"],
+		]);
+		expect(settled.items[0]?.applied?.inEditor).toBeUndefined();
+		expect(settled.status).toBe("applied");
+	});
+
+	it("AGENT-E5 gives the media library the alt text changes, and leaves captions and other operations to the review", () => {
+		const media = (id: string, spot: string, value: string) =>
+			itemOf(id, "media.updateText", {
+				target: { kind: "media", id: `m-${id}`, spot },
+				preview: { before: null, after: value },
+				base: "b",
+				change: { spot, value },
+			});
+		const proposal = {
+			id: "p",
+			adminId: admin.userId,
+			runId: "run-p",
+			request: "alt texts",
+			status: "pending" as const,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			items: [media("alt", "defaultAlt", "A desk by the window."), media("cap", "defaultCaption", "Morning.")],
+		};
+		expect(mediaProposalViews([proposal])).toEqual([
+			expect.objectContaining({ id: "alt", mediaId: "m-alt", before: null, value: "A desk by the window." }),
+		]);
 	});
 });

@@ -18,10 +18,11 @@ const system = (format: string, rules: string | null) =>
 		...(rules ? ["", "The site's writing rules:", rules] : []),
 	].join("\n");
 
-const fieldSystem = (field: string, rules: string | null) =>
+/** The system prompt for writing a short text again: `what` names it ('the field "summary" of an entry', "the alt text of a media file"). */
+const fieldSystem = (what: string, rules: string | null) =>
 	[
-		`You change the value of the field "${field}" of an entry again, as the admin asks in the card under it.`,
-		"Answer only by calling `rewrite` with the field's whole new value as plain text, and a one-sentence reply.",
+		`You change ${what} again, as the admin asks in the card under it.`,
+		"Answer only by calling `rewrite` with the whole new text as plain text, and a one-sentence reply.",
 		"Change only what the admin asks; keep the rest of your earlier proposal. The reply is in the admin's language, plain and short.",
 		...(rules ? ["", "The site's writing rules:", rules] : []),
 	].join("\n");
@@ -155,7 +156,7 @@ export async function askAtSpot({
 		const current = typeof item.preview.before === "string" ? item.preview.before : "";
 		const answer = await rewrite({
 			model,
-			system: fieldSystem(field, rules),
+			system: fieldSystem(`the field "${field}" of an entry`, rules),
 			prompt: prompt({ request: proposal.request, current, proposed, thread, text }).replace(
 				"The block as it is now:",
 				"The field as it is now:",
@@ -169,8 +170,28 @@ export async function askAtSpot({
 			{ id: item.target.id, fields: { [field]: answer.text } },
 			{ auth },
 		);
+	} else if (item.operation === "media.updateText" && proposed !== null) {
+		// A media file's alt text (or caption), written again as plain text.
+		const { spot } = item.change as { spot: "defaultAlt" | "defaultCaption" };
+		const current = typeof item.preview.before === "string" ? item.preview.before : "";
+		const answer = await rewrite({
+			model,
+			system: fieldSystem(`the ${spot === "defaultAlt" ? "alt text" : "caption"} of a media file`, rules),
+			prompt: prompt({ request: proposal.request, current, proposed, thread, text }).replace(
+				"The block as it is now:",
+				"The text as it is now:",
+			),
+			recordUsage,
+			signal,
+		});
+		reply = answer.reply;
+		plans = await cms.writes.plan(
+			"media.updateText",
+			{ items: [{ id: item.target.id, [spot === "defaultAlt" ? "alt" : "caption"]: answer.text }] },
+			{ auth },
+		);
 	} else {
-		throw new CmsError("Only a body change or a text field can be asked about here", "invalid_input");
+		throw new CmsError("Only a body change, a text field or a media text can be asked about here", "invalid_input");
 	}
 	const at = new Date().toISOString();
 	const said: SpotMessage[] = [...thread, { author: "admin", text, at }, { author: "assistant", text: reply, at }];

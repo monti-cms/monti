@@ -168,6 +168,51 @@ describe("a request in a field change's card", () => {
 	});
 });
 
+describe("a request in a media tile's card", () => {
+	it("AGENT-S1 writes a media file's alt text again, and plans it as a media text change", async () => {
+		const site = notesSite();
+		await site.store.proposals.create("p", { adminId: admin.userId, runId: "run-p", request: "alt texts" });
+		await site.store.proposals.addItems(admin.userId, "p", [
+			itemOf("m1", "media.updateText", {
+				target: { kind: "media", id: "media-1", spot: "defaultAlt" },
+				preview: { before: null, after: "A laptop and coffee on a desk." },
+				base: "x",
+				change: { spot: "defaultAlt", value: "A laptop and coffee on a desk." },
+			}),
+		]);
+		const plan = vi.fn(
+			async (_operation: string, input: { items: { id: string; alt: string }[] }): Promise<WritePlan[]> => [
+				{
+					target: { kind: "media", id: "media-1", spot: "defaultAlt" },
+					preview: { before: null, after: input.items[0]?.alt ?? "" },
+					base: "x",
+					change: { spot: "defaultAlt", value: input.items[0]?.alt ?? "" },
+				},
+			],
+		);
+		const cms = { writes: { plan } } as unknown as Cms;
+		const { model } = modelAnswering("An open notebook and a pencil on a desk.", "Fixed it.");
+		const { proposal } = await askAtSpot({
+			cms,
+			auth: admin,
+			store: site.store.proposals,
+			model,
+			proposalId: "p",
+			itemId: "m1",
+			text: "it is a notebook, no coffee",
+		});
+		expect(plan).toHaveBeenCalledWith(
+			"media.updateText",
+			{ items: [{ id: "media-1", alt: "An open notebook and a pencil on a desk." }] },
+			{ auth: admin },
+		);
+		expect(proposal.items[0]?.thread?.map((message) => message.text)).toEqual([
+			"it is a notebook, no coffee",
+			"Fixed it.",
+		]);
+	});
+});
+
 describe("a request on selected words", () => {
 	const BLOCK = "I kept the settings screen as it was. It changes rarely.";
 

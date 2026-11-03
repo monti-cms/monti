@@ -139,6 +139,19 @@ export function createProposalStore(collection: PluginCollection<ProposalValue>)
 				.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 		},
 
+		/** The proposals that wait for review and change media files (their alt text, their caption), oldest first. */
+		async pendingMedia(adminId: string): Promise<Proposal[]> {
+			return (await collection.list({ prefix: `${adminId}/` }))
+				.filter(
+					(item) =>
+						item.value.adminId === adminId &&
+						item.value.status === "pending" &&
+						item.value.items.some((change) => change.target.kind === "media"),
+				)
+				.map(toProposal)
+				.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+		},
+
 		/** The proposals that wait for review and change the entry `entryId`, oldest first. */
 		async pendingFor(adminId: string, entryId: string): Promise<Proposal[]> {
 			return (await collection.list({ prefix: `${adminId}/` }))

@@ -28,10 +28,11 @@ export function AgentProposal({ initial }: { initial: ProposalView }) {
 	const t = useTranslator(proposalMessages);
 	const proposal = useProposal(initial.id, initial);
 	const client = useQueryClient();
-	// A proposal that arrives or grows may change the open entry: its editor reads its waiting changes again.
+	// A proposal that arrives or grows may change the open entry or media files: the editor and the media tiles read their waiting changes again.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the proposal arrives and each time it grows
 	useEffect(() => {
 		void client.invalidateQueries({ queryKey: [...aiKeys.all, "entry-proposals"] });
+		void client.invalidateQueries({ queryKey: aiKeys.mediaProposals() });
 	}, [client, initial.id, initial.items.length]);
 	const view = proposal.view ?? initial;
 	const { progress } = proposal;
