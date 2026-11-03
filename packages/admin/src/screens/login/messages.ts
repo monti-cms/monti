@@ -30,7 +30,7 @@ export const loginMessages = defineMessages("cms-admin.login", {
 	ko: {
 		signIn: ({ provider }) => `${josa(String(provider), "으로", "로")} 로그인`,
 		or: "또는",
-		notAdmin: "{name} 계정은 관리자가 아니에요.",
+		notAdmin: ({ name }) => `${josa(String(name), "은", "는")} 관리자가 아니에요.`,
 		otherAccount: "다른 계정으로 로그인",
 		noLoginTitle: "로그인이 설정되지 않았어요",
 		email: "이메일",
