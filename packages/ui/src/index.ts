@@ -77,6 +77,7 @@ export type {
 	ModelMenuThinking,
 	MontiIcon,
 	PatchLine,
+	ProposalsItem,
 	ToolCallDetail,
 	ToolCallStatus,
 } from "./internal";

@@ -2,7 +2,13 @@ import { type ReactNode, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
 import { Count } from "./count";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { MenuShortcut } from "./menu-parts";
 import { Text } from "./text";
 import { TextButton } from "./text-button";
@@ -16,10 +22,18 @@ interface ChangesItem {
 	onUndo: () => void;
 }
 
+/** What the assistant proposed and nobody has taken yet: the field's name and the button that discards the proposal. */
+interface ProposalsItem {
+	id: string;
+	name: ReactNode;
+	onDiscard: () => void;
+}
+
 /**
  * The save group in the title row of a settings screen while the draft has changes: "changes N" opens the list of changes, each with its own undo; then
  * "undo all" and the one primary pill ("save and apply"). The pill is disabled (not hidden) while something blocks saving. The list hangs from the whole
- * group, its right edge on the group's.
+ * group, its right edge on the group's. While the assistant's proposals wait in the form, `proposals` adds "· proposals N" in blue after the count, and the
+ * list ends with them, each with its own discard.
  */
 function ChangesGroup({
 	label,
@@ -33,6 +47,7 @@ function ChangesGroup({
 	onSave,
 	saveDisabled,
 	saveDanger,
+	proposals,
 	...props
 }: {
 	/** "changes". */
@@ -50,6 +65,16 @@ function ChangesGroup({
 	onSave: () => void;
 	saveDisabled?: boolean;
 	saveDanger?: boolean;
+	/** The assistant's proposals in the form, not taken yet. */
+	proposals?: {
+		/** "proposals". */
+		label: string;
+		/** The count spoken ("2 proposals"). */
+		countLabel: string;
+		/** "discard". */
+		discardLabel: string;
+		items: readonly ProposalsItem[];
+	};
 } & Omit<React.ComponentProps<"section">, "children" | "onSelect">) {
 	const [group, setGroup] = useState<HTMLElement | null>(null);
 	return (
@@ -60,6 +85,18 @@ function ChangesGroup({
 					<Count tone="warning" aria-label={countLabel}>
 						{items.length}
 					</Count>
+					{proposals && proposals.items.length > 0 && (
+						<>
+							{" "}
+							<span className="text-monti-faint">·</span>{" "}
+							<span className="text-monti-proposal">
+								{proposals.label}{" "}
+								<Count tone="proposal" aria-label={proposals.countLabel}>
+									{proposals.items.length}
+								</Count>
+							</span>
+						</>
+					)}
 					<Caret />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" anchor={group ?? undefined} width="panel">
@@ -74,6 +111,22 @@ function ChangesGroup({
 							<MenuShortcut>{undoLabel}</MenuShortcut>
 						</DropdownMenuItem>
 					))}
+					{proposals && proposals.items.length > 0 && (
+						<>
+							<DropdownMenuSeparator />
+							{proposals.items.map((item) => (
+								<DropdownMenuItem key={item.id} onClick={item.onDiscard}>
+									<span className="inline-flex items-baseline gap-monti-4">
+										{item.name}{" "}
+										<Text variant="meta" tone="proposal">
+											{proposals.label}
+										</Text>
+									</span>
+									<MenuShortcut>{proposals.discardLabel}</MenuShortcut>
+								</DropdownMenuItem>
+							))}
+						</>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<TextButton type="button" onClick={onDiscard}>
@@ -86,4 +139,4 @@ function ChangesGroup({
 	);
 }
 
-export { ChangesGroup, type ChangesItem };
+export { ChangesGroup, type ChangesItem, type ProposalsItem };

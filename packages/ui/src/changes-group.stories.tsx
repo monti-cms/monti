@@ -38,3 +38,18 @@ export const Blocked: Story = { args: { saveDisabled: true } };
 
 /** The changes delete saved values: the pill is red. */
 export const Deletes: Story = { args: { saveDanger: true, saveLabel: "지우고 적용" } };
+
+/** The assistant's proposals wait in the form: "· 제안 N" in blue after the count, and the list ends with them, each with its own discard. */
+export const WithProposals: Story = {
+	args: {
+		proposals: {
+			label: "제안",
+			countLabel: "제안 2개",
+			discardLabel: "버리기",
+			items: [
+				{ id: "preview", name: "미리보기 경로", onDiscard: noop },
+				{ id: "locale-path", name: "주소에 언어 표시", onDiscard: noop },
+			],
+		},
+	},
+};

@@ -167,7 +167,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "바뀐 곳 3 · 제안 2 ▾" | `ChangesGroup` | 바뀐 곳 개수 뒤에 어시스턴트 제안 개수가 파랗게 붙는다. 목록에서 제안도 하나씩 버린다. |
+| "바뀐 곳 3 · 제안 2 ▾" | `ChangesGroup`(`proposals`: `label` "제안", `discardLabel` "버리기", `items`) | 바뀐 곳 개수 뒤에 어시스턴트 제안 개수가 파랗게 붙는다. 목록에서 제안도 하나씩 버린다. |
 | 제안된 값 (미리보기 경로) | `Affix proposal` | 파란 글자와 파란 밑줄. 아래에 옛 값 `Del`("/preview"). 사람이 고치거나 저장하면 보통 색으로 돌아간다([proposal.md](../components/proposal.md)). |
 | 제안된 값 (주소에 언어 표시) | `Select` + `SelectTrigger proposal` | 같다. 아래에 옛 값 `Del`("항상"). |
 | 제안된 필드의 라벨 줄 | `FormFieldLabel`(파란 점과 "버리기") | 버리면 옛 값으로 돌아간다. |
@@ -190,5 +190,4 @@
 
 보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
 
-- **제안 개수가 붙은 저장 묶음**: "바뀐 곳 3 · 제안 2"(`.mt-fill` 안의 개수). `ChangesGroup`은 바뀐 곳 개수 하나만 그린다.
 - **제안 표시가 붙은 라벨 줄**(`.mt-proposal-dot` + "버리기"): `FormFieldLabel changed`는 주황 바뀜 점만 그린다.

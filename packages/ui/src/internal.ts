@@ -30,7 +30,7 @@ export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
-export { ChangesGroup, type ChangesItem } from "./changes-group";
+export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
