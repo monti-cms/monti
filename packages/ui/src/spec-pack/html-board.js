@@ -67,6 +67,28 @@ const parts = [
 		leaf: true,
 		asProps: ["flex"],
 	},
+	// A board drawn inside this board (the sidebar beside a page) and the runtime's host around it.
+	{ match: (el) => el.matches(".sc-host, .sc-host > .mt, .mt .mt"), frame: true },
+	// A content page's head: the title, the address rule, the actions at the end.
+	{
+		match: (el) => el.matches(".mt-page-header"),
+		part: "PageHeader",
+		slots: (el) => ({ title: el.querySelector(":scope > h1"), meta: el.querySelector(":scope > .meta") }),
+		children: (el) => el.querySelector(":scope > .end"),
+	},
+	// An empty list's steps.
+	{ match: (el) => el.matches(".mt-empty"), part: "EmptySteps", asProps: ["border-top"] },
+	{
+		match: (el) => el.matches(".mt-empty > a"),
+		part: "EmptyStep",
+		props: (el) => ({
+			number: el.querySelector(".mt-count")?.textContent.trim(),
+			title: el.querySelector(".text-title")?.textContent.trim(),
+		}),
+		leaf: true,
+	},
+	// The app frame's ✦ in the corner opens the assistant beside every screen: the frame's, not a screen's.
+	{ match: (el) => el.matches(".mt-icon-btn--corner"), ignore: true },
 	// The assistant's ✦ is the design system's own mark, not a Carbon icon.
 	{ match: (el) => el.matches("svg.mt-spark"), part: "Icon", props: () => ({ name: "spark" }), leaf: true },
 	{ match: (el) => el.matches(".mt-field"), part: "FormField", walk: "parts" },
@@ -99,6 +121,8 @@ const parts = [
 			size: el.classList.contains("mt-btn--sm") ? "sm" : undefined,
 			disabled: el.classList.contains("is-disabled") || undefined,
 		}),
+		// A link drawn as a button takes off the link's underline: the button's own look.
+		asProps: ["text-decoration"],
 	},
 	{
 		match: (el) => /^H[1-4]$/.test(el.tagName) && [...el.classList].some((name) => name.startsWith("text-")),
@@ -121,6 +145,6 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end)$/;
 
 window.boardPack = { parts, known };

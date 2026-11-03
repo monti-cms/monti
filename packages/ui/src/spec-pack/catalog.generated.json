@@ -15,6 +15,31 @@
 			},
 			"events": []
 		},
+		"EmptySteps": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"EmptyStep": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"number": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"ChangeDot": {
 			"kind": "part",
 			"bind": false,

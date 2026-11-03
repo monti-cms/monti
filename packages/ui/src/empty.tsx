@@ -31,15 +31,15 @@ function Empty({
 					{description}
 				</p>
 			)}
-			{children && (
-				<div
-					data-slot="empty-steps"
-					className={cn("flex flex-col border-monti-muted border-t", !description && "mt-monti-32")}
-				>
-					{children}
-				</div>
-			)}
+			{children && <EmptySteps className={cn(!description && "mt-monti-32")}>{children}</EmptySteps>}
 		</div>
+	);
+}
+
+/** The steps of an empty list, a rule above the first ({@link Empty} puts them under its title). */
+function EmptySteps({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div data-slot="empty-steps" className={cn("flex flex-col border-monti-muted border-t", className)} {...props} />
 	);
 }
 
@@ -86,4 +86,4 @@ function EmptyStep({
 	});
 }
 
-export { Empty, EmptyStep };
+export { Empty, EmptyStep, EmptySteps };

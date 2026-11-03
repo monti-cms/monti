@@ -122,9 +122,21 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 				return id === undefined ? [] : [id];
 			});
 		}
+		const slots = Object.fromEntries(
+			Object.entries(node.slots ?? {}).map(([slot, fill]) => [
+				slot,
+				fill.flatMap((child): Exclude<SpecChild, { spacing: number }>[] => {
+					if (child.part === undefined && child.text !== undefined && child.children === undefined)
+						return [textOf(child.text)];
+					const placed = convert(child);
+					return placed === undefined ? [] : [placed];
+				}),
+			]),
+		);
 		elements[id] = {
 			type: node.part,
 			...(Object.keys(props).length > 0 ? { props } : {}),
+			...(Object.keys(slots).length > 0 ? { slots } : {}),
 			...(specChildren.length > 0 ? { children: specChildren } : {}),
 		};
 		return id;

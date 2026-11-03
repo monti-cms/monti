@@ -3,6 +3,7 @@ import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { ChangeDot } from "../change-dot";
 import { Count } from "../count";
+import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
 import { IconButton } from "../icon-button";
@@ -302,6 +303,15 @@ function SidebarScreenMode({
 	);
 }
 
+/** One thing to do from an empty list: its place in the order (`number`, "01") and its title. */
+function EmptyStep({ number, title, className }: { number?: string; title?: string; className?: string }) {
+	return (
+		<EmptyStepPart number={number} className={className}>
+			{title}
+		</EmptyStepPart>
+	);
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -322,6 +332,8 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	EmptySteps,
+	EmptyStep,
 	ChangeDot,
 	Sidebar,
 	SidebarHeader,
@@ -409,6 +421,8 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	EmptySteps: { kind: "part", props: {} },
+	EmptyStep: { kind: "part", props: { number: "text", title: "text" } },
 	ChangeDot: { kind: "part", props: { tone: "variant", label: "text" } },
 	Sidebar: { kind: "part", props: { rail: "flag", label: "text" } },
 	SidebarHeader: { kind: "part", props: {} },

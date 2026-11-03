@@ -24,6 +24,8 @@ export interface DrawnNode {
 		readonly minHeight?: "screen";
 	};
 	readonly children?: readonly DrawnNode[];
+	/** A part's named places (a page header's `title`), each with what the drawing puts there. */
+	readonly slots?: Readonly<Record<string, readonly DrawnNode[]>>;
 	/** In a group, the distance in px from the child before it (for the first child, from the group's start). */
 	readonly before?: number;
 	/** In a group, the distance in px from its last child to the group's end. */

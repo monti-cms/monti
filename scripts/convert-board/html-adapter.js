@@ -58,7 +58,7 @@ function looksOf(el, part, root = false, inPart = false) {
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.
 		if (/^(position|top|right|bottom|left)$/.test(property)) continue;
 		// The board's frame is the page itself: its height and ground are the window's.
-		if (root && /^(min-height|background)$/.test(property)) continue;
+		if (root && /^(min-height|height|background)$/.test(property)) continue;
 		if (part && (part.asProps?.includes(property) || !changes(el, property))) continue;
 		looks.push(`${property}: ${value.join(":").trim()}${part ? " (on a part)" : ""}`);
 	}
@@ -125,12 +125,16 @@ function isSpacer(el) {
 }
 
 function read(el, where, page = undefined, inPart = false) {
-	const root = page !== undefined;
 	const rule = PARTS.find((each) => each.match(el));
+	// A board drawn inside a board (its own page root) is read as a page too: its height and ground are the page's.
+	const root = page !== undefined || rule?.frame === true;
 	const here = `${where} › ${label(el)}`;
-	const looks = looksOf(el, rule, root, inPart);
+	const looks = looksOf(el, rule?.frame ? undefined : rule, root, inPart);
 	// A state the board draws for a behavior (an open tooltip): the spec draws looks, the behavior comes later.
 	if (rule?.ignore) return { where: here };
+	if (rule?.frame) {
+		return framed(el, { where: here, direction: directionOf(el), layout: {}, looks, ...measured(el, here) });
+	}
 	if (rule) {
 		const props = Object.fromEntries(
 			Object.entries(rule.props?.(el) ?? {}).filter(([, value]) => value != null && value !== ""),
@@ -139,7 +143,14 @@ function read(el, where, page = undefined, inPart = false) {
 		const named = el.id ? { id: el.id } : {};
 		if (rule.leaf) return { where: here, part: rule.part, props, looks, ...named };
 		const node = { where: here, part: rule.part, props, looks, ...named };
-		node.children = drawnChildren(el).map((child, index) => readChild(child, `${here}[${index}]`, true));
+		// A part's named places, each an element of it whose inside fills the place; its children, from the element the rule names or its own.
+		const inside = (holder, at) =>
+			drawnChildren(holder).map((child, index) => readChild(child, `${at}[${index}]`, true));
+		const slots = Object.entries(rule.slots?.(el) ?? {}).filter(([, holder]) => holder);
+		if (slots.length > 0)
+			node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, inside(holder, `${here} › ${name}`)]));
+		const holder = rule.slots ? rule.children?.(el) : el;
+		node.children = holder ? inside(holder, here) : [];
 		return node;
 	}
 	if (el.tagName.toLowerCase() === "svg") return { where: here, looks };
@@ -215,10 +226,16 @@ function measured(el, where) {
 			continue;
 		}
 		if (getComputedStyle(child).position === "absolute") {
-			// A line pinned to the group's end: the screen's layout, placed after a growing region (see `framed`).
 			const id = `${where}[${index}]`;
-			child.dataset.pinned = id;
-			children.push({ ...read(child, id), pinned: true, pinnedId: id });
+			const node = read(child, id);
+			// Something the pack leaves out (the frame's corner button) takes no place.
+			if (node.part === undefined && node.text === undefined && node.children === undefined && !node.looks?.length)
+				continue;
+			// A line pinned to the group's end: the screen's layout, placed after a growing region (see `framed`).
+			if (child.style.bottom !== "" && child.style.top === "") {
+				child.dataset.pinned = id;
+				children.push({ ...node, pinned: true, pinnedId: id });
+			} else children.push({ ...node, looks: [...(node.looks ?? []), "placed by position, not by the layout"] });
 			continue;
 		}
 		const rect = child.getBoundingClientRect();
@@ -228,7 +245,10 @@ function measured(el, where) {
 		edge = end(rect);
 	}
 	const last = end(box) - Number.parseFloat(row ? border.borderRightWidth : border.borderBottomWidth);
-	return { children, after: aligned ? undefined : Math.round(last - edge) };
+	// A box larger than its content (a page as tall as the window, a column that grows) keeps the rest as its size: only its padding is a distance.
+	const padding = Number.parseFloat(row ? border.paddingRight : border.paddingBottom);
+	const rest = Math.round(last - edge);
+	return { children, after: aligned ? undefined : rest > padding + 1 ? Math.round(padding) : rest };
 }
 
 window.readBoard = (selector, page = {}) => {
