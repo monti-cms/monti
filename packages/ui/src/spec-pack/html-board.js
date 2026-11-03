@@ -88,6 +88,8 @@ const parts = [
 		part: "PageHeader",
 		slots: (el) => ({ title: el.querySelector(":scope > h1"), meta: el.querySelector(":scope > .meta") }),
 		children: (el) => el.querySelector(":scope > .end"),
+		// A header that keeps its place over the scrolling page (the page column's own: its body scrolls under it).
+		asProps: ["position", "top", "z-index", "background", "padding-top"],
 	},
 	// A list: the head row and the rows are neighbours in a board and one table in the design system.
 	{
@@ -310,6 +312,7 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-affix"),
 		part: "AffixField",
+		idOf: (el) => el.querySelector("input")?.id,
 		props: (el) => ({
 			prefix: el.querySelector(".fix:first-child")?.textContent.trim(),
 			suffix: el.querySelector(".fix:last-child:not(:first-child)")?.textContent.trim(),
@@ -317,6 +320,59 @@ const parts = [
 		leaf: true,
 	},
 	{ match: (el) => el.matches(".mt-vr"), part: "VerticalRule", leaf: true },
+	{
+		match: (el) => el.matches(".mt-textarea"),
+		part: "Textarea",
+		props: (el) => ({ mono: el.classList.contains("mt-mono") || undefined }),
+		leaf: true,
+	},
+	// A field's line of help under it, in the role and tone its words have.
+	{
+		match: (el) => el.matches(".mt-field > span:not([class]):not(:has(input, button))"),
+		part: "Text",
+		props: (el) => ({ variant: "label", tone: /var\(--fg-([a-z]+)\)/.exec(el.style.color)?.[1] }),
+		asProps: ["color"],
+	},
+	// A settings screen's save group in its title row: "changes N", "undo all", the pill.
+	{
+		match: (el) => el.matches(".end > .mt-text-btn:has(> .mt-count--warn)"),
+		part: "SaveGroup",
+		props: (el) => {
+			const buttons = [...el.parentElement.children];
+			return {
+				label: [...el.childNodes]
+					.filter((node) => node.nodeType === Node.TEXT_NODE)
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+				count: Number(el.querySelector(".mt-count")?.textContent.trim()),
+				discardLabel: buttons.find((button) => button !== el && button.matches(".mt-text-btn"))?.textContent.trim(),
+				saveLabel: buttons.find((button) => button.matches(".mt-btn"))?.textContent.trim(),
+				saveDisabled: buttons.some((button) => button.matches(".mt-btn.is-disabled")) || undefined,
+			};
+		},
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches(".end:has(> .mt-text-btn > .mt-count--warn) > :not(.mt-text-btn:has(> .mt-count--warn))"),
+		ignore: true,
+	},
+	// A field's label with the dot of a change and its undo.
+	{
+		match: (el) => el.matches(".mt-label:has(> .mt-change-dot)"),
+		part: "ChangedLabel",
+		props: (el) => ({
+			label: [...el.childNodes]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			undo: el.querySelector(".mt-text-btn")?.textContent.trim(),
+			for: el.getAttribute("for"),
+		}),
+		leaf: true,
+		asProps: ["display", "align-items", "gap"],
+	},
 	// A page's tab row: each tab a page of its own, with its count.
 	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
 	{
@@ -338,6 +394,7 @@ const parts = [
 				current: el.classList.contains("is-on") || undefined,
 				count: count?.textContent.trim(),
 				countTone: count?.classList.contains("mt-count--warn") ? "warning" : undefined,
+				dot: el.querySelector(".mt-change-dot") ? "warning" : undefined,
 			};
 		},
 		leaf: true,
@@ -455,7 +512,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

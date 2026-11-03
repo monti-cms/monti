@@ -4,6 +4,7 @@ import { Banner as BannerPart } from "../banner";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { ChangeDot } from "../change-dot";
+import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
 import { Count } from "../count";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
@@ -54,6 +55,7 @@ import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, 
 import { TabLink, TabLinks } from "../tabs";
 import { Heading, Text } from "../text";
 import { TextButton } from "../text-button";
+import { Textarea as TextareaPart } from "../textarea";
 import { TrashRowDate, TrashRowTitle } from "../trash-row";
 
 /** An icon by its Carbon name in the design system's icon list (`iconsByName`), in a part that takes its icon as children (a button, an icon button). */
@@ -478,14 +480,17 @@ function Tab({
 	current,
 	count,
 	countTone,
+	dot,
 }: {
 	label?: string;
 	current?: boolean;
 	count?: string;
 	countTone?: "default" | "warning";
+	/** The tab has a change in it (or the assistant's proposal). */
+	dot?: "warning" | "proposal";
 }) {
 	return (
-		<TabLink current={current} count={count} countTone={countTone}>
+		<TabLink current={current} count={count} countTone={countTone} dot={dot}>
 			{label}
 		</TabLink>
 	);
@@ -570,6 +575,60 @@ function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; p
 	);
 }
 
+/** The save group of a settings screen, as it looks: "changes N", "undo all", the pill. Its list and its actions are wired later. */
+function SaveGroup({
+	label,
+	count,
+	discardLabel,
+	saveLabel,
+	saveDisabled,
+}: {
+	label?: string;
+	count?: number;
+	discardLabel?: string;
+	saveLabel?: string;
+	saveDisabled?: boolean;
+}) {
+	return (
+		<ChangesBar
+			label={label ?? ""}
+			count={Number(count ?? 0)}
+			discardLabel={discardLabel ?? ""}
+			saveLabel={saveLabel ?? ""}
+			saveDisabled={saveDisabled}
+		/>
+	);
+}
+
+/** A field's label with the dot of a change and, at the end of its row, the quiet undo. */
+function ChangedLabel({ label, undo, for: field }: { label?: string; undo?: string; for?: string }) {
+	return (
+		<FormFieldLabelPart
+			htmlFor={field}
+			changed={{ label: "", undoLabel: undo ?? "", onUndo: undo ? () => {} : undefined }}
+		>
+			{label}
+		</FormFieldLabelPart>
+	);
+}
+
+/** A field of several lines: what it holds is its `bind`. */
+function Textarea({
+	id,
+	name,
+	value,
+	rows,
+	mono,
+}: {
+	id?: string;
+	name?: string;
+	value?: string;
+	rows?: number;
+	mono?: boolean;
+}) {
+	return <TextareaPart id={id} name={name} defaultValue={value} rows={rows} mono={mono} />;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -590,6 +649,9 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Textarea,
+	SaveGroup,
+	ChangedLabel,
 	TwoLineCell,
 	SelectBox,
 	Filter,
@@ -704,6 +766,12 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Textarea: { kind: "part", bind: "yes", props: { rows: "state", mono: "flag" } },
+	SaveGroup: {
+		kind: "part",
+		props: { label: "text", count: "state", discardLabel: "text", saveLabel: "text", saveDisabled: "flag" },
+	},
+	ChangedLabel: { kind: "part", props: { label: "text", undo: "text", for: "ref" } },
 	TwoLineCell: { kind: "part", props: { title: "text", sub: "text", proposal: "flag" } },
 	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant" } },
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
@@ -723,7 +791,7 @@ export const CATALOG = {
 	MoreButton: { kind: "part", props: { label: "text" } },
 	PageToolbar: { kind: "part", props: { inset: "flag" } },
 	TabLinks: { kind: "part", props: { variant: "variant" } },
-	Tab: { kind: "part", props: { label: "text", current: "flag", count: "text", countTone: "variant" } },
+	Tab: { kind: "part", props: { label: "text", current: "flag", count: "text", countTone: "variant", dot: "variant" } },
 	List: { kind: "part", props: {} },
 	TitleCell: { kind: "part", props: { title: "text", address: "text", folder: "flag" } },
 	CountCell: { kind: "part", props: { align: "variant" } },

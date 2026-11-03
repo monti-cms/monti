@@ -159,7 +159,8 @@ function read(el, where, page = undefined, inPart = false) {
 			Object.entries(rule.props?.(el) ?? {}).filter(([, value]) => value != null && value !== ""),
 		);
 		// The drawing's own id goes with the node, for a label that names it; it never reaches the spec.
-		const named = el.id ? { id: el.id } : {};
+		const id = rule.idOf?.(el) ?? el.id;
+		const named = id ? { id } : {};
 		if (rule.leaf) return { where: here, part: rule.part, props, looks, ...named };
 		const node = { where: here, part: rule.part, props, looks, ...named };
 		// A part's named places, each an element of it whose inside fills the place; its children, from the element the rule names or its own.
@@ -298,7 +299,9 @@ function measured(el, where) {
 			}
 			continue;
 		}
-		const before = aligned && children.length === 0 ? undefined : Math.round(start(rect) - edge);
+		// A part the board pulls back over the room before it (a header kept in place over a padded page) takes that room as its own: no distance.
+		const pulled = Number.parseFloat(getComputedStyle(child)[row ? "marginLeft" : "marginTop"]) < 0;
+		const before = (aligned && children.length === 0) || pulled ? undefined : Math.round(start(rect) - edge);
 		children.push({ ...read(child, `${where}[${index}]`), before });
 		edge = end(rect);
 	}

@@ -15,6 +15,71 @@
 			},
 			"events": []
 		},
+		"Textarea": {
+			"kind": "part",
+			"bind": true,
+			"children": false,
+			"slots": [],
+			"props": {
+				"mono": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"rows": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"SaveGroup": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"count": {
+					"kind": "state"
+				},
+				"discardLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"saveDisabled": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"saveLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ChangedLabel": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"for": {
+					"kind": "ref",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"undo": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"TwoLineCell": {
 			"kind": "part",
 			"bind": false,
@@ -301,6 +366,10 @@
 				"current": {
 					"kind": "flag",
 					"type": "boolean"
+				},
+				"dot": {
+					"kind": "variant",
+					"enum": ["proposal", "warning"]
 				},
 				"label": {
 					"kind": "text",
