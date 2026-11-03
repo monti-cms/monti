@@ -143,7 +143,7 @@ function PropertyRow({
 			aria-labelledby={labelId}
 			data-slot="property-row"
 			className={cn(
-				"group/row flex flex-col gap-monti-2 border-monti-muted border-b py-monti-10 **:data-[slot=ai-action]:data-loading:opacity-100 **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
+				"group/row flex flex-col gap-monti-2 border-monti-muted border-b py-monti-10 **:data-[tone=proposal]:data-loading:opacity-100 **:data-[tone=proposal]:opacity-0 hover:**:data-[tone=proposal]:opacity-100 focus-within:**:data-[tone=proposal]:opacity-100",
 				className,
 			)}
 			{...props}

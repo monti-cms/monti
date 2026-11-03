@@ -1,7 +1,7 @@
 "use client";
 
 import { errorText, useSite, useTranslator } from "@monti-cms/admin";
-import { Button, Spark, toast } from "@monti-cms/admin/kit";
+import { Spark, TextButton, toast } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
 import { type ReactNode, useState } from "react";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";
@@ -40,11 +40,9 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 	if (!ai.available) return null;
 	const label = ai.action?.label ?? action;
 	return (
-		<Button
-			type="button"
-			variant="secondary"
-			size="sm"
-			disabled={running}
+		<TextButton
+			tone="proposal"
+			loading={running}
 			onClick={async () => {
 				setRunning(true);
 				try {
@@ -56,8 +54,14 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				}
 			}}
 		>
-			<Spark aria-hidden />
-			{running ? t("running") : (children ?? label)}
-		</Button>
+			{running ? (
+				t("running")
+			) : (
+				<>
+					<Spark />
+					{children ?? label}
+				</>
+			)}
+		</TextButton>
 	);
 }

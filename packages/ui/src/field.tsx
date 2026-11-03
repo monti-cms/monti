@@ -68,7 +68,7 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 			role="group"
 			data-slot="field"
 			className={cn(
-				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
+				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[tone=proposal]:opacity-0 hover:**:data-[tone=proposal]:opacity-100 focus-within:**:data-[tone=proposal]:opacity-100",
 				className,
 			)}
 			{...props}

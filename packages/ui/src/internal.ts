@@ -7,7 +7,6 @@
  */
 
 export { Affix } from "./affix";
-export { AiAction } from "./ai-action";
 export {
 	AlertDialog,
 	AlertDialogAction,

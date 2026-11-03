@@ -82,7 +82,7 @@
 | "주소 복사" · "새 탭에서 열기" | `TextButton variant="underline"` | |
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
 | 폴더 | `FormField` + `Select`(`SelectTrigger width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
-| 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`AiAction` "✦ 채우기") + `Textarea size="sm"` | 늘 입력 칸이다. 이미지에만 있다. |
+| 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="sm"` | 늘 입력 칸이다. 이미지에만 있다. |
 | 기본 캡션 | `FormField` + `Input size="sm"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `Stack`, 행마다 `TextButton`(`href` 그 글) + `Text variant="micro" tone="subtle"`(자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). |

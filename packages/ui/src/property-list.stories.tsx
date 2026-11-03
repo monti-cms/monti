@@ -1,8 +1,10 @@
+import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { AiAction } from "./ai-action";
 import { Input } from "./input";
 import { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
+import { Spark } from "./spark";
+import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
 
 /**
@@ -40,7 +42,12 @@ export const Base: Story = {
 				<PropertyRow label="발행일" value="2026. 10. 01" onEdit={() => undefined} />
 				<PropertyRow
 					label="요약"
-					action={<AiAction aria-label="요약 채우기" />}
+					action={
+						<TextButton tone="proposal" size="micro" aria-label="요약 채우기">
+							<Spark />
+							채우기
+						</TextButton>
+					}
 					value="비어 있음"
 					empty
 					onEdit={() => undefined}
@@ -84,7 +91,12 @@ export const FilledByAssistant: Story = {
 				<PropertyRow label="카테고리" value="개발" onEdit={() => undefined} />
 				<PropertyRow
 					label="시리즈"
-					action={<AiAction filled aria-label="시리즈 다시 채우기" />}
+					action={
+						<TextButton tone="proposal" size="micro" aria-label="시리즈 다시 채우기">
+							<Renew />
+							다시
+						</TextButton>
+					}
 					value="리액트 다시 만들기"
 					proposal
 					onEdit={() => undefined}
@@ -101,7 +113,11 @@ export const Writing: Story = {
 			<PropertyGroup>
 				<PropertyRow
 					label="요약"
-					action={<AiAction loading aria-label="요약 채우는 중" />}
+					action={
+						<TextButton tone="proposal" size="micro" loading aria-label="요약 채우는 중">
+							쓰는 중…
+						</TextButton>
+					}
 					value="비어 있음"
 					empty
 					onEdit={() => undefined}

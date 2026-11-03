@@ -47,7 +47,7 @@
 
 ### 코드
 
-`TextButton`: `variant`는 `plain`(기본), `underline`, `quiet`, `danger` 중 하나다. `mono`는 주소나 식별자에 고정폭 글자를 쓴다. `href`가 있으면 링크로 그리고, 앱의 라우터 링크는 `render`에 넣는다. 아이콘은 글자 앞에 온다(14px, 간격 6px). 뒤에 오는 `Caret`은 자기 크기 12px를 지킨다. DS는 호버를 그리지 않는다. 글자가 잉크색이 되고 선도 그렇게 된다.
+`TextButton`: `variant`는 `plain`(기본), `underline`, `quiet`, `danger` 중 하나다. `tone="proposal"`은 어시스턴트에게 시키는 버튼의 파란 글자다(밑줄도 파랑). `size`는 `note`, `caption`, 그리고 필드 라벨 줄의 "✦ 채우기"에 쓰는 `micro`(mono 11)다. `loading`은 글자 앞에 고리를 두고 다시 누를 수 없게 하며, 흐리게 하지 않는다(`aria-busy`). `mono`는 주소나 식별자에 고정폭 글자를 쓴다. `href`가 있으면 링크로 그리고, 앱의 라우터 링크는 `render`에 넣는다. 아이콘은 글자 앞에 온다(14px, 간격 6px). 뒤에 오는 `Caret`은 자기 크기 12px를 지킨다. DS는 호버를 그리지 않는다. 글자가 잉크색이 되고 선도 그렇게 된다.
 
 DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 부품은 `TextButton`이다.
 
@@ -84,4 +84,4 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 ## 스피너
 
-일하는 중이라는 표시다. 옆 글자의 잉크색으로 그린 14px 고리로, 4분의 1이 열려 있고 1초에 한 바퀴 돈다(시스템이 움직임을 줄여 달라고 하면 3초에 한 바퀴). 장식이다. 무슨 일이 일어나는지는 옆의 말이 알려 준다. `Button`, `SplitButton`, `AiAction`은 `loading`인 동안 스스로 보여 준다. `Spinner`는 상태 줄 옆에서만 직접 쓴다.
+일하는 중이라는 표시다. 옆 글자의 잉크색으로 그린 14px 고리로, 4분의 1이 열려 있고 1초에 한 바퀴 돈다(시스템이 움직임을 줄여 달라고 하면 3초에 한 바퀴). 장식이다. 무슨 일이 일어나는지는 옆의 말이 알려 준다. `Button`, `SplitButton`, `TextButton`은 `loading`인 동안 스스로 보여 준다. `Spinner`는 상태 줄 옆에서만 직접 쓴다.

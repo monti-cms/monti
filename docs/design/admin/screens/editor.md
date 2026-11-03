@@ -42,8 +42,8 @@
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`, `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
 | 이미지 도구 행 | `BlockBar`: `BlockBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `BlockBarSeparator`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
-| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `AiAction` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
-| 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `AiAction` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
+| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Select`, "대체 텍스트" `Textarea size="sm"`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
+| 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `TextButton tone="proposal" size="micro"` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
 
 ### 속성 패널
@@ -54,17 +54,17 @@
 |---|---|---|
 | 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. |
 | 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`) | 다른 탭에 제안이 있으면 탭 이름 뒤 `ChangeDot tone="proposal"`. |
-| "빈 칸 채우기" (탭 줄 끝) | `TextButton`(파란 ✦, `Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. |
+| "빈 칸 채우기" (탭 줄 끝) | `TextButton tone="proposal"`(`Spark`) | 빈 속성을 어시스턴트가 한꺼번에 채운다. 일이 있을 때만 보인다. |
 | 속성 한 행 | `PropertyRow`(`label`, `action`, `error`, `note`) | 라벨은 mono 11, 값은 13. 라벨 줄 끝 `action`은 포인터나 키보드가 행 안에 있을 때만 보인다. |
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
 | 주소 | `Affix`(`prefix` "/posts/", 끝 `action`은 다시 만들기 `IconButton`), mono | 늘 입력 칸이다. 바꿀 수 있는 부분만 밑줄. |
 | 발행일 | `Text variant="meta"` | 읽기만 한다. 날짜는 "발행하기 ▾"가 정한다. |
 | 대표 이미지 | 그림이 있으면 `Image`(4:3, `radius-sm`)와 파일 이름 `Text variant="caption" tone="subtle"`, 없으면 "비어 있음"(`Text tone="faint"`) | 누르면 `MediaPicker`를 담은 `Dialog`가 열린다(이미지를 고르는 창이므로 여기만 "누르면 열린다"). |
-| 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `AiAction`("✦ 채우기", 값이 있으면 "↻ 다시"). |
+| 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="micro"`("✦ 채우기", 값이 있으면 "↻ 다시"). |
 | 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
 | 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. |
 | 태그 (관계 여럿) | `Combobox` + `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`) | 고른 값은 칩, 끝의 입력 칸에서 더한다. |
-| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음", 그 뒤 `TextButton`(파란 ✦ "추천") | "추천"은 어시스턴트가 값을 고른다. 고른 값은 `proposal`(파란 글자)로 남고 라벨 줄 끝이 `AiAction` "↻ 다시"가 된다. |
+| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음", 그 뒤 `TextButton tone="proposal"`(✦ "추천") | "추천"은 어시스턴트가 값을 고른다. 고른 값은 `proposal`(파란 글자)로 남고 라벨 줄 끝이 `TextButton tone="proposal" size="micro"` "↻ 다시"가 된다. |
 | 고르기 필드 (`select`) | `Select` + `SelectTrigger size="sm" width="full"` | 늘 트리거가 있다. 누르면 목록. |
 | 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
 | 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="sm"`, `Textarea size="sm"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
@@ -98,12 +98,12 @@
 | `trashed` | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) |
 | `img` "올리는 중" · "설정" · "파일" | `UploadingImage` · `BlockBar`와 설정 `Popover` · `FileBlock` |
 | `fix` "요약" | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" |
-| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`AiAction`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). |
+| `fix` "대체 텍스트" | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="micro"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). |
 | `todo` · `todoOpen` | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) |
 | `pluginOpen` | 플러그인 칸의 `StatusBarList` |
 | `panel` · `panelTab` | `PropertyPanel`과 고른 탭 |
 | `panelFill` | 탭 줄 끝 "빈 칸 채우기" |
-| `seriesPending` | 시리즈 값이 `proposal`, 라벨 줄 끝 `AiAction filled` |
+| `seriesPending` | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") |
 | `toast` "발행 막힘" · "발행됨" | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" |
 
 ## 지금 코드와 다른 곳

@@ -1,12 +1,14 @@
+import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { AiAction } from "./ai-action";
 import { Checkbox } from "./checkbox";
 import { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldLegend, FormFieldSet } from "./field";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";
+import { Spark } from "./spark";
 import { Stack } from "./stack";
+import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
 
 /**
@@ -70,13 +72,17 @@ function WithFill({ initial, focus = false }: { initial: string; focus?: boolean
 			<FormFieldLabel
 				htmlFor={`alt-${focus}`}
 				action={
-					<AiAction
-						filled={value !== ""}
+					<TextButton
+						tone="proposal"
+						size="micro"
 						onClick={() => {
 							setValue("책상 위의 아침 햇살");
 							setProposal(true);
 						}}
-					/>
+					>
+						{value === "" ? <Spark /> : <Renew />}
+						{value === "" ? "채우기" : "다시"}
+					</TextButton>
 				}
 			>
 				대체 텍스트
