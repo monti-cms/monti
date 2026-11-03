@@ -48,10 +48,6 @@
 | `noDiagrams` | 미디어 트리에 "diagrams"가 없다 |
 | `fresh` | 새로 설치한 사이트: 글 수, 휴지통, 도구 개수가 없고 글 폴더 트리가 없다 |
 
-### 부품 없음
-
-없다.
-
 ## 사이드바 · 접힘 (SidebarRail)
 
 - 보드: `SidebarRail.dc.html`. Sidebar에 `rail`과 `railTip`을 켠 것이다. 상태: [screens.md › SidebarRail](../screens.md#sidebarrail).
@@ -72,10 +68,6 @@
 |---|---|
 | (prop 없음) | 접힌 사이드바, "도구" 툴팁, 도구 `railDot` |
 
-### 부품 없음
-
-없다.
-
 ## 사이드바 · 화면 모드 (SidebarTheme)
 
 - 보드: `SidebarTheme.dc.html`. 어두운 테마의 펼친 Sidebar와, `rail` · `themeMenu`를 켠 Sidebar를 나란히 둔다. 상태: [screens.md › SidebarTheme](../screens.md#sidebartheme).
@@ -93,6 +85,3 @@
 |---|---|
 | (prop 없음) | 왼쪽: 펼친 사이드바 `theme` "dark". 오른쪽: 접힌 사이드바 `theme` "dark"와 열린 화면 모드 메뉴 |
 
-### 부품 없음
-
-없다.

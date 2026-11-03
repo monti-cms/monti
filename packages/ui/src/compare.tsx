@@ -114,6 +114,62 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 	);
 }
 
+/**
+ * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
+ * is the head (`head`): the name of each side in the small mono line, under the ink rule.
+ */
+function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="compare-rows" className={cn("flex flex-col", className)} {...props} />;
+}
+
+/**
+ * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source
+ * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block
+ * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`.
+ */
+function CompareRow({
+	name,
+	note,
+	head = false,
+	current = false,
+	source,
+	translation,
+	className,
+	...props
+}: Omit<React.ComponentProps<"div">, "children"> & {
+	/** The kind of block ("문단"); empty on the head row. */
+	name?: React.ReactNode;
+	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. */
+	note?: React.ReactNode;
+	/** The head row: each side's name, date and language in the small mono line. */
+	head?: boolean;
+	current?: boolean;
+	source: React.ReactNode;
+	translation: React.ReactNode;
+}) {
+	return (
+		<div
+			data-slot="compare-row"
+			data-current={current || undefined}
+			className={cn(
+				"grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] items-stretch border-monti-muted border-b last:border-b-0",
+				head && "border-t border-t-monti-contrast font-mono text-monti-micro text-monti-subtle",
+				className,
+			)}
+			{...props}
+		>
+			<span className="flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle">
+				{name}
+				{note && <span className="text-monti-warning">{note}</span>}
+			</span>
+			<div className={cn("min-w-0 bg-monti-tool px-monti-24 py-monti-16", !head && "text-monti-muted")}>{source}</div>
+			<div className={cn("min-w-0 border-monti-default border-l px-monti-24 py-monti-16", current && "bg-monti-block")}>
+				{translation}
+			</div>
+		</div>
+	);
+}
+
 /** A run of the entry's text: the words that `changed` are on the highlight, the others are plain. */
 function CompareText({ changed = false, children }: { changed?: boolean; children: React.ReactNode }) {
 	return changed ? <Highlight>{children}</Highlight> : children;
@@ -126,6 +182,8 @@ export {
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
 	CompareSide,
 	CompareText,
 	CompareTitle,

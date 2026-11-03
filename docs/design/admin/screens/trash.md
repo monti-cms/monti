@@ -53,7 +53,7 @@
 | 상태 줄 | `DotNote` "휴지통 · 3일 남음 · 읽기 전용" | 패널은 읽기만 한다. |
 | 미리보기 (미디어) | `Image`(4:3), 파일이면 `FilePreview framed` | |
 | 정보 | `DescriptionList` + `DescriptionItem` | 항목: 컬렉션 · 이름 · 주소 · 버린 날. 미디어: 종류 · 크기 · 폴더 · 대체 텍스트 · 버린 날. |
-| "가리키는 글 · 4" / "쓰는 곳" | `Label`, 그 아래 글마다 링크 행(아래 "부품 없음") | 글 이름과 어느 필드인지("태그", "휴지통 · 태그"). 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". |
+| "가리키는 글 · 4" / "쓰는 곳" | `Label`, 그 아래 `ChangeLines`(`what` 글 이름 링크, `then` 어느 필드인지) | 글 이름과 어느 필드인지("태그", "휴지통 · 태그"). 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". |
 | 발 | `SidePanel`의 `footer`: `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 영구 삭제는 `AlertDialog`로 묻는다. |
 
 ### 창
@@ -72,7 +72,7 @@
 |---|---|---|---|
 | "종류 메뉴" | 5.11 | "종류" 열의 `DropdownMenuCheckboxItem` 다섯과 개수 | Controls/Menu/DropdownMenu |
 | "행 메뉴" | 5.16 | 행 `ContextMenu`("복원" · "영구 삭제"), 그 행 호버 바탕 | Controls/Menu/ContextMenu |
-| "어시스턴트" | 5.15 | 어시스턴트가 버린 행은 버린 날 앞에 파란 ✦(아래 "부품 없음"). 누르면 그 대화가 열린다 |  |
+| "어시스턴트" | 5.15 | 어시스턴트가 버린 행은 `TrashRowDate byAssistant`: 버린 날이 파란 ✦와 함께 버튼이 된다. 누르면 그 대화가 열린다 | Patterns/List/TrashRow |
 | "미디어" | 5.17 | "종류" 열 `filtered`, 미디어 행만. 칩 줄은 없다 |  |
 | "항목 열기" | 5.19 | 태그 행 `selected`와 항목 `SidePanel`("가리키는 글 · 4") | Controls/Overlay/SidePanel |
 | "미디어 열기" | 5.20 | 파일 행 `selected`와 미디어 `SidePanel`(미리보기, "쓰는 곳" 없음) | Controls/Overlay/SidePanel |
@@ -87,10 +87,3 @@
 | "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `meta`, "폴더 복원" · "영구 삭제", "상위 폴더로" 행, 날짜 칸이 빈 안쪽 행 | Patterns/Frame/PageHeader |
 | "폴더에서 하나 복원" | 5.13 | 남은 안쪽 행, `toast` "시리즈 원고 폴더를 다시 만들고 초안으로 복원했어요"와 "열기" | Controls/Status/Toast |
 | "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 `meta` 앞에 폴더 경로 | Controls/Field/SearchBox |
-
-## 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- **어시스턴트가 버린 표시** `.mt-spark`(버린 날 앞, `fg-proposal`): `TrashRowDate`에는 이 표시와, 누르면 대화를 여는 동작이 없다.
-- **패널 안의 링크 행** `.mt-panel-body .mt-row`(글 이름과 끝의 `.text-micro` 덧말): "가리키는 글"과 "쓰는 곳"의 행. 이 모양을 그리는 부품이 없다.

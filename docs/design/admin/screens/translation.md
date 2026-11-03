@@ -78,12 +78,10 @@
 | `stage` "다시 번역" | 3.11 | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble, Controls/Status/EntryStatus |
 | `stage` "번역 지우기" | 3.15 | ⋯ `DropdownMenu` 열림 | Controls/Menu/DropdownMenu |
 
-### 부품 없음
+### 보드의 이름을 부품으로
 
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- `.mt-tool`: 원문 옆 창(도구 바탕, 읽기 전용 원문).
-- `.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`: 본문 블록([editor-tools.md](../components/editor-tools.md)의 "본문 블록").
+- `.mt-tool` 원문 옆 창: `ResizablePane` 안의 `Box background="tool"`.
+- `.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table` 본문 블록: 블록 패키지가 편집기에 그리는 블록 그대로.
 
 ## 번역 · 원문 나란히 (TranslatePaired)
 
@@ -115,10 +113,8 @@
 |---|---|---|---|
 | (상태 prop 없음) | 3.05 | 한 화면뿐이다. 바뀐 문단, 원문에 더해진 문단, 이미지, 코드, 표, 목록을 한 번에 보인다. |  |
 
-### 부품 없음
+### 보드의 이름을 부품으로
 
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- `.mt-pair`, `.mt-pair--head`, `.mt-pair--title`, `.mt-src-changed`: 짝 보기([translation.md](../components/translation.md)의 "나란히 보기", "아직 `@monti-cms/ui`에 없다").
-- `.mt-shared`: 원문과 같음.
-- `.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`: 본문 블록.
+- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 여백의 상태는 "원문 바뀜" · "원문에 추가" 모두 주황, 원문에서 바뀐 글은 `Highlight`.
+- `.mt-shared` 원문과 같음: 원문 블록을 흐린 글자로, 아래 "English에서만 따로 고치기" `TextButton`.
+- 본문 블록: 블록 패키지의 블록 그대로.

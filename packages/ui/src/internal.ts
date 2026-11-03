@@ -74,6 +74,8 @@ export {
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
 	CompareSide,
 	CompareText,
 	CompareTitle,
