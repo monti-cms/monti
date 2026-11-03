@@ -94,7 +94,8 @@ export function TabsNodeView() {
 									value={label}
 									required
 									autoFocus
-									size={Math.max(4, label.length + 1)}
+									width="fit"
+									align="center"
 									onCommit={(next) => renameTab(index, next)}
 									onEnter={() => {
 										setRenaming(null);
@@ -102,7 +103,6 @@ export function TabsNodeView() {
 									}}
 									onEscape={() => setRenaming(null)}
 									onBlur={() => setRenaming(null)}
-									className="text-center"
 								/>
 							</div>
 						) : (
