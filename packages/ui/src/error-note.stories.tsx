@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, ChatError, TextButton } from "./index";
+import { Box, ErrorNote, TextButton } from "./index";
 
-/** An error answer in the conversation: a red line on the left, the problem in one bold red line, one grey line, then what can be done. */
+/** Something that failed, where it failed (an answer in the conversation, a change a screen could not apply): a red line on the left, the problem in one bold red line, one grey line, then what can be done. */
 const meta = {
-	title: "Monti/Assistant/ChatError",
-	component: ChatError,
+	title: "Controls/Status/ErrorNote",
+	component: ErrorNote,
 	args: { title: "Anthropic 크레딧이 부족해요" },
 	decorators: [
 		(Story) => (
@@ -13,7 +13,7 @@ const meta = {
 			</Box>
 		),
 	],
-} satisfies Meta<typeof ChatError>;
+} satisfies Meta<typeof ErrorNote>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

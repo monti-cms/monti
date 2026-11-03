@@ -15,7 +15,7 @@
 |---|---|---|
 | 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 미리보기에 고칠 곳이 있으면 `saveDisabled`. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
 | 열린 PR 줄 | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
-| 데이터베이스 적용 실패 | `ChatError`(`title` "데이터베이스에 적용하지 못했어요", 회색 한 줄, `actions`에 `TextButton` "다시 적용" · "다시 불러오기") | 컬렉션 탭 줄 바로 아래. |
+| 데이터베이스 적용 실패 | `ErrorNote`(`title` "데이터베이스에 적용하지 못했어요", 회색 한 줄, `actions`에 `TextButton` "다시 적용" · "다시 불러오기") | 컬렉션 탭 줄 바로 아래. |
 
 #### 컬렉션 목록
 
@@ -60,7 +60,7 @@
 | 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField ruled`, 값 자리의 입력 부품, 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
 | 미리볼 수 없음 | `Text variant="note"` "고칠 곳이 있어 미리볼 수 없어요." + `TodoItem blocking`(`title` 필드 이름, 아래 줄 "선택지가 없어요") | 행을 누르면 그 필드로 간다. 저장 묶음의 알약이 비활성이 된다. |
 
-스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Patterns/Frame/Banner, Controls/Button/TextButton, Monti/Assistant/ChatError, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/Tabs, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Field/Caret, Controls/Menu/DropdownMenu, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch.
+스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Patterns/Frame/Banner, Controls/Button/TextButton, Controls/Status/ErrorNote, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/Tabs, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Field/Caret, Controls/Menu/DropdownMenu, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch.
 
 ### 뜨는 자리
 
@@ -104,7 +104,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 바뀐 곳 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 비활성. 발에는 "취소"와 알약 하나만 있다. |
-| 파일이 바뀜 | `ChatError`(`title` "파일이 바뀌었어요", 회색 한 줄, `actions`에 "다시 불러오기") | 시트 맨 위. |
+| 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었어요", 회색 한 줄, `actions`에 "다시 불러오기") | 시트 맨 위. |
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기") | 하나를 고른다. |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "132편에서 값이 사라져요. 되돌릴 수 없어요." |
@@ -154,14 +154,8 @@
 | "PR에 더하기" | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
 | "읽기 전용" | 11.17, 11.17c | 구조 절 `LockMark`, 식별자 · 종류 · 공개 주소는 글, 스위치 `disabled`, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |
-| "적용 실패" | 11.20 | `ChatError` "데이터베이스에 적용하지 못했어요" | Monti/Assistant/ChatError |
-| "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ChatError` "파일이 바뀌었어요", 알약 비활성 | Controls/Overlay/Sheet, Monti/Assistant/ChatError |
+| "적용 실패" | 11.20 | `ErrorNote` "데이터베이스에 적용하지 못했어요" | Controls/Status/ErrorNote |
+| "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ErrorNote` "파일이 바뀌었어요", 알약 비활성 | Controls/Overlay/Sheet, Controls/Status/ErrorNote |
 | `tab` "필드" · "기본" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
 | `sheetKind` "관계" · "글자" · "고르기" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 시트의 `PickListItem selected`와 그 종류의 설정 | Controls/Menu/PickList |
 | `withRail` | 11.11 | ✦ 어시스턴트 열기(미리보기 중에는 패널에 가려진다) |  |
-
-### 부품 없음
-
-보드에 있지만 `@monti-cms/ui`에 아직 없는 것이다. 화면에서 만들지 않고, 먼저 부품을 만든다.
-
-- **오류 답장의 일반 이름**: `.mt-msg-error`는 지금 어시스턴트 부품 `ChatError`로만 있다. 이 화면은 같은 모양을 쓴다. 이름이 대화에 묶여 있으니, 다른 화면에서도 쓰는 부품으로 옮길지 정해야 한다.

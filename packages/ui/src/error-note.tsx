@@ -2,11 +2,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 
 /**
- * An answer that could not be given, in the conversation itself: a red line on the left, the problem in one bold red line, one grey line that says
- * what happened (which key, how much was spent, when it opens again), and what can be done next (`actions`, text buttons). Sending is never blocked
- * beforehand; this is what comes back after.
+ * Something that failed, where it failed: a red line on the left, the problem in one bold red line, one grey line that says what happened (which key,
+ * which database error, when it opens again), and what can be done next (`actions`, text buttons). In the conversation it is the answer that could not
+ * be given (sending is never blocked beforehand; this is what comes back after); on a screen, a change that could not be applied.
  */
-function ChatError({
+function ErrorNote({
 	title,
 	actions,
 	className,
@@ -21,7 +21,7 @@ function ChatError({
 }) {
 	return (
 		<div
-			data-slot="chat-error"
+			data-slot="error-note"
 			role="alert"
 			className={cn("flex flex-col gap-monti-4 border-monti-danger border-l-2 pl-monti-12", className)}
 			{...props}
@@ -33,4 +33,4 @@ function ChatError({
 	);
 }
 
-export { ChatError };
+export { ErrorNote };

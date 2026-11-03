@@ -31,7 +31,6 @@ export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
 export { ChangesGroup, type ChangesItem } from "./changes-group";
-export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
@@ -133,6 +132,7 @@ export {
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";
+export { ErrorNote } from "./error-note";
 export {
 	FormField,
 	FormFieldDescription,

@@ -18,7 +18,7 @@
 | 화면 버튼으로 보낸 말 | `ChatMessage author="user" request` | 앞에 파란 반짝이. |
 | 하는 중인 도구 줄 | `ToolCallLine status="running"` | 돌아가는 표시와 진한 글("요약 확인 중 · 62 / 148"). |
 | 멈춘 도구 줄 | `ToolCallLine status="failed"` | 빨간 ×와 "… 에서 멈춤". |
-| 오류 답장 | `ChatError`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 크레딧 부족: "Anthropic 크레딧이 부족해요" · "다른 모델로 보내기". 연결 끊김: "연결이 끊겼어요" · "이어서 하기". 보내기는 미리 막지 않고, 보낸 뒤에 이 답장으로 알린다. |
+| 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 크레딧 부족: "Anthropic 크레딧이 부족해요" · "다른 모델로 보내기". 연결 끊김: "연결이 끊겼어요" · "이어서 하기". 보내기는 미리 막지 않고, 보낸 뒤에 이 답장으로 알린다. |
 | 옮기지 못한 이동 | 답의 글 + 글 이름 `TextButton variant="underline"` + mono 주소 + `Button variant="secondary" size="sm"` "저장하고 열기" | 저장하지 않은 편집이 있어 화면을 옮기지 않았을 때. 대화 안의 답으로 알린다. |
 | 여러 묶음 제안 | `ProposalCard`(`summary` "4묶음 · 19건") 안에 `ProposalRow` 넷(`name`, `detail`, `count`) | 기다림: `ProposalActions` "상세 보기" · "버리기" · [19건 적용]. 적용 뒤: `ProposalResult` "✓ 16건 적용" · "1건 못 함" · 시각 · "모두 되돌리기", `after`에 `ProposalRow tone="danger"` "못 옮김 · 겨울 사진 · 그 사이 휴지통으로 감". |
 | 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "상세 보기"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "상세 보기". |
@@ -33,7 +33,7 @@
 | 모델 버튼 | `ModelMenuButton` | mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 메뉴가 열리면 잉크. |
 | 모델 메뉴 | `ModelMenu layout="chat"`(검색 행, `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 끝의 "기본" · 키 이름 `hint`, `thinking`의 "생각 ›" 둘째 단계 "끔" · "낮음" · "보통" · "높음") | 생각을 지원하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 목록은 키로 묶는다. 도구를 쓸 수 있는 모델만 나온다. |
 
-스토리: Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Monti/Assistant/ChatError, Controls/Button/TextButton, Controls/Button/Button, Monti/Proposal/ProposalCard, Monti/Proposal/Marks, Monti/Assistant/Suggest, Primitives/Text, Monti/Assistant/ConversationList, Controls/Menu/DropdownMenu, Patterns/List/FilterButton, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu.
+스토리: Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Controls/Status/ErrorNote, Controls/Button/TextButton, Controls/Button/Button, Monti/Proposal/ProposalCard, Monti/Proposal/Marks, Monti/Assistant/Suggest, Primitives/Text, Monti/Assistant/ConversationList, Controls/Menu/DropdownMenu, Patterns/List/FilterButton, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu.
 
 ### 흐름 2 · 어시스턴트
 
@@ -48,7 +48,7 @@
 | "목록 거름" | 2.03 | 도구 줄 셋과 답 |  |
 | "글 엶" | 2.04 | 이어서 "첫 번째 글 열어 줘", 도구 줄 "화면 이동", 답. 플레이스홀더 "이 글에 대해 물어보세요" |  |
 | "이동 막힘" | 2.05 | 이어서 옮기지 못한 이동의 답과 "저장하고 열기" |  |
-| "실패" | 2.06 | `ToolCallLine status="failed"`와 `ChatError` "연결이 끊겼어요" | Monti/Assistant/ToolCallLine, Monti/Assistant/ChatError |
+| "실패" | 2.06 | `ToolCallLine status="failed"`와 `ErrorNote` "연결이 끊겼어요" | Monti/Assistant/ToolCallLine, Controls/Status/ErrorNote |
 | "글에서 요청" | 2.07 | "글 엶"에 입력 상자의 글 "더 짧게 다듬어 줘. 말투는 그대로." |  |
 | "맡기기" | 2.10 | "둘 다 골라 줘" 답, 입력 상자의 긴 요청과 `Chip` "고른 글 2편" |  |
 | "제안 카드" | 2.11 | 여러 묶음 `ProposalCard`와 `ProposalActions` | Monti/Proposal/ProposalCard |
@@ -60,7 +60,7 @@
 | "생각 고르기" | 2.23b | `ModelMenu`의 "생각 ›" 둘째 단계 열림 | Controls/Menu/ModelMenu |
 | "생각 높음" | 2.23c | `ModelMenuButton`에 "· 생각 높음" | Controls/Menu/ModelMenu |
 | "생각 없는 모델" | 2.23d | 다른 모델에 ✓, "생각" 행과 버튼의 "· 생각"이 없음 |  |
-| "크레딧 부족" | 2.24 | 내 말 아래 `ChatError` "Anthropic 크레딧이 부족해요" | Monti/Assistant/ChatError |
+| "크레딧 부족" | 2.24 | 내 말 아래 `ErrorNote` "Anthropic 크레딧이 부족해요" | Controls/Status/ErrorNote |
 | "지난 대화" | 2.25 | 머리 `back`, `ConversationList`, 발의 `FilterButton`. 입력 상자 없음 | Monti/Assistant/ConversationList, Patterns/List/FilterButton |
 | "다시 연 대화" | 2.26 | `ChatDate`, 지운 제안 카드, 모델 "claude-opus-5-5 · 생각 높음" | Monti/Assistant/ChatThread |
 

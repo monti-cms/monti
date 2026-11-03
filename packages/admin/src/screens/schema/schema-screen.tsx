@@ -9,9 +9,9 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Banner,
 	Box,
-	ChatError,
 	CodeBlock,
 	DragHandle,
+	ErrorNote,
 	Heading,
 	Icon,
 	Inline,
@@ -380,7 +380,7 @@ function SchemaEditor({
 						)}
 						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
 						{applyFailed !== null && (
-							<ChatError
+							<ErrorNote
 								title={tReview("applyFailed.title")}
 								actions={
 									<TextButton type="button" onClick={reloadPage}>
@@ -389,7 +389,7 @@ function SchemaEditor({
 								}
 							>
 								{tReview("applyFailed.text", { message: applyFailed })}
-							</ChatError>
+							</ErrorNote>
 						)}
 						{state.issues.length > 0 && (
 							<Stack gap={8} data-testid="schema-file-invalid">

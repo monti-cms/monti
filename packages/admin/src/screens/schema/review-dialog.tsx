@@ -13,7 +13,7 @@ import {
 	ChangeLine,
 	ChangeLines,
 	ChangeNote,
-	ChatError,
+	ErrorNote,
 	Input,
 	RadioGroup,
 	RadioItem,
@@ -799,7 +799,7 @@ export function ReviewDialog({
 						<Stack gap={0}>
 							{saveError && (
 								<Box paddingTop={16} paddingBottom={4}>
-									<ChatError
+									<ErrorNote
 										title={saveError.conflict ? t("save.conflict.title") : saveError.message}
 										actions={
 											saveError.conflict ? (
@@ -810,26 +810,26 @@ export function ReviewDialog({
 										}
 									>
 										{saveError.conflict ? saveError.message : undefined}
-									</ChatError>
+									</ErrorNote>
 								</Box>
 							)}
-							{error && <ChatError title={error} />}
+							{error && <ErrorNote title={error} />}
 							{loading && !preview && (
 								<Text as="p" tone="subtle" role="status">
 									{tc("loading")}
 								</Text>
 							)}
 							{preview && !preview.valid && (
-								<ChatError title={t("review.invalid")}>
+								<ErrorNote title={t("review.invalid")}>
 									<IssueList issues={preview.issues} />
-								</ChatError>
+								</ErrorNote>
 							)}
 							{problems.length > 0 && (
-								<ChatError title={t("review.problems")}>
+								<ErrorNote title={t("review.problems")}>
 									{problems.map((problem) => (
 										<span key={`${problem.id}:${problem.message}`}>{problem.message}</span>
 									))}
-								</ChatError>
+								</ErrorNote>
 							)}
 							{preview?.valid && !preview.changed && (
 								<Text as="p" tone="subtle">
