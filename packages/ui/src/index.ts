@@ -184,6 +184,7 @@ export const LockMark = close(open.LockMark);
 export const NavLink = close(open.NavLink);
 export const RailLayout = close(open.RailLayout);
 export const OptionRow = close(open.OptionRow);
+export const OrderedRow = close(open.OrderedRow);
 export const OptionTable = close(open.OptionTable);
 export const Pagination = close(open.Pagination);
 export const PaginationContent = close(open.PaginationContent);

@@ -740,10 +740,6 @@ const DRAWING = new Map([
 		"extra room after the last block so the source can scroll as far as the translation does (35% of the viewport, in step with the editor)",
 	],
 	[
-		"admin/src/screens/entries/sortable-entry-row.tsx",
-		"a sortable row is moved by dnd-kit's transform (inline style) and lifts while dragged, and its handle needs a grab cursor and no touch scrolling",
-	],
-	[
 		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
 		"the drop rows of the field list: a drag transform on the row",
 	],
