@@ -2,9 +2,8 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 
 /**
  * Flow 8, first install (docs/design/admin/flows/08-first-install.md), through the login screen of the example app with an empty database.
- * Steps 8.07 (locked after five misses), 8.08 and 8.09 (GitHub only, a GitHub account that is not an admin) and 8.10 (no login method) are
- * not here: the login tells a locked email apart from a wrong password nowhere the screen can read, the GitHub steps need GitHub's OAuth
- * server, and the example always has a login method.
+ * Steps 8.08 and 8.09 (GitHub only, a GitHub account that is not an admin) and 8.10 (no login method) are not here: the GitHub steps
+ * need GitHub's OAuth server, and the example always has a login method.
  */
 
 const EMAIL = "me@example.dev";
@@ -25,7 +24,7 @@ async function freshPage(browser: Browser) {
 	return context.newPage();
 }
 
-test("flow 8: 8.01 first admin form, 8.02 field errors, 8.04 created elsewhere, 8.03 created and signed in, 8.05 sign in, 8.06 wrong password", async ({
+test("flow 8: 8.01 first admin form, 8.02 field errors, 8.04 created elsewhere, 8.03 created and signed in, 8.05 sign in, 8.06 wrong password, 8.07 locked", async ({
 	page,
 	browser,
 }) => {
@@ -33,7 +32,8 @@ test("flow 8: 8.01 first admin form, 8.02 field errors, 8.04 created elsewhere, 
 		await page.goto("/studio");
 		await expect(page).toHaveURL(/\/studio\/login/);
 		await expect(page.getByText("첫 관리자 만들기")).toBeVisible();
-		await expect(field(page, "비밀번호")).toHaveAttribute("placeholder", "10자 이상");
+		// The length rule stays under the field while the password is typed.
+		await expect(field(page, "비밀번호")).toHaveAccessibleDescription("10자 이상");
 		await expect(page.getByRole("button", { name: "생성" })).toBeVisible();
 		await expect(page.getByRole("button", { name: "GitHub로 로그인" })).toHaveCount(0);
 	});
@@ -98,5 +98,21 @@ test("flow 8: 8.01 first admin form, 8.02 field errors, 8.04 created elsewhere, 
 		await visitor.getByRole("button", { name: "로그인", exact: true }).click();
 		await expect(visitor).not.toHaveURL(/\/login/);
 		await expect(visitor.getByText("첫 글을 써 볼까요?")).toBeVisible();
+	});
+
+	await test.step("8.07 five misses lock the email for a minute, and the screen says to wait", async () => {
+		const stranger = await freshPage(browser);
+		await stranger.goto(LOGIN);
+		for (let miss = 0; miss < 5; miss++) {
+			await field(stranger, "이메일").fill(EMAIL);
+			await field(stranger, "비밀번호").fill(`wrong-password-${miss}`);
+			await stranger.getByRole("button", { name: "로그인", exact: true }).click();
+			await expect(stranger.getByText("이메일 또는 비밀번호가 맞지 않아요.")).toBeVisible();
+		}
+		await field(stranger, "이메일").fill(EMAIL);
+		await field(stranger, "비밀번호").fill(PASSWORD);
+		await stranger.getByRole("button", { name: "로그인", exact: true }).click();
+		await expect(stranger.getByText("1분 뒤에 다시 시도해 주세요.")).toBeVisible();
+		await expect(stranger.getByRole("button", { name: "로그인", exact: true })).toBeDisabled();
 	});
 });

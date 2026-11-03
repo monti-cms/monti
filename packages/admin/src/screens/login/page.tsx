@@ -25,7 +25,7 @@ export default async function AdminLoginPage({
 }: {
 	cms: Cms;
 	server: AdminServer;
-	/** The query of the address: `error` says why the last attempt did not work (Auth.js's `CredentialsSignin`, or a reason from the first-admin route). */
+	/** The query of the address: `error` says why the last attempt did not work (Auth.js's `CredentialsSignin`, with its `code`, or a reason from the first-admin route). */
 	searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 	const { site } = cms;
@@ -44,8 +44,11 @@ export default async function AdminLoginPage({
 	}
 
 	const providers = auth.providers;
-	const rawError = (await searchParams)?.error;
-	const code = Array.isArray(rawError) ? rawError[0] : rawError;
+	const query = await searchParams;
+	const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+	const code = first(query?.error);
+	// Auth.js's reason for a refused password sign-in: `locked` after too many recent misses.
+	const locked = code === "CredentialsSignin" && first(query?.code) === "locked";
 	const error = code ? (ERRORS[code] ?? "other") : undefined;
 	const accounts = auth.accounts;
 	// The built-in login with no account yet: the first admin is created here. The route that handles the form checks that again on the server.
@@ -76,7 +79,7 @@ export default async function AdminLoginPage({
 								kind: "sign-in",
 								buttons: buttonsOf(providers, signInAction),
 								...(passwordMethod ? { passwordAction: signInAction(passwordMethod.id) } : {}),
-								...(error ? { error } : {}),
+								...(locked ? { locked: true } : error ? { error } : {}),
 							};
 
 	return <LoginView t={t} siteName={site.config.site?.name?.trim() || "Monti"} mode={mode} />;
