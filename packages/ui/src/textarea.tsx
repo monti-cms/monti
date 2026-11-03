@@ -4,13 +4,17 @@ import type * as React from "react";
 import { cn } from "./cn";
 import { useProposalDescription } from "./proposal-cue";
 
-/** Several lines, drawn like `Input`: an underline, never a box. `proposal` marks text the assistant wrote and nobody has touched. */
+/**
+ * Several lines, drawn like `Input`: an underline, never a box. `proposal` marks text the assistant wrote and nobody has touched. `action` is a
+ * control at the end of the first line (a button that makes the text again from the body); the underline then runs under it too.
+ */
 function Textarea({
 	className,
 	size = "default",
 	mono = false,
 	proposal = false,
 	tall = false,
+	action,
 	...props
 }: React.ComponentProps<"textarea"> & {
 	/** `sm` writes at the note size, for compact panels; `default` at the reading size on a phone and body size above. */
@@ -21,8 +25,10 @@ function Textarea({
 	proposal?: boolean;
 	/** Two lines high (52px) while it is empty or short, then it grows: the help text of a field. */
 	tall?: boolean;
+	/** A control at the end of the first line. */
+	action?: React.ReactNode;
 }) {
-	return (
+	const textarea = (
 		<textarea
 			data-slot="textarea"
 			data-size={size}
@@ -36,10 +42,24 @@ function Textarea({
 					: "text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
 				tall && "min-h-[52px]",
+				action && "min-w-0 flex-1 border-b-0 data-proposal:border-b-0",
 				className,
 			)}
 			{...props}
 		/>
+	);
+	if (!action) return textarea;
+	return (
+		<div
+			data-slot="textarea-line"
+			className={cn(
+				"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				"items-start",
+			)}
+		>
+			{textarea}
+			<span className="shrink-0">{action}</span>
+		</div>
 	);
 }
 

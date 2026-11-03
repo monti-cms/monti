@@ -17,7 +17,8 @@ const INLINE_SIZE = {
 
 /**
  * A one-line field drawn as an underline, never a box. The underline turns ink on focus and danger when `aria-invalid`; the placeholder is
- * faint. `proposal` marks a value the assistant wrote and nobody has touched: blue text and a 1.5px blue underline.
+ * faint. `proposal` marks a value the assistant wrote and nobody has touched: blue text and a 1.5px blue underline. `action` is a control at the
+ * end of the line (a button that makes the value again from the body); the underline then runs under it too, like a select's caret.
  */
 function Input({
 	className,
@@ -29,6 +30,7 @@ function Input({
 	proposal = false,
 	srOnly = false,
 	align = "start",
+	action,
 	...props
 }: Omit<React.ComponentProps<"input">, "size" | "width"> & {
 	/** `sm` (28px) beside small buttons in toolbars, filters and tables; `default` in forms. */
@@ -49,9 +51,11 @@ function Input({
 	srOnly?: boolean;
 	/** Where the text sits in the field (a caption that follows its image's alignment). */
 	align?: "start" | "center" | "end";
+	/** A control at the end of the line, for a line field. */
+	action?: React.ReactNode;
 }) {
 	const inline = appearance === "inline" || size === "title" || size === "display" || size === "inherit";
-	return (
+	const input = (
 		<InputPrimitive
 			type={type}
 			data-slot="input"
@@ -77,10 +81,24 @@ function Input({
 				srOnly && "sr-only",
 				align === "center" && "text-center",
 				align === "end" && "text-right",
+				action && "border-b-0 data-proposal:border-b-0",
 				className,
 			)}
 			{...props}
 		/>
+	);
+	if (!action || inline) return input;
+	return (
+		<div
+			data-slot="input-line"
+			className={cn(
+				"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				"items-center",
+			)}
+		>
+			{input}
+			<span className="shrink-0">{action}</span>
+		</div>
 	);
 }
 

@@ -92,6 +92,7 @@ function TextRow({
 	proposal = false,
 	multiline = false,
 	fill,
+	fromBody = false,
 }: {
 	label: string;
 	value?: string;
@@ -99,18 +100,25 @@ function TextRow({
 	proposal?: boolean;
 	multiline?: boolean;
 	fill?: "empty" | "filled" | "loading";
+	/** The field fills from the start of the body: a button at the end of its line, where the address has its regenerate button. */
+	fromBody?: boolean;
 }) {
 	const id = useId();
 	const action = fill === undefined ? undefined : <Fill filled={fill === "filled"} loading={fill === "loading"} />;
+	const end = fromBody ? (
+		<IconButton label="본문에서 가져오기">
+			<Renew aria-hidden />
+		</IconButton>
+	) : undefined;
 	return (
 		<FormField>
 			<FormFieldLabel htmlFor={id} action={action}>
 				{label}
 			</FormFieldLabel>
 			{multiline ? (
-				<Textarea id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} />
+				<Textarea id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
 			) : (
-				<Input id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} />
+				<Input id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
 			)}
 		</FormField>
 	);
@@ -275,7 +283,7 @@ export const Basic: Story = {
 						<PropertyGroup>
 							<AddressRow />
 							<PublishedRow />
-							<TextRow label="요약" multiline fill="empty" />
+							<TextRow label="요약" multiline fill="empty" fromBody />
 							<TextRow label="부제" value="단풍이 시작된 산길에서" fill="filled" />
 						</PropertyGroup>
 						<PropertyGroup title="분류">

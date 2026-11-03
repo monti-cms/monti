@@ -14,7 +14,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"property.empty": "Empty",
 		"property.none": "None",
 		"property.slugFromTitle": "Made from the title",
-		"field.fromBody": "From body",
 		"copy.suffix": " (copy)",
 
 		"lifecycle.success.archive": "Archived.",
@@ -123,7 +122,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"property.empty": "비어 있음",
 		"property.none": "없음",
 		"property.slugFromTitle": "제목에서 만들어요",
-		"field.fromBody": "본문에서",
 		"copy.suffix": " (복사)",
 
 		"lifecycle.success.archive": "보관했어요.",

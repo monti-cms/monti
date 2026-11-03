@@ -1,17 +1,9 @@
 "use client";
 
 import { Renew } from "@carbon/icons-react";
-import type {
-	BacklinkField,
-	ConditionalField,
-	RelationField,
-	SlugField,
-	TextField,
-	ValueField,
-	ViewField,
-} from "@monti-cms/core";
+import type { BacklinkField, ConditionalField, RelationField, SlugField, ValueField, ViewField } from "@monti-cms/core";
 import type { PanelGroup } from "@monti-cms/core/site";
-import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Affix,
 	FormField,
@@ -22,7 +14,6 @@ import {
 	Inline,
 	PropertyGroup,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { type FocusEvent, memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
@@ -46,7 +37,7 @@ import { MediaValue } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { PropertyEditContext, usePropertyEdit } from "./property-edit";
 import { optionOf } from "./record-create-sheet";
-import { DefaultInput, useRegisteredInput } from "./schema-fields";
+import { DefaultInput, useFillFromBodyButton, useRegisteredInput } from "./schema-fields";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
 
@@ -236,7 +227,6 @@ function ValuePropertyView({
 	form?: FieldInputProps["form"];
 	focus: FocusRequest;
 }) {
-	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
@@ -270,30 +260,11 @@ function ValuePropertyView({
 	const Empty = parts?.Empty;
 	const Input = parts?.Input;
 	const empty = !proposal && isBlank(field.value) && !alwaysHasValue(definition);
-	const canFillFromBody =
-		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	const fillFromBody = useFillFromBodyButton(collection, definition, field.readOnly, field.setValue);
 	const max = definition.kind === "text" ? definition.max : undefined;
 	const length = typeof field.value === "string" ? field.value.length : 0;
 
-	const extras = (
-		<>
-			{canFillFromBody && (
-				<TextButton
-					type="button"
-					aria-label={t("field.fillFromBody")}
-					disabled={field.readOnly}
-					onClick={() => {
-						const currentDoc = store.getState().form.doc;
-						if (!currentDoc) return;
-						field.setValue(bodyExcerpt(site, currentDoc, fillFromBodyLength(definition as TextField)));
-					}}
-				>
-					{t("field.fromBody")}
-				</TextButton>
-			)}
-			{Aside ? <Aside {...props} /> : max ? <Counter length={length} max={max} /> : null}
-		</>
-	);
+	const extras = <>{Aside ? <Aside {...props} /> : max ? <Counter length={length} max={max} /> : null}</>;
 
 	return (
 		<PropertyShell
@@ -315,7 +286,7 @@ function ValuePropertyView({
 			editor={
 				Input === null ? null : (
 					<div {...(proposal ? { [FIELD_PROPOSAL_ATTRIBUTE]: field.name } : {})}>
-						{Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} />}
+						{Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} action={fillFromBody} />}
 					</div>
 				)
 			}

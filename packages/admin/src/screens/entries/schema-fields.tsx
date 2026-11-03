@@ -191,7 +191,46 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 }
 
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
-export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
+/**
+ * The button at the end of a text field's line that fills it from the start of the body, for a field with `fillFromBody`. It stands where
+ * the slug's regenerate button stands, since both make the value again from another one.
+ */
+export function useFillFromBodyButton(
+	collection: string,
+	definition: ValueField,
+	disabled: boolean,
+	setValue: (value: string) => void,
+): ReactNode {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
+	const store = useEntryFormStore();
+	const canFill = definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	if (!canFill) return null;
+	return (
+		<IconButton
+			label={t("field.fillFromBody")}
+			side="bottom"
+			disabled={disabled}
+			onClick={() => {
+				const currentDoc = store.getState().form.doc;
+				if (!currentDoc) return;
+				setValue(bodyExcerpt(site, currentDoc, fillFromBodyLength(definition as TextField)));
+			}}
+		>
+			<Renew aria-hidden />
+		</IconButton>
+	);
+}
+
+export function DefaultInput({
+	parts,
+	action,
+	...props
+}: FieldInputProps & {
+	parts?: FieldInputParts;
+	/** A control at the end of a text field's line (fill from the body). */
+	action?: ReactNode;
+}) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
@@ -221,6 +260,7 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					action={action}
 				/>
 			) : (
 				<Input
@@ -233,6 +273,7 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					action={action}
 				/>
 			);
 		case "select": {
@@ -299,8 +340,6 @@ function FormBoundRow({ field }: { field: FieldState }) {
 }
 
 function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) {
-	const site = useSite();
-	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const entryId = useEntryFormSelector((state) => state.entryId);
@@ -331,33 +370,9 @@ function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) 
 	const Aside = parts?.Aside;
 	const Input = parts?.Input;
 
-	const canFillFromBody =
-		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	const fillFromBody = useFillFromBodyButton(collection, definition, field.readOnly, field.setValue);
 
-	const fillFromBodyButton = canFillFromBody ? (
-		<IconButton
-			label={t("field.fillFromBody")}
-			side="bottom"
-			disabled={field.readOnly}
-			onClick={() => {
-				const currentDoc = store.getState().form.doc;
-				if (!currentDoc) return;
-				const length = fillFromBodyLength(definition as TextField);
-				const excerpt = bodyExcerpt(site, currentDoc, length);
-				field.setValue(excerpt);
-			}}
-		>
-			<Renew aria-hidden />
-		</IconButton>
-	) : null;
-
-	const aside =
-		fillFromBodyButton || Aside ? (
-			<Inline gap={4}>
-				{fillFromBodyButton}
-				{Aside && <Aside {...props} />}
-			</Inline>
-		) : undefined;
+	const aside = Aside ? <Aside {...props} /> : undefined;
 
 	return (
 		<FieldRow
@@ -369,7 +384,11 @@ function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) 
 			slot={Input === null ? undefined : (field.slotRequest ?? undefined)}
 			aside={aside}
 		>
-			{Input === null ? null : Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} />}
+			{Input === null ? null : Input ? (
+				<Input {...props} />
+			) : (
+				<DefaultInput {...props} parts={parts} action={fillFromBody} />
+			)}
 		</FieldRow>
 	);
 }
