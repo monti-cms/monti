@@ -7,6 +7,7 @@ import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
 import { Count } from "../count";
+import { DragHandle } from "../drag-handle";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
@@ -15,6 +16,7 @@ import { IconButton } from "../icon-button";
 import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
+import { LanguageRow, LanguageSource } from "../language-row";
 import { ListHead } from "../list-head";
 import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
 import { Option } from "../option";
@@ -653,6 +655,54 @@ function ListSectionRows({ children }: { children?: React.ReactNode }) {
 	return <>{children}</>;
 }
 
+/** A section's list of languages: its rows. */
+function LanguageList({ children }: { children?: React.ReactNode }) {
+	return <ul className="m-0 list-none p-0">{children}</ul>;
+}
+
+/** One content language: its own name, code and display name; `handle` when it can be dragged, `handled` when its list can be reordered. */
+function LanguageLine({
+	name,
+	code,
+	label,
+	dot,
+	gone,
+	handle,
+	handled,
+	handleLabel,
+	children,
+}: {
+	/** The handle's name for a screen reader ("move Korean"). */
+	handleLabel?: string;
+	name?: string;
+	code?: string;
+	label?: string;
+	dot?: string;
+	gone?: boolean;
+	handle?: boolean;
+	handled?: boolean;
+	children?: React.ReactNode;
+}) {
+	return (
+		<LanguageRow
+			name={name}
+			code={code ?? ""}
+			label={label}
+			dot={dot}
+			gone={gone}
+			handled={handled}
+			handle={handle ? <DragHandle aria-label={handleLabel} /> : undefined}
+		>
+			{children}
+		</LanguageRow>
+	);
+}
+
+/** The source language's mark at the end of its row: the bold word, a rule, the button that changes it. */
+function LanguageSourceMark({ flag, children }: { flag?: string; children?: React.ReactNode }) {
+	return <LanguageSource flag={flag}>{children}</LanguageSource>;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -673,6 +723,9 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	LanguageList,
+	LanguageLine,
+	LanguageSourceMark,
 	ListSection,
 	ListSectionRows,
 	ListSectionRow,
@@ -793,6 +846,21 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	LanguageList: { kind: "part", props: {} },
+	LanguageLine: {
+		kind: "part",
+		props: {
+			name: "text",
+			code: "text",
+			label: "text",
+			dot: "text",
+			gone: "flag",
+			handle: "flag",
+			handled: "flag",
+			handleLabel: "text",
+		},
+	},
+	LanguageSourceMark: { kind: "part", props: { flag: "text" } },
 	ListSection: { kind: "part", props: { count: "text", countTone: "variant" } },
 	ListSectionRows: { kind: "part", props: {} },
 	ListSectionRow: { kind: "part", props: { metaTone: "variant", muted: "flag" } },

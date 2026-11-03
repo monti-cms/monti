@@ -201,9 +201,15 @@ function read(el, where, page = undefined, inPart = false) {
 		);
 		if (slots.length > 0) node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, fill(holder, name)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
-		node.children = holder ? inside(holder, here) : [];
+		// Children are an element's inside, or (a list of elements) those elements themselves.
+		node.children = Array.isArray(holder)
+			? holder.map((member, index) => read(member, `${here}[${index}]`, undefined, true))
+			: holder
+				? inside(holder, here)
+				: [];
 		// The element the children come from is the part's own inside: what the board writes on it is read as on the part.
-		if (holder && holder !== el) node.looks = [...looks, ...looksOf(holder, rule, false, true)];
+		if (holder && !Array.isArray(holder) && holder !== el)
+			node.looks = [...looks, ...looksOf(holder, rule, false, true)];
 		return node;
 	}
 	if (el.tagName.toLowerCase() === "svg") return { where: here, looks };

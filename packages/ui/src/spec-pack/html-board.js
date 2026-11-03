@@ -306,8 +306,41 @@ const parts = [
 		props: (el) => ({ last: /^0(px)?$/.test(el.style.borderBottom.split(" ")[0] ?? "") || undefined }),
 		asProps: ["border-bottom"],
 		slots: (el) => ({ title: el.querySelector(":scope > h2") }),
-		children: (el) => el.querySelector(":scope > .body") ?? el,
+		// A body of rows is a list of its own (the content languages); otherwise the body's inside is the section's.
+		children: (el) => {
+			const body = el.querySelector(":scope > .body") ?? el;
+			return body.querySelector(":scope > .mt-row") ? [body] : body;
+		},
 	},
+	{ match: (el) => el.matches(".body:has(> .mt-row)"), part: "LanguageList", asProps: ["gap", "position"] },
+	{
+		match: (el) => el.matches(".body > .mt-row"),
+		part: "LanguageLine",
+		props: (el) => {
+			const shown = (node) => node && getComputedStyle(node).display !== "none";
+			const label = el.querySelector(".mt-row-title ~ .text-note");
+			const handle = el.querySelector(":scope > span:first-child > span");
+			return {
+				name: el.querySelector(".mt-row-title")?.textContent.trim(),
+				code: el.querySelector(".mt-row-sub")?.textContent.trim(),
+				label: shown(label) ? label.textContent.replace("·", "").trim() : undefined,
+				dot: shown(el.querySelector(".mt-change-dot")) ? "changed" : undefined,
+				handle: shown(handle) || undefined,
+				handled: true,
+			};
+		},
+		children: (el) => el.querySelector(":scope > span:last-child"),
+		slots: () => ({}),
+		asProps: ["grid-template-columns", "align-items"],
+	},
+	{
+		match: (el) => el.matches(".body > .mt-row > span:last-child > .text-note"),
+		part: "LanguageSourceMark",
+		props: (el) => ({ flag: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["display", "color", "font-weight"],
+	},
+	{ match: (el) => el.matches(".body > .mt-row > span:last-child > .mt-vr"), ignore: true },
 	{
 		match: (el) => el.matches(".mt-option"),
 		part: "OptionCheck",

@@ -15,6 +15,68 @@
 			},
 			"events": []
 		},
+		"LanguageList": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"LanguageLine": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"code": {
+					"kind": "text",
+					"type": "string"
+				},
+				"dot": {
+					"kind": "text",
+					"type": "string"
+				},
+				"gone": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"handle": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"handled": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"handleLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"LanguageSourceMark": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"flag": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"ListSection": {
 			"kind": "part",
 			"bind": false,
