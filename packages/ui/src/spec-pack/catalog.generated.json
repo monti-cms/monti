@@ -15,6 +15,94 @@
 			},
 			"events": []
 		},
+		"SelectBox": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"size": {
+					"kind": "variant",
+					"enum": ["default", "sm"]
+				},
+				"value": {
+					"kind": "text",
+					"type": "string"
+				},
+				"width": {
+					"kind": "variant",
+					"enum": ["fit", "full"]
+				}
+			},
+			"events": []
+		},
+		"Filter": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"filled": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Banner": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"meta": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				},
+				"tone": {
+					"kind": "variant",
+					"enum": ["danger", "neutral", "warning"]
+				}
+			},
+			"events": []
+		},
+		"AffixField": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"placeholder": {
+					"kind": "text",
+					"type": "string"
+				},
+				"prefix": {
+					"kind": "text",
+					"type": "string"
+				},
+				"suffix": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"VerticalRule": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
 		"Section": {
 			"kind": "part",
 			"bind": false,

@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Affix } from "../affix";
+import { Banner as BannerPart } from "../banner";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { ChangeDot } from "../change-dot";
@@ -7,6 +9,7 @@ import { Count } from "../count";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart } from "../field";
+import { FilterButton } from "../filter-button";
 import { IconButton } from "../icon-button";
 import { type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
@@ -26,6 +29,7 @@ import {
 } from "../pagination";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
+import { Select, SelectTrigger, SelectValue } from "../select";
 import { Separator } from "../separator";
 import {
 	SidebarContent,
@@ -502,6 +506,51 @@ function OptionCheck({ label, note, checked }: { label?: string; note?: string; 
 	);
 }
 
+/** A closed select showing its value (a key's state, a language). */
+function SelectBox({ value, size, width }: { value?: string; size?: "sm" | "default"; width?: "fit" | "full" }) {
+	return (
+		<Select items={[{ value: "shown", label: value ?? "" }]} value="shown">
+			<SelectTrigger size={size} width={width}>
+				<SelectValue />
+			</SelectTrigger>
+		</Select>
+	);
+}
+
+/** A condition of a filter row: its name (or its value, `filled`) and a caret. */
+function Filter({ label, filled }: { label?: string; filled?: boolean }) {
+	return <FilterButton filled={filled}>{label}</FilterButton>;
+}
+
+/** A line across a page that says what needs knowing: its title, a detail, and an action at its end. */
+function Banner({
+	title,
+	meta,
+	tone,
+	children,
+}: {
+	title?: string;
+	meta?: string;
+	tone?: "warning" | "danger" | "neutral";
+	children?: React.ReactNode;
+}) {
+	return (
+		<BannerPart title={title} meta={meta} tone={tone}>
+			{children}
+		</BannerPart>
+	);
+}
+
+/** A field with fixed words before or after what is typed (`/` before an address). */
+function AffixField({ prefix, suffix, placeholder }: { prefix?: string; suffix?: string; placeholder?: string }) {
+	return <Affix prefix={prefix} suffix={suffix} placeholder={placeholder} />;
+}
+
+/** The short upright rule between two things on a line. */
+function VerticalRule({ className }: { className?: string }) {
+	return <Separator orientation="vertical" length="control" className={className} />;
+}
+
 /** The design system's line: `bottom-contrast` is the ink rule under a title. Only the line; a box's other options are not a screen spec's. */
 function Box({ border, className }: { border: "top" | "bottom" | "bottom-contrast"; className?: string }) {
 	return <BoxPart border={border} className={className} />;
@@ -522,6 +571,11 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	SelectBox,
+	Filter,
+	Banner,
+	AffixField,
+	VerticalRule,
 	Section,
 	OptionCheck,
 	ListBody,
@@ -630,6 +684,11 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant" } },
+	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
+	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },
+	AffixField: { kind: "part", props: { prefix: "text", suffix: "text", placeholder: "text" } },
+	VerticalRule: { kind: "part", props: {} },
 	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
 	OptionCheck: { kind: "part", props: { label: "text", note: "text", checked: "flag" } },
 	ListBody: { kind: "part", props: {} },
