@@ -49,11 +49,11 @@ const preview: Preview = {
 	parameters: {
 		layout: "fullscreen",
 		controls: { expanded: true },
-		// The design system's five tiers, smallest part first, then the screen stories (admin, plugins). Foundations and Primitives hold pages
-		// (`Tier/Name`); Controls, Patterns and Monti hold groups (`Tier/Group/Name`). `storySort` must be written inline, so the parity test reads it here.
+		// The design system's five tiers, smallest part first. Foundations and Primitives hold pages
+		// (`Tier/Name`); Controls, Patterns and Monti hold groups (`Tier/Group/Name`). `storySort` must be written inline.
 		options: {
 			storySort: {
-				// Inside each place of the order, and for everything it does not name (the screens and their stories), A to Z.
+				// Inside each place of the order, and for everything it does not name, A to Z.
 				method: "alphabetical",
 				order: [
 					"Foundations",
@@ -63,11 +63,9 @@ const preview: Preview = {
 					"Controls",
 					["Button", "Field", "Choice", "Tabs", "Menu", "Overlay", "Status"],
 					"Patterns",
-					["List", "Frame", "Sheet"],
+					["List", "Frame", "Panel", "Sheet"],
 					"Monti",
 					["EditorTools", "Change", "Proposal", "Assistant", "Translation"],
-					"Screens",
-					"*",
 				],
 			},
 		},
