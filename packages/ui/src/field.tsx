@@ -172,18 +172,22 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 
 /**
  * The error line under a field. `reserve` keeps the line (20px, 4px below the control) while it is empty, for a field whose error comes back
- * after the form is sent (a password): the button under it does not move when the error appears.
+ * after the form is sent (a password): the button under it does not move when the error appears. `hint` fills that line in grey while there is no
+ * error, for what the user must know before typing ("10자 이상"); the error takes its place.
  */
 function FormFieldError({
 	className,
 	children,
 	errors,
 	reserve = false,
+	hint,
 	...props
 }: React.ComponentProps<"div"> & {
 	errors?: Array<{ message?: string } | undefined>;
 	/** Keep the empty line so the form does not move when the error appears. */
 	reserve?: boolean;
+	/** With `reserve`: what the line says in grey while there is no error. */
+	hint?: React.ReactNode;
 }) {
 	const content = useMemo(() => {
 		if (children) {
@@ -209,6 +213,17 @@ function FormFieldError({
 
 	if (!content && !reserve) {
 		return null;
+	}
+	if (!content && hint) {
+		return (
+			<div
+				data-slot="field-hint"
+				className={cn("mt-monti-4 min-h-5 text-monti-note text-monti-subtle", className)}
+				{...props}
+			>
+				{hint}
+			</div>
+		);
 	}
 
 	return (

@@ -68,11 +68,11 @@ export const States: Story = {
 	),
 };
 
-/** A reserved error line: empty before the send, then the error; the button under it stays where it was. */
+/** A reserved error line: the grey hint before the send, then the error in its place; the button under it stays where it was. */
 export const ReservedError: Story = {
 	render: () => (
 		<Stack gap={32}>
-			{[undefined, "이메일 또는 비밀번호가 맞지 않아요."].map((error) => (
+			{[undefined, "10자 이상이어야 해요."].map((error) => (
 				<Stack key={error ?? "empty"} gap={12}>
 					<FormField data-invalid={error ? "true" : undefined}>
 						<FormFieldLabel htmlFor={`r-${error ? "bad" : "ok"}`}>비밀번호</FormFieldLabel>
@@ -82,7 +82,9 @@ export const ReservedError: Story = {
 							aria-invalid={error ? true : undefined}
 							defaultValue="••••••••••"
 						/>
-						<FormFieldError reserve>{error}</FormFieldError>
+						<FormFieldError reserve hint="10자 이상">
+							{error}
+						</FormFieldError>
 					</FormField>
 					<Button variant="primary" width="full">
 						로그인

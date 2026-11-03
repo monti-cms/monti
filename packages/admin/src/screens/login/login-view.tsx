@@ -192,7 +192,7 @@ function FirstAdmin({
 								label={t("password")}
 								autoComplete="new-password"
 								minLength={minPasswordLength}
-								placeholder={t("passwordHint", { min: minPasswordLength })}
+								hint={t("passwordHint", { min: minPasswordLength })}
 								error={has("password") ? t("errorPassword", { min: minPasswordLength }) : undefined}
 							/>
 							<PasswordField
@@ -251,14 +251,15 @@ function PasswordField({
 	error,
 	autoComplete,
 	minLength,
-	placeholder,
+	hint,
 }: {
 	id: "password" | "confirm";
 	label: string;
 	error?: string;
 	autoComplete: "current-password" | "new-password";
 	minLength?: number;
-	placeholder?: string;
+	/** What the line under the field says before any error (the first admin's length rule). */
+	hint?: string;
 }) {
 	return (
 		<FormField>
@@ -270,12 +271,11 @@ function PasswordField({
 				autoComplete={autoComplete}
 				required
 				minLength={minLength}
-				placeholder={placeholder}
 				aria-invalid={error ? true : undefined}
-				aria-describedby={error ? `${id}-error` : undefined}
+				aria-describedby={error || hint ? `${id}-error` : undefined}
 			/>
 			{/* The line stays when empty: the error comes back after a send, and the button must not move. */}
-			<FormFieldError id={`${id}-error`} reserve>
+			<FormFieldError id={`${id}-error`} reserve hint={hint}>
 				{error}
 			</FormFieldError>
 		</FormField>
