@@ -2,7 +2,17 @@
 
 import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { BlockBar, cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
+import {
+	cn,
+	FloatingBar,
+	IconButton,
+	Inline,
+	Label,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+} from "@monti-cms/ui";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
 import { blocksMessages } from "./messages";
@@ -127,7 +137,7 @@ export function ContainerToolbar({
 				className,
 			)}
 		>
-			<BlockBar aria-label={label}>{children}</BlockBar>
+			<FloatingBar aria-label={label}>{children}</FloatingBar>
 		</div>
 	);
 }

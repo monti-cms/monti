@@ -3,8 +3,8 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Link } from "@carbon/icons-react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
-import { BAR, BAR_BUTTON, BAR_SEPARATOR } from "./block-bar";
 import { cn } from "./cn";
+import { BAR_BUTTON, BAR_SEPARATOR } from "./floating-bar";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -111,15 +111,6 @@ function FormatButton({
 	);
 }
 
-/**
- * The bar that floats above selected text: the inline formats as letters (`FormatButton`), a `FormatBarSeparator` between groups, and at the end the
- * button that asks the assistant (`FormatBarRequest`, "✦ Request ⌘J"). It is one row that does not change; there is no toolbar that stays on screen, this
- * bar, the block handle and the / menu hold every tool.
- */
-function FormatBar({ className, ...props }: ComponentProps<"div">) {
-	return <div data-slot="format-bar" role="toolbar" className={cn(BAR, "whitespace-nowrap", className)} {...props} />;
-}
-
 /** The line between two groups of formats. */
 function FormatBarSeparator() {
 	return <span data-slot="format-bar-separator" aria-hidden className={BAR_SEPARATOR} />;
@@ -149,4 +140,4 @@ function FormatBarRequest({
 	);
 }
 
-export { FormatBar, FormatBarButton, FormatBarRequest, FormatBarSeparator, FormatButton, type FormatMark };
+export { FormatBarButton, FormatBarRequest, FormatBarSeparator, FormatButton, type FormatMark };

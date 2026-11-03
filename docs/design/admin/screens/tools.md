@@ -55,7 +55,7 @@
 | ⋯ | `IconButton`(`label` "더보기: 복제, 지우기") + `DropdownMenu` | 위에 문서 도구 묶음([editor-tools.md](../components/editor-tools.md): 플러그인 행, "본문 폭"), 구분선, "복제" · "지우기"(`variant="danger"`). 새 템플릿에는 ⋯가 없다. |
 | 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
 | 템플릿 이름 | `Input size="display"`(`placeholder`와 `aria-label` "템플릿 이름") | 라벨이 없다. 글 제목 자리(위 16, 아래 20)에 늘 입력 칸으로 있다. 포커스는 캐럿만 보인다. 아래에 잉크 선 하나. |
-| 본문 | 글 편집기와 같다(`Block`, `BlockHandle`, `FormatBar`, "/" 메뉴 `Command`) | 템플릿에 든 블록이 그대로 글에 들어간다. |
+| 본문 | 글 편집기와 같다(`Block`, `BlockHandle`, `FloatingBar`, "/" 메뉴 `Command`) | 템플릿에 든 블록이 그대로 글에 들어간다. |
 | 상태 표시줄 | `StatusBar` 안에 `StatusBarSpacer`와 글자 수 `StatusBarCell end` | 글자 수 칸 하나만 있다. |
 | 저장 거절 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요"), 끝에 `TextButton` "서버 최신본 불러오기" | 머리 바로 아래, 가장자리에서 가장자리까지. |
 | 불러오기 실패 | `Banner tone="danger"`, 끝에 `TextButton` "다시 시도" | 공용 불러오기 오류 띠와 같다. |

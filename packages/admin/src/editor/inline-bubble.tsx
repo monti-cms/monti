@@ -22,7 +22,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-	FormatBar,
+	FloatingBar,
 	FormatBarButton,
 	FormatBarRequest,
 	FormatBarSeparator,
@@ -757,7 +757,7 @@ export function InlineBubble({
 		) : (
 			// design-allow: bubble position computed from the selection
 			<div ref={bubbleRef} data-monti-inline-bubble style={style}>
-				<FormatBar
+				<FloatingBar
 					aria-label={
 						target.kind === "selection"
 							? t("inlineBubble.selectionLabel")
@@ -771,7 +771,7 @@ export function InlineBubble({
 						: target.kind === "footnote"
 							? renderFootnote(target)
 							: renderMarks(target.marks, target.rules)}
-				</FormatBar>
+				</FloatingBar>
 			</div>
 		),
 		document.body,

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FormatBar, FormatBarRequest, FormatBarSeparator, FormatButton } from "./format-bar";
+import { FloatingBar } from "./floating-bar";
+import { FormatBarRequest, FormatBarSeparator, FormatButton } from "./format-bar";
 import { UiLabelsProvider } from "./labels";
 import { Highlight } from "./proposal-marks";
 import { Text } from "./text";
@@ -10,7 +11,7 @@ import { Text } from "./text";
  */
 const meta = {
 	title: "Monti/EditorTools/FormatBar",
-	component: FormatBar,
+	component: FloatingBar,
 	// The footnote button's glyph is a word of the app's language.
 	decorators: [
 		(Story) => (
@@ -19,7 +20,7 @@ const meta = {
 			</UiLabelsProvider>
 		),
 	],
-} satisfies Meta<typeof FormatBar>;
+} satisfies Meta<typeof FloatingBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -46,18 +47,18 @@ function Formats({ pressed = [] }: { pressed?: readonly string[] }) {
 
 export const Playground: Story = {
 	render: (args) => (
-		<FormatBar aria-label="꾸미기" {...args}>
+		<FloatingBar aria-label="꾸미기" {...args}>
 			<Formats />
-		</FormatBar>
+		</FloatingBar>
 	),
 };
 
 /** The selected text is italic and a link: those formats are pressed. */
 export const Pressed: Story = {
 	render: (args) => (
-		<FormatBar aria-label="꾸미기" {...args}>
+		<FloatingBar aria-label="꾸미기" {...args}>
 			<Formats pressed={["italic", "link"]} />
-		</FormatBar>
+		</FloatingBar>
 	),
 };
 
@@ -65,9 +66,9 @@ export const Pressed: Story = {
 export const OverText: Story = {
 	render: (args) => (
 		<div className="relative max-w-md pt-14">
-			<FormatBar aria-label="꾸미기" className="absolute top-0 left-24" {...args}>
+			<FloatingBar aria-label="꾸미기" className="absolute top-0 left-24" {...args}>
 				<Formats pressed={["italic"]} />
-			</FormatBar>
+			</FloatingBar>
 			<Text variant="reading">
 				블로그를 다시 만들기로 한 건 <Highlight>도구를 고치는 시간이</Highlight> 길어졌기 때문이다.
 			</Text>

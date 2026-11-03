@@ -4,11 +4,11 @@ import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	BlockBar,
 	BlockBarButton,
 	BlockBarSeparator,
 	Count,
 	cn,
+	FloatingBar,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
@@ -329,7 +329,7 @@ export function ImageBlockView() {
 						(block.selected || isEditing) && "opacity-100",
 					)}
 				>
-					<BlockBar aria-label={t("imageNode.toolbar")}>
+					<FloatingBar aria-label={t("imageNode.toolbar")}>
 						{ALIGN_TOOLS(t).map((tool) => (
 							<BlockBarButton
 								key={tool.value}
@@ -408,7 +408,7 @@ export function ImageBlockView() {
 								<Crop aria-hidden />
 							</BlockBarButton>
 						)}
-					</BlockBar>
+					</FloatingBar>
 				</div>
 			)}
 

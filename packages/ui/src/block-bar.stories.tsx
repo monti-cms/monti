@@ -1,6 +1,7 @@
 import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
+import { BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
+import { FloatingBar } from "./floating-bar";
 import { Image } from "./image";
 import { Stack } from "./stack";
 
@@ -12,13 +13,13 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
  * The tools of a block that has settings, in a small floating row: align, then settings and crop after a rule. A tool that is on keeps its
  * background. Delete is not here; it is in the block menu.
  */
-const meta = { title: "Monti/EditorTools/BlockBar", component: BlockBar } satisfies Meta<typeof BlockBar>;
+const meta = { title: "Monti/EditorTools/BlockBar", component: FloatingBar } satisfies Meta<typeof FloatingBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {
 	render: () => (
-		<BlockBar aria-label="이미지 도구">
+		<FloatingBar aria-label="이미지 도구">
 			<BlockBarButton label="왼쪽">
 				<TextAlignLeft aria-hidden />
 			</BlockBarButton>
@@ -35,7 +36,7 @@ export const Playground: Story = {
 			<BlockBarButton label="자르기와 회전">
 				<Crop aria-hidden />
 			</BlockBarButton>
-		</BlockBar>
+		</FloatingBar>
 	),
 };
 
@@ -43,7 +44,7 @@ export const Playground: Story = {
 export const OnImage: Story = {
 	render: () => (
 		<Stack gap={8} className="max-w-md">
-			<BlockBar aria-label="이미지 도구" className="self-start">
+			<FloatingBar aria-label="이미지 도구" className="self-start">
 				<BlockBarButton label="왼쪽">
 					<TextAlignLeft aria-hidden />
 				</BlockBarButton>
@@ -60,7 +61,7 @@ export const OnImage: Story = {
 				<BlockBarButton label="자르기와 회전">
 					<Crop aria-hidden />
 				</BlockBarButton>
-			</BlockBar>
+			</FloatingBar>
 			<div className="relative">
 				<Image src={SAMPLE} alt="" ratio="photo" />
 				<ResizeCorner side="left" label="너비 줄이기" />
