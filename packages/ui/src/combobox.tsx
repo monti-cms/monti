@@ -4,7 +4,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { Caret } from "./caret";
-import { CHIP, CHIP_REMOVE } from "./chip";
+import { CHIP, CHIP_REMOVE, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
 import { Input } from "./input";
@@ -162,16 +162,7 @@ function ComboboxChips({
 	className,
 	...props
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
-	return (
-		<ComboboxPrimitive.Chips
-			data-slot="combobox-chips"
-			className={cn(
-				"flex flex-wrap items-center gap-monti-6 border-monti-default border-b py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <ComboboxPrimitive.Chips data-slot="combobox-chips" className={cn(CHIPS_FIELD, className)} {...props} />;
 }
 
 function ComboboxChip({
@@ -205,13 +196,7 @@ function ComboboxChip({
 }
 
 function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
-	return (
-		<ComboboxPrimitive.Input
-			data-slot="combobox-chip-input"
-			className={cn("h-7 min-w-16 flex-1 outline-none", className)}
-			{...props}
-		/>
-	);
+	return <ComboboxPrimitive.Input data-slot="combobox-chip-input" className={cn(CHIPS_INPUT, className)} {...props} />;
 }
 
 function useComboboxAnchor() {

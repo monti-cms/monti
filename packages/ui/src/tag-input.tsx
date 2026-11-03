@@ -1,7 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, useState } from "react";
-import { Chip } from "./chip";
+import { CHIPS_FIELD, CHIPS_INPUT, Chip } from "./chip";
 import { cn } from "./cn";
 
 /**
@@ -53,12 +53,7 @@ function TagInput({
 	return (
 		<div
 			data-slot="tag-input"
-			className={cn(
-				"flex flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
-				mono && "font-mono",
-				disabled && "cursor-not-allowed opacity-45",
-				className,
-			)}
+			className={cn(CHIPS_FIELD, mono && "font-mono", disabled && "cursor-not-allowed opacity-45", className)}
 		>
 			{items.map((item, index) => (
 				<Chip
@@ -81,7 +76,7 @@ function TagInput({
 					onBlur={() => {
 						if (input.trim()) add(input);
 					}}
-					className="h-7 min-w-8 flex-1 bg-transparent px-monti-2 outline-none placeholder:text-monti-faint"
+					className={CHIPS_INPUT}
 				/>
 			)}
 		</div>
