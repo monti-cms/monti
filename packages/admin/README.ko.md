@@ -573,7 +573,7 @@ import "@monti-cms/admin/styles.css";
 | `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | 컨트롤과 바의 높이(`h-monti-control-md` 36, `h-monti-header` 60 …), 열, 패널, 시트의 너비(`w-monti-sidebar` 232, `w-monti-sheet` 520 …), 아이콘 크기(`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드, 식별자, 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
 
-**글자를 가운데 맞추는 건 글꼴의 몫이다.** Monti는 함께 싣는 Pretendard에 `ascent-override: 92.4%`, `descent-override: 19%`, `line-gap-override: 0%`를 건다(관리자 빌드가 쓰는 `@font-face`). 그래서 글꼴 크기에 상관없이 한글과 영문이 컨트롤 가운데에서 반 픽셀 안에 놓이고, 어떤 부품도 패딩으로 글자를 밀지 않는다. `--monti-font-sans`의 글꼴을 바꾸면, 부품에 패딩을 주지 말고 글꼴을 선언하는 곳에서 같은 방식으로 `@font-face`의 `ascent-override`, `descent-override`, `line-gap-override`로 맞춘다. `pnpm test:visual:audit`(`@monti-cms/ui`)는 글자가 가운데에서 벗어난 컨트롤을 모두 알려 준다.
+**글자를 가운데 맞추는 건 글꼴의 몫이다.** Monti는 함께 싣는 Pretendard에 `ascent-override: 92.4%`, `descent-override: 19%`, `line-gap-override: 0%`를 건다(관리자 빌드가 쓰는 `@font-face`). 그래서 글꼴 크기에 상관없이 한글과 영문이 컨트롤 가운데에서 반 픽셀 안에 놓이고, 어떤 부품도 패딩으로 글자를 밀지 않는다. `--monti-font-sans`의 글꼴을 바꾸면, 부품에 패딩을 주지 말고 글꼴을 선언하는 곳에서 같은 방식으로 `@font-face`의 `ascent-override`, `descent-override`, `line-gap-override`로 맞춘다.
 
 확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(간격 눈금의 px 단계로 고르는 간격: `gap={8}`)과 위의 클래스로 만든다.
 
@@ -602,19 +602,3 @@ shadcn에는 경고색과 성공색이 없으므로 그 둘은 관리자의 기�
 
 블록은 `--monti-callout-*`와 `--monti-chart-1`~`--monti-chart-5`를 더한다(`@monti-cms/blocks` 참고). 테마를 확인하려면 관리자를 밝은 테마와 어두운 테마로 열어 본다. 설정 항목은 없다. 위 CSS가
 인터페이스의 전부다.
-
-## 개발
-
-```bash
-pnpm --filter @monti-cms/admin test:run        # 예시 블로그 설정 + 다른 사이트 설정
-pnpm --filter @monti-cms/admin test:other-site # 다른 사이트 설정(`../core/test/other-site.config.ts`)만
-pnpm --filter @monti-cms/admin test:dom        # 화면 테스트(`*.dom.test.ts(x)`, jsdom)만
-pnpm --filter @monti-cms/admin test:browser    # 실제 브라우저가 필요한 테스트(`*.browser.test.ts(x)`, Chromium)만
-```
-
-테스트는 층으로 나뉜다(`docs/testing.md`). `vitest.config.ts`는 DOM 없이 도는 로직 테스트(묶음 `admin`)를, `vitest.dom.config.ts`는 컴포넌트나
-편집기를 jsdom에 렌더하는 테스트(`*.dom.test.ts(x)`, 묶음 `admin (dom)`)를 돌린다. `vitest.browser.config.ts`는 레이아웃, 포커스, 편집기가 필요한
-테스트를 Chromium에서 돌린다(`*.browser.test.ts(x)`, 묶음 `admin (browser)`). 브라우저는 처음 한 번 `pnpm exec playwright install chromium`으로 받는다.
-
-화면 테스트는 블로그와 다른 사이트 설정으로도 돈다(`vitest.othersite.config.ts`, 본체 README "개발"). 컬렉션·필드·블록 이름과
-이름표는 테스트에 적지 말고 설정에서 읽는다(예: `src/screens/__test__/any-site-screens.dom.test.tsx`).

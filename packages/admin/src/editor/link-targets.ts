@@ -193,14 +193,6 @@ export function useLinkPaths(ids: readonly string[]): (id: string) => string | n
 }
 
 /**
- * Forgets every lookup of the site. For tests, which share the module.
- * @internal For tests.
- */
-export function resetLinkTargets(site: Site): void {
-	storeOf(site).reset();
-}
-
-/**
  * Where the link to this entry goes, looked up on first use and kept for the session. `null` for a link that is not to an entry.
  */
 export function useLinkTarget(entryId: string | null | undefined): LinkTargetState | null {

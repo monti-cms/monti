@@ -589,7 +589,7 @@ Type roles set size, line height, weight, letter spacing and font family togethe
 | `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | Heights of controls and bars (`h-monti-control-md` 36, `h-monti-header` 60, …), widths of columns, panels and sheets (`w-monti-sidebar` 232, `w-monti-sheet` 520, …) and icon sizes (`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code, identifiers and source views (default: IBM Plex Mono, then a system monospace stack) |
 
-**Centering is the font's job.** Monti sets `ascent-override: 92.4%`, `descent-override: 19%` and `line-gap-override: 0%` on its bundled Pretendard (in the `@font-face` rules the admin build writes), which puts Hangul and Latin text on the center of the admin's controls within half a pixel at every size, so no part nudges its text with padding. If you replace the font in `--monti-font-sans`, balance it the same way where it is declared, with `ascent-override`, `descent-override` and `line-gap-override` in its `@font-face`, not with padding on a part. `pnpm test:visual:audit` (in `@monti-cms/ui`) reports every control whose text sits off center.
+**Centering is the font's job.** Monti sets `ascent-override: 92.4%`, `descent-override: 19%` and `line-gap-override: 0%` on its bundled Pretendard (in the `@font-face` rules the admin build writes), which puts Hangul and Latin text on the center of the admin's controls within half a pixel at every size, so no part nudges its text with padding. If you replace the font in `--monti-font-sans`, balance it the same way where it is declared, with `ascent-override`, `descent-override` and `line-gap-override` in its `@font-face`, not with padding on a part.
 
 An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by the px step of the spacing scale: `gap={8}`) and the classes above.
 
@@ -618,19 +618,3 @@ shadcn has no warning or success colors, so those keep the admin's defaults. If 
 
 Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark. There is no config option: the CSS above is the
 whole interface.
-
-## Development
-
-```bash
-pnpm --filter @monti-cms/admin test:run        # example blog config + other-site config
-pnpm --filter @monti-cms/admin test:other-site # other-site config only (`../core/test/other-site.config.ts`)
-pnpm --filter @monti-cms/admin test:dom        # the screen tests only (`*.dom.test.ts(x)`, in jsdom)
-pnpm --filter @monti-cms/admin test:browser    # the tests that need a real browser (`*.browser.test.ts(x)`, in Chromium)
-```
-
-The tests are split by layer (`docs/testing.md`). `vitest.config.ts` runs the logic tests without a DOM (suite `admin`). `vitest.dom.config.ts` runs the tests that render
-components or editors in jsdom (`*.dom.test.ts(x)`, suite `admin (dom)`). `vitest.browser.config.ts` runs the tests that need layout, focus or the editor in Chromium
-(`*.browser.test.ts(x)`, suite `admin (browser)`); install the browser once with `pnpm exec playwright install chromium`.
-
-Screen tests also run with a site config different from the reference blog (`vitest.othersite.config.ts`, core README "Development"). Do not write collection, field or block names and
-labels in tests; read them from the config (e.g. `src/screens/__test__/any-site-screens.dom.test.tsx`).
