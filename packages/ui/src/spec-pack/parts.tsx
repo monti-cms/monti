@@ -74,6 +74,7 @@ function Input({
 	mono,
 	autofill,
 	required,
+	invalid,
 	className,
 }: {
 	type?: "text" | "email" | "password";
@@ -81,6 +82,8 @@ function Input({
 	autofill?: "username" | "current-password" | "new-password";
 	/** The form is not sent while it is empty. */
 	required?: boolean;
+	/** What it holds was refused: the underline turns danger. */
+	invalid?: boolean;
 	id?: string;
 	name?: string;
 	/** The value it starts with, from its `bind`. */
@@ -103,6 +106,7 @@ function Input({
 			mono={mono}
 			autoComplete={autofill}
 			required={required}
+			aria-invalid={invalid || undefined}
 			className={className}
 		/>
 	);
@@ -301,6 +305,7 @@ export const CATALOG = {
 			mono: "flag",
 			autofill: "variant",
 			required: "flag",
+			invalid: "flag",
 		},
 	},
 	FormFieldError: { kind: "part", props: {} },

@@ -62,22 +62,25 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	const spaced = (node: DrawnNode, children: readonly DrawnNode[]): SpecChild[] => {
 		const out: SpecChild[] = [];
 		children.forEach((child) => {
+			const id = convert(child);
+			// What the drawing has that no part draws is listed, not placed: its distance goes with it.
+			if (id === undefined) return;
 			out.push(...spacing(child.before, child.where));
-			out.push(convert(child));
+			out.push(id);
 		});
 		out.push(...spacing(node.after, `${node.where} (end)`));
 		return out;
 	};
 
-	const convert = (node: DrawnNode): string => {
+	/** The id of the element a node became, or undefined for one no part draws (a text outside any part, a shape drawn by its style): it is listed. */
+	const convert = (node: DrawnNode): string | undefined => {
 		for (const look of node.looks ?? []) outside.push(`${node.where}: shaped by hand: ${look}`);
 		if (node.part === undefined && node.text !== undefined) {
 			outside.push(`${node.where}: text outside any part: "${node.text}"`);
-			const id = idFor("text");
-			elements[id] = { type: "Text", children: [textOf(node.text)] };
-			return id;
+			return undefined;
 		}
 		const children = node.children ?? [];
+		if (node.part === undefined && children.length === 0) return undefined;
 		if (node.part === undefined) {
 			const id = idFor("stack");
 			const props = { ...(node.direction === "row" ? { direction: "row" } : {}), ...node.layout };
@@ -111,11 +114,13 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 			elements[stack] = { type: catalog.group, children: spaced(node, children) };
 			specChildren = [stack];
 		} else {
-			specChildren = children.map((child) =>
-				child.part === undefined && child.text !== undefined && child.children === undefined
-					? textOf(child.text)
-					: convert(child),
-			);
+			specChildren = children.flatMap((child): SpecChild[] => {
+				if (child.part === undefined && child.text !== undefined && child.children === undefined) {
+					return [textOf(child.text)];
+				}
+				const id = convert(child);
+				return id === undefined ? [] : [id];
+			});
 		}
 		elements[id] = {
 			type: node.part,
@@ -125,7 +130,7 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 		return id;
 	};
 
-	const rootId = convert(root);
+	const rootId = convert(root) ?? idFor("empty");
 	// A label names its field by the drawing's id; in the spec it is a reference to that field's element.
 	for (const { element, prop, drawnId } of pendingRefs) {
 		const target = drawnIds.get(drawnId);

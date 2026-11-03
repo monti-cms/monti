@@ -179,6 +179,10 @@
 					"kind": "variant",
 					"enum": ["current-password", "new-password", "username"]
 				},
+				"invalid": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"mono": {
 					"kind": "flag",
 					"type": "boolean"

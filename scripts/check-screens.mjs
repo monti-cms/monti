@@ -34,7 +34,7 @@ const TOOL = [
 	"scripts/convert-board/html-adapter.js",
 ];
 /** What would tie the tool to one design system: this repo's name or board classes, an icon set, a part it would draw by name. Built from pieces, so this line is not one. */
-const TIED = [new RegExp(["mon" + "ti", "car" + "bon", "\\.m" + "t-"].join("|"), "i"), /"(Stack|Form|Button)"/];
+const TIED = [new RegExp(["mon" + "ti", "car" + "bon", "\\.m" + "t-"].join("|"), "i"), /"(Stack|Form|Button|Text)"/];
 const files = (target) =>
 	readdirSync(target, { withFileTypes: true, recursive: true })
 		.filter((entry) => entry.isFile())

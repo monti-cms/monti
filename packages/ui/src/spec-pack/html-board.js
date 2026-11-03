@@ -15,7 +15,7 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-input"),
 		part: "Input",
-		props: (el) => ({ type: el.getAttribute("type") }),
+		props: (el) => ({ type: el.getAttribute("type"), invalid: el.classList.contains("is-error") || undefined }),
 	},
 	{ match: (el) => el.matches(".mt-error"), part: "FormFieldError" },
 	{
@@ -34,6 +34,7 @@ const parts = [
 				el.classList.contains(`mt-btn--${name}`),
 			),
 			size: el.classList.contains("mt-btn--sm") ? "sm" : undefined,
+			disabled: el.classList.contains("is-disabled") || undefined,
 		}),
 	},
 	{
@@ -53,10 +54,10 @@ const parts = [
 		// What the board writes inline that is one of the part's own props.
 		asProps: ["color", "text-align"],
 	},
-	{ match: (el) => el.tagName.toLowerCase() === "svg" && el.closest(".mt-btn"), part: "Image", leaf: true },
 ];
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
-const known = /^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+)|text-[a-z]+|dark)$/;
+const known =
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+)|text-[a-z]+|dark|is-(error|disabled))$/;
 
 window.boardPack = { parts, known };
