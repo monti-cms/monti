@@ -48,11 +48,8 @@ function SecretInput({
 								{keep.label}
 							</TextButton>
 						)}
-						<IconButton
-							label={shown ? hideLabel : showLabel}
-							pressed={shown}
-							onClick={() => setShown((value) => !value)}
-						>
+						{/* Not a pressed toggle: the icon and the name already say which way it is, so it keeps no background while shown. */}
+						<IconButton label={shown ? hideLabel : showLabel} onClick={() => setShown((value) => !value)}>
 							{shown ? <ViewOff aria-hidden /> : <View aria-hidden />}
 						</IconButton>
 					</span>

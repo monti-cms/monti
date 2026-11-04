@@ -110,7 +110,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 ### 코드
 
-`SecretInput`: mono 입력란 하나에, 끝의 `action` 자리로 눈 아이콘 버튼(`showLabel`·`hideLabel`이 이름, 칸보다 한 단계 작은 둥근 버튼)이 든 필드다. 포커스 중에는 밑줄이 잉크, `aria-invalid`이면 위험색이다. 비밀번호는 `kind="password"`다. 본문 글꼴이고, 브라우저의 비밀번호 관리자가 채울 수 있게 `autoComplete`(`current-password`, `new-password`)를 그대로 둔다. 키(기본 `kind="key"`)는 mono이고 자동 채우기를 막는다. `keep`을 주면 줄 끝에 조용한 글자 버튼("그대로")이 붙는다. `SavedValue`: 입력란과 같은 높이(36px)에 mono 값과 끝의 밑줄 글자 버튼 하나(`action`, "바꾸기")를 둔 행이다. 밑줄은 보이지 않는다.
+`SecretInput`: mono 입력란 하나에, 끝의 `action` 자리로 눈 아이콘 버튼(`showLabel`·`hideLabel`이 이름, 칸보다 한 단계 작은 둥근 버튼)이 든 필드다. 포커스 중에는 밑줄이 잉크, `aria-invalid`이면 위험색이다. 눈은 눌린 바탕을 남기지 않는다. 아이콘(눈과 빗금 친 눈)과 이름("보기", "가리기")이 지금 상태를 말한다. 비밀번호는 `kind="password"`다. 본문 글꼴이고, 브라우저의 비밀번호 관리자가 채울 수 있게 `autoComplete`(`current-password`, `new-password`)를 그대로 둔다. 키(기본 `kind="key"`)는 mono이고 자동 채우기를 막는다. `keep`을 주면 줄 끝에 조용한 글자 버튼("그대로")이 붙는다. `SavedValue`: 입력란과 같은 높이(36px)에 mono 값과 끝의 밑줄 글자 버튼 하나(`action`, "바꾸기")를 둔 행이다. 밑줄은 보이지 않는다.
 
 ## 메뉴로 고르는 칸 (`.mt-select` 모양)
 
