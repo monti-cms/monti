@@ -59,7 +59,7 @@ function Affix({
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className={cn(
-					"min-w-[3ch] flex-1 rounded-none border-0 border-monti-default border-b bg-transparent px-monti-4 py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint hover:not-focus:border-monti-strong hover:not-focus:bg-monti-muted focus:border-monti-contrast aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
+					"min-w-[3ch] flex-1 rounded-none border-0 border-monti-default border-b bg-transparent px-monti-8 py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint hover:not-focus:border-monti-strong hover:not-focus:bg-monti-muted focus:border-monti-contrast aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
 					bare && "min-w-0 border-b-0 group-data-proposal/affix:border-b-0",
 				)}
 				{...props}
