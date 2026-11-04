@@ -25,10 +25,8 @@ export function AdminSettingsScreen() {
 				</PageToolbar>
 				<PageBody>
 					<Section title="언어">
-						<FormField>
-							<FormFieldLabel htmlFor="ui-locale">메뉴와 버튼 언어</FormFieldLabel>
-							<MenuField id="ui-locale" value="한국어" meta="ko" />
-						</FormField>
+						{/* The section's title already says what it is; the field needs no label of its own. */}
+						<MenuField aria-label="언어" value="한국어" meta="ko" />
 					</Section>
 					<Section title="기능">
 						<SwitchOption label="본문 템플릿" checked />

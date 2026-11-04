@@ -142,7 +142,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 언어 절 | `Section`("언어") | |
-| 메뉴와 버튼 언어 | `FormField` + `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 흐린 코드 "ko") | 고르면 관리자 화면의 말이 바뀐다. |
+| 언어 고르기 | `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 흐린 코드 "ko"). 라벨 없음: 절 제목 "언어"가 이미 말한다(스크린 리더 이름은 `aria-label`) | 고르면 관리자 화면의 말이 바뀐다. |
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 · 번역 | 줄마다 `Option spread` + `Switch` | 바로 적용되는 켜기/끄기. |
 | 주소 절 | `Section`("주소", 마지막 절이라 `last`). 읽기 전용이면 제목 뒤 `LockMark` | |
