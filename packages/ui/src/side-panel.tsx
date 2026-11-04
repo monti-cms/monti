@@ -1,10 +1,11 @@
 "use client";
 
-import { type ComponentProps, type FormEventHandler, type ReactNode, useId } from "react";
+import { type ComponentProps, type CSSProperties, type FormEventHandler, type ReactNode, useId } from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { ChevronLeft, Close } from "./icons";
 import { useUiLabels } from "./labels";
+import { ResizeHandle, useResizableWidth } from "./resize-handle";
 
 /**
  * The look of a tool panel, shared by `SidePanel` and `Sheet`: a cream ground, a 60px head (title 16px bold at the start, icon buttons at the end, 24px
@@ -17,16 +18,19 @@ export const PANEL_BODY = "flex flex-col gap-[18px] px-monti-24 py-monti-20";
 export const PANEL_FOOT =
 	"flex shrink-0 items-center justify-end gap-[18px] border-monti-default border-t px-monti-24 py-[14px]";
 
-/** The widths a side panel takes: `side` for a file or an activity beside a list, `panel` for the entry's properties, `assistant` for the assistant. */
+/**
+ * The widths a side panel starts at (the `width-panel`, `width-side-panel` and `width-assistant` tokens): `side` for a file or an activity beside a
+ * list, `panel` for the entry's properties, `assistant` for the assistant. The writer can drag it up to twice as wide, never narrower.
+ */
 const SIDE_PANEL_WIDTH = {
-	side: "sm:w-monti-side-panel",
-	panel: "sm:w-monti-panel",
-	assistant: "sm:w-monti-assistant",
+	side: 360,
+	panel: 300,
+	assistant: 380,
 } as const;
 
 /**
  * A panel beside a screen, for what is looked at together with it (a media file, an activity, an entry's properties, the assistant): it does not
- * cover the screen. A fixed width by `width`, a cream ground, a line down its left edge, and a 60px head with the title (16px bold), the panel's
+ * cover the screen. A width by `width` that the writer can drag wider from its left edge (remembered in this browser under `resizeKey`), a cream ground, a line down its left edge, and a 60px head with the title (16px bold), the panel's
  * icon buttons and the close button. Under the body an optional foot holds the one pill, or the box to type in. Docked at the window's right edge,
  * it covers the ✦ button of the page's corner. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
  * in a field and the foot's submit button save it.
@@ -43,7 +47,9 @@ export function SidePanel({
 	width = "side",
 	bleed = false,
 	onSubmit,
+	resizeKey,
 	className,
+	style,
 	children,
 	...props
 }: Omit<ComponentProps<"aside">, "title"> & {
@@ -66,8 +72,17 @@ export function SidePanel({
 	/** The body keeps no padding or gap of its own: for content that lays out its own sections edge to edge (tabs, bands). */
 	bleed?: boolean;
 	onSubmit?: FormEventHandler<HTMLFormElement>;
+	/** The name its width is remembered under; `panel:<width>` by default, so panels of one kind share it. */
+	resizeKey?: string;
 }) {
 	const labels = useUiLabels();
+	const start = SIDE_PANEL_WIDTH[width];
+	const resize = useResizableWidth({
+		storageKey: resizeKey ?? `panel:${width}`,
+		defaultWidth: start,
+		min: start,
+		max: start * 2,
+	});
 	const titleId = useId();
 	const body = (
 		<div
@@ -96,12 +111,22 @@ export function SidePanel({
 			data-slot="side-panel"
 			aria-labelledby={title ? titleId : undefined}
 			className={cn(
-				"flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)]",
-				SIDE_PANEL_WIDTH[width],
+				"relative flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] sm:w-(--side-panel-width)",
 				className,
 			)}
+			style={{ "--side-panel-width": `${resize.width}px`, ...style } as CSSProperties}
 			{...props}
 		>
+			<ResizeHandle
+				value={resize.width}
+				min={resize.min}
+				max={resize.max}
+				onChange={resize.setWidth}
+				onReset={resize.reset}
+				edge="start"
+				resizing={resize.resizing}
+				className="max-sm:hidden"
+			/>
 			{title && (
 				<header data-slot="side-panel-header" className={PANEL_HEAD}>
 					{back && (
