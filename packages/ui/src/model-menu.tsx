@@ -181,13 +181,13 @@ export function ModelMenuButton({
 	label: string;
 }) {
 	return (
-		// A small ghost button pulled 10px into the box's padding, so its words line up with the text above and its ground stays inside the box.
+		// A small ghost button pulled 6px into the box's padding: its words sit 2px past the text above, its ground stays 6px inside the box, and the caret side is 6px, as tight as the words side looks.
 		<Button
 			variant="ghost"
 			size="sm"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="-ml-monti-10 min-w-0 font-mono text-monti-meta"
+			className="-ml-monti-6 min-w-0 pr-monti-6 pl-monti-8 font-mono text-monti-meta"
 			{...props}
 		>
 			<span className="min-w-0 truncate">{model}</span>
