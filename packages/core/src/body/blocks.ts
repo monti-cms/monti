@@ -2,7 +2,7 @@ import { z } from "zod";
 import { sameJson } from "../json";
 import type { Message } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
-import { type Block, blockMap, type Doc, DocShape, type Mark, walk } from "./doc";
+import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
 
 /** A row a block adds to the publish to-do list. `block` stops the publish; `warn` only tells. */
 export type BlockCheck = { level: "warn" | "block"; message: string | Message };
@@ -184,9 +184,10 @@ export type BodyProblem = { code: string; block?: string; detail?: string };
 
 /**
  * What a body must fix before it is saved. A person's save and the assistant's block operations both pass it (doc 03). Blocks the doc already had
- * may stay as they are, even of a type the site no longer defines or the editor no longer offers (doc 03, decisions); a new block may not.
+ * may stay as they are, even of a type the site no longer defines (doc 03, decisions); a new block may not. The editor allowance is not checked
+ * here: it only filters the "/" menu and the assistant's catalog, so a template put in the editor goes in as it is.
  */
-export function checkDoc(doc: unknown, kit: BlockKit, editor: Editor | undefined, previous: Doc | null): BodyProblem[] {
+export function checkDoc(doc: unknown, kit: BlockKit, previous: Doc | null): BodyProblem[] {
 	const parsed = DocShape.safeParse(doc);
 	if (!parsed.success) return [{ code: "shape", detail: parsed.error.issues[0]?.message }];
 	const before = blockMap(previous);
@@ -198,37 +199,34 @@ export function checkDoc(doc: unknown, kit: BlockKit, editor: Editor | undefined
 		if (seen.has(block.id)) at("duplicateId");
 		seen.add(block.id);
 		const old = before.get(block.id);
-		const kept = old !== undefined && sameJson(old, block);
-		if (kept) continue;
+		if (old !== undefined && sameJson(old, block)) continue;
 		const definition = kit.blocks.get(block.type);
 		if (!definition) {
 			if (old?.type !== block.type) at("unknownBlock", block.type);
 			continue;
 		}
-		const isNew = old?.type !== block.type || !sameJson(old.attrs, block.attrs);
-		if (isNew && !blockOn(editor, block)) at("blockOff", block.type);
 		if (definition.holds !== "text" && block.content?.length) at("noText");
 		if (definition.holds !== "blocks" && block.children?.length) at("noChildren");
 		if (definition.children && block.children?.some((child) => !definition.children?.includes(child.type)))
 			at("badChild");
 		const attrs = (definition.attrs ?? z.object({}).strict()).safeParse(block.attrs ?? {});
 		if (!attrs.success) at("badAttrs", attrs.error.issues[0]?.message);
+		// A mark the block already had may stay, like a block, even when the site no longer defines it.
+		const oldMarks = new Set(
+			(old?.content ?? [])
+				.flatMap((inline) => (inline.type === "text" ? (inline.marks ?? []) : []))
+				.map((mark) => mark.type),
+		);
 		for (const inline of block.content ?? [])
-			for (const mark of inline.type === "text" ? (inline.marks ?? []) : []) checkMark(mark, kit, editor, !old, at);
+			for (const mark of inline.type === "text" ? (inline.marks ?? []) : []) {
+				const markDefinition = kit.marks.get(mark.type);
+				if (!markDefinition) {
+					if (!oldMarks.has(mark.type)) at("unknownMark", mark.type);
+					continue;
+				}
+				const { type: _type, ...markAttrs } = mark;
+				if (!(markDefinition.attrs ?? z.object({}).strict()).safeParse(markAttrs).success) at("badMark", mark.type);
+			}
 	}
 	return problems;
-}
-
-function checkMark(
-	mark: Mark,
-	kit: BlockKit,
-	editor: Editor | undefined,
-	isNew: boolean,
-	at: (code: string, detail?: string) => void,
-) {
-	const definition = kit.marks.get(mark.type);
-	if (!definition) return at("unknownMark", mark.type);
-	if (isNew && !markOn(editor, mark.type)) at("markOff", mark.type);
-	const { type: _type, ...attrs } = mark;
-	if (!(definition.attrs ?? z.object({}).strict()).safeParse(attrs).success) at("badMark", mark.type);
 }

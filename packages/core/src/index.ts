@@ -12,6 +12,7 @@ export {
 } from "./body/blocks";
 export type { Block, Doc, Inline, Mark, NewBlock } from "./body/doc";
 export type { BodyOp } from "./body/edit";
+export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database } from "./db/schema";

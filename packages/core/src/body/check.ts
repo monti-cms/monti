@@ -18,13 +18,8 @@ export async function editorOf(db: Db, collection: string): Promise<AdminValues[
 }
 
 /** Refuses a body that does not pass `checkDoc`, naming the first problem. */
-export function assertDoc(
-	doc: unknown,
-	kit: BlockKit,
-	editor: AdminValues["editor"],
-	previous: Doc | null,
-): asserts doc is Doc {
-	const problems = checkDoc(doc, kit, editor, previous);
+export function assertDoc(doc: unknown, kit: BlockKit, previous: Doc | null): asserts doc is Doc {
+	const problems = checkDoc(doc, kit, previous);
 	if (problems.length === 0) return;
 	const [first] = problems;
 	throw new CheckError({
