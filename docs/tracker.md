@@ -21,8 +21,8 @@
 |---|---|---|---|
 | 00 | 0 | 만드는 중 | #432 |
 | 01 | 1 | 만드는 중 | #433 |
-| 02 | 1 | 만드는 중 | |
-| 03 | 1 | 대기 | |
+| 02 | 1 | 만드는 중 | #434 |
+| 03 | 1 | 만드는 중 | |
 | 15 | 2 | 대기 | |
 | 05 | 2 | 대기 | |
 | 06 | 2 | 대기 | |
@@ -46,7 +46,7 @@
 | T5 | 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`). 명령 `deliveries:run`은 있다 | 13 | #432 |
 | T6 | 사람이 누른 "다시 보내기"는 시도 수를 처음부터 센다(`deliveries.retry`) | 13 | 13 보내기 |
 | T7 | 30일 지난 되돌리기 스냅숏 지우기. 휴지통 정리와 같은 때(`monti trash:purge`) | 11 | 13 결정 기록, #432 |
-| T8 | 말 사전: 기능 요약과 오류의 `Message` 키(`errors.*`, `activity.*`, `proposals.*`, `schema.*`, `collections.*`, `entries.*`)를 ko · en 사전에 두고 `check:messages`가 core 사전을 보게 한다 | 15 | #432, 01·02(키만 있다) |
+| T8 | 말 사전: 기능 요약과 오류의 `Message` 키(`errors.*`, `activity.*`, `proposals.*`, `schema.*`, `collections.*`, `entries.*`, `body.*`, `templates.*`, `blocks.*`, `marks.*`)를 ko · en 사전에 두고 `check:messages`가 core 사전을 보게 한다 | 15 | #432, 01·02·03(키만 있다) |
 | T9 | 관리자 API의 로그인 확인: `createAdminApi`의 `authenticate`를 세션으로 채운다 | 15 | #432 |
 | T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀 | 15 | build.md 규칙 6 |
 | T11 | 새 관리자 패키지에서 `fetch` 금지 린트가 걸리는지 확인한다(`biome.json`, `packages/admin/src/operations/**`만 예외) | 15 | build.md 규칙 3, #432 |
@@ -56,9 +56,12 @@
 | T15 | 01의 화면: 설정 › 컬렉션(`useSchemaDraft`, `ChangeReview`, 속성 패널 미리보기 `PropertyPanel`), 흐름 4 전부와 흐름 11·15–20(끝 조건 01-2). 관리자 패키지가 생긴 뒤(2단계) | 01 | 01 화면 쪽 조각 |
 | T16 | 관리자 화면 위 알림 띠: 개발 서버는 "파일이 바뀌었어요 · 검토"(`schema.read`의 `fileChanged`, `syncSchemaFile`의 review), 운영은 "`monti db:migrate`를 돌려 주세요", 적용 실패는 "다시 적용"(`failedChange`) | 15 | 01 |
 | T21 | 02의 화면: `useEntryEditor`(저장 칸 네 가지, 브라우저 임시 저장, 충돌), `usePublish`, `EntryStatus`, `CompareView`. 흐름 1 전부(끝 조건 02-1·02-2의 화면 쪽). 편집기 화면(2단계)에서 | 02 | 02 화면 쪽 조각 |
-| T22 | `entries.create`가 템플릿을 받는다 | 03 | 02 기능 목록 |
-| T23 | 할 일 "발행 안 된 글로 가는 링크"(알리기만). 본문 링크를 읽어야 한다 | 03 | 02 할 일 표 |
-| T24 | `entries.compare`가 본문을 블록마다 견준다. 지금은 본문 전체가 "다른 곳" 하나다 | 03 | 02 |
+| T23 | 할 일 "발행 안 된 글로 가는 링크"(알리기만). 본문 링크가 글을 가리키는 모양이 아직 정해지지 않았다(소유자에게 물음) | 03 | 02 할 일 표 |
+| T31 | 03의 화면: `useBodyEditor`(블록 정의로 ProseMirror 스키마, `/` 메뉴, 바꾸기 메뉴), `BlockHandle`, `FormatCard`, `SlashMenu`, `ImageTools`. 흐름 1의 02~06단계, 기준 화면 TemplateEditor(끝 조건 03-1의 편집기 쪽, 03-4). 편집기 화면(2단계)에서 | 03 | 03 화면 쪽 조각 |
+| T32 | `ProposalMarks`: 블록 id로 받은 본문 제안을 본문 위에 그린다 | 05 | 03 화면 쪽 조각 |
+| T33 | 이미지 블록의 `media`가 미디어 라이브러리를 가리킨다. 본문 이미지를 "쓰는 곳"에 넣고, 기준 화면 ImageInsert(붙여 넣기 · 끌어 넣기 · 올리는 막대) | 09 | 03 |
+| T34 | MDX와 지시문 문법(`:::callout`) 읽기 · 내보내기 플러그인 | 14 | 03 원칙 1 |
+| T35 | `@monti-cms/blocks`(콜아웃, 탭, 단 나누기, 접기, 코드 탐색기, 수식, 차트, 다이어그램, 툴팁, 글자 색)를 `defineBlock`으로 다시 만들고 `monti add`로 사이트 소스에 넣는다. 옛 코드는 `9c69629f` 이전 기록 | 출시 전 | 03 블록 표 |
 | T25 | 할 일 "대체 텍스트 없는 이미지 n개"(막는다). 본문과 미디어 필드의 이미지 | 09 | 02 할 일 표 |
 | T26 | `entries.create`가 사이트의 언어만 받는다. 지금은 아무 언어 이름이나 받는다 | 04 | 02 |
 | T27 | 항목 컬렉션은 저장하면 바로 발행본이 된다. 지금 `entries.publish`는 항목을 거절하고, 사이트 읽기에 항목이 없다 | 08 | 02 원칙 |
@@ -70,6 +73,8 @@
 
 | 번호 | 할 일 | PR |
 |---|---|---|
+| T22 | `entries.create`가 템플릿을 받는다 | #435 |
+| T24 | `entries.compare`가 본문을 블록마다 견준다 | #435 |
 | T4 | `monti` 명령: `monti.config.ts`를 읽어 기능을 명령으로 돌리고, 관리 명령 `db:setup` · `db:migrate` · `deliveries:run` | #433 |
 
 ## 그만둔 일

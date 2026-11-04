@@ -7,7 +7,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./cli": "./src/cli/main.ts"
+		"./cli": "./src/cli/main.ts",
+		"./render": "./src/render.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
@@ -40,6 +41,10 @@
 			"./cli": {
 				"types": "./dist/cli/main.d.ts",
 				"default": "./dist/cli/main.js"
+			},
+			"./render": {
+				"types": "./dist/render.d.ts",
+				"default": "./dist/render.js"
 			}
 		}
 	},

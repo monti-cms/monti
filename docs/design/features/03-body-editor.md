@@ -134,11 +134,12 @@ flowchart TB
 
 ```ts
 // in the site
+import { createElement } from "react";
 import { renderDocument } from "@monti-cms/core/render";
 import { blocks } from "@/monti/blocks"; // the same definitions the admin uses
 
 export function PostBody({ doc }: { doc: Doc }) {
-  return renderDocument(doc, { blocks });
+  return renderDocument(doc, { createElement, blocks });
 }
 ```
 
@@ -213,10 +214,16 @@ sequenceDiagram
 - 2026-11-05: 편집기 엔진은 ProseMirror(Tiptap)다. 엔진의 문서 모양은 저장하지 않는다.
 - 2026-11-05: core에는 글 쓰기에 꼭 필요한 블록과 서식만 있다. 나머지는 `@monti-cms/blocks`에서 `monti add`로 사이트 소스에 넣는다("사용자가 만지는 것은 연다").
 - 2026-11-05: 템플릿은 사이트 전체에 하나의 목록이다. 컬렉션마다 나누지 않는다.
+- 2026-11-05: 서버의 검사는 문서가 전에 갖고 있던 블록을 "남은 블록"으로, 처음 보는 id나 종류·attrs가 바뀐 블록을 "새 블록"으로 본다. 편집기 허용과 정의 없음은 새 블록만 막는다. 서식의 편집기 허용은 새 블록 안에서만 본다.
+- 2026-11-05: `body.read`는 블록의 서식 없는 글자를 보인다. `replaceText`의 위치가 모델이 읽은 글자와 같아야 해서다. 바꾼 글자는 바꾼 자리 첫 글자의 서식을 받는다.
+- 2026-11-05: `renderDocument`는 `@monti-cms/core/render`에 있지만 React를 가져오지 않는다. 사이트가 자기 `createElement`를 넘긴다. core는 어떤 프레임워크도 모른다는 규칙(`biome.json`)을 지키고, React가 아닌 사이트도 같은 함수를 쓴다. core 블록은 `Site` 컴포넌트가 없으면 평범한 HTML로 그린다.
+- 2026-11-05: 표 블록은 칸마다 서식 없는 글자다(`attrs.rows`). 칸 안의 서식이 필요해지면 표를 블록을 담는 블록으로 바꾼다.
+- 2026-11-05: 목록은 `listItem` 블록을 담는 블록이다(`bulletList`, `orderedList`, `checklist`). 체크리스트 항목은 `checked`를 가진다.
 
 ## 끝 조건
 
-- 블록 하나를 `defineBlock`으로 더하면 편집기, `/` 메뉴, 사이트 그리기, `blocks.catalog`에 함께 나타난다.
-- 사람의 저장과 에이전트의 블록 연산이 같은 검사를 지난다.
-- 블록 id는 옮기기, 고치기, 저장, 발행을 지나도 그대로다.
-- 흐름 1의 02~06단계와 기준 화면 TemplateEditor, ImageInsert가 이 기능 목록과 09번 문서만으로 된다.
+- **03-1** 블록 하나를 `defineBlock`으로 더하면 편집기, `/` 메뉴, 사이트 그리기, `blocks.catalog`, 발행 할 일(블록의 `check`)에 함께 나타난다.
+- **03-2** 사람의 저장과 에이전트의 블록 연산이 같은 검사를 지난다.
+- **03-3** 블록 id는 옮기기, 고치기, 저장, 발행을 지나도 그대로다.
+- **03-4** 흐름 1의 02~06단계와 기준 화면 TemplateEditor, ImageInsert가 이 기능 목록과 09번 문서만으로 된다.
+- **03-5** 끈 블록과 사이트가 더는 정의하지 않는 블록은 글에 그대로 남고, 다른 곳을 고쳐 저장할 수 있다. 새로 넣을 수는 없다. 템플릿으로 넣을 때는 그대로 들어간다.

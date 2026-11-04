@@ -1,3 +1,17 @@
+export {
+	type AnyBlockDefinition,
+	type BlockCheck,
+	type BlockDefinition,
+	type BodyProblem,
+	checkDoc,
+	coreBlocks,
+	coreMarks,
+	defineBlock,
+	defineMark,
+	type MarkDefinition,
+} from "./body/blocks";
+export type { Block, Doc, Inline, Mark, NewBlock } from "./body/doc";
+export type { BodyOp } from "./body/edit";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database } from "./db/schema";
