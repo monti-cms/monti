@@ -15,6 +15,125 @@
 			},
 			"events": []
 		},
+		"Conversation": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"turns": {
+					"kind": "data",
+					"fields": ["role", "text", "detail"]
+				}
+			},
+			"events": []
+		},
+		"ProposalBox": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"applyLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"discardLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"entries": {
+					"kind": "data",
+					"fields": ["name", "slug", "field", "text"]
+				},
+				"reviewLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"status": {
+					"kind": "state"
+				},
+				"summary": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Suggestions": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"SuggestHeading": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"text": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"SuggestRow": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"recent": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"ChatBox": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"effort": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"model": {
+					"kind": "state"
+				},
+				"modelLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"placeholder": {
+					"kind": "text",
+					"type": "string"
+				},
+				"sendLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"PropsPanel": {
 			"kind": "part",
 			"bind": false,

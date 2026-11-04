@@ -3,9 +3,13 @@ import { Affix } from "../affix";
 import { Banner as BannerPart } from "../banner";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
+import { Caret } from "../caret";
 import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "../change";
 import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
+import { ChatInput } from "../chat-input";
+import { ChatEntryLink, ChatEntryList, ChatMessage } from "../chat-message";
+import { ChatAnswer, ChatThread, ToolCallLines } from "../chat-thread";
 import { Checkbox } from "../checkbox";
 import { cn } from "../cn";
 import {
@@ -60,6 +64,7 @@ import {
 import { PickList, PickListItem } from "../pick-list";
 import { PropertyGroup, PropertyPanel } from "../property-list";
 import { ProposalBubble, ProposalBubbleDock } from "../proposal-bubble";
+import { ProposalActions, ProposalCard, ProposalEntry } from "../proposal-card";
 import { Del, Ins } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
@@ -111,6 +116,7 @@ import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
 import { StatusBar, StatusBarCell, StatusBarSpacer } from "../status-bar";
 import { StatusBarList } from "../status-bar-list";
+import { Suggest, SuggestLabel, SuggestList } from "../suggest";
 import { Switch } from "../switch";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../tabs";
@@ -120,6 +126,7 @@ import { TextButton } from "../text-button";
 import { Textarea as TextareaPart } from "../textarea";
 import { FolderTile, Tile } from "../tile";
 import { TodoDone, TodoItem } from "../todo-item";
+import { ToolCallLine } from "../tool-call-line";
 import { TrashRowDate, TrashRowTitle } from "../trash-row";
 
 /** An icon by its Carbon name in the design system's icon list (`iconsByName`), in a part that takes its icon as children (a button, an icon button). */
@@ -2023,6 +2030,181 @@ function PropertyPicture({ picture }: { picture?: string }) {
 	return <ImagePart src={address ?? ""} alt="" ratio="photo" radius="sm" />;
 }
 
+/** The assistant's empty panel: the requests to start from, in groups under their `SuggestHeading`s. */
+function Suggestions({ children }: { children?: React.ReactNode }) {
+	return <SuggestList>{children}</SuggestList>;
+}
+
+/** The name of a group of requests ("In this list", "Recent"). */
+function SuggestHeading({ text }: { text?: string }) {
+	return <SuggestLabel>{text}</SuggestLabel>;
+}
+
+/** One request to start from: `recent` for one asked before; otherwise a saved one. */
+function SuggestRow({ label, recent }: { label?: string; recent?: boolean }) {
+	return <Suggest kind={recent ? "recent" : "request"}>{label}</Suggest>;
+}
+
+/**
+ * The box a conversation is typed in: its name (`label`), the line it shows while empty, the send button's name, and at its start the model it asks
+ * (`model`, with how hard it thinks, `effort`).
+ */
+function ChatBox({
+	label,
+	placeholder,
+	sendLabel,
+	modelLabel,
+	model,
+	effort,
+}: {
+	label?: string;
+	placeholder?: string;
+	sendLabel?: string;
+	modelLabel?: string;
+	model?: string;
+	effort?: string;
+}) {
+	const none = () => {};
+	return (
+		<ChatInput
+			value=""
+			onValueChange={none}
+			onSubmit={none}
+			onStop={none}
+			label={label ?? ""}
+			placeholder={placeholder}
+			sendLabel={sendLabel ?? ""}
+			stopLabel=""
+			aside={
+				<TextButton mono size="caption" aria-label={modelLabel}>
+					{model}
+					{effort && <Text tone="faint"> · {effort}</Text>}
+					<Caret />
+				</TextButton>
+			}
+		/>
+	);
+}
+
+/**
+ * A conversation with the assistant, from the data: each turn's `role` (`user` asked, `tool` a call it made, `assistant` its words, `entry` an entry its
+ * answer names, with its slug as `detail`) and `text`. The proposals it made (`ProposalBox`) follow it.
+ */
+function Conversation({
+	turns,
+	children,
+}: {
+	turns?: readonly { role: string; text: string; detail?: string }[];
+	children?: React.ReactNode;
+}) {
+	// The turns of one answer (its calls, its words, the entries it names) go together.
+	const groups: { role: string; turns: { role: string; text: string; detail?: string }[] }[] = [];
+	for (const turn of turns ?? []) {
+		const last = groups[groups.length - 1];
+		if (turn.role === "user" || !last || last.role === "user")
+			groups.push({ role: turn.role === "user" ? "user" : "answer", turns: [turn] });
+		else last.turns.push(turn);
+	}
+	return (
+		<ChatThread>
+			{groups.map((group, index) =>
+				group.role === "user" ? (
+					// biome-ignore lint/suspicious/noArrayIndexKey: a sample conversation never moves
+					<ChatMessage key={index} author="user">
+						{group.turns[0]?.text}
+					</ChatMessage>
+				) : (
+					// biome-ignore lint/suspicious/noArrayIndexKey: a sample conversation never moves
+					<ChatAnswer key={index}>
+						{group.turns.some((turn) => turn.role === "tool") && (
+							<ToolCallLines>
+								{group.turns
+									.filter((turn) => turn.role === "tool")
+									.map((turn) => (
+										<ToolCallLine key={turn.text} status="done" statusLabel="">
+											{turn.text}
+										</ToolCallLine>
+									))}
+							</ToolCallLines>
+						)}
+						{group.turns
+							.filter((turn) => turn.role === "assistant")
+							.map((turn) => (
+								<ChatMessage key={turn.text} author="assistant">
+									{turn.text}
+								</ChatMessage>
+							))}
+						{group.turns.some((turn) => turn.role === "entry") && (
+							<ChatEntryList>
+								{group.turns
+									.filter((turn) => turn.role === "entry")
+									.map((turn) => (
+										<li key={turn.text}>
+											<ChatEntryLink slug={turn.detail}>{turn.text}</ChatEntryLink>
+										</li>
+									))}
+							</ChatEntryList>
+						)}
+					</ChatAnswer>
+				),
+			)}
+			{children}
+		</ChatThread>
+	);
+}
+
+/**
+ * A proposal in the conversation: what it is (`title`) and how much (`summary`), where it stands (`status`), the entries it changes (from the data:
+ * each one's `name`, `slug`, `field` and new `text`), and its foot (review, discard, apply).
+ */
+function ProposalBox({
+	title,
+	summary,
+	status,
+	entries,
+	reviewLabel,
+	discardLabel,
+	applyLabel,
+}: {
+	title?: string;
+	summary?: string;
+	status?: string;
+	entries?: readonly { name: string; slug?: string; field?: string; text: string }[];
+	reviewLabel?: string;
+	discardLabel?: string;
+	applyLabel?: string;
+}) {
+	const none = () => {};
+	return (
+		<ProposalCard
+			title={title}
+			summary={summary}
+			status={status}
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel={reviewLabel}
+					onReview={reviewLabel ? none : undefined}
+					discardLabel={discardLabel ?? ""}
+					onDiscard={none}
+					applyLabel={applyLabel ?? ""}
+					onApply={none}
+				/>
+			}
+		>
+			{entries?.map((entry) => (
+				<ProposalEntry
+					key={entry.name}
+					name={entry.name}
+					slug={entry.slug}
+					field={entry.field}
+					after={<Ins>{entry.text}</Ins>}
+				/>
+			))}
+		</ProposalCard>
+	);
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -2031,6 +2213,12 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Conversation,
+	ProposalBox,
+	Suggestions,
+	SuggestHeading,
+	SuggestRow,
+	ChatBox,
 	PropsPanel,
 	PropsGroup,
 	LabelWithFill,
@@ -2228,6 +2416,33 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Conversation: { kind: "part", props: { turns: "data:role,text,detail" } },
+	ProposalBox: {
+		kind: "part",
+		props: {
+			title: "text",
+			summary: "text",
+			status: "state",
+			entries: "data:name,slug,field,text",
+			reviewLabel: "text",
+			discardLabel: "text",
+			applyLabel: "text",
+		},
+	},
+	Suggestions: { kind: "part", props: {} },
+	SuggestHeading: { kind: "part", props: { text: "text" } },
+	SuggestRow: { kind: "part", props: { label: "text", recent: "flag" } },
+	ChatBox: {
+		kind: "part",
+		props: {
+			label: "text",
+			placeholder: "text",
+			sendLabel: "text",
+			modelLabel: "text",
+			model: "state",
+			effort: "text",
+		},
+	},
 	PropsPanel: { kind: "part", props: { label: "text", open: "text", tabs: "data:value,label" } },
 	PropsGroup: { kind: "part", props: { title: "text" } },
 	LabelWithFill: { kind: "part", props: { label: "text", action: "text", for: "ref" } },

@@ -329,7 +329,8 @@ const parts = [
 		asProps: ["position", "left", "top", "opacity"],
 	},
 	{
-		match: (el) => el.matches(".mt-row > a"),
+		// A row's title link; a worded link of the row (its count, going to its entries) is a text button.
+		match: (el) => el.matches(".mt-row > a:not(.mt-text-btn)"),
 		part: "TitleCell",
 		props: (el) => ({
 			title: el.querySelector(".mt-row-title")?.textContent.trim(),
@@ -998,7 +999,7 @@ const parts = [
 			// Each block of a side: a new piece per paragraph, list item or row; the marked words of the source as changed pieces.
 			const pieces = (side) =>
 				side
-					? [...side.querySelectorAll("p, li, tr, pre, h1, figcaption")]
+					? [...side.querySelectorAll("p, li, tr, pre, h1, figcaption, .mt-label")]
 							.filter((block) => !block.closest(".mt-shared button"))
 							.flatMap((block) => {
 								const runs = [...block.childNodes]
@@ -1314,6 +1315,108 @@ const parts = [
 		props: (el) => ({ picture: el.style.background }),
 		leaf: true,
 		asProps: ["display", "height", "border-radius", "background", "margin"],
+	},
+	// A conversation: the turns are the data; the proposals in it are parts.
+	{
+		match: (el) => el.matches("div:has(> div > .mt-msg-user)"),
+		part: "Conversation",
+		props: (el) => {
+			const turns = [];
+			const words = (node) => node.textContent.replace(/\s+/g, " ").trim();
+			for (const item of el.querySelector(":scope > div:has(> .mt-msg-user)").children) {
+				if (item.matches(".mt-msg-user")) {
+					turns.push({ role: "user", text: words(item) });
+					continue;
+				}
+				for (const line of item.querySelectorAll(".mt-tool-line")) turns.push({ role: "tool", text: words(line) });
+				for (const said of item.querySelectorAll(":scope > p")) turns.push({ role: "assistant", text: words(said) });
+				for (const entry of item.querySelectorAll(".mt-entry-list > li"))
+					turns.push({
+						role: "entry",
+						text: words(entry.querySelector("a")),
+						detail: entry.querySelector(".slug")?.textContent.trim(),
+					});
+			}
+			return { turns };
+		},
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll("section.mt-card[aria-label]")],
+		asProps: ["flex", "min-height", "overflow", "display", "flex-direction"],
+	},
+	{
+		match: (el) => el.matches("section.mt-card:has(> .mt-proposal-entry)"),
+		part: "ProposalBox",
+		props: (el) => {
+			const head = el.querySelector(":scope > div:first-child");
+			const foot = [...el.querySelectorAll(":scope > div:has(> .mt-btn)")].find((row) => shown(row));
+			return {
+				title: head?.querySelector("b")?.textContent.trim(),
+				summary: head?.querySelector(".text-micro")?.textContent.trim(),
+				status: head?.querySelector(".text-caption")?.textContent.trim() || undefined,
+				entries: [...el.querySelectorAll(".mt-proposal-entry")].map((entry) => ({
+					name: entry.querySelector(".name")?.textContent.trim(),
+					slug: entry.querySelector(".slug")?.textContent.trim(),
+					field: entry.querySelector(".field")?.textContent.trim(),
+					text: entry.querySelector("ins")?.textContent.trim(),
+				})),
+				reviewLabel: foot?.querySelector(".mt-text-btn--underline")?.textContent.trim(),
+				discardLabel: foot?.querySelector(".mt-text-btn--quiet")?.textContent.trim(),
+				applyLabel: foot?.querySelector(".mt-btn")?.textContent.trim(),
+			};
+		},
+		leaf: true,
+		asProps: ["padding", "overflow", "box-shadow", "border-color"],
+	},
+	// The assistant's empty panel: requests to start from, and the box to type in.
+	{
+		// The panel's scrolling body with the requests at its bottom: the list fills the panel and sits low itself.
+		match: (el) => el.matches("div:has(> div > .mt-suggest)"),
+		part: "Suggestions",
+		slots: () => ({}),
+		children: (el) => [...el.querySelector(":scope > div:has(> .mt-suggest)").children],
+		asProps: ["flex", "min-height", "overflow", "display", "flex-direction"],
+	},
+	{
+		match: (el) => el.matches("div:has(> .mt-suggest) > .text-micro"),
+		part: "SuggestHeading",
+		props: (el) => ({ text: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["color", "padding"],
+	},
+	{
+		match: (el) => el.matches(".mt-suggest"),
+		part: "SuggestRow",
+		props: (el) => ({
+			label: el.textContent.trim(),
+			recent: el.querySelector("svg.mt-spark") ? undefined : true,
+		}),
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches("form:has(> .mt-chat-input), .mt-chat-input:not(form > *)"),
+		part: "ChatBox",
+		// It draws its own words (the dot before the effort) and its own room in the panel's foot.
+		ownWords: true,
+		asProps: ["flex-shrink", "padding"],
+		props: (el) => {
+			const box = el.matches(".mt-chat-input") ? el : el.querySelector(".mt-chat-input");
+			const picker = box.querySelector("button[aria-haspopup], button.mt-mono");
+			const words = [...(picker?.childNodes ?? [])]
+				.filter((node) => node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp"))
+				.map((node) => node.textContent)
+				.join("")
+				.trim();
+			return {
+				label: box.querySelector("label")?.textContent.trim(),
+				placeholder: box.querySelector("textarea")?.placeholder || undefined,
+				sendLabel: box.querySelector(".mt-send[type=submit], .mt-send")?.getAttribute("aria-label"),
+				modelLabel: picker?.getAttribute("aria-label"),
+				model: words || undefined,
+				effort:
+					picker?.querySelector(":scope > span:not(.mt-caret)")?.textContent.replace(/^·\s*/, "").trim() || undefined,
+			};
+		},
+		leaf: true,
 	},
 	// A panel beside the page.
 	{
@@ -1688,7 +1791,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff|mt-bubble|who|mt-tool|mt-untranslated|mt-fill|mt-pair|mt-pair--head|mt-pair--title|gutter|src|dst|is-changed|is-new|mt-doc-callout|mt-doc-code|mt-doc-table|num|mt-shared|mt-props|mt-props-title|mt-ai-action|mt-input-line|mt-input-line--multi|is-bare|mt-chips-field|mt-chip|x|mt-statusbar-list|mt-todo-item|mt-todo-done|mt-menu-label|title|sub|act|plain|mark|is-on)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff|mt-bubble|who|mt-tool|mt-untranslated|mt-fill|mt-pair|mt-pair--head|mt-pair--title|gutter|src|dst|is-changed|is-new|mt-doc-callout|mt-doc-code|mt-doc-table|num|mt-shared|mt-props|mt-props-title|mt-ai-action|mt-input-line|mt-input-line--multi|is-bare|mt-chips-field|mt-chip|x|mt-statusbar-list|mt-todo-item|mt-todo-done|mt-menu-label|title|sub|act|plain|mark|is-on|mt-suggest|mt-chat-input|mt-send|mt-msg-user|mt-tool-line|mt-entry-list|slug|mt-proposal-entry|field)$/;
 
 /**
  * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame
