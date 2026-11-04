@@ -93,8 +93,8 @@ export const FailedChange: Story = {
 	],
 };
 
-/** On the live site the code has a newer schema than the database: the deploy did not run `monti db:migrate` (T16). */
-export const NeedsMigrate: Story = {
+/** The live site's database is behind its schema: the admin sees nothing; the server's log says to run `monti db:migrate` (doc 01). */
+export const LiveBehind: Story = {
 	loaders: [
 		async () => {
 			const site = await storySite({ schema, auth: { password: true }, signedIn: true, setup: labelCollections });

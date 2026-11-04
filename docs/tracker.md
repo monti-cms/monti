@@ -45,7 +45,7 @@
 | T5 | 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`). 명령 `deliveries:run`은 있다 | 13 | #432 |
 | T6 | 사람이 누른 "다시 보내기"는 시도 수를 처음부터 센다(`deliveries.retry`) | 13 | 13 보내기 |
 | T7 | 30일 지난 되돌리기 스냅숏 지우기. 휴지통 정리와 같은 때(`monti trash:purge`) | 11 | 13 결정 기록, #432 |
-| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다 | 출시 전 | #432에서 지움, 01 |
+| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다. 운영 사이트가 시작할 때 데이터베이스가 스키마보다 뒤에 있으면(`schema.read`의 `fileChanged`) `monti db:migrate`를 돌리라고 서버 로그에 남긴다 | 출시 전 | #432에서 지움, 01 |
 | T14 | 릴리스 묶음(`scripts/pack-release.mjs`, `release.yml`)을 새 패키지에 맞춘다 | 출시 전 | #432 |
 | T15 | 01의 화면: 설정 › 컬렉션(`useSchemaDraft`, `ChangeReview`, 속성 패널 미리보기 `PropertyPanel`), 흐름 4 전부와 흐름 11·15–20(끝 조건 01-2). 관리자 패키지가 생긴 뒤(2단계). 알림 띠 "파일이 바뀌었어요"의 "검토" 버튼도 이 화면이 생길 때 단다(T16) | 01 | 01 화면 쪽 조각 |
 | T21 | 02의 화면: `useEntryEditor`(저장 칸 네 가지, 브라우저 임시 저장, 충돌), `usePublish`, `EntryStatus`, `CompareView`. 흐름 1 전부(끝 조건 02-1·02-2의 화면 쪽). 편집기 화면(2단계)에서 | 02 | 02 화면 쪽 조각 |
@@ -76,7 +76,7 @@
 | T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀(`packages/admin/.storybook/pglite-site.ts`) | #437 |
 | T11 | 관리자 패키지 화면에서 `fetch`를 쓰면 린트가 막는다. `src/operations/**`만 예외 | #437 |
 | T12 | `check:design`이 `packages/admin/src`를 본다 | #437 |
-| T16 | 스키마 알림 띠(`SchemaBanner`, 목록 바로 위): 파일이 바뀜(개발), `monti db:migrate`(운영), 적용 실패와 "다시 적용". "검토" 버튼은 검토 화면과 함께(T15) | #437 |
+| T16 | 스키마 알림 띠(`SchemaBanner`, 목록 바로 위): 파일이 바뀜(개발 서버), 적용 실패와 "다시 적용". 운영의 `db:migrate` 누락은 화면이 아니라 서버 로그(T13). "검토" 버튼은 검토 화면과 함께(T15) | #437 |
 | T22 | `entries.create`가 템플릿을 받는다 | #435 |
 | T23 | 할 일 "발행 안 된 글로 가는 링크"(알리기만). 본문 링크는 `monti:entry/<묶음 id>`로 글을 가리킨다 | #436 |
 | T24 | `entries.compare`가 본문을 블록마다 견준다 | #435 |

@@ -5,8 +5,9 @@ import { useOperation, useRead } from "../../operations/use-operation";
 type SchemaState = { locked: boolean; fileChanged: boolean; failedChange: string | null };
 
 /**
- * The schema's alert line (T16): a change saved but not applied, a hand-edited schema file (dev server), or a deploy that did not run
- * `monti db:migrate` (live site). It sits directly above a screen's list, never across the top of the page, where the ✦ button is (status.md).
+ * The schema's alert line (T16): a change saved but not applied, or a hand-edited schema file on the dev server. It sits directly above a screen's
+ * list, never across the top of the page, where the ✦ button is (status.md). A live site whose database is behind its schema shows nothing: the
+ * admin cannot run `monti db:migrate`, so the server's log says it (doc 01, decisions).
  */
 export function SchemaBanner() {
 	const { t } = useAdmin();
@@ -26,11 +27,6 @@ export function SchemaBanner() {
 				</TextButton>
 			</Banner>
 		);
-	if (!state?.fileChanged) return null;
-	// On the dev server the review lives in settings › collections (doc 01, T15); until then the line only tells.
-	return state.locked ? (
-		<Banner title={t("banner.migrate")} meta={t("banner.migrateMeta")} />
-	) : (
-		<Banner title={t("banner.fileChanged")} />
-	);
+	// The review lives in settings › collections (doc 01, T15); until then the line only tells.
+	return state?.fileChanged && !state.locked ? <Banner title={t("banner.fileChanged")} /> : null;
 }
