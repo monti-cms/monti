@@ -87,7 +87,7 @@ export interface FormFieldChange {
 	undoName?: string;
 	/** Puts the saved value back. Without it the row has the dot only (a switch, which is undone by turning it back). */
 	onUndo?: () => void;
-	/** The undo button is drawn without `onUndo` (a static screen's look, such as a reference screen, before its behavior is wired). */
+	/** The undo button is drawn without `onUndo` (a screen spec's look, before its behavior is wired). */
 	undoShown?: boolean;
 	/** The undo button cannot be pressed (the screen is read-only). */
 	undoDisabled?: boolean;
