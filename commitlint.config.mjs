@@ -21,26 +21,8 @@ export default {
 		"scope-enum": [
 			2,
 			"always",
-			[
-				"core",
-				"auth",
-				"storage-s3",
-				"admin",
-				"ui",
-				"nextjs",
-				"ai",
-				"blocks",
-				"mdx",
-				"seo",
-				"registry",
-				"syntax",
-				"example",
-				"scripts",
-				"ci",
-				"deps",
-				"release",
-				"repo",
-			],
+			// The packages that exist, and the repo's own areas. A new package adds its scope here.
+			["core", "ui", "scripts", "ci", "deps", "release", "repo"],
 		],
 	},
 };
