@@ -1,10 +1,11 @@
 import { ChangesBar } from "../../changes-group";
+import { Close } from "../../icons";
 import {
 	Affix,
 	Box,
 	FormField,
 	FormFieldLabel,
-	Inline,
+	IconButton,
 	Input,
 	Option,
 	PageBody,
@@ -119,12 +120,16 @@ export function SettingsScreen() {
 						<FormField>
 							<FormFieldLabel>다른 호스트 이름</FormFieldLabel>
 							<Stack gap={2}>
-								<Inline gap={12}>
-									<Input mono defaultValue="www.example.dev" aria-label="호스트 1" />
-									<TextButton variant="quiet" aria-label="www.example.dev 지우기">
-										×
-									</TextButton>
-								</Inline>
+								<Input
+									mono
+									defaultValue="www.example.dev"
+									aria-label="호스트 1"
+									action={
+										<IconButton label="www.example.dev 지우기">
+											<Close aria-hidden />
+										</IconButton>
+									}
+								/>
 								<Box paddingTop={8}>
 									<TextButton>+ 호스트</TextButton>
 								</Box>

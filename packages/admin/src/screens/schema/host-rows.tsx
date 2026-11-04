@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldError, Inline, Input, Stack, TextButton } from "@monti-cms/ui";
+import { Box, FormFieldError, IconButton, Input, Stack, TextButton } from "@monti-cms/ui";
+import { Close } from "@monti-cms/ui/icons";
 import { useId, useRef, useState } from "react";
 import { Labeled } from "../shared/labeled";
 import { useFieldChange, useSchemaEdit } from "./controls";
@@ -15,7 +16,7 @@ interface Row {
 }
 
 /**
- * The other host names of the site, edited in place: one mono input per host with a quiet × that takes it out, and "add host" that adds an empty row and puts
+ * The other host names of the site, edited in place: one mono input per host with a × icon button at its end that takes it out, and "add host" that adds an empty row and puts
  * the caret in it. An empty row is not written to the file. `onChange` gets the filled-in names; when they change from outside (a revert) the rows follow.
  */
 export function HostRows({
@@ -58,30 +59,29 @@ export function HostRows({
 					const problem = at === -1 ? undefined : problemAt(problems, `site.aliases.${at}`);
 					return (
 						<Stack key={row.id} gap={2}>
-							<Inline gap={12}>
-								<Input
-									mono
-									value={row.value}
-									disabled={disabled}
-									autoFocus={row.id === focusId}
-									placeholder="blog.example.dev"
-									aria-label={t("site.alias.row", { number: index + 1 })}
-									aria-invalid={problem ? true : undefined}
-									aria-describedby={problem ? `${errorId}-${row.id}` : undefined}
-									onChange={(event) =>
-										commit(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)))
-									}
-								/>
-								{!disabled && (
-									<TextButton
-										variant="quiet"
-										aria-label={name === "" ? t("site.alias.removeNew") : t("site.alias.remove", { name })}
-										onClick={() => commit(rows.filter((item) => item.id !== row.id))}
-									>
-										×
-									</TextButton>
-								)}
-							</Inline>
+							<Input
+								mono
+								value={row.value}
+								disabled={disabled}
+								autoFocus={row.id === focusId}
+								placeholder="blog.example.dev"
+								aria-label={t("site.alias.row", { number: index + 1 })}
+								aria-invalid={problem ? true : undefined}
+								aria-describedby={problem ? `${errorId}-${row.id}` : undefined}
+								onChange={(event) =>
+									commit(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)))
+								}
+								action={
+									disabled ? undefined : (
+										<IconButton
+											label={name === "" ? t("site.alias.removeNew") : t("site.alias.remove", { name })}
+											onClick={() => commit(rows.filter((item) => item.id !== row.id))}
+										>
+											<Close aria-hidden />
+										</IconButton>
+									)
+								}
+							/>
 							{problem && <FormFieldError id={`${errorId}-${row.id}`}>{t("problem.host")}</FormFieldError>}
 						</Stack>
 					);

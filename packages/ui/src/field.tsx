@@ -124,7 +124,8 @@ function FormFieldLabel({
 						variant="underline"
 						quiet
 						size="caption"
-						className="ml-auto"
+						// 8px in from the field's end, as a field's words are, so its hover tint (8px out) stays inside the field.
+						className="mr-monti-8 ml-auto"
 						aria-label={changed.undoName}
 						disabled={changed.undoDisabled}
 						onClick={changed.onUndo}
