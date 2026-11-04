@@ -50,6 +50,8 @@ export interface OperationContext {
 	created(ref: RecordRef): void;
 	/** The site's schema and, on the dev server, the way to its files. */
 	site: Site;
+	/** The engine's clock (tests set it). */
+	now(): Date;
 }
 
 /** What a write would change, without writing it. */

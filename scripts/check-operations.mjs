@@ -8,7 +8,7 @@
  *   undocumented    An operation defined in code (`defineOperation({ name: "…" })` in a package's src) is in no doc's "기능 목록" table.
  *   missing         A doc marked 끝 in docs/tracker.md has an operation in its table that no code defines.
  *   open-item       A doc marked 끝 still has an open item in the tracker's "남은 일" that is to be done with it.
- *   bad-item        An open item's id repeats, or its "할 때" is neither a doc number nor 출시 전.
+ *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor 출시 전.
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
  *
  * Operations defined in tests (`__test__`, `*.test.ts`) are samples, not Monti's, and are left out.
@@ -103,10 +103,13 @@ for (const doc of docs) {
 		if (!defined.has(name))
 			findings.push(`${rel(doc.file)}: [missing] \`${name}\` is listed and the doc is 끝, but no code defines it`);
 }
+// A number is never used twice, across open, finished and dropped items.
 const seen = new Set();
+for (const [id] of [...rows("남은 일"), ...rows("끝낸 일"), ...rows("그만둔 일")]) {
+	if (seen.has(id)) findings.push(`${rel(trackerFile)}: [bad-item] ${id} is used twice`);
+	seen.add(id);
+}
 for (const item of openItems) {
-	if (seen.has(item.id)) findings.push(`${rel(trackerFile)}: [bad-item] ${item.id} is used twice`);
-	seen.add(item.id);
 	if (item.when !== "출시 전" && !docs.some((doc) => doc.number === item.when))
 		findings.push(
 			`${rel(trackerFile)}: [bad-item] ${item.id} is to be done with "${item.when}", which is no doc number`,

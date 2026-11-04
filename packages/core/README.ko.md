@@ -70,6 +70,24 @@ monti help              # 모든 기능, 기능마다 명령 하나
 monti schema.read
 ```
 
+## 글과 사이트 읽기
+
+글에는 고치는 본이 있고, 발행하면 발행본이 생긴다. `entries.save`는 고치는 본을 바꾸며 읽은 버전을 받는다. 그래서 어느 입구도 자기가 못 본
+저장을 덮어쓰지 못한다. `entries.publish`는 고치는 본을 사이트로 복사하고, 빈 주소는 제목으로 만든다. 발행된 주소를 바꾸면 옛 주소는 새 주소로
+넘어간다. `entries.checkPublish`는 발행이 읽는 할 일 목록 하나다. 플러그인은 `publishChecks`로 줄을 더한다.
+
+사이트는 발행본만 읽는다.
+
+```ts
+import { createReader } from "@monti-cms/core";
+
+const site = createReader({ db, schema, secret: process.env.MONTI_SECRET });
+await site.entry({ collection: "post", locale: "ko", slug }); // { entry } | { redirect } | null
+await site.entries({ collection: "post", locale: "ko" });
+```
+
+`entries.previewLink`는 `MONTI_SECRET`으로 서명한 한 시간짜리 표를 준다. 그 표를 `preview`로 넘기면 그 글의 고치는 본이 열린다.
+
 ## 테스트
 
 ```sh

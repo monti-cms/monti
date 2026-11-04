@@ -92,7 +92,7 @@ beforeEach(async () => {
 
 const reviewAnswers = {
 	"renameField:post.summary": { do: "renameField", values: "move" },
-	"removeField:post.subtitle": { do: "removeField", values: "keep" },
+	"removeField:post.subtitle": { do: "removeField", values: "clear" },
 	"addField:post.format": { do: "addRequiredField", fill: "memo" },
 } as const;
 
@@ -108,7 +108,7 @@ describe("one change file, two ways in, one way to apply", () => {
 		expect(await readFile(path.join(root, "monti.schema.ts"), "utf8")).toContain("excerpt");
 		const devValues = await postValues();
 		expect(devValues).toEqual([
-			{ excerpt: "first", subtitle: "sub", format: "memo" },
+			{ excerpt: "first", format: "memo" },
 			{ excerpt: "second", format: "memo" },
 		]);
 
@@ -194,35 +194,72 @@ describe("review before values change", () => {
 	});
 });
 
-describe("removed fields keep their values", () => {
-	const removed = withPostFields({ title, slug, summary: base.collections.post.fields.summary });
+describe("removing a collection", () => {
+	it("01-4 removing a collection waits for the delete-and-apply answer, then deletes its entries; a relation still pointing at it must be fixed first", async () => {
+		await addEntry("memo", {});
+		const { memo: _memo, ...rest } = base.collections;
+		const withoutMemo = { collections: rest };
+		await expect(dev().run("schema.apply", { draft: withoutMemo }, { actor: "admin" })).rejects.toThrow("Check failed");
+		const pointing = {
+			collections: {
+				post: {
+					...base.collections.post,
+					fields: { ...base.collections.post.fields, memo: { kind: "relation", to: "memo" } },
+				},
+			},
+		} as Schema;
+		expect(await dev().run("schema.check", { draft: pointing }, { actor: "admin" })).toEqual([
+			{ collection: "post", field: "memo", code: "unknownTarget" },
+		]);
 
-	it("01-5 a removed field's values stay in the entries, out of the read view, unless 값 지우기 is chosen", async () => {
 		await dev().run(
 			"schema.apply",
-			{ draft: removed, answers: { "removeField:post.subtitle": { do: "removeField", values: "keep" } } },
+			{ draft: withoutMemo, answers: { "removeCollection:memo": { do: "removeCollection", confirm: true } } },
 			{ actor: "admin" },
 		);
-		expect((await postValues())[0]).toEqual({ summary: "first", subtitle: "sub" });
-		const view = await sql<Record<string, unknown>>`select * from monti_post order by created_at`.execute(db);
-		expect(Object.keys(view.rows[0])).not.toContain("subtitle");
+		expect(await db.selectFrom("entries").select("id").where("collection", "=", "memo").execute()).toEqual([]);
+		expect(await postValues()).toHaveLength(2);
+	});
+});
 
-		// A new field by the old name asks whether to use what was kept.
-		const back = (await dev(removed).run("schema.plan", { draft: base }, { actor: "admin" })) as {
-			changes: { id: string; choices?: { do: string }[] }[];
+describe("removing a field", () => {
+	const removed = withPostFields({ title, slug, summary: base.collections.post.fields.summary });
+
+	it("01-4 the review asks about every change that can touch live values, even when the dev data has none", async () => {
+		await db.deleteFrom("entries").execute();
+		const plan = (await dev().run("schema.plan", { draft: edited, renames }, { actor: "admin" })) as {
+			changes: { id: string; count?: number; choices?: unknown[] }[];
 		};
-		expect(back.changes.find((change) => change.id === "addField:post.subtitle")?.choices?.map((c) => c.do)).toContain(
-			"reuseKeptValues",
-		);
+		expect(plan.changes.filter((change) => change.choices).map((change) => [change.id, change.count])).toEqual([
+			["renameField:post.summary", 0],
+			["removeField:post.subtitle", 0],
+			["addField:post.format", 0],
+		]);
+		await expect(dev().run("schema.apply", { draft: removed }, { actor: "admin" })).rejects.toThrow("Check failed");
+		expect((await syncSchemaFile(dev(removed))).status).toBe("review");
 	});
 
-	it("01-5 값 지우기 removes them", async () => {
+	it("01-5 a removed field's values go with it, unless they are moved to another field", async () => {
 		await dev().run(
 			"schema.apply",
 			{ draft: removed, answers: { "removeField:post.subtitle": { do: "removeField", values: "clear" } } },
 			{ actor: "admin" },
 		);
 		expect(await postValues()).toEqual([{ summary: "first" }, { summary: "second" }]);
+		// A new field by the old name starts empty: nothing was kept.
+		await dev(removed).run("schema.apply", { draft: base }, { actor: "admin" });
+		expect((await postValues())[0]).toEqual({ summary: "first" });
+	});
+
+	it("01-5 moving keeps the values in the other field, without overwriting what it has", async () => {
+		await addEntry("post", { subtitle: "moved" });
+		await dev().run(
+			"schema.apply",
+			{ draft: removed, answers: { "removeField:post.subtitle": { do: "removeField", values: { move: "summary" } } } },
+			{ actor: "admin" },
+		);
+		// The first entry's subtitle ("sub") does not overwrite its summary; the third's moves into an empty one.
+		expect(await postValues()).toEqual([{ summary: "first" }, { summary: "second" }, { summary: "moved" }]);
 	});
 });
 
@@ -267,7 +304,7 @@ describe("a failed apply", () => {
 		await sql`drop trigger refuse on entries`.execute(db);
 		await sql`drop function refuse`.execute(db);
 		await monti.run("schema.retry", {}, { actor: "admin" });
-		expect((await postValues())[0]).toEqual({ excerpt: "first", subtitle: "sub", format: "memo" });
+		expect((await postValues())[0]).toEqual({ excerpt: "first", format: "memo" });
 		expect((await monti.run("schema.read", {}, { actor: "admin" })) as { failedChange: null }).toMatchObject({
 			failedChange: null,
 			fileChanged: false,

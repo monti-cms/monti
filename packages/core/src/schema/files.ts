@@ -8,9 +8,8 @@ import { schemaSource } from "./source";
 export type ChangeStep =
 	| { do: "removeCollection"; collection: string }
 	| { do: "renameField"; collection: string; from: string; to: string; values: "move" | "empty" }
-	| { do: "removeField"; collection: string; field: string; values: "keep" | "clear" | { move: string } }
-	| { do: "fillField"; collection: string; field: string; value: unknown }
-	| { do: "clearKeptValues"; collection: string; field: string };
+	| { do: "removeField"; collection: string; field: string; values: "clear" | { move: string } }
+	| { do: "fillField"; collection: string; field: string; value: unknown };
 
 /**
  * `monti/changes/<id>.json`: every structure change leaves one, and a database follows them in id order, the dev database when the change is saved

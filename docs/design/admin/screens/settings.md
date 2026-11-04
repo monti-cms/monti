@@ -116,7 +116,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 빼기 검토 | `Sheet`(`SheetTitle` "검토", `of` "언어 · 바뀐 곳 1"): `ChangeGroup kind="drop"`(`tag` "뺌", `title` "English", `identifier` "en · 번역 12편") 안에 `RadioGroup` + `RadioItem` "남겨 두기"(기본) · "휴지통으로", `ChangeNote` "다시 추가하면 돌아와요.", 발은 "취소" · "적용" | 번역이 있는 언어를 뺀 채 저장하면 열린다. |
+| 빼기 검토 | `Sheet`(`SheetTitle` "검토", `of` "언어 · 바뀐 곳 1"): `ChangeGroup kind="drop"`(`tag` "뺌", `title` "English", `identifier` "en") 안에 `ChangeNote` "번역이 함께 지워져요.", 발은 "취소" · 빨간 "지우고 적용"(2026-11-05 바뀜) | 번역이 있는 언어를 뺀 채 저장하면 열린다. |
 
 ### 흐름 11 · 설정
 

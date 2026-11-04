@@ -130,6 +130,45 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0003_lifecycle": {
+		async up(db) {
+			await db.schema
+				.alterTable("entries")
+				.addColumn("has_unpublished_changes", "boolean", (column) => column.notNull().defaultTo(false))
+				.execute();
+			await db.schema
+				.alterTable("entries")
+				.addCheckConstraint("entries_status", sql`status in ('draft', 'published', 'archived')`)
+				.execute();
+			await db.schema
+				.createTable("entry_published")
+				.addColumn("entry_id", "text", (column) => column.primaryKey().references("entries.id").onDelete("cascade"))
+				.addColumn("collection", "text", (column) => column.notNull())
+				.addColumn("locale", "text", (column) => column.notNull())
+				.addColumn("title", "text", (column) => column.notNull())
+				.addColumn("slug", "text", (column) => column.notNull())
+				.addColumn("values", "jsonb", (column) => column.notNull())
+				.addColumn("doc", "jsonb")
+				.addColumn("published_at", "timestamptz", (column) => column.notNull())
+				.addColumn("from_version", "integer", (column) => column.notNull())
+				.execute();
+			await db.schema
+				.createIndex("entry_published_path")
+				.on("entry_published")
+				.columns(["collection", "locale", "slug"])
+				.unique()
+				.execute();
+			await db.schema
+				.createTable("old_paths")
+				.addColumn("collection", "text", (column) => column.notNull())
+				.addColumn("locale", "text", (column) => column.notNull())
+				.addColumn("slug", "text", (column) => column.notNull())
+				.addColumn("entry_id", "text", (column) => column.notNull().references("entries.id").onDelete("cascade"))
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addPrimaryKeyConstraint("old_paths_pk", ["collection", "locale", "slug"])
+				.execute();
+		},
+	},
 };
 
 /** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */

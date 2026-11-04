@@ -74,7 +74,9 @@ export interface EntryTable {
 	locale: string;
 	slug: string;
 	title: Generated<string>;
-	status: Generated<string>;
+	status: Generated<EntryStatus>;
+	/** Published, and the working copy differs from what the site shows ("changed" in the list). */
+	has_unpublished_changes: Generated<boolean>;
 	version: Generated<number>;
 	folder_id: string | null;
 	values: ColumnType<Record<string, unknown>, string | undefined, string>;
@@ -82,6 +84,32 @@ export interface EntryTable {
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 	trashed_at: Date | null;
+}
+
+/** `draft` was never published; `archived` was taken off the site (doc 02). "Changed" is `published` with `has_unpublished_changes`. */
+export type EntryStatus = "draft" | "published" | "archived";
+
+/** What the site shows of an entry: a copy of its working version made when it was published (doc 02). The site reads only this table. */
+export interface EntryPublishedTable {
+	entry_id: string;
+	collection: string;
+	locale: string;
+	title: string;
+	slug: string;
+	values: Json<Record<string, unknown>>;
+	doc: Json<unknown> | null;
+	published_at: Date;
+	/** The entry version it was copied from. */
+	from_version: number;
+}
+
+/** A slug an entry was published under before; the site sends it on to the entry's slug now. */
+export interface OldPathTable {
+	collection: string;
+	locale: string;
+	slug: string;
+	entry_id: string;
+	created_at: Generated<Date>;
 }
 
 /** A relation value between translation groups (doc 08). */
@@ -115,6 +143,8 @@ export interface CollectionAdminValuesTable {
 
 export interface Database {
 	entries: EntryTable;
+	entry_published: EntryPublishedTable;
+	old_paths: OldPathTable;
 	entry_links: EntryLinkTable;
 	schema_state: SchemaStateTable;
 	schema_changes: SchemaChangeTable;

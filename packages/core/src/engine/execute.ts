@@ -57,6 +57,7 @@ export function context(engine: Engine, db: Kysely<Database> | Transaction<Datab
 		emit: (event) => events.push(event),
 		created: (ref) => created.push(ref),
 		site: engine.site,
+		now: engine.now,
 	};
 	return { ctx, events, created };
 }

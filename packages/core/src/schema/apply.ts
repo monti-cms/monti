@@ -9,10 +9,15 @@ type Db = Kysely<Database> | Transaction<Database>;
 const empty = (field: string) => sql<boolean>`coalesce(values->>${field}, '') = ''`;
 
 async function applyStep(db: Db, step: ChangeStep) {
-	const entries = (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) =>
-		sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
+	// A field step changes the working copy and what the site shows alike (doc 02): the site's code changes with the schema.
+	const entries = async (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) => {
+		await sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
 			db,
 		);
+		await sql`update entry_published set values = ${set} where collection = ${step.collection} and ${where}`.execute(
+			db,
+		);
+	};
 	switch (step.do) {
 		case "removeCollection": {
 			const groups = db.selectFrom("entries").select("translation_group").where("collection", "=", step.collection);
@@ -25,7 +30,9 @@ async function applyStep(db: Db, step: ChangeStep) {
 			return;
 		}
 		case "renameField":
-			if (step.values === "move")
+			// "empty": the new field starts empty and the old name's values go with it.
+			if (step.values === "empty") await entries(sql`values - ${step.from}::text`, sql<boolean>`values ? ${step.from}`);
+			else
 				await entries(
 					sql`(values - ${step.from}::text) || jsonb_build_object(${step.to}::text, values->${step.from})`,
 					sql<boolean>`values ? ${step.from}`,
@@ -39,10 +46,6 @@ async function applyStep(db: Db, step: ChangeStep) {
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
 					sql<boolean>`values ? ${step.field}`,
 				);
-			// "keep": the values stay in the entries; the read API shows only the schema's fields.
-			return;
-		case "clearKeptValues":
-			await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
 			return;
 		case "fillField":
 			await entries(

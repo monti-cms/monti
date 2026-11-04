@@ -5,6 +5,9 @@ import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliv
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem } from "./engine/proposals";
 import { planUndo, undo } from "./engine/undo";
+import { entryOperations } from "./entries/operations";
+import { entryRecord } from "./entries/record";
+import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
 import { type Actor, type AnyOperation, defineOperation, type OperationKind, type Preview } from "./operation";
 import type { RecordKind } from "./records";
@@ -19,6 +22,8 @@ export type Plugin = {
 	operations?: AnyOperation[];
 	recordKinds?: RecordKind[];
 	receivers?: Receiver[];
+	/** Rows it adds to the publish to-do list (doc 02). */
+	publishChecks?: PublishCheck[];
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -35,6 +40,8 @@ export type MontiOptions = {
 	recordKinds?: RecordKind[];
 	receivers?: Receiver[];
 	plugins?: Plugin[];
+	/** `MONTI_SECRET`: signs preview links (and, with doc 14, encrypts keys). */
+	secret?: string | null;
 	now?: () => Date;
 	/**
 	 * Keeps the first send of a write's events going after the response (a serverless host's `waitUntil`). Without it the write waits for the send.
@@ -108,6 +115,7 @@ export function createMonti(options: MontiOptions) {
 	const recordKinds = new Map<string, RecordKind>();
 	for (const kind of [
 		...schemaRecordKinds,
+		entryRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -116,7 +124,10 @@ export function createMonti(options: MontiOptions) {
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
 	const now = options.now ?? (() => new Date());
-	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null);
+	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null, {
+		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
+		secret: options.secret,
+	});
 	const engine: Engine = { db: options.db, recordKinds, receivers, site, now };
 
 	const operations = new Map<string, AnyOperation>();
@@ -124,7 +135,11 @@ export function createMonti(options: MontiOptions) {
 		if (operations.has(operation.name)) throw new Error(`Operation "${operation.name}" from ${from} is defined twice.`);
 		operations.set(operation.name, operation);
 	};
-	for (const operation of [...engineOperations(engine, () => [...operations.values()]), ...schemaOperations])
+	for (const operation of [
+		...engineOperations(engine, () => [...operations.values()]),
+		...schemaOperations,
+		...entryOperations,
+	])
 		add(operation, "the core");
 	for (const operation of options.operations ?? []) add(operation, "the site");
 	for (const plugin of plugins)

@@ -19,6 +19,8 @@ export type MontiConfig = {
 	 * `production`. On the live site structure is locked.
 	 */
 	dev?: boolean;
+	/** Signs preview links. Left out, `MONTI_SECRET`. */
+	secret?: string;
 };
 
 export function defineConfig(config: MontiConfig): MontiConfig {
@@ -37,5 +39,6 @@ export function openMonti(config: MontiConfig, root: string): Monti {
 		files: dev ? schemaFilesAt(root) : null,
 		plugins: config.plugins,
 		receivers: config.receivers,
+		secret: config.secret ?? process.env.MONTI_SECRET ?? null,
 	});
 }

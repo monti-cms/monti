@@ -11,8 +11,9 @@ export type SyncResult =
 	| { status: "applied"; changeId: string };
 
 /**
- * On the dev server, catches up with a schema file a developer edited by hand. An edit that touches no stored value gets its change file and is
- * applied at once (one line at start-up); one that does (a field gone and another new: a rename, or a remove and an add?) waits for the review.
+ * On the dev server, catches up with a schema file a developer edited by hand. An edit that cannot touch stored values (a new collection or field,
+ * a field's settings) gets its change file and is applied at once (one line at start-up); one that can (a field gone: removed, or renamed?) waits for
+ * the review.
  */
 export async function syncSchemaFile(monti: Monti): Promise<SyncResult> {
 	const state = await readSchemaState(monti.db);
