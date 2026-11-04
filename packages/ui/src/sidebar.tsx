@@ -556,8 +556,8 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
 
 /**
- * The tree line of a folder row, drawn on the row's own room: a 1px rule down from its parent's icon (or its parent folder's words) and a rounded elbow
- * into the row's middle. The rule runs on through the row to the next one; the last row of the list ends at its elbow.
+ * The tree line of a folder row, drawn on the row's own room: a 1px rule down from its parent's icon (or its parent folder's words) that runs
+ * straight past each folder, and a rounded elbow into the middle of the last one at that depth, where it ends.
  */
 const SUB_LINE_X = [
 	"before:left-[17px] after:left-[17px] after:w-[15px]",
@@ -633,7 +633,12 @@ function SidebarMenuSubButton({
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],
-					tree?.last && "before:hidden",
+					// Only the last folder at a depth curves in; the ones above it let the rule run straight past.
+					tree
+						? tree.last
+							? "before:hidden"
+							: "after:hidden"
+						: "not-in-[li:last-child]:after:hidden in-[li:last-child]:before:hidden",
 					className,
 				),
 				style: lines || style ? { ...lines, ...style } : undefined,
