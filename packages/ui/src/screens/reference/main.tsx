@@ -5,7 +5,7 @@ import {
 	type EntryStatusKind,
 	ListFooter,
 	ListHead,
-	PageBody,
+	ListScroll,
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
@@ -166,9 +166,10 @@ export function MainScreen() {
 					<SearchToggle label="검색" value="" aria-label="검색" />
 					<Button variant="primary">+ 새 글 쓰기</Button>
 				</PageHeader>
-				<PageBody>
+				<ListScroll>
 					<Table container="none" layout="fixed">
 						<ListHead
+							selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
 							columns={COLUMNS}
 							end={38}
 							add={{ label: "열 추가", columns: [{ id: "more", label: "열 추가" }], onAdd: () => {} }}
@@ -217,7 +218,7 @@ export function MainScreen() {
 							))}
 						</TableBody>
 					</Table>
-				</PageBody>
+				</ListScroll>
 				<ListFooter>
 					<Count>1–25 / 148</Count>
 					<PageSizeMenu label="25개씩" value={25} options={[{ value: 25, label: "25개씩" }]} />

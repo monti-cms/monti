@@ -1,6 +1,7 @@
 import {
 	Inline,
 	ListHead,
+	ListScroll,
 	PageColumn,
 	PageHeader,
 	RowActions,
@@ -64,6 +65,7 @@ export function TrashScreen() {
 				</PageHeader>
 				<Table container="none" layout="fixed">
 					<ListHead
+						selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
 						end={114}
 						columns={[
 							{ id: "제목", label: "제목" },

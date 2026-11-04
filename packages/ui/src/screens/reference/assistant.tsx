@@ -9,7 +9,7 @@ import {
 	EntryStatus,
 	ListFooter,
 	ListHead,
-	PageBody,
+	ListScroll,
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
@@ -232,9 +232,10 @@ export function AssistantScreen() {
 					<SearchToggle label="검색" aria-label="검색" value="" onValueChange={none} />
 					<Button>+ 새 글 쓰기</Button>
 				</PageHeader>
-				<PageBody>
+				<ListScroll>
 					<Table container="none" layout="fixed" columns={[76, undefined, 84, 152, 60, 71, 39]}>
 						<ListHead
+							selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
 							end={39}
 							columns={[
 								{ id: "status", label: "상태", size: 76 },
@@ -298,7 +299,7 @@ export function AssistantScreen() {
 							))}
 						</TableBody>
 					</Table>
-				</PageBody>
+				</ListScroll>
 				<ListFooter>
 					<Count>1–25 / 148</Count>
 					<PageSizeMenu label="한 쪽에 보일 수" value={25} options={[{ value: 25, label: "25개씩" }]} />
