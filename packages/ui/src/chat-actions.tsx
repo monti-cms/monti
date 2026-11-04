@@ -1,7 +1,8 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { Grip } from "./grip";
 import { IconButton } from "./icon-button";
-import { ArrowUp, Edit, List, TrashCan } from "./icons";
+import { ArrowUp, Edit, TrashCan } from "./icons";
 
 /**
  * The row right under one message of a conversation: when it was sent (faint caption) and icon-only buttons (`IconButton`s at 24px with 14px icons; their
@@ -39,7 +40,7 @@ export function ChatMessageActions({
 
 /**
  * One message the admin sent while the assistant was working: it waits in the queue over the text box (`ChatInput`'s `queue`) until the
- * assistant takes it in, then leaves and shows in the thread as a message. A queue mark, its words (one line) and three icon buttons: send
+ * assistant takes it in, then leaves and shows in the thread as a message. A grip, its words (one line) and three icon buttons: send
  * now (↑), edit (its words go back into the box), cancel (trash). The names are tooltips.
  */
 export function ChatQueueItem({
@@ -70,12 +71,12 @@ export function ChatQueueItem({
 		<li
 			data-slot="chat-queue-item"
 			className={cn(
-				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[22px] [&_[data-slot=icon-button]]:text-monti-faint [&_svg]:size-[12px]",
+				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]:not(:hover):not(:focus-visible)]:opacity-60 [&_[data-slot=icon-button]]:size-[22px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-[12px]",
 				className,
 			)}
 			{...props}
 		>
-			<List aria-hidden className="text-monti-faint" />
+			<Grip className="text-monti-faint opacity-60" />
 			<span className="min-w-0 flex-1 truncate pl-monti-4 text-monti-default text-monti-note">{children}</span>
 			<IconButton label={sendNowLabel} onClick={onSendNow}>
 				{sendNowIcon}
