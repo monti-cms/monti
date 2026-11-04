@@ -566,7 +566,7 @@ const SUB_LINE_X = [
 	"before:left-[53px] after:left-[53px] after:w-[10px]",
 	"before:left-[71px] after:left-[71px] after:w-[10px]",
 ] as const;
-/** Where each folder depth's rule runs, in px from the row's start: 19px before the folder's words at every depth, so every elbow (10px) stops 9px short of them and reads at the same angle. */
+/** Where each folder depth's rule runs, in px from the row's start: 19px before the folder's words at every depth, so every elbow (10px wide, a 4px curve) stops 9px short of them and reads at the same angle. */
 const SUB_LINE_LEFT = [17, 35, 53, 71] as const;
 
 /**
@@ -592,7 +592,7 @@ export function folderTree(depths: readonly number[]) {
 
 const SUB_LINE_FIRST = "before:top-monti-4 after:top-monti-4 after:h-[calc(50%-4px)]";
 const SUB_LINE =
-	"relative before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:top-0 after:h-1/2 after:rounded-bl-[10px] after:border-monti-strong after:border-b after:border-l after:content-['']";
+	"relative before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:top-0 after:h-1/2 after:rounded-bl-[4px] after:border-monti-strong after:border-b after:border-l after:content-['']";
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
