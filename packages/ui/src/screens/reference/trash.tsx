@@ -4,6 +4,8 @@ import {
 	PageColumn,
 	PageHeader,
 	RowActions,
+	RowCheck,
+	RowLink,
 	RowMore,
 	SearchToggle,
 	Table,
@@ -73,7 +75,13 @@ export function TrashScreen() {
 						{ROWS.map((row) => (
 							<TableRow key={row.title} twoLine>
 								<TableCell truncate>
-									<TrashRowTitle title={row.title} address={row.address} meta={row.meta} folder={row.folder} />
+									<RowCheck checked={false} label={`${row.title} 고르기`} />
+									<TrashRowTitle
+										title={<RowLink render={<button type="button" />}>{row.title}</RowLink>}
+										address={row.address}
+										meta={row.meta}
+										folder={row.folder}
+									/>
 								</TableCell>
 								<TableCell tone="subtle" truncate>
 									{row.kind}

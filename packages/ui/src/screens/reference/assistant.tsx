@@ -23,6 +23,7 @@ import {
 	ProposalCard,
 	ProposalEntry,
 	RowActions,
+	RowCheck,
 	RowLink,
 	RowMore,
 	RowTitle,
@@ -264,6 +265,7 @@ export function AssistantScreen() {
 							{rows.map((row) => (
 								<TableRow key={row.address}>
 									<TableCell>
+										<RowCheck checked={false} label={`${row.title} 고르기`} />
 										<EntryStatus status={row.status} quiet={row.status === "published"}>
 											{row.statusLabel}
 										</EntryStatus>

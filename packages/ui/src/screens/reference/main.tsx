@@ -16,6 +16,7 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 	RowActions,
+	RowCheck,
 	RowLink,
 	RowMore,
 	RowTitle,
@@ -187,6 +188,7 @@ export function MainScreen() {
 							{POSTS.map((post) => (
 								<TableRow key={post.address}>
 									<TableCell>
+										<RowCheck checked={false} label={`${post.title} 고르기`} />
 										<EntryStatus status={post.status} quiet={post.status === "published"}>
 											{post.label}
 										</EntryStatus>
