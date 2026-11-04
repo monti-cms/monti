@@ -90,7 +90,10 @@ const bodyBlocks = (el) => {
 					? true
 					: undefined,
 			untranslated: block.matches(".mt-untranslated") || undefined,
-			active: block.matches(".mt-block.is-on") || undefined,
+			active:
+				block.matches(".mt-block.is-on") || (block.matches("li") && block.closest(".mt-block.is-on"))
+					? true
+					: undefined,
 			current: block.matches(".mt-current") || undefined,
 		};
 		const pieces = keepSpaces(
@@ -125,11 +128,18 @@ const bodyTools = (el) => {
 	const left = el.getBoundingClientRect().left;
 	const blockOf = (tool) =>
 		tool.closest("h2, h3, p, li, blockquote, figure") ??
-		tool.parentElement.querySelector(":scope > p, :scope > h2, :scope > h3, :scope > figure");
+		tool.parentElement.querySelector(":scope > p, :scope > h2, :scope > h3, :scope > figure, :scope li");
+	// A block's place as drawn: the items of one list are one block.
+	const drawnIndex = (element) =>
+		blocks
+			.slice(0, blocks.indexOf(element) + 1)
+			.filter(
+				(each, index) => !(each.matches("li") && index > 0 && blocks[index - 1].parentElement === each.parentElement),
+			).length - 1;
 	return [...el.querySelectorAll(".mt-handle, .mt-card, .mt-format-bar, .mt-marker, .mt-memo")].flatMap((tool) => {
 		const block = blockOf(tool);
-		const at = blocks.indexOf(block);
-		if (at < 0) return [];
+		if (blocks.indexOf(block) < 0) return [];
+		const at = drawnIndex(block);
 		const box = tool.getBoundingClientRect();
 		const place = {
 			block: at,
