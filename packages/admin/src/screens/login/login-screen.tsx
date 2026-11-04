@@ -6,6 +6,7 @@ import {
 	FormFieldLabel,
 	Heading,
 	Input,
+	SecretInput,
 	Separator,
 	Stack,
 	Text,
@@ -119,9 +120,11 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 								</FormField>
 								<FormField>
 									<FormFieldLabel htmlFor="password">{t("login.password")}</FormFieldLabel>
-									<Input
+									<SecretInput
+										kind="password"
+										showLabel={t("login.showPassword")}
+										hideLabel={t("login.hidePassword")}
 										id="password"
-										type="password"
 										autoComplete="current-password"
 										value={password}
 										onChange={(event) => setPassword(event.target.value)}
@@ -208,9 +211,11 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 						<Stack gap={16}>
 							<FormField>
 								<FormFieldLabel htmlFor="password">{t("login.password")}</FormFieldLabel>
-								<Input
+								<SecretInput
+									kind="password"
+									showLabel={t("login.showPassword")}
+									hideLabel={t("login.hidePassword")}
 									id="password"
-									type="password"
 									autoComplete="new-password"
 									value={password}
 									onChange={(event) => setPassword(event.target.value)}
@@ -222,9 +227,11 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 							</FormField>
 							<FormField>
 								<FormFieldLabel htmlFor="confirm">{t("login.confirm")}</FormFieldLabel>
-								<Input
+								<SecretInput
+									kind="password"
+									showLabel={t("login.showPassword")}
+									hideLabel={t("login.hidePassword")}
 									id="confirm"
-									type="password"
 									autoComplete="new-password"
 									value={confirm}
 									onChange={(event) => setConfirm(event.target.value)}
