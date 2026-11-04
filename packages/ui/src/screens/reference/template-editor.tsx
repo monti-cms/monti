@@ -2,7 +2,6 @@ import {
 	Block,
 	BlockHandle,
 	Box,
-	CompareBody,
 	EditorTitleRule,
 	FormFieldLabel,
 	Inline,
@@ -55,17 +54,14 @@ export function TemplateEditorScreen() {
 					<div style={{ position: "absolute", top: 3, left: -64 }}>
 						<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" />
 					</div>
+					{/* Each item of a list is a block of its own, as the editor makes it: the handle and the tint are on one item only. */}
 					<Block active>
-						<Text tone="muted">
-							<CompareBody>
-								<ul>
-									<li>첫 번째 요점</li>
-									<li>두 번째 요점</li>
-								</ul>
-							</CompareBody>
-						</Text>
+						<ListItem>첫 번째 요점</ListItem>
 					</Block>
 				</Box>
+				<Block>
+					<ListItem>두 번째 요점</ListItem>
+				</Block>
 			</BodyBlock>
 			<BodyBlock gap={24}>
 				<BodyHeading>결론</BodyHeading>
@@ -77,5 +73,17 @@ export function TemplateEditorScreen() {
 				<Paragraph tone="faint">/ 를 눌러 블록 넣기</Paragraph>
 			</BodyBlock>
 		</EditorPage>
+	);
+}
+
+/** One item of a bulleted list in the editor's body: the bullet, then its words. */
+function ListItem({ children }: { children: React.ReactNode }) {
+	return (
+		<Inline gap={10} align="baseline">
+			<Text variant="reading" tone="muted" aria-hidden>
+				•
+			</Text>
+			<Paragraph tone="muted">{children}</Paragraph>
+		</Inline>
 	);
 }
