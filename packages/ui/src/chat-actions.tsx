@@ -71,7 +71,7 @@ export function ChatQueueItem({
 		<li
 			data-slot="chat-queue-item"
 			className={cn(
-				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[20px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-monti-icon-xs!",
+				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[20px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-monti-icon-sm!",
 				className,
 			)}
 			{...props}
