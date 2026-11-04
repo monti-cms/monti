@@ -32,7 +32,7 @@ export function CollectionBasicsScreen() {
 						<Switch checked />
 					</Option>
 				</Section>
-				<Section title="구조" stacked>
+				<Section title="구조" stacked last>
 					<Grid columns={2} gap={24}>
 						<ReadValue label="식별자" mono>
 							post

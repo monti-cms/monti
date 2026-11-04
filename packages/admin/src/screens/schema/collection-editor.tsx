@@ -323,7 +323,8 @@ export function CollectionEditor({
 								</>
 							}
 							stacked
-							last={disabled}
+							// The delete block under it brings its own rule (and the page ends here when it is not shown): no hairline of its own.
+							last
 						>
 							<Grid columns={2} gap={24}>
 								<ReadValue label={t("collection.newId")}>
