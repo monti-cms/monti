@@ -6,6 +6,7 @@ import {
 	FormField,
 	FormFieldLabel,
 	IconButton,
+	Inline,
 	Input,
 	Option,
 	PageBody,
@@ -120,16 +121,12 @@ export function SettingsScreen() {
 						<FormField>
 							<FormFieldLabel>다른 호스트 이름</FormFieldLabel>
 							<Stack gap={2}>
-								<Input
-									mono
-									defaultValue="www.example.dev"
-									aria-label="호스트 1"
-									action={
-										<IconButton label="www.example.dev 지우기">
-											<Close aria-hidden />
-										</IconButton>
-									}
-								/>
+								<Inline gap={8} align="center">
+									<Input mono defaultValue="www.example.dev" aria-label="호스트 1" />
+									<IconButton label="www.example.dev 빼기" onClick={() => {}}>
+										<Close aria-hidden />
+									</IconButton>
+								</Inline>
 								<Box paddingTop={8}>
 									<TextButton>+ 호스트</TextButton>
 								</Box>

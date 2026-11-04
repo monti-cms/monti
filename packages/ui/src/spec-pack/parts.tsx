@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { Affix } from "../affix";
 import { Banner as BannerPart } from "../banner";

@@ -2826,7 +2826,7 @@
 				},
 				"size": {
 					"kind": "variant",
-					"enum": ["md", "sm"]
+					"enum": ["lg", "md", "sm"]
 				},
 				"variant": {
 					"kind": "variant",
