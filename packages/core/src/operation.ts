@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 import type { Database } from "./db/schema";
+import type { Site } from "./site";
 
 /**
  * Who called an operation. The admin screen and the CLI run writes at once; the assistant's writes become proposal items, and when the admin applies
@@ -47,6 +48,8 @@ export interface OperationContext {
 	emit(event: MontiEvent): void;
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
+	/** The site's schema and, on the dev server, the way to its files. */
+	site: Site;
 }
 
 /** What a write would change, without writing it. */
@@ -67,6 +70,11 @@ export type OperationDefinition<Input, Output> = {
 	kind: OperationKind;
 	/** Only a person may run it (permanent delete, emptying the trash). It is never an agent tool. */
 	humanOnly?: boolean;
+	/**
+	 * It writes structure values (`monti.schema.ts`), so it runs only on the dev server: on the live site no entry point offers it. It has no undo; a
+	 * structure change is reversed by a new change (doc 00).
+	 */
+	structure?: boolean;
 	/** For the model. The admin never sees it. */
 	description: string;
 	input: z.ZodType<Input>;
@@ -101,7 +109,12 @@ export function defineOperation<Input, Output>(
 		throw new Error(`Operation name "${definition.name}" is not "<area>.<verb>" in camel case.`);
 	if (definition.kind === "write" && definition.summary === undefined)
 		throw new Error(`Write operation "${definition.name}" has no summary for the activity log.`);
-	if (definition.kind !== "write" && (definition.touches || definition.preview || definition.humanOnly))
-		throw new Error(`Operation "${definition.name}" is not a write, so it has no touches, preview or humanOnly.`);
+	if (
+		definition.kind !== "write" &&
+		(definition.touches || definition.preview || definition.humanOnly || definition.structure)
+	)
+		throw new Error(
+			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly or structure.`,
+		);
 	return { ...definition, __operation: true };
 }

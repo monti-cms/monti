@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Feature docs and code name the same operations (docs/design/features/build.md, rule 4).
+ * Feature docs, the tracker and the code agree (docs/design/features/build.md, rule 4; docs/tracker.md, "쓰는 법").
  *
  *   node scripts/check-operations.mjs
  *
  * Rules (each finding names its rule id):
  *   undocumented    An operation defined in code (`defineOperation({ name: "…" })` in a package's src) is in no doc's "기능 목록" table.
- *   missing         A doc marked 끝 in build.md has an operation in its table that no code defines.
+ *   missing         A doc marked 끝 in docs/tracker.md has an operation in its table that no code defines.
+ *   open-item       A doc marked 끝 still has an open item in the tracker's "남은 일" that is to be done with it.
+ *   bad-item        An open item's id repeats, or its "할 때" is neither a doc number nor 출시 전.
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
  *
  * Operations defined in tests (`__test__`, `*.test.ts`) are samples, not Monti's, and are left out.
@@ -51,14 +53,20 @@ const docs = readdirSync(docsDir)
 		return { number: name.slice(0, 2), file: path.join(docsDir, name), operations, ids };
 	});
 
-const status = new Map(
-	section(readFileSync(path.join(docsDir, "build.md"), "utf8"), "문서마다 상태")
-		.filter((line) => /^\| \d\d \|/.test(line))
-		.map((line) => {
-			const cells = line.split("|").map((cell) => cell.trim());
-			return [cells[1], cells[3]];
-		}),
-);
+const trackerFile = path.join(root, "docs/tracker.md");
+const tracker = readFileSync(trackerFile, "utf8");
+const rows = (title) =>
+	section(tracker, title)
+		.filter((line) => line.startsWith("|") && !/^\|\s*-/.test(line))
+		.slice(1)
+		.map((line) =>
+			line
+				.split("|")
+				.slice(1, -1)
+				.map((cell) => cell.trim()),
+		);
+const status = new Map(rows("문서마다 상태").map((cells) => [cells[0], cells[2]]));
+const openItems = rows("남은 일").map(([id, , when]) => ({ id, when }));
 
 const sources = readdirSync(path.join(root, "packages"), { withFileTypes: true })
 	.filter((entry) => entry.isDirectory())
@@ -95,6 +103,23 @@ for (const doc of docs) {
 		if (!defined.has(name))
 			findings.push(`${rel(doc.file)}: [missing] \`${name}\` is listed and the doc is 끝, but no code defines it`);
 }
+const seen = new Set();
+for (const item of openItems) {
+	if (seen.has(item.id)) findings.push(`${rel(trackerFile)}: [bad-item] ${item.id} is used twice`);
+	seen.add(item.id);
+	if (item.when !== "출시 전" && !docs.some((doc) => doc.number === item.when))
+		findings.push(
+			`${rel(trackerFile)}: [bad-item] ${item.id} is to be done with "${item.when}", which is no doc number`,
+		);
+	else if (status.get(item.when) === "끝")
+		findings.push(
+			`${rel(trackerFile)}: [open-item] doc ${item.when} is 끝, but ${item.id} is still to be done with it`,
+		);
+}
+for (const doc of docs)
+	if (!status.has(doc.number))
+		findings.push(`${rel(trackerFile)}: [bad-item] doc ${doc.number} has no row in 문서마다 상태`);
+
 const knownIds = new Set(docs.flatMap((doc) => doc.ids));
 for (const { file, id, line } of testIds)
 	if (!knownIds.has(id)) findings.push(`${rel(file)}:${line}: [unknown-id] ${id} is no doc's 끝 조건`);

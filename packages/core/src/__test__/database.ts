@@ -19,7 +19,7 @@ export async function testDatabase<Extra = object>(): Promise<Kysely<Database & 
 	const db = new Kysely<Database & Extra>({
 		dialect: new PostgresDialect({ pool: new Pool({ connectionString: URL, options: `-c search_path=${schema}` }) }),
 	});
-	await migrateToLatest(db as Kysely<unknown>);
+	await migrateToLatest(db as unknown as Kysely<Database>);
 	afterAll(async () => {
 		await db.destroy();
 		await admin.query(`drop schema ${schema} cascade`);

@@ -1,11 +1,12 @@
 import { parseInput } from "../engine/execute";
 import { UnknownOperationError } from "../errors";
-import { type Capability, describe, type Monti } from "../monti";
+import { available, type Capability, describe, type Monti } from "../monti";
 import type { Preview } from "../operation";
 
-/** The operations the assistant gets as tools: every one but those only a person may run. */
+/** The operations the assistant gets as tools: every one but those only a person may run, and on the live site those that change structure. */
 export function agentTools(monti: Monti): Capability[] {
-	return [...monti.operations.values()].filter((operation) => !operation.humanOnly).map(describe);
+	const open = monti.site.files !== null;
+	return [...monti.operations.values()].filter((operation) => available(operation, "assistant", open)).map(describe);
 }
 
 export type ToolSession = { conversationId: string; proposalId: string };
@@ -26,7 +27,8 @@ export async function callAgentTool(
 	session: ToolSession,
 ): Promise<ToolResult> {
 	const operation = monti.operations.get(name);
-	if (!operation || operation.humanOnly) throw new UnknownOperationError(name);
+	if (!operation || !available(operation, "assistant", monti.site.files !== null))
+		throw new UnknownOperationError(name);
 	if (operation.kind === "read")
 		return {
 			kind: "read",

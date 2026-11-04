@@ -6,7 +6,8 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./cli": "./src/cli/main.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
@@ -14,6 +15,7 @@
 		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
+		"jiti": "^2.7.0",
 		"kysely": "^0.29.6",
 		"pg": "^8.23.0",
 		"zod": "^4.2.1"
@@ -25,6 +27,7 @@
 		"vitest": "^4.0.0"
 	},
 	"files": [
+		"bin",
 		"dist",
 		"README.md"
 	],
@@ -33,8 +36,15 @@
 			".": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"./cli": {
+				"types": "./dist/cli/main.d.ts",
+				"default": "./dist/cli/main.js"
 			}
 		}
 	},
-	"sideEffects": false
+	"sideEffects": false,
+	"bin": {
+		"monti": "./bin/monti.mjs"
+	}
 }

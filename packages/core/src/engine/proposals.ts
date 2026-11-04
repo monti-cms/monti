@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ProposalItemState } from "../db/schema";
 import { ConflictError, isMontiError } from "../errors";
 import type { AnyOperation, Message, Preview } from "../operation";
-import { type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
+import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 
 /**
  * In an item's input, the id a former item of the same proposal creates: `{ "$item": "<item id>" }` stands for that item's `output.id`. Applying
@@ -72,7 +72,7 @@ export async function proposeItem(
 	await engine.db
 		.transaction()
 		.execute(async (trx) => {
-			const ctx = { db: trx, actor: "assistant" as const, emit: () => {}, created: () => {} };
+			const { ctx } = context(engine, trx, "assistant");
 			const touched = (await operation.touches?.(input, ctx)) ?? [];
 			const states = await loadRecords(engine, trx, touched);
 			baseVersions = Object.fromEntries(

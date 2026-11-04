@@ -12,7 +12,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 설치할 릴리스는 없습니다.
 
 - 설계는 [`docs/design/features`](docs/design/features/README.md)에 있습니다. 기능마다 문서 하나이고, 만드는 순서는
-  [`build.md`](docs/design/features/build.md)에 있습니다.
+  [`build.md`](docs/design/features/build.md)에 있습니다. 어디까지 왔고 무엇이 남았는지는 [`docs/tracker.md`](docs/tracker.md)에 있습니다.
 - 기준이 되는 화면은 디자인 시스템 Storybook의 기준 화면(`Screens/Reference`)입니다.
 
 ## 패키지

@@ -1,5 +1,8 @@
 # 테스트
 
+> 2026-11-05: 다시 만들기가 시작되어 옛 테스트는 모두 지웠다. 새 코드의 테스트는 core 기능의 동작만 두고, 이름은 기능 문서의 끝 조건 번호로 시작한다
+> ([build.md](design/features/build.md) 규칙 5). 아래의 층과 원칙은 그대로 쓰고, `docs/testing/requirements`의 표는 옛 코드의 기록이다.
+
 상태: 승인됨 (2026-10-30). 패키지별로 차례로 적용한다. 코어가 먼저다. 아직 옮기지 않은 패키지의 테스트는 이 규칙을 어길 수 있다.
 개편을 시작하는 숫자는 [`testing/baseline-2026-10.md`](testing/baseline-2026-10.md)에 있다.
 정비한 단계와 그 숫자는 [`testing/core-overhaul.md`](testing/core-overhaul.md)에 있다.

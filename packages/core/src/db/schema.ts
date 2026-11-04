@@ -1,5 +1,7 @@
 import type { ColumnType, Generated } from "kysely";
 import type { Actor, Message, MontiEvent, RecordRef } from "../operation";
+import type { AdminValues } from "../schema/admin-values";
+import type { Schema } from "../schema/define";
 
 type Json<T> = ColumnType<T, string, string>;
 
@@ -64,7 +66,59 @@ export interface ProposalItemTable {
 	activity_id: string | null;
 }
 
+/** Every collection's entries in one table (doc 01, D1). Field values sit in `values`; system values the list sorts and filters by are columns. */
+export interface EntryTable {
+	id: string;
+	collection: string;
+	translation_group: string;
+	locale: string;
+	slug: string;
+	title: Generated<string>;
+	status: Generated<string>;
+	version: Generated<number>;
+	folder_id: string | null;
+	values: ColumnType<Record<string, unknown>, string | undefined, string>;
+	doc: Json<unknown> | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+	trashed_at: Date | null;
+}
+
+/** A relation value between translation groups (doc 08). */
+export interface EntryLinkTable {
+	from_group: string;
+	field: string;
+	to_group: string;
+	position: Generated<number>;
+}
+
+/** The schema this database last followed: compared with the file to find hand edits. */
+export interface SchemaStateTable {
+	id: number;
+	version: number;
+	applied_hash: string;
+	applied_schema: Json<Schema>;
+	/** A change file whose database step failed after its files were written (doc 12: the "apply again" button). */
+	failed_change: string | null;
+}
+
+export interface SchemaChangeTable {
+	id: string;
+	applied_at: Generated<Date>;
+}
+
+export interface CollectionAdminValuesTable {
+	collection: string;
+	values: Json<AdminValues>;
+	version: Generated<number>;
+}
+
 export interface Database {
+	entries: EntryTable;
+	entry_links: EntryLinkTable;
+	schema_state: SchemaStateTable;
+	schema_changes: SchemaChangeTable;
+	collection_admin_values: CollectionAdminValuesTable;
 	monti_activity: ActivityTable;
 	monti_activity_snapshot: ActivitySnapshotTable;
 	monti_delivery: DeliveryTable;
