@@ -64,7 +64,6 @@ export function MediaScreen() {
 				<PageToolbar inset>
 					<FilterButton>종류</FilterButton>
 					<FilterButton>사용 여부</FilterButton>
-					<FilterButton>대체 텍스트</FilterButton>
 					<PageToolbarEnd>
 						<FilterButton>최근 올린순</FilterButton>
 						<Segmented
