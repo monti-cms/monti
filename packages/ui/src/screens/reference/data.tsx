@@ -47,14 +47,6 @@ export function DataScreen() {
 						</Option>
 					</Stack>
 				</Section>
-				<Section title="가져오기">
-					<Inline gap={16}>
-						<Button variant="secondary">zip 파일 고르기</Button>
-						<Text as="span" variant="meta" tone="subtle">
-							Monti 백업 · .md/.mdx 묶음
-						</Text>
-					</Inline>
-				</Section>
 			</PageColumn>
 		</AdminFrame>
 	);

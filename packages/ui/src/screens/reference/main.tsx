@@ -1,4 +1,4 @@
-import { Archive, Copy, Folder, Launch, Tag, TrashCan } from "../../icons";
+import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "../../icons";
 import {
 	Button,
 	ContextMenu,
@@ -11,6 +11,7 @@ import {
 	Count,
 	EntryStatus,
 	type EntryStatusKind,
+	IconButton,
 	ListFooter,
 	ListHead,
 	ListScroll,
@@ -164,6 +165,15 @@ const more = (
 	</TableCell>
 );
 
+/** A list's more menu in the title row: the rarely used "새 폴더" and "가져오기" live in it, not as buttons. */
+export function ListMore() {
+	return (
+		<IconButton label="더 보기" side="bottom">
+			<OverflowMenuHorizontal aria-hidden />
+		</IconButton>
+	);
+}
+
 /** The posts list's search: a list with a body searches its title and address, or everything, as the admin does. */
 export function PostSearch() {
 	return (
@@ -236,8 +246,8 @@ export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
 		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }}>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
-					<Button variant="ghost">+ 폴더</Button>
 					<PostSearch />
+					<ListMore />
 					<Button variant="primary">+ 새 글 쓰기</Button>
 				</PageHeader>
 				<ListScroll>

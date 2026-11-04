@@ -13,7 +13,7 @@
 |---|---|---|
 | 제목 행 | `PageHeader`(`title` "게시글", `meta` "/posts/:slug") | 폴더 안에서는 `title`이 폴더 이름이고 `meta`가 없다. |
 | 폴더 경로 "게시글 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 지나온 폴더마다 버튼 하나. 누르면 그 폴더로 간다. |
-| "+ 폴더" | `TextButton` | 누르면 그 자리에서 맨 위 폴더 행에 새 폴더가 생기고 이름 칸이 열린다(아래 "새 폴더"). 검색이나 필터가 걸려 있으면 먼저 지운다. |
+| 더 보기 ⋯ | `IconButton`(`label` "더 보기", `OverflowMenuHorizontal`) + `DropdownMenu`("새 폴더" · "가져오기") | 검색과 검은 알약 사이. "새 폴더"는 그 자리에서 맨 위 폴더 행에 새 폴더가 생기고 이름 칸이 열린다(아래 "새 폴더"). 검색이나 필터가 걸려 있으면 먼저 지운다. "폴더 사용"을 끈 컬렉션에는 "새 폴더"가 없다. "가져오기"는 이 컬렉션에 글을 가져오는 시트를 연다([tools.md](tools.md)의 가져오기 시트). (2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 더 보기 메뉴에 둔다.) |
 | "검색" | `SearchToggle`(`label` "검색", `targets` 전체 · 제목 · 주소 · 본문) | 누르면 그 자리에서 `SearchBox`가 열리고 검색어에 포커스. 비우고 벗어나거나 비우고 Esc면 다시 버튼. 검색어는 상자 안에만 있다. |
 | 찾을 곳 "전체 ▾" | `SearchBox`의 `targets` · `target` · `onTargetChange` | 상자 앞부분에 있다. 고르면 바로 적용, 지금 값에 ✓. |
 | "+ 새 글 쓰기" | `Button variant="primary"` | 화면의 검은 알약 하나. 새 글 편집기로 간다. 항목 컬렉션(카테고리, 태그)은 `Button variant="secondary"` "+ 카테고리 추가" · "+ 태그 추가"다([taxonomy.md](taxonomy.md)). |

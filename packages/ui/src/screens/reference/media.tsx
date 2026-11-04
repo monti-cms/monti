@@ -20,6 +20,7 @@ import {
 	Tile,
 } from "../../index";
 import { AdminFrame, type FrameFolder } from "./frame";
+import { ListMore } from "./main";
 
 const MEDIA_FOLDERS: readonly FrameFolder[] = [
 	{ name: "Blog Assets", count: "14", active: true },
@@ -54,8 +55,8 @@ export function MediaScreen() {
 					}
 					title="Blog Assets"
 				>
-					<TextButton>+ 폴더</TextButton>
 					<SearchToggle label="검색" value="" aria-label="검색" />
+					<ListMore />
 					<Button variant="primary">
 						<Upload aria-hidden />
 						올리기
