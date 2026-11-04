@@ -86,7 +86,7 @@ flowchart LR
 ## 행에서 하는 일
 
 ```mermaid
-flowchart TB
+flowchart LR
   R["행 하나 · 오른쪽 클릭 · ⋯"] --> O["열기 · 새 탭에서 열기<br/>(화면)"]
   R --> D["복제 (02)"]
   R --> FD["폴더로 (07)"]
