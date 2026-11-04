@@ -106,17 +106,9 @@ export function AssistantPanel({
 }
 
 /** The row under a message as the boards draw it: the time, copy, and edit (the admin's) or do again (the assistant's). */
-export function MessageActions({
-	author,
-	time,
-	shown,
-}: {
-	author: "user" | "assistant";
-	time: string;
-	shown?: boolean;
-}) {
+export function MessageActions({ author, time }: { author: "user" | "assistant"; time: string }) {
 	return (
-		<ChatMessageActions author={author} time={time} shown={shown}>
+		<ChatMessageActions author={author} time={time}>
 			<IconButton label="복사">
 				<Copy />
 			</IconButton>

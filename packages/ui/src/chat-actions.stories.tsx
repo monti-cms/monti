@@ -3,7 +3,7 @@ import { Copy, Edit, Renew } from "./icons";
 import { Box, ChatMessage, ChatMessageActions, ChatThread, IconButton } from "./index";
 
 /**
- * The row under a message: its time and icon-only buttons, shown while the pointer or keyboard is on the message, always on the latest one.
+ * The row under a message: its time and icon-only buttons, shown only while the pointer or keyboard is on the message.
  * The `Hovered` story forces the pointer onto the first message with `storybook-addon-pseudo-states`.
  */
 const meta = {
@@ -50,34 +50,18 @@ function Thread() {
 				{userActions}
 			</ChatMessageActions>
 			<ChatMessage author="assistant">요약이 빈 글은 두 편이에요.</ChatMessage>
-			<ChatMessageActions author="assistant" time="오후 3:12" shown>
+			<ChatMessageActions author="assistant" time="오후 3:12">
 				{assistantActions}
 			</ChatMessageActions>
 		</ChatThread>
 	);
 }
 
-/** At rest only the latest answer's row shows. */
+/** At rest no row shows. */
 export const Default: Story = { render: () => <Thread /> };
 
 /** The pointer on the admin's message: its row shows at the right. */
 export const Hovered: Story = {
 	parameters: { pseudo: { hover: ["#thread [data-slot=chat-message]:first-child"] } },
 	render: () => <Thread />,
-};
-
-/** Both authors with their rows shown: the admin's at the right, the assistant's at the left. */
-export const BothAuthors: Story = {
-	render: () => (
-		<ChatThread>
-			<ChatMessage author="user">이 두 편에 요약 써 줘</ChatMessage>
-			<ChatMessageActions author="user" time="오후 3:14" shown>
-				{userActions}
-			</ChatMessageActions>
-			<ChatMessage author="assistant">두 편에 요약을 채웠어요.</ChatMessage>
-			<ChatMessageActions author="assistant" time="오후 3:14" shown>
-				{assistantActions}
-			</ChatMessageActions>
-		</ChatThread>
-	),
 };

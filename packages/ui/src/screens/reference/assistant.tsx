@@ -215,7 +215,7 @@ const conversation = (
 					/>
 				</ProposalCard>
 			</ChatAnswer>
-			<MessageActions author="assistant" time="오후 3:14" shown />
+			<MessageActions author="assistant" time="오후 3:14" />
 		</ChatThread>
 	</AssistantPanel>
 );

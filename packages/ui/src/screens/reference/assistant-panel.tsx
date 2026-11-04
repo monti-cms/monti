@@ -40,7 +40,7 @@ export function AssistantWorkingScreen() {
 			>
 				<ChatThread>
 					<ChatMessage author="user">작년 글을 모두 영어로 옮겨 줘</ChatMessage>
-					<MessageActions author="user" time="오후 4:02" shown />
+					<MessageActions author="user" time="오후 4:02" />
 					<ChatAnswer>
 						<ToolCallLines>
 							<ToolCallLine status="done" statusLabel="끝남">
