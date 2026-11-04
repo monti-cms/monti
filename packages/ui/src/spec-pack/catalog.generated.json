@@ -15,6 +15,150 @@
 			},
 			"events": []
 		},
+		"ReviewAsk": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"text": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"ReviewHead": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["actions"],
+			"props": {
+				"meta": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ReviewEntry": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"change": {
+					"kind": "data",
+					"fields": ["kind", "text"]
+				},
+				"end": {
+					"kind": "text",
+					"type": "string"
+				},
+				"included": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"muted": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"path": {
+					"kind": "state"
+				},
+				"title": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"ReviewBlockLine": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"included": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				},
+				"text": {
+					"kind": "data",
+					"fields": ["kind", "text"]
+				}
+			},
+			"events": []
+		},
+		"ReviewBlockCompare": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"after": {
+					"kind": "data",
+					"fields": ["kind", "text"]
+				},
+				"before": {
+					"kind": "data",
+					"fields": ["kind", "text"]
+				},
+				"included": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ReviewColumns": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"after": {
+					"kind": "text",
+					"type": "string"
+				},
+				"before": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ReviewRest": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"Trail": {
 			"kind": "part",
 			"bind": false,

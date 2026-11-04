@@ -55,6 +55,8 @@ function looksOf(el, part, root = false, inPart = false) {
 			continue;
 		}
 		if (!part && SCREEN_LAYOUT.test(property)) continue;
+		// A value the board writes that changes nothing (a state's "fully shown").
+		if (property === "opacity" && Number.parseFloat(el.style.getPropertyValue(property)) === 1) continue;
 		if (part && property === "flex" && el.dataset.sized !== undefined) continue;
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.
 		if (/^(position|top|right|bottom|left)$/.test(property)) continue;

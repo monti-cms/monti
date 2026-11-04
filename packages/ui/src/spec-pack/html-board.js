@@ -26,6 +26,20 @@ const tableAfter = (el) => {
 };
 
 /** The name of an icon of the design system's list with this svg's shape (`icon-key.js`, `window.boardData.icons`), if there is one. */
+// An entry's words as a run of pieces: plain, taken out (`del`) and put in (`ins`).
+const markedRun = (el) =>
+	el
+		? [...el.childNodes]
+				.map((node) => ({
+					kind: node.nodeName === "DEL" ? "del" : node.nodeName === "INS" ? "ins" : undefined,
+					text: node.textContent,
+				}))
+				.filter((piece) => piece.text.trim() !== "")
+		: undefined;
+// A row of a review page: one that follows a group's head, or one of its side-by-side blocks.
+const reviewRow = (el) =>
+	el.parentElement?.querySelector(":scope > h2.mt-toolbar") != null ||
+	el.parentElement?.parentElement?.querySelector(":scope > h2.mt-toolbar") != null;
 // An option row's own words, without its note, its count or its control.
 const choiceLabel = (el) =>
 	[...el.childNodes]
@@ -131,7 +145,8 @@ const parts = [
 	},
 	{ match: (el) => el.matches("div.mt-table"), part: "ListSectionRows" },
 	{
-		match: (el) => el.matches("div.mt-row"),
+		// A review page's rows (under a group's head) are its own parts.
+		match: (el) => el.matches("div.mt-row") && !reviewRow(el),
 		part: "ListSectionRow",
 		props: (el) => ({
 			metaTone: { faint: "faint", subtle: "subtle", danger: "danger" }[
@@ -178,7 +193,7 @@ const parts = [
 	},
 	{ match: (el) => el.matches(".mt-table"), part: "TableBody", asProps: ["list-style", "margin", "padding"] },
 	{
-		match: (el) => el.matches(".mt-row"),
+		match: (el) => el.matches(".mt-row") && !reviewRow(el),
 		part: "TableRow",
 		// Rows 16px above and below are the two-line rows (a title over a line).
 		props: (el) => ({ twoLine: el.style.paddingTop === "var(--space-16)" || undefined }),
@@ -419,7 +434,7 @@ const parts = [
 		}),
 		leaf: true,
 	},
-	{ match: (el) => el.matches(".mt-vr"), part: "VerticalRule", leaf: true },
+	{ match: (el) => el.matches(".mt-vr"), part: "VerticalRule", leaf: true, asProps: ["align-self"] },
 	{
 		match: (el) => el.matches(".mt-textarea"),
 		part: "Textarea",
@@ -668,6 +683,116 @@ const parts = [
 		match: (el) => el.matches("nav[aria-label] > span[aria-hidden]") && el.textContent.trim() === "/",
 		part: "TrailSlash",
 		leaf: true,
+	},
+	// A review of the assistant's proposal: the request, each group's head, its changes.
+	{
+		match: (el) =>
+			el.matches("main p") && el.style.fontSize === "16px" && el.nextElementSibling?.matches("h2.mt-toolbar"),
+		part: "ReviewAsk",
+		props: (el) => ({ text: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["font-size", "color", "line-height"],
+	},
+	{
+		match: (el) => el.matches("h2.mt-toolbar"),
+		part: "ReviewHead",
+		props: (el) => ({
+			title: [...el.childNodes]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			meta: el.querySelector(":scope > .text-meta")?.textContent.trim(),
+		}),
+		slots: (el) => ({ actions: el.querySelector(":scope > .end") }),
+		children: () => [],
+		asProps: ["min-height", "gap", "align-items", "padding-bottom", "font-size", "font-weight"],
+	},
+	{
+		match: (el) => el.matches("h2.mt-toolbar > .end .mt-vr"),
+		part: "VerticalRule",
+		leaf: true,
+		asProps: ["align-self"],
+	},
+	{
+		match: (el) => el.matches(".mt-review-line"),
+		part: "ReviewBlockLine",
+		props: (el) => ({
+			label: [...(el.querySelector(".gut > .name")?.childNodes ?? [])]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			note: el.querySelector(".gut .note")?.textContent.trim(),
+			text: markedRun(el.querySelector(":scope > .text")),
+			included: el.querySelector(".mt-check.is-on") ? true : undefined,
+		}),
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches(".mt-row[style*='104px']") && el.querySelector(":scope > span:empty") !== null,
+		part: "ReviewColumns",
+		props: (el) => {
+			const [before, after] = [...el.querySelectorAll(":scope > .text-micro")].map((cell) => cell.textContent.trim());
+			return { before, after };
+		},
+		leaf: true,
+		asProps: ["grid-template-columns", "column-gap", "align-items", "padding", "margin", "border-bottom"],
+	},
+	{
+		match: (el) => el.matches(".mt-row[style*='104px']"),
+		part: "ReviewBlockCompare",
+		props: (el) => {
+			const [before, after] = [...el.querySelectorAll(":scope > .cell")];
+			return {
+				label: [
+					...(el.querySelector(".gut")?.querySelectorAll(":scope > span:not(.mt-check)") ?? []),
+				][0]?.textContent.trim(),
+				note: el.querySelector(".gut .note")?.textContent.trim(),
+				before: markedRun(before),
+				after: markedRun(after),
+				included: el.querySelector(".mt-check.is-on") ? true : undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["grid-template-columns", "column-gap", "align-items", "padding", "margin", "border-bottom"],
+	},
+	{
+		match: (el) => el.matches(".mt-row:has(> .mt-check)") && el.closest("main") !== null && !el.closest(".mt-table"),
+		part: "ReviewEntry",
+		props: (el) => {
+			const what = el.querySelector(":scope > span:not(.mt-check):not(.mt-count)");
+			const head = what?.querySelector(":scope > span[style*='baseline']") ?? what;
+			const titleEl = head?.querySelector("span[style*='font-weight: 600']");
+			const lines = what?.querySelectorAll(":scope > span") ?? [];
+			const change = what?.style.flexDirection === "column" ? lines[lines.length - 1] : undefined;
+			const end =
+				el.querySelector(":scope > .mt-count") ?? head?.querySelector(":scope > .text-micro, :scope > .text-caption");
+			return {
+				title: titleEl
+					? titleEl.textContent.trim()
+					: [...(what?.childNodes ?? [])]
+							.filter((node) => node.nodeType === Node.TEXT_NODE)
+							.map((node) => node.textContent)
+							.join("")
+							.trim(),
+				path: head?.querySelector(".mt-row-sub")?.textContent.trim(),
+				end: end?.textContent.trim() || undefined,
+				change: markedRun(change),
+				included: el.querySelector(":scope > .mt-check.is-on") ? true : undefined,
+				muted: change?.style.color?.includes("--fg-subtle") || undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["grid-template-columns", "column-gap", "align-items"],
+	},
+	{
+		match: (el) =>
+			el.matches("main .mt-text-btn--quiet:has(> .mt-caret)") && el.previousElementSibling?.matches(".mt-row"),
+		part: "ReviewRest",
+		props: (el) => ({ label: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["margin-top", "margin-left"],
 	},
 	// A library's files and folders, where files can be dropped.
 	{
@@ -1015,6 +1140,8 @@ const parts = [
 		props: (el) => ({
 			variant: ["danger", "ink", "underline", "quiet"].find((name) => el.classList.contains(`mt-text-btn--${name}`)),
 		}),
+		// A text button with an icon lines it up itself.
+		asProps: ["display", "align-items", "gap", "text-decoration"],
 	},
 	{
 		match: (el) => el.matches(".mt-btn"),
@@ -1054,7 +1181,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins)$/;
 
 /**
  * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame

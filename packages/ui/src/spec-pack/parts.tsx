@@ -41,9 +41,19 @@ import {
 	PaginationPrevious,
 } from "../pagination";
 import { PickList, PickListItem } from "../pick-list";
+import { Del, Ins } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
 import { ReadValue as ReadValuePart } from "../read-value";
+import {
+	ReviewCompare,
+	ReviewCompareHead,
+	ReviewGroup,
+	ReviewItem,
+	ReviewLine,
+	ReviewMore,
+	ReviewQuote,
+} from "../review";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
 import { Segmented } from "../segmented";
@@ -1233,6 +1243,114 @@ function TrailSlash() {
 	return <span aria-hidden="true">/</span>;
 }
 
+/** A run of an entry's words with what a change takes out (`del`) and puts in (`ins`), as the data gives it. */
+type Marked = readonly { kind?: string; text: string }[];
+
+function marked(run: Marked | undefined) {
+	return run?.map((piece, index) =>
+		piece.kind === "del" ? (
+			// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one run never move
+			<Del key={index}>{piece.text}</Del>
+		) : piece.kind === "ins" ? (
+			// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one run never move
+			<Ins key={index}>{piece.text}</Ins>
+		) : (
+			piece.text
+		),
+	);
+}
+
+/** What the admin asked, quoted under a review page's title (the admin's own words, from the data). */
+function ReviewAsk({ text }: { text?: string }) {
+	return <ReviewQuote>{text}</ReviewQuote>;
+}
+
+/** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
+function ReviewHead({ title, meta, actions }: { title?: string; meta?: string; actions?: React.ReactNode }) {
+	return <ReviewGroup title={title} meta={meta} actions={actions} />;
+}
+
+/**
+ * One change of a review: its check (`included`), what it is about (`title`, `path`: an entry's, from the data), how it went at the end (`end`), and
+ * the change itself under it (`change`, marked words from the data). `muted` when it cannot be applied any more.
+ */
+function ReviewEntry({
+	title,
+	path,
+	end,
+	change,
+	included,
+	muted,
+}: {
+	title?: string;
+	path?: string;
+	end?: string;
+	change?: Marked;
+	included?: boolean;
+	muted?: boolean;
+}) {
+	return (
+		<ReviewItem included={included ?? false} includeLabel="" title={title} path={path} end={end} muted={muted}>
+			{change ? marked(change) : undefined}
+		</ReviewItem>
+	);
+}
+
+/** One block's change on one line: its check, the block's name (`label`, a `note` under it), its words marked (`text`, from the data). */
+function ReviewBlockLine({
+	label,
+	note,
+	text,
+	included,
+}: {
+	label?: string;
+	note?: string;
+	text?: Marked;
+	included?: boolean;
+}) {
+	return (
+		<ReviewLine included={included ?? false} includeLabel="" label={label} note={note}>
+			{marked(text)}
+		</ReviewLine>
+	);
+}
+
+/** One block's change side by side: its check and name, the words now (`before`) and proposed (`after`), from the data. */
+function ReviewBlockCompare({
+	label,
+	note,
+	before,
+	after,
+	included,
+}: {
+	label?: string;
+	note?: string;
+	before?: Marked;
+	after?: Marked;
+	included?: boolean;
+}) {
+	return (
+		<ReviewCompare
+			included={included ?? false}
+			includeLabel=""
+			label={label}
+			note={note}
+			before={marked(before)}
+			after={marked(after)}
+		/>
+	);
+}
+
+/** The column names over side-by-side changes. */
+function ReviewColumns({ before, after }: { before?: string; after?: string }) {
+	return <ReviewCompareHead before={before} after={after} />;
+}
+
+/** The way to the rest of a long group ("6 more"). */
+function ReviewRest({ label }: { label?: string }) {
+	return <ReviewMore open={false} onOpenChange={() => {}} moreLabel={label ?? ""} lessLabel="" />;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1241,6 +1359,13 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	ReviewAsk,
+	ReviewHead,
+	ReviewEntry,
+	ReviewBlockLine,
+	ReviewBlockCompare,
+	ReviewColumns,
+	ReviewRest,
 	Trail,
 	TrailSlash,
 	DropZone,
@@ -1405,6 +1530,19 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	ReviewAsk: { kind: "part", props: { text: "state" } },
+	ReviewHead: { kind: "part", props: { title: "text", meta: "text" } },
+	ReviewEntry: {
+		kind: "part",
+		props: { title: "state", path: "state", end: "text", change: "data:kind,text", included: "flag", muted: "flag" },
+	},
+	ReviewBlockLine: { kind: "part", props: { label: "text", note: "text", text: "data:kind,text", included: "flag" } },
+	ReviewBlockCompare: {
+		kind: "part",
+		props: { label: "text", note: "text", before: "data:kind,text", after: "data:kind,text", included: "flag" },
+	},
+	ReviewColumns: { kind: "part", props: { before: "text", after: "text" } },
+	ReviewRest: { kind: "part", props: { label: "text" } },
 	Trail: { kind: "part", props: { label: "text" } },
 	TrailSlash: { kind: "part", props: {} },
 	DropZone: { kind: "part", props: { over: "flag" } },
