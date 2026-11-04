@@ -11,13 +11,13 @@ import { Spinner } from "./spinner";
 /**
  * The text of an action inside a section: add, edit, cancel, go to. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
  * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
- * and, for `underline`, a 1px rule under it say what it is. Under the pointer the text turns ink (and the rule too) and a flat tint (`bg-muted`) shows around its words, 8px at the sides and 4px above and below, drawn as a shadow so the line does not move.
+ * and, for `underline`, a 1px rule under it say what it is. Under the pointer the text turns ink (and the rule too) and a flat tint (`bg-muted`) shows around its words, 8px at the sides and 4px above and below, drawn as a shadow so the line does not move. The keyboard's focus ring runs around that same room.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
  * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, and it is `aria-busy`. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	"inline cursor-pointer rounded-monti-sm border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",
+	"inline cursor-pointer rounded-monti-sm border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] focus-visible:shadow-[-4px_0_0_4px_var(--monti-bg-page),4px_0_0_4px_var(--monti-bg-page),-4px_0_0_6px_var(--monti-border-strong),4px_0_0_6px_var(--monti-border-strong)] aria-expanded:text-monti-default disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",
 	{
 		variants: {
 			variant: {
@@ -51,8 +51,7 @@ const textButtonVariants = cva(
 			},
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {
-				proposal:
-					"text-monti-proposal hover:text-monti-proposal border-monti-proposal hover:border-monti-proposal focus-visible:ring-monti-proposal/30",
+				proposal: "text-monti-proposal hover:text-monti-proposal border-monti-proposal hover:border-monti-proposal",
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
 			loading: { true: "cursor-default disabled:opacity-100" },
