@@ -1,7 +1,7 @@
-import { FolderParent, Upload } from "../../icons";
+import { FolderAdd, FolderParent, Upload } from "../../icons";
 import {
-	Button,
 	DropArea,
+	DropdownMenuItem,
 	FilePreview,
 	FilterButton,
 	FolderTile,
@@ -15,12 +15,12 @@ import {
 	PageToolbarEnd,
 	SearchToggle,
 	Segmented,
+	SplitButton,
 	Stack,
 	TextButton,
 	Tile,
 } from "../../index";
 import { AdminFrame, type FrameFolder } from "./frame";
-import { ListMore } from "./main";
 
 const MEDIA_FOLDERS: readonly FrameFolder[] = [
 	{ name: "Blog Assets", count: "14", active: true },
@@ -56,11 +56,18 @@ export function MediaScreen() {
 					title="Blog Assets"
 				>
 					<SearchToggle label="검색" value="" aria-label="검색" />
-					<ListMore />
-					<Button variant="primary">
+					{/* The caret holds the rare other way to add: a folder. */}
+					<SplitButton
+						menuLabel="더 만들기"
+						menu={
+							<DropdownMenuItem>
+								<FolderAdd aria-hidden />새 폴더
+							</DropdownMenuItem>
+						}
+					>
 						<Upload aria-hidden />
 						올리기
-					</Button>
+					</SplitButton>
 				</PageHeader>
 				<PageToolbar inset>
 					<FilterButton>종류</FilterButton>

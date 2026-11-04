@@ -1,6 +1,5 @@
-import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "../../icons";
+import { Archive, Copy, Folder, FolderAdd, Launch, Tag, TrashCan, Upload } from "../../icons";
 import {
-	Button,
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
@@ -9,9 +8,9 @@ import {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 	Count,
+	DropdownMenuItem,
 	EntryStatus,
 	type EntryStatusKind,
-	IconButton,
 	ListFooter,
 	ListHead,
 	ListScroll,
@@ -31,6 +30,7 @@ import {
 	RowMore,
 	RowTitle,
 	SearchToggle,
+	SplitButton,
 	Table,
 	TableBody,
 	TableCell,
@@ -165,12 +165,25 @@ const more = (
 	</TableCell>
 );
 
-/** A list's more menu in the title row: the rarely used "새 폴더" and "가져오기" live in it, not as buttons. */
-export function ListMore() {
+/** A list's one black pill. Its caret holds the other ways to add: a folder, or posts from a file. They are rare, so they are not buttons of their own. */
+export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string } = {}) {
 	return (
-		<IconButton label="더 보기" side="bottom">
-			<OverflowMenuHorizontal aria-hidden />
-		</IconButton>
+		<SplitButton
+			menuLabel="더 만들기"
+			menu={
+				<>
+					<DropdownMenuItem>
+						<FolderAdd aria-hidden />새 폴더
+					</DropdownMenuItem>
+					<DropdownMenuItem>
+						<Upload aria-hidden />
+						가져오기
+					</DropdownMenuItem>
+				</>
+			}
+		>
+			{label}
+		</SplitButton>
 	);
 }
 
@@ -247,8 +260,7 @@ export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<PostSearch />
-					<ListMore />
-					<Button variant="primary">+ 새 글 쓰기</Button>
+					<NewPostButton />
 				</PageHeader>
 				<ListScroll>
 					<Table container="none" layout="fixed">

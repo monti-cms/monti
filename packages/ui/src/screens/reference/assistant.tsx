@@ -1,5 +1,4 @@
 import {
-	Button,
 	ChatAnswer,
 	ChatEntryLink,
 	ChatEntryList,
@@ -27,7 +26,6 @@ import {
 	RowLink,
 	RowMore,
 	RowTitle,
-	Stack,
 	Table,
 	TableBody,
 	TableCell,
@@ -38,7 +36,7 @@ import {
 } from "../../index";
 import { AssistantPanel, MessageActions } from "./assistant-parts";
 import { AdminFrame } from "./frame";
-import { ListMore, PostSearch } from "./main";
+import { NewPostButton, PostSearch } from "./main";
 
 const none = () => {};
 
@@ -232,8 +230,7 @@ export function AssistantScreen() {
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<PostSearch />
-					<ListMore />
-					<Button>+ 새 글 쓰기</Button>
+					<NewPostButton />
 				</PageHeader>
 				<ListScroll>
 					<Table container="none" layout="fixed" columns={[76, undefined, 84, 152, 60, 71, 39]}>
