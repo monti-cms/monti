@@ -137,6 +137,17 @@ describe("one change file, two ways in, one way to apply", () => {
 	});
 });
 
+describe("plans", () => {
+	it("01-4 a field whose keys come back from the database in another order is no change", async () => {
+		const { summary, ...rest } = base.collections.post.fields;
+		const reordered = withPostFields({ ...rest, summary: { max: 120, kind: "text" } as typeof summary });
+		const planned = (await dev().run("schema.plan", { draft: reordered }, { actor: "admin" })) as {
+			changes: unknown[];
+		};
+		expect(planned.changes).toEqual([]);
+	});
+});
+
 describe("the live site", () => {
 	it("01-3 no entry point changes structure on the live site, and admin values still save", async () => {
 		const monti = live();

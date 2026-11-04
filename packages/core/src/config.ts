@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
+import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Database } from "./db/schema";
 import type { Receiver } from "./engine/deliveries";
 import { createMonti, type Monti, type Plugin } from "./monti";
@@ -12,6 +13,9 @@ export type MontiConfig = {
 	/** The Postgres address. */
 	database: string | undefined;
 	plugins?: Plugin[];
+	/** The site's body blocks and marks: the same definitions the site renders with. */
+	blocks?: AnyBlockDefinition[];
+	marks?: MarkDefinition[];
 	/** Webhooks and other places events go after a write. */
 	receivers?: Receiver[];
 	/**
@@ -38,6 +42,8 @@ export function openMonti(config: MontiConfig, root: string): Monti {
 		schema: config.schema,
 		files: dev ? schemaFilesAt(root) : null,
 		plugins: config.plugins,
+		blocks: config.blocks,
+		marks: config.marks,
 		receivers: config.receivers,
 		secret: config.secret ?? process.env.MONTI_SECRET ?? null,
 	});

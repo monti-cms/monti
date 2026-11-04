@@ -169,15 +169,31 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0004_templates": {
+		async up(db) {
+			await db.schema
+				.createTable("templates")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("name", "text", (column) => column.notNull())
+				.addColumn("doc", "jsonb", (column) => column.notNull())
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addColumn("updated_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.execute();
+		},
+	},
 };
 
 /** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */
 export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
+	// Named, because the migrator otherwise looks for its tables in every schema and takes another schema's (a second site in the same database).
+	const { rows } = await sql<{ schema: string }>`select current_schema() as schema`.execute(db);
 	const migrator = new Migrator({
 		db: db as Kysely<unknown>,
 		provider: { getMigrations: async () => MIGRATIONS },
 		migrationTableName: "monti_migration",
 		migrationLockTableName: "monti_migration_lock",
+		migrationTableSchema: rows[0].schema,
 	});
 	const { error, results } = await migrator.migrateToLatest();
 	const failed = results?.find((result) => result.status === "Error");

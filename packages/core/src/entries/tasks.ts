@@ -1,7 +1,9 @@
 import type { Kysely, Transaction } from "kysely";
+import { asDoc, walk } from "../body/doc";
 import type { Database } from "../db/schema";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
+import type { Site } from "../site";
 import type { Entry } from "./record";
 
 type Awaitable<T> = T | Promise<T>;
@@ -9,8 +11,9 @@ type Awaitable<T> = T | Promise<T>;
 /** One row of the publish to-do list (doc 02). A blocking one stops the publish until it is done. */
 export type PublishTask = {
 	code: string;
-	/** Where it points: a field name, so the screen can go there. */
+	/** Where it points: a field name, or `doc` with a block id, so the screen can go there. */
 	field?: string;
+	block?: string;
 	blocking: boolean;
 	message: Message;
 };
@@ -34,11 +37,11 @@ export const fieldValue = (entry: Pick<Entry, "title" | "slug" | "values">, fiel
  */
 export async function publishTasks(
 	db: Kysely<Database> | Transaction<Database>,
-	schema: Schema,
-	checks: readonly PublishCheck[],
+	site: Site,
 	entry: Entry,
 	slugTaken: boolean,
 ): Promise<PublishTask[]> {
+	const schema = site.schema();
 	const fields: Record<string, FieldDefinition> = schema.collections[entry.collection]?.fields ?? {};
 	const tasks: PublishTask[] = [];
 	// An empty slug is made from the title when publishing, so it is never a task.
@@ -57,6 +60,16 @@ export async function publishTasks(
 			blocking: true,
 			message: { key: "entries.task.slugTaken", values: { slug: entry.slug } },
 		});
-	for (const check of checks) tasks.push(...(await check(entry, { db, schema })));
+	// A block's own check (`defineBlock`'s `check`) adds rows for that block.
+	for (const { block } of walk(asDoc(entry.doc).blocks))
+		for (const row of site.kit.blocks.get(block.type)?.check?.(block) ?? [])
+			tasks.push({
+				code: "block",
+				field: "doc",
+				block: block.id,
+				blocking: row.level === "block",
+				message: typeof row.message === "string" ? { key: "blocks.check", values: { text: row.message } } : row.message,
+			});
+	for (const check of site.publishChecks) tasks.push(...(await check(entry, { db, schema })));
 	return tasks;
 }

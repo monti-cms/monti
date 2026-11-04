@@ -88,6 +88,22 @@ await site.entries({ collection: "post", locale: "ko" });
 
 `entries.previewLink`는 `MONTI_SECRET`으로 서명한 한 시간짜리 표를 준다. 그 표를 `preview`로 넘기면 그 글의 고치는 본이 열린다.
 
+## 본문
+
+본문은 블록이 늘어선 JSON 문서이고, 블록마다 바뀌지 않는 id가 있다. 블록 종류 하나는 `defineBlock` 하나다. 어시스턴트가 읽는 목록
+(`blocks.catalog`), 발행 할 일(그 블록의 `check`), 사이트 그리기가 모두 여기서 나온다. 사이트의 블록은 `monti.config.ts`(`blocks`)와
+`renderDocument`에 함께 주고, 사이트의 `createElement`도 넘긴다(core는 프레임워크를 가져오지 않는다).
+
+```ts
+import { createElement } from "react";
+import { renderDocument } from "@monti-cms/core/render";
+
+export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks, mediaUrl: (id) => `/media/${id}` });
+```
+
+어시스턴트는 `body.read`(블록 id와 서식 없는 글자)로 본문을 읽고 `body.edit`(블록 연산)로 고친다. 본문 전체를 다시 쓰지 않는다. 사람의 저장과
+블록 연산은 같은 검사를 지난다. 템플릿은 사이트 전체에 하나의 목록이다(`templates.*`).
+
 ## 테스트
 
 ```sh

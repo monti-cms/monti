@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "../db/schema";
+import { canonical, sameJson } from "../json";
 import type { CollectionDefinition, FieldDefinition, Schema } from "./define";
 import type { ChangeStep } from "./files";
 
@@ -36,23 +37,11 @@ export type SchemaChange = {
 
 /** The same hash for the same schema, whatever the key order. */
 export function schemaHash(schema: Schema): string {
-	const canonical = (value: unknown): unknown =>
-		Array.isArray(value)
-			? value.map(canonical)
-			: typeof value === "object" && value !== null
-				? Object.fromEntries(
-						Object.keys(value)
-							.sort()
-							.map((key) => [key, canonical((value as Record<string, unknown>)[key])]),
-					)
-				: value;
 	return createHash("sha256")
 		.update(JSON.stringify(canonical(schema)))
 		.digest("hex")
 		.slice(0, 16);
 }
-
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** Entries of a collection whose value for `field` is not empty. Trashed entries count: their values come back with them. */
 const hasValue = (field: string) => sql<boolean>`coalesce(values->>${field}, '') <> ''`;
@@ -156,7 +145,7 @@ async function planFields(
 		const old = before.fields[field];
 		if (renamedTo.has(field)) continue;
 		if (!old) changes.push(await planNewField(db, collection, field, definition));
-		else if (!same(old, definition) || (definition.required && !old.required))
+		else if (!sameJson(old, definition) || (definition.required && !old.required))
 			changes.push(
 				definition.required && !old.required
 					? await planNewField(db, collection, field, definition, "changeField")

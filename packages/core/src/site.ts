@@ -1,3 +1,4 @@
+import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
@@ -14,12 +15,14 @@ export type Site = {
 	publishChecks: readonly PublishCheck[];
 	/** `MONTI_SECRET`: signs preview links. Without it there is no preview. */
 	secret: string | null;
+	/** The body blocks and marks: the core's, the site's and its plugins' (doc 03). */
+	kit: BlockKit;
 };
 
 export function createSite(
 	schema: Schema,
 	files: SchemaFiles | null,
-	extra: { publishChecks?: readonly PublishCheck[]; secret?: string | null } = {},
+	extra: { publishChecks?: readonly PublishCheck[]; secret?: string | null; kit?: BlockKit } = {},
 ): Site {
 	let current = schema;
 	return {
@@ -30,5 +33,6 @@ export function createSite(
 		files,
 		publishChecks: extra.publishChecks ?? [],
 		secret: extra.secret ?? null,
+		kit: extra.kit ?? createBlockKit([], []),
 	};
 }

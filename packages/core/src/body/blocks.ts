@@ -1,0 +1,234 @@
+import { z } from "zod";
+import { sameJson } from "../json";
+import type { Message } from "../operation";
+import type { AdminValues } from "../schema/admin-values";
+import { type Block, blockMap, type Doc, DocShape, type Mark, walk } from "./doc";
+
+/** A row a block adds to the publish to-do list. `block` stops the publish; `warn` only tells. */
+export type BlockCheck = { level: "warn" | "block"; message: string | Message };
+
+/**
+ * A kind of block, defined once: the editor, the "/" menu, the site, the assistant's catalog and the publish check all come from it (doc 03,
+ * principle 3). `Component` is the site's component type (a React component for a React site); core never calls it except through `renderDocument`.
+ */
+export type BlockDefinition<Component = unknown> = {
+	/** `paragraph`, `callout`, `component:PostCard`. */
+	type: string;
+	/** What the "/" menu shows: the site's own words, or a message key (the core's blocks). */
+	label: string | Message;
+	/** For the model: when to use the block. */
+	description: string;
+	/** The "/" menu group. Blocks without one are not offered there (a list item comes with its list). */
+	menu?: "text" | "insert" | "component";
+	attrs?: z.ZodType<Record<string, unknown>>;
+	holds: "text" | "blocks" | "nothing";
+	/** For a block that holds blocks: the types it takes. All when left out. */
+	children?: string[];
+	/** Text in attrs that a translation rewrites (doc 04). */
+	translate?: { attrs: string[] };
+	Site?: Component;
+	/** The editor's view; the site's component with editable children when left out. */
+	Editor?: Component;
+	check?: (block: Block) => BlockCheck[];
+};
+
+export type AnyBlockDefinition = BlockDefinition<unknown>;
+
+export function defineBlock<Component>(definition: BlockDefinition<Component>): BlockDefinition<Component> {
+	if (!/^[a-zA-Z][\w:-]*$/.test(definition.type)) throw new Error(`Block type "${definition.type}" is not a name.`);
+	return definition;
+}
+
+export type MarkDefinition<Component = unknown> = {
+	type: string;
+	label: string | Message;
+	attrs?: z.ZodType<Record<string, unknown>>;
+	Site?: Component;
+};
+
+export function defineMark<Component>(definition: MarkDefinition<Component>): MarkDefinition<Component> {
+	return definition;
+}
+
+/** A core block's label: a key of the admin's message dictionaries. */
+const label = (type: string): Message => ({ key: `blocks.${type}` });
+
+const text = (type: string, description: string, extra: Partial<AnyBlockDefinition> = {}) =>
+	defineBlock({ type, label: label(type), description, holds: "text", menu: "text", ...extra });
+
+/** The blocks a blog post needs, and nothing more (doc 03, "which block lives where"). */
+export const coreBlocks: AnyBlockDefinition[] = [
+	text("paragraph", "A paragraph of text."),
+	text("heading", "A section heading, level 2 to 4.", {
+		attrs: z.object({ level: z.number().int().min(2).max(4) }),
+	}),
+	defineBlock({
+		type: "bulletList",
+		label: label("bulletList"),
+		description: "A bulleted list. Its children are listItem blocks.",
+		menu: "text",
+		holds: "blocks",
+		children: ["listItem"],
+	}),
+	defineBlock({
+		type: "orderedList",
+		label: label("orderedList"),
+		description: "A numbered list. Its children are listItem blocks.",
+		menu: "text",
+		attrs: z.object({ start: z.number().int().min(0).optional() }),
+		holds: "blocks",
+		children: ["listItem"],
+	}),
+	defineBlock({
+		type: "checklist",
+		label: label("checklist"),
+		description: "A list of items to tick. Its children are listItem blocks with `checked`.",
+		menu: "text",
+		holds: "blocks",
+		children: ["listItem"],
+	}),
+	defineBlock({
+		type: "listItem",
+		label: label("listItem"),
+		description: "One item of a list.",
+		attrs: z.object({ checked: z.boolean().optional() }),
+		holds: "text",
+	}),
+	defineBlock({ type: "quote", label: label("quote"), description: "A quotation.", menu: "text", holds: "blocks" }),
+	text("codeBlock", "Code, kept as written, with its language.", {
+		attrs: z.object({ language: z.string().optional() }),
+	}),
+	defineBlock({
+		type: "table",
+		label: label("table"),
+		description: "A table of plain text cells; the first row is the header when `header` is true.",
+		menu: "text",
+		attrs: z.object({ header: z.boolean().optional(), rows: z.array(z.array(z.string())) }),
+		holds: "nothing",
+	}),
+	defineBlock({
+		type: "divider",
+		label: label("divider"),
+		description: "A horizontal rule.",
+		menu: "text",
+		holds: "nothing",
+	}),
+	text("footnote", "A footnote's text; footnoteRef inlines with the same id point at it.", {
+		attrs: z.object({ id: z.string() }),
+	}),
+	defineBlock({
+		type: "image",
+		label: label("image"),
+		description: "An image from the media library, with alt text and an optional caption.",
+		menu: "insert",
+		attrs: z.object({
+			media: z.string(),
+			alt: z.string().optional(),
+			caption: z.string().optional(),
+			width: z.number().positive().optional(),
+			align: z.enum(["left", "center", "right"]).optional(),
+		}),
+		holds: "nothing",
+		translate: { attrs: ["alt", "caption"] },
+	}),
+	defineBlock({
+		type: "file",
+		label: label("file"),
+		description: "A file from the media library to download.",
+		menu: "insert",
+		attrs: z.object({ media: z.string(), name: z.string().optional() }),
+		holds: "nothing",
+	}),
+];
+
+export const coreMarks: MarkDefinition[] = [
+	defineMark({ type: "bold", label: { key: "marks.bold" } }),
+	defineMark({ type: "italic", label: { key: "marks.italic" } }),
+	defineMark({ type: "underline", label: { key: "marks.underline" } }),
+	defineMark({ type: "strike", label: { key: "marks.strike" } }),
+	defineMark({ type: "code", label: { key: "marks.code" } }),
+	defineMark({ type: "sup", label: { key: "marks.sup" } }),
+	defineMark({ type: "sub", label: { key: "marks.sub" } }),
+	defineMark({ type: "link", label: { key: "marks.link" }, attrs: z.object({ href: z.string().min(1) }) }),
+];
+
+/** The blocks and marks a site has: the core's, the site's and its plugins'. */
+export type BlockKit = {
+	blocks: ReadonlyMap<string, AnyBlockDefinition>;
+	marks: ReadonlyMap<string, MarkDefinition>;
+};
+
+export function createBlockKit(blocks: AnyBlockDefinition[], marks: MarkDefinition[]): BlockKit {
+	const byType = <T extends { type: string }>(list: T[], what: string) => {
+		const map = new Map<string, T>();
+		for (const each of list) {
+			if (map.has(each.type)) throw new Error(`${what} "${each.type}" is defined twice.`);
+			map.set(each.type, each);
+		}
+		return map;
+	};
+	return { blocks: byType([...coreBlocks, ...blocks], "Block"), marks: byType([...coreMarks, ...marks], "Mark") };
+}
+
+type Editor = NonNullable<AdminValues["editor"]>;
+const allows = (list: "all" | string[] | undefined, type: string) =>
+	list === undefined || list === "all" || list.includes(type);
+
+/** Whether the editor of a collection offers the block (its editor allowance, doc 01). */
+export const blockOn = (editor: Editor | undefined, block: Pick<Block, "type" | "attrs">) =>
+	allows(editor?.blocks, block.type) &&
+	(block.type !== "heading" || !editor?.headings || editor.headings.includes(Number(block.attrs?.level)));
+export const markOn = (editor: Editor | undefined, type: string) => allows(editor?.marks, type);
+
+export type BodyProblem = { code: string; block?: string; detail?: string };
+
+/**
+ * What a body must fix before it is saved. A person's save and the assistant's block operations both pass it (doc 03). Blocks the doc already had
+ * may stay as they are, even of a type the site no longer defines or the editor no longer offers (doc 03, decisions); a new block may not.
+ */
+export function checkDoc(doc: unknown, kit: BlockKit, editor: Editor | undefined, previous: Doc | null): BodyProblem[] {
+	const parsed = DocShape.safeParse(doc);
+	if (!parsed.success) return [{ code: "shape", detail: parsed.error.issues[0]?.message }];
+	const before = blockMap(previous);
+	const problems: BodyProblem[] = [];
+	const seen = new Set<string>();
+	for (const { block } of walk(parsed.data.blocks)) {
+		const at = (code: string, detail?: string) =>
+			problems.push({ code, block: block.id, ...(detail ? { detail } : {}) });
+		if (seen.has(block.id)) at("duplicateId");
+		seen.add(block.id);
+		const old = before.get(block.id);
+		const kept = old !== undefined && sameJson(old, block);
+		if (kept) continue;
+		const definition = kit.blocks.get(block.type);
+		if (!definition) {
+			if (old?.type !== block.type) at("unknownBlock", block.type);
+			continue;
+		}
+		const isNew = old?.type !== block.type || !sameJson(old.attrs, block.attrs);
+		if (isNew && !blockOn(editor, block)) at("blockOff", block.type);
+		if (definition.holds !== "text" && block.content?.length) at("noText");
+		if (definition.holds !== "blocks" && block.children?.length) at("noChildren");
+		if (definition.children && block.children?.some((child) => !definition.children?.includes(child.type)))
+			at("badChild");
+		const attrs = (definition.attrs ?? z.object({}).strict()).safeParse(block.attrs ?? {});
+		if (!attrs.success) at("badAttrs", attrs.error.issues[0]?.message);
+		for (const inline of block.content ?? [])
+			for (const mark of inline.type === "text" ? (inline.marks ?? []) : []) checkMark(mark, kit, editor, !old, at);
+	}
+	return problems;
+}
+
+function checkMark(
+	mark: Mark,
+	kit: BlockKit,
+	editor: Editor | undefined,
+	isNew: boolean,
+	at: (code: string, detail?: string) => void,
+) {
+	const definition = kit.marks.get(mark.type);
+	if (!definition) return at("unknownMark", mark.type);
+	if (isNew && !markOn(editor, mark.type)) at("markOff", mark.type);
+	const { type: _type, ...attrs } = mark;
+	if (!(definition.attrs ?? z.object({}).strict()).safeParse(attrs).success) at("badMark", mark.type);
+}

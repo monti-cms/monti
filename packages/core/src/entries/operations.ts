@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { assertDoc, editorOf } from "../body/check";
+import { blockMap, type Doc, withNewIds } from "../body/doc";
 import { CheckError, ConflictError } from "../errors";
+import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import type { Schema } from "../schema/define";
 import { publicPath, publishSlug, slugify } from "./paths";
@@ -25,7 +28,7 @@ export type EntryState = "draft" | "published" | "changed" | "archived";
 const stateOf = (entry: Entry): EntryState =>
 	entry.status === "published" ? (entry.hasUnpublishedChanges ? "changed" : "published") : entry.status;
 
-async function entryOf(ctx: OperationContext, id: string): Promise<Entry> {
+export async function entryOf(ctx: OperationContext, id: string): Promise<Entry> {
 	const [entry] = await loadEntries(ctx.db, [id]);
 	if (!entry) throw new CheckError({ key: "entries.unknown", values: { id } });
 	return entry;
@@ -60,9 +63,55 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
 	};
 }
 
+/** Checks the body a draft brings against the body the entry had: a person's save and the assistant's block edits pass the same check (doc 03). */
+async function checkBodyOf(ctx: OperationContext, collection: string, doc: unknown, previous: unknown) {
+	if (doc === undefined || doc === null) return;
+	assertDoc(doc, ctx.site.kit, await editorOf(ctx.db, collection), (previous as Doc | null) ?? null);
+}
+
+/** Writes a new working copy: one version up, "changed" set again, and an `entry.saved` event. Saving and block edits both end here. */
+export async function saveWorking(
+	ctx: OperationContext,
+	entry: Entry,
+	working: Pick<Entry, "title" | "slug" | "values" | "doc">,
+): Promise<{ id: string; version: number }> {
+	await ctx.db
+		.updateTable("entries")
+		.set((eb) => ({
+			title: working.title,
+			slug: working.slug,
+			values: JSON.stringify(working.values),
+			doc: working.doc === null ? null : JSON.stringify(working.doc),
+			version: eb("version", "+", 1),
+			updated_at: ctx.now(),
+		}))
+		.where("id", "=", entry.id)
+		.execute();
+	await markChanges(ctx.db, entry.id);
+	ctx.emit({
+		type: "entry.saved",
+		ids: [entry.id],
+		collection: entry.collection,
+		locale: entry.locale,
+		version: entry.version + 1,
+	});
+	return { id: entry.id, version: entry.version + 1 };
+}
+
+/** Refuses a change to an entry read at another version, or one that is archived or in the trash. */
+export async function editableEntry(ctx: OperationContext, id: string, version: number): Promise<Entry> {
+	const entry = await entryOf(ctx, id);
+	// The version is part of the input, so no entry point can save over a save it has not seen (doc 02, principle 3).
+	if (entry.version !== version)
+		throw new ConflictError([{ ref: ref(entry.id), expected: version, actual: entry.version }]);
+	if (entry.status === "archived") throw new CheckError({ key: "entries.archived" });
+	if (entry.trashedAt) throw new CheckError({ key: "entries.trashed" });
+	return entry;
+}
+
 async function tasksOf(ctx: OperationContext, entry: Entry): Promise<{ slug: string; tasks: PublishTask[] }> {
 	const { slug, taken } = await publishSlug(ctx.db, entry);
-	return { slug, tasks: await publishTasks(ctx.db, ctx.site.schema(), ctx.site.publishChecks, entry, taken) };
+	return { slug, tasks: await publishTasks(ctx.db, ctx.site, entry, taken) };
 }
 
 type PublishPlan = { entry: Entry; slug: string; tasks: PublishTask[]; blocked: PreviewBlock | null };
@@ -100,17 +149,56 @@ async function oldSlug(ctx: OperationContext, entry: Entry) {
 	);
 }
 
+/**
+ * The body, block by block (`doc.<block id>`), so "3 places differ" counts blocks, not the whole body (doc 02, compare). A changed order is one more
+ * place, `doc.order`.
+ */
+function docPlaces(mine: unknown, server: unknown) {
+	const ours = blockMap((mine as Doc | null) ?? null);
+	const theirs = blockMap((server as Doc | null) ?? null);
+	const topIds = (doc: unknown) => ((doc as Doc | null)?.blocks ?? []).map((block) => block.id);
+	return [
+		...[...new Set([...topIds(mine), ...topIds(server)])].map((id) => ({
+			place: `doc.${id}`,
+			mine: ours.get(id),
+			server: theirs.get(id),
+		})),
+		{
+			place: "doc.order",
+			mine: topIds(mine).filter((id) => theirs.has(id)),
+			server: topIds(server).filter((id) => ours.has(id)),
+		},
+	];
+}
+
 export const entryOperations = [
 	defineOperation({
 		name: "entries.create",
 		kind: "write",
 		description:
-			"Create an entry in a collection and language, optionally with a title, field values and a body. It starts as a draft with an empty slug, made from the title when it is first published.",
-		input: z.object({ collection: z.string(), locale: z.string().min(1), ...Draft }),
-		check: (input, ctx) => checkDraft(ctx.site.schema(), input.collection, input),
+			"Create an entry in a collection and language, optionally with a title, field values and either a body or a template (templates.list) to start the body from. It starts as a draft with an empty slug, made from the title when it is first published.",
+		input: z.object({ collection: z.string(), locale: z.string().min(1), template: z.string().optional(), ...Draft }),
+		async check(input, ctx) {
+			checkDraft(ctx.site.schema(), input.collection, input);
+			if (input.template !== undefined && input.doc !== undefined)
+				throw new CheckError({ key: "entries.docAndTemplate" });
+			await checkBodyOf(ctx, input.collection, input.doc, null);
+		},
 		async run(input, ctx) {
 			const id = randomUUID();
 			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, input);
+			if (input.template !== undefined) {
+				const template = await ctx.db
+					.selectFrom("templates")
+					.select("doc")
+					.where("id", "=", input.template)
+					.executeTakeFirst();
+				if (!template) throw new CheckError({ key: "templates.unknown", values: { id: input.template } });
+				// New ids, and the blocks go in as the template has them, even ones this editor no longer offers (doc 03, decisions).
+				const doc = template.doc as Doc;
+				working.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
+				await checkBodyOf(ctx, input.collection, working.doc, working.doc);
+			}
 			await ctx.db
 				.insertInto("entries")
 				.values({
@@ -166,38 +254,13 @@ export const entryOperations = [
 		input: z.object({ id: z.string(), version: z.number().int(), ...Draft }),
 		touches: (input) => [ref(input.id)],
 		async check(input, ctx) {
-			const entry = await entryOf(ctx, input.id);
-			// The version is part of the input, so no entry point can save over a save it has not seen (doc 02, principle 3).
-			if (entry.version !== input.version)
-				throw new ConflictError([{ ref: ref(entry.id), expected: input.version, actual: entry.version }]);
-			if (entry.status === "archived") throw new CheckError({ key: "entries.archived" });
-			if (entry.trashedAt) throw new CheckError({ key: "entries.trashed" });
+			const entry = await editableEntry(ctx, input.id, input.version);
 			checkDraft(ctx.site.schema(), entry.collection, input);
+			await checkBodyOf(ctx, entry.collection, input.doc, entry.doc);
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
-			const working = applyDraft(entry, input);
-			await ctx.db
-				.updateTable("entries")
-				.set((eb) => ({
-					title: working.title,
-					slug: working.slug,
-					values: JSON.stringify(working.values),
-					doc: working.doc === null ? null : JSON.stringify(working.doc),
-					version: eb("version", "+", 1),
-					updated_at: ctx.now(),
-				}))
-				.where("id", "=", entry.id)
-				.execute();
-			await markChanges(ctx.db, entry.id);
-			ctx.emit({
-				type: "entry.saved",
-				ids: [entry.id],
-				collection: entry.collection,
-				locale: entry.locale,
-				version: entry.version + 1,
-			});
-			return { id: entry.id, version: entry.version + 1 };
+			return saveWorking(ctx, entry, applyDraft(entry, input));
 		},
 		summary: (input) => ({ key: "entries.save", values: { id: input.id } }),
 	}),
@@ -217,8 +280,8 @@ export const entryOperations = [
 					mine: fieldValue(mine, field),
 					server: fieldValue(entry, field),
 				})),
-				{ place: "doc", mine: mine.doc, server: entry.doc },
-			].filter((place) => JSON.stringify(place.mine) !== JSON.stringify(place.server));
+				...docPlaces(mine.doc, entry.doc),
+			].filter((place) => !sameJson(place.mine, place.server));
 			return { version: entry.version, updatedAt: entry.updatedAt, places };
 		},
 	}),

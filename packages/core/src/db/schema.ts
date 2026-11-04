@@ -112,6 +112,16 @@ export interface OldPathTable {
 	created_at: Generated<Date>;
 }
 
+/** A body template (doc 03): one list for the whole site, an admin value editable on the live site. */
+export interface TemplateTable {
+	id: string;
+	name: string;
+	doc: Json<unknown>;
+	version: Generated<number>;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
 /** A relation value between translation groups (doc 08). */
 export interface EntryLinkTable {
 	from_group: string;
@@ -145,6 +155,7 @@ export interface Database {
 	entries: EntryTable;
 	entry_published: EntryPublishedTable;
 	old_paths: OldPathTable;
+	templates: TemplateTable;
 	entry_links: EntryLinkTable;
 	schema_state: SchemaStateTable;
 	schema_changes: SchemaChangeTable;

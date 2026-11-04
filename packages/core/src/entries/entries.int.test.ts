@@ -169,12 +169,12 @@ describe("saves never overwrite each other", () => {
 			id,
 			title: "Hello",
 			values: { summary: "longer", format: null },
-			doc: { type: "doc" },
+			doc: { type: "doc", blocks: [{ id: "b_1", type: "paragraph" }] },
 		});
 		expect(compared.places).toEqual([
 			{ place: "values.summary", mine: "longer", server: "short" },
 			{ place: "values.format", mine: undefined, server: "memo" },
-			{ place: "doc", mine: { type: "doc" }, server: null },
+			{ place: "doc.b_1", mine: { id: "b_1", type: "paragraph" }, server: undefined },
 		]);
 	});
 });

@@ -89,6 +89,22 @@ await site.entries({ collection: "post", locale: "ko" });
 
 `entries.previewLink` gives a one-hour token, signed with `MONTI_SECRET`; passed as `preview`, it opens that entry's working copy.
 
+## Bodies
+
+A body is a JSON document of blocks, each with an id that never changes. A block kind is one `defineBlock`: the catalog the assistant reads
+(`blocks.catalog`), the publish to-do rows (its `check`) and the site's drawing come from it. Give the site's blocks to `monti.config.ts`
+(`blocks`) and to `renderDocument`, with the site's own `createElement` (the core imports no framework):
+
+```ts
+import { createElement } from "react";
+import { renderDocument } from "@monti-cms/core/render";
+
+export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks, mediaUrl: (id) => `/media/${id}` });
+```
+
+The assistant reads a body with `body.read` (block ids and plain text) and changes it with `body.edit` (block operations), never by rewriting it. A
+person's save and a block edit pass the same check. Templates are one list for the site (`templates.*`).
+
 ## Tests
 
 ```sh

@@ -1,5 +1,7 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
+import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
@@ -24,6 +26,9 @@ export type Plugin = {
 	receivers?: Receiver[];
 	/** Rows it adds to the publish to-do list (doc 02). */
 	publishChecks?: PublishCheck[];
+	/** Body blocks and marks it brings (doc 03). */
+	blocks?: AnyBlockDefinition[];
+	marks?: MarkDefinition[];
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -40,6 +45,9 @@ export type MontiOptions = {
 	recordKinds?: RecordKind[];
 	receivers?: Receiver[];
 	plugins?: Plugin[];
+	/** The site's own body blocks and marks (`defineBlock`), next to the core's. */
+	blocks?: AnyBlockDefinition[];
+	marks?: MarkDefinition[];
 	/** `MONTI_SECRET`: signs preview links (and, with doc 14, encrypts keys). */
 	secret?: string | null;
 	now?: () => Date;
@@ -116,6 +124,7 @@ export function createMonti(options: MontiOptions) {
 	for (const kind of [
 		...schemaRecordKinds,
 		entryRecord,
+		templateRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -127,6 +136,10 @@ export function createMonti(options: MontiOptions) {
 	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
+		kit: createBlockKit(
+			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
+			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],
+		),
 	});
 	const engine: Engine = { db: options.db, recordKinds, receivers, site, now };
 
@@ -139,6 +152,7 @@ export function createMonti(options: MontiOptions) {
 		...engineOperations(engine, () => [...operations.values()]),
 		...schemaOperations,
 		...entryOperations,
+		...bodyOperations,
 	])
 		add(operation, "the core");
 	for (const operation of options.operations ?? []) add(operation, "the site");
