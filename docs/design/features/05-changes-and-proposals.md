@@ -15,7 +15,7 @@
 
 ## 쓰는 화면과 흐름
 
-- 기준 화면: `Screens/Reference/Settings` › Settings, SettingsProposal, `Screens/Reference/Editor` › EditorProposal, EditorTranslate, `Screens/Reference/Lists` › Taxonomy(패널), Media(대체 텍스트 제안), `Screens/Reference/Assistant` › CollectionEditor.
+- 기준 화면: `Screens/Reference/Settings` › Settings, SettingsProposal, `Screens/Reference/Editor` › EditorProposal, EditorTranslate, `Screens/Reference/Lists` › Taxonomy(패널), `Screens/Reference/Assistant` › CollectionEditor.
 - 흐름: [흐름 2](../admin/flows/02-assistant.md)의 제안 단계, [흐름 4](../admin/flows/04-collections.md)의 07, 10단계, [흐름 11](../admin/flows/11-settings.md)의 04, 11단계.
 - 표시의 모양은 [components/proposal.md](../admin/components/proposal.md)와 [components/change.md](../admin/components/change.md)가 정한다. 이 문서는 그 뒤의 상태를 정한다.
 
