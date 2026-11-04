@@ -29,12 +29,12 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `attempt` "처음" | 8.05 | 이메일, 비밀번호, "로그인", "또는", "GitHub로 로그인"(secondary) | Screens/Login › 처음 |
-| "한 번 틀림" | 8.06 | 비밀번호 `aria-invalid`, `FormFieldError` "이메일 또는 비밀번호가 맞지 않아요." | Screens/Login › 한 번 틀림, Controls/Field/Field |
-| "잠김" | 8.07 | `FormFieldError` "1분 뒤에 다시 시도해 주세요.", "로그인" `disabled` | Screens/Login › 잠김, Controls/Field/Field |
-| "첫 관리자" | 8.01 | 안내 제목 "첫 관리자 만들기", 이메일, 비밀번호(아래 회색 설명 "10자 이상"), 비밀번호 확인, "생성". GitHub 줄은 없다. | Screens/Login › 첫 관리자 |
-| "첫 관리자 오류" | 8.02 | 비밀번호 `FormFieldError` "10자 이상이어야 해요.", 확인 `FormFieldError` "두 비밀번호가 같지 않아요." | Screens/Login › 첫 관리자 오류, Controls/Field/Field |
-| "이미 있음" | 8.04 | `FormFieldError` "이미 관리자가 있어요."와 "로그인하기" `Button variant="secondary"`만 | Screens/Login › 이미 있음, Controls/Field/Field › FormError, Controls/Button/Button |
-| "GitHub만" | 8.08 | "GitHub로 로그인" `Button variant="primary" pendingLabel`만 | Screens/Login › GitHub만, Controls/Button/Button |
-| "GitHub 권한 없음" | 8.09 | "GitHub로 로그인"(primary), `FormFieldError`, "다른 계정으로 로그인" `TextButton` | Screens/Login › GitHub 권한 없음, Controls/Field/Field › FormError |
-| "로그인 없음" | 8.10 | 안내 제목 "로그인이 설정되지 않았어요"만. 폼도 버튼도 없다. | Screens/Login › 로그인 없음 |
+| `attempt` "처음" | 8.05 | 이메일, 비밀번호, "로그인", "또는", "GitHub로 로그인"(secondary) | Screens/Login › First |
+| "한 번 틀림" | 8.06 | 비밀번호 `aria-invalid`, `FormFieldError` "이메일 또는 비밀번호가 맞지 않아요." | Screens/Login › Once Wrong, Controls/Field/Field |
+| "잠김" | 8.07 | `FormFieldError` "1분 뒤에 다시 시도해 주세요.", "로그인" `disabled` | Screens/Login › Locked, Controls/Field/Field |
+| "첫 관리자" | 8.01 | 안내 제목 "첫 관리자 만들기", 이메일, 비밀번호(아래 회색 설명 "10자 이상"), 비밀번호 확인, "생성". GitHub 줄은 없다. | Screens/Login › First Admin |
+| "첫 관리자 오류" | 8.02 | 비밀번호 `FormFieldError` "10자 이상이어야 해요.", 확인 `FormFieldError` "두 비밀번호가 같지 않아요." | Screens/Login › First Admin Errors, Controls/Field/Field |
+| "이미 있음" | 8.04 | `FormFieldError` "이미 관리자가 있어요."와 "로그인하기" `Button variant="secondary"`만 | Screens/Login › Already Exists, Controls/Field/Field › FormError, Controls/Button/Button |
+| "GitHub만" | 8.08 | "GitHub로 로그인" `Button variant="primary" pendingLabel`만 | Screens/Login › Github Only, Controls/Button/Button |
+| "GitHub 권한 없음" | 8.09 | "GitHub로 로그인"(primary), `FormFieldError`, "다른 계정으로 로그인" `TextButton` | Screens/Login › Github Denied, Controls/Field/Field › FormError |
+| "로그인 없음" | 8.10 | 안내 제목 "로그인이 설정되지 않았어요"만. 폼도 버튼도 없다. | Screens/Login › No Login |

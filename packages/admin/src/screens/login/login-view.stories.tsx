@@ -49,25 +49,22 @@ const state = (mode: LoginMode, typed: Record<string, string> = {}): Story => ({
 
 const SIGN_IN = { email: "me@example.dev", password: "aaaaaaaaaa" };
 
-export const First: Story = { name: "처음", ...state(signIn(), SIGN_IN) };
-export const OnceWrong: Story = { name: "한 번 틀림", ...state(signIn({ error: "credentials" }), SIGN_IN) };
-export const Locked: Story = { name: "잠김", ...state(signIn({ error: "credentials", locked: true }), SIGN_IN) };
+export const First: Story = { ...state(signIn(), SIGN_IN) };
+export const OnceWrong: Story = { ...state(signIn({ error: "credentials" }), SIGN_IN) };
+export const Locked: Story = { ...state(signIn({ error: "credentials", locked: true }), SIGN_IN) };
 export const FirstAdmin: Story = {
-	name: "첫 관리자",
 	...state(firstAdmin(), { email: "me@example.dev", password: "aaaaaaaaaa", confirm: "aaaaaaaaaa" }),
 };
 export const FirstAdminErrors: Story = {
-	name: "첫 관리자 오류",
 	...state(firstAdmin({ errors: ["password", "confirm"] }), {
 		email: "me@example.dev",
 		password: "aaaaaa",
 		confirm: "aaaaaaa",
 	}),
 };
-export const AlreadyExists: Story = { name: "이미 있음", ...state({ kind: "closed", signInHref: "#login" }) };
-export const GithubOnly: Story = { name: "GitHub만", ...state({ kind: "sign-in", buttons: [github] }) };
+export const AlreadyExists: Story = { ...state({ kind: "closed", signInHref: "#login" }) };
+export const GithubOnly: Story = { ...state({ kind: "sign-in", buttons: [github] }) };
 export const GithubDenied: Story = {
-	name: "GitHub 권한 없음",
 	...state({ kind: "sign-in", buttons: [github], denied: { name: "octo-kim", signOutAction: "#sign-out" } }),
 };
-export const NoLogin: Story = { name: "로그인 없음", ...state({ kind: "no-login" }) };
+export const NoLogin: Story = { ...state({ kind: "no-login" }) };
