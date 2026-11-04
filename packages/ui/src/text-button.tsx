@@ -57,6 +57,11 @@ const textButtonVariants = cva(
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
 			loading: { true: "cursor-default disabled:opacity-100" },
+			/**
+			 * The button stands alone at a column's edge (an "+ add" under a list, an undo at a row's end): 8px in from that edge, so its tint (8px out)
+			 * stays in the column and its words line up with the words in a field, which sit 8px in too.
+			 */
+			edge: { start: "ml-monti-8", end: "mr-monti-8" },
 		},
 		defaultVariants: { variant: "plain" },
 	},
@@ -69,6 +74,7 @@ function TextButton({
 	quiet,
 	size,
 	tone,
+	edge,
 	loading = false,
 	disabled,
 	render,
@@ -87,7 +93,7 @@ function TextButton({
 		defaultTagName: href === undefined ? "button" : "a",
 		props: mergeProps<"button">(
 			{
-				className: cn(textButtonVariants({ variant, mono, quiet, size, tone, loading }), className),
+				className: cn(textButtonVariants({ variant, mono, quiet, size, tone, edge, loading }), className),
 				...(isButton ? { type: "button" } : {}),
 				...({ "data-tone": tone ?? undefined, "data-loading": loading || undefined } as React.ComponentProps<"button">),
 				"aria-busy": loading || undefined,

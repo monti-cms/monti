@@ -135,7 +135,7 @@ export function SchemaPage({
 							</FolderTabs>
 							<Stack gap={12}>
 								<Inline gap={20}>
-									<TextButton>+ 필드 추가</TextButton>
+									<TextButton edge="start">+ 필드 추가</TextButton>
 									<TextButton variant="quiet">+ 묶음 추가</TextButton>
 								</Inline>
 								<Text as="p" variant="meta" tone="subtle">

@@ -88,7 +88,9 @@ export function HostRows({
 				})}
 				{!disabled && (
 					<Box paddingTop={8}>
-						<TextButton onClick={add}>{t("site.alias.add")}</TextButton>
+						<TextButton edge="start" onClick={add}>
+							{t("site.alias.add")}
+						</TextButton>
 					</Box>
 				)}
 			</Stack>

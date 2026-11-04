@@ -128,7 +128,7 @@ export function SettingsScreen() {
 									</IconButton>
 								</Inline>
 								<Box paddingTop={8}>
-									<TextButton>+ 호스트</TextButton>
+									<TextButton edge="start">+ 호스트</TextButton>
 								</Box>
 							</Stack>
 						</FormField>

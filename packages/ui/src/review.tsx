@@ -35,7 +35,9 @@ function ReviewGroup({
 				{title}
 				{meta !== undefined && <span className="font-normal text-monti-meta text-monti-subtle">{meta}</span>}
 				{actions !== undefined && (
-					<span className="ml-auto flex items-baseline gap-monti-16 font-normal text-monti-note">{actions}</span>
+					<span className="ml-auto flex items-baseline gap-monti-16 font-normal text-monti-note [&>[data-slot=text-button]:last-child]:mr-monti-8">
+						{actions}
+					</span>
 				)}
 			</h2>
 			{children}

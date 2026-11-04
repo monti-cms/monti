@@ -189,7 +189,13 @@ export function TranslatePairedScreen() {
 							}
 							source={<DocCode source>{CODE}</DocCode>}
 							translation={
-								<CompareShared action={<TextButton variant="underline">English에서만 따로 고치기</TextButton>}>
+								<CompareShared
+									action={
+										<TextButton variant="underline" edge="start">
+											English에서만 따로 고치기
+										</TextButton>
+									}
+								>
 									<DocCode>{CODE}</DocCode>
 								</CompareShared>
 							}

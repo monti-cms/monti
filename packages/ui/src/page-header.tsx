@@ -28,7 +28,12 @@ function PageHeader({
 			<div className="flex flex-wrap items-end gap-monti-12">
 				<h1 className="pt-monti-4 text-monti-page">{title}</h1>
 				{meta && <span className="pb-[3px] font-mono text-monti-body text-monti-faint">{meta}</span>}
-				{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
+				{/* A text button last in the row stands 8px in from the end, so its tint stays in the column. */}
+				{children && (
+					<span className="ml-auto flex items-center gap-monti-16 [&>[data-slot=text-button]:last-child]:mr-monti-8">
+						{children}
+					</span>
+				)}
 			</div>
 		</header>
 	);
@@ -132,7 +137,10 @@ function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span
 			data-slot="page-toolbar-end"
-			className={cn("ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8", className)}
+			className={cn(
+				"ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8 [&>[data-slot=text-button]:last-child]:mr-monti-8",
+				className,
+			)}
 			{...props}
 		/>
 	);

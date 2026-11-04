@@ -29,6 +29,7 @@ import {
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
+	IconButton,
 	Inline,
 	Input,
 	LanguageRow,
@@ -44,6 +45,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Close } from "@monti-cms/ui/icons";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
@@ -204,7 +206,7 @@ function AddLocale({
 				if (!next) setSearch("");
 			}}
 		>
-			<PopoverTrigger render={<TextButton />}>{t("locales.add")}</PopoverTrigger>
+			<PopoverTrigger render={<TextButton edge="start" />}>{t("locales.add")}</PopoverTrigger>
 			<PopoverContent align="start" padding="menu">
 				<Command shouldFilter={false} label={t("locales.search")}>
 					<CommandInput value={search} onValueChange={setSearch} aria-label={t("locales.search")} autoFocus />
@@ -291,9 +293,9 @@ function OtherRow({
 			}
 		>
 			{editable && (
-				<TextButton variant="quiet" aria-label={t("locales.remove", { name: locale.name })} onClick={onRemove}>
-					×
-				</TextButton>
+				<IconButton label={t("locales.remove", { name: locale.name })} onClick={onRemove}>
+					<Close aria-hidden />
+				</IconButton>
 			)}
 		</LanguageRow>
 	);

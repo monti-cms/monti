@@ -5,7 +5,7 @@ import { Separator } from "./separator";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
- * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the quiet × that
+ * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the × icon button that
  * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link DragHandle}); a list whose rows can
  * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed").
  */
@@ -40,7 +40,9 @@ function LanguageRow({
 		<li
 			data-slot="language-row"
 			className={cn(
-				"grid items-center gap-x-monti-12 border-monti-muted border-b py-monti-10 hover:bg-monti-muted",
+				// 8px in at both ends, as a field's words are, so a tint stays in the column. Only a row that can be moved answers the pointer.
+				"grid items-center gap-x-monti-12 border-monti-muted border-b px-monti-8 py-monti-10",
+				handle && "hover:bg-monti-muted",
 				handled ? "grid-cols-[16px_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]",
 				drag?.active && "relative z-10 bg-monti-page opacity-80 shadow-monti-floating",
 				className,
@@ -55,7 +57,10 @@ function LanguageRow({
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
 			</span>
-			<span className="flex items-center justify-end">{children}</span>
+			{/* An icon button (the × that takes the language out) keeps the row's height and puts its glyph 8px from the end, as a field's action does. */}
+			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-8">
+				{children}
+			</span>
 		</li>
 	);
 }

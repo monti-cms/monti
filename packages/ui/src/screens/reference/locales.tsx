@@ -1,8 +1,10 @@
+import { Close } from "../../icons";
 import {
 	Box,
 	DragHandle,
 	FormField,
 	FormFieldLabel,
+	IconButton,
 	LanguageRow,
 	LanguageSource,
 	PageBody,
@@ -43,13 +45,13 @@ export function LocalesScreen() {
 									handled
 									handle={<DragHandle aria-label="English 옮기기" />}
 								>
-									<TextButton variant="quiet" aria-label="English 지우기">
-										×
-									</TextButton>
+									<IconButton label="English 빼기" onClick={() => {}}>
+										<Close aria-hidden />
+									</IconButton>
 								</LanguageRow>
 							</Box>
 							<Box paddingTop={12}>
-								<TextButton>+ 언어 추가</TextButton>
+								<TextButton edge="start">+ 언어 추가</TextButton>
 							</Box>
 						</Stack>
 					</Section>
