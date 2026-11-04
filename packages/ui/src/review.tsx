@@ -126,7 +126,7 @@ function ReviewCompareHead({ before, after }: { before: ReactNode; after: ReactN
 	return (
 		<div
 			data-slot="review-compare-head"
-			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] px-monti-12 pt-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
+			className="-mx-monti-12 grid grid-cols-[104px_repeat(2,minmax(0,1fr))] px-monti-12 pt-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
 		>
 			<span />
 			<span className="px-monti-20">{before}</span>
@@ -195,7 +195,7 @@ function ReviewCompare({
 	return (
 		<div
 			data-slot="review-compare"
-			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
+			className="-mx-monti-12 grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
 		>
 			<ReviewGutter
 				included={included}

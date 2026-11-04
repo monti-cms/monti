@@ -27,14 +27,22 @@ const tableAfter = (el) => {
 
 /** The name of an icon of the design system's list with this svg's shape (`icon-key.js`, `window.boardData.icons`), if there is one. */
 // An entry's words as a run of pieces: plain, taken out (`del`) and put in (`ins`).
+/** The pieces of a run: a space between two marked pieces (`</del> <ins>`) is a piece of its own, as the line reads; the run's edges are not. */
+const keepSpaces = (pieces) => {
+	const first = pieces.findIndex((piece) => piece.text.trim() !== "");
+	const last = pieces.findLastIndex((piece) => piece.text.trim() !== "");
+	return first < 0
+		? []
+		: pieces.slice(first, last + 1).map((piece) => (piece.text.trim() === "" ? { ...piece, text: " " } : piece));
+};
 const markedRun = (el) =>
 	el
-		? [...el.childNodes]
-				.map((node) => ({
+		? keepSpaces(
+				[...el.childNodes].map((node) => ({
 					kind: node.nodeName === "DEL" ? "del" : node.nodeName === "INS" ? "ins" : undefined,
 					text: node.textContent,
-				}))
-				.filter((piece) => piece.text.trim() !== "")
+				})),
+			)
 		: undefined;
 // A row of a review page: one that follows a group's head, or one of its side-by-side blocks.
 const reviewRow = (el) =>
@@ -85,9 +93,9 @@ const bodyBlocks = (el) => {
 			active: block.matches(".mt-block.is-on") || undefined,
 			current: block.matches(".mt-current") || undefined,
 		};
-		const pieces = [...copy.childNodes]
-			.map((node) => ({ mark: markOf(node), text: node.textContent.replace(/\s+/g, " ") }))
-			.filter((piece) => piece.text.trim() !== "");
+		const pieces = keepSpaces(
+			[...copy.childNodes].map((node) => ({ mark: markOf(node), text: node.textContent.replace(/\s+/g, " ") })),
+		);
 		// Every block keeps its place, an empty one too: the tools name a block by it.
 		if (pieces.length === 0) return [{ kind, text: "", ...state }];
 		return pieces.map((piece, index) =>
@@ -1658,7 +1666,7 @@ const parts = [
 			bleed: (() => {
 				const body = el.querySelector(":scope > .mt-panel-body");
 				return (
-					(!body && el.querySelector(":scope > form")) ||
+					(!body && el.querySelector(":scope > form:not(.mt-panel-body)")) ||
 					(body && getComputedStyle(body).paddingLeft === "0px") ||
 					undefined
 				);
@@ -1670,12 +1678,12 @@ const parts = [
 			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter((button) => !closes(button)),
 			footer: el.querySelector(":scope > .mt-panel-foot"),
 			// The box to type in, under the body.
-			composer: [el.querySelector(":scope > form")],
+			composer: [el.querySelector(":scope > form:not(.mt-panel-body)")],
 		}),
 		// A panel without a body element holds its parts directly (its tabs and their page).
 		children: (el) =>
 			el.querySelector(":scope > .mt-panel-body") ??
-			[...el.children].filter((child) => !child.matches(".mt-panel-head, .mt-panel-foot, form")),
+			[...el.children].filter((child) => !child.matches(".mt-panel-head, .mt-panel-foot, form:not(.mt-panel-body)")),
 		asProps: ["flex", "flex-grow", "min-width", "max-width", "min-height", "box-sizing", "display", "flex-direction"],
 	},
 	{
