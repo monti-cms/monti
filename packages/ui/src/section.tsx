@@ -47,7 +47,7 @@ function Section({
 			{stacked || dense ? (
 				children
 			) : (
-				<div className="flex min-w-0 flex-[999_1_420px] flex-col gap-monti-16">{children}</div>
+				<div className="flex min-w-0 flex-[999_1_420px] flex-col gap-monti-24">{children}</div>
 			)}
 		</section>
 	);
