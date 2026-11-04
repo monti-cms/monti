@@ -187,12 +187,12 @@ export function ModelMenuButton({
 			size="sm"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-8 font-mono text-monti-meta"
+			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-10 font-mono text-monti-meta"
 			{...props}
 		>
 			<span className="min-w-0 truncate">{model}</span>
 			{thinking && <span className="shrink-0 text-monti-faint">· {thinking}</span>}
-			<Caret />
+			<Caret solo />
 		</Button>
 	);
 }

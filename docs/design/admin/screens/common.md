@@ -48,7 +48,7 @@
 |---|---|---|
 | ⋯ 메뉴, 글자 버튼이 여는 메뉴 | `DropdownMenu`(`DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuCheckboxItem`, `DropdownMenuLabel`, `DropdownMenuSearch`, `DropdownMenuScroll`), 끝의 표시는 `MenuShortcut`·`MenuTick`·`MenuValue` | 할 수 있는 것만 둔다. 위험한 것은 맨 아래 `variant="danger"`. 둘째 단계까지만. 할 수 없는 행은 숨긴다. |
 | 행 오른쪽 클릭 | `ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`, `ContextMenuLabel`) | 같은 항목이 행의 ⋯에도 있다. 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
-| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 8px · 꺾쇠 쪽 6px 여백), `PageSizeMenu`(`TextButton variant="quiet" size="meta"`) + `Caret` | mono 12. 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
+| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="meta"`) + `Caret` | mono 12. 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
 | 검색이 있는 고르기 | `Popover`의 `PopoverContent padding="menu"` 안에 `Command`(`CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandEmpty`, `CommandFooter`) | 값이 많은 고르기(언어 코드, 태그, 링크할 글). |
 
 ## AI 버튼
