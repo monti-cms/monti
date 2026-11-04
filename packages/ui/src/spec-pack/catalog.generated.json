@@ -1,7 +1,7 @@
 {
 	"spacing": [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48],
 	"group": "Stack",
-	"words": "Text",
+	"words": "Words",
 	"entries": {
 		"Box": {
 			"kind": "part",
@@ -2202,6 +2202,52 @@
 			},
 			"events": []
 		},
+		"LanguageTabs": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"SiteName": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"name": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"Words": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"TabAdd": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"Tab": {
 			"kind": "part",
 			"bind": false,
@@ -2269,6 +2315,10 @@
 				"align": {
 					"kind": "variant",
 					"enum": ["end", "start"]
+				},
+				"tone": {
+					"kind": "variant",
+					"enum": ["ink", "muted"]
 				}
 			},
 			"events": []

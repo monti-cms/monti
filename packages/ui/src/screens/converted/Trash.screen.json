@@ -2,24 +2,20 @@
 	"root": "stack",
 	"overlays": ["assistantCorner"],
 	"elements": {
-		"text": {
-			"type": "Text",
+		"siteName": {
+			"type": "SiteName",
 			"props": {
-				"as": "span",
-				"variant": "title"
-			},
-			"children": [
-				{
-					"state": "/drawn/text2"
+				"name": {
+					"state": "/drawn/name"
 				}
-			]
+			}
 		},
 		"sidebarRailToggle": {
 			"type": "SidebarRailToggle"
 		},
 		"sidebarHeader": {
 			"type": "SidebarHeader",
-			"children": ["text", "sidebarRailToggle"]
+			"children": ["siteName", "sidebarRailToggle"]
 		},
 		"icon": {
 			"type": "Icon",
@@ -31,7 +27,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text4"
+					"state": "/drawn/text2"
 				}
 			]
 		},
@@ -40,7 +36,7 @@
 			"children": [
 				"icon",
 				{
-					"state": "/drawn/text3"
+					"state": "/drawn/text"
 				},
 				"sidebarCount"
 			]
@@ -56,7 +52,7 @@
 			"children": [
 				"icon2",
 				{
-					"state": "/drawn/text5"
+					"state": "/drawn/text3"
 				}
 			]
 		},
@@ -71,7 +67,7 @@
 			"children": [
 				"icon3",
 				{
-					"state": "/drawn/text6"
+					"state": "/drawn/text4"
 				}
 			]
 		},
@@ -86,7 +82,7 @@
 			"children": [
 				"icon4",
 				{
-					"state": "/drawn/text7"
+					"state": "/drawn/text5"
 				}
 			]
 		},
@@ -101,7 +97,7 @@
 			"children": [
 				"icon5",
 				{
-					"state": "/drawn/text8"
+					"state": "/drawn/text6"
 				}
 			]
 		},
@@ -116,7 +112,7 @@
 			"children": [
 				"icon6",
 				{
-					"state": "/drawn/text9"
+					"state": "/drawn/text7"
 				}
 			]
 		},
@@ -137,7 +133,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text11"
+					"state": "/drawn/text9"
 				}
 			]
 		},
@@ -149,7 +145,7 @@
 			"children": [
 				"icon7",
 				{
-					"state": "/drawn/text10"
+					"state": "/drawn/text8"
 				},
 				"sidebarCount2"
 			]
@@ -167,7 +163,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text11"
 				}
 			]
 		},
@@ -176,7 +172,7 @@
 			"children": [
 				"icon8",
 				{
-					"state": "/drawn/text12"
+					"state": "/drawn/text10"
 				},
 				"sidebarCount3"
 			]
@@ -192,7 +188,7 @@
 			"children": [
 				"icon9",
 				{
-					"state": "/drawn/text14"
+					"state": "/drawn/text12"
 				}
 			]
 		},
@@ -233,7 +229,7 @@
 			"type": "SearchToggle",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text13"
 				}
 			}
 		},
@@ -244,7 +240,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text16"
+					"state": "/drawn/text14"
 				}
 			]
 		},
@@ -253,7 +249,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text17"
+						"state": "/drawn/text15"
 					}
 				],
 				"meta": []
@@ -275,13 +271,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text16"
 				},
 				"address": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text17"
 				},
 				"meta": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text18"
 				}
 			}
 		},
@@ -293,7 +289,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text21"
+					"state": "/drawn/text19"
 				}
 			]
 		},
@@ -301,10 +297,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text20"
 				},
 				"left": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -312,7 +308,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text24"
+					"state": "/drawn/text22"
 				}
 			]
 		},
@@ -337,10 +333,10 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text23"
 				},
 				"meta": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text24"
 				},
 				"folder": true
 			}
@@ -353,7 +349,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text27"
+					"state": "/drawn/text25"
 				}
 			]
 		},
@@ -361,10 +357,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text26"
 				},
 				"left": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text27"
 				}
 			}
 		},
@@ -372,7 +368,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text30"
+					"state": "/drawn/text28"
 				}
 			]
 		},
@@ -397,10 +393,10 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text29"
 				},
 				"meta": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text30"
 				},
 				"folder": true
 			}
@@ -413,7 +409,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text33"
+					"state": "/drawn/text31"
 				}
 			]
 		},
@@ -421,10 +417,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text32"
 				},
 				"left": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text33"
 				}
 			}
 		},
@@ -432,7 +428,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text36"
+					"state": "/drawn/text34"
 				}
 			]
 		},
@@ -457,10 +453,10 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text35"
 				},
 				"meta": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text36"
 				}
 			}
 		},
@@ -472,7 +468,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text39"
+					"state": "/drawn/text37"
 				}
 			]
 		},
@@ -480,10 +476,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text40"
+					"state": "/drawn/text38"
 				},
 				"left": {
-					"state": "/drawn/text41"
+					"state": "/drawn/text39"
 				}
 			}
 		},
@@ -491,7 +487,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text42"
+					"state": "/drawn/text40"
 				}
 			]
 		},
@@ -516,13 +512,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text43"
+					"state": "/drawn/text41"
 				},
 				"address": {
-					"state": "/drawn/text44"
+					"state": "/drawn/text42"
 				},
 				"meta": {
-					"state": "/drawn/text45"
+					"state": "/drawn/text43"
 				}
 			}
 		},
@@ -534,7 +530,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text46"
+					"state": "/drawn/text44"
 				}
 			]
 		},
@@ -542,10 +538,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text45"
 				},
 				"left": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text46"
 				}
 			}
 		},
@@ -553,7 +549,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text49"
+					"state": "/drawn/text47"
 				}
 			]
 		},
@@ -578,13 +574,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text50"
+					"state": "/drawn/text48"
 				},
 				"address": {
-					"state": "/drawn/text51"
+					"state": "/drawn/text49"
 				},
 				"meta": {
-					"state": "/drawn/text52"
+					"state": "/drawn/text50"
 				}
 			}
 		},
@@ -596,7 +592,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text53"
+					"state": "/drawn/text51"
 				}
 			]
 		},
@@ -604,10 +600,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text54"
+					"state": "/drawn/text52"
 				},
 				"left": {
-					"state": "/drawn/text55"
+					"state": "/drawn/text53"
 				}
 			}
 		},
@@ -615,7 +611,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text56"
+					"state": "/drawn/text54"
 				}
 			]
 		},
@@ -640,13 +636,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text57"
+					"state": "/drawn/text55"
 				},
 				"address": {
-					"state": "/drawn/text58"
+					"state": "/drawn/text56"
 				},
 				"meta": {
-					"state": "/drawn/text59"
+					"state": "/drawn/text57"
 				}
 			}
 		},
@@ -658,7 +654,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text60"
+					"state": "/drawn/text58"
 				}
 			]
 		},
@@ -666,10 +662,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text61"
+					"state": "/drawn/text59"
 				},
 				"left": {
-					"state": "/drawn/text62"
+					"state": "/drawn/text60"
 				}
 			}
 		},
@@ -677,7 +673,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text63"
+					"state": "/drawn/text61"
 				}
 			]
 		},
@@ -702,13 +698,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text64"
+					"state": "/drawn/text62"
 				},
 				"address": {
-					"state": "/drawn/text65"
+					"state": "/drawn/text63"
 				},
 				"meta": {
-					"state": "/drawn/text66"
+					"state": "/drawn/text64"
 				}
 			}
 		},
@@ -720,7 +716,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text67"
+					"state": "/drawn/text65"
 				}
 			]
 		},
@@ -728,10 +724,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text68"
+					"state": "/drawn/text66"
 				},
 				"left": {
-					"state": "/drawn/text69"
+					"state": "/drawn/text67"
 				}
 			}
 		},
@@ -739,7 +735,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text70"
+					"state": "/drawn/text68"
 				}
 			]
 		},
@@ -764,7 +760,7 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text71"
+					"state": "/drawn/text69"
 				}
 			}
 		},
@@ -776,7 +772,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text72"
+					"state": "/drawn/text70"
 				}
 			]
 		},
@@ -784,10 +780,10 @@
 			"type": "TrashDateCell",
 			"props": {
 				"date": {
-					"state": "/drawn/text73"
+					"state": "/drawn/text71"
 				},
 				"left": {
-					"state": "/drawn/text74"
+					"state": "/drawn/text72"
 				},
 				"urgent": true
 			}
@@ -796,7 +792,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text75"
+					"state": "/drawn/text73"
 				}
 			]
 		},
@@ -887,7 +883,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text76"
+					"state": "/drawn/text74"
 				}
 			}
 		}

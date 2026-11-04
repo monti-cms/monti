@@ -291,6 +291,13 @@ const parts = [
 			tone: el.matches(".mt-count--warn") ? "warning" : el.matches(".mt-count--danger") ? "danger" : undefined,
 		}),
 	},
+	// The site's name at the head of the sidebar: it takes the room the row leaves, so the fold button sits at the row's end.
+	{
+		match: (el) => el.matches(".mt-sidebar-head > .site"),
+		part: "SiteName",
+		props: (el) => ({ name: el.textContent.trim() }),
+		leaf: true,
+	},
 	{ match: (el) => el.matches(".mt-sidebar-foot"), part: "SidebarFoot" },
 	{
 		match: (el) => el.matches(".mt-sidebar-foot > .mt-seg, .mt-sidebar-foot > .mt-icon-btn"),
@@ -386,9 +393,7 @@ const parts = [
 						const box = column.closest(".mt-col-wrap") ?? column;
 						const track = tracks[shown.indexOf(box)];
 						// A column at least as wide as its name with the head cell's own padding (10px a side): a board may let a name spill past its track.
-						// A name that fills its track gets 8px to spare: the product's type sets a few px wider than a board's.
-						const tight = column.scrollWidth + 8 >= box.getBoundingClientRect().width ? 8 : 0;
-						const width = Math.max(box.getBoundingClientRect().width, column.scrollWidth + 20 - gap) + tight;
+						const width = box.getBoundingClientRect().width;
 						return {
 							id: column.textContent.trim(),
 							label: column.textContent.trim(),
@@ -534,7 +539,11 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-row > .mt-count"),
 		part: "CountCell",
-		props: (el) => ({ align: el.style.textAlign === "right" ? "end" : undefined }),
+		props: (el) => ({
+			align: el.style.textAlign === "right" ? "end" : undefined,
+			// The ink the board gives it: the row's own (a language) or the muted one (a date); otherwise a count's quiet ink.
+			tone: el.style.color === "inherit" ? "ink" : el.style.color.includes("--fg-muted") ? "muted" : undefined,
+		}),
 		asProps: ["order", "white-space", "color", "text-align"],
 	},
 	// A worded link of a row (its count, going to its entries) stands in a cell of its own, at the row's end side.
@@ -1758,6 +1767,13 @@ const parts = [
 		leaf: true,
 		asProps: ["font-size"],
 	},
+	// A round button with the assistant's ✦ (the design system's own mark, not a Carbon icon).
+	{
+		match: (el) => el.matches(".mt-icon-btn:not(.mt-icon-btn--corner):has(> svg.mt-spark)"),
+		part: "IconOnlyButton",
+		props: (el) => ({ icon: "spark", label: el.getAttribute("aria-label") }),
+		leaf: true,
+	},
 	{
 		match: (el) => el.matches(".mt-icon-btn:has(> svg)") && iconName(el.querySelector("svg")) !== undefined,
 		part: "IconOnlyButton",
@@ -1946,6 +1962,22 @@ const parts = [
 	},
 	// Its right group: the filters at the end of the line.
 	{ match: (el) => el.matches("div.mt-toolbar > .end"), part: "PageToolbarEnd" },
+	// An entry's language tabs: 6px under the bar above, its languages, then the + that adds one, on the tabs' line.
+	{
+		match: (el) => el.matches("nav.mt-tabs:has(> span > button.mt-text-btn)"),
+		part: "LanguageTabs",
+		props: (el) => ({ label: el.getAttribute("aria-label") }),
+		asProps: ["padding-top"],
+	},
+	{
+		match: (el) =>
+			el.matches(".mt-tabs > span:has(> button.mt-text-btn)") ||
+			(el.matches(".mt-tabs > button") && el.textContent.trim().startsWith("+")),
+		part: "TabAdd",
+		props: (el) => ({ label: (el.matches("button") ? el : el.querySelector("button")).textContent.trim() }),
+		leaf: true,
+		asProps: ["position", "display"],
+	},
 	{
 		match: (el) => el.matches(".mt-tabs"),
 		part: "TabLinks",
@@ -2098,6 +2130,8 @@ const parts = [
 		part: "TextButton",
 		props: (el) => ({
 			variant: ["danger", "ink", "underline", "quiet"].find((name) => el.classList.contains(`mt-text-btn--${name}`)),
+			// The type a board gives it by its role class (a row's "대화", a title's "모두 허용").
+			size: el.classList.contains("text-note") ? "note" : el.classList.contains("text-caption") ? "caption" : undefined,
 		}),
 		// A text button with an icon lines it up itself.
 		asProps: ["display", "align-items", "gap", "text-decoration"],

@@ -2,24 +2,20 @@
 	"root": "stack",
 	"overlays": ["sheet", "assistantCorner"],
 	"elements": {
-		"text": {
-			"type": "Text",
+		"siteName": {
+			"type": "SiteName",
 			"props": {
-				"as": "span",
-				"variant": "title"
-			},
-			"children": [
-				{
-					"state": "/drawn/text2"
+				"name": {
+					"state": "/drawn/name"
 				}
-			]
+			}
 		},
 		"sidebarRailToggle": {
 			"type": "SidebarRailToggle"
 		},
 		"sidebarHeader": {
 			"type": "SidebarHeader",
-			"children": ["text", "sidebarRailToggle"]
+			"children": ["siteName", "sidebarRailToggle"]
 		},
 		"icon": {
 			"type": "Icon",
@@ -31,7 +27,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text4"
+					"state": "/drawn/text2"
 				}
 			]
 		},
@@ -40,7 +36,7 @@
 			"children": [
 				"icon",
 				{
-					"state": "/drawn/text3"
+					"state": "/drawn/text"
 				},
 				"sidebarCount"
 			]
@@ -56,7 +52,7 @@
 			"children": [
 				"icon2",
 				{
-					"state": "/drawn/text5"
+					"state": "/drawn/text3"
 				}
 			]
 		},
@@ -71,7 +67,7 @@
 			"children": [
 				"icon3",
 				{
-					"state": "/drawn/text6"
+					"state": "/drawn/text4"
 				}
 			]
 		},
@@ -86,7 +82,7 @@
 			"children": [
 				"icon4",
 				{
-					"state": "/drawn/text7"
+					"state": "/drawn/text5"
 				}
 			]
 		},
@@ -101,7 +97,7 @@
 			"children": [
 				"icon5",
 				{
-					"state": "/drawn/text8"
+					"state": "/drawn/text6"
 				}
 			]
 		},
@@ -116,7 +112,7 @@
 			"children": [
 				"icon6",
 				{
-					"state": "/drawn/text9"
+					"state": "/drawn/text7"
 				}
 			]
 		},
@@ -137,7 +133,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text11"
+					"state": "/drawn/text9"
 				}
 			]
 		},
@@ -146,7 +142,7 @@
 			"children": [
 				"icon7",
 				{
-					"state": "/drawn/text10"
+					"state": "/drawn/text8"
 				},
 				"sidebarCount2"
 			]
@@ -164,7 +160,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text11"
 				}
 			]
 		},
@@ -173,7 +169,7 @@
 			"children": [
 				"icon8",
 				{
-					"state": "/drawn/text12"
+					"state": "/drawn/text10"
 				},
 				"sidebarCount3"
 			]
@@ -192,7 +188,7 @@
 			"children": [
 				"icon9",
 				{
-					"state": "/drawn/text14"
+					"state": "/drawn/text12"
 				}
 			]
 		},
@@ -233,16 +229,16 @@
 			"type": "SaveGroup",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text13"
 				},
 				"count": {
 					"state": "/drawn/count"
 				},
 				"discardLabel": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text14"
 				},
 				"saveLabel": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text15"
 				}
 			}
 		},
@@ -251,7 +247,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text18"
+						"state": "/drawn/text16"
 					}
 				]
 			},
@@ -261,7 +257,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text17"
 				}
 			}
 		},
@@ -269,7 +265,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text18"
 				}
 			}
 		},
@@ -277,7 +273,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text19"
 				},
 				"current": true
 			}
@@ -286,7 +282,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -305,7 +301,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -313,11 +309,11 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text22"
 				},
 				"current": true,
 				"count": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text23"
 				}
 			}
 		},
@@ -325,7 +321,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text24"
 				}
 			}
 		},
@@ -340,7 +336,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text27"
+					"state": "/drawn/text25"
 				}
 			]
 		},
@@ -356,10 +352,10 @@
 			"type": "FolderTabItem",
 			"props": {
 				"label": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text27"
 				},
 				"count": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text28"
 				}
 			}
 		},
@@ -367,10 +363,10 @@
 			"type": "FolderTabItem",
 			"props": {
 				"label": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text29"
 				},
 				"count": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text30"
 				},
 				"locked": true
 			}
@@ -379,7 +375,7 @@
 			"type": "FolderTabRow",
 			"props": {
 				"add": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text26"
 				}
 			},
 			"children": ["folderTabItem", "folderTabItem2"]
@@ -388,16 +384,16 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text31"
 				},
 				"label": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text32"
 				},
 				"note": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text33"
 				},
 				"kind": {
-					"state": "/drawn/text36"
+					"state": "/drawn/text34"
 				}
 			}
 		},
@@ -405,13 +401,13 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text35"
 				},
 				"label": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text36"
 				},
 				"kind": {
-					"state": "/drawn/text39"
+					"state": "/drawn/text37"
 				}
 			}
 		},
@@ -419,16 +415,16 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text40"
+					"state": "/drawn/text38"
 				},
 				"label": {
-					"state": "/drawn/text41"
+					"state": "/drawn/text39"
 				},
 				"note": {
-					"state": "/drawn/text42"
+					"state": "/drawn/text40"
 				},
 				"kind": {
-					"state": "/drawn/text43"
+					"state": "/drawn/text41"
 				},
 				"tone": "warning"
 			}
@@ -437,16 +433,16 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text44"
+					"state": "/drawn/text42"
 				},
 				"label": {
-					"state": "/drawn/text45"
+					"state": "/drawn/text43"
 				},
 				"note": {
-					"state": "/drawn/text46"
+					"state": "/drawn/text44"
 				},
 				"kind": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text45"
 				},
 				"tone": "faint"
 			}
@@ -455,16 +451,16 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text46"
 				},
 				"label": {
-					"state": "/drawn/text49"
+					"state": "/drawn/text47"
 				},
 				"note": {
-					"state": "/drawn/text50"
+					"state": "/drawn/text48"
 				},
 				"kind": {
-					"state": "/drawn/text51"
+					"state": "/drawn/text49"
 				},
 				"tone": "success"
 			}
@@ -473,16 +469,16 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text52"
+					"state": "/drawn/text50"
 				},
 				"label": {
-					"state": "/drawn/text53"
+					"state": "/drawn/text51"
 				},
 				"description": {
-					"state": "/drawn/text54"
+					"state": "/drawn/text52"
 				},
 				"kind": {
-					"state": "/drawn/text55"
+					"state": "/drawn/text53"
 				}
 			}
 		},
@@ -490,7 +486,7 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text56"
+					"state": "/drawn/text54"
 				},
 				"group": true
 			}
@@ -499,13 +495,13 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text57"
+					"state": "/drawn/text55"
 				},
 				"label": {
-					"state": "/drawn/text58"
+					"state": "/drawn/text56"
 				},
 				"kind": {
-					"state": "/drawn/text59"
+					"state": "/drawn/text57"
 				},
 				"depth": 1
 			}
@@ -514,13 +510,13 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text60"
+					"state": "/drawn/text58"
 				},
 				"label": {
-					"state": "/drawn/text61"
+					"state": "/drawn/text59"
 				},
 				"kind": {
-					"state": "/drawn/text62"
+					"state": "/drawn/text60"
 				},
 				"depth": 1
 			}
@@ -529,13 +525,13 @@
 			"type": "FieldLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text63"
+					"state": "/drawn/text61"
 				},
 				"label": {
-					"state": "/drawn/text64"
+					"state": "/drawn/text62"
 				},
 				"kind": {
-					"state": "/drawn/text65"
+					"state": "/drawn/text63"
 				},
 				"depth": 1
 			}
@@ -567,7 +563,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text66"
+					"state": "/drawn/text64"
 				}
 			]
 		},
@@ -578,7 +574,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text67"
+					"state": "/drawn/text65"
 				}
 			]
 		},
@@ -596,7 +592,7 @@
 				"textButton3"
 			]
 		},
-		"text68": {
+		"text66": {
 			"type": "Text",
 			"props": {
 				"as": "p",
@@ -605,7 +601,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text69"
+					"state": "/drawn/text67"
 				}
 			]
 		},
@@ -625,25 +621,36 @@
 				{
 					"spacing": 12
 				},
-				"text68"
+				"text66"
 			]
 		},
 		"navEntry": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
-					"state": "/drawn/text70"
+					"state": "/drawn/text68"
 				},
 				"note": {
-					"state": "/drawn/text71"
+					"state": "/drawn/text69"
 				},
 				"active": true,
 				"dot": {
-					"state": "/drawn/text72"
+					"state": "/drawn/text70"
 				}
 			}
 		},
 		"navEntry2": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text71"
+				},
+				"note": {
+					"state": "/drawn/text72"
+				}
+			}
+		},
+		"navEntry3": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
@@ -654,7 +661,7 @@
 				}
 			}
 		},
-		"navEntry3": {
+		"navEntry4": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
@@ -665,7 +672,7 @@
 				}
 			}
 		},
-		"navEntry4": {
+		"navEntry5": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
@@ -676,22 +683,11 @@
 				}
 			}
 		},
-		"navEntry5": {
-			"type": "NavEntry",
-			"props": {
-				"label": {
-					"state": "/drawn/text79"
-				},
-				"note": {
-					"state": "/drawn/text80"
-				}
-			}
-		},
 		"railAdd": {
 			"type": "RailAdd",
 			"props": {
 				"label": {
-					"state": "/drawn/text81"
+					"state": "/drawn/text79"
 				}
 			}
 		},
@@ -771,10 +767,10 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text89"
+					"state": "/drawn/text87"
 				},
 				"hint": {
-					"state": "/drawn/text90"
+					"state": "/drawn/text88"
 				}
 			}
 		},
@@ -782,7 +778,7 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text91"
+					"state": "/drawn/text89"
 				}
 			}
 		},
@@ -790,10 +786,10 @@
 			"type": "Choices",
 			"props": {
 				"label": {
-					"state": "/drawn/text87"
+					"state": "/drawn/text85"
 				},
 				"picked": {
-					"state": "/drawn/text88"
+					"state": "/drawn/text86"
 				}
 			},
 			"children": ["choice", "choice2"]
@@ -803,13 +799,13 @@
 			"props": {
 				"kind": "edit",
 				"tag": {
-					"state": "/drawn/text84"
+					"state": "/drawn/text82"
 				},
 				"title": {
-					"state": "/drawn/text85"
+					"state": "/drawn/text83"
 				},
 				"identifier": {
-					"state": "/drawn/text86"
+					"state": "/drawn/text84"
 				}
 			},
 			"children": ["choices"]
@@ -818,10 +814,10 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text97"
+					"state": "/drawn/text95"
 				},
 				"hint": {
-					"state": "/drawn/text98"
+					"state": "/drawn/text96"
 				}
 			}
 		},
@@ -829,7 +825,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text100"
+					"state": "/drawn/text98"
 				},
 				"width": "choice"
 			}
@@ -838,7 +834,7 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text99"
+					"state": "/drawn/text97"
 				}
 			},
 			"slots": {
@@ -849,7 +845,7 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text101"
+					"state": "/drawn/text99"
 				}
 			}
 		},
@@ -857,10 +853,10 @@
 			"type": "Choices",
 			"props": {
 				"label": {
-					"state": "/drawn/text95"
+					"state": "/drawn/text93"
 				},
 				"picked": {
-					"state": "/drawn/text96"
+					"state": "/drawn/text94"
 				}
 			},
 			"children": ["choice3", "choice4", "choice5"]
@@ -869,7 +865,7 @@
 			"type": "ChangeResult",
 			"props": {
 				"text": {
-					"state": "/drawn/text102"
+					"state": "/drawn/text100"
 				}
 			}
 		},
@@ -878,13 +874,13 @@
 			"props": {
 				"kind": "drop",
 				"tag": {
-					"state": "/drawn/text92"
+					"state": "/drawn/text90"
 				},
 				"title": {
-					"state": "/drawn/text93"
+					"state": "/drawn/text91"
 				},
 				"identifier": {
-					"state": "/drawn/text94"
+					"state": "/drawn/text92"
 				}
 			},
 			"children": ["choices2", "changeResult"]
@@ -893,7 +889,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text109"
+					"state": "/drawn/text107"
 				},
 				"width": "choice"
 			}
@@ -902,7 +898,7 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text108"
+					"state": "/drawn/text106"
 				}
 			},
 			"slots": {
@@ -913,7 +909,7 @@
 			"type": "Choice",
 			"props": {
 				"label": {
-					"state": "/drawn/text110"
+					"state": "/drawn/text108"
 				}
 			}
 		},
@@ -921,10 +917,10 @@
 			"type": "Choices",
 			"props": {
 				"label": {
-					"state": "/drawn/text106"
+					"state": "/drawn/text104"
 				},
 				"picked": {
-					"state": "/drawn/text107"
+					"state": "/drawn/text105"
 				}
 			},
 			"children": ["choice6", "choice7"]
@@ -933,7 +929,7 @@
 			"type": "ChangeResult",
 			"props": {
 				"text": {
-					"state": "/drawn/text111"
+					"state": "/drawn/text109"
 				}
 			}
 		},
@@ -942,13 +938,13 @@
 			"props": {
 				"kind": "new",
 				"tag": {
-					"state": "/drawn/text103"
+					"state": "/drawn/text101"
 				},
 				"title": {
-					"state": "/drawn/text104"
+					"state": "/drawn/text102"
 				},
 				"identifier": {
-					"state": "/drawn/text105"
+					"state": "/drawn/text103"
 				}
 			},
 			"children": ["choices3", "changeResult2"]
@@ -960,7 +956,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text114"
+					"state": "/drawn/text112"
 				}
 			]
 		},
@@ -971,11 +967,11 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text116"
+					"state": "/drawn/text114"
 				}
 			]
 		},
-		"text112": {
+		"text110": {
 			"type": "Text",
 			"props": {
 				"as": "p",
@@ -984,15 +980,15 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text113"
+					"state": "/drawn/text111"
 				},
 				"textButton4",
 				{
-					"state": "/drawn/text115"
+					"state": "/drawn/text113"
 				},
 				"textButton5",
 				{
-					"state": "/drawn/text117"
+					"state": "/drawn/text115"
 				}
 			]
 		},
@@ -1005,7 +1001,7 @@
 				{
 					"spacing": 12
 				},
-				"text112"
+				"text110"
 			]
 		},
 		"sheetBody": {
@@ -1027,7 +1023,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text118"
+					"state": "/drawn/text116"
 				}
 			]
 		},
@@ -1038,7 +1034,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text119"
+					"state": "/drawn/text117"
 				}
 			]
 		},
@@ -1046,10 +1042,10 @@
 			"type": "Sheet",
 			"props": {
 				"title": {
-					"state": "/drawn/text82"
+					"state": "/drawn/text80"
 				},
 				"of": {
-					"state": "/drawn/text83"
+					"state": "/drawn/text81"
 				}
 			},
 			"slots": {
@@ -1061,7 +1057,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text120"
+					"state": "/drawn/text118"
 				}
 			}
 		}

@@ -99,33 +99,35 @@
 		"verticalRule": {
 			"type": "VerticalRule"
 		},
-		"icon2": {
-			"type": "Icon",
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
 			"props": {
-				"name": "spark"
+				"icon": "spark",
+				"label": {
+					"state": "/drawn/text11"
+				}
 			}
-		},
-		"stack3": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"align": "center",
-				"justify": "center"
-			},
-			"children": ["icon2"]
 		},
 		"editorTopBar": {
 			"type": "EditorTopBar",
 			"slots": {
 				"start": ["textButton", "text2", "entryStatus"],
-				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "moreButton", "verticalRule", "stack3"]
+				"end": [
+					"textButton2",
+					"button",
+					"publishButton",
+					"iconOnlyButton",
+					"moreButton",
+					"verticalRule",
+					"iconOnlyButton2"
+				]
 			}
 		},
 		"tab": {
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text11"
+					"state": "/drawn/text12"
 				}
 			}
 		},
@@ -133,22 +135,24 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text12"
+					"state": "/drawn/text13"
 				},
 				"current": true
 			}
 		},
+		"tabAdd": {
+			"type": "TabAdd",
+			"props": {
+				"label": {
+					"state": "/drawn/text14"
+				}
+			}
+		},
 		"paneTabs": {
 			"type": "PaneTabs",
-			"children": [
-				"tab",
-				"tab2",
-				{
-					"state": "/drawn/text13"
-				}
-			]
+			"children": ["tab", "tab2", "tabAdd"]
 		},
-		"stack5": {
+		"stack4": {
 			"type": "Stack",
 			"props": {
 				"grow": true,
@@ -156,7 +160,7 @@
 			},
 			"children": ["paneTabs"]
 		},
-		"text14": {
+		"text15": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -165,7 +169,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text16"
 				}
 			]
 		},
@@ -173,13 +177,13 @@
 			"type": "SegmentedChoice",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text17"
 				},
 				"options": {
 					"state": "/drawn/options"
 				},
 				"picked": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text18"
 				},
 				"size": "sm",
 				"inline": true
@@ -187,24 +191,24 @@
 		},
 		"paneLine": {
 			"type": "PaneLine",
-			"children": ["text14", "segmentedChoice"]
+			"children": ["text15", "segmentedChoice"]
 		},
-		"stack4": {
+		"stack3": {
 			"type": "Stack",
 			"props": {
 				"direction": "row"
 			},
-			"children": ["stack5", "paneLine"]
+			"children": ["stack4", "paneLine"]
 		},
 		"pairRow": {
 			"type": "PairRow",
 			"props": {
 				"kind": "head",
 				"sourceLabel": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text19"
 				},
 				"translationLabel": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -213,7 +217,7 @@
 			"props": {
 				"kind": "title",
 				"name": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text21"
 				},
 				"source": {
 					"state": "/drawn/source"
@@ -227,7 +231,7 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text22"
 				},
 				"source": {
 					"state": "/drawn/source2"
@@ -241,10 +245,10 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text23"
 				},
 				"note": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text24"
 				},
 				"current": true,
 				"source": {
@@ -259,10 +263,10 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text25"
 				},
 				"sub": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text26"
 				},
 				"source": {
 					"state": "/drawn/source4"
@@ -276,10 +280,10 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text27"
 				},
 				"sub": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text28"
 				},
 				"source": {
 					"state": "/drawn/source5"
@@ -293,10 +297,10 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text29"
 				},
 				"sub": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text30"
 				},
 				"source": {
 					"state": "/drawn/source6"
@@ -306,7 +310,7 @@
 				},
 				"shared": true,
 				"sharedAction": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text31"
 				}
 			}
 		},
@@ -314,7 +318,7 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text32"
 				},
 				"source": {
 					"state": "/drawn/source7"
@@ -328,7 +332,7 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text33"
 				},
 				"source": {
 					"state": "/drawn/source8"
@@ -342,10 +346,10 @@
 			"type": "PairRow",
 			"props": {
 				"name": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text34"
 				},
 				"note": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text35"
 				},
 				"source": {
 					"state": "/drawn/source9"
@@ -370,14 +374,14 @@
 				"pairRow10"
 			]
 		},
-		"stack8": {
+		"stack7": {
 			"type": "Stack",
 			"props": {
 				"maxWidth": 1180
 			},
 			"children": ["pairRows"]
 		},
-		"stack7": {
+		"stack6": {
 			"type": "Stack",
 			"props": {
 				"align": "center",
@@ -387,13 +391,13 @@
 				{
 					"spacing": 24
 				},
-				"stack8",
+				"stack7",
 				{
 					"spacing": 48
 				}
 			]
 		},
-		"stack6": {
+		"stack5": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
@@ -403,7 +407,7 @@
 				{
 					"spacing": 40
 				},
-				"stack7",
+				"stack6",
 				{
 					"spacing": 40
 				}
@@ -413,7 +417,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text36"
 				}
 			}
 		},
@@ -424,7 +428,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text36"
+					"state": "/drawn/text37"
 				},
 				"end": true
 			}
@@ -439,7 +443,7 @@
 				"grow": true,
 				"minWidth": 0
 			},
-			"children": ["editorTopBar", "stack4", "stack6", "editorStatusBar"]
+			"children": ["editorTopBar", "stack3", "stack5", "editorStatusBar"]
 		},
 		"stack": {
 			"type": "Stack",

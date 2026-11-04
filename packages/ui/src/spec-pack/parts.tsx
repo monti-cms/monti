@@ -431,7 +431,11 @@ function EmptyStep({ number, title, className }: { number?: string; title?: stri
  */
 function List({ children }: { children?: React.ReactNode }) {
 	return (
-		<Table container="none" className="has-[th[style*=width]]:table-fixed">
+		// A column's name may run past its width into the gap, as the board lets it, rather than be cut.
+		<Table
+			container="none"
+			className="has-[th[style*=width]]:table-fixed [&_th_.truncate]:overflow-visible [&_th_.truncate]:text-clip"
+		>
 			{children}
 		</Table>
 	);
@@ -454,10 +458,25 @@ function TitleCell({ title, address, folder }: { title?: string; address?: strin
 }
 
 /** A cell of a count, a language's or a date's: mono and quiet. */
-function CountCell({ align, children }: { align?: "start" | "end"; children?: React.ReactNode }) {
+function CountCell({
+	align,
+	tone,
+	children,
+}: {
+	align?: "start" | "end";
+	/** `ink` in the row's own ink (a language), `muted` in the muted one (a date); without it a count's quiet ink. */
+	tone?: "ink" | "muted";
+	children?: React.ReactNode;
+}) {
 	return (
 		<TableCell align={align}>
-			<Count>{children}</Count>
+			{tone ? (
+				<Text mono variant="meta" tone={tone === "muted" ? "muted" : undefined}>
+					{children}
+				</Text>
+			) : (
+				<Count>{children}</Count>
+			)}
 		</TableCell>
 	);
 }
@@ -611,6 +630,36 @@ function MoreButton({ label, letter }: { label?: string; letter?: boolean }) {
 			<Icon name="overflow-menu--horizontal" />
 		</IconButton>
 	);
+}
+
+/** Words a row holds beside a part (a title before its note), in the type of what holds them. */
+function Words({ children }: { children?: React.ReactNode }) {
+	return <span>{children}</span>;
+}
+
+/** The site's name at the head of the sidebar, in a box that takes the room the row leaves (cut with an ellipsis when long). */
+function SiteName({ name }: { name?: string }) {
+	return (
+		<BoxPart grow minWidth={0}>
+			<Text variant="title" truncate>
+				{name}
+			</Text>
+		</BoxPart>
+	);
+}
+
+/** An entry's language tabs, 6px under the bar above them, as the editor draws them; `label` names them. */
+function LanguageTabs({ label, children }: { label?: string; children?: React.ReactNode }) {
+	return (
+		<BoxPart as="nav" aria-label={label} paddingTop={6}>
+			<TabLinks>{children}</TabLinks>
+		</BoxPart>
+	);
+}
+
+/** The + at the end of a tab row that adds one ("+ 언어"): a tab's own look, as a button. */
+function TabAdd({ label }: { label?: string }) {
+	return <TabLink render={<button type="button" />}>{label}</TabLink>;
 }
 
 /** One tab of a page's tab row: a page of its own, with its count. */
@@ -2674,7 +2723,7 @@ function SectionHead({ children }: { children?: React.ReactNode }) {
 	return <>{children}</>;
 }
 
-export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack", words: "Text" };
+export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack", words: "Words" };
 
 /**
  * The parts a screen spec can name, by the name it uses. `pnpm gen:screen-catalog` reads their prop types into `catalog.generated.json`, which
@@ -2789,6 +2838,10 @@ export const parts = {
 	PageToolbar,
 	PageToolbarEnd,
 	TabLinks,
+	LanguageTabs,
+	SiteName,
+	Words,
+	TabAdd,
 	Tab,
 	List,
 	TitleCell,
@@ -3178,7 +3231,7 @@ export const CATALOG = {
 	Tab: { kind: "part", props: { label: "text", current: "flag", count: "text", countTone: "variant", dot: "variant" } },
 	List: { kind: "part", props: {} },
 	TitleCell: { kind: "part", props: { title: "text", address: "text", folder: "flag" } },
-	CountCell: { kind: "part", props: { align: "variant" } },
+	CountCell: { kind: "part", props: { align: "variant", tone: "variant" } },
 	ActionsCell: { kind: "part", props: { label: "text" } },
 	RowMark: { kind: "part", props: { checked: "flag", label: "text" } },
 	PageSize: { kind: "part", props: { shown: "text", label: "text" } },
@@ -3241,6 +3294,10 @@ export const CATALOG = {
 	PageColumn: { kind: "part", props: { width: "variant" } },
 	PageHeader: { kind: "part", props: {} },
 	TextButton: { kind: "part", props: { variant: "variant", size: "variant", tone: "variant" } },
+	LanguageTabs: { kind: "part", props: { label: "text" } },
+	SiteName: { kind: "part", props: { name: "state" } },
+	Words: { kind: "part", props: {} },
+	TabAdd: { kind: "part", props: { label: "text" } },
 	ListHead: {
 		kind: "part",
 		props: {

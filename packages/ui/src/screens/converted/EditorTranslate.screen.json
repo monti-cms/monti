@@ -106,26 +106,20 @@
 		"verticalRule": {
 			"type": "VerticalRule"
 		},
-		"icon2": {
-			"type": "Icon",
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
 			"props": {
-				"name": "spark"
+				"icon": "spark",
+				"label": {
+					"state": "/drawn/text11"
+				}
 			}
-		},
-		"stack4": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"align": "center",
-				"justify": "center"
-			},
-			"children": ["icon2"]
 		},
 		"editorTopBar": {
 			"type": "EditorTopBar",
 			"slots": {
 				"start": ["textButton", "text2", "entryStatus"],
-				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "stack3", "verticalRule", "stack4"]
+				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "stack3", "verticalRule", "iconOnlyButton2"]
 			}
 		},
 		"editorBody": {
@@ -141,7 +135,7 @@
 			"type": "SourceColumn",
 			"props": {
 				"label": {
-					"state": "/drawn/text11"
+					"state": "/drawn/text12"
 				},
 				"title": {
 					"state": "/drawn/title"
@@ -149,7 +143,7 @@
 			},
 			"children": ["editorBody"]
 		},
-		"stack6": {
+		"stack5": {
 			"type": "Stack",
 			"props": {
 				"grow": true,
@@ -161,7 +155,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text12"
+					"state": "/drawn/text13"
 				}
 			}
 		},
@@ -169,22 +163,24 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text13"
+					"state": "/drawn/text14"
 				},
 				"current": true
 			}
 		},
+		"tabAdd": {
+			"type": "TabAdd",
+			"props": {
+				"label": {
+					"state": "/drawn/text15"
+				}
+			}
+		},
 		"tabLinks": {
 			"type": "TabLinks",
-			"children": [
-				"tab",
-				"tab2",
-				{
-					"state": "/drawn/text14"
-				}
-			]
+			"children": ["tab", "tab2", "tabAdd"]
 		},
-		"stack10": {
+		"stack9": {
 			"type": "Stack",
 			"props": {
 				"grow": true,
@@ -192,7 +188,7 @@
 			},
 			"children": ["tabLinks"]
 		},
-		"icon3": {
+		"icon2": {
 			"type": "Icon",
 			"props": {
 				"name": "spark"
@@ -204,23 +200,23 @@
 				"tone": "proposal"
 			},
 			"children": [
-				"icon3",
+				"icon2",
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text16"
 				}
 			]
 		},
 		"verticalRule2": {
 			"type": "VerticalRule"
 		},
-		"text16": {
+		"text17": {
 			"type": "Text",
 			"props": {
 				"variant": "note"
 			},
 			"children": [
 				{
-					"state": "/drawn/text17"
+					"state": "/drawn/text18"
 				}
 			]
 		},
@@ -228,13 +224,13 @@
 			"type": "SegmentedChoice",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text19"
 				},
 				"options": {
 					"state": "/drawn/options"
 				},
 				"picked": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text20"
 				},
 				"size": "sm",
 				"inline": true
@@ -243,15 +239,15 @@
 		"languageBar": {
 			"type": "LanguageBar",
 			"slots": {
-				"tabs": ["stack10"],
-				"action": ["textButton3", "verticalRule2", "text16", "segmentedChoice"]
+				"tabs": ["stack9"],
+				"action": ["textButton3", "verticalRule2", "text17", "segmentedChoice"]
 			}
 		},
 		"entryTitle": {
 			"type": "EntryTitle",
 			"props": {
 				"text": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text21"
 				},
 				"untranslated": true
 			}
@@ -267,7 +263,7 @@
 				}
 			}
 		},
-		"stack9": {
+		"stack8": {
 			"type": "Stack",
 			"props": {
 				"maxWidth": 680
@@ -288,7 +284,7 @@
 				"editorBody2"
 			]
 		},
-		"stack8": {
+		"stack7": {
 			"type": "Stack",
 			"props": {
 				"align": "center",
@@ -298,13 +294,13 @@
 				{
 					"spacing": 16
 				},
-				"stack9",
+				"stack8",
 				{
 					"spacing": 48
 				}
 			]
 		},
-		"stack7": {
+		"stack6": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
@@ -315,31 +311,31 @@
 				{
 					"spacing": 48
 				},
-				"stack8",
+				"stack7",
 				{
 					"spacing": 48
 				}
 			]
 		},
-		"stack5": {
+		"stack4": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
 				"grow": true
 			},
 			"children": [
-				"stack6",
+				"stack5",
 				{
 					"spacing": 40
 				},
-				"stack7"
+				"stack6"
 			]
 		},
 		"statusCell": {
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text22"
 				}
 			}
 		},
@@ -347,7 +343,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text23"
 				},
 				"tone": "warning"
 			}
@@ -359,7 +355,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text24"
 				},
 				"end": true
 			}
@@ -374,7 +370,7 @@
 				"grow": true,
 				"minWidth": 0
 			},
-			"children": ["editorTopBar", "stack5", "editorStatusBar"]
+			"children": ["editorTopBar", "stack4", "editorStatusBar"]
 		},
 		"stack": {
 			"type": "Stack",

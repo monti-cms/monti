@@ -2,24 +2,20 @@
 	"root": "stack",
 	"overlays": ["assistantCorner"],
 	"elements": {
-		"text": {
-			"type": "Text",
+		"siteName": {
+			"type": "SiteName",
 			"props": {
-				"as": "span",
-				"variant": "title"
-			},
-			"children": [
-				{
-					"state": "/drawn/text2"
+				"name": {
+					"state": "/drawn/name"
 				}
-			]
+			}
 		},
 		"sidebarRailToggle": {
 			"type": "SidebarRailToggle"
 		},
 		"sidebarHeader": {
 			"type": "SidebarHeader",
-			"children": ["text", "sidebarRailToggle"]
+			"children": ["siteName", "sidebarRailToggle"]
 		},
 		"icon": {
 			"type": "Icon",
@@ -31,7 +27,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text4"
+					"state": "/drawn/text2"
 				}
 			]
 		},
@@ -40,7 +36,7 @@
 			"children": [
 				"icon",
 				{
-					"state": "/drawn/text3"
+					"state": "/drawn/text"
 				},
 				"sidebarCount"
 			]
@@ -56,7 +52,7 @@
 			"children": [
 				"icon2",
 				{
-					"state": "/drawn/text5"
+					"state": "/drawn/text3"
 				}
 			]
 		},
@@ -71,7 +67,7 @@
 			"children": [
 				"icon3",
 				{
-					"state": "/drawn/text6"
+					"state": "/drawn/text4"
 				}
 			]
 		},
@@ -86,7 +82,7 @@
 			"children": [
 				"icon4",
 				{
-					"state": "/drawn/text7"
+					"state": "/drawn/text5"
 				}
 			]
 		},
@@ -101,7 +97,7 @@
 			"children": [
 				"icon5",
 				{
-					"state": "/drawn/text8"
+					"state": "/drawn/text6"
 				}
 			]
 		},
@@ -116,7 +112,7 @@
 			"children": [
 				"icon6",
 				{
-					"state": "/drawn/text9"
+					"state": "/drawn/text7"
 				}
 			]
 		},
@@ -137,7 +133,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text11"
+					"state": "/drawn/text9"
 				}
 			]
 		},
@@ -146,7 +142,7 @@
 			"children": [
 				"icon7",
 				{
-					"state": "/drawn/text10"
+					"state": "/drawn/text8"
 				},
 				"sidebarCount2"
 			]
@@ -164,7 +160,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text11"
 				}
 			]
 		},
@@ -176,7 +172,7 @@
 			"children": [
 				"icon8",
 				{
-					"state": "/drawn/text12"
+					"state": "/drawn/text10"
 				},
 				"sidebarCount3"
 			]
@@ -192,7 +188,7 @@
 			"children": [
 				"icon9",
 				{
-					"state": "/drawn/text14"
+					"state": "/drawn/text12"
 				}
 			]
 		},
@@ -236,7 +232,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text13"
 				}
 			]
 		},
@@ -245,7 +241,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text16"
+						"state": "/drawn/text14"
 					}
 				]
 			},
@@ -255,11 +251,11 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text15"
 				},
 				"current": true,
 				"count": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text16"
 				}
 			}
 		},
@@ -267,7 +263,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text17"
 				}
 			}
 		},
@@ -275,10 +271,10 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text18"
 				},
 				"count": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text19"
 				},
 				"countTone": "warning"
 			}
@@ -287,7 +283,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -309,10 +305,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text21"
 				},
 				"note": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text22"
 				}
 			}
 		},
@@ -320,7 +316,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text25"
+					"state": "/drawn/text23"
 				}
 			]
 		},
@@ -338,10 +334,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text24"
 				},
 				"note": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text25"
 				}
 			}
 		},
@@ -349,7 +345,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text28"
+					"state": "/drawn/text26"
 				}
 			]
 		},
@@ -367,10 +363,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text27"
 				},
 				"note": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text28"
 				}
 			}
 		},
@@ -378,7 +374,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text31"
+					"state": "/drawn/text29"
 				}
 			]
 		},
@@ -448,7 +444,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text30"
 				}
 			}
 		}

@@ -194,7 +194,7 @@ function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
  * the row (20px) and lets its button stand out above and below, so the ⋯ does not make the row taller than its text.
  */
 /**
- * A row's ⋯: the letter, not a round button, in the row's own 20px line at the end of the row (`.mt-row > .mt-text-btn`). `label` is the screen reader
+ * A row's ⋯: the letter at 16px, not a round button, in the row's own 20px line at the end of the row (`.mt-row > .mt-text-btn`). `label` is the screen reader
  * name and the tooltip. To make it the trigger of a menu, wrap it with `trigger`: `trigger={(button) => <DropdownMenuTrigger render={button} />}`.
  */
 function RowMore({
@@ -213,7 +213,7 @@ function RowMore({
 			type={type}
 			aria-label={label}
 			className={cn(
-				"inline-flex h-5 cursor-pointer items-center border-0 bg-transparent p-0 text-monti-muted text-monti-reading outline-none transition-colors hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default",
+				"inline-flex h-5 cursor-pointer items-center border-0 bg-transparent p-0 font-normal text-monti-muted text-monti-title outline-none transition-colors hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default",
 				className,
 			)}
 			{...props}

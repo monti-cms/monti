@@ -47,26 +47,20 @@
 		"verticalRule": {
 			"type": "VerticalRule"
 		},
-		"icon2": {
-			"type": "Icon",
+		"iconOnlyButton": {
+			"type": "IconOnlyButton",
 			"props": {
-				"name": "spark"
+				"icon": "spark",
+				"label": {
+					"state": "/drawn/text4"
+				}
 			}
-		},
-		"stack2": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"align": "center",
-				"justify": "center"
-			},
-			"children": ["icon2"]
 		},
 		"editorTopBar": {
 			"type": "EditorTopBar",
 			"slots": {
 				"start": ["textButton", "entryStatus"],
-				"end": ["button", "moreButton", "verticalRule", "stack2"]
+				"end": ["button", "moreButton", "verticalRule", "iconOnlyButton"]
 			}
 		},
 		"titleInput": {
@@ -76,10 +70,10 @@
 					"state": "/drawn/value"
 				},
 				"placeholder": {
-					"state": "/drawn/text4"
+					"state": "/drawn/text5"
 				},
 				"label": {
-					"state": "/drawn/text5"
+					"state": "/drawn/text6"
 				}
 			}
 		},
@@ -97,7 +91,7 @@
 				}
 			}
 		},
-		"stack5": {
+		"stack4": {
 			"type": "Stack",
 			"props": {
 				"maxWidth": 680
@@ -114,7 +108,7 @@
 				"editorBody"
 			]
 		},
-		"stack4": {
+		"stack3": {
 			"type": "Stack",
 			"props": {
 				"align": "center",
@@ -124,13 +118,13 @@
 				{
 					"spacing": 32
 				},
-				"stack5",
+				"stack4",
 				{
 					"spacing": 48
 				}
 			]
 		},
-		"stack3": {
+		"stack2": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
@@ -140,7 +134,7 @@
 				{
 					"spacing": 48
 				},
-				"stack4",
+				"stack3",
 				{
 					"spacing": 48
 				}
@@ -153,7 +147,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text6"
+					"state": "/drawn/text7"
 				},
 				"end": true
 			}
@@ -167,7 +161,7 @@
 			"props": {
 				"minHeight": "screen"
 			},
-			"children": ["editorTopBar", "stack3", "editorStatusBar"]
+			"children": ["editorTopBar", "stack2", "editorStatusBar"]
 		}
 	}
 }

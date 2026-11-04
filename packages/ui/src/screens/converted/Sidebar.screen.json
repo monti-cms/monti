@@ -1,24 +1,20 @@
 {
 	"root": "stack",
 	"elements": {
-		"text": {
-			"type": "Text",
+		"siteName": {
+			"type": "SiteName",
 			"props": {
-				"as": "span",
-				"variant": "title"
-			},
-			"children": [
-				{
-					"state": "/drawn/text2"
+				"name": {
+					"state": "/drawn/name"
 				}
-			]
+			}
 		},
 		"sidebarRailToggle": {
 			"type": "SidebarRailToggle"
 		},
 		"sidebarHeader": {
 			"type": "SidebarHeader",
-			"children": ["text", "sidebarRailToggle"]
+			"children": ["siteName", "sidebarRailToggle"]
 		},
 		"icon": {
 			"type": "Icon",
@@ -30,7 +26,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text4"
+					"state": "/drawn/text2"
 				}
 			]
 		},
@@ -42,7 +38,7 @@
 			"children": [
 				"icon",
 				{
-					"state": "/drawn/text3"
+					"state": "/drawn/text"
 				},
 				"sidebarCount"
 			]
@@ -51,7 +47,7 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text6"
+					"state": "/drawn/text4"
 				}
 			]
 		},
@@ -59,7 +55,7 @@
 			"type": "SidebarSubItem",
 			"children": [
 				{
-					"state": "/drawn/text5"
+					"state": "/drawn/text3"
 				},
 				"count"
 			]
@@ -79,7 +75,7 @@
 			"children": [
 				"icon2",
 				{
-					"state": "/drawn/text7"
+					"state": "/drawn/text5"
 				}
 			]
 		},
@@ -94,7 +90,7 @@
 			"children": [
 				"icon3",
 				{
-					"state": "/drawn/text8"
+					"state": "/drawn/text6"
 				}
 			]
 		},
@@ -109,7 +105,7 @@
 			"children": [
 				"icon4",
 				{
-					"state": "/drawn/text9"
+					"state": "/drawn/text7"
 				}
 			]
 		},
@@ -124,7 +120,7 @@
 			"children": [
 				"icon5",
 				{
-					"state": "/drawn/text10"
+					"state": "/drawn/text8"
 				}
 			]
 		},
@@ -139,7 +135,7 @@
 			"children": [
 				"icon6",
 				{
-					"state": "/drawn/text11"
+					"state": "/drawn/text9"
 				}
 			]
 		},
@@ -168,7 +164,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text11"
 				}
 			]
 		},
@@ -177,7 +173,7 @@
 			"children": [
 				"icon7",
 				{
-					"state": "/drawn/text12"
+					"state": "/drawn/text10"
 				},
 				"sidebarCount2"
 			]
@@ -195,7 +191,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text13"
 				}
 			]
 		},
@@ -204,7 +200,7 @@
 			"children": [
 				"icon8",
 				{
-					"state": "/drawn/text14"
+					"state": "/drawn/text12"
 				},
 				"sidebarCount3"
 			]
@@ -220,7 +216,7 @@
 			"children": [
 				"icon9",
 				{
-					"state": "/drawn/text16"
+					"state": "/drawn/text14"
 				}
 			]
 		},

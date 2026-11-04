@@ -100,33 +100,35 @@
 		"verticalRule": {
 			"type": "VerticalRule"
 		},
-		"icon2": {
-			"type": "Icon",
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
 			"props": {
-				"name": "spark"
+				"icon": "spark",
+				"label": {
+					"state": "/drawn/text11"
+				}
 			}
-		},
-		"stack3": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"align": "center",
-				"justify": "center"
-			},
-			"children": ["icon2"]
 		},
 		"editorTopBar": {
 			"type": "EditorTopBar",
 			"slots": {
 				"start": ["textButton", "text2", "entryStatus"],
-				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "moreButton", "verticalRule", "stack3"]
+				"end": [
+					"textButton2",
+					"button",
+					"publishButton",
+					"iconOnlyButton",
+					"moreButton",
+					"verticalRule",
+					"iconOnlyButton2"
+				]
 			}
 		},
 		"tab": {
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text11"
+					"state": "/drawn/text12"
 				},
 				"current": true
 			}
@@ -135,26 +137,28 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text12"
+					"state": "/drawn/text13"
 				},
 				"dot": "warning"
 			}
 		},
+		"tabAdd": {
+			"type": "TabAdd",
+			"props": {
+				"label": {
+					"state": "/drawn/text14"
+				}
+			}
+		},
 		"tabLinks": {
 			"type": "TabLinks",
-			"children": [
-				"tab",
-				"tab2",
-				{
-					"state": "/drawn/text13"
-				}
-			]
+			"children": ["tab", "tab2", "tabAdd"]
 		},
 		"entryTitle": {
 			"type": "EntryTitle",
 			"props": {
 				"text": {
-					"state": "/drawn/text14"
+					"state": "/drawn/text15"
 				}
 			}
 		},
@@ -172,7 +176,7 @@
 				}
 			}
 		},
-		"stack7": {
+		"stack6": {
 			"type": "Stack",
 			"props": {
 				"maxWidth": 680
@@ -193,7 +197,7 @@
 				"editorBody"
 			]
 		},
-		"stack6": {
+		"stack5": {
 			"type": "Stack",
 			"props": {
 				"align": "center",
@@ -203,13 +207,13 @@
 				{
 					"spacing": 16
 				},
-				"stack7",
+				"stack6",
 				{
 					"spacing": 48
 				}
 			]
 		},
-		"stack5": {
+		"stack4": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
@@ -220,7 +224,7 @@
 				{
 					"spacing": 48
 				},
-				"stack6",
+				"stack5",
 				{
 					"spacing": 48
 				}
@@ -230,7 +234,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text17"
+					"state": "/drawn/text18"
 				}
 			],
 			"props": {
@@ -245,7 +249,7 @@
 				},
 				"mono": true,
 				"actionLabel": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text19"
 				},
 				"actionIcon": "renew"
 			}
@@ -258,11 +262,11 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text19"
+					"state": "/drawn/text20"
 				}
 			]
 		},
-		"text20": {
+		"text21": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -270,19 +274,19 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text21"
+					"state": "/drawn/text22"
 				}
 			]
 		},
 		"formField2": {
 			"type": "FormField",
-			"children": ["formFieldLabel2", "text20"]
+			"children": ["formFieldLabel2", "text21"]
 		},
 		"formFieldLabel3": {
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text22"
+					"state": "/drawn/text23"
 				}
 			]
 		},
@@ -294,7 +298,7 @@
 				}
 			}
 		},
-		"text23": {
+		"text24": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -303,22 +307,22 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text24"
+					"state": "/drawn/text25"
 				}
 			]
 		},
 		"formField3": {
 			"type": "FormField",
-			"children": ["formFieldLabel3", "propertyPicture", "text23"]
+			"children": ["formFieldLabel3", "propertyPicture", "text24"]
 		},
 		"changedLabel": {
 			"type": "ChangedLabel",
 			"props": {
 				"label": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text26"
 				},
 				"undo": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text27"
 				},
 				"proposal": true,
 				"for": "@lineInput2"
@@ -332,7 +336,7 @@
 				},
 				"multiline": true,
 				"actionLabel": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text28"
 				},
 				"actionIcon": "renew",
 				"proposal": true
@@ -350,7 +354,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text29"
+					"state": "/drawn/text30"
 				}
 			],
 			"props": {
@@ -364,7 +368,7 @@
 					"state": "/drawn/value3"
 				},
 				"actionLabel": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text31"
 				},
 				"actionIcon": "close"
 			}
@@ -377,7 +381,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text31"
+					"state": "/drawn/text32"
 				}
 			]
 		},
@@ -385,13 +389,13 @@
 			"type": "ChipsField",
 			"props": {
 				"label": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text33"
 				},
 				"items": {
 					"state": "/drawn/items"
 				},
 				"removeLabel": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text34"
 				}
 			}
 		},
@@ -403,7 +407,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text34"
+					"state": "/drawn/text35"
 				}
 			]
 		},
@@ -411,7 +415,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text36"
 				},
 				"width": "full"
 			}
@@ -424,7 +428,7 @@
 			"type": "PropsGroup",
 			"props": {
 				"title": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text29"
 				}
 			},
 			"children": ["formField5", "formField6", "formField7"]
@@ -433,10 +437,10 @@
 			"type": "PropsPanel",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text16"
 				},
 				"open": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text17"
 				},
 				"tabs": {
 					"state": "/drawn/tabs"
@@ -444,20 +448,20 @@
 			},
 			"children": ["propsGroup", "propsGroup2"]
 		},
-		"stack4": {
+		"stack3": {
 			"type": "Stack",
 			"props": {
 				"direction": "row",
 				"grow": true,
 				"wrap": true
 			},
-			"children": ["stack5", "propsPanel"]
+			"children": ["stack4", "propsPanel"]
 		},
 		"statusCell": {
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text36"
+					"state": "/drawn/text37"
 				},
 				"tone": "warning"
 			}
@@ -466,7 +470,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text38"
 				}
 			}
 		},
@@ -477,7 +481,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text39"
 				},
 				"end": true
 			}
@@ -492,7 +496,7 @@
 				"grow": true,
 				"minWidth": 0
 			},
-			"children": ["editorTopBar", "stack4", "editorStatusBar"]
+			"children": ["editorTopBar", "stack3", "editorStatusBar"]
 		},
 		"stack": {
 			"type": "Stack",
@@ -515,16 +519,16 @@
 					"state": "/drawn/total"
 				},
 				"previousLabel": {
-					"state": "/drawn/text39"
-				},
-				"nextLabel": {
 					"state": "/drawn/text40"
 				},
-				"discardAllLabel": {
+				"nextLabel": {
 					"state": "/drawn/text41"
 				},
-				"acceptAllLabel": {
+				"discardAllLabel": {
 					"state": "/drawn/text42"
+				},
+				"acceptAllLabel": {
+					"state": "/drawn/text43"
 				},
 				"besidePanel": true
 			}

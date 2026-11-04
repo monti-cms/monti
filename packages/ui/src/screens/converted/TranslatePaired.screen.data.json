@@ -8,11 +8,12 @@
 		"text8": "미리보기",
 		"text9": "발행하기",
 		"text10": "발행 방식",
-		"text11": "한국어",
-		"text12": "English",
-		"text13": "+ 언어",
-		"text15": "원문",
-		"text16": "원문 보기",
+		"text11": "어시스턴트 열기",
+		"text12": "한국어",
+		"text13": "English",
+		"text14": "+ 언어",
+		"text16": "원문",
+		"text17": "원문 보기",
 		"options": [
 			{
 				"value": "끔",
@@ -27,10 +28,10 @@
 				"label": "나란히"
 			}
 		],
-		"text17": "나란히",
-		"text18": "원문 · 한국어 · 10. 26 수정",
-		"text19": "번역 · English · 09. 20 수정",
-		"text20": "제목",
+		"text18": "나란히",
+		"text19": "원문 · 한국어 · 10. 26 수정",
+		"text20": "번역 · English · 09. 20 수정",
+		"text21": "제목",
 		"source": [
 			{
 				"kind": "title",
@@ -43,7 +44,7 @@
 				"text": "The first post"
 			}
 		],
-		"text21": "문단",
+		"text22": "문단",
 		"source2": [
 			{
 				"kind": "p",
@@ -56,8 +57,8 @@
 				"text": "I rebuilt the blog because I was spending more time fixing tools than writing."
 			}
 		],
-		"text22": "문단",
-		"text23": "원문 바뀜",
+		"text23": "문단",
+		"text24": "원문 바뀜",
 		"source3": [
 			{
 				"kind": "p",
@@ -74,8 +75,8 @@
 				"text": "The list keeps only the title, the address and the status."
 			}
 		],
-		"text24": "콜아웃",
-		"text25": "제목 + 본문",
+		"text25": "콜아웃",
+		"text26": "제목 + 본문",
 		"source4": [
 			{
 				"kind": "callout",
@@ -104,8 +105,8 @@
 				"text": "The example code is in the repository."
 			}
 		],
-		"text26": "이미지",
-		"text27": "같은 파일",
+		"text27": "이미지",
+		"text28": "같은 파일",
 		"source5": [
 			{
 				"kind": "image",
@@ -144,8 +145,8 @@
 				"editable": true
 			}
 		],
-		"text28": "코드 블록",
-		"text29": "tsx",
+		"text29": "코드 블록",
+		"text30": "tsx",
 		"source6": [
 			{
 				"kind": "code",
@@ -158,8 +159,8 @@
 				"text": "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}"
 			}
 		],
-		"text30": "English에서만 따로 고치기",
-		"text31": "표",
+		"text31": "English에서만 따로 고치기",
+		"text32": "표",
 		"source7": [
 			{
 				"kind": "th",
@@ -188,7 +189,7 @@
 				"text": "19\tServer components are stable\t데이터 불러오기 정리"
 			}
 		],
-		"text32": "목록",
+		"text33": "목록",
 		"source8": [
 			{
 				"kind": "li",
@@ -217,8 +218,8 @@
 				"text": "Date of last edit"
 			}
 		],
-		"text33": "문단",
-		"text34": "원문에 추가",
+		"text34": "문단",
+		"text35": "원문에 추가",
 		"source9": [
 			{
 				"kind": "p",
@@ -232,7 +233,7 @@
 				"faint": true
 			}
 		],
-		"text35": "할 일 1",
-		"text36": "912자"
+		"text36": "할 일 1",
+		"text37": "912자"
 	}
 }

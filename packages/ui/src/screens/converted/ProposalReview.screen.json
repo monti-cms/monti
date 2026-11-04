@@ -2,24 +2,20 @@
 	"root": "stack",
 	"overlays": ["assistantCorner"],
 	"elements": {
-		"text": {
-			"type": "Text",
+		"siteName": {
+			"type": "SiteName",
 			"props": {
-				"as": "span",
-				"variant": "title"
-			},
-			"children": [
-				{
-					"state": "/drawn/text2"
+				"name": {
+					"state": "/drawn/name"
 				}
-			]
+			}
 		},
 		"sidebarRailToggle": {
 			"type": "SidebarRailToggle"
 		},
 		"sidebarHeader": {
 			"type": "SidebarHeader",
-			"children": ["text", "sidebarRailToggle"]
+			"children": ["siteName", "sidebarRailToggle"]
 		},
 		"icon": {
 			"type": "Icon",
@@ -31,7 +27,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text4"
+					"state": "/drawn/text2"
 				}
 			]
 		},
@@ -40,7 +36,7 @@
 			"children": [
 				"icon",
 				{
-					"state": "/drawn/text3"
+					"state": "/drawn/text"
 				},
 				"sidebarCount"
 			]
@@ -56,7 +52,7 @@
 			"children": [
 				"icon2",
 				{
-					"state": "/drawn/text5"
+					"state": "/drawn/text3"
 				}
 			]
 		},
@@ -71,7 +67,7 @@
 			"children": [
 				"icon3",
 				{
-					"state": "/drawn/text6"
+					"state": "/drawn/text4"
 				}
 			]
 		},
@@ -86,7 +82,7 @@
 			"children": [
 				"icon4",
 				{
-					"state": "/drawn/text7"
+					"state": "/drawn/text5"
 				}
 			]
 		},
@@ -101,7 +97,7 @@
 			"children": [
 				"icon5",
 				{
-					"state": "/drawn/text8"
+					"state": "/drawn/text6"
 				}
 			]
 		},
@@ -116,7 +112,7 @@
 			"children": [
 				"icon6",
 				{
-					"state": "/drawn/text9"
+					"state": "/drawn/text7"
 				}
 			]
 		},
@@ -137,7 +133,7 @@
 			"type": "SidebarCount",
 			"children": [
 				{
-					"state": "/drawn/text11"
+					"state": "/drawn/text9"
 				}
 			]
 		},
@@ -146,7 +142,7 @@
 			"children": [
 				"icon7",
 				{
-					"state": "/drawn/text10"
+					"state": "/drawn/text8"
 				},
 				"sidebarCount2"
 			]
@@ -164,7 +160,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text11"
 				}
 			]
 		},
@@ -173,7 +169,7 @@
 			"children": [
 				"icon8",
 				{
-					"state": "/drawn/text12"
+					"state": "/drawn/text10"
 				},
 				"sidebarCount3"
 			]
@@ -189,7 +185,7 @@
 			"children": [
 				"icon9",
 				{
-					"state": "/drawn/text14"
+					"state": "/drawn/text12"
 				}
 			]
 		},
@@ -235,12 +231,13 @@
 		"textButton": {
 			"type": "TextButton",
 			"props": {
-				"variant": "quiet"
+				"variant": "quiet",
+				"size": "note"
 			},
 			"children": [
 				"icon10",
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text13"
 				}
 			]
 		},
@@ -251,7 +248,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text16"
+					"state": "/drawn/text14"
 				}
 			]
 		},
@@ -262,7 +259,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text17"
+					"state": "/drawn/text15"
 				}
 			]
 		},
@@ -271,12 +268,12 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text18"
+						"state": "/drawn/text16"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text19"
+						"state": "/drawn/text17"
 					}
 				]
 			},
@@ -286,7 +283,7 @@
 			"type": "ReviewAsk",
 			"props": {
 				"text": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text18"
 				}
 			}
 		},
@@ -297,7 +294,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text21"
 				}
 			]
 		},
@@ -308,7 +305,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text22"
 				},
 				"current": true
 			}
@@ -317,7 +314,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text23"
 				}
 			}
 		},
@@ -329,10 +326,10 @@
 			"type": "ReviewHead",
 			"props": {
 				"title": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text19"
 				},
 				"meta": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text20"
 				}
 			},
 			"slots": {
@@ -340,6 +337,18 @@
 			}
 		},
 		"reviewBlockLine": {
+			"type": "ReviewBlockLine",
+			"props": {
+				"label": {
+					"state": "/drawn/text24"
+				},
+				"text": {
+					"state": "/drawn/text25"
+				},
+				"included": true
+			}
+		},
+		"reviewBlockLine2": {
 			"type": "ReviewBlockLine",
 			"props": {
 				"label": {
@@ -351,29 +360,17 @@
 				"included": true
 			}
 		},
-		"reviewBlockLine2": {
+		"reviewBlockLine3": {
 			"type": "ReviewBlockLine",
 			"props": {
 				"label": {
 					"state": "/drawn/text28"
 				},
-				"text": {
+				"note": {
 					"state": "/drawn/text29"
 				},
-				"included": true
-			}
-		},
-		"reviewBlockLine3": {
-			"type": "ReviewBlockLine",
-			"props": {
-				"label": {
-					"state": "/drawn/text30"
-				},
-				"note": {
-					"state": "/drawn/text31"
-				},
 				"text": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text30"
 				},
 				"included": true
 			}
@@ -382,10 +379,10 @@
 			"type": "ReviewHead",
 			"props": {
 				"title": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text31"
 				},
 				"meta": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text32"
 				}
 			}
 		},
@@ -399,7 +396,7 @@
 					"state": "/drawn/path"
 				},
 				"end": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text33"
 				},
 				"change": {
 					"state": "/drawn/change"
@@ -417,11 +414,11 @@
 					"state": "/drawn/path2"
 				},
 				"end": {
-					"state": "/drawn/text36"
+					"state": "/drawn/text34"
 				},
 				"endWarning": true,
 				"again": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text35"
 				},
 				"change": {
 					"state": "/drawn/change2"
@@ -433,7 +430,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text40"
+					"state": "/drawn/text38"
 				}
 			]
 		},
@@ -441,10 +438,10 @@
 			"type": "ReviewHead",
 			"props": {
 				"title": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text36"
 				},
 				"meta": {
-					"state": "/drawn/text39"
+					"state": "/drawn/text37"
 				}
 			},
 			"slots": {
@@ -461,7 +458,7 @@
 					"state": "/drawn/path3"
 				},
 				"end": {
-					"state": "/drawn/text41"
+					"state": "/drawn/text39"
 				},
 				"included": true
 			}
@@ -476,7 +473,7 @@
 					"state": "/drawn/path4"
 				},
 				"end": {
-					"state": "/drawn/text42"
+					"state": "/drawn/text40"
 				},
 				"included": true
 			}
@@ -491,7 +488,7 @@
 					"state": "/drawn/path5"
 				},
 				"end": {
-					"state": "/drawn/text43"
+					"state": "/drawn/text41"
 				},
 				"included": true
 			}
@@ -506,7 +503,7 @@
 					"state": "/drawn/path6"
 				},
 				"end": {
-					"state": "/drawn/text44"
+					"state": "/drawn/text42"
 				}
 			}
 		},
@@ -520,7 +517,7 @@
 					"state": "/drawn/path7"
 				},
 				"end": {
-					"state": "/drawn/text45"
+					"state": "/drawn/text43"
 				},
 				"included": true
 			}
@@ -529,7 +526,7 @@
 			"type": "ReviewRest",
 			"props": {
 				"label": {
-					"state": "/drawn/text46"
+					"state": "/drawn/text44"
 				}
 			}
 		},
@@ -537,10 +534,10 @@
 			"type": "ReviewHead",
 			"props": {
 				"title": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text45"
 				},
 				"meta": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text46"
 				}
 			}
 		},
@@ -655,7 +652,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text49"
+					"state": "/drawn/text47"
 				}
 			}
 		}

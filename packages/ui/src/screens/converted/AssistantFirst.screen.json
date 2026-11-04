@@ -113,33 +113,27 @@
 		"verticalRule": {
 			"type": "VerticalRule"
 		},
-		"icon2": {
-			"type": "Icon",
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
 			"props": {
-				"name": "spark"
+				"icon": "spark",
+				"label": {
+					"state": "/drawn/text11"
+				}
 			}
-		},
-		"stack8": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"align": "center",
-				"justify": "center"
-			},
-			"children": ["icon2"]
 		},
 		"editorTopBar": {
 			"type": "EditorTopBar",
 			"slots": {
 				"start": ["textButton", "text2", "entryStatus"],
-				"end": ["textButton2", "button", "stack6", "iconOnlyButton", "stack7", "verticalRule", "stack8"]
+				"end": ["textButton2", "button", "stack6", "iconOnlyButton", "stack7", "verticalRule", "iconOnlyButton2"]
 			}
 		},
 		"tab": {
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text11"
+					"state": "/drawn/text13"
 				},
 				"current": true
 			}
@@ -148,35 +142,33 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text12"
+					"state": "/drawn/text14"
 				},
 				"dot": "warning"
 			}
 		},
-		"textButton3": {
-			"type": "TextButton",
-			"children": [
-				{
-					"state": "/drawn/text13"
-				}
-			]
-		},
-		"stack13": {
-			"type": "Stack",
+		"tabAdd": {
+			"type": "TabAdd",
 			"props": {
-				"direction": "row"
-			},
-			"children": ["textButton3"]
+				"label": {
+					"state": "/drawn/text15"
+				}
+			}
 		},
-		"tabLinks": {
-			"type": "TabLinks",
-			"children": ["tab", "tab2", "stack13"]
+		"languageTabs": {
+			"type": "LanguageTabs",
+			"props": {
+				"label": {
+					"state": "/drawn/text12"
+				}
+			},
+			"children": ["tab", "tab2", "tabAdd"]
 		},
 		"entryTitle": {
 			"type": "EntryTitle",
 			"props": {
 				"text": {
-					"state": "/drawn/text14"
+					"state": "/drawn/text16"
 				}
 			}
 		},
@@ -191,13 +183,13 @@
 				}
 			}
 		},
-		"stack12": {
+		"stack11": {
 			"type": "Stack",
 			"props": {
 				"maxWidth": 680
 			},
 			"children": [
-				"tabLinks",
+				"languageTabs",
 				{
 					"spacing": 16
 				},
@@ -212,7 +204,7 @@
 				"editorBody"
 			]
 		},
-		"stack11": {
+		"stack10": {
 			"type": "Stack",
 			"props": {
 				"align": "center",
@@ -221,23 +213,6 @@
 			"children": [
 				{
 					"spacing": 16
-				},
-				"stack12",
-				{
-					"spacing": 48
-				}
-			]
-		},
-		"stack10": {
-			"type": "Stack",
-			"props": {
-				"direction": "row",
-				"grow": true,
-				"minWidth": 0
-			},
-			"children": [
-				{
-					"spacing": 48
 				},
 				"stack11",
 				{
@@ -250,15 +225,32 @@
 			"props": {
 				"direction": "row",
 				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack10",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
 				"wrap": true
 			},
-			"children": ["stack10"]
+			"children": ["stack9"]
 		},
 		"statusCell": {
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text17"
 				},
 				"tone": "warning"
 			}
@@ -267,7 +259,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text18"
 				},
 				"tone": "warning"
 			}
@@ -276,7 +268,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text19"
 				},
 				"tone": "warning"
 			}
@@ -288,7 +280,7 @@
 			"type": "StatusCell",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text20"
 				},
 				"end": true
 			}
@@ -297,7 +289,7 @@
 			"type": "EditorStatusBar",
 			"children": ["statusCell", "statusCell2", "statusCell3", "statusGap", "statusCell4"]
 		},
-		"stack14": {
+		"stack12": {
 			"type": "Stack",
 			"children": ["editorStatusBar"]
 		},
@@ -307,7 +299,7 @@
 				"grow": true,
 				"minWidth": 0
 			},
-			"children": ["editorTopBar", "stack9", "stack14"]
+			"children": ["editorTopBar", "stack8", "stack12"]
 		},
 		"stack4": {
 			"type": "Stack",
@@ -333,7 +325,7 @@
 			"type": "SuggestHeading",
 			"props": {
 				"text": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text22"
 				}
 			}
 		},
@@ -341,7 +333,7 @@
 			"type": "SuggestRow",
 			"props": {
 				"label": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text23"
 				}
 			}
 		},
@@ -349,7 +341,7 @@
 			"type": "SuggestRow",
 			"props": {
 				"label": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text24"
 				}
 			}
 		},
@@ -357,7 +349,7 @@
 			"type": "SuggestHeading",
 			"props": {
 				"text": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text25"
 				}
 			}
 		},
@@ -365,7 +357,7 @@
 			"type": "SuggestRow",
 			"props": {
 				"label": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text26"
 				},
 				"recent": true
 			}
@@ -374,7 +366,7 @@
 			"type": "SuggestRow",
 			"props": {
 				"label": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text27"
 				},
 				"recent": true
 			}
@@ -383,7 +375,7 @@
 			"type": "Suggestions",
 			"children": ["suggestHeading", "suggestRow", "suggestRow2", "suggestHeading2", "suggestRow3", "suggestRow4"]
 		},
-		"stack15": {
+		"stack13": {
 			"type": "Stack",
 			"props": {
 				"grow": true,
@@ -391,7 +383,7 @@
 			},
 			"children": ["suggestions"]
 		},
-		"iconOnlyButton2": {
+		"iconOnlyButton3": {
 			"type": "IconOnlyButton",
 			"props": {
 				"icon": "recently-viewed"
@@ -401,16 +393,16 @@
 			"type": "ChatBox",
 			"props": {
 				"label": {
-					"state": "/drawn/text26"
-				},
-				"placeholder": {
-					"state": "/drawn/text27"
-				},
-				"sendLabel": {
 					"state": "/drawn/text28"
 				},
-				"modelLabel": {
+				"placeholder": {
 					"state": "/drawn/text29"
+				},
+				"sendLabel": {
+					"state": "/drawn/text30"
+				},
+				"modelLabel": {
+					"state": "/drawn/text31"
 				},
 				"model": {
 					"state": "/drawn/model"
@@ -421,17 +413,17 @@
 			"type": "Panel",
 			"props": {
 				"title": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text21"
 				},
 				"closable": true,
 				"width": "assistant",
 				"bleed": true
 			},
 			"slots": {
-				"actions": ["iconOnlyButton2"],
+				"actions": ["iconOnlyButton3"],
 				"composer": ["chatBox"]
 			},
-			"children": ["stack15"]
+			"children": ["stack13"]
 		},
 		"stack": {
 			"type": "Stack",
