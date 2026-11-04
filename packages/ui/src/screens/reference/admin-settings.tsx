@@ -1,4 +1,14 @@
-import { Affix, MenuField, PageBody, PageColumn, PageHeader, PageToolbar, Section } from "../../index";
+import {
+	Affix,
+	FormField,
+	FormFieldLabel,
+	MenuField,
+	PageBody,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	Section,
+} from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs, SwitchOption } from "./settings";
 
@@ -13,17 +23,22 @@ export function AdminSettingsScreen() {
 				</PageToolbar>
 				<PageBody>
 					<Section title="언어">
-						{/* The section's title already says what it is; the field needs no label of its own. */}
-						<MenuField aria-label="언어" value="한국어" meta="ko" />
+						{/* A small label over the field, as every field on the site tab has, so the tabs read alike. */}
+						<FormField>
+							<FormFieldLabel htmlFor="ui-locale">화면 언어</FormFieldLabel>
+							<MenuField id="ui-locale" value="한국어" meta="ko" />
+						</FormField>
 					</Section>
 					<Section title="기능">
 						<SwitchOption label="본문 템플릿" checked />
 						<SwitchOption label="번역" checked />
 					</Section>
 					<Section title="주소" last>
-						{/* The section's title says what the value is; the address alone, read only (it is set in a file). */}
 						{/* Set in the config file, so it can be changed here in local development, as the preview path can. */}
-						<Affix aria-label="관리자 주소" prefix="/" defaultValue="studio" />
+						<FormField>
+							<FormFieldLabel htmlFor="admin-path">관리자 주소</FormFieldLabel>
+							<Affix id="admin-path" prefix="/" defaultValue="studio" />
+						</FormField>
 					</Section>
 				</PageBody>
 			</PageColumn>
