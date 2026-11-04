@@ -76,7 +76,7 @@ export function ChatInput({
 			}}
 			{...props}
 		>
-			{context && <div className="mb-monti-6 flex flex-wrap gap-monti-6">{context}</div>}
+			{context && <div className="-mt-monti-2 mb-monti-6 -ml-monti-4 flex flex-wrap gap-monti-6">{context}</div>}
 			<textarea
 				aria-label={label}
 				placeholder={busy && onQueue && busyPlaceholder ? busyPlaceholder : placeholder}
