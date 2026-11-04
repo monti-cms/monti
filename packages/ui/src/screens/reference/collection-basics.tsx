@@ -47,7 +47,7 @@ export function CollectionBasicsScreen() {
 							공개 주소
 							<Switch checked />
 						</Option>
-						<Affix aria-label="공개 주소" prefix="/" suffix="/:slug" defaultValue="posts" />
+						<Affix aria-label="공개 주소" prefix="/" suffix="/:slug" defaultValue="posts" width="fit" />
 					</Stack>
 				</Section>
 				<DangerBlock title="컬렉션 지우기">
