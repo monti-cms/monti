@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
+import { ko } from "react-day-picker/locale";
 import { Renew, Spark } from "./icons";
 import {
 	Affix,
 	Box,
+	Calendar,
 	Combobox,
 	ComboboxChip,
 	ComboboxChips,
@@ -18,6 +20,10 @@ import {
 	FormFieldLabel,
 	IconButton,
 	Input,
+	MenuField,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 	PropertyGroup,
 	PropertyPanel,
 	Select,
@@ -141,11 +147,24 @@ function AddressRow() {
 	);
 }
 
+/** A field in a select's look that opens a calendar: the date can be set by hand. */
 function PublishedRow() {
+	const id = useId();
 	return (
 		<FormField>
-			<FormFieldLabel>발행일</FormFieldLabel>
-			<Text variant="meta">2026. 10. 24 10:12</Text>
+			<FormFieldLabel htmlFor={id}>발행일</FormFieldLabel>
+			<Popover>
+				<PopoverTrigger render={<MenuField id={id} value="2026. 10. 24 10:12" mono />} />
+				<PopoverContent width="auto" padding="none" align="start">
+					<Calendar
+						locale={ko}
+						mode="single"
+						defaultMonth={new Date(2026, 9, 24)}
+						selected={new Date(2026, 9, 24)}
+						showOutsideDays={false}
+					/>
+				</PopoverContent>
+			</Popover>
 		</FormField>
 	);
 }
