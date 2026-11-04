@@ -225,6 +225,19 @@ function read(el, where, page = undefined, inPart = false) {
 		if (slots.length > 0) node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, fill(holder, name)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
 		// Children are an element's inside, or (a list of elements) those elements themselves.
+		// A part that holds a run of its own (a sheet's body): its children are a group the screen spaces, from the part's inside edge to its inside edge.
+		if (rule.stacked && holder && !Array.isArray(holder)) {
+			const run = measured(holder, here);
+			// The part's own gap between its children is its rhythm, not the screen's: only a board that adds to it (or sets it to none and spaces
+			// its children itself) gives the screen distances to keep, and then the run is a group of the screen's.
+			const gap = Number.parseFloat(getComputedStyle(holder).rowGap) || 0;
+			const own = run.children.slice(1).every((child) => Math.abs((child.before ?? 0) - gap) < 1);
+			if (!own) {
+				const children = run.children.map((child, index) => (index === 0 ? { ...child, before: 0 } : child));
+				node.children = [{ where: `${here} (run)`, direction: "column", layout: {}, children }];
+				return node;
+			}
+		}
 		node.children = Array.isArray(holder)
 			? holder.map((member, index) => read(member, `${here}[${index}]`, undefined, true))
 			: holder

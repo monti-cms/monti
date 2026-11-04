@@ -3,6 +3,7 @@ import { Affix } from "../affix";
 import { Banner as BannerPart } from "../banner";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
+import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "../change";
 import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
@@ -37,10 +38,13 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "../pagination";
+import { PickList, PickListItem } from "../pick-list";
+import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
 import { ReadValue as ReadValuePart } from "../read-value";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
+import { Segmented } from "../segmented";
 import { Select, SelectTrigger, SelectValue } from "../select";
 import { Separator } from "../separator";
 import {
@@ -50,6 +54,7 @@ import {
 	SheetHeader,
 	Sheet as SheetRoot,
 	SheetSplit as SheetSplitPart,
+	SheetSummary as SheetSummaryPart,
 	SheetTitle,
 } from "../sheet";
 import { SidePanel } from "../side-panel";
@@ -74,7 +79,7 @@ import {
 import { Inline, Stack as StackPart } from "../stack";
 import { Switch } from "../switch";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
-import { TabLink, TabLinks } from "../tabs";
+import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../tabs";
 import { Heading, Text } from "../text";
 import { TextButton } from "../text-button";
 import { Textarea as TextareaPart } from "../textarea";
@@ -546,7 +551,7 @@ function SelectBox({
 }: {
 	value?: string;
 	size?: "sm" | "default";
-	width?: "fit" | "full";
+	width?: "fit" | "full" | "choice";
 	/** The assistant picked the value and nobody has touched it. */
 	proposal?: boolean;
 }) {
@@ -1002,6 +1007,112 @@ function SheetSplit({ list, children }: { list?: React.ReactNode; children?: Rea
 	return <SheetSplitPart list={list}>{children}</SheetSplitPart>;
 }
 
+/** A short list of kinds to pick one from, with the picked one marked (the kind of a new field). */
+function KindList({ label, children }: { label?: string; children?: React.ReactNode }) {
+	return <PickList aria-label={label}>{children}</PickList>;
+}
+
+/** One kind of a `KindList`: its name, `selected` for the picked one, `mark` when picking it opens more (→). */
+function KindItem({ label, selected, mark }: { label?: string; selected?: boolean; mark?: string }) {
+	return (
+		<PickListItem selected={selected} mark={mark}>
+			{label}
+		</PickListItem>
+	);
+}
+
+/** The tab row at the top of a pane (a sheet's Basic and Advanced): `open` names the picked tab, the tabs are its `PaneTab`s. */
+function PaneTabs({ open, children }: { open?: string; children?: React.ReactNode }) {
+	return (
+		<TabsRoot value={open ?? ""}>
+			<TabsList variant="bar">{children}</TabsList>
+		</TabsRoot>
+	);
+}
+
+/** One tab of `PaneTabs`. */
+function PaneTab({ label }: { label?: string }) {
+	return <TabsTrigger value={label ?? ""}>{label}</TabsTrigger>;
+}
+
+/** A short choice of one among a few, joined in one frame; `options` are the cells and `picked` the one picked. */
+function SegmentedChoice({
+	label,
+	options,
+	picked,
+}: {
+	label?: string;
+	options?: readonly { value: string; label: string }[];
+	picked?: string;
+}) {
+	return <Segmented aria-label={label} value={picked ?? null} onValueChange={() => {}} options={options ?? []} />;
+}
+
+/** A choice of one among options in rows, each with a round mark: `picked` names the picked row, the rows are its `Choice`s. */
+function Choices({ label, picked, children }: { label?: string; picked?: string; children?: React.ReactNode }) {
+	return (
+		<RadioGroup aria-label={label} value={picked ?? null}>
+			{children}
+		</RadioGroup>
+	);
+}
+
+/** One row of `Choices`: its words, a quiet `description` after them, a mono `hint` ("148 posts") and a `control` at its end. */
+function Choice({
+	label,
+	description,
+	hint,
+	control,
+}: {
+	label?: string;
+	description?: string;
+	hint?: string;
+	control?: React.ReactNode;
+}) {
+	return <RadioItem value={label ?? ""} label={label} description={description} hint={hint} control={control} />;
+}
+
+/** One change of a schema review: its `kind`, its `tag`, the field's name (`title`) and key (`identifier`), and what to do with saved data under it. */
+function Change({
+	kind,
+	tag,
+	title,
+	identifier,
+	children,
+}: {
+	kind?: "new" | "edit" | "drop";
+	tag?: string;
+	title?: string;
+	identifier?: string;
+	children?: React.ReactNode;
+}) {
+	return (
+		<ChangeGroup kind={kind ?? "edit"} tag={tag ?? ""} title={title} identifier={identifier}>
+			{children}
+		</ChangeGroup>
+	);
+}
+
+/** The result of a change's choice in one line; `danger` when it cannot be undone. */
+function ChangeResult({ text, danger }: { text?: string; danger?: boolean }) {
+	return <ChangeNote danger={danger}>{text}</ChangeNote>;
+}
+
+/** What a change sets, a name and its value per line: its `ChangeRow`s. */
+function ChangeRows({ children }: { children?: React.ReactNode }) {
+	return <ChangeLines>{children}</ChangeLines>;
+}
+
+/** One line of `ChangeRows`: `what` on the left, its `result` on the right. */
+function ChangeRow({ what, result }: { what?: string; result?: string }) {
+	return <ChangeLine what={what} then={result} />;
+}
+
+/** What a sheet will make, in one quiet line at the end of its body. */
+function SheetSummary({ text }: { text?: string }) {
+	return <SheetSummaryPart>{text}</SheetSummaryPart>;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1010,9 +1121,21 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	KindList,
+	KindItem,
+	PaneTabs,
+	PaneTab,
+	SegmentedChoice,
+	Choices,
+	Choice,
+	Change,
+	ChangeResult,
+	ChangeRows,
+	ChangeRow,
 	Sheet,
 	SheetBody,
 	SheetSplit,
+	SheetSummary,
 	Folder,
 	FolderTabRow,
 	FolderTabItem,
@@ -1156,9 +1279,21 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	KindList: { kind: "part", props: { label: "text" } },
+	KindItem: { kind: "part", props: { label: "text", selected: "flag", mark: "text" } },
+	PaneTabs: { kind: "part", props: { open: "text" } },
+	PaneTab: { kind: "part", props: { label: "text" } },
+	SegmentedChoice: { kind: "part", props: { label: "text", options: "data:value,label", picked: "text" } },
+	Choices: { kind: "part", props: { label: "text", picked: "text" } },
+	Choice: { kind: "part", props: { label: "text", description: "text", hint: "text" } },
+	Change: { kind: "part", props: { kind: "variant", tag: "text", title: "text", identifier: "text" } },
+	ChangeResult: { kind: "part", props: { text: "text", danger: "flag" } },
+	ChangeRows: { kind: "part", props: {} },
+	ChangeRow: { kind: "part", props: { what: "text", result: "text" } },
 	Sheet: { kind: "overlay", props: { title: "text", of: "text" } },
 	SheetBody: { kind: "part", props: { blocks: "flag" } },
 	SheetSplit: { kind: "part", props: {} },
+	SheetSummary: { kind: "part", props: { text: "text" } },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
 	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },

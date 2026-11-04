@@ -15,6 +15,192 @@
 			},
 			"events": []
 		},
+		"KindList": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"KindItem": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"mark": {
+					"kind": "text",
+					"type": "string"
+				},
+				"selected": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"PaneTabs": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"open": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"PaneTab": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"SegmentedChoice": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"options": {
+					"kind": "data",
+					"fields": ["value", "label"]
+				},
+				"picked": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Choices": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"picked": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Choice": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["control"],
+			"props": {
+				"description": {
+					"kind": "text",
+					"type": "string"
+				},
+				"hint": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"Change": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"identifier": {
+					"kind": "text",
+					"type": "string"
+				},
+				"kind": {
+					"kind": "variant",
+					"enum": ["drop", "edit", "new"]
+				},
+				"tag": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ChangeResult": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"danger": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"text": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ChangeRows": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"ChangeRow": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"result": {
+					"kind": "text",
+					"type": "string"
+				},
+				"what": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"Sheet": {
 			"kind": "overlay",
 			"bind": false,
@@ -51,6 +237,19 @@
 			"children": true,
 			"slots": ["list"],
 			"props": {},
+			"events": []
+		},
+		"SheetSummary": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"text": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
 			"events": []
 		},
 		"Folder": {
@@ -667,7 +866,7 @@
 				},
 				"width": {
 					"kind": "variant",
-					"enum": ["fit", "full"]
+					"enum": ["choice", "fit", "full"]
 				}
 			},
 			"events": []

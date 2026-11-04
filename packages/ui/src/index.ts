@@ -234,6 +234,7 @@ export const SheetFooter = close(open.SheetFooter);
 export const SheetHeader = close(open.SheetHeader);
 export const SheetSection = close(open.SheetSection);
 export const SheetSplit = close(open.SheetSplit);
+export const SheetSummary = close(open.SheetSummary);
 export const SheetTitle = close(open.SheetTitle);
 export const SheetTrigger = close(open.SheetTrigger);
 export const ResizablePane = close(open.ResizablePane);

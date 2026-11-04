@@ -260,6 +260,7 @@ export {
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
+	SheetSummary,
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";

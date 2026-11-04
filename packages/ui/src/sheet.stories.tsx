@@ -15,6 +15,7 @@ import {
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
+	SheetSummary,
 	SheetTitle,
 	TextButton,
 } from "./index";
@@ -102,6 +103,7 @@ export const Split: Story = {
 							<FormFieldLabel htmlFor="split-label">라벨</FormFieldLabel>
 							<Input id="split-label" />
 						</FormField>
+						<SheetSummary>텍스트 필드 · 한 줄 · 비어 있어도 됨</SheetSummary>
 					</SheetBody>
 				</SheetSplit>
 				{Footer}

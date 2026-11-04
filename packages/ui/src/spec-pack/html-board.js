@@ -26,6 +26,13 @@ const tableAfter = (el) => {
 };
 
 /** The name of an icon of the design system's list with this svg's shape (`icon-key.js`, `window.boardData.icons`), if there is one. */
+// An option row's own words, without its note, its count or its control.
+const choiceLabel = (el) =>
+	[...el.childNodes]
+		.filter((node) => node.nodeType === Node.TEXT_NODE)
+		.map((node) => node.textContent)
+		.join("")
+		.trim();
 const iconName = (el) => window.boardData?.icons?.[window.iconShapeKey?.(el.innerHTML)];
 
 const parts = [
@@ -342,7 +349,7 @@ const parts = [
 	},
 	{ match: (el) => el.matches(".body > .mt-row > span:last-child > .mt-vr"), ignore: true },
 	{
-		match: (el) => el.matches(".mt-option"),
+		match: (el) => el.matches(".mt-option:not(:has(> .mt-switch, > .mt-radio))"),
 		part: "OptionCheck",
 		props: (el) => ({
 			label: [...el.childNodes]
@@ -360,8 +367,15 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-select"),
 		part: "SelectBox",
-		props: (el) => ({ value: el.textContent.trim(), proposal: el.classList.contains("is-ai") || undefined }),
+		props: (el) => ({
+			value: el.textContent.trim(),
+			proposal: el.classList.contains("is-ai") || undefined,
+			// At the end of a choice row: as wide as a field needs to read as one.
+			width: el.closest(".mt-option") ? "choice" : undefined,
+		}),
 		leaf: true,
+		// An empty select's faint words are its own look.
+		asProps: ["width", "min-width", "color"],
 	},
 	{
 		match: (el) => el.matches(".mt-filter"),
@@ -399,8 +413,13 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-textarea"),
 		part: "Textarea",
-		props: (el) => ({ mono: el.classList.contains("mt-mono") || undefined }),
+		props: (el) => ({
+			mono: el.classList.contains("mt-mono") || undefined,
+			// A height the board gives it is a number of lines.
+			rows: el.style.minHeight ? Math.max(1, Math.round((Number.parseFloat(el.style.minHeight) - 12) / 20)) : undefined,
+		}),
 		leaf: true,
+		asProps: ["min-height"],
 	},
 	// A field's line of help under it, in the role and tone its words have.
 	{
@@ -494,6 +513,7 @@ const parts = [
 		match: (el) => el.matches(".mt-sheet .mt-panel-body"),
 		part: "SheetBody",
 		props: (el) => ({ blocks: el.style.paddingTop.includes("--space-4") || undefined }),
+		stacked: true,
 		asProps: ["flex", "overflow", "padding-top", "gap"],
 	},
 	{
@@ -502,6 +522,124 @@ const parts = [
 		slots: (el) => ({ list: el.querySelector(":scope > [role=listbox]") }),
 		children: (el) => [...el.children].filter((child) => !child.matches("[role=listbox]")),
 		asProps: ["flex", "display", "min-height"],
+	},
+	// What the sheet will make, at the end of its body.
+	{
+		match: (el) => el.matches(".mt-sheet .mt-panel-body > div[style*='--bg-tool']"),
+		part: "SheetSummary",
+		props: (el) => ({ text: el.textContent.trim() }),
+		leaf: true,
+		asProps: ["padding", "background", "border-radius"],
+	},
+	// The kinds to pick from, on the left of a split sheet.
+	{
+		match: (el) => el.matches("[role=listbox]:has(> .mt-menu-item)"),
+		part: "KindList",
+		props: (el) => ({ label: el.getAttribute("aria-label") }),
+		asProps: ["flex", "padding", "border-right", "display", "flex-direction"],
+	},
+	{
+		match: (el) => el.matches("[role=listbox] > .mt-menu-item"),
+		part: "KindItem",
+		props: (el) => ({
+			label: [...el.childNodes]
+				.filter((node) => node.nodeType === Node.TEXT_NODE)
+				.map((node) => node.textContent)
+				.join("")
+				.trim(),
+			selected: el.classList.contains("is-on") || undefined,
+			mark: el.querySelector(".k")?.textContent.trim(),
+		}),
+		leaf: true,
+	},
+	// A pane's tab row.
+	{
+		match: (el) => el.matches(".mt-tabs--bar"),
+		part: "PaneTabs",
+		props: (el) => ({ open: el.querySelector("[aria-selected=true]")?.textContent.trim() }),
+	},
+	{
+		match: (el) => el.matches(".mt-tabs--bar > [role=tab]"),
+		part: "PaneTab",
+		props: (el) => ({ label: el.textContent.trim() }),
+		leaf: true,
+	},
+	// One among a few, joined in a frame.
+	{
+		match: (el) => el.matches(".mt-field > .mt-seg"),
+		part: "SegmentedChoice",
+		props: (el) => {
+			const cells = [...el.children].map((cell) => cell.textContent.trim());
+			return {
+				label: el.parentElement.querySelector(":scope > .mt-label")?.textContent.trim(),
+				options: cells.map((cell) => ({ value: cell, label: cell })),
+				picked: [...el.children].find((cell) => cell.classList.contains("is-on"))?.textContent.trim(),
+			};
+		},
+		leaf: true,
+		asProps: ["margin-top"],
+	},
+	// Rows of options with a round mark each.
+	{
+		match: (el) => el.matches("[role=radiogroup]"),
+		part: "Choices",
+		props: (el) => {
+			const picked = el.querySelector(".mt-radio.is-on")?.closest(".mt-option");
+			return { label: el.getAttribute("aria-label"), picked: picked && choiceLabel(picked) };
+		},
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll(":scope > .mt-option")],
+		asProps: ["display", "flex-direction", "gap", "padding-top"],
+	},
+	{
+		match: (el) => el.matches(".mt-option:has(> .mt-radio)"),
+		part: "Choice",
+		props: (el) => ({
+			label: choiceLabel(el),
+			description: el.querySelector(":scope > .text-meta")?.textContent.trim(),
+			hint: el.querySelector(":scope > .n")?.textContent.trim(),
+		}),
+		slots: (el) => ({ control: [el.querySelector(":scope > .mt-select")] }),
+		children: () => [],
+		asProps: ["color"],
+	},
+	// One change of a schema review.
+	{
+		match: (el) => el.matches("section.mt-change"),
+		part: "Change",
+		props: (el) => ({
+			kind: ["new", "edit", "drop"].find((kind) => el.classList.contains(`mt-change--${kind}`)),
+			tag: el.querySelector(":scope > .tag")?.textContent.trim(),
+			title: el.querySelector(":scope > .head > b")?.textContent.trim(),
+			identifier: el.querySelector(":scope > .head > .key")?.textContent.trim(),
+		}),
+		slots: () => ({}),
+		// A body of options is one choice, and its note follows it; any other body is its own lines.
+		children: (el) => {
+			const body = el.querySelector(":scope > .body");
+			if (!body) return [];
+			return body.matches("[role=radiogroup]")
+				? [body, ...body.querySelectorAll(":scope > p.note")]
+				: [...body.children];
+		},
+	},
+	{
+		match: (el) => el.matches(".mt-change p.note"),
+		part: "ChangeResult",
+		props: (el) => ({ text: el.textContent.trim(), danger: el.classList.contains("is-danger") || undefined }),
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches(".mt-change p.lines"),
+		part: "ChangeRows",
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll(":scope > .what")],
+	},
+	{
+		match: (el) => el.matches(".mt-change p.lines > .what"),
+		part: "ChangeRow",
+		props: (el) => ({ what: el.textContent.trim(), result: el.nextElementSibling?.textContent.trim() }),
+		leaf: true,
 	},
 	// A panel beside the page.
 	{
@@ -594,7 +732,8 @@ const parts = [
 	},
 	// A value under its label with no field.
 	{
-		match: (el) => el.matches(".mt-field:has(> .mt-label + :is(p, span:not([class])):last-child)"),
+		match: (el) =>
+			el.matches(".mt-field:has(> .mt-label + :is(p:not([style*='display: flex']), span:not([class])):last-child)"),
 		part: "ReadValue",
 		props: (el) => ({
 			label: el.querySelector(":scope > .mt-label")?.textContent.trim(),
@@ -836,7 +975,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger)$/;
 
 /** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
 const frame = ["flex-wrap"];

@@ -151,6 +151,20 @@ function SheetSection({
 	);
 }
 
+/** What the sheet will make, said in one quiet line on the tool ground at the end of its body (the field a new field becomes). */
+function SheetSummary({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sheet-summary"
+			className={cn(
+				"rounded-monti-lg bg-monti-tool px-monti-16 py-monti-12 text-monti-meta text-monti-muted",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
 /** Cancel (a text button) and the one pill, right-aligned, at the bottom of the sheet. */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return <div data-slot="sheet-footer" className={cn(PANEL_FOOT, "mt-auto", className)} {...props} />;
@@ -180,6 +194,7 @@ function SheetTitle({
 }
 
 export {
+	SheetSummary,
 	Sheet,
 	SheetBody,
 	SheetClose,
