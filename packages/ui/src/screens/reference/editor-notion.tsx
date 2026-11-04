@@ -3,7 +3,6 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ChevronLeft,
-	ChevronRight,
 	Close,
 	Copy,
 	OverflowMenuHorizontal,
@@ -26,6 +25,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	EditorHeader,
 	EditorTitleRule,
@@ -363,16 +364,18 @@ function BlockMenu() {
 		<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
 			<DropdownMenuGroup>
 				<DropdownMenuLabel>문단</DropdownMenuLabel>
-				<DropdownMenuItem>
-					<Repeat aria-hidden />
-					다른 블록으로 바꾸기
-					<ChevronRight aria-hidden />
-				</DropdownMenuItem>
-				<DropdownMenuItem>
-					<TextAlignLeft aria-hidden />
-					정렬
-					<ChevronRight aria-hidden />
-				</DropdownMenuItem>
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>
+						<Repeat aria-hidden />
+						다른 블록으로 바꾸기
+					</DropdownMenuSubTrigger>
+				</DropdownMenuSub>
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>
+						<TextAlignLeft aria-hidden />
+						정렬
+					</DropdownMenuSubTrigger>
+				</DropdownMenuSub>
 			</DropdownMenuGroup>
 			<DropdownMenuSeparator />
 			<DropdownMenuItem>
