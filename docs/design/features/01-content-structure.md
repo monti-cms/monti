@@ -1,18 +1,19 @@
 # 01 콘텐츠 구조
 
-상태: 초안 (2026-11-05). 결정 두 가지(D1, D2)가 소유자 확인을 기다린다.
+상태: 초안 (2026-11-05). D1, D2는 소유자가 정했다(결정 기록).
 
 ## 한 문장
 
-컬렉션은 글의 종류(게시글, 메모, 카테고리)이고, 필드는 그 종류가 담는 값(요약, 대표 이미지, 태그)이다. 구조는 저장소의 `monti.schema.ts` 파일에 있고, 데이터베이스는 그 파일을 따라간다. 구조를 바꾸면 값이 어떻게 되는지를 사람이 검토에서 고른다.
+컬렉션은 글의 종류(게시글, 메모, 카테고리)이고, 필드는 그 종류가 담는 값(요약, 대표 이미지, 태그)이다. 사이트 코드와 함께 바뀌어야 하는 구조는 저장소의 `monti.schema.ts` 파일에 있고, 관리자만 쓰는 값(표시 이름, 도움말, 배치)은 데이터베이스에 있다. 구조를 바꾸면 값이 어떻게 되는지를 사람이 검토에서 고른다.
 
 ## 원칙
 
-1. **구조는 파일에 있다.** `monti.schema.ts`는 사람이 읽을 수 있는 순수한 값이다. 개발자는 파일을 직접 고쳐도 되고, 관리자 화면에서 고쳐도 된다. 결과는 같다.
-2. **바꾸기 전에 검토한다.** 이미 저장된 값에 영향이 있는 변경(이름 바꿈, 지움, 새 필수)은 검토에서 값을 어떻게 할지 고른 뒤에만 적용된다.
-3. **지운 필드의 값은 바로 사라지지 않는다.** 기본은 "남겨 두기"다. 값은 글에 남고, 읽기 API와 사이트에서는 보이지 않는다. 값을 지우는 것은 따로 고르고 빨간 버튼으로 한다.
-4. **필드 종류는 네 가지다.** 글자, 고르기, 미디어, 관계. 그 밖의 종류는 필요해질 때 더한다.
-5. **만들 때 정한 것은 바꾸지 않는다.** 컬렉션의 식별자와 종류, 필드의 종류는 만든 뒤 바꿀 수 없다. 바꾸려면 새로 만들고 값을 옮긴다.
+1. **사이트 코드가 기대는 값은 파일에, 아닌 값은 데이터베이스에.** 필드 이름과 종류처럼 사이트 코드가 읽는 값은 코드와 함께 개발되고 배포되어야 하므로 `monti.schema.ts`에 둔다. 표시 이름이나 도움말처럼 관리자 화면만 쓰는 값은 운영 사이트에서도 바로 고칠 수 있게 데이터베이스에 둔다. 한 값은 두 곳 중 한 곳에만 있다.
+2. **파일은 사람이 읽는다.** `monti.schema.ts`는 순수한 값이다. 개발자는 파일을 직접 고쳐도 되고, 관리자 화면에서 고쳐도 된다. 결과는 같다.
+3. **바꾸기 전에 검토한다.** 이미 저장된 값에 영향이 있는 변경(이름 바꿈, 지움, 새 필수)은 검토에서 값을 어떻게 할지 고른 뒤에만 적용된다.
+4. **지운 필드의 값은 바로 사라지지 않는다.** 기본은 "남겨 두기"다. 값은 글에 남고, 읽기 API와 사이트에서는 보이지 않는다. 값을 지우는 것은 따로 고르고 빨간 버튼으로 한다.
+5. **필드 종류는 네 가지다.** 글자, 고르기, 미디어, 관계. 그 밖의 종류는 필요해질 때 더한다.
+6. **만들 때 정한 것은 바꾸지 않는다.** 컬렉션의 식별자와 종류, 필드의 종류는 만든 뒤 바꿀 수 없다. 바꾸려면 새로 만들고 값을 옮긴다.
 
 ## 쓰는 화면과 흐름
 
@@ -43,6 +44,33 @@ flowchart TD
 - **탭과 묶음**은 속성 패널의 배치다. 값의 모양에는 영향이 없다. 플러그인이 둔 탭(SEO)은 잠겨 있다.
 - **미디어**는 컬렉션 목록에 없는 내장 종류다(09번 문서).
 
+## 어디에 사는가
+
+가르는 물음은 하나다. **사이트 코드가 이 값에 기대는가?** 기대면 코드와 같이 바뀌어야 하므로 파일(구조 값)이고, 아니면 데이터베이스(관리자 값)다.
+
+```mermaid
+flowchart LR
+  V["값 하나"] --> Q{"사이트 코드가<br/>이 값에 기대나"}
+  Q -->|예| F["구조 값 · monti.schema.ts<br/>개발 서버: 바로 · 운영: PR 또는 잠김"]
+  Q -->|아니오| D["관리자 값 · 데이터베이스<br/>어디서나 바로 저장"]
+```
+
+| 값 | 어디 | 이유 |
+|---|---|---|
+| 컬렉션 식별자, 종류, 공개 주소 | 파일 | 사이트가 이 이름과 주소로 글을 읽는다 |
+| 필드 이름, 종류, 필수, 최대 글자 수, 언어 방식 | 파일 | 사이트 코드가 이 모양을 읽는다 |
+| 관계의 대상, 여러 개 | 파일 | 값의 모양이 바뀐다 |
+| 고르기 선택지의 값 | 파일 | 사이트 코드가 값으로 나눠 그린다 |
+| 컬렉션 표시 이름, 폴더 사용 | 데이터베이스 | 관리자 화면만 쓴다 |
+| 필드 표시 이름, 도움말, 안내 문구, 줄 수 | 데이터베이스 | 관리자 화면과 어시스턴트만 쓴다 |
+| 고르기 선택지의 라벨 | 데이터베이스 | 관리자 화면만 쓴다 |
+| 속성 패널의 탭, 묶음, 순서 | 데이터베이스 | 관리자 화면의 배치다 |
+| 편집기 허용(블록, 서식, 제목 단계) | 데이터베이스 | 편집기에서 무엇을 넣을지다. 사이트는 있는 블록을 모두 그릴 수 있다 |
+
+- 관리자 화면은 두 값을 섞어 보인다. 저장할 때 검토가 "바로 저장돼요"와 "PR로 가요"를 나눠 보인다(흐름 11·13). 플러그인이 없는 운영 사이트에서는 구조 값만 잠긴다(흐름 11·17).
+- 새 컬렉션이나 새 필드를 개발 서버에서 만들면, 그때 정한 관리자 값(표시 이름, 도움말, 배치)은 변경 파일에 "처음 값"으로 실려 간다. 운영 사이트는 배포할 때 그 값이 아직 없으면 넣는다. 그 뒤로는 데이터베이스가 그 값의 주인이다. 덧씌우기가 아니라 처음 한 번 넣는 것이다.
+- 관리자 값이 비어 있으면 화면은 식별자를 그대로 보인다(`summary`).
+
 ## 필드
 
 | 종류 | 화면 이름 | 설정 |
@@ -54,7 +82,7 @@ flowchart TD
 
 모든 종류에 공통인 설정:
 
-- **표시 이름**과 **도움말.** 도움말은 화면에 보이지 않고 어시스턴트가 읽는다. 그 필드를 어떻게 채우는지에 대한 규칙이다.
+- **표시 이름**과 **도움말**(관리자 값). 도움말은 화면에 보이지 않고 어시스턴트가 읽는다. 그 필드를 어떻게 채우는지에 대한 규칙이라, 운영 사이트에서 바로 고칠 수 있다.
 - **필수.** 비어 있으면 발행할 수 없다(02번 문서의 발행 전 할 일).
 - **제목으로 사용.** 목록과 관계 고르기에서 이 값을 제목 대신 보인다.
 - **언어.** 세 가지 중 하나다.
@@ -68,51 +96,56 @@ flowchart TD
 ## 파일
 
 ```ts
-// monti.schema.ts
+// monti.schema.ts — only what the site's code relies on
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
   collections: {
     post: {
-      label: "게시글",
       kind: "document",
       path: "/posts/:slug",
-      folders: true,
       fields: {
-        title: { kind: "text", label: "제목", required: true, locale: "perLocale" },
-        slug: { kind: "slug", label: "주소", required: true, locale: "fromSource", from: "title" },
-        summary: {
-          kind: "text",
-          label: "요약",
-          description: "목록과 검색 결과에 나오는 한 문장. 결론을 먼저.",
-          max: 120,
-          locale: "perLocale",
-        },
-        cover: { kind: "media", label: "대표 이미지", accept: "image" },
-        category: { kind: "relation", label: "카테고리", to: "category" },
-        tags: { kind: "relation", label: "태그", to: "tag", many: true, createMissing: true },
+        title: { kind: "text", required: true, locale: "perLocale" },
+        slug: { kind: "slug", required: true, locale: "fromSource", from: "title" },
+        summary: { kind: "text", max: 120, locale: "perLocale" },
+        cover: { kind: "media", accept: "image" },
+        category: { kind: "relation", to: "category" },
+        tags: { kind: "relation", to: "tag", many: true, createMissing: true },
+        format: { kind: "select", options: ["memo", "essay", "tutorial"] },
       },
-      layout: [
-        { tab: "기본", fields: ["title", "slug", "summary", "cover", { group: "분류", fields: ["category", "tags"] }] },
-      ],
-      editor: { blocks: "all", marks: "all", headings: [2, 3] },
     },
     category: {
-      label: "카테고리",
       kind: "item",
       path: "/category/:slug",
       fields: {
-        title: { kind: "text", label: "이름", required: true, locale: "perLocale" },
-        slug: { kind: "slug", label: "주소", required: true, locale: "fromSource", from: "title" },
-        description: { kind: "text", label: "설명", locale: "perLocale" },
+        title: { kind: "text", required: true, locale: "perLocale" },
+        slug: { kind: "slug", required: true, locale: "fromSource", from: "title" },
+        description: { kind: "text", locale: "perLocale" },
       },
     },
   },
 });
 ```
 
-- 필드 정의(`fields`)와 배치(`layout`)를 나눈다. 배치를 바꿔도 필드 정의는 그대로다.
-- `layout`이 없으면 탭 하나에 필드를 적힌 순서대로 둔다.
+관리자 값은 데이터베이스에 컬렉션마다 한 줄로 있다.
+
+```ts
+type CollectionAdminValues = {
+  collection: "post";
+  label: "게시글";
+  folders: true;
+  fields: {
+    summary: { label: "요약"; description: "목록과 검색 결과에 나오는 한 문장. 결론을 먼저." };
+    format: { label: "글 종류"; optionLabels: { memo: "메모"; essay: "에세이"; tutorial: "튜토리얼" } };
+  };
+  layout: [{ tab: "기본"; fields: ["title", "slug", "summary", "cover", { group: "분류"; fields: ["category", "tags"] }] }];
+  editor: { blocks: "all"; marks: "all"; headings: [2, 3] };
+  version: number;
+};
+```
+
+- 배치(`layout`)가 없으면 탭 하나에 필드를 파일에 적힌 순서대로 둔다.
+- 파일에 없는 필드가 관리자 값에 남아 있으면 무시한다. 필드를 지우는 변경이 그 필드의 관리자 값도 지운다.
 - 플러그인이 더하는 필드와 탭은 이 파일에 적히지 않는다. 플러그인 설정에서 온다.
 
 ## 데이터베이스
@@ -148,6 +181,11 @@ erDiagram
     text id PK
     timestamptz applied_at
   }
+  collection_admin_values {
+    text collection PK
+    jsonb values
+    int version
+  }
   entries ||--o{ entry_links : "관계 값"
   entries }o--|| entries : "번역 묶음"
 ```
@@ -158,6 +196,7 @@ erDiagram
 - 관계 값은 `entry_links`에도 적는다. "쓰인 글 수", 대상이 지워질 때 끊기, 관계로 거르기가 이 표를 쓴다.
 - 지운 필드를 남겨 두면 그 값은 `values`에 그대로 있다. 읽기 API는 지금 스키마에 있는 필드만 내놓는다.
 - 컬렉션마다 읽기 전용 뷰를 만든다(`monti_post`, `monti_category`). 필드 하나가 열 하나라서, 데이터베이스를 직접 열어 보는 개발자가 표처럼 읽을 수 있다. 스키마를 적용할 때마다 다시 만든다.
+- `collection_admin_values`는 위의 관리자 값이다. 운영 사이트에서도 바로 쓰고, 다른 쓰기처럼 활동 기록과 되돌리기가 있다.
 - `schema_state`는 이 데이터베이스가 마지막으로 따른 스키마다. 파일과 비교해서 누가 파일을 손으로 고쳤는지 안다.
 
 ## 구조 바꾸기
@@ -172,7 +211,10 @@ erDiagram
     { "do": "renameField", "collection": "post", "from": "summary", "to": "excerpt", "values": "move" },
     { "do": "removeField", "collection": "post", "field": "subtitle", "values": "keep" },
     { "do": "addField", "collection": "post", "field": "format", "fill": "memo" }
-  ]
+  ],
+  "firstAdminValues": {
+    "post": { "fields": { "format": { "label": "글 종류", "optionLabels": { "memo": "메모" } } } }
+  }
 }
 ```
 
@@ -220,8 +262,12 @@ flowchart TD
 | `schema.plan` | read | 초안과 지금 스키마의 차이, 바뀐 것마다 영향받는 글 수와 고를 것 |
 | `schema.apply` | write · 파일 통로 | 계획과 고른 값 처리로 schema 파일과 변경 파일을 쓰고 적용 |
 | `schema.retry` | write | 적용에 실패한 변경 파일을 다시 적용 |
+| `collections.updateAdminValues` | write | 표시 이름, 도움말, 배치, 편집기 허용. 어느 환경에서나 바로 저장 |
 | `collections.export` | read | 컬렉션 하나의 글을 내보내기 파일로 |
 
+## 에이전트
+
+- 에이전트는 `schema.read`로 모든 컬렉션과 필드, 그리고 필드마다 도움말(채우는 규칙)을 읽는다. 다른 기능의 글 읽기와 쓰기는 이것을 보고 값을 맞춘다.
 - 어시스턴트가 스키마를 바꾸면 `schema.apply`가 제안이 된다. 화면에서는 필드 목록에 "✦ 제안" 표시로 보이고(흐름 11·11), 받으면 같은 검토를 거친다.
 
 ## 화면 쪽 조각
@@ -230,47 +276,10 @@ flowchart TD
 - `PropertyPanel`: 스키마에서 속성 패널을 그리는 부품. 편집기(02)와 "속성 패널 미리보기"가 같은 것을 쓴다.
 - `ChangeReview`: `schema.plan`의 결과를 그리는 검토 시트. 언어 빼기(04)도 같은 시트를 쓴다.
 
-## 결정
-
-### D1. 글을 데이터베이스에 어떻게 담을까 (추천: A, 소유자 확인 기다림)
-
-**A. 표 하나 + 필드 값은 JSON + 컬렉션마다 읽기 뷰**
-
-```sql
-select id, title, values->>'summary' as summary from entries where collection = 'post';
--- the view reads like a table:
-select id, title, summary from monti_post;
-```
-
-**B. 컬렉션마다 표 하나 (Payload 방식)**
-
-```sql
-create table posts (id text primary key, title text, summary text, ...);
-alter table posts rename column summary to excerpt;  -- every field change is a table change
-```
-
-| | A | B |
-|---|---|---|
-| 필드 고치기 | 값만 바꾼다. 표 구조는 그대로 | 고칠 때마다 표 구조 변경(마이그레이션)을 만들어야 한다 |
-| 지운 필드 남겨 두기 | 값이 그대로 남는다 | 열을 숨긴 채 남겨 두는 장치가 따로 필요하다 |
-| 컬렉션 새로 만들기 | 행만 생긴다 | 관리자 화면이 표를 새로 만든다 |
-| 언어마다 다른 값, 여러 개 관계 | 같은 JSON 안에 | 언어 표, 필드마다 연결 표가 늘어난다 |
-| 목록 · 휴지통 · 폴더 · 찾기 | 표 하나를 읽는다 | 컬렉션 표를 모두 합쳐 읽는다 |
-| 데이터베이스를 직접 보기 | 뷰로 표처럼 본다 | 바로 표다 |
-| 값 검사 | 앱이 한다 | 데이터베이스도 한다 |
-
-추천은 A다. Monti의 구조는 관리자 화면에서 바뀌고 PR로 배포된다. B는 그때마다 표 구조 변경을 만들어 두 데이터베이스에 맞춰야 하고, 시안의 "남겨 두기"를 위해 장치를 더해야 한다. 블로그 규모에서는 JSON 칸을 정렬하고 거르는 속도도 문제가 되지 않는다. B의 좋은 점인 "표처럼 보기"는 뷰로 가져온다.
-
-### D2. 표시 이름, 도움말, 배치는 어디에 둘까 (추천: 파일, 소유자 확인 기다림)
-
-흐름 11·17은 플러그인이 없는 운영 사이트에서 "구조만 잠기고 보기와 배치는 고칠 수 있다"고 그렸다. 그러려면 보기 값이 데이터베이스에 있어야 한다.
-
-- **파일에 둔다 (추천).** 모든 구조와 보기가 `monti.schema.ts` 한 곳에 있다. 플러그인이 없는 운영 사이트에서는 컬렉션 탭 전체가 잠긴다. GitHub 플러그인이 있으면 PR로 고친다. 흐름 11·17, 17b, 17c를 고쳐야 한다.
-- **운영 사이트에서만 데이터베이스에 덧씌운다.** 시안대로다. 대신 같은 값이 파일과 데이터베이스 두 곳에 있게 된다. 개발 서버에서 라벨을 바꿔 배포해도 운영 사이트에서 덧씌운 값이 이기므로, 왜 안 바뀌는지 알기 어렵다.
-
-추천 이유: 한 값은 한 곳에만 있어야 관리자가 이해하기 쉽다.
-
 ## 결정 기록
+
+- 2026-11-05, 소유자: 모든 컬렉션의 글을 표 하나(`entries`)에 담고 필드 값은 JSON 한 칸(`values`)에 둔다. 컬렉션마다 읽기 전용 뷰를 만든다. 컬렉션마다 표를 두는 방식은 필드를 고칠 때마다 표 구조 변경을 두 데이터베이스에 맞춰야 하고, "지운 필드 값 남겨 두기"에 따로 장치가 필요해서 고르지 않았다.
+- 2026-11-05, 소유자: 값은 "사이트 코드가 기대는가"로 가른다. 기대는 값(스키마)은 코드와 함께 바뀌어야 하므로 파일에, 아닌 값(표시 이름, 도움말, 배치, 편집기 허용, 템플릿, 번역 사용 여부)은 운영 사이트에서도 바로 고치도록 데이터베이스에 둔다. 한 값은 한 곳에만 있다. 개발 서버에서 만든 새 컬렉션의 관리자 값은 변경 파일에 처음 값으로 실려 간다.
 
 - 2026-11-05, 소유자: 필드 종류는 글자, 고르기, 미디어, 관계 네 가지로 시작한다. 숫자, 날짜 같은 종류는 필요할 때 더한다.
 - 2026-11-05: 필드 종류, 컬렉션 식별자와 종류는 만든 뒤 바꾸지 않는다. 기준 화면의 필드 시트도 종류를 잠긴 글로 보인다.
