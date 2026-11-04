@@ -538,7 +538,7 @@ function SidebarMenuBadge({
 	);
 }
 
-/** The folders under an open row, 13px muted. Each row keeps its own 44px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
+/** The folders under an open row, 13px muted. Each row keeps its own 38px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	return (
 		<ul
@@ -553,15 +553,15 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-11", "pl-[62px]", "pl-[80px]", "pl-[98px]"] as const;
+const SUB_DEPTH = ["pl-[38px]", "pl-[60px]", "pl-[82px]", "pl-[104px]"] as const;
 
 /**
  * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
- * with 4px of air above the first folder and below the last. The folder names stand well inside it.
+ * with 4px of air above the first folder and below the last. Every folder name stands 20px past its nearest rule.
  */
-const SUB_LINE_X = ["before:left-[17px]", "before:left-[45px]", "before:left-[63px]", "before:left-[81px]"] as const;
+const SUB_LINE_X = ["before:left-[17px]", "before:left-[39px]", "before:left-[61px]", "before:left-[83px]"] as const;
 /** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
-const SUB_LINE_LEFT = [17, 45, 63, 81] as const;
+const SUB_LINE_LEFT = [17, 39, 61, 83] as const;
 
 /**
  * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
@@ -589,7 +589,7 @@ const SUB_LINE =
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row starts 44px in from the edge, and `depth` indents a folder inside another by 18px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row starts 38px in from the edge, and `depth` indents a folder inside another by 22px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
