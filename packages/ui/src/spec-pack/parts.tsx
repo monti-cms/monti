@@ -124,7 +124,18 @@ import { StatusBar, StatusBarCell, StatusBarSpacer } from "../status-bar";
 import { StatusBarList } from "../status-bar-list";
 import { Suggest, SuggestLabel, SuggestList } from "../suggest";
 import { Switch } from "../switch";
-import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
+import {
+	ListScroll,
+	RowActions,
+	RowCheck,
+	RowLink,
+	RowMore,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+} from "../table";
 import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../tabs";
 import { TagInput } from "../tag-input";
 import { Heading, Text } from "../text";
@@ -454,9 +465,7 @@ function ActionsCell({ label }: { label?: string }) {
 	return (
 		<TableCell align="end">
 			<RowActions>
-				<IconButton label={label ?? ""}>
-					<Icon name="overflow-menu--horizontal" />
-				</IconButton>
+				<RowMore label={label ?? ""} />
 			</RowActions>
 		</TableCell>
 	);
@@ -568,13 +577,10 @@ function RowButtonsCell({ children }: { children?: React.ReactNode }) {
 	);
 }
 
-/** The ⋯ of a row: an icon button. */
+/** The ⋯ of a row: the letter. */
 function MoreButton({ label }: { label?: string }) {
-	return (
-		<IconButton label={label ?? ""}>
-			<Icon name="overflow-menu--horizontal" />
-		</IconButton>
-	);
+	// A board's worded ⋯ (a text button) is the letter, as at the end of a row.
+	return <RowMore label={label ?? ""} />;
 }
 
 /** One tab of a page's tab row: a page of its own, with its count. */

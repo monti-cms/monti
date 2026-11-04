@@ -95,7 +95,7 @@ export function TemplatesScreen({ now }: { now?: Date } = {}) {
 										</TableCell>
 										<TableCell align="end">
 											<RowActions>
-												<MoreActionsButton actions={menu(template)} label={t("row.more")} />
+												<MoreActionsButton row actions={menu(template)} label={t("row.more")} />
 											</RowActions>
 										</TableCell>
 									</ActionContextMenu>

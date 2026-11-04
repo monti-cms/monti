@@ -195,7 +195,7 @@ function EntriesTableFolderRow({
 			<TableCell size={ACTIONS_SIZE} align="end">
 				{layout === "inline" && (
 					<RowActions>
-						<MoreActionsButton actions={menu} label={t("list.folderActions", { name: folder.name })} />
+						<MoreActionsButton row actions={menu} label={t("list.folderActions", { name: folder.name })} />
 					</RowActions>
 				)}
 			</TableCell>

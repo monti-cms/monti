@@ -1,13 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { OverflowMenuHorizontal } from "./icons";
 import {
 	Box,
 	EntryStatus,
-	IconButton,
 	ListScroll,
 	RowActions,
 	RowCheck,
 	RowLink,
+	RowMore,
 	RowTitle,
 	Table,
 	TableBody,
@@ -80,9 +79,7 @@ const rows = (pick: (id: string) => { selected?: boolean; proposal?: boolean }) 
 				</TableCell>
 				<TableCell>
 					<RowActions>
-						<IconButton label="더 보기">
-							<OverflowMenuHorizontal />
-						</IconButton>
+						<RowMore label="더 보기" />
 					</RowActions>
 				</TableCell>
 			</TableRow>
@@ -119,9 +116,7 @@ export const Folder: Story = {
 				<TableCell />
 				<TableCell>
 					<RowActions>
-						<IconButton label="더 보기">
-							<OverflowMenuHorizontal />
-						</IconButton>
+						<RowMore label="더 보기" />
 					</RowActions>
 				</TableCell>
 			</TableRow>

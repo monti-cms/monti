@@ -142,7 +142,11 @@ export function EntryRowCells({
 			<TableCell size={ACTIONS_SIZE} align="end">
 				<Inline gap={4} justify="end">
 					<RowActions>
-						<MoreActionsButton actions={menu} label={t("list.rowActions", { title: item.title ?? tc("untitled") })} />
+						<MoreActionsButton
+							row
+							actions={menu}
+							label={t("list.rowActions", { title: item.title ?? tc("untitled") })}
+						/>
 					</RowActions>
 				</Inline>
 			</TableCell>

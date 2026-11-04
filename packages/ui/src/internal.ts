@@ -302,6 +302,7 @@ export {
 	RowActions,
 	RowCheck,
 	RowLink,
+	RowMore,
 	RowThumb,
 	RowTitle,
 	Table,

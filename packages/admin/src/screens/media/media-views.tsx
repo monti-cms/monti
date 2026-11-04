@@ -318,7 +318,11 @@ export function MediaTable({ library, uploads, drop, folderActions, menuFor, onT
 									</TableCell>
 									<TableCell onClick={(event) => event.stopPropagation()}>
 										<RowActions>
-											<MoreActionsButton actions={menuFor(media)} label={t("tile.actions", { name: media.filename })} />
+											<MoreActionsButton
+												row
+												actions={menuFor(media)}
+												label={t("tile.actions", { name: media.filename })}
+											/>
 										</RowActions>
 									</TableCell>
 								</ActionContextMenu>

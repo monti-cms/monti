@@ -160,6 +160,7 @@ function TrashRow({
 					</RowActions>
 					<RowActions>
 						<MoreActionsButton
+							row
 							actions={[
 								{
 									kind: "item",

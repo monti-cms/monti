@@ -1,11 +1,13 @@
 "use client";
 
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { Folder } from "./icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
 	className,
@@ -191,6 +193,40 @@ function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
  * The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. It takes one line of
  * the row (20px) and lets its button stand out above and below, so the ⋯ does not make the row taller than its text.
  */
+/**
+ * A row's ⋯: the letter, not a round button, in the row's own 20px line at the end of the row (`.mt-row > .mt-text-btn`). `label` is the screen reader
+ * name and the tooltip. To make it the trigger of a menu, wrap it with `trigger`: `trigger={(button) => <DropdownMenuTrigger render={button} />}`.
+ */
+function RowMore({
+	label,
+	trigger,
+	className,
+	type = "button",
+	...props
+}: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
+	label: string;
+	trigger?: (button: React.ReactElement) => React.ReactElement;
+}) {
+	const button = (
+		<ButtonPrimitive
+			data-slot="row-more"
+			type={type}
+			aria-label={label}
+			className={cn(
+				"inline-flex h-5 cursor-pointer items-center border-0 bg-transparent p-0 text-monti-muted text-monti-reading outline-none transition-colors hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default",
+				className,
+			)}
+			{...props}
+		/>
+	);
+	return (
+		<Tooltip>
+			<TooltipTrigger render={trigger ? trigger(button) : button}>⋯</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span data-slot="row-actions" className={cn("relative z-1 inline-flex h-5 items-center", className)} {...props} />
@@ -343,6 +379,7 @@ function TableCell({
 export {
 	ListScroll,
 	RowActions,
+	RowMore,
 	RowCheck,
 	RowThumb,
 	RowLink,
