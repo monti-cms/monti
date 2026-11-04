@@ -53,6 +53,7 @@ function TagInput({
 	return (
 		<div
 			data-slot="tag-input"
+			data-disabled={disabled || undefined}
 			className={cn(CHIPS_FIELD, mono && "font-mono", disabled && "cursor-not-allowed opacity-45", className)}
 		>
 			{items.map((item, index) => (

@@ -24,7 +24,7 @@ function FilterButton({
 			type="button"
 			className={cn(
 				TEXT_HOVER,
-				"inline-flex cursor-pointer items-center rounded-monti-sm border-0 bg-transparent p-0 outline-none hover:text-monti-default disabled:cursor-default disabled:opacity-45 aria-expanded:text-monti-default",
+				"inline-flex cursor-pointer items-center rounded-monti-sm border-0 bg-transparent p-0 outline-none hover:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-expanded:text-monti-default",
 				filled ? "text-monti-default" : "text-monti-subtle",
 				className,
 			)}

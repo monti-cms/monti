@@ -192,13 +192,13 @@ export const Rows: Story = {
 	render: () => (
 		<Sheet>
 			<Row name="표 행">
-				{() => (
+				{(disabled) => (
 					<Table container="none">
 						<TableBody>
-							<TableRow>
+							<TableRow aria-disabled={disabled || undefined}>
 								<TableCell>
 									<RowCheck checked={false} label="고르기" />
-									<RowLink render={<button type="button" />}>첫 번째 글</RowLink>
+									<RowLink render={<button type="button" disabled={disabled} />}>첫 번째 글</RowLink>
 								</TableCell>
 							</TableRow>
 						</TableBody>
