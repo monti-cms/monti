@@ -98,7 +98,7 @@ export function ChatInput({
 	if (!queue) return form;
 	return (
 		<div data-slot="chat-input-queue" className="flex flex-col">
-			<ul className="-mb-monti-12 flex flex-col gap-monti-4 rounded-t-monti-xl border border-monti-default border-b-0 bg-monti-page pt-monti-6 pr-monti-6 pb-[18px] pl-monti-12">
+			<ul className="-mb-monti-12 flex flex-col gap-monti-4 rounded-t-monti-xl border border-monti-default border-b-0 bg-monti-muted pt-monti-6 pr-monti-6 pb-[18px] pl-monti-12">
 				{queue}
 			</ul>
 			{form}
