@@ -508,7 +508,7 @@
 				},
 				"source": {
 					"kind": "data",
-					"fields": ["kind", "text", "changed"]
+					"fields": ["kind", "text", "changed", "faint", "picture", "label", "placeholder", "editable"]
 				},
 				"sourceLabel": {
 					"kind": "text",
@@ -520,7 +520,7 @@
 				},
 				"translation": {
 					"kind": "data",
-					"fields": ["kind", "text", "changed"]
+					"fields": ["kind", "text", "changed", "faint", "picture", "label", "placeholder", "editable"]
 				},
 				"translationLabel": {
 					"kind": "text",

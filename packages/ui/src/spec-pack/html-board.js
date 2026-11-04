@@ -997,22 +997,59 @@ const parts = [
 			const src = el.querySelector(":scope > .src");
 			const dst = el.querySelector(":scope > .dst");
 			// Each block of a side: a new piece per paragraph, list item or row; the marked words of the source as changed pieces.
-			const pieces = (side) =>
-				side
-					? [...side.querySelectorAll("p, li, tr, pre, h1, figcaption, .mt-label")]
-							.filter((block) => !block.closest(".mt-shared button"))
-							.flatMap((block) => {
-								const runs = [...block.childNodes]
-									.filter((node) => node.textContent.trim() !== "" && node.nodeName !== "BUTTON")
-									.map((node) => ({
-										text: node.nodeName === "TR" ? node.textContent : node.textContent,
-										changed: node.nodeName === "MARK" || undefined,
-									}));
-								if (block.matches("tr"))
-									return [{ kind: "p", text: [...block.children].map((cell) => cell.textContent.trim()).join(" · ") }];
-								return runs.map((run, index) => (index === 0 ? { kind: "p", ...run } : run));
-							})
-					: undefined;
+			// A side's blocks, as the data gives them: each starts with a piece that has its `kind`; the pieces after it go on the same block.
+			const runOf = (block, kind, extra = {}) => {
+				const runs = [...block.childNodes]
+					.filter((node) => node.textContent.trim() !== "" && node.nodeName !== "BUTTON")
+					.map((node) => ({ text: node.textContent, changed: node.nodeName === "MARK" || undefined }));
+				return runs.map((run, index) => (index === 0 ? { kind, ...run, ...extra } : run));
+			};
+			const pieces = (side) => {
+				if (!side) return undefined;
+				const out = [];
+				const faint = (node) => node.matches(".mt-untranslated, [style*='--fg-faint']") || undefined;
+				for (const block of side.querySelectorAll(":scope > *, :scope > .mt-shared > *")) {
+					if (block.matches("button")) continue;
+					if (block.matches(".mt-shared")) continue;
+					if (block.matches(".mt-doc-callout")) {
+						for (const [index, line] of [...block.children].entries())
+							out.push(...runOf(line, index === 0 ? "callout" : "line"));
+					} else if (block.matches("pre")) {
+						out.push({ kind: "code", text: block.textContent, faint: faint(block) });
+					} else if (block.matches("table")) {
+						for (const row of block.querySelectorAll("tr"))
+							out.push({
+								kind: row.querySelector("th") ? "th" : "tr",
+								text: [...row.children].map((cell) => cell.textContent.trim()).join("\t"),
+							});
+					} else if (block.matches("ul, ol")) {
+						for (const item of block.querySelectorAll(":scope > li")) out.push(...runOf(item, "li"));
+					} else if (block.querySelector(".mt-field")) {
+						const picture = block.querySelector(":scope > div:first-child");
+						out.push({
+							kind: "image",
+							text: "",
+							picture: picture?.style.background,
+							faint: picture?.style.opacity ? true : undefined,
+						});
+						for (const field of block.querySelectorAll(".mt-field")) {
+							const input = field.querySelector("input");
+							out.push({
+								kind: "field",
+								label: field.querySelector(".mt-label")?.textContent.trim(),
+								text: input ? input.value : (field.querySelector("p")?.textContent.trim() ?? ""),
+								placeholder: input?.placeholder || undefined,
+								editable: input ? true : undefined,
+							});
+						}
+					} else if (block.matches("h1")) {
+						out.push({ kind: "title", text: block.textContent.trim() });
+					} else {
+						out.push(...runOf(block, "p", { faint: faint(block) }));
+					}
+				}
+				return out;
+			};
 			const head = el.classList.contains("mt-pair--head");
 			const title = el.classList.contains("mt-pair--title");
 			const shared = dst?.querySelector(".mt-shared");

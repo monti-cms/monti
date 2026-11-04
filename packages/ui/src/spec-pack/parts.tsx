@@ -27,6 +27,7 @@ import {
 } from "../compare";
 import { Count } from "../count";
 import { DangerBlock, DangerRow } from "../danger-block";
+import { DocCallout, DocCode, DocTable } from "../doc-blocks";
 import { DragHandle } from "../drag-handle";
 import { DropArea } from "../drop-area";
 import { EditorHeader, EditorTitleRule } from "../editor-header";
@@ -1242,7 +1243,7 @@ function MediaTile({
 	selected?: boolean;
 	picking?: boolean;
 }) {
-	// A picture is an address; a board draws a colour in its place, which is no picture to load.
+	// A picture is an address; a board's sample paints a colour in its place, drawn as it is.
 	const address = picture && /^(https?:|\/|data:)/.test(picture) ? picture : undefined;
 	return (
 		<Tile
@@ -1253,6 +1254,8 @@ function MediaTile({
 					<FilePreview ext={ext} />
 				) : address ? (
 					<ImagePart src={address} alt="" ratio="photo" radius="none" />
+				) : picture ? (
+					<SamplePicture paint={picture} />
 				) : null
 			}
 			status={status}
@@ -1301,10 +1304,8 @@ type Marked = readonly { kind?: string; text: string }[];
 function marked(run: Marked | undefined) {
 	return run?.map((piece, index) =>
 		piece.kind === "del" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one run never move
 			<Del key={index}>{piece.text}</Del>
 		) : piece.kind === "ins" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one run never move
 			<Ins key={index}>{piece.text}</Ins>
 		) : (
 			piece.text
@@ -1496,14 +1497,11 @@ function EditorBody({
 			)}
 		>
 			{bodyOf(doc).map((block, index) => {
-				// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
 				const key = index;
 				const run = block.pieces.map((piece, at) =>
 					piece.mark === "del" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
 						<Del key={at}>{piece.text}</Del>
 					) : piece.mark === "ins" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
 						<Ins key={at}>{piece.text}</Ins>
 					) : (
 						piece.text
@@ -1518,7 +1516,6 @@ function EditorBody({
 					return (
 						<ul key={key}>
 							{block.items.map((item, at) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: a sample list's items never move
 								<li key={at}>{item}</li>
 							))}
 						</ul>
@@ -1680,7 +1677,118 @@ function StatusGap() {
  * Pieces of an entry's text as the data gives them: a piece with a `kind` (`h2`, `h3`, `p`) starts a block, one without goes on the block before it;
  * `changed` pieces are the words that differ between the two sides.
  */
-type Pieces = readonly { kind?: string; text: string; changed?: boolean }[];
+type Pieces = readonly {
+	kind?: string;
+	text: string;
+	changed?: boolean;
+	faint?: boolean;
+	picture?: string;
+	label?: string;
+	placeholder?: string;
+	editable?: boolean;
+}[];
+
+/**
+ * A side's blocks drawn with the design system's body parts: paragraphs and list items with their changed words, a callout, code, a table, and an image
+ * with its fields. `source` draws the callout and code one step darker, as on the source's ground.
+ */
+function docBlocks(pieces: Pieces | undefined, source: boolean) {
+	const out: React.ReactNode[] = [];
+	const list = [...(pieces ?? [])];
+	let at = 0;
+	const take = (kinds: string[]) => {
+		const taken = [];
+		while (
+			at < list.length &&
+			(kinds.includes(list[at]?.kind ?? "") || (taken.length > 0 && list[at]?.kind === undefined))
+		) {
+			taken.push(list[at] as Pieces[number]);
+			at++;
+		}
+		return taken;
+	};
+	const lines = (taken: Pieces) => {
+		const blocks: Pieces[number][][] = [];
+		for (const piece of taken) {
+			if (piece.kind || blocks.length === 0) blocks.push([piece]);
+			else blocks[blocks.length - 1]?.push(piece);
+		}
+		return blocks;
+	};
+	while (at < list.length) {
+		const kind = list[at]?.kind ?? "p";
+		const key = at;
+		if (kind === "callout" || kind === "line") {
+			out.push(
+				<DocCallout key={key} source={source}>
+					{lines(take(["callout", "line"])).map((line, index) => (
+						<p key={index} className="m-0">
+							{runOf(line)}
+						</p>
+					))}
+				</DocCallout>,
+			);
+		} else if (kind === "code") {
+			const code = take(["code"])[0];
+			out.push(
+				<DocCode key={key} source={source}>
+					{code?.faint ? <Untranslated>{code.text}</Untranslated> : code?.text}
+				</DocCode>,
+			);
+		} else if (kind === "th" || kind === "tr") {
+			const rows = take(["th", "tr"]);
+			const head = rows.find((row) => row.kind === "th")?.text.split("\t") ?? [];
+			out.push(
+				<DocTable
+					key={key}
+					head={head}
+					rows={rows.filter((row) => row.kind === "tr").map((row) => row.text.split("\t"))}
+				/>,
+			);
+		} else if (kind === "li") {
+			out.push(
+				<ul key={key} className="m-0 pl-monti-20">
+					{lines(take(["li"])).map((item, index) => (
+						<li key={index}>{runOf(item)}</li>
+					))}
+				</ul>,
+			);
+		} else if (kind === "image") {
+			const image = list[at] as Pieces[number];
+			at++;
+			const fields = take(["field"]);
+			out.push(
+				<Inline key={key} gap={16} align="start">
+					<BoxPart radius="md" className={cn("h-24 w-[140px] shrink-0 overflow-hidden", image.faint && "opacity-45")}>
+						{image.picture && <SamplePicture paint={image.picture} />}
+					</BoxPart>
+					<StackPart gap={12} grow>
+						{fields.map((field) =>
+							field.editable ? (
+								<FormField key={field.label}>
+									<FormFieldLabelPart>{field.label}</FormFieldLabelPart>
+									<InputPart defaultValue={field.text} placeholder={field.placeholder} />
+								</FormField>
+							) : (
+								<ReadValuePart key={field.label} label={field.label ?? ""} mono={false}>
+									{field.text}
+								</ReadValuePart>
+							),
+						)}
+					</StackPart>
+				</Inline>,
+			);
+		} else {
+			const block = lines(take(["p"]))[0] ?? [];
+			out.push(
+				<CompareParagraph key={key}>
+					{block[0]?.faint ? <Untranslated>{runOf(block)}</Untranslated> : runOf(block)}
+				</CompareParagraph>,
+			);
+		}
+	}
+	return out;
+}
 
 function blocksOf(pieces: Pieces | undefined) {
 	const blocks: { kind: string; pieces: { text: string; changed?: boolean }[] }[] = [];
@@ -1693,7 +1801,6 @@ function blocksOf(pieces: Pieces | undefined) {
 
 function runOf(pieces: readonly { text: string; changed?: boolean }[]) {
 	return pieces.map((piece, index) => (
-		// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
 		<CompareText key={index} changed={piece.changed}>
 			{piece.text}
 		</CompareText>
@@ -1736,18 +1843,13 @@ function PairRow({
 	shared?: boolean;
 	sharedAction?: string;
 }) {
-	const side = (pieces: Pieces | undefined) =>
+	const side = (pieces: Pieces | undefined, source: boolean) =>
 		kind === "title" ? (
 			<Heading as="h2" variant="page">
 				{pieces?.map((piece) => piece.text).join("")}
 			</Heading>
 		) : (
-			<CompareBody>
-				{blocksOf(pieces).map((block, index) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
-					<CompareParagraph key={index}>{runOf(block.pieces)}</CompareParagraph>
-				))}
-			</CompareBody>
+			<CompareBody>{docBlocks(pieces, source)}</CompareBody>
 		);
 	return (
 		<CompareRow
@@ -1765,16 +1867,16 @@ function PairRow({
 				)
 			}
 			note={note}
-			source={kind === "head" ? sourceLabel : side(source)}
+			source={kind === "head" ? sourceLabel : side(source, true)}
 			translation={
 				kind === "head" ? (
 					translationLabel
 				) : shared ? (
 					<CompareShared action={<TextButton variant="underline">{sharedAction}</TextButton>}>
-						{side(translation)}
+						{side(translation, false)}
 					</CompareShared>
 				) : (
-					side(translation)
+					side(translation, false)
 				)
 			}
 		/>
@@ -1825,10 +1927,8 @@ function CompareColumn({
 			<CompareBody>
 				{blocksOf(doc).map((block, index) =>
 					block.kind === "h2" || block.kind === "h3" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
 						<CompareHeading key={index}>{runOf(block.pieces)}</CompareHeading>
 					) : (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
 						<CompareParagraph key={index}>{runOf(block.pieces)}</CompareParagraph>
 					),
 				)}
@@ -2026,8 +2126,19 @@ function ChipsField({
 /** The picture of a property (an entry's cover), from the data, under its label. */
 function PropertyPicture({ picture }: { picture?: string }) {
 	const address = picture && /^(https?:|\/|data:)/.test(picture) ? picture : undefined;
-	// Without an address the frame shows its neutral fill.
-	return <ImagePart src={address ?? ""} alt="" ratio="photo" radius="sm" />;
+	if (address || !picture) return <ImagePart src={address ?? ""} alt="" ratio="photo" radius="sm" />;
+	return (
+		<BoxPart radius="sm" className="aspect-[3/1] overflow-hidden">
+			<SamplePicture paint={picture} />
+		</BoxPart>
+	);
+}
+
+/** A sample's picture: the paint a board draws where a real file's picture goes (a gradient), so a sample screen reads like the board. */
+function SamplePicture({ paint }: { paint: string }) {
+	return (
+		<span data-slot="sample-picture" aria-hidden="true" className="block size-full" style={{ background: paint }} />
+	);
 }
 
 /** The assistant's empty panel: the requests to start from, in groups under their `SuggestHeading`s. */
@@ -2109,12 +2220,10 @@ function Conversation({
 		<ChatThread>
 			{groups.map((group, index) =>
 				group.role === "user" ? (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a sample conversation never moves
 					<ChatMessage key={index} author="user">
 						{group.turns[0]?.text}
 					</ChatMessage>
 				) : (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a sample conversation never moves
 					<ChatAnswer key={index}>
 						{group.turns.some((turn) => turn.role === "tool") && (
 							<ToolCallLines>
@@ -2500,8 +2609,8 @@ export const CATALOG = {
 			current: "flag",
 			sourceLabel: "text",
 			translationLabel: "text",
-			source: "data:kind,text,changed",
-			translation: "data:kind,text,changed",
+			source: "data:kind,text,changed,faint,picture,label,placeholder,editable",
+			translation: "data:kind,text,changed,faint,picture,label,placeholder,editable",
 			shared: "flag",
 			sharedAction: "text",
 		},

@@ -11,6 +11,8 @@
 // `minWidth`, `minHeight`.
 
 const { parts: PARTS, known: KNOWN, frame: FRAME = [] } = window.boardPack ?? { parts: [], known: /^$/ };
+/** The layout the board's page gets (as tall as the window), for the boards drawn inside it too. */
+let PAGE = {};
 
 /** Inline style properties that are spacing (measured as distances), and the screen's own layout of a group (open: the screen decides it, and the
  * spec writes it on its Stack). On a part, layout is a look: a part is placed by the group around it. Every other property is a look. */
@@ -234,7 +236,8 @@ function read(el, where, page = undefined, inPart = false) {
 	if (rule?.overlay && el.dataset.overlay === undefined) return { where: here };
 	if (rule?.frame) {
 		// The board's own root is the page whatever rule it matches: it takes the page's layout (as tall as the window).
-		const layout = page !== undefined ? { ...page } : {};
+		// A board drawn inside a board (its own page root) is a page too: as tall as the window.
+		const layout = el.matches(".sc-host") ? {} : { ...(page ?? PAGE) };
 		return framed(el, { where: here, direction: directionOf(el), layout, ...withLooks(measured(el, here), looks) });
 	}
 	if (rule) {
@@ -434,6 +437,7 @@ function measured(el, where) {
 window.readBoard = (selector, page = {}) => {
 	const root = document.querySelector(selector);
 	if (!root) throw new Error(`no element "${selector}" in the board`);
+	PAGE = page;
 	const node = read(root, "board", page);
 	// What opens over the screen (a sheet), read as the parts they are, in the order the board draws them.
 	const overlays = [...root.querySelectorAll("*")]
