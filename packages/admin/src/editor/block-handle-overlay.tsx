@@ -100,7 +100,7 @@ export function BlockHandleOverlay({
 		<div
 			ref={marks}
 			// design-allow: the marks follow the block under the pointer
-			style={{ position: "fixed", top: `${spot.top + 4}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
+			style={{ position: "fixed", top: `${spot.top + 3}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
 			className="flex items-center"
 		>
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}

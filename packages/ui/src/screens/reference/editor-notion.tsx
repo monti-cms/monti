@@ -453,8 +453,8 @@ export function EditorNotionScreen() {
 		>
 			<EntryTitle>첫 번째 글</EntryTitle>
 			<Box position="relative">
-				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left, 4px down) */}
-				<div style={{ position: "absolute", top: 4, left: -64 }}>
+				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left, 3px down: the 24px handle centred on the 30px line) */}
+				<div style={{ position: "absolute", top: 3, left: -64 }}>
 					<DropdownMenu open modal={false}>
 						<BlockHandle
 							addLabel="아래에 블록 넣기"
