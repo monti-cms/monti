@@ -58,6 +58,7 @@ import {
 	PaginationPrevious,
 } from "../pagination";
 import { PickList, PickListItem } from "../pick-list";
+import { PropertyGroup, PropertyPanel } from "../property-list";
 import { ProposalBubble, ProposalBubbleDock } from "../proposal-bubble";
 import { Del, Ins } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
@@ -109,13 +110,16 @@ import {
 import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
 import { StatusBar, StatusBarCell, StatusBarSpacer } from "../status-bar";
+import { StatusBarList } from "../status-bar-list";
 import { Switch } from "../switch";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../tabs";
+import { TagInput } from "../tag-input";
 import { Heading, Text } from "../text";
 import { TextButton } from "../text-button";
 import { Textarea as TextareaPart } from "../textarea";
 import { FolderTile, Tile } from "../tile";
+import { TodoDone, TodoItem } from "../todo-item";
 import { TrashRowDate, TrashRowTitle } from "../trash-row";
 
 /** An icon by its Carbon name in the design system's icon list (`iconsByName`), in a part that takes its icon as children (a button, an icon button). */
@@ -1612,6 +1616,54 @@ function StatusCell({
 	);
 }
 
+/**
+ * A status bar cell with its list open over it ("To do 2"): the cell's words and `tone`, the list's name (`listLabel`) and how many are left (`count`),
+ * the rows to fix (from the data: each one's `title`, `detail` and `action`; `ai` when the assistant does it, `current` for the one looked at), the
+ * ones done (`done`, from the data), and the list's own buttons (`footer`).
+ */
+function StatusListCell({
+	label,
+	tone,
+	listLabel,
+	count,
+	items,
+	done,
+	footer,
+}: {
+	label?: string;
+	tone?: "warning" | "danger";
+	listLabel?: string;
+	count?: number;
+	items?: readonly { title: string; detail?: string; action?: string; ai?: boolean; current?: boolean }[];
+	done?: readonly { text: string }[];
+	footer?: React.ReactNode;
+}) {
+	return (
+		<StatusBarList
+			trigger={<StatusBarCell tone={tone}>{label}</StatusBarCell>}
+			label={listLabel ?? ""}
+			count={Number(count ?? 0)}
+			defaultOpen
+			footer={footer}
+		>
+			{items?.map((item) => (
+				<TodoItem
+					key={item.title}
+					title={item.title}
+					detail={item.detail}
+					current={item.current}
+					actionLabel={item.action}
+					onAction={item.action ? () => {} : undefined}
+					proposal={item.ai}
+				/>
+			))}
+			{done?.map((item) => (
+				<TodoDone key={item.text}>{item.text}</TodoDone>
+			))}
+		</StatusBarList>
+	);
+}
+
 /** The room between a status bar's cells and its end cells. */
 function StatusGap() {
 	return <StatusBarSpacer />;
@@ -1873,6 +1925,104 @@ function EmptyHead({ title, description }: { title?: string; description?: strin
 	return <Empty title={title} description={description} />;
 }
 
+/** The editor's properties pane: its tabs (from the data: each one's `value` and `label`; `open` the picked one) over the picked tab's groups. */
+function PropsPanel({
+	label,
+	open,
+	tabs,
+	children,
+}: {
+	label?: string;
+	open?: string;
+	tabs?: readonly { value: string; label: string }[];
+	children?: React.ReactNode;
+}) {
+	return (
+		<PropertyPanel label={label ?? ""} value={open ?? ""} onValueChange={() => {}} tabs={tabs ?? []}>
+			{children}
+		</PropertyPanel>
+	);
+}
+
+/** A run of property rows, with its quiet subheading (`title`) when it has one. */
+function PropsGroup({ title, children }: { title?: string; children?: React.ReactNode }) {
+	return <PropertyGroup title={title}>{children}</PropertyGroup>;
+}
+
+/** A property's label with the assistant's fill action at the end of its row (`action`, its words; ✦ is the part's). */
+function LabelWithFill({ label, action, for: field }: { label?: string; action?: string; for?: string }) {
+	return (
+		<FormFieldLabelPart
+			htmlFor={field}
+			action={
+				action ? (
+					<TextButton tone="proposal" size="micro">
+						{action}
+					</TextButton>
+				) : undefined
+			}
+		>
+			{label}
+		</FormFieldLabelPart>
+	);
+}
+
+/** A field with a small button at the end of its line (make the address again from the title, open the category list). */
+function LineInput({
+	id,
+	value,
+	placeholder,
+	mono,
+	multiline,
+	actionLabel,
+	actionIcon,
+}: {
+	id?: string;
+	value?: string;
+	placeholder?: string;
+	mono?: boolean;
+	/** Several lines (a summary). */
+	multiline?: boolean;
+	actionLabel?: string;
+	actionIcon?: IconName;
+}) {
+	const action = actionLabel ? (
+		<IconButton label={actionLabel}>{actionIcon ? <Icon name={actionIcon} /> : null}</IconButton>
+	) : undefined;
+	return multiline ? (
+		<TextareaPart id={id} defaultValue={value} placeholder={placeholder} mono={mono} action={action} />
+	) : (
+		<InputPart id={id} defaultValue={value} placeholder={placeholder} mono={mono} action={action} />
+	);
+}
+
+/** Values picked as chips in one line (an entry's tags), from the data; `removeLabel` names each chip's ×. */
+function ChipsField({
+	label,
+	items,
+	removeLabel,
+}: {
+	label?: string;
+	items?: readonly { label: string }[];
+	removeLabel?: string;
+}) {
+	return (
+		<TagInput
+			aria-label={label}
+			items={(items ?? []).map((item) => item.label)}
+			onChange={() => {}}
+			removeLabel={(item) => `${item} ${removeLabel ?? ""}`.trim()}
+		/>
+	);
+}
+
+/** The picture of a property (an entry's cover), from the data, under its label. */
+function PropertyPicture({ picture }: { picture?: string }) {
+	const address = picture && /^(https?:|\/|data:)/.test(picture) ? picture : undefined;
+	// Without an address the frame shows its neutral fill.
+	return <ImagePart src={address ?? ""} alt="" ratio="photo" radius="sm" />;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1881,6 +2031,12 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	PropsPanel,
+	PropsGroup,
+	LabelWithFill,
+	LineInput,
+	ChipsField,
+	PropertyPicture,
 	EmptyHead,
 	PickerDialog,
 	ProposalDock,
@@ -1900,6 +2056,7 @@ export const parts = {
 	EditorStatusBar,
 	StatusCell,
 	StatusGap,
+	StatusListCell,
 	ReviewAsk,
 	ReviewHead,
 	ReviewEntry,
@@ -2071,6 +2228,24 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	PropsPanel: { kind: "part", props: { label: "text", open: "text", tabs: "data:value,label" } },
+	PropsGroup: { kind: "part", props: { title: "text" } },
+	LabelWithFill: { kind: "part", props: { label: "text", action: "text", for: "ref" } },
+	LineInput: {
+		kind: "part",
+		bind: "yes",
+		props: {
+			id: "text",
+			value: "state",
+			placeholder: "text",
+			mono: "flag",
+			multiline: "flag",
+			actionLabel: "text",
+			actionIcon: "variant",
+		},
+	},
+	ChipsField: { kind: "part", props: { label: "text", items: "data:label", removeLabel: "text" } },
+	PropertyPicture: { kind: "part", props: { picture: "state" } },
 	EmptyHead: { kind: "part", props: { title: "text", description: "text" } },
 	PickerDialog: {
 		kind: "overlay",
@@ -2137,6 +2312,17 @@ export const CATALOG = {
 	EditorStatusBar: { kind: "part", props: { label: "text" } },
 	StatusCell: { kind: "part", props: { label: "text", tone: "variant", noDot: "flag", end: "flag" } },
 	StatusGap: { kind: "part", props: {} },
+	StatusListCell: {
+		kind: "part",
+		props: {
+			label: "text",
+			tone: "variant",
+			listLabel: "text",
+			count: "state",
+			items: "data:title,detail,action,ai,current",
+			done: "data:text",
+		},
+	},
 	ReviewAsk: { kind: "part", props: { text: "state" } },
 	ReviewHead: { kind: "part", props: { title: "text", meta: "text" } },
 	ReviewEntry: {

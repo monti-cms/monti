@@ -501,7 +501,7 @@ const parts = [
 	},
 	// A field's line of help under it, in the role and tone its words have.
 	{
-		match: (el) => el.matches(".mt-field > span:not([class]):not(:has(input, button))"),
+		match: (el) => el.matches(".mt-field > span:not([class]):not(:has(input, button)):not(:empty)"),
 		part: "Text",
 		props: (el) => ({ variant: "label", tone: /var\(--fg-([a-z]+)\)/.exec(el.style.color)?.[1] }),
 		asProps: ["color"],
@@ -575,6 +575,8 @@ const parts = [
 	},
 	// A sheet over the screen: the dim behind it is the sheet's own.
 	{ match: (el) => el.matches(".mt-backdrop"), ignore: true },
+	// A group's subheading is read by its group.
+	{ match: (el) => el.matches("h3.mt-props-title"), ignore: true },
 	{
 		match: (el) => el.matches("section.mt-sheet"),
 		part: "Sheet",
@@ -940,6 +942,8 @@ const parts = [
 			getComputedStyle(el).position === "absolute",
 		part: "PickerDialog",
 		overlay: true,
+		// It draws its own words (the step count, cancel).
+		ownWords: true,
 		props: (el) => {
 			const dialog = el.querySelector("section.mt-dialog");
 			const nav = dialog.querySelector("nav[aria-label]");
@@ -1079,6 +1083,8 @@ const parts = [
 		match: (el) => el.matches("div[role=toolbar]:has(> .mt-bubble)"),
 		part: "ProposalDock",
 		overlay: true,
+		// It draws its own words (the step count, cancel).
+		ownWords: true,
 		props: (el) => {
 			const bubble = el.querySelector(".mt-bubble");
 			const [position, total] = (bubble.querySelector(".mt-count")?.textContent ?? "")
@@ -1115,11 +1121,43 @@ const parts = [
 		slots: () => ({}),
 		children: (el) => [
 			...el.querySelectorAll(
-				":scope > button, :scope > .cell > button, :scope > span:not(.cell), :scope > .grow, :scope > .end",
+				":scope > button, :scope > .cell:not(:has(.mt-statusbar-list)) > button, :scope > .cell:has(.mt-statusbar-list), :scope > span:not(.cell), :scope > .grow, :scope > .end",
 			),
 		],
 	},
 	{ match: (el) => el.matches(".mt-statusbar > .grow"), part: "StatusGap", leaf: true },
+	// A cell whose list is open.
+	{
+		match: (el) => el.matches(".mt-statusbar > .cell:has(.mt-statusbar-list)"),
+		part: "StatusListCell",
+		props: (el) => {
+			const list = el.querySelector(".mt-statusbar-list");
+			const head = [...(list.querySelector(".mt-menu-label")?.children ?? [])];
+			const button = el.querySelector(":scope > button");
+			return {
+				label: button?.textContent.replace(/\s+/g, " ").trim(),
+				tone: button?.querySelector(".warn, [style*='--fg-warning']") ? "warning" : undefined,
+				listLabel: head[0]?.textContent.trim(),
+				count: Number(head[1]?.textContent.trim()) || undefined,
+				items: [...list.querySelectorAll(".mt-todo-item")].map((item) => ({
+					title: item.querySelector(".title")?.textContent.trim(),
+					detail: item.querySelector(".sub")?.textContent.trim(),
+					action: item.querySelector(".act")?.textContent.trim() || undefined,
+					ai: item.querySelector(".act:not(.plain)") ? true : undefined,
+					current: item.classList.contains("is-on") || undefined,
+				})),
+				done: [...list.querySelectorAll(".mt-todo-done")].map((row) => ({
+					text: [...row.childNodes]
+						.filter((node) => node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp"))
+						.map((node) => node.textContent)
+						.join("")
+						.trim(),
+				})),
+			};
+		},
+		slots: (el) => ({ footer: el.querySelector(".mt-statusbar-list > div:last-child:has(> .mt-text-btn)") }),
+		children: () => [],
+	},
 	{
 		match: (el) =>
 			el.matches(".mt-statusbar > button, .mt-statusbar > .cell > button, .mt-statusbar > span:not(.cell, .grow)"),
@@ -1193,6 +1231,89 @@ const parts = [
 		},
 		leaf: true,
 		asProps: ["text-decoration", "color", "background"],
+	},
+	// The editor's properties pane: its tab bar over the picked tab's groups of rows.
+	{
+		match: (el) => el.matches("aside.mt-panel:has(> nav.mt-tabs--bar):not(:has(> .mt-panel-head))"),
+		part: "PropsPanel",
+		props: (el) => {
+			const tabs = [...el.querySelectorAll(":scope > nav [role=tab]")].map((tab) => ({
+				value: tab.textContent.trim(),
+				label: tab.textContent.trim(),
+			}));
+			return {
+				label: el.getAttribute("aria-label"),
+				open: el.querySelector(":scope > nav [role=tab][aria-selected=true], :scope > nav .is-on")?.textContent.trim(),
+				tabs,
+			};
+		},
+		slots: () => ({}),
+		// The picked tab's page: its groups, each with the subheading before it.
+		children: (el) => [...el.querySelectorAll(":scope > div > .mt-props")].filter((group) => shown(group)),
+		asProps: ["flex", "max-width", "min-width"],
+	},
+	{
+		match: (el) => el.matches(".mt-props"),
+		part: "PropsGroup",
+		props: (el) => ({
+			title: el.previousElementSibling?.matches("h3.mt-props-title")
+				? el.previousElementSibling.textContent.trim()
+				: undefined,
+		}),
+	},
+	{
+		match: (el) => el.matches(".mt-label-row:has(> .mt-ai-action)"),
+		part: "LabelWithFill",
+		props: (el) => ({
+			label: el.querySelector(".mt-label")?.textContent.trim(),
+			action: el.querySelector(".mt-ai-action")?.textContent.trim(),
+			for: el.querySelector(".mt-label")?.getAttribute("for"),
+		}),
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches(".mt-input-line, .mt-affix.is-bare"),
+		part: "LineInput",
+		idOf: (el) => el.querySelector("input, textarea")?.id,
+		props: (el) => {
+			const input = el.querySelector("input, textarea");
+			const button = el.querySelector(".mt-icon-btn");
+			return {
+				value: input?.value || undefined,
+				placeholder: input?.placeholder || undefined,
+				mono: input?.classList.contains("mt-mono") || undefined,
+				multiline: el.classList.contains("mt-input-line--multi") || undefined,
+				actionLabel: button?.getAttribute("aria-label"),
+				actionIcon: button?.querySelector("svg") ? iconName(button.querySelector("svg")) : undefined,
+			};
+		},
+		leaf: true,
+	},
+	{
+		match: (el) => el.matches(".mt-chips-field"),
+		part: "ChipsField",
+		idOf: (el) => el.closest(".mt-field")?.querySelector("label")?.getAttribute("for"),
+		props: (el) => ({
+			label: el.closest(".mt-field")?.querySelector(".mt-label")?.textContent.trim(),
+			items: [...el.querySelectorAll(".mt-chip")].map((chip) => ({
+				label: [...chip.childNodes]
+					.filter((node) => node.nodeType === Node.TEXT_NODE)
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+			})),
+			removeLabel: el.querySelector(".mt-chip .x")?.getAttribute("aria-label")?.split(" ").slice(1).join(" "),
+		}),
+		leaf: true,
+		// Each chip's × is the part's.
+		ownWords: true,
+	},
+	{
+		match: (el) => el.matches(".mt-field > span:empty") && el.style.background.includes("gradient"),
+		part: "PropertyPicture",
+		props: (el) => ({ picture: el.style.background }),
+		leaf: true,
+		asProps: ["display", "height", "border-radius", "background", "margin"],
 	},
 	// A panel beside the page.
 	{
@@ -1567,7 +1688,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff|mt-bubble|who|mt-tool|mt-untranslated|mt-fill|mt-pair|mt-pair--head|mt-pair--title|gutter|src|dst|is-changed|is-new|mt-doc-callout|mt-doc-code|mt-doc-table|num|mt-shared)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff|mt-bubble|who|mt-tool|mt-untranslated|mt-fill|mt-pair|mt-pair--head|mt-pair--title|gutter|src|dst|is-changed|is-new|mt-doc-callout|mt-doc-code|mt-doc-table|num|mt-shared|mt-props|mt-props-title|mt-ai-action|mt-input-line|mt-input-line--multi|is-bare|mt-chips-field|mt-chip|x|mt-statusbar-list|mt-todo-item|mt-todo-done|mt-menu-label|title|sub|act|plain|mark|is-on)$/;
 
 /**
  * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame

@@ -15,6 +15,213 @@
 			},
 			"events": []
 		},
+		"PropsPanel": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"open": {
+					"kind": "text",
+					"type": "string"
+				},
+				"tabs": {
+					"kind": "data",
+					"fields": ["value", "label"]
+				}
+			},
+			"events": []
+		},
+		"PropsGroup": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"LabelWithFill": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"action": {
+					"kind": "text",
+					"type": "string"
+				},
+				"for": {
+					"kind": "ref",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"LineInput": {
+			"kind": "part",
+			"bind": true,
+			"children": false,
+			"slots": [],
+			"props": {
+				"actionIcon": {
+					"kind": "variant",
+					"enum": [
+						"add",
+						"app-connectivity",
+						"archive",
+						"arrow--down",
+						"asleep",
+						"book",
+						"bookmark",
+						"box",
+						"bullhorn",
+						"calendar",
+						"center--circle",
+						"chat",
+						"chevron--left",
+						"chevron--right",
+						"close",
+						"close--outline",
+						"code--reference",
+						"color-palette",
+						"compass",
+						"dashboard",
+						"data--base",
+						"data-table",
+						"document",
+						"document--blank",
+						"document--view",
+						"edit",
+						"email",
+						"favorite",
+						"fire",
+						"flag",
+						"flash",
+						"folder",
+						"gift",
+						"globe",
+						"hashtag",
+						"idea",
+						"image",
+						"layers",
+						"light",
+						"link",
+						"list",
+						"location",
+						"logo--github",
+						"music",
+						"notebook",
+						"notebook--reference",
+						"overflow-menu--horizontal",
+						"package",
+						"password",
+						"pen",
+						"pin",
+						"plug",
+						"portfolio",
+						"quotes",
+						"recently-viewed",
+						"right-panel--open",
+						"rocket",
+						"rss",
+						"screen",
+						"search",
+						"settings",
+						"settings--adjust",
+						"shapes",
+						"shopping--bag",
+						"side-panel--close",
+						"sigma",
+						"spark",
+						"square--outline",
+						"star",
+						"subtract",
+						"tag",
+						"terminal",
+						"text--highlight",
+						"ticket",
+						"time",
+						"tools",
+						"trash-can",
+						"upload",
+						"user",
+						"user--multiple",
+						"video",
+						"warning--alt"
+					]
+				},
+				"actionLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"id": {
+					"kind": "text",
+					"type": "string"
+				},
+				"mono": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"multiline": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"placeholder": {
+					"kind": "text",
+					"type": "string"
+				},
+				"value": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"ChipsField": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"items": {
+					"kind": "data",
+					"fields": ["label"]
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"removeLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"PropertyPicture": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"picture": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
 		"EmptyHead": {
 			"kind": "part",
 			"bind": false,
@@ -369,6 +576,38 @@
 			"children": false,
 			"slots": [],
 			"props": {},
+			"events": []
+		},
+		"StatusListCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["footer"],
+			"props": {
+				"count": {
+					"kind": "state"
+				},
+				"done": {
+					"kind": "data",
+					"fields": ["text"]
+				},
+				"items": {
+					"kind": "data",
+					"fields": ["title", "detail", "action", "ai", "current"]
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"listLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"tone": {
+					"kind": "variant",
+					"enum": ["danger", "warning"]
+				}
+			},
 			"events": []
 		},
 		"ReviewAsk": {
