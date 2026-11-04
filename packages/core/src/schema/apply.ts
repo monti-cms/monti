@@ -9,10 +9,15 @@ type Db = Kysely<Database> | Transaction<Database>;
 const empty = (field: string) => sql<boolean>`coalesce(values->>${field}, '') = ''`;
 
 async function applyStep(db: Db, step: ChangeStep) {
-	const entries = (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) =>
-		sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
+	// A field step changes the working copy and what the site shows alike (doc 02): the site's code changes with the schema.
+	const entries = async (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) => {
+		await sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
 			db,
 		);
+		await sql`update entry_published set values = ${set} where collection = ${step.collection} and ${where}`.execute(
+			db,
+		);
+	};
 	switch (step.do) {
 		case "removeCollection": {
 			const groups = db.selectFrom("entries").select("translation_group").where("collection", "=", step.collection);

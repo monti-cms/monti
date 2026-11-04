@@ -71,6 +71,24 @@ monti help              # every operation, each one a command
 monti schema.read
 ```
 
+## Entries and what the site reads
+
+An entry has a working copy and, once published, a published copy. `entries.save` changes the working copy and takes the version it read, so no
+caller can save over a save it has not seen. `entries.publish` copies the working copy to the site, making an empty slug from the title; a changed
+published slug sends the old one on. `entries.checkPublish` is the one to-do list the publish reads; a plugin adds rows with `publishChecks`.
+
+The site reads only published copies:
+
+```ts
+import { createReader } from "@monti-cms/core";
+
+const site = createReader({ db, schema, secret: process.env.MONTI_SECRET });
+await site.entry({ collection: "post", locale: "ko", slug }); // { entry } | { redirect } | null
+await site.entries({ collection: "post", locale: "ko" });
+```
+
+`entries.previewLink` gives a one-hour token, signed with `MONTI_SECRET`; passed as `preview`, it opens that entry's working copy.
+
 ## Tests
 
 ```sh
