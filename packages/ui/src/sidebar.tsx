@@ -557,7 +557,7 @@ const SUB_DEPTH = ["pl-[38px]", "pl-[60px]", "pl-[82px]", "pl-[104px]"] as const
 
 /**
  * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
- * with 4px of air above the first folder, ending 4px past the middle of the last folder's name. Every folder name stands 20px past its nearest rule.
+ * with 4px of air above the first folder, ending 8px past the middle of the last folder's name. Every folder name stands 20px past its nearest rule.
  */
 const SUB_LINE_X = ["before:left-[17px]", "before:left-[39px]", "before:left-[61px]", "before:left-[83px]"] as const;
 /** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
@@ -630,10 +630,10 @@ function SidebarMenuSubButton({
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],
-					// 4px of air above a parent's first folder; the rule ends 4px past the middle of its last one.
+					// 4px of air above a parent's first folder; the rule ends 8px past the middle of its last one.
 					tree
-						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-[calc(50%-4px)]")
-						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-[calc(50%-4px)]",
+						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-[calc(50%-8px)]")
+						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-[calc(50%-8px)]",
 					className,
 				),
 				style: lines || style ? { ...lines, ...style } : undefined,
