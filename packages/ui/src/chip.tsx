@@ -21,11 +21,11 @@ export const CHIP_REMOVE =
 
 /**
  * The field that holds chips and the words being typed after them (a combobox of many, `TagInput`): an underline like `Input`, ink while it has
- * focus. One row stands as high as an `Input` (36px, 32px with `data-size="md"`, 28px with `"sm"`); more chips wrap it downward.
+ * focus. The field's tint stays off while the pointer is on a chip (the chip is what answers then). One row stands as high as an `Input` (36px, 32px with `data-size="md"`, 28px with `"sm"`); more chips wrap it downward.
  */
 export const CHIPS_FIELD = cn(
 	FIELD_HOVER,
-	"flex min-h-monti-control-lg flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body data-[size=md]:min-h-monti-control-md data-[size=sm]:min-h-monti-control-sm data-[size=sm]:py-px transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+	"has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:border-monti-default! has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:bg-transparent! flex min-h-monti-control-lg flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body data-[size=md]:min-h-monti-control-md data-[size=sm]:min-h-monti-control-sm data-[size=sm]:py-px transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 	FIELD_INSET,
 );
 

@@ -18,17 +18,17 @@ import { Spinner } from "./spinner";
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	`${TEXT_HOVER} inline cursor-pointer rounded-monti-sm border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${TEXT_HOVER} inline cursor-pointer rounded-monti-full border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none aria-expanded:text-monti-default disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {
 				/** Cancel, undo all. */
-				plain: "text-monti-muted hover:text-monti-default",
+				plain: "text-monti-muted not-disabled:hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
 				underline:
-					"underline decoration-monti-strong decoration-1 underline-offset-4 text-monti-muted hover:decoration-monti-contrast hover:text-monti-default",
+					"underline decoration-monti-strong decoration-1 underline-offset-4 text-monti-muted not-disabled:hover:decoration-monti-contrast not-disabled:hover:text-monti-default",
 				/** Less important: + language, + group. */
-				quiet: "text-monti-subtle hover:text-monti-default",
+				quiet: "text-monti-subtle not-disabled:hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
 				/** The one thing a row asks for before anything else (restore the original first): in ink, among quieter buttons. */
@@ -39,7 +39,7 @@ const textButtonVariants = cva(
 			/** Fixed-width letters, for an address or an identifier. */
 			mono: { true: "font-mono" },
 			/** Takes the quiet ink on top of its variant: an underlined button that is not the main action of its line (undo, change). */
-			quiet: { true: "text-monti-subtle hover:text-monti-default" },
+			quiet: { true: "text-monti-subtle not-disabled:hover:text-monti-default" },
 			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
 			size: {
 				note: "text-monti-note",
@@ -53,7 +53,7 @@ const textButtonVariants = cva(
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {
 				proposal:
-					"text-monti-proposal hover:text-monti-proposal decoration-monti-proposal hover:decoration-monti-proposal",
+					"text-monti-proposal not-disabled:hover:text-monti-proposal decoration-monti-proposal not-disabled:hover:decoration-monti-proposal",
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
 			loading: { true: "cursor-default disabled:opacity-100" },

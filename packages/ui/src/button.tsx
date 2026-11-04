@@ -12,21 +12,22 @@ import { Spinner } from "./spinner";
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
 				/** The one main action of a screen or a floating surface. */
 				primary:
-					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:hover:bg-monti-emphasis/90",
+					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-emphasis/90",
 				/** A common side action. */
-				secondary: "bg-monti-muted px-[16px] font-normal text-monti-muted not-data-loading:hover:bg-monti-selected",
+				secondary:
+					"bg-monti-muted px-[16px] font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-selected",
 				/** Confirms something that cannot be undone. Only inside a confirmation. */
 				danger:
-					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:hover:bg-monti-danger-emphasis/90",
+					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90",
 				/** The quiet version of `danger`. */
 				"outline-danger":
-					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:hover:bg-monti-danger-muted",
+					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
 			},
 			/** The control heights: `lg` 36px (the default: page headers, forms, dialogs); `md` 32px (side panels); `sm` 28px inside cards and toolbars. */
 			size: {

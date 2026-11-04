@@ -19,7 +19,7 @@ export const CHECK_HOVER =
 	"hover:not-data-disabled:shadow-[0_0_0_5px_var(--monti-bg-selected)] hover:not-data-disabled:not-data-checked:border-(color:--monti-fg-muted)";
 
 /**
- * The pointer over words that act (a text button, a list's filter): a flat tint around them, 8px at the sides and 4px above and below, drawn as
+ * The pointer over words that act (a text button, a list's filter): a pill-shaped tint around them, 8px at the sides and 4px above and below, drawn as
  * shadows so the line they stand in does not move. The keyboard's focus ring runs around that same room.
  */
 export const TEXT_HOVER =

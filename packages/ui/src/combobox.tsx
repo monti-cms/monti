@@ -69,7 +69,7 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:cursor-not-allowed has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
@@ -216,12 +216,7 @@ function ComboboxChip({
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
 			// The small chip (24px), as `TagInput`'s, so a row of chips stands in the field's own height.
-			className={cn(
-				CHIP,
-				CHIP_SM,
-				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
-				className,
-			)}
+			className={cn(CHIP, CHIP_SM, "has-disabled:cursor-not-allowed has-disabled:opacity-45", className)}
 			{...props}
 		>
 			{children}

@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 // The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
 // and the half that has the focus is marked by a lighter fill, not by a line of its own.
 const HALF =
-	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] disabled:pointer-events-none";
+	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] cursor-pointer disabled:cursor-not-allowed";
 
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
