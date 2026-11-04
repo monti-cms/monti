@@ -15,6 +15,14 @@
 			},
 			"events": []
 		},
+		"SectionHead": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
 		"Conversation": {
 			"kind": "part",
 			"bind": false,
@@ -1928,6 +1936,9 @@
 				"suffix": {
 					"kind": "text",
 					"type": "string"
+				},
+				"value": {
+					"kind": "state"
 				}
 			},
 			"events": []
@@ -2618,6 +2629,9 @@
 				"type": {
 					"kind": "variant",
 					"enum": ["email", "password", "text"]
+				},
+				"value": {
+					"kind": "state"
 				},
 				"width": {
 					"kind": "variant",

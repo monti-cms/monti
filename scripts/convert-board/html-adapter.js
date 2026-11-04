@@ -155,12 +155,34 @@ function isTwoWayGrid(el) {
 	return drawnChildren(el).filter((child) => child.nodeType === Node.ELEMENT_NODE).length > gridColumns(el);
 }
 
+/** Whether a node runs in a line with its neighbours (a text, or an element laid out inline). */
+const inline = (node) =>
+	node?.nodeType === Node.TEXT_NODE ||
+	(node?.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).display.startsWith("inline"));
+
+/**
+ * A run of text as it reads: its white space one space, kept at an edge where the run goes on in the same line ("새 " before a word, " 쓰기" after
+ * it), dropped where the line starts or ends.
+ */
+function runText(node) {
+	const text = node.textContent.replace(/\s+/g, " ");
+	const before = inline(node.previousSibling) ? text : text.trimStart();
+	return inline(node.nextSibling) ? before : before.trimEnd();
+}
+
 /** The children that are drawn: elements shown, and text runs; the board runtime's own wrappers (`sc-if`) are seen through. */
 function drawnChildren(el) {
 	const out = [];
 	for (const child of el.childNodes) {
 		if (child.nodeType === Node.TEXT_NODE) {
-			if (child.textContent.trim()) out.push(child);
+			// A space between two words of one line is a run of its own.
+			if (
+				child.textContent.trim() ||
+				(inline(child.previousSibling) &&
+					inline(child.nextSibling) &&
+					getComputedStyle(el).display.startsWith("inline"))
+			)
+				out.push(child);
 		} else if (child.nodeType === Node.ELEMENT_NODE) {
 			if (child.tagName.includes("-") && !child.shadowRoot) out.push(...drawnChildren(child));
 			else if (shown(child)) out.push(child);
@@ -251,8 +273,15 @@ function read(el, where, page = undefined, inPart = false) {
 			return { where: here, part: rule.part, props, looks: [...looks, ...leftOut(el, rule, props, [])], ...named };
 		const node = { where: here, part: rule.part, props, looks, ...named };
 		// A part's named places, each an element of it whose inside fills the place; its children, from the element the rule names or its own.
-		const inside = (holder, at) =>
-			drawnChildren(holder).map((child, index) => readChild(child, `${at}[${index}]`, true));
+		const inside = (holder, at) => {
+			const read = drawnChildren(holder).map((child, index) => readChild(child, `${at}[${index}]`, true));
+			// Words a flex line holds as items of their own ("+", "새", a value, "쓰기") read as one run, their gaps as spaces.
+			const words = (node) =>
+				node.text !== undefined && node.part === undefined && node.children === undefined && !node.looks?.length;
+			if (read.length > 1 && read.every(words) && getComputedStyle(holder).display.includes("flex"))
+				return [{ where: `${at}[0]`, text: read.map((node) => node.text.trim()).join(" ") }];
+			return read;
+		};
 		// A place is filled with an element's inside, or (a list of elements) with those elements themselves.
 		const fill = (holder, name) =>
 			Array.isArray(holder)
@@ -342,7 +371,7 @@ function framed(el, node) {
 }
 
 function readChild(node, where, inPart = false) {
-	if (node.nodeType === Node.TEXT_NODE) return { where, text: node.textContent.trim() };
+	if (node.nodeType === Node.TEXT_NODE) return { where, text: runText(node) };
 	return read(node, where, undefined, inPart);
 }
 

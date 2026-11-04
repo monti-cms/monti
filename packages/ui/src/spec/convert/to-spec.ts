@@ -41,7 +41,8 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 	};
 
 	const textOf = (text: string): TextValue | StateValue => {
-		const key = dictionary[text];
+		// A run with a space at its edge (the words around a value) is read as drawn: the dictionary's texts have none.
+		const key = text === text.trim() ? dictionary[text] : undefined;
 		if (key !== undefined) return { text: key };
 		const id = idFor("text");
 		drawnTexts[id] = text;

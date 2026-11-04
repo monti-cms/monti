@@ -659,18 +659,21 @@ function Banner({
 
 /** A field with fixed words before or after what is typed (`/` before an address). */
 function AffixField({
+	value,
 	prefix,
 	suffix,
 	placeholder,
 	proposal,
 }: {
+	/** What is typed, from the data. */
+	value?: string;
 	prefix?: string;
 	suffix?: string;
 	placeholder?: string;
 	/** The assistant wrote what is typed and nobody has touched it. */
 	proposal?: boolean;
 }) {
-	return <Affix prefix={prefix} suffix={suffix} placeholder={placeholder} proposal={proposal} />;
+	return <Affix defaultValue={value} prefix={prefix} suffix={suffix} placeholder={placeholder} proposal={proposal} />;
 }
 
 /** The saved value an assistant's proposal would replace, struck through under the field. */
@@ -687,14 +690,19 @@ function VerticalRule({ className }: { className?: string }) {
 function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; proposal?: boolean }) {
 	return (
 		<TableCell truncate>
-			<Text as="div" truncate>
-				{proposal && (
-					<Text tone="proposal">
-						<Icon name="spark" />{" "}
+			{proposal ? (
+				// The assistant's request: its mark on the line of its words.
+				<Inline gap={8} align="baseline" minWidth={0}>
+					<Text tone="proposal" aria-hidden="true">
+						✦
 					</Text>
-				)}
-				{title}
-			</Text>
+					<Text truncate>{title}</Text>
+				</Inline>
+			) : (
+				<Text as="div" truncate>
+					{title}
+				</Text>
+			)}
 			<Text as="div" variant="meta" tone="subtle" truncate>
 				{sub}
 			</Text>
@@ -1474,7 +1482,8 @@ function TitleInput({
 
 /** The ink rule under an entry's title. */
 function TitleRule() {
-	return <EditorTitleRule />;
+	// The room above it is the screen's (a Spacing before it), so the line is drawn without its own.
+	return <EditorTitleRule className="pt-0" />;
 }
 
 /**
@@ -2314,6 +2323,11 @@ function ProposalBox({
 	);
 }
 
+/** The words of a list section's head (its name, its count): each one a piece of the section's own head line, set apart as it sets them. */
+function SectionHead({ children }: { children?: React.ReactNode }) {
+	return <>{children}</>;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -2322,6 +2336,7 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	SectionHead,
 	Conversation,
 	ProposalBox,
 	Suggestions,
@@ -2525,6 +2540,7 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	SectionHead: { kind: "part", props: {} },
 	Conversation: { kind: "part", props: { turns: "data:role,text,detail" } },
 	ProposalBox: {
 		kind: "part",
@@ -2774,7 +2790,10 @@ export const CATALOG = {
 	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant", proposal: "flag" } },
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
 	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },
-	AffixField: { kind: "part", props: { prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" } },
+	AffixField: {
+		kind: "part",
+		props: { value: "state", prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" },
+	},
 	VerticalRule: { kind: "part", props: {} },
 	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
 	OptionCheck: {
@@ -2835,6 +2854,7 @@ export const CATALOG = {
 		kind: "part",
 		bind: "yes",
 		props: {
+			value: "state",
 			type: "variant",
 			placeholder: "text",
 			size: "variant",

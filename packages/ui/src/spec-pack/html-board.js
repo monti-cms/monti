@@ -169,8 +169,7 @@ const parts = [
 	},
 	{
 		match: (el) => el.matches("h2.mt-table-head") && rowsAfter(el) !== null,
-		part: "Text",
-		props: () => ({ as: "span" }),
+		part: "SectionHead",
 		slots: () => ({}),
 		children: (el) => el,
 		asProps: ["display", "align-items", "gap", "margin", "border-bottom", "font-weight", "padding-bottom"],
@@ -309,7 +308,7 @@ const parts = [
 		asProps: ["display", "flex-direction", "align-items", "gap"],
 	},
 	{
-		match: (el) => el.matches(".mt-row > span:has(> .mt-text-btn)"),
+		match: (el) => el.matches(".mt-row > span:has(> .mt-text-btn)") && !el.closest(".body"),
 		part: "RowButtonsCell",
 		asProps: ["display", "align-items", "gap", "justify-content", "min-width"],
 	},
@@ -358,7 +357,11 @@ const parts = [
 		leaf: true,
 		asProps: ["order", "font-size", "justify-self", "opacity"],
 	},
-	{ match: (el) => el.matches(".mt-row > span"), part: "TableCell", asProps: ["order", "display", "color", "cursor"] },
+	{
+		match: (el) => el.matches(".mt-row > span") && !el.closest(".body"),
+		part: "TableCell",
+		asProps: ["order", "display", "color", "cursor"],
+	},
 	{
 		match: (el) => el.matches(".mt-status"),
 		part: "EntryStatus",
@@ -402,16 +405,21 @@ const parts = [
 				handled: true,
 			};
 		},
-		children: (el) => el.querySelector(":scope > span:last-child"),
+		children: (el) => {
+			const end = el.querySelector(":scope > span:last-child");
+			return end?.querySelector(":scope > .text-note") ? [end] : end;
+		},
 		slots: () => ({}),
 		asProps: ["grid-template-columns", "align-items", "column-gap", "display", "justify-content"],
 	},
 	{
-		match: (el) => el.matches(".body > .mt-row > span:last-child > .text-note"),
+		// The source language's mark: its bold word, the rule, and the button that changes it, one part.
+		match: (el) => el.matches(".body .mt-row > span[style*='flex-end']:has(> .text-note)"),
 		part: "LanguageSourceMark",
-		props: (el) => ({ flag: el.textContent.trim() }),
-		leaf: true,
-		asProps: ["display", "color", "font-weight"],
+		props: (el) => ({ flag: el.querySelector(":scope > .text-note")?.textContent.trim() }),
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll("button")],
+		asProps: ["display", "justify-content", "align-items"],
 	},
 	{ match: (el) => el.matches(".body > .mt-row > span:last-child > .mt-vr"), ignore: true },
 	{
@@ -476,6 +484,8 @@ const parts = [
 		props: (el) => ({
 			prefix: el.querySelector(".fix:first-child")?.textContent.trim(),
 			suffix: el.querySelector(".fix:last-child:not(:first-child)")?.textContent.trim(),
+			value: el.querySelector("input")?.value || undefined,
+			placeholder: el.querySelector("input")?.placeholder || undefined,
 			proposal: el.querySelector(".is-ai") ? true : undefined,
 		}),
 		leaf: true,
@@ -895,13 +905,13 @@ const parts = [
 		part: "EntryTitle",
 		props: (el) => ({ text: el.textContent.trim(), faint: el.style.color.includes("--fg-faint") || undefined }),
 		leaf: true,
-		asProps: ["margin", "color"],
+		asProps: ["color"],
 	},
 	{
 		match: (el) => el.matches("div:empty") && el.style.borderTop.includes("--border-contrast"),
 		part: "TitleRule",
 		leaf: true,
-		asProps: ["border-top", "margin-bottom"],
+		asProps: ["border-top"],
 	},
 	{
 		match: (el) => el.matches("input.text-display"),
@@ -1238,7 +1248,11 @@ const parts = [
 			const bar = img?.querySelector(".mt-progress > span");
 			const failed = el.classList.contains("is-failed");
 			// A picture the board fills with a colour: what the data gives in its place.
-			const fill = img && (img.querySelector(":scope > span:not([class])")?.style.background || img.style.background);
+			const fill =
+				img &&
+				[img, ...img.querySelectorAll(":scope > span")]
+					.map((node) => node.style.background)
+					.find((paint) => paint.includes("gradient"));
 			return {
 				name: el.querySelector(".name")?.textContent.trim(),
 				detail: el.querySelector(".meta")?.textContent.trim(),
@@ -1768,7 +1782,14 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-input"),
 		part: "Input",
-		props: (el) => ({ type: el.getAttribute("type"), invalid: el.classList.contains("is-error") || undefined }),
+		props: (el) => ({
+			// What is typed is the data's.
+			value: el.value || undefined,
+			placeholder: el.placeholder || undefined,
+			mono: el.classList.contains("mt-mono") || undefined,
+			type: el.getAttribute("type"),
+			invalid: el.classList.contains("is-error") || undefined,
+		}),
 	},
 	{ match: (el) => el.matches(".mt-error"), part: "FormFieldError" },
 	{
