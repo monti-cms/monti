@@ -431,7 +431,8 @@ function NotionStatusBar() {
 				count={2}
 				defaultOpen
 			>
-				<TodoItem title="요약 쓰기" detail="요약 · 비어 있음" current actionLabel="채우기" onAction={still} proposal />
+				{/* A row only takes you to its place; filling is the field's own ✦ there, beside what it fills. */}
+				<TodoItem title="요약 쓰기" detail="요약 · 비어 있음" current />
 				<TodoItem title="대체 텍스트 없는 이미지 2개" detail="대표 이미지 · 본문 1" />
 				<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
 			</StatusBarList>
