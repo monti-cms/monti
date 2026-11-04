@@ -108,7 +108,7 @@ function FormFieldLabel({
 	const label = (
 		<Label
 			data-slot="field-label"
-			size="micro"
+			size="caption"
 			tone="subtle"
 			className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
 			{...props}
@@ -116,7 +116,7 @@ function FormFieldLabel({
 	);
 	if (changed) {
 		return (
-			<div data-slot="label-row" className="flex h-3.5 items-center gap-monti-8">
+			<div data-slot="label-row" className="flex h-4 items-center gap-monti-8">
 				{label}
 				<ChangeDot tone={changed.tone} label={changed.label} />
 				{(changed.onUndo || changed.undoShown) && (
