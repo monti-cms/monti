@@ -57,7 +57,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있어요", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
-| 운영 검토 | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
+| 운영 검토 (빠짐, 2026-11-05) | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
 
 ### 흐름 2 · 어시스턴트
 
@@ -78,7 +78,7 @@
 | "칸 오류" | 11.03 | 홈 링크 `Input aria-invalid`와 `FormFieldError`, 저장 알약 `saveDisabled`. screens.md는 호스트 이름 행의 오류라고 적지만 보드는 홈 링크에 그린다 | Controls/Field/Input, Controls/Field/Field |
 | "나가기 확인" | 11.04 | 나가기 `AlertDialog` | Controls/Overlay/AlertDialog |
 | "운영 글 쓰는 방식" | 11.09 | 말투와 규칙 `FormFieldLabel changed`, 알약 "저장" | Controls/Field/Field |
-| "운영 검토" | 11.13 | 운영 검토 `Sheet`(바로 저장 2 · PR 1과 `Patch`), ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet, Patterns/List/ListSection › ReviewSheet, Monti/Change/Patch |
+| "운영 검토" (빠짐, 2026-11-05) | 11.13 | 운영 검토 `Sheet`(바로 저장 2 · PR 1과 `Patch`), ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet, Patterns/List/ListSection › ReviewSheet, Monti/Change/Patch |
 | "읽기 전용" | 11.15 | 미리보기와 공개 주소 절 제목 뒤 `LockMark`, 그 값은 글, 스위치 `disabled`, 저장 묶음 없음. screens.md는 공개 주소만 잠긴다고 적지만 보드는 미리보기도 잠근다 | Primitives/LockMark |
 | "읽기 전용 저장" | 11.15b | "읽기 전용"에 더해 사이트 이름 `FormFieldLabel changed`와 알약 "저장" | Controls/Field/Field |
 
