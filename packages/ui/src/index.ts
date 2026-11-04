@@ -399,6 +399,7 @@ export {
 	Combobox,
 	cn,
 	DEFAULT_UI_LABELS,
+	folderTree,
 	PROPOSAL_MARK_CLASSES,
 	SearchBox,
 	SearchToggle,

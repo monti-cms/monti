@@ -4,6 +4,7 @@ import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Count,
+	folderTree,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -78,10 +79,12 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 		},
 	});
 
+	// The sidebar lists a collection's top-level folders only, so every row is at depth 0.
+	const tree = folderTree(rows.map(() => 0));
 	return (
 		<li>
 			<SidebarMenuSub aria-label={t("sidebar.folderTree", { label })}>
-				{rows.map((folder) => {
+				{rows.map((folder, index) => {
 					const active = openTop === folder.id;
 					return (
 						<li key={folder.id}>
@@ -90,6 +93,7 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 								isActive={active}
 								aria-current={active ? "true" : undefined}
 								dropTarget={dropTarget === folder.id}
+								tree={tree[index]}
 								onClick={() => {
 									nav.onSelectFolder(folder.id);
 									closeMobile();

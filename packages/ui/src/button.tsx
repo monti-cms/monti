@@ -12,19 +12,19 @@ import { Spinner } from "./spinner";
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
 				/** The one main action of a screen or a floating surface. */
 				primary:
-					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-emphasis/90",
+					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-emphasis/90 not-data-loading:not-disabled:active:bg-monti-emphasis/80",
 				/** A common side action. */
 				secondary:
-					"bg-monti-muted px-[16px] font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-selected",
+					"bg-monti-muted px-[16px] font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-selected not-data-loading:not-disabled:active:bg-monti-current not-data-loading:not-disabled:active:text-monti-default",
 				/** Confirms something that cannot be undone. Only inside a confirmation. */
 				danger:
-					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90",
+					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90 not-data-loading:not-disabled:active:bg-monti-danger-emphasis/80",
 				/** The quiet version of `danger`. */
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",

@@ -556,18 +556,74 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
 
 /**
+ * The tree line of a folder row, drawn on the row's own room: a 1px rule down from its parent's icon (or its parent folder's words) and a rounded elbow
+ * into the row's middle. The rule runs on through the row to the next one; the last row of the list ends at its elbow.
+ */
+const SUB_LINE_X = [
+	"before:left-[17px] after:left-[17px] after:w-[15px]",
+	"before:left-[39px] after:left-[39px] after:w-[7px]",
+	"before:left-[53px] after:left-[53px] after:w-[7px]",
+	"before:left-[67px] after:left-[67px] after:w-[7px]",
+] as const;
+/** Where each folder depth's rule runs, in px from the row's start (the parent's icon, then each folder's words). */
+const SUB_LINE_LEFT = [17, 39, 53, 67] as const;
+
+/**
+ * The tree lines of a flat folder list, from each folder's depth: whether a folder is the last at its depth under its parent (its rule ends at its
+ * elbow), and which ancestors' rules run on past it (`through[d]`: the parent at depth `d` has a later sibling).
+ */
+export function folderTree(depths: readonly number[]) {
+	const hasLaterSibling = (index: number, depth: number) => {
+		for (let next = index + 1; next < depths.length; next++) {
+			if (depths[next] < depth) return false;
+			if (depths[next] === depth) return true;
+		}
+		return false;
+	};
+	return depths.map((depth, index) => {
+		const through: boolean[] = [];
+		for (let level = 0; level < depth; level++) through.push(hasLaterSibling(index, level));
+		return { last: !hasLaterSibling(index, depth), through };
+	});
+}
+
+const SUB_LINE =
+	"relative before:pointer-events-none before:absolute before:-top-monti-2 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:-top-monti-2 after:h-[calc(50%+2px)] after:rounded-bl-[6px] after:border-monti-strong after:border-b after:border-l after:content-['']";
+
+/**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A row starts 36px in from the edge, and `depth` indents a folder inside another by 14px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * the selected ground. A thin tree line runs down from the parent and curves into each folder (`SUB_LINE`). A row starts 36px in from the edge, and `depth` indents a folder inside another by 14px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
 	isActive = false,
 	depth = 0,
 	dropTarget = false,
+	tree,
 	className,
+	style,
 	...props
 }: useRender.ComponentProps<"a"> &
-	React.ComponentProps<"a"> & { isActive?: boolean; depth?: 0 | 1 | 2 | 3; dropTarget?: boolean }) {
+	React.ComponentProps<"a"> & {
+		isActive?: boolean;
+		depth?: 0 | 1 | 2 | 3;
+		dropTarget?: boolean;
+		/** The row's place in the tree, from {@link folderTree}: whether its rule ends here, and which ancestors' rules run past it. */
+		tree?: { last: boolean; through: readonly boolean[] };
+	}) {
+	// The ancestors' rules that run on past this row: 1px lines drawn as the row's background, at their depths' places.
+	const through = (tree?.through ?? []).flatMap((on, level) => (on ? [SUB_LINE_LEFT[level]] : []));
+	const lines: React.CSSProperties | undefined =
+		through.length === 0
+			? undefined
+			: {
+					backgroundImage: through
+						.map(() => "linear-gradient(var(--monti-border-strong), var(--monti-border-strong))")
+						.join(", "),
+					backgroundSize: through.map(() => "1px 100%").join(", "),
+					backgroundPosition: through.map((left) => `${left}px 0`).join(", "),
+					backgroundRepeat: "no-repeat",
+				};
 	return useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
@@ -575,8 +631,12 @@ function SidebarMenuSubButton({
 				className: cn(
 					"flex w-full cursor-pointer items-center justify-between gap-monti-8 rounded-monti-md border-0 bg-transparent py-[5px] pr-monti-10 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
+					SUB_LINE,
+					SUB_LINE_X[depth],
+					tree?.last && "before:hidden",
 					className,
 				),
+				style: lines || style ? { ...lines, ...style } : undefined,
 			},
 			props,
 		),

@@ -4,6 +4,7 @@ import { Document, Image as ImageIcon, Settings, Tools, TrashCan } from "./icons
 import {
 	Box,
 	Count,
+	folderTree,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -28,6 +29,14 @@ import {
  * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the tools and the settings.
  * The open row is on the current ground and semibold; a row under the pointer takes the selected ground. Folded (⌘B) it is a 48px rail of icons.
  */
+const FOLDERS = [
+	{ name: "에세이", count: "12", depth: 0, active: true },
+	{ name: "여행", count: "5", depth: 1 },
+	{ name: "회고", count: "3", depth: 1 },
+	{ name: "시리즈 원고", count: "2", depth: 0 },
+] as const;
+const TREE = folderTree(FOLDERS.map((folder) => folder.depth));
+
 const meta = {
 	title: "Patterns/Frame/Sidebar",
 	parameters: { bleed: true },
@@ -65,12 +74,19 @@ function Nav({ rail = false }: { rail?: boolean }) {
 									</SidebarMenuButton>
 									{!rail && (
 										<SidebarMenuSub aria-label="게시글 폴더">
-											<li>
-												<SidebarMenuSubButton render={<button type="button" />} isActive>
-													<span>에세이</span>
-													<Count>12</Count>
-												</SidebarMenuSubButton>
-											</li>
+											{FOLDERS.map((folder, index) => (
+												<li key={folder.name}>
+													<SidebarMenuSubButton
+														render={<button type="button" />}
+														isActive={"active" in folder}
+														depth={folder.depth}
+														tree={TREE[index]}
+													>
+														<span>{folder.name}</span>
+														<Count>{folder.count}</Count>
+													</SidebarMenuSubButton>
+												</li>
+											))}
 										</SidebarMenuSub>
 									)}
 								</SidebarMenuItem>

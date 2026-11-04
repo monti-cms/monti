@@ -28,11 +28,21 @@ const meta = {
 	title: "Foundations/States",
 	parameters: {
 		pseudo: {
-			hover: [".state-hover > *", ".state-hover tr", ".state-hover [data-slot=list-section-row]"],
+			hover: [
+				".state-hover > *",
+				".state-hover [data-slot=chip] > button",
+				".state-hover tr",
+				".state-hover [data-slot=list-section-row]",
+			],
 			focus: [".state-focus input"],
-			focusVisible: [".state-focus > *", ".state-focus [data-slot=checkbox]", ".state-focus [data-slot=row-link]"],
+			focusVisible: [
+				".state-focus > *",
+				".state-focus [data-slot=chip] > button",
+				".state-focus [data-slot=checkbox]",
+				".state-focus [data-slot=row-link]",
+			],
 			focusWithin: [".state-focus > *"],
-			active: [".state-active > *", ".state-active tr"],
+			active: [".state-active > *", ".state-active [data-slot=chip] > button", ".state-active tr"],
 		},
 	},
 } satisfies Meta;

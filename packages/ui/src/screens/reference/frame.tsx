@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Document, Folder, Image, List, Pen, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "../../icons";
 import {
 	Count,
+	folderTree,
 	IconButton,
 	Inline,
 	Sidebar,
@@ -119,12 +120,18 @@ export function AdminFrame({
 	const [rail, setRail] = useState(railStart);
 	const [mode, setMode] = useState<"system" | "light" | "dark">(modeStart);
 	const count = { posts: "148", trash: "3", tools: "1", ...counts };
+	const tree = folderTree(folders.map((folder) => folder.depth ?? 0));
 	const sub =
 		!rail && folders.length > 0 ? (
 			<SidebarMenuSub aria-label="폴더">
-				{folders.map((folder) => (
+				{folders.map((folder, index) => (
 					<li key={folder.name}>
-						<SidebarMenuSubButton render={<button type="button" />} isActive={folder.active} depth={folder.depth}>
+						<SidebarMenuSubButton
+							render={<button type="button" />}
+							isActive={folder.active}
+							depth={folder.depth}
+							tree={tree[index]}
+						>
 							<span>{folder.name}</span>
 							{folder.count ? <Count>{folder.count}</Count> : null}
 						</SidebarMenuSubButton>
