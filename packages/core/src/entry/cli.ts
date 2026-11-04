@@ -1,4 +1,4 @@
-import type { Monti } from "../monti";
+import { available, type Monti } from "../monti";
 import { describeError } from "./errors";
 
 export type CliIo = { out: (line: string) => void; err: (line: string) => void };
@@ -31,7 +31,7 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 	const [name, ...rest] = argv;
 	if (!name || name === "help") {
 		for (const operation of monti.operations.values())
-			if (operation.kind !== "screen") io.out(`${operation.name}  ${operation.description}`);
+			if (available(operation, "cli", monti.site.files !== null)) io.out(`${operation.name}  ${operation.description}`);
 		return 0;
 	}
 	try {

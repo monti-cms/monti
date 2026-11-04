@@ -1,3 +1,4 @@
+export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database } from "./db/schema";
 export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
@@ -31,3 +32,19 @@ export {
 	recordKey,
 } from "./operation";
 export { defineRecordKind, type RecordKind, type RecordState } from "./records";
+export type { AdminValues } from "./schema/admin-values";
+export { migrateContent } from "./schema/apply";
+export {
+	type CollectionDefinition,
+	checkSchema,
+	defineSchema,
+	type FieldDefinition,
+	type FieldKind,
+	type LocaleMode,
+	type Schema,
+	type SchemaProblem,
+} from "./schema/define";
+export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, schemaFilesAt } from "./schema/files";
+export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
+export { type SyncResult, syncSchemaFile } from "./schema/sync";
+export type { Site } from "./site";

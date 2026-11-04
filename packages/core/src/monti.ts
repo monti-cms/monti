@@ -6,8 +6,12 @@ import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execut
 import { type ApplyResult, applyProposal, createProposal, proposeItem } from "./engine/proposals";
 import { planUndo, undo } from "./engine/undo";
 import { UnknownOperationError } from "./errors";
-import { type AnyOperation, defineOperation, type OperationKind, type Preview } from "./operation";
+import { type Actor, type AnyOperation, defineOperation, type OperationKind, type Preview } from "./operation";
 import type { RecordKind } from "./records";
+import type { Schema } from "./schema/define";
+import type { SchemaFiles } from "./schema/files";
+import { schemaOperations, schemaRecordKinds } from "./schema/operations";
+import { createSite } from "./site";
 
 /** A plugin adds operations (and the records and receivers they need) the same way the core does, so they become API routes, tools and commands too. */
 export type Plugin = {
@@ -23,6 +27,10 @@ export function definePlugin(plugin: Plugin): Plugin {
 
 export type MontiOptions = {
 	db: Kysely<Database>;
+	/** `monti.schema.ts`. */
+	schema?: Schema;
+	/** The way to the schema file and change files, on the dev server only. Without it, structure values are locked (the live site). */
+	files?: SchemaFiles | null;
 	operations?: AnyOperation[];
 	recordKinds?: RecordKind[];
 	receivers?: Receiver[];
@@ -52,6 +60,12 @@ export const describe = (operation: AnyOperation): Capability => ({
 	inputSchema: z.toJSONSchema(operation.input, { io: "input", unrepresentable: "any" }),
 });
 
+/** Whether an entry point offers the operation to this caller: the assistant gets no human-only one, nobody gets a structure one on the live site. */
+export const available = (operation: AnyOperation, actor: Actor, structureOpen: boolean) =>
+	!(operation.humanOnly && actor === "assistant") &&
+	!(operation.structure && !structureOpen) &&
+	!(operation.kind === "screen" && actor === "cli");
+
 /** The core's own operations that belong to the engine itself. */
 function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperation[] {
 	return [
@@ -63,8 +77,7 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 			input: z.object({}),
 			run: (_input, ctx) =>
 				all()
-					.filter((operation) => operation.kind !== "screen" || ctx.actor !== "cli")
-					.filter((operation) => !(operation.humanOnly && ctx.actor === "assistant"))
+					.filter((operation) => available(operation, ctx.actor, ctx.site.files !== null))
 					.map(describe),
 		}),
 		defineOperation({
@@ -93,20 +106,26 @@ export type Monti = ReturnType<typeof createMonti>;
 export function createMonti(options: MontiOptions) {
 	const plugins = options.plugins ?? [];
 	const recordKinds = new Map<string, RecordKind>();
-	for (const kind of [...(options.recordKinds ?? []), ...plugins.flatMap((plugin) => plugin.recordKinds ?? [])]) {
+	for (const kind of [
+		...schemaRecordKinds,
+		...(options.recordKinds ?? []),
+		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
+	]) {
 		if (recordKinds.has(kind.kind)) throw new Error(`Record kind "${kind.kind}" is defined twice.`);
 		recordKinds.set(kind.kind, kind);
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
 	const now = options.now ?? (() => new Date());
-	const engine: Engine = { db: options.db, recordKinds, receivers, now };
+	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null);
+	const engine: Engine = { db: options.db, recordKinds, receivers, site, now };
 
 	const operations = new Map<string, AnyOperation>();
 	const add = (operation: AnyOperation, from: string) => {
 		if (operations.has(operation.name)) throw new Error(`Operation "${operation.name}" from ${from} is defined twice.`);
 		operations.set(operation.name, operation);
 	};
-	for (const operation of engineOperations(engine, () => [...operations.values()])) add(operation, "the core");
+	for (const operation of [...engineOperations(engine, () => [...operations.values()]), ...schemaOperations])
+		add(operation, "the core");
 	for (const operation of options.operations ?? []) add(operation, "the site");
 	for (const plugin of plugins)
 		for (const operation of plugin.operations ?? []) add(operation, `plugin ${plugin.name}`);
@@ -127,6 +146,7 @@ export function createMonti(options: MontiOptions) {
 
 	return {
 		db: options.db,
+		site,
 		operations: operations as ReadonlyMap<string, AnyOperation>,
 
 		/**

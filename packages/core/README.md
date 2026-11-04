@@ -45,6 +45,32 @@ A record kind (`defineRecordKind`) tells the engine how to read a record's state
 
 An operation marked `humanOnly` is never an agent tool. A `screen` operation is run by the browser, never by the server.
 
+## The schema and the command line
+
+A site has two files. `monti.schema.ts` holds the structure values its code relies on (collections, fields, public paths), as one plain value the
+admin can write back. `monti.config.ts` imports it and names the database:
+
+```ts
+import { defineConfig } from "@monti-cms/core";
+import schema from "./monti.schema";
+
+export default defineConfig({ schema, database: process.env.DATABASE_URL });
+```
+
+Labels, help texts, layout and editor permissions are admin values in the database (`collections.updateAdminValues`), editable on the live site too.
+
+Structure changes only on the dev server. `schema.plan` lists what a draft changes and what the review must choose for stored values;
+`schema.apply` writes `monti.schema.ts` and a change file under `monti/changes`, then applies it. The live site follows the same change files on
+deploy, and has no way to change structure.
+
+```sh
+monti db:setup          # create the tables and follow every change file
+monti db:migrate        # on deploy: follow the change files this database has not
+monti deliveries:run    # send webhook retries that are due
+monti help              # every operation, each one a command
+monti schema.read
+```
+
 ## Tests
 
 ```sh

@@ -45,6 +45,31 @@ export const moveToFolder = defineOperation({
 
 `humanOnly`인 기능은 에이전트 도구가 되지 않는다. `screen` 기능은 브라우저가 실행하고 서버는 실행하지 않는다.
 
+## 스키마와 명령줄
+
+사이트에는 파일이 둘 있다. `monti.schema.ts`는 사이트 코드가 기대는 구조 값(컬렉션, 필드, 공개 주소)을 관리자가 다시 쓸 수 있는 순수한 값
+하나로 담는다. `monti.config.ts`는 그것을 가져오고 데이터베이스를 적는다.
+
+```ts
+import { defineConfig } from "@monti-cms/core";
+import schema from "./monti.schema";
+
+export default defineConfig({ schema, database: process.env.DATABASE_URL });
+```
+
+표시 이름, 도움말, 배치, 편집기 허용은 데이터베이스의 관리자 값이다(`collections.updateAdminValues`). 운영 사이트에서도 고칠 수 있다.
+
+구조는 개발 서버에서만 바꾼다. `schema.plan`은 초안이 무엇을 바꾸고 저장된 값에 대해 검토에서 무엇을 골라야 하는지 보인다. `schema.apply`는
+`monti.schema.ts`와 `monti/changes`의 변경 파일을 쓰고 적용한다. 운영 사이트는 배포할 때 같은 변경 파일을 따르고, 구조를 바꾸는 길은 없다.
+
+```sh
+monti db:setup          # 표를 만들고 모든 변경 파일을 따른다
+monti db:migrate        # 배포할 때: 이 데이터베이스가 아직 안 따른 변경 파일을 따른다
+monti deliveries:run    # 때가 된 웹훅 다시 보내기
+monti help              # 모든 기능, 기능마다 명령 하나
+monti schema.read
+```
+
 ## 테스트
 
 ```sh

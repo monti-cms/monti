@@ -43,19 +43,25 @@
 | T1 | `useOperation(name)`: 기능을 부르는 화면 훅. 버전을 함께 보내고 충돌이면 다시 불러오기를 보인다 | 15 | 00 화면 쪽 조각, #432 |
 | T2 | `useProposals(target)`: 화면의 레코드에 걸린 대기 제안 | 05 | 00 화면 쪽 조각, #432 |
 | T3 | `entries.query`: 00-5의 뒤 절반(사람이 목록에서 거를 수 있는 것은 에이전트도 거른다) | 06 | 00 끝 조건, #432 |
-| T4 | `monti` 명령 파일: 사이트 설정을 읽어 `runCli`를 부르고, 관리 명령 `db:setup` · `db:migrate`를 단다 | 01 | #432(`runCli`만 있다) |
-| T5 | 관리 명령 `deliveries:run`과, 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`) | 13 | #432 |
+| T5 | 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`). 명령 `deliveries:run`은 있다 | 13 | #432 |
 | T6 | 사람이 누른 "다시 보내기"는 시도 수를 처음부터 센다(`deliveries.retry`) | 13 | 13 보내기 |
 | T7 | 30일 지난 되돌리기 스냅숏 지우기. 휴지통 정리와 같은 때(`monti trash:purge`) | 11 | 13 결정 기록, #432 |
-| T8 | 말 사전: 기능 요약과 오류의 `Message` 키(`errors.*`, `activity.undo`, `proposals.*`)를 ko · en 사전에 두고 `check:messages`가 core 사전을 보게 한다 | 15 | #432(키만 있다) |
+| T8 | 말 사전: 기능 요약과 오류의 `Message` 키(`errors.*`, `activity.*`, `proposals.*`, `schema.*`, `collections.*`)를 ko · en 사전에 두고 `check:messages`가 core 사전을 보게 한다 | 15 | #432, 01(키만 있다) |
 | T9 | 관리자 API의 로그인 확인: `createAdminApi`의 `authenticate`를 세션으로 채운다 | 15 | #432 |
 | T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀 | 15 | build.md 규칙 6 |
 | T11 | 새 관리자 패키지에서 `fetch` 금지 린트가 걸리는지 확인한다(`biome.json`, `packages/admin/src/operations/**`만 예외) | 15 | build.md 규칙 3, #432 |
 | T12 | `check:design`이 새 관리자 패키지를 다시 본다(`SOURCES`, 관리자 스타일시트 `@source`, 옛 플러그인 경로 정리) | 15 | #432 |
-| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기)과 예제 앱 | 출시 전 | #432에서 지움 |
+| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다 | 출시 전 | #432에서 지움, 01 |
 | T14 | 릴리스 묶음(`scripts/pack-release.mjs`, `release.yml`)을 새 패키지에 맞춘다 | 출시 전 | #432 |
+| T15 | 01의 화면: 설정 › 컬렉션(`useSchemaDraft`, `ChangeReview`, 속성 패널 미리보기 `PropertyPanel`), 컬렉션 지우기 검토의 "받아 두기"(`collections.export`). 흐름 4 전부와 흐름 11·15–20(끝 조건 01-2). 관리자 패키지가 생긴 뒤(2단계) | 01 | 01 화면 쪽 조각 |
+| T16 | 관리자 화면 위 알림 띠: 개발 서버는 "파일이 바뀌었어요 · 검토"(`schema.read`의 `fileChanged`, `syncSchemaFile`의 review), 운영은 "`monti db:migrate`를 돌려 주세요", 적용 실패는 "다시 적용"(`failedChange`) | 15 | 01 |
+| T17 | 컬렉션 지우기 검토에 지워지는 폴더 수, 폴더도 함께 지우기 | 07 | 01 구조 바꾸기 표 |
+| T18 | 컬렉션 지우기 검토의 옛 주소 수, 공개 주소 바꿈의 "발행된 글 n편"을 02의 발행 모델로 센다(지금은 `status = 'published'`로 센다) | 02 | 01 구조 바꾸기 표 |
+| T19 | 컬렉션 지우기 검토의 끊기는 관계("첫 번째 글 외 3편"): `entry_links`로 센다. 지금은 링크만 지운다 | 08 | 01 구조 바꾸기 표 |
+| T20 | 컬렉션 지우기 검토의 깨지는 본문 링크 수 | 03 | 01 구조 바꾸기 표 |
 
 ## 끝낸 일
 
 | 번호 | 할 일 | PR |
 |---|---|---|
+| T4 | `monti` 명령: `monti.config.ts`를 읽어 기능을 명령으로 돌리고, 관리 명령 `db:setup` · `db:migrate` · `deliveries:run` | 01 PR |
