@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { type Kysely, sql, type Transaction } from "kysely";
+import { fingerprint } from "../bytes";
 import type { Database } from "../db/schema";
 import { canonical, sameJson } from "../json";
 import type { CollectionDefinition, FieldDefinition, Schema } from "./define";
@@ -37,10 +37,7 @@ export type SchemaChange = {
 
 /** The same hash for the same schema, whatever the key order. */
 export function schemaHash(schema: Schema): string {
-	return createHash("sha256")
-		.update(JSON.stringify(canonical(schema)))
-		.digest("hex")
-		.slice(0, 16);
+	return fingerprint(JSON.stringify(canonical(schema)));
 }
 
 /** Entries of a collection whose value for `field` is not empty. Trashed entries count: their values come back with them. */

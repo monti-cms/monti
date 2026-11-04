@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import type { Kysely, Transaction } from "kysely";
+import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import type { MontiEvent } from "../operation";
 

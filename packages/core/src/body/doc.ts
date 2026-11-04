@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { base64url, randomBytes } from "../bytes";
 
 /** A text mark. Core has bold, italic, underline, strike, code, sup, sub and link; plugins add more (`defineMark`). */
 export type Mark = { type: string; [attr: string]: unknown };
@@ -52,7 +52,7 @@ export const NewBlockShape: z.ZodType<NewBlock> = z.lazy(() =>
 	}),
 );
 
-export const newBlockId = () => `b_${randomBytes(6).toString("base64url")}`;
+export const newBlockId = () => `b_${base64url(randomBytes(6))}`;
 
 /** Gives every block without an id a new one. */
 export const withIds = ({ children, ...block }: NewBlock): Block => ({

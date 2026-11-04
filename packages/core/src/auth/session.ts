@@ -1,4 +1,5 @@
 import type { Kysely, Transaction } from "kysely";
+import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { randomToken, sha256 } from "./secrets";
 
@@ -16,7 +17,7 @@ export async function startSession(db: Db, who: string, now: Date): Promise<{ to
 	const expiresAt = new Date(now.getTime() + SESSION_DAYS * DAY);
 	await db
 		.insertInto("monti_session")
-		.values({ id: globalThis.crypto.randomUUID(), token_hash: await sha256(token), who, expires_at: expiresAt })
+		.values({ id: randomUUID(), token_hash: await sha256(token), who, expires_at: expiresAt })
 		.execute();
 	return { token, expiresAt };
 }

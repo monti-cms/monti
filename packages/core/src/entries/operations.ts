@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { assertDoc } from "../body/check";
 import { blockMap, type Doc, withNewIds } from "../body/doc";
+import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
@@ -497,7 +497,7 @@ export const entryOperations = [
 			const expiresAt = new Date(ctx.now().getTime() + PREVIEW_MINUTES * 60_000);
 			const { slug } = await publishSlug(ctx.db, entry);
 			return {
-				token: previewToken(ctx.site.secret, entry.id, expiresAt),
+				token: await previewToken(ctx.site.secret, entry.id, expiresAt),
 				path: publicPath(ctx.site.schema(), entry.collection, slug),
 				expiresAt,
 			};

@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
 import type { Kysely, Transaction } from "kysely";
 import type { Session } from "../auth/session";
+import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
 import {
