@@ -156,6 +156,24 @@ const more = (
 	</TableCell>
 );
 
+/** The posts list's search: a list with a body searches its title and address, or everything, as the admin does. */
+export function PostSearch() {
+	return (
+		<SearchToggle
+			label="검색"
+			value=""
+			aria-label="검색"
+			placeholder="제목·주소 검색"
+			targets={[
+				{ value: "fields", label: "제목·주소" },
+				{ value: "all", label: "전체" },
+			]}
+			target="fields"
+			targetLabel="찾을 곳"
+		/>
+	);
+}
+
 /** The posts list: a folder first, then the entries, and the pages under them. */
 export function MainScreen() {
 	return (
@@ -163,7 +181,7 @@ export function MainScreen() {
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<TextButton>+ 폴더</TextButton>
-					<SearchToggle label="검색" value="" aria-label="검색" />
+					<PostSearch />
 					<Button variant="primary">+ 새 글 쓰기</Button>
 				</PageHeader>
 				<ListScroll>

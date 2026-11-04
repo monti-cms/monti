@@ -27,7 +27,6 @@ import {
 	RowLink,
 	RowMore,
 	RowTitle,
-	SearchToggle,
 	Stack,
 	Table,
 	TableBody,
@@ -40,6 +39,7 @@ import {
 } from "../../index";
 import { AssistantPanel, MessageActions } from "./assistant-parts";
 import { AdminFrame } from "./frame";
+import { PostSearch } from "./main";
 
 const none = () => {};
 
@@ -233,7 +233,7 @@ export function AssistantScreen() {
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<TextButton>+ 폴더</TextButton>
-					<SearchToggle label="검색" aria-label="검색" value="" onValueChange={none} />
+					<PostSearch />
 					<Button>+ 새 글 쓰기</Button>
 				</PageHeader>
 				<ListScroll>
