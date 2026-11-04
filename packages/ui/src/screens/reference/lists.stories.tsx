@@ -18,6 +18,23 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Main: Story = { render: () => <MainScreen /> };
+/** A row right-clicked over its title: the row menu opens at the cursor. */
+export const MainRowMenu: Story = {
+	render: () => <MainScreen rowMenu />,
+	play: async ({ canvasElement }) => {
+		const row = canvasElement.querySelector<HTMLElement>("[data-row-menu]");
+		if (!row) return;
+		const box = row.getBoundingClientRect();
+		row.dispatchEvent(
+			new MouseEvent("contextmenu", {
+				bubbles: true,
+				cancelable: true,
+				clientX: box.left + 320,
+				clientY: box.top + box.height / 2,
+			}),
+		);
+	},
+};
 export const Media: Story = { render: () => <MediaScreen /> };
 export const Trash: Story = { render: () => <TrashScreen /> };
 export const Templates: Story = { render: () => <TemplatesScreen /> };

@@ -1,11 +1,20 @@
+import { Archive, Copy, Folder, Launch, Tag, TrashCan } from "../../icons";
 import {
 	Button,
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubTrigger,
+	ContextMenuTrigger,
 	Count,
 	EntryStatus,
 	type EntryStatusKind,
 	ListFooter,
 	ListHead,
 	ListScroll,
+	MenuShortcut,
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
@@ -173,8 +182,56 @@ export function PostSearch() {
 	);
 }
 
-/** The posts list: a folder first, then the entries, and the pages under them. */
-export function MainScreen() {
+/** The menu a post row opens on a right click: open, open in a new tab, copy | to folder, category, tag | archive, to the trash. */
+function PostRowMenu() {
+	return (
+		<ContextMenuContent>
+			<ContextMenuItem>
+				<Launch />
+				열기
+			</ContextMenuItem>
+			<ContextMenuItem>
+				<Launch />새 탭에서 열기
+			</ContextMenuItem>
+			<ContextMenuItem>
+				<Copy />
+				복제
+			</ContextMenuItem>
+			<ContextMenuSeparator />
+			<ContextMenuSub>
+				<ContextMenuSubTrigger>
+					<Folder />
+					폴더로
+				</ContextMenuSubTrigger>
+			</ContextMenuSub>
+			<ContextMenuSub>
+				<ContextMenuSubTrigger>
+					<Tag />
+					카테고리
+				</ContextMenuSubTrigger>
+			</ContextMenuSub>
+			<ContextMenuSub>
+				<ContextMenuSubTrigger>
+					<Tag />
+					태그
+				</ContextMenuSubTrigger>
+			</ContextMenuSub>
+			<ContextMenuSeparator />
+			<ContextMenuItem>
+				<Archive />
+				보관
+			</ContextMenuItem>
+			<ContextMenuItem variant="danger">
+				<TrashCan />
+				휴지통으로
+				<MenuShortcut>Del</MenuShortcut>
+			</ContextMenuItem>
+		</ContextMenuContent>
+	);
+}
+
+/** The posts list. With `rowMenu`, a row's right-click menu is open. */
+export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
 	return (
 		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }}>
 			<PageColumn width="list">
@@ -203,36 +260,47 @@ export function MainScreen() {
 								<TableCell />
 								{more}
 							</TableRow>
-							{POSTS.map((post) => (
-								<TableRow key={post.address}>
-									<TableCell>
-										<RowCheck checked={false} label={`${post.title} 고르기`} />
-										<EntryStatus status={post.status} quiet={post.status === "published"}>
-											{post.label}
-										</EntryStatus>
-									</TableCell>
-									<TableCell truncate>
-										<RowTitle title={<RowLink href="#">{post.title}</RowLink>} address={post.address} />
-									</TableCell>
-									<TableCell tone="subtle" truncate>
-										{post.category}
-									</TableCell>
-									<TableCell tone="subtle" truncate>
-										{post.tags}
-									</TableCell>
-									<TableCell>
-										<Text mono variant="meta">
-											{post.language}
-										</Text>
-									</TableCell>
-									<TableCell align="end">
-										<Text mono variant="meta" tone="muted">
-											{post.date}
-										</Text>
-									</TableCell>
-									{more}
-								</TableRow>
-							))}
+							{POSTS.map((post, index) => {
+								const row = (
+									<TableRow key={post.address}>
+										<TableCell>
+											<RowCheck checked={false} label={`${post.title} 고르기`} />
+											<EntryStatus status={post.status} quiet={post.status === "published"}>
+												{post.label}
+											</EntryStatus>
+										</TableCell>
+										<TableCell truncate>
+											<RowTitle title={<RowLink href="#">{post.title}</RowLink>} address={post.address} />
+										</TableCell>
+										<TableCell tone="subtle" truncate>
+											{post.category}
+										</TableCell>
+										<TableCell tone="subtle" truncate>
+											{post.tags}
+										</TableCell>
+										<TableCell>
+											<Text mono variant="meta">
+												{post.language}
+											</Text>
+										</TableCell>
+										<TableCell align="end">
+											<Text mono variant="meta" tone="muted">
+												{post.date}
+											</Text>
+										</TableCell>
+										{more}
+									</TableRow>
+								);
+								// The second row takes a right click (the story clicks it): its menu opens at the cursor, the same items as its ⋯.
+								return rowMenu && index === 1 ? (
+									<ContextMenu key={post.address}>
+										<ContextMenuTrigger render={row} data-row-menu="" />
+										<PostRowMenu />
+									</ContextMenu>
+								) : (
+									row
+								);
+							})}
 						</TableBody>
 					</Table>
 				</ListScroll>
