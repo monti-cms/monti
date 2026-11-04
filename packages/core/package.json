@@ -1,0 +1,40 @@
+{
+	"name": "@monti-cms/core",
+	"version": "0.2.0-next.16",
+	"private": true,
+	"description": "Monti's core: operations, the engine that runs them, and the entry points they produce",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit -p .",
+		"test": "vitest run",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"dependencies": {
+		"kysely": "^0.29.6",
+		"pg": "^8.23.0",
+		"zod": "^4.2.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/pg": "^8.23.1",
+		"typescript": "^7.0.2",
+		"vitest": "^4.0.0"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		}
+	},
+	"sideEffects": false
+}

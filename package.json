@@ -7,19 +7,16 @@
 		"lint:fix": "pnpm exec biome check . --write",
 		"gen:tokens": "node scripts/gen-tokens.mjs",
 		"gen:screen-catalog": "node scripts/gen-screen-catalog.mjs",
-		"gen:db-types": "pnpm --filter @monti-cms/core gen:db-types",
-		"check:migrations": "pnpm --filter @monti-cms/core check:migrations",
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:design": "node scripts/check-design.mjs",
 		"check:screens": "node scripts/check-screens.mjs",
 		"check:messages": "node scripts/check-messages.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" -r typecheck",
-		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/auth build && pnpm --filter @monti-cms/storage-s3 build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/mdx build && pnpm --filter @monti-cms/syntax-directive build && pnpm --filter @monti-cms/syntax-shiki build && pnpm --filter @monti-cms/nextjs build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/blocks build && pnpm --filter @monti-cms/seo build",
-		"example:check": "node scripts/check-example.mjs",
-		"example:pack": "node scripts/pack-example.mjs",
-		"preview:example": "node scripts/preview-example.mjs",
+		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/ui build",
 		"prepare": "husky",
-		"knip": "knip --include files,exports,types,duplicates && knip --production --include exports,types"
+		"knip": "knip --include files,exports,types,duplicates && knip --production --include exports,types",
+		"check:operations": "node scripts/check-operations.mjs",
+		"test": "pnpm --filter @monti-cms/core test"
 	},
 	"lint-staged": {
 		"*": [
