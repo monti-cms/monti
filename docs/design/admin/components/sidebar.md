@@ -17,7 +17,7 @@
 
 `Sidebar`는 도구 바탕 위의 `nav`다. 오른쪽 가장자리를 따라 선이 있고, 사이트 이름이 든 머리, 묶음들의 행, 바닥이 있다. 쓰는 사람이 가장자리를 끌어 너비를 바꾼다(200px에서 400px, 끌기 전에는 232px, `width-sidebar`). 좁은 화면에서는 흐려진 페이지 위로 왼쪽에서 열리는 서랍이 된다. 시트처럼 모서리가 각지고 열린 쪽 가장자리에 선이 있다. `label`은 스크린 리더용 이름이다.
 
-부품: `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`, `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 8px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
+부품: `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`, `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 12px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
 
 `SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 호버 바탕도 같은 `bg-selected`다(디자인 시스템의 색 규칙이 설정의 컬렉션 열을 이 목록에 넣는다). `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
 

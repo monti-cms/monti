@@ -134,11 +134,11 @@ function SidebarProvider({
 }
 
 /**
- * The rail as the design draws it: the tool ground, 8px above (open or folded, so the head row stays put), 14px at the sides, 16px below, rows
+ * The rail as the design draws it: the tool ground, 12px above (open or folded, so the head row stays put), 14px at the sides, 16px below, rows
  * 2px apart. Folded, 6px | 5px at the sides, so the 36px rows fill the 48px rail with its 1px edge and nothing scrolls sideways.
  */
 const RAIL =
-	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-8 pb-monti-16 text-monti-default data-rail:pr-[5px] data-rail:pl-[6px]";
+	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-12 pb-monti-16 text-monti-default data-rail:pr-[5px] data-rail:pl-[6px]";
 
 /**
  * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
