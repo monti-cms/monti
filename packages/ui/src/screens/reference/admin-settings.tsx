@@ -1,4 +1,4 @@
-import { MenuField, PageBody, PageColumn, PageHeader, PageToolbar, Section, Text } from "../../index";
+import { Box, MenuField, PageBody, PageColumn, PageHeader, PageToolbar, Section, Text } from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs, SwitchOption } from "./settings";
 
@@ -22,7 +22,10 @@ export function AdminSettingsScreen() {
 					</Section>
 					<Section title="주소" last>
 						{/* The section's title says what the value is; the address alone, read only (it is set in a file). */}
-						<Text mono>/studio</Text>
+						{/* The 6px a field keeps above and below its words, so the value sits on the line of the section's title as a field's would. */}
+						<Box paddingY={6}>
+							<Text mono>/studio</Text>
+						</Box>
 					</Section>
 				</PageBody>
 			</PageColumn>
