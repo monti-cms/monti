@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "./button";
 import { DragHandle } from "./drag-handle";
 import { Input } from "./input";
 import { OptionRow, OptionTable } from "./option-table";
-import { TextButton } from "./text-button";
 
 const ROWS = [
 	{ value: "note", label: "메모" },
@@ -40,15 +40,17 @@ export const Playground: Story = {
 						value={<Input appearance="inline" mono aria-label="값" defaultValue={row.value} />}
 						label={<Input appearance="inline" aria-label="라벨" defaultValue={row.label} />}
 						action={
-							<TextButton quiet aria-label={`${row.value} 빼기`}>
+							<Button variant="ghost" size="xs" aria-label={`${row.value} 빼기`}>
 								×
-							</TextButton>
+							</Button>
 						}
 					/>
 				))}
 			</OptionTable>
 			<div className="mt-monti-8 flex gap-monti-16 text-monti-note">
-				<TextButton>+ 선택지</TextButton>
+				<Button variant="ghost" size="sm">
+					+ 선택지
+				</Button>
 			</div>
 		</>
 	),

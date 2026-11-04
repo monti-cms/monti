@@ -19,7 +19,6 @@ import {
 	TabsTrigger,
 	Text,
 	Textarea,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 import { SchemaPage } from "./schema";
@@ -82,9 +81,9 @@ export function SchemaFieldScreen() {
 					</Tabs>
 					<SheetFooter>
 						<Inline gap={12} grow minWidth={0}>
-							<TextButton variant="danger">필드 삭제</TextButton>
+							<Button variant="ghost-danger">필드 삭제</Button>
 						</Inline>
-						<TextButton>취소</TextButton>
+						<Button variant="ghost">취소</Button>
 						<Button>저장</Button>
 					</SheetFooter>
 				</SheetContent>

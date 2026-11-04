@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StatusBar, StatusBarCell, StatusBarList, TextButton, TodoDone, TodoItem } from "./index";
+import { Button, StatusBar, StatusBarCell, StatusBarList, TodoDone, TodoItem } from "./index";
 
 /** The list that opens upward from a status bar cell: the group's name and count, the rows to do, the ones done, and actions under a rule. */
 const meta = {
@@ -23,8 +23,12 @@ export const Todo: Story = {
 				defaultOpen
 				footer={
 					<>
-						<TextButton>설정</TextButton>
-						<TextButton>모두 고치기</TextButton>
+						<Button variant="ghost" size="sm">
+							설정
+						</Button>
+						<Button variant="ghost" size="sm">
+							모두 고치기
+						</Button>
 					</>
 				}
 			>

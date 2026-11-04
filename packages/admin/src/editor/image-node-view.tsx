@@ -3,6 +3,7 @@
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Button,
 	Count,
 	cn,
 	FloatingBar,
@@ -20,7 +21,6 @@ import {
 	Separator,
 	Switch,
 	Text,
-	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
 import {
@@ -271,9 +271,9 @@ export function ImageBlockView() {
 	};
 
 	const nextButton = (
-		<TextButton type="button" variant="quiet" onClick={goNext}>
+		<Button variant="ghost" size="sm" type="button" onClick={goNext}>
 			{t("imageNode.next")} <span className="text-monti-micro">↵</span>
-		</TextButton>
+		</Button>
 	);
 	const altField = (
 		<FormField>

@@ -1,5 +1,6 @@
 import type * as React from "react";
 import {
+	Button,
 	FieldRow,
 	FieldTree,
 	FolderTab,
@@ -20,7 +21,6 @@ import {
 	TabLink,
 	TabLinks,
 	Text,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs } from "./settings";
@@ -111,7 +111,9 @@ export function SchemaPage({
 								<TabLink>에디터</TabLink>
 							</TabLinks>
 							<PageToolbarEnd>
-								<TextButton>속성 패널 미리보기</TextButton>
+								<Button variant="ghost" size="sm">
+									속성 패널 미리보기
+								</Button>
 							</PageToolbarEnd>
 						</PageToolbar>
 						<Stack gap={12} paddingTop={4}>
@@ -135,8 +137,12 @@ export function SchemaPage({
 							</FolderTabs>
 							<Stack gap={12}>
 								<Inline gap={20}>
-									<TextButton edge="start">+ 필드 추가</TextButton>
-									<TextButton variant="quiet">+ 묶음 추가</TextButton>
+									<Button variant="ghost" size="sm">
+										+ 필드 추가
+									</Button>
+									<Button variant="ghost" size="sm">
+										+ 묶음 추가
+									</Button>
 								</Inline>
 								<Text as="p" variant="meta" tone="subtle">
 									! 필수 · → 관계 · [] 여러 개

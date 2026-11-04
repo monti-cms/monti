@@ -1,5 +1,9 @@
+"use client";
+
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
+import type * as React from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "./cn";
 import { Spinner } from "./spinner";
 
@@ -25,15 +29,29 @@ const buttonVariants = cva(
 				/** Confirms something that cannot be undone. Only inside a confirmation. */
 				danger:
 					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90 not-data-loading:not-disabled:active:bg-monti-danger-emphasis/80",
+				/**
+				 * An action that stands on its own where a pill would be too heavy (undo all beside the save pill, a toolbar's upload, "+ add" under a
+				 * list): no ground at rest, the muted ground under the pointer and the selected one while pressed (and while it is on, `aria-pressed`, or
+				 * its menu is open), at the same heights as the pills.
+				 */
+				ghost:
+					"bg-transparent px-[12px] font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-muted not-data-loading:not-disabled:hover:text-monti-default not-data-loading:not-disabled:active:bg-monti-selected not-data-loading:not-disabled:active:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default aria-expanded:bg-monti-selected aria-expanded:text-monti-default",
+				/** A `ghost` that deletes or empties something (empty the trash, delete forever): red words, the red wash under the pointer. */
+				"ghost-danger":
+					"bg-transparent px-[12px] font-normal text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted not-data-loading:not-disabled:active:bg-monti-danger-muted",
 				/** The quiet version of `danger`. */
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
 			},
-			/** The control heights: `lg` 36px (the default: page headers, forms, dialogs); `md` 32px (side panels); `sm` 28px inside cards and toolbars. */
+			/**
+			 * The control heights: `lg` 36px (the default: page headers, forms, dialogs); `md` 32px (side panels); `sm` 28px inside cards and toolbars;
+			 * `xs` 24px where only a small one fits (a card's head, a chip row).
+			 */
 			size: {
 				lg: "h-monti-control-lg text-monti-body",
 				md: "h-monti-control-md px-[14px] text-monti-body",
 				sm: "h-monti-control-sm px-[12px] text-monti-note",
+				xs: "h-monti-control-xs px-[8px] text-monti-caption [&_svg:not([class*='size-'])]:size-3.5",
 			},
 		},
 		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
@@ -47,6 +65,7 @@ const buttonVariants = cva(
 			{ size: "lg", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
 			{ size: "md", class: "data-loading:pr-[11px] data-loading:pl-[11px]" },
 			{ size: "sm", class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
+			{ size: "xs", class: "data-loading:pr-[7px] data-loading:pl-[7px]" },
 		],
 		defaultVariants: { variant: "primary", size: "lg" },
 	},
@@ -57,28 +76,51 @@ function Button({
 	variant,
 	size,
 	loading = false,
+	pendingLabel,
 	width,
 	disabled,
 	children,
 	...props
 }: ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
+		/**
+		 * The button sends its form by a plain post (no script handles it): from the moment the form is sent until the next page comes it is
+		 * `loading` and says this instead of its words ("Signing in…"). Coming back to the page (the browser's back) wakes it.
+		 */
+		pendingLabel?: React.ReactNode;
 		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
 		width?: "full";
 	}) {
+	const own = useRef<HTMLButtonElement>(null);
+	const [sending, setSending] = useState(false);
+	useEffect(() => {
+		const form = own.current?.form;
+		if (pendingLabel === undefined || !form) return;
+		const sent = () => setSending(true);
+		const back = () => setSending(false);
+		form.addEventListener("submit", sent);
+		window.addEventListener("pageshow", back);
+		return () => {
+			form.removeEventListener("submit", sent);
+			window.removeEventListener("pageshow", back);
+		};
+	}, [pendingLabel]);
+	const busy = loading || sending;
 	return (
 		<ButtonPrimitive
+			ref={pendingLabel === undefined ? undefined : own}
+			type={pendingLabel === undefined ? undefined : "submit"}
 			data-slot="button"
-			data-loading={loading || undefined}
-			aria-busy={loading || undefined}
-			disabled={disabled || loading}
+			data-loading={busy || undefined}
+			aria-busy={busy || undefined}
+			disabled={disabled || busy}
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...props}
 		>
-			{loading && <Spinner className={size === "sm" ? "size-3" : "size-3.5"} />}
-			{children}
+			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
+			{sending ? pendingLabel : children}
 		</ButtonPrimitive>
 	);
 }

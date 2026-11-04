@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
+	Button,
 	ChatAnswer,
 	ChatDate,
 	ChatMessage,
@@ -9,7 +10,6 @@ import {
 	ProposalActions,
 	ProposalCard,
 	ProposalRow,
-	TextButton,
 	ToolCallLine,
 	ToolCallLines,
 } from "./index";
@@ -125,7 +125,14 @@ export const Stopped: Story = {
 						글 옮기기 · 여기서 멈춤
 					</ToolCallLine>
 				</ToolCallLines>
-				<ErrorNote title="연결이 끊겼어요" actions={<TextButton variant="underline">이어서 하기</TextButton>}>
+				<ErrorNote
+					title="연결이 끊겼어요"
+					actions={
+						<Button variant="ghost" size="sm">
+							이어서 하기
+						</Button>
+					}
+				>
 					여기까지 한 일은 위에 남아 있어요.
 				</ErrorNote>
 			</ChatAnswer>

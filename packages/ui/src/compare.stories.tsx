@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
+	Button,
 	Compare,
 	CompareBody,
 	CompareCode,
@@ -16,7 +17,6 @@ import {
 	Heading,
 	Highlight,
 	Text,
-	TextButton,
 } from "./index";
 
 /**
@@ -161,7 +161,13 @@ export const TranslationRows: Story = {
 					name="코드 블록"
 					source={<CompareCode>{CODE}</CompareCode>}
 					translation={
-						<CompareShared action={<TextButton variant="underline">English에서만 따로 고치기</TextButton>}>
+						<CompareShared
+							action={
+								<Button variant="ghost" size="sm">
+									English에서만 따로 고치기
+								</Button>
+							}
+						>
 							<CompareCode>{CODE}</CompareCode>
 						</CompareShared>
 					}

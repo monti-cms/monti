@@ -12,7 +12,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { errorText } from "../../api/client";
 import type { ImportPreview } from "../../api/import";
@@ -75,9 +74,9 @@ export function ImportSheet({
 						</Button>
 					) : (
 						<>
-							<TextButton type="button" disabled={running} onClick={onClose}>
+							<Button variant="ghost" size="lg" type="button" disabled={running} onClick={onClose}>
 								{tc("cancel")}
-							</TextButton>
+							</Button>
 							<Button
 								type="button"
 								loading={running}

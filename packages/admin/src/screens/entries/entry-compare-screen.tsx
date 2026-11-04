@@ -23,7 +23,6 @@ import {
 	StatusBarCell,
 	StatusBarSpacer,
 	Text,
-	TextButton,
 	toast,
 } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
@@ -171,10 +170,10 @@ export function EntryCompareScreen({ editor, mode }: { editor: EntryEditor; mode
 				minHeight="header"
 				paddingX={24}
 			>
-				<TextButton variant="quiet" render={<Link href={editHref} />}>
+				<Button variant="ghost" size="sm" render={<Link href={editHref} />} nativeButton={false} role="link">
 					<ChevronLeft aria-hidden />
 					{t("back")}
-				</TextButton>
+				</Button>
 				<Heading as="h1" variant="title">
 					{mode === "conflict" ? t("heading.conflict") : t("heading.draft")}
 				</Heading>
@@ -192,14 +191,18 @@ export function EntryCompareScreen({ editor, mode }: { editor: EntryEditor; mode
 					</Inline>
 					{mode === "conflict" ? (
 						<>
-							<TextButton onClick={() => void loadServer()}>{t("loadServer")}</TextButton>
+							<Button variant="ghost" size="lg" onClick={() => void loadServer()}>
+								{t("loadServer")}
+							</Button>
 							<Button type="button" onClick={() => void saveMine()}>
 								{t("saveMine")}
 							</Button>
 						</>
 					) : (
 						<>
-							<TextButton onClick={() => void discardDraft()}>{t("discard")}</TextButton>
+							<Button variant="ghost" size="lg" onClick={() => void discardDraft()}>
+								{t("discard")}
+							</Button>
 							<Button type="button" onClick={loadDraft}>
 								{t("loadDraft")}
 							</Button>

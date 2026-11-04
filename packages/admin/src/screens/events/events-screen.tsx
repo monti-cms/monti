@@ -280,13 +280,15 @@ export function EventsScreen() {
 															>
 																{tc("retry")}
 															</Button>
-															<TextButton
+															<Button
+																variant="ghost"
+																size="sm"
 																type="button"
 																aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
 																onClick={() => void requestDismiss(key)}
 															>
 																{t("action.dismiss")}
-															</TextButton>
+															</Button>
 														</Inline>
 													)}
 												</TableCell>

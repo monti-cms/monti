@@ -40,6 +40,44 @@ export const AllVariants: Story = {
 	),
 };
 
+/** `ghost` and `ghost-danger`: an action that stands on its own where a pill is too heavy, at every height (lg 36, md 32, sm 28, xs 24), then disabled. */
+export const Ghost: Story = {
+	render: () => (
+		<Stack gap={16}>
+			{(["lg", "md", "sm", "xs"] as const).map((size) => (
+				<Stack key={size} direction="row" gap={16} align="center" wrap>
+					<Button variant="ghost" size={size}>
+						<Add aria-hidden />
+						폴더
+					</Button>
+					<Button variant="ghost" size={size}>
+						취소
+					</Button>
+					<Button variant="ghost-danger" size={size}>
+						비우기
+					</Button>
+					<Button variant="ghost" size={size} disabled>
+						disabled
+					</Button>
+				</Stack>
+			))}
+		</Stack>
+	),
+};
+
+/** The smallest pill, `xs` 24px, where only that fits (a card's head, a chip row). */
+export const ExtraSmall: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			{VARIANTS.map((variant) => (
+				<Button key={variant} variant={variant} size="xs">
+					{variant}
+				</Button>
+			))}
+		</Stack>
+	),
+};
+
 /** A leading icon sits 2px into the left padding, so it looks centered. */
 export const WithIcon: Story = {
 	render: () => (

@@ -5,20 +5,20 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "./cn";
-import { TEXT_HOVER } from "./hover";
 import { useUiLabels } from "./labels";
 import { Spinner } from "./spinner";
 
 /**
- * The text of an action inside a section: add, edit, cancel, go to. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
+ * Words that act where a button's height does not fit: in a sentence, on a field's label row, at the end of a short line. Where a button fits, use
+ * `Button variant="ghost"`. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
  * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
- * and, for `underline`, a 1px rule under it say what it is. Under the pointer the text turns ink (and the rule too) and a flat tint (`bg-muted`) shows around its words, 8px at the sides and 4px above and below, drawn as a shadow so the line does not move. The keyboard's focus ring runs around that same room.
+ * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens), and while pressed the rule thickens. The keyboard's ring sits close around the words.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
  * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, and it is `aria-busy`. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	`${TEXT_HOVER} inline cursor-pointer rounded-monti-full border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`inline cursor-pointer rounded-monti-sm border-0 decoration-1 underline-offset-4 not-disabled:hover:underline not-disabled:active:decoration-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/30 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {
@@ -26,7 +26,7 @@ const textButtonVariants = cva(
 				plain: "text-monti-muted not-disabled:hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
 				underline:
-					"underline decoration-monti-strong decoration-1 underline-offset-4 text-monti-muted not-disabled:hover:decoration-monti-contrast not-disabled:hover:text-monti-default",
+					"underline decoration-monti-strong text-monti-muted not-disabled:hover:decoration-monti-contrast not-disabled:hover:text-monti-default",
 				/** Less important: + language, + group. */
 				quiet: "text-monti-subtle not-disabled:hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
@@ -57,11 +57,6 @@ const textButtonVariants = cva(
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
 			loading: { true: "cursor-default disabled:opacity-100" },
-			/**
-			 * The button stands alone at a column's edge (an "+ add" under a list, an undo at a row's end): 8px in from that edge, so its tint (8px out)
-			 * stays in the column and its words line up with the words in a field, which sit 8px in too.
-			 */
-			edge: { start: "ml-monti-8", end: "mr-monti-8" },
 		},
 		defaultVariants: { variant: "plain" },
 	},
@@ -74,7 +69,6 @@ function TextButton({
 	quiet,
 	size,
 	tone,
-	edge,
 	loading = false,
 	disabled,
 	render,
@@ -93,7 +87,7 @@ function TextButton({
 		defaultTagName: href === undefined ? "button" : "a",
 		props: mergeProps<"button">(
 			{
-				className: cn(textButtonVariants({ variant, mono, quiet, size, tone, edge, loading }), className),
+				className: cn(textButtonVariants({ variant, mono, quiet, size, tone, loading }), className),
 				...(isButton ? { type: "button" } : {}),
 				...({ "data-tone": tone ?? undefined, "data-loading": loading || undefined } as React.ComponentProps<"button">),
 				"aria-busy": loading || undefined,

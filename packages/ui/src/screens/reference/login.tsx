@@ -9,9 +9,7 @@ import {
 	Input,
 	Separator,
 	Stack,
-	SubmitButton,
 	Text,
-	TextButton,
 } from "../../index";
 
 /** What the login screen shows, as the admin's own login (`packages/admin/src/screens/login/login-view.tsx`) takes it. */
@@ -86,19 +84,19 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 								<EmailField />
 								<PasswordField id="password" label="비밀번호" value="aaaaaaaaaa" error={passwordError} />
 							</Stack>
-							<SubmitButton variant="primary" width="full" disabled={locked} pendingLabel="로그인 중…">
+							<Button variant="primary" width="full" disabled={locked} pendingLabel="로그인 중…">
 								로그인
-							</SubmitButton>
+							</Button>
 						</Stack>
 					</form>
 				) : null}
 				{password ? <Separator label="또는" /> : null}
 				<form>
 					{/* The one black pill: the password form's button, or the first method when there is no form. */}
-					<SubmitButton variant={password ? "secondary" : "primary"} width="full" pendingLabel="로그인 중…">
+					<Button variant={password ? "secondary" : "primary"} width="full" pendingLabel="로그인 중…">
 						<LogoGithub aria-hidden />
 						GitHub로 로그인
-					</SubmitButton>
+					</Button>
 				</form>
 			</Stack>
 			{/* The form's own error line keeps its room under the password form, so an error moves nothing. */}
@@ -111,7 +109,9 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 				<Stack gap={8} align="start">
 					<FormFieldError>{denied}는 관리자가 아니에요.</FormFieldError>
 					<form>
-						<TextButton type="submit">다른 계정으로 로그인</TextButton>
+						<Button variant="ghost" type="submit">
+							다른 계정으로 로그인
+						</Button>
 					</form>
 				</Stack>
 			) : null}
@@ -143,9 +143,9 @@ function FirstAdmin({ errors = [] }: Extract<LoginState, { kind: "first-admin" }
 							/>
 						</Stack>
 					</Stack>
-					<SubmitButton variant="primary" width="full" pendingLabel="생성 중…">
+					<Button variant="primary" width="full" pendingLabel="생성 중…">
 						생성
-					</SubmitButton>
+					</Button>
 				</Stack>
 				<FormFieldError reserve />
 			</Stack>

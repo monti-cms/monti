@@ -85,9 +85,9 @@ function ProposalBubble({
 					↓
 				</button>
 			</span>
-			<TextButton variant="quiet" onClick={onDiscardAll}>
+			<Button variant="ghost" size="sm" onClick={onDiscardAll}>
 				{discardAllLabel}
-			</TextButton>
+			</Button>
 			<Button size="sm" onClick={onAcceptAll}>
 				{acceptAllLabel}
 			</Button>

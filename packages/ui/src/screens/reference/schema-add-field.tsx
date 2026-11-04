@@ -20,7 +20,6 @@ import {
 	TabsTrigger,
 	Text,
 	Textarea,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 import { SchemaPage } from "./schema";
@@ -110,7 +109,7 @@ export function SchemaAddFieldScreen() {
 						</Tabs>
 					</SheetSplit>
 					<SheetFooter>
-						<TextButton>취소</TextButton>
+						<Button variant="ghost">취소</Button>
 						<Button>필드 추가</Button>
 					</SheetFooter>
 				</SheetContent>

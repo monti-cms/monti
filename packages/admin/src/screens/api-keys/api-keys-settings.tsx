@@ -54,7 +54,6 @@ import {
 	SelectValue,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { Fragment, type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
@@ -184,12 +183,24 @@ function KeyRow({ apiKey, onEdit, onDelete }: { apiKey: ApiKeyView; onEdit: () =
 			muted={unused}
 			actions={
 				<>
-					<TextButton type="button" variant="underline" onClick={onEdit} aria-label={`${t("row.edit")} ${apiKey.name}`}>
+					<Button
+						variant="ghost"
+						size="sm"
+						type="button"
+						onClick={onEdit}
+						aria-label={`${t("row.edit")} ${apiKey.name}`}
+					>
 						{t("row.edit")}
-					</TextButton>
-					<TextButton type="button" variant="quiet" onClick={onDelete} aria-label={`${t("row.delete")} ${apiKey.name}`}>
+					</Button>
+					<Button
+						variant="ghost-danger"
+						size="sm"
+						type="button"
+						onClick={onDelete}
+						aria-label={`${t("row.delete")} ${apiKey.name}`}
+					>
 						{t("row.delete")}
-					</TextButton>
+					</Button>
 				</>
 			}
 		/>
@@ -304,9 +315,9 @@ function ServiceDialog({
 					))}
 				</PickList>
 				<DialogFooter>
-					<TextButton type="button" onClick={onClose}>
+					<Button variant="ghost" size="lg" type="button" onClick={onClose}>
 						{tc("cancel")}
-					</TextButton>
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

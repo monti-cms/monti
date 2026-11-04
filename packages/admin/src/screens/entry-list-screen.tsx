@@ -42,7 +42,11 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
-			{list.folders && <TextButton onClick={list.folders.addFolder}>{t("list.addFolder")}</TextButton>}
+			{list.folders && (
+				<Button variant="ghost" size="lg" onClick={list.folders.addFolder}>
+					{t("list.addFolder")}
+				</Button>
+			)}
 			<ListSearch state={list.state} onChange={list.update} />
 			<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 				<Add aria-hidden />

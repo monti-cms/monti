@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "./icons";
 import {
+	Button,
 	Caret,
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -21,7 +22,6 @@ import {
 	IconButton,
 	MenuShortcut,
 	MenuValue,
-	TextButton,
 } from "./index";
 
 /** The floating menu card: 240px, rows with an icon, a name and a shortcut; what cannot be undone is last, in red. */
@@ -108,9 +108,9 @@ export const PickOne: Story = {
 		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger
 				render={
-					<TextButton>
+					<Button variant="ghost" size="sm">
 						최근 수정 <Caret />
-					</TextButton>
+					</Button>
 				}
 			/>
 			<DropdownMenuContent>

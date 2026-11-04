@@ -33,7 +33,6 @@ import {
 	TableCell,
 	TableRow,
 	Text,
-	TextButton,
 	ToolCallLine,
 	ToolCallLines,
 } from "../../index";
@@ -232,7 +231,7 @@ export function AssistantScreen() {
 		>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
-					<TextButton>+ 폴더</TextButton>
+					<Button variant="ghost">+ 폴더</Button>
 					<PostSearch />
 					<Button>+ 새 글 쓰기</Button>
 				</PageHeader>

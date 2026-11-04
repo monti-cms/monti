@@ -22,7 +22,11 @@ function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Prop
 	return (
 		<ComboboxPrimitive.Trigger
 			data-slot="combobox-trigger"
-			className={cn(ICON_BUTTON, "w-auto hover:bg-transparent aria-expanded:bg-transparent", className)}
+			className={cn(
+				ICON_BUTTON,
+				"w-auto not-disabled:hover:bg-transparent not-disabled:active:bg-transparent aria-expanded:bg-transparent",
+				className,
+			)}
 			{...props}
 		>
 			<Caret solo className="size-3.5" />
@@ -35,7 +39,11 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 	return (
 		<ComboboxPrimitive.Clear
 			data-slot="combobox-clear"
-			className={cn(ICON_BUTTON, "w-auto hover:bg-transparent aria-expanded:bg-transparent", className)}
+			className={cn(
+				ICON_BUTTON,
+				"w-auto not-disabled:hover:bg-transparent not-disabled:active:bg-transparent aria-expanded:bg-transparent",
+				className,
+			)}
 			{...props}
 		>
 			<Close className="pointer-events-none" aria-hidden />

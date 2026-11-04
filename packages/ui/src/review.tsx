@@ -1,10 +1,10 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
+import { Button } from "./button";
 import { Caret } from "./caret";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
-import { TextButton } from "./text-button";
 
 /** What the admin asked, quoted under the title of the review page. */
 function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
@@ -35,9 +35,7 @@ function ReviewGroup({
 				{title}
 				{meta !== undefined && <span className="font-normal text-monti-meta text-monti-subtle">{meta}</span>}
 				{actions !== undefined && (
-					<span className="ml-auto flex items-baseline gap-monti-16 font-normal text-monti-note [&>[data-slot=text-button]:last-child]:mr-monti-8">
-						{actions}
-					</span>
+					<span className="ml-auto flex items-baseline gap-monti-16 font-normal text-monti-note">{actions}</span>
 				)}
 			</h2>
 			{children}
@@ -234,10 +232,10 @@ function ReviewMore({
 		<div data-slot="review-more" className="mt-monti-12 grid grid-cols-[14px_minmax(0,1fr)] gap-x-monti-16">
 			<span />
 			<span>
-				<TextButton variant="quiet" aria-expanded={open} onClick={() => onOpenChange(!open)}>
+				<Button variant="ghost" size="sm" aria-expanded={open} onClick={() => onOpenChange(!open)}>
 					{open ? lessLabel : moreLabel}
 					<Caret className={cn("transition-transform", open && "rotate-180")} />
-				</TextButton>
+				</Button>
 			</span>
 		</div>
 	);

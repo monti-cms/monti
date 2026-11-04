@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
+	Button,
 	ChangeActions,
 	ChangeGroup,
 	ChangeLabel,
@@ -12,7 +13,6 @@ import {
 	Option,
 	RadioGroup,
 	RadioItem,
-	TextButton,
 } from "./index";
 
 /**
@@ -72,7 +72,9 @@ export const Drop: Story = {
 			</Option>
 			<ChangeNote danger>되돌릴 수 없어요.</ChangeNote>
 			<ChangeActions>
-				<TextButton>연결 보기</TextButton>
+				<Button variant="ghost" size="sm">
+					연결 보기
+				</Button>
 			</ChangeActions>
 		</ChangeGroup>
 	),

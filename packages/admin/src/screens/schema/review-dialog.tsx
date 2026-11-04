@@ -803,9 +803,9 @@ export function ReviewDialog({
 										title={saveError.conflict ? t("save.conflict.title") : saveError.message}
 										actions={
 											saveError.conflict ? (
-												<TextButton type="button" onClick={reloadPage}>
+												<Button variant="ghost" size="sm" type="button" onClick={reloadPage}>
 													{t("save.reload")}
-												</TextButton>
+												</Button>
 											) : undefined
 										}
 									>
@@ -848,9 +848,9 @@ export function ReviewDialog({
 						</Stack>
 					</SheetBody>
 					<SheetFooter>
-						<TextButton type="button" onClick={() => onOpenChange(false)}>
+						<Button variant="ghost" size="lg" type="button" onClick={() => onOpenChange(false)}>
 							{tc("cancel")}
-						</TextButton>
+						</Button>
 						<Button
 							type="button"
 							variant={deletes ? "danger" : "primary"}

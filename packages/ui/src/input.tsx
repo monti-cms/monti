@@ -3,7 +3,7 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_ACTION, FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_ACTION, FIELD_ACTION_SIZE, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /** The text of an input that reads as text (no underline): the label size, or a heading's. */
@@ -113,7 +113,9 @@ function Input({
 			)}
 		>
 			{input}
-			<span className={FIELD_ACTION}>{action}</span>
+			<span className={cn(FIELD_ACTION, FIELD_ACTION_SIZE[size === "sm" ? "sm" : size === "md" ? "md" : "lg"])}>
+				{action}
+			</span>
 		</div>
 	);
 }

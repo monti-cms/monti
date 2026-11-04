@@ -310,11 +310,13 @@ function OptionsEditor({
 			</OptionTable>
 			{!disabled && (
 				<Inline gap={16} paddingTop={8}>
-					<TextButton onClick={addOne}>{t("options.add")}</TextButton>
+					<Button variant="ghost" size="sm" onClick={addOne}>
+						{t("options.add")}
+					</Button>
 					<Box as="span" grow />
 					{defaultValue !== undefined && defaultValue in options && (
 						<DropdownMenu>
-							<DropdownMenuTrigger render={<TextButton quiet />}>
+							<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 								{t("options.defaultIs", { label: options[defaultValue] || defaultValue })}
 								<Caret />
 							</DropdownMenuTrigger>

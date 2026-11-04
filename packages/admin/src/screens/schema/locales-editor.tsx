@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
+	Button,
 	Combobox,
 	ComboboxContent,
 	ComboboxEmpty,
@@ -206,7 +207,7 @@ function AddLocale({
 				if (!next) setSearch("");
 			}}
 		>
-			<PopoverTrigger render={<TextButton edge="start" />}>{t("locales.add")}</PopoverTrigger>
+			<PopoverTrigger render={<Button variant="ghost" size="sm" />}>{t("locales.add")}</PopoverTrigger>
 			<PopoverContent align="start" padding="menu">
 				<Command shouldFilter={false} label={t("locales.search")}>
 					<CommandInput value={search} onValueChange={setSearch} aria-label={t("locales.search")} autoFocus />

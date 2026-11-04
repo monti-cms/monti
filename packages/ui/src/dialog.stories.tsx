@@ -10,7 +10,6 @@ import {
 	FormField,
 	FormFieldLabel,
 	Input,
-	TextButton,
 } from "./index";
 
 /**
@@ -37,7 +36,7 @@ export const Form: Story = {
 					<Input id="lang-code" placeholder="예: pt-BR" />
 				</FormField>
 				<DialogFooter>
-					<TextButton>취소</TextButton>
+					<Button variant="ghost">취소</Button>
 					<Button>추가</Button>
 				</DialogFooter>
 			</DialogContent>
@@ -59,7 +58,7 @@ export const Of: Story = {
 					<Input id="key" placeholder="sk-ant-…" />
 				</FormField>
 				<DialogFooter>
-					<TextButton>취소</TextButton>
+					<Button variant="ghost">취소</Button>
 					<Button>저장</Button>
 				</DialogFooter>
 			</DialogContent>

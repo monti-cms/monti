@@ -292,7 +292,9 @@ export const FormError: Story = {
 		<Stack gap={8} className="max-w-sm">
 			<Button width="full">GitHub로 로그인</Button>
 			<FormFieldError className="mt-monti-4">octo-kim은 관리자가 아니에요.</FormFieldError>
-			<TextButton className="self-start">다른 계정으로 로그인</TextButton>
+			<Button variant="ghost" className="self-start">
+				다른 계정으로 로그인
+			</Button>
 		</Stack>
 	),
 };

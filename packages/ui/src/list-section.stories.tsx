@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, ChangeGroup, ChangeNote, ListSection, ListSectionRow, MenuField, Stack, TextButton } from "./index";
+import { Box, Button, ChangeGroup, ChangeNote, ListSection, ListSectionRow, MenuField, Stack } from "./index";
 
 /**
  * A titled list of rows: the title bold with a count, a line under it, then its rows. On a tools page, rows with a meta line and their actions or one control
@@ -21,8 +21,12 @@ export const Keys: Story = {
 				meta="이번 달 1.24M 토큰"
 				actions={
 					<>
-						<TextButton variant="underline">바꾸기</TextButton>
-						<TextButton variant="quiet">지우기</TextButton>
+						<Button variant="ghost" size="sm">
+							바꾸기
+						</Button>
+						<Button variant="ghost-danger" size="sm">
+							지우기
+						</Button>
 					</>
 				}
 			/>
@@ -32,14 +36,22 @@ export const Keys: Story = {
 				meta="이번 달 사용 없음"
 				metaTone="faint"
 				muted
-				actions={<TextButton variant="quiet">지우기</TextButton>}
+				actions={
+					<Button variant="ghost-danger" size="sm">
+						지우기
+					</Button>
+				}
 			/>
 			<ListSectionRow
 				title="검색 노출"
 				detail="· 검색 키"
 				meta="읽을 수 없어요"
 				metaTone="danger"
-				actions={<TextButton variant="underline">바꾸기</TextButton>}
+				actions={
+					<Button variant="ghost" size="sm">
+						바꾸기
+					</Button>
+				}
 			/>
 		</ListSection>
 	),

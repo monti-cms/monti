@@ -1,6 +1,7 @@
 import { Close } from "../../icons";
 import {
 	Box,
+	Button,
 	DragHandle,
 	FormField,
 	FormFieldLabel,
@@ -51,7 +52,7 @@ export function LocalesScreen() {
 								</LanguageRow>
 							</Box>
 							<Box paddingTop={12}>
-								<TextButton edge="start">+ 언어 추가</TextButton>
+								<Button variant="ghost">+ 언어 추가</Button>
 							</Box>
 						</Stack>
 					</Section>

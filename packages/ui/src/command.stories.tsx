@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Add } from "./icons";
 import {
+	Button,
 	Command,
 	CommandEmpty,
 	CommandFooter,
@@ -12,7 +13,6 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-	TextButton,
 } from "./index";
 
 /** A menu you can search, inside a `PopoverContent padding="menu"`: the search line, rows in groups, and a footer row for the whole list. */
@@ -25,7 +25,13 @@ type Story = StoryObj<typeof meta>;
 
 const Card = ({ children }: { children: React.ReactNode }) => (
 	<Popover defaultOpen>
-		<PopoverTrigger render={<TextButton>태그</TextButton>} />
+		<PopoverTrigger
+			render={
+				<Button variant="ghost" size="sm">
+					태그
+				</Button>
+			}
+		/>
 		<PopoverContent width="sm" padding="menu">
 			{children}
 		</PopoverContent>
@@ -46,9 +52,9 @@ export const PickOne: Story = {
 					</CommandGroup>
 				</CommandList>
 				<CommandFooter>
-					<TextButton>
+					<Button variant="ghost" size="sm">
 						<Add />새 태그
-					</TextButton>
+					</Button>
 				</CommandFooter>
 			</Command>
 		</Card>

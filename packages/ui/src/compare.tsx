@@ -194,7 +194,7 @@ function CompareRow({
 
 /**
  * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
- * `TextButton variant="underline"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
+ * `Button variant="ghost" size="sm"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
  */
 function CompareShared({
 	action,

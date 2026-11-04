@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -84,9 +85,9 @@ function BulkBar({
 					</DropdownMenu>
 				</>
 			)}
-			<TextButton variant="quiet" onClick={onClear} className="ml-auto">
+			<Button variant="ghost" size="sm" onClick={onClear} className="ml-auto">
 				{clearLabel}
-			</TextButton>
+			</Button>
 		</>
 	);
 	if (colSpan === undefined)

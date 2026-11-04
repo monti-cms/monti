@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Add } from "./icons";
-import { NavLink, RailLayout, Section, Text, TextButton } from "./index";
+import { Button, NavLink, RailLayout, Section, Text } from "./index";
 
 /** A page part with a list of links beside it, as the collections sit beside their editor in Settings. Narrow, the content wraps under the links. */
 const meta = {
@@ -21,9 +21,9 @@ export const Collections: Story = {
 					<NavLink note="notes" onSelect={() => {}}>
 						노트
 					</NavLink>
-					<TextButton variant="quiet">
+					<Button variant="ghost" size="sm">
 						<Add />새 컬렉션
-					</TextButton>
+					</Button>
 				</>
 			}
 		>

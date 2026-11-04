@@ -1,5 +1,5 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 
@@ -60,9 +60,9 @@ export function EditorFooter({
 					{children}
 				</Inline>
 				{onDelete && (
-					<TextButton type="button" variant="danger" disabled={busy} onClick={onDelete}>
+					<Button variant="ghost-danger" size="sm" type="button" disabled={busy} onClick={onDelete}>
 						{deleting ? t("deleting") : t("delete")}
-					</TextButton>
+					</Button>
 				)}
 			</Inline>
 		</Stack>

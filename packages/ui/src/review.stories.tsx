@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import {
 	Box,
+	Button,
 	Del,
 	Ins,
 	ReviewCompare,
@@ -44,8 +45,12 @@ export const Group: Story = {
 				meta="글 2편 · 되돌릴 수 있음"
 				actions={
 					<>
-						<TextButton variant="quiet">한 줄</TextButton>
-						<TextButton variant="quiet">나란히</TextButton>
+						<Button variant="ghost" size="sm">
+							한 줄
+						</Button>
+						<Button variant="ghost" size="sm">
+							나란히
+						</Button>
 					</>
 				}
 			>
@@ -126,9 +131,15 @@ export const OneLine: Story = {
 			meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
 			actions={
 				<>
-					<TextButton variant="underline">편집기에서 보기</TextButton>
-					<TextButton variant="ink">한 줄</TextButton>
-					<TextButton variant="quiet">나란히</TextButton>
+					<Button variant="ghost" size="sm">
+						편집기에서 보기
+					</Button>
+					<Button variant="ghost" size="sm">
+						한 줄
+					</Button>
+					<Button variant="ghost" size="sm">
+						나란히
+					</Button>
 				</>
 			}
 		>

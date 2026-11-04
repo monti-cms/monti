@@ -4,11 +4,11 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { ComponentProps, KeyboardEvent, ReactElement, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { IconButton } from "./icon-button";
+import { ArrowUp, StopFilledAlt } from "./icons";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
-import { SendButton } from "./send-button";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
-import { TextButton } from "./text-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** A button of the card's head that tells its key combination in a tooltip after its name, and only there. */
@@ -94,9 +94,9 @@ function MemoCard({
 					<span className="grow text-monti-caption text-monti-subtle">{where}</span>
 					{discardLabel && onDiscard && (
 						<WithShortcut label={discardLabel} shortcut={discardShortcut}>
-							<TextButton className="text-monti-note" onClick={onDiscard}>
+							<Button variant="ghost" size="sm" onClick={onDiscard}>
 								{discardLabel}
-							</TextButton>
+							</Button>
 						</WithShortcut>
 					)}
 					{acceptLabel && onAccept && (
@@ -123,9 +123,13 @@ function MemoCard({
 						className="min-w-0 grow border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 					/>
 					{reply.stop ? (
-						<SendButton size="sm" busy label={reply.stop.label} onClick={reply.stop.onStop} />
+						<IconButton variant="primary" size="sm" label={reply.stop.label} onClick={reply.stop.onStop}>
+							<StopFilledAlt aria-hidden className="size-3" />
+						</IconButton>
 					) : (
-						<SendButton size="sm" label={reply.sendLabel} disabled={blank} onClick={send} />
+						<IconButton variant="primary" size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
+							<ArrowUp aria-hidden className="size-3.5" />
+						</IconButton>
 					)}
 				</div>
 			)}

@@ -13,7 +13,6 @@ import {
 	DIALOG_TITLE,
 	useModalFocus,
 } from "./dialog";
-import { TextButton } from "./text-button";
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
 	return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
@@ -98,7 +97,7 @@ function AlertDialogCancel({
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
 			className={cn(className)}
-			render={<TextButton variant={variant} />}
+			render={<Button variant={variant === "danger" ? "ghost-danger" : "ghost"} />}
 			{...props}
 		/>
 	);

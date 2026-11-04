@@ -26,7 +26,6 @@ import {
 	TableCell,
 	TableRow,
 	Text,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
@@ -180,7 +179,7 @@ export function MainScreen() {
 		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }}>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
-					<TextButton>+ 폴더</TextButton>
+					<Button variant="ghost">+ 폴더</Button>
 					<PostSearch />
 					<Button variant="primary">+ 새 글 쓰기</Button>
 				</PageHeader>

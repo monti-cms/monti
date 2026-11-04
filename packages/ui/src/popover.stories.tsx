@@ -8,7 +8,6 @@ import {
 	PopoverTitle,
 	PopoverTrigger,
 	Text,
-	TextButton,
 } from "./index";
 
 /** A floating card for a small form or a note, or the card around a menu (`padding="menu"`). */
@@ -23,7 +22,13 @@ type Story = StoryObj<typeof meta>;
 export const Note: Story = {
 	render: () => (
 		<Popover defaultOpen>
-			<PopoverTrigger render={<TextButton>정보</TextButton>} />
+			<PopoverTrigger
+				render={
+					<Button variant="ghost" size="sm">
+						정보
+					</Button>
+				}
+			/>
 			<PopoverContent>
 				<PopoverHeader>
 					<PopoverTitle>예약 발행</PopoverTitle>
@@ -39,7 +44,13 @@ export const Note: Story = {
 export const Small: Story = {
 	render: () => (
 		<Popover defaultOpen>
-			<PopoverTrigger render={<TextButton>sm</TextButton>} />
+			<PopoverTrigger
+				render={
+					<Button variant="ghost" size="sm">
+						sm
+					</Button>
+				}
+			/>
 			<PopoverContent width="sm">
 				<Text variant="note">메뉴 폭의 카드예요.</Text>
 			</PopoverContent>
@@ -50,7 +61,13 @@ export const Small: Story = {
 export const Large: Story = {
 	render: () => (
 		<Popover defaultOpen>
-			<PopoverTrigger render={<TextButton>lg</TextButton>} />
+			<PopoverTrigger
+				render={
+					<Button variant="ghost" size="sm">
+						lg
+					</Button>
+				}
+			/>
 			<PopoverContent width="lg">
 				<Text variant="note">어시스턴트 폭의 카드예요.</Text>
 			</PopoverContent>

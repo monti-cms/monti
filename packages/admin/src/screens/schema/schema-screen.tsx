@@ -8,6 +8,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Banner,
 	Box,
+	Button,
 	CodeBlock,
 	DragHandle,
 	ErrorNote,
@@ -20,7 +21,6 @@ import {
 	Section,
 	Stack,
 	Text,
-	TextButton,
 	toast,
 } from "@monti-cms/ui";
 import { Locked } from "@monti-cms/ui/icons";
@@ -384,9 +384,9 @@ function SchemaEditor({
 							<ErrorNote
 								title={tReview("applyFailed.title")}
 								actions={
-									<TextButton type="button" onClick={reloadPage}>
+									<Button variant="ghost" size="sm" type="button" onClick={reloadPage}>
 										{tReview("save.reload")}
-									</TextButton>
+									</Button>
 								}
 							>
 								{tReview("applyFailed.text", { message: applyFailed })}

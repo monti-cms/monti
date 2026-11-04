@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldError, IconButton, Inline, Input, Stack, TextButton } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, IconButton, Inline, Input, Stack } from "@monti-cms/ui";
 import { Close } from "@monti-cms/ui/icons";
 import { useId, useRef, useState } from "react";
 import { Labeled } from "../shared/labeled";
@@ -88,9 +88,9 @@ export function HostRows({
 				})}
 				{!disabled && (
 					<Box paddingTop={8}>
-						<TextButton edge="start" onClick={add}>
+						<Button variant="ghost" size="sm" onClick={add}>
 							{t("site.alias.add")}
-						</TextButton>
+						</Button>
 					</Box>
 				)}
 			</Stack>

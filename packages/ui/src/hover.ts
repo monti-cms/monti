@@ -26,7 +26,15 @@ export const TEXT_HOVER =
 	"hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] active:not-disabled:not-aria-disabled:bg-monti-selected active:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-selected),4px_0_0_4px_var(--monti-bg-selected)] focus-visible:shadow-[-4px_0_0_4px_var(--monti-bg-page),4px_0_0_4px_var(--monti-bg-page),-4px_0_0_6px_var(--monti-border-strong),4px_0_0_6px_var(--monti-border-strong)]";
 
 /**
- * The control at an underline field's end (a regenerate button, a combobox's caret): pulled 8px into the field's padding, so a 32px icon button's
- * glyph sits 8px from the field's end, as the words sit 8px from its start. The button keeps its whole 32px to press.
+ * The control at an underline field's end (a regenerate button, a combobox's caret, the eye of a secret): one size under the field, so its round
+ * ground stays inside the field's tint with 2px to spare above, below and at the end (a 36px field holds a 32px button, 32px a 28px one, 28px a
+ * 24px one). It is pulled 6px into the field's 8px padding.
  */
-export const FIELD_ACTION = "-mr-monti-8 shrink-0";
+export const FIELD_ACTION = "-mr-monti-6 shrink-0";
+
+/** The button size under each field size, for {@link FIELD_ACTION}. */
+export const FIELD_ACTION_SIZE = {
+	lg: "",
+	md: "[&_[data-slot=icon-button]]:size-monti-control-sm",
+	sm: "[&_[data-slot=icon-button]]:size-monti-control-xs [&_[data-slot=icon-button]_svg]:size-3.5",
+} as const;

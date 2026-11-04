@@ -2,9 +2,9 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
-import { TextButton } from "./text-button";
 
 /**
  * The look of a modal, shared by `Dialog` and `AlertDialog`: the page ground with an emphasis edge, the largest radius and the overlay shadow, 28px
@@ -116,7 +116,9 @@ function DialogFooter({
 	const labels = useUiLabels();
 	return (
 		<div data-slot="dialog-footer" className={cn(DIALOG_ACTIONS, className)} {...props}>
-			{showCloseButton && <DialogPrimitive.Close render={<TextButton />}>{labels.cancel}</DialogPrimitive.Close>}
+			{showCloseButton && (
+				<DialogPrimitive.Close render={<Button variant="ghost" />}>{labels.cancel}</DialogPrimitive.Close>
+			)}
 			{children}
 		</div>
 	);

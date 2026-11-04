@@ -119,7 +119,7 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 				</TextButton>
 				<Stack gap={0} paddingTop={2}>
 					<PageHeader title="제안 검토" meta="10. 26 10:51">
-						<TextButton variant="quiet">버리기</TextButton>
+						<Button variant="ghost">버리기</Button>
 						<Button>17건 적용</Button>
 					</PageHeader>
 				</Stack>
@@ -132,7 +132,9 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 					meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
 					actions={
 						<>
-							<TextButton variant="underline">편집기에서 보기</TextButton>
+							<Button variant="ghost" size="sm">
+								편집기에서 보기
+							</Button>
 							<Separator orientation="vertical" length="control" flush />
 							<TabLinks>
 								<TabLink current={!side}>한 줄</TabLink>
@@ -204,7 +206,11 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 				<ReviewGroup
 					title="2024 폴더로 옮기기"
 					meta="글 11편 · 되돌릴 수 있음"
-					actions={<TextButton>11편 모두 빼기</TextButton>}
+					actions={
+						<Button variant="ghost" size="sm">
+							11편 모두 빼기
+						</Button>
+					}
 				>
 					{moves.map((move) => (
 						<ReviewItem

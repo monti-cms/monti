@@ -82,7 +82,7 @@ export function SchemaReviewScreen() {
 						</Stack>
 					</SheetBody>
 					<SheetFooter>
-						<TextButton>취소</TextButton>
+						<Button variant="ghost">취소</Button>
 						<Button>적용</Button>
 					</SheetFooter>
 				</SheetContent>

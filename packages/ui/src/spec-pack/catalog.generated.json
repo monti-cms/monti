@@ -2814,7 +2814,7 @@
 			"role": "button",
 			"bind": false,
 			"children": true,
-			"slots": [],
+			"slots": ["pendingLabel"],
 			"props": {
 				"disabled": {
 					"kind": "flag",
@@ -2826,11 +2826,11 @@
 				},
 				"size": {
 					"kind": "variant",
-					"enum": ["lg", "md", "sm"]
+					"enum": ["lg", "md", "sm", "xs"]
 				},
 				"variant": {
 					"kind": "variant",
-					"enum": ["danger", "outline-danger", "primary", "secondary"]
+					"enum": ["danger", "ghost", "ghost-danger", "outline-danger", "primary", "secondary"]
 				},
 				"width": {
 					"kind": "variant",

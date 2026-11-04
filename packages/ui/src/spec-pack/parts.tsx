@@ -2273,7 +2273,13 @@ function PairRow({
 				kind === "head" ? (
 					translationLabel
 				) : shared ? (
-					<CompareShared action={<TextButton variant="underline">{sharedAction}</TextButton>}>
+					<CompareShared
+						action={
+							<Button variant="ghost" size="sm">
+								{sharedAction}
+							</Button>
+						}
+					>
 						{side(translation, false)}
 					</CompareShared>
 				) : (

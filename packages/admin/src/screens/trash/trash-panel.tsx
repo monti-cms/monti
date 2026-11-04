@@ -121,9 +121,9 @@ export function TrashPanel({
 			onClose={onClose}
 			footer={
 				<Inline justify="between" grow>
-					<TextButton variant="danger" onClick={onDelete}>
+					<Button variant="ghost-danger" size="md" onClick={onDelete}>
 						{tc("lifecycle.deletePermanently")}
-					</TextButton>
+					</Button>
 					<Button type="button" onClick={onRestore}>
 						{tc("lifecycle.restore")}
 					</Button>

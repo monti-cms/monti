@@ -2,7 +2,8 @@
 
 import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
 import { cn } from "./cn";
-import { SendButton } from "./send-button";
+import { IconButton } from "./icon-button";
+import { ArrowUp, StopFilledAlt } from "./icons";
 
 /**
  * The box a conversation is typed in: a rounded box with a text area, and under it a row with `aside` at the start (the model picker) and a round send
@@ -88,9 +89,13 @@ export function ChatInput({
 			<div className="mt-monti-4 flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
 				{busy ? (
-					<SendButton busy label={stopLabel} onClick={onStop} />
+					<IconButton variant="primary" label={stopLabel} onClick={onStop}>
+						<StopFilledAlt aria-hidden className="size-3" />
+					</IconButton>
 				) : (
-					<SendButton type="submit" label={sendLabel} disabled={blank || disabled} />
+					<IconButton variant="primary" type="submit" label={sendLabel} disabled={blank || disabled}>
+						<ArrowUp aria-hidden />
+					</IconButton>
 				)}
 			</div>
 		</form>

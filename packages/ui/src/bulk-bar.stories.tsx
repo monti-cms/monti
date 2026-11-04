@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
 	BulkBar,
+	Button,
 	Caret,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
@@ -9,7 +10,6 @@ import {
 	TableBody,
 	TableCell,
 	TableRow,
-	TextButton,
 } from "./index";
 
 /**
@@ -54,14 +54,18 @@ export const OverTable: Story = {
 				clearLabel="선택 해제"
 				onClear={() => {}}
 			>
-				<TextButton>발행</TextButton>
-				<TextButton>보관</TextButton>
-				<TextButton>
+				<Button variant="ghost" size="sm">
+					발행
+				</Button>
+				<Button variant="ghost" size="sm">
+					보관
+				</Button>
+				<Button variant="ghost" size="sm">
 					폴더로 <Caret />
-				</TextButton>
-				<TextButton>
+				</Button>
+				<Button variant="ghost" size="sm">
 					바꾸기 <Caret />
-				</TextButton>
+				</Button>
 			</BulkBar>
 			<TableBody>
 				<TableRow selected>
@@ -86,9 +90,9 @@ export const OverGrid: Story = {
 			clearLabel="선택 해제"
 			onClear={() => {}}
 		>
-			<TextButton>
+			<Button variant="ghost" size="sm">
 				폴더로 <Caret />
-			</TextButton>
+			</Button>
 		</BulkBar>
 	),
 };
@@ -97,8 +101,12 @@ export const OverGrid: Story = {
 export const Trash: Story = {
 	render: () => (
 		<BulkBar label="2개 선택" clearLabel="선택 해제" onClear={() => {}}>
-			<TextButton>복원</TextButton>
-			<TextButton variant="danger">영구 삭제</TextButton>
+			<Button variant="ghost" size="sm">
+				복원
+			</Button>
+			<Button variant="ghost-danger" size="sm">
+				영구 삭제
+			</Button>
 		</BulkBar>
 	),
 };

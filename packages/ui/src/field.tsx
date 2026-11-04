@@ -95,9 +95,6 @@ export interface FormFieldChange {
 	tone?: "warning" | "proposal";
 }
 
-/** A text button that ends a label row ("✦ Fill", undo) stands 8px in from the field's end, so its tint stays inside the field. */
-const LABEL_ROW_END = "[&>[data-slot=text-button]:last-child]:mr-monti-8";
-
 /**
  * The label of a field. `changed` marks a field that differs from the saved value: a change dot after the label and a small quiet underlined undo button at the
  * end of the row. The row stays 14px high, the label's own height, so the field below does not move when it becomes changed.
@@ -119,7 +116,7 @@ function FormFieldLabel({
 	);
 	if (changed) {
 		return (
-			<div data-slot="label-row" className={cn("flex h-4 items-center gap-monti-8", LABEL_ROW_END)}>
+			<div data-slot="label-row" className="flex h-4 items-center gap-monti-8">
 				{label}
 				<ChangeDot tone={changed.tone} label={changed.label} />
 				{(changed.onUndo || changed.undoShown) && (
@@ -141,7 +138,7 @@ function FormFieldLabel({
 	}
 	if (!action) return label;
 	return (
-		<div data-slot="label-row" className={cn("flex items-baseline justify-between gap-monti-8", LABEL_ROW_END)}>
+		<div data-slot="label-row" className="flex items-baseline justify-between gap-monti-8">
 			{label}
 			{action}
 		</div>

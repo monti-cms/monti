@@ -2,7 +2,6 @@ import type { ComponentProps, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { Del, Ins } from "./proposal-marks";
-import { TextButton } from "./text-button";
 
 const ROW = "flex items-baseline gap-monti-8 border-monti-muted border-t px-[14px] py-monti-10 text-monti-note";
 const FOOT = "flex items-center gap-[14px] border-monti-default border-t px-[14px] py-monti-10 text-monti-note";
@@ -168,14 +167,14 @@ function ProposalActions({
 	return (
 		<>
 			{reviewLabel && onReview && (
-				<TextButton variant="underline" onClick={onReview}>
+				<Button variant="ghost" size="sm" onClick={onReview}>
 					{reviewLabel}
-				</TextButton>
+				</Button>
 			)}
 			<span className="grow" />
-			<TextButton variant="quiet" onClick={onDiscard} disabled={busy}>
+			<Button variant="ghost" size="sm" onClick={onDiscard} disabled={busy}>
 				{discardLabel}
-			</TextButton>
+			</Button>
 			<Button size="sm" onClick={onApply} loading={busy}>
 				{applyLabel}
 			</Button>
@@ -206,9 +205,9 @@ function ProposalResult({
 			{time !== undefined && <span className="text-monti-micro text-monti-subtle">{time}</span>}
 			<span className="grow" />
 			{undoLabel && onUndo && (
-				<TextButton variant="underline" onClick={onUndo} disabled={busy}>
+				<Button variant="ghost" size="sm" onClick={onUndo} disabled={busy}>
 					{undoLabel}
-				</TextButton>
+				</Button>
 			)}
 		</>
 	);

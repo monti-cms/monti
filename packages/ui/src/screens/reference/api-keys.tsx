@@ -10,7 +10,6 @@ import {
 	Stack,
 	TabLink,
 	TabLinks,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
@@ -64,8 +63,12 @@ export function ApiKeysScreen() {
 									metaTone={key.unused ? "faint" : "muted"}
 									actions={
 										<>
-											<TextButton variant="underline">편집</TextButton>
-											<TextButton variant="quiet">지우기</TextButton>
+											<Button variant="ghost" size="sm">
+												편집
+											</Button>
+											<Button variant="ghost-danger" size="sm">
+												지우기
+											</Button>
 										</>
 									}
 								/>

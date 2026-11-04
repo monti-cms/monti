@@ -3,6 +3,7 @@ import { Close } from "../../icons";
 import {
 	Affix,
 	Box,
+	Button,
 	FormField,
 	FormFieldLabel,
 	IconButton,
@@ -24,7 +25,6 @@ import {
 	TabLinks,
 	Text,
 	Textarea,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
@@ -128,7 +128,7 @@ export function SettingsScreen() {
 									</IconButton>
 								</Inline>
 								<Box paddingTop={8}>
-									<TextButton edge="start">+ 호스트</TextButton>
+									<Button variant="ghost">+ 호스트</Button>
 								</Box>
 							</Stack>
 						</FormField>

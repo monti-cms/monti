@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconButton } from "./icon-button";
-import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "./icons";
+import { ArrowUp, Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "./icons";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
 
@@ -47,6 +47,23 @@ export const Danger: Story = {
 			</IconButton>
 			<IconButton label="비활성" tone="danger" disabled>
 				<TrashCan aria-hidden />
+			</IconButton>
+		</Stack>
+	),
+};
+
+/** `variant="primary"`: the black round button that sends (the assistant's box, a note's reply), at `md` 32px and `sm` 28px, then disabled. */
+export const Primary: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="보내기" variant="primary">
+				<ArrowUp aria-hidden />
+			</IconButton>
+			<IconButton label="보내기" variant="primary" size="sm">
+				<ArrowUp aria-hidden />
+			</IconButton>
+			<IconButton label="보내기" variant="primary" disabled>
+				<ArrowUp aria-hidden />
 			</IconButton>
 		</Stack>
 	),

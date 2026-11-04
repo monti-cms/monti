@@ -18,7 +18,6 @@ import {
 	Separator,
 	SplitButton,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import {
 	Archive,
@@ -113,10 +112,16 @@ export function EntryEditorHeader({
 	return (
 		<EditorHeader>
 			<Inline gap={12} minWidth={0} paddingX={12}>
-				<TextButton variant="quiet" render={<Link href={site.adminHref(`?collection=${collection}`)} />}>
+				<Button
+					variant="ghost"
+					size="sm"
+					render={<Link href={site.adminHref(`?collection=${collection}`)} />}
+					nativeButton={false}
+					role="link"
+				>
 					<ChevronLeft aria-hidden />
 					{collectionNoun(site, collection) || t("backToList")}
-				</TextButton>
+				</Button>
 				{path && (
 					<Box hideBelow="sm" minWidth={0}>
 						<Text variant="meta" tone="faint" truncate>
@@ -134,17 +139,19 @@ export function EntryEditorHeader({
 			<Inline gap={12} justify="end">
 				{isTrashed ? (
 					// A trashed entry is read-only: the head holds only what can be done with it, deleting it for good or bringing it back.
-					<TextButton variant="danger" onClick={confirmPermanentDelete}>
+					<Button variant="ghost-danger" size="lg" onClick={confirmPermanentDelete}>
 						{tc("lifecycle.deletePermanently")}
-					</TextButton>
+					</Button>
 				) : (
-					<TextButton
+					<Button
+						variant="ghost"
+						size="lg"
 						type="button"
 						disabled={busy !== null || isSubmitting}
 						onClick={() => void commands.handleSaveNow()}
 					>
 						{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
-					</TextButton>
+					</Button>
 				)}
 				{!isTrashed &&
 					(previewHref && !editor.hasUnsavedChanges ? (

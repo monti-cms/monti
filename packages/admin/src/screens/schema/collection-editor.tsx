@@ -21,7 +21,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
@@ -282,13 +281,9 @@ export function CollectionEditor({
 					</TabsList>
 					{tab === "fields" && (
 						<PageToolbarEnd>
-							<TextButton
-								variant={previewOpen ? "ink" : "plain"}
-								aria-pressed={previewOpen}
-								onClick={() => setPreviewOpen(!previewOpen)}
-							>
+							<Button variant="ghost" size="sm" aria-pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
 								{tf("layout.previewTitle")}
-							</TextButton>
+							</Button>
 						</PageToolbarEnd>
 					)}
 				</PageToolbar>

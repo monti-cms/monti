@@ -1,4 +1,5 @@
 import {
+	Button,
 	Inline,
 	ListHead,
 	ListScroll,
@@ -13,7 +14,6 @@ import {
 	TableBody,
 	TableCell,
 	TableRow,
-	TextButton,
 	TrashRowDate,
 	TrashRowTitle,
 } from "../../index";
@@ -61,7 +61,7 @@ export function TrashScreen() {
 			<PageColumn width="list">
 				<PageHeader title="휴지통">
 					<SearchToggle label="검색" value="" aria-label="검색" />
-					<TextButton variant="danger">비우기</TextButton>
+					<Button variant="ghost-danger">비우기</Button>
 				</PageHeader>
 				<Table container="none" layout="fixed">
 					<ListHead
@@ -94,7 +94,9 @@ export function TrashScreen() {
 								<TableCell align="end">
 									<RowActions>
 										<Inline gap={16}>
-											<TextButton>복원</TextButton>
+											<Button variant="ghost" size="sm">
+												복원
+											</Button>
 											<RowMore label="더 보기" />
 										</Inline>
 									</RowActions>

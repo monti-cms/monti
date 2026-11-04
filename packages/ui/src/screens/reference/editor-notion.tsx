@@ -105,12 +105,12 @@ export function EntryHeader({
 			<Inline gap={wide ? 16 : 12} justify="end">
 				{publish ? (
 					<>
-						<TextButton>
+						<Button variant="ghost">
 							저장{" "}
 							<Text variant="micro" tone="faint">
 								⌘S
 							</Text>
-						</TextButton>
+						</Button>
 						<Button variant="secondary">미리보기</Button>
 						<SplitButton menuLabel="발행 방식" menu={null}>
 							발행하기

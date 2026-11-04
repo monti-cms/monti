@@ -1,5 +1,6 @@
 import {
 	Box,
+	Button,
 	CompareBody,
 	CompareParagraph,
 	CompareRow,
@@ -25,7 +26,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
-	TextButton,
 	Untranslated,
 } from "../../index";
 import { EntryHeader, still } from "./editor-notion";
@@ -191,9 +191,9 @@ export function TranslatePairedScreen() {
 							translation={
 								<CompareShared
 									action={
-										<TextButton variant="underline" edge="start">
+										<Button variant="ghost" size="sm">
 											English에서만 따로 고치기
-										</TextButton>
+										</Button>
 									}
 								>
 									<DocCode>{CODE}</DocCode>

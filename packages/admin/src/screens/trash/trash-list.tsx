@@ -4,6 +4,7 @@ import { trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	BulkBar,
+	Button,
 	DropdownMenuCheckboxItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
@@ -21,7 +22,6 @@ import {
 	TableCell,
 	TableRow,
 	Text,
-	TextButton,
 	TrashRowDate,
 	TrashRowTitle,
 } from "@monti-cms/ui";
@@ -145,17 +145,19 @@ function TrashRow({
 				<Inline gap={16} justify="end">
 					<RowActions>
 						{action === "restore" && (
-							<TextButton onClick={() => void actions.restore([item])}>{tc("lifecycle.restore")}</TextButton>
+							<Button variant="ghost" size="sm" onClick={() => void actions.restore([item])}>
+								{tc("lifecycle.restore")}
+							</Button>
 						)}
 						{action === "restoreOriginal" && (
-							<TextButton variant="ink" onClick={() => void actions.restoreOriginal(item as TrashEntryJson)}>
+							<Button variant="ghost" size="sm" onClick={() => void actions.restoreOriginal(item as TrashEntryJson)}>
 								{t("row.restoreOriginal")}
-							</TextButton>
+							</Button>
 						)}
 						{action === "delete" && (
-							<TextButton variant="danger" onClick={() => void actions.requestDelete([item])}>
+							<Button variant="ghost-danger" size="sm" onClick={() => void actions.requestDelete([item])}>
 								{tc("lifecycle.deletePermanently")}
-							</TextButton>
+							</Button>
 						)}
 					</RowActions>
 					<RowActions>
@@ -262,10 +264,12 @@ function TrashBulkBar({ view, actions }: { view: TrashView; actions: TrashAction
 				label: t("selectAll"),
 			}}
 		>
-			<TextButton onClick={() => void actions.restore(rows)}>{tc("lifecycle.restore")}</TextButton>
-			<TextButton variant="danger" onClick={() => void actions.requestDelete(rows)}>
+			<Button variant="ghost" size="sm" onClick={() => void actions.restore(rows)}>
+				{tc("lifecycle.restore")}
+			</Button>
+			<Button variant="ghost-danger" size="sm" onClick={() => void actions.requestDelete(rows)}>
 				{tc("lifecycle.deletePermanently")}
-			</TextButton>
+			</Button>
 		</BulkBar>
 	);
 }

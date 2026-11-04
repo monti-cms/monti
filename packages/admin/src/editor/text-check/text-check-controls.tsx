@@ -113,10 +113,10 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 						{t("explain")}
 					</TextButton>
 				)}
-				<TextButton type="button" onClick={() => controller.ignore(issue)}>
+				<Button variant="ghost" size="sm" type="button" onClick={() => controller.ignore(issue)}>
 					<ViewOff aria-hidden />
 					{t("ignore")}
-				</TextButton>
+				</Button>
 			</Inline>
 		</>
 	);

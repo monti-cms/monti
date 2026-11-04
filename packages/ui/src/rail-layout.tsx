@@ -1,6 +1,6 @@
 import type * as React from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
-import { TextButton } from "./text-button";
 
 /**
  * A page part with a list of links beside it, as the collections sit beside their editor in Settings: the links are a `nav` named by `label` (160px at
@@ -30,10 +30,10 @@ function RailLayout({
 }
 
 /** The quiet button under the links ("+ New collection"), its text in line with theirs. */
-function RailAction(props: Omit<React.ComponentProps<typeof TextButton>, "variant" | "quiet">) {
+function RailAction(props: Omit<React.ComponentProps<typeof Button>, "variant" | "size">) {
 	return (
-		<div data-slot="rail-action" className="px-monti-10 pt-monti-12">
-			<TextButton quiet {...props} />
+		<div data-slot="rail-action" className="pt-monti-12">
+			<Button variant="ghost" size="sm" {...props} />
 		</div>
 	);
 }

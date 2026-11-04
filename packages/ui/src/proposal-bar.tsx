@@ -5,7 +5,6 @@ import { Button } from "./button";
 import { PageToolbar, PageToolbarEnd } from "./page-header";
 import { Spark } from "./spark";
 import { Text } from "./text";
-import { TextButton } from "./text-button";
 
 /**
  * The toolbar over a grid while the assistant's proposals wait on its tiles (flow 6 · 25: the alt texts of media files): a spark and how many ("Proposals
@@ -34,9 +33,9 @@ function ProposalBar({
 				{label}
 			</Text>
 			<PageToolbarEnd className="gap-x-monti-16">
-				<TextButton variant="quiet" onClick={onDiscardAll}>
+				<Button variant="ghost" size="sm" onClick={onDiscardAll}>
 					{discardAllLabel}
-				</TextButton>
+				</Button>
 				<Button size="sm" onClick={onAcceptAll}>
 					{acceptAllLabel}
 				</Button>

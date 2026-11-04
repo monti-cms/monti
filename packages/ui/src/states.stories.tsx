@@ -170,6 +170,13 @@ export const Buttons: Story = {
 					</Button>
 				)}
 			</Row>
+			<Row name="Button 고스트">
+				{(disabled) => (
+					<Button variant="ghost" disabled={disabled}>
+						+ 폴더
+					</Button>
+				)}
+			</Row>
 			<Row name="IconButton">
 				{(disabled) => (
 					<IconButton label="설정" disabled={disabled}>
@@ -177,7 +184,6 @@ export const Buttons: Story = {
 					</IconButton>
 				)}
 			</Row>
-			<Row name="TextButton">{(disabled) => <TextButton disabled={disabled}>되돌리기</TextButton>}</Row>
 			<Row name="TextButton 밑줄">
 				{(disabled) => (
 					<TextButton variant="underline" disabled={disabled}>
@@ -218,7 +224,14 @@ export const Rows: Story = {
 			<Row name="보기 줄">
 				{() => (
 					<ListSection title="">
-						<ListSectionRow title="Anthropic 개인" actions={<TextButton variant="underline">편집</TextButton>} />
+						<ListSectionRow
+							title="Anthropic 개인"
+							actions={
+								<Button variant="ghost" size="sm">
+									편집
+								</Button>
+							}
+						/>
 					</ListSection>
 				)}
 			</Row>

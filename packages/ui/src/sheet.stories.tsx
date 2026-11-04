@@ -17,7 +17,6 @@ import {
 	SheetSplit,
 	SheetSummary,
 	SheetTitle,
-	TextButton,
 } from "./index";
 
 /** Where work with several inputs happens: 520px from the right over a dimmed page, a 60px head, Cancel and one pill at the bottom. */
@@ -31,7 +30,7 @@ type Story = StoryObj<typeof meta>;
 
 const Footer = (
 	<SheetFooter>
-		<TextButton>취소</TextButton>
+		<Button variant="ghost">취소</Button>
 		<Button>추가</Button>
 	</SheetFooter>
 );

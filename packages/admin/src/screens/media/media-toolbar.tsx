@@ -4,6 +4,7 @@ import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	BulkBar,
+	Button,
 	Caret,
 	Chip,
 	DropdownMenu,
@@ -20,7 +21,6 @@ import {
 	PageToolbarEnd,
 	Segmented,
 	Separator,
-	TextButton,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { folderChoices, type MediaState, selectAllState, toggleKind, withKind } from "./media-state";
@@ -186,7 +186,7 @@ function PickBar({
 			{...(onRequest ? { request: { label: t("bulk.altText"), onClick: onRequest } } : {})}
 		>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<TextButton />}>
+				<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 					{t("bulk.toFolder")}
 					<Caret />
 				</DropdownMenuTrigger>
@@ -212,7 +212,9 @@ function PickBar({
 					<DropdownMenuItem onClick={onNewFolder}>{t("bulk.newFolder")}</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<TextButton onClick={onTrash}>{t("bulk.trash")}</TextButton>
+			<Button variant="ghost" size="sm" onClick={onTrash}>
+				{t("bulk.trash")}
+			</Button>
 		</BulkBar>
 	);
 }

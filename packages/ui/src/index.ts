@@ -270,7 +270,6 @@ export const TodoItem = close(open.TodoItem);
 export const TrashRowDate = close(open.TrashRowDate);
 export const TrashRowTitle = close(open.TrashRowTitle);
 export const SplitButton = close(open.SplitButton);
-export const SubmitButton = close(open.SubmitButton);
 export const Stack = close(open.Stack);
 export const Inline = close(open.Inline);
 export const Box = close(open.Box);

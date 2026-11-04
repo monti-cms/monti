@@ -11,7 +11,6 @@ import {
 } from "./dropdown-menu";
 import { MenuShortcut } from "./menu-parts";
 import { Text } from "./text";
-import { TextButton } from "./text-button";
 
 /** One change in the list: its name, how it changed (the tag is colored by `tone`) and the button that puts it back. */
 interface ChangesItem {
@@ -77,7 +76,7 @@ function ChangesBar({
 	return (
 		<section ref={setGroup} data-slot="changes-group" className="flex items-center gap-monti-16" {...props}>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<TextButton aria-label={listLabel} />}>
+				<DropdownMenuTrigger render={<Button variant="ghost" aria-label={listLabel} />}>
 					{label}{" "}
 					<Count tone="warning" aria-label={countLabel}>
 						{count}
@@ -102,9 +101,9 @@ function ChangesBar({
 					</DropdownMenuContent>
 				)}
 			</DropdownMenu>
-			<TextButton type="button" onClick={onDiscard}>
+			<Button type="button" variant="ghost" onClick={onDiscard}>
 				{discardLabel}
-			</TextButton>
+			</Button>
 			<Button type="button" variant={saveDanger ? "danger" : "primary"} disabled={saveDisabled} onClick={onSave}>
 				{saveLabel}
 			</Button>

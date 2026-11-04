@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, EntryStatus, Inline, TabLink, TabLinks, Text, TextButton, toast } from "@monti-cms/ui";
+import { Box, Button, EntryStatus, Inline, TabLink, TabLinks, Text, toast } from "@monti-cms/ui";
 import { Add } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { errorText } from "../../api/client";
@@ -100,7 +100,7 @@ export function LanguageTabs({
 					</TabLinks>
 				)}
 				{missing.map((target) => (
-					<TextButton key={target} variant="quiet" disabled={createDisabled} onClick={() => void create(target)}>
+					<Button variant="ghost" size="sm" key={target} disabled={createDisabled} onClick={() => void create(target)}>
 						<Add aria-hidden />
 						{/* The visible text is the button's name; the locale code stays in mono. */}
 						{t("lang.addTab", { code: CODE_MARK })
@@ -113,7 +113,7 @@ export function LanguageTabs({
 								) : null,
 								part,
 							])}
-					</TextButton>
+					</Button>
 				))}
 			</Inline>
 		</Box>

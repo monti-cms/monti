@@ -19,7 +19,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdminComponents } from "../../admin-components";
@@ -282,7 +281,9 @@ export function AddFieldSheet({
 						</Tabs>
 					</SheetSplit>
 					<SheetFooter>
-						<TextButton onClick={onClose}>{tc("cancel")}</TextButton>
+						<Button variant="ghost" size="lg" onClick={onClose}>
+							{tc("cancel")}
+						</Button>
 						<Button type="submit" disabled={!ready}>
 							{t("field.add")}
 						</Button>
