@@ -22,3 +22,9 @@ export const CHECK_HOVER =
  */
 export const TEXT_HOVER =
 	"hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] focus-visible:shadow-[-4px_0_0_4px_var(--monti-bg-page),4px_0_0_4px_var(--monti-bg-page),-4px_0_0_6px_var(--monti-border-strong),4px_0_0_6px_var(--monti-border-strong)]";
+
+/**
+ * The control at an underline field's end (a regenerate button, a combobox's caret): pulled 8px into the field's padding, so a 32px icon button's
+ * glyph sits 8px from the field's end, as the words sit 8px from its start. The button keeps its whole 32px to press.
+ */
+export const FIELD_ACTION = "-mr-monti-8 shrink-0";

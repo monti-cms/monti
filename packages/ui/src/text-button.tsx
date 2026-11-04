@@ -26,7 +26,7 @@ const textButtonVariants = cva(
 				plain: "text-monti-muted hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
 				underline:
-					"rounded-none border-b border-monti-strong text-monti-muted hover:border-monti-contrast hover:text-monti-default",
+					"underline decoration-monti-strong decoration-1 underline-offset-4 text-monti-muted hover:decoration-monti-contrast hover:text-monti-default",
 				/** Less important: + language, + group. */
 				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
@@ -52,7 +52,8 @@ const textButtonVariants = cva(
 			},
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {
-				proposal: "text-monti-proposal hover:text-monti-proposal border-monti-proposal hover:border-monti-proposal",
+				proposal:
+					"text-monti-proposal hover:text-monti-proposal decoration-monti-proposal hover:decoration-monti-proposal",
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
 			loading: { true: "cursor-default disabled:opacity-100" },

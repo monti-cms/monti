@@ -19,7 +19,6 @@ import {
 	useTranslator,
 } from "@monti-cms/core/site";
 import {
-	Affix,
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
@@ -406,8 +405,9 @@ const SlugRow = memo(function SlugRow({ name, placeholder }: RowProps & { placeh
 			help={field.description}
 			slot={slot}
 		>
-			<Affix
+			<Input
 				id={field.ids.input}
+				mono
 				autoComplete="off"
 				aria-invalid={field.inputProps["aria-invalid"]}
 				aria-describedby={field.inputProps["aria-describedby"]}

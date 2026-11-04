@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_ACTION, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -73,7 +73,7 @@ function Textarea({
 			)}
 		>
 			{textarea}
-			<span className="shrink-0">{action}</span>
+			<span className={FIELD_ACTION}>{action}</span>
 		</div>
 	);
 }

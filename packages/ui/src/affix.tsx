@@ -3,6 +3,7 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
+import { FIELD_ACTION } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -65,7 +66,7 @@ function Affix({
 				{...props}
 			/>
 			{suffix && <span className="shrink-0 whitespace-nowrap py-monti-6 text-monti-subtle">{suffix}</span>}
-			{action && <span className="ml-auto cursor-auto self-center">{action}</span>}
+			{action && <span className={cn("ml-auto cursor-auto self-center", FIELD_ACTION)}>{action}</span>}
 		</div>
 	);
 }

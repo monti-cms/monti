@@ -4,13 +4,13 @@ import type { BacklinkField, ConditionalField, RelationField, SlugField, ValueFi
 import type { PanelGroup } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Affix,
 	FormField,
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldLabel,
 	IconButton,
 	Inline,
+	Input,
 	PropertyGroup,
 	Text,
 } from "@monti-cms/ui";
@@ -379,8 +379,9 @@ function SlugAffix({
 }) {
 	const edit = usePropertyEdit();
 	return (
-		<Affix
+		<Input
 			id={field.ids.input}
+			mono
 			autoComplete="off"
 			proposal={edit?.proposal}
 			aria-invalid={field.inputProps["aria-invalid"]}
