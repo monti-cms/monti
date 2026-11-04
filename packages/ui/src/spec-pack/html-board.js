@@ -81,8 +81,12 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-nav-sub > a"),
 		part: "SidebarSubItem",
-		props: (el) => ({ active: el.classList.contains("is-on") || undefined }),
-		asProps: ["color", "font-weight"],
+		props: (el) => ({
+			active: el.classList.contains("is-on") || undefined,
+			// A folder inside another sits 14px further in a level.
+			depth: Math.round((Number.parseFloat(el.style.paddingLeft) || 0) / 14) || undefined,
+		}),
+		asProps: ["color", "font-weight", "padding-left"],
 	},
 	{ match: (el) => el.matches(".mt-count") && !el.matches(".mt-row > *, footer"), part: "Count" },
 	{ match: (el) => el.matches(".mt-sidebar-foot"), part: "SidebarFoot" },
@@ -572,14 +576,17 @@ const parts = [
 	},
 	// One among a few, joined in a frame.
 	{
-		match: (el) => el.matches(".mt-field > .mt-seg"),
+		match: (el) => el.matches(".mt-field > .mt-seg, .mt-seg.mt-seg--sm:not(.mt-sidebar-foot > *)"),
 		part: "SegmentedChoice",
 		props: (el) => {
 			const cells = [...el.children].map((cell) => cell.textContent.trim());
 			return {
-				label: el.parentElement.querySelector(":scope > .mt-label")?.textContent.trim(),
+				label:
+					el.getAttribute("aria-label") ?? el.parentElement.querySelector(":scope > .mt-label")?.textContent.trim(),
 				options: cells.map((cell) => ({ value: cell, label: cell })),
 				picked: [...el.children].find((cell) => cell.classList.contains("is-on"))?.textContent.trim(),
+				size: el.classList.contains("mt-seg--sm") ? "sm" : undefined,
+				inline: el.classList.contains("mt-seg--inline") || undefined,
 			};
 		},
 		leaf: true,
@@ -646,6 +653,73 @@ const parts = [
 		part: "ChangeRow",
 		props: (el) => ({ what: el.textContent.trim(), result: el.nextElementSibling?.textContent.trim() }),
 		leaf: true,
+	},
+	// The folders above the open one, in a page header.
+	{
+		match: (el) =>
+			el.matches("nav[aria-label]") &&
+			getComputedStyle(el).display === "flex" &&
+			el.querySelector(":scope > .mt-text-btn") !== null,
+		part: "Trail",
+		props: (el) => ({ label: el.getAttribute("aria-label") }),
+		asProps: ["display", "align-items", "gap", "color"],
+	},
+	{
+		match: (el) => el.matches("nav[aria-label] > span[aria-hidden]") && el.textContent.trim() === "/",
+		part: "TrailSlash",
+		leaf: true,
+	},
+	// A library's files and folders, where files can be dropped.
+	{
+		match: (el) => el.matches(".mt-droparea"),
+		part: "DropZone",
+		props: (el) => ({ over: el.classList.contains("is-over") || undefined }),
+	},
+	{
+		match: (el) => el.matches(".mt-tiles"),
+		part: "MediaGrid",
+		props: (el) => ({ folders: el.classList.contains("mt-tiles--folders") || undefined }),
+		asProps: ["position"],
+	},
+	{
+		match: (el) => el.matches(".mt-tile"),
+		part: "MediaTile",
+		props: (el) => {
+			const img = el.querySelector(":scope > .img");
+			const bar = img?.querySelector(".mt-progress > span");
+			const failed = el.classList.contains("is-failed");
+			// A picture the board fills with a colour: what the data gives in its place.
+			const fill = img && (img.querySelector(":scope > span:not([class])")?.style.background || img.style.background);
+			return {
+				name: el.querySelector(".name")?.textContent.trim(),
+				detail: el.querySelector(".meta")?.textContent.trim(),
+				ext: img?.querySelector(".ext")?.textContent.trim(),
+				picture: !img?.classList.contains("is-file") && fill ? fill : undefined,
+				status: failed ? (img?.style.background || fill ? "interrupted" : "failed") : bar ? "uploading" : undefined,
+				progress: bar ? Number.parseFloat(bar.style.width) : undefined,
+				actions: failed
+					? [...el.querySelectorAll(".acts > .mt-text-btn")].map((button) => ({ label: button.textContent.trim() }))
+					: undefined,
+				selected: el.querySelector(".mt-check.is-on") ? true : undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["margin", "position", "z-index"],
+	},
+	{
+		match: (el) => el.matches(".mt-folder"),
+		part: "FolderEntry",
+		props: (el) => {
+			const count = el.querySelector(".mt-count")?.textContent.trim();
+			return {
+				name: el.querySelector("span:not(.mt-count)")?.textContent.trim(),
+				count: count ? Number(count) : undefined,
+				up: count === undefined || undefined,
+				selected: el.classList.contains("is-on") || undefined,
+			};
+		},
+		leaf: true,
+		asProps: ["text-decoration", "color", "background"],
 	},
 	// A panel beside the page.
 	{
@@ -962,7 +1036,10 @@ const parts = [
 		props: (el) => ({ as: el.tagName.toLowerCase(), variant: role(el) }),
 	},
 	{
-		match: (el) => [...el.classList].some((name) => name.startsWith("text-")),
+		// A run laid out by flex (a page's trail of folders) is a group of the screen's, in its role's size; one text otherwise.
+		match: (el) =>
+			[...el.classList].some((name) => name.startsWith("text-")) &&
+			!(el.tagName === "NAV" && getComputedStyle(el).display === "flex"),
 		part: "Text",
 		props: (el) => ({
 			as: el.tagName.toLowerCase(),
@@ -977,7 +1054,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline)$/;
 
 /**
  * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame

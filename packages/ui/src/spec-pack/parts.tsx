@@ -10,15 +10,17 @@ import { Checkbox } from "../checkbox";
 import { Count } from "../count";
 import { DangerBlock, DangerRow } from "../danger-block";
 import { DragHandle } from "../drag-handle";
+import { DropArea } from "../drop-area";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFieldWas } from "../field";
 import { FieldRow, FieldTree as FieldTreePart } from "../field-tree";
+import { FilePreview } from "../file-preview";
 import { FilterButton } from "../filter-button";
 import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "../folder-tabs";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
-import { type IconName, iconsByName } from "../icons";
+import { FolderParent, type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
@@ -83,6 +85,7 @@ import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../t
 import { Heading, Text } from "../text";
 import { TextButton } from "../text-button";
 import { Textarea as TextareaPart } from "../textarea";
+import { FolderTile, Tile } from "../tile";
 import { TrashRowDate, TrashRowTitle } from "../trash-row";
 
 /** An icon by its Carbon name in the design system's icon list (`iconsByName`), in a part that takes its icon as children (a button, an icon button). */
@@ -317,11 +320,21 @@ function SidebarSub({ children }: { children?: React.ReactNode }) {
 	);
 }
 
-/** One folder under a row: its name and its count. */
-function SidebarSubItem({ active, children }: { active?: boolean; children?: React.ReactNode }) {
+/** One folder under a row: its name and its count; `depth` for a folder inside another. */
+function SidebarSubItem({
+	active,
+	depth,
+	children,
+}: {
+	active?: boolean;
+	depth?: 0 | 1 | 2 | 3;
+	children?: React.ReactNode;
+}) {
 	return (
 		<li>
-			<SidebarMenuSubButton isActive={active}>{children}</SidebarMenuSubButton>
+			<SidebarMenuSubButton isActive={active} depth={depth}>
+				{children}
+			</SidebarMenuSubButton>
 		</li>
 	);
 }
@@ -1040,12 +1053,27 @@ function SegmentedChoice({
 	label,
 	options,
 	picked,
+	size,
+	inline,
 }: {
 	label?: string;
 	options?: readonly { value: string; label: string }[];
 	picked?: string;
+	/** `sm` in a toolbar or a panel. */
+	size?: "md" | "sm";
+	/** As wide as its cells, not its container (a toolbar's view switch). */
+	inline?: boolean;
 }) {
-	return <Segmented aria-label={label} value={picked ?? null} onValueChange={() => {}} options={options ?? []} />;
+	return (
+		<Segmented
+			aria-label={label}
+			value={picked ?? null}
+			onValueChange={() => {}}
+			options={options ?? []}
+			size={size}
+			inline={inline}
+		/>
+	);
 }
 
 /** A choice of one among options in rows, each with a round mark: `picked` names the picked row, the rows are its `Choice`s. */
@@ -1113,6 +1141,98 @@ function SheetSummary({ text }: { text?: string }) {
 	return <SheetSummaryPart>{text}</SheetSummaryPart>;
 }
 
+/** Where files can be dropped (the folders and the file grid); `over` while files are dragged over it. */
+function DropZone({ over, children }: { over?: boolean; children?: React.ReactNode }) {
+	return <DropArea over={over}>{children}</DropArea>;
+}
+
+/** The grid of a library's files (`MediaTile`s), or of its folders (`folders`), set in from the column as the design system's tiles are. */
+function MediaGrid({ folders, children }: { folders?: boolean; children?: React.ReactNode }) {
+	return (
+		<BoxPart paddingTop={24} paddingX={12}>
+			<Grid columns={folders ? "folders" : "tiles"}>{children}</Grid>
+		</BoxPart>
+	);
+}
+
+/**
+ * One file of a grid: its `name`, the `detail` line, its picture (`picture`, a file's address, read from the data) or, for a file with none, its
+ * extension (`ext`). `status` for a file going up or one that cannot be taken, with `progress`; `actions` are what can be done with a failed one.
+ */
+function MediaTile({
+	name,
+	detail,
+	picture,
+	ext,
+	status,
+	progress,
+	actions,
+	selected,
+	picking,
+}: {
+	name?: string;
+	detail?: string;
+	picture?: string;
+	ext?: string;
+	status?: "ready" | "uploading" | "failed" | "interrupted";
+	progress?: number;
+	actions?: readonly { label: string }[];
+	selected?: boolean;
+	picking?: boolean;
+}) {
+	// A picture is an address; a board draws a colour in its place, which is no picture to load.
+	const address = picture && /^(https?:|\/|data:)/.test(picture) ? picture : undefined;
+	return (
+		<Tile
+			title={name}
+			detail={detail}
+			preview={
+				ext ? (
+					<FilePreview ext={ext} />
+				) : address ? (
+					<ImagePart src={address} alt="" ratio="photo" radius="none" />
+				) : null
+			}
+			status={status}
+			progress={progress}
+			actions={actions?.map((action) => ({ label: action.label, onClick: () => {} }))}
+			selected={selected}
+			picking={picking}
+		/>
+	);
+}
+
+/** A folder of a library: its `name` and how many files it holds; `up` for the tile that goes one level up. */
+function FolderEntry({
+	name,
+	count,
+	up,
+	selected,
+}: {
+	name?: string;
+	count?: number;
+	up?: boolean;
+	selected?: boolean;
+}) {
+	return (
+		<FolderTile name={name} count={count} selected={selected} icon={up ? <FolderParent aria-hidden /> : undefined} />
+	);
+}
+
+/** The folders above the one open, in a page header's trail: links with a slash after each, named by `label`. */
+function Trail({ label, children }: { label?: string; children?: React.ReactNode }) {
+	return (
+		<Inline as="nav" gap={6} aria-label={label}>
+			{children}
+		</Inline>
+	);
+}
+
+/** The slash between two folders of a `Trail`. */
+function TrailSlash() {
+	return <span aria-hidden="true">/</span>;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1121,6 +1241,12 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	Trail,
+	TrailSlash,
+	DropZone,
+	MediaGrid,
+	MediaTile,
+	FolderEntry,
 	KindList,
 	KindItem,
 	PaneTabs,
@@ -1279,11 +1405,33 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	Trail: { kind: "part", props: { label: "text" } },
+	TrailSlash: { kind: "part", props: {} },
+	DropZone: { kind: "part", props: { over: "flag" } },
+	MediaGrid: { kind: "part", props: { folders: "flag" } },
+	MediaTile: {
+		kind: "part",
+		props: {
+			name: "text",
+			detail: "text",
+			picture: "state",
+			ext: "text",
+			status: "variant",
+			progress: "state",
+			actions: "data:label",
+			selected: "flag",
+			picking: "flag",
+		},
+	},
+	FolderEntry: { kind: "part", props: { name: "text", count: "state", up: "flag", selected: "flag" } },
 	KindList: { kind: "part", props: { label: "text" } },
 	KindItem: { kind: "part", props: { label: "text", selected: "flag", mark: "text" } },
 	PaneTabs: { kind: "part", props: { open: "text" } },
 	PaneTab: { kind: "part", props: { label: "text" } },
-	SegmentedChoice: { kind: "part", props: { label: "text", options: "data:value,label", picked: "text" } },
+	SegmentedChoice: {
+		kind: "part",
+		props: { label: "text", options: "data:value,label", picked: "text", size: "variant", inline: "flag" },
+	},
 	Choices: { kind: "part", props: { label: "text", picked: "text" } },
 	Choice: { kind: "part", props: { label: "text", description: "text", hint: "text" } },
 	Change: { kind: "part", props: { kind: "variant", tag: "text", title: "text", identifier: "text" } },
@@ -1389,7 +1537,7 @@ export const CATALOG = {
 	SidebarItem: { kind: "part", props: { active: "flag" } },
 	SidebarCount: { kind: "part", props: { tone: "variant" } },
 	SidebarSub: { kind: "part", props: {} },
-	SidebarSubItem: { kind: "part", props: { active: "flag" } },
+	SidebarSubItem: { kind: "part", props: { active: "flag", depth: "variant" } },
 	SidebarFoot: { kind: "part", props: {} },
 	SidebarScreenMode: { kind: "part", props: { value: "variant", label: "text", defaultOpen: "flag" } },
 	Form: { kind: "part", role: "form", props: { action: "action" } },

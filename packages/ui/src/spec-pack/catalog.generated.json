@@ -15,6 +15,120 @@
 			},
 			"events": []
 		},
+		"Trail": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"TrailSlash": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"DropZone": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"over": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"MediaGrid": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"folders": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
+		"MediaTile": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"actions": {
+					"kind": "data",
+					"fields": ["label"]
+				},
+				"detail": {
+					"kind": "text",
+					"type": "string"
+				},
+				"ext": {
+					"kind": "text",
+					"type": "string"
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				},
+				"picking": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"picture": {
+					"kind": "state"
+				},
+				"progress": {
+					"kind": "state"
+				},
+				"selected": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"status": {
+					"kind": "variant",
+					"enum": ["failed", "interrupted", "ready", "uploading"]
+				}
+			},
+			"events": []
+		},
+		"FolderEntry": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"count": {
+					"kind": "state"
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				},
+				"selected": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"up": {
+					"kind": "flag",
+					"type": "boolean"
+				}
+			},
+			"events": []
+		},
 		"KindList": {
 			"kind": "part",
 			"bind": false,
@@ -81,6 +195,10 @@
 			"children": false,
 			"slots": [],
 			"props": {
+				"inline": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"label": {
 					"kind": "text",
 					"type": "string"
@@ -92,6 +210,10 @@
 				"picked": {
 					"kind": "text",
 					"type": "string"
+				},
+				"size": {
+					"kind": "variant",
+					"enum": ["md", "sm"]
 				}
 			},
 			"events": []
@@ -628,6 +750,7 @@
 						"time",
 						"tools",
 						"trash-can",
+						"upload",
 						"user",
 						"user--multiple",
 						"video",
@@ -1386,6 +1509,10 @@
 				"active": {
 					"kind": "flag",
 					"type": "boolean"
+				},
+				"depth": {
+					"kind": "variant",
+					"enum": [0, 1, 2, 3]
 				}
 			},
 			"events": []
@@ -1782,6 +1909,7 @@
 						"time",
 						"tools",
 						"trash-can",
+						"upload",
 						"user",
 						"user--multiple",
 						"video",
