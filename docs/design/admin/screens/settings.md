@@ -146,7 +146,7 @@
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 · 번역 | 줄마다 `Option spread` + `Switch` | 바로 적용되는 켜기/끄기. |
 | 주소 절 | `Section`("주소", 마지막 절이라 `last`). 읽기 전용이면 제목 뒤 `LockMark` | |
-| 관리자 주소 | `Text mono` "/studio" 하나. 라벨과 파일 이름은 없다: 절 제목 "주소"가 이미 말한다 | 파일에서 정하는 값이라 글로 보인다. |
+| 관리자 주소 | `Affix`(`prefix` "/", 값 "studio"), 라벨 없음: 절 제목 "주소"가 이미 말한다 | 설정 파일에서 정하는 값이지만 미리보기 경로처럼 고칠 수 있다. 로컬 개발 모드에서는 바로 파일에 쓰고, 파일을 쓸 수 없는 곳(배포된 사이트)에서는 절 제목 뒤 `LockMark`와 함께 글로 보인다. |
 
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Select, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Primitives/Text.
 
