@@ -420,6 +420,10 @@
 					"kind": "text",
 					"type": "string"
 				},
+				"besidePanel": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"discardAllLabel": {
 					"kind": "text",
 					"type": "string"
@@ -2124,6 +2128,10 @@
 				"label": {
 					"kind": "text",
 					"type": "string"
+				},
+				"letter": {
+					"kind": "flag",
+					"type": "boolean"
 				}
 			},
 			"events": []

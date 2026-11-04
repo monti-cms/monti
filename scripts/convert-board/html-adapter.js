@@ -142,8 +142,8 @@ function sizedPart(el, rule) {
 	// A part the board lets take the room its line leaves (`flex-grow: 1`) stands in a region that grows.
 	if (!flex && Number.parseFloat(el.style.getPropertyValue("flex-grow")) > 0) return { grow: true, minWidth: 0 };
 	if (!flex || !basis) return undefined;
-	// One that does not grow beside one that does keeps the size the board gives it.
-	return grows(el) ? { grow: true, minWidth: Number(basis) } : { width: Number(basis) };
+	// One that does not grow beside one that does keeps its own size: the part's, as the design system gives it (a panel's width).
+	return grows(el) ? { grow: true, minWidth: Number(basis) } : undefined;
 }
 
 /** The axis a group's children run along, as laid out. */
@@ -415,21 +415,16 @@ function framed(el, node) {
 			Object.entries({ grow, width, minWidth, maxWidth, minHeight }).filter(([, value]) => value !== undefined),
 		);
 		const content = { ...out, layout: { ...rest, grow: true } };
-		const wrapped = inner.reduceRight(
-			(child, step) => ({
-				where: `${node.where} (side)`,
-				direction: "row",
-				layout: { grow: true },
-				children: [{ ...child, before: step }],
-			}),
-			content,
-		);
+		// The steps past the first are room before the box in its line (`lead`): the line counts it when it shares its width out, as it counts the
+		// box's padding; the content lands where the board's does.
+		const lead = inner.reduce((total, step) => total + step, 0);
 		return {
 			where: `${node.where} (sides)`,
 			direction: "row",
 			layout: own,
-			children: [{ ...wrapped, before: outer }],
+			children: [{ ...content, before: outer }],
 			after: right,
+			...(lead > 0 ? { lead } : {}),
 		};
 	}
 	return out;
@@ -518,7 +513,10 @@ function measured(el, where) {
 		// A part the board pulls back over the room before it (a header kept in place over a padded page) takes that room as its own: no distance.
 		const pulled = Number.parseFloat(getComputedStyle(child)[row ? "marginLeft" : "marginTop"]) < 0;
 		const before = (aligned && children.length === 0) || pulled ? undefined : Math.round(start(rect) - edge);
-		children.push({ ...read(child, `${where}[${index}]`), before });
+		const node = read(child, `${where}[${index}]`);
+		// A box that keeps room before itself (see `framed`) is that much further from what comes before it.
+		const { lead, ...drawn } = node;
+		children.push({ ...drawn, before: lead && before !== undefined ? before + lead : before });
 		edge = end(rect);
 	}
 	const last = end(box) - Number.parseFloat(row ? border.borderRightWidth : border.borderBottomWidth);

@@ -463,6 +463,7 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-text-btn") && el.textContent.trim() === "⋯" && !el.matches(".mt-row > *"),
 		part: "MoreButton",
+		props: () => ({ letter: true }),
 		leaf: true,
 		asProps: ["font-size"],
 	},
@@ -1288,6 +1289,8 @@ const parts = [
 		// It draws its own words (the step count, cancel).
 		ownWords: true,
 		props: (el) => {
+			// Over the editor column only: the board keeps it clear of the properties panel at its right.
+			const besidePanel = el.style.right.includes("--width-panel") || undefined;
 			const bubble = el.querySelector(".mt-bubble");
 			const [position, total] = (bubble.querySelector(".mt-count")?.textContent ?? "")
 				.split("/")
@@ -1301,6 +1304,7 @@ const parts = [
 				nextLabel: buttons[1]?.getAttribute("aria-label"),
 				discardAllLabel: bubble.querySelector(".mt-text-btn")?.textContent.trim(),
 				acceptAllLabel: bubble.querySelector(".mt-btn")?.textContent.trim(),
+				besidePanel,
 			};
 		},
 		leaf: true,

@@ -577,10 +577,14 @@ function RowButtonsCell({ children }: { children?: React.ReactNode }) {
 	);
 }
 
-/** The ⋯ of a row: the letter. */
-function MoreButton({ label }: { label?: string }) {
-	// A board's worded ⋯ (a text button) is the letter, as at the end of a row.
-	return <RowMore label={label ?? ""} />;
+/** A ⋯: the round icon button of a head or a panel, or (`letter`) the row's letter, as the board draws it. */
+function MoreButton({ label, letter }: { label?: string; letter?: boolean }) {
+	if (letter) return <RowMore label={label ?? ""} />;
+	return (
+		<IconButton label={label ?? ""}>
+			<Icon name="overflow-menu--horizontal" />
+		</IconButton>
+	);
 }
 
 /** One tab of a page's tab row: a page of its own, with its count. */
@@ -2239,6 +2243,7 @@ function ProposalDock({
 	nextLabel,
 	discardAllLabel,
 	acceptAllLabel,
+	besidePanel,
 }: {
 	name?: string;
 	position?: number;
@@ -2247,10 +2252,18 @@ function ProposalDock({
 	nextLabel?: string;
 	discardAllLabel?: string;
 	acceptAllLabel?: string;
+	/** The properties panel is open at the right: the pill centres over the editor column, clear of it. */
+	besidePanel?: boolean;
 }) {
 	const none = () => {};
+	// Drawn over the screen, it takes no room: 12px over the status bar, centred over the editor column, where the editor's dock holds it.
 	return (
-		<ProposalBubbleDock>
+		<ProposalBubbleDock
+			className={cn(
+				"fixed bottom-[calc(var(--monti-height-statusbar)+12px)] left-0",
+				besidePanel ? "right-(--monti-width-panel)" : "right-0",
+			)}
+		>
 			<ProposalBubble
 				name={name ?? ""}
 				position={position ?? 1}
@@ -2887,6 +2900,7 @@ export const CATALOG = {
 			nextLabel: "text",
 			discardAllLabel: "text",
 			acceptAllLabel: "text",
+			besidePanel: "flag",
 		},
 	},
 	CompareView: { kind: "part", props: {} },
@@ -3092,7 +3106,7 @@ export const CATALOG = {
 	},
 	TrashDateCell: { kind: "part", props: { date: "text", left: "text", urgent: "flag" } },
 	RowButtonsCell: { kind: "part", props: {} },
-	MoreButton: { kind: "part", props: { label: "text" } },
+	MoreButton: { kind: "part", props: { label: "text", letter: "flag" } },
 	PageToolbar: { kind: "part", props: { inset: "flag" } },
 	PageToolbarEnd: { kind: "part", props: {} },
 	TabLinks: { kind: "part", props: { variant: "variant" } },
