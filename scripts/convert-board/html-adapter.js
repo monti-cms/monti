@@ -182,6 +182,32 @@ function isSpacer(el) {
 	return !drawsLine && style.backgroundColor === "rgba(0, 0, 0, 0)";
 }
 
+/**
+ * The words in a part's element that its rule neither reads into a prop nor hands on (to a place or as its children): what converting would drop
+ * without a word. Marks drawn as a single sign (×, +, →) and what the board hides from reading are the part's own.
+ */
+function leftOut(el, rule, props, holders) {
+	const read = holders.flat().filter(Boolean);
+	const said = JSON.stringify(props);
+	const out = [];
+	const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+		const text = node.textContent.replace(/\s+/g, " ").trim();
+		const parent = node.parentElement;
+		if (!text || !parent || !shown(parent) || parent.closest("[aria-hidden=true]")) continue;
+		if (read.some((holder) => holder === parent || holder.contains(parent))) continue;
+		if (text.length <= 2 && !/[\p{L}\p{N}]/u.test(text)) continue;
+		if (said.includes(JSON.stringify(text).slice(1, -1))) continue;
+		let ignored = false;
+		for (let at = parent; at && at !== el; at = at.parentElement) {
+			if (PARTS.some((each) => each.ignore && each.match(at))) ignored = true;
+		}
+		if (ignored) continue;
+		out.push(`left out by the ${rule.part} rule: "${text.slice(0, 40)}"`);
+	}
+	return out;
+}
+
 function read(el, where, page = undefined, inPart = false) {
 	// A rule that groups an element with its neighbours is read where they are measured; each member is read by its own rule.
 	const rule = PARTS.find((each) => !each.group && each.match(el));
@@ -212,7 +238,8 @@ function read(el, where, page = undefined, inPart = false) {
 		// The drawing's own id goes with the node, for a label that names it; it never reaches the spec.
 		const id = rule.idOf?.(el) ?? el.id;
 		const named = id ? { id } : {};
-		if (rule.leaf) return { where: here, part: rule.part, props, looks, ...named };
+		if (rule.leaf)
+			return { where: here, part: rule.part, props, looks: [...looks, ...leftOut(el, rule, props, [])], ...named };
 		const node = { where: here, part: rule.part, props, looks, ...named };
 		// A part's named places, each an element of it whose inside fills the place; its children, from the element the rule names or its own.
 		const inside = (holder, at) =>
@@ -227,6 +254,9 @@ function read(el, where, page = undefined, inPart = false) {
 		);
 		if (slots.length > 0) node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, fill(holder, name)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
+		// What the rule hands on: its places and its children; any other words in the element are dropped, and said so.
+		const handed = [...slots.map(([, place]) => place), Array.isArray(holder) ? holder : [holder]].flat();
+		node.looks = [...node.looks, ...leftOut(el, rule, props, handed)];
 		// Children are an element's inside, or (a list of elements) those elements themselves.
 		// A part that holds a run of its own (a sheet's body): its children are a group the screen spaces, from the part's inside edge to its inside edge.
 		if (rule.stacked && holder && !Array.isArray(holder)) {

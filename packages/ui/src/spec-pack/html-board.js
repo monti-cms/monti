@@ -1156,7 +1156,10 @@ const parts = [
 			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter((button) => !closes(button)),
 			footer: el.querySelector(":scope > .mt-panel-foot"),
 		}),
-		children: (el) => el.querySelector(":scope > .mt-panel-body"),
+		// A panel without a body element holds its parts directly (its tabs and their page).
+		children: (el) =>
+			el.querySelector(":scope > .mt-panel-body") ??
+			[...el.children].filter((child) => !child.matches(".mt-panel-head, .mt-panel-foot")),
 		asProps: ["flex", "flex-grow", "min-width", "max-width", "min-height", "box-sizing", "display", "flex-direction"],
 	},
 	{
