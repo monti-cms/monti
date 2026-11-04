@@ -399,6 +399,10 @@ export const iconsByName = {
 	spark: Spark,
 	// The sidebar's and the list's own icons, named for the boards drawn with them (`pnpm convert:board`).
 	"arrow--down": ArrowDown,
+	"arrow--up": ArrowUp,
+	copy: Copy,
+	repeat: Repeat,
+	"text--align--left": TextAlignLeft,
 	asleep: Asleep,
 	"chevron--left": ChevronLeft,
 	"chevron--right": ChevronRight,

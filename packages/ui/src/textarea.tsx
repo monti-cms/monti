@@ -6,7 +6,8 @@ import { useProposalDescription } from "./proposal-cue";
 
 /**
  * Several lines, drawn like `Input`: an underline, never a box. `proposal` marks text the assistant wrote and nobody has touched. `action` is a
- * control at the end of the first line (a button that makes the text again from the body); the underline then runs under it too.
+ * control at the end of the first line (a button that makes the text again from the body); the underline then runs under it too. `rows` is the
+ * fewest lines it shows: it grows with its text past them.
  */
 function Textarea({
 	className,
@@ -15,6 +16,8 @@ function Textarea({
 	proposal = false,
 	tall = false,
 	action,
+	rows,
+	style,
 	...props
 }: React.ComponentProps<"textarea"> & {
 	/** `sm` writes at the note size, for compact panels; `default` at the reading size on a phone and body size above. */
@@ -45,6 +48,9 @@ function Textarea({
 				action && "min-w-0 flex-1 border-b-0 data-proposal:border-b-0",
 				className,
 			)}
+			rows={rows}
+			// The box grows with its text (`field-sizing`), so `rows` alone sets no height: it holds that many lines of 1.6 and its padding.
+			style={rows === undefined ? style : { minHeight: `calc(${rows} * 1.6em + 12px)`, ...style }}
 			{...props}
 		/>
 	);

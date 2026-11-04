@@ -387,9 +387,50 @@ function framed(el, node) {
 			),
 		};
 	}
-	const side = Math.round(Number.parseFloat(style.paddingLeft));
-	if (side > 0 && side === Math.round(Number.parseFloat(style.paddingRight))) {
-		return { where: `${node.where} (sides)`, direction: "row", children: [{ ...out, before: side }], after: side };
+	// The room at its sides, each its own (a page beside a pane can keep more on the side next to it).
+	const left = Math.round(Number.parseFloat(style.paddingLeft));
+	const right = Math.round(Number.parseFloat(style.paddingRight));
+	if (left > 0 || right > 0) {
+		// A side the board writes as a sum of spacing steps (`calc(var(--space-48) + var(--space-40))`) is that many steps, one region in another.
+		// A shorthand with variables leaves the longhands empty: its fourth value (or second, or only) is the left side.
+		const written = [];
+		let depth = 0;
+		let word = "";
+		for (const letter of `${el.style.padding} `) {
+			if (letter === " " && depth === 0) {
+				if (word) written.push(word);
+				word = "";
+				continue;
+			}
+			depth += letter === "(" ? 1 : letter === ")" ? -1 : 0;
+			word += letter;
+		}
+		const leftWritten = el.style.paddingLeft || written[3] || written[1] || written[0] || "";
+		const steps = [...leftWritten.matchAll(/var\(--space-(\d+)\)/g)].map((match) => Number(match[1]));
+		const sum = steps.reduce((total, step) => total + step, 0);
+		const [outer, ...inner] = steps.length > 1 && sum === left ? steps : [left];
+		// The box's own size in its line (it grows, its width) goes with the padding, as the board's box holds both; the content fills inside it.
+		const { grow, width, minWidth, maxWidth, minHeight, ...rest } = out.layout ?? {};
+		const own = Object.fromEntries(
+			Object.entries({ grow, width, minWidth, maxWidth, minHeight }).filter(([, value]) => value !== undefined),
+		);
+		const content = { ...out, layout: { ...rest, grow: true } };
+		const wrapped = inner.reduceRight(
+			(child, step) => ({
+				where: `${node.where} (side)`,
+				direction: "row",
+				layout: { grow: true },
+				children: [{ ...child, before: step }],
+			}),
+			content,
+		);
+		return {
+			where: `${node.where} (sides)`,
+			direction: "row",
+			layout: own,
+			children: [{ ...wrapped, before: outer }],
+			after: right,
+		};
 	}
 	return out;
 }

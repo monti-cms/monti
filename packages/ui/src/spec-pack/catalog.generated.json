@@ -210,6 +210,7 @@
 						"app-connectivity",
 						"archive",
 						"arrow--down",
+						"arrow--up",
 						"asleep",
 						"book",
 						"bookmark",
@@ -225,6 +226,7 @@
 						"code--reference",
 						"color-palette",
 						"compass",
+						"copy",
 						"dashboard",
 						"data--base",
 						"data-table",
@@ -261,6 +263,7 @@
 						"portfolio",
 						"quotes",
 						"recently-viewed",
+						"repeat",
 						"right-panel--open",
 						"rocket",
 						"rss",
@@ -278,6 +281,7 @@
 						"subtract",
 						"tag",
 						"terminal",
+						"text--align--left",
 						"text--highlight",
 						"ticket",
 						"time",
@@ -626,11 +630,30 @@
 			"props": {
 				"doc": {
 					"kind": "data",
-					"fields": ["kind", "text", "mark", "untranslated"]
+					"fields": ["kind", "text", "mark", "untranslated", "active", "current"]
 				},
 				"muted": {
 					"kind": "flag",
 					"type": "boolean"
+				},
+				"tools": {
+					"kind": "data",
+					"fields": [
+						"kind",
+						"block",
+						"x",
+						"y",
+						"width",
+						"on",
+						"text",
+						"key",
+						"discard",
+						"accept",
+						"row",
+						"icon",
+						"sub",
+						"label"
+					]
 				}
 			},
 			"events": []
@@ -1518,8 +1541,12 @@
 			"kind": "part",
 			"bind": false,
 			"children": true,
-			"slots": ["actions", "footer"],
+			"slots": ["actions", "composer", "footer"],
 			"props": {
+				"bleed": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"closable": {
 					"kind": "flag",
 					"type": "boolean"
@@ -1548,6 +1575,7 @@
 						"app-connectivity",
 						"archive",
 						"arrow--down",
+						"arrow--up",
 						"asleep",
 						"book",
 						"bookmark",
@@ -1563,6 +1591,7 @@
 						"code--reference",
 						"color-palette",
 						"compass",
+						"copy",
 						"dashboard",
 						"data--base",
 						"data-table",
@@ -1599,6 +1628,7 @@
 						"portfolio",
 						"quotes",
 						"recently-viewed",
+						"repeat",
 						"right-panel--open",
 						"rocket",
 						"rss",
@@ -1616,6 +1646,7 @@
 						"subtract",
 						"tag",
 						"terminal",
+						"text--align--left",
 						"text--highlight",
 						"ticket",
 						"time",
@@ -1957,6 +1988,10 @@
 			"children": true,
 			"slots": ["title"],
 			"props": {
+				"dense": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"last": {
 					"kind": "flag",
 					"type": "boolean"
@@ -2740,6 +2775,7 @@
 						"app-connectivity",
 						"archive",
 						"arrow--down",
+						"arrow--up",
 						"asleep",
 						"book",
 						"bookmark",
@@ -2755,6 +2791,7 @@
 						"code--reference",
 						"color-palette",
 						"compass",
+						"copy",
 						"dashboard",
 						"data--base",
 						"data-table",
@@ -2791,6 +2828,7 @@
 						"portfolio",
 						"quotes",
 						"recently-viewed",
+						"repeat",
 						"right-panel--open",
 						"rocket",
 						"rss",
@@ -2808,6 +2846,7 @@
 						"subtract",
 						"tag",
 						"terminal",
+						"text--align--left",
 						"text--highlight",
 						"ticket",
 						"time",
@@ -2873,7 +2912,7 @@
 			"props": {
 				"columns": {
 					"kind": "data",
-					"fields": ["id", "label", "sort", "filtered", "size"]
+					"fields": ["id", "label", "sort", "filtered", "size", "align"]
 				},
 				"end": {
 					"kind": "state"

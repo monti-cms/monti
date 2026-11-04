@@ -37,6 +37,20 @@ export const Sections: Story = {
 	),
 };
 
+/** `dense`: groups of options in a stacked column (a collection's editor options), 20px apart from their rules. */
+export const Dense: Story = {
+	render: () => (
+		<Stack gap={0} width="content">
+			<Section title="블록" dense>
+				{field("blocks", "허용할 블록", "수식, 콜아웃, 탭")}
+			</Section>
+			<Section title="서식" dense last>
+				{field("marks", "허용할 서식", "굵게, 기울임")}
+			</Section>
+		</Stack>
+	),
+};
+
 /** `stacked`: the title over the fields, in a column that is already narrow. */
 export const Stacked: Story = {
 	render: () => (

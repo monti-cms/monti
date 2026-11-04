@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Affix } from "../affix";
 import { Banner as BannerPart } from "../banner";
+import { Block, BlockHandle } from "../block-handle";
 import { Box as BoxPart } from "../box";
 import { Button } from "../button";
 import { Caret } from "../caret";
@@ -37,7 +38,9 @@ import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFi
 import { FieldRow, FieldTree as FieldTreePart } from "../field-tree";
 import { FilePreview } from "../file-preview";
 import { FilterButton } from "../filter-button";
+import { FloatingBar } from "../floating-bar";
 import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "../folder-tabs";
+import { FormatBarRequest, FormatButton, type FormatMark } from "../format-bar";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
 import { FolderParent, type IconName, iconsByName } from "../icons";
@@ -47,8 +50,10 @@ import { LanguageRow, LanguageSource } from "../language-row";
 import { ListHead as ListHeadPart } from "../list-head";
 import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
 import { LockMark } from "../lock-mark";
-import { Untranslated } from "../marker";
+import { Marker, Untranslated } from "../marker";
 import { MediaPicker } from "../media-picker";
+import { MemoCard, MemoMessage, MemoThread } from "../memo-card";
+import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_SEPARATOR, MENU_SUB_MARK, MenuShortcut } from "../menu-parts";
 import { NavLink } from "../nav-link";
 import { Option } from "../option";
 import { PageColumn, PageHeader, PageToolbar, PageToolbarEnd } from "../page-header";
@@ -66,7 +71,7 @@ import { PickList, PickListItem } from "../pick-list";
 import { PropertyGroup, PropertyPanel } from "../property-list";
 import { ProposalBubble, ProposalBubbleDock } from "../proposal-bubble";
 import { ProposalActions, ProposalCard, ProposalEntry } from "../proposal-card";
-import { Del, Ins } from "../proposal-marks";
+import { Del, Ins, PROPOSAL_MARK_CLASSES } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
 import { ReadValue as ReadValuePart } from "../read-value";
@@ -880,19 +885,33 @@ function Panel({
 	title,
 	closable,
 	width,
+	bleed,
 	actions,
 	footer,
+	composer,
 	children,
 }: {
 	title?: string;
 	closable?: boolean;
 	width?: "side" | "panel" | "assistant";
+	/** The body keeps no padding of its own: what it holds lays itself out (the assistant's conversation). */
+	bleed?: boolean;
 	actions?: React.ReactNode;
 	footer?: React.ReactNode;
+	/** The box to type in, pinned under the body (the assistant's). */
+	composer?: React.ReactNode;
 	children?: React.ReactNode;
 }) {
 	return (
-		<SidePanel title={title} closable={closable} width={width} actions={actions} footer={footer}>
+		<SidePanel
+			title={title}
+			closable={closable}
+			width={width}
+			bleed={bleed}
+			actions={actions}
+			footer={footer}
+			composer={composer}
+		>
 			{children}
 		</SidePanel>
 	);
@@ -1510,20 +1529,24 @@ function TitleRule() {
 
 /**
  * An entry's body: where the editor goes. The spec says only that the body is here; its blocks come from the data (`doc`: each block's `kind`, `h2`,
- * `h3`, `p`, `quote` or `figure`, and its `text`), drawn in the editor's reading type. The editor itself takes this place when the screen is wired.
+ * `h3`, `p`, `quote`, `figure` or `placeholder`, and its `text`), drawn in the editor's reading type. The editor itself takes this place when the
+ * screen is wired. What the board shows open in it (a block's handle and menu, the format bar, a proposal's mark and card) comes from the data too
+ * (`tools`), drawn with the design system's editor parts at the places the board gives them.
  */
 function EditorBody({
 	doc,
+	tools,
 	muted,
 }: {
-	doc?: readonly { kind?: string; text: string; mark?: string; untranslated?: boolean }[];
+	doc?: readonly BodyPiece[];
+	tools?: readonly ToolPiece[];
 	/** Read only, in the quiet ink (the source beside a translation). */
 	muted?: boolean;
 }) {
 	return (
 		<div
 			className={cn(
-				"prose monti-dark:prose-invert max-w-none text-monti-reading",
+				"prose monti-dark:prose-invert relative max-w-none text-monti-reading",
 				muted ? "text-monti-muted" : "text-monti-default",
 			)}
 		>
@@ -1534,42 +1557,160 @@ function EditorBody({
 						<Del key={at}>{piece.text}</Del>
 					) : piece.mark === "ins" ? (
 						<Ins key={at}>{piece.text}</Ins>
+					) : piece.mark === "anchor" ? (
+						<span key={at} className={PROPOSAL_MARK_CLASSES.anchor}>
+							{piece.text}
+						</span>
+					) : piece.mark === "strong" ? (
+						<strong key={at}>{piece.text}</strong>
 					) : (
 						piece.text
 					),
 				);
 				// A block still in the source's language reads faint until it is translated.
 				const text = block.untranslated ? <Untranslated>{run}</Untranslated> : run;
-				// Paragraphs and headings keep the editor's own spacing (as a side-by-side view draws them), not the reading defaults.
-				if (block.kind === "h2" || block.kind === "h3")
-					return (
-						<CompareHeading key={key} className="first:mt-0">
-							{text}
-						</CompareHeading>
-					);
-				if (block.kind === "quote") return <blockquote key={key}>{text}</blockquote>;
-				if (block.kind === "list")
-					return (
-						<ul key={key}>
-							{block.items.map((item, at) => (
-								<li key={at}>{item}</li>
-							))}
-						</ul>
-					);
-				if (block.kind === "figure")
-					return (
-						<figure key={key}>
-							<div className="aspect-[3/2] rounded-monti-md bg-monti-muted" />
-							{block.pieces.length > 0 && <figcaption>{text}</figcaption>}
-						</figure>
-					);
+				const own = toolsOf(tools).filter((tool) => tool.block === index);
+				const drawn = blockOf(block, text);
+				if (own.length === 0 && !block.active && !block.current)
+					return <React.Fragment key={key}>{drawn}</React.Fragment>;
+				// A block the board shows a state of: the block, then its tools at their places beside it.
 				return (
-					<CompareParagraph key={key} className="mt-0">
-						{text}
-					</CompareParagraph>
+					<div key={key} className={cn("relative", block.current && PROPOSAL_MARK_CLASSES.current)}>
+						{block.active ? (
+							<Block active className="-ml-monti-8 *:mb-0">
+								{drawn}
+							</Block>
+						) : (
+							drawn
+						)}
+						{own.map((tool, at) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: a block's tools never move
+							<div key={at} className="absolute z-3" style={{ left: tool.x, top: tool.y, width: tool.width }}>
+								{toolOf(tool)}
+							</div>
+						))}
+					</div>
 				);
 			})}
 		</div>
+	);
+}
+
+/** One block of the body in the editor's own spacing (as a side-by-side view draws it), not the reading defaults. */
+function blockOf(block: BodyBlock, text: React.ReactNode) {
+	if (block.kind === "h2" || block.kind === "h3") return <CompareHeading className="first:mt-0">{text}</CompareHeading>;
+	if (block.kind === "quote") return <blockquote>{text}</blockquote>;
+	if (block.kind === "list")
+		return (
+			<ul>
+				{block.items.map((item, at) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: a list's items never move
+					<li key={at}>{item}</li>
+				))}
+			</ul>
+		);
+	if (block.kind === "figure")
+		return (
+			<figure>
+				<div className="aspect-[3/2] rounded-monti-md bg-monti-muted" />
+				{block.pieces.length > 0 && <figcaption>{text}</figcaption>}
+			</figure>
+		);
+	// The line that asks for the first block: faint, with nothing under it.
+	if (block.kind === "placeholder")
+		return <CompareParagraph className="mt-0 mb-0 text-monti-faint">{text}</CompareParagraph>;
+	return <CompareParagraph className="mt-0">{text}</CompareParagraph>;
+}
+
+/** Nothing happens when a tool drawn from a board is pressed: its looks only. */
+const still = () => {};
+
+/** One of the editor's tools, drawn open with the design system's parts. */
+function toolOf(tool: BodyTool) {
+	const items = tool.items;
+	if (tool.kind === "handle") return <BlockHandle addLabel="" gripLabel="" active={tool.on} />;
+	if (tool.kind === "marker")
+		return (
+			<Marker active={tool.on} onClick={still}>
+				{tool.text}
+			</Marker>
+		);
+	if (tool.kind === "menu")
+		return (
+			<div role="menu" className={cn(MENU_CARD, "p-monti-6")}>
+				{items.map((item, at) =>
+					item.kind === "label" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
+						<span key={at} className={MENU_LABEL}>
+							{item.text}
+						</span>
+					) : item.kind === "sep" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
+						<span key={at} className={MENU_SEPARATOR} />
+					) : (
+						<span
+							// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
+							key={at}
+							role="menuitem"
+							data-highlighted={item.on || undefined}
+							className={MENU_ITEM}
+						>
+							{item.icon && <Icon name={item.icon} />}
+							{item.text}
+							{item.key && <MenuShortcut>{item.key}</MenuShortcut>}
+							{item.sub && (
+								<span className={MENU_SUB_MARK}>
+									<Icon name="chevron--right" />
+								</span>
+							)}
+						</span>
+					),
+				)}
+			</div>
+		);
+	if (tool.kind === "format")
+		return (
+			<FloatingBar>
+				{items.map((item, at) =>
+					item.kind === "sep" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
+						<Separator key={at} orientation="vertical" length="bar" />
+					) : item.kind === "ask" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
+						<FormatBarRequest key={at} label={item.text ?? ""} />
+					) : (
+						<FormatButton
+							// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
+							key={at}
+							mark={item.kind as FormatMark}
+							label={item.text ?? ""}
+							pressed={item.on}
+						/>
+					),
+				)}
+			</FloatingBar>
+		);
+	return (
+		<MemoCard
+			discardLabel={tool.discard}
+			onDiscard={tool.discard ? still : undefined}
+			acceptLabel={tool.accept}
+			onAccept={tool.accept ? still : undefined}
+			reply={
+				tool.text
+					? { placeholder: tool.text, value: "", onValueChange: still, onSend: still, sendLabel: tool.text }
+					: undefined
+			}
+		>
+			<MemoThread>
+				{items.map((message, at) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: a note's messages never move
+					<MemoMessage key={at} author={message.label ?? ""} time={message.key} ai={message.kind === "ai"}>
+						{message.text}
+					</MemoMessage>
+				))}
+			</MemoThread>
+		</MemoCard>
 	);
 }
 
@@ -1612,8 +1753,77 @@ function LanguageBar({ tabs, action }: { tabs?: React.ReactNode; action?: React.
 	);
 }
 
-type BodyPiece = { kind?: string; text: string; mark?: string; untranslated?: boolean };
-type BodyBlock = { kind: string; pieces: BodyPiece[]; untranslated?: boolean; items: string[] };
+type BodyPiece = {
+	kind?: string;
+	text: string;
+	mark?: string;
+	untranslated?: boolean;
+	active?: boolean;
+	current?: boolean;
+};
+type BodyBlock = {
+	kind: string;
+	pieces: BodyPiece[];
+	untranslated?: boolean;
+	active?: boolean;
+	current?: boolean;
+	items: string[];
+};
+
+/**
+ * One of the editor's tools drawn open by a block, as the board shows it: `block` is the block's place in the body, `x` across from the body's left
+ * edge and `y` down from the block's top. `handle` is the + and the grip (`on`: the menu is open); `menu` the block's menu (`items`: its labels, rows
+ * and rules); `format` the bar over picked words (`items`: its formats, rules and the request); `marker` a proposal's tag in the margin; `memo` the
+ * card under a request (`items`: its messages).
+ */
+type BodyTool = {
+	kind: string;
+	block: number;
+	x: number;
+	y: number;
+	width?: number;
+	on?: boolean;
+	text?: string;
+	key?: string;
+	discard?: string;
+	accept?: string;
+	items: ToolRow[];
+};
+type ToolRow = {
+	kind: string;
+	text?: string;
+	icon?: IconName;
+	key?: string;
+	sub?: boolean;
+	on?: boolean;
+	label?: string;
+};
+/** A tool or one of its rows, as the data lists them: a row has `row` (its kind) and goes with the tool before it. */
+type ToolPiece = Omit<BodyTool, "items" | "kind" | "block" | "x" | "y"> &
+	Partial<Pick<BodyTool, "kind" | "block" | "x" | "y">> & {
+		row?: string;
+		icon?: IconName;
+		sub?: boolean;
+		label?: string;
+	};
+
+/** The data's tool pieces as tools with their rows. */
+function toolsOf(pieces: readonly ToolPiece[] | undefined): BodyTool[] {
+	const tools: BodyTool[] = [];
+	for (const { row, ...piece } of pieces ?? []) {
+		if (row !== undefined) tools[tools.length - 1]?.items.push({ ...piece, kind: row });
+		else
+			tools.push({
+				...piece,
+				kind: piece.kind ?? "",
+				block: piece.block ?? 0,
+				x: piece.x ?? 0,
+				y: piece.y ?? 0,
+				items: [],
+			});
+	}
+	return tools;
+}
 
 /** The data's pieces as blocks: a piece with a `kind` starts one, the rest go on it; list items in a row are one list. */
 function bodyOf(doc: readonly BodyPiece[] | undefined) {
@@ -1628,6 +1838,8 @@ function bodyOf(doc: readonly BodyPiece[] | undefined) {
 				kind: piece.kind ?? "p",
 				pieces: piece.text ? [piece] : [],
 				untranslated: piece.untranslated,
+				active: piece.active,
+				current: piece.current,
 				items: [],
 			});
 		} else if (last.kind === "list") last.items[last.items.length - 1] += piece.text;
@@ -2680,7 +2892,14 @@ export const CATALOG = {
 	EntryTitle: { kind: "part", props: { text: "state", faint: "flag" } },
 	TitleRule: { kind: "part", props: {} },
 	TitleInput: { kind: "part", bind: "yes", props: { id: "text", value: "state", placeholder: "text", label: "text" } },
-	EditorBody: { kind: "part", props: { doc: "data:kind,text,mark,untranslated", muted: "flag" } },
+	EditorBody: {
+		kind: "part",
+		props: {
+			doc: "data:kind,text,mark,untranslated,active,current",
+			tools: "data:kind,block,x,y,width,on,text,key,discard,accept,row,icon,sub,label",
+			muted: "flag",
+		},
+	},
 	SourceColumn: { kind: "part", props: { label: "text", title: "state" } },
 	LanguageBar: { kind: "part", props: {} },
 	EditorStatusBar: { kind: "part", props: { label: "text" } },
@@ -2785,7 +3004,7 @@ export const CATALOG = {
 	Rail: { kind: "part", props: { label: "text" } },
 	NavEntry: { kind: "part", props: { label: "text", note: "text", active: "flag", dot: "text" } },
 	OptionSwitch: { kind: "part", props: { label: "text", checked: "flag" } },
-	Panel: { kind: "part", props: { title: "text", closable: "flag", width: "variant" } },
+	Panel: { kind: "part", props: { title: "text", closable: "flag", width: "variant", bleed: "flag" } },
 	IconOnlyButton: { kind: "part", props: { icon: "variant", label: "text" } },
 	DragHandle: { kind: "part", props: { "aria-label": "text" } },
 	LanguageList: { kind: "part", props: {} },
@@ -2829,7 +3048,7 @@ export const CATALOG = {
 		props: { value: "state", prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" },
 	},
 	VerticalRule: { kind: "part", props: {} },
-	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
+	Section: { kind: "part", props: { stacked: "flag", last: "flag", dense: "flag" } },
 	OptionCheck: {
 		kind: "part",
 		props: { label: "text", note: "text", checked: "flag", mono: "flag", noteTone: "variant" },
@@ -2915,7 +3134,7 @@ export const CATALOG = {
 	ListHead: {
 		kind: "part",
 		props: {
-			columns: "data:id,label,sort,filtered,size",
+			columns: "data:id,label,sort,filtered,size,align",
 			end: "state",
 			moveLabel: "text",
 			onPlace: "event",

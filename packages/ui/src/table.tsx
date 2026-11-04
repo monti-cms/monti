@@ -321,11 +321,13 @@ function TableCell({
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
 			className={cn(
-				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
+				// make the line taller than either, and the row 2px taller than the design system's 42.
+				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
-				valign === "top" && "align-top",
+				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",
 				tone === "muted" && "text-monti-muted",
 				tone === "subtle" && "text-monti-note text-monti-subtle",

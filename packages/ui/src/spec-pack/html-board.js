@@ -45,26 +45,143 @@ const reviewRow = (el) =>
 // Each block starts with a piece that has its `kind` (h2, h3, p, li, quote, figure); the pieces after it go on the same block, the words a proposal
 // takes out (`del`) and puts in (`ins`) marked as such.
 const EDITOR_TOOLS = ".mt-card, .mt-handle, .mt-format-bar, .mt-block-bar, .mt-memo, .mt-marker";
+/** The blocks of an editor's body, in order: its text, and the line that asks for the first block (faint). */
+const bodyBlockElements = (el) =>
+	[...el.querySelectorAll("h2, h3, p, li, blockquote, figure")].filter(
+		(block) => !block.closest(`${EDITOR_TOOLS}, figure figure, blockquote p`),
+	);
+/** How a run of a block's text is marked: taken out or put in by a proposal, the words a request is about, bold. */
+const markOf = (node) =>
+	node.nodeName === "DEL"
+		? "del"
+		: node.nodeName === "INS"
+			? "ins"
+			: node.classList?.contains("mt-anchor")
+				? "anchor"
+				: node.nodeName === "STRONG" || node.nodeName === "B"
+					? "strong"
+					: undefined;
 const bodyBlocks = (el) =>
-	[...el.querySelectorAll("h2, h3, p, li, blockquote, figure")]
-		.filter((block) => !block.closest(`${EDITOR_TOOLS}, figure figure, blockquote p`))
-		.filter((block) => !(block.matches("p") && block.style.color.includes("--fg-faint")))
-		.flatMap((block) => {
-			const copy = block.cloneNode(true);
-			for (const tool of copy.querySelectorAll(`${EDITOR_TOOLS}, button`)) tool.remove();
-			const kind = block.matches("blockquote") ? "quote" : block.tagName.toLowerCase();
-			const untranslated = block.matches(".mt-untranslated") || undefined;
-			const pieces = [...copy.childNodes]
-				.map((node) => ({
-					mark: node.nodeName === "DEL" ? "del" : node.nodeName === "INS" ? "ins" : undefined,
-					text: node.textContent.replace(/\s+/g, " "),
-				}))
-				.filter((piece) => piece.text.trim() !== "");
-			if (pieces.length === 0) return kind === "figure" ? [{ kind, text: "" }] : [];
-			return pieces.map((piece, index) =>
-				index === 0 ? { kind, ...piece, text: piece.text.trimStart(), untranslated } : piece,
-			);
-		});
+	bodyBlockElements(el).flatMap((block) => {
+		const copy = block.cloneNode(true);
+		for (const tool of copy.querySelectorAll(`${EDITOR_TOOLS}, button`)) tool.remove();
+		const faint = block.matches("p") && block.style.color.includes("--fg-faint");
+		const kind = faint ? "placeholder" : block.matches("blockquote") ? "quote" : block.tagName.toLowerCase();
+		// What the block is while the board shows it: picked (its menu is open), or the one whose proposal is looked at.
+		const state = {
+			untranslated: block.matches(".mt-untranslated") || undefined,
+			active: block.matches(".mt-block.is-on") || undefined,
+			current: block.matches(".mt-current") || undefined,
+		};
+		const pieces = [...copy.childNodes]
+			.map((node) => ({ mark: markOf(node), text: node.textContent.replace(/\s+/g, " ") }))
+			.filter((piece) => piece.text.trim() !== "");
+		// Every block keeps its place, an empty one too: the tools name a block by it.
+		if (pieces.length === 0) return [{ kind, text: "", ...state }];
+		return pieces.map((piece, index) =>
+			index === 0 ? { kind, ...piece, text: piece.text.trimStart(), ...state } : piece,
+		);
+	});
+/** A format button by what it shows: the letter in its own style, a raised or lowered x, the link's icon, the footnote's raised number, the ⋯. */
+const formatOf = (button) => {
+	const style = button.getAttribute("style") ?? "";
+	if (button.textContent.trim() === "⋯") return "more";
+	if (button.querySelector("svg")) return "link";
+	if (button.querySelector("sub")) return "subscript";
+	if (button.querySelector("sup")) return button.textContent.trim().startsWith("x") ? "superscript" : "footnote";
+	if (button.classList.contains("mt-mono")) return "code";
+	if (style.includes("line-through")) return "strike";
+	if (style.includes("underline")) return "underline";
+	if (style.includes("italic")) return "italic";
+	return "bold";
+};
+/**
+ * The editor's tools a board draws open in the body (a block's handle and menu, the format bar over picked words, a proposal's mark and its card), each
+ * by the block it belongs to and its place: across from the body's left edge, down from the block's top.
+ */
+const bodyTools = (el) => {
+	const blocks = bodyBlockElements(el);
+	const left = el.getBoundingClientRect().left;
+	const blockOf = (tool) =>
+		tool.closest("h2, h3, p, li, blockquote, figure") ??
+		tool.parentElement.querySelector(":scope > p, :scope > h2, :scope > h3, :scope > figure");
+	return [...el.querySelectorAll(".mt-handle, .mt-card, .mt-format-bar, .mt-marker, .mt-memo")].flatMap((tool) => {
+		const block = blockOf(tool);
+		const at = blocks.indexOf(block);
+		if (at < 0) return [];
+		const box = tool.getBoundingClientRect();
+		const place = {
+			block: at,
+			x: Math.round(box.left - left),
+			y: Math.round(box.top - block.getBoundingClientRect().top),
+		};
+		const own = (node) =>
+			[...node.childNodes]
+				.filter((child) => child.nodeType === Node.TEXT_NODE || child.classList?.contains("sc-interp"))
+				.map((child) => child.textContent)
+				.join("")
+				.trim();
+		if (tool.matches(".mt-handle"))
+			return [{ kind: "handle", ...place, on: tool.querySelector("button.is-on") ? true : undefined }];
+		if (tool.matches(".mt-marker"))
+			return [{ kind: "marker", ...place, text: tool.textContent.trim(), on: tool.matches(".is-on") || undefined }];
+		if (tool.matches(".mt-card"))
+			return [
+				{
+					kind: "menu",
+					...place,
+					width: Math.round(box.width),
+					items: [...tool.children].map((row) =>
+						row.matches(".mt-menu-label")
+							? { kind: "label", text: row.textContent.trim() }
+							: row.matches(".mt-menu-sep")
+								? { kind: "sep" }
+								: {
+										kind: "item",
+										text: own(row),
+										icon: row.querySelector(":scope > svg") ? iconName(row.querySelector(":scope > svg")) : undefined,
+										key: row.querySelector(".k")?.textContent.trim(),
+										sub: row.querySelector(".sub") ? true : undefined,
+										on: row.matches(".is-on") || undefined,
+									},
+					),
+				},
+			];
+		if (tool.matches(".mt-format-bar"))
+			return [
+				{
+					kind: "format",
+					...place,
+					items: [...tool.children].map((button) =>
+						button.matches(".sep")
+							? { kind: "sep" }
+							: button.matches(".ask")
+								? { kind: "ask", text: own(button), key: button.querySelector(".k")?.textContent.trim() }
+								: {
+										kind: formatOf(button),
+										text: button.getAttribute("aria-label"),
+										on: button.matches(".is-on") || undefined,
+									},
+					),
+				},
+			];
+		return [
+			{
+				kind: "memo",
+				...place,
+				discard: tool.querySelector(".mt-memo-head .mt-text-btn")?.textContent.trim(),
+				accept: tool.querySelector(".mt-memo-head .mt-btn")?.textContent.trim(),
+				text: tool.querySelector(".mt-memo-reply .ph")?.textContent.trim(),
+				items: [...tool.querySelectorAll(".mt-memo-msg")].map((message) => ({
+					kind: message.matches(".is-ai") ? "ai" : "you",
+					text: message.querySelector(".text")?.textContent.trim(),
+					label: message.querySelector(".who b")?.textContent.trim(),
+					key: own(message.querySelector(".who")),
+				})),
+			},
+		];
+	});
+};
 // Whether an element has words of its own, not only in its children.
 // (A board's data fills its words in a span of its runtime's: those are its own words too.)
 const ownText = (el) =>
@@ -232,6 +349,7 @@ const parts = [
 							id: column.textContent.trim(),
 							label: column.textContent.trim(),
 							...(column.classList.contains("is-sort") ? { sort: "desc" } : {}),
+							...(box.classList.contains("is-end") ? { align: "end" } : {}),
 							...(track === undefined || track.includes("fr") || width === 0 ? {} : { size: Math.round(width + gap) }),
 						};
 					}),
@@ -526,7 +644,9 @@ const parts = [
 			value: (el.value ?? el.textContent).trim() || undefined,
 			mono: el.classList.contains("mt-mono") || undefined,
 			// A height the board gives it is a number of lines.
-			rows: el.style.minHeight ? Math.max(1, Math.round((Number.parseFloat(el.style.minHeight) - 12) / 20)) : undefined,
+			rows: el.style.minHeight
+				? Math.max(1, Math.round((Number.parseFloat(el.style.minHeight) - 12) / 20))
+				: Number(el.getAttribute("rows")) || undefined,
 		}),
 		leaf: true,
 		asProps: ["min-height"],
@@ -1179,7 +1299,18 @@ const parts = [
 		// The editor's own tools in the body (a block's handle and menu, a proposal's mark and its card) and its line that asks for the first block
 		// are its states, not the body's.
 		leaves: `${EDITOR_TOOLS}, p[style*='--fg-faint']`,
-		props: (el) => ({ doc: bodyBlocks(el), muted: el.closest(".mt-tool") ? true : undefined }),
+		props: (el) => {
+			// Each tool, then its rows (a menu's, a bar's, a card's messages): a row has `row`, its kind, and goes with the tool before it.
+			const tools = bodyTools(el).flatMap(({ items, ...tool }) => [
+				tool,
+				...(items ?? []).map(({ kind, ...row }) => ({ row: kind, ...row })),
+			]);
+			return {
+				doc: bodyBlocks(el),
+				tools: tools.length > 0 ? tools : undefined,
+				muted: el.closest(".mt-tool") ? true : undefined,
+			};
+		},
 		leaf: true,
 		asProps: ["color"],
 	},
@@ -1506,15 +1637,28 @@ const parts = [
 				: el.style.flex.includes("--width-panel")
 					? "panel"
 					: undefined,
+			// A body the board draws without padding of its own: what it holds lays itself out.
+			bleed: (() => {
+				const body = el.querySelector(":scope > .mt-panel-body");
+				return (
+					(!body && el.querySelector(":scope > form")) ||
+					(body && getComputedStyle(body).paddingLeft === "0px") ||
+					undefined
+				);
+			})()
+				? true
+				: undefined,
 		}),
 		slots: (el) => ({
 			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter((button) => !closes(button)),
 			footer: el.querySelector(":scope > .mt-panel-foot"),
+			// The box to type in, under the body.
+			composer: [el.querySelector(":scope > form")],
 		}),
 		// A panel without a body element holds its parts directly (its tabs and their page).
 		children: (el) =>
 			el.querySelector(":scope > .mt-panel-body") ??
-			[...el.children].filter((child) => !child.matches(".mt-panel-head, .mt-panel-foot")),
+			[...el.children].filter((child) => !child.matches(".mt-panel-head, .mt-panel-foot, form")),
 		asProps: ["flex", "flex-grow", "min-width", "max-width", "min-height", "box-sizing", "display", "flex-direction"],
 	},
 	{
@@ -1683,7 +1827,11 @@ const parts = [
 	{
 		match: (el) => el.matches(".col-blk, .col-grp"),
 		part: "Section",
-		props: (el) => ({ stacked: true, last: /^0(px)?$/.test(el.style.borderBottom.split(" ")[0] ?? "") || undefined }),
+		props: (el) => ({
+			stacked: true,
+			dense: el.matches(".col-grp") || undefined,
+			last: /^0(px)?$/.test(el.style.borderBottom.split(" ")[0] ?? "") || undefined,
+		}),
 		slots: (el) => ({ title: el.querySelector(":scope > h2") }),
 		children: (el) => [...el.children].filter((child) => !child.matches("h2")),
 		asProps: ["border-bottom"],
