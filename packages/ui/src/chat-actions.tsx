@@ -70,12 +70,12 @@ export function ChatQueueItem({
 		<li
 			data-slot="chat-queue-item"
 			className={cn(
-				"flex min-w-0 items-center gap-monti-4 [&_[data-slot=icon-button]]:size-[24px] [&_svg]:size-[14px]",
+				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]]:size-[22px] [&_svg]:size-[12px]",
 				className,
 			)}
 			{...props}
 		>
-			<span className="min-w-0 flex-1 truncate text-monti-body text-monti-muted">{children}</span>
+			<span className="min-w-0 flex-1 truncate text-monti-muted text-monti-note">{children}</span>
 			<IconButton label={sendNowLabel} onClick={onSendNow}>
 				{sendNowIcon}
 			</IconButton>

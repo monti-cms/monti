@@ -75,7 +75,7 @@ export function ChatInput({
 			{...props}
 		>
 			{queue && (
-				<ul className="-mx-monti-12 -mt-monti-10 mb-monti-8 flex flex-col border-monti-default border-b bg-monti-selected py-monti-4 pr-monti-4 pl-monti-12">
+				<ul className="-mx-monti-12 -mt-monti-10 mb-monti-8 flex flex-col gap-monti-4 border-monti-default border-b bg-monti-selected py-monti-8 pr-monti-6 pl-monti-12">
 					{queue}
 				</ul>
 			)}
