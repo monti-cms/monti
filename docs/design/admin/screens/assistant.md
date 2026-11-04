@@ -44,7 +44,7 @@
 | 지난 대화의 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `FilterButton filled` "30일 뒤" + `DropdownMenu`(`DropdownMenuRadioGroup` 7일 · 30일 · 90일 · 지우지 않음) | 날수는 메뉴에서 고른다. |
 | 입력 상자의 고른 행 칩 | `ChatInput context`에 `Chip onRemove`("고른 글 2편") | ×로 빼면 그 행들은 가지 않는다. |
 | 답을 쓰는 동안 | `ChatInput busy` | 보내기가 멈춤 버튼이 된다. |
-| 모델 버튼 | `ModelMenuButton` | mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 메뉴가 열리면 잉크. |
+| 모델 버튼 | `ModelMenuButton` | 작은 ghost 버튼. mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 가리키면 버튼 전체에 엷은 바탕이 깔리고(밑줄 없음), 메뉴가 열려 있는 동안도 그렇다. |
 | 모델 메뉴 | `ModelMenu layout="chat"`(검색 행, `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 끝의 "기본" · 키 이름 `hint`, `thinking`의 "생각 ›" 둘째 단계 "끔" · "낮음" · "보통" · "높음") | 생각을 지원하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 목록은 키로 묶는다. 도구를 쓸 수 있는 모델만 나온다. |
 
 스토리: Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Controls/Status/ErrorNote, Controls/Button/TextButton, Controls/Button/Button, Monti/Proposal/ProposalCard, Monti/Proposal/Marks, Monti/Assistant/Suggest, Primitives/Text, Monti/Assistant/ConversationList, Controls/Menu/DropdownMenu, Patterns/List/FilterButton, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu.
