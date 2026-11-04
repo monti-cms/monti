@@ -53,7 +53,11 @@ const bodyBlocks = (el) =>
 			for (const tool of copy.querySelectorAll(".mt-card, .mt-handle, .mt-format-bar, .mt-block-bar, button"))
 				tool.remove();
 			const kind = block.matches("blockquote") ? "quote" : block.tagName.toLowerCase();
-			return { kind, text: copy.textContent.replace(/\s+/g, " ").trim() };
+			return {
+				kind,
+				text: copy.textContent.replace(/\s+/g, " ").trim(),
+				untranslated: block.matches(".mt-untranslated") || undefined,
+			};
 		})
 		.filter((block) => block.text !== "" || block.kind === "figure");
 // An option row's own words, without its note, its count or its control.
@@ -450,7 +454,14 @@ const parts = [
 		}),
 		leaf: true,
 	},
-	{ match: (el) => el.matches(".mt-vr"), part: "VerticalRule", leaf: true, asProps: ["align-self"] },
+	// A rule between two groups of a line keeps the room the design system gives it on its sides.
+	{ match: (el) => el.matches(".mt-vr"), part: "VerticalRule", leaf: true, asProps: ["align-self", "margin"] },
+	{
+		match: (el) => el.matches("div:has(> nav.mt-tabs) > span.text-note"),
+		part: "Text",
+		props: () => ({ variant: "note" }),
+		asProps: ["margin-right", "color"],
+	},
 	{
 		match: (el) => el.matches(".mt-textarea"),
 		part: "Textarea",
@@ -598,6 +609,7 @@ const parts = [
 		match: (el) => el.matches(".mt-tabs--bar"),
 		part: "PaneTabs",
 		props: (el) => ({ open: el.querySelector("[aria-selected=true]")?.textContent.trim() }),
+		asProps: ["flex-grow"],
 	},
 	{
 		match: (el) => el.matches(".mt-tabs--bar > [role=tab]"),
@@ -855,6 +867,137 @@ const parts = [
 	},
 	// The design system's buttons show no shortcut: the one a board writes in a button is left out.
 	{ match: (el) => el.matches(".mt-btn > .text-micro"), ignore: true },
+	// The source beside a translation: its quiet line, its title and rule, its body (muted, read only).
+	{
+		match: (el) => el.matches("aside.mt-tool"),
+		part: "SourceColumn",
+		props: (el) => ({
+			label: el.querySelector(".text-meta")?.textContent.trim(),
+			title: el.querySelector("h1")?.textContent.trim(),
+		}),
+		slots: () => ({}),
+		children: (el) => [el.querySelector(".text-reading")],
+		asProps: ["flex", "min-width", "border-right"],
+	},
+	// The line over a translation's title: its language tabs and the assistant's action for the entry.
+	{
+		match: (el) => el.matches("div:has(> nav.mt-tabs[aria-label])") && el.style.height === "32px",
+		part: "LanguageBar",
+		slots: (el) => ({
+			tabs: [el.querySelector(":scope > nav.mt-tabs")],
+			action: [...el.children].filter((child) => !child.matches("nav")),
+		}),
+		children: () => [],
+		asProps: ["display", "align-items", "height"],
+	},
+	// The library as a picker over the screen: the dim behind it is the picker's own.
+	{
+		match: (el) =>
+			el.matches("div:has(> section.mt-dialog nav[aria-label] > .mt-nav)") &&
+			getComputedStyle(el).position === "absolute",
+		part: "PickerDialog",
+		overlay: true,
+		props: (el) => {
+			const dialog = el.querySelector("section.mt-dialog");
+			const nav = dialog.querySelector("nav[aria-label]");
+			const links = [...nav.querySelectorAll(":scope > .mt-nav")];
+			const name = (link) =>
+				[...link.childNodes]
+					.filter((node) => node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp"))
+					.map((node) => node.textContent)
+					.join("")
+					.trim();
+			const [all, ...rest] = links;
+			const picked = links.find((link) => link.classList.contains("is-on"));
+			const buttons = [...dialog.querySelectorAll(".mt-dialog-actions > button")];
+			return {
+				title: dialog.querySelector(".mt-dialog-title")?.textContent.trim(),
+				allLabel: all && name(all),
+				folders: rest.map((link) => ({
+					id: name(link),
+					name: name(link),
+					depth: Number.parseFloat(link.style.paddingLeft) > 0 ? 1 : 0,
+					count: Number(link.querySelector(".n")?.textContent.trim()) || undefined,
+				})),
+				folder: picked && picked !== all ? name(picked) : undefined,
+				foldersLabel: nav.getAttribute("aria-label"),
+				searchLabel: dialog.querySelector("input")?.getAttribute("placeholder"),
+				uploadLabel: buttons[0]?.textContent.trim(),
+				confirmLabel: buttons[buttons.length - 1]?.textContent.trim(),
+			};
+		},
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll(".mt-tile")],
+		asProps: ["position", "inset", "z-index", "display", "align-items", "justify-content"],
+	},
+	// A translation beside its source, block by block.
+	{
+		match: (el) => el.matches("div:has(> .mt-pair)"),
+		part: "PairRows",
+		slots: () => ({}),
+		children: (el) => [...el.querySelectorAll(":scope > .mt-pair")],
+		asProps: ["max-width", "margin"],
+	},
+	{
+		match: (el) => el.matches(".mt-pair"),
+		part: "PairRow",
+		props: (el) => {
+			const gutter = el.querySelector(":scope > .gutter");
+			const marks = gutter ? [...gutter.querySelectorAll(":scope > span")] : [];
+			const note = marks.find((mark) => mark.matches(".is-changed, .is-new"));
+			const sub = marks.find((mark) => mark !== note);
+			const src = el.querySelector(":scope > .src");
+			const dst = el.querySelector(":scope > .dst");
+			// Each block of a side: a new piece per paragraph, list item or row; the marked words of the source as changed pieces.
+			const pieces = (side) =>
+				side
+					? [...side.querySelectorAll("p, li, tr, pre, h1, figcaption")]
+							.filter((block) => !block.closest(".mt-shared button"))
+							.flatMap((block) => {
+								const runs = [...block.childNodes]
+									.filter((node) => node.textContent.trim() !== "" && node.nodeName !== "BUTTON")
+									.map((node) => ({
+										text: node.nodeName === "TR" ? node.textContent : node.textContent,
+										changed: node.nodeName === "MARK" || undefined,
+									}));
+								if (block.matches("tr"))
+									return [{ kind: "p", text: [...block.children].map((cell) => cell.textContent.trim()).join(" · ") }];
+								return runs.map((run, index) => (index === 0 ? { kind: "p", ...run } : run));
+							})
+					: undefined;
+			const head = el.classList.contains("mt-pair--head");
+			const title = el.classList.contains("mt-pair--title");
+			const shared = dst?.querySelector(".mt-shared");
+			return {
+				kind: head ? "head" : title ? "title" : undefined,
+				name: gutter
+					? [...gutter.childNodes]
+							.filter((node) => node.nodeType === Node.TEXT_NODE)
+							.map((node) => node.textContent)
+							.join("")
+							.trim()
+					: undefined,
+				sub: sub?.textContent.trim(),
+				note: note?.textContent.trim(),
+				current: dst?.classList.contains("is-on") || undefined,
+				sourceLabel: head ? src?.textContent.trim() : undefined,
+				translationLabel: head ? dst?.textContent.trim() : undefined,
+				source: head ? undefined : pieces(src),
+				translation: head ? undefined : pieces(dst),
+				shared: shared ? true : undefined,
+				sharedAction: shared?.querySelector("button")?.textContent.trim(),
+			};
+		},
+		leaf: true,
+	},
+	// The line under a pane's tabs: the source view's switch, named by the quiet word before it.
+	{
+		match: (el) => el.matches("div:has(> .mt-seg--sm)") && el.style.height === "var(--height-panebar)",
+		part: "PaneLine",
+		slots: () => ({}),
+		children: (el) => [...el.children],
+		asProps: ["height", "flex-shrink", "display", "align-items", "gap", "padding", "border-bottom"],
+	},
 	// Two versions side by side.
 	{ match: (el) => el.matches(".mt-compare"), part: "CompareView", asProps: ["flex-grow"] },
 	{
@@ -888,11 +1031,36 @@ const parts = [
 		},
 		leaf: true,
 	},
+	// The pill over the status bar while proposals wait: it opens over the editor.
+	{
+		match: (el) => el.matches("div[role=toolbar]:has(> .mt-bubble)"),
+		part: "ProposalDock",
+		overlay: true,
+		props: (el) => {
+			const bubble = el.querySelector(".mt-bubble");
+			const [position, total] = (bubble.querySelector(".mt-count")?.textContent ?? "")
+				.split("/")
+				.map((n) => Number(n.trim()));
+			const buttons = [...bubble.querySelectorAll("button")];
+			return {
+				name: bubble.querySelector(".who")?.textContent.trim(),
+				position: position || undefined,
+				total: total || undefined,
+				previousLabel: buttons[0]?.getAttribute("aria-label"),
+				nextLabel: buttons[1]?.getAttribute("aria-label"),
+				discardAllLabel: bubble.querySelector(".mt-text-btn")?.textContent.trim(),
+				acceptAllLabel: bubble.querySelector(".mt-btn")?.textContent.trim(),
+			};
+		},
+		leaf: true,
+		asProps: ["position", "left", "right", "bottom", "z-index", "display", "justify-content", "pointer-events"],
+	},
 	{
 		match: (el) => el.matches(".text-reading"),
 		part: "EditorBody",
-		props: (el) => ({ doc: bodyBlocks(el) }),
+		props: (el) => ({ doc: bodyBlocks(el), muted: el.closest(".mt-tool") ? true : undefined }),
 		leaf: true,
+		asProps: ["color"],
 	},
 	{
 		match: (el) => el.matches("footer.mt-statusbar"),
@@ -1168,6 +1336,8 @@ const parts = [
 		match: (el) => el.matches(".mt-tabs"),
 		part: "TabLinks",
 		props: (el) => ({ variant: el.closest(".mt-toolbar") ? "toolbar" : undefined }),
+		// A tab row takes the room its line leaves.
+		asProps: ["flex-grow"],
 	},
 	{
 		match: (el) => el.matches(".mt-tabs > a"),
@@ -1263,6 +1433,13 @@ const parts = [
 		props: (el) => ({ label: el.textContent.trim() }),
 		leaf: true,
 	},
+	// The assistant's action, in the proposal blue.
+	{
+		match: (el) => el.matches(".mt-text-btn") && el.style.color.includes("--fg-proposal"),
+		part: "TextButton",
+		props: () => ({ tone: "proposal" }),
+		asProps: ["color", "display", "align-items", "gap"],
+	},
 	{
 		match: (el) => el.matches(".mt-text-btn"),
 		part: "TextButton",
@@ -1310,7 +1487,7 @@ const parts = [
 
 /** The classes this adapter reads: any other class on an element is a look of its own. */
 const known =
-	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff)$/;
+	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger|mt-droparea|is-over|mt-tiles|mt-tiles--folders|mt-tile|is-failed|img|is-file|ext|meta|acts|mt-folder|is-drop|mt-seg--sm|mt-seg--inline|mt-review-line|gut|cell|was|now|side|mt-ins|mt-split|mt-caret--solo|text-reading|mt-block|mt-statusbar|cell|grow|warn|danger|ok|mt-compare|props|mt-diff|mt-bubble|who|mt-tool|mt-untranslated|mt-fill|mt-pair|mt-pair--head|mt-pair--title|gutter|src|dst|is-changed|is-new|mt-doc-callout|mt-doc-code|mt-doc-table|num|mt-shared)$/;
 
 /**
  * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame

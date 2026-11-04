@@ -7,12 +7,16 @@ import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "../change";
 import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
+import { cn } from "../cn";
 import {
 	Compare,
 	CompareBody,
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,
@@ -38,6 +42,8 @@ import { LanguageRow, LanguageSource } from "../language-row";
 import { ListHead } from "../list-head";
 import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
 import { LockMark } from "../lock-mark";
+import { Untranslated } from "../marker";
+import { MediaPicker } from "../media-picker";
 import { NavLink } from "../nav-link";
 import { Option } from "../option";
 import { PageColumn, PageHeader, PageToolbar } from "../page-header";
@@ -52,6 +58,7 @@ import {
 	PaginationPrevious,
 } from "../pagination";
 import { PickList, PickListItem } from "../pick-list";
+import { ProposalBubble, ProposalBubbleDock } from "../proposal-bubble";
 import { Del, Ins } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
@@ -1420,25 +1427,78 @@ function TitleRule() {
  * An entry's body: where the editor goes. The spec says only that the body is here; its blocks come from the data (`doc`: each block's `kind`, `h2`,
  * `h3`, `p`, `quote` or `figure`, and its `text`), drawn in the editor's reading type. The editor itself takes this place when the screen is wired.
  */
-function EditorBody({ doc }: { doc?: readonly { kind?: string; text: string }[] }) {
+function EditorBody({
+	doc,
+	muted,
+}: {
+	doc?: readonly { kind?: string; text: string; untranslated?: boolean }[];
+	/** Read only, in the quiet ink (the source beside a translation). */
+	muted?: boolean;
+}) {
 	return (
-		<div className="prose monti-dark:prose-invert max-w-none text-monti-default text-monti-reading">
+		<div
+			className={cn(
+				"prose monti-dark:prose-invert max-w-none text-monti-reading",
+				muted ? "text-monti-muted" : "text-monti-default",
+			)}
+		>
 			{doc?.map((block, index) => {
 				// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
 				const key = index;
-				if (block.kind === "h2") return <h2 key={key}>{block.text}</h2>;
-				if (block.kind === "h3") return <h3 key={key}>{block.text}</h3>;
-				if (block.kind === "quote") return <blockquote key={key}>{block.text}</blockquote>;
+				// A block still in the source's language reads faint until it is translated.
+				const text = block.untranslated ? <Untranslated>{block.text}</Untranslated> : block.text;
+				if (block.kind === "h2") return <h2 key={key}>{text}</h2>;
+				if (block.kind === "h3") return <h3 key={key}>{text}</h3>;
+				if (block.kind === "quote") return <blockquote key={key}>{text}</blockquote>;
 				if (block.kind === "figure")
 					return (
 						<figure key={key}>
 							<div className="aspect-[3/2] rounded-monti-md bg-monti-muted" />
-							{block.text && <figcaption>{block.text}</figcaption>}
+							{block.text && <figcaption>{text}</figcaption>}
 						</figure>
 					);
-				return <p key={key}>{block.text}</p>;
+				return <p key={key}>{text}</p>;
 			})}
 		</div>
+	);
+}
+
+/**
+ * The source beside a translation, read only: on the tool ground with a line at its right edge, a quiet line naming it (`label`), the source's title
+ * (from the data), the rule, and its body (an `EditorBody`, muted).
+ */
+function SourceColumn({ label, title, children }: { label?: string; title?: string; children?: React.ReactNode }) {
+	return (
+		<BoxPart as="aside" aria-label={label} background="tool" border="right" grow minWidth={0}>
+			<BoxPart paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" className="mx-auto">
+				<Inline minHeight="icon-button">
+					<Text variant="meta" tone="subtle">
+						{label}
+					</Text>
+				</Inline>
+				<BoxPart paddingTop={16} paddingBottom={20}>
+					<Heading as="h1" variant="display" tone="muted">
+						{title}
+					</Heading>
+				</BoxPart>
+				<BoxPart border="top" paddingTop={32}>
+					{children}
+				</BoxPart>
+			</BoxPart>
+		</BoxPart>
+	);
+}
+
+/**
+ * The line over a translation's title: its language tabs, and at the end what the assistant can do for the whole entry. As tall as the source's quiet
+ * line beside it, so both titles start on one line.
+ */
+function LanguageBar({ tabs, action }: { tabs?: React.ReactNode; action?: React.ReactNode }) {
+	return (
+		<Inline minHeight="icon-button" justify="between" gap={12}>
+			{tabs}
+			{action}
+		</Inline>
 	);
 }
 
@@ -1495,6 +1555,96 @@ function runOf(pieces: readonly { text: string; changed?: boolean }[]) {
 	));
 }
 
+/** A translation and its source block by block: its `PairRow`s. */
+function PairRows({ children }: { children?: React.ReactNode }) {
+	return <CompareRows>{children}</CompareRows>;
+}
+
+/**
+ * One row of `PairRows`. `kind` `head` is the row of the two sides' names (`source` and `translation` are its words), `title` the two titles (from the
+ * data); any other row is one block: its `name` (and `sub`, what is in it), a `note` when its source moved, `current` while it is written, and the
+ * two sides' text from the data (`changed` source words are marked; an `untranslated` translation is the source, faint). `shared` is the translation
+ * of a block both languages use, with the button (`sharedAction`) that makes a copy for this language.
+ */
+function PairRow({
+	kind,
+	name,
+	sub,
+	note,
+	current,
+	sourceLabel,
+	translationLabel,
+	source,
+	translation,
+	shared,
+	sharedAction,
+}: {
+	kind?: "head" | "title" | "block";
+	name?: string;
+	sub?: string;
+	note?: string;
+	current?: boolean;
+	sourceLabel?: string;
+	translationLabel?: string;
+	source?: Pieces;
+	translation?: Pieces;
+	shared?: boolean;
+	sharedAction?: string;
+}) {
+	const side = (pieces: Pieces | undefined) =>
+		kind === "title" ? (
+			<Heading as="h2" variant="page">
+				{pieces?.map((piece) => piece.text).join("")}
+			</Heading>
+		) : (
+			<CompareBody>
+				{blocksOf(pieces).map((block, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
+					<CompareParagraph key={index}>{runOf(block.pieces)}</CompareParagraph>
+				))}
+			</CompareBody>
+		);
+	return (
+		<CompareRow
+			head={kind === "head"}
+			title={kind === "title"}
+			current={current}
+			name={
+				sub ? (
+					<>
+						{name}
+						<span className="block text-monti-faint">{sub}</span>
+					</>
+				) : (
+					name
+				)
+			}
+			note={note}
+			source={kind === "head" ? sourceLabel : side(source)}
+			translation={
+				kind === "head" ? (
+					translationLabel
+				) : shared ? (
+					<CompareShared action={<TextButton variant="underline">{sharedAction}</TextButton>}>
+						{side(translation)}
+					</CompareShared>
+				) : (
+					side(translation)
+				)
+			}
+		/>
+	);
+}
+
+/** The line under a pane's tabs (the source view's switch), as tall as a pane bar with a line under it. */
+function PaneLine({ children }: { children?: React.ReactNode }) {
+	return (
+		<Inline minHeight="panebar" gap={8} border="bottom" paddingX={12} shrink={false}>
+			{children}
+		</Inline>
+	);
+}
+
 /** Two versions of one entry side by side: its two `CompareColumn`s. */
 function CompareView({ children }: { children?: React.ReactNode }) {
 	return <Compare>{children}</Compare>;
@@ -1542,6 +1692,96 @@ function CompareColumn({
 	);
 }
 
+/**
+ * The pill over the status bar while the assistant's proposals wait: the request they came from (`name`, the admin's words from the data), which one
+ * is looked at of how many, and discarding or taking them all.
+ */
+function ProposalDock({
+	name,
+	position,
+	total,
+	previousLabel,
+	nextLabel,
+	discardAllLabel,
+	acceptAllLabel,
+}: {
+	name?: string;
+	position?: number;
+	total?: number;
+	previousLabel?: string;
+	nextLabel?: string;
+	discardAllLabel?: string;
+	acceptAllLabel?: string;
+}) {
+	const none = () => {};
+	return (
+		<ProposalBubbleDock>
+			<ProposalBubble
+				name={name ?? ""}
+				position={position ?? 1}
+				total={total ?? 1}
+				previousLabel={previousLabel ?? ""}
+				nextLabel={nextLabel ?? ""}
+				onPrevious={none}
+				onNext={none}
+				discardAllLabel={discardAllLabel ?? ""}
+				onDiscardAll={none}
+				acceptAllLabel={acceptAllLabel ?? ""}
+				onAcceptAll={none}
+			/>
+		</ProposalBubbleDock>
+	);
+}
+
+/**
+ * The library as a picker, open over the screen (an image to insert): its `title`, the folders at the left (from the data: each one's `id`, `name`,
+ * `depth` and `count`; `folder` the picked one), the search box, the files (`MediaTile`s) and the buttons.
+ */
+function PickerDialog({
+	title,
+	allLabel,
+	folders,
+	folder,
+	foldersLabel,
+	searchLabel,
+	uploadLabel,
+	confirmLabel,
+	children,
+}: {
+	title?: string;
+	allLabel?: string;
+	folders?: readonly { id: string; name: string; depth: number; count?: number }[];
+	folder?: string;
+	foldersLabel?: string;
+	searchLabel?: string;
+	uploadLabel?: string;
+	confirmLabel?: string;
+	children?: React.ReactNode;
+}) {
+	const none = () => {};
+	return (
+		<MediaPicker
+			open
+			onOpenChange={none}
+			title={title ?? ""}
+			allLabel={allLabel ?? ""}
+			folders={folders ?? []}
+			folder={folder ?? null}
+			onFolderChange={none}
+			foldersLabel={foldersLabel ?? ""}
+			search=""
+			onSearchChange={none}
+			searchLabel={searchLabel ?? ""}
+			uploadLabel={uploadLabel ?? ""}
+			onUpload={none}
+			confirmLabel={confirmLabel ?? ""}
+			onConfirm={none}
+		>
+			{children}
+		</MediaPicker>
+	);
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1550,14 +1790,21 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	PickerDialog,
+	ProposalDock,
 	CompareView,
 	CompareColumn,
+	PairRows,
+	PairRow,
+	PaneLine,
 	EditorTopBar,
 	PublishButton,
 	EntryTitle,
 	TitleInput,
 	TitleRule,
 	EditorBody,
+	SourceColumn,
+	LanguageBar,
 	EditorStatusBar,
 	StatusCell,
 	StatusGap,
@@ -1732,7 +1979,50 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	PickerDialog: {
+		kind: "overlay",
+		props: {
+			title: "text",
+			allLabel: "text",
+			folders: "data:id,name,depth,count",
+			folder: "state",
+			foldersLabel: "text",
+			searchLabel: "text",
+			uploadLabel: "text",
+			confirmLabel: "text",
+		},
+	},
+	ProposalDock: {
+		kind: "overlay",
+		props: {
+			name: "state",
+			position: "state",
+			total: "state",
+			previousLabel: "text",
+			nextLabel: "text",
+			discardAllLabel: "text",
+			acceptAllLabel: "text",
+		},
+	},
 	CompareView: { kind: "part", props: {} },
+	PairRows: { kind: "part", props: {} },
+	PaneLine: { kind: "part", props: {} },
+	PairRow: {
+		kind: "part",
+		props: {
+			kind: "variant",
+			name: "text",
+			sub: "text",
+			note: "text",
+			current: "flag",
+			sourceLabel: "text",
+			translationLabel: "text",
+			source: "data:kind,text,changed",
+			translation: "data:kind,text,changed",
+			shared: "flag",
+			sharedAction: "text",
+		},
+	},
 	CompareColumn: {
 		kind: "part",
 		props: {
@@ -1748,7 +2038,9 @@ export const CATALOG = {
 	EntryTitle: { kind: "part", props: { text: "state", faint: "flag" } },
 	TitleRule: { kind: "part", props: {} },
 	TitleInput: { kind: "part", bind: "yes", props: { id: "text", value: "state", placeholder: "text", label: "text" } },
-	EditorBody: { kind: "part", props: { doc: "data:kind,text" } },
+	EditorBody: { kind: "part", props: { doc: "data:kind,text,untranslated", muted: "flag" } },
+	SourceColumn: { kind: "part", props: { label: "text", title: "state" } },
+	LanguageBar: { kind: "part", props: {} },
 	EditorStatusBar: { kind: "part", props: { label: "text" } },
 	StatusCell: { kind: "part", props: { label: "text", tone: "variant", noDot: "flag", end: "flag" } },
 	StatusGap: { kind: "part", props: {} },

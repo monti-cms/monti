@@ -15,6 +15,80 @@
 			},
 			"events": []
 		},
+		"PickerDialog": {
+			"kind": "overlay",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"allLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"confirmLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"folder": {
+					"kind": "state"
+				},
+				"folders": {
+					"kind": "data",
+					"fields": ["id", "name", "depth", "count"]
+				},
+				"foldersLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"searchLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				},
+				"uploadLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"ProposalDock": {
+			"kind": "overlay",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"acceptAllLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"discardAllLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"name": {
+					"kind": "state"
+				},
+				"nextLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"position": {
+					"kind": "state"
+				},
+				"previousLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"total": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
 		"CompareView": {
 			"kind": "part",
 			"bind": false,
@@ -49,6 +123,75 @@
 					"kind": "state"
 				}
 			},
+			"events": []
+		},
+		"PairRows": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"PairRow": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"current": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"kind": {
+					"kind": "variant",
+					"enum": ["block", "head", "title"]
+				},
+				"name": {
+					"kind": "text",
+					"type": "string"
+				},
+				"note": {
+					"kind": "text",
+					"type": "string"
+				},
+				"shared": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"sharedAction": {
+					"kind": "text",
+					"type": "string"
+				},
+				"source": {
+					"kind": "data",
+					"fields": ["kind", "text", "changed"]
+				},
+				"sourceLabel": {
+					"kind": "text",
+					"type": "string"
+				},
+				"sub": {
+					"kind": "text",
+					"type": "string"
+				},
+				"translation": {
+					"kind": "data",
+					"fields": ["kind", "text", "changed"]
+				},
+				"translationLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"PaneLine": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
 			"events": []
 		},
 		"EditorTopBar": {
@@ -132,9 +275,37 @@
 			"props": {
 				"doc": {
 					"kind": "data",
-					"fields": ["kind", "text"]
+					"fields": ["kind", "text", "untranslated"]
+				},
+				"muted": {
+					"kind": "flag",
+					"type": "boolean"
 				}
 			},
+			"events": []
+		},
+		"SourceColumn": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"LanguageBar": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["action", "tabs"],
+			"props": {},
 			"events": []
 		},
 		"EditorStatusBar": {
