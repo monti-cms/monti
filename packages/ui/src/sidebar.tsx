@@ -553,23 +553,25 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
+const SUB_DEPTH = ["pl-9", "pl-[54px]", "pl-[72px]", "pl-[90px]"] as const;
 
 /**
  * The tree line of a folder row, drawn on the row's own room: a 1px rule down from its parent's icon (or its parent folder's words) that runs
- * straight past each folder, and a rounded elbow into the middle of the last one at that depth, where it ends.
+ * straight past each folder, and a rounded elbow into the middle of the last one at that depth, where it ends. It keeps some air: it starts 4px
+ * below the parent's row and its elbow stops short of the folder's name.
  */
 const SUB_LINE_X = [
-	"before:left-[17px] after:left-[17px] after:w-[15px]",
-	"before:left-[39px] after:left-[39px] after:w-[9px]",
-	"before:left-[53px] after:left-[53px] after:w-[9px]",
-	"before:left-[67px] after:left-[67px] after:w-[9px]",
+	"before:left-[17px] after:left-[17px] after:w-[10px]",
+	"before:left-[37px] after:left-[37px] after:w-[10px]",
+	"before:left-[55px] after:left-[55px] after:w-[10px]",
+	"before:left-[73px] after:left-[73px] after:w-[10px]",
 ] as const;
 /** Where each folder depth's rule runs, in px from the row's start (the parent's icon, then each folder's words). */
-const SUB_LINE_LEFT = [17, 39, 53, 67] as const;
+const SUB_LINE_LEFT = [17, 37, 55, 73] as const;
 
 /**
- * The tree lines of a flat folder list, from each folder's depth: whether a folder is the last at its depth under its parent (its rule ends at its
+ * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
+ * whether it is the last at its depth under its parent (its rule ends at its
  * elbow), and which ancestors' rules run on past it (`through[d]`: the parent at depth `d` has a later sibling).
  */
 export function folderTree(depths: readonly number[]) {
@@ -583,16 +585,18 @@ export function folderTree(depths: readonly number[]) {
 	return depths.map((depth, index) => {
 		const through: boolean[] = [];
 		for (let level = 0; level < depth; level++) through.push(hasLaterSibling(index, level));
-		return { last: !hasLaterSibling(index, depth), through };
+		const first = index === 0 || depths[index - 1] < depth;
+		return { first, last: !hasLaterSibling(index, depth), through };
 	});
 }
 
+const SUB_LINE_FIRST = "before:top-monti-4 after:top-monti-4 after:h-[calc(50%-4px)]";
 const SUB_LINE =
-	"relative before:pointer-events-none before:absolute before:-top-monti-2 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:-top-monti-2 after:h-[calc(50%+2px)] after:rounded-bl-[10px] after:border-monti-strong after:border-b after:border-l after:content-['']";
+	"relative before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:top-0 after:h-1/2 after:rounded-bl-[10px] after:border-monti-strong after:border-b after:border-l after:content-['']";
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A thin tree line runs down from the parent and curves into each folder (`SUB_LINE`). A row starts 36px in from the edge, and `depth` indents a folder inside another by 14px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * the selected ground. A thin tree line runs down from the parent and curves into each folder (`SUB_LINE`). A row starts 36px in from the edge, and `depth` indents a folder inside another by 18px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
@@ -609,7 +613,7 @@ function SidebarMenuSubButton({
 		depth?: 0 | 1 | 2 | 3;
 		dropTarget?: boolean;
 		/** The row's place in the tree, from {@link folderTree}: whether its rule ends here, and which ancestors' rules run past it. */
-		tree?: { last: boolean; through: readonly boolean[] };
+		tree?: { first: boolean; last: boolean; through: readonly boolean[] };
 	}) {
 	// The ancestors' rules that run on past this row: 1px lines drawn as the row's background, at their depths' places.
 	const through = (tree?.through ?? []).flatMap((on, level) => (on ? [SUB_LINE_LEFT[level]] : []));
@@ -639,6 +643,10 @@ function SidebarMenuSubButton({
 							? "before:hidden"
 							: "after:hidden"
 						: "not-in-[li:last-child]:after:hidden in-[li:last-child]:before:hidden",
+					// The first folder under a parent leaves 4px of air under the parent's row before its rule starts.
+					(tree ? tree.first : undefined) && SUB_LINE_FIRST,
+					!tree &&
+						"in-[li:first-child]:before:top-monti-4 in-[li:first-child]:after:top-monti-4 in-[li:first-child]:after:h-[calc(50%-4px)]",
 					className,
 				),
 				style: lines || style ? { ...lines, ...style } : undefined,

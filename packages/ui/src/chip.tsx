@@ -17,7 +17,13 @@ export const CHIP_SM = "h-monti-control-xs gap-monti-4 px-monti-8 text-monti-cap
 
 /** What a chip's remove mark looks like: lighter than the text. */
 export const CHIP_REMOVE =
-	"flex shrink-0 cursor-pointer rounded-monti-full border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:bg-monti-current hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/30 active:bg-monti-emphasis/15 active:text-monti-default";
+	"flex shrink-0 cursor-pointer rounded-monti-full border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/30";
+
+/**
+ * A chip that can be taken off answers as a whole, as most systems' chips do: one step darker under the pointer, one more while its × is pressed. The ×
+ * only turns ink; the keyboard's ring runs around the × alone, the one thing in it that can be pressed.
+ */
+export const CHIP_REMOVABLE = "hover:bg-monti-current has-[>button:active]:bg-monti-emphasis/20";
 
 /**
  * The field that holds chips and the words being typed after them (a combobox of many, `TagInput`): an underline like `Input`, ink while it has
@@ -42,6 +48,7 @@ function Chip({
 	onRemove,
 	removeLabel,
 	proposal = false,
+	disabled = false,
 	size = "default",
 	className,
 	children,
@@ -55,6 +62,8 @@ function Chip({
 	removeLabel?: string;
 	/** The assistant set this and nobody has touched it yet. Turn it off when it is changed. */
 	proposal?: boolean;
+	/** Cannot be taken off now: faint, with no × and no answer to the pointer. */
+	disabled?: boolean;
 }) {
 	const labels = useUiLabels();
 	return (
@@ -62,9 +71,12 @@ function Chip({
 			data-slot="chip"
 			data-proposal={proposal || undefined}
 			data-size={size}
+			data-disabled={disabled || undefined}
 			className={cn(
 				CHIP,
 				size === "sm" && CHIP_SM,
+				onRemove && !disabled && CHIP_REMOVABLE,
+				disabled && "opacity-45",
 				proposal && "bg-monti-proposal-muted text-monti-proposal",
 				className,
 			)}
@@ -73,7 +85,7 @@ function Chip({
 			{proposal && <Spark className="size-monti-icon-xs" />}
 			<ProposalNote proposal={proposal} />
 			{children}
-			{onRemove && (
+			{onRemove && !disabled && (
 				<button
 					type="button"
 					aria-label={removeLabel ?? labels.deselect}

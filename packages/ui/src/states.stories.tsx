@@ -187,8 +187,8 @@ export const Buttons: Story = {
 			</Row>
 			<Row name="FilterButton">{(disabled) => <FilterButton disabled={disabled}>태그</FilterButton>}</Row>
 			<Row name="Chip ×">
-				{() => (
-					<Chip onRemove={() => {}} removeLabel="빼기">
+				{(disabled) => (
+					<Chip onRemove={() => {}} removeLabel="빼기" disabled={disabled}>
 						상태: 발행됨
 					</Chip>
 				)}

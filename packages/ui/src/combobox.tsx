@@ -3,7 +3,7 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import * as React from "react";
 import { Caret } from "./caret";
-import { CHIP, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
+import { CHIP, CHIP_REMOVABLE, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
@@ -219,6 +219,7 @@ function ComboboxChip({
 			className={cn(
 				CHIP,
 				CHIP_SM,
+				CHIP_REMOVABLE,
 				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
 				className,
 			)}

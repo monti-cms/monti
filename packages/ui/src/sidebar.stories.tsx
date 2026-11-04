@@ -29,13 +29,18 @@ import {
  * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the tools and the settings.
  * The open row is on the current ground and semibold; a row under the pointer takes the selected ground. Folded (⌘B) it is a 48px rail of icons.
  */
-const FOLDERS = [
+type Folder = { name: string; count: string; depth: 0 | 1; active?: boolean };
+// The sidebar lists a collection's top-level folders; an open folder shows its own folders under it.
+const TOP: readonly Folder[] = [
+	{ name: "에세이", count: "12", depth: 0 },
+	{ name: "시리즈 원고", count: "2", depth: 0 },
+];
+const ESSAYS_OPEN: readonly Folder[] = [
 	{ name: "에세이", count: "12", depth: 0, active: true },
 	{ name: "여행", count: "5", depth: 1 },
 	{ name: "회고", count: "3", depth: 1 },
 	{ name: "시리즈 원고", count: "2", depth: 0 },
-] as const;
-const TREE = folderTree(FOLDERS.map((folder) => folder.depth));
+];
 
 const meta = {
 	title: "Patterns/Frame/Sidebar",
@@ -47,7 +52,8 @@ type Story = StoryObj<typeof meta>;
 /** Stands in for the app's router link. */
 const RouterLink = (props: React.ComponentProps<"a">) => <a {...props} />;
 
-function Nav({ rail = false }: { rail?: boolean }) {
+function Nav({ rail = false, folders = TOP }: { rail?: boolean; folders?: readonly Folder[] }) {
+	const tree = folderTree(folders.map((folder) => folder.depth));
 	const [mode, setMode] = useState<"system" | "light" | "dark">("system");
 	return (
 		<SidebarProvider rail={rail} onRailChange={() => {}}>
@@ -74,13 +80,13 @@ function Nav({ rail = false }: { rail?: boolean }) {
 									</SidebarMenuButton>
 									{!rail && (
 										<SidebarMenuSub aria-label="게시글 폴더">
-											{FOLDERS.map((folder, index) => (
+											{folders.map((folder, index) => (
 												<li key={folder.name}>
 													<SidebarMenuSubButton
 														render={<button type="button" />}
-														isActive={"active" in folder}
+														isActive={folder.active}
 														depth={folder.depth}
-														tree={TREE[index]}
+														tree={tree[index]}
 													>
 														<span>{folder.name}</span>
 														<Count>{folder.count}</Count>
@@ -143,6 +149,9 @@ function Nav({ rail = false }: { rail?: boolean }) {
 
 /** Open: names, counts, the open collection's folder tree, the screen mode switch at the bottom. */
 export const Open: Story = { render: () => <Nav /> };
+
+/** A folder open (posts › essays): its own folders show under it, and the top level's line runs past them to the next folder. */
+export const FolderOpen: Story = { render: () => <Nav folders={ESSAYS_OPEN} /> };
 
 /** Folded to the rail: icons only, names in tooltips, a dot on the tools icon for a failure. */
 export const Rail: Story = { render: () => <Nav rail /> };
