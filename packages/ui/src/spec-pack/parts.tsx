@@ -571,13 +571,27 @@ function Tab({
 }
 
 /** A choice of this time only (a backup's "include media"): a checkbox, its words, and a quiet note after them. */
-function OptionCheck({ label, note, checked }: { label?: string; note?: string; checked?: boolean }) {
+function OptionCheck({
+	label,
+	mono,
+	note,
+	noteTone,
+	checked,
+}: {
+	label?: string;
+	/** The words are a key (a heading level's tag). */
+	mono?: boolean;
+	note?: string;
+	/** `warning` for a note that says the option changed. */
+	noteTone?: "warning";
+	checked?: boolean;
+}) {
 	return (
 		<Option>
 			<Checkbox checked={checked ?? false} />
-			{label}
+			{mono ? <Text mono>{label}</Text> : label}
 			{note && (
-				<Text variant="meta" tone="subtle">
+				<Text variant="meta" tone={noteTone ?? "subtle"}>
 					{note}
 				</Text>
 			)}
@@ -680,12 +694,17 @@ function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; p
 function SaveGroup({
 	label,
 	count,
+	proposalsLabel,
+	proposalsCount,
 	discardLabel,
 	saveLabel,
 	saveDisabled,
 }: {
 	label?: string;
 	count?: number;
+	/** "proposals" and how many, while the assistant's proposals wait in the form. */
+	proposalsLabel?: string;
+	proposalsCount?: number;
 	discardLabel?: string;
 	saveLabel?: string;
 	saveDisabled?: boolean;
@@ -694,6 +713,8 @@ function SaveGroup({
 		<ChangesBar
 			label={label ?? ""}
 			count={Number(count ?? 0)}
+			proposalsLabel={proposalsLabel}
+			proposalsCount={proposalsCount}
 			discardLabel={discardLabel ?? ""}
 			saveLabel={saveLabel ?? ""}
 			saveDisabled={saveDisabled}
@@ -1298,6 +1319,7 @@ function ReviewEntry({
 	title,
 	path,
 	end,
+	again,
 	change,
 	included,
 	muted,
@@ -1305,12 +1327,32 @@ function ReviewEntry({
 	title?: string;
 	path?: string;
 	end?: string;
+	/** What can be done about how it went ("Make again"), after `end`. */
+	again?: string;
 	change?: Marked;
 	included?: boolean;
 	muted?: boolean;
 }) {
 	return (
-		<ReviewItem included={included ?? false} includeLabel="" title={title} path={path} end={end} muted={muted}>
+		<ReviewItem
+			included={included ?? false}
+			includeLabel=""
+			title={title}
+			path={path}
+			end={
+				again ? (
+					<>
+						{end}{" "}
+						<TextButton variant="underline" size="caption">
+							{again}
+						</TextButton>
+					</>
+				) : (
+					end
+				)
+			}
+			muted={muted}
+		>
 			{change ? marked(change) : undefined}
 		</ReviewItem>
 	);
@@ -2055,7 +2097,15 @@ export const CATALOG = {
 	ReviewHead: { kind: "part", props: { title: "text", meta: "text" } },
 	ReviewEntry: {
 		kind: "part",
-		props: { title: "state", path: "state", end: "text", change: "data:kind,text", included: "flag", muted: "flag" },
+		props: {
+			title: "state",
+			path: "state",
+			end: "text",
+			again: "text",
+			change: "data:kind,text",
+			included: "flag",
+			muted: "flag",
+		},
 	},
 	ReviewBlockLine: { kind: "part", props: { label: "text", note: "text", text: "data:kind,text", included: "flag" } },
 	ReviewBlockCompare: {
@@ -2152,10 +2202,18 @@ export const CATALOG = {
 	ListSection: { kind: "part", props: { count: "text", countTone: "variant" } },
 	ListSectionRows: { kind: "part", props: {} },
 	ListSectionRow: { kind: "part", props: { metaTone: "variant", muted: "flag" } },
-	Textarea: { kind: "part", bind: "yes", props: { rows: "state", mono: "flag" } },
+	Textarea: { kind: "part", bind: "yes", props: { rows: "state", mono: "flag", value: "state" } },
 	SaveGroup: {
 		kind: "part",
-		props: { label: "text", count: "state", discardLabel: "text", saveLabel: "text", saveDisabled: "flag" },
+		props: {
+			label: "text",
+			count: "state",
+			discardLabel: "text",
+			saveLabel: "text",
+			saveDisabled: "flag",
+			proposalsLabel: "text",
+			proposalsCount: "state",
+		},
 	},
 	ChangedLabel: { kind: "part", props: { label: "text", undo: "text", proposal: "flag", for: "ref" } },
 	TwoLineCell: { kind: "part", props: { title: "text", sub: "text", proposal: "flag" } },
@@ -2165,7 +2223,10 @@ export const CATALOG = {
 	AffixField: { kind: "part", props: { prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" } },
 	VerticalRule: { kind: "part", props: {} },
 	Section: { kind: "part", props: { stacked: "flag", last: "flag" } },
-	OptionCheck: { kind: "part", props: { label: "text", note: "text", checked: "flag" } },
+	OptionCheck: {
+		kind: "part",
+		props: { label: "text", note: "text", checked: "flag", mono: "flag", noteTone: "variant" },
+	},
 	ListBody: { kind: "part", props: {} },
 	TwoLineTitleCell: { kind: "part", props: { title: "text", note: "text" } },
 	TrashTitleCell: {

@@ -187,8 +187,10 @@ function isSpacer(el) {
  * without a word. Marks drawn as a single sign (×, +, →) and what the board hides from reading are the part's own.
  */
 function leftOut(el, rule, props, holders) {
+	if (rule.ownWords) return [];
 	const read = holders.flat().filter(Boolean);
-	const said = JSON.stringify(props);
+	// What the props say, read as words: a value's line breaks are spaces, as the board's words are read.
+	const said = JSON.stringify(props).replace(/\\n/g, " ").replace(/\s+/g, " ");
 	const out = [];
 	const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
 	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -196,6 +198,8 @@ function leftOut(el, rule, props, holders) {
 		const parent = node.parentElement;
 		if (!text || !parent || !shown(parent) || parent.closest("[aria-hidden=true]")) continue;
 		if (read.some((holder) => holder === parent || holder.contains(parent))) continue;
+		// What the rule says another part hands on (a note its parent reads).
+		if (rule.leaves && [...el.querySelectorAll(rule.leaves)].some((left) => left.contains(parent))) continue;
 		if (text.length <= 2 && !/[\p{L}\p{N}]/u.test(text)) continue;
 		if (said.includes(JSON.stringify(text).slice(1, -1))) continue;
 		let ignored = false;

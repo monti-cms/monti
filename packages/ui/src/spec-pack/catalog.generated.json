@@ -406,6 +406,10 @@
 			"children": false,
 			"slots": [],
 			"props": {
+				"again": {
+					"kind": "text",
+					"type": "string"
+				},
 				"change": {
 					"kind": "data",
 					"fields": ["kind", "text"]
@@ -1394,6 +1398,9 @@
 				},
 				"rows": {
 					"kind": "state"
+				},
+				"value": {
+					"kind": "state"
 				}
 			},
 			"events": []
@@ -1412,6 +1419,13 @@
 					"type": "string"
 				},
 				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"proposalsCount": {
+					"kind": "state"
+				},
+				"proposalsLabel": {
 					"kind": "text",
 					"type": "string"
 				},
@@ -1599,9 +1613,17 @@
 					"kind": "text",
 					"type": "string"
 				},
+				"mono": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"note": {
 					"kind": "text",
 					"type": "string"
+				},
+				"noteTone": {
+					"kind": "variant",
+					"enum": ["warning"]
 				}
 			},
 			"events": []

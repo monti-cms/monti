@@ -60,6 +60,13 @@ const bodyBlocks = (el) =>
 			};
 		})
 		.filter((block) => block.text !== "" || block.kind === "figure");
+// Whether an element has words of its own, not only in its children.
+// (A board's data fills its words in a span of its runtime's: those are its own words too.)
+const ownText = (el) =>
+	[...(el?.childNodes ?? [])].some(
+		(node) =>
+			(node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp")) && node.textContent.trim() !== "",
+	);
 // An option row's own words, without its note, its count or its control.
 const choiceLabel = (el) =>
 	[...el.childNodes]
@@ -178,8 +185,13 @@ const parts = [
 		}),
 		slots: (el) => ({
 			// The row draws its title, its count and its meta line itself: each place takes the words, not the board's element.
-			title: el.querySelector(".mt-row-title > span:not(.mt-count)"),
-			titleCount: el.querySelector(".mt-row-title > .mt-count"),
+			// A title written straight in its element (a name, then a quiet "· role") is all of it; otherwise its first words, its count apart.
+			...(ownText(el.querySelector(".mt-row-title"))
+				? { title: el.querySelector(".mt-row-title") }
+				: {
+						title: el.querySelector(".mt-row-title > span:not(.mt-count)"),
+						titleCount: el.querySelector(".mt-row-title > .mt-count"),
+					}),
 			meta: el.querySelector(".text-meta"),
 			actions: [...el.querySelectorAll(":scope > .mt-text-btn")],
 			control: [el.querySelector(":scope > .mt-select")],
@@ -335,7 +347,7 @@ const parts = [
 		asProps: ["order", "white-space", "color", "text-align"],
 	},
 	{
-		match: (el) => el.matches(".mt-row > .mt-text-btn"),
+		match: (el) => el.matches(".mt-row > .mt-text-btn") && el.textContent.trim() === "⋯",
 		part: "ActionsCell",
 		leaf: true,
 		asProps: ["order", "font-size", "justify-self", "opacity"],
@@ -400,12 +412,17 @@ const parts = [
 		match: (el) => el.matches(".mt-option:not(:has(> .mt-switch, > .mt-radio))"),
 		part: "OptionCheck",
 		props: (el) => ({
-			label: [...el.childNodes]
-				.filter((node) => node.nodeType === Node.TEXT_NODE)
-				.map((node) => node.textContent)
-				.join("")
-				.trim(),
-			note: el.querySelector(".text-meta")?.textContent.trim(),
+			label:
+				[...el.childNodes]
+					.filter((node) => node.nodeType === Node.TEXT_NODE)
+					.map((node) => node.textContent)
+					.join("")
+					.trim() || el.querySelector(":scope > .mt-mono")?.textContent.trim(),
+			mono: el.querySelector(":scope > .mt-mono") ? true : undefined,
+			note: el.querySelector(".text-meta, .text-caption")?.textContent.trim(),
+			noteTone: el.querySelector(".text-caption[style*='--fg-warning'], .text-meta[style*='--fg-warning']")
+				? "warning"
+				: undefined,
 			checked: el.querySelector(".mt-check.is-on") ? true : undefined,
 		}),
 		leaf: true,
@@ -469,6 +486,7 @@ const parts = [
 		match: (el) => el.matches(".mt-textarea"),
 		part: "Textarea",
 		props: (el) => ({
+			value: (el.value ?? el.textContent).trim() || undefined,
 			mono: el.classList.contains("mt-mono") || undefined,
 			// A height the board gives it is a number of lines.
 			rows: el.style.minHeight ? Math.max(1, Math.round((Number.parseFloat(el.style.minHeight) - 12) / 20)) : undefined,
@@ -496,6 +514,13 @@ const parts = [
 					.join("")
 					.trim(),
 				count: Number(el.querySelector(".mt-count")?.textContent.trim()),
+				proposalsLabel:
+					[...(el.querySelector(".mt-fill")?.childNodes ?? [])]
+						.filter((node) => node.nodeType === Node.TEXT_NODE)
+						.map((node) => node.textContent)
+						.join("")
+						.trim() || undefined,
+				proposalsCount: Number(el.querySelector(".mt-count--proposal")?.textContent.trim()) || undefined,
 				discardLabel: buttons.find((button) => button !== el && button.matches(".mt-text-btn"))?.textContent.trim(),
 				saveLabel: buttons.find((button) => button.matches(".mt-btn"))?.textContent.trim(),
 				saveDisabled: buttons.some((button) => button.matches(".mt-btn.is-disabled")) || undefined,
@@ -648,6 +673,8 @@ const parts = [
 		},
 		slots: () => ({}),
 		children: (el) => [...el.querySelectorAll(":scope > .mt-option")],
+		// The note under the options is the change's (its next line), not the choice's.
+		leaves: ":scope > p.note",
 		asProps: ["display", "flex-direction", "gap", "padding-top"],
 	},
 	{
@@ -714,6 +741,13 @@ const parts = [
 		match: (el) => el.matches("nav[aria-label] > span[aria-hidden]") && el.textContent.trim() === "/",
 		part: "TrailSlash",
 		leaf: true,
+	},
+	// A quiet word after a row's title (a plugin key's role).
+	{
+		match: (el) => el.matches(".mt-row-title > span") && el.style.color.includes("--fg-muted"),
+		part: "Text",
+		props: () => ({ as: "span", tone: "muted" }),
+		asProps: ["color", "font-weight"],
 	},
 	// A review of the assistant's proposal: the request, each group's head, its changes.
 	{
@@ -809,6 +843,7 @@ const parts = [
 							.trim(),
 				path: head?.querySelector(".mt-row-sub")?.textContent.trim(),
 				end: end?.textContent.trim() || undefined,
+				again: head?.querySelector(":scope > .mt-text-btn")?.textContent.trim(),
 				change: markedRun(change),
 				included: el.querySelector(":scope > .mt-check.is-on") ? true : undefined,
 				muted: change?.style.color?.includes("--fg-subtle") || undefined,
@@ -1071,12 +1106,15 @@ const parts = [
 		props: (el) => ({ label: el.getAttribute("aria-label") }),
 		slots: () => ({}),
 		children: (el) => [
-			...el.querySelectorAll(":scope > button, :scope > .cell > button, :scope > .grow, :scope > .end"),
+			...el.querySelectorAll(
+				":scope > button, :scope > .cell > button, :scope > span:not(.cell), :scope > .grow, :scope > .end",
+			),
 		],
 	},
 	{ match: (el) => el.matches(".mt-statusbar > .grow"), part: "StatusGap", leaf: true },
 	{
-		match: (el) => el.matches(".mt-statusbar > button, .mt-statusbar > .cell > button, .mt-statusbar > .end"),
+		match: (el) =>
+			el.matches(".mt-statusbar > button, .mt-statusbar > .cell > button, .mt-statusbar > span:not(.cell, .grow)"),
 		part: "StatusCell",
 		props: (el) => {
 			const warn =
@@ -1085,7 +1123,11 @@ const parts = [
 				el.querySelector("[style*='--fg-warning']") !== null;
 			return {
 				label: el.textContent.replace(/\s+/g, " ").trim(),
-				tone: warn ? "warning" : el.matches(".danger") || el.querySelector(".danger") ? "danger" : undefined,
+				tone: warn
+					? "warning"
+					: el.matches(".danger, [style*='--fg-danger']") || el.querySelector(".danger")
+						? "danger"
+						: undefined,
 				end: el.matches(".end") || undefined,
 			};
 		},
@@ -1195,7 +1237,13 @@ const parts = [
 		props: (el) => {
 			const shown = (node) => node && getComputedStyle(node).display !== "none";
 			return {
-				label: el.querySelector(":scope > span:first-child")?.textContent.trim(),
+				label:
+					(ownText(el) ? undefined : el.querySelector(":scope > span:first-child")?.textContent.trim()) ||
+					[...el.childNodes]
+						.filter((node) => node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp"))
+						.map((node) => node.textContent)
+						.join("")
+						.trim(),
 				note: el.querySelector(".n")?.textContent.trim(),
 				active: el.classList.contains("is-on") || undefined,
 				dot: shown(el.querySelector(".mt-change-dot")) ? "changed" : undefined,
@@ -1293,7 +1341,7 @@ const parts = [
 			return {
 				name: own(el.querySelector(".name")),
 				label: own(el.querySelector(".label")),
-				description: text(".label > span:not(.text-micro)"),
+				description: text(".label > span[style*='--fg-faint']:not(.text-micro)"),
 				note: text(".label > .text-micro"),
 				kind: own(el.querySelector(".kind")),
 				depth: el.classList.contains("d2") ? 1 : el.classList.contains("d3") ? 2 : undefined,
@@ -1395,6 +1443,8 @@ const parts = [
 			page: el.classList.contains("mt-page--wide") ? undefined : el.textContent.trim(),
 		}),
 		leaf: true,
+		// The step buttons draw their own words.
+		ownWords: true,
 	},
 	// The page's search, before it is opened: a secondary pill with the magnifier.
 	{
