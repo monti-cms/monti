@@ -146,7 +146,7 @@
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 · 번역 | 줄마다 `Option spread` + `Switch` | 바로 적용되는 켜기/끄기. |
 | 주소 절 | `Section`("주소", 마지막 절이라 `last`). 읽기 전용이면 제목 뒤 `LockMark` | |
-| 관리자 주소 | `FormField`의 라벨과 `Text mono` "/studio" | 파일에서 정하는 값이라 글로 보인다. 보드는 값 뒤에 "monti.schema.ts"를 붙이지만 [page-header.md](../components/page-header.md)를 따라 뺀다(파일 이름은 그 파일이 문제인 곳에서만 보인다). |
+| 관리자 주소 | `Text mono` "/studio" 하나. 라벨과 파일 이름은 없다: 절 제목 "주소"가 이미 말한다 | 파일에서 정하는 값이라 글로 보인다. |
 
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Select, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Primitives/Text.
 

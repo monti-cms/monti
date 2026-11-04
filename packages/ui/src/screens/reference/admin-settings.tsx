@@ -1,16 +1,4 @@
-import {
-	Box,
-	FormField,
-	FormFieldLabel,
-	Inline,
-	MenuField,
-	PageBody,
-	PageColumn,
-	PageHeader,
-	PageToolbar,
-	Section,
-	Text,
-} from "../../index";
+import { MenuField, PageBody, PageColumn, PageHeader, PageToolbar, Section, Text } from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs, SwitchOption } from "./settings";
 
@@ -33,17 +21,8 @@ export function AdminSettingsScreen() {
 						<SwitchOption label="번역" checked />
 					</Section>
 					<Section title="주소" last>
-						<FormField>
-							<FormFieldLabel>관리자 주소</FormFieldLabel>
-							<Box paddingTop={6}>
-								<Inline gap={12} align="baseline">
-									<Text mono>/studio</Text>
-									<Text variant="micro" tone="faint">
-										monti.schema.ts
-									</Text>
-								</Inline>
-							</Box>
-						</FormField>
+						{/* The section's title says what the value is; the address alone, read only (it is set in a file). */}
+						<Text mono>/studio</Text>
 					</Section>
 				</PageBody>
 			</PageColumn>
