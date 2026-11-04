@@ -1,5 +1,14 @@
-import { Add, RecentlyViewed } from "../../icons";
-import { ChatInput, Del, IconButton, Ins, ModelMenuButton, SidePanel } from "../../index";
+import { Add, Copy, Edit, RecentlyViewed, Renew } from "../../icons";
+import {
+	ChatInput,
+	ChatMessageActions,
+	ChatQueueItem,
+	Del,
+	IconButton,
+	Ins,
+	ModelMenuButton,
+	SidePanel,
+} from "../../index";
 
 const none = () => {};
 
@@ -24,6 +33,7 @@ export function AssistantPanel({
 	placeholder,
 	effort,
 	newConversation = true,
+	queued,
 	children,
 }: {
 	placeholder: string;
@@ -31,6 +41,8 @@ export function AssistantPanel({
 	effort?: string;
 	/** The + that starts a new conversation (not shown before the first one). */
 	newConversation?: boolean;
+	/** The assistant is working and these messages wait over the text box. */
+	queued?: readonly string[];
 	children?: React.ReactNode;
 }) {
 	return (
@@ -62,6 +74,22 @@ export function AssistantPanel({
 					placeholder={placeholder}
 					sendLabel="보내기"
 					stopLabel="멈추기"
+					busy={queued !== undefined}
+					busyPlaceholder="더 말하기"
+					onQueue={none}
+					queue={queued?.map((words) => (
+						<ChatQueueItem
+							key={words}
+							sendNowLabel="지금 보내기"
+							editLabel="고치기"
+							cancelLabel="취소"
+							onSendNow={none}
+							onEdit={none}
+							onCancel={none}
+						>
+							{words}
+						</ChatQueueItem>
+					))}
 					aside={
 						<ModelMenuButton
 							model="claude-sonnet-5-5"
@@ -74,5 +102,33 @@ export function AssistantPanel({
 		>
 			{children}
 		</SidePanel>
+	);
+}
+
+/** The row under a message as the boards draw it: the time, copy, and edit (the admin's) or do again (the assistant's). */
+export function MessageActions({
+	author,
+	time,
+	shown,
+}: {
+	author: "user" | "assistant";
+	time: string;
+	shown?: boolean;
+}) {
+	return (
+		<ChatMessageActions author={author} time={time} shown={shown}>
+			<IconButton label="복사">
+				<Copy />
+			</IconButton>
+			{author === "user" ? (
+				<IconButton label="고쳐서 다시 보내기">
+					<Edit />
+				</IconButton>
+			) : (
+				<IconButton label="다시 하기">
+					<Renew />
+				</IconButton>
+			)}
+		</ChatMessageActions>
 	);
 }

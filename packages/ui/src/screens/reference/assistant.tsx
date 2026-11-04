@@ -38,7 +38,7 @@ import {
 	ToolCallLine,
 	ToolCallLines,
 } from "../../index";
-import { AssistantPanel } from "./assistant-parts";
+import { AssistantPanel, MessageActions } from "./assistant-parts";
 import { AdminFrame } from "./frame";
 
 const none = () => {};
@@ -157,6 +157,7 @@ const conversation = (
 	<AssistantPanel placeholder="사이트에 대해 물어보세요">
 		<ChatThread>
 			<ChatMessage author="user">요약이 비어 있는 글 찾아 줘</ChatMessage>
+			<MessageActions author="user" time="오후 3:12" />
 			<ChatAnswer>
 				<ToolCallLines>
 					<ToolCallLine status="done" statusLabel="끝남">
@@ -172,7 +173,9 @@ const conversation = (
 					<ChatEntryLink slug="/draft-post">쓰는 중인 글</ChatEntryLink>
 				</ChatEntryList>
 			</ChatAnswer>
+			<MessageActions author="assistant" time="오후 3:12" />
 			<ChatMessage author="user">이 두 편에 요약 써 줘</ChatMessage>
+			<MessageActions author="user" time="오후 3:14" />
 			<ChatAnswer>
 				<ToolCallLines>
 					<ToolCallLine status="done" statusLabel="끝남">
@@ -212,6 +215,7 @@ const conversation = (
 					/>
 				</ProposalCard>
 			</ChatAnswer>
+			<MessageActions author="assistant" time="오후 3:14" shown />
 		</ChatThread>
 	</AssistantPanel>
 );

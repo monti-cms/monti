@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AssistantScreen } from "./assistant";
 import { AssistantFirstScreen } from "./assistant-first";
-import { AssistantPanelScreen } from "./assistant-panel";
+import { AssistantPanelScreen, AssistantWorkingScreen } from "./assistant-panel";
 import { CollectionBasicsScreen } from "./collection-basics";
 import { CollectionEditorScreen } from "./collection-editor";
 import { ProposalReviewScreen } from "./proposal-review";
@@ -15,6 +15,7 @@ type Story = StoryObj<typeof meta>;
 export const Assistant: Story = { render: () => <AssistantScreen /> };
 export const AssistantFirst: Story = { render: () => <AssistantFirstScreen /> };
 export const AssistantPanel: Story = { render: () => <AssistantPanelScreen /> };
+export const AssistantWorking: Story = { render: () => <AssistantWorkingScreen /> };
 export const ProposalReview: Story = { render: () => <ProposalReviewScreen /> };
 export const ProposalReviewSide: Story = { render: () => <ProposalReviewSideScreen /> };
 export const CollectionBasics: Story = { render: () => <CollectionBasicsScreen /> };
