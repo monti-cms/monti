@@ -15,3 +15,10 @@ export const FIELD_INSET = "px-monti-8";
  */
 export const CHECK_HOVER =
 	"hover:not-data-disabled:shadow-[0_0_0_5px_var(--monti-bg-muted)] hover:not-data-disabled:not-data-checked:border-(color:--monti-fg-muted)";
+
+/**
+ * The pointer over words that act (a text button, a list's filter): a flat tint around them, 8px at the sides and 4px above and below, drawn as
+ * shadows so the line they stand in does not move. The keyboard's focus ring runs around that same room.
+ */
+export const TEXT_HOVER =
+	"hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] focus-visible:shadow-[-4px_0_0_4px_var(--monti-bg-page),4px_0_0_4px_var(--monti-bg-page),-4px_0_0_6px_var(--monti-border-strong),4px_0_0_6px_var(--monti-border-strong)]";
