@@ -187,7 +187,7 @@ export function ModelMenuButton({
 			size="sm"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-10 font-mono text-monti-meta"
+			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-10 font-mono text-monti-meta text-monti-subtle"
 			{...props}
 		>
 			<span className="min-w-0 truncate">{model}</span>

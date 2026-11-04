@@ -65,7 +65,8 @@ export function ChatInput({
 		<form
 			data-slot="chat-input"
 			className={cn(
-				// 24px round: the 28px model pill and the 32px send button sit 8px from its edges, so their curves run with its own.
+				// 24px round: the 28px model pill and the 32px send button sit 8px from its edges, so their curves run with its own. The typed words,
+				// the queued ones and the model's name all start 18px in.
 				"rounded-[24px] border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
 				queue && "relative",
 				className,
@@ -85,7 +86,7 @@ export function ChatInput({
 				rows={2}
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={onKeyDown}
-				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
+				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent py-monti-2 pr-0 pl-monti-6 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 			/>
 			<div className="mt-monti-4 flex items-end justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
@@ -110,7 +111,7 @@ export function ChatInput({
 	if (!queue) return form;
 	return (
 		<div data-slot="chat-input-queue" className="flex flex-col">
-			<ul className="-mb-[24px] flex flex-col gap-monti-4 rounded-t-[24px] border border-monti-default border-b-0 bg-monti-selected pt-monti-6 pr-monti-12 pb-[30px] pl-monti-16">
+			<ul className="-mb-[24px] flex flex-col gap-monti-4 rounded-t-[24px] border border-monti-default border-b-0 bg-monti-selected pt-monti-6 pr-monti-12 pb-[30px] pl-[18px]">
 				{queue}
 			</ul>
 			{form}
