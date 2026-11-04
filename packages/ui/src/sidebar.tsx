@@ -133,9 +133,12 @@ function SidebarProvider({
 	);
 }
 
-/** The rail as the design draws it: the tool ground, 20px above, 14px at the sides (6px folded, so the 36px rows fill the 48px rail), 16px below, rows 2px apart. */
+/**
+ * The rail as the design draws it: the tool ground, 20px above, 14px at the sides, 16px below, rows 2px apart. Folded, 8px above and 6px | 5px at
+ * the sides, so the 36px rows fill the 48px rail with its 1px edge and nothing scrolls sideways.
+ */
 const RAIL =
-	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default data-rail:px-[6px]";
+	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default data-rail:pt-monti-8 data-rail:pr-[5px] data-rail:pl-[6px]";
 
 /**
  * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
@@ -282,7 +285,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-header"
 			data-sidebar="header"
 			className={cn(
-				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-0 *:[span]:min-w-0 *:[span]:flex-1 group-data-[rail]/rail:*:[span]:hidden",
+				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:mb-monti-6 group-data-[rail]/rail:px-0 *:[span]:min-w-0 *:[span]:flex-1 group-data-[rail]/rail:*:[span]:hidden",
 				className,
 			)}
 			{...props}
