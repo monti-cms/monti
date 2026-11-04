@@ -168,9 +168,9 @@ erDiagram
     timestamptz trashed_at
   }
   entry_links {
-    text from_entry FK
+    text from_group
     text field
-    text to_entry FK
+    text to_group
     int position
   }
   schema_state {
@@ -193,7 +193,7 @@ erDiagram
 - 모든 컬렉션의 글이 `entries` 표 하나에 있다(D1).
 - 시스템이 쓰는 값(컬렉션, 언어, 주소, 제목, 상태, 버전, 폴더, 날짜)은 열이다. 정렬하고 거르는 데 쓰기 때문이다.
 - 필드 값은 `values` 한 칸에 JSON으로 있다. 본문은 `doc`이다. 발행본과 고치는 중인 본을 어떻게 나누는지는 02번 문서에서 정한다.
-- 관계 값은 `entry_links`에도 적는다. "쓰인 글 수", 대상이 지워질 때 끊기, 관계로 거르기가 이 표를 쓴다.
+- 관계 값은 대상의 번역 묶음 id이고, `entry_links`에도 묶음끼리 적는다(08번 문서). "쓰인 글 수", 대상이 지워질 때 끊기, 관계로 거르기가 이 표를 쓴다.
 - 지운 필드를 남겨 두면 그 값은 `values`에 그대로 있다. 읽기 API는 지금 스키마에 있는 필드만 내놓는다.
 - 컬렉션마다 읽기 전용 뷰를 만든다(`monti_post`, `monti_category`). 필드 하나가 열 하나라서, 데이터베이스를 직접 열어 보는 개발자가 표처럼 읽을 수 있다. 스키마를 적용할 때마다 다시 만든다.
 - `collection_admin_values`는 위의 관리자 값이다. 운영 사이트에서도 바로 쓰고, 다른 쓰기처럼 활동 기록과 되돌리기가 있다.
