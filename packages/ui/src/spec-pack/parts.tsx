@@ -1571,21 +1571,36 @@ function EditorBody({
 				const text = block.untranslated ? <Untranslated>{run}</Untranslated> : run;
 				const own = toolsOf(tools).filter((tool) => tool.block === index);
 				const drawn = blockOf(block, text);
+				// The board's own distance above the block, when it gives one: the block keeps no margin of its own then.
+				const spaced =
+					block.gap === undefined ? (
+						drawn
+					) : (
+						<div style={{ paddingTop: block.gap }} className={cn("*:my-0", block.muted && "text-monti-muted")}>
+							{drawn}
+						</div>
+					);
 				if (own.length === 0 && !block.active && !block.current)
-					return <React.Fragment key={key}>{drawn}</React.Fragment>;
+					return <React.Fragment key={key}>{spaced}</React.Fragment>;
 				// A block the board shows a state of: the block, then its tools at their places beside it.
 				return (
 					<div key={key} className={cn("relative", block.current && PROPOSAL_MARK_CLASSES.current)}>
 						{block.active ? (
-							<Block active className="-ml-monti-8 *:mb-0">
-								{drawn}
-							</Block>
+							<div style={{ paddingTop: block.gap }} className={cn(block.muted && "text-monti-muted")}>
+								<Block active className="-ml-monti-8 py-monti-2 *:my-0">
+									{drawn}
+								</Block>
+							</div>
 						) : (
-							drawn
+							spaced
 						)}
 						{own.map((tool, at) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: a block's tools never move
-							<div key={at} className="absolute z-3" style={{ left: tool.x, top: tool.y, width: tool.width }}>
+							<div
+								key={at}
+								className="absolute z-3"
+								style={{ left: tool.x, top: tool.y + (block.gap ?? 0), width: tool.width }}
+							>
 								{toolOf(tool)}
 							</div>
 						))}
@@ -1602,7 +1617,7 @@ function blockOf(block: BodyBlock, text: React.ReactNode) {
 	if (block.kind === "quote") return <blockquote>{text}</blockquote>;
 	if (block.kind === "list")
 		return (
-			<ul>
+			<ul className="m-0 pl-monti-16 *:my-0 *:pl-0">
 				{block.items.map((item, at) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: a list's items never move
 					<li key={at}>{item}</li>
@@ -1757,6 +1772,10 @@ type BodyPiece = {
 	kind?: string;
 	text: string;
 	mark?: string;
+	/** How far the block sits below the one before, in px (the first, below the body's top), as the board draws it. */
+	gap?: number;
+	/** The block's words in the quiet ink (a template's guide text). */
+	muted?: boolean;
 	untranslated?: boolean;
 	active?: boolean;
 	current?: boolean;
@@ -1764,6 +1783,8 @@ type BodyPiece = {
 type BodyBlock = {
 	kind: string;
 	pieces: BodyPiece[];
+	gap?: number;
+	muted?: boolean;
 	untranslated?: boolean;
 	active?: boolean;
 	current?: boolean;
@@ -1831,8 +1852,16 @@ function bodyOf(doc: readonly BodyPiece[] | undefined) {
 	for (const piece of doc ?? []) {
 		const last = blocks[blocks.length - 1];
 		if (piece.kind === "li") {
-			if (last?.kind === "list") last.items.push(piece.text);
-			else blocks.push({ kind: "list", pieces: [], items: [piece.text] });
+			if (last?.kind === "list" && piece.gap === undefined) last.items.push(piece.text);
+			else
+				blocks.push({
+					kind: "list",
+					pieces: [],
+					items: [piece.text],
+					gap: piece.gap,
+					muted: piece.muted,
+					active: piece.active,
+				});
 		} else if (piece.kind || !last) {
 			blocks.push({
 				kind: piece.kind ?? "p",
@@ -1840,6 +1869,8 @@ function bodyOf(doc: readonly BodyPiece[] | undefined) {
 				untranslated: piece.untranslated,
 				active: piece.active,
 				current: piece.current,
+				gap: piece.gap,
+				muted: piece.muted,
 				items: [],
 			});
 		} else if (last.kind === "list") last.items[last.items.length - 1] += piece.text;
@@ -2556,13 +2587,7 @@ function ProposalBox({
 			}
 		>
 			{entries?.map((entry) => (
-				<ProposalEntry
-					key={entry.name}
-					name={entry.name}
-					slug={entry.slug}
-					field={entry.field}
-					after={<Ins>{entry.text}</Ins>}
-				/>
+				<ProposalEntry key={entry.name} name={entry.name} slug={entry.slug} field={entry.field} after={entry.text} />
 			))}
 		</ProposalCard>
 	);
@@ -2895,7 +2920,7 @@ export const CATALOG = {
 	EditorBody: {
 		kind: "part",
 		props: {
-			doc: "data:kind,text,mark,untranslated,active,current",
+			doc: "data:kind,text,mark,untranslated,active,current,gap,muted",
 			tools: "data:kind,block,x,y,width,on,text,key,discard,accept,row,icon,sub,label",
 			muted: "flag",
 		},

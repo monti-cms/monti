@@ -61,14 +61,26 @@ const markOf = (node) =>
 				: node.nodeName === "STRONG" || node.nodeName === "B"
 					? "strong"
 					: undefined;
-const bodyBlocks = (el) =>
-	bodyBlockElements(el).flatMap((block) => {
+const bodyBlocks = (el) => {
+	// How far each block sits below the one before (the first, below the body's top): the body's own rhythm, whatever the board writes it with.
+	let edge = el.getBoundingClientRect().top;
+	return bodyBlockElements(el).flatMap((block, index, blocks) => {
+		const box = (block.closest(".mt-block") ?? block).getBoundingClientRect();
+		const inList = block.matches("li") && index > 0 && blocks[index - 1].parentElement === block.parentElement;
+		const gap = inList ? undefined : Math.round(box.top - edge);
+		edge = Math.max(edge, box.bottom);
 		const copy = block.cloneNode(true);
 		for (const tool of copy.querySelectorAll(`${EDITOR_TOOLS}, button`)) tool.remove();
 		const faint = block.matches("p") && block.style.color.includes("--fg-faint");
 		const kind = faint ? "placeholder" : block.matches("blockquote") ? "quote" : block.tagName.toLowerCase();
 		// What the block is while the board shows it: picked (its menu is open), or the one whose proposal is looked at.
 		const state = {
+			gap,
+			// Words in the quiet ink inside a body that is not (a template's guide text).
+			muted:
+				el.contains(block.closest("[style*='--fg-muted']")) && block.closest("[style*='--fg-muted']") !== el
+					? true
+					: undefined,
 			untranslated: block.matches(".mt-untranslated") || undefined,
 			active: block.matches(".mt-block.is-on") || undefined,
 			current: block.matches(".mt-current") || undefined,
@@ -82,6 +94,7 @@ const bodyBlocks = (el) =>
 			index === 0 ? { kind, ...piece, text: piece.text.trimStart(), ...state } : piece,
 		);
 	});
+};
 /** A format button by what it shows: the letter in its own style, a raised or lowered x, the link's icon, the footnote's raised number, the ⋯. */
 const formatOf = (button) => {
 	const style = button.getAttribute("style") ?? "";
