@@ -2,118 +2,41 @@
 
 [English](README.md) | 한국어
 
-개발 블로그를 위한 CMS.
+개발자 블로그를 위한 CMS.
 
-이름은 몽테뉴(Montaigne)를 줄인 것이다. 이탈리아어로 "산들"이라는 뜻이기도 하다.
+이름은 몽테뉴(Montaigne)를 줄인 것입니다. 이탈리아어로 "monti"는 "산들"이라는 뜻이기도 합니다.
 
-## 빠른 시작: 기존 Next 앱에 Monti 더하기
+## 상태: 다시 만드는 중
 
-Next.js(App Router) 앱 폴더에서 실행한다.
+Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠고, 그것이 있는 마지막 커밋은 `9c69629f`입니다. 다시 만들기가 그 단계에 이를 때까지
+설치할 릴리스는 없습니다.
 
-```sh
-# 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.16&path:/core"
-# 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
-pnpm exec monti init
-```
-
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고(첫 질문은 "추천 설정"으로, 기본 언어와 로그인만 묻거나 "하나씩 고르기"다), Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **앱의 파일 셋을 고치고, 고친 파일과 정확한 변경을 "Changed:" 아래에 하나씩 적어 준다**(`next.config`를 `withCms`로 감싸기, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`·`.monti/`). 안전하게 고칠 수 없는 모양의 파일은 건드리지 않고 이유와 함께 할 일 목록에 넣는다. 그다음 한 번 확인을 받고 기계가 할 일을 직접 한다: `.env.example`에서 `.env.local`을 만들고 새 `MONTI_SECRET`을 채우고(있는 `.env.local`은 덮어쓰지 않는다), 데이터베이스 주소가 있으면 `monti db:setup`을 돌리고, `monti doctor`를 돌린다. 끝에는 무엇을 골랐는지, 그리고 사람이 할 일을 번호를 붙여 쉬운 말로 적어 준다(없던 `DATABASE_URL`, `pnpm dev`, 첫 관리자나 GitHub OAuth 앱).
-
-전체 흐름:
-
-```text
-설치 → monti init(.env.local, db:setup, doctor까지 한다) → pnpm dev
-```
-
-pnpm 12라면 1단계 전에 `pnpm-workspace.yaml`에 이렇게 적는다(core가 쓰는 `tsx`가 esbuild를 가져오고, pnpm 12는 그 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
-
-```yaml
-allowBuilds:
-  esbuild: true
-```
-
-- **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기), 본문 블록, 관리자 경로(기본 `/studio`). 관리자 로그인 방법도 묻는다: 내장 이메일·비밀번호 로그인(기본, 다른 서비스 불필요) 또는 GitHub(OAuth 앱 필요). 이메일·비밀번호면 배포한 직후 관리자를 열어 첫 관리자 화면에서 첫 관리자를 만들고, 비밀번호를 잊었을 때는 `monti admin:reset-password`로 새로 정한다.
-- **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 주고, `--no-setup`은 `.env.local`·데이터베이스·doctor를 사람에게 맡긴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
-- **안전:** 이미 있는 파일은 (위의 세 가지 수정 말고는) 고치지 않고(건너뛰고 알려 준다), 묻지 않고 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 설치가 실패하면 그렇게 말하고 설치 명령을 그대로 적어 준다. `monti init`을 다시 돌리면 이어서 하고, 있는 파일은 그대로 둔다.
-- **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
-- **블록:** 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`). 둘은 `@monti-cms/blocks/mermaid`와 `@monti-cms/blocks/chart`에서 오고, 고른 경우에만 `mermaid`와 `recharts`가 따라오므로 고르지 않은 앱은 둘 다 불러오지도 설치하지도 않는다.
-
-공개 릴리스 전에는 `@monti-cms/core`를 먼저 GitHub 주소로 추가하고(위 1단계), 나머지 Monti 패키지는 `monti init`이 같은 릴리스에서(`package.json`에 적힌 ref를 그대로 써서) 설치하고, 외부 패키지는 npm에서 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
-
-## 조용히 하는 자동 동작은 없다
-
-`monti doctor`가 `config/automatic`에서 Monti가 스스로 정한 것(데이터베이스와 그 출처 변수, 로그인, 개발 로그인 우회, 호스트 신뢰, `SITE_URL`, 스키마 파일)과 각 값의 출처를 보여 준다. 자동 동작마다 끄거나 바꾸는 법은 [core README](packages/core/README.ko.md)의 "Monti가 스스로 정하는 것과 끄는 법"에 있다.
-
-## 문제 해결: `monti doctor`
-
-동작하지 않는 것이 있으면 앱 폴더에서 이것을 돌린다.
-
-```sh
-pnpm exec monti doctor
-```
-
-설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·표가 만들어져 있는지(표가 아직 없으면 `monti db:setup`, 업데이트 뒤 미적용 마이그레이션이 있으면 `monti db:migrate`), `MONTI_SECRET`, 로그인 설정(이메일·비밀번호면 관리자 계정이 이미 있는지, GitHub이면 등록할 콜백 URL과 관리자 id, 그리고 `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다). `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
+- 설계는 [`docs/design/features`](docs/design/features/README.md)에 있습니다. 기능마다 문서 하나이고, 만드는 순서는
+  [`build.md`](docs/design/features/build.md)에 있습니다.
+- 기준이 되는 화면은 디자인 시스템 Storybook의 기준 화면(`Screens/Reference`)입니다.
 
 ## 패키지
 
-| 패키지 | 하는 일 |
-| --- | --- |
-| [`@monti-cms/core`](packages/core/README.ko.md) | 본체. 설정, 글 저장·발행, 문서 모델, 관리자 API, 명령줄(`monti`) |
-| [`@monti-cms/mdx`](packages/mdx/README.ko.md) | MDX 확장. `mdx` 형식, 관리자 원문 패널, `renderMdx`, 문법 확장 API |
-| [`@monti-cms/admin`](packages/admin/README.ko.md) | 관리자 화면. 편집기, 글 목록, 미디어, 템플릿. 프레임워크에 묶이지 않고 라우터는 어댑터로 받는다 |
-| [`@monti-cms/auth`](packages/auth/README.ko.md) | `Request`·`Response` 위의 관리자 로그인(Auth.js core). 프로바이더를 갈아 끼운다. 내장 이메일·비밀번호 로그인(`password()`)과 GitHub가 들어 있다 |
-| [`@monti-cms/nextjs`](packages/nextjs/README.ko.md) | Next.js 어댑터. 라우트 핸들러, `next.config.ts` 연결, App Router 어댑터를 얹은 관리자 페이지·레이아웃, 로그인의 Next 쪽 |
-| [`@monti-cms/blocks`](packages/blocks/README.ko.md) | 블록 확장. 콜아웃, 접기, 탭, 단 나누기, 코드 탐색기, Mermaid, 차트 |
-| [`@monti-cms/ai`](packages/ai/README.ko.md) | AI 확장. 글쓰기·번역 같은 AI 기능 |
-| [`@monti-cms/seo`](packages/seo/README.ko.md) | SEO 확장. 검색·공유 필드와 미리보기 |
-| [`@monti-cms/storage-s3`](packages/storage-s3/README.ko.md) | S3 API 미디어 저장소(AWS S3, Cloudflare R2, MinIO). `s3Storage()` 하나, `S3_*` 환경 변수로 설정 |
-| [`@monti-cms/syntax-directive`](packages/syntax-directive/README.ko.md) | 지시자 문법 확장. `:::callout`·`::image{…}`·`:u[글자]`를 읽고 쓴다 |
-| [`@monti-cms/syntax-shiki`](packages/syntax-shiki/README.ko.md) | Shiki 코드 표기 확장. 코드 펜스의 `// [!code ++]` 등을 Monti 코드 주석으로 읽는다 |
-
-## 지원하는 프레임워크
-
-지금은 Next.js(App Router)만 지원한다. Next.js를 가져다 쓰는 곳은 `@monti-cms/nextjs`뿐이다. 코어는 표준 `Request`·`Response`로 말하고, 관리자는 받은 작은 어댑터로 라우터에 닿는다. 다른 프레임워크는 코어나 관리자를 고치지 않고 어댑터 패키지를 새로 만들어 붙인다. 코어 README의 "지원하는 프레임워크"를 본다.
-
-## 설치
-
-아직 npm에 올리지 않았다. 공개 전에는 `release` 브랜치의 배포 묶음을 GitHub 주소로 설치한다(pnpm만 된다).
-
-```json
-{
-	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.16&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.16&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs"
-	}
-}
-```
-
-다른 패키지도 `path:/<폴더 이름>`만 바꿔 같은 태그로 넣는다.
-
-MDX(`mdx` 형식, 원문 패널, 문법 확장)와 AI 확장에는 `@monti-cms/mdx`가 필요하며 같은 방식으로 설치한다. 설치 방법과 설정은 각 패키지의 README에 있다. 모두 붙인 예시 앱은 [`examples/blog`](examples/blog/README.ko.md)이며, 설정 파일은 완성된 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나다.
+| 패키지 | 무엇인가 |
+|---|---|
+| [`@monti-cms/core`](packages/core) | 기능(`defineOperation`), 기능을 돌리는 엔진(버전, 되돌리기 스냅숏, 활동 기록, 전송, 제안), 기능에서 나오는 입구들(관리자 API, 에이전트 도구, CLI) |
+| [`@monti-cms/ui`](packages/ui) | 디자인 시스템. 토큰, 관리자 화면을 만드는 부품, 기준 화면 |
 
 ## 개발
 
 ```sh
-pnpm install          # 설치
-pnpm lint             # 코드 검사 (고치려면 pnpm lint:fix)
-pnpm check:korean     # 실행 코드의 한국어 문구가 문구 사전에만 있는지 검사
-pnpm typecheck        # 모든 패키지 타입 검사
-pnpm build            # 모든 패키지 빌드 (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → seo)
-pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
+pnpm install            # 설치
+pnpm lint               # 린트 (pnpm lint:fix로 고침)
+pnpm check:design       # 관리자 화면 규칙 (docs/design/admin)
+pnpm check:operations   # 기능 문서와 코드가 같은 기능을 말하는지
+pnpm typecheck          # 모든 패키지 타입 검사
+pnpm build              # 모든 패키지 빌드
+CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test   # core 테스트, Postgres 테스트 데이터베이스에서
+pnpm --filter @monti-cms/ui storybook                             # 디자인 시스템과 기준 화면
 ```
 
-커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.
-
-## 버전 내기
-
-```sh
-node scripts/version.mjs 0.1.0   # 모든 패키지 버전을 한 번에 바꾼다
-git commit -am "chore(release): v0.1.0"
-git tag v0.1.0 && git push origin main v0.1.0
-```
-
-`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.2.0-next.16` 태그를 붙인다.
+커밋하면 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 저절로 돕니다. 커밋 메시지는 영어로 `type(scope): subject`처럼 씁니다
+(예: `feat(core): add thing`). scope 목록은 `commitlint.config.mjs`에 있습니다.
 
 ## 라이선스
 

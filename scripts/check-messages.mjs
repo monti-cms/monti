@@ -82,18 +82,9 @@ const isBundle = (value) =>
 	typeof value.messages === "object";
 
 const ALL_RULES = ["file-name", "missing-key", "unreferenced"];
-/**
- * The packages checked, with their rules. The core looks its block labels and error texts up by names built at run time (a block's name, an error
- * code), which the reference rule cannot see, so it is checked for names and keys only. The auth package has no dictionary of its own to check: it
- * builds `cms.auth` when it starts, from the button labels each login provider brings, and a provider from another package may bring English only.
- */
+/** The packages checked, with their rules. A rebuilt package joins when it has a dictionary. */
 const PACKAGES = {
-	admin: ALL_RULES,
-	ai: ALL_RULES,
-	blocks: ALL_RULES,
-	core: ["file-name", "missing-key"],
-	mdx: ALL_RULES,
-	seo: ALL_RULES,
+	core: ALL_RULES,
 };
 const packages = Object.keys(PACKAGES).filter((name) => only.length === 0 || only.includes(name));
 

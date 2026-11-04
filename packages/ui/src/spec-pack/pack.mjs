@@ -3,7 +3,7 @@
 
 export default {
 	/** Where this pack's screen specs are: `check:screens` checks every `*.screen.json` in these folders. */
-	screens: ["../screens", "../../../admin/src"],
+	screens: ["../screens"],
 	/** What `gen:screen-catalog` writes and the other scripts read. */
 	catalog: "catalog.generated.json",
 };

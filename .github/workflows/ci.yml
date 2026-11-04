@@ -1,4 +1,4 @@
-# Automated checks. On every push: lint, type check, unused code and package build; and the example app bundle check.
+# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, and the core tests on Postgres.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -12,20 +12,12 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # The integration branch that feature branches are cut from and merged into. `check:migrations` compares with it. It becomes `main` once the
-  # overhaul merges.
-  MONTI_BASE_BRANCH: overhaul
-
 jobs:
   check:
     name: lint · typecheck · build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          # The full history, for `check:migrations` to reach its base (the merge base with the integration branch, or the commit before the push).
-          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -46,18 +38,24 @@ jobs:
       - run: pnpm check:screens
       # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
       - run: pnpm check:messages
-      # A migration step on the base branch is not renamed or deleted, and the step list is the step files (a store records steps by name).
-      - run: pnpm check:migrations
-        env:
-          MONTI_PUSH_BEFORE: ${{ github.event.before }}
+      # The feature docs and the code name the same operations, and test titles name done criteria that exist (docs/design/features/build.md).
+      - run: pnpm check:operations
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip
       - run: pnpm build
 
-  example:
-    name: example app (packed)
+  test:
+    name: core tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: monti_test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -66,4 +64,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm example:check
+      - run: pnpm test
+        env:
+          CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test

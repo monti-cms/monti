@@ -1,106 +1,33 @@
-/**
- * Authoring API. Entry point imported by the site config file (`cms.config.ts`).
- *
- * Modules exported here import no `Site`, no instance and no server code: the config file imports this entry point, and it runs before any site exists.
- * What a config needs to know about a site (`createSite`, `SiteProvider`) is in `@monti-cms/core/site`.
- */
-
-export type {
-	BlockAttribute,
-	BlockChildren,
-	BlockDefinition,
-	BlockEditing,
-	BlockInsert,
-	BlockIssue,
-	BlockNode,
-	BlockSyntax,
-	BlockValidate,
-	BlockValidateContext,
-} from "./blocks/define";
-export { defineBlock } from "./blocks/define";
-export { ConfigError, type ConfigIssue, configError, IssueList, pathOf } from "./config/check/issue";
+export { migrateToLatest } from "./db/migrations";
+export type { Database } from "./db/schema";
+export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
+export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
+export type { ApplyResult, ItemRef } from "./engine/proposals";
+export type { UndoPlan } from "./engine/undo";
+export { type AdminApiOptions, createAdminApi } from "./entry/api";
+export { type CliIo, runCli } from "./entry/cli";
+export { agentTools, callAgentTool, type ToolResult, type ToolSession } from "./entry/tools";
 export {
-	type AdminConfig,
-	type CmsConfig,
-	type CollectionsConfig,
-	defineSite,
-	type EditorConfig,
-	type EditorWidthStep,
-	type LocaleConfig,
-	type LocalePrefixMode,
-	type SchemaCmsConfig,
-	type SeedConfig,
-	type SeedTemplate,
-	type SiteConfig,
-} from "./config/define";
-export { describeNodeEnv, type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
-export { type Problem, problemError, problemText, SetupError } from "./core/problem";
-export { createActiveTranslator } from "./i18n/active";
+	CheckError,
+	ConflictError,
+	ForbiddenError,
+	InputError,
+	type MontiError,
+	UnknownOperationError,
+} from "./errors";
+export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {
-	defineMessages,
-	type MessageBundle,
-	type MessageDict,
-	type MessageValue,
-	type MessageVars,
-	translate,
-} from "./i18n/define";
-export {
-	type AdminPluginShape,
-	definePlugin,
-	emptyServerPlugin,
-	type Plugin,
-	type PluginCommand,
-	type PluginCommandContext,
-	type PluginCommandOption,
-	type PluginConfigView,
-	type PluginContributions,
-	type PluginId,
-	type PluginKeyService,
-	type PluginKeySlot,
-	type PluginLabel,
-	type PluginNamed,
-	type PluginNavItem,
-	type PluginRoute,
-	type ServerPlugin,
-} from "./plugin/define";
-
-export {
-	type CollectionSchema,
-	defineCollection,
-	type LayoutGroup,
-	type MetadataOf,
-} from "./schema/collection";
-export type { PluginFieldSet } from "./schema/field-sets";
-export {
-	type BacklinkField,
-	type ConditionalField,
-	type Field,
-	type FieldKind,
-	type FieldRole,
-	fields,
-	type Localized,
-	type MediaField,
-	type RelationField,
-	type SelectField,
-	type SlugField,
-	SUMMARY_ROLE,
-	type TextField,
-	TITLE_ROLE,
-	type ValueField,
-	type ViewField,
-} from "./schema/fields";
-export type { PluginPlacement } from "./schema/layout";
-
-export { defineSchema } from "./schema-file/define";
-export { parseSchemaFile } from "./schema-file/format";
-export type {
-	SchemaAdmin,
-	SchemaCollection,
-	SchemaFile,
-	SchemaMigration,
-	SchemaTypes,
-} from "./schema-file/types";
-// Entry validator contract (also used by extensions the config file reads, so it must not read the site config).
-export * from "./text-check/normalize";
-export * from "./text-check/remote";
-export * from "./text-check/types";
+	type Actor,
+	type AnyOperation,
+	defineOperation,
+	type Message,
+	type MontiEvent,
+	type Operation,
+	type OperationContext,
+	type OperationDefinition,
+	type OperationKind,
+	type Preview,
+	type RecordRef,
+	recordKey,
+} from "./operation";
+export { defineRecordKind, type RecordKind, type RecordState } from "./records";

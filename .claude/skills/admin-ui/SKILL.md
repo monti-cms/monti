@@ -19,7 +19,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 ## Rules
 
 - Style with `monti-*` token utilities only. No raw palette (`bg-gray-100`, `text-sm`) and no raw colors (`#fff`) anywhere. Screens use no arbitrary lengths (`w-[320px]`): a size belongs to a part in `@monti-cms/ui` (which may use its own measured lengths) or to a token in `packages/ui/tokens/tokens.json` and `tokens.md`.
-- No new stylesheets or CSS classes. `packages/admin/styles/admin.css` holds only document-wide base rules. A state is a `data-` attribute with a `data-[…]:` variant.
+- No new stylesheets or CSS classes. `packages/ui/styles/admin.css` holds only document-wide base rules. A state is a `data-` attribute with a `data-[…]:` variant.
 - No `style={{}}` in screens, except a runtime-measured value marked `// design-allow: <reason>`.
 - Parts live in `@monti-cms/ui`, with stories. Screens compose them and never import Radix, Base UI or `cva`.
 - A part you add or change is named on its family page in `docs/design/admin/components/` in the same change.

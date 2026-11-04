@@ -12,9 +12,9 @@
  *
  * Rules (each finding names its rule id):
  *   css-file            Admin styling lives in token utilities. The only stylesheets in `packages/ui` and `packages/admin` are `ui/styles/theme.css`,
- *                       `ui/styles/tokens.css` (generated), `admin/styles/index.css` and `admin/styles/admin.css` (`ui/.storybook` is exempt). A
+ *                       `ui/styles/tokens.css` (generated), `ui/styles/admin.css` and `admin/styles/index.css` (`ui/.storybook` is exempt). A
  *                       `.ts`/`.tsx` that imports any other CSS file fails too.
- *   admin-css-rule      `admin/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the scrollbar).
+ *   admin-css-rule      `ui/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the scrollbar).
  *                       Any other selector moves to token utilities on the element.
  *   arbitrary-value     A class with a raw color in brackets (`bg-[#fff]`, `[color:red]`, `color-mix(... white)`) fails everywhere. Outside `packages/ui`
  *                       a raw length (`w-[34px]`, `p-[0.5rem]`, `calc(100%-2rem)`) fails too: the parts of `@monti-cms/ui` keep the design system's
@@ -33,7 +33,7 @@
  *   app-color           No class or variable of the host app's color names (`bg-background`, `--muted-foreground`), no `dark:` variant and no
  *                       `data-horizontal` variant in the sources of core, admin, blocks, mdx, seo and ai.
  *   theme-names         `ui/styles/theme.css` clears Tailwind's names and defines only `monti` ones that read `--monti-*` variables, its variants
- *                       are `monti-` (the dark one follows `.dark` and `[data-theme="dark"]`), and `ui/styles/tokens.css` and `admin/styles/admin.css`
+ *                       are `monti-` (the dark one follows `.dark` and `[data-theme="dark"]`), and `ui/styles/tokens.css` and `ui/styles/admin.css`
  *                       declare only `--monti-*` variables, none named like the host app's colors.
  *   off-system          Every class word in the admin UI packages (stories and test helpers too) is in the design system: a known role per
  *                       namespace, the weights, radius and shadows it keeps, no line height or letter spacing of its own, and on screens the
@@ -46,7 +46,7 @@
  * `// design-allow: reason`, or `{/* design-allow: reason *\/}` in JSX (alone on its line, it skips the next line). In a CSS file,
  * `/* design-allow: reason *\/` on the line before a rule skips that rule. A marker is not for a style choice, and an empty reason fails.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -54,7 +54,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (file) => path.relative(root, file).split(path.sep).join("/");
 const targets = process.argv.slice(2).map((target) => path.resolve(target));
 
-/** Source trees the admin UI is built from. `ui` is the design system itself, `screen` is everything that composes it. */
+/**
+ * Source trees the admin UI is built from. `ui` is the design system itself, `screen` is everything that composes it. A tree that does not exist yet
+ * (the packages being rebuilt) is skipped.
+ */
 const SOURCES = [
 	{ dir: "packages/ui/src", ext: /\.tsx?$/, kind: "ui" },
 	{ dir: "packages/admin/src", ext: /\.tsx?$/, kind: "screen" },
@@ -69,8 +72,8 @@ const isSkippedFile = (name) =>
 const ALLOWED_CSS = new Set([
 	"packages/ui/styles/theme.css",
 	"packages/ui/styles/tokens.css",
+	"packages/ui/styles/admin.css",
 	"packages/admin/styles/index.css",
-	"packages/admin/styles/admin.css",
 ]);
 /** Package specifiers that stand for the allowed files above. */
 const ALLOWED_CSS_SPECIFIERS = new Set(["@monti-cms/ui/theme.css", "@monti-cms/ui/tokens.css"]);
@@ -78,7 +81,7 @@ const CSS_ROOTS = ["packages/ui", "packages/admin"];
 const CSS_SKIP_DIRS = new Set(["node_modules", "dist", ".storybook", "storybook-static", ".turbo", "test-results"]);
 
 /** The document-wide rules of `admin.css`: selector → the `@layer` it must sit in (`null` for none). */
-const ADMIN_CSS_FILE = "packages/admin/styles/admin.css";
+const ADMIN_CSS_FILE = "packages/ui/styles/admin.css";
 const ADMIN_CSS_SELECTORS = new Map([
 	["html:has(.monti-admin) body", null],
 	[":where(html:has(.monti-admin)) *", "base"],
@@ -139,7 +142,7 @@ const walk = (dir, ext, kind) => {
 		}
 	}
 };
-for (const { dir, ext, kind } of SOURCES) walk(path.join(root, dir), ext, kind);
+for (const { dir, ext, kind } of SOURCES) if (existsSync(path.join(root, dir))) walk(path.join(root, dir), ext, kind);
 
 /** Whether a path is one of the paths given on the command line, or under one (everything when none is given). */
 const inTargets = (file) =>
@@ -599,6 +602,7 @@ function checkAdminCss(file) {
 }
 
 for (const dir of CSS_ROOTS) {
+	if (!existsSync(path.join(root, dir))) continue;
 	const found = [];
 	walkCss(path.join(root, dir), found);
 	for (const file of found) {
@@ -653,8 +657,9 @@ function checkUndocumentedParts() {
 }
 if (covers(path.join(root, "packages/ui/src/index.ts"))) checkUndocumentedParts();
 
-/** `.ts`/`.tsx` sources under `dir`, tests and test helpers left out. */
+/** `.ts`/`.tsx` sources under `dir`, tests and test helpers left out; none when `dir` does not exist. */
 function sourcesUnder(dir, skip = ["__test__", "node_modules", "dist", "test"]) {
+	if (!existsSync(dir)) return [];
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) return skip.includes(entry.name) ? [] : sourcesUnder(full, skip);
@@ -666,101 +671,19 @@ const linesMatching = (source, pattern) =>
 	source.split("\n").flatMap((text, index) => (pattern.test(text) ? [index + 1] : []));
 
 /** The packages whose classes the admin stylesheet compiles (its `@source` lines): the admin UI. */
-const ADMIN_UI_PACKAGES = [
-	...readFileSync(path.join(root, "packages/admin/styles/index.css"), "utf8").matchAll(
-		/^@source "(?:\.\.\/\.\.\/)?([\w-]+|\.\.)\/src";/gm,
-	),
-].map((match) => (match[1] === ".." ? "admin" : match[1]));
+const ADMIN_STYLES_INDEX = path.join(root, "packages/admin/styles/index.css");
+const ADMIN_UI_PACKAGES = existsSync(ADMIN_STYLES_INDEX)
+	? [...readFileSync(ADMIN_STYLES_INDEX, "utf8").matchAll(/^@source "(?:\.\.\/\.\.\/)?([\w-]+|\.\.)\/src";/gm)].map(
+			(match) => (match[1] === ".." ? "admin" : match[1]),
+		)
+	: ["ui"];
 
 /**
  * Files of a screen package that draw something the components cannot say (positions over the document, drag transforms, measured layouts, chart
  * geometry, an imitation of another site), with the reason. Only these set `className` or `style`, import the open entry or the class helpers.
  * Adding a file here is a design decision, made in review.
  */
-const DRAWING = new Map([
-	["admin/src/editor/block-handle-overlay.tsx", "the handle floats beside the block at measured coordinates"],
-	[
-		"admin/src/editor/blocks/added/view.tsx",
-		"the default custom block is drawn in the document: a frame with the component name above its body",
-	],
-	[
-		"admin/src/editor/blocks/fence-preview/fence-preview-node-view.tsx",
-		"the preview block is drawn inside the document",
-	],
-	[
-		"admin/src/editor/blocks/fence-preview/preview-renderers.tsx",
-		"rendered previews (diagram, formula) are drawn inside the document in the block's own look",
-	],
-	[
-		"admin/src/editor/blocks/shared.tsx",
-		"the block toolbar floats over the block corner and attributes are written in place inside the block",
-	],
-	[
-		"admin/src/editor/blocks/use-block-editor.tsx",
-		"`Content` and `BlockFrame` are how a block view draws inside the document, so they take a `className`",
-	],
-	[
-		"admin/src/editor/code-block/code-block-view.tsx",
-		"the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together",
-	],
-	[
-		"admin/src/editor/file-node-view.tsx",
-		"the file card is a block inside the document, with its name written in place",
-	],
-	[
-		"admin/src/editor/image-node-view.tsx",
-		"the image block is drawn inside the document: frame, crop, width, caption in place, resize handles",
-	],
-	[
-		"admin/src/editor/inline-bubble.tsx",
-		"the bubble floats at the selection (fixed coordinates, z-index, measured by ref)",
-	],
-	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
-	[
-		"admin/src/editor/tiptap-editor.tsx",
-		"the editor canvas: the writing column is sized by `--editor-width`, and the empty-line hint and the block under an open menu are styled inside it",
-	],
-	["admin/src/host/layout.tsx", "the admin root: `monti-admin` scopes the tokens and the page fills the window"],
-	[
-		"admin/src/host/setup-problem.tsx",
-		"the admin root: `monti-admin` scopes the tokens and the screen is centered in the window",
-	],
-	[
-		"admin/src/screens/entries/editor-scroller.tsx",
-		"the scrolling body of the editor: its active-block highlight reaches into the editor's own markup",
-	],
-	[
-		"admin/src/screens/entries/entry-editor-side-panels.tsx",
-		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow)",
-	],
-	[
-		"admin/src/screens/entries/scroll-room.tsx",
-		"extra room after the last block so the source can scroll as far as the translation does (35% of the viewport, in step with the editor)",
-	],
-	[
-		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
-		"the drop rows of the field list: a drag transform on the row",
-	],
-	[
-		"admin/src/screens/schema/fields-tree-rows.tsx",
-		"the field list rows: the hover-revealed row buttons and the problem dot",
-	],
-	[
-		"admin/src/screens/shared/side-panel.tsx",
-		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
-	],
-	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
-	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],
-	["blocks/src/chart/view.tsx", "the public page's chart, styled by render.css"],
-	["blocks/src/code-explorer/view.tsx", "draws the explorer as the public post does"],
-	["blocks/src/collapsible/view.tsx", "draws the collapsible as the public post does"],
-	["blocks/src/color/menu.tsx", "color samples painted by the mark's own classes and variables"],
-	["blocks/src/columns/view.tsx", "measured column layout with boundary handles and drag"],
-	["blocks/src/mermaid/preview.tsx", "hosts the diagram SVG"],
-	["blocks/src/tabs/view.tsx", "draws the tab bar and body as the public post does"],
-	["mdx/src/admin/mdx-source-editor.tsx", "a textarea laid over a syntax-highlighted layer"],
-	["mdx/src/admin/source-panel.tsx", "sizes the highlighted source editor, which draws its own surface"],
-]);
+const DRAWING = new Map([]);
 
 /**
  * Screens are built from `@monti-cms/ui` components and their options only: no `className`, no `style`, no import of the open entry
@@ -951,7 +874,7 @@ function checkThemeNames() {
 	}
 	for (const file of [TOKENS_FILE, ADMIN_CSS_FILE]) {
 		const full = path.join(root, file);
-		if (!covers(full)) continue;
+		if (!covers(full) || !existsSync(full)) continue;
 		const source = readFileSync(full, "utf8").replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
 		for (const match of source.matchAll(/^\s*(--[\w-]+)\s*:/gm)) {
 			const name = match[1];
