@@ -233,6 +233,8 @@ flowchart TD
 | CLI | 터미널의 개발자 | 바로 실행 |
 | MCP 서버 (나중에) | Claude Code 같은 바깥 에이전트 | 제안 |
 
+- 서버를 다루는 관리 명령(`monti db:setup`, `monti db:migrate`, `monti restore`, `monti trash:purge`, `monti deliveries:run`)은 기능이 아니다. 화면과 에이전트에는 나오지 않고 CLI에만 있다.
+
 ## 화면 쪽 조각
 
 - `useOperation(name)`: 기능 하나를 부르는 훅. 버전을 함께 보내고, 충돌이면 화면이 다시 불러오기를 보이게 한다.
