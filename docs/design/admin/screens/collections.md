@@ -108,7 +108,7 @@
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기") | 하나를 고른다. |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "132편에서 값이 사라져요. 되돌릴 수 없어요." |
-| 영향 목록 | `ChangeLabel`("지워지는 것", "받아 두기") + `ChangeLines` + `ChangeLine`(`what`, `then`, `tone` `danger`) | 공개 주소는 전 / 후 / 발행된 글. 컬렉션 삭제의 "받아 두기"는 `TextButton variant="underline"` "내보내기". |
+| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 공개 주소의 전 / 후. 개수는 보이지 않는다(2026-11-05 바뀜: 개발 데이터의 숫자라 운영과 다르다). 컬렉션 삭제는 `ChangeNote` 한 줄이다. |
 | 영향받는 글 | `Text variant="note"` 안의 `TextButton variant="underline"` 글 링크 | "첫 번째 글, 발행 후 고친 글 외 146편". |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
 
@@ -134,7 +134,7 @@
 | "주소 검토" | 4.14 | 검토 `Sheet`: 주소 `ChangeGroup kind="edit"`, 전 / 후 / 발행된 글 `ChangeLines`, `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지우기 전" | 4.15 | 메모의 기본 탭과 `DangerBlock` | Patterns/Frame/DangerBlock |
 | "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 바뀐 곳 목록 열림("메모 · 컬렉션 지움 · 되돌리기"), `toast` "메모를 지웠어요"와 "되돌리기" | Controls/Status/Toast |
-| "지우기 검토" | 4.17 | 검토 `Sheet`: `ChangeGroup kind="drop"`, "지워지는 것" · "받아 두기", 알약 "지우고 적용" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "지우기 검토" | 4.17 | 검토 `Sheet`: `ChangeGroup kind="drop"`, `ChangeNote` "이 컬렉션의 글이 모두 지워져요.", 알약 "지우고 적용"(2026-11-05 바뀜: 받아 두기와 개수는 빠짐) | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지운 뒤" | 4.18 | 메모가 목록에 없음, `toast` "적용됐어요" | Controls/Status/Toast |
 | `tab` "필드" · "기본" | 4.01, 4.02, 4.03, 4.04, 4.05, 4.06, 4.07, 4.08, 4.09, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
 | `sheetKind` "관계" · "글자" · "고르기" | 4.01, 4.02, 4.03, 4.04, 4.05, 4.06, 4.07, 4.08, 4.09, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18 | 필드 시트의 `PickListItem selected`와 그 종류의 설정 | Controls/Menu/PickList |

@@ -26,11 +26,10 @@ export type SchemaChange = {
 	from?: string;
 	to?: string;
 	/**
-	 * How many entries it touches in this database: with values, empty, published, or all (for a removed collection; `trashed` of them in the trash).
-	 * On the dev server this is the dev data; the live site may have more, so a count never decides whether the review asks.
+	 * For a field change, how many entries it touches in this database: with values, or empty. On the dev server this is the dev data; the live site
+	 * may have more, so a count never decides whether the review asks. Path changes and removed collections show none (doc 01).
 	 */
 	count?: number;
-	trashed?: number;
 	/** What the review asks, with the default first. Absent when the change touches no stored value. */
 	choices?: Choice[];
 };
@@ -58,14 +57,14 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** Entries of a collection whose value for `field` is not empty. Trashed entries count: their values come back with them. */
 const hasValue = (field: string) => sql<boolean>`coalesce(values->>${field}, '') <> ''`;
 
-async function countEntries(db: Db, collection: string, where?: ReturnType<typeof sql<boolean>>) {
-	let query = db
+async function countEntries(db: Db, collection: string, where: ReturnType<typeof sql<boolean>>) {
+	const row = await db
 		.selectFrom("entries")
-		.select((eb) => [eb.fn.countAll<string>().as("all"), eb.fn.count<string>("trashed_at").as("trashed")])
-		.where("collection", "=", collection);
-	if (where) query = query.where(where);
-	const row = await query.executeTakeFirstOrThrow();
-	return { all: Number(row.all), trashed: Number(row.trashed) };
+		.select((eb) => eb.fn.countAll<string>().as("all"))
+		.where("collection", "=", collection)
+		.where(where)
+		.executeTakeFirstOrThrow();
+	return Number(row.all);
 }
 
 /**
@@ -92,22 +91,18 @@ export async function planSchema(
 				collection: name,
 				from: before.path,
 				to: collection.path,
-				count: (await countEntries(db, name, sql<boolean>`status = 'published' and trashed_at is null`)).all,
 			});
 		changes.push(...(await planFields(db, name, before, collection, renames)));
 	}
 	for (const name of Object.keys(current.collections))
-		if (!draft.collections[name]) {
-			const { all, trashed } = await countEntries(db, name);
+		if (!draft.collections[name])
+			// Nothing to choose: the answer is the red "delete and apply" button itself.
 			changes.push({
 				id: `removeCollection:${name}`,
 				do: "removeCollection",
 				collection: name,
-				count: all,
-				trashed,
 				choices: [{ do: "removeCollection", confirm: true }],
 			});
-		}
 	return changes;
 }
 
@@ -132,7 +127,7 @@ async function planFields(
 			collection,
 			field: rename.to,
 			from: rename.from,
-			count: (await countEntries(db, collection, hasValue(rename.from))).all,
+			count: await countEntries(db, collection, hasValue(rename.from)),
 			choices: [
 				{ do: "renameField", values: "move" },
 				{ do: "renameField", values: "empty" },
@@ -149,7 +144,7 @@ async function planFields(
 			do: "removeField",
 			collection,
 			field,
-			count: (await countEntries(db, collection, hasValue(field))).all,
+			count: await countEntries(db, collection, hasValue(field)),
 			choices: [
 				{ do: "removeField", values: "clear" },
 				...movable.map((target) => ({ do: "removeField" as const, values: { move: target } })),
@@ -180,7 +175,7 @@ async function planNewField(
 ): Promise<SchemaChange> {
 	const change: SchemaChange = { id: `${kind}:${collection}.${field}`, do: kind, collection, field };
 	if (definition.required) {
-		change.count = (await countEntries(db, collection, sql<boolean>`not ${hasValue(field)}`)).all;
+		change.count = await countEntries(db, collection, sql<boolean>`not ${hasValue(field)}`);
 		change.choices = [
 			{ do: "addRequiredField", fill: defaultFill(definition) },
 			{ do: "addRequiredField", fill: null },

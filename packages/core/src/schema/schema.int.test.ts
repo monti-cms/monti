@@ -194,6 +194,34 @@ describe("review before values change", () => {
 	});
 });
 
+describe("removing a collection", () => {
+	it("01-4 removing a collection waits for the delete-and-apply answer, then deletes its entries; a relation still pointing at it must be fixed first", async () => {
+		await addEntry("memo", {});
+		const { memo: _memo, ...rest } = base.collections;
+		const withoutMemo = { collections: rest };
+		await expect(dev().run("schema.apply", { draft: withoutMemo }, { actor: "admin" })).rejects.toThrow("Check failed");
+		const pointing = {
+			collections: {
+				post: {
+					...base.collections.post,
+					fields: { ...base.collections.post.fields, memo: { kind: "relation", to: "memo" } },
+				},
+			},
+		} as Schema;
+		expect(await dev().run("schema.check", { draft: pointing }, { actor: "admin" })).toEqual([
+			{ collection: "post", field: "memo", code: "unknownTarget" },
+		]);
+
+		await dev().run(
+			"schema.apply",
+			{ draft: withoutMemo, answers: { "removeCollection:memo": { do: "removeCollection", confirm: true } } },
+			{ actor: "admin" },
+		);
+		expect(await db.selectFrom("entries").select("id").where("collection", "=", "memo").execute()).toEqual([]);
+		expect(await postValues()).toHaveLength(2);
+	});
+});
+
 describe("removing a field", () => {
 	const removed = withPostFields({ title, slug, summary: base.collections.post.fields.summary });
 
