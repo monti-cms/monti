@@ -12,11 +12,11 @@ export const FIELD_HOVER =
 export const FIELD_INSET = "px-monti-8";
 
 /**
- * The pointer over a checkbox, or over the option row that holds it: a soft round halo (`bg-muted`) around the box, and an empty box's border a
+ * The pointer over a checkbox, or over the option row that holds it: a soft round halo (`bg-selected`, a step stronger than a field's tint: no picked state shares it) around the box, and an empty box's border a
  * step darker. Only the box answers, not the whole row.
  */
 export const CHECK_HOVER =
-	"hover:not-data-disabled:shadow-[0_0_0_5px_var(--monti-bg-muted)] hover:not-data-disabled:not-data-checked:border-(color:--monti-fg-muted)";
+	"hover:not-data-disabled:shadow-[0_0_0_5px_var(--monti-bg-selected)] hover:not-data-disabled:not-data-checked:border-(color:--monti-fg-muted)";
 
 /**
  * The pointer over words that act (a text button, a list's filter): a flat tint around them, 8px at the sides and 4px above and below, drawn as
