@@ -204,7 +204,7 @@
 | 토큰 | 값 | 쓰임 |
 |---|---|---|
 | `height-control-lg` | 36px | 기본 크기의 버튼(알약)과 입력 칸. 폼, 대화상자, 페이지 헤더. |
-| `height-control-md` | 32px | 중간 입력 칸(`size="md"`). 속성 패널과 사이드 패널. |
+| `height-control-md` | 32px | 중간 버튼과 입력 칸(`size="md"`). 속성 패널과 사이드 패널. |
 | `height-control-sm` | 28px | 작은 버튼과 작은 입력 칸(`size="sm"`). 툴바, 필터, 표, 카드 안. |
 | `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). |
 | `height-icon-button` | 32px | 둥근 아이콘 버튼(정사각형: 폭 = 높이). |

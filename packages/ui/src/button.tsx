@@ -28,9 +28,10 @@ const buttonVariants = cva(
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:hover:bg-monti-danger-muted",
 			},
-			/** `md` 36px; `sm` 28px inside cards and panels. */
+			/** The control heights: `lg` 36px (the default: page headers, forms, dialogs); `md` 32px (side panels); `sm` 28px inside cards and toolbars. */
 			size: {
-				md: "h-monti-control-lg text-monti-body",
+				lg: "h-monti-control-lg text-monti-body",
+				md: "h-monti-control-md px-[14px] text-monti-body",
 				sm: "h-monti-control-sm px-[12px] text-monti-note",
 			},
 		},
@@ -38,14 +39,15 @@ const buttonVariants = cva(
 		// tighter than the resting padding, so the pill does not look empty on the right.
 		compoundVariants: [
 			{
-				size: "md",
+				size: "lg",
 				variant: ["primary", "danger", "outline-danger"],
 				class: "data-loading:pr-[15px] data-loading:pl-[13px]",
 			},
-			{ size: "md", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
+			{ size: "lg", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
+			{ size: "md", class: "data-loading:pr-[11px] data-loading:pl-[11px]" },
 			{ size: "sm", class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
 		],
-		defaultVariants: { variant: "primary", size: "md" },
+		defaultVariants: { variant: "primary", size: "lg" },
 	},
 );
 

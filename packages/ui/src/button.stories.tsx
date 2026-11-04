@@ -20,11 +20,11 @@ export const Playground: Story = {};
 
 const VARIANTS = ["primary", "secondary", "danger", "outline-danger"] as const;
 
-/** Every variant at both sizes, then disabled. */
+/** Every variant at each size (lg 36, md 32, sm 28), then disabled. */
 export const AllVariants: Story = {
 	render: () => (
 		<Stack gap={16}>
-			{(["md", "sm"] as const).map((size) => (
+			{(["lg", "md", "sm"] as const).map((size) => (
 				<Stack key={size} direction="row" gap={16} align="center" wrap>
 					{VARIANTS.map((variant) => (
 						<Button key={variant} variant={variant} size={size}>
