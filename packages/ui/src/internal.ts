@@ -286,7 +286,6 @@ export {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
-	SidebarSiteName,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";

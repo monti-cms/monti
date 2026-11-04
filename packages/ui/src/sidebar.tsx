@@ -21,7 +21,6 @@ import { useUiLabels } from "./labels";
 import { NAV_ROW, NAV_ROW_END } from "./nav-link";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Segmented } from "./segmented";
-import { Text } from "./text";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useIsMobile } from "./use-mobile";
 
@@ -274,26 +273,8 @@ function SidebarInset({
 }
 
 /**
- * The site's name at the head of the sidebar ({@link SidebarHeader}): it takes the room the row leaves, so the fold button sits at the row's end, cut
- * with an ellipsis when long; folded to a rail it is not shown. Put the link to the site's home inside it.
- */
-function SidebarSiteName({ className, children, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="sidebar-site-name"
-			className={cn("min-w-0 flex-1 group-data-[rail]/rail:hidden", className)}
-			{...props}
-		>
-			<Text variant="title" truncate>
-				{children}
-			</Text>
-		</div>
-	);
-}
-
-/**
- * The head row, 32px: the site's name ({@link SidebarSiteName}) and the fold button ({@link SidebarRailToggle}). Folded, the row holds the unfold
- * button alone.
+ * The head row, 32px: the site's name and the fold button ({@link SidebarRailToggle}). Put the name in a span (a `Text`): it takes the room the row
+ * leaves, so the fold button sits at the row's end, and folded to a rail it is hidden, so the row holds the unfold button alone.
  */
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
@@ -301,7 +282,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-header"
 			data-sidebar="header"
 			className={cn(
-				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-0",
+				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-0 *:[span]:min-w-0 *:[span]:flex-1 group-data-[rail]/rail:*:[span]:hidden",
 				className,
 			)}
 			{...props}
@@ -619,7 +600,6 @@ export {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
-	SidebarSiteName,
 	SidebarTrigger,
 	useSidebar,
 };

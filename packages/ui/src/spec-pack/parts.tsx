@@ -117,7 +117,6 @@ import {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode as SidebarScreenModePart,
-	SidebarSiteName,
 } from "../sidebar";
 import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
@@ -651,7 +650,11 @@ function Words({ children }: { children?: React.ReactNode }) {
 
 /** The site's name at the head of the sidebar. */
 function SiteName({ name }: { name?: string }) {
-	return <SidebarSiteName>{name}</SidebarSiteName>;
+	return (
+		<Text variant="title" truncate>
+			{name}
+		</Text>
+	);
 }
 
 /** An entry's language tabs, 6px under the bar above them, as the editor draws them; `label` names them. */

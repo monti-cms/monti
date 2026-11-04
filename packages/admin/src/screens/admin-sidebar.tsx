@@ -18,7 +18,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarRailToggle,
-	SidebarSiteName,
+	Text,
 	useSidebar,
 } from "@monti-cms/ui";
 import { Image, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
@@ -187,11 +187,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 	return (
 		<Sidebar label={t("sidebar.label")}>
 			<SidebarHeader>
-				<SidebarSiteName>
+				<Text variant="title" truncate>
 					<Link href={site.adminHref()} onClick={closeMobile}>
 						{site.SITE_NAME || "CMS"}
 					</Link>
-				</SidebarSiteName>
+				</Text>
 				<SidebarRailToggle />
 			</SidebarHeader>
 			<SidebarContent>

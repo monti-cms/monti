@@ -21,7 +21,6 @@ import {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
-	SidebarSiteName,
 	Text,
 } from "./index";
 
@@ -45,7 +44,9 @@ function Nav({ rail = false }: { rail?: boolean }) {
 		<SidebarProvider rail={rail} onRailChange={() => {}}>
 			<Sidebar label="관리자 메뉴">
 				<SidebarHeader>
-					<SidebarSiteName>몬티 블로그</SidebarSiteName>
+					<Text variant="title" truncate>
+						몬티 블로그
+					</Text>
 					<SidebarRailToggle />
 				</SidebarHeader>
 				<SidebarContent>
