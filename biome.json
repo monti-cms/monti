@@ -47,17 +47,57 @@
 	},
 	"overrides": [
 		{
-			"includes": ["packages/core/src/adapters/postgres/migrations/0*_*.ts"],
+			"includes": ["packages/core/src/**"],
 			"linter": {
 				"rules": {
 					"style": {
-						"useFilenamingConvention": "off"
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"next",
+											"next/**",
+											"react",
+											"react/**",
+											"react-dom",
+											"react-dom/**",
+											"@monti-cms/ui",
+											"@monti-cms/ui/**"
+										],
+										"message": "The core runs on the server and in the CLI and knows no framework or screen: operations reach the screen through the admin API."
+									},
+									{
+										"group": ["ai", "@ai-sdk/**", "@anthropic-ai/**", "openai"],
+										"message": "The core knows no AI: the assistant lives in @monti-cms/ai and uses the core through agentTools and callAgentTool."
+									}
+								]
+							}
+						}
 					}
 				}
 			}
 		},
 		{
-			"includes": ["packages/admin/src/ui/**", "packages/ui/src/**"],
+			"includes": ["packages/admin/src/**", "!packages/admin/src/operations/**", "!**/*.test.ts", "!**/*.test.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedGlobals": {
+							"level": "error",
+							"options": {
+								"deniedGlobals": {
+									"fetch": "Screens reach the server only through operations (useOperation), so every screen gets the same checks, versions and log (docs/design/features/build.md, rule 3)."
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/ui/src/**"],
 			"linter": {
 				"rules": {
 					"a11y": {
@@ -79,289 +119,6 @@
 			}
 		},
 		{
-			"includes": ["packages/core/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"next-auth",
-											"next-auth/**",
-											"@auth/core",
-											"@auth/core/**",
-											"@monti-cms/nextjs",
-											"@monti-cms/nextjs/**"
-										],
-										"message": "The core is framework-neutral: Next-specific code (next/*, NextAuth, withCms, the route handler) lives in @monti-cms/nextjs, and the core gets what it needs through the login connection (CmsAuth.requestHeaders, CmsAuth.rethrow)."
-									},
-									{
-										"group": [
-											"@monti-cms/mdx",
-											"@monti-cms/mdx/**",
-											"unified",
-											"unified/**",
-											"vfile",
-											"vfile/**",
-											"next-mdx-remote",
-											"next-mdx-remote/**",
-											"@mdx-js/**",
-											"@types/mdast",
-											"mdast",
-											"mdast/**",
-											"mdast-*",
-											"micromark",
-											"micromark-*",
-											"remark",
-											"remark-*",
-											"rehype",
-											"rehype-*"
-										],
-										"message": "MDX is an optional format package (@monti-cms/mdx), not a part of the core: the core imports neither it nor the remark and rehype family."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"packages/core/src/**",
-				"packages/core/test/**",
-				"!packages/core/src/adapters/postgres/**",
-				"!packages/core/src/server/index.ts",
-				"!packages/core/src/testing.ts",
-				"!packages/core/src/cli/doctor/database-checks.ts"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"next-auth",
-											"next-auth/**",
-											"@auth/core",
-											"@auth/core/**",
-											"@monti-cms/nextjs",
-											"@monti-cms/nextjs/**"
-										],
-										"message": "The core is framework-neutral: Next-specific code (next/*, NextAuth, withCms, the route handler) lives in @monti-cms/nextjs, and the core gets what it needs through the login connection (CmsAuth.requestHeaders, CmsAuth.rethrow)."
-									},
-									{
-										"group": [
-											"@monti-cms/mdx",
-											"@monti-cms/mdx/**",
-											"unified",
-											"unified/**",
-											"vfile",
-											"vfile/**",
-											"next-mdx-remote",
-											"next-mdx-remote/**",
-											"@mdx-js/**",
-											"@types/mdast",
-											"mdast",
-											"mdast/**",
-											"mdast-*",
-											"micromark",
-											"micromark-*",
-											"remark",
-											"remark-*",
-											"rehype",
-											"rehype-*"
-										],
-										"message": "MDX is an optional format package (@monti-cms/mdx), not a part of the core: the core imports neither it nor the remark and rehype family."
-									},
-									{
-										"group": ["**/adapters/postgres", "**/adapters/postgres/**"],
-										"message": "Only the Postgres adapter's own files, its public entry points (server/index.ts, testing.ts) and the doctor's database checks reach into adapters/postgres; the rest of the core works through the ContentStore port."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"packages/core/src/**",
-				"!packages/core/src/**/__test__/**",
-				"!packages/core/src/**/*.test.ts",
-				"!packages/core/src/**/*.test.tsx",
-				"!packages/core/src/adapters/postgres/**",
-				"!packages/core/src/server/index.ts",
-				"!packages/core/src/testing.ts",
-				"!packages/core/src/cli/doctor/database-checks.ts"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"next-auth",
-											"next-auth/**",
-											"@auth/core",
-											"@auth/core/**",
-											"@monti-cms/nextjs",
-											"@monti-cms/nextjs/**"
-										],
-										"message": "The core is framework-neutral: Next-specific code (next/*, NextAuth, withCms, the route handler) lives in @monti-cms/nextjs, and the core gets what it needs through the login connection (CmsAuth.requestHeaders, CmsAuth.rethrow)."
-									},
-									{
-										"group": [
-											"@monti-cms/mdx",
-											"@monti-cms/mdx/**",
-											"unified",
-											"unified/**",
-											"vfile",
-											"vfile/**",
-											"next-mdx-remote",
-											"next-mdx-remote/**",
-											"@mdx-js/**",
-											"@types/mdast",
-											"mdast",
-											"mdast/**",
-											"mdast-*",
-											"micromark",
-											"micromark-*",
-											"remark",
-											"remark-*",
-											"rehype",
-											"rehype-*"
-										],
-										"message": "MDX is an optional format package (@monti-cms/mdx), not a part of the core: the core imports neither it nor the remark and rehype family."
-									},
-									{
-										"group": ["**/adapters/postgres", "**/adapters/postgres/**"],
-										"message": "Only the Postgres adapter's own files, its public entry points (server/index.ts, testing.ts) and the doctor's database checks reach into adapters/postgres; the rest of the core works through the ContentStore port."
-									},
-									{
-										"group": ["pg", "pg/**", "kysely", "kysely/**"],
-										"message": "The Postgres driver and Kysely stay in the Postgres adapter (and the doctor's database checks): the plugin API, the root entry and the services never see them."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["packages/core/src/server/index.ts", "packages/core/src/testing.ts"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"next-auth",
-											"next-auth/**",
-											"@auth/core",
-											"@auth/core/**",
-											"@monti-cms/nextjs",
-											"@monti-cms/nextjs/**"
-										],
-										"message": "The core is framework-neutral: Next-specific code (next/*, NextAuth, withCms, the route handler) lives in @monti-cms/nextjs, and the core gets what it needs through the login connection (CmsAuth.requestHeaders, CmsAuth.rethrow)."
-									},
-									{
-										"group": [
-											"@monti-cms/mdx",
-											"@monti-cms/mdx/**",
-											"unified",
-											"unified/**",
-											"vfile",
-											"vfile/**",
-											"next-mdx-remote",
-											"next-mdx-remote/**",
-											"@mdx-js/**",
-											"@types/mdast",
-											"mdast",
-											"mdast/**",
-											"mdast-*",
-											"micromark",
-											"micromark-*",
-											"remark",
-											"remark-*",
-											"rehype",
-											"rehype-*"
-										],
-										"message": "MDX is an optional format package (@monti-cms/mdx), not a part of the core: the core imports neither it nor the remark and rehype family."
-									},
-									{
-										"group": ["pg", "pg/**", "kysely", "kysely/**"],
-										"message": "The Postgres driver and Kysely stay in the Postgres adapter (and the doctor's database checks): the plugin API, the root entry and the services never see them."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"packages/admin/src/**",
-				"!packages/admin/src/**/__test__/**",
-				"!packages/admin/src/test/**",
-				"!packages/admin/src/**/*.test.ts",
-				"!packages/admin/src/**/*.test.tsx"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"next-auth",
-											"next-auth/**",
-											"@auth/core",
-											"@auth/core/**",
-											"@monti-cms/nextjs",
-											"@monti-cms/nextjs/**"
-										],
-										"message": "The admin is framework-neutral: it reaches the router through the injected AdminRouter (src/router) and the server through AdminServer (src/host/server.ts). Next-specific code lives in @monti-cms/nextjs."
-									},
-									{
-										"group": ["@monti-cms/mdx", "@monti-cms/mdx/**"],
-										"message": "The admin knows no text notation: the MDX source panel and the mdx format come from @monti-cms/mdx through the plugin slots (sourcePanels, formats), and @monti-cms/mdx depends on the admin, so importing it would be a cycle."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": [
 				"packages/*/src/**",
 				"!**/__test__/**",
@@ -370,23 +127,6 @@
 				"!**/*.test.tsx"
 			],
 			"plugins": ["./biome-plugins/title-key.grit"]
-		},
-		{
-			"includes": [
-				"packages/*/src/**",
-				"!**/__test__/**",
-				"!packages/*/src/test/**",
-				"!**/*.test.ts",
-				"!**/*.test.tsx",
-				"!**/*.stories.tsx",
-				"!packages/core/src/**",
-				"!packages/auth/src/**",
-				"!packages/nextjs/src/route-handler.ts",
-				"!packages/nextjs/src/auth/**",
-				"!packages/*/src/**/plugin.ts",
-				"!packages/*/src/**/server.ts"
-			],
-			"plugins": ["./biome-plugins/admin-api-url.grit"]
 		},
 		{
 			"includes": ["packages/*/src/**/*.stories.tsx"],

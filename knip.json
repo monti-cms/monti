@@ -4,16 +4,8 @@
 		".": {
 			"entry": ["scripts/*.mjs"]
 		},
-		"packages/admin": {
-			"ignoreIssues": {
-				"src/ui/**": ["exports", "types"]
-			}
-		},
-		"packages/ai": {
-			"entry": ["src/routes/**/route.ts!"]
-		},
 		"packages/core": {
-			"entry": ["src/http/**/route.ts!"]
+			"entry": ["src/**/*.test.ts", "src/__test__/**"]
 		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
@@ -22,6 +14,5 @@
 			}
 		}
 	},
-	"ignoreExportsUsedInFile": true,
-	"ignore": ["examples/**", "packages/mdx/src/__test__/fixtures/**"]
+	"ignoreExportsUsedInFile": true
 }

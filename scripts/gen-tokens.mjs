@@ -34,7 +34,7 @@ export const END = "/* END generated */";
 const LIGHT = ":where(html:has(.monti-admin))";
 const DARK = ':where(html:is(.dark, [data-theme="dark"]):has(.monti-admin))';
 
-/** The admin bundle ships its fonts under these names (`bundledFonts` in `scripts/build-styles.mjs`), so they never collide with a site's own copy. */
+/** The admin bundle ships its fonts under these names (`fontFaces` in `packages/ui/.storybook/fonts.ts`), so they never collide with a site's own copy. */
 const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"Monti Plex Mono"' };
 
 /**

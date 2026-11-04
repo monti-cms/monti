@@ -6,114 +6,37 @@ A CMS for developer blogs.
 
 The name is short for Montaigne. In Italian, "monti" also means "mountains".
 
-## Quick start: add Monti to an existing Next app
+## Status: being rebuilt
 
-Run this in the folder of a Next.js (App Router) app:
+Monti is being rebuilt from its design. The previous packages were removed; the last commit with them is `9c69629f`. There is no release to install
+until the rebuild reaches it.
 
-```sh
-# 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.16&path:/core"
-# 2. Run init; it installs the other Monti packages from the same release
-pnpm exec monti init
-```
-
-It looks at the app (App Router, `src/` or not, package manager, TypeScript, existing `content/` folders of Markdown or MDX), asks a few questions (the first one: "Recommended setup", which asks only the default language and the login, or "Choose each option"), and then writes Monti's own new files, which you can read and change: `monti.config.ts` (one line per feature, each with a comment), `monti.schema.ts` (a starter `post` collection, shaped by your front matter if it finds content), the three Next files (`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), and a commented `.env.example` (what each variable is and where to get it). It shows the install command and asks before running it. **It edits three files of your app and lists each one, with the exact change, under "Changed:"** (`next.config` wrapped in `withCms`, `suppressHydrationWarning` on the root layout's `<html>`, `.monti/` in `.gitignore`); a file in a shape it cannot change safely is left alone and its step is listed with the reason. It then does the machine steps (after one confirmation): `.env.local` from `.env.example` with a new `MONTI_SECRET` (an existing `.env.local` is never overwritten), `monti db:setup` when a database URL is there, and `monti doctor`. It ends with what you chose, and a plain, numbered list of what is left for you (the `DATABASE_URL` if it was missing, `pnpm dev`, the first admin or the GitHub OAuth app).
-
-The whole flow:
-
-```text
-install → monti init (does .env.local, db:setup and doctor) → pnpm dev
-```
-
-With pnpm 12, put this in `pnpm-workspace.yaml` before step 1 (core's `tsx` brings esbuild, and pnpm 12 stops an install until its install script is allowed; Monti does not edit that file):
-
-```yaml
-allowBuilds:
-  esbuild: true
-```
-
-- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing), which body blocks, and the admin path (default `/studio`). How people sign in to the admin: the built-in email and password login (default, no other service needed), or GitHub (needs an OAuth app). With email and password, right after you deploy you open the admin and create the first admin on its first-admin screen; a forgotten password is replaced with `monti admin:reset-password`.
-- **No prompts:** every question has a flag, and `--yes` takes the defaults (and installs without asking); `--no-install` prints the install command instead, and `--no-setup` leaves `.env.local`, the database and the doctor to you. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
-- **Safe:** apart from the three small edits it lists under "Changed:" it edits no existing file, never overwrites one without asking (a file that is already there is skipped and reported), never writes outside the project, and says what it wrote if a run stops partway. If the install fails it says so and prints the exact install command; running `monti init` again continues, and existing files are kept.
-- **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
-- **Blocks:** its default body blocks are a light set; `mermaid` and `chart` are opt-in (`--blocks all`): they come from `@monti-cms/blocks/mermaid` and `@monti-cms/blocks/chart` and bring `mermaid` and `recharts` only when chosen, so an app without them loads and installs neither.
-
-Until the public release, `@monti-cms/core` is added by its GitHub address first (step 1 above); `monti init` then installs the other Monti packages from the same release (it reuses the ref in your `package.json`) and the third-party packages from npm. Always install `@monti-cms/core` before running `monti`: `npx monti` without it fetches an unrelated package. The short version with every command is the [Quick start](packages/core/README.md#quick-start-existing-next-app) of the core README.
-
-## Nothing automatic is silent
-
-`monti doctor` lists what Monti decided on its own (the database and which variable it came from, the login, the dev login bypass, host trust, `SITE_URL`, the schema file), with where each value came from, under `config/automatic`. Each automatic behavior and how to turn it off or override it is in "What Monti decides on its own" of the [core README](packages/core/README.md#what-monti-decides-on-its-own-and-how-to-turn-it-off).
-
-## Troubleshooting: run `monti doctor`
-
-If something does not work, run this in the folder of the app:
-
-```sh
-pnpm exec monti doctor
-```
-
-It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and set up (no tables yet: `monti db:setup`; migrations pending after an update: `monti db:migrate`), `MONTI_SECRET`, the login settings (for email and password: that an admin account exists yet; for GitHub: the callback URL to register, the admin id; and `SITE_URL`), the three Next files, what Monti decided on its own and where each value came from, and the `upgrade/` checks (only for sites coming from the pre-overhaul setup; they will be removed after the owner's blog migration (#93)). `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
+- The design is in [`docs/design/features`](docs/design/features/README.md): one document per feature, and the order they are built in
+  ([`build.md`](docs/design/features/build.md)).
+- The screens it is built against are the reference stories (`Screens/Reference`) in the design system's Storybook.
 
 ## Packages
 
-| Package | What it does |
-| --- | --- |
-| [`@monti-cms/core`](packages/core) | The core. One config (`monti.config.ts`), entry storage and publishing, the document model, admin API, command line (`monti`) |
-| [`@monti-cms/mdx`](packages/mdx) | MDX extension. The `mdx` format, the admin source panel, `renderMdx` and the syntax extension API |
-| [`@monti-cms/admin`](packages/admin) | The admin UI. Editor, entry list, media, templates. Framework-neutral: it reaches the router through an adapter |
-| [`@monti-cms/auth`](packages/auth) | Admin login on `Request` and `Response` (Auth.js core), with pluggable providers. A built-in email and password login (`password()`) and GitHub ship with it |
-| [`@monti-cms/nextjs`](packages/nextjs) | The Next.js adapter. Route handler, `next.config.ts` wiring, admin page and layout with the App Router adapter, the Next side of the login |
-| [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
-| [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
-| [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
-| [`@monti-cms/storage-s3`](packages/storage-s3) | Media storage on the S3 API (AWS S3, Cloudflare R2, MinIO), one `s3Storage()` configured from `S3_*` environment variables |
-| [`@monti-cms/syntax-directive`](packages/syntax-directive) | Directive syntax extension. Reads and writes `:::callout`, `::image{…}` and `:u[text]` |
-| [`@monti-cms/syntax-shiki`](packages/syntax-shiki) | Shiki code notation extension. Reads `// [!code ++]` and friends in code fences as Monti code annotations |
-
-## Supported frameworks
-
-Next.js (App Router) is the only supported host for now. Only `@monti-cms/nextjs` imports from Next.js: the core speaks the standard `Request` and `Response`, and the admin reaches the router through a small adapter it is given. Another framework would be a new adapter package, not a change to the core or the admin. See the core README, "Supported frameworks".
-
-## Install
-
-Not on npm yet. Until the public release, install the release bundle from the `release` branch by GitHub address (pnpm only).
-
-```json
-{
-	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.16&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.16&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs"
-	}
-}
-```
-
-For the other packages, change only `path:/<folder name>` and use the same tag.
-
-`@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog); its one config file is `monti.config.ts`, which exports the ready `cms` instance.
+| Package | What it is |
+|---|---|
+| [`@monti-cms/core`](packages/core) | Operations (`defineOperation`), the engine that runs them (versions, undo snapshots, the activity log, deliveries, proposals) and the entry points they produce: the admin API, the agent tools and the CLI |
+| [`@monti-cms/ui`](packages/ui) | The design system: tokens, the components the admin is built from, and the reference screens |
 
 ## Development
 
 ```sh
-pnpm install          # install
-pnpm lint             # lint (fix with pnpm lint:fix)
-pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
-pnpm typecheck        # type check all packages
-pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → seo)
-pnpm example:check    # pack the packages, install them into the example app and build it
+pnpm install            # install
+pnpm lint               # lint (fix with pnpm lint:fix)
+pnpm check:design       # admin UI rules (docs/design/admin)
+pnpm check:operations   # the feature docs and the code name the same operations
+pnpm typecheck          # type check all packages
+pnpm build              # build all packages
+CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test   # the core tests, on a Postgres test database
+pnpm --filter @monti-cms/ui storybook                             # the design system and the reference screens
 ```
 
-On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
-
-## Releasing
-
-```sh
-node scripts/version.mjs 0.1.0   # change every package version at once
-git commit -am "chore(release): v0.1.0"
-git tag v0.1.0 && git push origin main v0.1.0
-```
-
-When a `v*` tag is pushed, the release workflow (`.github/workflows/release.yml`) builds and packs the packages, commits them to the `release` branch and adds a `release/v0.2.0-next.16` tag.
+On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as
+`type(scope): subject` (for example `feat(core): add thing`); the scopes are in `commitlint.config.mjs`.
 
 ## License
 

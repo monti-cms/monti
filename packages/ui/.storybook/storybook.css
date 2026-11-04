@@ -1,5 +1,5 @@
 /*
- * What the admin bundle compiles (packages/admin/styles/index.css), without its build-time confinement: Storybook is the whole page.
+ * What the admin bundle compiles, without its build-time confinement: Storybook is the whole page.
  * The admin's own rules come in whole (`admin.css`: the default border color, scrollbars, selection), so a story looks like the admin.
  * The fonts are not here: `main.ts` adds the admin's own `@font-face` rules (`Monti Pretendard`, `Monti Plex Mono`) to the page head.
  */
@@ -9,13 +9,8 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @import "../styles/tokens.css";
-@import "../../admin/styles/admin.css";
+@import "../styles/admin.css";
 
 @source "../src";
-@source "../../admin/src";
-@source "../../ai/src";
-@source "../../blocks/src";
-@source "../../mdx/src";
-@source "../../seo/src";
 @source not "../src/**/__test__";
 @source not "../../*/src/**/__test__";
