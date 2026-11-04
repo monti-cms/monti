@@ -165,7 +165,8 @@ function SignIn({
 					</Stack>
 				) : null}
 			</Stack>
-			{formError ? <FormFieldError>{formError}</FormFieldError> : null}
+			{/* Its line is kept under the password form, so an error there moves nothing. */}
+			{formError || passwordAction ? <FormFieldError reserve>{formError}</FormFieldError> : null}
 			{denied ? (
 				<Stack gap={8} align="start">
 					<FormFieldError>{t("notAdmin", { name: denied.name })}</FormFieldError>
@@ -213,7 +214,7 @@ function FirstAdmin({
 						{t("createFirstAdmin")}
 					</SubmitButton>
 				</Stack>
-				{has("other") || has("credentials") ? <FormFieldError>{t("errorCreate")}</FormFieldError> : null}
+				<FormFieldError reserve>{has("other") || has("credentials") ? t("errorCreate") : undefined}</FormFieldError>
 			</Stack>
 		</form>
 	);
@@ -245,7 +246,10 @@ function EmailField({ t, error }: { t: T; error?: string }) {
 				aria-invalid={error ? true : undefined}
 				aria-describedby={error ? "email-error" : undefined}
 			/>
-			{error ? <FormFieldError id="email-error">{error}</FormFieldError> : null}
+			{/* The line stays when empty, as the password's does: an error after a send moves nothing. */}
+			<FormFieldError id="email-error" reserve>
+				{error}
+			</FormFieldError>
 		</FormField>
 	);
 }

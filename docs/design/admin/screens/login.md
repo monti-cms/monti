@@ -10,7 +10,7 @@
 | 화면 | `Stack`(가운데 놓인 좁은 폼 하나) | 폼은 `<form>`이고 Enter로 보낸다. |
 | 사이트 이름 "example.dev" | `Heading as="h1" variant="page"`, 그 아래 잉크 선 `Box border="bottom-contrast"` | 로고는 없고 이름을 글자로 쓴다. 잉크 선은 편집기 제목 아래 선과 같다. |
 | 안내 제목 ("첫 관리자 만들기", "로그인이 설정되지 않았어요") | `Text variant="title"` | 첫 관리자와 로그인 없음에서만 보인다. |
-| "이메일" | `FormField` + `FormFieldLabel` + `Input type="email"`(`autoComplete="username"`) + `FormFieldError` | 모든 필드가 필수인 짧은 폼이라 `*`를 붙이지 않는다([field.md](../components/field.md)). 주소가 아니면 브라우저가 보내기 전에 막으므로 흐름에는 없다. 서버가 그래도 거절하면 "이메일 주소 형식이 아니에요." 한 줄(자리를 지키지 않는다). |
+| "이메일" | `FormField` + `FormFieldLabel` + `Input type="email"`(`autoComplete="username"`) + `FormFieldError reserve` | 모든 필드가 필수인 짧은 폼이라 `*`를 붙이지 않는다([field.md](../components/field.md)). 주소가 아니면 브라우저가 보내기 전에 막으므로 흐름에는 없다. 서버가 그래도 거절하면 "이메일 주소 형식이 아니에요." 한 줄. 비밀번호처럼 오류 줄이 비어 있어도 자리를 지켜, 오류가 떠도 아래가 움직이지 않는다. 폼 전체 오류 줄(버튼 아래)도 같다. |
 | "비밀번호" | `FormField` + `FormFieldLabel` + `Input type="password"`(로그인은 `current-password`, 첫 관리자는 `new-password`) + `FormFieldError reserve` | 오류 줄은 비어 있어도 자리를 지킨다(아래 6px, 높이 20px). 오류가 떠도 버튼이 움직이지 않는다. 필드와 버튼 사이는 12px다. 틀리면 `aria-invalid`와 오류 한 줄("이메일 또는 비밀번호가 맞지 않아요.", "1분 뒤에 다시 시도해 주세요.", "10자 이상이어야 해요."). 첫 관리자의 길이 조건 "10자 이상"은 그 줄의 회색 설명이다(`hint`). 꼭 알아야 하는 규칙이라 입력하는 동안에도 보여야 하고, 오류가 오면 같은 자리에서 오류로 바뀐다. |
 | "비밀번호 확인" | `FormField` + `FormFieldLabel` + `Input type="password"`(`new-password`) + `FormFieldError reserve` | 첫 관리자에서만. 비밀번호 필드와 16px 떨어진다. 다르면 "두 비밀번호가 같지 않아요." |
 | "로그인" · "생성" | `SubmitButton variant="primary" width="full"` | 화면의 검은 알약 하나. 잠긴 동안 `disabled`. 보내는 동안 `loading`이고 글자가 "로그인 중…", "생성 중…"으로 바뀐다. GitHub 버튼도 `SubmitButton`이다. |
