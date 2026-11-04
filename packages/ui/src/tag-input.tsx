@@ -57,6 +57,7 @@ function TagInput({
 		>
 			{items.map((item, index) => (
 				<Chip
+					size="sm"
 					key={item}
 					className={mono ? "font-mono" : undefined}
 					onRemove={disabled ? undefined : () => remove(index)}

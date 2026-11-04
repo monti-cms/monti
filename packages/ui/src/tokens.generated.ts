@@ -229,6 +229,7 @@ export const MAX_WIDTH = {
 export const HEIGHT = {
 	"control-md": "h-monti-control-md",
 	"control-sm": "h-monti-control-sm",
+	"control-xs": "h-monti-control-xs",
 	"icon-button": "h-monti-icon-button",
 	header: "h-monti-header",
 	toolbar: "h-monti-toolbar",
@@ -240,6 +241,7 @@ export const HEIGHT = {
 export const MIN_HEIGHT = {
 	"control-md": "min-h-monti-control-md",
 	"control-sm": "min-h-monti-control-sm",
+	"control-xs": "min-h-monti-control-xs",
 	"icon-button": "min-h-monti-icon-button",
 	header: "min-h-monti-header",
 	toolbar: "min-h-monti-toolbar",

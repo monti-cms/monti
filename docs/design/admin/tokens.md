@@ -200,6 +200,7 @@
 |---|---|---|
 | `height-control-md` | 36px | 페이지 헤더와 대화상자 안의 알약과 입력 높이. |
 | `height-control-sm` | 28px | 작은 알약, 칩, 카드 안의 버튼. |
+| `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). |
 | `height-icon-button` | 32px | 둥근 아이콘 버튼(정사각형: 폭 = 높이). |
 | `height-header` | 60px | 편집기의 앱 헤더, 도구 패널과 시트의 헤더. |
 | `height-toolbar` | 48px | 페이지 제목 아래의 탭과 필터 줄. |
