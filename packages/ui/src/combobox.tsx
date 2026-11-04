@@ -3,7 +3,7 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import * as React from "react";
 import { Caret } from "./caret";
-import { CHIP, CHIP_REMOVE, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
+import { CHIP, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
@@ -215,8 +215,10 @@ function ComboboxChip({
 	return (
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
+			// The small chip (24px), as `TagInput`'s, so a row of chips stands in the field's own height.
 			className={cn(
 				CHIP,
+				CHIP_SM,
 				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
 				className,
 			)}

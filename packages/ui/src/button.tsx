@@ -28,7 +28,7 @@ const buttonVariants = cva(
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:hover:bg-monti-danger-muted",
 			},
-			/** `md` 36px; `sm` 28px inside cards and panels. */
+			/** `md` 32px; `sm` 28px inside cards and panels. */
 			size: {
 				md: "h-monti-control-md text-monti-body",
 				sm: "h-monti-control-sm px-[12px] text-monti-note",

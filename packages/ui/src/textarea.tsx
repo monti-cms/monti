@@ -45,10 +45,10 @@ function Textarea({
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
-				// One line stands as high as an `Input` of its size (28px small, 36px otherwise: the buttons' heights); more lines grow it downward.
+				// One line stands as high as an `Input` of its size (28px small, 32px otherwise: the buttons' heights); more lines grow it downward.
 				size === "sm"
 					? "min-h-monti-control-sm py-[3px] text-monti-note leading-[1.6]"
-					: "min-h-monti-control-md py-monti-6 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
+					: "min-h-monti-control-md py-monti-4 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
 				tall && "min-h-[52px]",
 				// With an action the line around it draws the rule, so the box keeps the height less that 1px.
@@ -64,7 +64,12 @@ function Textarea({
 			rows={rows}
 			// The box grows with its text (`field-sizing`), so `rows` alone sets no height: it holds that many lines of 1.6 and its padding.
 			style={
-				rows === undefined ? style : { minHeight: `calc(${rows} * 1.6em + ${size === "sm" ? 7 : 13}px)`, ...style }
+				rows === undefined
+					? style
+					: {
+							minHeight: `max(calc(var(--monti-height-control-${size === "sm" ? "sm" : "md"}) - ${action ? 1 : 0}px), calc(${rows} * 1.6em + ${size === "sm" ? 7 : 9}px))`,
+							...style,
+						}
 			}
 			{...props}
 		/>
@@ -83,7 +88,8 @@ function Textarea({
 			)}
 		>
 			{textarea}
-			<span className={FIELD_ACTION}>{action}</span>
+			{/* A 32px button over a 28px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
+			<span className={cn(FIELD_ACTION, size === "sm" && "-mt-monti-2 -mb-[3px]")}>{action}</span>
 		</div>
 	);
 }

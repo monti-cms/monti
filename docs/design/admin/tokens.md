@@ -203,8 +203,8 @@
 
 | 토큰 | 값 | 쓰임 |
 |---|---|---|
-| `height-control-md` | 36px | 페이지 헤더와 대화상자 안의 알약과 입력 높이. |
-| `height-control-sm` | 28px | 작은 알약, 칩, 카드 안의 버튼. |
+| `height-control-md` | 32px | 기본 크기의 버튼(알약)과 입력 칸. 폼, 대화상자, 페이지 헤더. |
+| `height-control-sm` | 28px | 작은 버튼과 작은 입력 칸(`size="sm"`). 속성 패널, 툴바, 필터, 표, 카드 안. |
 | `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). |
 | `height-icon-button` | 32px | 둥근 아이콘 버튼(정사각형: 폭 = 높이). |
 | `height-header` | 60px | 편집기의 앱 헤더, 도구 패널과 시트의 헤더. |

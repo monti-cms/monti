@@ -21,11 +21,11 @@ export const CHIP_REMOVE =
 
 /**
  * The field that holds chips and the words being typed after them (a combobox of many, `TagInput`): an underline like `Input`, ink while it has
- * focus. One row stands as high as an `Input` (36px, or 28px with `data-size="sm"`); more chips wrap it downward.
+ * focus. One row stands as high as an `Input` (32px, or 28px with `data-size="sm"`); more chips wrap it downward.
  */
 export const CHIPS_FIELD = cn(
 	FIELD_HOVER,
-	"flex min-h-monti-control-md flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body data-[size=sm]:min-h-monti-control-sm transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+	"flex min-h-monti-control-md flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body data-[size=sm]:min-h-monti-control-sm data-[size=sm]:py-px transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 	FIELD_INSET,
 );
 

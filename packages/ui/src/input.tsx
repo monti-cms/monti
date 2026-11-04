@@ -81,7 +81,7 @@ function Input({
 							!action && FIELD_INSET,
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
-				// An underline field stands as high as a button of its size: 28px small, 36px otherwise, its rule inside. With an action the line around it holds the height.
+				// An underline field stands as high as a button of its size: 28px small, 32px otherwise, its rule inside. With an action the line around it holds the height.
 				!inline && (action ? "h-full self-stretch py-0" : cn("py-0", fieldHeight)),
 				width === "short" && "w-monti-menu",
 				width === "number" && "w-24",
