@@ -56,8 +56,8 @@ function LanguageRow({
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
 			</span>
-			{/* An icon button (the × that takes the language out) keeps the row's height and puts its glyph 8px from the end, as a field's action does. */}
-			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-8 [&_[data-slot=button]]:-my-monti-4">
+			{/* An icon button (the × that takes the language out) keeps the row's height and keeps 2px from the row's end, as a field's action does. */}
+			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-6 [&_[data-slot=button]]:-my-monti-4">
 				{children}
 			</span>
 		</li>
