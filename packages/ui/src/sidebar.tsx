@@ -562,12 +562,12 @@ const SUB_DEPTH = ["pl-9", "pl-[54px]", "pl-[72px]", "pl-[90px]"] as const;
  */
 const SUB_LINE_X = [
 	"before:left-[17px] after:left-[17px] after:w-[10px]",
-	"before:left-[37px] after:left-[37px] after:w-[10px]",
-	"before:left-[55px] after:left-[55px] after:w-[10px]",
-	"before:left-[73px] after:left-[73px] after:w-[10px]",
+	"before:left-[35px] after:left-[35px] after:w-[10px]",
+	"before:left-[53px] after:left-[53px] after:w-[10px]",
+	"before:left-[71px] after:left-[71px] after:w-[10px]",
 ] as const;
-/** Where each folder depth's rule runs, in px from the row's start (the parent's icon, then each folder's words). */
-const SUB_LINE_LEFT = [17, 37, 55, 73] as const;
+/** Where each folder depth's rule runs, in px from the row's start: 19px before the folder's words at every depth, so every elbow (10px) stops 9px short of them and reads at the same angle. */
+const SUB_LINE_LEFT = [17, 35, 53, 71] as const;
 
 /**
  * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
