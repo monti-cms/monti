@@ -3,7 +3,6 @@
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Box,
 	Count,
 	Sidebar,
 	SidebarContent,
@@ -19,7 +18,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarRailToggle,
-	Text,
+	SidebarSiteName,
 	useSidebar,
 } from "@monti-cms/ui";
 import { Image, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
@@ -188,15 +187,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 	return (
 		<Sidebar label={t("sidebar.label")}>
 			<SidebarHeader>
-				{!rail && (
-					<Box grow minWidth={0}>
-						<Link href={site.adminHref()} onClick={closeMobile}>
-							<Text variant="title" truncate>
-								{site.SITE_NAME || "CMS"}
-							</Text>
-						</Link>
-					</Box>
-				)}
+				<SidebarSiteName>
+					<Link href={site.adminHref()} onClick={closeMobile}>
+						{site.SITE_NAME || "CMS"}
+					</Link>
+				</SidebarSiteName>
 				<SidebarRailToggle />
 			</SidebarHeader>
 			<SidebarContent>

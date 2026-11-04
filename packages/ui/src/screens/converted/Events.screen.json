@@ -195,7 +195,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -230,7 +242,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text13"
+						"state": "/drawn/text17"
 					}
 				]
 			}
@@ -239,7 +251,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text14"
+					"state": "/drawn/text18"
 				}
 			}
 		},
@@ -247,7 +259,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text19"
 				}
 			}
 		},
@@ -255,11 +267,11 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				},
 				"current": true,
 				"count": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				},
 				"countTone": "warning"
 			}
@@ -268,7 +280,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				}
 			}
 		},
@@ -283,7 +295,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				}
 			}
 		},
@@ -305,7 +317,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				}
 			]
 		},
@@ -313,7 +325,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				}
 			]
 		},
@@ -321,16 +333,16 @@
 			"type": "Banner",
 			"props": {
 				"title": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				},
 				"meta": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				},
 				"tone": "danger"
 			},
 			"children": ["textButton", "textButton2"]
 		},
-		"text24": {
+		"text28": {
 			"type": "Text",
 			"props": {
 				"as": "p",
@@ -339,7 +351,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				}
 			]
 		},
@@ -347,7 +359,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text26"
+					"state": "/drawn/text30"
 				}
 			]
 		},
@@ -355,10 +367,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				},
 				"sub": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				},
 				"proposal": true
 			}
@@ -371,7 +383,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				}
 			]
 		},
@@ -383,7 +395,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				}
 			]
 		},
@@ -399,7 +411,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				}
 			]
 		},
@@ -407,10 +419,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text36"
 				},
 				"sub": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text37"
 				},
 				"proposal": true
 			}
@@ -423,7 +435,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				}
 			]
 		},
@@ -435,7 +447,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text35"
+					"state": "/drawn/text39"
 				}
 			]
 		},
@@ -451,7 +463,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text36"
+					"state": "/drawn/text40"
 				}
 			]
 		},
@@ -459,10 +471,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				},
 				"sub": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text42"
 				},
 				"proposal": true
 			}
@@ -475,7 +487,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text39"
+					"state": "/drawn/text43"
 				}
 			]
 		},
@@ -487,7 +499,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text40"
+					"state": "/drawn/text44"
 				}
 			]
 		},
@@ -503,7 +515,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text41"
+					"state": "/drawn/text45"
 				}
 			]
 		},
@@ -511,14 +523,14 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text42"
+					"state": "/drawn/text46"
 				},
 				"sub": {
-					"state": "/drawn/text43"
+					"state": "/drawn/text47"
 				}
 			}
 		},
-		"text44": {
+		"text48": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -527,13 +539,13 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text45"
+					"state": "/drawn/text49"
 				}
 			]
 		},
 		"rowButtonsCell4": {
 			"type": "RowButtonsCell",
-			"children": ["text44"]
+			"children": ["text48"]
 		},
 		"tableRow4": {
 			"type": "TableRow",
@@ -543,7 +555,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text46"
+					"state": "/drawn/text50"
 				}
 			]
 		},
@@ -551,10 +563,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text51"
 				},
 				"sub": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text52"
 				},
 				"proposal": true
 			}
@@ -567,11 +579,11 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text49"
+					"state": "/drawn/text53"
 				}
 			]
 		},
-		"text50": {
+		"text54": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -580,13 +592,13 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text51"
+					"state": "/drawn/text55"
 				}
 			]
 		},
 		"rowButtonsCell5": {
 			"type": "RowButtonsCell",
-			"children": ["textButton9", "text50"]
+			"children": ["textButton9", "text54"]
 		},
 		"tableRow5": {
 			"type": "TableRow",
@@ -596,7 +608,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text52"
+					"state": "/drawn/text56"
 				}
 			]
 		},
@@ -604,10 +616,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text53"
+					"state": "/drawn/text57"
 				},
 				"sub": {
-					"state": "/drawn/text54"
+					"state": "/drawn/text58"
 				}
 			}
 		},
@@ -618,11 +630,11 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text55"
+					"state": "/drawn/text59"
 				}
 			]
 		},
-		"text56": {
+		"text60": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -631,7 +643,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text57"
+					"state": "/drawn/text61"
 				}
 			]
 		},
@@ -643,7 +655,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text58"
+					"state": "/drawn/text62"
 				}
 			]
 		},
@@ -658,7 +670,7 @@
 				{
 					"spacing": 12
 				},
-				"text56",
+				"text60",
 				{
 					"spacing": 12
 				},
@@ -677,7 +689,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text59"
+					"state": "/drawn/text63"
 				}
 			]
 		},
@@ -685,10 +697,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text60"
+					"state": "/drawn/text64"
 				},
 				"sub": {
-					"state": "/drawn/text61"
+					"state": "/drawn/text65"
 				}
 			}
 		},
@@ -700,7 +712,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text62"
+					"state": "/drawn/text66"
 				}
 			]
 		},
@@ -708,10 +720,10 @@
 			"type": "TwoLineCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text63"
+					"state": "/drawn/text67"
 				},
 				"sub": {
-					"state": "/drawn/text64"
+					"state": "/drawn/text68"
 				}
 			}
 		},
@@ -744,7 +756,7 @@
 				{
 					"spacing": 24
 				},
-				"text24",
+				"text28",
 				{
 					"spacing": 4
 				},
@@ -796,7 +808,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text65"
+					"state": "/drawn/text69"
 				}
 			}
 		}

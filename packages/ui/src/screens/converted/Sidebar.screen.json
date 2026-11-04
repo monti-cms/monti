@@ -223,7 +223,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text15"
+				},
+				"system": {
+					"state": "/drawn/text16"
+				},
+				"light": {
+					"state": "/drawn/text17"
+				},
+				"dark": {
+					"state": "/drawn/text18"
+				}
 			}
 		},
 		"sidebarFoot": {

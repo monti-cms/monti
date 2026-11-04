@@ -194,7 +194,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -234,7 +246,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text17"
 				}
 			]
 		},
@@ -243,12 +255,12 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text14"
+						"state": "/drawn/text18"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text15"
+						"state": "/drawn/text19"
 					}
 				]
 			},
@@ -258,11 +270,11 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				},
 				"current": true,
 				"count": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -277,7 +289,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				}
 			}
 		},
@@ -303,13 +315,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				},
 				"address": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				},
 				"meta": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				}
 			}
 		},
@@ -344,13 +356,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				},
 				"address": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				},
 				"meta": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				}
 			}
 		},
@@ -384,13 +396,13 @@
 			"type": "TrashTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				},
 				"address": {
-					"state": "/drawn/text26"
+					"state": "/drawn/text30"
 				},
 				"meta": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				},
 				"metaTone": "warning"
 			}
@@ -462,7 +474,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				},
 				"current": true
 			}
@@ -471,7 +483,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				}
 			}
 		},
@@ -483,7 +495,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				}
 			],
 			"props": {
@@ -506,7 +518,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text32"
+					"state": "/drawn/text36"
 				}
 			],
 			"props": {
@@ -530,7 +542,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text33"
+					"state": "/drawn/text37"
 				}
 			],
 			"props": {
@@ -556,18 +568,18 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				}
 			]
 		},
-		"text35": {
+		"text39": {
 			"type": "Text",
 			"props": {
 				"mono": true
 			},
 			"children": [
 				{
-					"state": "/drawn/text36"
+					"state": "/drawn/text40"
 				}
 			]
 		},
@@ -579,7 +591,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				}
 			]
 		},
@@ -590,7 +602,7 @@
 				"align": "baseline"
 			},
 			"children": [
-				"text35",
+				"text39",
 				{
 					"spacing": 12
 				},
@@ -604,7 +616,7 @@
 		"moreButton": {
 			"type": "MoreButton"
 		},
-		"text38": {
+		"text42": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -613,7 +625,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text39"
+					"state": "/drawn/text43"
 				}
 			]
 		},
@@ -623,7 +635,7 @@
 				"grow": true,
 				"minWidth": 0
 			},
-			"children": ["text38"]
+			"children": ["text42"]
 		},
 		"button2": {
 			"type": "Button",
@@ -632,7 +644,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text40"
+					"state": "/drawn/text44"
 				}
 			]
 		},
@@ -640,7 +652,7 @@
 			"type": "Panel",
 			"props": {
 				"title": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				},
 				"closable": true
 			},

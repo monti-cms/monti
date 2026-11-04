@@ -261,6 +261,7 @@ export const SidebarMenuSubButton = close(open.SidebarMenuSubButton);
 export const SidebarProvider = close(open.SidebarProvider);
 export const SidebarRailToggle = close(open.SidebarRailToggle);
 export const SidebarScreenMode = close(open.SidebarScreenMode);
+export const SidebarSiteName = close(open.SidebarSiteName);
 export const SidebarTrigger = close(open.SidebarTrigger);
 export const StatusBarList = close(open.StatusBarList);
 export const TodoDone = close(open.TodoDone);

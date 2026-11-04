@@ -223,7 +223,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text15"
+				},
+				"system": {
+					"state": "/drawn/text16"
+				},
+				"light": {
+					"state": "/drawn/text17"
+				},
+				"dark": {
+					"state": "/drawn/text18"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -257,7 +269,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text15"
+					"state": "/drawn/text19"
 				}
 			]
 		},
@@ -265,7 +277,7 @@
 			"type": "SearchToggle",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -276,7 +288,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				}
 			]
 		},
@@ -285,12 +297,12 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text18"
+						"state": "/drawn/text22"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text19"
+						"state": "/drawn/text23"
 					}
 				]
 			},
@@ -303,7 +315,7 @@
 					"state": "/drawn/end"
 				},
 				"addLabel": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				},
 				"columns": {
 					"state": "/drawn/columns"
@@ -317,10 +329,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				},
 				"address": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				},
 				"folder": true
 			}
@@ -351,7 +363,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				}
 			]
 		},
@@ -363,10 +375,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				},
 				"address": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				}
 			}
 		},
@@ -378,7 +390,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text26"
+					"state": "/drawn/text30"
 				}
 			]
 		},
@@ -390,7 +402,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				}
 			]
 		},
@@ -401,7 +413,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				}
 			]
 		},
@@ -413,7 +425,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				}
 			]
 		},
@@ -431,7 +443,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				}
 			]
 		},
@@ -443,10 +455,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				},
 				"address": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text36"
 				}
 			}
 		},
@@ -458,7 +470,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text33"
+					"state": "/drawn/text37"
 				}
 			]
 		},
@@ -470,7 +482,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				}
 			]
 		},
@@ -481,7 +493,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text35"
+					"state": "/drawn/text39"
 				}
 			]
 		},
@@ -493,7 +505,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text36"
+					"state": "/drawn/text40"
 				}
 			]
 		},
@@ -511,7 +523,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				}
 			]
 		},
@@ -523,10 +535,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text42"
 				},
 				"address": {
-					"state": "/drawn/text39"
+					"state": "/drawn/text43"
 				}
 			}
 		},
@@ -538,7 +550,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text40"
+					"state": "/drawn/text44"
 				}
 			]
 		},
@@ -556,7 +568,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text41"
+					"state": "/drawn/text45"
 				}
 			]
 		},
@@ -568,7 +580,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text42"
+					"state": "/drawn/text46"
 				}
 			]
 		},
@@ -595,7 +607,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text43"
+					"state": "/drawn/text47"
 				}
 			]
 		},
@@ -607,10 +619,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text44"
+					"state": "/drawn/text48"
 				},
 				"address": {
-					"state": "/drawn/text45"
+					"state": "/drawn/text49"
 				}
 			}
 		},
@@ -622,7 +634,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text46"
+					"state": "/drawn/text50"
 				}
 			]
 		},
@@ -634,7 +646,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text47"
+					"state": "/drawn/text51"
 				}
 			]
 		},
@@ -645,7 +657,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text48"
+					"state": "/drawn/text52"
 				}
 			]
 		},
@@ -657,7 +669,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text49"
+					"state": "/drawn/text53"
 				}
 			]
 		},
@@ -684,7 +696,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text50"
+					"state": "/drawn/text54"
 				}
 			]
 		},
@@ -696,10 +708,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text51"
+					"state": "/drawn/text55"
 				},
 				"address": {
-					"state": "/drawn/text52"
+					"state": "/drawn/text56"
 				}
 			}
 		},
@@ -711,7 +723,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text53"
+					"state": "/drawn/text57"
 				}
 			]
 		},
@@ -729,7 +741,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text54"
+					"state": "/drawn/text58"
 				}
 			]
 		},
@@ -741,7 +753,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text55"
+					"state": "/drawn/text59"
 				}
 			]
 		},
@@ -768,7 +780,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text56"
+					"state": "/drawn/text60"
 				}
 			]
 		},
@@ -780,10 +792,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text57"
+					"state": "/drawn/text61"
 				},
 				"address": {
-					"state": "/drawn/text58"
+					"state": "/drawn/text62"
 				}
 			}
 		},
@@ -795,7 +807,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text59"
+					"state": "/drawn/text63"
 				}
 			]
 		},
@@ -807,7 +819,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text60"
+					"state": "/drawn/text64"
 				}
 			]
 		},
@@ -818,7 +830,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text61"
+					"state": "/drawn/text65"
 				}
 			]
 		},
@@ -830,7 +842,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text62"
+					"state": "/drawn/text66"
 				}
 			]
 		},
@@ -857,7 +869,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text63"
+					"state": "/drawn/text67"
 				}
 			]
 		},
@@ -869,10 +881,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text64"
+					"state": "/drawn/text68"
 				},
 				"address": {
-					"state": "/drawn/text65"
+					"state": "/drawn/text69"
 				}
 			}
 		},
@@ -884,7 +896,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text66"
+					"state": "/drawn/text70"
 				}
 			]
 		},
@@ -902,7 +914,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text67"
+					"state": "/drawn/text71"
 				}
 			]
 		},
@@ -914,7 +926,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text68"
+					"state": "/drawn/text72"
 				}
 			]
 		},
@@ -941,7 +953,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text69"
+					"state": "/drawn/text73"
 				}
 			]
 		},
@@ -953,10 +965,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text70"
+					"state": "/drawn/text74"
 				},
 				"address": {
-					"state": "/drawn/text71"
+					"state": "/drawn/text75"
 				}
 			}
 		},
@@ -968,7 +980,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text72"
+					"state": "/drawn/text76"
 				}
 			]
 		},
@@ -986,7 +998,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text73"
+					"state": "/drawn/text77"
 				}
 			]
 		},
@@ -998,7 +1010,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text74"
+					"state": "/drawn/text78"
 				}
 			]
 		},
@@ -1025,7 +1037,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text75"
+					"state": "/drawn/text79"
 				}
 			]
 		},
@@ -1037,10 +1049,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text76"
+					"state": "/drawn/text80"
 				},
 				"address": {
-					"state": "/drawn/text77"
+					"state": "/drawn/text81"
 				}
 			}
 		},
@@ -1052,7 +1064,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text78"
+					"state": "/drawn/text82"
 				}
 			]
 		},
@@ -1070,7 +1082,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text79"
+					"state": "/drawn/text83"
 				}
 			]
 		},
@@ -1082,7 +1094,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text80"
+					"state": "/drawn/text84"
 				}
 			]
 		},
@@ -1109,7 +1121,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text81"
+					"state": "/drawn/text85"
 				}
 			]
 		},
@@ -1121,10 +1133,10 @@
 			"type": "TitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text82"
+					"state": "/drawn/text86"
 				},
 				"address": {
-					"state": "/drawn/text83"
+					"state": "/drawn/text87"
 				}
 			}
 		},
@@ -1136,7 +1148,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text84"
+					"state": "/drawn/text88"
 				}
 			]
 		},
@@ -1148,7 +1160,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text85"
+					"state": "/drawn/text89"
 				}
 			]
 		},
@@ -1159,7 +1171,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text86"
+					"state": "/drawn/text90"
 				}
 			]
 		},
@@ -1171,7 +1183,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text87"
+					"state": "/drawn/text91"
 				}
 			]
 		},
@@ -1221,7 +1233,7 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text88"
+					"state": "/drawn/text92"
 				}
 			]
 		},
@@ -1229,7 +1241,7 @@
 			"type": "PageSize",
 			"props": {
 				"shown": {
-					"state": "/drawn/text89"
+					"state": "/drawn/text93"
 				}
 			}
 		},
@@ -1245,7 +1257,7 @@
 			"props": {
 				"current": true,
 				"page": {
-					"state": "/drawn/text90"
+					"state": "/drawn/text94"
 				}
 			}
 		},
@@ -1253,7 +1265,7 @@
 			"type": "PageButton",
 			"props": {
 				"page": {
-					"state": "/drawn/text91"
+					"state": "/drawn/text95"
 				}
 			}
 		},
@@ -1261,7 +1273,7 @@
 			"type": "PageButton",
 			"props": {
 				"page": {
-					"state": "/drawn/text92"
+					"state": "/drawn/text96"
 				}
 			}
 		},
@@ -1269,7 +1281,7 @@
 			"type": "PageButton",
 			"props": {
 				"page": {
-					"state": "/drawn/text93"
+					"state": "/drawn/text97"
 				}
 			}
 		},
@@ -1277,7 +1289,7 @@
 			"type": "PageButton",
 			"props": {
 				"page": {
-					"state": "/drawn/text94"
+					"state": "/drawn/text98"
 				}
 			}
 		},
@@ -1285,7 +1297,7 @@
 			"type": "PageButton",
 			"props": {
 				"page": {
-					"state": "/drawn/text95"
+					"state": "/drawn/text99"
 				}
 			}
 		},
@@ -1377,10 +1389,10 @@
 			"type": "ProposalBox",
 			"props": {
 				"title": {
-					"state": "/drawn/text97"
+					"state": "/drawn/text101"
 				},
 				"summary": {
-					"state": "/drawn/text98"
+					"state": "/drawn/text102"
 				},
 				"status": {
 					"state": "/drawn/status"
@@ -1389,13 +1401,13 @@
 					"state": "/drawn/entries"
 				},
 				"reviewLabel": {
-					"state": "/drawn/text99"
+					"state": "/drawn/text103"
 				},
 				"discardLabel": {
-					"state": "/drawn/text100"
+					"state": "/drawn/text104"
 				},
 				"applyLabel": {
-					"state": "/drawn/text101"
+					"state": "/drawn/text105"
 				}
 			}
 		},
@@ -1432,16 +1444,16 @@
 			"type": "ChatBox",
 			"props": {
 				"label": {
-					"state": "/drawn/text102"
+					"state": "/drawn/text106"
 				},
 				"placeholder": {
-					"state": "/drawn/text103"
+					"state": "/drawn/text107"
 				},
 				"sendLabel": {
-					"state": "/drawn/text104"
+					"state": "/drawn/text108"
 				},
 				"modelLabel": {
-					"state": "/drawn/text105"
+					"state": "/drawn/text109"
 				},
 				"model": {
 					"state": "/drawn/model"
@@ -1452,7 +1464,7 @@
 			"type": "Panel",
 			"props": {
 				"title": {
-					"state": "/drawn/text96"
+					"state": "/drawn/text100"
 				},
 				"closable": true,
 				"width": "assistant",

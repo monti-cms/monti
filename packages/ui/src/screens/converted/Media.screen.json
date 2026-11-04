@@ -281,7 +281,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text21"
+				},
+				"system": {
+					"state": "/drawn/text22"
+				},
+				"light": {
+					"state": "/drawn/text23"
+				},
+				"dark": {
+					"state": "/drawn/text24"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -318,7 +330,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				}
 			]
 		},
@@ -329,7 +341,7 @@
 			"type": "Trail",
 			"props": {
 				"label": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				}
 			},
 			"children": ["textButton", "trailSlash"]
@@ -338,7 +350,7 @@
 			"type": "TextButton",
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				}
 			]
 		},
@@ -346,7 +358,7 @@
 			"type": "SearchToggle",
 			"props": {
 				"label": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				}
 			}
 		},
@@ -364,7 +376,7 @@
 			"children": [
 				"icon10",
 				{
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				}
 			]
 		},
@@ -373,7 +385,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text26"
+						"state": "/drawn/text30"
 					}
 				]
 			},
@@ -383,7 +395,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				}
 			}
 		},
@@ -398,7 +410,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				}
 			}
 		},
@@ -406,7 +418,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				}
 			}
 		},
@@ -421,7 +433,7 @@
 			"type": "Filter",
 			"props": {
 				"label": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				}
 			}
 		},
@@ -429,13 +441,13 @@
 			"type": "SegmentedChoice",
 			"props": {
 				"label": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				},
 				"options": {
 					"state": "/drawn/options"
 				},
 				"picked": {
-					"state": "/drawn/text32"
+					"state": "/drawn/text36"
 				},
 				"size": "sm",
 				"inline": true
@@ -456,7 +468,7 @@
 			"type": "FolderEntry",
 			"props": {
 				"name": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text37"
 				},
 				"up": true
 			}
@@ -465,7 +477,7 @@
 			"type": "FolderEntry",
 			"props": {
 				"name": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				},
 				"count": {
 					"state": "/drawn/count5"
@@ -476,7 +488,7 @@
 			"type": "FolderEntry",
 			"props": {
 				"name": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text39"
 				},
 				"count": {
 					"state": "/drawn/count6"
@@ -494,10 +506,10 @@
 			"type": "MediaTile",
 			"props": {
 				"name": {
-					"state": "/drawn/text36"
+					"state": "/drawn/text40"
 				},
 				"detail": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				},
 				"picture": {
 					"state": "/drawn/picture"
@@ -508,10 +520,10 @@
 			"type": "MediaTile",
 			"props": {
 				"name": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text42"
 				},
 				"detail": {
-					"state": "/drawn/text39"
+					"state": "/drawn/text43"
 				},
 				"picture": {
 					"state": "/drawn/picture2"
@@ -522,10 +534,10 @@
 			"type": "MediaTile",
 			"props": {
 				"name": {
-					"state": "/drawn/text40"
+					"state": "/drawn/text44"
 				},
 				"detail": {
-					"state": "/drawn/text41"
+					"state": "/drawn/text45"
 				},
 				"picture": {
 					"state": "/drawn/picture3"
@@ -536,13 +548,13 @@
 			"type": "MediaTile",
 			"props": {
 				"name": {
-					"state": "/drawn/text42"
+					"state": "/drawn/text46"
 				},
 				"detail": {
-					"state": "/drawn/text43"
+					"state": "/drawn/text47"
 				},
 				"ext": {
-					"state": "/drawn/text44"
+					"state": "/drawn/text48"
 				}
 			}
 		},
@@ -550,10 +562,10 @@
 			"type": "MediaTile",
 			"props": {
 				"name": {
-					"state": "/drawn/text45"
+					"state": "/drawn/text49"
 				},
 				"detail": {
-					"state": "/drawn/text46"
+					"state": "/drawn/text50"
 				},
 				"picture": {
 					"state": "/drawn/picture4"
@@ -620,7 +632,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text51"
 				}
 			}
 		}

@@ -306,7 +306,20 @@ const parts = [
 			const on = [...el.querySelectorAll(":scope > button")].findIndex((button) => button.classList.contains("is-on"));
 			const icon = iconName(el.querySelector("svg") ?? el);
 			const value = on >= 0 ? ["system", "light", "dark"][on] : ({ light: "light", asleep: "dark" }[icon] ?? "system");
-			return { value, defaultOpen: document.querySelector(".mt-card .mt-menu-item") ? true : undefined };
+			// The modes' names, from the three cells or (folded) from the sidebar's own open menu; that menu, and no other on the screen, is it open.
+			const sidebar = el.closest(".mt-sidebar")?.parentElement;
+			const menu = sidebar?.querySelector(":scope > .mt-card[role=menu]");
+			const cells = [...el.querySelectorAll(":scope > button")].map((button) => button.getAttribute("aria-label"));
+			const rows = [...(menu?.querySelectorAll(".mt-menu-item .name") ?? [])].map((name) => name.textContent.trim());
+			const [system, light, dark] = cells.length === 3 ? cells : rows;
+			return {
+				value,
+				label: el.getAttribute("aria-label") ?? menu?.getAttribute("aria-label"),
+				system,
+				light,
+				dark,
+				defaultOpen: menu ? true : undefined,
+			};
 		},
 		leaf: true,
 		asProps: ["flex"],

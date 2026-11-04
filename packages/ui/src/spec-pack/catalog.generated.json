@@ -2572,11 +2572,23 @@
 			"children": false,
 			"slots": [],
 			"props": {
+				"dark": {
+					"kind": "text",
+					"type": "string"
+				},
 				"defaultOpen": {
 					"kind": "flag",
 					"type": "boolean"
 				},
 				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"light": {
+					"kind": "text",
+					"type": "string"
+				},
+				"system": {
 					"kind": "text",
 					"type": "string"
 				},

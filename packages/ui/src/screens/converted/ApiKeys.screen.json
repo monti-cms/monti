@@ -195,7 +195,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -232,7 +244,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text17"
 				}
 			]
 		},
@@ -241,7 +253,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text14"
+						"state": "/drawn/text18"
 					}
 				]
 			},
@@ -251,7 +263,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text19"
 				}
 			}
 		},
@@ -259,7 +271,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -267,10 +279,10 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				},
 				"count": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				},
 				"countTone": "warning"
 			}
@@ -279,7 +291,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				},
 				"current": true
 			}
@@ -302,7 +314,7 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				}
 			]
 		},
@@ -310,7 +322,7 @@
 			"type": "SectionHead",
 			"children": [
 				{
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				},
 				"count"
 			]
@@ -319,10 +331,10 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				},
 				{
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				}
 			]
 		},
@@ -348,13 +360,13 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text22"
+						"state": "/drawn/text26"
 					},
 					"count2"
 				],
 				"meta": [
 					{
-						"state": "/drawn/text25"
+						"state": "/drawn/text29"
 					}
 				],
 				"actions": ["linkCell", "linkCell2"]
@@ -364,10 +376,10 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				},
 				{
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				}
 			]
 		},
@@ -393,13 +405,13 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text26"
+						"state": "/drawn/text30"
 					},
 					"count3"
 				],
 				"meta": [
 					{
-						"state": "/drawn/text29"
+						"state": "/drawn/text33"
 					}
 				],
 				"actions": ["linkCell3", "linkCell4"]
@@ -409,10 +421,10 @@
 			"type": "Count",
 			"children": [
 				{
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				},
 				{
-					"state": "/drawn/text32"
+					"state": "/drawn/text36"
 				}
 			]
 		},
@@ -441,13 +453,13 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text30"
+						"state": "/drawn/text34"
 					},
 					"count4"
 				],
 				"meta": [
 					{
-						"state": "/drawn/text33"
+						"state": "/drawn/text37"
 					}
 				],
 				"actions": ["linkCell5", "linkCell6"]
@@ -465,7 +477,7 @@
 			"type": "SectionHead",
 			"children": [
 				{
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				}
 			]
 		},
@@ -473,7 +485,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				},
 				"width": "full"
 			}
@@ -483,12 +495,12 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text35"
+						"state": "/drawn/text39"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text36"
+						"state": "/drawn/text40"
 					}
 				],
 				"control": ["selectBox"]
@@ -509,7 +521,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text39"
+					"state": "/drawn/text43"
 				}
 			]
 		},
@@ -517,7 +529,7 @@
 			"type": "SectionHead",
 			"children": [
 				{
-					"state": "/drawn/text38"
+					"state": "/drawn/text42"
 				},
 				"count5"
 			]
@@ -526,7 +538,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text42"
+					"state": "/drawn/text46"
 				},
 				"warning": true,
 				"width": "full"
@@ -540,18 +552,18 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text40"
+						"state": "/drawn/text44"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text41"
+						"state": "/drawn/text45"
 					}
 				],
 				"control": ["selectBox2"]
 			}
 		},
-		"text44": {
+		"text48": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -559,10 +571,10 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text45"
+					"state": "/drawn/text49"
 				},
 				{
-					"state": "/drawn/text46"
+					"state": "/drawn/text50"
 				}
 			]
 		},
@@ -570,7 +582,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text52"
 				},
 				"warning": true,
 				"width": "full"
@@ -585,19 +597,19 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text43"
+						"state": "/drawn/text47"
 					},
-					"text44"
+					"text48"
 				],
 				"meta": [
 					{
-						"state": "/drawn/text47"
+						"state": "/drawn/text51"
 					}
 				],
 				"control": ["selectBox3"]
 			}
 		},
-		"text50": {
+		"text54": {
 			"type": "Text",
 			"props": {
 				"as": "span",
@@ -605,10 +617,10 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text51"
+					"state": "/drawn/text55"
 				},
 				{
-					"state": "/drawn/text52"
+					"state": "/drawn/text56"
 				}
 			]
 		},
@@ -616,7 +628,7 @@
 			"type": "SelectBox",
 			"props": {
 				"value": {
-					"state": "/drawn/text54"
+					"state": "/drawn/text58"
 				},
 				"warning": true,
 				"width": "full"
@@ -631,13 +643,13 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text49"
+						"state": "/drawn/text53"
 					},
-					"text50"
+					"text54"
 				],
 				"meta": [
 					{
-						"state": "/drawn/text53"
+						"state": "/drawn/text57"
 					}
 				],
 				"control": ["selectBox4"]
@@ -718,7 +730,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text55"
+					"state": "/drawn/text59"
 				}
 			}
 		}

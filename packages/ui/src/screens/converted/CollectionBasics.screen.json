@@ -195,7 +195,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -230,7 +242,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text13"
+						"state": "/drawn/text17"
 					}
 				]
 			}
@@ -239,7 +251,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text14"
+					"state": "/drawn/text18"
 				}
 			}
 		},
@@ -247,7 +259,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text19"
 				}
 			}
 		},
@@ -255,7 +267,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				},
 				"current": true
 			}
@@ -264,7 +276,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -283,7 +295,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				},
 				"current": true
 			}
@@ -292,10 +304,10 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				},
 				"count": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				}
 			}
 		},
@@ -303,7 +315,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				}
 			}
 		},
@@ -322,7 +334,7 @@
 			"type": "FormFieldLabel",
 			"children": [
 				{
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				}
 			],
 			"props": {
@@ -361,7 +373,7 @@
 			"type": "OptionSwitch",
 			"props": {
 				"label": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				},
 				"checked": true
 			}
@@ -374,7 +386,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text24"
+						"state": "/drawn/text28"
 					}
 				]
 			},
@@ -387,13 +399,13 @@
 			"type": "ReadValue",
 			"props": {
 				"label": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				},
 				"mono": true
 			},
 			"children": [
 				{
-					"state": "/drawn/text26"
+					"state": "/drawn/text30"
 				},
 				"lock"
 			]
@@ -410,12 +422,12 @@
 			"type": "ReadValue",
 			"props": {
 				"label": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				}
 			},
 			"children": [
 				{
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				}
 			]
 		},
@@ -445,7 +457,7 @@
 			"type": "OptionSwitch",
 			"props": {
 				"label": {
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				},
 				"checked": true
 			}
@@ -454,10 +466,10 @@
 			"type": "AffixField",
 			"props": {
 				"prefix": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				},
 				"suffix": {
-					"state": "/drawn/text31"
+					"state": "/drawn/text35"
 				},
 				"value": {
 					"state": "/drawn/value2"
@@ -482,7 +494,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text32"
+						"state": "/drawn/text36"
 					}
 				]
 			},
@@ -496,7 +508,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text36"
+					"state": "/drawn/text40"
 				}
 			]
 		},
@@ -504,10 +516,10 @@
 			"type": "DangerLine",
 			"props": {
 				"name": {
-					"state": "/drawn/text34"
+					"state": "/drawn/text38"
 				},
 				"meta": {
-					"state": "/drawn/text35"
+					"state": "/drawn/text39"
 				}
 			},
 			"slots": {
@@ -518,7 +530,7 @@
 			"type": "DangerSection",
 			"props": {
 				"title": {
-					"state": "/drawn/text33"
+					"state": "/drawn/text37"
 				}
 			},
 			"children": ["dangerLine"]
@@ -543,37 +555,15 @@
 			"type": "NavEntry",
 			"props": {
 				"label": {
-					"state": "/drawn/text37"
+					"state": "/drawn/text41"
 				},
 				"note": {
-					"state": "/drawn/text38"
+					"state": "/drawn/text42"
 				},
 				"active": true
 			}
 		},
 		"navEntry2": {
-			"type": "NavEntry",
-			"props": {
-				"label": {
-					"state": "/drawn/text39"
-				},
-				"note": {
-					"state": "/drawn/text40"
-				}
-			}
-		},
-		"navEntry3": {
-			"type": "NavEntry",
-			"props": {
-				"label": {
-					"state": "/drawn/text41"
-				},
-				"note": {
-					"state": "/drawn/text42"
-				}
-			}
-		},
-		"navEntry4": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
@@ -584,7 +574,7 @@
 				}
 			}
 		},
-		"navEntry5": {
+		"navEntry3": {
 			"type": "NavEntry",
 			"props": {
 				"label": {
@@ -595,11 +585,33 @@
 				}
 			}
 		},
+		"navEntry4": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text47"
+				},
+				"note": {
+					"state": "/drawn/text48"
+				}
+			}
+		},
+		"navEntry5": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text49"
+				},
+				"note": {
+					"state": "/drawn/text50"
+				}
+			}
+		},
 		"railAdd": {
 			"type": "RailAdd",
 			"props": {
 				"label": {
-					"state": "/drawn/text47"
+					"state": "/drawn/text51"
 				}
 			}
 		},
@@ -679,7 +691,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text48"
+					"state": "/drawn/text52"
 				}
 			}
 		}

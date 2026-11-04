@@ -117,6 +117,7 @@ import {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode as SidebarScreenModePart,
+	SidebarSiteName,
 } from "../sidebar";
 import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
@@ -320,7 +321,8 @@ function Sidebar({
 	children?: React.ReactNode;
 }) {
 	return (
-		<SidebarProvider rail={rail} className={className}>
+		// As in the app's frame, the sidebar keeps to the window while a long page scrolls beside it.
+		<SidebarProvider rail={rail} className={cn("sticky top-0 h-svh self-start", className)}>
 			<SidebarPart label={label ?? ""}>{children}</SidebarPart>
 		</SidebarProvider>
 	);
@@ -357,9 +359,13 @@ function SidebarNav({ place = "top", children }: { place?: "top" | "bottom"; chi
 
 /** One row: its icon, its name and its count as children; `active`, the open one. */
 function SidebarItem({ active, children }: { active?: boolean; children?: React.ReactNode }) {
+	// The row's name goes in a span, as the design system's row takes it: folded to a rail, the row hides it and keeps the icon.
+	const parts = React.Children.toArray(children).map((child, index) =>
+		React.isValidElement(child) ? child : <span key={index}>{child}</span>,
+	);
 	return (
 		<SidebarMenuItem>
-			<SidebarMenuButton isActive={active}>{children}</SidebarMenuButton>
+			<SidebarMenuButton isActive={active}>{parts}</SidebarMenuButton>
 		</SidebarMenuItem>
 	);
 }
@@ -401,17 +407,23 @@ function SidebarSubItem({
 function SidebarScreenMode({
 	value = "system",
 	label,
+	system,
+	light,
+	dark,
 	defaultOpen,
 }: {
 	value?: "system" | "light" | "dark";
 	label?: string;
+	system?: string;
+	light?: string;
+	dark?: string;
 	defaultOpen?: boolean;
 }) {
 	return (
 		<SidebarScreenModePart
 			value={value}
 			defaultOpen={defaultOpen}
-			labels={{ label: label ?? "", system: "", light: "", dark: "" }}
+			labels={{ label: label ?? "", system: system ?? "", light: light ?? "", dark: dark ?? "" }}
 		/>
 	);
 }
@@ -637,15 +649,9 @@ function Words({ children }: { children?: React.ReactNode }) {
 	return <span>{children}</span>;
 }
 
-/** The site's name at the head of the sidebar, in a box that takes the room the row leaves (cut with an ellipsis when long). */
+/** The site's name at the head of the sidebar. */
 function SiteName({ name }: { name?: string }) {
-	return (
-		<BoxPart grow minWidth={0}>
-			<Text variant="title" truncate>
-				{name}
-			</Text>
-		</BoxPart>
-	);
+	return <SidebarSiteName>{name}</SidebarSiteName>;
 }
 
 /** An entry's language tabs, 6px under the bar above them, as the editor draws them; `label` names them. */
@@ -3249,7 +3255,10 @@ export const CATALOG = {
 	SidebarSub: { kind: "part", props: {} },
 	SidebarSubItem: { kind: "part", props: { active: "flag", depth: "variant" } },
 	SidebarFoot: { kind: "part", props: {} },
-	SidebarScreenMode: { kind: "part", props: { value: "variant", label: "text", defaultOpen: "flag" } },
+	SidebarScreenMode: {
+		kind: "part",
+		props: { value: "variant", label: "text", system: "text", light: "text", dark: "text", defaultOpen: "flag" },
+	},
 	Form: { kind: "part", role: "form", props: { action: "action" } },
 	Heading: { kind: "part", props: { as: "variant", variant: "variant", tone: "variant", truncate: "flag" } },
 	Text: {

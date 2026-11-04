@@ -195,7 +195,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -232,7 +244,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text17"
 				}
 			]
 		},
@@ -241,12 +253,12 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text14"
+						"state": "/drawn/text18"
 					}
 				],
 				"meta": [
 					{
-						"state": "/drawn/text15"
+						"state": "/drawn/text19"
 					}
 				]
 			},
@@ -256,10 +268,10 @@
 			"type": "EmptyHead",
 			"props": {
 				"title": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				},
 				"description": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -267,10 +279,10 @@
 			"type": "EmptyStep",
 			"props": {
 				"number": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				},
 				"title": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				}
 			}
 		},
@@ -278,10 +290,10 @@
 			"type": "EmptyStep",
 			"props": {
 				"number": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				},
 				"title": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				}
 			}
 		},
@@ -289,10 +301,10 @@
 			"type": "EmptyStep",
 			"props": {
 				"number": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				},
 				"title": {
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				}
 			}
 		},
@@ -362,7 +374,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				}
 			}
 		}

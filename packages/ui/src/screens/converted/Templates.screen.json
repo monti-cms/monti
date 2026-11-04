@@ -195,7 +195,19 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"system": {
+					"state": "/drawn/text14"
+				},
+				"light": {
+					"state": "/drawn/text15"
+				},
+				"dark": {
+					"state": "/drawn/text16"
+				}
 			}
 		},
 		"sidebarFoot": {
@@ -232,7 +244,7 @@
 			},
 			"children": [
 				{
-					"state": "/drawn/text13"
+					"state": "/drawn/text17"
 				}
 			]
 		},
@@ -241,7 +253,7 @@
 			"slots": {
 				"title": [
 					{
-						"state": "/drawn/text14"
+						"state": "/drawn/text18"
 					}
 				]
 			},
@@ -251,11 +263,11 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text15"
+					"state": "/drawn/text19"
 				},
 				"current": true,
 				"count": {
-					"state": "/drawn/text16"
+					"state": "/drawn/text20"
 				}
 			}
 		},
@@ -263,7 +275,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text17"
+					"state": "/drawn/text21"
 				}
 			}
 		},
@@ -271,10 +283,10 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text18"
+					"state": "/drawn/text22"
 				},
 				"count": {
-					"state": "/drawn/text19"
+					"state": "/drawn/text23"
 				},
 				"countTone": "warning"
 			}
@@ -283,7 +295,7 @@
 			"type": "Tab",
 			"props": {
 				"label": {
-					"state": "/drawn/text20"
+					"state": "/drawn/text24"
 				}
 			}
 		},
@@ -305,10 +317,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text21"
+					"state": "/drawn/text25"
 				},
 				"note": {
-					"state": "/drawn/text22"
+					"state": "/drawn/text26"
 				}
 			}
 		},
@@ -316,7 +328,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text23"
+					"state": "/drawn/text27"
 				}
 			]
 		},
@@ -334,10 +346,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text24"
+					"state": "/drawn/text28"
 				},
 				"note": {
-					"state": "/drawn/text25"
+					"state": "/drawn/text29"
 				}
 			}
 		},
@@ -345,7 +357,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text26"
+					"state": "/drawn/text30"
 				}
 			]
 		},
@@ -363,10 +375,10 @@
 			"type": "TwoLineTitleCell",
 			"props": {
 				"title": {
-					"state": "/drawn/text27"
+					"state": "/drawn/text31"
 				},
 				"note": {
-					"state": "/drawn/text28"
+					"state": "/drawn/text32"
 				}
 			}
 		},
@@ -374,7 +386,7 @@
 			"type": "CountCell",
 			"children": [
 				{
-					"state": "/drawn/text29"
+					"state": "/drawn/text33"
 				}
 			]
 		},
@@ -444,7 +456,7 @@
 			"type": "AssistantCorner",
 			"props": {
 				"label": {
-					"state": "/drawn/text30"
+					"state": "/drawn/text34"
 				}
 			}
 		}

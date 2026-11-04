@@ -114,7 +114,10 @@
 		"sidebarScreenMode": {
 			"type": "SidebarScreenMode",
 			"props": {
-				"value": "system"
+				"value": "system",
+				"label": {
+					"state": "/drawn/text"
+				}
 			}
 		},
 		"sidebarFoot": {
