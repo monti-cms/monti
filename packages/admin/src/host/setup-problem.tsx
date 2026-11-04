@@ -31,7 +31,7 @@ export function setupProblemOf(cms: Pick<Cms, "auth">): string | undefined {
 export function SetupProblemScreen({ cms }: { cms: Pick<Cms, "site"> }) {
 	const t = cms.site.createTranslator(layoutMessages);
 	return (
-		<div className="monti-admin flex min-h-screen items-center justify-center bg-monti-page p-monti-16 text-monti-default">
+		<div className="monti-admin flex min-h-screen items-center justify-center bg-monti-page p-monti-16 text-monti-default selection:bg-monti-block">
 			<Box maxWidth="panel">
 				<Stack gap={8}>
 					<Heading as="h1" variant="title">

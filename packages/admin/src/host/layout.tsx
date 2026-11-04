@@ -64,7 +64,9 @@ export async function AdminLayout({
 		<AdminPluginScope plugins={plugins}>
 			<AdminUiLabels>
 				<TooltipProvider>
-					<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
+					<div className="monti-admin min-h-screen bg-monti-page text-monti-default selection:bg-monti-block">
+						{children}
+					</div>
 					{toaster ? <Toaster /> : null}
 				</TooltipProvider>
 			</AdminUiLabels>

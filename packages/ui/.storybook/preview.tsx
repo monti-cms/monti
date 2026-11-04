@@ -20,7 +20,12 @@ function Frame({ language, bleed, children }: { language: Language; bleed: boole
 	return (
 		<UiLabelsProvider labels={language === "ko" ? KO_UI_LABELS : DEFAULT_UI_LABELS}>
 			<TooltipProvider>
-				<div className={cn("monti-admin min-h-screen bg-monti-page text-monti-default", !bleed && "p-monti-16")}>
+				<div
+					className={cn(
+						"monti-admin min-h-screen bg-monti-page text-monti-default selection:bg-monti-block",
+						!bleed && "p-monti-16",
+					)}
+				>
 					{children}
 				</div>
 			</TooltipProvider>

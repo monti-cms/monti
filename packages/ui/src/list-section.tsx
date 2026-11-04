@@ -78,7 +78,7 @@ function ListSectionRow({
 			role="listitem"
 			data-slot="list-section-row"
 			className={cn(
-				"relative grid items-center gap-monti-20 border-monti-muted border-b px-monti-12 py-monti-16 hover:bg-monti-muted",
+				"relative grid items-center gap-monti-20 border-monti-muted border-b px-monti-12 py-monti-16",
 				control ? "grid-cols-[minmax(0,1fr)_320px]" : "auto-cols-auto grid-flow-col grid-cols-[minmax(0,1fr)]",
 			)}
 			{...props}
