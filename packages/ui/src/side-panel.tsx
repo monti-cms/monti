@@ -56,7 +56,7 @@ export function SidePanel({
 	/** A back button before the title, for a view inside the panel (the assistant's past conversations): its name ("Back to the conversation") and what it does. */
 	back?: { label: string; onClick: () => void };
 	onClose?: () => void;
-	/** The × is drawn without `onClose` (a screen spec's look, before its behavior is wired). */
+	/** The × is drawn without `onClose` (a static screen's look, such as a reference screen, before its behavior is wired). */
 	closable?: boolean;
 	/** Pinned under the body. */
 	footer?: ReactNode;

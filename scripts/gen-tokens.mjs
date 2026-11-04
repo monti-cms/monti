@@ -246,18 +246,6 @@ function layoutModule(json) {
 		scale("PADDING_Y", "py", "Padding above and below."),
 		scale("PADDING_TOP", "pt", "Padding above."),
 		scale("PADDING_BOTTOM", "pb", "Padding below."),
-		scale("PADDING_LEFT", "pl", "Padding at the start of a row."),
-		scale("PADDING_RIGHT", "pr", "Padding at the end of a row."),
-		scale(
-			"MARGIN_TOP",
-			"mt",
-			"Space above, only for a screen spec's Spacing between two children (`spec/spacing.ts`).",
-		),
-		scale(
-			"MARGIN_LEFT",
-			"ml",
-			"Space before, only for a screen spec's Spacing between two children in a row (`spec/spacing.ts`).",
-		),
 		block(
 			"Surfaces, by background role. The black one carries its own text color, so what is written on it can be read.",
 			"BACKGROUND",

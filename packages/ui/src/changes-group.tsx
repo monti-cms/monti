@@ -31,7 +31,7 @@ interface ProposalsItem {
 
 /**
  * How the save group looks: "changes N" (and "· proposals N" in blue), then "undo all" and the one primary pill ("save and apply"). `list` is what
- * "changes N" opens, hanging from the whole group with its right edge on the group's; without it the group is drawn and opens nothing (a screen spec's
+ * "changes N" opens, hanging from the whole group with its right edge on the group's; without it the group is drawn and opens nothing (a static screen's
  * look, before its behavior is wired). The pill is disabled (not hidden) while something blocks saving.
  */
 function ChangesBar({

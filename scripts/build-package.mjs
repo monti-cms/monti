@@ -37,7 +37,7 @@ if (
 const toDist = (target, ext) => target.replace(/^\.\/src\//, "./dist/").replace(/\.tsx?$/, ext);
 const publishTarget = (target) => {
 	if (typeof target === "string") {
-		// A data file under `src` (a screen spec's JSON) ships from `dist` like the code; a stylesheet outside `src` stays where it is.
+		// A data file under `src` (a JSON file) ships from `dist` like the code; a stylesheet outside `src` stays where it is.
 		if (!/\.tsx?$/.test(target)) return target.replace(/^\.\/src\//, "./dist/");
 		return { types: toDist(target, ".d.ts"), default: toDist(target, ".js") };
 	}

@@ -38,7 +38,7 @@ function NavLink({
 	handle?: React.ReactNode;
 	/** While the link is dragged: where the drag has moved it (the sortable's transform and transition) and whether it is the link in hand. */
 	drag?: { transform?: string; transition?: string; active?: boolean };
-	/** Without it the entry is drawn and opens nothing (a screen spec's look, before its behavior is wired). */
+	/** Without it the entry is drawn and opens nothing (a static screen's look, such as a reference screen, before its behavior is wired). */
 	onSelect?: () => void;
 	children: React.ReactNode;
 }) {

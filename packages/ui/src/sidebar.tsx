@@ -351,7 +351,7 @@ function SidebarScreenMode({
 	defaultOpen,
 }: {
 	value: ScreenMode;
-	/** Without it the modes are drawn and pick nothing (a screen spec's look, before its behavior is wired). */
+	/** Without it the modes are drawn and pick nothing (a static screen's look, such as a reference screen, before its behavior is wired). */
 	onValueChange?: (mode: ScreenMode) => void;
 	labels: { label: string } & Record<ScreenMode, string>;
 	/** Opens the folded menu at first (for a story). */

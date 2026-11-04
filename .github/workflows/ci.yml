@@ -41,9 +41,6 @@ jobs:
       # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
       # declaration per role).
       - run: pnpm gen:tokens --check
-      # Screen specs: the catalog is what scripts/gen-screen-catalog.mjs reads from the parts' prop types, and every *.screen.json stays inside it.
-      - run: pnpm gen:screen-catalog --check
-      - run: pnpm check:screens
       # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
       - run: pnpm check:messages
       # A migration step on the base branch is not renamed or deleted, and the step list is the step files (a store records steps by name).

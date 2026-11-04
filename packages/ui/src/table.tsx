@@ -143,7 +143,7 @@ function RowCheck({
 	proposal = false,
 }: {
 	checked: boolean;
-	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
+	/** Without it the check is drawn and does nothing (a static screen's look, such as a reference screen, before its behavior is wired). */
 	onCheckedChange?: (checked: boolean) => void;
 	/** The name of the check, for screen readers ("Select First post"). */
 	label: string;
