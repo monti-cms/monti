@@ -1,3 +1,4 @@
+import type { AuthSettings } from "./auth/operations";
 import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
 import type { Schema } from "./schema/define";
@@ -17,12 +18,14 @@ export type Site = {
 	secret: string | null;
 	/** The body blocks and marks: the core's, the site's and its plugins' (doc 03). */
 	kit: BlockKit;
+	/** The ways to sign in (doc 15). */
+	auth: AuthSettings;
 };
 
 export function createSite(
 	schema: Schema,
 	files: SchemaFiles | null,
-	extra: { publishChecks?: readonly PublishCheck[]; secret?: string | null; kit?: BlockKit } = {},
+	extra: { publishChecks?: readonly PublishCheck[]; secret?: string | null; kit?: BlockKit; auth?: AuthSettings } = {},
 ): Site {
 	let current = schema;
 	return {
@@ -34,5 +37,6 @@ export function createSite(
 		publishChecks: extra.publishChecks ?? [],
 		secret: extra.secret ?? null,
 		kit: extra.kit ?? createBlockKit([], []),
+		auth: extra.auth ?? { password: false, github: null },
 	};
 }

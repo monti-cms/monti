@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database } from "./db/schema";
@@ -48,6 +49,8 @@ export type MontiOptions = {
 	/** The site's own body blocks and marks (`defineBlock`), next to the core's. */
 	blocks?: AnyBlockDefinition[];
 	marks?: MarkDefinition[];
+	/** The ways to sign in that `monti init` chose. Without one, the admin says sign-in is not set up. */
+	auth?: Partial<AuthSettings>;
 	/** `MONTI_SECRET`: signs preview links (and, with doc 14, encrypts keys). */
 	secret?: string | null;
 	now?: () => Date;
@@ -77,6 +80,7 @@ export const describe = (operation: AnyOperation): Capability => ({
 
 /** Whether an entry point offers the operation to this caller: the assistant gets no human-only one, nobody gets a structure one on the live site. */
 export const available = (operation: AnyOperation, actor: Actor, structureOpen: boolean) =>
+	!(operation.open && actor !== "admin") &&
 	!(operation.humanOnly && actor === "assistant") &&
 	!(operation.structure && !structureOpen) &&
 	!(operation.kind === "screen" && actor === "cli");
@@ -136,6 +140,7 @@ export function createMonti(options: MontiOptions) {
 	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
+		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
 			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],
@@ -153,6 +158,7 @@ export function createMonti(options: MontiOptions) {
 		...schemaOperations,
 		...entryOperations,
 		...bodyOperations,
+		...authOperations,
 	])
 		add(operation, "the core");
 	for (const operation of options.operations ?? []) add(operation, "the site");
@@ -175,6 +181,7 @@ export function createMonti(options: MontiOptions) {
 
 	return {
 		db: options.db,
+		now,
 		site,
 		operations: operations as ReadonlyMap<string, AnyOperation>,
 
@@ -184,7 +191,9 @@ export function createMonti(options: MontiOptions) {
 		 */
 		async run(name: string, input: unknown, runOptions: RunOptions): Promise<unknown> {
 			const operation = get(name, ["read", "write"]);
-			if (operation.kind === "read") return runRead(engine, operation, input, runOptions.actor);
+			// Signing in belongs to the admin API alone: no command or tool reaches it.
+			if (operation.open && runOptions.actor !== "admin") throw new UnknownOperationError(name);
+			if (operation.kind === "read") return runRead(engine, operation, input, runOptions.actor, runOptions.session);
 			const { deliveryIds: _sent, ...result } = await write(operation, input, runOptions);
 			return result;
 		},

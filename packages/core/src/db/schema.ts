@@ -151,11 +151,38 @@ export interface CollectionAdminValuesTable {
 	version: Generated<number>;
 }
 
+/** The one admin (doc 15). The password way has an email and a hash; the GitHub way names its account in the config file, not here. */
+export interface AdminTable {
+	id: number;
+	email: string;
+	password_hash: string;
+	created_at: Generated<Date>;
+}
+
+/** A signed-in browser. The cookie holds a token; the table holds its hash, so a leaked table opens nothing. */
+export interface SessionTable {
+	id: string;
+	token_hash: string;
+	/** Who signed in: the admin's email, or `github:<login>`. */
+	who: string;
+	created_at: Generated<Date>;
+	expires_at: Date;
+}
+
+/** A failed sign-in, counted per email for the one-minute lock. */
+export interface SignInAttemptTable {
+	email: string;
+	at: Date;
+}
+
 export interface Database {
 	entries: EntryTable;
 	entry_published: EntryPublishedTable;
 	old_paths: OldPathTable;
 	templates: TemplateTable;
+	monti_admin: AdminTable;
+	monti_session: SessionTable;
+	monti_sign_in_attempt: SignInAttemptTable;
 	entry_links: EntryLinkTable;
 	schema_state: SchemaStateTable;
 	schema_changes: SchemaChangeTable;

@@ -54,8 +54,12 @@ export const moveToFolder = defineOperation({
 import { defineConfig } from "@monti-cms/core";
 import schema from "./monti.schema";
 
-export default defineConfig({ schema, database: process.env.DATABASE_URL });
+export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: { password: true } });
 ```
+
+`auth`는 관리자 한 명이 들어오는 방법이다. `password: true`, `github: { clientId, clientSecret, admin }`, 또는 둘 다다. 비밀번호 방식이면 관리자
+화면의 첫 방문에서 관리자를 만든다. 관리자 API(`createAdminApi`)는 `httpOnly` 세션 쿠키가 없으면 로그인 기능만 받는다. 세션은 30일 동안 쓰지
+않으면 끝난다. 잊은 비밀번호는 서버에서 `monti admin:reset-password`로 바꾼다.
 
 표시 이름, 도움말, 배치, 편집기 허용은 데이터베이스의 관리자 값이다(`collections.updateAdminValues`). 운영 사이트에서도 고칠 수 있다.
 
@@ -66,6 +70,7 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL });
 monti db:setup          # 표를 만들고 모든 변경 파일을 따른다
 monti db:migrate        # 배포할 때: 이 데이터베이스가 아직 안 따른 변경 파일을 따른다
 monti deliveries:run    # 때가 된 웹훅 다시 보내기
+monti admin:reset-password  # 관리자 비밀번호를 바꾸고 모든 브라우저를 로그아웃
 monti help              # 모든 기능, 기능마다 명령 하나
 monti schema.read
 ```

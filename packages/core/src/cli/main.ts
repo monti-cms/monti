@@ -1,4 +1,6 @@
 import path from "node:path";
+import { createInterface } from "node:readline/promises";
+import { resetAdminPassword } from "../auth/reset";
 import { type MontiConfig, openMonti } from "../config";
 import { migrateToLatest } from "../db/migrations";
 import { runCli } from "../entry/cli";
@@ -8,7 +10,9 @@ import { readChangeFiles } from "../schema/files";
 const MAINTENANCE = `Maintenance commands (not operations):
   db:setup        create the tables and follow every change file
   db:migrate      follow the change files this database has not (run it on deploy)
-  deliveries:run  send the webhook retries that are due`;
+  deliveries:run  send the webhook retries that are due
+  admin:reset-password [--email address]
+                  set the admin's password and sign every browser out`;
 
 /**
  * `monti <command>`: the maintenance commands, and every operation as a command (`monti help` lists them). `config` is `monti.config.ts`, loaded by
@@ -27,6 +31,19 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 				await readChangeFiles(path.join(root, "monti", "changes")),
 			);
 			io.out(applied.length > 0 ? `Applied ${applied.join(", ")}.` : "The database is up to date.");
+			return 0;
+		}
+		if (command === "admin:reset-password") {
+			const email = argv.indexOf("--email") > 0 ? argv[argv.indexOf("--email") + 1] : undefined;
+			const prompt = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+			const password = await prompt.question("New password: ");
+			const again = await prompt.question("Again: ");
+			prompt.close();
+			if (password !== again) {
+				io.err("The two passwords differ.");
+				return 1;
+			}
+			io.out(`Password set for ${await resetAdminPassword(monti.db, password, email)}. Every browser is signed out.`);
 			return 0;
 		}
 		if (command === "deliveries:run") {

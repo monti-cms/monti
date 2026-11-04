@@ -1,3 +1,5 @@
+export type { AuthSettings } from "./auth/operations";
+export type { Session } from "./auth/session";
 export {
 	type AnyBlockDefinition,
 	type BlockCheck,

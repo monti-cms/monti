@@ -1,7 +1,7 @@
 import { sql } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
+import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
-import { createAdminApi } from "../entry/api";
 import { runCli } from "../entry/cli";
 import { createMonti, definePlugin, type Plugin } from "../monti";
 import { migrateContent } from "../schema/apply";
@@ -138,7 +138,7 @@ describe("saves never overwrite each other", () => {
 		await write("entries.save", { id, version: old, title: "Saved in another tab" });
 
 		const monti = site();
-		const response = await createAdminApi(monti, { authenticate: async () => true })(
+		const response = await signedInApi(monti)(
 			new Request("https://site.test/api/operations/entries.save", {
 				method: "POST",
 				body: JSON.stringify({ input: { id, version: old, title: "Mine" } }),
