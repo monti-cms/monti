@@ -408,6 +408,8 @@ export const iconsByName = {
 	tools: Tools,
 	"trash-can": TrashCan,
 	pen: Pen,
+	"recently-viewed": RecentlyViewed,
+	close: Close,
 } as const satisfies Readonly<Record<string, MontiIcon>>;
 
 /** A name `iconsByName` knows; a screen spec names icons only by these. */

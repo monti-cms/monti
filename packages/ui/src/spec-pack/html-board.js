@@ -33,6 +33,10 @@ const choiceLabel = (el) =>
 		.map((node) => node.textContent)
 		.join("")
 		.trim();
+// A head's close button: drawn as "×" or as the close icon.
+const closes = (button) =>
+	button.textContent.trim() === "×" ||
+	(button.querySelector("svg") !== null && iconName(button.querySelector("svg")) === "close");
 const iconName = (el) => window.boardData?.icons?.[window.iconShapeKey?.(el.innerHTML)];
 
 const parts = [
@@ -96,6 +100,8 @@ const parts = [
 	},
 	// A board drawn inside this board (the sidebar beside a page) and the runtime's host around it.
 	{ match: (el) => el.matches(".sc-host, .sc-host > .mt, .mt .mt"), frame: true },
+	// The screen beside a panel: its place in the app's frame.
+	{ match: (el) => el.matches(".mt > div:has(> .sc-host):has(+ aside.mt-panel)"), frame: true },
 	// A content page's head: the title, the address rule, the actions at the end.
 	{
 		match: (el) => el.matches(".mt-page-header"),
@@ -647,18 +653,14 @@ const parts = [
 		part: "Panel",
 		props: (el) => ({
 			title: el.querySelector(".mt-panel-head > h2")?.textContent.trim(),
-			closable:
-				[...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].some((button) => button.textContent.trim() === "×") ||
-				undefined,
+			closable: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].some(closes) || undefined,
 		}),
 		slots: (el) => ({
-			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter(
-				(button) => button.textContent.trim() !== "×",
-			),
+			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter((button) => !closes(button)),
 			footer: el.querySelector(":scope > .mt-panel-foot"),
 		}),
 		children: (el) => el.querySelector(":scope > .mt-panel-body"),
-		asProps: ["flex", "flex-grow", "min-width", "box-sizing", "display", "flex-direction"],
+		asProps: ["flex", "flex-grow", "min-width", "min-height", "box-sizing", "display", "flex-direction"],
 	},
 	{
 		match: (el) => el.matches(".mt-icon-btn") && el.textContent.trim() === "⋯",
@@ -977,7 +979,10 @@ const parts = [
 const known =
 	/^(mt|mt-(field|label|input|error|rule-label|text-btn|btn|btn--[a-z-]+|sidebar|sidebar-head|sidebar-foot|nav|nav-sub|count|change-dot|seg|tooltip|card|menu-item|icon-btn|icon-btn--corner|spark)|text-[a-z]+|dark|is-(error|disabled|on|rail)|site|n|k|sc-host|sc-interp|mt-empty|mt-page-header|meta|end|mt-list-head|mt-col|mt-col-wrap|mt-col-add|mt-table|mt-table-head|mt-row|mt-row-folder|mt-row-title|mt-row-sub|mt-check|mt-status|mt-status--[a-z]+|mt-per-page|mt-caret|mt-pager|mt-page|mt-page--[a-z]+|is-(sort|end|off|hover)|mt-text-btn--[a-z]+|mt-toolbar|mt-tabs|mt-count--[a-z]+|text-meta|mt-section|body|mt-option|mt-mono|mt-select|mt-filter|mt-banner|mt-banner--[a-z]+|dot|mt-affix|fix|mt-vr|mt-textarea|mt-panel|mt-panel-head|mt-panel-body|mt-panel-foot|col-blk|col-grp|mt-switch|opt-grid|mt-label-row|mt-label-row--changed|mt-del|is-ai|mt-ftabs|mt-ftabs-body|mt-tree|tab|add|d1|d2|d3|is-group|handle|name|label|kind|lv|is-readonly|mt-sheet|mt-backdrop|mt-tabs--bar|mt-seg|mt-radio|mt-change|mt-change--[a-z]+|tag|head|key|note|lines|what|then|is-danger)$/;
 
-/** What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`). */
-const frame = ["flex-wrap"];
+/**
+ * What a page's frame does, not a screen: the sidebar and the page side by side wrap on a narrow window (the app's frame, `SidebarInset`); the frame
+ * clips what is wider than the window; the line between a screen and a panel beside it is the panel's own (`SidePanel` draws its left edge).
+ */
+const frame = ["flex-wrap", "overflow", "border-right"];
 
 window.boardPack = { parts, known, frame };
