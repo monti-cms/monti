@@ -233,7 +233,9 @@ function read(el, where, page = undefined, inPart = false) {
 	// What opens over the screen is read apart, as the root's overlay (see `readBoard`); where the board draws it, it takes no place.
 	if (rule?.overlay && el.dataset.overlay === undefined) return { where: here };
 	if (rule?.frame) {
-		return framed(el, { where: here, direction: directionOf(el), layout: {}, ...withLooks(measured(el, here), looks) });
+		// The board's own root is the page whatever rule it matches: it takes the page's layout (as tall as the window).
+		const layout = page !== undefined ? { ...page } : {};
+		return framed(el, { where: here, direction: directionOf(el), layout, ...withLooks(measured(el, here), looks) });
 	}
 	if (rule) {
 		const props = Object.fromEntries(

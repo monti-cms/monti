@@ -1413,7 +1413,10 @@ const parts = [
 				modelLabel: picker?.getAttribute("aria-label"),
 				model: words || undefined,
 				effort:
-					picker?.querySelector(":scope > span:not(.mt-caret)")?.textContent.replace(/^·\s*/, "").trim() || undefined,
+					picker
+						?.querySelector(":scope > span:not(.mt-caret):not(.sc-interp)")
+						?.textContent.replace(/^·\s*/, "")
+						.trim() || undefined,
 			};
 		},
 		leaf: true,
