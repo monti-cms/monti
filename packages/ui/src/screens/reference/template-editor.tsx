@@ -1,6 +1,7 @@
 import {
 	Block,
 	BlockHandle,
+	Box,
 	CompareBody,
 	EditorTitleRule,
 	FormFieldLabel,
@@ -49,8 +50,11 @@ export function TemplateEditorScreen() {
 				<BodyHeading>본론</BodyHeading>
 			</BodyBlock>
 			<BodyBlock gap={8}>
-				<Inline gap={0} align="start">
-					<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" />
+				<Box position="relative">
+					{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left, 4px down) */}
+					<div style={{ position: "absolute", top: 4, left: -64 }}>
+						<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" />
+					</div>
 					<Block active>
 						<Text tone="muted">
 							<CompareBody>
@@ -61,7 +65,7 @@ export function TemplateEditorScreen() {
 							</CompareBody>
 						</Text>
 					</Block>
-				</Inline>
+				</Box>
 			</BodyBlock>
 			<BodyBlock gap={24}>
 				<BodyHeading>결론</BodyHeading>

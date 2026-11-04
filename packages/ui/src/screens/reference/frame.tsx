@@ -183,7 +183,7 @@ export function AdminFrame({
 					corner={
 						corner ? (
 							<IconButton label="어시스턴트 열기">
-								<Spark />
+								<Spark className="size-monti-icon-lg" />
 							</IconButton>
 						) : undefined
 					}

@@ -42,7 +42,7 @@ export function SettingsProposalScreen() {
 						</FormField>
 						<FormField>
 							<FormFieldLabel htmlFor="home">홈 링크</FormFieldLabel>
-							<Input id="home" mono defaultValue="/" />
+							<Affix id="home" prefix="/" defaultValue="" />
 						</FormField>
 					</Section>
 					<Section title="미리보기">

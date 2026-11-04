@@ -114,7 +114,7 @@ export function SettingsScreen() {
 						</FormField>
 						<FormField>
 							<FormFieldLabel htmlFor="home">홈 링크</FormFieldLabel>
-							<Input id="home" mono defaultValue="/" />
+							<Affix id="home" prefix="/" defaultValue="" />
 						</FormField>
 						<FormField>
 							<FormFieldLabel>다른 호스트 이름</FormFieldLabel>

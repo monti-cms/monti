@@ -434,32 +434,36 @@ export function EditorNotionScreen() {
 			statusBar={<NotionStatusBar />}
 		>
 			<EntryTitle>첫 번째 글</EntryTitle>
-			{/* The handle stands before the block: the design system has no way to float it in the margin (reference-gaps.md). */}
-			<Inline gap={0} align="start">
-				<DropdownMenu open modal={false}>
-					<BlockHandle
-						addLabel="아래에 블록 넣기"
-						gripLabel="블록 메뉴"
-						active
-						trigger={(grip) => <DropdownMenuTrigger render={grip} />}
-					/>
-					<BlockMenu />
-				</DropdownMenu>
+			<Box position="relative">
+				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left, 4px down) */}
+				<div style={{ position: "absolute", top: 4, left: -64 }}>
+					<DropdownMenu open modal={false}>
+						<BlockHandle
+							addLabel="아래에 블록 넣기"
+							gripLabel="블록 메뉴"
+							active
+							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+						/>
+						<BlockMenu />
+					</DropdownMenu>
+				</div>
 				<Block active>
 					<Paragraph>블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</Paragraph>
 				</Block>
-			</Inline>
+			</Box>
 			<BodyBlock gap={32}>
 				<BodyHeading>무엇을 덜어냈나</BodyHeading>
 			</BodyBlock>
 			<BodyBlock gap={12}>
-				{/* The format bar sits in the flow above the words: the design system has no way to float it over them (reference-gaps.md). */}
-				<Stack gap={8} align="start">
-					<FormatBar />
+				<Box position="relative">
+					{/* design-allow: the format bar floats over the picked words, where the editor's bubble puts it */}
+					<div style={{ position: "absolute", top: -42, left: 300 }}>
+						<FormatBar />
+					</div>
 					<Paragraph>
 						목록에는 제목과 주소, 지금 상태만 남겼다. <RequestAnchor>나머지는 필요할 때 꺼내 본다</RequestAnchor>.
 					</Paragraph>
-				</Stack>
+				</Box>
 			</BodyBlock>
 			<BodyBlock gap={20}>
 				<Paragraph>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</Paragraph>
