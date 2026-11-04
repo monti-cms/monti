@@ -130,15 +130,41 @@ export function toSpec(root: DrawnNode, catalog: Catalog, dictionary: Readonly<R
 			});
 		}
 		const slots = Object.fromEntries(
-			Object.entries(node.slots ?? {}).map(([slot, fill]) => [
-				slot,
-				fill.flatMap((child): Exclude<SpecChild, { spacing: number }>[] => {
-					if (child.part === undefined && child.text !== undefined && child.children === undefined)
-						return [textOf(child.text)];
-					const placed = convert(child);
-					return placed === undefined ? [] : [placed];
-				}),
-			]),
+			Object.entries(node.slots ?? {}).map(([slot, fill]) => {
+				// Pieces the drawing spaces apart in a place (a title and its note): one row that keeps the distances.
+				if (fill.slice(1).some((child) => (child.before ?? 0) > 0)) {
+					const row = idFor("stack");
+					elements[row] = {
+						type: catalog.group,
+						props: { direction: "row", align: "baseline" },
+						// A container holds elements, so a run of words in the row is the catalog's text part around them.
+						children: fill.flatMap((child, index): SpecChild[] => {
+							const gap = index === 0 ? [] : spacing(child.before, child.where);
+							if (child.part === undefined && child.text !== undefined && child.children === undefined) {
+								if (catalog.words === undefined) {
+									outside.push(`${child.where}: text outside any part: "${child.text}"`);
+									return [];
+								}
+								const words = idFor("text");
+								elements[words] = { type: catalog.words, children: [textOf(child.text)] };
+								return [...gap, words];
+							}
+							const placed = convert(child);
+							return placed === undefined ? [] : [...gap, placed];
+						}),
+					};
+					return [slot, [row]];
+				}
+				return [
+					slot,
+					fill.flatMap((child): Exclude<SpecChild, { spacing: number }>[] => {
+						if (child.part === undefined && child.text !== undefined && child.children === undefined)
+							return [textOf(child.text)];
+						const placed = convert(child);
+						return placed === undefined ? [] : [placed];
+					}),
+				];
+			}),
 		);
 		elements[id] = {
 			type: node.part,

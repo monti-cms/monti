@@ -196,7 +196,11 @@ if (problems.length > 0) {
 // Written as Biome formats it, so \`pnpm lint\` and \`--check\` agree.
 const text = execFileSync("pnpm", ["exec", "biome", "format", `--stdin-file-path=${OUT}`], {
 	cwd: ROOT,
-	input: JSON.stringify({ spacing: screen.spacing, group: screen.group, entries: catalog }, null, "\t"),
+	input: JSON.stringify(
+		{ spacing: screen.spacing, group: screen.group, words: screen.words, entries: catalog },
+		null,
+		"\t",
+	),
 	encoding: "utf8",
 });
 if (process.argv.includes("--check")) {

@@ -45,6 +45,8 @@ export interface Catalog {
 	readonly spacing: readonly number[];
 	/** The layout entry a plain group becomes (a board's group, a form's inside). */
 	readonly group: string;
+	/** The part a run of words becomes where a container holds it (a row of a title and its note); it takes the words as its children. */
+	readonly words?: string;
 	readonly entries: Readonly<Record<string, CatalogPart>>;
 }
 

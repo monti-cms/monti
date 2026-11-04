@@ -400,6 +400,7 @@ export const iconsByName = {
 	// The sidebar's and the list's own icons, named for the boards drawn with them (`pnpm convert:board`).
 	"arrow--down": ArrowDown,
 	"arrow--up": ArrowUp,
+	renew: Renew,
 	copy: Copy,
 	repeat: Repeat,
 	"text--align--left": TextAlignLeft,

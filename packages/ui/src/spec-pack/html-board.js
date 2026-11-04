@@ -278,11 +278,19 @@ const parts = [
 		props: (el) => ({
 			active: el.classList.contains("is-on") || undefined,
 			// A folder inside another sits 14px further in a level.
-			depth: Math.round((Number.parseFloat(el.style.paddingLeft) || 0) / 14) || undefined,
+			// A row starts 36px in; each level inside another is 14px more.
+			depth: Math.round(Math.max(0, (Number.parseFloat(el.style.paddingLeft) || 36) - 36) / 14) || undefined,
 		}),
 		asProps: ["color", "font-weight", "padding-left"],
 	},
-	{ match: (el) => el.matches(".mt-count") && !el.matches(".mt-row > *, footer"), part: "Count" },
+	// A count in the warning or danger ink (`.mt-count--warn`, `--danger`).
+	{
+		match: (el) => el.matches(".mt-count") && !el.matches(".mt-row > *, footer"),
+		part: "Count",
+		props: (el) => ({
+			tone: el.matches(".mt-count--warn") ? "warning" : el.matches(".mt-count--danger") ? "danger" : undefined,
+		}),
+	},
 	{ match: (el) => el.matches(".mt-sidebar-foot"), part: "SidebarFoot" },
 	{
 		match: (el) => el.matches(".mt-sidebar-foot > .mt-seg, .mt-sidebar-foot > .mt-icon-btn"),
@@ -370,12 +378,15 @@ const parts = [
 				last && !last.matches(".mt-col-wrap") ? Math.round(last.getBoundingClientRect().width + 22) : undefined;
 			return {
 				end,
+				// The + at the end that offers the hidden columns, named as the board names it.
+				addLabel: el.querySelector(".mt-col-add")?.getAttribute("aria-label") || undefined,
 				columns: [...el.querySelectorAll(".mt-col")]
 					.filter((column) => column.closest(".mt-col-wrap")?.style.display !== "none")
 					.map((column) => {
 						const box = column.closest(".mt-col-wrap") ?? column;
 						const track = tracks[shown.indexOf(box)];
-						const width = box.getBoundingClientRect().width;
+						// A column at least as wide as its name with the head cell's own padding (10px a side): a board may let a name spill past its track.
+						const width = Math.max(box.getBoundingClientRect().width, column.scrollWidth + 20 - gap);
 						return {
 							id: column.textContent.trim(),
 							label: column.textContent.trim(),
@@ -398,8 +409,11 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-row") && !reviewRow(el) && !el.matches(".body > .mt-row"),
 		part: "TableRow",
-		// Rows 16px above and below are the two-line rows (a title over a line).
-		props: (el) => ({ twoLine: el.style.paddingTop === "var(--space-16)" || undefined }),
+		// Rows 16px above and below are the two-line rows (a title over a line); a picked row has the selected ground.
+		props: (el) => ({
+			twoLine: el.style.paddingTop === "var(--space-16)" || undefined,
+			selected: el.classList.contains("is-on") || undefined,
+		}),
 		asProps: ["grid-template-columns", "column-gap", "align-items", "padding-top", "padding-bottom"],
 	},
 	{
@@ -424,7 +438,10 @@ const parts = [
 					.join("")
 					.trim(),
 				sub: el.querySelector(".mt-row-sub")?.textContent.trim(),
-				proposal: title.querySelector(".mt-fill") ? true : undefined,
+				// The assistant's mark when the board shows it (a row the assistant did not do hides it).
+				proposal:
+					[...title.querySelectorAll(".mt-fill")].some((mark) => getComputedStyle(mark).display !== "none") ||
+					undefined,
 			};
 		},
 		leaf: true,
@@ -517,6 +534,18 @@ const parts = [
 		part: "CountCell",
 		props: (el) => ({ align: el.style.textAlign === "right" ? "end" : undefined }),
 		asProps: ["order", "white-space", "color", "text-align"],
+	},
+	// A worded link of a row (its count, going to its entries) stands in a cell of its own, at the row's end side.
+	{
+		match: (el) =>
+			el.matches(".mt-row > .mt-text-btn") && el.textContent.trim() !== "⋯" && !reviewRow(el) && !el.closest(".body"),
+		part: "LinkCell",
+		props: (el) => ({
+			label: el.textContent.trim(),
+			underline: el.classList.contains("mt-text-btn--underline") || undefined,
+		}),
+		leaf: true,
+		asProps: ["text-decoration", "color", "order"],
 	},
 	{
 		match: (el) => el.matches(".mt-row > .mt-text-btn") && el.textContent.trim() === "⋯",
@@ -620,8 +649,14 @@ const parts = [
 		props: (el) => ({
 			value: el.textContent.trim(),
 			proposal: el.classList.contains("is-ai") || undefined,
-			// At the end of a choice row: as wide as a field needs to read as one.
-			width: el.closest(".mt-option") ? "choice" : undefined,
+			// A value in the warning ink ("키 없음": nothing to pick yet).
+			warning: el.querySelector("[style*='--fg-warning']") ? true : undefined,
+			// At the end of a choice row: as wide as a field needs to read as one. In a field, as wide as the field when the board draws it so.
+			width: el.closest(".mt-option")
+				? "choice"
+				: el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1
+					? "full"
+					: undefined,
 		}),
 		leaf: true,
 		// An empty select's faint words are its own look.
@@ -649,7 +684,8 @@ const parts = [
 	},
 	{ match: (el) => el.matches(".mt-banner > b, .mt-banner > .text-meta, .mt-banner > span:empty"), ignore: true },
 	{
-		match: (el) => el.matches(".mt-affix"),
+		// A bare affix (no fixed parts, a button at its end) is a line input; see below.
+		match: (el) => el.matches(".mt-affix:not(.is-bare)"),
 		part: "AffixField",
 		idOf: (el) => el.querySelector("input")?.id,
 		props: (el) => ({
@@ -1001,10 +1037,16 @@ const parts = [
 		props: (el) => {
 			const [before, after] = [...el.querySelectorAll(":scope > .cell")];
 			return {
+				// The block's name, without its note under it.
 				label: [
-					...(el.querySelector(".gut")?.querySelectorAll(":scope > span:not(.mt-check)") ?? []),
-				][0]?.textContent.trim(),
-				note: el.querySelector(".gut .note")?.textContent.trim(),
+					...([...(el.querySelector(".gut")?.querySelectorAll(":scope > span:not(.mt-check)") ?? [])][0]?.childNodes ??
+						[]),
+				]
+					.filter((node) => node.nodeType === Node.TEXT_NODE || node.classList?.contains("sc-interp"))
+					.map((node) => node.textContent)
+					.join("")
+					.trim(),
+				note: el.querySelector(".gut .note, .gut b")?.textContent.trim(),
 				before: markedRun(before),
 				after: markedRun(after),
 				included: el.querySelector(".mt-check.is-on") ? true : undefined,
@@ -1034,6 +1076,7 @@ const parts = [
 							.trim(),
 				path: head?.querySelector(".mt-row-sub")?.textContent.trim(),
 				end: end?.textContent.trim() || undefined,
+				endWarning: end?.style.color.includes("--fg-warning") || undefined,
 				again: head?.querySelector(":scope > .mt-text-btn")?.textContent.trim(),
 				change: markedRun(change),
 				included: el.querySelector(":scope > .mt-check.is-on") ? true : undefined,
@@ -1076,7 +1119,12 @@ const parts = [
 	{
 		match: (el) => el.matches("main h1.text-display"),
 		part: "EntryTitle",
-		props: (el) => ({ text: el.textContent.trim(), faint: el.style.color.includes("--fg-faint") || undefined }),
+		props: (el) => ({
+			text: el.textContent.trim(),
+			faint: el.style.color.includes("--fg-faint") || undefined,
+			// Still in the source's language: it reads faint until it is translated.
+			untranslated: el.classList.contains("mt-untranslated") || undefined,
+		}),
 		leaf: true,
 		asProps: ["color"],
 	},
@@ -1479,6 +1527,8 @@ const parts = [
 			const tabs = [...el.querySelectorAll(":scope > nav [role=tab]")].map((tab) => ({
 				value: tab.textContent.trim(),
 				label: tab.textContent.trim(),
+				// The assistant proposed something on that tab: a blue dot after its name.
+				dot: tab.querySelector(".mt-proposal-dot") ? "proposal" : undefined,
 			}));
 			return {
 				label: el.getAttribute("aria-label"),
@@ -1524,6 +1574,8 @@ const parts = [
 				multiline: el.classList.contains("mt-input-line--multi") || undefined,
 				actionLabel: button?.getAttribute("aria-label"),
 				actionIcon: button?.querySelector("svg") ? iconName(button.querySelector("svg")) : undefined,
+				// A value the assistant wrote and nobody has touched.
+				proposal: input?.classList.contains("is-ai") || el.classList.contains("is-ai") || undefined,
 			};
 		},
 		leaf: true,
@@ -1889,7 +1941,7 @@ const parts = [
 		asProps: ["padding-left", "padding-right"],
 	},
 	// Its right group: the filters at the end of the line.
-	{ match: (el) => el.matches(".mt-toolbar > .end"), part: "PageToolbarEnd" },
+	{ match: (el) => el.matches("div.mt-toolbar > .end"), part: "PageToolbarEnd" },
 	{
 		match: (el) => el.matches(".mt-tabs"),
 		part: "TabLinks",
@@ -1898,7 +1950,9 @@ const parts = [
 		asProps: ["flex-grow"],
 	},
 	{
-		match: (el) => el.matches(".mt-tabs > a"),
+		// A tab is a link to its page, or a button where the tabs switch a view in place (the review's "한 줄 · 나란히"); a "+" button adds one.
+		match: (el) =>
+			el.matches(".mt-tabs > a") || (el.matches(".mt-tabs > button") && !el.textContent.trim().startsWith("+")),
 		part: "Tab",
 		props: (el) => {
 			const count = el.querySelector(".mt-count");
@@ -1911,7 +1965,12 @@ const parts = [
 				current: el.classList.contains("is-on") || undefined,
 				count: count?.textContent.trim(),
 				countTone: count?.classList.contains("mt-count--warn") ? "warning" : undefined,
-				dot: el.querySelector(".mt-change-dot") ? "warning" : undefined,
+				// A dot after the name: something changed (warning) or the assistant proposed something here (proposal).
+				dot: el.querySelector(".mt-change-dot, span[style*='--bg-warning-emphasis']")
+					? "warning"
+					: el.querySelector(".mt-proposal-dot")
+						? "proposal"
+						: undefined,
 			};
 		},
 		leaf: true,
@@ -1986,8 +2045,14 @@ const parts = [
 		}),
 		leaf: true,
 	},
-	// The app frame's ✦ in the corner opens the assistant beside every screen: the frame's, not a screen's.
-	{ match: (el) => el.matches(".mt-icon-btn--corner"), ignore: true },
+	// The app frame's ✦ in the corner opens the assistant beside every screen: drawn over the page, 12px from its top right (`SidebarInset`'s corner).
+	{
+		match: (el) => el.matches(".mt-icon-btn--corner"),
+		part: "AssistantCorner",
+		overlay: true,
+		props: (el) => ({ label: el.getAttribute("aria-label") }),
+		leaf: true,
+	},
 	// The assistant's ✦ is the design system's own mark, not a Carbon icon.
 	{ match: (el) => el.matches("svg.mt-spark"), part: "Icon", props: () => ({ name: "spark" }), leaf: true },
 	// A switch with what it turns on under it is two lines of a page, not one field.

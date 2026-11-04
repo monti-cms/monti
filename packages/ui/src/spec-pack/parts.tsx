@@ -438,8 +438,10 @@ function List({ children }: { children?: React.ReactNode }) {
 }
 
 /** A list's head row, as it looks: its columns at the widths the board gives them, and the cell at its end. */
-function ListHead(props: React.ComponentProps<typeof ListHeadPart>) {
-	return <ListHeadPart {...props} />;
+function ListHead({ addLabel, ...props }: React.ComponentProps<typeof ListHeadPart> & { addLabel?: string }) {
+	// The + shows only while some column is off; the board draws it, so it stands for the columns it would offer.
+	const add = addLabel ? { label: addLabel, columns: [{ id: "more", label: addLabel }], onAdd: () => {} } : undefined;
+	return <ListHeadPart {...props} add={add} />;
 }
 
 /** A row's title cell: the title (the way into it) and its address, or a folder's name and what it holds. */
@@ -456,6 +458,19 @@ function CountCell({ align, children }: { align?: "start" | "end"; children?: Re
 	return (
 		<TableCell align={align}>
 			<Count>{children}</Count>
+		</TableCell>
+	);
+}
+
+/** A row's worded link in a cell of its own (a category's "글 3", going to its entries). */
+function LinkCell({ label, underline }: { label?: string; underline?: boolean }) {
+	return (
+		<TableCell align="end">
+			<RowActions>
+				<TextButton variant={underline ? "underline" : undefined} size="note">
+					{label}
+				</TextButton>
+			</RowActions>
 		</TableCell>
 	);
 }
@@ -577,6 +592,17 @@ function RowButtonsCell({ children }: { children?: React.ReactNode }) {
 	);
 }
 
+/** The app frame's ✦ in the page's top-right corner, 12px from both edges, as `SidebarInset` places its `corner`. It opens the assistant. */
+function AssistantCorner({ label }: { label?: string }) {
+	return (
+		<div className="fixed top-monti-12 right-monti-12 z-10">
+			<IconButton label={label ?? ""}>
+				<Icon name="spark" />
+			</IconButton>
+		</div>
+	);
+}
+
 /** A ⋯: the round icon button of a head or a panel, or (`letter`) the row's letter, as the board draws it. */
 function MoreButton({ label, letter }: { label?: string; letter?: boolean }) {
 	if (letter) return <RowMore label={label ?? ""} />;
@@ -645,16 +671,19 @@ function SelectBox({
 	size,
 	width,
 	proposal,
+	warning,
 }: {
 	value?: string;
 	size?: "sm" | "default";
 	width?: "fit" | "full" | "choice";
 	/** The assistant picked the value and nobody has touched it. */
 	proposal?: boolean;
+	/** The value is in the warning ink: nothing to pick yet ("No key"). */
+	warning?: boolean;
 }) {
 	return (
 		<Select items={[{ value: "shown", label: value ?? "" }]} value="shown">
-			<SelectTrigger size={size} width={width} proposal={proposal}>
+			<SelectTrigger size={size} width={width} proposal={proposal} className={cn(warning && "text-monti-warning")}>
 				<SelectValue />
 			</SelectTrigger>
 		</Select>
@@ -971,7 +1000,12 @@ function GridBox({ columns, children }: { columns?: 1 | 2 | 3 | 4 | 6; children?
 
 /** What cannot be undone, apart at the end of a page: its title in danger, its rows under it. */
 function DangerSection({ title, children }: { title?: string; children?: React.ReactNode }) {
-	return <DangerBlock title={title}>{children}</DangerBlock>;
+	// The room above it is the screen's (a Spacing before it), so the block is drawn without its own.
+	return (
+		<DangerBlock title={title} className="mt-0">
+			{children}
+		</DangerBlock>
+	);
 }
 
 /** One thing that cannot be undone: its name, a detail, and its button. */
@@ -1373,7 +1407,8 @@ function marked(run: Marked | undefined) {
 
 /** What the admin asked, quoted under a review page's title (the admin's own words, from the data). */
 function ReviewAsk({ text }: { text?: string }) {
-	return <ReviewQuote>{text}</ReviewQuote>;
+	// The room above it is the screen's (a Spacing before it), so the quote is drawn without its own.
+	return <ReviewQuote className="mt-0">{text}</ReviewQuote>;
 }
 
 /** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
@@ -1394,6 +1429,7 @@ function ReviewEntry({
 	change,
 	included,
 	muted,
+	endWarning,
 }: {
 	title?: string;
 	path?: string;
@@ -1403,7 +1439,10 @@ function ReviewEntry({
 	change?: Marked;
 	included?: boolean;
 	muted?: boolean;
+	/** `end` in the warning ink: the entry changed since the proposal was made ("이 사이에 고쳐짐"). */
+	endWarning?: boolean;
 }) {
+	const endWords = endWarning ? <span className="text-monti-warning">{end}</span> : end;
 	return (
 		<ReviewItem
 			included={included ?? false}
@@ -1413,13 +1452,13 @@ function ReviewEntry({
 			end={
 				again ? (
 					<>
-						{end}{" "}
+						{endWords}{" "}
 						<TextButton variant="underline" size="caption">
 							{again}
 						</TextButton>
 					</>
 				) : (
-					end
+					endWords
 				)
 			}
 			muted={muted}
@@ -1508,10 +1547,10 @@ function PublishButton({ label, menuLabel }: { label?: string; menuLabel?: strin
 }
 
 /** An entry's title, as large as a page's; the words are the entry's (from the data). */
-function EntryTitle({ text, faint }: { text?: string; faint?: boolean }) {
+function EntryTitle({ text, faint, untranslated }: { text?: string; faint?: boolean; untranslated?: boolean }) {
 	return (
 		<Heading as="h1" variant="display" tone={faint ? "subtle" : undefined}>
-			{text}
+			{untranslated ? <Untranslated>{text}</Untranslated> : text}
 		</Heading>
 	);
 }
@@ -1624,7 +1663,13 @@ function EditorBody({
 /** One block of the body in the editor's own spacing (as a side-by-side view draws it), not the reading defaults. */
 function blockOf(block: BodyBlock, text: React.ReactNode) {
 	if (block.kind === "h2" || block.kind === "h3") return <CompareHeading className="first:mt-0">{text}</CompareHeading>;
-	if (block.kind === "quote") return <blockquote>{text}</blockquote>;
+	// A quote as the editor draws it: plain text after a rule, not the reading defaults' italic.
+	if (block.kind === "quote")
+		return (
+			<blockquote className="not-prose m-0 mb-monti-20 border-monti-strong border-l-2 pl-monti-16 font-normal not-italic">
+				{text}
+			</blockquote>
+		);
 	if (block.kind === "list")
 		return (
 			<ul className="m-0 pl-monti-16 *:my-0 *:pl-0">
@@ -2345,7 +2390,7 @@ function PropsPanel({
 }: {
 	label?: string;
 	open?: string;
-	tabs?: readonly { value: string; label: string }[];
+	tabs?: readonly { value: string; label: string; dot?: "warning" | "proposal" }[];
 	children?: React.ReactNode;
 }) {
 	return (
@@ -2387,6 +2432,7 @@ function LineInput({
 	multiline,
 	actionLabel,
 	actionIcon,
+	proposal,
 }: {
 	id?: string;
 	value?: string;
@@ -2396,14 +2442,23 @@ function LineInput({
 	multiline?: boolean;
 	actionLabel?: string;
 	actionIcon?: IconName;
+	/** The assistant wrote the value and nobody has touched it. */
+	proposal?: boolean;
 }) {
 	const action = actionLabel ? (
 		<IconButton label={actionLabel}>{actionIcon ? <Icon name={actionIcon} /> : null}</IconButton>
 	) : undefined;
 	return multiline ? (
-		<TextareaPart id={id} defaultValue={value} placeholder={placeholder} mono={mono} action={action} />
+		<TextareaPart
+			id={id}
+			defaultValue={value}
+			placeholder={placeholder}
+			mono={mono}
+			action={action}
+			proposal={proposal}
+		/>
 	) : (
-		<InputPart id={id} defaultValue={value} placeholder={placeholder} mono={mono} action={action} />
+		<InputPart id={id} defaultValue={value} placeholder={placeholder} mono={mono} action={action} proposal={proposal} />
 	);
 }
 
@@ -2552,9 +2607,9 @@ function Conversation({
 								{group.turns
 									.filter((turn) => turn.role === "entry")
 									.map((turn) => (
-										<li key={turn.text}>
-											<ChatEntryLink slug={turn.detail}>{turn.text}</ChatEntryLink>
-										</li>
+										<ChatEntryLink key={turn.text} slug={turn.detail}>
+											{turn.text}
+										</ChatEntryLink>
 									))}
 							</ChatEntryList>
 						)}
@@ -2617,7 +2672,7 @@ function SectionHead({ children }: { children?: React.ReactNode }) {
 	return <>{children}</>;
 }
 
-export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
+export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack", words: "Text" };
 
 /**
  * The parts a screen spec can name, by the name it uses. `pnpm gen:screen-catalog` reads their prop types into `catalog.generated.json`, which
@@ -2728,6 +2783,7 @@ export const parts = {
 	TrashDateCell,
 	RowButtonsCell,
 	MoreButton,
+	AssistantCorner,
 	PageToolbar,
 	PageToolbarEnd,
 	TabLinks,
@@ -2736,6 +2792,7 @@ export const parts = {
 	TitleCell,
 	CountCell,
 	ActionsCell,
+	LinkCell,
 	RowMark,
 	PageSize,
 	Pager,
@@ -2858,7 +2915,7 @@ export const CATALOG = {
 			effort: "text",
 		},
 	},
-	PropsPanel: { kind: "part", props: { label: "text", open: "text", tabs: "data:value,label" } },
+	PropsPanel: { kind: "part", props: { label: "text", open: "text", tabs: "data:value,label,dot" } },
 	PropsGroup: { kind: "part", props: { title: "text" } },
 	LabelWithFill: { kind: "part", props: { label: "text", action: "text", for: "ref" } },
 	LineInput: {
@@ -2872,6 +2929,7 @@ export const CATALOG = {
 			multiline: "flag",
 			actionLabel: "text",
 			actionIcon: "variant",
+			proposal: "flag",
 		},
 	},
 	ChipsField: { kind: "part", props: { label: "text", items: "data:label", removeLabel: "text" } },
@@ -2934,7 +2992,7 @@ export const CATALOG = {
 	},
 	EditorTopBar: { kind: "part", props: {} },
 	PublishButton: { kind: "part", props: { label: "text", menuLabel: "text" } },
-	EntryTitle: { kind: "part", props: { text: "state", faint: "flag" } },
+	EntryTitle: { kind: "part", props: { text: "state", faint: "flag", untranslated: "flag" } },
 	TitleRule: { kind: "part", props: {} },
 	TitleInput: { kind: "part", bind: "yes", props: { id: "text", value: "state", placeholder: "text", label: "text" } },
 	EditorBody: {
@@ -2973,6 +3031,7 @@ export const CATALOG = {
 			change: "data:kind,text",
 			included: "flag",
 			muted: "flag",
+			endWarning: "flag",
 		},
 	},
 	ReviewBlockLine: { kind: "part", props: { label: "text", note: "text", text: "data:kind,text", included: "flag" } },
@@ -3085,7 +3144,10 @@ export const CATALOG = {
 	},
 	ChangedLabel: { kind: "part", props: { label: "text", undo: "text", proposal: "flag", for: "ref" } },
 	TwoLineCell: { kind: "part", props: { title: "text", sub: "text", proposal: "flag" } },
-	SelectBox: { kind: "part", props: { value: "text", size: "variant", width: "variant", proposal: "flag" } },
+	SelectBox: {
+		kind: "part",
+		props: { value: "text", size: "variant", width: "variant", proposal: "flag", warning: "flag" },
+	},
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
 	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },
 	AffixField: {
@@ -3107,6 +3169,7 @@ export const CATALOG = {
 	TrashDateCell: { kind: "part", props: { date: "text", left: "text", urgent: "flag" } },
 	RowButtonsCell: { kind: "part", props: {} },
 	MoreButton: { kind: "part", props: { label: "text", letter: "flag" } },
+	AssistantCorner: { kind: "overlay", props: { label: "text" } },
 	PageToolbar: { kind: "part", props: { inset: "flag" } },
 	PageToolbarEnd: { kind: "part", props: {} },
 	TabLinks: { kind: "part", props: { variant: "variant" } },
@@ -3180,6 +3243,7 @@ export const CATALOG = {
 		kind: "part",
 		props: {
 			columns: "data:id,label,sort,filtered,size,align",
+			addLabel: "text",
 			end: "state",
 			moveLabel: "text",
 			onPlace: "event",
@@ -3191,6 +3255,7 @@ export const CATALOG = {
 	Table: { kind: "part", props: { container: "variant", layout: "variant" } },
 	TableBody: { kind: "part", props: { dimmed: "flag" } },
 	TableRow: { kind: "part", props: { selected: "flag", proposal: "flag", twoLine: "flag" } },
+	LinkCell: { kind: "part", props: { label: "state", underline: "flag" } },
 	TableCell: { kind: "part", props: { align: "variant", tone: "variant", width: "variant", truncate: "flag" } },
 	RowCheck: { kind: "part", props: { checked: "flag", proposal: "flag", label: "text", onCheckedChange: "event" } },
 	RowLink: { kind: "part", props: {} },

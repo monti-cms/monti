@@ -302,8 +302,20 @@ function read(el, where, page = undefined, inPart = false) {
 			// Words a flex line holds as items of their own ("+", "새", a value, "쓰기") read as one run, their gaps as spaces.
 			const words = (node) =>
 				node.text !== undefined && node.part === undefined && node.children === undefined && !node.looks?.length;
-			if (read.length > 1 && read.every(words) && getComputedStyle(holder).display.includes("flex"))
+			const style = getComputedStyle(holder);
+			if (read.length > 1 && read.every(words) && style.display.includes("flex"))
 				return [{ where: `${at}[0]`, text: read.map((node) => node.text.trim()).join(" ") }];
+			// Pieces a flex line keeps apart by its gap (a title and its note): one row with that distance between them.
+			if (
+				read.length > 1 &&
+				holder.matches("h1, h2, h3") &&
+				style.display.includes("flex") &&
+				Number.parseFloat(style.columnGap) > 0 &&
+				holder !== el
+			)
+				return read.map((node, index) =>
+					index > 0 ? { ...node, before: Math.round(Number.parseFloat(style.columnGap)) } : node,
+				);
 			return read;
 		};
 		// A place is filled with an element's inside, or (a list of elements) with those elements themselves.
@@ -311,9 +323,10 @@ function read(el, where, page = undefined, inPart = false) {
 			Array.isArray(holder)
 				? holder.filter(Boolean).map((member, index) => read(member, `${here} › ${name}[${index}]`, undefined, true))
 				: inside(holder, `${here} › ${name}`);
-		const slots = Object.entries(rule.slots?.(el) ?? {}).filter(([, holder]) =>
-			Array.isArray(holder) ? holder.length > 0 : holder,
-		);
+		// A place the board leaves empty (a list of nothing found) is no place: the part draws what it draws without it.
+		const slots = Object.entries(rule.slots?.(el) ?? {})
+			.map(([name, holder]) => [name, Array.isArray(holder) ? holder.filter(Boolean) : holder])
+			.filter(([, holder]) => (Array.isArray(holder) ? holder.length > 0 : holder));
 		if (slots.length > 0) node.slots = Object.fromEntries(slots.map(([name, holder]) => [name, fill(holder, name)]));
 		const holder = rule.slots ? rule.children?.(el) : el;
 		// What the rule hands on: its places and its children; any other words in the element are dropped, and said so.
