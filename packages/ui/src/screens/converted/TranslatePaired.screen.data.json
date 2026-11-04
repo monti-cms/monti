@@ -1,0 +1,238 @@
+{
+	"drawn": {
+		"text": "게시글",
+		"text3": "/en/posts/first-post",
+		"text4": "발행됨",
+		"text5": "저장 ",
+		"text7": "⌘S",
+		"text8": "미리보기",
+		"text9": "발행하기",
+		"text10": "발행 방식",
+		"text11": "한국어",
+		"text12": "English",
+		"text13": "+ 언어",
+		"text15": "원문",
+		"text16": "원문 보기",
+		"options": [
+			{
+				"value": "끔",
+				"label": "끔"
+			},
+			{
+				"value": "옆 창",
+				"label": "옆 창"
+			},
+			{
+				"value": "나란히",
+				"label": "나란히"
+			}
+		],
+		"text17": "나란히",
+		"text18": "원문 · 한국어 · 10. 26 수정",
+		"text19": "번역 · English · 09. 20 수정",
+		"text20": "제목",
+		"source": [
+			{
+				"kind": "title",
+				"text": "첫 번째 글"
+			}
+		],
+		"translation": [
+			{
+				"kind": "title",
+				"text": "The first post"
+			}
+		],
+		"text21": "문단",
+		"source2": [
+			{
+				"kind": "p",
+				"text": "블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다."
+			}
+		],
+		"translation2": [
+			{
+				"kind": "p",
+				"text": "I rebuilt the blog because I was spending more time fixing tools than writing."
+			}
+		],
+		"text22": "문단",
+		"text23": "원문 바뀜",
+		"source3": [
+			{
+				"kind": "p",
+				"text": "목록에는 제목과 주소, 지금 상태만 남겼다. "
+			},
+			{
+				"text": "나머지는 필요할 때 꺼내 본다.",
+				"changed": true
+			}
+		],
+		"translation3": [
+			{
+				"kind": "p",
+				"text": "The list keeps only the title, the address and the status."
+			}
+		],
+		"text24": "콜아웃",
+		"text25": "제목 + 본문",
+		"source4": [
+			{
+				"kind": "callout",
+				"text": "버전 안내"
+			},
+			{
+				"kind": "line",
+				"text": "이 글은 리액트 19 기준이다."
+			},
+			{
+				"kind": "line",
+				"text": "예시 코드는 저장소에 있다."
+			}
+		],
+		"translation4": [
+			{
+				"kind": "callout",
+				"text": "About versions"
+			},
+			{
+				"kind": "line",
+				"text": "This post is based on React 19."
+			},
+			{
+				"kind": "line",
+				"text": "The example code is in the repository."
+			}
+		],
+		"text26": "이미지",
+		"text27": "같은 파일",
+		"source5": [
+			{
+				"kind": "image",
+				"text": "",
+				"picture": "linear-gradient(160deg, rgb(58, 63, 85), rgb(28, 30, 43))"
+			},
+			{
+				"kind": "field",
+				"label": "캡션",
+				"text": "서울의 밤, 작업실 창밖"
+			},
+			{
+				"kind": "field",
+				"label": "대체 텍스트",
+				"text": "불 켜진 아파트 창과 남산타워"
+			}
+		],
+		"translation5": [
+			{
+				"kind": "image",
+				"text": "",
+				"picture": "linear-gradient(160deg, rgb(58, 63, 85), rgb(28, 30, 43))",
+				"faint": true
+			},
+			{
+				"kind": "field",
+				"label": "캡션",
+				"text": "Seoul at night, from my desk",
+				"editable": true
+			},
+			{
+				"kind": "field",
+				"label": "대체 텍스트",
+				"text": "",
+				"placeholder": "아직 번역하지 않았어요",
+				"editable": true
+			}
+		],
+		"text28": "코드 블록",
+		"text29": "tsx",
+		"source6": [
+			{
+				"kind": "code",
+				"text": "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}"
+			}
+		],
+		"translation6": [
+			{
+				"kind": "code",
+				"text": "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}"
+			}
+		],
+		"text30": "English에서만 따로 고치기",
+		"text31": "표",
+		"source7": [
+			{
+				"kind": "th",
+				"text": "버전\t바뀐 점\t옮길 때"
+			},
+			{
+				"kind": "tr",
+				"text": "18\t훅 도입 이후 안정\t그대로"
+			},
+			{
+				"kind": "tr",
+				"text": "19\t서버 컴포넌트 정식\t데이터 불러오기 정리"
+			}
+		],
+		"translation7": [
+			{
+				"kind": "th",
+				"text": "Version\tWhat changed\tWhen moving"
+			},
+			{
+				"kind": "tr",
+				"text": "18\tStable since hooks\tKeep as is"
+			},
+			{
+				"kind": "tr",
+				"text": "19\tServer components are stable\t데이터 불러오기 정리"
+			}
+		],
+		"text32": "목록",
+		"source8": [
+			{
+				"kind": "li",
+				"text": "제목과 주소"
+			},
+			{
+				"kind": "li",
+				"text": "지금 상태"
+			},
+			{
+				"kind": "li",
+				"text": "수정한 날짜"
+			}
+		],
+		"translation8": [
+			{
+				"kind": "li",
+				"text": "Title and address"
+			},
+			{
+				"kind": "li",
+				"text": "Current status"
+			},
+			{
+				"kind": "li",
+				"text": "Date of last edit"
+			}
+		],
+		"text33": "문단",
+		"text34": "원문에 추가",
+		"source9": [
+			{
+				"kind": "p",
+				"text": "편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다."
+			}
+		],
+		"translation9": [
+			{
+				"kind": "p",
+				"text": "편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.",
+				"faint": true
+			}
+		],
+		"text35": "할 일 1",
+		"text36": "912자"
+	}
+}

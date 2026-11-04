@@ -1,0 +1,1031 @@
+{
+	"root": "stack",
+	"overlays": ["sheet", "assistantCorner"],
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": ["sidebarItem", "sidebarItem2", "sidebarItem3", "sidebarItem4", "sidebarItem5", "sidebarItem6"]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text10"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"props": {
+				"active": true
+			},
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack4": {
+			"type": "Stack",
+			"children": ["stack5"]
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text15"
+					}
+				]
+			}
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text16"
+				}
+			}
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text17"
+				}
+			}
+		},
+		"tab3": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text18"
+				},
+				"current": true
+			}
+		},
+		"tab4": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text19"
+				}
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab", "tab2", "tab3", "tab4"]
+		},
+		"pageToolbar": {
+			"type": "PageToolbar",
+			"children": ["tabLinks"]
+		},
+		"tab5": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text20"
+				}
+			}
+		},
+		"tab6": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text21"
+				},
+				"current": true,
+				"count": {
+					"state": "/drawn/text22"
+				}
+			}
+		},
+		"tab7": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text23"
+				}
+			}
+		},
+		"tabLinks2": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab5", "tab6", "tab7"]
+		},
+		"textButton": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text24"
+				}
+			]
+		},
+		"pageToolbarEnd": {
+			"type": "PageToolbarEnd",
+			"children": ["textButton"]
+		},
+		"pageToolbar2": {
+			"type": "PageToolbar",
+			"children": ["tabLinks2", "pageToolbarEnd"]
+		},
+		"folderTabItem": {
+			"type": "FolderTabItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text26"
+				},
+				"count": {
+					"state": "/drawn/text27"
+				}
+			}
+		},
+		"folderTabItem2": {
+			"type": "FolderTabItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text28"
+				},
+				"count": {
+					"state": "/drawn/text29"
+				},
+				"locked": true
+			}
+		},
+		"folderTabRow": {
+			"type": "FolderTabRow",
+			"props": {
+				"add": {
+					"state": "/drawn/text25"
+				}
+			},
+			"children": ["folderTabItem", "folderTabItem2"]
+		},
+		"fieldLine": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text30"
+				},
+				"label": {
+					"state": "/drawn/text31"
+				},
+				"note": {
+					"state": "/drawn/text32"
+				},
+				"kind": {
+					"state": "/drawn/text33"
+				}
+			}
+		},
+		"fieldLine2": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text34"
+				},
+				"label": {
+					"state": "/drawn/text35"
+				},
+				"kind": {
+					"state": "/drawn/text36"
+				}
+			}
+		},
+		"fieldLine3": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text37"
+				},
+				"label": {
+					"state": "/drawn/text38"
+				},
+				"description": {
+					"state": "/drawn/text39"
+				},
+				"kind": {
+					"state": "/drawn/text40"
+				}
+			}
+		},
+		"fieldLine4": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text41"
+				},
+				"label": {
+					"state": "/drawn/text42"
+				},
+				"description": {
+					"state": "/drawn/text43"
+				},
+				"kind": {
+					"state": "/drawn/text44"
+				}
+			}
+		},
+		"fieldLine5": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text45"
+				},
+				"group": true
+			}
+		},
+		"fieldLine6": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text46"
+				},
+				"label": {
+					"state": "/drawn/text47"
+				},
+				"kind": {
+					"state": "/drawn/text48"
+				},
+				"depth": 1
+			}
+		},
+		"fieldLine7": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text49"
+				},
+				"label": {
+					"state": "/drawn/text50"
+				},
+				"kind": {
+					"state": "/drawn/text51"
+				},
+				"depth": 1
+			}
+		},
+		"fieldLine8": {
+			"type": "FieldLine",
+			"props": {
+				"name": {
+					"state": "/drawn/text52"
+				},
+				"label": {
+					"state": "/drawn/text53"
+				},
+				"kind": {
+					"state": "/drawn/text54"
+				},
+				"depth": 1
+			}
+		},
+		"fieldTree": {
+			"type": "FieldTree",
+			"children": [
+				"fieldLine",
+				"fieldLine2",
+				"fieldLine3",
+				"fieldLine4",
+				"fieldLine5",
+				"fieldLine6",
+				"fieldLine7",
+				"fieldLine8"
+			]
+		},
+		"folderBody": {
+			"type": "FolderBody",
+			"children": ["fieldTree"]
+		},
+		"folder": {
+			"type": "Folder",
+			"children": ["folderTabRow", "folderBody"]
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text55"
+				}
+			]
+		},
+		"textButton3": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				{
+					"state": "/drawn/text56"
+				}
+			]
+		},
+		"stack11": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center"
+			},
+			"children": [
+				"textButton2",
+				{
+					"spacing": 20
+				},
+				"textButton3"
+			]
+		},
+		"text57": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "meta",
+				"tone": "subtle"
+			},
+			"children": [
+				{
+					"state": "/drawn/text58"
+				}
+			]
+		},
+		"stack10": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				"pageToolbar2",
+				{
+					"spacing": 16
+				},
+				"folder",
+				"stack11",
+				{
+					"spacing": 12
+				},
+				"text57"
+			]
+		},
+		"navEntry": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text59"
+				},
+				"note": {
+					"state": "/drawn/text60"
+				},
+				"active": true
+			}
+		},
+		"navEntry2": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text61"
+				},
+				"note": {
+					"state": "/drawn/text62"
+				}
+			}
+		},
+		"navEntry3": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text63"
+				},
+				"note": {
+					"state": "/drawn/text64"
+				}
+			}
+		},
+		"navEntry4": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text65"
+				},
+				"note": {
+					"state": "/drawn/text66"
+				}
+			}
+		},
+		"navEntry5": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text67"
+				},
+				"note": {
+					"state": "/drawn/text68"
+				}
+			}
+		},
+		"railAdd": {
+			"type": "RailAdd",
+			"props": {
+				"label": {
+					"state": "/drawn/text69"
+				}
+			}
+		},
+		"rail": {
+			"type": "Rail",
+			"slots": {
+				"rail": ["navEntry", "navEntry2", "navEntry3", "navEntry4", "navEntry5", "railAdd"]
+			},
+			"children": ["stack10"]
+		},
+		"stack9": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 880
+			},
+			"children": ["pageHeader", "pageToolbar", "rail"]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack9",
+				{
+					"spacing": 20
+				}
+			]
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"direction": "row"
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack8",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["stack7"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack4", "stack6"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"children": ["stack3"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen"
+			},
+			"children": ["stack2"]
+		},
+		"paneTab": {
+			"type": "PaneTab",
+			"props": {
+				"label": {
+					"state": "/drawn/text73"
+				}
+			}
+		},
+		"paneTab2": {
+			"type": "PaneTab",
+			"props": {
+				"label": {
+					"state": "/drawn/text74"
+				}
+			}
+		},
+		"paneTabs": {
+			"type": "PaneTabs",
+			"props": {
+				"open": {
+					"state": "/drawn/text72"
+				}
+			},
+			"children": ["paneTab", "paneTab2"]
+		},
+		"formFieldLabel": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text75"
+				}
+			],
+			"props": {
+				"for": "@input"
+			}
+		},
+		"input": {
+			"type": "Input",
+			"props": {
+				"value": {
+					"state": "/drawn/value"
+				}
+			}
+		},
+		"formField": {
+			"type": "FormField",
+			"children": ["formFieldLabel", "input"]
+		},
+		"formFieldLabel2": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text76"
+				}
+			],
+			"props": {
+				"for": "@input2"
+			}
+		},
+		"input2": {
+			"type": "Input",
+			"props": {
+				"value": {
+					"state": "/drawn/value2"
+				},
+				"mono": true
+			}
+		},
+		"formField2": {
+			"type": "FormField",
+			"children": ["formFieldLabel2", "input2"]
+		},
+		"formFieldLabel3": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text77"
+				}
+			]
+		},
+		"textarea": {
+			"type": "Textarea",
+			"props": {
+				"value": {
+					"state": "/drawn/value3"
+				},
+				"rows": {
+					"state": "/drawn/rows"
+				}
+			}
+		},
+		"formField3": {
+			"type": "FormField",
+			"children": ["formFieldLabel3", "textarea"]
+		},
+		"formFieldLabel4": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text78"
+				}
+			]
+		},
+		"selectBox": {
+			"type": "SelectBox",
+			"props": {
+				"value": {
+					"state": "/drawn/text79"
+				},
+				"width": "full"
+			}
+		},
+		"formField4": {
+			"type": "FormField",
+			"children": ["formFieldLabel4", "selectBox"]
+		},
+		"optionSwitch": {
+			"type": "OptionSwitch",
+			"props": {
+				"label": {
+					"state": "/drawn/text80"
+				}
+			}
+		},
+		"optionSwitch2": {
+			"type": "OptionSwitch",
+			"props": {
+				"label": {
+					"state": "/drawn/text81"
+				},
+				"checked": true
+			}
+		},
+		"formFieldLabel5": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text82"
+				}
+			]
+		},
+		"selectBox2": {
+			"type": "SelectBox",
+			"props": {
+				"value": {
+					"state": "/drawn/text83"
+				},
+				"width": "full"
+			}
+		},
+		"formField5": {
+			"type": "FormField",
+			"children": ["formFieldLabel5", "selectBox2"]
+		},
+		"optionSwitch3": {
+			"type": "OptionSwitch",
+			"props": {
+				"label": {
+					"state": "/drawn/text84"
+				}
+			}
+		},
+		"formFieldLabel6": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text85"
+				}
+			]
+		},
+		"segmentedChoice": {
+			"type": "SegmentedChoice",
+			"props": {
+				"label": {
+					"state": "/drawn/text86"
+				},
+				"options": {
+					"state": "/drawn/options"
+				},
+				"picked": {
+					"state": "/drawn/text87"
+				}
+			}
+		},
+		"formField6": {
+			"type": "FormField",
+			"children": ["formFieldLabel6", "segmentedChoice"]
+		},
+		"sheetSummary": {
+			"type": "SheetSummary",
+			"props": {
+				"text": {
+					"state": "/drawn/text88"
+				}
+			}
+		},
+		"sheetBody": {
+			"type": "SheetBody",
+			"children": [
+				"formField",
+				"formField2",
+				"formField3",
+				"formField4",
+				"optionSwitch",
+				"optionSwitch2",
+				"formField5",
+				"optionSwitch3",
+				"formField6",
+				"sheetSummary"
+			]
+		},
+		"stack14": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["sheetBody"]
+		},
+		"stack13": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["paneTabs", "stack14"]
+		},
+		"kindItem": {
+			"type": "KindItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text89"
+				}
+			}
+		},
+		"kindItem2": {
+			"type": "KindItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text90"
+				}
+			}
+		},
+		"kindItem3": {
+			"type": "KindItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text91"
+				}
+			}
+		},
+		"kindItem4": {
+			"type": "KindItem",
+			"props": {
+				"label": {
+					"state": "/drawn/text92"
+				},
+				"selected": true,
+				"mark": {
+					"state": "/drawn/text93"
+				}
+			}
+		},
+		"sheetSplit": {
+			"type": "SheetSplit",
+			"slots": {
+				"list": ["kindItem", "kindItem2", "kindItem3", "kindItem4"]
+			},
+			"children": ["stack13"]
+		},
+		"stack12": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["sheetSplit"]
+		},
+		"textButton4": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text94"
+				}
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text95"
+				}
+			]
+		},
+		"sheet": {
+			"type": "Sheet",
+			"props": {
+				"title": {
+					"state": "/drawn/text70"
+				},
+				"of": {
+					"state": "/drawn/text71"
+				}
+			},
+			"slots": {
+				"footer": ["textButton4", "button"]
+			},
+			"children": ["stack12"]
+		},
+		"assistantCorner": {
+			"type": "AssistantCorner",
+			"props": {
+				"label": {
+					"state": "/drawn/text96"
+				}
+			}
+		}
+	}
+}

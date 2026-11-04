@@ -1,0 +1,200 @@
+{
+	"drawn": {
+		"text2": "example.dev",
+		"text3": "게시글",
+		"text4": "148",
+		"text5": "시리즈 원고",
+		"text6": "2",
+		"text7": "메모",
+		"text8": "카테고리",
+		"text9": "태그",
+		"text10": "시리즈",
+		"text11": "미디어",
+		"text12": "휴지통",
+		"text13": "6",
+		"text14": "도구",
+		"text15": "1",
+		"text16": "설정",
+		"text17": "+ 폴더",
+		"text18": "검색",
+		"text19": "+ 새 글 쓰기",
+		"text20": "게시글",
+		"text21": "/posts/:slug",
+		"end": 46,
+		"text22": "열 추가",
+		"columns": [
+			{
+				"id": "상태",
+				"label": "상태",
+				"size": 76
+			},
+			{
+				"id": "제목",
+				"label": "제목"
+			},
+			{
+				"id": "카테고리",
+				"label": "카테고리",
+				"size": 84
+			},
+			{
+				"id": "태그",
+				"label": "태그",
+				"size": 152
+			},
+			{
+				"id": "언어",
+				"label": "언어",
+				"size": 60
+			},
+			{
+				"id": "수정일",
+				"label": "수정일",
+				"sort": "desc",
+				"align": "end",
+				"size": 67
+			}
+		],
+		"text23": "시리즈 원고",
+		"text24": "글 2",
+		"text25": "수정 중",
+		"text26": "발행 후 고친 글",
+		"text27": "/edited-post",
+		"text28": "개발",
+		"text29": "리액트",
+		"text30": "KO",
+		"text31": "10. 26",
+		"text32": "초안",
+		"text33": "리액트 서버 컴포넌트 다시 보기",
+		"text34": "/rsc-again",
+		"text35": "개발",
+		"text36": "리액트 · 성능",
+		"text37": "KO",
+		"text38": "10. 25",
+		"text39": "초안",
+		"text40": "가을 사진 정리",
+		"text41": "/autumn-photos",
+		"text42": "일상",
+		"text43": "KO",
+		"text44": "10. 22",
+		"text45": "발행됨",
+		"text46": "첫 번째 글",
+		"text47": "/first-post",
+		"text48": "개발",
+		"text49": "리액트",
+		"text50": "KO +1",
+		"text51": "10. 01",
+		"text52": "발행됨",
+		"text53": "CMS elements: details",
+		"text54": "/cms-elements-details",
+		"text55": "개발",
+		"text56": "KO +1",
+		"text57": "09. 20",
+		"text58": "발행됨",
+		"text59": "CMS elements",
+		"text60": "/cms-elements",
+		"text61": "개발",
+		"text62": "Blocks",
+		"text63": "KO",
+		"text64": "09. 14",
+		"text65": "발행됨",
+		"text66": "서울의 밤",
+		"text67": "/seoul-night",
+		"text68": "일상",
+		"text69": "KO",
+		"text70": "09. 02",
+		"text71": "발행됨",
+		"text72": "타입스크립트 5.9 정리",
+		"text73": "/ts-59",
+		"text74": "개발",
+		"text75": "KO",
+		"text76": "08. 28",
+		"text77": "발행됨",
+		"text78": "여름 휴가 메모",
+		"text79": "/summer-notes",
+		"text80": "일상",
+		"text81": "KO",
+		"text82": "08. 11",
+		"text83": "발행됨",
+		"text84": "리액트 19 마이그레이션, 서버 컴포넌트와 액션까지 한 번에 옮긴 기록",
+		"text85": "/react-19-migration-notes",
+		"text86": "개발",
+		"text87": "리액트 · 마이그레이션 · 회고 · 타입스크립트",
+		"text88": "KO +2",
+		"text89": "08. 03",
+		"text90": "1–25 / 148",
+		"text91": "25개씩",
+		"text92": "1",
+		"text93": "2",
+		"text94": "3",
+		"text95": "4",
+		"text96": "5",
+		"text97": "6",
+		"text98": "어시스턴트",
+		"turns": [
+			{
+				"role": "user",
+				"text": "요약이 비어 있는 글 찾아 줘"
+			},
+			{
+				"role": "tool",
+				"text": "글 목록 읽음 · 게시글 6편"
+			},
+			{
+				"role": "tool",
+				"text": "필드 확인 · summary"
+			},
+			{
+				"role": "assistant",
+				"text": "요약이 빈 글은 두 편이에요."
+			},
+			{
+				"role": "entry",
+				"text": "발행 후 고친 글",
+				"detail": "/edited-post"
+			},
+			{
+				"role": "entry",
+				"text": "쓰는 중인 글",
+				"detail": "/draft-post"
+			},
+			{
+				"role": "user",
+				"text": "이 두 편에 요약 써 줘"
+			},
+			{
+				"role": "tool",
+				"text": "글 읽음 · 2편"
+			},
+			{
+				"role": "tool",
+				"text": "요약 쓰기 · 2편"
+			}
+		],
+		"text99": "제안",
+		"text100": "요약 채우기 · 글 2편",
+		"status": "검토 대기",
+		"entries": [
+			{
+				"name": "발행 후 고친 글",
+				"slug": "/edited-post",
+				"field": "요약",
+				"text": "예시 코드를 고친 뒤 다시 정리한 메모. 바뀐 코드와 이유를 한 번에 봅니다."
+			},
+			{
+				"name": "쓰는 중인 글",
+				"slug": "/draft-post",
+				"field": "요약",
+				"text": "글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."
+			}
+		],
+		"text101": "검토",
+		"text102": "버리기",
+		"text103": "적용",
+		"text104": "어시스턴트에게 묻기",
+		"text105": "사이트에 대해 물어보세요",
+		"text106": "보내기",
+		"text107": "모델 고르기",
+		"model": "claude-sonnet-5-5"
+	}
+}

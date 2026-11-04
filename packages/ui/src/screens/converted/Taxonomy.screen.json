@@ -1,0 +1,665 @@
+{
+	"root": "stack",
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"props": {
+				"active": true
+			},
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": ["sidebarItem", "sidebarItem2", "sidebarItem3", "sidebarItem4", "sidebarItem5", "sidebarItem6"]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text10"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"children": ["stack3"]
+		},
+		"searchToggle": {
+			"type": "SearchToggle"
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "secondary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text15"
+				}
+			]
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text16"
+					}
+				],
+				"meta": [
+					{
+						"state": "/drawn/text17"
+					}
+				]
+			},
+			"children": ["searchToggle", "button"]
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text18"
+				},
+				"current": true,
+				"count": {
+					"state": "/drawn/text19"
+				}
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab"]
+		},
+		"filter": {
+			"type": "Filter",
+			"props": {
+				"label": {
+					"state": "/drawn/text20"
+				}
+			}
+		},
+		"pageToolbarEnd": {
+			"type": "PageToolbarEnd",
+			"children": ["filter"]
+		},
+		"pageToolbar": {
+			"type": "PageToolbar",
+			"props": {
+				"inset": true
+			},
+			"children": ["tabLinks", "pageToolbarEnd"]
+		},
+		"dragHandle": {
+			"type": "DragHandle"
+		},
+		"tableCell": {
+			"type": "TableCell",
+			"children": ["dragHandle"]
+		},
+		"trashTitleCell": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text21"
+				},
+				"address": {
+					"state": "/drawn/text22"
+				},
+				"meta": {
+					"state": "/drawn/text23"
+				}
+			}
+		},
+		"linkCell": {
+			"type": "LinkCell",
+			"props": {
+				"label": {
+					"state": "/drawn/label"
+				},
+				"underline": true
+			}
+		},
+		"actionsCell": {
+			"type": "ActionsCell"
+		},
+		"tableRow": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true,
+				"selected": true
+			},
+			"children": ["tableCell", "trashTitleCell", "linkCell", "actionsCell"]
+		},
+		"dragHandle2": {
+			"type": "DragHandle"
+		},
+		"tableCell2": {
+			"type": "TableCell",
+			"children": ["dragHandle2"]
+		},
+		"trashTitleCell2": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text24"
+				},
+				"address": {
+					"state": "/drawn/text25"
+				},
+				"meta": {
+					"state": "/drawn/text26"
+				}
+			}
+		},
+		"linkCell2": {
+			"type": "LinkCell",
+			"props": {
+				"label": {
+					"state": "/drawn/label2"
+				},
+				"underline": true
+			}
+		},
+		"tableCell3": {
+			"type": "TableCell"
+		},
+		"tableRow2": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["tableCell2", "trashTitleCell2", "linkCell2", "tableCell3"]
+		},
+		"dragHandle3": {
+			"type": "DragHandle"
+		},
+		"tableCell4": {
+			"type": "TableCell",
+			"children": ["dragHandle3"]
+		},
+		"trashTitleCell3": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text27"
+				},
+				"address": {
+					"state": "/drawn/text28"
+				},
+				"meta": {
+					"state": "/drawn/text29"
+				},
+				"metaTone": "warning"
+			}
+		},
+		"linkCell3": {
+			"type": "LinkCell",
+			"props": {
+				"label": {
+					"state": "/drawn/label3"
+				},
+				"underline": true
+			}
+		},
+		"tableCell5": {
+			"type": "TableCell"
+		},
+		"tableRow3": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["tableCell4", "trashTitleCell3", "linkCell3", "tableCell5"]
+		},
+		"listBody": {
+			"type": "ListBody",
+			"children": ["tableRow", "tableRow2", "tableRow3"]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 720
+			},
+			"children": ["pageHeader", "pageToolbar", "listBody"]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack6",
+				{
+					"spacing": 40
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack5",
+				{
+					"spacing": 40
+				}
+			]
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text31"
+				},
+				"current": true
+			}
+		},
+		"tab3": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text32"
+				}
+			}
+		},
+		"tabLinks2": {
+			"type": "TabLinks",
+			"children": ["tab2", "tab3"]
+		},
+		"formFieldLabel": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text33"
+				}
+			],
+			"props": {
+				"for": "@input"
+			}
+		},
+		"input": {
+			"type": "Input",
+			"props": {
+				"value": {
+					"state": "/drawn/value"
+				}
+			}
+		},
+		"formField": {
+			"type": "FormField",
+			"children": ["formFieldLabel", "input"]
+		},
+		"formFieldLabel2": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text34"
+				}
+			],
+			"props": {
+				"for": "@input2"
+			}
+		},
+		"input2": {
+			"type": "Input",
+			"props": {
+				"value": {
+					"state": "/drawn/value2"
+				},
+				"mono": true
+			}
+		},
+		"formField2": {
+			"type": "FormField",
+			"children": ["formFieldLabel2", "input2"]
+		},
+		"formFieldLabel3": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text35"
+				}
+			],
+			"props": {
+				"for": "@textarea"
+			}
+		},
+		"textarea": {
+			"type": "Textarea",
+			"props": {
+				"value": {
+					"state": "/drawn/value3"
+				},
+				"rows": {
+					"state": "/drawn/rows"
+				}
+			}
+		},
+		"formField3": {
+			"type": "FormField",
+			"children": ["formFieldLabel3", "textarea"]
+		},
+		"formFieldLabel4": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text36"
+				}
+			]
+		},
+		"text37": {
+			"type": "Text",
+			"props": {
+				"mono": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text38"
+				}
+			]
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "underline"
+			},
+			"children": [
+				{
+					"state": "/drawn/text39"
+				}
+			]
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "baseline"
+			},
+			"children": [
+				"text37",
+				{
+					"spacing": 12
+				},
+				"textButton"
+			]
+		},
+		"formField4": {
+			"type": "FormField",
+			"children": ["formFieldLabel4", "stack7"]
+		},
+		"moreButton": {
+			"type": "MoreButton"
+		},
+		"text40": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "note",
+				"tone": "subtle"
+			},
+			"children": [
+				{
+					"state": "/drawn/text41"
+				}
+			]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["text40"]
+		},
+		"button2": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text42"
+				}
+			]
+		},
+		"panel": {
+			"type": "Panel",
+			"props": {
+				"title": {
+					"state": "/drawn/text30"
+				},
+				"closable": true
+			},
+			"slots": {
+				"actions": ["moreButton"],
+				"footer": ["stack8", "button2"]
+			},
+			"children": ["tabLinks2", "formField", "formField2", "formField3", "formField4"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2", "stack4", "panel"]
+		}
+	}
+}

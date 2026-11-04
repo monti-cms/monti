@@ -1,0 +1,173 @@
+{
+	"root": "stack",
+	"elements": {
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "chevron--left"
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"entryStatus": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "editing"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text3"
+				}
+			]
+		},
+		"moreButton": {
+			"type": "MoreButton"
+		},
+		"verticalRule": {
+			"type": "VerticalRule"
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "spark"
+			}
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center",
+				"justify": "center"
+			},
+			"children": ["icon2"]
+		},
+		"editorTopBar": {
+			"type": "EditorTopBar",
+			"slots": {
+				"start": ["textButton", "entryStatus"],
+				"end": ["button", "moreButton", "verticalRule", "stack2"]
+			}
+		},
+		"titleInput": {
+			"type": "TitleInput",
+			"props": {
+				"value": {
+					"state": "/drawn/value"
+				},
+				"placeholder": {
+					"state": "/drawn/text4"
+				},
+				"label": {
+					"state": "/drawn/text5"
+				}
+			}
+		},
+		"titleRule": {
+			"type": "TitleRule"
+		},
+		"editorBody": {
+			"type": "EditorBody",
+			"props": {
+				"doc": {
+					"state": "/drawn/doc"
+				},
+				"tools": {
+					"state": "/drawn/tools"
+				}
+			}
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 680
+			},
+			"children": [
+				"titleInput",
+				{
+					"spacing": 20
+				},
+				"titleRule",
+				{
+					"spacing": 32
+				},
+				"editorBody"
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 32
+				},
+				"stack5",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack4",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"statusGap": {
+			"type": "StatusGap"
+		},
+		"statusCell": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text6"
+				},
+				"end": true
+			}
+		},
+		"editorStatusBar": {
+			"type": "EditorStatusBar",
+			"children": ["statusGap", "statusCell"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen"
+			},
+			"children": ["editorTopBar", "stack3", "editorStatusBar"]
+		}
+	}
+}

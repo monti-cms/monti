@@ -1,0 +1,1440 @@
+{
+	"root": "stack",
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"props": {
+				"active": true
+			},
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"count": {
+			"type": "Count",
+			"children": [
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"sidebarSubItem": {
+			"type": "SidebarSubItem",
+			"children": [
+				{
+					"state": "/drawn/text5"
+				},
+				"count"
+			]
+		},
+		"sidebarSub": {
+			"type": "SidebarSub",
+			"children": ["sidebarSubItem"]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text10"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": [
+				"sidebarItem",
+				"sidebarSub",
+				"sidebarItem2",
+				"sidebarItem3",
+				"sidebarItem4",
+				"sidebarItem5",
+				"sidebarItem6"
+			]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text15"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text14"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text16"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack5": {
+			"type": "Stack",
+			"children": ["stack6"]
+		},
+		"textButton": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text17"
+				}
+			]
+		},
+		"searchToggle": {
+			"type": "SearchToggle",
+			"props": {
+				"label": {
+					"state": "/drawn/text18"
+				}
+			}
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text19"
+				}
+			]
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text20"
+					}
+				],
+				"meta": [
+					{
+						"state": "/drawn/text21"
+					}
+				]
+			},
+			"children": ["textButton", "searchToggle", "button"]
+		},
+		"listHead": {
+			"type": "ListHead",
+			"props": {
+				"end": {
+					"state": "/drawn/end"
+				},
+				"addLabel": {
+					"state": "/drawn/text22"
+				},
+				"columns": {
+					"state": "/drawn/columns"
+				}
+			}
+		},
+		"tableCell": {
+			"type": "TableCell"
+		},
+		"titleCell": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text23"
+				},
+				"address": {
+					"state": "/drawn/text24"
+				},
+				"folder": true
+			}
+		},
+		"tableCell2": {
+			"type": "TableCell"
+		},
+		"tableCell3": {
+			"type": "TableCell"
+		},
+		"tableCell4": {
+			"type": "TableCell"
+		},
+		"tableCell5": {
+			"type": "TableCell"
+		},
+		"actionsCell": {
+			"type": "ActionsCell"
+		},
+		"tableRow": {
+			"type": "TableRow",
+			"children": ["tableCell", "titleCell", "tableCell2", "tableCell3", "tableCell4", "tableCell5", "actionsCell"]
+		},
+		"entryStatus": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "editing"
+			},
+			"children": [
+				{
+					"state": "/drawn/text25"
+				}
+			]
+		},
+		"tableCell6": {
+			"type": "TableCell",
+			"children": ["entryStatus"]
+		},
+		"titleCell2": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text26"
+				},
+				"address": {
+					"state": "/drawn/text27"
+				}
+			}
+		},
+		"tableCell7": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text28"
+				}
+			]
+		},
+		"tableCell8": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text29"
+				}
+			]
+		},
+		"countCell": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text30"
+				}
+			]
+		},
+		"countCell2": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text31"
+				}
+			]
+		},
+		"actionsCell2": {
+			"type": "ActionsCell"
+		},
+		"tableRow2": {
+			"type": "TableRow",
+			"children": ["tableCell6", "titleCell2", "tableCell7", "tableCell8", "countCell", "countCell2", "actionsCell2"]
+		},
+		"entryStatus2": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "draft"
+			},
+			"children": [
+				{
+					"state": "/drawn/text32"
+				}
+			]
+		},
+		"tableCell9": {
+			"type": "TableCell",
+			"children": ["entryStatus2"]
+		},
+		"titleCell3": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text33"
+				},
+				"address": {
+					"state": "/drawn/text34"
+				}
+			}
+		},
+		"tableCell10": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text35"
+				}
+			]
+		},
+		"tableCell11": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text36"
+				}
+			]
+		},
+		"countCell3": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text37"
+				}
+			]
+		},
+		"countCell4": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text38"
+				}
+			]
+		},
+		"actionsCell3": {
+			"type": "ActionsCell"
+		},
+		"tableRow3": {
+			"type": "TableRow",
+			"children": ["tableCell9", "titleCell3", "tableCell10", "tableCell11", "countCell3", "countCell4", "actionsCell3"]
+		},
+		"entryStatus3": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "draft"
+			},
+			"children": [
+				{
+					"state": "/drawn/text39"
+				}
+			]
+		},
+		"tableCell12": {
+			"type": "TableCell",
+			"children": ["entryStatus3"]
+		},
+		"titleCell4": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text40"
+				},
+				"address": {
+					"state": "/drawn/text41"
+				}
+			}
+		},
+		"tableCell13": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text42"
+				}
+			]
+		},
+		"tableCell14": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			}
+		},
+		"countCell5": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text43"
+				}
+			]
+		},
+		"countCell6": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text44"
+				}
+			]
+		},
+		"actionsCell4": {
+			"type": "ActionsCell"
+		},
+		"tableRow4": {
+			"type": "TableRow",
+			"children": [
+				"tableCell12",
+				"titleCell4",
+				"tableCell13",
+				"tableCell14",
+				"countCell5",
+				"countCell6",
+				"actionsCell4"
+			]
+		},
+		"entryStatus4": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text45"
+				}
+			]
+		},
+		"tableCell15": {
+			"type": "TableCell",
+			"children": ["entryStatus4"]
+		},
+		"titleCell5": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text46"
+				},
+				"address": {
+					"state": "/drawn/text47"
+				}
+			}
+		},
+		"tableCell16": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text48"
+				}
+			]
+		},
+		"tableCell17": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text49"
+				}
+			]
+		},
+		"countCell7": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text50"
+				}
+			]
+		},
+		"countCell8": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text51"
+				}
+			]
+		},
+		"actionsCell5": {
+			"type": "ActionsCell"
+		},
+		"tableRow5": {
+			"type": "TableRow",
+			"children": [
+				"tableCell15",
+				"titleCell5",
+				"tableCell16",
+				"tableCell17",
+				"countCell7",
+				"countCell8",
+				"actionsCell5"
+			]
+		},
+		"entryStatus5": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text52"
+				}
+			]
+		},
+		"tableCell18": {
+			"type": "TableCell",
+			"children": ["entryStatus5"]
+		},
+		"titleCell6": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text53"
+				},
+				"address": {
+					"state": "/drawn/text54"
+				}
+			}
+		},
+		"tableCell19": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text55"
+				}
+			]
+		},
+		"tableCell20": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			}
+		},
+		"countCell9": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text56"
+				}
+			]
+		},
+		"countCell10": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text57"
+				}
+			]
+		},
+		"actionsCell6": {
+			"type": "ActionsCell"
+		},
+		"tableRow6": {
+			"type": "TableRow",
+			"children": [
+				"tableCell18",
+				"titleCell6",
+				"tableCell19",
+				"tableCell20",
+				"countCell9",
+				"countCell10",
+				"actionsCell6"
+			]
+		},
+		"entryStatus6": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text58"
+				}
+			]
+		},
+		"tableCell21": {
+			"type": "TableCell",
+			"children": ["entryStatus6"]
+		},
+		"titleCell7": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text59"
+				},
+				"address": {
+					"state": "/drawn/text60"
+				}
+			}
+		},
+		"tableCell22": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text61"
+				}
+			]
+		},
+		"tableCell23": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text62"
+				}
+			]
+		},
+		"countCell11": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text63"
+				}
+			]
+		},
+		"countCell12": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text64"
+				}
+			]
+		},
+		"actionsCell7": {
+			"type": "ActionsCell"
+		},
+		"tableRow7": {
+			"type": "TableRow",
+			"children": [
+				"tableCell21",
+				"titleCell7",
+				"tableCell22",
+				"tableCell23",
+				"countCell11",
+				"countCell12",
+				"actionsCell7"
+			]
+		},
+		"entryStatus7": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text65"
+				}
+			]
+		},
+		"tableCell24": {
+			"type": "TableCell",
+			"children": ["entryStatus7"]
+		},
+		"titleCell8": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text66"
+				},
+				"address": {
+					"state": "/drawn/text67"
+				}
+			}
+		},
+		"tableCell25": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text68"
+				}
+			]
+		},
+		"tableCell26": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			}
+		},
+		"countCell13": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text69"
+				}
+			]
+		},
+		"countCell14": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text70"
+				}
+			]
+		},
+		"actionsCell8": {
+			"type": "ActionsCell"
+		},
+		"tableRow8": {
+			"type": "TableRow",
+			"children": [
+				"tableCell24",
+				"titleCell8",
+				"tableCell25",
+				"tableCell26",
+				"countCell13",
+				"countCell14",
+				"actionsCell8"
+			]
+		},
+		"entryStatus8": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text71"
+				}
+			]
+		},
+		"tableCell27": {
+			"type": "TableCell",
+			"children": ["entryStatus8"]
+		},
+		"titleCell9": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text72"
+				},
+				"address": {
+					"state": "/drawn/text73"
+				}
+			}
+		},
+		"tableCell28": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text74"
+				}
+			]
+		},
+		"tableCell29": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			}
+		},
+		"countCell15": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text75"
+				}
+			]
+		},
+		"countCell16": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text76"
+				}
+			]
+		},
+		"actionsCell9": {
+			"type": "ActionsCell"
+		},
+		"tableRow9": {
+			"type": "TableRow",
+			"children": [
+				"tableCell27",
+				"titleCell9",
+				"tableCell28",
+				"tableCell29",
+				"countCell15",
+				"countCell16",
+				"actionsCell9"
+			]
+		},
+		"entryStatus9": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text77"
+				}
+			]
+		},
+		"tableCell30": {
+			"type": "TableCell",
+			"children": ["entryStatus9"]
+		},
+		"titleCell10": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text78"
+				},
+				"address": {
+					"state": "/drawn/text79"
+				}
+			}
+		},
+		"tableCell31": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text80"
+				}
+			]
+		},
+		"tableCell32": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			}
+		},
+		"countCell17": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text81"
+				}
+			]
+		},
+		"countCell18": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text82"
+				}
+			]
+		},
+		"actionsCell10": {
+			"type": "ActionsCell"
+		},
+		"tableRow10": {
+			"type": "TableRow",
+			"children": [
+				"tableCell30",
+				"titleCell10",
+				"tableCell31",
+				"tableCell32",
+				"countCell17",
+				"countCell18",
+				"actionsCell10"
+			]
+		},
+		"entryStatus10": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "published",
+				"quiet": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text83"
+				}
+			]
+		},
+		"tableCell33": {
+			"type": "TableCell",
+			"children": ["entryStatus10"]
+		},
+		"titleCell11": {
+			"type": "TitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text84"
+				},
+				"address": {
+					"state": "/drawn/text85"
+				}
+			}
+		},
+		"tableCell34": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text86"
+				}
+			]
+		},
+		"tableCell35": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text87"
+				}
+			]
+		},
+		"countCell19": {
+			"type": "CountCell",
+			"children": [
+				{
+					"state": "/drawn/text88"
+				}
+			]
+		},
+		"countCell20": {
+			"type": "CountCell",
+			"props": {
+				"align": "end"
+			},
+			"children": [
+				{
+					"state": "/drawn/text89"
+				}
+			]
+		},
+		"actionsCell11": {
+			"type": "ActionsCell"
+		},
+		"tableRow11": {
+			"type": "TableRow",
+			"children": [
+				"tableCell33",
+				"titleCell11",
+				"tableCell34",
+				"tableCell35",
+				"countCell19",
+				"countCell20",
+				"actionsCell11"
+			]
+		},
+		"tableBody": {
+			"type": "TableBody",
+			"children": [
+				"tableRow",
+				"tableRow2",
+				"tableRow3",
+				"tableRow4",
+				"tableRow5",
+				"tableRow6",
+				"tableRow7",
+				"tableRow8",
+				"tableRow9",
+				"tableRow10",
+				"tableRow11"
+			]
+		},
+		"list": {
+			"type": "List",
+			"children": ["listHead", "tableBody"]
+		},
+		"stack10": {
+			"type": "Stack",
+			"props": {
+				"grow": true
+			},
+			"children": ["pageHeader", "list"]
+		},
+		"count2": {
+			"type": "Count",
+			"children": [
+				{
+					"state": "/drawn/text90"
+				}
+			]
+		},
+		"pageSize": {
+			"type": "PageSize",
+			"props": {
+				"shown": {
+					"state": "/drawn/text91"
+				}
+			}
+		},
+		"pageButton": {
+			"type": "PageButton",
+			"props": {
+				"step": "previous",
+				"off": true
+			}
+		},
+		"pageButton2": {
+			"type": "PageButton",
+			"props": {
+				"current": true,
+				"page": {
+					"state": "/drawn/text92"
+				}
+			}
+		},
+		"pageButton3": {
+			"type": "PageButton",
+			"props": {
+				"page": {
+					"state": "/drawn/text93"
+				}
+			}
+		},
+		"pageButton4": {
+			"type": "PageButton",
+			"props": {
+				"page": {
+					"state": "/drawn/text94"
+				}
+			}
+		},
+		"pageButton5": {
+			"type": "PageButton",
+			"props": {
+				"page": {
+					"state": "/drawn/text95"
+				}
+			}
+		},
+		"pageButton6": {
+			"type": "PageButton",
+			"props": {
+				"page": {
+					"state": "/drawn/text96"
+				}
+			}
+		},
+		"pageButton7": {
+			"type": "PageButton",
+			"props": {
+				"page": {
+					"state": "/drawn/text97"
+				}
+			}
+		},
+		"pageButton8": {
+			"type": "PageButton",
+			"props": {
+				"step": "next"
+			}
+		},
+		"pager": {
+			"type": "Pager",
+			"children": [
+				"pageButton",
+				"pageButton2",
+				"pageButton3",
+				"pageButton4",
+				"pageButton5",
+				"pageButton6",
+				"pageButton7",
+				"pageButton8"
+			]
+		},
+		"listFooter": {
+			"type": "ListFooter",
+			"children": ["count2", "pageSize", "pager"]
+		},
+		"stack9": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"maxWidth": 880
+			},
+			"children": ["stack10", "listFooter"]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack9",
+				{
+					"spacing": 24
+				}
+			]
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack8",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack5", "stack7"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"children": ["stack4"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen",
+				"grow": true
+			},
+			"children": ["stack3"]
+		},
+		"proposalBox": {
+			"type": "ProposalBox",
+			"props": {
+				"title": {
+					"state": "/drawn/text99"
+				},
+				"summary": {
+					"state": "/drawn/text100"
+				},
+				"status": {
+					"state": "/drawn/status"
+				},
+				"entries": {
+					"state": "/drawn/entries"
+				},
+				"reviewLabel": {
+					"state": "/drawn/text101"
+				},
+				"discardLabel": {
+					"state": "/drawn/text102"
+				},
+				"applyLabel": {
+					"state": "/drawn/text103"
+				}
+			}
+		},
+		"conversation": {
+			"type": "Conversation",
+			"props": {
+				"turns": {
+					"state": "/drawn/turns"
+				}
+			},
+			"children": ["proposalBox"]
+		},
+		"stack11": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["conversation"]
+		},
+		"iconOnlyButton": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "recently-viewed"
+			}
+		},
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "add"
+			}
+		},
+		"chatBox": {
+			"type": "ChatBox",
+			"props": {
+				"label": {
+					"state": "/drawn/text104"
+				},
+				"placeholder": {
+					"state": "/drawn/text105"
+				},
+				"sendLabel": {
+					"state": "/drawn/text106"
+				},
+				"modelLabel": {
+					"state": "/drawn/text107"
+				},
+				"model": {
+					"state": "/drawn/model"
+				}
+			}
+		},
+		"panel": {
+			"type": "Panel",
+			"props": {
+				"title": {
+					"state": "/drawn/text98"
+				},
+				"closable": true,
+				"width": "assistant",
+				"bleed": true
+			},
+			"slots": {
+				"actions": ["iconOnlyButton", "iconOnlyButton2"],
+				"composer": ["chatBox"]
+			},
+			"children": ["stack11"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2", "panel"]
+		}
+	}
+}

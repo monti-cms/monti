@@ -1,0 +1,388 @@
+{
+	"root": "stack",
+	"elements": {
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "chevron--left"
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"text2": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "meta",
+				"tone": "faint"
+			},
+			"children": [
+				{
+					"state": "/drawn/text3"
+				}
+			]
+		},
+		"entryStatus": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "draft"
+			},
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"text6": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "micro",
+				"tone": "faint"
+			},
+			"children": [
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text5"
+				},
+				"text6"
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "secondary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"publishButton": {
+			"type": "PublishButton",
+			"props": {
+				"label": {
+					"state": "/drawn/text9"
+				},
+				"menuLabel": {
+					"state": "/drawn/text10"
+				}
+			}
+		},
+		"iconOnlyButton": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "right-panel--open"
+			}
+		},
+		"moreButton": {
+			"type": "MoreButton"
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row"
+			},
+			"children": ["moreButton"]
+		},
+		"verticalRule": {
+			"type": "VerticalRule"
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "spark"
+			}
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center",
+				"justify": "center"
+			},
+			"children": ["icon2"]
+		},
+		"editorTopBar": {
+			"type": "EditorTopBar",
+			"slots": {
+				"start": ["textButton", "text2", "entryStatus"],
+				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "stack3", "verticalRule", "stack4"]
+			}
+		},
+		"editorBody": {
+			"type": "EditorBody",
+			"props": {
+				"doc": {
+					"state": "/drawn/doc"
+				},
+				"muted": true
+			}
+		},
+		"sourceColumn": {
+			"type": "SourceColumn",
+			"props": {
+				"label": {
+					"state": "/drawn/text11"
+				},
+				"title": {
+					"state": "/drawn/title"
+				}
+			},
+			"children": ["editorBody"]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["sourceColumn"]
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text12"
+				}
+			}
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"current": true
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"children": [
+				"tab",
+				"tab2",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"stack10": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["tabLinks"]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "spark"
+			}
+		},
+		"textButton3": {
+			"type": "TextButton",
+			"props": {
+				"tone": "proposal"
+			},
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text15"
+				}
+			]
+		},
+		"verticalRule2": {
+			"type": "VerticalRule"
+		},
+		"text16": {
+			"type": "Text",
+			"props": {
+				"variant": "note"
+			},
+			"children": [
+				{
+					"state": "/drawn/text17"
+				}
+			]
+		},
+		"segmentedChoice": {
+			"type": "SegmentedChoice",
+			"props": {
+				"label": {
+					"state": "/drawn/text18"
+				},
+				"options": {
+					"state": "/drawn/options"
+				},
+				"picked": {
+					"state": "/drawn/text19"
+				},
+				"size": "sm",
+				"inline": true
+			}
+		},
+		"languageBar": {
+			"type": "LanguageBar",
+			"slots": {
+				"tabs": ["stack10"],
+				"action": ["textButton3", "verticalRule2", "text16", "segmentedChoice"]
+			}
+		},
+		"entryTitle": {
+			"type": "EntryTitle",
+			"props": {
+				"text": {
+					"state": "/drawn/text20"
+				},
+				"untranslated": true
+			}
+		},
+		"titleRule": {
+			"type": "TitleRule"
+		},
+		"editorBody2": {
+			"type": "EditorBody",
+			"props": {
+				"doc": {
+					"state": "/drawn/doc2"
+				}
+			}
+		},
+		"stack9": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 680
+			},
+			"children": [
+				"languageBar",
+				{
+					"spacing": 16
+				},
+				"entryTitle",
+				{
+					"spacing": 20
+				},
+				"titleRule",
+				{
+					"spacing": 32
+				},
+				"editorBody2"
+			]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 16
+				},
+				"stack9",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack8",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true
+			},
+			"children": [
+				"stack6",
+				{
+					"spacing": 40
+				},
+				"stack7"
+			]
+		},
+		"statusCell": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text21"
+				}
+			}
+		},
+		"statusCell2": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text22"
+				},
+				"tone": "warning"
+			}
+		},
+		"statusGap": {
+			"type": "StatusGap"
+		},
+		"statusCell3": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text23"
+				},
+				"end": true
+			}
+		},
+		"editorStatusBar": {
+			"type": "EditorStatusBar",
+			"children": ["statusCell", "statusCell2", "statusGap", "statusCell3"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["editorTopBar", "stack5", "editorStatusBar"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2"]
+		}
+	}
+}

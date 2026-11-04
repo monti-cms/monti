@@ -1,0 +1,125 @@
+{
+	"root": "stack",
+	"elements": {
+		"suggestHeading": {
+			"type": "SuggestHeading",
+			"props": {
+				"text": {
+					"state": "/drawn/text2"
+				}
+			}
+		},
+		"suggestRow": {
+			"type": "SuggestRow",
+			"props": {
+				"label": {
+					"state": "/drawn/text3"
+				}
+			}
+		},
+		"suggestRow2": {
+			"type": "SuggestRow",
+			"props": {
+				"label": {
+					"state": "/drawn/text4"
+				}
+			}
+		},
+		"suggestHeading2": {
+			"type": "SuggestHeading",
+			"props": {
+				"text": {
+					"state": "/drawn/text5"
+				}
+			}
+		},
+		"suggestRow3": {
+			"type": "SuggestRow",
+			"props": {
+				"label": {
+					"state": "/drawn/text6"
+				},
+				"recent": true
+			}
+		},
+		"suggestRow4": {
+			"type": "SuggestRow",
+			"props": {
+				"label": {
+					"state": "/drawn/text7"
+				},
+				"recent": true
+			}
+		},
+		"suggestions": {
+			"type": "Suggestions",
+			"children": ["suggestHeading", "suggestRow", "suggestRow2", "suggestHeading2", "suggestRow3", "suggestRow4"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["suggestions"]
+		},
+		"iconOnlyButton": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "recently-viewed"
+			}
+		},
+		"iconOnlyButton2": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "add"
+			}
+		},
+		"chatBox": {
+			"type": "ChatBox",
+			"props": {
+				"label": {
+					"state": "/drawn/text8"
+				},
+				"placeholder": {
+					"state": "/drawn/text9"
+				},
+				"sendLabel": {
+					"state": "/drawn/text10"
+				},
+				"modelLabel": {
+					"state": "/drawn/text11"
+				},
+				"model": {
+					"state": "/drawn/model"
+				},
+				"effort": {
+					"state": "/drawn/text12"
+				}
+			}
+		},
+		"panel": {
+			"type": "Panel",
+			"props": {
+				"title": {
+					"state": "/drawn/text"
+				},
+				"closable": true,
+				"bleed": true
+			},
+			"slots": {
+				"actions": ["iconOnlyButton", "iconOnlyButton2"],
+				"composer": ["chatBox"]
+			},
+			"children": ["stack2"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["panel"]
+		}
+	}
+}

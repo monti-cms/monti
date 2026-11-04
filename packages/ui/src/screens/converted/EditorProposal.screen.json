@@ -1,0 +1,533 @@
+{
+	"root": "stack",
+	"overlays": ["proposalDock"],
+	"elements": {
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "chevron--left"
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"text2": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "meta",
+				"tone": "faint"
+			},
+			"children": [
+				{
+					"state": "/drawn/text3"
+				}
+			]
+		},
+		"entryStatus": {
+			"type": "EntryStatus",
+			"props": {
+				"status": "editing"
+			},
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"text6": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "micro",
+				"tone": "faint"
+			},
+			"children": [
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text5"
+				},
+				"text6"
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "secondary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"publishButton": {
+			"type": "PublishButton",
+			"props": {
+				"label": {
+					"state": "/drawn/text9"
+				},
+				"menuLabel": {
+					"state": "/drawn/text10"
+				}
+			}
+		},
+		"iconOnlyButton": {
+			"type": "IconOnlyButton",
+			"props": {
+				"icon": "right-panel--open"
+			}
+		},
+		"moreButton": {
+			"type": "MoreButton"
+		},
+		"verticalRule": {
+			"type": "VerticalRule"
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "spark"
+			}
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center",
+				"justify": "center"
+			},
+			"children": ["icon2"]
+		},
+		"editorTopBar": {
+			"type": "EditorTopBar",
+			"slots": {
+				"start": ["textButton", "text2", "entryStatus"],
+				"end": ["textButton2", "button", "publishButton", "iconOnlyButton", "moreButton", "verticalRule", "stack3"]
+			}
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text11"
+				},
+				"current": true
+			}
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text12"
+				},
+				"dot": "warning"
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"children": [
+				"tab",
+				"tab2",
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"entryTitle": {
+			"type": "EntryTitle",
+			"props": {
+				"text": {
+					"state": "/drawn/text14"
+				}
+			}
+		},
+		"titleRule": {
+			"type": "TitleRule"
+		},
+		"editorBody": {
+			"type": "EditorBody",
+			"props": {
+				"doc": {
+					"state": "/drawn/doc"
+				},
+				"tools": {
+					"state": "/drawn/tools"
+				}
+			}
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 680
+			},
+			"children": [
+				"tabLinks",
+				{
+					"spacing": 16
+				},
+				"entryTitle",
+				{
+					"spacing": 20
+				},
+				"titleRule",
+				{
+					"spacing": 32
+				},
+				"editorBody"
+			]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 16
+				},
+				"stack7",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack6",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"formFieldLabel": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text17"
+				}
+			],
+			"props": {
+				"for": "@lineInput"
+			}
+		},
+		"lineInput": {
+			"type": "LineInput",
+			"props": {
+				"value": {
+					"state": "/drawn/value"
+				},
+				"mono": true,
+				"actionLabel": {
+					"state": "/drawn/text18"
+				},
+				"actionIcon": "renew"
+			}
+		},
+		"formField": {
+			"type": "FormField",
+			"children": ["formFieldLabel", "lineInput"]
+		},
+		"formFieldLabel2": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text19"
+				}
+			]
+		},
+		"text20": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "meta"
+			},
+			"children": [
+				{
+					"state": "/drawn/text21"
+				}
+			]
+		},
+		"formField2": {
+			"type": "FormField",
+			"children": ["formFieldLabel2", "text20"]
+		},
+		"formFieldLabel3": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text22"
+				}
+			]
+		},
+		"propertyPicture": {
+			"type": "PropertyPicture",
+			"props": {
+				"picture": {
+					"state": "/drawn/picture"
+				}
+			}
+		},
+		"text23": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "caption",
+				"tone": "subtle"
+			},
+			"children": [
+				{
+					"state": "/drawn/text24"
+				}
+			]
+		},
+		"formField3": {
+			"type": "FormField",
+			"children": ["formFieldLabel3", "propertyPicture", "text23"]
+		},
+		"changedLabel": {
+			"type": "ChangedLabel",
+			"props": {
+				"label": {
+					"state": "/drawn/text25"
+				},
+				"undo": {
+					"state": "/drawn/text26"
+				},
+				"proposal": true,
+				"for": "@lineInput2"
+			}
+		},
+		"lineInput2": {
+			"type": "LineInput",
+			"props": {
+				"value": {
+					"state": "/drawn/value2"
+				},
+				"multiline": true,
+				"actionLabel": {
+					"state": "/drawn/text27"
+				},
+				"actionIcon": "renew",
+				"proposal": true
+			}
+		},
+		"formField4": {
+			"type": "FormField",
+			"children": ["changedLabel", "lineInput2"]
+		},
+		"propsGroup": {
+			"type": "PropsGroup",
+			"children": ["formField", "formField2", "formField3", "formField4"]
+		},
+		"formFieldLabel4": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text29"
+				}
+			],
+			"props": {
+				"for": "@lineInput3"
+			}
+		},
+		"lineInput3": {
+			"type": "LineInput",
+			"props": {
+				"value": {
+					"state": "/drawn/value3"
+				},
+				"actionLabel": {
+					"state": "/drawn/text30"
+				},
+				"actionIcon": "close"
+			}
+		},
+		"formField5": {
+			"type": "FormField",
+			"children": ["formFieldLabel4", "lineInput3"]
+		},
+		"formFieldLabel5": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text31"
+				}
+			]
+		},
+		"chipsField": {
+			"type": "ChipsField",
+			"props": {
+				"label": {
+					"state": "/drawn/text32"
+				},
+				"items": {
+					"state": "/drawn/items"
+				},
+				"removeLabel": {
+					"state": "/drawn/text33"
+				}
+			}
+		},
+		"formField6": {
+			"type": "FormField",
+			"children": ["formFieldLabel5", "chipsField"]
+		},
+		"formFieldLabel6": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"state": "/drawn/text34"
+				}
+			]
+		},
+		"selectBox": {
+			"type": "SelectBox",
+			"props": {
+				"value": {
+					"state": "/drawn/text35"
+				},
+				"width": "full"
+			}
+		},
+		"formField7": {
+			"type": "FormField",
+			"children": ["formFieldLabel6", "selectBox"]
+		},
+		"propsGroup2": {
+			"type": "PropsGroup",
+			"props": {
+				"title": {
+					"state": "/drawn/text28"
+				}
+			},
+			"children": ["formField5", "formField6", "formField7"]
+		},
+		"propsPanel": {
+			"type": "PropsPanel",
+			"props": {
+				"label": {
+					"state": "/drawn/text15"
+				},
+				"open": {
+					"state": "/drawn/text16"
+				},
+				"tabs": {
+					"state": "/drawn/tabs"
+				}
+			},
+			"children": ["propsGroup", "propsGroup2"]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"wrap": true
+			},
+			"children": ["stack5", "propsPanel"]
+		},
+		"statusCell": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text36"
+				},
+				"tone": "warning"
+			}
+		},
+		"statusCell2": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text37"
+				}
+			}
+		},
+		"statusGap": {
+			"type": "StatusGap"
+		},
+		"statusCell3": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text38"
+				},
+				"end": true
+			}
+		},
+		"editorStatusBar": {
+			"type": "EditorStatusBar",
+			"children": ["statusCell", "statusCell2", "statusGap", "statusCell3"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["editorTopBar", "stack4", "editorStatusBar"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2"]
+		},
+		"proposalDock": {
+			"type": "ProposalDock",
+			"props": {
+				"name": {
+					"state": "/drawn/name"
+				},
+				"position": {
+					"state": "/drawn/position"
+				},
+				"total": {
+					"state": "/drawn/total"
+				},
+				"previousLabel": {
+					"state": "/drawn/text39"
+				},
+				"nextLabel": {
+					"state": "/drawn/text40"
+				},
+				"discardAllLabel": {
+					"state": "/drawn/text41"
+				},
+				"acceptAllLabel": {
+					"state": "/drawn/text42"
+				},
+				"besidePanel": true
+			}
+		}
+	}
+}

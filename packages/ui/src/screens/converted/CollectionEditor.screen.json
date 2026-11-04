@@ -1,0 +1,864 @@
+{
+	"root": "stack",
+	"overlays": ["assistantCorner"],
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": ["sidebarItem", "sidebarItem2", "sidebarItem3", "sidebarItem4", "sidebarItem5", "sidebarItem6"]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text10"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"props": {
+				"active": true
+			},
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"children": ["stack3"]
+		},
+		"saveGroup": {
+			"type": "SaveGroup",
+			"props": {
+				"label": {
+					"state": "/drawn/text15"
+				},
+				"count": {
+					"state": "/drawn/count"
+				},
+				"discardLabel": {
+					"state": "/drawn/text16"
+				},
+				"saveLabel": {
+					"state": "/drawn/text17"
+				}
+			}
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text18"
+					}
+				]
+			},
+			"children": ["saveGroup"]
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text19"
+				}
+			}
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text20"
+				}
+			}
+		},
+		"tab3": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text21"
+				},
+				"current": true,
+				"dot": "warning"
+			}
+		},
+		"tab4": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text22"
+				}
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab", "tab2", "tab3", "tab4"]
+		},
+		"pageToolbar": {
+			"type": "PageToolbar",
+			"children": ["tabLinks"]
+		},
+		"tab5": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text23"
+				}
+			}
+		},
+		"tab6": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text24"
+				},
+				"count": {
+					"state": "/drawn/text25"
+				}
+			}
+		},
+		"tab7": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text26"
+				},
+				"current": true
+			}
+		},
+		"tabLinks2": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab5", "tab6", "tab7"]
+		},
+		"pageToolbar2": {
+			"type": "PageToolbar",
+			"children": ["tabLinks2"]
+		},
+		"optionCheck": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text27"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck2": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text28"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck3": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text29"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck4": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text30"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck5": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text31"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck6": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text32"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck7": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text33"
+				},
+				"note": {
+					"state": "/drawn/text34"
+				},
+				"noteTone": "warning"
+			}
+		},
+		"optionCheck8": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text35"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck9": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text36"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck10": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text37"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck11": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text38"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck12": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text39"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck13": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text40"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck14": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text41"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck15": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text42"
+				}
+			}
+		},
+		"optionCheck16": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text43"
+				}
+			}
+		},
+		"gridBox": {
+			"type": "GridBox",
+			"props": {
+				"columns": 3
+			},
+			"children": [
+				"optionCheck",
+				"optionCheck2",
+				"optionCheck3",
+				"optionCheck4",
+				"optionCheck5",
+				"optionCheck6",
+				"optionCheck7",
+				"optionCheck8",
+				"optionCheck9",
+				"optionCheck10",
+				"optionCheck11",
+				"optionCheck12",
+				"optionCheck13",
+				"optionCheck14",
+				"optionCheck15",
+				"optionCheck16"
+			]
+		},
+		"text44": {
+			"type": "Text",
+			"children": [
+				{
+					"state": "/drawn/text45"
+				}
+			]
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				{
+					"state": "/drawn/text46"
+				}
+			]
+		},
+		"stack8": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "baseline"
+			},
+			"children": [
+				"text44",
+				{
+					"spacing": 12
+				},
+				"textButton"
+			]
+		},
+		"section": {
+			"type": "Section",
+			"props": {
+				"stacked": true,
+				"dense": true
+			},
+			"slots": {
+				"title": ["stack8"]
+			},
+			"children": ["gridBox"]
+		},
+		"optionCheck17": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text47"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck18": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text48"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck19": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text49"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck20": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text50"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck21": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text51"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck22": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text52"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck23": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text53"
+				}
+			}
+		},
+		"optionCheck24": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text54"
+				}
+			}
+		},
+		"optionCheck25": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text55"
+				},
+				"checked": true
+			}
+		},
+		"optionCheck26": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text56"
+				},
+				"checked": true
+			}
+		},
+		"gridBox2": {
+			"type": "GridBox",
+			"props": {
+				"columns": 3
+			},
+			"children": [
+				"optionCheck17",
+				"optionCheck18",
+				"optionCheck19",
+				"optionCheck20",
+				"optionCheck21",
+				"optionCheck22",
+				"optionCheck23",
+				"optionCheck24",
+				"optionCheck25",
+				"optionCheck26"
+			]
+		},
+		"section2": {
+			"type": "Section",
+			"props": {
+				"stacked": true,
+				"dense": true
+			},
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text57"
+					}
+				]
+			},
+			"children": ["gridBox2"]
+		},
+		"optionCheck27": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text58"
+				},
+				"mono": true,
+				"checked": true
+			}
+		},
+		"optionCheck28": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text59"
+				},
+				"mono": true,
+				"checked": true
+			}
+		},
+		"optionCheck29": {
+			"type": "OptionCheck",
+			"props": {
+				"label": {
+					"state": "/drawn/text60"
+				},
+				"mono": true
+			}
+		},
+		"gridBox3": {
+			"type": "GridBox",
+			"props": {
+				"columns": 3
+			},
+			"children": ["optionCheck27", "optionCheck28", "optionCheck29"]
+		},
+		"section3": {
+			"type": "Section",
+			"props": {
+				"stacked": true,
+				"dense": true,
+				"last": true
+			},
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text61"
+					}
+				]
+			},
+			"children": ["gridBox3"]
+		},
+		"stack7": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["pageToolbar2", "section", "section2", "section3"]
+		},
+		"navEntry": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text62"
+				},
+				"note": {
+					"state": "/drawn/text63"
+				},
+				"active": true
+			}
+		},
+		"navEntry2": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text64"
+				},
+				"note": {
+					"state": "/drawn/text65"
+				}
+			}
+		},
+		"navEntry3": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text66"
+				},
+				"note": {
+					"state": "/drawn/text67"
+				}
+			}
+		},
+		"navEntry4": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text68"
+				},
+				"note": {
+					"state": "/drawn/text69"
+				}
+			}
+		},
+		"navEntry5": {
+			"type": "NavEntry",
+			"props": {
+				"label": {
+					"state": "/drawn/text70"
+				},
+				"note": {
+					"state": "/drawn/text71"
+				}
+			}
+		},
+		"railAdd": {
+			"type": "RailAdd",
+			"props": {
+				"label": {
+					"state": "/drawn/text72"
+				}
+			}
+		},
+		"rail": {
+			"type": "Rail",
+			"slots": {
+				"rail": ["navEntry", "navEntry2", "navEntry3", "navEntry4", "navEntry5", "railAdd"]
+			},
+			"children": ["stack7"]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"maxWidth": 880
+			},
+			"children": ["pageHeader", "pageToolbar", "rail"]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack6"
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack5",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2", "stack4"]
+		},
+		"assistantCorner": {
+			"type": "AssistantCorner",
+			"props": {
+				"label": {
+					"state": "/drawn/text73"
+				}
+			}
+		}
+	}
+}

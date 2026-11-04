@@ -1,0 +1,171 @@
+{
+	"root": "stack",
+	"elements": {
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "chevron--left"
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"text2": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text3"
+				}
+			]
+		},
+		"text4": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "meta",
+				"tone": "faint"
+			},
+			"children": [
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"text6": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "note",
+				"tone": "subtle"
+			},
+			"children": [
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"verticalRule": {
+			"type": "VerticalRule"
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"editorTopBar": {
+			"type": "EditorTopBar",
+			"slots": {
+				"start": ["textButton", "text2", "text4"],
+				"end": ["text6", "verticalRule", "textButton2", "button"]
+			}
+		},
+		"compareColumn": {
+			"type": "CompareColumn",
+			"props": {
+				"label": {
+					"state": "/drawn/text10"
+				},
+				"properties": {
+					"state": "/drawn/properties"
+				},
+				"title": {
+					"state": "/drawn/title"
+				},
+				"doc": {
+					"state": "/drawn/doc"
+				}
+			}
+		},
+		"compareColumn2": {
+			"type": "CompareColumn",
+			"props": {
+				"label": {
+					"state": "/drawn/text11"
+				},
+				"empty": {
+					"state": "/drawn/text12"
+				},
+				"properties": {
+					"state": "/drawn/properties2"
+				},
+				"title": {
+					"state": "/drawn/title2"
+				},
+				"doc": {
+					"state": "/drawn/doc2"
+				}
+			}
+		},
+		"compareView": {
+			"type": "CompareView",
+			"children": ["compareColumn", "compareColumn2"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": ["compareView"]
+		},
+		"statusCell": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text13"
+				},
+				"tone": "danger"
+			}
+		},
+		"statusGap": {
+			"type": "StatusGap"
+		},
+		"statusCell2": {
+			"type": "StatusCell",
+			"props": {
+				"label": {
+					"state": "/drawn/text14"
+				},
+				"end": true
+			}
+		},
+		"editorStatusBar": {
+			"type": "EditorStatusBar",
+			"children": ["statusCell", "statusGap", "statusCell2"]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen"
+			},
+			"children": ["editorTopBar", "stack2", "editorStatusBar"]
+		}
+	}
+}

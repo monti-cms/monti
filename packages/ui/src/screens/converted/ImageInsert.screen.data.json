@@ -1,0 +1,146 @@
+{
+	"drawn": {
+		"text": "게시글",
+		"text3": "/posts/first-post",
+		"text4": "초안",
+		"text5": "저장 ",
+		"text7": "⌘S",
+		"text8": "미리보기",
+		"text9": "발행하기",
+		"text10": "발행 방식",
+		"text11": "한국어",
+		"text12": "English",
+		"text13": "+ 언어",
+		"text14": "첫 번째 글",
+		"doc": [
+			{
+				"kind": "p",
+				"text": "블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.",
+				"gap": 0
+			},
+			{
+				"kind": "h2",
+				"text": "무엇을 덜어냈나",
+				"gap": 32
+			},
+			{
+				"kind": "p",
+				"text": "목록에는 제목과 주소, 지금 상태만 남겼다. ",
+				"gap": 12
+			},
+			{
+				"text": "나머지는 필요할 때 꺼내 본다"
+			},
+			{
+				"text": ". "
+			},
+			{
+				"kind": "p",
+				"text": "편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.",
+				"gap": 20
+			},
+			{
+				"kind": "placeholder",
+				"text": "/ 를 눌러 블록 넣기",
+				"gap": 20
+			}
+		],
+		"text15": "속성",
+		"text16": "기본",
+		"tabs": [
+			{
+				"value": "기본",
+				"label": "기본"
+			},
+			{
+				"value": "SEO",
+				"label": "SEO"
+			}
+		],
+		"text17": "주소",
+		"value": "first-post",
+		"text18": "제목에서 만들어요",
+		"text19": "제목으로 다시 만들기",
+		"text20": "발행일",
+		"text22": "2026. 10. 01",
+		"text23": "대표 이미지",
+		"picture": "linear-gradient(160deg, rgb(201, 214, 211), rgb(142, 167, 162))",
+		"text25": "cover-react.png",
+		"text26": "요약",
+		"text27": "채우기",
+		"text28": "비어 있음",
+		"text29": "본문에서 가져오기",
+		"text30": "분류",
+		"text31": "카테고리",
+		"value2": "개발",
+		"text32": "카테고리 지우기",
+		"text33": "태그",
+		"text34": "태그",
+		"items": [
+			{
+				"label": "리액트"
+			},
+			{
+				"label": "프론트엔드"
+			}
+		],
+		"text35": "빼기",
+		"text36": "시리즈",
+		"text37": "없음",
+		"text38": "저장됨 10:42",
+		"text39": "할 일 2",
+		"text40": "맞춤법 2",
+		"text41": "1,240자",
+		"text42": "라이브러리",
+		"text43": "모든 이미지",
+		"folders": [
+			{
+				"id": "Blog Assets",
+				"name": "Blog Assets",
+				"depth": 0,
+				"count": 14
+			},
+			{
+				"id": "covers",
+				"name": "covers",
+				"depth": 1,
+				"count": 6
+			},
+			{
+				"id": "diagrams",
+				"name": "diagrams",
+				"depth": 1,
+				"count": 3
+			},
+			{
+				"id": "Wallpapers",
+				"name": "Wallpapers",
+				"depth": 0,
+				"count": 8
+			}
+		],
+		"folder": "Blog Assets",
+		"text44": "폴더",
+		"text45": "파일 이름 검색",
+		"text46": "올리기",
+		"text47": "넣기",
+		"text48": "desk-morning.jpg",
+		"text49": "2400×1600 · 글 1",
+		"picture2": "linear-gradient(160deg, rgb(216, 205, 184), rgb(166, 148, 121))",
+		"text50": "cybersecurity-code.jpg",
+		"text51": "1600×900 · 글 2",
+		"picture3": "linear-gradient(160deg, rgb(47, 58, 44), rgb(18, 22, 17))",
+		"text52": "seoul-night.jpg",
+		"text53": "3000×2000 · 글 1",
+		"picture4": "linear-gradient(160deg, rgb(58, 63, 85), rgb(28, 30, 43))",
+		"text54": "cafe-window.jpg",
+		"text55": "2000×1333 · 글 1",
+		"picture5": "linear-gradient(160deg, rgb(185, 161, 132), rgb(109, 90, 68))",
+		"text56": "winter-02.jpg",
+		"text57": "2400×1600",
+		"picture6": "linear-gradient(160deg, rgb(207, 216, 222), rgb(143, 163, 176))",
+		"text58": "hero-dark.png",
+		"text59": "2560×1440",
+		"picture7": "linear-gradient(160deg, rgb(61, 58, 51), rgb(25, 24, 20))"
+	}
+}

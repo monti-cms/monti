@@ -1,0 +1,666 @@
+{
+	"root": "stack",
+	"overlays": ["assistantCorner"],
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": ["sidebarItem", "sidebarItem2", "sidebarItem3", "sidebarItem4", "sidebarItem5", "sidebarItem6"]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text10"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"children": ["stack3"]
+		},
+		"icon10": {
+			"type": "Icon",
+			"props": {
+				"name": "chevron--left"
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				"icon10",
+				{
+					"state": "/drawn/text15"
+				}
+			]
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"props": {
+				"variant": "quiet"
+			},
+			"children": [
+				{
+					"state": "/drawn/text16"
+				}
+			]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"state": "/drawn/text17"
+				}
+			]
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text18"
+					}
+				],
+				"meta": [
+					{
+						"state": "/drawn/text19"
+					}
+				]
+			},
+			"children": ["textButton2", "button"]
+		},
+		"reviewAsk": {
+			"type": "ReviewAsk",
+			"props": {
+				"text": {
+					"state": "/drawn/text20"
+				}
+			}
+		},
+		"textButton3": {
+			"type": "TextButton",
+			"props": {
+				"variant": "underline"
+			},
+			"children": [
+				{
+					"state": "/drawn/text23"
+				}
+			]
+		},
+		"verticalRule": {
+			"type": "VerticalRule"
+		},
+		"tab": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text24"
+				},
+				"current": true
+			}
+		},
+		"tab2": {
+			"type": "Tab",
+			"props": {
+				"label": {
+					"state": "/drawn/text25"
+				}
+			}
+		},
+		"tabLinks": {
+			"type": "TabLinks",
+			"props": {
+				"variant": "toolbar"
+			},
+			"children": ["tab", "tab2"]
+		},
+		"reviewHead": {
+			"type": "ReviewHead",
+			"props": {
+				"title": {
+					"state": "/drawn/text21"
+				},
+				"meta": {
+					"state": "/drawn/text22"
+				}
+			},
+			"slots": {
+				"actions": ["textButton3", "verticalRule", "tabLinks"]
+			}
+		},
+		"reviewBlockLine": {
+			"type": "ReviewBlockLine",
+			"props": {
+				"label": {
+					"state": "/drawn/text26"
+				},
+				"text": {
+					"state": "/drawn/text27"
+				},
+				"included": true
+			}
+		},
+		"reviewBlockLine2": {
+			"type": "ReviewBlockLine",
+			"props": {
+				"label": {
+					"state": "/drawn/text28"
+				},
+				"text": {
+					"state": "/drawn/text29"
+				},
+				"included": true
+			}
+		},
+		"reviewBlockLine3": {
+			"type": "ReviewBlockLine",
+			"props": {
+				"label": {
+					"state": "/drawn/text30"
+				},
+				"note": {
+					"state": "/drawn/text31"
+				},
+				"text": {
+					"state": "/drawn/text32"
+				},
+				"included": true
+			}
+		},
+		"reviewHead2": {
+			"type": "ReviewHead",
+			"props": {
+				"title": {
+					"state": "/drawn/text33"
+				},
+				"meta": {
+					"state": "/drawn/text34"
+				}
+			}
+		},
+		"reviewEntry": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title"
+				},
+				"path": {
+					"state": "/drawn/path"
+				},
+				"end": {
+					"state": "/drawn/text35"
+				},
+				"change": {
+					"state": "/drawn/change"
+				},
+				"included": true
+			}
+		},
+		"reviewEntry2": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title2"
+				},
+				"path": {
+					"state": "/drawn/path2"
+				},
+				"end": {
+					"state": "/drawn/text36"
+				},
+				"endWarning": true,
+				"again": {
+					"state": "/drawn/text37"
+				},
+				"change": {
+					"state": "/drawn/change2"
+				},
+				"muted": true
+			}
+		},
+		"textButton4": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text40"
+				}
+			]
+		},
+		"reviewHead3": {
+			"type": "ReviewHead",
+			"props": {
+				"title": {
+					"state": "/drawn/text38"
+				},
+				"meta": {
+					"state": "/drawn/text39"
+				}
+			},
+			"slots": {
+				"actions": ["textButton4"]
+			}
+		},
+		"reviewEntry3": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title3"
+				},
+				"path": {
+					"state": "/drawn/path3"
+				},
+				"end": {
+					"state": "/drawn/text41"
+				},
+				"included": true
+			}
+		},
+		"reviewEntry4": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title4"
+				},
+				"path": {
+					"state": "/drawn/path4"
+				},
+				"end": {
+					"state": "/drawn/text42"
+				},
+				"included": true
+			}
+		},
+		"reviewEntry5": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title5"
+				},
+				"path": {
+					"state": "/drawn/path5"
+				},
+				"end": {
+					"state": "/drawn/text43"
+				},
+				"included": true
+			}
+		},
+		"reviewEntry6": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title6"
+				},
+				"path": {
+					"state": "/drawn/path6"
+				},
+				"end": {
+					"state": "/drawn/text44"
+				}
+			}
+		},
+		"reviewEntry7": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title7"
+				},
+				"path": {
+					"state": "/drawn/path7"
+				},
+				"end": {
+					"state": "/drawn/text45"
+				},
+				"included": true
+			}
+		},
+		"reviewRest": {
+			"type": "ReviewRest",
+			"props": {
+				"label": {
+					"state": "/drawn/text46"
+				}
+			}
+		},
+		"reviewHead4": {
+			"type": "ReviewHead",
+			"props": {
+				"title": {
+					"state": "/drawn/text47"
+				},
+				"meta": {
+					"state": "/drawn/text48"
+				}
+			}
+		},
+		"reviewEntry8": {
+			"type": "ReviewEntry",
+			"props": {
+				"title": {
+					"state": "/drawn/title8"
+				},
+				"path": {
+					"state": "/drawn/path8"
+				},
+				"included": true
+			}
+		},
+		"stack7": {
+			"type": "Stack",
+			"children": [
+				"reviewAsk",
+				{
+					"spacing": 32
+				},
+				"reviewHead",
+				"reviewBlockLine",
+				"reviewBlockLine2",
+				"reviewBlockLine3",
+				{
+					"spacing": 32
+				},
+				"reviewHead2",
+				"reviewEntry",
+				"reviewEntry2",
+				{
+					"spacing": 32
+				},
+				"reviewHead3",
+				"reviewEntry3",
+				"reviewEntry4",
+				"reviewEntry5",
+				"reviewEntry6",
+				"reviewEntry7",
+				{
+					"spacing": 12
+				},
+				"reviewRest",
+				{
+					"spacing": 32
+				},
+				"reviewHead4",
+				"reviewEntry8"
+			]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 880
+			},
+			"children": [
+				"textButton",
+				{
+					"spacing": 2
+				},
+				"pageHeader",
+				{
+					"spacing": 16
+				},
+				"stack7"
+			]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack6",
+				{
+					"spacing": 40
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack5",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2", "stack4"]
+		},
+		"assistantCorner": {
+			"type": "AssistantCorner",
+			"props": {
+				"label": {
+					"state": "/drawn/text49"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,205 @@
+{
+	"root": "stack",
+	"elements": {
+		"heading": {
+			"type": "Heading",
+			"props": {
+				"as": "h1",
+				"variant": "page"
+			},
+			"children": [
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"text2": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"text": "firstAdminTitle"
+				}
+			]
+		},
+		"formFieldLabel": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"text": "email"
+				}
+			],
+			"props": {
+				"for": "@input"
+			}
+		},
+		"input": {
+			"type": "Input",
+			"props": {
+				"type": "email"
+			}
+		},
+		"formField": {
+			"type": "FormField",
+			"children": ["formFieldLabel", "input"]
+		},
+		"formFieldLabel2": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"text": "password"
+				}
+			],
+			"props": {
+				"for": "@input2"
+			}
+		},
+		"input2": {
+			"type": "Input",
+			"props": {
+				"type": "password",
+				"invalid": true
+			}
+		},
+		"formFieldError": {
+			"type": "FormFieldError",
+			"children": [
+				{
+					"state": "/drawn/text3"
+				}
+			]
+		},
+		"formField2": {
+			"type": "FormField",
+			"children": ["formFieldLabel2", "input2", "formFieldError"]
+		},
+		"formFieldLabel3": {
+			"type": "FormFieldLabel",
+			"children": [
+				{
+					"text": "confirmPassword"
+				}
+			],
+			"props": {
+				"for": "@input3"
+			}
+		},
+		"input3": {
+			"type": "Input",
+			"props": {
+				"type": "password",
+				"invalid": true
+			}
+		},
+		"formFieldError2": {
+			"type": "FormFieldError",
+			"children": [
+				{
+					"text": "errorConfirm"
+				}
+			]
+		},
+		"formField3": {
+			"type": "FormField",
+			"children": ["formFieldLabel3", "input3", "formFieldError2"]
+		},
+		"button": {
+			"type": "Button",
+			"props": {
+				"variant": "primary"
+			},
+			"children": [
+				{
+					"text": "createFirstAdmin"
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 360
+			},
+			"children": [
+				"heading",
+				{
+					"spacing": 32
+				},
+				"text2",
+				{
+					"spacing": 24
+				},
+				"formField",
+				{
+					"spacing": 24
+				},
+				"formField2",
+				{
+					"spacing": 16
+				},
+				"formField3",
+				{
+					"spacing": 12
+				},
+				"button"
+			]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center",
+				"justify": "center",
+				"grow": true
+			},
+			"children": ["stack4"]
+		},
+		"text4": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "micro",
+				"tone": "faint",
+				"align": "center"
+			},
+			"children": [
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen"
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack3",
+				"text4",
+				{
+					"spacing": 24
+				}
+			]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row"
+			},
+			"children": [
+				{
+					"spacing": 16
+				},
+				"stack2",
+				{
+					"spacing": 16
+				}
+			]
+		}
+	}
+}

@@ -1,0 +1,895 @@
+{
+	"root": "stack",
+	"overlays": ["assistantCorner"],
+	"elements": {
+		"text": {
+			"type": "Text",
+			"props": {
+				"as": "span",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"state": "/drawn/text2"
+				}
+			]
+		},
+		"sidebarRailToggle": {
+			"type": "SidebarRailToggle"
+		},
+		"sidebarHeader": {
+			"type": "SidebarHeader",
+			"children": ["text", "sidebarRailToggle"]
+		},
+		"icon": {
+			"type": "Icon",
+			"props": {
+				"name": "document"
+			}
+		},
+		"sidebarCount": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"sidebarItem": {
+			"type": "SidebarItem",
+			"children": [
+				"icon",
+				{
+					"state": "/drawn/text3"
+				},
+				"sidebarCount"
+			]
+		},
+		"icon2": {
+			"type": "Icon",
+			"props": {
+				"name": "pen"
+			}
+		},
+		"sidebarItem2": {
+			"type": "SidebarItem",
+			"children": [
+				"icon2",
+				{
+					"state": "/drawn/text5"
+				}
+			]
+		},
+		"icon3": {
+			"type": "Icon",
+			"props": {
+				"name": "folder"
+			}
+		},
+		"sidebarItem3": {
+			"type": "SidebarItem",
+			"children": [
+				"icon3",
+				{
+					"state": "/drawn/text6"
+				}
+			]
+		},
+		"icon4": {
+			"type": "Icon",
+			"props": {
+				"name": "tag"
+			}
+		},
+		"sidebarItem4": {
+			"type": "SidebarItem",
+			"children": [
+				"icon4",
+				{
+					"state": "/drawn/text7"
+				}
+			]
+		},
+		"icon5": {
+			"type": "Icon",
+			"props": {
+				"name": "list"
+			}
+		},
+		"sidebarItem5": {
+			"type": "SidebarItem",
+			"children": [
+				"icon5",
+				{
+					"state": "/drawn/text8"
+				}
+			]
+		},
+		"icon6": {
+			"type": "Icon",
+			"props": {
+				"name": "image"
+			}
+		},
+		"sidebarItem6": {
+			"type": "SidebarItem",
+			"children": [
+				"icon6",
+				{
+					"state": "/drawn/text9"
+				}
+			]
+		},
+		"sidebarNav": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "top"
+			},
+			"children": ["sidebarItem", "sidebarItem2", "sidebarItem3", "sidebarItem4", "sidebarItem5", "sidebarItem6"]
+		},
+		"icon7": {
+			"type": "Icon",
+			"props": {
+				"name": "trash-can"
+			}
+		},
+		"sidebarCount2": {
+			"type": "SidebarCount",
+			"children": [
+				{
+					"state": "/drawn/text11"
+				}
+			]
+		},
+		"sidebarItem7": {
+			"type": "SidebarItem",
+			"props": {
+				"active": true
+			},
+			"children": [
+				"icon7",
+				{
+					"state": "/drawn/text10"
+				},
+				"sidebarCount2"
+			]
+		},
+		"icon8": {
+			"type": "Icon",
+			"props": {
+				"name": "tools"
+			}
+		},
+		"sidebarCount3": {
+			"type": "SidebarCount",
+			"props": {
+				"tone": "warning"
+			},
+			"children": [
+				{
+					"state": "/drawn/text13"
+				}
+			]
+		},
+		"sidebarItem8": {
+			"type": "SidebarItem",
+			"children": [
+				"icon8",
+				{
+					"state": "/drawn/text12"
+				},
+				"sidebarCount3"
+			]
+		},
+		"icon9": {
+			"type": "Icon",
+			"props": {
+				"name": "settings--adjust"
+			}
+		},
+		"sidebarItem9": {
+			"type": "SidebarItem",
+			"children": [
+				"icon9",
+				{
+					"state": "/drawn/text14"
+				}
+			]
+		},
+		"sidebarScreenMode": {
+			"type": "SidebarScreenMode",
+			"props": {
+				"value": "system"
+			}
+		},
+		"sidebarFoot": {
+			"type": "SidebarFoot",
+			"children": ["sidebarScreenMode"]
+		},
+		"sidebarNav2": {
+			"type": "SidebarNav",
+			"props": {
+				"place": "bottom"
+			},
+			"children": ["sidebarItem7", "sidebarItem8", "sidebarItem9", "sidebarFoot"]
+		},
+		"sidebar": {
+			"type": "Sidebar",
+			"children": ["sidebarHeader", "sidebarNav", "sidebarNav2"]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["sidebar"]
+		},
+		"stack2": {
+			"type": "Stack",
+			"children": ["stack3"]
+		},
+		"searchToggle": {
+			"type": "SearchToggle",
+			"props": {
+				"label": {
+					"state": "/drawn/text15"
+				}
+			}
+		},
+		"textButton": {
+			"type": "TextButton",
+			"props": {
+				"variant": "danger"
+			},
+			"children": [
+				{
+					"state": "/drawn/text16"
+				}
+			]
+		},
+		"pageHeader": {
+			"type": "PageHeader",
+			"slots": {
+				"title": [
+					{
+						"state": "/drawn/text17"
+					}
+				],
+				"meta": []
+			},
+			"children": ["searchToggle", "textButton"]
+		},
+		"listHead": {
+			"type": "ListHead",
+			"props": {
+				"end": {
+					"state": "/drawn/end"
+				},
+				"columns": {
+					"state": "/drawn/columns"
+				}
+			}
+		},
+		"trashTitleCell": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text18"
+				},
+				"address": {
+					"state": "/drawn/text19"
+				},
+				"meta": {
+					"state": "/drawn/text20"
+				}
+			}
+		},
+		"tableCell": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text21"
+				}
+			]
+		},
+		"trashDateCell": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text22"
+				},
+				"left": {
+					"state": "/drawn/text23"
+				}
+			}
+		},
+		"textButton2": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text24"
+				}
+			]
+		},
+		"moreButton": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell": {
+			"type": "RowButtonsCell",
+			"children": ["textButton2", "moreButton"]
+		},
+		"tableRow": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell", "tableCell", "trashDateCell", "rowButtonsCell"]
+		},
+		"trashTitleCell2": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text25"
+				},
+				"meta": {
+					"state": "/drawn/text26"
+				},
+				"folder": true
+			}
+		},
+		"tableCell2": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text27"
+				}
+			]
+		},
+		"trashDateCell2": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text28"
+				},
+				"left": {
+					"state": "/drawn/text29"
+				}
+			}
+		},
+		"textButton3": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text30"
+				}
+			]
+		},
+		"moreButton2": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell2": {
+			"type": "RowButtonsCell",
+			"children": ["textButton3", "moreButton2"]
+		},
+		"tableRow2": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell2", "tableCell2", "trashDateCell2", "rowButtonsCell2"]
+		},
+		"trashTitleCell3": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text31"
+				},
+				"meta": {
+					"state": "/drawn/text32"
+				},
+				"folder": true
+			}
+		},
+		"tableCell3": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text33"
+				}
+			]
+		},
+		"trashDateCell3": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text34"
+				},
+				"left": {
+					"state": "/drawn/text35"
+				}
+			}
+		},
+		"textButton4": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text36"
+				}
+			]
+		},
+		"moreButton3": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell3": {
+			"type": "RowButtonsCell",
+			"children": ["textButton4", "moreButton3"]
+		},
+		"tableRow3": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell3", "tableCell3", "trashDateCell3", "rowButtonsCell3"]
+		},
+		"trashTitleCell4": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text37"
+				},
+				"meta": {
+					"state": "/drawn/text38"
+				}
+			}
+		},
+		"tableCell4": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text39"
+				}
+			]
+		},
+		"trashDateCell4": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text40"
+				},
+				"left": {
+					"state": "/drawn/text41"
+				}
+			}
+		},
+		"textButton5": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text42"
+				}
+			]
+		},
+		"moreButton4": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell4": {
+			"type": "RowButtonsCell",
+			"children": ["textButton5", "moreButton4"]
+		},
+		"tableRow4": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell4", "tableCell4", "trashDateCell4", "rowButtonsCell4"]
+		},
+		"trashTitleCell5": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text43"
+				},
+				"address": {
+					"state": "/drawn/text44"
+				},
+				"meta": {
+					"state": "/drawn/text45"
+				}
+			}
+		},
+		"tableCell5": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text46"
+				}
+			]
+		},
+		"trashDateCell5": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text47"
+				},
+				"left": {
+					"state": "/drawn/text48"
+				}
+			}
+		},
+		"textButton6": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text49"
+				}
+			]
+		},
+		"moreButton5": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell5": {
+			"type": "RowButtonsCell",
+			"children": ["textButton6", "moreButton5"]
+		},
+		"tableRow5": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell5", "tableCell5", "trashDateCell5", "rowButtonsCell5"]
+		},
+		"trashTitleCell6": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text50"
+				},
+				"address": {
+					"state": "/drawn/text51"
+				},
+				"meta": {
+					"state": "/drawn/text52"
+				}
+			}
+		},
+		"tableCell6": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text53"
+				}
+			]
+		},
+		"trashDateCell6": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text54"
+				},
+				"left": {
+					"state": "/drawn/text55"
+				}
+			}
+		},
+		"textButton7": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text56"
+				}
+			]
+		},
+		"moreButton6": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell6": {
+			"type": "RowButtonsCell",
+			"children": ["textButton7", "moreButton6"]
+		},
+		"tableRow6": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell6", "tableCell6", "trashDateCell6", "rowButtonsCell6"]
+		},
+		"trashTitleCell7": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text57"
+				},
+				"address": {
+					"state": "/drawn/text58"
+				},
+				"meta": {
+					"state": "/drawn/text59"
+				}
+			}
+		},
+		"tableCell7": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text60"
+				}
+			]
+		},
+		"trashDateCell7": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text61"
+				},
+				"left": {
+					"state": "/drawn/text62"
+				}
+			}
+		},
+		"textButton8": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text63"
+				}
+			]
+		},
+		"moreButton7": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell7": {
+			"type": "RowButtonsCell",
+			"children": ["textButton8", "moreButton7"]
+		},
+		"tableRow7": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell7", "tableCell7", "trashDateCell7", "rowButtonsCell7"]
+		},
+		"trashTitleCell8": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text64"
+				},
+				"address": {
+					"state": "/drawn/text65"
+				},
+				"meta": {
+					"state": "/drawn/text66"
+				}
+			}
+		},
+		"tableCell8": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text67"
+				}
+			]
+		},
+		"trashDateCell8": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text68"
+				},
+				"left": {
+					"state": "/drawn/text69"
+				}
+			}
+		},
+		"textButton9": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text70"
+				}
+			]
+		},
+		"moreButton8": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell8": {
+			"type": "RowButtonsCell",
+			"children": ["textButton9", "moreButton8"]
+		},
+		"tableRow8": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell8", "tableCell8", "trashDateCell8", "rowButtonsCell8"]
+		},
+		"trashTitleCell9": {
+			"type": "TrashTitleCell",
+			"props": {
+				"title": {
+					"state": "/drawn/text71"
+				}
+			}
+		},
+		"tableCell9": {
+			"type": "TableCell",
+			"props": {
+				"tone": "subtle",
+				"truncate": true
+			},
+			"children": [
+				{
+					"state": "/drawn/text72"
+				}
+			]
+		},
+		"trashDateCell9": {
+			"type": "TrashDateCell",
+			"props": {
+				"date": {
+					"state": "/drawn/text73"
+				},
+				"left": {
+					"state": "/drawn/text74"
+				},
+				"urgent": true
+			}
+		},
+		"textButton10": {
+			"type": "TextButton",
+			"children": [
+				{
+					"state": "/drawn/text75"
+				}
+			]
+		},
+		"moreButton9": {
+			"type": "MoreButton",
+			"props": {
+				"letter": true
+			}
+		},
+		"rowButtonsCell9": {
+			"type": "RowButtonsCell",
+			"children": ["textButton10", "moreButton9"]
+		},
+		"tableRow9": {
+			"type": "TableRow",
+			"props": {
+				"twoLine": true
+			},
+			"children": ["trashTitleCell9", "tableCell9", "trashDateCell9", "rowButtonsCell9"]
+		},
+		"tableBody": {
+			"type": "TableBody",
+			"children": [
+				"tableRow",
+				"tableRow2",
+				"tableRow3",
+				"tableRow4",
+				"tableRow5",
+				"tableRow6",
+				"tableRow7",
+				"tableRow8",
+				"tableRow9"
+			]
+		},
+		"list": {
+			"type": "List",
+			"children": ["listHead", "tableBody"]
+		},
+		"stack6": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 880
+			},
+			"children": ["pageHeader", "list"]
+		},
+		"stack5": {
+			"type": "Stack",
+			"props": {
+				"align": "center",
+				"grow": true
+			},
+			"children": [
+				{
+					"spacing": 40
+				},
+				"stack6",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"grow": true,
+				"minWidth": 0
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack5",
+				{
+					"spacing": 48
+				}
+			]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"minHeight": "screen"
+			},
+			"children": ["stack2", "stack4"]
+		},
+		"assistantCorner": {
+			"type": "AssistantCorner",
+			"props": {
+				"label": {
+					"state": "/drawn/text76"
+				}
+			}
+		}
+	}
+}

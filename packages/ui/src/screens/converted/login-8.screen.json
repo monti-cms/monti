@@ -1,0 +1,100 @@
+{
+	"root": "stack",
+	"elements": {
+		"heading": {
+			"type": "Heading",
+			"props": {
+				"as": "h1",
+				"variant": "page"
+			},
+			"children": [
+				{
+					"state": "/drawn/text"
+				}
+			]
+		},
+		"text2": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "title"
+			},
+			"children": [
+				{
+					"text": "noLoginTitle"
+				}
+			]
+		},
+		"stack4": {
+			"type": "Stack",
+			"props": {
+				"maxWidth": 360
+			},
+			"children": [
+				"heading",
+				{
+					"spacing": 32
+				},
+				"text2",
+				{
+					"spacing": 24
+				}
+			]
+		},
+		"stack3": {
+			"type": "Stack",
+			"props": {
+				"direction": "row",
+				"align": "center",
+				"justify": "center",
+				"grow": true
+			},
+			"children": ["stack4"]
+		},
+		"text3": {
+			"type": "Text",
+			"props": {
+				"as": "p",
+				"variant": "micro",
+				"tone": "faint",
+				"align": "center"
+			},
+			"children": [
+				{
+					"state": "/drawn/text4"
+				}
+			]
+		},
+		"stack2": {
+			"type": "Stack",
+			"props": {
+				"minHeight": "screen"
+			},
+			"children": [
+				{
+					"spacing": 48
+				},
+				"stack3",
+				"text3",
+				{
+					"spacing": 24
+				}
+			]
+		},
+		"stack": {
+			"type": "Stack",
+			"props": {
+				"direction": "row"
+			},
+			"children": [
+				{
+					"spacing": 16
+				},
+				"stack2",
+				{
+					"spacing": 16
+				}
+			]
+		}
+	}
+}
