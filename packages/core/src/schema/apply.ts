@@ -25,7 +25,9 @@ async function applyStep(db: Db, step: ChangeStep) {
 			return;
 		}
 		case "renameField":
-			if (step.values === "move")
+			// "empty": the new field starts empty and the old name's values go with it.
+			if (step.values === "empty") await entries(sql`values - ${step.from}::text`, sql<boolean>`values ? ${step.from}`);
+			else
 				await entries(
 					sql`(values - ${step.from}::text) || jsonb_build_object(${step.to}::text, values->${step.from})`,
 					sql<boolean>`values ? ${step.from}`,
@@ -39,10 +41,6 @@ async function applyStep(db: Db, step: ChangeStep) {
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
 					sql<boolean>`values ? ${step.field}`,
 				);
-			// "keep": the values stay in the entries; the read API shows only the schema's fields.
-			return;
-		case "clearKeptValues":
-			await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
 			return;
 		case "fillField":
 			await entries(

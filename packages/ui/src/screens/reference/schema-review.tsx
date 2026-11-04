@@ -19,7 +19,7 @@ import { AdminFrame } from "./frame";
 import { CHANGED_FIELDS, SchemaPage } from "./schema";
 import { ShownSelect } from "./settings";
 
-/** Settings, Collections tab, with the review sheet open over three changes to the post collection. */
+/** Settings, Collections tab, with the review sheet open over three changes to the post collection; removing a field deletes its values. */
 export function SchemaReviewScreen() {
 	return (
 		<AdminFrame open="settings" corner={false}>
@@ -52,16 +52,14 @@ export function SchemaReviewScreen() {
 									</RadioGroup>
 								</ChangeGroup>
 								<ChangeGroup kind="drop" tag="지움" title="부제" identifier="subtitle">
-									<RadioGroup aria-label="부제 값" value="keep">
-										<RadioItem value="keep" label="남겨 두기" hint="132편" />
+									<RadioGroup aria-label="부제 값" value="drop">
+										<RadioItem value="drop" label="값 지우기" hint="132편" />
 										<RadioItem
 											value="move"
 											label="다른 필드로 옮기기"
 											control={<ShownSelect value="필드" width="choice" />}
 										/>
-										<RadioItem value="drop" label="값 지우기" />
 									</RadioGroup>
-									<ChangeNote>값은 글에 남고 사이트에선 안 보여요.</ChangeNote>
 								</ChangeGroup>
 								<ChangeGroup kind="new" tag="필수" title="글 종류" identifier="format · select">
 									<RadioGroup aria-label="빈 글" value="fill">
@@ -83,7 +81,8 @@ export function SchemaReviewScreen() {
 					</SheetBody>
 					<SheetFooter>
 						<Button variant="ghost">취소</Button>
-						<Button>적용</Button>
+						{/* A removed field's values go with it (doc 01), so the apply that deletes them is red. */}
+						<Button variant="danger">지우고 적용</Button>
 					</SheetFooter>
 				</SheetContent>
 			</Sheet>

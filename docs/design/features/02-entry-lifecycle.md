@@ -163,7 +163,7 @@ erDiagram
 - `entries`의 `values`, `doc`, `title`, `slug`는 고치는 본이다(01번 문서의 표에 열이 더해진다).
 - 발행본은 `entry_published`에 따로 있다. 사이트의 읽기 API는 이 표만 읽는다.
 - `has_unpublished_changes`는 저장할 때 `working_hash`와 발행본 `hash`를 비교해 정한다. 목록의 "수정 중"과 거르기가 이 열을 쓴다.
-- 지운 필드를 남겨 두는 규칙(01)은 두 본에 똑같이 걸린다.
+- 필드를 지우면(01) 두 본에서 함께 지운다.
 
 ## 기능 목록
 

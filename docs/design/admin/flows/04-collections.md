@@ -97,6 +97,8 @@
 - 테스트: `packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx`
 - 사용자가 값 지우기를 고르면 적용 버튼이 빨개지고 "지우고 적용"이 된다.
 
+> 바뀜 (2026-11-05): "남겨 두기"는 빠진다. 지운 필드의 값은 함께 지워지고, 고를 것은 "값 지우기 · 다른 필드로 옮기기"다. 개발 데이터에 값이 없어도 묻는다([01-content-structure.md](../../features/01-content-structure.md#결정-기록)).
+
 ## "주소 바꾸기"
 
 ### 단계 13: "주소 바꾸기 · 공개 주소 고침"

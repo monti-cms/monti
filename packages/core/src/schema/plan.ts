@@ -12,9 +12,8 @@ export type Rename = { collection: string; from: string; to: string };
 /** What a person chooses for a change that touches stored values (doc 01, the review table). The first option is the default. */
 export type Choice =
 	| { do: "renameField"; values: "move" | "empty" }
-	| { do: "removeField"; values: "keep" | "clear" | { move: string } }
+	| { do: "removeField"; values: "clear" | { move: string } }
 	| { do: "addRequiredField"; fill: unknown | null }
-	| { do: "reuseKeptValues"; values: "use" | "clear" }
 	| { do: "removeCollection"; confirm: true };
 
 export type SchemaChange = {
@@ -26,7 +25,10 @@ export type SchemaChange = {
 	/** For a rename, the old name; for a path change, the old path. */
 	from?: string;
 	to?: string;
-	/** How many entries it touches: with values, empty, published, or all (for a removed collection; `trashed` of them in the trash). */
+	/**
+	 * How many entries it touches in this database: with values, empty, published, or all (for a removed collection; `trashed` of them in the trash).
+	 * On the dev server this is the dev data; the live site may have more, so a count never decides whether the review asks.
+	 */
 	count?: number;
 	trashed?: number;
 	/** What the review asks, with the default first. Absent when the change touches no stored value. */
@@ -67,7 +69,8 @@ async function countEntries(db: Db, collection: string, where?: ReturnType<typeo
 }
 
 /**
- * What saving `draft` over `current` changes, with the entries each change touches and what the review must ask. Nothing is written.
+ * What saving `draft` over `current` changes, with the entries each change touches and what the review must ask. Nothing is written. The review asks
+ * about every change that can touch stored values on the live site, even when this (dev) database has none (doc 01, principle 4).
  */
 export async function planSchema(
 	db: Db,
@@ -138,7 +141,6 @@ async function planFields(
 
 	for (const [field, definition] of Object.entries(before.fields)) {
 		if (after.fields[field] || renamedFrom.has(field)) continue;
-		const count = (await countEntries(db, collection, hasValue(field))).all;
 		const movable = Object.entries(after.fields)
 			.filter(([other, target]) => other !== "title" && other !== "slug" && target.kind === definition.kind)
 			.map(([other]) => other);
@@ -147,15 +149,11 @@ async function planFields(
 			do: "removeField",
 			collection,
 			field,
-			count,
-			choices:
-				count === 0
-					? undefined
-					: [
-							{ do: "removeField", values: "keep" },
-							...movable.map((target) => ({ do: "removeField" as const, values: { move: target } })),
-							{ do: "removeField", values: "clear" },
-						],
+			count: (await countEntries(db, collection, hasValue(field))).all,
+			choices: [
+				{ do: "removeField", values: "clear" },
+				...movable.map((target) => ({ do: "removeField" as const, values: { move: target } })),
+			],
 		});
 	}
 
@@ -181,17 +179,13 @@ async function planNewField(
 	kind: "addField" | "changeField" = "addField",
 ): Promise<SchemaChange> {
 	const change: SchemaChange = { id: `${kind}:${collection}.${field}`, do: kind, collection, field };
-	const choices: Choice[] = [];
-	// A field removed earlier with "keep" left its values under this name; a new field of that name would show them.
-	const kept = kind === "addField" ? (await countEntries(db, collection, hasValue(field))).all : 0;
-	if (kept > 0) choices.push({ do: "reuseKeptValues", values: "use" }, { do: "reuseKeptValues", values: "clear" });
 	if (definition.required) {
-		const empty = (await countEntries(db, collection, sql<boolean>`not ${hasValue(field)}`)).all;
-		change.count = empty;
-		if (empty > 0)
-			choices.push({ do: "addRequiredField", fill: defaultFill(definition) }, { do: "addRequiredField", fill: null });
-	} else if (kept > 0) change.count = kept;
-	if (choices.length > 0) change.choices = choices;
+		change.count = (await countEntries(db, collection, sql<boolean>`not ${hasValue(field)}`)).all;
+		change.choices = [
+			{ do: "addRequiredField", fill: defaultFill(definition) },
+			{ do: "addRequiredField", fill: null },
+		];
+	}
 	return change;
 }
 
@@ -221,13 +215,9 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 			if (choice.do === "renameField")
 				steps.push({ do: "renameField", collection, from: change.from as string, to: field, values: choice.values });
 			if (choice.do === "removeField") steps.push({ do: "removeField", collection, field, values: choice.values });
-			if (choice.do === "reuseKeptValues" && choice.values === "clear")
-				steps.push({ do: "clearKeptValues", collection, field });
 			if (choice.do === "addRequiredField" && choice.fill !== null)
 				steps.push({ do: "fillField", collection, field, value: choice.fill });
 		}
 	}
-	// Clearing kept values comes before filling the same field.
-	steps.sort((a, b) => Number(b.do === "clearKeptValues") - Number(a.do === "clearKeptValues"));
 	return { steps, missing };
 }
