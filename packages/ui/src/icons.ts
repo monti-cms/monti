@@ -411,6 +411,7 @@ export const iconsByName = {
 	"recently-viewed": RecentlyViewed,
 	close: Close,
 	upload: Upload,
+	"right-panel--open": RightPanelOpen,
 } as const satisfies Readonly<Record<string, MontiIcon>>;
 
 /** A name `iconsByName` knows; a screen spec names icons only by these. */

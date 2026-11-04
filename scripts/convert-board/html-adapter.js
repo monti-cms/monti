@@ -17,7 +17,7 @@ const { parts: PARTS, known: KNOWN, frame: FRAME = [] } = window.boardPack ?? { 
 const SPACING = /^(margin|padding|gap|row-gap|column-gap)(-|$)/;
 const LAYOUT = /^(display|flex-direction|box-sizing)$/;
 const SCREEN_LAYOUT =
-	/^(width|max-width|min-width|min-height|align-items|justify-content|flex|flex-grow|flex-wrap|position|top|right|bottom|left)$/;
+	/^(width|max-width|min-width|min-height|align-items|justify-content|flex|flex-grow|flex-shrink|flex-wrap|position|top|right|bottom|left)$/;
 
 const shown = (el) => {
 	const style = getComputedStyle(el);
@@ -55,7 +55,8 @@ function looksOf(el, part, root = false, inPart = false) {
 			continue;
 		}
 		if (!part && SCREEN_LAYOUT.test(property)) continue;
-		// A value the board writes that changes nothing (a state's "fully shown").
+		// A value the board writes that changes nothing: a state's "fully shown", or what the element would inherit anyway.
+		if (/^inherit$/.test(el.style.getPropertyValue(property).trim())) continue;
 		if (property === "opacity" && Number.parseFloat(el.style.getPropertyValue(property)) === 1) continue;
 		if (part && property === "flex" && el.dataset.sized !== undefined) continue;
 		// Pinning a line to the group's end is the screen's layout, on a part too: it becomes the place of the part in the spec.

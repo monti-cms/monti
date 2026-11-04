@@ -132,6 +132,7 @@ export {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+export { EditorHeader, EditorTitleRule } from "./editor-header";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";

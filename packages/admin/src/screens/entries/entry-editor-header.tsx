@@ -11,6 +11,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	EditorHeader,
 	EntryStatus,
 	IconButton,
 	Inline,
@@ -110,17 +111,7 @@ export function EntryEditorHeader({
 	});
 
 	return (
-		<Inline
-			as="header"
-			wrap
-			justify="between"
-			gap={12}
-			shrink={false}
-			border="bottom"
-			background="page"
-			minHeight="header"
-			paddingX={12}
-		>
+		<EditorHeader>
 			<Inline gap={12} minWidth={0} paddingX={12}>
 				<TextButton variant="quiet" render={<Link href={site.adminHref(`?collection=${collection}`)} />}>
 					<ChevronLeft aria-hidden />
@@ -309,6 +300,6 @@ export function EntryEditorHeader({
 					unsaved={editor.hasUnsavedChanges}
 				/>
 			)}
-		</Inline>
+		</EditorHeader>
 	);
 }

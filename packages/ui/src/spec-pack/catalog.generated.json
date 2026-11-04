@@ -15,6 +15,174 @@
 			},
 			"events": []
 		},
+		"CompareView": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"CompareColumn": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"doc": {
+					"kind": "data",
+					"fields": ["kind", "text", "changed"]
+				},
+				"empty": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"properties": {
+					"kind": "data",
+					"fields": ["label", "text", "changed"]
+				},
+				"title": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"EditorTopBar": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": ["end", "start"],
+			"props": {},
+			"events": []
+		},
+		"PublishButton": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"menuLabel": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"EntryTitle": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"faint": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"text": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"TitleInput": {
+			"kind": "part",
+			"bind": true,
+			"children": false,
+			"slots": [],
+			"props": {
+				"id": {
+					"kind": "text",
+					"type": "string"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"placeholder": {
+					"kind": "text",
+					"type": "string"
+				},
+				"value": {
+					"kind": "state"
+				}
+			},
+			"events": []
+		},
+		"TitleRule": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
+		"EditorBody": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"doc": {
+					"kind": "data",
+					"fields": ["kind", "text"]
+				}
+			},
+			"events": []
+		},
+		"EditorStatusBar": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {
+				"label": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
+		"StatusCell": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"end": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"label": {
+					"kind": "text",
+					"type": "string"
+				},
+				"noDot": {
+					"kind": "flag",
+					"type": "boolean"
+				},
+				"tone": {
+					"kind": "variant",
+					"enum": ["danger", "warning"]
+				}
+			},
+			"events": []
+		},
+		"StatusGap": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {},
+			"events": []
+		},
 		"ReviewAsk": {
 			"kind": "part",
 			"bind": false,
@@ -873,6 +1041,7 @@
 						"portfolio",
 						"quotes",
 						"recently-viewed",
+						"right-panel--open",
 						"rocket",
 						"rss",
 						"screen",
@@ -2032,6 +2201,7 @@
 						"portfolio",
 						"quotes",
 						"recently-viewed",
+						"right-panel--open",
 						"rocket",
 						"rss",
 						"screen",

@@ -7,10 +7,21 @@ import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "../change";
 import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { Checkbox } from "../checkbox";
+import {
+	Compare,
+	CompareBody,
+	CompareHeading,
+	CompareParagraph,
+	CompareProperty,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+} from "../compare";
 import { Count } from "../count";
 import { DangerBlock, DangerRow } from "../danger-block";
 import { DragHandle } from "../drag-handle";
 import { DropArea } from "../drop-area";
+import { EditorHeader, EditorTitleRule } from "../editor-header";
 import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFieldWas } from "../field";
@@ -88,7 +99,9 @@ import {
 	SidebarRailToggle,
 	SidebarScreenMode as SidebarScreenModePart,
 } from "../sidebar";
+import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
+import { StatusBar, StatusBarCell, StatusBarSpacer } from "../status-bar";
 import { Switch } from "../switch";
 import { ListScroll, RowActions, RowCheck, RowLink, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { TabLink, TabLinks, TabsList, Tabs as TabsRoot, TabsTrigger } from "../tabs";
@@ -1351,6 +1364,184 @@ function ReviewRest({ label }: { label?: string }) {
 	return <ReviewMore open={false} onOpenChange={() => {}} moreLabel={label ?? ""} lessLabel="" />;
 }
 
+/** The head of an editor: the way back, where the entry lives and its state, then saving, publishing and the editor's tools. */
+function EditorTopBar({ start, end }: { start?: React.ReactNode; end?: React.ReactNode }) {
+	return (
+		<EditorHeader>
+			<Inline gap={12} minWidth={0} paddingX={12}>
+				{start}
+			</Inline>
+			<Inline gap={12} justify="end">
+				{end}
+			</Inline>
+		</EditorHeader>
+	);
+}
+
+/** The pill that publishes, with the caret half that opens the other ways to (`menuLabel` names it). */
+function PublishButton({ label, menuLabel }: { label?: string; menuLabel?: string }) {
+	return (
+		<SplitButton menuLabel={menuLabel ?? ""} menu={null}>
+			{label}
+		</SplitButton>
+	);
+}
+
+/** An entry's title, as large as a page's; the words are the entry's (from the data). */
+function EntryTitle({ text, faint }: { text?: string; faint?: boolean }) {
+	return (
+		<Heading as="h1" variant="display" tone={faint ? "subtle" : undefined}>
+			{text}
+		</Heading>
+	);
+}
+
+/** A name typed as large as a page's title (a template's), with no line: it reads as the title until it has focus. */
+function TitleInput({
+	id,
+	value,
+	placeholder,
+	label,
+}: {
+	id?: string;
+	value?: string;
+	placeholder?: string;
+	label?: string;
+}) {
+	return <InputPart id={id} defaultValue={value} placeholder={placeholder} aria-label={label} size="display" />;
+}
+
+/** The ink rule under an entry's title. */
+function TitleRule() {
+	return <EditorTitleRule />;
+}
+
+/**
+ * An entry's body: where the editor goes. The spec says only that the body is here; its blocks come from the data (`doc`: each block's `kind`, `h2`,
+ * `h3`, `p`, `quote` or `figure`, and its `text`), drawn in the editor's reading type. The editor itself takes this place when the screen is wired.
+ */
+function EditorBody({ doc }: { doc?: readonly { kind?: string; text: string }[] }) {
+	return (
+		<div className="prose monti-dark:prose-invert max-w-none text-monti-default text-monti-reading">
+			{doc?.map((block, index) => {
+				// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
+				const key = index;
+				if (block.kind === "h2") return <h2 key={key}>{block.text}</h2>;
+				if (block.kind === "h3") return <h3 key={key}>{block.text}</h3>;
+				if (block.kind === "quote") return <blockquote key={key}>{block.text}</blockquote>;
+				if (block.kind === "figure")
+					return (
+						<figure key={key}>
+							<div className="aspect-[3/2] rounded-monti-md bg-monti-muted" />
+							{block.text && <figcaption>{block.text}</figcaption>}
+						</figure>
+					);
+				return <p key={key}>{block.text}</p>;
+			})}
+		</div>
+	);
+}
+
+/** The bar under the editor, named by `label`: its cells, a spacer, and the cells at its end. */
+function EditorStatusBar({ label, children }: { label?: string; children?: React.ReactNode }) {
+	return <StatusBar aria-label={label}>{children}</StatusBar>;
+}
+
+/** One cell of the status bar: its words, `tone` for something to fix (with its dot unless `noDot`), `end` after the spacer. */
+function StatusCell({
+	label,
+	tone,
+	noDot,
+	end,
+}: {
+	label?: string;
+	tone?: "warning" | "danger";
+	noDot?: boolean;
+	end?: boolean;
+}) {
+	return (
+		<StatusBarCell tone={tone} dot={!noDot} end={end}>
+			{label}
+		</StatusBarCell>
+	);
+}
+
+/** The room between a status bar's cells and its end cells. */
+function StatusGap() {
+	return <StatusBarSpacer />;
+}
+
+/**
+ * Pieces of an entry's text as the data gives them: a piece with a `kind` (`h2`, `h3`, `p`) starts a block, one without goes on the block before it;
+ * `changed` pieces are the words that differ between the two sides.
+ */
+type Pieces = readonly { kind?: string; text: string; changed?: boolean }[];
+
+function blocksOf(pieces: Pieces | undefined) {
+	const blocks: { kind: string; pieces: { text: string; changed?: boolean }[] }[] = [];
+	for (const piece of pieces ?? []) {
+		if (piece.kind || blocks.length === 0) blocks.push({ kind: piece.kind ?? "p", pieces: [] });
+		blocks[blocks.length - 1]?.pieces.push(piece);
+	}
+	return blocks;
+}
+
+function runOf(pieces: readonly { text: string; changed?: boolean }[]) {
+	return pieces.map((piece, index) => (
+		// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
+		<CompareText key={index} changed={piece.changed}>
+			{piece.text}
+		</CompareText>
+	));
+}
+
+/** Two versions of one entry side by side: its two `CompareColumn`s. */
+function CompareView({ children }: { children?: React.ReactNode }) {
+	return <Compare>{children}</Compare>;
+}
+
+/**
+ * One version: its `label`, the properties that differ (`properties`: each one's `label` and its `text` pieces, from the data; `empty` names an
+ * empty one), and the entry (`title` and `doc`, from the data) the way it reads.
+ */
+function CompareColumn({
+	label,
+	empty,
+	properties,
+	title,
+	doc,
+}: {
+	label?: string;
+	empty?: string;
+	properties?: readonly { label: string; text?: string; changed?: boolean }[];
+	title?: string;
+	doc?: Pieces;
+}) {
+	return (
+		<CompareSide
+			label={label ?? ""}
+			properties={properties?.map((property) => (
+				<CompareProperty key={property.label} label={property.label} empty={empty ?? ""}>
+					{property.text ? <CompareText changed={property.changed}>{property.text}</CompareText> : undefined}
+				</CompareProperty>
+			))}
+		>
+			<CompareTitle>{title}</CompareTitle>
+			<CompareBody>
+				{blocksOf(doc).map((block, index) =>
+					block.kind === "h2" || block.kind === "h3" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
+						<CompareHeading key={index}>{runOf(block.pieces)}</CompareHeading>
+					) : (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
+						<CompareParagraph key={index}>{runOf(block.pieces)}</CompareParagraph>
+					),
+				)}
+			</CompareBody>
+		</CompareSide>
+	);
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1359,6 +1550,17 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	CompareView,
+	CompareColumn,
+	EditorTopBar,
+	PublishButton,
+	EntryTitle,
+	TitleInput,
+	TitleRule,
+	EditorBody,
+	EditorStatusBar,
+	StatusCell,
+	StatusGap,
 	ReviewAsk,
 	ReviewHead,
 	ReviewEntry,
@@ -1530,6 +1732,26 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	CompareView: { kind: "part", props: {} },
+	CompareColumn: {
+		kind: "part",
+		props: {
+			label: "text",
+			empty: "text",
+			properties: "data:label,text,changed",
+			title: "state",
+			doc: "data:kind,text,changed",
+		},
+	},
+	EditorTopBar: { kind: "part", props: {} },
+	PublishButton: { kind: "part", props: { label: "text", menuLabel: "text" } },
+	EntryTitle: { kind: "part", props: { text: "state", faint: "flag" } },
+	TitleRule: { kind: "part", props: {} },
+	TitleInput: { kind: "part", bind: "yes", props: { id: "text", value: "state", placeholder: "text", label: "text" } },
+	EditorBody: { kind: "part", props: { doc: "data:kind,text" } },
+	EditorStatusBar: { kind: "part", props: { label: "text" } },
+	StatusCell: { kind: "part", props: { label: "text", tone: "variant", noDot: "flag", end: "flag" } },
+	StatusGap: { kind: "part", props: {} },
 	ReviewAsk: { kind: "part", props: { text: "state" } },
 	ReviewHead: { kind: "part", props: { title: "text", meta: "text" } },
 	ReviewEntry: {
