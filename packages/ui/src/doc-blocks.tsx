@@ -30,7 +30,7 @@ function DocCode({ source = false, className, ...props }: React.ComponentProps<"
 			data-slot="doc-code"
 			className={cn(
 				DOC_BOX,
-				"m-0 overflow-x-auto font-mono text-monti-caption",
+				"m-0 overflow-x-auto font-mono text-monti-caption leading-[1.7]",
 				source ? "bg-monti-selected" : "bg-monti-muted",
 				className,
 			)}

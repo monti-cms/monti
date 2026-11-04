@@ -1530,7 +1530,7 @@
 				},
 				"width": {
 					"kind": "variant",
-					"enum": ["panel", "side"]
+					"enum": ["assistant", "panel", "side"]
 				}
 			},
 			"events": []
@@ -2104,6 +2104,14 @@
 					"type": "boolean"
 				}
 			},
+			"events": []
+		},
+		"PageToolbarEnd": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": [],
+			"props": {},
 			"events": []
 		},
 		"TabLinks": {
@@ -2865,7 +2873,10 @@
 			"props": {
 				"columns": {
 					"kind": "data",
-					"fields": ["id", "label", "sort", "filtered"]
+					"fields": ["id", "label", "sort", "filtered", "size"]
+				},
+				"end": {
+					"kind": "state"
 				},
 				"moveLabel": {
 					"kind": "text",

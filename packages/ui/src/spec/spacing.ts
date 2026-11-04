@@ -22,7 +22,8 @@ export interface SpacingClasses {
 /**
  * Turns a container's `Spacing` items into the pack's token classes, so the app's DOM has no element for empty space and no style of its own. A first or
  * last Spacing is the container's padding on that end of its axis. The ones between children are the container's gap when they are all the same size,
- * and otherwise a margin on the child after each (a gap and margins together would add up). A child's margin goes with it when it is hidden.
+ * and no two children touch, and otherwise a margin on the child after each (a gap and margins together would add up). A child's margin goes with it
+ * when it is hidden.
  */
 export function spacingClasses(
 	children: readonly SpecChild[],
@@ -47,8 +48,12 @@ export function spacingClasses(
 		if (index > 0 && index < children.length - 1 && isSpacing(child)) between.set(index + 1, child.spacing);
 	});
 	const sizes = new Set(between.values());
+	// A gap spaces every two neighbours, so it stands for the Spacings only when no two children touch.
+	const touching = children.some(
+		(child, index) => index > 0 && !isSpacing(child) && !isSpacing(children[index - 1] as SpecChild),
+	);
 	const margins = new Map<number, string>();
-	if (sizes.size === 1) container.push(classOf(table.gap, [...sizes][0] as SpacingStep));
+	if (sizes.size === 1 && !touching) container.push(classOf(table.gap, [...sizes][0] as SpacingStep));
 	else for (const [index, step] of between) margins.set(index, classOf(table.marginBefore[direction], step));
 	return { container, margins };
 }

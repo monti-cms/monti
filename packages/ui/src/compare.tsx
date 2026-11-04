@@ -106,7 +106,7 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 		<pre
 			data-slot="compare-code"
 			className={cn(
-				"mb-monti-20 overflow-x-auto whitespace-pre-wrap break-words rounded-monti-lg bg-monti-muted px-monti-16 py-monti-12 font-mono text-monti-caption",
+				"mb-monti-20 overflow-x-auto whitespace-pre-wrap break-words rounded-monti-lg bg-monti-muted px-monti-16 py-monti-12 font-mono text-monti-caption leading-[1.7]",
 				className,
 			)}
 			{...props}

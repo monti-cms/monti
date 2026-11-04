@@ -74,6 +74,18 @@ function looksOf(el, part, root = false, inPart = false) {
 	return looks;
 }
 
+/**
+ * Whether an element takes the room its line leaves: it grows, and no neighbour grows more. A neighbour that grows by 1 beside one that grows by 999
+ * (a panel beside the page) keeps its own size, as the board lays it out.
+ */
+function grows(el) {
+	const own = Number.parseFloat(getComputedStyle(el).flexGrow);
+	if (!(own > 0)) return false;
+	const parent = el.parentElement;
+	if (!parent) return true;
+	return [...parent.children].every((other) => !(Number.parseFloat(getComputedStyle(other).flexGrow) > own));
+}
+
 /** The screen's own layout of a group: how it aligns its children, whether it grows, its width and height. */
 function layoutOf(el, page) {
 	const style = getComputedStyle(el);
@@ -85,7 +97,7 @@ function layoutOf(el, page) {
 	const layout = {};
 	if (flex && align) layout.align = align;
 	if (flex && justify) layout.justify = justify;
-	if (Number.parseFloat(style.flexGrow) > 0) layout.grow = true;
+	if (grows(el)) layout.grow = true;
 	if (style.flexWrap === "wrap") layout.wrap = true;
 	// A size the board writes in px is the region's; a width the box only takes from its parent is not.
 	for (const [property, name] of [
@@ -104,7 +116,11 @@ function layoutOf(el, page) {
 
 /** A group whose one child the board centres with automatic side margins (`margin: 0 auto`): the group centres it. */
 function centred(el) {
-	const only = drawnChildren(el).filter((child) => child.nodeType === Node.ELEMENT_NODE);
+	// What floats over the column (a block's menu, placed absolutely) takes no place in it.
+	const only = drawnChildren(el).filter(
+		(child) =>
+			child.nodeType === Node.ELEMENT_NODE && !["absolute", "fixed"].includes(getComputedStyle(child).position),
+	);
 	if (only.length !== 1 || directionOf(el) === "row") return {};
 	const margin = (side) => only[0].style.getPropertyValue(`margin-${side}`) || only[0].style.margin.split(" ")[1];
 	return margin("left") === "auto" && (margin("right") === "auto" || only[0].style.margin.split(" ").length <= 3)
@@ -120,8 +136,14 @@ function sizedPart(el, rule) {
 	if (!rule || rule.frame || rule.ignore || el.dataset.sized !== undefined) return undefined;
 	const flex = el.style.getPropertyValue("flex");
 	const basis = /\b(\d+)px\b/.exec(flex)?.[1];
+	// A part the board caps in width (`max-width: 1180px`) stands in a region that is that wide at most.
+	const cap = el.style.getPropertyValue("max-width");
+	if (cap.endsWith("px") && !(flex && basis)) return { maxWidth: Math.round(Number.parseFloat(cap)) };
+	// A part the board lets take the room its line leaves (`flex-grow: 1`) stands in a region that grows.
+	if (!flex && Number.parseFloat(el.style.getPropertyValue("flex-grow")) > 0) return { grow: true, minWidth: 0 };
 	if (!flex || !basis) return undefined;
-	return { grow: Number.parseFloat(getComputedStyle(el).flexGrow) > 0 || undefined, minWidth: Number(basis) };
+	// One that does not grow beside one that does keeps the size the board gives it.
+	return grows(el) ? { grow: true, minWidth: Number(basis) } : { width: Number(basis) };
 }
 
 /** The axis a group's children run along, as laid out. */
@@ -259,7 +281,9 @@ function read(el, where, page = undefined, inPart = false) {
 	if (rule?.frame) {
 		// The board's own root is the page whatever rule it matches: it takes the page's layout (as tall as the window).
 		// A board drawn inside a board (its own page root) is a page too: as tall as the window.
-		const layout = el.matches(".sc-host") ? {} : { ...(page ?? PAGE) };
+		// One drawn beside another part of its board (an editor beside its assistant) takes the room the board gives it.
+		const grow = page === undefined && grows(el) ? { grow: true } : {};
+		const layout = el.matches(".sc-host") ? {} : { ...(page ?? PAGE), ...grow };
 		return framed(el, { where: here, direction: directionOf(el), layout, ...withLooks(measured(el, here), looks) });
 	}
 	if (rule) {

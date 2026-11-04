@@ -1025,6 +1025,9 @@ const OWN_TYPE = new Map([
 	["ui/src/dialog.tsx", new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"])],
 	// The translation marker's text, 10px, the one size under the micro role (`.mt-marker`).
 	["ui/src/marker.tsx", new Set(["text-[10px]"])],
+	// Code in an entry's body keeps the reading line of 1.7 times its size (`.mt-doc-code` in `.text-reading`).
+	["ui/src/doc-blocks.tsx", new Set(["leading-[1.7]"])],
+	["ui/src/compare.tsx", new Set(["leading-[1.7]"])],
 	// The heading icon's level number, 8px mono in the corner of the 16px glyph (`.mt-ico-level .lv`).
 	["ui/src/heading-icon.tsx", new Set(["text-[8px]", "leading-[8px]"])],
 ]);

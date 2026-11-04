@@ -211,15 +211,32 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-list-head"),
 		part: "ListHead",
-		props: (el) => ({
-			columns: [...el.querySelectorAll(".mt-col")]
-				.filter((column) => column.closest(".mt-col-wrap")?.style.display !== "none")
-				.map((column) => ({
-					id: column.textContent.trim(),
-					label: column.textContent.trim(),
-					...(column.classList.contains("is-sort") ? { sort: "desc" } : {}),
-				})),
-		}),
+		props: (el) => {
+			// Each shown column's width as the board lays it out, with its share of the gap; a column the board lets grow (`1fr`) takes what is left.
+			const tracks = el.style.gridTemplateColumns.split(/ (?![^(]*\))/);
+			const gap = Number.parseFloat(getComputedStyle(el).columnGap) || 0;
+			const shown = [...el.children].filter((child) => getComputedStyle(child).display !== "none");
+			// The cell at the end (over the rows' ⋯ or their buttons), with the cell's own padding at both sides.
+			const last = shown.at(-1);
+			const end =
+				last && !last.matches(".mt-col-wrap") ? Math.round(last.getBoundingClientRect().width + 22) : undefined;
+			return {
+				end,
+				columns: [...el.querySelectorAll(".mt-col")]
+					.filter((column) => column.closest(".mt-col-wrap")?.style.display !== "none")
+					.map((column) => {
+						const box = column.closest(".mt-col-wrap") ?? column;
+						const track = tracks[shown.indexOf(box)];
+						const width = box.getBoundingClientRect().width;
+						return {
+							id: column.textContent.trim(),
+							label: column.textContent.trim(),
+							...(column.classList.contains("is-sort") ? { sort: "desc" } : {}),
+							...(track === undefined || track.includes("fr") || width === 0 ? {} : { size: Math.round(width + gap) }),
+						};
+					}),
+			};
+		},
 		leaf: true,
 		asProps: ["grid-template-columns", "column-gap"],
 	},
@@ -1483,6 +1500,12 @@ const parts = [
 		props: (el) => ({
 			title: el.querySelector(".mt-panel-head > h2")?.textContent.trim(),
 			closable: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].some(closes) || undefined,
+			// The panel's width, by the token the board sizes it with.
+			width: el.style.flex.includes("--width-assistant")
+				? "assistant"
+				: el.style.flex.includes("--width-panel")
+					? "panel"
+					: undefined,
 		}),
 		slots: (el) => ({
 			actions: [...el.querySelectorAll(".mt-panel-head > .mt-icon-btn")].filter((button) => !closes(button)),
@@ -1675,7 +1698,15 @@ const parts = [
 		leaf: true,
 	},
 	// A page's tab row: each tab a page of its own, with its count.
-	{ match: (el) => el.matches(".mt-toolbar"), part: "PageToolbar" },
+	// Over a table the row is pulled 12px inside, like the rows under it.
+	{
+		match: (el) => el.matches(".mt-toolbar"),
+		part: "PageToolbar",
+		props: (el) => ({ inset: el.classList.contains("mt-table-head") || undefined }),
+		asProps: ["padding-left", "padding-right"],
+	},
+	// Its right group: the filters at the end of the line.
+	{ match: (el) => el.matches(".mt-toolbar > .end"), part: "PageToolbarEnd" },
 	{
 		match: (el) => el.matches(".mt-tabs"),
 		part: "TabLinks",

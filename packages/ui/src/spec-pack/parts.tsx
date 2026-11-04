@@ -44,14 +44,14 @@ import { FolderParent, type IconName, iconsByName } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
-import { ListHead } from "../list-head";
+import { ListHead as ListHeadPart } from "../list-head";
 import { ListSection as ListSectionPart, ListSectionRow } from "../list-section";
 import { LockMark } from "../lock-mark";
 import { Untranslated } from "../marker";
 import { MediaPicker } from "../media-picker";
 import { NavLink } from "../nav-link";
 import { Option } from "../option";
-import { PageColumn, PageHeader, PageToolbar } from "../page-header";
+import { PageColumn, PageHeader, PageToolbar, PageToolbarEnd } from "../page-header";
 import {
 	ListFooter,
 	PageSizeMenu,
@@ -409,9 +409,21 @@ function EmptyStep({ number, title, className }: { number?: string; title?: stri
 	);
 }
 
-/** A list: its head row and its rows in one table, so the columns line up (a board draws them as two neighbours). */
+/**
+ * A list: its head row and its rows in one table, so the columns line up (a board draws them as two neighbours). When the head gives its columns
+ * widths, the table keeps them whatever the rows hold, as the board's grid does.
+ */
 function List({ children }: { children?: React.ReactNode }) {
-	return <Table container="none">{children}</Table>;
+	return (
+		<Table container="none" className="has-[th[style*=width]]:table-fixed">
+			{children}
+		</Table>
+	);
+}
+
+/** A list's head row, as it looks: its columns at the widths the board gives them, and the cell at its end. */
+function ListHead(props: React.ComponentProps<typeof ListHeadPart>) {
+	return <ListHeadPart {...props} />;
 }
 
 /** A row's title cell: the title (the way into it) and its address, or a folder's name and what it holds. */
@@ -598,8 +610,9 @@ function OptionCheck({
 	noteTone?: "warning";
 	checked?: boolean;
 }) {
+	// A row of options is 32px tall (`.mt-option`, 6px above and below its line).
 	return (
-		<Option>
+		<Option className="py-monti-6">
 			<Checkbox checked={checked ?? false} />
 			{mono ? <Text mono>{label}</Text> : label}
 			{note && (
@@ -690,22 +703,25 @@ function VerticalRule({ className }: { className?: string }) {
 function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; proposal?: boolean }) {
 	return (
 		<TableCell truncate>
-			{proposal ? (
-				// The assistant's request: its mark on the line of its words.
-				<Inline gap={8} align="baseline" minWidth={0}>
-					<Text tone="proposal" aria-hidden="true">
-						✦
+			<StackPart gap={4} minWidth={0}>
+				{proposal ? (
+					// The assistant's request: its mark on the line of its words.
+					<Inline gap={8} align="baseline" minWidth={0}>
+						<Text tone="proposal" aria-hidden="true">
+							✦
+						</Text>
+						<Text truncate>{title}</Text>
+					</Inline>
+				) : (
+					<Text as="div" truncate>
+						{title}
 					</Text>
-					<Text truncate>{title}</Text>
-				</Inline>
-			) : (
-				<Text as="div" truncate>
-					{title}
+				)}
+				{/* The line under the title stands in a 20px line, as the title does (`.mt-row-sub`). */}
+				<Text as="div" variant="meta" tone="subtle" truncate className="py-monti-2">
+					{sub}
 				</Text>
-			)}
-			<Text as="div" variant="meta" tone="subtle" truncate>
-				{sub}
-			</Text>
+			</StackPart>
 		</TableCell>
 	);
 }
@@ -870,7 +886,7 @@ function Panel({
 }: {
 	title?: string;
 	closable?: boolean;
-	width?: "side" | "panel";
+	width?: "side" | "panel" | "assistant";
 	actions?: React.ReactNode;
 	footer?: React.ReactNode;
 	children?: React.ReactNode;
@@ -915,9 +931,13 @@ function OptionSwitch({ label, checked }: { label?: string; checked?: boolean })
 	);
 }
 
-/** Children in equal columns (a collection's editor options, three across). */
+/** Children in equal columns (a collection's editor options, three across): rows 4px apart, columns 24 (`.opt-grid`). */
 function GridBox({ columns, children }: { columns?: 1 | 2 | 3 | 4 | 6; children?: React.ReactNode }) {
-	return <Grid columns={columns}>{children}</Grid>;
+	return (
+		<Grid columns={columns} gap={4} className="gap-x-monti-24">
+			{children}
+		</Grid>
+	);
 }
 
 /** What cannot be undone, apart at the end of a page: its title in danger, its rows under it. */
@@ -1329,7 +1349,8 @@ function ReviewAsk({ text }: { text?: string }) {
 
 /** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
 function ReviewHead({ title, meta, actions }: { title?: string; meta?: string; actions?: React.ReactNode }) {
-	return <ReviewGroup title={title} meta={meta} actions={actions} />;
+	// The room above it is the screen's (a Spacing before it), so the group is drawn without its own.
+	return <ReviewGroup title={title} meta={meta} actions={actions} className="mt-0" />;
 }
 
 /**
@@ -1519,8 +1540,13 @@ function EditorBody({
 				);
 				// A block still in the source's language reads faint until it is translated.
 				const text = block.untranslated ? <Untranslated>{run}</Untranslated> : run;
-				if (block.kind === "h2") return <h2 key={key}>{text}</h2>;
-				if (block.kind === "h3") return <h3 key={key}>{text}</h3>;
+				// Paragraphs and headings keep the editor's own spacing (as a side-by-side view draws them), not the reading defaults.
+				if (block.kind === "h2" || block.kind === "h3")
+					return (
+						<CompareHeading key={key} className="first:mt-0">
+							{text}
+						</CompareHeading>
+					);
 				if (block.kind === "quote") return <blockquote key={key}>{text}</blockquote>;
 				if (block.kind === "list")
 					return (
@@ -1537,7 +1563,11 @@ function EditorBody({
 							{block.pieces.length > 0 && <figcaption>{text}</figcaption>}
 						</figure>
 					);
-				return <p key={key}>{text}</p>;
+				return (
+					<CompareParagraph key={key} className="mt-0">
+						{text}
+					</CompareParagraph>
+				);
 			})}
 		</div>
 	);
@@ -1859,7 +1889,8 @@ function PairRow({
 				{pieces?.map((piece) => piece.text).join("")}
 			</Heading>
 		) : (
-			<CompareBody>{docBlocks(pieces, source)}</CompareBody>
+			// A row's side holds one block: nothing below its last line but the row's own padding.
+			<CompareBody className="*:last:mb-0">{docBlocks(pieces, source)}</CompareBody>
 		);
 	return (
 		<CompareRow
@@ -2442,6 +2473,7 @@ export const parts = {
 	RowButtonsCell,
 	MoreButton,
 	PageToolbar,
+	PageToolbarEnd,
 	TabLinks,
 	Tab,
 	List,
@@ -2812,6 +2844,7 @@ export const CATALOG = {
 	RowButtonsCell: { kind: "part", props: {} },
 	MoreButton: { kind: "part", props: { label: "text" } },
 	PageToolbar: { kind: "part", props: { inset: "flag" } },
+	PageToolbarEnd: { kind: "part", props: {} },
 	TabLinks: { kind: "part", props: { variant: "variant" } },
 	Tab: { kind: "part", props: { label: "text", current: "flag", count: "text", countTone: "variant", dot: "variant" } },
 	List: { kind: "part", props: {} },
@@ -2882,7 +2915,8 @@ export const CATALOG = {
 	ListHead: {
 		kind: "part",
 		props: {
-			columns: "data:id,label,sort,filtered",
+			columns: "data:id,label,sort,filtered,size",
+			end: "state",
 			moveLabel: "text",
 			onPlace: "event",
 			onStep: "event",
