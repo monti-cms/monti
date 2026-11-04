@@ -92,14 +92,3 @@ export const FailedChange: Story = {
 		},
 	],
 };
-
-/** The live site's database is behind its schema: the admin sees nothing; the server's log says to run `monti db:migrate` (doc 01). */
-export const LiveBehind: Story = {
-	loaders: [
-		async () => {
-			const site = await storySite({ schema, auth: { password: true }, signedIn: true, setup: labelCollections });
-			await sql`update schema_state set applied_hash = 'older'`.execute(site.db);
-			return { site };
-		},
-	],
-};
