@@ -209,8 +209,8 @@ erDiagram
   "id": "2026-11-05-1432-post-fields",
   "steps": [
     { "do": "renameField", "collection": "post", "from": "summary", "to": "excerpt", "values": "move" },
-    { "do": "removeField", "collection": "post", "field": "subtitle", "values": "keep" },
-    { "do": "addField", "collection": "post", "field": "format", "fill": "memo" }
+    { "do": "removeField", "collection": "post", "field": "subtitle", "values": "clear" },
+    { "do": "fillField", "collection": "post", "field": "format", "value": "memo" }
   ],
   "firstAdminValues": {
     "post": { "fields": { "format": { "label": "글 종류", "optionLabels": { "memo": "메모" } } } }
