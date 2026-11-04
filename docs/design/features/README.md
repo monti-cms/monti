@@ -55,4 +55,7 @@
 지금 만들지 않지만 설계가 막지 않게 열어 둔 것이다. 자세한 것은 각 문서에 있다.
 
 - **MCP 서버.** 바깥 에이전트(Claude Code 같은)가 같은 기능 정의로 Monti를 쓴다. 쓰기는 제안이 된다. [00-foundation.md](00-foundation.md#mcp-서버)
+- **예약 발행.** 정한 시각에 발행한다. `entries.publish`에 시각을 더하는 것으로 연다. [02-entry-lifecycle.md](02-entry-lifecycle.md#열린-질문)
+- **판 기록.** 지난 발행본을 보고 그 판으로 돌아간다. 지금은 활동 기록의 스냅숏으로만 되돌린다. [02-entry-lifecycle.md](02-entry-lifecycle.md#열린-질문)
+- **Postgres 말고 다른 데이터베이스.** 지금은 Postgres만 쓴다. 저장소 코드를 한 곳에 모아 두어 나중에 더할 수 있게만 한다.
 - **스스로 일하는 에이전트.** 발행됨, 매주 같은 때에 정해 둔 규칙으로 에이전트가 제안을 만든다. [00-foundation.md](00-foundation.md#스스로-일하는-에이전트)
