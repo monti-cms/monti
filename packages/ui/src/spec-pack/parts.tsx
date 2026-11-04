@@ -1473,7 +1473,7 @@ function EditorBody({
 	doc,
 	muted,
 }: {
-	doc?: readonly { kind?: string; text: string; untranslated?: boolean }[];
+	doc?: readonly { kind?: string; text: string; mark?: string; untranslated?: boolean }[];
 	/** Read only, in the quiet ink (the source beside a translation). */
 	muted?: boolean;
 }) {
@@ -1484,19 +1484,39 @@ function EditorBody({
 				muted ? "text-monti-muted" : "text-monti-default",
 			)}
 		>
-			{doc?.map((block, index) => {
+			{bodyOf(doc).map((block, index) => {
 				// biome-ignore lint/suspicious/noArrayIndexKey: a sample body's blocks never move
 				const key = index;
+				const run = block.pieces.map((piece, at) =>
+					piece.mark === "del" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
+						<Del key={at}>{piece.text}</Del>
+					) : piece.mark === "ins" ? (
+						// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one block never move
+						<Ins key={at}>{piece.text}</Ins>
+					) : (
+						piece.text
+					),
+				);
 				// A block still in the source's language reads faint until it is translated.
-				const text = block.untranslated ? <Untranslated>{block.text}</Untranslated> : block.text;
+				const text = block.untranslated ? <Untranslated>{run}</Untranslated> : run;
 				if (block.kind === "h2") return <h2 key={key}>{text}</h2>;
 				if (block.kind === "h3") return <h3 key={key}>{text}</h3>;
 				if (block.kind === "quote") return <blockquote key={key}>{text}</blockquote>;
+				if (block.kind === "list")
+					return (
+						<ul key={key}>
+							{block.items.map((item, at) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: a sample list's items never move
+								<li key={at}>{item}</li>
+							))}
+						</ul>
+					);
 				if (block.kind === "figure")
 					return (
 						<figure key={key}>
 							<div className="aspect-[3/2] rounded-monti-md bg-monti-muted" />
-							{block.text && <figcaption>{text}</figcaption>}
+							{block.pieces.length > 0 && <figcaption>{text}</figcaption>}
 						</figure>
 					);
 				return <p key={key}>{text}</p>;
@@ -1542,6 +1562,30 @@ function LanguageBar({ tabs, action }: { tabs?: React.ReactNode; action?: React.
 			{action}
 		</Inline>
 	);
+}
+
+type BodyPiece = { kind?: string; text: string; mark?: string; untranslated?: boolean };
+type BodyBlock = { kind: string; pieces: BodyPiece[]; untranslated?: boolean; items: string[] };
+
+/** The data's pieces as blocks: a piece with a `kind` starts one, the rest go on it; list items in a row are one list. */
+function bodyOf(doc: readonly BodyPiece[] | undefined) {
+	const blocks: BodyBlock[] = [];
+	for (const piece of doc ?? []) {
+		const last = blocks[blocks.length - 1];
+		if (piece.kind === "li") {
+			if (last?.kind === "list") last.items.push(piece.text);
+			else blocks.push({ kind: "list", pieces: [], items: [piece.text] });
+		} else if (piece.kind || !last) {
+			blocks.push({
+				kind: piece.kind ?? "p",
+				pieces: piece.text ? [piece] : [],
+				untranslated: piece.untranslated,
+				items: [],
+			});
+		} else if (last.kind === "list") last.items[last.items.length - 1] += piece.text;
+		else last.pieces.push(piece);
+	}
+	return blocks;
 }
 
 /** The bar under the editor, named by `label`: its cells, a spacer, and the cells at its end. */
@@ -2087,7 +2131,7 @@ export const CATALOG = {
 	EntryTitle: { kind: "part", props: { text: "state", faint: "flag" } },
 	TitleRule: { kind: "part", props: {} },
 	TitleInput: { kind: "part", bind: "yes", props: { id: "text", value: "state", placeholder: "text", label: "text" } },
-	EditorBody: { kind: "part", props: { doc: "data:kind,text,untranslated", muted: "flag" } },
+	EditorBody: { kind: "part", props: { doc: "data:kind,text,mark,untranslated", muted: "flag" } },
 	SourceColumn: { kind: "part", props: { label: "text", title: "state" } },
 	LanguageBar: { kind: "part", props: {} },
 	EditorStatusBar: { kind: "part", props: { label: "text" } },

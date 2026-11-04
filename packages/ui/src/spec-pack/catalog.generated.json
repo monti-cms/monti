@@ -292,7 +292,7 @@
 			"props": {
 				"doc": {
 					"kind": "data",
-					"fields": ["kind", "text", "untranslated"]
+					"fields": ["kind", "text", "mark", "untranslated"]
 				},
 				"muted": {
 					"kind": "flag",

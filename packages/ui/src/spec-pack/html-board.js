@@ -42,24 +42,29 @@ const reviewRow = (el) =>
 	el.parentElement?.parentElement?.querySelector(":scope > h2.mt-toolbar") != null;
 // The blocks of an entry's body, read as the data gives them: the editor's own tools in it (a block's handle and menu, the bar over a selection) are
 // its states, not the body's, and the line that asks for the first block is the editor's.
+// Each block starts with a piece that has its `kind` (h2, h3, p, li, quote, figure); the pieces after it go on the same block, the words a proposal
+// takes out (`del`) and puts in (`ins`) marked as such.
+const EDITOR_TOOLS = ".mt-card, .mt-handle, .mt-format-bar, .mt-block-bar, .mt-memo, .mt-marker";
 const bodyBlocks = (el) =>
-	[...el.querySelectorAll("h2, h3, p, blockquote, figure")]
-		.filter(
-			(block) => !block.closest(".mt-card, .mt-handle, .mt-format-bar, .mt-block-bar, figure figure, blockquote p"),
-		)
+	[...el.querySelectorAll("h2, h3, p, li, blockquote, figure")]
+		.filter((block) => !block.closest(`${EDITOR_TOOLS}, figure figure, blockquote p`))
 		.filter((block) => !(block.matches("p") && block.style.color.includes("--fg-faint")))
-		.map((block) => {
+		.flatMap((block) => {
 			const copy = block.cloneNode(true);
-			for (const tool of copy.querySelectorAll(".mt-card, .mt-handle, .mt-format-bar, .mt-block-bar, button"))
-				tool.remove();
+			for (const tool of copy.querySelectorAll(`${EDITOR_TOOLS}, button`)) tool.remove();
 			const kind = block.matches("blockquote") ? "quote" : block.tagName.toLowerCase();
-			return {
-				kind,
-				text: copy.textContent.replace(/\s+/g, " ").trim(),
-				untranslated: block.matches(".mt-untranslated") || undefined,
-			};
-		})
-		.filter((block) => block.text !== "" || block.kind === "figure");
+			const untranslated = block.matches(".mt-untranslated") || undefined;
+			const pieces = [...copy.childNodes]
+				.map((node) => ({
+					mark: node.nodeName === "DEL" ? "del" : node.nodeName === "INS" ? "ins" : undefined,
+					text: node.textContent.replace(/\s+/g, " "),
+				}))
+				.filter((piece) => piece.text.trim() !== "");
+			if (pieces.length === 0) return kind === "figure" ? [{ kind, text: "" }] : [];
+			return pieces.map((piece, index) =>
+				index === 0 ? { kind, ...piece, text: piece.text.trimStart(), untranslated } : piece,
+			);
+		});
 // Whether an element has words of its own, not only in its children.
 // (A board's data fills its words in a span of its runtime's: those are its own words too.)
 const ownText = (el) =>
@@ -1096,6 +1101,9 @@ const parts = [
 	{
 		match: (el) => el.matches(".text-reading"),
 		part: "EditorBody",
+		// The editor's own tools in the body (a block's handle and menu, a proposal's mark and its card) and its line that asks for the first block
+		// are its states, not the body's.
+		leaves: `${EDITOR_TOOLS}, p[style*='--fg-faint']`,
 		props: (el) => ({ doc: bodyBlocks(el), muted: el.closest(".mt-tool") ? true : undefined }),
 		leaf: true,
 		asProps: ["color"],
