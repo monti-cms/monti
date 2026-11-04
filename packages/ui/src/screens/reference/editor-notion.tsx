@@ -1,3 +1,4 @@
+import { ko } from "react-day-picker/locale";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -18,6 +19,7 @@ import {
 	BlockHandle,
 	Box,
 	Button,
+	Calendar,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -39,7 +41,11 @@ import {
 	Image,
 	Inline,
 	Input,
+	MenuField,
 	MenuShortcut,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 	PropertyGroup,
 	PropertyPanel,
 	RequestAnchor,
@@ -268,8 +274,20 @@ export function EntryProperties({
 					/>
 				</FormField>
 				<FormField>
-					<FormFieldLabel>발행일</FormFieldLabel>
-					<Text variant="meta">2026. 10. 01</Text>
+					<FormFieldLabel htmlFor="ref-published">발행일</FormFieldLabel>
+					{/* A field in a select's look that opens a calendar: the date can be set by hand. */}
+					<Popover>
+						<PopoverTrigger render={<MenuField id="ref-published" value="2026. 10. 01" mono />} />
+						<PopoverContent width="auto" padding="none" align="start">
+							<Calendar
+								locale={ko}
+								mode="single"
+								defaultMonth={new Date(2026, 9, 1)}
+								selected={new Date(2026, 9, 1)}
+								showOutsideDays={false}
+							/>
+						</PopoverContent>
+					</Popover>
 				</FormField>
 				<FormField>
 					<FormFieldLabel>대표 이미지</FormFieldLabel>

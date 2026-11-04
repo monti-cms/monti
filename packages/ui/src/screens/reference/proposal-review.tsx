@@ -22,8 +22,8 @@ import { AdminFrame } from "./frame";
 
 const none = () => {};
 
-/** One block of the "다듬기" group: its name, a note under it, the words now and proposed, and the two marked as one line. */
-const blocks: readonly { label: string; note?: string; line: Marked; before: Marked; after: Marked }[] = [
+/** One block of the "다듬기" group: its name, the words now and proposed, and the two marked as one line. */
+const blocks: readonly { label: string; line: Marked; before: Marked; after: Marked }[] = [
 	{
 		label: "요약",
 		line: [
@@ -80,7 +80,6 @@ const blocks: readonly { label: string; note?: string; line: Marked; before: Mar
 	},
 	{
 		label: "문단 2",
-		note: "거의 다시 씀",
 		line: [
 			[
 				"del",
@@ -150,18 +149,11 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 								included
 								includeLabel={`${block.label} 넣기`}
 								label={block.label}
-								note={block.note}
 								before={marked(block.before)}
 								after={marked(block.after)}
 							/>
 						) : (
-							<ReviewLine
-								key={block.label}
-								included
-								includeLabel={`${block.label} 넣기`}
-								label={block.label}
-								note={block.note}
-							>
+							<ReviewLine key={block.label} included includeLabel={`${block.label} 넣기`} label={block.label}>
 								{marked(block.line)}
 							</ReviewLine>
 						),

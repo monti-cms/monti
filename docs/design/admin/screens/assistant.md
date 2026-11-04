@@ -121,9 +121,9 @@
 | 요청 | `ReviewQuote` | 따옴표로 인용한 요청. |
 | 묶음 | `ReviewGroup`(`title` "다듬기", `meta` "발행 후 고친 글 · 3곳 · 되돌릴 수 있음", `actions`) | 묶음 전체의 일은 `actions`: `TextButton variant="underline"` "편집기에서 보기", `Separator orientation="vertical" length="control"`, 보기 전환 "한 줄 · 나란히"(`Tabs` + `TabsList variant="line"`), 또는 `TextButton` "11편 모두 빼기", "모두 펼치기". |
 | 항목 (한 줄) | `ReviewItem`(`included`, `onIncludedChange`, `includeLabel` "포함", `title`, `path` mono, `end` 필드나 결과, `children`에 `Del` · `Ins`) | 체크로 넣고 뺀다. `end`: "요약", "폴더 없음 → 2024", 결과 뒤 "✓ 2024로 옮김"이나 빨간 "못 옮김 · 그 사이 휴지통으로 감". 체크는 `ReviewItem`이 그린다. |
-| 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1", 그 아래 경고 메모 `Count tone="warning"` "거의 다시 씀". 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | `ReviewLine`(`included`, `includeLabel` "포함", `label` 블록 이름, `note` 경고 메모, children 글). 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. |
+| 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1". 바뀐 정도를 따로 적는 메모는 없다(글의 `Del` · `Ins`가 이미 보여 준다). 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | `ReviewLine`(`included`, `includeLabel` "포함", `label` 블록 이름, children 글). 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. |
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
-| 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `note`에 `Count tone="warning"` "거의 다시 씀", `before`, `after`) |  |
+| 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `before`, `after`) |  |
 | 긴 묶음 | `ReviewMore`(`moreLabel` "6편 더 보기", `lessLabel` "접기") | 다섯 줄이 넘을 때. |
 | 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 유지 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
 | 결과 뒤의 체크 | `ReviewItem readOnly` | 회색 체크, 바꿀 수 없다. |

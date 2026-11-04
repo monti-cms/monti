@@ -140,7 +140,7 @@ export const OneLine: Story = {
 				<Del>처음 글을</Del> 발행하고 나서 예시 코드에 오타가 있다는 걸 <Del>알게 되었습니다. 그래서</Del>{" "}
 				<Ins>알았습니다.</Ins> 코드를 <Del>고치고</Del> <Ins>고치면서</Ins> 글도 함께 손봤습니다.
 			</ReviewLine>
-			<ReviewLine included includeLabel="포함" label="문단 2" note="거의 다시 씀">
+			<ReviewLine included includeLabel="포함" label="문단 2">
 				<Del>
 					바뀐 부분은 크게 두 가지입니다. 첫째, 함수 이름을 더 알기 쉽게 바꿨습니다. 둘째, 오류가 났을 때 무엇이
 					잘못되었는지 알려 주는 메시지를 추가했습니다.

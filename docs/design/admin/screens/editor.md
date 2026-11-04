@@ -49,7 +49,7 @@
 | 속성 한 행 | `FormField` + `FormFieldLabel`(`htmlFor`, 라벨 줄 끝 `action`) + 입력 부품 + `FormFieldError` | 라벨은 mono 11, 값은 13. 라벨 줄 끝의 어시스턴트 버튼은 포인터나 키보드가 행 안에 있을 때만 보인다. |
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
 | 주소 | `Input mono`(슬러그만, 끝 `action`은 다시 만들기 `IconButton`). 앞뒤 고정 글자가 없어 `Affix`가 아니다 | 늘 입력 칸이다. "/posts/"는 붙이지 않는다. 전체 주소는 머리의 주소 줄에 있고, 패널 폭은 긴 슬러그에 쓴다. 고정 글자가 없으니 밑줄은 아이콘까지 행 전체다. |
-| 발행일 | `Text variant="meta"` | 읽기만 한다. 날짜는 "발행하기 ▾"가 정한다. |
+| 발행일 | `MenuField mono`(값은 날짜) + `Popover` 안의 `Calendar` | 누르면 달력이 열리고 날짜를 직접 고른다. "발행하기 ▾"의 "오늘 날짜로 다시 발행"도 그대로 있다. |
 | 대표 이미지 | 그림이 있으면 `Image ratio="photo" radius="sm"`(4:3)와 파일 이름 `Text variant="caption" tone="subtle"`, 없으면 "비어 있음"(`Text tone="faint"`) | 누르면 `MediaPicker`를 담은 `Dialog`가 열린다(이미지를 고르는 창이므로 여기만 "누르면 열린다"). |
 | 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="micro"`("✦ 채우기", 값이 있으면 "↻ 다시"). "비어 있으면 본문에서 채우기"를 켠 필드는 입력 줄 끝(`Textarea`·`Input`의 `action`)에 `IconButton`(`Renew`, 이름 "본문에서 가져오기")이 늘 있다. 주소의 다시 만들기와 같은 자리다. 둘 다 다른 값에서 이 값을 다시 만든다. 라벨 줄에는 어시스턴트의 일만 있다. |
 | 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
