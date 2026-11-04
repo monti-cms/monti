@@ -12,7 +12,7 @@ Monti is being rebuilt from its design. The previous packages were removed; the 
 until the rebuild reaches it.
 
 - The design is in [`docs/design/features`](docs/design/features/README.md): one document per feature, and the order they are built in
-  ([`build.md`](docs/design/features/build.md)).
+  ([`build.md`](docs/design/features/build.md)). How far it has come and what is left is in [`docs/tracker.md`](docs/tracker.md).
 - The screens it is built against are the reference stories (`Screens/Reference`) in the design system's Storybook.
 
 ## Packages
