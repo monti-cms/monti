@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { assertDoc, editorOf } from "../body/check";
+import { assertDoc } from "../body/check";
 import { blockMap, type Doc, withNewIds } from "../body/doc";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
@@ -64,9 +64,9 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
 }
 
 /** Checks the body a draft brings against the body the entry had: a person's save and the assistant's block edits pass the same check (doc 03). */
-async function checkBodyOf(ctx: OperationContext, collection: string, doc: unknown, previous: unknown) {
+async function checkBodyOf(ctx: OperationContext, doc: unknown, previous: unknown) {
 	if (doc === undefined || doc === null) return;
-	assertDoc(doc, ctx.site.kit, await editorOf(ctx.db, collection), (previous as Doc | null) ?? null);
+	assertDoc(doc, ctx.site.kit, (previous as Doc | null) ?? null);
 }
 
 /** Writes a new working copy: one version up, "changed" set again, and an `entry.saved` event. Saving and block edits both end here. */
@@ -182,7 +182,7 @@ export const entryOperations = [
 			checkDraft(ctx.site.schema(), input.collection, input);
 			if (input.template !== undefined && input.doc !== undefined)
 				throw new CheckError({ key: "entries.docAndTemplate" });
-			await checkBodyOf(ctx, input.collection, input.doc, null);
+			await checkBodyOf(ctx, input.doc, null);
 		},
 		async run(input, ctx) {
 			const id = randomUUID();
@@ -194,10 +194,10 @@ export const entryOperations = [
 					.where("id", "=", input.template)
 					.executeTakeFirst();
 				if (!template) throw new CheckError({ key: "templates.unknown", values: { id: input.template } });
-				// New ids, and the blocks go in as the template has them, even ones this editor no longer offers (doc 03, decisions).
+				// New ids, and the blocks go in as the template has them, even ones the site no longer defines (doc 03, decisions).
 				const doc = template.doc as Doc;
 				working.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
-				await checkBodyOf(ctx, input.collection, working.doc, working.doc);
+				await checkBodyOf(ctx, working.doc, working.doc);
 			}
 			await ctx.db
 				.insertInto("entries")
@@ -256,7 +256,7 @@ export const entryOperations = [
 		async check(input, ctx) {
 			const entry = await editableEntry(ctx, input.id, input.version);
 			checkDraft(ctx.site.schema(), entry.collection, input);
-			await checkBodyOf(ctx, entry.collection, input.doc, entry.doc);
+			await checkBodyOf(ctx, input.doc, entry.doc);
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);

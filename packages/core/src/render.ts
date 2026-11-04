@@ -1,5 +1,6 @@
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Block, Doc, Inline, Mark } from "./body/doc";
+import { linkedGroup } from "./body/links";
 
 /**
  * The site's element factory: React's `createElement`, or any function of that shape. The core knows no framework, so the site hands it in (doc
@@ -23,6 +24,11 @@ export type RenderOptions<Node> = {
 	marks?: MarkDefinition[];
 	/** The address of a media file (doc 09) for image and file blocks; the media id itself when left out. */
 	mediaUrl?: (id: string) => string;
+	/**
+	 * The path of a linked entry (`monti:entry/<group>`), from the reader's `linkPaths`. A link to an entry with no path (not published) is drawn as
+	 * its text alone.
+	 */
+	entryPath?: (group: string) => string | undefined;
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
@@ -55,7 +61,11 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			const props = index === 0 ? { key } : null;
 			const Site = marks.get(mark.type)?.Site;
 			if (Site) return h(Site, { ...props, mark }, inner);
-			if (mark.type === "link") return h("a", { ...props, href: text(mark.href) }, inner);
+			if (mark.type === "link") {
+				const group = linkedGroup(mark.href);
+				const href = group === null ? text(mark.href) : options.entryPath?.(group);
+				return href === undefined ? inner : h("a", { ...props, href }, inner);
+			}
 			const tag = plainMarks[mark.type];
 			return tag ? h(tag, props, inner) : inner;
 		}, part.text);

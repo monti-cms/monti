@@ -50,7 +50,7 @@ async function editedBody(
 ) {
 	const entry = await editableEntry(ctx, input.id, input.version);
 	const next = applyOps(asDoc(entry.doc), input.ops);
-	assertDoc(next, ctx.site.kit, await editorOf(ctx.db, entry.collection), (entry.doc as Doc | null) ?? null);
+	assertDoc(next, ctx.site.kit, (entry.doc as Doc | null) ?? null);
 	return { entry, next };
 }
 
@@ -158,7 +158,7 @@ export const bodyOperations = [
 				throw new ConflictError([
 					{ ref: templateRef(previous.id), expected: input.version ?? 0, actual: previous.version },
 				]);
-			assertDoc(input.doc, ctx.site.kit, undefined, (previous?.doc as Doc | undefined) ?? null);
+			assertDoc(input.doc, ctx.site.kit, (previous?.doc as Doc | undefined) ?? null);
 		},
 		async run(input, ctx) {
 			if (input.id) {

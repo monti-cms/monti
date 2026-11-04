@@ -1,5 +1,6 @@
 import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
+import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
@@ -70,6 +71,25 @@ export async function publishTasks(
 				blocking: row.level === "block",
 				message: typeof row.message === "string" ? { key: "blocks.check", values: { text: row.message } } : row.message,
 			});
+	// Links to entries in this language that are not on the site: the reader would find nothing there. It only tells (doc 02).
+	const linked = linkedGroups(asDoc(entry.doc));
+	if (linked.length > 0) {
+		const live = await db
+			.selectFrom("entry_published")
+			.innerJoin("entries", "entries.id", "entry_published.entry_id")
+			.select("entries.translation_group")
+			.where("entries.translation_group", "in", linked)
+			.where("entry_published.locale", "=", entry.locale)
+			.execute();
+		const unpublished = linked.filter((group) => !live.some((row) => row.translation_group === group)).length;
+		if (unpublished > 0)
+			tasks.push({
+				code: "unpublishedLink",
+				field: "doc",
+				blocking: false,
+				message: { key: "entries.task.unpublishedLink", values: { count: unpublished } },
+			});
+	}
 	for (const check of site.publishChecks) tasks.push(...(await check(entry, { db, schema })));
 	return tasks;
 }

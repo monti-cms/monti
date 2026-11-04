@@ -1,4 +1,6 @@
 import type { Kysely } from "kysely";
+import type { Doc } from "../body/doc";
+import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
 import type { Schema } from "../schema/define";
 import { publicPath } from "./paths";
@@ -94,6 +96,25 @@ export function createReader(options: ReaderOptions) {
 				.executeTakeFirst();
 			const path = moved && publicPath(schema, where.collection, moved.slug);
 			return path ? { redirect: path } : null;
+		},
+
+		/** The paths of the entries a body links to that are on the site in this language, by translation group: `renderDocument`'s `entryPath`. */
+		async linkPaths(doc: Doc, locale: string): Promise<Record<string, string>> {
+			const groups = linkedGroups(doc);
+			if (groups.length === 0) return {};
+			const rows = await db
+				.selectFrom("entry_published")
+				.innerJoin("entries", "entries.id", "entry_published.entry_id")
+				.select(["entries.translation_group as group", "entry_published.collection", "entry_published.slug"])
+				.where("entries.translation_group", "in", groups)
+				.where("entry_published.locale", "=", locale)
+				.execute();
+			return Object.fromEntries(
+				rows.flatMap((row) => {
+					const path = publicPath(schema, row.collection, row.slug);
+					return path ? [[row.group, path]] : [];
+				}),
+			);
 		},
 
 		/** The published entries of a collection and language, newest first. */

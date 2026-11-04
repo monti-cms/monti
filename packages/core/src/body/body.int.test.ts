@@ -2,12 +2,14 @@ import { sql } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { testDatabase } from "../__test__/database";
+import { createReader } from "../entries/reader";
 import { createMonti, definePlugin } from "../monti";
 import { type CreateElement, renderDocument } from "../render";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import { defineBlock } from "./blocks";
 import type { Block, Doc } from "./doc";
+import { entryLink } from "./links";
 
 const db = await testDatabase();
 
@@ -164,17 +166,6 @@ describe("one check", () => {
 		await expect(
 			write("entries.save", { id, version: await version(id), doc: doc(p("b_1", "Hello"), p("b_1", "Again")) }),
 		).rejects.toMatchObject({ reason: { key: "body.duplicateId" } });
-
-		await setEditor({ blocks: ["paragraph"] });
-		const off = { id: "b_8", type: "divider" };
-		await expect(
-			write("entries.save", { id, version: await version(id), doc: doc(p("b_1", "Hello"), off) }),
-		).rejects.toMatchObject({
-			reason: { key: "body.blockOff" },
-		});
-		await expect(
-			write("body.edit", { id, version: await version(id), ops: [{ op: "insert", after: null, blocks: [off] }] }),
-		).rejects.toMatchObject({ reason: { key: "body.blockOff" } });
 	});
 
 	it("03-2 an assistant's block edit is a proposal, and it goes stale when the entry is saved first", async () => {
@@ -311,8 +302,41 @@ describe("templates", () => {
 	});
 });
 
+describe("links to entries", () => {
+	const linkTo = (group: string): Block =>
+		p("b_1", "", { content: [{ type: "text", text: "see this", marks: [{ type: "link", href: entryLink(group) }] }] });
+	const groupOf = async (id: string) =>
+		(await db.selectFrom("entries").select("translation_group").where("id", "=", id).executeTakeFirstOrThrow())
+			.translation_group;
+
+	it("02-4 a link to an entry that is not on the site is a to-do row that only tells", async () => {
+		const target = await newPost(doc());
+		const id = await newPost(doc(linkTo(await groupOf(target))));
+		expect((await get(id)).tasks).toEqual([expect.objectContaining({ code: "unpublishedLink", blocking: false })]);
+		await write("entries.publish", { ids: [id] });
+		await write("entries.publish", { ids: [target] });
+		expect((await get(id)).tasks).toEqual([]);
+	});
+
+	it("03-1 the site draws an entry link with the entry's path now, and as text while it is not published", async () => {
+		const target = await newPost(doc());
+		const body = doc(linkTo(await groupOf(target)));
+		const reader = createReader({ db, schema });
+		const drawn = async () => {
+			const paths = await reader.linkPaths(body, "ko");
+			return draw(body, { entryPath: (group) => paths[group] });
+		};
+		expect(await drawn()).toBe("<p>see this</p>");
+		await write("entries.publish", { ids: [target] });
+		expect(await drawn()).toBe('<p><a href="/posts/hello">see this</a></p>');
+		await write("entries.save", { id: target, version: await version(target), slug: "renamed" });
+		await write("entries.publish", { ids: [target] });
+		expect(await drawn()).toBe('<p><a href="/posts/renamed">see this</a></p>');
+	});
+});
+
 describe("blocks that are off", () => {
-	it("03-5 a block the editor no longer offers, or the site no longer defines, stays and the rest can still be changed", async () => {
+	it("03-5 a block the site no longer defines stays and the rest can still be changed; the editor allowance only filters menus", async () => {
 		const id = await newPost(doc(p("b_1", "Hello"), { id: "b_2", type: "divider" }));
 		await db
 			.updateTable("entries")
@@ -334,6 +358,18 @@ describe("blocks that are off", () => {
 			"oldWidget",
 		]);
 		expect((await get(id)).tasks).toEqual([]);
+
+		// A template put in by the editor brings new blocks the editor no longer offers; the server takes them as they are.
+		await write("entries.save", {
+			id,
+			version: await version(id),
+			doc: doc(
+				p("b_1", "Hi"),
+				{ id: "b_2", type: "divider" },
+				{ id: "b_3", type: "oldWidget" },
+				{ id: "b_9", type: "divider" },
+			),
+		});
 
 		const template = (await write("templates.save", { name: "구분", doc: doc({ id: "b_1", type: "divider" }) })).output
 			.id;

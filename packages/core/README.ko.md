@@ -104,6 +104,9 @@ export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks
 어시스턴트는 `body.read`(블록 id와 서식 없는 글자)로 본문을 읽고 `body.edit`(블록 연산)로 고친다. 본문 전체를 다시 쓰지 않는다. 사람의 저장과
 블록 연산은 같은 검사를 지난다. 템플릿은 사이트 전체에 하나의 목록이다(`templates.*`).
 
+글로 가는 링크는 `monti:entry/<번역 묶음 id>`다(`entryLink`). 그래서 글 주소가 바뀌어도 끊기지 않는다. 읽기 API의 `linkPaths(doc, locale)`를
+`renderDocument`의 `entryPath`로 넘기고, 사이트에 없는 글로 가는 링크는 글자만 그린다.
+
 ## 테스트
 
 ```sh

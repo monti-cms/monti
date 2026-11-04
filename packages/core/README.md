@@ -105,6 +105,9 @@ export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks
 The assistant reads a body with `body.read` (block ids and plain text) and changes it with `body.edit` (block operations), never by rewriting it. A
 person's save and a block edit pass the same check. Templates are one list for the site (`templates.*`).
 
+A link to an entry is `monti:entry/<translation group>` (`entryLink`), so it holds when the entry's slug changes. The reader's
+`linkPaths(doc, locale)` gives `renderDocument`'s `entryPath`; a link to an entry not on the site is drawn as its text.
+
 ## Tests
 
 ```sh
