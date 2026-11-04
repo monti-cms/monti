@@ -26,7 +26,7 @@ import { type DragEvent, Fragment, type ReactNode, useState } from "react";
 import { AdminLink as Link } from "../router";
 import { ScreenModeSwitch } from "../ui/screen-mode";
 import { screensMessages } from "./messages";
-import { railFolders } from "./rail-folders";
+import { folderPath, railFolders } from "./rail-folders";
 import { useAdminFeatures } from "./shared/admin-features";
 import { CollectionIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
@@ -55,12 +55,13 @@ export interface AdminSidebarProps {
 	eventsCount?: number | null;
 }
 
-/** The folders of the open collection, under its row: top-level folders, and the folders inside the ones on the open path. Click opens one; entries can be dropped on one. */
+/** The folders of the open collection, under its row: its top-level folders only. The one the open folder sits in is the open row. Click opens one; entries can be dropped on one. */
 function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label: string; closeMobile: () => void }) {
 	const t = useTranslator(screensMessages);
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
-	const rows = railFolders(nav.folders, nav.currentFolder);
+	const rows = railFolders(nav.folders);
 	if (rows.length === 0) return null;
+	const openTop = folderPath(nav.folders, nav.currentFolder)[0]?.id;
 
 	const dropProps = (folderId: string) => ({
 		onDragOver: (event: DragEvent) => {
@@ -80,15 +81,14 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 	return (
 		<li>
 			<SidebarMenuSub aria-label={t("sidebar.folderTree", { label })}>
-				{rows.map(({ folder, depth }) => {
-					const active = nav.currentFolder === folder.id;
+				{rows.map((folder) => {
+					const active = openTop === folder.id;
 					return (
 						<li key={folder.id}>
 							<SidebarMenuSubButton
 								render={<button type="button" />}
 								isActive={active}
 								aria-current={active ? "true" : undefined}
-								depth={Math.min(depth, 3) as 0 | 1 | 2 | 3}
 								dropTarget={dropTarget === folder.id}
 								onClick={() => {
 									nav.onSelectFolder(folder.id);

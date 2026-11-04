@@ -71,12 +71,6 @@ function Nav({ rail = false }: { rail?: boolean }) {
 													<Count>12</Count>
 												</SidebarMenuSubButton>
 											</li>
-											<li>
-												<SidebarMenuSubButton render={<button type="button" />} depth={1}>
-													<span>여행</span>
-													<Count>4</Count>
-												</SidebarMenuSubButton>
-											</li>
 										</SidebarMenuSub>
 									)}
 								</SidebarMenuItem>

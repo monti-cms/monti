@@ -23,8 +23,6 @@ import { AdminFrame, type FrameFolder } from "./frame";
 
 const MEDIA_FOLDERS: readonly FrameFolder[] = [
 	{ name: "Blog Assets", count: "14", active: true },
-	{ name: "covers", count: "6", depth: 1 },
-	{ name: "diagrams", count: "3", depth: 1 },
 	{ name: "Wallpapers", count: "7" },
 ];
 
