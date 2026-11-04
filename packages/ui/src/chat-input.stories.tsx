@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Box, ChatInput, Chip, ModelMenuButton } from "./index";
+import { Box, ChatInput, ChatQueueItem, Chip, ModelMenuButton } from "./index";
 
 /**
  * The assistant's box: the text area, the model button at the bottom left, the round send button at the right (a stop button while the answer is
@@ -73,3 +73,27 @@ export const WithContext: Story = {
 
 /** The box cannot send. */
 export const Disabled: Story = { render: () => <Live initial="요약을 채워 줘" disabled /> };
+
+/** While the answer is written, what the admin sends waits over the text: send now, edit, cancel. */
+export const BusyWithQueue: Story = {
+	render: () => (
+		<Live
+			busy
+			busyPlaceholder="더 말하기"
+			onQueue={() => {}}
+			queue={["회고 글은 빼고 옮겨 줘", "사진 글도 빼 줘"].map((words) => (
+				<ChatQueueItem
+					key={words}
+					sendNowLabel="지금 보내기"
+					editLabel="고치기"
+					cancelLabel="취소"
+					onSendNow={() => {}}
+					onEdit={() => {}}
+					onCancel={() => {}}
+				>
+					{words}
+				</ChatQueueItem>
+			))}
+		/>
+	),
+};

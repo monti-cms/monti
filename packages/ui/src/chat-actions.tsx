@@ -1,0 +1,94 @@
+import type { ComponentProps, ReactNode } from "react";
+import { cn } from "./cn";
+import { IconButton } from "./icon-button";
+import { ArrowUp, Close, Edit } from "./icons";
+
+/**
+ * The row right under one message of a conversation: when it was sent (faint caption) and icon-only buttons (`IconButton`s at 24px with 14px icons; their
+ * names are tooltips). It sits on the message's side (`user` right, `assistant` left), pulled up into the thread's gap so showing it moves nothing. It
+ * shows only while the pointer or the keyboard is on its message (the sibling just before it) or on the row, always when `shown` (the latest
+ * message) and on touch screens.
+ */
+export function ChatMessageActions({
+	author,
+	time,
+	shown = false,
+	className,
+	children,
+	...props
+}: ComponentProps<"div"> & {
+	author: "user" | "assistant";
+	/** When the message was sent ("오후 3:12"). */
+	time?: ReactNode;
+	/** Always visible: the latest message. */
+	shown?: boolean;
+}) {
+	return (
+		<div
+			data-slot="chat-message-actions"
+			data-author={author}
+			className={cn(
+				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [&_[data-slot=icon-button]]:size-[24px] [&_svg]:size-[14px] [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
+				author === "user" ? "self-end" : "self-start",
+				shown && "opacity-100",
+				className,
+			)}
+			{...props}
+		>
+			{time !== undefined && <span className="px-monti-6 text-monti-caption text-monti-faint">{time}</span>}
+			{children}
+		</div>
+	);
+}
+
+/**
+ * One message the admin sent while the assistant was working: it waits in the queue over the text box (`ChatInput`'s `queue`) until the
+ * assistant takes it in, then leaves and shows in the thread as a message. Its words (one muted line) and three icon buttons: send now (↑),
+ * edit (its words go back into the box), cancel (×). The names are tooltips.
+ */
+export function ChatQueueItem({
+	onSendNow,
+	onEdit,
+	onCancel,
+	sendNowLabel,
+	editLabel,
+	cancelLabel,
+	sendNowIcon = <ArrowUp />,
+	editIcon = <Edit />,
+	cancelIcon = <Close />,
+	className,
+	children,
+	...props
+}: ComponentProps<"li"> & {
+	onSendNow: () => void;
+	onEdit: () => void;
+	onCancel: () => void;
+	sendNowLabel: string;
+	editLabel: string;
+	cancelLabel: string;
+	sendNowIcon?: ReactNode;
+	editIcon?: ReactNode;
+	cancelIcon?: ReactNode;
+}) {
+	return (
+		<li
+			data-slot="chat-queue-item"
+			className={cn(
+				"flex min-w-0 items-center gap-monti-4 [&_[data-slot=icon-button]]:size-[24px] [&_svg]:size-[14px]",
+				className,
+			)}
+			{...props}
+		>
+			<span className="min-w-0 flex-1 truncate text-monti-body text-monti-muted">{children}</span>
+			<IconButton label={sendNowLabel} onClick={onSendNow}>
+				{sendNowIcon}
+			</IconButton>
+			<IconButton label={editLabel} onClick={onEdit}>
+				{editIcon}
+			</IconButton>
+			<IconButton label={cancelLabel} onClick={onCancel}>
+				{cancelIcon}
+			</IconButton>
+		</li>
+	);
+}

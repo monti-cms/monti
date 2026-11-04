@@ -22,6 +22,9 @@ export function ChatInput({
 	stopLabel,
 	aside,
 	context,
+	queue,
+	onQueue,
+	busyPlaceholder,
 	className,
 	...props
 }: Omit<ComponentProps<"form">, "onSubmit" | "children"> & {
@@ -39,10 +42,18 @@ export function ChatInput({
 	aside?: ReactNode;
 	/** What the message will be about, over the text: a `Chip` of the picked rows ("2 picked ×"). */
 	context?: ReactNode;
+	/** The messages waiting while the assistant works: `ChatQueueItem`s, drawn at the top inside the box. */
+	queue?: ReactNode;
+	/** Set, and Enter while `busy` puts the words in the queue instead of doing nothing. */
+	onQueue?: (value: string) => void;
+	/** The placeholder while `busy` and the box can queue ("더 말하기"). */
+	busyPlaceholder?: string;
 }) {
 	const blank = value.trim() === "";
 	const submit = () => {
-		if (!blank && !busy && !disabled) onSubmit(value.trim());
+		if (blank || disabled) return;
+		if (!busy) onSubmit(value.trim());
+		else if (onQueue) onQueue(value.trim());
 	};
 	const onKeyDown = (event: KeyboardEvent) => {
 		if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -54,6 +65,7 @@ export function ChatInput({
 			data-slot="chat-input"
 			className={cn(
 				"rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
+				queue && "overflow-hidden",
 				className,
 			)}
 			onSubmit={(event) => {
@@ -62,10 +74,15 @@ export function ChatInput({
 			}}
 			{...props}
 		>
+			{queue && (
+				<ul className="-mx-monti-12 -mt-monti-10 mb-monti-8 flex flex-col border-monti-default border-b bg-monti-selected py-monti-4 pr-monti-4 pl-monti-12">
+					{queue}
+				</ul>
+			)}
 			{context && <div className="mb-monti-6 flex flex-wrap gap-monti-6">{context}</div>}
 			<textarea
 				aria-label={label}
-				placeholder={placeholder}
+				placeholder={busy && onQueue && busyPlaceholder ? busyPlaceholder : placeholder}
 				value={value}
 				disabled={disabled}
 				rows={2}

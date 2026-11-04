@@ -31,6 +31,7 @@ export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
 export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
+export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
 export { ChatEntryLink, ChatEntryList, ChatMessage } from "./chat-message";
 export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
