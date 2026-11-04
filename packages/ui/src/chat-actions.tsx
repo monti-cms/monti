@@ -18,7 +18,7 @@ export function ChatMessageActions({
 	...props
 }: ComponentProps<"div"> & {
 	author: "user" | "assistant";
-	/** When the message was sent ("오후 3:12"). */
+	/** When the message was sent ("오후 3:12"). (cms-allow-korean: quotes the words) */
 	time?: ReactNode;
 }) {
 	return (

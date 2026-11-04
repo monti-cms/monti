@@ -41,21 +41,31 @@ function Textarea({
 			className={cn(
 				cn(
 					!action && FIELD_HOVER,
-					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
+				// One line stands as high as an `Input` of its size (28px small, 36px otherwise: the buttons' heights); more lines grow it downward.
 				size === "sm"
-					? "text-monti-note leading-[1.6]"
-					: "text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
+					? "min-h-monti-control-sm py-[3px] text-monti-note leading-[1.6]"
+					: "min-h-monti-control-md py-monti-6 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
 				tall && "min-h-[52px]",
-				action && "min-w-0 flex-1 border-b-0 data-proposal:border-b-0",
+				// With an action the line around it draws the rule, so the box keeps the height less that 1px.
+				action &&
+					cn(
+						"min-w-0 flex-1 border-b-0 data-proposal:border-b-0",
+						size === "sm"
+							? "min-h-[calc(var(--monti-height-control-sm)-1px)]"
+							: "min-h-[calc(var(--monti-height-control-md)-1px)]",
+					),
 				className,
 			)}
 			rows={rows}
 			// The box grows with its text (`field-sizing`), so `rows` alone sets no height: it holds that many lines of 1.6 and its padding.
-			style={rows === undefined ? style : { minHeight: `calc(${rows} * 1.6em + 12px)`, ...style }}
+			style={
+				rows === undefined ? style : { minHeight: `calc(${rows} * 1.6em + ${size === "sm" ? 7 : 13}px)`, ...style }
+			}
 			{...props}
 		/>
 	);

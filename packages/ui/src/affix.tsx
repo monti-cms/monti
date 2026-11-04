@@ -52,25 +52,25 @@ function Affix({
 			onClick={focusInput}
 			className={cn(
 				cn(
-					"group/affix flex cursor-text items-baseline pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+					"group/affix flex h-monti-control-md cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
 				),
 				bare &&
 					"border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				className,
 			)}
 		>
-			{prefix && <span className="shrink-0 whitespace-nowrap py-monti-6 text-monti-subtle">{prefix}</span>}
+			{prefix && <span className="shrink-0 whitespace-nowrap text-monti-subtle">{prefix}</span>}
 			<InputPrimitive
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className={cn(
-					"min-w-[3ch] rounded-none border-0 border-monti-default border-b bg-transparent px-monti-8 py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast group-hover/affix:not-focus:not-disabled:border-monti-strong group-hover/affix:not-focus:not-disabled:bg-monti-muted aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
+					"h-full min-w-[3ch] rounded-none border-0 border-monti-default border-b bg-transparent px-monti-8 py-0 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast group-hover/affix:not-focus:not-disabled:border-monti-strong group-hover/affix:not-focus:not-disabled:bg-monti-muted aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
 					width === "fit" ? "field-sizing-content flex-initial" : "flex-1",
 					bare && "min-w-0 border-b-0 group-data-proposal/affix:border-b-0",
 				)}
 				{...props}
 			/>
-			{suffix && <span className="shrink-0 whitespace-nowrap py-monti-6 text-monti-subtle">{suffix}</span>}
+			{suffix && <span className="shrink-0 whitespace-nowrap text-monti-subtle">{suffix}</span>}
 			{action && <span className={cn("ml-auto cursor-auto self-center", FIELD_ACTION)}>{action}</span>}
 		</div>
 	);

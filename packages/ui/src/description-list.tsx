@@ -68,7 +68,7 @@ function DescriptionItem({
 
 /**
  * One line of a list of how many of each kind something holds (what an export puts in its archive): the kind on the left, its count in mono at the
- * right end. Each kind is its own line ("글 1", "분류 1"), never two kinds summed on one. Put them in a column under a `Label`.
+ * right end. Each kind is its own line ("글 1", "분류 1"), never two kinds summed on one. Put them in a column under a `Label`. (cms-allow-korean)
  */
 function CountRow({ label, count }: { label: React.ReactNode; count: React.ReactNode }) {
 	return (

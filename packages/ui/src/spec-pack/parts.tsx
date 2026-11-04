@@ -492,7 +492,7 @@ function CountCell({
 	);
 }
 
-/** A row's worded link in a cell of its own (a category's "글 3", going to its entries). */
+/** A row's worded link in a cell of its own (a category's "글 3", going to its entries). (cms-allow-korean: quotes the words) */
 function LinkCell({ label, underline }: { label?: string; underline?: boolean }) {
 	return (
 		<TableCell align="end">
@@ -521,7 +521,7 @@ function RowMark({ checked, label }: { checked?: boolean; label?: string }) {
 	return <RowCheck checked={checked ?? false} label={label ?? ""} />;
 }
 
-/** How many rows a page holds, as the board shows it ("25개씩"). */
+/** How many rows a page holds, as the board shows it ("25개씩"). (cms-allow-korean: quotes the words) */
 function PageSize({ shown, label }: { shown?: string; label?: string }) {
 	return <PageSizeMenu label={label ?? ""} value={0} options={[{ value: 0, label: shown ?? "" }]} />;
 }
@@ -666,7 +666,7 @@ function LanguageTabs({ label, children }: { label?: string; children?: React.Re
 	);
 }
 
-/** The + at the end of a tab row that adds one ("+ 언어"): a tab's own look, as a button. */
+/** The + at the end of a tab row that adds one ("+ 언어"): a tab's own look, as a button. (cms-allow-korean: quotes the words) */
 function TabAdd({ label }: { label?: string }) {
 	return <TabLink render={<button type="button" />}>{label}</TabLink>;
 }
@@ -1098,7 +1098,7 @@ function Box({ border, className }: { border: "top" | "bottom" | "bottom-contras
 /**
  * Monti's screen pack: what the screen spec tool (`../spec`) needs from Monti's design system. The tool knows no part, token or class of its own; this
  * folder gives them: the parts and their kinds here, the spacing classes (`spacing.ts`), the renderer (`index.tsx`), the HTML board's classes
- * (`html-board.js`) and the scripts' settings (`pack.mjs`).
+ * and the scripts' settings (`pack.mjs`).
  *
  * `SCREEN`: the steps of the spacing scale (the design system's spacing tokens but 0) and the layout entry a plain group becomes.
  */
@@ -1497,7 +1497,7 @@ function ReviewEntry({
 	change?: Marked;
 	included?: boolean;
 	muted?: boolean;
-	/** `end` in the warning ink: the entry changed since the proposal was made ("이 사이에 고쳐짐"). */
+	/** `end` in the warning ink: the entry changed since the proposal was made ("이 사이에 고쳐짐"). (cms-allow-korean: quotes the words) */
 	endWarning?: boolean;
 }) {
 	const endWords = endWarning ? <span className="text-monti-warning">{end}</span> : end;

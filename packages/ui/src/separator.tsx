@@ -18,7 +18,7 @@ function Separator({
 	length?: "full" | "control" | "bar";
 	/** No room of its own at its sides: the row's gap spaces it (a page toolbar, a bulk bar). */
 	flush?: boolean;
-	/** A horizontal rule with a word in its middle ("또는", between two ways to sign in): the caption size, faint, 12px from each side's line. */
+	/** A horizontal rule with a word in its middle ("또는", between two ways to sign in): the caption size, faint, 12px from each side's line. (cms-allow-korean: quotes the words) */
 	label?: string;
 }) {
 	if (label && orientation === "horizontal")

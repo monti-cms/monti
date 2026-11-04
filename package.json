@@ -7,7 +7,6 @@
 		"lint:fix": "pnpm exec biome check . --write",
 		"gen:tokens": "node scripts/gen-tokens.mjs",
 		"gen:screen-catalog": "node scripts/gen-screen-catalog.mjs",
-		"convert:board": "node scripts/convert-board.mjs",
 		"gen:db-types": "pnpm --filter @monti-cms/core gen:db-types",
 		"check:migrations": "pnpm --filter @monti-cms/core check:migrations",
 		"check:korean": "node scripts/check-korean.mjs",

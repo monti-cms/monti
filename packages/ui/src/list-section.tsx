@@ -5,7 +5,7 @@ import { Count } from "./count";
 
 /**
  * A titled list of rows: the title in label type, bold, with a count after it, a line under it, then its rows: {@link ListSectionRow}s on a tools page
- * (API keys: saved keys · models · plugins), `ChangeGroup`s in a review sheet ("바로 저장 2", "PR 1"). It keeps no room around itself; the page or
+ * (API keys: saved keys · models · plugins), `ChangeGroup`s in a review sheet ("바로 저장 2", "PR 1"). It keeps no room around itself; the page or (cms-allow-korean)
  * sheet spaces its sections.
  */
 function ListSection({

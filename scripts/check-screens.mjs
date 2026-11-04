@@ -26,13 +26,7 @@ const { checkSpec } = await import(pathToFileURL(path.join(ROOT, "packages/ui/sr
 const catalog = JSON.parse(readFileSync(path.join(PACK, pack.catalog), "utf8"));
 
 /** The tool's own files: they read a design system from its pack and name none. */
-const TOOL = [
-	"packages/ui/src/spec",
-	"scripts/check-screens.mjs",
-	"scripts/gen-screen-catalog.mjs",
-	"scripts/convert-board.mjs",
-	"scripts/convert-board/html-adapter.js",
-];
+const TOOL = ["packages/ui/src/spec", "scripts/check-screens.mjs", "scripts/gen-screen-catalog.mjs"];
 /** What would tie the tool to one design system: this repo's name or board classes, an icon set, a part it would draw by name. Built from pieces, so this line is not one. */
 const TIED = [new RegExp(["mon" + "ti", "car" + "bon", "\\.m" + "t-"].join("|"), "i"), /"(Stack|Form|Button|Text)"/];
 const files = (target) =>

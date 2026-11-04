@@ -14,6 +14,12 @@
 		},
 		"packages/core": {
 			"entry": ["src/http/**/route.ts!"]
+		},
+		"packages/ui": {
+			"entry": ["src/spec-pack/pack.mjs"],
+			"ignoreIssues": {
+				"src/spec-pack/parts.tsx": ["exports"]
+			}
 		}
 	},
 	"ignoreExportsUsedInFile": true,

@@ -106,9 +106,9 @@ function ProposalItem({ title, children }: { title: ReactNode; children: ReactNo
 }
 
 /**
- * One entry a proposal changes: the entry's name in bold, its slug in faint mono, the field at the end ("요약"), and under it the change, the old value
+ * One entry a proposal changes: the entry's name in bold, its slug in faint mono, the field at the end ("요약"), and under it the change, the old value (cms-allow-korean)
  * struck through (`Del`) over the new one (`Ins`). An empty old value is not shown: the new text alone says the field was filled. A card shows its first
- * three entries and then a `ProposalRow` with only a `detail` ("외 4편"); its review screen has them all.
+ * three entries and then a `ProposalRow` with only a `detail` ("외 4편"); its review screen has them all. (cms-allow-korean)
  */
 function ProposalEntry({
 	name,

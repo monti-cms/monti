@@ -140,7 +140,7 @@ type ReviewBlockProps = {
 	onIncludedChange?: (included: boolean) => void;
 	includeLabel: string;
 	readOnly?: boolean;
-	/** The block's name ("요약", "문단 1"). */
+	/** The block's name ("요약", "문단 1"). (cms-allow-korean: quotes the words) */
 	label: ReactNode;
 	/** A word under the block's name ("mostly rewritten"), in the warning tone. */
 	note?: ReactNode;
@@ -160,7 +160,7 @@ function ReviewGutter({ included, onIncludedChange, includeLabel, readOnly, labe
 }
 
 /**
- * One change to a block of an entry, on one line (the "한 줄" view of a group like 다듬기): the check and the block's name in the gutter, as in
+ * One change to a block of an entry, on one line (the "한 줄" view of a group like 다듬기): the check and the block's name in the gutter, as in (cms-allow-korean)
  * `ReviewCompare`, then the block's text with the words taken out (`Del`) and put in (`Ins`) where they are.
  */
 function ReviewLine({ className, children, ...props }: ReviewBlockProps & { className?: string; children: ReactNode }) {

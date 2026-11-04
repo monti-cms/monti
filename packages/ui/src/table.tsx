@@ -257,7 +257,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 }
 
 /**
- * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns
+ * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns (cms-allow-korean)
  * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title.
  */
 function RowTitle({
@@ -268,7 +268,7 @@ function RowTitle({
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
 	title: React.ReactNode;
-	/** After the title: `/first-post`, or what a folder holds ("글 2"). */
+	/** After the title: `/first-post`, or what a folder holds ("글 2"). (cms-allow-korean: quotes the words) */
 	address?: React.ReactNode;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;

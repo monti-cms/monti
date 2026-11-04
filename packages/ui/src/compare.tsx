@@ -123,8 +123,8 @@ function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source
- * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block
+ * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source (cms-allow-korean)
+ * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
  * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`. The row of the entry's
  * title is `title`: the two titles in `Heading variant="page"`, its name set lower to sit by them.
  */
@@ -139,9 +139,9 @@ function CompareRow({
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children" | "title"> & {
-	/** The kind of block ("문단"); empty on the head row. */
+	/** The kind of block ("문단"); empty on the head row. (cms-allow-korean: quotes the words) */
 	name?: React.ReactNode;
-	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. */
+	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. (cms-allow-korean: quotes the words) */
 	note?: React.ReactNode;
 	/** The head row: each side's name, date and language in the small mono line. */
 	head?: boolean;
@@ -194,7 +194,7 @@ function CompareRow({
 
 /**
  * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
- * `TextButton variant="underline"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`.
+ * `TextButton variant="underline"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
  */
 function CompareShared({
 	action,

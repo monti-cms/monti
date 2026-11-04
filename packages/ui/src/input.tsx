@@ -56,6 +56,7 @@ function Input({
 	action?: React.ReactNode;
 }) {
 	const inline = appearance === "inline" || size === "title" || size === "display" || size === "inherit";
+	const fieldHeight = size === "sm" ? "h-monti-control-sm" : "h-monti-control-md";
 	const input = (
 		<InputPrimitive
 			type={type}
@@ -79,7 +80,9 @@ function Input({
 							"border-0 border-monti-default border-b text-monti-default text-monti-reading focus-visible:border-monti-contrast aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
 							!action && FIELD_INSET,
 						),
-				inline ? INLINE_SIZE[size] : size === "sm" ? "py-monti-4 md:text-monti-note" : "py-monti-6",
+				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
+				// An underline field stands as high as a button of its size: 28px small, 36px otherwise, its rule inside. With an action the line around it holds the height.
+				!inline && (action ? "h-full self-stretch py-0" : cn("py-0", fieldHeight)),
 				width === "short" && "w-monti-menu",
 				width === "number" && "w-24",
 				width === "fit" && "field-sizing-content w-auto min-w-[4ch]",
@@ -104,6 +107,7 @@ function Input({
 					FIELD_INSET,
 				),
 				"items-center",
+				fieldHeight,
 			)}
 		>
 			{input}

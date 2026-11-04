@@ -15,6 +15,7 @@ function TagInput({
 	removeLabel,
 	disabled = false,
 	mono = false,
+	size = "default",
 	className,
 	"aria-label": ariaLabel,
 }: {
@@ -27,6 +28,8 @@ function TagInput({
 	disabled?: boolean;
 	/** Values are code (keys, identifiers): the chips and the entry are fixed-width. */
 	mono?: boolean;
+	/** `sm` stands 28px high, as a small `Input` does. */
+	size?: "sm" | "default";
 	className?: string;
 	"aria-label"?: string;
 }) {
@@ -53,6 +56,7 @@ function TagInput({
 	return (
 		<div
 			data-slot="tag-input"
+			data-size={size}
 			data-disabled={disabled || undefined}
 			className={cn(CHIPS_FIELD, mono && "font-mono", disabled && "cursor-not-allowed opacity-45", className)}
 		>

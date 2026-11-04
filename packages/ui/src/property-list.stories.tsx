@@ -3,7 +3,6 @@ import { useId, useState } from "react";
 import { ko } from "react-day-picker/locale";
 import { Renew, Spark } from "./icons";
 import {
-	Affix,
 	Box,
 	Calendar,
 	Combobox,
@@ -134,8 +133,10 @@ function AddressRow() {
 	return (
 		<FormField>
 			<FormFieldLabel htmlFor={id}>주소</FormFieldLabel>
-			<Affix
+			<Input
 				id={id}
+				size="sm"
+				mono
 				defaultValue="autumn-trail"
 				action={
 					<IconButton label="제목으로 다시 만들기">
@@ -209,7 +210,7 @@ function TagsRow() {
 		<FormField>
 			<FormFieldLabel htmlFor={id}>태그</FormFieldLabel>
 			<Combobox items={TAGS} multiple defaultValue={["가을", "산"]}>
-				<ComboboxChips ref={anchor}>
+				<ComboboxChips ref={anchor} size="sm">
 					<ComboboxValue>
 						{(values: string[]) => values.map((tag) => <ComboboxChip key={tag}>{tag}</ComboboxChip>)}
 					</ComboboxValue>

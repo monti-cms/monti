@@ -5,7 +5,7 @@ import { Button } from "./button";
 
 /**
  * A `Button` that sends its form by a plain post (no script handles it) and is `loading` from the moment the form is sent until the next page
- * comes: `pendingLabel` replaces its words ("로그인 중…"), and it cannot be pressed twice. Coming back to the page (the browser's back) wakes it.
+ * comes: `pendingLabel` replaces its words ("로그인 중…"), and it cannot be pressed twice. Coming back to the page (the browser's back) wakes it. (cms-allow-korean)
  */
 function SubmitButton({
 	pendingLabel,

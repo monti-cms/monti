@@ -397,7 +397,7 @@ export const iconsByName = {
 	"logo--github": LogoGithub,
 	"overflow-menu--horizontal": OverflowMenuHorizontal,
 	spark: Spark,
-	// The sidebar's and the list's own icons, named for the boards drawn with them (`pnpm convert:board`).
+	// The sidebar's and the list's own icons.
 	"arrow--down": ArrowDown,
 	"arrow--up": ArrowUp,
 	renew: Renew,

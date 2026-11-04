@@ -46,7 +46,7 @@ export function ChatInput({
 	queue?: ReactNode;
 	/** Set, and Enter while `busy` puts the words in the queue instead of doing nothing. */
 	onQueue?: (value: string) => void;
-	/** The placeholder while `busy` and the box can queue ("더 말하기"). */
+	/** The placeholder while `busy` and the box can queue ("더 말하기"). (cms-allow-korean: quotes the words) */
 	busyPlaceholder?: string;
 }) {
 	const blank = value.trim() === "";

@@ -72,6 +72,7 @@ function ComboboxInput({
 					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
 					FIELD_INSET,
 				),
+				size === "sm" ? "h-monti-control-sm" : "h-monti-control-md",
 				className,
 			)}
 		>
@@ -83,7 +84,7 @@ function ComboboxInput({
 						mono={mono}
 						proposal={proposal}
 						// The field around it holds the room and the tint; the input inside takes neither.
-						className="flex-1 border-b-0 px-0 hover:bg-transparent data-proposal:border-b-0"
+						className="h-full flex-1 border-b-0 px-0 hover:bg-transparent data-proposal:border-b-0"
 					/>
 				}
 				{...props}
@@ -184,10 +185,22 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 }
 
 function ComboboxChips({
+	size = "default",
 	className,
 	...props
-}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
-	return <ComboboxPrimitive.Chips data-slot="combobox-chips" className={cn(CHIPS_FIELD, className)} {...props} />;
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
+	ComboboxPrimitive.Chips.Props & {
+		/** `sm` stands 28px high, as a small `ComboboxInput` does. */
+		size?: "sm" | "default";
+	}) {
+	return (
+		<ComboboxPrimitive.Chips
+			data-slot="combobox-chips"
+			data-size={size}
+			className={cn(CHIPS_FIELD, className)}
+			{...props}
+		/>
+	);
 }
 
 function ComboboxChip({
