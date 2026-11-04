@@ -26,7 +26,7 @@ const withFonts = async (head: string) => {
 const config: StorybookConfig = {
 	framework: "@storybook/react-vite",
 	stories: ["../src/**/*.stories.tsx"],
-	addons: ["@storybook/addon-themes"],
+	addons: ["@storybook/addon-themes", "storybook-addon-pseudo-states"],
 	// The `./fonts/...` urls in the rules below resolve against the preview's `iframe.html`.
 	staticDirs: [
 		{ from: pretendardSubsets, to: "/fonts/pretendard" },

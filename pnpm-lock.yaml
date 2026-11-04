@@ -803,6 +803,9 @@ importers:
       storybook:
         specifier: 10.6.1
         version: 10.6.1(@types/react@19.3.0)(react@19.2.3)
+      storybook-addon-pseudo-states:
+        specifier: 10.6.1
+        version: 10.6.1(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3))
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -4851,6 +4854,11 @@ packages:
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
+
+  storybook-addon-pseudo-states@10.6.1:
+    resolution: {integrity: sha512-gOAGOJqhpj+S+nJzeaTq5HXQ9SkafJwWqoqlnhqIG+9iw3VoyY7jushOj1ybEMTP2LtKFt8fU90gLVxiFEXYPA==}
+    peerDependencies:
+      storybook: ^10.6.1
 
   storybook@10.6.1:
     resolution: {integrity: sha512-NeEmukMWPA5OqHizUkQtxCIhGt7MUZLPY4FFgpC0LNiipjrac/oKpH0TxI+9Zc+vI5+IoN+NiskOmBP7gtYfmA==}
@@ -9580,6 +9588,10 @@ snapshots:
   space-separated-tokens@2.0.2: {}
 
   split2@4.2.0: {}
+
+  storybook-addon-pseudo-states@10.6.1(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3)):
+    dependencies:
+      storybook: 10.6.1(@types/react@19.3.0)(react@19.2.3)
 
   storybook@10.6.1(@types/react@19.3.0)(react@19.2.3):
     dependencies:
