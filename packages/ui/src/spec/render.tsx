@@ -223,11 +223,24 @@ export function createScreenSpec(pack: ScreenPack) {
 				classes.push(...container);
 				// A margin is the space after the child before it, so the first child shown has none.
 				let shown = false;
-				drawn = children.map((child: SpecChild, index) => {
-					if (typeof child !== "string") return null;
-					const node = draw(child, [shown ? margins.get(index) : undefined], scope, `${key}/${child}`);
-					if (node !== null) shown = true;
-					return node;
+				drawn = children.flatMap((child: SpecChild, index) => {
+					if (typeof child !== "string") return [];
+					const margin = shown ? margins.get(index) : undefined;
+					// A container takes the space on itself; a part may not take a class, so the space before it is an empty box of its own.
+					const takesClass = catalog.entries[elementOf(child).type]?.kind === "layout";
+					const node = draw(child, [takesClass ? margin : undefined], scope, `${key}/${child}`);
+					if (node === null) return [];
+					shown = true;
+					return margin && !takesClass
+						? [
+								createElement("span", {
+									key: `${key}/${child}/space`,
+									"aria-hidden": true,
+									className: `block shrink-0 ${margin}`,
+								}),
+								node,
+							]
+						: [node];
 				});
 			} else {
 				drawn = children.map((child, index) => childOf(child, `${id}.children[${index}]`));

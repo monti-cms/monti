@@ -855,7 +855,8 @@ function LanguageLine({
 
 /** The source language's mark at the end of its row: the bold word, a rule, the button that changes it. */
 function LanguageSourceMark({ flag, children }: { flag?: string; children?: React.ReactNode }) {
-	return <LanguageSource flag={flag}>{children}</LanguageSource>;
+	// A translation's row has no mark: only its own buttons.
+	return flag ? <LanguageSource flag={flag}>{children}</LanguageSource> : <>{children}</>;
 }
 
 /** A panel beside the page: its title, its actions (⋯) and × in its head, what it holds, and its footer. */
@@ -2038,7 +2039,8 @@ function PickerDialog({
 
 /** What an empty list says first: its `title`, and the quiet question under it (`description`); its steps follow it. */
 function EmptyHead({ title, description }: { title?: string; description?: string }) {
-	return <Empty title={title} description={description} />;
+	// The room around it is the screen's (its Spacings), so the part's own is taken off.
+	return <Empty title={title} description={description} className="pt-0 *:data-[slot=empty-description]:mb-0" />;
 }
 
 /** The editor's properties pane: its tabs (from the data: each one's `value` and `label`; `open` the picked one) over the picked tab's groups. */

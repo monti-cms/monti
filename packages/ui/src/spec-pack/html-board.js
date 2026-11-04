@@ -416,9 +416,13 @@ const parts = [
 		// The source language's mark: its bold word, the rule, and the button that changes it, one part.
 		match: (el) => el.matches(".body .mt-row > span[style*='flex-end']:has(> .text-note)"),
 		part: "LanguageSourceMark",
-		props: (el) => ({ flag: el.querySelector(":scope > .text-note")?.textContent.trim() }),
+		// Only what the row shows: a translation's row has no flag and no button to change it.
+		props: (el) => {
+			const flag = el.querySelector(":scope > .text-note");
+			return { flag: flag && shown(flag) ? flag.textContent.trim() : undefined };
+		},
 		slots: () => ({}),
-		children: (el) => [...el.querySelectorAll("button")],
+		children: (el) => [...el.querySelectorAll("button")].filter((button) => shown(button)),
 		asProps: ["display", "justify-content", "align-items"],
 	},
 	{ match: (el) => el.matches(".body > .mt-row > span:last-child > .mt-vr"), ignore: true },
@@ -442,7 +446,7 @@ const parts = [
 		leaf: true,
 		asProps: ["color"],
 	},
-	{ match: (el) => el.matches(".mt-mono"), part: "Text", props: () => ({ mono: true }) },
+	{ match: (el) => el.matches(".mt-mono:not(input, textarea)"), part: "Text", props: () => ({ mono: true }) },
 	{
 		match: (el) => el.matches(".mt-select"),
 		part: "SelectBox",
