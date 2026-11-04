@@ -561,9 +561,9 @@ const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
  */
 const SUB_LINE_X = [
 	"before:left-[17px] after:left-[17px] after:w-[15px]",
-	"before:left-[39px] after:left-[39px] after:w-[7px]",
-	"before:left-[53px] after:left-[53px] after:w-[7px]",
-	"before:left-[67px] after:left-[67px] after:w-[7px]",
+	"before:left-[39px] after:left-[39px] after:w-[9px]",
+	"before:left-[53px] after:left-[53px] after:w-[9px]",
+	"before:left-[67px] after:left-[67px] after:w-[9px]",
 ] as const;
 /** Where each folder depth's rule runs, in px from the row's start (the parent's icon, then each folder's words). */
 const SUB_LINE_LEFT = [17, 39, 53, 67] as const;
@@ -588,7 +588,7 @@ export function folderTree(depths: readonly number[]) {
 }
 
 const SUB_LINE =
-	"relative before:pointer-events-none before:absolute before:-top-monti-2 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:-top-monti-2 after:h-[calc(50%+2px)] after:rounded-bl-[6px] after:border-monti-strong after:border-b after:border-l after:content-['']";
+	"relative before:pointer-events-none before:absolute before:-top-monti-2 before:bottom-0 before:border-monti-strong before:border-l before:content-[''] after:pointer-events-none after:absolute after:-top-monti-2 after:h-[calc(50%+2px)] after:rounded-bl-[10px] after:border-monti-strong after:border-b after:border-l after:content-['']";
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
