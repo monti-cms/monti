@@ -1,8 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
-import { Grip } from "./grip";
 import { IconButton } from "./icon-button";
-import { ArrowUp, Edit, TrashCan } from "./icons";
+import { ArrowUp, Pen, TrashCan } from "./icons";
 
 /**
  * The row right under one message of a conversation: when it was sent (faint caption) and icon-only buttons (`IconButton`s at 24px with 14px icons; their
@@ -40,7 +39,7 @@ export function ChatMessageActions({
 
 /**
  * One message the admin sent while the assistant was working: it waits in the queue over the text box (`ChatInput`'s `queue`) until the
- * assistant takes it in, then leaves and shows in the thread as a message. A grip, its words (one line) and three icon buttons: send
+ * assistant takes it in, then leaves and shows in the thread as a message. Its words (one line) and three icon buttons: send
  * now (↑), edit (its words go back into the box), cancel (trash). The names are tooltips.
  */
 export function ChatQueueItem({
@@ -51,7 +50,7 @@ export function ChatQueueItem({
 	editLabel,
 	cancelLabel,
 	sendNowIcon = <ArrowUp />,
-	editIcon = <Edit />,
+	editIcon = <Pen />,
 	cancelIcon = <TrashCan />,
 	className,
 	children,
@@ -76,8 +75,7 @@ export function ChatQueueItem({
 			)}
 			{...props}
 		>
-			<Grip className="size-monti-icon-xs text-monti-faint" />
-			<span className="min-w-0 flex-1 truncate pl-monti-4 text-monti-default text-monti-note">{children}</span>
+			<span className="min-w-0 flex-1 truncate text-monti-default text-monti-note">{children}</span>
 			<IconButton label={sendNowLabel} onClick={onSendNow}>
 				{sendNowIcon}
 			</IconButton>
