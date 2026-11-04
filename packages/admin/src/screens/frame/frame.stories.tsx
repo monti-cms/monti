@@ -7,7 +7,7 @@ import { schema } from "../story-schema";
 type Loaded = { site: StorySite };
 
 /** The collections' Korean names, as the admin keeps them (admin values, doc 01). */
-export async function labelCollections(monti: {
+async function labelCollections(monti: {
 	run: (name: string, input: unknown, options: { actor: "admin" }) => Promise<unknown>;
 }) {
 	for (const [collection, label] of [
