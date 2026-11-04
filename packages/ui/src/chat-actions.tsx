@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
-import { ArrowUp, Close, Edit } from "./icons";
+import { ArrowUp, Edit, List, TrashCan } from "./icons";
 
 /**
  * The row right under one message of a conversation: when it was sent (faint caption) and icon-only buttons (`IconButton`s at 24px with 14px icons; their
@@ -25,7 +25,7 @@ export function ChatMessageActions({
 			data-slot="chat-message-actions"
 			data-author={author}
 			className={cn(
-				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [&_[data-slot=icon-button]]:size-[24px] [&_svg]:size-[14px] [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
+				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[24px] [&_[data-slot=icon-button]]:text-monti-faint [&_svg]:size-[14px] [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
 				author === "user" ? "self-end" : "self-start",
 				className,
 			)}
@@ -39,8 +39,8 @@ export function ChatMessageActions({
 
 /**
  * One message the admin sent while the assistant was working: it waits in the queue over the text box (`ChatInput`'s `queue`) until the
- * assistant takes it in, then leaves and shows in the thread as a message. Its words (one muted line) and three icon buttons: send now (↑),
- * edit (its words go back into the box), cancel (×). The names are tooltips.
+ * assistant takes it in, then leaves and shows in the thread as a message. A queue mark, its words (one line) and three icon buttons: send
+ * now (↑), edit (its words go back into the box), cancel (trash). The names are tooltips.
  */
 export function ChatQueueItem({
 	onSendNow,
@@ -51,7 +51,7 @@ export function ChatQueueItem({
 	cancelLabel,
 	sendNowIcon = <ArrowUp />,
 	editIcon = <Edit />,
-	cancelIcon = <Close />,
+	cancelIcon = <TrashCan />,
 	className,
 	children,
 	...props
@@ -70,12 +70,13 @@ export function ChatQueueItem({
 		<li
 			data-slot="chat-queue-item"
 			className={cn(
-				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]]:size-[22px] [&_svg]:size-[12px]",
+				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[22px] [&_[data-slot=icon-button]]:text-monti-faint [&_svg]:size-[12px]",
 				className,
 			)}
 			{...props}
 		>
-			<span className="min-w-0 flex-1 truncate text-monti-muted text-monti-note">{children}</span>
+			<List aria-hidden className="text-monti-faint" />
+			<span className="min-w-0 flex-1 truncate pl-monti-4 text-monti-default text-monti-note">{children}</span>
 			<IconButton label={sendNowLabel} onClick={onSendNow}>
 				{sendNowIcon}
 			</IconButton>

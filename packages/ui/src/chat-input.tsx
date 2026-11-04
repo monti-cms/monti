@@ -42,7 +42,7 @@ export function ChatInput({
 	aside?: ReactNode;
 	/** What the message will be about, over the text: a `Chip` of the picked rows ("2 picked ×"). */
 	context?: ReactNode;
-	/** The messages waiting while the assistant works: `ChatQueueItem`s, drawn at the top inside the box. */
+	/** The messages waiting while the assistant works: `ChatQueueItem`s, drawn as a card tucked behind the top of the box. */
 	queue?: ReactNode;
 	/** Set, and Enter while `busy` puts the words in the queue instead of doing nothing. */
 	onQueue?: (value: string) => void;
@@ -60,12 +60,12 @@ export function ChatInput({
 		event.preventDefault();
 		submit();
 	};
-	return (
+	const form = (
 		<form
 			data-slot="chat-input"
 			className={cn(
 				"rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
-				queue && "overflow-hidden",
+				queue && "relative",
 				className,
 			)}
 			onSubmit={(event) => {
@@ -74,11 +74,6 @@ export function ChatInput({
 			}}
 			{...props}
 		>
-			{queue && (
-				<ul className="-mx-monti-12 -mt-monti-10 mb-monti-8 flex flex-col gap-monti-4 border-monti-default border-b bg-monti-selected py-monti-8 pr-monti-6 pl-monti-12">
-					{queue}
-				</ul>
-			)}
 			{context && <div className="mb-monti-6 flex flex-wrap gap-monti-6">{context}</div>}
 			<textarea
 				aria-label={label}
@@ -99,5 +94,14 @@ export function ChatInput({
 				)}
 			</div>
 		</form>
+	);
+	if (!queue) return form;
+	return (
+		<div data-slot="chat-input-queue" className="flex flex-col">
+			<ul className="mx-monti-12 -mb-monti-12 flex flex-col gap-monti-4 rounded-t-monti-xl border border-monti-default border-b-0 bg-monti-page pt-monti-6 pr-monti-6 pb-[18px] pl-monti-12">
+				{queue}
+			</ul>
+			{form}
+		</div>
 	);
 }
