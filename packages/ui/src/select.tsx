@@ -4,7 +4,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
-import { FIELD_HOVER } from "./hover";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { useProposalDescription } from "./proposal-cue";
@@ -38,6 +38,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
 	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	FIELD_INSET,
 );
 
 /**
@@ -72,7 +73,7 @@ function SelectTrigger({
 				SELECT_TRIGGER,
 				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6",
 				width === "full"
-					? "w-full"
+					? "w-[calc(100%-8px)]"
 					: width === "choice"
 						? // Two attributes, so the row's line wins over the size's own padding and type.
 							"w-fit min-w-30 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"

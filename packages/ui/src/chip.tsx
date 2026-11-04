@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_HOVER } from "./hover";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { ProposalNote } from "./proposal-cue";
@@ -23,6 +23,7 @@ export const CHIP_REMOVE =
 export const CHIPS_FIELD = cn(
 	FIELD_HOVER,
 	"flex flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+	FIELD_INSET,
 );
 
 /** The words being typed in a {@link CHIPS_FIELD}, after its chips. */

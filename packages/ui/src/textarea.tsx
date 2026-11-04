@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_HOVER } from "./hover";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -40,8 +40,11 @@ function Textarea({
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				cn(
-					FIELD_HOVER,
+					!action && FIELD_HOVER,
 					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+					!action && FIELD_INSET,
+					// Its rows set its height with the padding counted in, so it keeps the border box and widens itself instead.
+					!action && "box-border w-[calc(100%+8px)]",
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
 				size === "sm"
@@ -66,6 +69,7 @@ function Textarea({
 				cn(
 					FIELD_HOVER,
 					"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					FIELD_INSET,
 				),
 				"items-start",
 			)}

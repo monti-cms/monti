@@ -5,7 +5,7 @@ import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVE, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
-import { FIELD_HOVER } from "./hover";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
 import { Close } from "./icons";
 import { Input } from "./input";
@@ -70,6 +70,7 @@ function ComboboxInput({
 				cn(
 					FIELD_HOVER,
 					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					FIELD_INSET,
 				),
 				className,
 			)}

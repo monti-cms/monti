@@ -3,7 +3,7 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_HOVER } from "./hover";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /** The text of an input that reads as text (no underline): the label size, or a heading's. */
@@ -74,8 +74,10 @@ function Input({
 								"focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 						)
 					: cn(
-							FIELD_HOVER,
+							// With an action the wrapper below draws the rule, the tint and the room; the input inside keeps none.
+							!action && FIELD_HOVER,
 							"border-0 border-monti-default border-b text-monti-default text-monti-reading focus-visible:border-monti-contrast aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
+							!action && FIELD_INSET,
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" ? "py-monti-4 md:text-monti-note" : "py-monti-6",
 				width === "short" && "w-monti-menu",
@@ -99,6 +101,7 @@ function Input({
 				cn(
 					FIELD_HOVER,
 					"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					FIELD_INSET,
 				),
 				"items-center",
 			)}

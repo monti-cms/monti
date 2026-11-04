@@ -24,7 +24,8 @@ const textButtonVariants = cva(
 				/** Cancel, undo all. */
 				plain: "text-monti-muted hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
-				underline: "border-b border-monti-strong text-monti-muted hover:border-monti-contrast hover:text-monti-default",
+				underline:
+					"rounded-none border-b border-monti-strong text-monti-muted hover:border-monti-contrast hover:text-monti-default",
 				/** Less important: + language, + group. */
 				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
