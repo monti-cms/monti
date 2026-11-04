@@ -323,9 +323,6 @@
 		},
 		"tabLinks": {
 			"type": "TabLinks",
-			"props": {
-				"variant": "toolbar"
-			},
 			"children": ["tab", "tab2"]
 		},
 		"reviewHead": {

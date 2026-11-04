@@ -386,7 +386,9 @@ const parts = [
 						const box = column.closest(".mt-col-wrap") ?? column;
 						const track = tracks[shown.indexOf(box)];
 						// A column at least as wide as its name with the head cell's own padding (10px a side): a board may let a name spill past its track.
-						const width = Math.max(box.getBoundingClientRect().width, column.scrollWidth + 20 - gap);
+						// A name that fills its track gets 8px to spare: the product's type sets a few px wider than a board's.
+						const tight = column.scrollWidth + 8 >= box.getBoundingClientRect().width ? 8 : 0;
+						const width = Math.max(box.getBoundingClientRect().width, column.scrollWidth + 20 - gap) + tight;
 						return {
 							id: column.textContent.trim(),
 							label: column.textContent.trim(),
@@ -654,8 +656,10 @@ const parts = [
 			// At the end of a choice row: as wide as a field needs to read as one. In a field, as wide as the field when the board draws it so.
 			width: el.closest(".mt-option")
 				? "choice"
-				: el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1
-					? "full"
+				: el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1 ||
+						el.parentElement.matches(".mt-row")
+					? // A row's control fills the control's column, as a field fills its field.
+						"full"
 					: undefined,
 		}),
 		leaf: true,
@@ -1945,7 +1949,8 @@ const parts = [
 	{
 		match: (el) => el.matches(".mt-tabs"),
 		part: "TabLinks",
-		props: (el) => ({ variant: el.closest(".mt-toolbar") ? "toolbar" : undefined }),
+		// In a page's toolbar the tabs are its own kind; elsewhere (a review group's head) the current one is underlined.
+		props: (el) => ({ variant: el.closest("div.mt-toolbar") ? "toolbar" : undefined }),
 		// A tab row takes the room its line leaves.
 		asProps: ["flex-grow"],
 	},

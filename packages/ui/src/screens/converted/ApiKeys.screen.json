@@ -478,7 +478,8 @@
 			"props": {
 				"value": {
 					"state": "/drawn/text39"
-				}
+				},
+				"width": "full"
 			}
 		},
 		"listSectionRow4": {
@@ -531,7 +532,8 @@
 				"value": {
 					"state": "/drawn/text44"
 				},
-				"warning": true
+				"warning": true,
+				"width": "full"
 			}
 		},
 		"listSectionRow5": {
@@ -574,7 +576,8 @@
 				"value": {
 					"state": "/drawn/text50"
 				},
-				"warning": true
+				"warning": true,
+				"width": "full"
 			}
 		},
 		"listSectionRow6": {
@@ -619,7 +622,8 @@
 				"value": {
 					"state": "/drawn/text56"
 				},
-				"warning": true
+				"warning": true,
+				"width": "full"
 			}
 		},
 		"listSectionRow7": {

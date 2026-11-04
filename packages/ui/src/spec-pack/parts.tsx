@@ -1662,7 +1662,9 @@ function EditorBody({
 
 /** One block of the body in the editor's own spacing (as a side-by-side view draws it), not the reading defaults. */
 function blockOf(block: BodyBlock, text: React.ReactNode) {
-	if (block.kind === "h2" || block.kind === "h3") return <CompareHeading className="first:mt-0">{text}</CompareHeading>;
+	// A heading takes the body's ink (muted in a read-only source), not the reading defaults' own.
+	if (block.kind === "h2" || block.kind === "h3")
+		return <CompareHeading className="text-inherit first:mt-0">{text}</CompareHeading>;
 	// A quote as the editor draws it: plain text after a rule, not the reading defaults' italic.
 	if (block.kind === "quote")
 		return (
