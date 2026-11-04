@@ -166,7 +166,8 @@ const parts = [
 	{ match: (el) => el.matches("div.mt-table"), part: "ListSectionRows" },
 	{
 		// A review page's rows (under a group's head) are its own parts.
-		match: (el) => el.matches("div.mt-row") && !reviewRow(el),
+		// A content language row is its own part (`LanguageLine`, below).
+		match: (el) => el.matches("div.mt-row") && !reviewRow(el) && !el.matches(".body > .mt-row"),
 		part: "ListSectionRow",
 		props: (el) => ({
 			metaTone: { faint: "faint", subtle: "subtle", danger: "danger" }[
@@ -213,7 +214,7 @@ const parts = [
 	},
 	{ match: (el) => el.matches(".mt-table"), part: "TableBody", asProps: ["list-style", "margin", "padding"] },
 	{
-		match: (el) => el.matches(".mt-row") && !reviewRow(el),
+		match: (el) => el.matches(".mt-row") && !reviewRow(el) && !el.matches(".body > .mt-row"),
 		part: "TableRow",
 		// Rows 16px above and below are the two-line rows (a title over a line).
 		props: (el) => ({ twoLine: el.style.paddingTop === "var(--space-16)" || undefined }),
@@ -358,6 +359,8 @@ const parts = [
 		props: (el) => ({ last: /^0(px)?$/.test(el.style.borderBottom.split(" ")[0] ?? "") || undefined }),
 		asProps: ["border-bottom"],
 		slots: (el) => ({ title: el.querySelector(":scope > h2") }),
+		// A body that sets its own gap spaces its children itself: the screen's run.
+		stacked: true,
 		// A body of rows is a list of its own (the content languages); otherwise the body's inside is the section's.
 		children: (el) => {
 			const body = el.querySelector(":scope > .body") ?? el;
@@ -383,7 +386,7 @@ const parts = [
 		},
 		children: (el) => el.querySelector(":scope > span:last-child"),
 		slots: () => ({}),
-		asProps: ["grid-template-columns", "align-items"],
+		asProps: ["grid-template-columns", "align-items", "column-gap", "display", "justify-content"],
 	},
 	{
 		match: (el) => el.matches(".body > .mt-row > span:last-child > .text-note"),
@@ -1400,6 +1403,22 @@ const parts = [
 		asProps: ["padding", "width", "justify-content"],
 	},
 	// An empty list's steps.
+	// An empty list's title and its quiet question, over its steps.
+	{
+		match: (el) =>
+			el.matches("p.text-heading") &&
+			el.nextElementSibling?.matches("p.text-title") &&
+			el.parentElement.querySelector(":scope > .mt-empty") !== null,
+		part: "EmptyHead",
+		props: (el) => ({ title: el.textContent.trim(), description: el.nextElementSibling.textContent.trim() }),
+		leaf: true,
+		asProps: ["margin"],
+	},
+	{
+		match: (el) =>
+			el.matches("p.text-heading + p.text-title") && el.parentElement.querySelector(":scope > .mt-empty") !== null,
+		ignore: true,
+	},
 	{ match: (el) => el.matches(".mt-empty"), part: "EmptySteps", asProps: ["border-top"] },
 	{
 		match: (el) => el.matches(".mt-empty > a"),

@@ -26,7 +26,7 @@ import { DangerBlock, DangerRow } from "../danger-block";
 import { DragHandle } from "../drag-handle";
 import { DropArea } from "../drop-area";
 import { EditorHeader, EditorTitleRule } from "../editor-header";
-import { EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
+import { Empty, EmptyStep as EmptyStepPart, EmptySteps } from "../empty";
 import { EntryStatus } from "../entry-status";
 import { FormField, FormFieldError, FormFieldLabel as FormFieldLabelPart, FormFieldWas } from "../field";
 import { FieldRow, FieldTree as FieldTreePart } from "../field-tree";
@@ -1782,6 +1782,11 @@ function PickerDialog({
 	);
 }
 
+/** What an empty list says first: its `title`, and the quiet question under it (`description`); its steps follow it. */
+function EmptyHead({ title, description }: { title?: string; description?: string }) {
+	return <Empty title={title} description={description} />;
+}
+
 export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], group: "Stack" };
 
 /**
@@ -1790,6 +1795,7 @@ export const SCREEN = { spacing: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48], g
  */
 export const parts = {
 	Box,
+	EmptyHead,
 	PickerDialog,
 	ProposalDock,
 	CompareView,
@@ -1979,6 +1985,7 @@ export const CATALOG = {
 		},
 	},
 	Box: { kind: "part", props: { border: "variant" } },
+	EmptyHead: { kind: "part", props: { title: "text", description: "text" } },
 	PickerDialog: {
 		kind: "overlay",
 		props: {

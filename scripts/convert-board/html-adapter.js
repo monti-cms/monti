@@ -234,7 +234,8 @@ function read(el, where, page = undefined, inPart = false) {
 			// The part's own gap between its children is its rhythm, not the screen's: only a board that adds to it (or sets it to none and spaces
 			// its children itself) gives the screen distances to keep, and then the run is a group of the screen's.
 			const gap = Number.parseFloat(getComputedStyle(holder).rowGap) || 0;
-			const own = run.children.slice(1).every((child) => Math.abs((child.before ?? 0) - gap) < 1);
+			// A gap the board writes on the holder is its own choice, not the part's rhythm.
+			const own = !holder.style.gap && run.children.slice(1).every((child) => Math.abs((child.before ?? 0) - gap) < 1);
 			if (!own) {
 				const children = run.children.map((child, index) => (index === 0 ? { ...child, before: 0 } : child));
 				node.children = [{ where: `${here} (run)`, direction: "column", layout: {}, children }];

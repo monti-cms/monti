@@ -15,6 +15,23 @@
 			},
 			"events": []
 		},
+		"EmptyHead": {
+			"kind": "part",
+			"bind": false,
+			"children": false,
+			"slots": [],
+			"props": {
+				"description": {
+					"kind": "text",
+					"type": "string"
+				},
+				"title": {
+					"kind": "text",
+					"type": "string"
+				}
+			},
+			"events": []
+		},
 		"PickerDialog": {
 			"kind": "overlay",
 			"bind": false,
