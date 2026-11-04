@@ -127,7 +127,8 @@ export function SchemaPage({
 								<FolderTabsBody value="기본">
 									<FieldTree>
 										{fields.map((field) => (
-											<FieldRow key={String(field.name)} grip {...field} />
+											// A field opens its settings sheet; a group's row only holds its fields.
+											<FieldRow key={String(field.name)} grip onOpen={field.group ? undefined : () => {}} {...field} />
 										))}
 									</FieldTree>
 								</FolderTabsBody>

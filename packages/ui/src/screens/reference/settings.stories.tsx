@@ -4,6 +4,7 @@ import { ApiKeysScreen } from "./api-keys";
 import { LocalesScreen } from "./locales";
 import { SchemaScreen } from "./schema";
 import { SchemaAddFieldScreen } from "./schema-add-field";
+import { SchemaFieldScreen } from "./schema-field";
 import { SchemaReviewScreen } from "./schema-review";
 import { SettingsScreen } from "./settings";
 import { SettingsProposalScreen } from "./settings-proposal";
@@ -23,4 +24,6 @@ export const ApiKeys: Story = { render: () => <ApiKeysScreen /> };
 export const Locales: Story = { render: () => <LocalesScreen /> };
 export const Schema: Story = { render: () => <SchemaScreen /> };
 export const SchemaAddField: Story = { render: () => <SchemaAddFieldScreen /> };
+/** A saved field's sheet, opened by clicking its row. */
+export const SchemaField: Story = { render: () => <SchemaFieldScreen /> };
 export const SchemaReview: Story = { render: () => <SchemaReviewScreen /> };
