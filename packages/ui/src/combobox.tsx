@@ -58,7 +58,7 @@ function ComboboxInput({
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
 	showTrigger?: boolean;
 	showClear?: boolean;
-	size?: "sm" | "default";
+	size?: "sm" | "md" | "default";
 	mono?: boolean;
 	/** The picked value is one the assistant chose and nobody has touched: blue text and a 1.5px blue line, as `Input proposal`. */
 	proposal?: boolean;
@@ -72,7 +72,7 @@ function ComboboxInput({
 					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
 					FIELD_INSET,
 				),
-				size === "sm" ? "h-monti-control-sm" : "h-monti-control-md",
+				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
 				className,
 			)}
 		>
@@ -191,7 +191,7 @@ function ComboboxChips({
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
 	ComboboxPrimitive.Chips.Props & {
 		/** `sm` stands 28px high, as a small `ComboboxInput` does. */
-		size?: "sm" | "default";
+		size?: "sm" | "md" | "default";
 	}) {
 	return (
 		<ComboboxPrimitive.Chips

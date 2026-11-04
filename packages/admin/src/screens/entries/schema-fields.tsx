@@ -250,7 +250,7 @@ export function DefaultInput({
 			return field.multiline ? (
 				<Textarea
 					id={id}
-					size="sm"
+					size="md"
 					{...multilineProps(field)}
 					autoComplete="off"
 					value={text}
@@ -264,7 +264,7 @@ export function DefaultInput({
 			) : (
 				<Input
 					id={id}
-					size="sm"
+					size="md"
 					autoComplete="off"
 					value={text}
 					proposal={edit?.proposal}
@@ -288,7 +288,7 @@ export function DefaultInput({
 					disabled={context.disabled}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					<SelectTrigger id={id} size="sm" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
+					<SelectTrigger id={id} size="md" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -616,7 +616,7 @@ function RecordLocaleField({
 			{multiline ? (
 				<Textarea
 					id={field.ids.input}
-					size="sm"
+					size="md"
 					{...multilineProps(definition)}
 					autoComplete="off"
 					lang={locale}
@@ -627,7 +627,7 @@ function RecordLocaleField({
 			) : (
 				<Input
 					id={field.ids.input}
-					size="sm"
+					size="md"
 					autoComplete="off"
 					lang={locale}
 					value={value}

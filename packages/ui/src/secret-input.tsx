@@ -29,7 +29,7 @@ function SecretInput({
 		<span
 			data-slot="secret-input"
 			className={cn(
-				"flex h-monti-control-md items-center gap-monti-4 border-monti-default border-b focus-within:border-monti-contrast",
+				"flex h-monti-control-lg items-center gap-monti-4 border-monti-default border-b focus-within:border-monti-contrast",
 				props["aria-invalid"] && "border-monti-danger focus-within:border-monti-danger",
 			)}
 		>
@@ -73,7 +73,7 @@ function SavedValue({
 	return (
 		<span
 			data-slot="saved-value"
-			className="flex h-monti-control-md items-center gap-monti-12 border-transparent border-b"
+			className="flex h-monti-control-lg items-center gap-monti-12 border-transparent border-b"
 		>
 			<span className="min-w-0 flex-1 truncate font-mono text-monti-body">{children}</span>
 			<TextButton type="button" variant="underline" size="note" onClick={action.onClick}>

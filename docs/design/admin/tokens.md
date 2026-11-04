@@ -11,7 +11,7 @@
 | 종류 | 방식 | 예 |
 |---|---|---|
 | 바탕 단계 | 숫자 | `gray-1`부터 `gray-12`까지(밝음에서 어두움), `success-3` / `success-11`(옅은 채움 / 글자), `space-2`부터 `space-48`까지(숫자는 px) |
-| 작은 순서 집합 | `sm` `md` `lg` `xl` `full`, 이 순서로만 | `radius-sm`부터 `radius-xl`까지, `radius-full`, `height-control-sm` / `-md` |
+| 작은 순서 집합 | `sm` `md` `lg` `xl` `full`, 이 순서로만 | `radius-sm`부터 `radius-xl`까지, `radius-full`, `height-control-sm` / `-md` / `-lg` |
 | 역할 | 속성-역할 | `bg-`, `fg-`, `border-` 뒤에 역할 낱말 |
 | 세기 | muted < default < emphasis < strong < contrast | `bg`, `fg`, `border`에서 같은 순서다. 글자에는 muted 아래로 두 단계가 더 있다: `subtle`과 `faint` |
 | 자리 | `page`, `tool` | `bg-page`(콘텐츠), `bg-tool`(도구) |
@@ -203,8 +203,9 @@
 
 | 토큰 | 값 | 쓰임 |
 |---|---|---|
-| `height-control-md` | 32px | 기본 크기의 버튼(알약)과 입력 칸. 폼, 대화상자, 페이지 헤더. |
-| `height-control-sm` | 28px | 작은 버튼과 작은 입력 칸(`size="sm"`). 속성 패널, 툴바, 필터, 표, 카드 안. |
+| `height-control-lg` | 36px | 기본 크기의 버튼(알약)과 입력 칸. 폼, 대화상자, 페이지 헤더. |
+| `height-control-md` | 32px | 중간 입력 칸(`size="md"`). 속성 패널과 사이드 패널. |
+| `height-control-sm` | 28px | 작은 버튼과 작은 입력 칸(`size="sm"`). 툴바, 필터, 표, 카드 안. |
 | `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). |
 | `height-icon-button` | 32px | 둥근 아이콘 버튼(정사각형: 폭 = 높이). |
 | `height-header` | 60px | 편집기의 앱 헤더, 도구 패널과 시트의 헤더. |

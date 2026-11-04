@@ -216,7 +216,7 @@ export function MenuField({
 	placeholder?: ReactNode;
 	warning?: boolean;
 	/** As a `SelectTrigger`'s: `sm` (note text, the default: a settings row) or `default` (body text, beside a form's inputs). */
-	size?: "sm" | "default";
+	size?: "sm" | "md" | "default";
 }) {
 	const empty = value === undefined || value === null || value === "";
 	return (

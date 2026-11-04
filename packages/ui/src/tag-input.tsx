@@ -29,7 +29,7 @@ function TagInput({
 	/** Values are code (keys, identifiers): the chips and the entry are fixed-width. */
 	mono?: boolean;
 	/** `sm` stands 28px high, as a small `Input` does. */
-	size?: "sm" | "default";
+	size?: "sm" | "md" | "default";
 	className?: string;
 	"aria-label"?: string;
 }) {

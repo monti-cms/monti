@@ -4,7 +4,7 @@ import { cn } from "./cn";
 /**
  * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. `meta` is a list's address rule in mono
  * beside the title; `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
- * as a pill (32px) with or without one, so the rule sits at the same height on every page. `trail` is the way back above the title (a folder path).
+ * as a pill (36px) with or without one, so the rule sits at the same height on every page. `trail` is the way back above the title (a folder path).
  */
 function PageHeader({
 	title,

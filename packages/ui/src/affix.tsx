@@ -52,7 +52,7 @@ function Affix({
 			onClick={focusInput}
 			className={cn(
 				cn(
-					"group/affix flex h-monti-control-md cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+					"group/affix flex h-monti-control-lg cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
 				),
 				bare &&
 					"border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",

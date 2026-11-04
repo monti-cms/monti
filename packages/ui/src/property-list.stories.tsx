@@ -120,9 +120,9 @@ function TextRow({
 				{label}
 			</FormFieldLabel>
 			{multiline ? (
-				<Textarea id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
+				<Textarea id={id} size="md" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
 			) : (
-				<Input id={id} size="sm" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
+				<Input id={id} size="md" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
 			)}
 		</FormField>
 	);
@@ -135,7 +135,7 @@ function AddressRow() {
 			<FormFieldLabel htmlFor={id}>주소</FormFieldLabel>
 			<Input
 				id={id}
-				size="sm"
+				size="md"
 				mono
 				defaultValue="autumn-trail"
 				action={
@@ -155,7 +155,7 @@ function PublishedRow() {
 		<FormField>
 			<FormFieldLabel htmlFor={id}>발행일</FormFieldLabel>
 			<Popover>
-				<PopoverTrigger render={<MenuField id={id} value="2026. 10. 24 10:12" mono />} />
+				<PopoverTrigger render={<MenuField id={id} size="md" value="2026. 10. 24 10:12" mono />} />
 				<PopoverContent width="auto" padding="none" align="start">
 					<Calendar
 						locale={ko}
@@ -188,7 +188,7 @@ function CategoryRow({
 				{label}
 			</FormFieldLabel>
 			<Combobox items={CATEGORIES} defaultValue={value}>
-				<ComboboxInput id={id} size="sm" placeholder="없음" showClear={value !== null} proposal={proposal} />
+				<ComboboxInput id={id} size="md" placeholder="없음" showClear={value !== null} proposal={proposal} />
 				<ComboboxContent>
 					<ComboboxList>
 						{(item: string) => (
@@ -210,7 +210,7 @@ function TagsRow() {
 		<FormField>
 			<FormFieldLabel htmlFor={id}>태그</FormFieldLabel>
 			<Combobox items={TAGS} multiple defaultValue={["가을", "산"]}>
-				<ComboboxChips ref={anchor} size="sm">
+				<ComboboxChips ref={anchor} size="md">
 					<ComboboxValue>
 						{(values: string[]) => values.map((tag) => <ComboboxChip key={tag}>{tag}</ComboboxChip>)}
 					</ComboboxValue>
@@ -240,7 +240,7 @@ function SelectRow({ proposal = false }: { proposal?: boolean }) {
 		<FormField>
 			<FormFieldLabel htmlFor={id}>분량</FormFieldLabel>
 			<Select items={items} defaultValue="short">
-				<SelectTrigger id={id} size="sm" width="full" proposal={proposal}>
+				<SelectTrigger id={id} size="md" width="full" proposal={proposal}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

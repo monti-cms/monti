@@ -263,6 +263,7 @@ export function EntryProperties({
 				<FormField>
 					<FormFieldLabel htmlFor="ref-address">주소</FormFieldLabel>
 					<Input
+						size="md"
 						id="ref-address"
 						defaultValue="first-post"
 						placeholder="제목에서 만들어요"
@@ -278,7 +279,7 @@ export function EntryProperties({
 					<FormFieldLabel htmlFor="ref-published">발행일</FormFieldLabel>
 					{/* A field in a select's look that opens a calendar: the date can be set by hand. */}
 					<Popover>
-						<PopoverTrigger render={<MenuField id="ref-published" value="2026. 10. 01" mono />} />
+						<PopoverTrigger render={<MenuField id="ref-published" size="md" value="2026. 10. 01" mono />} />
 						<PopoverContent width="auto" padding="none" align="start">
 							<Calendar
 								locale={ko}
@@ -312,6 +313,7 @@ export function EntryProperties({
 							요약
 						</FormFieldLabel>
 						<Textarea
+							size="md"
 							id="ref-summary"
 							placeholder="비어 있음"
 							action={
@@ -327,6 +329,7 @@ export function EntryProperties({
 				<FormField>
 					<FormFieldLabel htmlFor="ref-category">카테고리</FormFieldLabel>
 					<Input
+						size="md"
 						id="ref-category"
 						defaultValue="개발"
 						action={
@@ -339,6 +342,7 @@ export function EntryProperties({
 				<FormField>
 					<FormFieldLabel>태그</FormFieldLabel>
 					<TagInput
+						size="md"
 						aria-label="태그"
 						items={["리액트", "프론트엔드"]}
 						onChange={still}
@@ -348,7 +352,7 @@ export function EntryProperties({
 				<FormField>
 					<FormFieldLabel>시리즈</FormFieldLabel>
 					<Select items={[{ value: "none", label: "없음" }]} value="none">
-						<SelectTrigger width="full">
+						<SelectTrigger size="md" width="full">
 							<SelectValue />
 						</SelectTrigger>
 					</Select>

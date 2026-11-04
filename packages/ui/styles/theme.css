@@ -199,6 +199,8 @@
 	--radius-monti-full: var(--monti-radius-full);
 
 	/* Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Glyph sizes are size-monti-icon-xs to -lg; the 32px icon button is size-monti-icon-button. */
+	--height-monti-control-lg: var(--monti-height-control-lg);
+	--size-monti-control-lg: var(--monti-height-control-lg);
 	--height-monti-control-md: var(--monti-height-control-md);
 	--size-monti-control-md: var(--monti-height-control-md);
 	--height-monti-control-sm: var(--monti-height-control-sm);

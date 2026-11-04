@@ -52,7 +52,7 @@ function SplitButton({
 			role="group"
 			data-slot="split-button"
 			className={cn(
-				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-3 has-focus-visible:ring-monti-contrast/20",
+				"inline-flex h-monti-control-lg shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-3 has-focus-visible:ring-monti-contrast/20",
 				disabled && "opacity-45",
 			)}
 		>

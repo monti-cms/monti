@@ -227,6 +227,7 @@ export const MAX_WIDTH = {
 
 /** Heights of controls and bars. */
 export const HEIGHT = {
+	"control-lg": "h-monti-control-lg",
 	"control-md": "h-monti-control-md",
 	"control-sm": "h-monti-control-sm",
 	"control-xs": "h-monti-control-xs",
@@ -239,6 +240,7 @@ export const HEIGHT = {
 
 /** The least height of a box, by the same height tokens. */
 export const MIN_HEIGHT = {
+	"control-lg": "min-h-monti-control-lg",
 	"control-md": "min-h-monti-control-md",
 	"control-sm": "min-h-monti-control-sm",
 	"control-xs": "min-h-monti-control-xs",

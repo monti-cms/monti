@@ -189,7 +189,7 @@ export function RelationCombobox({
 					itemToStringLabel={(item: Item) => item.label}
 					isItemEqualToValue={(a: Item, b: Item) => a.value === b.value}
 				>
-					<ComboboxChips ref={anchor}>
+					<ComboboxChips ref={anchor} size="md">
 						<ComboboxValue>
 							{(showChips ? selected : []).map((item) => (
 								<ComboboxChip key={item.value}>
@@ -235,7 +235,7 @@ export function RelationCombobox({
 					placeholder={placeholder}
 					showClear={selected.length > 0}
 					disabled={disabled || isCreating}
-					size="sm"
+					size="md"
 				/>
 				{list}
 			</Combobox>

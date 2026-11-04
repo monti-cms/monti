@@ -22,7 +22,7 @@ function Textarea({
 	...props
 }: React.ComponentProps<"textarea"> & {
 	/** `sm` writes at the note size, for compact panels; `default` at the reading size on a phone and body size above. */
-	size?: "sm" | "default";
+	size?: "sm" | "md" | "default";
 	/** Fixed-width letters for code and source text. */
 	mono?: boolean;
 	/** The assistant wrote this text and nobody has touched it yet. Turn it off when the text is edited. */
@@ -45,10 +45,12 @@ function Textarea({
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
-				// One line stands as high as an `Input` of its size (28px small, 32px otherwise: the buttons' heights); more lines grow it downward.
+				// One line stands as high as an `Input` of its size (28px small, 32px medium, 36px otherwise); more lines grow it downward.
 				size === "sm"
 					? "min-h-monti-control-sm py-[3px] text-monti-note leading-[1.6]"
-					: "min-h-monti-control-md py-monti-4 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
+					: size === "md"
+						? "min-h-monti-control-md py-monti-4 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]"
+						: "min-h-monti-control-lg py-monti-6 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
 				tall && "min-h-[52px]",
 				// With an action the line around it draws the rule, so the box keeps the height less that 1px.
@@ -57,7 +59,9 @@ function Textarea({
 						"min-w-0 flex-1 border-b-0 data-proposal:border-b-0",
 						size === "sm"
 							? "min-h-[calc(var(--monti-height-control-sm)-1px)]"
-							: "min-h-[calc(var(--monti-height-control-md)-1px)]",
+							: size === "md"
+								? "min-h-[calc(var(--monti-height-control-md)-1px)]"
+								: "min-h-[calc(var(--monti-height-control-lg)-1px)]",
 					),
 				className,
 			)}
@@ -67,7 +71,7 @@ function Textarea({
 				rows === undefined
 					? style
 					: {
-							minHeight: `max(calc(var(--monti-height-control-${size === "sm" ? "sm" : "md"}) - ${action ? 1 : 0}px), calc(${rows} * 1.6em + ${size === "sm" ? 7 : 9}px))`,
+							minHeight: `max(calc(var(--monti-height-control-${size === "sm" ? "sm" : size === "md" ? "md" : "lg"}) - ${action ? 1 : 0}px), calc(${rows} * 1.6em + ${size === "sm" ? 7 : size === "md" ? 9 : 13}px))`,
 							...style,
 						}
 			}
@@ -88,8 +92,10 @@ function Textarea({
 			)}
 		>
 			{textarea}
-			{/* A 32px button over a 28px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
-			<span className={cn(FIELD_ACTION, size === "sm" && "-mt-monti-2 -mb-[3px]")}>{action}</span>
+			{/* A 32px button over a 28px or 32px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
+			<span className={cn(FIELD_ACTION, size === "sm" ? "-mt-monti-2 -mb-[3px]" : size === "md" && "-mb-px")}>
+				{action}
+			</span>
 		</div>
 	);
 }
