@@ -557,7 +557,7 @@ const SUB_DEPTH = ["pl-[38px]", "pl-[60px]", "pl-[82px]", "pl-[104px]"] as const
 
 /**
  * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
- * with 4px of air above the first folder and below the last. Every folder name stands 20px past its nearest rule.
+ * with 4px of air above the first folder, ending level with the middle of the last folder's name. Every folder name stands 20px past its nearest rule.
  */
 const SUB_LINE_X = ["before:left-[17px]", "before:left-[39px]", "before:left-[61px]", "before:left-[83px]"] as const;
 /** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
@@ -565,7 +565,7 @@ const SUB_LINE_LEFT = [17, 39, 61, 83] as const;
 
 /**
  * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
- * whether it is the last at its depth under its parent (its rule ends below it), and which ancestors' rules run on past it (`through[d]`: the
+ * whether it is the last at its depth under its parent (its rule ends at its middle), and which ancestors' rules run on past it (`through[d]`: the
  * parent at depth `d` has a later sibling).
  */
 export function folderTree(depths: readonly number[]) {
@@ -630,10 +630,10 @@ function SidebarMenuSubButton({
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],
-					// 4px of air above a parent's first folder and below its last.
+					// 4px of air above a parent's first folder; the rule ends at the middle of its last one, level with its name.
 					tree
-						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-monti-4")
-						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-monti-4",
+						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-1/2")
+						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-1/2",
 					className,
 				),
 				style: lines || style ? { ...lines, ...style } : undefined,
