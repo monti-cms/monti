@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { randomToken } from "../auth/secrets";
-import { findSession, type Session, startSession } from "../auth/session";
+import { findSession, startSession } from "../auth/session";
 import type { Monti } from "../monti";
 import { describeError } from "./errors";
 
@@ -47,31 +47,50 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 	const sessionCookie = (request: Request, token: string, expiresAt: Date) =>
 		cookie(request, SESSION_COOKIE, token, Math.round((expiresAt.getTime() - monti.now().getTime()) / 1000));
 
-	async function operation(request: Request, name: string, session: Session | null): Promise<Response> {
+	/**
+	 * One operation call as the admin API answers it, with the session's token in and out: `session` is the new session to keep (signing in), `null`
+	 * to drop it (signing out). The HTTP handler puts it in the cookie; Storybook keeps it itself (a page script cannot read `Set-Cookie`).
+	 */
+	async function call(
+		name: string,
+		rawBody: unknown,
+		token: string | null | undefined,
+	): Promise<{ status: number; body: unknown; session?: { token: string; expiresAt: Date } | null }> {
+		const session = await findSession(monti.db, token, monti.now());
 		const found = monti.operations.get(name);
-		if (!found?.open && !session) return json(401, { error: "unauthenticated" });
-		const body = Body.safeParse(await request.json().catch(() => null));
-		if (!body.success) return json(400, { error: "invalid-body" });
+		if (!found?.open && !session) return { status: 401, body: { error: "unauthenticated" } };
+		const body = Body.safeParse(rawBody);
+		if (!body.success) return { status: 400, body: { error: "invalid-body" } };
 		try {
 			const result = await monti.run(name, body.data.input ?? {}, {
 				actor: "admin",
 				versions: body.data.versions,
 				session,
 			});
-			if (name === "auth.signOut") return json(200, result, { "set-cookie": cookie(request, SESSION_COOKIE, "", 0) });
-			if (!SIGN_IN.has(name)) return json(200, result);
+			if (name === "auth.signOut") return { status: 200, body: result, session: null };
+			if (!SIGN_IN.has(name)) return { status: 200, body: result };
 			const { output, ...rest } = result as {
 				output: { ok: boolean; token?: string; expiresAt?: Date; reason?: unknown };
 			};
 			if (!output.ok || !output.token || !output.expiresAt)
-				return json(401, { error: "sign-in-refused", reason: output.reason });
-			const { token, ...shown } = output;
-			return json(200, { ...rest, output: shown }, { "set-cookie": sessionCookie(request, token, output.expiresAt) });
+				return { status: 401, body: { error: "sign-in-refused", reason: output.reason } };
+			const { token: made, ...shown } = output;
+			return { status: 200, body: { ...rest, output: shown }, session: { token: made, expiresAt: output.expiresAt } };
 		} catch (error) {
 			const described = describeError(error);
-			if (described) return json(described.status, described.body);
+			if (described) return described;
 			throw error;
 		}
+	}
+
+	async function operation(request: Request, name: string): Promise<Response> {
+		const answer = await call(name, await request.json().catch(() => null), cookies(request)[SESSION_COOKIE]);
+		if (answer.session === undefined) return json(answer.status, answer.body);
+		const setCookie =
+			answer.session === null
+				? cookie(request, SESSION_COOKIE, "", 0)
+				: sessionCookie(request, answer.session.token, answer.session.expiresAt);
+		return json(answer.status, answer.body, { "set-cookie": setCookie });
 	}
 
 	/** GitHub's sign-in: send the browser to GitHub, then take its answer and sign in the one account the config names (doc 15). */
@@ -122,13 +141,13 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		return done(adminPath, sessionCookie(request, started.token, started.expiresAt));
 	}
 
-	return async (request: Request): Promise<Response> => {
+	const handle = async (request: Request): Promise<Response> => {
 		const { pathname } = new URL(request.url);
-		const session = await findSession(monti.db, cookies(request)[SESSION_COOKIE], monti.now());
 		const name = pathname.match(/\/operations\/([\w.]+)$/)?.[1];
-		if (name && request.method === "POST") return operation(request, name, session);
+		if (name && request.method === "POST") return operation(request, name);
 		const githubRoute = pathname.match(/\/auth\/github(\/callback)?$/);
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
+	return Object.assign(handle, { call });
 }

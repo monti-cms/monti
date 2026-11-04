@@ -6,7 +6,7 @@ const encode = (text: string) => new TextEncoder().encode(text);
 
 const ITERATIONS = 600_000;
 
-async function derive(password: string, salt: Uint8Array, iterations: number) {
+async function derive(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number) {
 	const key = await subtle().importKey("raw", encode(password), "PBKDF2", false, ["deriveBits"]);
 	return hex(await subtle().deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
 }
