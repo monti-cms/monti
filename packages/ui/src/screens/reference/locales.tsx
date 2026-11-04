@@ -14,7 +14,6 @@ import {
 	PageToolbar,
 	Section,
 	Stack,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs, ShownSelect } from "./settings";
@@ -34,9 +33,9 @@ export function LocalesScreen() {
 							<Box as="ul">
 								<LanguageRow name="한국어" code="ko" handled>
 									<LanguageSource flag="원문">
-										<TextButton variant="underline" quiet size="note">
+										<Button variant="ghost" size="sm">
 											바꾸기
-										</TextButton>
+										</Button>
 									</LanguageSource>
 								</LanguageRow>
 								<LanguageRow

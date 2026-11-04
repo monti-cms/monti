@@ -1,7 +1,6 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { Separator } from "./separator";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
@@ -58,7 +57,7 @@ function LanguageRow({
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
 			</span>
 			{/* An icon button (the × that takes the language out) keeps the row's height and puts its glyph 8px from the end, as a field's action does. */}
-			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-8">
+			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-8 [&_[data-slot=button]]:-my-monti-4">
 				{children}
 			</span>
 		</li>
@@ -66,20 +65,15 @@ function LanguageRow({
 }
 
 /**
- * The end of the source language's row: the bold flag that says it is the source, a rule, and `children`, the one quiet underlined text button that changes it.
+ * The end of the source language's row: the bold flag that says it is the source, then `children`, the small ghost button that changes it.
  * The state and the button that changes it stand together at the end, apart from the pale language info at the start. Without `children` (a list that cannot be
  * edited) only the flag shows.
  */
 function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: React.ReactNode }) {
 	return (
-		<span data-slot="language-source" className="inline-flex items-center gap-monti-12">
+		<span data-slot="language-source" className="inline-flex items-center gap-monti-8">
 			<span className="font-semibold text-monti-default text-monti-note">{flag}</span>
-			{children && (
-				<>
-					<Separator orientation="vertical" length="control" flush />
-					{children}
-				</>
-			)}
+			{children}
 		</span>
 	);
 }

@@ -44,7 +44,6 @@ import {
 	Section,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { Close } from "@monti-cms/ui/icons";
 import { useId, useMemo, useState } from "react";
@@ -376,7 +375,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 								<LanguageSource flag={t("locales.source")}>
 									{editable && locales.length > 1 && (
 										<DropdownMenu>
-											<DropdownMenuTrigger render={<TextButton variant="underline" quiet size="note" />}>
+											<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 												{t("locales.sourceChange")}
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
