@@ -1,7 +1,7 @@
-import { FolderParent, Upload } from "../../icons";
+import { FolderAdd, FolderParent, Upload } from "../../icons";
 import {
-	Button,
 	DropArea,
+	DropdownMenuItem,
 	FilePreview,
 	FilterButton,
 	FolderTile,
@@ -15,6 +15,7 @@ import {
 	PageToolbarEnd,
 	SearchToggle,
 	Segmented,
+	SplitButton,
 	Stack,
 	TextButton,
 	Tile,
@@ -54,17 +55,23 @@ export function MediaScreen() {
 					}
 					title="Blog Assets"
 				>
-					<TextButton>+ 폴더</TextButton>
 					<SearchToggle label="검색" value="" aria-label="검색" />
-					<Button variant="primary">
+					{/* The caret holds the rare other way to add: a folder. */}
+					<SplitButton
+						menuLabel="더 만들기"
+						menu={
+							<DropdownMenuItem>
+								<FolderAdd aria-hidden />새 폴더
+							</DropdownMenuItem>
+						}
+					>
 						<Upload aria-hidden />
 						올리기
-					</Button>
+					</SplitButton>
 				</PageHeader>
 				<PageToolbar inset>
 					<FilterButton>종류</FilterButton>
 					<FilterButton>사용 여부</FilterButton>
-					<FilterButton>대체 텍스트</FilterButton>
 					<PageToolbarEnd>
 						<FilterButton>최근 올린순</FilterButton>
 						<Segmented

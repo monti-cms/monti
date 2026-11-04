@@ -57,7 +57,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있어요", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
-| 운영 검토 | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
+| 운영 검토 (빠짐, 2026-11-05) | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
 
 ### 흐름 2 · 어시스턴트
 
@@ -78,7 +78,7 @@
 | "칸 오류" | 11.03 | 홈 링크 `Input aria-invalid`와 `FormFieldError`, 저장 알약 `saveDisabled`. screens.md는 호스트 이름 행의 오류라고 적지만 보드는 홈 링크에 그린다 | Controls/Field/Input, Controls/Field/Field |
 | "나가기 확인" | 11.04 | 나가기 `AlertDialog` | Controls/Overlay/AlertDialog |
 | "운영 글 쓰는 방식" | 11.09 | 말투와 규칙 `FormFieldLabel changed`, 알약 "저장" | Controls/Field/Field |
-| "운영 검토" | 11.13 | 운영 검토 `Sheet`(바로 저장 2 · PR 1과 `Patch`), ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet, Patterns/List/ListSection › ReviewSheet, Monti/Change/Patch |
+| "운영 검토" (빠짐, 2026-11-05) | 11.13 | 운영 검토 `Sheet`(바로 저장 2 · PR 1과 `Patch`), ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet, Patterns/List/ListSection › ReviewSheet, Monti/Change/Patch |
 | "읽기 전용" | 11.15 | 미리보기와 공개 주소 절 제목 뒤 `LockMark`, 그 값은 글, 스위치 `disabled`, 저장 묶음 없음. screens.md는 공개 주소만 잠긴다고 적지만 보드는 미리보기도 잠근다 | Primitives/LockMark |
 | "읽기 전용 저장" | 11.15b | "읽기 전용"에 더해 사이트 이름 `FormFieldLabel changed`와 알약 "저장" | Controls/Field/Field |
 
@@ -145,8 +145,11 @@
 | 화면 언어 | `FormField` + `FormFieldLabel` "화면 언어" + `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 흐린 코드 "ko") | 고르면 관리자 화면의 말이 바뀐다. 사이트 탭처럼 절 제목 아래 작은 라벨을 둔다. |
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 · 번역 | 줄마다 `Option spread` + `Switch` | 바로 적용되는 켜기/끄기. |
-| 주소 절 | `Section`("주소", 마지막 절이라 `last`). 읽기 전용이면 제목 뒤 `LockMark` | |
+| 주소 절 | `Section`("주소"). 읽기 전용이면 제목 뒤 `LockMark` | |
 | 관리자 주소 | `FormField` + `FormFieldLabel` "관리자 주소" + `Affix`(`prefix` "/", 값 "studio") | 설정 파일에서 정하는 값이지만 미리보기 경로처럼 고칠 수 있다. 로컬 개발 모드에서는 바로 파일에 쓰고, 파일을 쓸 수 없는 곳(배포된 사이트)에서는 절 제목 뒤 `LockMark`와 함께 글로 보인다. |
+| 계정 절 | `Section`("계정", 마지막 절이라 `last`) | 2026-11-05 소유자 결정으로 더해졌다. 보드에는 없다. |
+| 로그인한 계정 | `ReadValue`(`label` "로그인한 계정", 이메일 또는 GitHub 아이디, mono) | 고칠 수 없는 값이다. |
+| "로그아웃" | `TextButton` | 누르면 세션을 끝내고 로그인 화면으로 간다. 묻지 않는다. 운영 사이트에서도 늘 있다. |
 
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Select, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Primitives/Text.
 

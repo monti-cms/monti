@@ -14,7 +14,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 미리보기에 고칠 곳이 있으면 `saveDisabled`. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
-| 열린 PR 줄 | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
+| 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
 | 데이터베이스 적용 실패 | `ErrorNote`(`title` "데이터베이스에 적용하지 못했어요", 회색 한 줄, `actions`에 `TextButton` "다시 적용" · "다시 불러오기") | 컬렉션 탭 줄 바로 아래. |
 
 #### 컬렉션 목록
@@ -147,11 +147,11 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "운영 고침" | 11.10 | 새 `FieldRow`(readingTime, `success`, "새로"), 알약 "PR 만들기" | Patterns/List/FieldTree |
-| "운영 제안" | 11.11 | 새 `FieldRow`(note "✦ 제안", 파란 이름), 알약 "PR 만들기" | Patterns/List/FieldTree |
-| "운영 검토" | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
-| "PR 만듦" | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었어요"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
-| "PR에 더하기" | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
+| "운영 고침" (빠짐, 2026-11-05) | 11.10 | 새 `FieldRow`(readingTime, `success`, "새로"), 알약 "PR 만들기" | Patterns/List/FieldTree |
+| "운영 제안" (빠짐, 2026-11-05) | 11.11 | 새 `FieldRow`(note "✦ 제안", 파란 이름), 알약 "PR 만들기" | Patterns/List/FieldTree |
+| "운영 검토" (빠짐, 2026-11-05) | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
+| "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었어요"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
+| "PR에 더하기" (빠짐, 2026-11-05) | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
 | "읽기 전용" | 11.17, 11.17c | 구조 절 `LockMark`, 식별자 · 종류 · 공개 주소는 글, 스위치 `disabled`, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |
 | "적용 실패" | 11.20 | `ErrorNote` "데이터베이스에 적용하지 못했어요" | Controls/Status/ErrorNote |

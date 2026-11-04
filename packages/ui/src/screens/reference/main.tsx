@@ -1,6 +1,5 @@
-import { Archive, Copy, Folder, Launch, Tag, TrashCan } from "../../icons";
+import { Archive, Copy, Folder, FolderAdd, Launch, Tag, TrashCan, Upload } from "../../icons";
 import {
-	Button,
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
@@ -9,6 +8,7 @@ import {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 	Count,
+	DropdownMenuItem,
 	EntryStatus,
 	type EntryStatusKind,
 	ListFooter,
@@ -30,6 +30,7 @@ import {
 	RowMore,
 	RowTitle,
 	SearchToggle,
+	SplitButton,
 	Table,
 	TableBody,
 	TableCell,
@@ -164,6 +165,28 @@ const more = (
 	</TableCell>
 );
 
+/** A list's one black pill. Its caret holds the other ways to add: a folder, or posts from a file. They are rare, so they are not buttons of their own. */
+export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string } = {}) {
+	return (
+		<SplitButton
+			menuLabel="더 만들기"
+			menu={
+				<>
+					<DropdownMenuItem>
+						<FolderAdd aria-hidden />새 폴더
+					</DropdownMenuItem>
+					<DropdownMenuItem>
+						<Upload aria-hidden />
+						가져오기
+					</DropdownMenuItem>
+				</>
+			}
+		>
+			{label}
+		</SplitButton>
+	);
+}
+
 /** The posts list's search: a list with a body searches its title and address, or everything, as the admin does. */
 export function PostSearch() {
 	return (
@@ -236,9 +259,8 @@ export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
 		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }}>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
-					<Button variant="ghost">+ 폴더</Button>
 					<PostSearch />
-					<Button variant="primary">+ 새 글 쓰기</Button>
+					<NewPostButton />
 				</PageHeader>
 				<ListScroll>
 					<Table container="none" layout="fixed">
