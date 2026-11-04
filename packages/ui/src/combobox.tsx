@@ -5,6 +5,7 @@ import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVE, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
+import { FIELD_HOVER } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
 import { Close } from "./icons";
 import { Input } from "./input";
@@ -19,7 +20,11 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 
 function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Props) {
 	return (
-		<ComboboxPrimitive.Trigger data-slot="combobox-trigger" className={cn(ICON_BUTTON, className)} {...props}>
+		<ComboboxPrimitive.Trigger
+			data-slot="combobox-trigger"
+			className={cn(ICON_BUTTON, "hover:bg-transparent aria-expanded:bg-transparent", className)}
+			{...props}
+		>
 			<Caret solo className="size-3.5" />
 		</ComboboxPrimitive.Trigger>
 	);
@@ -28,7 +33,11 @@ function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Prop
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 	const labels = useUiLabels();
 	return (
-		<ComboboxPrimitive.Clear data-slot="combobox-clear" className={cn(ICON_BUTTON, className)} {...props}>
+		<ComboboxPrimitive.Clear
+			data-slot="combobox-clear"
+			className={cn(ICON_BUTTON, "hover:bg-transparent aria-expanded:bg-transparent", className)}
+			{...props}
+		>
 			<Close className="pointer-events-none" aria-hidden />
 			<span className="sr-only">{labels.clear}</span>
 		</ComboboxPrimitive.Clear>
@@ -58,7 +67,10 @@ function ComboboxInput({
 		<div
 			data-slot="combobox-input"
 			className={cn(
-				"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				cn(
+					FIELD_HOVER,
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				),
 				className,
 			)}
 		>

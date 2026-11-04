@@ -4,6 +4,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { FIELD_HOVER } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { useProposalDescription } from "./proposal-cue";
@@ -34,8 +35,10 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
  * The look of a closed pick-one field, shared by {@link SelectTrigger} and `MenuField`: an underline, the value, and a caret at the end. The line turns
  * ink while it has focus or its list is open. `data-size` is `default` (body text) or `sm` (note text, 2px less above and below).
  */
-export const SELECT_TRIGGER =
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0";
+export const SELECT_TRIGGER = cn(
+	FIELD_HOVER,
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+);
 
 /**
  * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,

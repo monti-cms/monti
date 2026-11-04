@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
+import { FIELD_HOVER } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -38,7 +39,10 @@ function Textarea({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+				cn(
+					FIELD_HOVER,
+					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
 				size === "sm"
 					? "text-monti-note leading-[1.6]"
@@ -59,7 +63,10 @@ function Textarea({
 		<div
 			data-slot="textarea-line"
 			className={cn(
-				"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				cn(
+					FIELD_HOVER,
+					"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+				),
 				"items-start",
 			)}
 		>

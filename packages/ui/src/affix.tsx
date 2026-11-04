@@ -3,6 +3,7 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
+import { FIELD_HOVER } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -46,7 +47,10 @@ function Affix({
 			data-proposal={proposal || undefined}
 			onClick={focusInput}
 			className={cn(
-				"group/affix flex cursor-text items-baseline font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+				cn(
+					FIELD_HOVER,
+					"group/affix flex cursor-text items-baseline font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+				),
 				bare &&
 					"border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				className,
@@ -57,7 +61,7 @@ function Affix({
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className={cn(
-					"min-w-[3ch] flex-1 rounded-none border-0 border-monti-default border-b bg-transparent px-px py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
+					"min-w-[3ch] flex-1 rounded-none border-0 border-monti-default border-b bg-transparent px-px py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast group-hover/affix:not-focus:border-monti-strong aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
 					bare && "min-w-0 border-b-0 group-data-proposal/affix:border-b-0",
 				)}
 				{...props}

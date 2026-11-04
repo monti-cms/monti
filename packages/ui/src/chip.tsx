@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
+import { FIELD_HOVER } from "./hover";
 import { Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { ProposalNote } from "./proposal-cue";
@@ -19,8 +20,10 @@ export const CHIP_REMOVE =
 	"flex shrink-0 cursor-pointer border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20";
 
 /** The field that holds chips and the words being typed after them (a combobox of many, `TagInput`): an underline like `Input`, ink while it has focus. */
-export const CHIPS_FIELD =
-	"flex flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger";
+export const CHIPS_FIELD = cn(
+	FIELD_HOVER,
+	"flex flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+);
 
 /** The words being typed in a {@link CHIPS_FIELD}, after its chips. */
 export const CHIPS_INPUT = "h-7 min-w-16 flex-1 bg-transparent px-monti-2 outline-none placeholder:text-monti-faint";

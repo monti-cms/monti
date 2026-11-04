@@ -2,6 +2,7 @@
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { cn } from "./cn";
+import { CHECK_HOVER } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -24,7 +25,10 @@ function Checkbox({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) data-checked:data-readonly:border-(color:--monti-fg-faint) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent outline-none transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-monti-contrast/20 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-not-allowed data-readonly:cursor-default data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-readonly:border-monti-muted data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
+				cn(
+					CHECK_HOVER,
+					"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) data-checked:data-readonly:border-(color:--monti-fg-faint) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent outline-none transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-monti-contrast/20 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-not-allowed data-readonly:cursor-default data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-readonly:border-monti-muted data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
+				),
 				className,
 			)}
 			{...props}
