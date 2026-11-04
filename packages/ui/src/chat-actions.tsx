@@ -26,7 +26,7 @@ export function ChatMessageActions({
 			data-slot="chat-message-actions"
 			data-author={author}
 			className={cn(
-				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[24px] [&_[data-slot=icon-button]]:text-monti-faint [&_svg]:size-monti-icon-sm [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
+				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]]:size-[24px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-monti-icon-sm! [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
 				author === "user" ? "self-end" : "self-start",
 				className,
 			)}
@@ -71,7 +71,7 @@ export function ChatQueueItem({
 		<li
 			data-slot="chat-queue-item"
 			className={cn(
-				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]:not(:hover):not(:focus-visible)]:opacity-60 [&_[data-slot=icon-button]]:size-[20px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-monti-icon-xs",
+				"flex min-w-0 items-center gap-monti-2 [&_[data-slot=icon-button]:hover]:text-monti-default [&_[data-slot=icon-button]:not(:hover):not(:focus-visible)]:opacity-60 [&_[data-slot=icon-button]]:size-[20px] [&_[data-slot=icon-button]]:text-monti-faint [&_[data-slot=icon-button]_svg]:size-monti-icon-xs!",
 				className,
 			)}
 			{...props}
