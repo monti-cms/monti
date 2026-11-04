@@ -52,7 +52,9 @@ export function LocalesScreen() {
 								</LanguageRow>
 							</Box>
 							<Box paddingTop={12}>
-								<Button variant="ghost">+ 언어 추가</Button>
+								<Button variant="ghost" size="sm">
+									+ 언어 추가
+								</Button>
 							</Box>
 						</Stack>
 					</Section>

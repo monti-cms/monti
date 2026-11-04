@@ -136,7 +136,7 @@ export function SchemaPage({
 								</FolderTabsBody>
 							</FolderTabs>
 							<Stack gap={12}>
-								<Inline gap={20}>
+								<Inline gap={4}>
 									<Button variant="ghost" size="sm">
 										+ 필드 추가
 									</Button>

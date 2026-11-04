@@ -486,7 +486,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			) : (
 				list
 			)}
-			<Inline gap={20} paddingY={12}>
+			<Inline gap={4} paddingY={12}>
 				{!disabled && (
 					<Button variant="ghost" size="sm" type="button" onClick={() => setAdding(true)}>
 						+ {t("field.add")}
