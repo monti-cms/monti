@@ -4,7 +4,7 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, Box, FormFieldError, TextButton } from "@monti-cms/ui";
+import { Banner, Box, Button, FormFieldError } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -61,12 +61,12 @@ export function EntryEditorBanners({
 
 			{sourceChanged && (
 				<Banner title={t("sourceChanged")}>
-					<TextButton variant="underline" onClick={onCompareSource}>
+					<Button variant="ghost" size="sm" onClick={onCompareSource}>
 						{t("compare")}
-					</TextButton>
-					<TextButton disabled={isReadOnly} onClick={editor.confirmTranslationSource}>
+					</Button>
+					<Button variant="ghost" size="sm" disabled={isReadOnly} onClick={editor.confirmTranslationSource}>
 						{t("confirm")}
-					</TextButton>
+					</Button>
 				</Banner>
 			)}
 		</>

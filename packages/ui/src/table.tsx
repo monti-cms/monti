@@ -1,10 +1,13 @@
 "use client";
 
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
+import { Folder } from "./icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
 	className,
@@ -41,6 +44,8 @@ function Table({
 				className={cn(
 					"w-full text-monti-body",
 					layout === "fixed" && "table-fixed",
+					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
+					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					className,
 				)}
@@ -111,7 +116,7 @@ function TableRow({
 			aria-selected={selected || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
-				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
+				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				twoLine && "[&>td]:py-monti-16",
 				className,
 			)}
@@ -138,7 +143,8 @@ function RowCheck({
 	proposal = false,
 }: {
 	checked: boolean;
-	onCheckedChange: (checked: boolean) => void;
+	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
+	onCheckedChange?: (checked: boolean) => void;
 	/** The name of the check, for screen readers ("Select First post"). */
 	label: string;
 	/** The assistant picked this row. */
@@ -148,7 +154,7 @@ function RowCheck({
 		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2", ON_ROW)}>
 			<Checkbox
 				checked={checked}
-				onCheckedChange={(next) => onCheckedChange(next === true)}
+				onCheckedChange={(next) => onCheckedChange?.(next === true)}
 				aria-label={label}
 				proposal={proposal}
 				className="bg-monti-page"
@@ -187,6 +193,40 @@ function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
  * The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. It takes one line of
  * the row (20px) and lets its button stand out above and below, so the ⋯ does not make the row taller than its text.
  */
+/**
+ * A row's ⋯: the letter at 16px, not a round button, in the row's own 20px line at the end of the row (`.mt-row > .mt-text-btn`). `label` is the screen reader
+ * name and the tooltip. To make it the trigger of a menu, wrap it with `trigger`: `trigger={(button) => <DropdownMenuTrigger render={button} />}`.
+ */
+function RowMore({
+	label,
+	trigger,
+	className,
+	type = "button",
+	...props
+}: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
+	label: string;
+	trigger?: (button: React.ReactElement) => React.ReactElement;
+}) {
+	const button = (
+		<ButtonPrimitive
+			data-slot="row-more"
+			type={type}
+			aria-label={label}
+			className={cn(
+				"inline-flex h-5 cursor-pointer items-center border-0 bg-transparent p-0 font-normal text-monti-muted text-monti-title outline-none transition-colors hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:text-monti-default",
+				className,
+			)}
+			{...props}
+		/>
+	);
+	return (
+		<Tooltip>
+			<TooltipTrigger render={trigger ? trigger(button) : button}>⋯</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span data-slot="row-actions" className={cn("relative z-1 inline-flex h-5 items-center", className)} {...props} />
@@ -217,23 +257,31 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 }
 
 /**
- * The title cell of a row: the title in ink over its address in mono, both on one line each. The other columns are gray, so the ink alone makes
- * the title the emphasis.
+ * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns (cms-allow-korean)
+ * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title.
  */
 function RowTitle({
 	title,
 	address,
+	folder = false,
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
 	title: React.ReactNode;
-	/** Under the title: `/first-post`, a folder path. */
+	/** After the title: `/first-post`, or what a folder holds ("글 2"). (cms-allow-korean: quotes the words) */
 	address?: React.ReactNode;
+	/** The row is a folder: its icon leads the line. */
+	folder?: boolean;
 }) {
 	return (
-		<span data-slot="row-title" className={cn("flex min-w-0 flex-col gap-monti-4", className)} {...props}>
-			<span className="truncate text-monti-body text-monti-default">{title}</span>
-			{address && <span className="truncate font-mono text-monti-faint text-monti-meta">{address}</span>}
+		<span data-slot="row-title" className={cn("flex min-w-0 items-baseline gap-monti-12", className)} {...props}>
+			<span className="flex min-w-0 items-baseline gap-monti-8">
+				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
+				<span className="min-w-0 truncate text-monti-body text-monti-default">{title}</span>
+			</span>
+			{address && (
+				<span className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta">{address}</span>
+			)}
 		</span>
 	);
 }
@@ -274,6 +322,7 @@ function TableHead({
 	return (
 		<th
 			data-slot="table-head"
+			data-truncate={truncate || undefined}
 			className={cn(
 				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
@@ -306,12 +355,15 @@ function TableCell({
 	return (
 		<td
 			data-slot="table-cell"
+			data-truncate={truncate || undefined}
 			className={cn(
-				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
+				// make the line taller than either, and the row 2px taller than the design system's 42.
+				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
-				valign === "top" && "align-top",
+				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",
 				tone === "muted" && "text-monti-muted",
 				tone === "subtle" && "text-monti-note text-monti-subtle",
@@ -327,6 +379,7 @@ function TableCell({
 export {
 	ListScroll,
 	RowActions,
+	RowMore,
 	RowCheck,
 	RowThumb,
 	RowLink,

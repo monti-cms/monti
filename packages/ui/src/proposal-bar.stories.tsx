@@ -1,22 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ProposalBar } from "./proposal-bar";
+import { Box, ProposalBar } from "./index";
 
-/**
- * The toolbar over a grid while the assistant's proposals wait on its tiles (the alt texts of media files): how many, then discard all and accept all.
- * One proposal is accepted, discarded or asked about again in the card its tile opens.
- */
+/** The toolbar over the media grid while alt-text proposals wait: the count in proposal blue, then discard all and accept all. */
 const meta = {
-	title: "Monti/Proposal/Bar",
+	title: "Monti/Proposal/ProposalBar",
 	component: ProposalBar,
 	args: {
 		label: "제안 3",
 		discardAllLabel: "모두 버리기",
-		onDiscardAll: () => undefined,
+		onDiscardAll: () => {},
 		acceptAllLabel: "모두 받기",
-		onAcceptAll: () => undefined,
+		onAcceptAll: () => {},
 	},
+	decorators: [
+		(Story) => (
+			<Box width="list">
+				<Story />
+			</Box>
+		),
+	],
 } satisfies Meta<typeof ProposalBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const Default: Story = {};

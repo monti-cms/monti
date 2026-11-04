@@ -16,7 +16,6 @@ import {
 	SheetTitle,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { errorText } from "../../api/client";
 import type { RestoreCounts, RestoreNotRestored, RestorePreview, RestoreWarning } from "../../api/restore";
@@ -246,9 +245,9 @@ export function RestoreSheet({
 						</Button>
 					) : (
 						<>
-							<TextButton type="button" disabled={running} onClick={onClose}>
+							<Button variant="ghost" size="lg" type="button" disabled={running} onClick={onClose}>
 								{tc("cancel")}
-							</TextButton>
+							</Button>
 							<Button type="button" loading={running} disabled={!preview?.ready} onClick={form.start}>
 								{running ? t("action.restoring") : t("action.restore")}
 							</Button>

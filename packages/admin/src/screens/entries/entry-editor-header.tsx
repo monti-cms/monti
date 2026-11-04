@@ -2,16 +2,6 @@
 
 // The header of the entry editor screen: the collection as a way back, the address and status, save, preview and publish, and the properties and "more" menus.
 
-import {
-	Archive,
-	ChevronLeft,
-	Contrast,
-	Copy,
-	Download,
-	OverflowMenuHorizontal,
-	RightPanelOpen,
-	TrashCan,
-} from "@carbon/icons-react";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
@@ -21,14 +11,24 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	EditorHeader,
 	EntryStatus,
 	IconButton,
 	Inline,
 	Separator,
 	SplitButton,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
+import {
+	Archive,
+	ChevronLeft,
+	Contrast,
+	Copy,
+	Download,
+	OverflowMenuHorizontal,
+	RightPanelOpen,
+	TrashCan,
+} from "@monti-cms/ui/icons";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import type { EditorMenuItem } from "../../admin-components";
@@ -110,22 +110,18 @@ export function EntryEditorHeader({
 	});
 
 	return (
-		<Inline
-			as="header"
-			wrap
-			justify="between"
-			gap={12}
-			shrink={false}
-			border="bottom"
-			background="page"
-			minHeight="header"
-			paddingX={12}
-		>
+		<EditorHeader>
 			<Inline gap={12} minWidth={0} paddingX={12}>
-				<TextButton variant="quiet" render={<Link href={site.adminHref(`?collection=${collection}`)} />}>
+				<Button
+					variant="ghost"
+					size="sm"
+					render={<Link href={site.adminHref(`?collection=${collection}`)} />}
+					nativeButton={false}
+					role="link"
+				>
 					<ChevronLeft aria-hidden />
 					{collectionNoun(site, collection) || t("backToList")}
-				</TextButton>
+				</Button>
 				{path && (
 					<Box hideBelow="sm" minWidth={0}>
 						<Text variant="meta" tone="faint" truncate>
@@ -143,17 +139,19 @@ export function EntryEditorHeader({
 			<Inline gap={12} justify="end">
 				{isTrashed ? (
 					// A trashed entry is read-only: the head holds only what can be done with it, deleting it for good or bringing it back.
-					<TextButton variant="danger" onClick={confirmPermanentDelete}>
+					<Button variant="ghost-danger" size="lg" onClick={confirmPermanentDelete}>
 						{tc("lifecycle.deletePermanently")}
-					</TextButton>
+					</Button>
 				) : (
-					<TextButton
+					<Button
+						variant="ghost"
+						size="lg"
 						type="button"
 						disabled={busy !== null || isSubmitting}
 						onClick={() => void commands.handleSaveNow()}
 					>
 						{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
-					</TextButton>
+					</Button>
 				)}
 				{!isTrashed &&
 					(previewHref && !editor.hasUnsavedChanges ? (
@@ -309,6 +307,6 @@ export function EntryEditorHeader({
 					unsaved={editor.hasUnsavedChanges}
 				/>
 			)}
-		</Inline>
+		</EditorHeader>
 	);
 }

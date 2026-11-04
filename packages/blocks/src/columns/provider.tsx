@@ -1,7 +1,7 @@
 "use client";
 
-import { SplitScreen } from "@carbon/icons-react";
 import type { AdminComponents } from "@monti-cms/admin";
+import { SplitScreen } from "@monti-cms/admin/icons";
 import { ColumnNodeView, ColumnsNodeView } from "./view";
 
 /** The columns block's editing view and menu icon. */

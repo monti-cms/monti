@@ -1,308 +1,96 @@
-import { Document, FolderParent, OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ReactNode, useEffect, useState } from "react";
-import { DropArea } from "./drop-area";
-import { IconButton } from "./icon-button";
-import { Image } from "./image";
-import { RenameField } from "./rename-field";
-import { Stack } from "./stack";
-import { Text } from "./text";
-import { FolderTile, Tile } from "./tile";
-import { Toaster, toast } from "./toast";
+import { OverflowMenuHorizontal } from "./icons";
+import { FilePreview, FolderTile, Grid, IconButton, Image, Tile } from "./index";
 
-/** An inline SVG, so the stories load nothing from the network. */
-const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#8fb8de"/><circle cx="240" cy="50" r="24" fill="#f6d365"/><path d="M0 180V120l80-50 70 60 60-40 110 70v20z" fill="#4c7a5a"/></svg>',
+/** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
+const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3c98b"/><stop offset="1" stop-color="#c76b4a"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1150" cy="300" r="120" fill="#fff3d6"/><path d="M0 700 L400 480 L800 700 L1200 520 L1600 700 V900 H0 Z" fill="#6b3a2e"/></svg>',
 )}`;
 
-const preview = <Image src={SAMPLE} alt="" ratio="photo" radius="none" />;
-
 /**
- * A file in the media grid: a 4:3 preview, the name, a mono detail line. No card. The check shows in the corner while the pointer is on the
- * tile, a ring marks a picked one, and uploading, failed and suggested files have their own looks.
+ * A file in a grid: a 4:3 preview, the name over a mono detail line. Flat: no card, no border. Picked: a 2px ink ring and the check on; the file open in
+ * a panel has the ring without the check. Uploading, failed and interrupted files say so in the detail line.
  */
 const meta = {
 	title: "Patterns/List/Tile",
-	component: Tile,
-	args: {
-		preview,
-		title: "desk-morning.jpg",
-		detail: "2400×1600 · 글 1",
-		onSelectedChange: () => {},
-		selectLabel: "선택",
-	},
-	decorators: [
-		(Story) => (
-			<div className="w-48">
-				<Story />
-			</div>
-		),
-	],
-} satisfies Meta<typeof Tile>;
+	component: FolderTile,
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+const picture = <Image src={PHOTO} alt="" ratio="photo" />;
+const more = (
+	<IconButton label="더 보기">
+		<OverflowMenuHorizontal />
+	</IconButton>
+);
+const pick = { onSelectedChange: () => {}, selectLabel: "고르기" };
 
-function Labelled({ name, children }: { name: string; children: ReactNode }) {
-	return (
-		<Stack gap={4}>
-			<Text variant="label" tone="muted">
-				{name}
-			</Text>
-			<div className="w-48">{children}</div>
-		</Stack>
-	);
-}
-
-/** Ready, picked, and picked while others are picked (`picking`: every tile shows its check, faint). */
-export const Picked: Story = {
+/** Ready, picked, current (open in the panel), and a file without a picture. */
+export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap={24} align="start">
-			<Labelled name="보통">
-				<Tile preview={preview} title="desk-morning.jpg" detail="2400×1600 · 글 1" onSelectedChange={() => {}} />
-			</Labelled>
-			<Labelled name="고름">
-				<Tile
-					preview={preview}
-					title="desk-morning.jpg"
-					detail="2400×1600 · 글 1"
-					selected
-					onSelectedChange={() => {}}
-				/>
-			</Labelled>
-			<Labelled name="다른 칸을 고른 중">
-				<Tile preview={preview} title="notes.png" detail="1200×800" picking onSelectedChange={() => {}} />
-			</Labelled>
-		</Stack>
+		<Grid columns="tiles">
+			<TileWith title="cover-2026.png" detail="1600×900 · 글 1" action={more} />
+			<TileWith title="spring-desk.jpg" detail="2400×1600 · 글 2" selected picking />
+			<TileWith title="hero.png" detail="1920×1080" current />
+			<FileTile />
+		</Grid>
 	),
 };
 
-/**
- * Uploading: a faded preview and a bar along its bottom edge. Interrupted (too large): the picture stays, faded, with a red line and what can be done.
- * Failed (a type that cannot be taken): a red ring over the preview, a red line, and what can be done.
- */
-export const UploadingAndFailed: Story = {
+/** Going up, refused (a type the site does not take), and interrupted (too large), with what can be done. */
+export const Upload: Story = {
 	render: () => (
-		<Stack direction="row" gap={24} align="start">
-			<Labelled name="올리는 중">
-				<Tile preview={preview} title="hero.png" detail="올리는 중 · 64%" status="uploading" progress={64} />
-			</Labelled>
-			<Labelled name="끊김">
-				<Tile
-					preview={preview}
-					title="panorama.jpg"
-					detail="14 MB · 10 MB까지"
-					status="interrupted"
-					actions={[
-						{ label: "줄여서 다시", onClick: () => {}, primary: true },
-						{ label: "빼기", onClick: () => {} },
-					]}
-				/>
-			</Labelled>
-			<Labelled name="실패, 받지 않는 형식">
-				<Tile
-					preview={null}
-					title="IMG_2041.HEIC"
-					detail="올릴 수 없는 형식"
-					status="failed"
-					actions={[{ label: "빼기", onClick: () => {} }]}
-				/>
-			</Labelled>
-		</Stack>
+		<Grid columns="tiles">
+			<TileWith title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
+			<TileWith
+				title="clip.mov"
+				detail="받지 않는 형식이에요"
+				status="failed"
+				noPreview
+				actions={[{ label: "빼기", onClick: () => {} }]}
+			/>
+			<TileWith
+				title="panorama.png"
+				detail="20MB보다 커요"
+				status="interrupted"
+				actions={[
+					{ label: "줄여서 다시", onClick: () => {}, primary: true },
+					{ label: "빼기", onClick: () => {} },
+				]}
+			/>
+		</Grid>
 	),
 };
 
-/** The assistant's suggestion for the file sits in the detail's place in the proposal mark; picked, the ring and the check are blue. */
+/** The assistant's suggestion in the place of the detail line; a picked tile that has one is ringed in blue. */
 export const Proposal: Story = {
 	render: () => (
-		<Stack direction="row" gap={24} align="start">
-			<Labelled name="제안">
-				<Tile
-					preview={preview}
-					title="desk-morning.jpg"
-					proposal="아침 책상 위의 노트북과 커피"
-					onSelectedChange={() => {}}
-				/>
-			</Labelled>
-			<Labelled name="제안, 카드 열림">
-				<Tile
-					preview={preview}
-					title="desk-morning.jpg"
-					proposal="아침 책상 위의 노트북과 커피"
-					current
-					onSelectedChange={() => {}}
-				/>
-			</Labelled>
-			<Labelled name="제안, 고름">
-				<Tile
-					preview={preview}
-					title="desk-morning.jpg"
-					proposal="아침 책상 위의 노트북과 커피"
-					selected
-					onSelectedChange={() => {}}
-				/>
-			</Labelled>
-		</Stack>
+		<Grid columns="tiles">
+			<TileWith title="spring-desk.jpg" proposal="✦ 봄 햇살이 드는 책상" selected picking />
+			<TileWith title="cover-2026.png" proposal="✦ 노을 진 산" picking />
+		</Grid>
 	),
 };
 
-/** `action` is the ⋯ at the top right, shown with the pointer. Shown here in the pointed-at state (a story cannot hover, so it sets `data-hovered`): the check and the ⋯. */
-export const WithMenu: Story = {
-	play: async ({ canvasElement }) => {
-		for (const tile of canvasElement.querySelectorAll("[data-slot=tile]")) tile.setAttribute("data-hovered", "");
-	},
-	render: () => (
-		<Labelled name="포인터를 올린 칸">
-			<Tile
-				preview={preview}
-				title="desk-morning.jpg"
-				detail="2400×1600 · 글 1"
-				onSelectedChange={() => {}}
-				action={
-					<IconButton label="더 보기" className="size-6">
-						<OverflowMenuHorizontal aria-hidden />
-					</IconButton>
-				}
-			/>
-		</Labelled>
-	),
-};
-
-export const Detail: Story = {
-	render: () => (
-		<Stack direction="row" gap={24} align="start">
-			<Labelled name="detail 없음">
-				<Tile preview={preview} title="desk-morning.jpg" />
-			</Labelled>
-			<Labelled name="긴 이름은 말줄임">
-				<Tile
-					preview={preview}
-					title="아주아주아주 긴 파일 이름의 여름 바다 사진.png"
-					detail="/covers/아주아주아주-긴-경로.png"
-				/>
-			</Labelled>
-			<Labelled name="preview 대체">
-				<Tile
-					preview={<Image src={null} alt="" fallback={Document} ratio="photo" radius="none" />}
-					title="문서.pdf"
-					detail="340KB"
-				/>
-			</Labelled>
-		</Stack>
-	),
-};
-
-/** A folder is a low tile with its icon, name and count. */
+/** Folders beside the files: a low tile with the icon, name and count; one a menu is open on; one files are dragged over. */
 export const Folders: Story = {
 	render: () => (
-		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12">
-			<FolderTile name="covers" count={6} />
-			<FolderTile name="diagrams" count={3} />
-			<FolderTile name="상위 폴더로" icon={<FolderParent aria-hidden />} />
-			<FolderTile name="menu open" count={4} selected />
-			<FolderTile name="files over it" count={4} dropTarget />
-			<FolderTile name="아주아주아주 긴 폴더 이름도 한 줄에서 잘려요" count={12} />
-		</div>
+		<Grid columns="tiles">
+			<FolderTile name="covers" count={12} action={more} />
+			<FolderTile name="trips" count={48} selected />
+			<FolderTile name="drafts" count={3} dropTarget />
+		</Grid>
 	),
 };
 
-/** `action` is the ⋯ at the right, shown with the pointer and in place of the count (point at the first folder; the second shows it open). */
-export const FolderWithMenu: Story = {
-	render: () => (
-		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12">
-			{[false, true].map((open) => (
-				<FolderTile
-					key={String(open)}
-					name={open ? "menu open" : "covers"}
-					count={6}
-					selected={open}
-					action={
-						<IconButton label="더 보기" aria-expanded={open}>
-							<OverflowMenuHorizontal aria-hidden />
-						</IconButton>
-					}
-				/>
-			))}
-		</div>
-	),
-};
-
-function RenameDemo() {
-	const [name, setName] = useState("새 폴더");
-	return (
-		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20">
-			<FolderTile>
-				<RenameField
-					value={name}
-					onValueChange={setName}
-					onCommit={() => {}}
-					onCancel={() => {}}
-					label="폴더 이름"
-					fill
-				/>
-			</FolderTile>
-		</div>
-	);
+function TileWith({
+	noPreview,
+	...props
+}: Omit<React.ComponentProps<typeof Tile>, "preview" | "onSelectedChange"> & { noPreview?: boolean }) {
+	return <Tile preview={noPreview ? null : picture} {...pick} {...props} />;
 }
 
-/** A new folder, or a rename, is edited in the tile with its whole name selected. */
-export const Renaming: Story = { render: () => <RenameDemo /> };
-
-function GridDemo({ over, folderOver }: { over: boolean; folderOver: boolean }) {
-	const [picked, setPicked] = useState<number[]>([1]);
-	// While files are dragged, a pill at the bottom says where they land.
-	useEffect(() => {
-		toast.dismiss();
-		if (over) toast.dropHint("여기에 올려요");
-		if (folderOver)
-			toast.dropHint(
-				<>
-					<b>covers</b>에 올려요
-				</>,
-			);
-		return () => void toast.dismiss();
-	}, [over, folderOver]);
-	const toggle = (index: number) =>
-		setPicked((now) => (now.includes(index) ? now.filter((item) => item !== index) : [...now, index]));
-	return (
-		<DropArea over={over} className="w-[720px] max-w-full">
-			<Toaster duration={Number.POSITIVE_INFINITY} />
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12 px-monti-12 pt-monti-24">
-				<FolderTile name="covers" count={6} dropTarget={folderOver} />
-				<FolderTile name="diagrams" count={3} />
-			</div>
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-24 px-monti-12 pt-monti-24">
-				{["desk-morning.jpg", "notes.png", "cover-a.png", "cover-b.png"].map((name, index) => (
-					<Tile
-						key={name}
-						preview={preview}
-						title={name}
-						detail="2400×1600 · 글 1"
-						selected={picked.includes(index)}
-						picking={picked.length > 0}
-						onSelectedChange={() => toggle(index)}
-						selectLabel={`${name} 선택`}
-					/>
-				))}
-			</div>
-		</DropArea>
-	);
+function FileTile() {
+	return <Tile preview={<FilePreview ext="PDF" />} title="annual-report.pdf" detail="PDF · 1.2MB" {...pick} />;
 }
-
-export const InGrid: Story = {
-	decorators: [],
-	render: () => <GridDemo over={false} folderOver={false} />,
-};
-
-/** Files dragged over the grid: a line and a tint around all of it, the tiles unchanged, and the pill at the bottom saying where they land. */
-export const DroppingOnTheGrid: Story = {
-	decorators: [],
-	render: () => <GridDemo over folderOver={false} />,
-};
-
-/** Over a subfolder, the grid's frame goes out, that folder takes the drop look, and the pill names the folder. */
-export const DroppingOnAFolder: Story = {
-	decorators: [],
-	render: () => <GridDemo over={false} folderOver />,
-};

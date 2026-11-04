@@ -38,7 +38,7 @@
 
 ### 코드
 
-`Icon`: `icon`은 모양(Carbon 아이콘, 어시스턴트는 `Spark`), `size`는 `xs`, `sm`, `md`, `lg` 중 하나, 그리고 `tone`과 `label`.
+`Icon`: `icon`은 모양(아이콘 목록 `@monti-cms/ui/icons`의 Carbon 아이콘, 어시스턴트는 `Spark`), `size`는 `xs`, `sm`, `md`, `lg` 중 하나, 그리고 `tone`과 `label`.
 
 ## 폼 라벨 (`.mt-label`)
 
@@ -60,7 +60,7 @@
 
 ### 코드
 
-`Separator`: `orientation`은 `horizontal`(기본)이나 `vertical`이다. 세로선에서 `length="full"`은 행 높이만큼 늘이고, `length="control"`은 툴바 가운데에 놓는 14px 선이다.
+`Separator`: `orientation`은 `horizontal`(기본)이나 `vertical`이다. 세로선에서 `length="full"`은 행 높이만큼 늘이고, `length="control"`은 툴바 가운데에 놓는 14px 선이다(양옆 4px). `length="bar"`는 뜨는 도구 줄에서 두 묶음 사이의 16px 선이다(양옆 3px). `flush`는 양옆 여백을 없애 줄의 간격이 선을 띄우게 한다(페이지 툴바, 일괄 막대).
 
 ## 부품이 쓰는 말 (`UiLabelsProvider`)
 

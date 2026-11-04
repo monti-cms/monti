@@ -1,74 +1,99 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Caret } from "./caret";
-import { ChatInput } from "./chat-input";
-import { Chip } from "./chip";
-import { TextButton } from "./text-button";
+import { Box, ChatInput, ChatQueueItem, Chip, ModelMenuButton } from "./index";
 
+/**
+ * The assistant's box: the text area, the model button at the bottom left, the round send button at the right (a stop button while the answer is
+ * written). Enter sends, Shift+Enter breaks the line. With an empty text only the send button dims.
+ */
 const meta = {
-	title: "Monti/Assistant/Input",
+	title: "Monti/Assistant/ChatInput",
 	component: ChatInput,
 	args: {
 		value: "",
-		onValueChange: () => undefined,
-		onSubmit: () => undefined,
-		onStop: () => undefined,
-		label: "메시지",
-		placeholder: "어시스턴트에게 물어보세요",
+		onValueChange: () => {},
+		onSubmit: () => {},
+		onStop: () => {},
+		label: "어시스턴트에게 요청",
+		placeholder: "무엇을 할까요?",
 		sendLabel: "보내기",
 		stopLabel: "멈추기",
 	},
 	decorators: [
 		(Story) => (
-			<div style={{ maxWidth: 360 }}>
+			<Box width="assistant" padding={16} background="tool">
 				<Story />
-			</div>
+			</Box>
 		),
 	],
 } satisfies Meta<typeof ChatInput>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Type and press Enter (Shift+Enter breaks the line). */
-export const Playground: Story = {
-	render: (args) => {
-		const [value, setValue] = useState("");
-		return <ChatInput {...args} value={value} onValueChange={setValue} onSubmit={() => setValue("")} />;
-	},
-};
+const model = <ModelMenuButton model="claude-sonnet-5-5" thinking="생각 보통" label="모델 고르기" />;
 
-/** Nothing to send yet: the send button is off. */
-export const Empty: Story = {};
+function Live(props: Partial<React.ComponentProps<typeof ChatInput>> & { initial?: string }) {
+	const [value, setValue] = useState(props.initial ?? "");
+	return (
+		<ChatInput
+			label="어시스턴트에게 요청"
+			placeholder="무엇을 할까요?"
+			sendLabel="보내기"
+			stopLabel="멈추기"
+			onSubmit={() => setValue("")}
+			onStop={() => {}}
+			aside={model}
+			{...props}
+			value={value}
+			onValueChange={setValue}
+		/>
+	);
+}
 
-export const WithText: Story = { args: { value: "초안인 글이 뭐야?" } };
+/** Empty: the send button is dim. */
+export const Empty: Story = { render: () => <Live /> };
 
-/** The answer is being written: the button stops it. */
-export const Busy: Story = { args: { value: "", busy: true } };
+export const Typed: Story = { render: () => <Live initial="요약이 빈 글에 요약을 채워 줘" /> };
 
-/** The assistant can't run: the box is off. */
-export const Disabled: Story = { args: { disabled: true, placeholder: "먼저 연결을 추가하세요" } };
+/** While the answer is written the send button is the stop button. */
+export const Busy: Story = { render: () => <Live initial="" busy /> };
 
-/** The model picker sits at the start of the row, the round send button at the end. */
-export const WithModelPicker: Story = {
-	args: {
-		value: "요약이 비어 있는 글 찾아 줘",
-		aside: (
-			<TextButton variant="quiet" mono className="text-monti-meta">
-				claude-sonnet-5-5
-				<Caret />
-			</TextButton>
-		),
-	},
-};
-
-/** What the message will be about, over the text: the picked rows, which × leaves out. */
+/** Rows picked in the list go with the request: a chip over the text, × leaves them out. */
 export const WithContext: Story = {
-	args: {
-		value: "이 두 편 요약 채워 줘",
-		context: (
-			<Chip onRemove={() => undefined} removeLabel="고른 글 빼기">
-				고른 글 2편
-			</Chip>
-		),
-	},
+	render: () => (
+		<Live
+			context={
+				<Chip onRemove={() => {}} removeLabel="빼기">
+					고른 글 2편
+				</Chip>
+			}
+		/>
+	),
+};
+
+/** The box cannot send. */
+export const Disabled: Story = { render: () => <Live initial="요약을 채워 줘" disabled /> };
+
+/** While the answer is written, what the admin sends waits over the text: send now, edit, cancel. */
+export const BusyWithQueue: Story = {
+	render: () => (
+		<Live
+			busy
+			busyPlaceholder="더 말하기"
+			onQueue={() => {}}
+			queue={["회고 글은 빼고 옮겨 줘", "사진 글도 빼 줘"].map((words) => (
+				<ChatQueueItem
+					key={words}
+					sendNowLabel="지금 보내기"
+					editLabel="고치기"
+					cancelLabel="취소"
+					onSendNow={() => {}}
+					onEdit={() => {}}
+					onCancel={() => {}}
+				>
+					{words}
+				</ChatQueueItem>
+			))}
+		/>
+	),
 };

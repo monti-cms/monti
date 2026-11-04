@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Close, Undo } from "@carbon/icons-react";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
@@ -13,6 +12,7 @@ import {
 	Inline,
 	Input,
 	Option,
+	ReadValue,
 	Segmented,
 	Select,
 	SelectContent,
@@ -24,11 +24,11 @@ import {
 	Text,
 	Textarea,
 } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Close, Undo } from "@monti-cms/ui/icons";
 import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import { nameProblem, type Obj, type Rename, sameJson, sectionOf } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */

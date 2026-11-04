@@ -1,8 +1,8 @@
 "use client";
 
-import { SpellCheck } from "@carbon/icons-react";
 import type { TextChecker } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { SpellCheck } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import { useState } from "react";
 import type { EditorExtensionContext, EditorExtensionResult } from "../../admin-components";

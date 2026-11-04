@@ -1,4 +1,4 @@
-import { Idea, Information, Warning, WarningAlt, WarningHex } from "@carbon/icons-react";
+import { Idea, Information, Warning, WarningAlt, WarningHex } from "@monti-cms/admin/icons";
 import type { ComponentType } from "react";
 
 /** Callout block variants (the options of the block definition's `callout.variant`). */

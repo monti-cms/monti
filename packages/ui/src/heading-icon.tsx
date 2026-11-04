@@ -1,6 +1,6 @@
-import { Heading } from "@carbon/icons-react";
 import { type ComponentProps, forwardRef } from "react";
 import { cn } from "./cn";
+import { Heading } from "./icons";
 import type { MontiIcon } from "./monti-icon";
 
 /**

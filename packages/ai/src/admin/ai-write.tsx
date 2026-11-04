@@ -1,6 +1,5 @@
 "use client";
 
-import { Renew } from "@carbon/icons-react";
 import {
 	type BrowserFormat,
 	diffWords,
@@ -13,6 +12,7 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
+import { Renew, Spark } from "@monti-cms/admin/icons";
 import {
 	Box,
 	Button,
@@ -31,7 +31,6 @@ import {
 	Inline,
 	Ins,
 	isComposingKey,
-	Spark,
 	Stack,
 	Tabs,
 	TabsList,

@@ -106,11 +106,111 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 		<pre
 			data-slot="compare-code"
 			className={cn(
-				"mb-monti-20 overflow-x-auto whitespace-pre-wrap break-words rounded-monti-lg bg-monti-muted px-monti-16 py-monti-12 font-mono text-monti-caption",
+				"mb-monti-20 overflow-x-auto whitespace-pre-wrap break-words rounded-monti-lg bg-monti-muted px-monti-16 py-monti-12 font-mono text-monti-caption leading-[1.7]",
 				className,
 			)}
 			{...props}
 		/>
+	);
+}
+
+/**
+ * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
+ * is the head (`head`): the name of each side in the small mono line, under the ink rule.
+ */
+function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="compare-rows" className={cn("flex flex-col", className)} {...props} />;
+}
+
+/**
+ * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source (cms-allow-korean)
+ * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
+ * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`. The row of the entry's
+ * title is `title`: the two titles in `Heading variant="page"`, its name set lower to sit by them.
+ */
+function CompareRow({
+	name,
+	note,
+	head = false,
+	title = false,
+	current = false,
+	source,
+	translation,
+	className,
+	...props
+}: Omit<React.ComponentProps<"div">, "children" | "title"> & {
+	/** The kind of block ("문단"); empty on the head row. (cms-allow-korean: quotes the words) */
+	name?: React.ReactNode;
+	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. (cms-allow-korean: quotes the words) */
+	note?: React.ReactNode;
+	/** The head row: each side's name, date and language in the small mono line. */
+	head?: boolean;
+	/** The title row: the two titles at the page heading size. */
+	title?: boolean;
+	current?: boolean;
+	source: React.ReactNode;
+	translation: React.ReactNode;
+}) {
+	return (
+		<div
+			data-slot="compare-row"
+			data-current={current || undefined}
+			data-title={title || undefined}
+			className={cn(
+				"grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] items-stretch border-monti-muted border-b last:border-b-0",
+				head && "border-t border-t-monti-contrast font-mono text-monti-micro text-monti-subtle",
+				className,
+			)}
+			{...props}
+		>
+			<span
+				className={cn(
+					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle",
+					title && "pt-monti-20",
+				)}
+			>
+				{name}
+				{note && <span className="text-monti-warning">{note}</span>}
+			</span>
+			<div
+				className={cn(
+					"min-w-0 bg-monti-tool px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0 **:data-[slot=compare-code]:bg-monti-selected",
+					!head && "text-monti-muted",
+				)}
+			>
+				{source}
+			</div>
+			<div
+				className={cn(
+					"min-w-0 border-monti-default border-l px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0",
+					current && "bg-monti-block",
+				)}
+			>
+				{translation}
+			</div>
+		</div>
+	);
+}
+
+/**
+ * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
+ * `Button variant="ghost" size="sm"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
+ */
+function CompareShared({
+	action,
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div"> & { action: React.ReactNode }) {
+	return (
+		<div
+			data-slot="compare-shared"
+			className={cn("flex min-w-0 flex-col items-start gap-monti-8 text-monti-faint", className)}
+			{...props}
+		>
+			<div className="w-full">{children}</div>
+			{action}
+		</div>
 	);
 }
 
@@ -126,6 +226,9 @@ export {
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,

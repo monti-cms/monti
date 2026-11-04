@@ -1,8 +1,8 @@
-import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Affix } from "./affix";
 import { FormField, FormFieldError, FormFieldLabel } from "./field";
 import { IconButton } from "./icon-button";
+import { Renew } from "./icons";
 import { Stack } from "./stack";
 
 /** Only the middle is typed: the fixed ends are faint mono text with no line, and the underline is under the typed part only. A click anywhere in the field puts the caret at the end of the typed part. */
@@ -92,6 +92,35 @@ export const States: Story = {
 				<Affix id="a-4" prefix="/" suffix="/:slug" proposal defaultValue="notes" />
 			</FormField>
 			<Affix prefix="https://" suffix=".dev" disabled defaultValue="example" />
+		</Stack>
+	),
+};
+
+/** A slug alone (the properties pane's address): no fixed part, so the line runs the full width, under the regenerate button too. */
+export const SlugOnly: Story = {
+	render: () => (
+		<Stack gap={24}>
+			<FormField>
+				<FormFieldLabel htmlFor="s-1">주소</FormFieldLabel>
+				<Affix
+					id="s-1"
+					defaultValue="a-long-autumn-trail-walk-in-the-mountains"
+					action={
+						<IconButton label="제목으로 다시 만들기">
+							<Renew aria-hidden />
+						</IconButton>
+					}
+				/>
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="s-2">주소 (제안)</FormFieldLabel>
+				<Affix id="s-2" proposal defaultValue="autumn-trail" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="s-3">주소 (오류)</FormFieldLabel>
+				<Affix id="s-3" aria-invalid defaultValue="가을 산길" />
+				<FormFieldError>영문 소문자, 숫자, -만 쓸 수 있어요.</FormFieldError>
+			</FormField>
 		</Stack>
 	),
 };

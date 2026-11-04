@@ -1,7 +1,7 @@
 "use client";
 
-import { Add, Draggable, SplitScreen, TrashCan } from "@carbon/icons-react";
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
+import { Add, Draggable, SplitScreen, TrashCan } from "@monti-cms/admin/icons";
 import { Box, cn, Text } from "@monti-cms/admin/kit";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {

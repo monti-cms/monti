@@ -13,6 +13,7 @@ import {
 	LockMark,
 	PageToolbar,
 	PageToolbarEnd,
+	ReadValue,
 	Section,
 	Stack,
 	Tabs,
@@ -20,7 +21,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
@@ -31,7 +31,6 @@ import { schemaFieldsMessages } from "./fields.messages";
 import { FieldsCard, usePreviewOpen, useWide } from "./fields-tree";
 import { schemaMessages } from "./messages";
 import { PublicPathField } from "./public-path-field";
-import { ReadValue } from "./read-value";
 import {
 	type Allowed,
 	allowedOf,
@@ -282,13 +281,9 @@ export function CollectionEditor({
 					</TabsList>
 					{tab === "fields" && (
 						<PageToolbarEnd>
-							<TextButton
-								variant={previewOpen ? "ink" : "plain"}
-								aria-pressed={previewOpen}
-								onClick={() => setPreviewOpen(!previewOpen)}
-							>
+							<Button variant="ghost" size="sm" aria-pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
 								{tf("layout.previewTitle")}
-							</TextButton>
+							</Button>
 						</PageToolbarEnd>
 					)}
 				</PageToolbar>
@@ -323,7 +318,8 @@ export function CollectionEditor({
 								</>
 							}
 							stacked
-							last={disabled}
+							// The delete block under it brings its own rule (and the page ends here when it is not shown): no hairline of its own.
+							last
 						>
 							<Grid columns={2} gap={24}>
 								<ReadValue label={t("collection.newId")}>

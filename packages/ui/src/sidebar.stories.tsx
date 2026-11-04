@@ -1,14 +1,16 @@
-import { Document, Edit, Folder, Image, ListBulleted, SettingsAdjust, Tag, Tools, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import * as React from "react";
-import { ChangeDot } from "./change-dot";
-import { Count } from "./count";
+import { useState } from "react";
+import { Document, Image as ImageIcon, Settings, Tools, TrashCan } from "./icons";
 import {
+	Box,
+	Count,
+	folderTree,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
+	SidebarGroupContent,
 	SidebarHeader,
 	SidebarInset,
 	SidebarMenu,
@@ -20,297 +22,136 @@ import {
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
-	useSidebar,
-} from "./sidebar";
-import { Heading, Text } from "./text";
-
-function Row({
-	icon,
-	children,
-	count,
-	countTone,
-	changed,
-	railDot,
-	...props
-}: {
-	railDot?: string;
-	tooltip?: string;
-	icon: React.ReactNode;
-	children: React.ReactNode;
-	count?: number;
-	countTone?: "default" | "warning";
-	isActive?: boolean;
-	changed?: boolean;
-	className?: string;
-	disabled?: boolean;
-}) {
-	return (
-		<SidebarMenuItem>
-			<SidebarMenuButton railDot={railDot} {...props}>
-				{icon}
-				<span>{children}</span>
-				{changed && <ChangeDot label="바뀐 곳" />}
-				{count !== undefined && <SidebarMenuBadge tone={countTone}>{count}</SidebarMenuBadge>}
-			</SidebarMenuButton>
-		</SidebarMenuItem>
-	);
-}
-
-/** The screen mode at the foot: one icon button that shows the current mode and opens the three modes upward, a ✓ on the current one. */
-function ScreenMode({ open }: { open?: boolean }) {
-	const [mode, setMode] = React.useState<"system" | "light" | "dark">("system");
-	return (
-		<SidebarScreenMode
-			value={mode}
-			onValueChange={setMode}
-			defaultOpen={open}
-			labels={{ label: "화면 모드", system: "시스템", light: "라이트", dark: "다크" }}
-		/>
-	);
-}
-
-type Open = "posts" | "folder" | "media" | "trash" | "tools" | "settings";
-
-/** The rail the admin draws: the site's name, the content rows (the open one has its folders under it), and at the bottom, under a line, the trash, tools and settings. */
-function AdminSidebar({ active = "posts", themeOpen = false }: { active?: Open; themeOpen?: boolean }) {
-	const { rail } = useSidebar();
-	return (
-		<Sidebar label="관리 메뉴">
-			<SidebarHeader>
-				{!rail && (
-					<Text variant="title" className="grow truncate">
-						example.dev
-					</Text>
-				)}
-				<SidebarRailToggle />
-			</SidebarHeader>
-			<SidebarContent>
-				<SidebarGroup>
-					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<Document aria-hidden />} count={148} isActive={active === "posts"}>
-							게시글
-						</Row>
-						{(active === "posts" || active === "folder") && (
-							<li>
-								<SidebarMenuSub aria-label="게시글 폴더">
-									<li>
-										<SidebarMenuSubButton href="#series" isActive={active === "folder"}>
-											시리즈 원고
-											<Count>2</Count>
-										</SidebarMenuSubButton>
-									</li>
-								</SidebarMenuSub>
-							</li>
-						)}
-						<Row icon={<Edit aria-hidden />}>메모</Row>
-						<Row icon={<Folder aria-hidden />}>카테고리</Row>
-						<Row icon={<Tag aria-hidden />}>태그</Row>
-						<Row icon={<ListBulleted aria-hidden />}>시리즈</Row>
-						<Row icon={<Image aria-hidden />} isActive={active === "media"}>
-							미디어
-						</Row>
-						{active === "media" && (
-							<li>
-								<SidebarMenuSub aria-label="미디어 폴더">
-									<li>
-										<SidebarMenuSubButton href="#blog" isActive>
-											Blog Assets
-											<Count>14</Count>
-										</SidebarMenuSubButton>
-									</li>
-									<li>
-										<SidebarMenuSubButton href="#covers" depth={1}>
-											covers
-											<Count>6</Count>
-										</SidebarMenuSubButton>
-									</li>
-									<li>
-										<SidebarMenuSubButton href="#diagrams" depth={1}>
-											diagrams
-											<Count>3</Count>
-										</SidebarMenuSubButton>
-									</li>
-									<li>
-										<SidebarMenuSubButton href="#wallpapers">
-											Wallpapers
-											<Count>7</Count>
-										</SidebarMenuSubButton>
-									</li>
-								</SidebarMenuSub>
-							</li>
-						)}
-					</SidebarMenu>
-				</SidebarGroup>
-			</SidebarContent>
-			<SidebarFooter>
-				<SidebarMenu aria-label="아래 묶음">
-					<Row icon={<TrashCan aria-hidden />} count={3} isActive={active === "trash"}>
-						휴지통
-					</Row>
-					<Row
-						icon={<Tools aria-hidden />}
-						count={1}
-						countTone="warning"
-						tooltip="도구 1"
-						railDot="전송 실패 1건"
-						isActive={active === "tools"}
-					>
-						도구
-					</Row>
-					<Row icon={<SettingsAdjust aria-hidden />} isActive={active === "settings"}>
-						설정
-					</Row>
-				</SidebarMenu>
-				<SidebarFoot>
-					<ScreenMode open={themeOpen} />
-				</SidebarFoot>
-			</SidebarFooter>
-		</Sidebar>
-	);
-}
+	Text,
+} from "./index";
 
 /**
- * The left navigation: the tool ground, a line down its right edge, 232px. The open row is on the selected ground and semibold; pointing at
- * another row gives it a paler ground. Counts sit at the end in mono, and the count that needs attention (failed deliveries on the tools row) in
- * the warning tone. Under the open row its folders show, with the folders on the open path. Drag the edge to change the width.
+ * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the tools and the settings.
+ * The open row is on the current ground and semibold; a row under the pointer takes the selected ground. Folded (⌘B) it is a 48px rail of icons.
  */
+type Folder = { name: string; count: string; depth: 0 | 1; active?: boolean };
+// The sidebar lists a collection's top-level folders; an open folder shows its own folders under it.
+const TOP: readonly Folder[] = [
+	{ name: "에세이", count: "12", depth: 0 },
+	{ name: "시리즈 원고", count: "2", depth: 0 },
+];
+const ESSAYS_OPEN: readonly Folder[] = [
+	{ name: "에세이", count: "12", depth: 0, active: true },
+	{ name: "여행", count: "5", depth: 1 },
+	{ name: "회고", count: "3", depth: 1 },
+	{ name: "시리즈 원고", count: "2", depth: 0 },
+];
+
 const meta = {
 	title: "Patterns/Frame/Sidebar",
-	component: Sidebar,
-	args: { label: "관리 메뉴" },
 	parameters: { bleed: true },
-	render: () => (
-		<SidebarProvider>
-			<AdminSidebar />
-			<SidebarInset className="gap-monti-16 p-monti-32">
-				<Heading variant="page">게시글</Heading>
-			</SidebarInset>
-		</SidebarProvider>
-	),
-} satisfies Meta<typeof Sidebar>;
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+/** Stands in for the app's router link. */
+const RouterLink = (props: React.ComponentProps<"a">) => <a {...props} />;
 
-/** The media row open, with its folders and the folder inside one (indented 14px a level). */
-export const Media: Story = {
-	render: () => (
-		<SidebarProvider>
-			<AdminSidebar active="media" />
-			<SidebarInset className="gap-monti-16 p-monti-32">
-				<Heading variant="page">Blog Assets</Heading>
+function Nav({ rail = false, folders = TOP }: { rail?: boolean; folders?: readonly Folder[] }) {
+	const tree = folderTree(folders.map((folder) => folder.depth));
+	const [mode, setMode] = useState<"system" | "light" | "dark">("system");
+	return (
+		<SidebarProvider rail={rail} onRailChange={() => {}}>
+			<Sidebar label="관리자 메뉴">
+				<SidebarHeader>
+					<Text variant="title" truncate>
+						몬티 블로그
+					</Text>
+					<SidebarRailToggle />
+				</SidebarHeader>
+				<SidebarContent>
+					<SidebarGroup>
+						<SidebarGroupContent>
+							<SidebarMenu aria-label="콘텐츠">
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										isActive
+										tooltip="게시글 148"
+										render={<RouterLink href="#posts" aria-current="page" />}
+									>
+										<Document />
+										<span>게시글</span>
+										<SidebarMenuBadge>148</SidebarMenuBadge>
+									</SidebarMenuButton>
+									{!rail && (
+										<SidebarMenuSub aria-label="게시글 폴더">
+											{folders.map((folder, index) => (
+												<li key={folder.name}>
+													<SidebarMenuSubButton
+														render={<button type="button" />}
+														isActive={folder.active}
+														depth={folder.depth}
+														tree={tree[index]}
+													>
+														<span>{folder.name}</span>
+														<Count>{folder.count}</Count>
+													</SidebarMenuSubButton>
+												</li>
+											))}
+										</SidebarMenuSub>
+									)}
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="미디어" render={<RouterLink href="#media" />}>
+										<ImageIcon />
+										<span>미디어</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				</SidebarContent>
+				<SidebarFooter>
+					<SidebarMenu aria-label="관리">
+						<SidebarMenuItem>
+							<SidebarMenuButton tooltip="휴지통 6" render={<RouterLink href="#trash" />}>
+								<TrashCan />
+								<span>휴지통</span>
+								<SidebarMenuBadge>6</SidebarMenuBadge>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton tooltip="도구 1" railDot="실패한 전송" render={<RouterLink href="#tools" />}>
+								<Tools />
+								<span>도구</span>
+								<SidebarMenuBadge tone="warning">1</SidebarMenuBadge>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton tooltip="설정" render={<RouterLink href="#settings" />}>
+								<Settings />
+								<span>설정</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					</SidebarMenu>
+					<SidebarFoot>
+						<SidebarScreenMode
+							value={mode}
+							onValueChange={setMode}
+							labels={{ label: "화면 모드", system: "시스템", light: "밝게", dark: "어둡게" }}
+						/>
+					</SidebarFoot>
+				</SidebarFooter>
+			</Sidebar>
+			<SidebarInset fixed>
+				<Box padding={24}>
+					<Text variant="note">페이지</Text>
+				</Box>
 			</SidebarInset>
 		</SidebarProvider>
-	),
-};
+	);
+}
 
-/** A folder of the posts open, and the rows of the bottom group open. */
-export const OtherRows: Story = {
-	render: () => (
-		<SidebarProvider className="min-h-96">
-			<AdminSidebar active="folder" />
-			<AdminSidebar active="trash" />
-			<AdminSidebar active="tools" />
-			<AdminSidebar active="settings" />
-		</SidebarProvider>
-	),
-};
+/** Open: names, counts, the open collection's folder tree, the screen mode switch at the bottom. */
+export const Open: Story = { render: () => <Nav /> };
 
-/** The open row, a plain row, a row someone is pointing at (paler than the open one), a row with an unsaved change, a disabled row. */
-export const RowStates: Story = {
-	render: () => (
-		<SidebarProvider className="min-h-96">
-			<Sidebar label="상태">
-				<SidebarContent>
-					<SidebarMenu aria-label="상태">
-						<Row icon={<Document aria-hidden />} count={148} isActive>
-							열린 줄
-						</Row>
-						<Row icon={<Folder aria-hidden />}>보통 줄</Row>
-						<Row icon={<Tag aria-hidden />} className="bg-monti-muted">
-							가리킨 줄
-						</Row>
-						<Row icon={<Image aria-hidden />} changed>
-							바뀐 곳이 있는 줄
-						</Row>
-						<Row icon={<TrashCan aria-hidden />} disabled>
-							쓸 수 없는 줄
-						</Row>
-					</SidebarMenu>
-				</SidebarContent>
-			</Sidebar>
-		</SidebarProvider>
-	),
-};
+/** A folder open (posts › essays): its own folders show under it, and the top level's line runs past them to the next folder. */
+export const FolderOpen: Story = { render: () => <Nav folders={ESSAYS_OPEN} /> };
 
-/** A name longer than the rail is cut before the count. */
-export const LongLabel: Story = {
-	render: () => (
-		<SidebarProvider className="min-h-96">
-			<Sidebar label="콘텐츠">
-				<SidebarContent>
-					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<Document aria-hidden />} count={128} isActive>
-							아주 긴 이름의 콘텐츠 종류가 사이드바 폭을 넘으면 잘려요
-						</Row>
-					</SidebarMenu>
-				</SidebarContent>
-			</Sidebar>
-		</SidebarProvider>
-	),
-};
-
-/** Entries dragged over a folder: it gets a ring. */
-export const DropTarget: Story = {
-	render: () => (
-		<SidebarProvider className="min-h-96">
-			<Sidebar label="관리 메뉴">
-				<SidebarContent>
-					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<Document aria-hidden />} isActive>
-							게시글
-						</Row>
-						<li>
-							<SidebarMenuSub aria-label="게시글 폴더">
-								<li>
-									<SidebarMenuSubButton href="#a" dropTarget>
-										시리즈 원고
-										<Count>2</Count>
-									</SidebarMenuSubButton>
-								</li>
-								<li>
-									<SidebarMenuSubButton href="#b">보관</SidebarMenuSubButton>
-								</li>
-							</SidebarMenuSub>
-						</li>
-					</SidebarMenu>
-				</SidebarContent>
-			</Sidebar>
-		</SidebarProvider>
-	),
-};
-
-/** Folded to the icon rail (⌘B or the button in the head row): 64px, the icons where they were, names and counts gone, the tools icon with its dot, the unfold button alone in the head. */
-export const Rail: Story = {
-	render: () => (
-		<SidebarProvider rail>
-			<AdminSidebar active="tools" />
-			<SidebarInset className="gap-monti-16 p-monti-32">
-				<Heading variant="page">도구</Heading>
-			</SidebarInset>
-		</SidebarProvider>
-	),
-};
-
-/** The screen mode menu open: system, light and dark, a ✓ on the current one. The default is the system. */
-export const ScreenModeMenu: Story = {
-	render: () => (
-		<SidebarProvider>
-			<AdminSidebar themeOpen />
-			<SidebarInset className="gap-monti-16 p-monti-32">
-				<Heading variant="page">게시글</Heading>
-			</SidebarInset>
-		</SidebarProvider>
-	),
-};
+/** Folded to the rail: icons only, names in tooltips, a dot on the tools icon for a failure. */
+export const Rail: Story = { render: () => <Nav rail /> };

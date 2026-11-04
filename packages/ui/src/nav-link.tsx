@@ -1,12 +1,22 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { Grip } from "./grip";
+
+/**
+ * The row of a navigation, the rail's (`SidebarMenuButton`) and a page's own ({@link NavLink}): 36px, the name 10px in, the open one on the current
+ * ground and semibold. Pointing at a row gives it the selected ground, one step under the open one's current ground, on the rail and on paper alike.
+ */
+export const NAV_ROW =
+	"flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body no-underline outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default not-disabled:hover:bg-monti-selected data-active:bg-monti-current data-active:font-semibold";
+
+/** The count or identifier at the end of a {@link NAV_ROW}: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
+export const NAV_ROW_END =
+	"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums text-monti-subtle";
 
 /**
  * One link of a page's own navigation, such as the collections beside the settings editor: 36px, the name, and at the end the identifier (`note`, mono,
- * quiet). The open one is on the current ground and semibold; the others are muted, and pointing at one gives it the selected ground. `dot` is the name of
- * the change dot that follows the name when this link holds an unsaved change. With `handle` (a {@link NavLinkHandle}) the link can be dragged: the handle
+ * quiet). It is the rail's row ({@link NAV_ROW}) on paper: the open one is on the current ground and semibold, the others are muted, and pointing at one gives it the selected ground. `dot` is the name of
+ * the change dot that follows the name when this link holds an unsaved change. With `handle` (a {@link DragHandle}) the link can be dragged: the handle
  * shows in the left margin while the pointer or the keyboard is on the link; `drag` carries the sortable's transform while it is moved.
  */
 function NavLink({
@@ -28,7 +38,8 @@ function NavLink({
 	handle?: React.ReactNode;
 	/** While the link is dragged: where the drag has moved it (the sortable's transform and transition) and whether it is the link in hand. */
 	drag?: { transform?: string; transition?: string; active?: boolean };
-	onSelect: () => void;
+	/** Without it the entry is drawn and opens nothing (a screen spec's look, before its behavior is wired). */
+	onSelect?: () => void;
 	children: React.ReactNode;
 }) {
 	return (
@@ -39,7 +50,7 @@ function NavLink({
 			{...props}
 		>
 			{handle && (
-				<span className="absolute top-1/2 left-0.5 z-10 -translate-y-1/2 opacity-0 focus-within:opacity-100 group-hover/nav:opacity-100">
+				<span className="absolute top-1/2 left-0.5 z-10 flex size-5 -translate-y-1/2 opacity-0 *:size-full focus-within:opacity-100 group-hover/nav:opacity-100">
 					{handle}
 				</span>
 			)}
@@ -47,31 +58,14 @@ function NavLink({
 				type="button"
 				aria-current={active ? "page" : undefined}
 				onClick={onSelect}
-				className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-muted outline-none hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default"
+				className={cn(NAV_ROW, "cursor-pointer text-monti-muted")}
 			>
 				<span className="min-w-0 truncate">{children}</span>
 				{dot && <ChangeDot label={dot} className="-ml-monti-4" />}
-				{note && <span className="ml-auto shrink-0 font-normal text-monti-meta text-monti-subtle">{note}</span>}
+				{note && <span className={NAV_ROW_END}>{note}</span>}
 			</button>
 		</div>
 	);
 }
 
-/** The drag handle of a {@link NavLink}: six dots, faint until pointed at. Give it the sortable's `ref` and listeners, and a name that says whose link it moves. */
-function NavLinkHandle({ className, ...props }: Omit<React.ComponentProps<"button">, "children" | "type">) {
-	return (
-		<button
-			type="button"
-			data-slot="nav-link-handle"
-			className={cn(
-				"flex size-5 cursor-grab touch-none items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-				className,
-			)}
-			{...props}
-		>
-			<Grip />
-		</button>
-	);
-}
-
-export { NavLink, NavLinkHandle };
+export { NavLink };

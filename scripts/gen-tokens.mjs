@@ -41,7 +41,7 @@ const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"M
  * A height class carries its token's name whole (`height-icon-button` is `h-monti-icon-button`), so a 32px button size (`size-monti-icon-button`) can never
  * be mistaken for a 16px glyph size (`size-monti-icon-md`). The heights of square controls also get a `size-monti-*` class.
  */
-const SQUARE = new Set(["control-md", "control-sm", "icon-button"]);
+const SQUARE = new Set(["control-lg", "control-md", "control-sm", "icon-button"]);
 
 const ref = (value) => value.replace(/\{([\w-]+)\}/g, "var(--monti-$1)");
 const strip = (name, prefix) => name.slice(prefix.length);
@@ -246,6 +246,18 @@ function layoutModule(json) {
 		scale("PADDING_Y", "py", "Padding above and below."),
 		scale("PADDING_TOP", "pt", "Padding above."),
 		scale("PADDING_BOTTOM", "pb", "Padding below."),
+		scale("PADDING_LEFT", "pl", "Padding at the start of a row."),
+		scale("PADDING_RIGHT", "pr", "Padding at the end of a row."),
+		scale(
+			"MARGIN_TOP",
+			"mt",
+			"Space above, only for a screen spec's Spacing between two children (`spec/spacing.ts`).",
+		),
+		scale(
+			"MARGIN_LEFT",
+			"ml",
+			"Space before, only for a screen spec's Spacing between two children in a row (`spec/spacing.ts`).",
+		),
 		block(
 			"Surfaces, by background role. The black one carries its own text color, so what is written on it can be read.",
 			"BACKGROUND",

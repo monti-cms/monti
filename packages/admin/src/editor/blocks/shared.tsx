@@ -1,8 +1,19 @@
 "use client";
 
-import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { BlockBar, cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
+import {
+	cn,
+	FloatingBar,
+	IconButton,
+	Inline,
+	Input,
+	Label,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+} from "@monti-cms/ui";
+import { SettingsAdjust } from "@monti-cms/ui/icons";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
 import { blocksMessages } from "./messages";
@@ -22,14 +33,14 @@ export function AttributeInput({
 	onBlur,
 	boxed = false,
 	...props
-}: Omit<ComponentProps<"input">, "value" | "onChange" | "defaultValue"> & {
+}: Omit<ComponentProps<typeof Input>, "value" | "onChange" | "defaultValue" | "size" | "appearance"> & {
 	value: string;
 	onCommit: (value: string) => void;
 	onEnter?: () => void;
 	onEscape?: () => void;
 	/** Do not write an emptied value (tab name). Leaving it empty restores the original value. */
 	required?: boolean;
-	/** A bordered field, for the settings popover. Without it the value reads as part of the block. */
+	/** The underline field, for the settings popover. Without it the value reads as part of the block, in its type. */
 	boxed?: boolean;
 }) {
 	const [draft, setDraft] = useState(value);
@@ -57,8 +68,9 @@ export function AttributeInput({
 	};
 
 	return (
-		<input
+		<Input
 			{...props}
+			{...(boxed ? { size: "sm" as const } : { appearance: "inline" as const, size: "inherit" as const })}
 			value={draft}
 			onFocus={() => {
 				focusedRef.current = true;
@@ -96,11 +108,6 @@ export function AttributeInput({
 					onEscape?.();
 				}
 			}}
-			className={cn(
-				"min-w-0 border-0 bg-transparent p-0 outline-none placeholder:text-current placeholder:opacity-50 focus-visible:ring-0",
-				boxed &&
-					"h-7 w-full rounded-monti-md border border-monti-default px-monti-8 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
-			)}
 		/>
 	);
 }
@@ -127,7 +134,7 @@ export function ContainerToolbar({
 				className,
 			)}
 		>
-			<BlockBar aria-label={label}>{children}</BlockBar>
+			<FloatingBar aria-label={label}>{children}</FloatingBar>
 		</div>
 	);
 }

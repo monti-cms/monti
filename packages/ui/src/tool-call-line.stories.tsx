@@ -1,57 +1,38 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Stack } from "./stack";
-import { ToolCallLine } from "./tool-call-line";
+import { Box, ToolCallLine } from "./index";
 
-const details = [
-	{ label: "입력", value: JSON.stringify({ collection: "post", status: "draft" }, null, 2) },
-	{ label: "결과", value: JSON.stringify({ items: [{ id: "a" }, { id: "b" }], total: 2 }, null, 2) },
+const DETAILS = [
+	{ label: "입력", value: '{ "collection": "posts", "filter": { "excerpt": null } }' },
+	{ label: "결과", value: '[{ "slug": "autumn-trail" }, { "slug": "hello-monti" }]' },
 ];
 
-/** One call the assistant made, as a mono line: a mark for where it stands and what was done. A line that opens ends in a caret; it shows the input and the result. */
+/**
+ * One call the assistant made, as a mono line: a spinner and darker words while it runs, ✓ when done, a red × and red words when it failed or
+ * stopped there. With details the line opens to the input and the result (the caret shows while pointed at, focused or open).
+ */
 const meta = {
 	title: "Monti/Assistant/ToolCallLine",
 	component: ToolCallLine,
-	args: { status: "done", statusLabel: "완료", details, children: "글 목록 읽음 · 게시글 6편" },
-	argTypes: { status: { control: "inline-radio", options: ["running", "done", "failed"] } },
+	args: { status: "done", statusLabel: "완료", children: "글 목록 읽음 · 게시글 148편" },
+	decorators: [
+		(Story) => (
+			<Box width="assistant" padding={24} background="tool">
+				<Story />
+			</Box>
+		),
+	],
 } satisfies Meta<typeof ToolCallLine>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const Done: Story = {};
 
-/** Where the call stands: running, done, failed. */
-export const Statuses: Story = {
-	render: () => (
-		<Stack gap={4} maxWidth="panel">
-			<ToolCallLine status="running" statusLabel="하는 중">
-				글 목록 읽는 중
-			</ToolCallLine>
-			<ToolCallLine status="done" statusLabel="완료" details={details}>
-				글 목록 읽음 · 게시글 6편
-			</ToolCallLine>
-			<ToolCallLine
-				status="failed"
-				statusLabel="실패"
-				details={[{ label: "결과", value: '{ "error": { "code": "not_found", "message": "그런 글이 없어요" } }' }]}
-			>
-				글 열기 실패 · 없는 글
-			</ToolCallLine>
-		</Stack>
-	),
-};
+export const Running: Story = { args: { status: "running", statusLabel: "하는 중", children: "글 목록 읽는 중" } };
 
-/** Opened: the input and the result, as text. */
-export const Open: Story = { args: { defaultOpen: true } };
+/** Failed, or stopped there when the connection dropped. */
+export const Failed: Story = { args: { status: "failed", statusLabel: "실패", children: "글 읽기 · 여기서 멈춤" } };
 
-/** Without details the line is not a button and has no caret. */
-export const NotExpandable: Story = { args: { details: undefined } };
+/** With details: press to open the input and the result. */
+export const WithDetails: Story = { args: { details: DETAILS } };
 
-export const OpenFailed: Story = {
-	args: {
-		status: "failed",
-		statusLabel: "실패",
-		defaultOpen: true,
-		children: "글 열기 실패 · 없는 글",
-		details: [{ label: "결과", value: "작업이 실패했어요." }],
-	},
-};
+export const Open: Story = { args: { details: DETAILS, defaultOpen: true } };

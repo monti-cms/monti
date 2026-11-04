@@ -1,10 +1,10 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
+import { Button } from "./button";
 import { Caret } from "./caret";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
-import { TextButton } from "./text-button";
 
 /** What the admin asked, quoted under the title of the review page. */
 function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
@@ -126,11 +126,54 @@ function ReviewCompareHead({ before, after }: { before: ReactNode; after: ReactN
 	return (
 		<div
 			data-slot="review-compare-head"
-			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] px-monti-12 pt-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
+			className="-mx-monti-12 grid grid-cols-[104px_repeat(2,minmax(0,1fr))] px-monti-12 pt-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
 		>
 			<span />
 			<span className="px-monti-20">{before}</span>
 			<span className="px-monti-20">{after}</span>
+		</div>
+	);
+}
+
+type ReviewBlockProps = {
+	included: boolean;
+	onIncludedChange?: (included: boolean) => void;
+	includeLabel: string;
+	readOnly?: boolean;
+	/** The block's name ("요약", "문단 1"). (cms-allow-korean: quotes the words) */
+	label: ReactNode;
+	/** A word under the block's name ("mostly rewritten"), in the warning tone. */
+	note?: ReactNode;
+};
+
+/** The gutter of a change to one block: the check, then the block's name with its note under it. */
+function ReviewGutter({ included, onIncludedChange, includeLabel, readOnly, label, note }: ReviewBlockProps) {
+	return (
+		<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
+			<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} readOnly={readOnly} />
+			<span className="flex flex-col">
+				{label}
+				{note !== undefined && <b className="font-mono font-normal text-monti-meta text-monti-warning">{note}</b>}
+			</span>
+		</span>
+	);
+}
+
+/**
+ * One change to a block of an entry, on one line (the "한 줄" view of a group like 다듬기): the check and the block's name in the gutter, as in (cms-allow-korean)
+ * `ReviewCompare`, then the block's text with the words taken out (`Del`) and put in (`Ins`) where they are.
+ */
+function ReviewLine({ className, children, ...props }: ReviewBlockProps & { className?: string; children: ReactNode }) {
+	return (
+		<div
+			data-slot="review-line"
+			className={cn(
+				"-mx-monti-12 grid grid-cols-[104px_minmax(0,1fr)] items-stretch border-monti-muted border-b px-monti-12 hover:bg-monti-muted",
+				className,
+			)}
+		>
+			<ReviewGutter {...props} />
+			<div className="min-w-0 py-monti-12 text-monti-reading">{children}</div>
 		</div>
 	);
 }
@@ -145,34 +188,23 @@ function ReviewCompare({
 	note,
 	before,
 	after,
-}: {
-	included: boolean;
-	onIncludedChange?: (included: boolean) => void;
-	includeLabel: string;
-	readOnly?: boolean;
-	label: ReactNode;
-	/** A word under the field's name ("mostly rewritten"), in the warning tone. */
-	note?: ReactNode;
+}: ReviewBlockProps & {
 	before: ReactNode;
 	after: ReactNode;
 }) {
 	return (
 		<div
 			data-slot="review-compare"
-			className="grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
+			className="-mx-monti-12 grid grid-cols-[104px_repeat(2,minmax(0,1fr))] items-stretch border-monti-muted border-b px-monti-12"
 		>
-			<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
-				<IncludeCheck
-					included={included}
-					onIncludedChange={onIncludedChange}
-					label={includeLabel}
-					readOnly={readOnly}
-				/>
-				<span className="flex flex-col">
-					{label}
-					{note !== undefined && <b className="font-mono font-normal text-monti-meta text-monti-warning">{note}</b>}
-				</span>
-			</span>
+			<ReviewGutter
+				included={included}
+				onIncludedChange={onIncludedChange}
+				includeLabel={includeLabel}
+				readOnly={readOnly}
+				label={label}
+				note={note}
+			/>
 			<div className="min-w-0 bg-monti-tool px-monti-20 py-monti-12 text-monti-muted text-monti-reading">{before}</div>
 			<div className="min-w-0 border-monti-default border-l px-monti-20 py-monti-12 text-monti-reading">{after}</div>
 		</div>
@@ -200,13 +232,13 @@ function ReviewMore({
 		<div data-slot="review-more" className="mt-monti-12 grid grid-cols-[14px_minmax(0,1fr)] gap-x-monti-16">
 			<span />
 			<span>
-				<TextButton variant="quiet" aria-expanded={open} onClick={() => onOpenChange(!open)}>
+				<Button variant="ghost" size="sm" aria-expanded={open} onClick={() => onOpenChange(!open)}>
 					{open ? lessLabel : moreLabel}
 					<Caret className={cn("transition-transform", open && "rotate-180")} />
-				</TextButton>
+				</Button>
 			</span>
 		</div>
 	);
 }
 
-export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote };
+export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewLine, ReviewMore, ReviewQuote };

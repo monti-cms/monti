@@ -1,168 +1,188 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+	Box,
+	Button,
 	Compare,
 	CompareBody,
 	CompareCode,
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,
-} from "./compare";
+	Heading,
+	Highlight,
+	Text,
+} from "./index";
 
 /**
- * Two versions of one entry side by side (an edit conflict, a draft kept in the browser). Two columns with no gap and a rule between them; each column
- * has its name, the properties that differ, and the entry. The words that differ sit on the highlight, the same way on both sides. The columns are
- * not lined up row by row: each reads as the entry itself.
+ * Two versions of one entry side by side: no gap, one rule between, 48px inside each side. Each side has its name in the small mono line, the
+ * properties that differ, then the entry as it reads. The words that differ are on the highlight on both sides.
  */
 const meta = {
-	title: "Patterns/Compare",
+	title: "Monti/Change/Compare",
 	component: Compare,
-	parameters: { bleed: true },
-	// The screen gives it the height between the header and the status bar: the rule between the columns runs the whole way.
+	parameters: { layout: "fullscreen" },
 	decorators: [
 		(Story) => (
-			<div className="flex min-h-screen flex-col">
+			<Box height="screen" background="page">
 				<Story />
-			</div>
+			</Box>
 		),
 	],
 } satisfies Meta<typeof Compare>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	tags: ["visual"],
-	render: (args) => (
-		<Compare {...args}>
-			<CompareSide
-				label="내 입력 · 저장 안 됨"
-				properties={
-					<CompareProperty label="요약" empty="비어 있음">
-						리액트로 블로그를 다시 만들며 <CompareText changed>덜어낸 것과 남긴 것.</CompareText>
-					</CompareProperty>
-				}
-			>
-				<CompareTitle>첫 번째 글</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>
-						블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
-					</CompareParagraph>
-					<CompareHeading>무엇을 덜어냈나</CompareHeading>
-					<CompareParagraph>
-						목록에는 제목과 주소, 지금 상태만 남겼다. <CompareText changed>나머지는 필요할 때 꺼내 본다.</CompareText>
-					</CompareParagraph>
-					<CompareParagraph>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</CompareParagraph>
-				</CompareBody>
-			</CompareSide>
-			<CompareSide
-				label="서버 최신본 · v4 · 10:41 저장"
-				properties={<CompareProperty label="요약" empty="비어 있음" />}
-			>
-				<CompareTitle>첫 번째 글</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>
-						블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
-					</CompareParagraph>
-					<CompareHeading>무엇을 덜어냈나</CompareHeading>
-					<CompareParagraph>
-						목록에는 제목과 주소, 지금 상태만 남겼다. <CompareText changed>설정 화면은 그대로 두었다.</CompareText>
-					</CompareParagraph>
-					<CompareParagraph>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</CompareParagraph>
-					<CompareHeading>
-						<CompareText changed>남긴 것</CompareText>
-					</CompareHeading>
-					<CompareParagraph>
-						<CompareText changed>편집기의 블록 손잡이와 / 넣기는 그대로 두었다.</CompareText>
-					</CompareParagraph>
-				</CompareBody>
-			</CompareSide>
-		</Compare>
-	),
-};
-
-/** The sides are the same in their properties: the properties block is left out and the title comes right under the name. */
-export const NoPropertyDiffers: Story = {
-	render: (args) => (
-		<Compare {...args}>
-			<CompareSide label="임시 저장본 · 이 브라우저 · 10. 26 10:12">
-				<CompareTitle>
-					<CompareText changed>둘째 글 고치는 중</CompareText>
-				</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>첫 문단.</CompareParagraph>
-				</CompareBody>
-			</CompareSide>
-			<CompareSide label="서버 저장본 · 10. 26 09:58">
-				<CompareTitle>
-					<CompareText changed>둘째 글</CompareText>
-				</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>첫 문단.</CompareParagraph>
-				</CompareBody>
-			</CompareSide>
-		</Compare>
-	),
-};
-
-/** Code and a list read as they are: line breaks are kept, code is in the inner box. */
-export const CodeAndLists: Story = {
-	render: (args) => (
-		<Compare {...args}>
-			<CompareSide label="내 입력 · 저장 안 됨">
-				<CompareTitle>예제</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>{"목록 하나\n목록 둘"}</CompareParagraph>
-					<CompareCode>
-						const answer = <CompareText changed>42</CompareText>
-						{";"}
-					</CompareCode>
-				</CompareBody>
-			</CompareSide>
-			<CompareSide label="서버 최신본 · v4 · 10:41 저장">
-				<CompareTitle>예제</CompareTitle>
-				<CompareBody>
-					<CompareParagraph>{"목록 하나\n목록 둘\n목록 셋"}</CompareParagraph>
-					<CompareCode>{"const answer = 41;"}</CompareCode>
-				</CompareBody>
-			</CompareSide>
-		</Compare>
-	),
-};
-
-/** Several properties differ: each is a name over its value, and a value that is empty on one side says so, faint. */
-export const SeveralProperties: Story = {
-	render: (args) => (
-		<Compare {...args}>
+export const EditConflict: Story = {
+	render: () => (
+		<Compare>
 			<CompareSide
 				label="내 입력 · 저장 안 됨"
 				properties={
 					<>
-						<CompareProperty label="주소" empty="비어 있음">
-							<CompareText changed>first-post-2</CompareText>
-						</CompareProperty>
-						<CompareProperty label="요약" empty="비어 있음" />
-					</>
-				}
-			>
-				<CompareTitle>첫 번째 글</CompareTitle>
-			</CompareSide>
-			<CompareSide
-				label="서버 최신본 · v4 · 10:41 저장"
-				properties={
-					<>
-						<CompareProperty label="주소" empty="비어 있음">
-							<CompareText changed>first-post</CompareText>
-						</CompareProperty>
 						<CompareProperty label="요약" empty="비어 있음">
-							<CompareText changed>글을 한 줄로 소개합니다.</CompareText>
+							설정 파일 없이 사이트를 고치는 법
+						</CompareProperty>
+						<CompareProperty label="태그" empty="비어 있음">
+							입문, 설정
 						</CompareProperty>
 					</>
 				}
 			>
-				<CompareTitle>첫 번째 글</CompareTitle>
+				<CompareTitle>처음 쓰는 Monti</CompareTitle>
+				<CompareBody>
+					<CompareParagraph>
+						Monti는 글을 쓰는 사람이 <CompareText changed>설정 파일을 열지 않아도</CompareText> 사이트를 고칠 수 있게
+						합니다.
+					</CompareParagraph>
+					<CompareHeading>시작하기</CompareHeading>
+					<CompareParagraph>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</CompareParagraph>
+					<CompareCode>pnpm create monti</CompareCode>
+				</CompareBody>
+			</CompareSide>
+			<CompareSide
+				label="서버 최신본 · v9 · 10:41 저장"
+				properties={
+					<>
+						<CompareProperty label="요약" empty="비어 있음" />
+						<CompareProperty label="태그" empty="비어 있음">
+							입문
+						</CompareProperty>
+					</>
+				}
+			>
+				<CompareTitle>처음 쓰는 Monti</CompareTitle>
+				<CompareBody>
+					<CompareParagraph>
+						Monti는 글을 쓰는 사람이 <CompareText changed>코드를 몰라도</CompareText> 사이트를 고칠 수 있게 합니다.
+					</CompareParagraph>
+					<CompareHeading>시작하기</CompareHeading>
+					<CompareParagraph>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</CompareParagraph>
+					<CompareCode>pnpm create monti</CompareCode>
+				</CompareBody>
 			</CompareSide>
 		</Compare>
+	),
+};
+
+/** The sides differ only in the text: no properties block. */
+export const TextOnly: Story = {
+	render: () => (
+		<Compare>
+			<CompareSide label="내 입력 · 저장 안 됨">
+				<CompareTitle>
+					<CompareText changed>가을 여행</CompareText> 기록
+				</CompareTitle>
+				<CompareBody>
+					<CompareParagraph>단풍이 시작된 산길을 걸었습니다.</CompareParagraph>
+				</CompareBody>
+			</CompareSide>
+			<CompareSide label="서버 최신본 · v4 · 09:12 저장">
+				<CompareTitle>
+					<CompareText changed>10월</CompareText> 기록
+				</CompareTitle>
+				<CompareBody>
+					<CompareParagraph>단풍이 시작된 산길을 걸었습니다.</CompareParagraph>
+				</CompareBody>
+			</CompareSide>
+		</Compare>
+	),
+};
+
+const CODE = "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}";
+
+/**
+ * A translation next to its source, block by block (the translation's 나란히 view): the kind of each block on the left, the source on the tool ground,
+ * the translation on the page. A block whose source changed since it was translated says so under its kind, and the words that changed are highlighted;
+ * a block added to the source and not translated yet shows the source, faint, in the translation's place. A block the translation shares with its source
+ * (code) is `CompareShared`: the source's block, faint, with the button that makes a copy of its own. The title row is `title`.
+ */
+export const TranslationRows: Story = {
+	render: () => (
+		<Box paddingX={40} paddingY={24}>
+			<CompareRows>
+				<CompareRow head source="원문 · 한국어 · 10. 26 수정" translation="번역 · English · 09. 20 수정" />
+				<CompareRow
+					name="제목"
+					title
+					source={<Heading variant="page">첫 번째 글</Heading>}
+					translation={<Heading variant="page">The first post</Heading>}
+				/>
+				<CompareRow
+					name="문단"
+					source={
+						<Text variant="reading">
+							블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
+						</Text>
+					}
+					translation={
+						<Text variant="reading">
+							I rebuilt the blog because I was spending more time fixing tools than writing.
+						</Text>
+					}
+				/>
+				<CompareRow
+					name="문단"
+					note="원문 바뀜"
+					current
+					source={
+						<Text variant="reading">
+							목록에는 제목과 주소, 지금 상태만 남겼다. <Highlight>나머지는 필요할 때 꺼내 본다.</Highlight>
+						</Text>
+					}
+					translation={<Text variant="reading">The list keeps only the title, the address and the status.</Text>}
+				/>
+				<CompareRow
+					name="코드 블록"
+					source={<CompareCode>{CODE}</CompareCode>}
+					translation={
+						<CompareShared
+							action={
+								<Button variant="ghost" size="sm">
+									English에서만 따로 고치기
+								</Button>
+							}
+						>
+							<CompareCode>{CODE}</CompareCode>
+						</CompareShared>
+					}
+				/>
+				<CompareRow
+					name="문단"
+					note="원문에 추가"
+					source={<Text variant="reading">편집기도 같은 원칙으로 정리했다.</Text>}
+					translation={
+						<Text variant="reading" tone="faint">
+							편집기도 같은 원칙으로 정리했다.
+						</Text>
+					}
+				/>
+			</CompareRows>
+		</Box>
 	),
 };

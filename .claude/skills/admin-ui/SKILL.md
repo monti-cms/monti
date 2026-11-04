@@ -12,8 +12,9 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 1. `docs/design/admin/README.md`: principles and the section "관리자 화면 UI 만들기" (how to build admin UI).
 2. `docs/design/admin/tokens.md`: which token to use for what.
 3. The family page in `docs/design/admin/components/` for every part you touch.
-4. `docs/design/admin/screens.md` and the `flows/` file for the screen and flow you build.
-5. The board on the canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) for the look. Read the live version with the Artifact tool.
+4. The screen's part map in `docs/design/admin/screens/` (which part goes in each place and how it behaves; what it does not name is not used). Use only the parts it names; if a place needs another part, change the map first.
+5. `docs/design/admin/screens.md` and the `flows/` file for the screen and flow you build.
+6. The board on the canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) for the look. Read the live version with the Artifact tool.
 
 ## Rules
 
@@ -23,6 +24,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 - Parts live in `@monti-cms/ui`, with stories. Screens compose them and never import Radix, Base UI or `cva`.
 - A part you add or change is named on its family page in `docs/design/admin/components/` in the same change.
 - Before building something, search `packages/ui/src/index.ts` and the component pages for an existing part. Reuse it; extend it with a prop only if the docs describe that variant.
+- A place that takes input holds the input part itself from the start (`Input`, `Textarea`, `Combobox`, `Select`, `Switch` …). Never draw the value as text or a button that turns into the input when pressed.
 - If the board disagrees with the docs or with an existing part (a width, a color, a label), do not pick one. Stop and report it.
 
 ## Order of work

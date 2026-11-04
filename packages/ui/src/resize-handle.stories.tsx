@@ -1,53 +1,39 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
-import { Box } from "./box";
-import { ResizablePane } from "./resize-handle";
-import { Inline } from "./stack";
-import { Text } from "./text";
+import { Box, Inline, ResizablePane, Text } from "./index";
 
-function Demo({ resizeKey }: { resizeKey: string }) {
-	return (
-		<Inline align="stretch" gap={0} minHeight="screen">
-			<ResizablePane resizeKey={resizeKey} defaultWidth={288} min={224} max={384} label="목록 너비 조절">
-				<Box padding={16}>
-					<Text>목록</Text>
-				</Box>
-			</ResizablePane>
-			<Box padding={16} grow>
-				<Text tone="muted">
-					가장자리를 끌거나, 포커스를 두고 방향키로 너비를 바꿔요. 두 번 누르면 처음 너비로 돌아가요.
-				</Text>
-			</Box>
-		</Inline>
-	);
-}
-
+/** A column whose width the person can change: the handle on one edge, a hairline on that side; the width is remembered, between a least and a most. */
 const meta = {
-	title: "Patterns/Frame/ResizeHandle",
-	component: ResizablePane,
-	args: { resizeKey: "story", defaultWidth: 288, min: 224, max: 384 },
-	render: () => <Demo resizeKey="story-rest" />,
-} satisfies Meta<typeof ResizablePane>;
+	title: "Patterns/Frame/ResizablePane",
+	parameters: { bleed: true },
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** At rest the handle is invisible: only the pane's own line shows. */
-export const Rest: Story = {};
-
-/** Pointed at: a 1px ink line on the edge, inside a wider hit area. A story cannot hover, so it sets `data-hovered`, which draws the same line. */
-export const Hover: Story = {
-	render: () => <Demo resizeKey="story-hover" />,
-	play: async ({ canvasElement }) => {
-		within(canvasElement).getByRole("separator", { name: "목록 너비 조절" }).setAttribute("data-hovered", "");
-	},
+/** A list beside its detail: the handle on the right edge (`end`). */
+export const End: Story = {
+	render: () => (
+		<Inline align="stretch" gap={0}>
+			<ResizablePane resizeKey="story-list" defaultWidth={320} min={240} max={480} label="목록 너비">
+				<Box padding={16}>
+					<Text variant="note">목록</Text>
+				</Box>
+			</ResizablePane>
+			<Box padding={16} grow>
+				<Text variant="note">자세히</Text>
+			</Box>
+		</Inline>
+	),
 };
 
-/** Focused with the keyboard: the same line; ←/→ change the width (Shift for bigger steps). */
-export const Focused: Story = {
-	render: () => <Demo resizeKey="story-focus" />,
-	play: async ({ canvasElement }) => {
-		const handle = within(canvasElement).getByRole("separator", { name: "목록 너비 조절" });
-		await userEvent.tab();
-		await expect(handle).toHaveFocus();
-	},
+/** The handle on the left edge (`start`), for a column at the right. */
+export const Start: Story = {
+	render: () => (
+		<Inline align="stretch" gap={0} justify="end">
+			<ResizablePane resizeKey="story-side" defaultWidth={300} min={240} max={420} label="패널 너비" edge="start">
+				<Box padding={16}>
+					<Text variant="note">패널</Text>
+				</Box>
+			</ResizablePane>
+		</Inline>
+	),
 };

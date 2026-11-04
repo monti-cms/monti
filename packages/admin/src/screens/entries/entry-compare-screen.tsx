@@ -3,7 +3,6 @@
 // The compare screen of an entry: the version the person holds beside the server's copy, with what differs marked and the two ways out. It stands
 // in for the editor while the address asks for it (`?compare=conflict` or `?compare=draft`), so what the editor holds is still there when it comes back.
 
-import { ChevronLeft } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Button,
@@ -24,9 +23,9 @@ import {
 	StatusBarCell,
 	StatusBarSpacer,
 	Text,
-	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { entryPath } from "../shared/entry-address";
@@ -171,10 +170,10 @@ export function EntryCompareScreen({ editor, mode }: { editor: EntryEditor; mode
 				minHeight="header"
 				paddingX={24}
 			>
-				<TextButton variant="quiet" render={<Link href={editHref} />}>
+				<Button variant="ghost" size="sm" render={<Link href={editHref} />} nativeButton={false} role="link">
 					<ChevronLeft aria-hidden />
 					{t("back")}
-				</TextButton>
+				</Button>
 				<Heading as="h1" variant="title">
 					{mode === "conflict" ? t("heading.conflict") : t("heading.draft")}
 				</Heading>
@@ -192,14 +191,18 @@ export function EntryCompareScreen({ editor, mode }: { editor: EntryEditor; mode
 					</Inline>
 					{mode === "conflict" ? (
 						<>
-							<TextButton onClick={() => void loadServer()}>{t("loadServer")}</TextButton>
+							<Button variant="ghost" size="lg" onClick={() => void loadServer()}>
+								{t("loadServer")}
+							</Button>
 							<Button type="button" onClick={() => void saveMine()}>
 								{t("saveMine")}
 							</Button>
 						</>
 					) : (
 						<>
-							<TextButton onClick={() => void discardDraft()}>{t("discard")}</TextButton>
+							<Button variant="ghost" size="lg" onClick={() => void discardDraft()}>
+								{t("discard")}
+							</Button>
 							<Button type="button" onClick={loadDraft}>
 								{t("loadDraft")}
 							</Button>

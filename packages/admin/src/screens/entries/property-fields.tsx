@@ -1,35 +1,26 @@
 "use client";
 
-import { Renew } from "@carbon/icons-react";
-import type {
-	BacklinkField,
-	ConditionalField,
-	RelationField,
-	SlugField,
-	TextField,
-	ValueField,
-	ViewField,
-} from "@monti-cms/core";
+import type { BacklinkField, ConditionalField, RelationField, SlugField, ValueField, ViewField } from "@monti-cms/core";
 import type { PanelGroup } from "@monti-cms/core/site";
-import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator } from "@monti-cms/core/site";
-import { Affix, Del, IconButton, Inline, Ins, PropertyGroup, PropertyRow, Text, TextButton } from "@monti-cms/ui";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	type FocusEvent,
-	memo,
-	type ReactNode,
-	type RefObject,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+	FormField,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldLabel,
+	IconButton,
+	Inline,
+	Input,
+	PropertyGroup,
+	Text,
+} from "@monti-cms/ui";
+import { Renew } from "@monti-cms/ui/icons";
+import { type FocusEvent, memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
 import { getEntry } from "../../api/entries";
 import { fieldIssueLine } from "../../api/error-message";
 import { FIELD_PROPOSAL_ATTRIBUTE } from "../../editor/proposals/use-proposal-marks";
 import { commonMessages } from "../../lib/common.messages";
-import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { type BacklinkChange, backlinkChangeTo, backlinkShown } from "./backlink-changes";
 import type { EntryData } from "./entry-form";
@@ -46,50 +37,9 @@ import { MediaValue } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { PropertyEditContext, usePropertyEdit } from "./property-edit";
 import { optionOf } from "./record-create-sheet";
-import { DefaultInput, useRegisteredInput } from "./schema-fields";
+import { DefaultInput, useFillFromBodyButton, useRegisteredInput } from "./schema-fields";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
-
-/**
- * Opening a property in place. Pressing the value opens its field and puts the caret in it; the field closes when it says it is done (Enter, Escape,
- * a closed list) or when focus leaves the row. Focus that moved into a window or a list opened from the field (picking a file, adding a name) does not
- * end it: the field is still in use, and closing it would take that window with it.
- */
-function useEditInPlace(controlId: string): {
-	editing: boolean;
-	open: () => void;
-	done: () => void;
-	rowRef: RefObject<HTMLDivElement | null>;
-	onBlur: (event: FocusEvent<HTMLElement>) => void;
-} {
-	const [editing, setEditing] = useState(false);
-	const rowRef = useRef<HTMLDivElement>(null);
-	const open = useCallback(() => setEditing(true), []);
-	const done = useCallback(() => setEditing(false), []);
-	// The caret goes into the field as soon as it can take it (a list that is still loading keeps its input disabled for a moment).
-	useEffect(() => {
-		if (!editing) return;
-		let tries = 0;
-		let timer: number | undefined;
-		const attempt = () => {
-			const control = document.getElementById(controlId) as HTMLInputElement | null;
-			if (control && !control.disabled) control.focus();
-			else if (++tries < 20) timer = window.setTimeout(attempt, 50);
-		};
-		attempt();
-		return () => window.clearTimeout(timer);
-	}, [editing, controlId]);
-	const onBlur = useCallback((event: FocusEvent<HTMLElement>) => {
-		if (rowRef.current?.contains(event.relatedTarget as Node | null)) return;
-		window.setTimeout(() => {
-			const row = rowRef.current;
-			if (!row || row.contains(document.activeElement)) return;
-			if (document.querySelector('[role="dialog"], [role="listbox"], [role="menu"]')) return;
-			setEditing(false);
-		}, 0);
-	}, []);
-	return { editing, open, done, rowRef, onBlur };
-}
 
 interface FocusRequest {
 	/** The field the page asked to bring up (a publish problem). */
@@ -109,28 +59,24 @@ interface ShellProps {
 	name: string;
 	controlId: string;
 	label: string;
-	/** Draws the value at rest. */
+	/** The value as text, for a property that cannot be changed here. */
 	display: ReactNode;
 	isEmpty: boolean;
-	/** The input, opened in place. */
-	editor: ReactNode;
-	/** The input is always there (an input a site registered draws its own value). */
-	alwaysOpen?: boolean;
-	/** The assistant wrote the value and nobody has edited it. */
+	/** The input, there from the start. `null`: the property is only read. */
+	editor: ReactNode | null;
+	/** The assistant wrote or proposes the value and nobody has edited it. */
 	assisted: boolean;
 	readOnly: boolean;
 	note?: ReactNode;
 	issue?: Parameters<typeof fieldIssueLine>[0];
 	errorId?: string;
-	/** On the label row while the input is open: a count, a piece an extension added. */
+	/** On the label row while the input has the focus: a count, a piece an extension added. */
 	extras?: ReactNode;
 	slot?: SlotRequest | null;
 	focus: FocusRequest;
-	/** Pressing the value opens something else than the input (the card of the assistant's change drawn in it). */
-	onPick?: () => void;
 }
 
-/** One property row: the label with its actions, the value at rest, the input in place. */
+/** One property: the label with its actions over the input itself (or the value as text when it cannot be changed here). */
 function PropertyShell({
 	name,
 	controlId,
@@ -138,7 +84,6 @@ function PropertyShell({
 	display,
 	isEmpty,
 	editor,
-	alwaysOpen = false,
 	assisted,
 	readOnly,
 	note,
@@ -147,42 +92,46 @@ function PropertyShell({
 	extras,
 	slot,
 	focus,
-	onPick,
 }: ShellProps) {
-	const { editing, open, done, rowRef, onBlur } = useEditInPlace(controlId);
+	const [focused, setFocused] = useState(false);
+	const labelId = useId();
 	const jump = focus.path === name;
 	useEffect(() => {
 		if (!jump) return;
-		open();
+		document.getElementById(controlId)?.focus();
 		focus.onFocused();
-	}, [jump, open, focus.onFocused]);
-	const edit = useMemo(() => ({ proposal: assisted, done }), [assisted, done]);
-	const isOpen = alwaysOpen || editing;
+	}, [jump, controlId, focus.onFocused]);
+	const edit = useMemo(() => ({ proposal: assisted }), [assisted]);
+	const editable = !readOnly && editor !== null;
+	const onBlur = useCallback((event: FocusEvent<HTMLElement>) => {
+		if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
+	}, []);
 	const row = (trigger: ReactNode, failure: ReactNode) => (
-		<PropertyRow
-			ref={rowRef}
-			onBlur={onBlur}
-			label={label}
-			controlId={controlId}
-			action={
-				(isOpen && extras) || trigger ? (
-					<Inline gap={8}>
-						{isOpen && extras}
-						{trigger}
-					</Inline>
-				) : undefined
-			}
-			value={display}
-			empty={isEmpty}
-			proposal={assisted}
-			onEdit={readOnly ? undefined : (onPick ?? open)}
-			editing={isOpen}
-			note={note}
-			error={issue ? fieldIssueLine(issue) : failure}
-			errorId={issue ? errorId : undefined}
-		>
-			<PropertyEditContext.Provider value={edit}>{editor}</PropertyEditContext.Provider>
-		</PropertyRow>
+		<FormField aria-labelledby={labelId} onFocus={() => setFocused(true)} onBlur={onBlur}>
+			<FormFieldLabel
+				id={labelId}
+				htmlFor={editable ? controlId : undefined}
+				action={
+					(focused && extras) || trigger ? (
+						<Inline gap={8}>
+							{focused && extras}
+							{trigger}
+						</Inline>
+					) : undefined
+				}
+			>
+				{label}
+			</FormFieldLabel>
+			{editable ? (
+				<PropertyEditContext.Provider value={edit}>{editor}</PropertyEditContext.Provider>
+			) : (
+				<Text variant="note" tone={isEmpty ? "faint" : assisted ? "proposal" : "default"} preserveLines>
+					{display}
+				</Text>
+			)}
+			{note && <FormFieldDescription>{note}</FormFieldDescription>}
+			{issue ? <FormFieldError id={errorId}>{fieldIssueLine(issue)}</FormFieldError> : failure}
+		</FormField>
 	);
 	return slot ? <SlotScope request={slot}>{({ trigger, panel }) => row(trigger, panel)}</SlotScope> : row(null, null);
 }
@@ -228,34 +177,6 @@ function ValueDisplay({ field, value }: { field: ValueField; value: FieldInputPr
 		default:
 			return <>{text}</>;
 	}
-}
-
-/**
- * A field the assistant proposed a new value for (flow 2 · 08): the old value struck through and the new one in the blue pencil, as in the body. Pressing it
- * opens the change's card under it.
- */
-function ProposedValue({
-	field,
-	name,
-	before,
-	value,
-}: {
-	field: ValueField;
-	name: string;
-	before: unknown;
-	value: unknown;
-}) {
-	const shown = (one: unknown) => <ValueDisplay field={field} value={one as FieldInputProps["value"]} />;
-	return (
-		<span {...{ [FIELD_PROPOSAL_ATTRIBUTE]: name }}>
-			{!isBlank(before) && (
-				<>
-					<Del>{shown(before)}</Del>{" "}
-				</>
-			)}
-			<Ins>{shown(value)}</Ins>
-		</span>
-	);
 }
 
 /** The kinds that always have a value to read: a select reads its default. */
@@ -306,7 +227,6 @@ function ValuePropertyView({
 	form?: FieldInputProps["form"];
 	focus: FocusRequest;
 }) {
-	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
@@ -316,50 +236,35 @@ function ValuePropertyView({
 	const definition = field.definition as ValueField;
 	const locked = field.readOnlyReason === "locked";
 	const state = store.getState();
+	// A proposed value waits in the input itself, in the assistant's blue; typing into it takes it first, as the person's edit.
+	const proposal = useFieldProposals().byField.get(field.name);
 	const props: FieldInputProps = {
 		collection,
 		form: form ?? (locked && state.locked ? state.locked.values : state.form),
 		name: field.name,
 		field: definition,
 		id: field.ids.input,
-		value: field.value,
+		value: proposal ? (proposal.value as FieldInputProps["value"]) : field.value,
 		invalid: field.invalid,
 		describedBy: field.inputProps["aria-describedby"],
 		context: { entryId, locale, groupId: entry?.translationGroupId, disabled: field.readOnly, entry },
-		onChange: field.setValue,
+		onChange: proposal
+			? (next) => {
+					proposal.accept();
+					field.setValue(next);
+				}
+			: field.setValue,
 	};
 	const parts = registered && isFieldInputParts(registered) ? registered : undefined;
-	// A component a site registered draws its own value, so it stays open. Parts keep the default value and input.
-	const custom = registered && !parts ? true : parts?.Input !== undefined;
 	const Aside = parts?.Aside;
 	const Empty = parts?.Empty;
 	const Input = parts?.Input;
-	const proposal = useFieldProposals().byField.get(field.name);
 	const empty = !proposal && isBlank(field.value) && !alwaysHasValue(definition);
-	const canFillFromBody =
-		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	const fillFromBody = useFillFromBodyButton(collection, definition, field.readOnly, field.setValue);
 	const max = definition.kind === "text" ? definition.max : undefined;
 	const length = typeof field.value === "string" ? field.value.length : 0;
 
-	const extras = (
-		<>
-			{canFillFromBody && (
-				<TextButton
-					type="button"
-					aria-label={t("field.fillFromBody")}
-					disabled={field.readOnly}
-					onClick={() => {
-						const currentDoc = store.getState().form.doc;
-						if (!currentDoc) return;
-						field.setValue(bodyExcerpt(site, currentDoc, fillFromBodyLength(definition as TextField)));
-					}}
-				>
-					{t("field.fromBody")}
-				</TextButton>
-			)}
-			{Aside ? <Aside {...props} /> : max ? <Counter length={length} max={max} /> : null}
-		</>
-	);
+	const extras = <>{Aside ? <Aside {...props} /> : max ? <Counter length={length} max={max} /> : null}</>;
 
 	return (
 		<PropertyShell
@@ -368,9 +273,7 @@ function ValuePropertyView({
 			label={field.label}
 			isEmpty={empty}
 			display={
-				proposal ? (
-					<ProposedValue field={definition} name={field.name} before={proposal.before} value={proposal.value} />
-				) : empty ? (
+				empty ? (
 					Empty ? (
 						<Empty {...props} />
 					) : (
@@ -380,9 +283,14 @@ function ValuePropertyView({
 					<ValueDisplay field={definition} value={field.value} />
 				)
 			}
-			editor={Input === null ? null : Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} />}
-			alwaysOpen={custom}
-			assisted={field.assisted}
+			editor={
+				Input === null ? null : (
+					<div {...(proposal ? { [FIELD_PROPOSAL_ATTRIBUTE]: field.name } : {})}>
+						{Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} action={fillFromBody} />}
+					</div>
+				)
+			}
+			assisted={field.assisted || Boolean(proposal)}
 			readOnly={field.readOnly}
 			note={locked ? field.lockedNote : undefined}
 			issue={field.error?.issue}
@@ -390,7 +298,6 @@ function ValuePropertyView({
 			extras={extras}
 			slot={Input === null ? undefined : field.slotRequest}
 			focus={focus}
-			{...(proposal ? { onPick: proposal.open } : {})}
 		/>
 	);
 }
@@ -472,13 +379,11 @@ function SlugAffix({
 }) {
 	const edit = usePropertyEdit();
 	return (
-		<Affix
+		<Input
 			id={field.ids.input}
+			mono
 			autoComplete="off"
 			proposal={edit?.proposal}
-			onKeyDown={(event) => {
-				if ((event.key === "Enter" && !isComposingKey(event)) || event.key === "Escape") edit?.done();
-			}}
 			aria-invalid={field.inputProps["aria-invalid"]}
 			aria-describedby={field.inputProps["aria-describedby"]}
 			value={field.value ?? ""}
@@ -519,10 +424,12 @@ const ViewProperty = memo(function ViewProperty({ name }: { name: string }) {
 	const entry = useEntryFormSelector((state) => state.entry);
 	const field = site.schemaOf(collection).fields[name] as ViewField;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
+	const labelId = useId();
 	return field.label ? (
-		<PropertyRow label={field.label} editing>
+		<FormField aria-labelledby={labelId}>
+			<FormFieldLabel id={labelId}>{field.label}</FormFieldLabel>
 			{view}
-		</PropertyRow>
+		</FormField>
 	) : (
 		view
 	);
@@ -630,8 +537,8 @@ interface PropertyFieldsProps {
 }
 
 /**
- * The properties of the entry as a read list, in the order of the collection's layout: a group with a name gets its quiet subheading, and every field is a
- * row whose value opens for editing in place. The values, issues and read-only state come from the nearest `EntryFormProvider`.
+ * The properties of the entry, in the order of the collection's layout: a group with a name gets its quiet subheading, and every field is a
+ * row with its input there from the start. The values, issues and read-only state come from the nearest `EntryFormProvider`.
  */
 export function PropertyFields({
 	include,

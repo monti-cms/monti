@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 
 /**
@@ -28,4 +29,13 @@ function RailLayout({
 	);
 }
 
-export { RailLayout };
+/** The quiet button under the links ("+ New collection"), its text in line with theirs. */
+function RailAction(props: Omit<React.ComponentProps<typeof Button>, "variant" | "size">) {
+	return (
+		<div data-slot="rail-action" className="pt-monti-12">
+			<Button variant="ghost" size="sm" {...props} />
+		</div>
+	);
+}
+
+export { RailAction, RailLayout };

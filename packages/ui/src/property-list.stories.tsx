@@ -1,154 +1,347 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { AiAction } from "./ai-action";
-import { Input } from "./input";
-import { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
-import { Textarea } from "./textarea";
+import { useId, useState } from "react";
+import { Renew, Spark } from "./icons";
+import {
+	Box,
+	Combobox,
+	ComboboxChip,
+	ComboboxChips,
+	ComboboxChipsInput,
+	ComboboxContent,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+	ComboboxValue,
+	FormField,
+	FormFieldDescription,
+	FormFieldLabel,
+	IconButton,
+	Input,
+	PropertyGroup,
+	PropertyPanel,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+	Text,
+	Textarea,
+	TextButton,
+	useComboboxAnchor,
+} from "./index";
 
 /**
- * The editor's properties pane: a tab bar at the top (no head, no close button) and a read list. Each row is a label above its value; pressing the value opens
- * the field in place. The assistant's fill action sits at the right end of the label row and shows while the pointer or keyboard is in the row. A value the
- * assistant wrote is blue until it is edited.
+ * The editor's properties pane: the tab bar on top, then each property a `FormField` whose input is there from the start (a pale underline
+ * at rest, the ink underline on focus). The assistant's fill button ("✦ 채우기", "↻ 다시" once there is a value) sits at the end of the label row
+ * and shows only while the pointer or the keyboard is in that row; what the assistant wrote waits inside the input as `proposal`.
  */
 const meta = {
-	title: "Patterns/List/PropertyPanel",
+	title: "Monti/Proposal/PropertyPanel",
 	component: PropertyPanel,
-	args: { label: "속성", value: "기본", onValueChange: () => undefined, tabs: [], children: null },
-	parameters: { layout: "fullscreen", bleed: true },
+	parameters: { layout: "fullscreen" },
+	args: { label: "속성", value: "basic", onValueChange: () => {}, tabs: [] },
 	decorators: [
 		(Story) => (
-			<div className="flex h-svh justify-end">
+			<Box height="screen" width="fit">
 				<Story />
-			</div>
+			</Box>
 		),
 	],
 } satisfies Meta<typeof PropertyPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const tabs = [
-	{ value: "기본", label: "기본" },
-	{ value: "SEO", label: "SEO" },
+type Tab = React.ComponentProps<typeof PropertyPanel>["tabs"][number];
+
+const TABS: Tab[] = [
+	{ value: "basic", label: "기본" },
+	{ value: "seo", label: "SEO" },
 ];
 
-export const Base: Story = {
-	tags: ["visual"],
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup>
-				<PropertyRow label="주소" value="/first-post" onEdit={() => undefined} />
-				<PropertyRow label="발행일" value="2026. 10. 01" onEdit={() => undefined} />
-				<PropertyRow
-					label="요약"
-					action={<AiAction aria-label="요약 채우기" />}
-					value="비어 있음"
-					empty
-					onEdit={() => undefined}
-				/>
-			</PropertyGroup>
-			<PropertyGroup title="분류">
-				<PropertyRow label="카테고리" value="개발" onEdit={() => undefined} />
-				<PropertyRow label="태그" value="리액트 · 프론트엔드" onEdit={() => undefined} />
-				<PropertyRow label="시리즈" value="없음" empty onEdit={() => undefined} />
-			</PropertyGroup>
+const CATEGORIES = ["여행", "기술", "일상"];
+const TAGS = ["가을", "산", "사진", "걷기"];
+
+/** The assistant's button for one field: "✦ 채우기" while empty, "↻ 다시" once there is a value, "쓰는 중…" while it works. */
+function Fill({ filled = false, loading = false }: { filled?: boolean; loading?: boolean }) {
+	return (
+		<TextButton tone="proposal" size="micro" loading={loading}>
+			{loading ? (
+				"쓰는 중…"
+			) : filled ? (
+				<>
+					<Renew aria-hidden />
+					다시
+				</>
+			) : (
+				<>
+					<Spark aria-hidden />
+					채우기
+				</>
+			)}
+		</TextButton>
+	);
+}
+
+function TextRow({
+	label,
+	value,
+	placeholder = "비어 있음",
+	proposal = false,
+	multiline = false,
+	fill,
+	fromBody = false,
+}: {
+	label: string;
+	value?: string;
+	placeholder?: string;
+	proposal?: boolean;
+	multiline?: boolean;
+	fill?: "empty" | "filled" | "loading";
+	/** The field fills from the start of the body: a button at the end of its line, where the address has its regenerate button. */
+	fromBody?: boolean;
+}) {
+	const id = useId();
+	const action = fill === undefined ? undefined : <Fill filled={fill === "filled"} loading={fill === "loading"} />;
+	const end = fromBody ? (
+		<IconButton label="본문에서 가져오기">
+			<Renew aria-hidden />
+		</IconButton>
+	) : undefined;
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id} action={action}>
+				{label}
+			</FormFieldLabel>
+			{multiline ? (
+				<Textarea id={id} size="md" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
+			) : (
+				<Input id={id} size="md" defaultValue={value} placeholder={placeholder} proposal={proposal} action={end} />
+			)}
+		</FormField>
+	);
+}
+
+function AddressRow() {
+	const id = useId();
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id}>주소</FormFieldLabel>
+			<Input
+				id={id}
+				size="md"
+				mono
+				defaultValue="autumn-trail"
+				action={
+					<IconButton label="제목으로 다시 만들기">
+						<Renew aria-hidden />
+					</IconButton>
+				}
+			/>
+		</FormField>
+	);
+}
+
+function CategoryRow({
+	label,
+	value,
+	fill,
+	proposal = false,
+}: {
+	label: string;
+	value: string | null;
+	fill?: "empty" | "filled";
+	proposal?: boolean;
+}) {
+	const id = useId();
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id} action={fill ? <Fill filled={fill === "filled"} /> : undefined}>
+				{label}
+			</FormFieldLabel>
+			<Combobox items={CATEGORIES} defaultValue={value}>
+				<ComboboxInput id={id} size="md" placeholder="없음" showClear={value !== null} proposal={proposal} />
+				<ComboboxContent>
+					<ComboboxList>
+						{(item: string) => (
+							<ComboboxItem key={item} value={item}>
+								{item}
+							</ComboboxItem>
+						)}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</FormField>
+	);
+}
+
+function TagsRow() {
+	const id = useId();
+	const anchor = useComboboxAnchor();
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id}>태그</FormFieldLabel>
+			<Combobox items={TAGS} multiple defaultValue={["가을", "산"]}>
+				<ComboboxChips ref={anchor} size="md">
+					<ComboboxValue>
+						{(values: string[]) => values.map((tag) => <ComboboxChip key={tag}>{tag}</ComboboxChip>)}
+					</ComboboxValue>
+					<ComboboxChipsInput id={id} />
+				</ComboboxChips>
+				<ComboboxContent anchor={anchor}>
+					<ComboboxList>
+						{(item: string) => (
+							<ComboboxItem key={item} value={item}>
+								{item}
+							</ComboboxItem>
+						)}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</FormField>
+	);
+}
+
+function SelectRow({ proposal = false }: { proposal?: boolean }) {
+	const id = useId();
+	const items = [
+		{ value: "short", label: "짧은 글" },
+		{ value: "long", label: "긴 글" },
+	];
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id}>분량</FormFieldLabel>
+			<Select items={items} defaultValue="short">
+				<SelectTrigger id={id} size="md" width="full" proposal={proposal}>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{items.map((item) => (
+						<SelectItem key={item.value} value={item.value}>
+							{item.label}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</FormField>
+	);
+}
+
+function SwitchRow() {
+	const id = useId();
+	return (
+		<FormField>
+			<FormFieldLabel htmlFor={id}>검색에서 숨기기</FormFieldLabel>
+			<Switch id={id} />
+		</FormField>
+	);
+}
+
+function Panel({
+	tabs = TABS,
+	initial = "basic",
+	children,
+}: {
+	tabs?: Tab[];
+	initial?: string;
+	children: (tab: string) => React.ReactNode;
+}) {
+	const [tab, setTab] = useState(initial);
+	return (
+		<PropertyPanel label="속성" value={tab} onValueChange={setTab} tabs={tabs}>
+			{children(tab)}
 		</PropertyPanel>
+	);
+}
+
+const Seo = () => (
+	<PropertyGroup>
+		<TextRow label="SEO 제목" placeholder="제목과 같음 · 10/60" fill="empty" />
+		<TextRow label="SEO 설명" placeholder="요약과 같음 · 28/160" multiline fill="empty" />
+		<SwitchRow />
+	</PropertyGroup>
+);
+
+/** Every kind of property with its input from the start. Point at a row to see its "✦ 채우기". */
+export const Basic: Story = {
+	render: () => (
+		<Panel>
+			{(tab) =>
+				tab === "seo" ? (
+					<Seo />
+				) : (
+					<>
+						<PropertyGroup>
+							<AddressRow />
+							<TextRow label="요약" multiline fill="empty" fromBody />
+							<TextRow label="부제" value="단풍이 시작된 산길에서" fill="filled" />
+						</PropertyGroup>
+						<PropertyGroup title="분류">
+							<CategoryRow label="카테고리" value="여행" />
+							<TagsRow />
+							<CategoryRow label="시리즈" value={null} fill="empty" />
+							<SelectRow />
+						</PropertyGroup>
+					</>
+				)
+			}
+		</Panel>
 	),
 };
 
-/** The summary is open in place: the count takes the action's place and the field is the underline field. */
-export const Editing: Story = {
-	tags: ["visual"],
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup>
-				<PropertyRow label="주소" value="/first-post" onEdit={() => undefined} />
-				<PropertyRow
-					label="요약"
-					controlId="summary"
-					action={<span className="text-monti-micro text-monti-subtle">28 / 120</span>}
-					editing
-				>
-					<Textarea id="summary" size="sm" rows={2} defaultValue="리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." />
-				</PropertyRow>
-			</PropertyGroup>
-		</PropertyPanel>
+/** The assistant's values wait inside the inputs in blue; the other tab has a proposal too (a blue dot after its name). */
+export const Proposals: Story = {
+	render: () => (
+		<Panel tabs={[TABS[0], { ...TABS[1], dot: "proposal", dotLabel: "제안 있음" }]}>
+			{(tab) =>
+				tab === "seo" ? (
+					<Seo />
+				) : (
+					<PropertyGroup>
+						<TextRow label="요약" value="단풍이 시작된 산길을 하루 동안 걸은 기록" multiline proposal fill="filled" />
+						<TextRow label="부제" value="가을 산길 하루" proposal fill="filled" />
+						<SelectRow proposal />
+						<CategoryRow label="시리즈" value="여행" fill="filled" proposal />
+					</PropertyGroup>
+				)
+			}
+		</Panel>
 	),
 };
 
-/** The assistant filled the series: blue, with "↻ 다시" on the label row. Editing it, or saving, returns it to the ink. */
-export const FilledByAssistant: Story = {
-	tags: ["visual"],
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup title="분류">
-				<PropertyRow label="카테고리" value="개발" onEdit={() => undefined} />
-				<PropertyRow
-					label="시리즈"
-					action={<AiAction filled aria-label="시리즈 다시 채우기" />}
-					value="리액트 다시 만들기"
-					proposal
-					onEdit={() => undefined}
-				/>
-			</PropertyGroup>
-		</PropertyPanel>
-	),
-};
-
-/** While the request runs: the spinner and "쓰는 중…", visible without the pointer. */
-export const Writing: Story = {
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup>
-				<PropertyRow
-					label="요약"
-					action={<AiAction loading aria-label="요약 채우는 중" />}
-					value="비어 있음"
-					empty
-					onEdit={() => undefined}
-				/>
-			</PropertyGroup>
-		</PropertyPanel>
-	),
-};
-
-/** The assistant's value opened in place: the underline is blue until the first change. */
-export const FilledAndOpen: Story = {
-	render: function Render(args) {
-		const [value, setValue] = useState("리액트 다시 만들기");
-		const [proposal, setProposal] = useState(true);
-		return (
-			<PropertyPanel {...args} tabs={tabs}>
+/** The assistant is writing one field: a ring and "쓰는 중…", blue, not dimmed, and it stays shown. */
+export const Filling: Story = {
+	render: () => (
+		<Panel>
+			{() => (
 				<PropertyGroup>
-					<PropertyRow label="시리즈" controlId="series" editing>
-						<Input
-							id="series"
-							size="sm"
-							value={value}
-							proposal={proposal}
-							onChange={(event) => {
-								setProposal(false);
-								setValue(event.target.value);
-							}}
-						/>
-					</PropertyRow>
+					<TextRow label="요약" multiline fill="loading" />
+					<TextRow label="부제" fill="empty" />
 				</PropertyGroup>
-			</PropertyPanel>
-		);
-	},
+			)}
+		</Panel>
+	),
 };
 
-/** The SEO tab: a read list; an empty value says what it follows. */
-export const Seo: Story = {
-	tags: ["visual"],
-	args: { value: "SEO" },
-	render: (args) => (
-		<PropertyPanel {...args} tabs={tabs}>
-			<PropertyGroup>
-				<PropertyRow label="SEO 제목" value="제목과 같음 · 10/60" empty onEdit={() => undefined} />
-				<PropertyRow label="SEO 설명" value="요약과 같음" empty onEdit={() => undefined} />
-				<PropertyRow label="공유 이미지" value="대표 이미지와 같음" empty onEdit={() => undefined} />
-				<PropertyRow label="검색에서 숨기기" value="아니요" onEdit={() => undefined} />
-			</PropertyGroup>
-		</PropertyPanel>
+/** A value that cannot be changed here (a translation's field shared with the source): text, and one quiet line under it. */
+export const ReadOnlyValue: Story = {
+	render: () => (
+		<Panel>
+			{() => (
+				<PropertyGroup>
+					<FormField>
+						<FormFieldLabel>대표 이미지</FormFieldLabel>
+						<Text variant="note">autumn-trail.jpg</Text>
+						<FormFieldDescription>원문과 함께 써요.</FormFieldDescription>
+					</FormField>
+					<TextRow label="요약" multiline fill="empty" />
+				</PropertyGroup>
+			)}
+		</Panel>
 	),
+};
+
+/** The SEO tab: values that follow another value say so in their placeholder. */
+export const SeoTab: Story = {
+	render: () => <Panel initial="seo">{(tab) => (tab === "seo" ? <Seo /> : null)}</Panel>,
 };

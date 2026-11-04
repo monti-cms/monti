@@ -1,3 +1,5 @@
+import { type CodeRule, ruleMatches } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import {
 	Code,
 	TextBold,
@@ -6,9 +8,7 @@ import {
 	TextSubscript,
 	TextSuperscript,
 	TextUnderline,
-} from "@carbon/icons-react";
-import { type CodeRule, ruleMatches } from "@monti-cms/core/code-block";
-import type { Site } from "@monti-cms/core/site";
+} from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type { Mark, Node as PmNode, ResolvedPos } from "@tiptap/pm/model";
 import { type EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";

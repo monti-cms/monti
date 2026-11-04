@@ -1,144 +1,130 @@
-import { Download } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
-import { Checkbox } from "./checkbox";
-import { Option } from "./option";
-import { RadioGroup, RadioItem } from "./radio-group";
-import { TextButton } from "./text-button";
+import {
+	Box,
+	Button,
+	ChangeActions,
+	ChangeGroup,
+	ChangeLabel,
+	ChangeLine,
+	ChangeLines,
+	ChangeNote,
+	Checkbox,
+	Highlight,
+	Option,
+	RadioGroup,
+	RadioItem,
+} from "./index";
 
 /**
- * One change in the review that opens before a schema is saved. A tag for the kind (new green, edit yellow, removed red), the name in bold and its
- * key at the end, then what to do with the data already saved: radio choices, one line for the result, a list of what is affected.
+ * One change in the review sheet before a schema is saved: a tag colored by kind (new green, edit yellow, removed red), the name in bold with its
+ * key at the end, and under them what to do with the data already saved.
  */
 const meta = {
 	title: "Monti/Change/ChangeGroup",
 	component: ChangeGroup,
-	args: { kind: "edit", tag: "이름", title: "요약", identifier: "summary → excerpt", children: null },
+	args: { kind: "new", tag: "추가", title: "요약" },
 	decorators: [
 		(Story) => (
-			<div className="max-w-[472px] bg-monti-tool px-monti-24">
+			<Box width="sheet">
 				<Story />
-			</div>
+			</Box>
 		),
 	],
 } satisfies Meta<typeof ChangeGroup>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	render: (args) => (
-		<ChangeGroup {...args}>
-			<RadioGroup defaultValue="move" className="gap-monti-10">
-				<RadioItem value="move" label="값 옮기기" hint="148편" />
-				<RadioItem value="blank" label="빈 칸으로 시작" />
-			</RadioGroup>
-		</ChangeGroup>
-	),
-};
-
-/** A renamed field: pick whether the values move with it. */
-export const Edit: Story = Playground;
-
-/** A new field starts empty; there is nothing to decide, only a line to say so. */
+/** A change that touches no saved value: no choices, one line. */
 export const New: Story = {
-	args: { kind: "new", tag: "새로", title: "대표 이미지", identifier: "cover" },
-	render: (args) => (
-		<ChangeGroup {...args}>
-			<ChangeNote>기존 글 148편은 빈 칸으로 시작해요.</ChangeNote>
+	render: () => (
+		<ChangeGroup kind="new" tag="추가" title="요약" identifier="excerpt">
+			<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
 		</ChangeGroup>
 	),
 };
 
-/** A removed field: keep the values or erase them. Erasing says what is lost and that it cannot be undone. */
-export const Drop: Story = {
-	args: { kind: "drop", tag: "지움", title: "부제", identifier: "subtitle" },
-	render: (args) => (
-		<ChangeGroup {...args}>
-			<RadioGroup defaultValue="erase" className="gap-monti-10">
-				<RadioItem value="keep" label="남겨 두기" hint="132편" />
-				<RadioItem value="erase" label="값 지우기" />
+/** An edit with radio choices; the choice that needs one more answer carries it at the end of its row. */
+export const EditWithChoices: Story = {
+	render: () => (
+		<ChangeGroup kind="edit" tag="바꿈" title="요약" identifier="summary → excerpt">
+			<RadioGroup defaultValue="move">
+				<RadioItem value="move" label="새 이름으로 옮기기" hint="148편" />
+				<RadioItem value="empty" label="빈 칸으로 두기" />
 			</RadioGroup>
-			<ChangeNote danger>132편에서 값이 사라져요. 되돌릴 수 없어요.</ChangeNote>
+			<ChangeNote>148편의 요약이 새 이름으로 옮겨져요.</ChangeNote>
 		</ChangeGroup>
 	),
 };
 
-/** A removed collection: what is deleted, what is cut and what breaks, a copy to take first, and the note that it cannot be undone. */
-export const DropCollection: Story = {
-	args: { kind: "drop", tag: "지움", title: "메모", identifier: "memo" },
-	render: (args) => (
-		<ChangeGroup {...args}>
+/** A removal: what goes (`danger`), what blocks the change (`warning`, with the button that clears it), and a choice to keep a copy. */
+export const Drop: Story = {
+	render: () => (
+		<ChangeGroup kind="drop" tag="뺌" title="메모" identifier="notes">
 			<ChangeLabel>지워지는 것</ChangeLabel>
 			<ChangeLines>
-				<ChangeLine what="글 23편 · 휴지통 2편 포함" then="영구 삭제" tone="danger" />
-				<ChangeLine what="폴더 2개 · 옛 주소 31개" then="삭제" tone="danger" />
-				<ChangeLine
-					what={
-						<>
-							가리키는 글 4편 · <TextButton variant="underline">첫 번째 글</TextButton> 외 3편
-						</>
-					}
-					then="연결 끊김"
-				/>
-				<ChangeLine what="본문 링크 2곳" then="깨진 링크로 표시" />
+				<ChangeLine what="글 23편 (휴지통 2편 포함)" then="영구 삭제" tone="danger" />
+				<ChangeLine what="이 컬렉션을 가리키는 글 4편" then="연결 끊김" tone="warning" />
 			</ChangeLines>
 			<ChangeLabel>받아 두기</ChangeLabel>
-			<ChangeLines>
-				<ChangeLine
-					what="글 23편 · 휴지통 2편 포함 · 폴더 2개"
-					then={
-						<TextButton variant="underline">
-							<Download aria-hidden />
-							내보내기
-						</TextButton>
-					}
-				/>
-			</ChangeLines>
-			<ChangeNote danger>되돌릴 수 없어요. 운영 사이트는 배포할 때 지워져요.</ChangeNote>
-		</ChangeGroup>
-	),
-};
-
-/** Choices that switch on and off use checks; the buttons that end a change sit in `ChangeActions`. */
-export const WithChecks: Story = {
-	args: { kind: "edit", tag: "선택지", title: "상태", identifier: "status" },
-	render: (args) => (
-		<ChangeGroup {...args}>
 			<Option>
 				<Checkbox defaultChecked />
-				초안을 비공개로 바꾸기
+				컬렉션 내보내기
 			</Option>
-			<Option>
-				<Checkbox />
-				예약된 글은 그대로 두기
-			</Option>
+			<ChangeNote danger>되돌릴 수 없어요.</ChangeNote>
 			<ChangeActions>
-				<TextButton variant="underline">목록에서 보기 →</TextButton>
+				<Button variant="ghost" size="sm">
+					연결 보기
+				</Button>
 			</ChangeActions>
 		</ChangeGroup>
 	),
 };
 
-/** Several together, as in the review. */
-export const InReview: Story = {
+/** A change of the public address: before and after as lines, and what it does to published posts. */
+export const Address: Story = {
 	render: () => (
-		<>
-			<ChangeGroup kind="edit" tag="이름" title="요약" identifier="summary → excerpt">
-				<RadioGroup defaultValue="move" className="gap-monti-10">
-					<RadioItem value="move" label="값 옮기기" hint="148편" />
-					<RadioItem value="blank" label="빈 칸으로 시작" />
-				</RadioGroup>
-			</ChangeGroup>
-			<ChangeGroup kind="drop" tag="지움" title="부제" identifier="subtitle">
-				<RadioGroup defaultValue="erase" className="gap-monti-10">
-					<RadioItem value="keep" label="남겨 두기" hint="132편" />
-					<RadioItem value="erase" label="값 지우기" />
-				</RadioGroup>
-				<ChangeNote danger>132편에서 값이 사라져요. 되돌릴 수 없어요.</ChangeNote>
-			</ChangeGroup>
-			<ChangeGroup kind="new" tag="새로" title="대표 이미지" identifier="cover">
-				<ChangeNote>기존 글 148편은 빈 칸으로 시작해요.</ChangeNote>
-			</ChangeGroup>
-		</>
+		<ChangeGroup kind="edit" tag="바꿈" title="공개 주소" identifier="path">
+			<ChangeLines>
+				<ChangeLine what="전" then="/posts/:slug" />
+				<ChangeLine what="후" then="/blog/:slug" />
+				<ChangeLine what="발행된 글" then="148편 주소 바뀜" tone="warning" />
+			</ChangeLines>
+			<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
+		</ChangeGroup>
+	),
+};
+
+/** A short value that was removed: before and after as lines, the after "없음". */
+export const Removed: Story = {
+	render: () => (
+		<ChangeGroup kind="edit" tag="고침" title="이름과 링크" identifier="다른 호스트 이름">
+			<ChangeLines>
+				<ChangeLine what="전" then="www.example.dev" />
+				<ChangeLine what="후" then="없음" />
+			</ChangeLines>
+		</ChangeGroup>
+	),
+};
+
+/**
+ * A long text (the writing rules): the same lines as a short value, the value wrapping and still right-aligned. The words that differ are
+ * highlighted: an added sentence on the after side, a removed one on the before side.
+ */
+export const LongText: Story = {
+	render: () => (
+		<ChangeGroup kind="edit" tag="고침" title="글 쓰는 방식" identifier="말투와 규칙">
+			<ChangeLines>
+				<ChangeLine what="전" then="'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다." />
+				<ChangeLine
+					what="후"
+					then={
+						<>
+							'~다'체로 쓴다. 한 문장은 짧게, 영어 낱말은 꼭 필요할 때만 쓴다.{" "}
+							<Highlight>숫자는 아라비아 숫자로 쓴다.</Highlight>
+						</>
+					}
+				/>
+			</ChangeLines>
+		</ChangeGroup>
 	),
 };

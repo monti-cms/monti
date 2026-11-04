@@ -1,42 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Stack } from "./stack";
-import { StoryCaption } from "./story-caption";
-import { UploadingImage } from "./uploading-image";
+import { Stack, UploadingImage } from "./index";
 
-const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320" viewBox="0 0 640 320"><rect width="640" height="320" fill="#8d7a5d"/><circle cx="500" cy="90" r="40" fill="#cdbfa6"/><path d="M0 320V220l160-90 140 100 120-70 220 120v40z" fill="#5d4f3a"/></svg>',
+/** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
+const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3c98b"/><stop offset="1" stop-color="#c76b4a"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1150" cy="300" r="120" fill="#fff3d6"/><path d="M0 700 L400 480 L800 700 L1200 520 L1600 700 V900 H0 Z" fill="#6b3a2e"/></svg>',
 )}`;
 
-/** The picture in its place in the body while it goes up: faded, with the 3px bar along its bottom edge. */
+/** An image still going up in the body: the picture faded under the page ground, 240px high, with the 3px bar along its bottom. */
 const meta = {
-	title: "Monti/EditorTools/UploadingImage",
+	title: "Patterns/Frame/UploadingImage",
 	component: UploadingImage,
-	args: { src: SAMPLE, progress: 64, label: "올리는 중" },
-	decorators: [
-		(Story) => (
-			<div className="max-w-2xl">
-				<Story />
-			</div>
-		),
-	],
+	args: { src: PHOTO, progress: 64, label: "올리는 중 64%" },
+	render: (args) => (
+		<Stack width="content">
+			<UploadingImage {...args} />
+		</Stack>
+	),
 } satisfies Meta<typeof UploadingImage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const Uploading: Story = {};
 
-export const Progress: Story = {
-	render: () => (
-		<Stack gap={16}>
-			{[0, 64, 100].map((progress) => (
-				<Stack key={progress} gap={4}>
-					<StoryCaption>{progress}%</StoryCaption>
-					<UploadingImage src={SAMPLE} progress={progress} label={`올리는 중 ${progress}%`} />
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-/** No local picture yet. */
-export const NoPicture: Story = { args: { src: null } };
+/** Before the picture is read: the neutral fill. */
+export const NoPicture: Story = { args: { src: null, progress: 8, label: "올리는 중 8%" } };

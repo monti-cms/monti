@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, RecentlyViewed } from "@carbon/icons-react";
 import {
 	type AdminPanel,
 	type AdminPanelProps,
@@ -12,17 +11,17 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/admin";
+import { Add, RecentlyViewed, Spark } from "@monti-cms/admin/icons";
 import {
 	Box,
 	Button,
 	ChatDate,
-	ChatError,
 	ChatInput,
 	ChatThread,
 	Chip,
+	ErrorNote,
 	IconButton,
 	SidePanel,
-	Spark,
 	Stack,
 	Suggest,
 	SuggestLabel,
@@ -243,7 +242,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 	const last = chat.messages.at(-1);
 	const day = dayOf(site, openedAt);
 	const notice = credit ? (
-		<ChatError
+		<ErrorNote
 			title={t("credit.title", { service: creditKey ? serviceName(creditKey.service) : "" })}
 			actions={
 				<TextButton
@@ -259,9 +258,9 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			}
 		>
 			{t("credit.text", { key: creditKey?.name ?? "", service: creditKey ? serviceName(creditKey.service) : "" })}
-		</ChatError>
+		</ErrorNote>
 	) : cut ? (
-		<ChatError
+		<ErrorNote
 			title={t("cut.title")}
 			actions={
 				<TextButton type="button" variant="underline" onClick={() => void chat.sendMessage()}>
@@ -270,9 +269,9 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			}
 		>
 			{t("cut.text")}
-		</ChatError>
+		</ErrorNote>
 	) : failed ? (
-		<ChatError
+		<ErrorNote
 			title={errorText(site, failed, t("error.failed"))}
 			actions={
 				<TextButton type="button" variant="underline" onClick={() => void chat.regenerate()}>
@@ -389,7 +388,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 						</Text>
 					)}
 					{!noticeInAnswer && notice}
-					{openError && <ChatError title={openError} />}
+					{openError && <ErrorNote title={openError} />}
 				</ChatThread>
 			)}
 		</SidePanel>

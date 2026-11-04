@@ -4,7 +4,7 @@
 // kept only in this browser. Each can be compared on the compare screen. Neither is a dialog and neither goes away until it is answered.
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, TextButton, toast } from "@monti-cms/ui";
+import { Banner, Button, toast } from "@monti-cms/ui";
 import { AdminLink as Link } from "../../router";
 import { compareHref } from "./compare-address";
 import { entryCompareMessages } from "./entry-compare.messages";
@@ -29,10 +29,18 @@ export function EntryEditorRecoveryStrips({ editor }: { editor: EntryEditor }) {
 					meta={t("conflict.meta")}
 					plainMeta
 				>
-					<TextButton variant="underline" render={<Link href={compareHref(site, conflict.server.id, "conflict")} />}>
+					<Button
+						variant="ghost"
+						size="sm"
+						render={<Link href={compareHref(site, conflict.server.id, "conflict")} />}
+						nativeButton={false}
+						role="link"
+					>
 						{t("compare")}
-					</TextButton>
-					<TextButton
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
 						onClick={() =>
 							// The server version is loaded in place: the page is not reloaded.
 							void editor.reload().then((reloaded) => {
@@ -41,21 +49,29 @@ export function EntryEditorRecoveryStrips({ editor }: { editor: EntryEditor }) {
 						}
 					>
 						{t("loadServer")}
-					</TextButton>
+					</Button>
 				</Banner>
 			)}
 			{recovery && (
 				<Banner title={t("draft.title")} meta={stampOf(site, t, recovery.savedAt)}>
 					{/* A new post has no server copy to compare with. */}
 					{entry && (
-						<TextButton variant="underline" render={<Link href={compareHref(site, entry.id, "draft")} />}>
+						<Button
+							variant="ghost"
+							size="sm"
+							render={<Link href={compareHref(site, entry.id, "draft")} />}
+							nativeButton={false}
+							role="link"
+						>
 							{t("compare")}
-						</TextButton>
+						</Button>
 					)}
-					<TextButton onClick={editor.restoreRecovery}>{t("load")}</TextButton>
-					<TextButton variant="quiet" onClick={() => void editor.discardRecovery()}>
+					<Button variant="ghost" size="sm" onClick={editor.restoreRecovery}>
+						{t("load")}
+					</Button>
+					<Button variant="ghost" size="sm" onClick={() => void editor.discardRecovery()}>
 						{t("discard")}
-					</TextButton>
+					</Button>
 				</Banner>
 			)}
 		</>

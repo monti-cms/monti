@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { TEXT_HOVER } from "./hover";
 
 /**
  * A condition that is not on yet, in a filter row: its name and a caret, opening a list of values (tag ▾, language ▾, sort ▾). Once a value is
@@ -22,7 +23,8 @@ function FilterButton({
 			data-slot="filter-button"
 			type="button"
 			className={cn(
-				"inline-flex cursor-pointer items-center border-0 bg-transparent p-0 outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-expanded:text-monti-default",
+				TEXT_HOVER,
+				"inline-flex cursor-pointer items-center rounded-monti-full border-0 bg-transparent p-0 outline-none not-disabled:hover:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-expanded:text-monti-default",
 				filled ? "text-monti-default" : "text-monti-subtle",
 				className,
 			)}

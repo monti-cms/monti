@@ -1,6 +1,5 @@
 "use client";
 
-import { Restart } from "@carbon/icons-react";
 import {
 	type CropBox,
 	isFullCrop,
@@ -26,8 +25,8 @@ import {
 	SheetTitle,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
+import { Restart } from "@monti-cms/ui/icons";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -326,13 +325,19 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 					</Stack>
 				</SheetBody>
 				<SheetFooter>
-					<TextButton type="button" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
+					<Button
+						variant="ghost"
+						size="lg"
+						type="button"
+						disabled={isFull && rotateDraft === 0}
+						onClick={handleResetAll}
+					>
 						{tc("reset")}
-					</TextButton>
+					</Button>
 					<Box as="span" grow />
-					<TextButton type="button" onClick={() => onOpenChange(false)}>
+					<Button variant="ghost" size="lg" type="button" onClick={() => onOpenChange(false)}>
 						{tc("cancel")}
-					</TextButton>
+					</Button>
 					<Button type="submit">{tc("apply")}</Button>
 				</SheetFooter>
 			</SheetContent>

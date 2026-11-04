@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, TrashCan, TypePattern } from "@carbon/icons-react";
 import {
 	CODE_CHAR_EFFECTS,
 	type CodeCharEffectName,
@@ -30,6 +29,7 @@ import {
 	Text,
 	Textarea,
 } from "@monti-cms/ui";
+import { Add, TrashCan, TypePattern } from "@monti-cms/ui/icons";
 import { useSlot } from "../../slots/slots";
 import type { TranslatorFor } from "../../translator";
 import { codeBlockMessages } from "./messages";

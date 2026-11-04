@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
-import { TextButton } from "./text-button";
+import { Del, Ins } from "./proposal-marks";
 
 const ROW = "flex items-baseline gap-monti-8 border-monti-muted border-t px-[14px] py-monti-10 text-monti-note";
 const FOOT = "flex items-center gap-[14px] border-monti-default border-t px-[14px] py-monti-10 text-monti-note";
@@ -104,6 +104,47 @@ function ProposalItem({ title, children }: { title: ReactNode; children: ReactNo
 	);
 }
 
+/**
+ * One entry a proposal changes: the entry's name in bold, its slug in faint mono, the field at the end ("요약"), and under it the change, the old value (cms-allow-korean)
+ * struck through (`Del`) over the new one (`Ins`). An empty old value is not shown: the new text alone says the field was filled. A card shows its first
+ * three entries and then a `ProposalRow` with only a `detail` ("외 4편"); its review screen has them all. (cms-allow-korean)
+ */
+function ProposalEntry({
+	name,
+	slug,
+	field,
+	before,
+	after,
+}: {
+	name: ReactNode;
+	slug?: ReactNode;
+	field?: ReactNode;
+	/** The value as it is; left out (or empty) when the field is empty. */
+	before?: ReactNode;
+	after: ReactNode;
+}) {
+	const hasBefore = before !== undefined && before !== null && before !== "";
+	return (
+		<div data-slot="proposal-entry" className={cn(ROW, "flex-col items-stretch gap-monti-6 py-monti-12")}>
+			<span className="flex items-baseline gap-monti-8">
+				<span className="font-semibold text-monti-label">{name}</span>
+				{slug !== undefined && <span className="text-monti-faint text-monti-micro">{slug}</span>}
+				<span className="grow" />
+				{field !== undefined && <span className="text-monti-micro text-monti-subtle">{field}</span>}
+			</span>
+			<span>
+				{hasBefore && (
+					<>
+						<Del>{before}</Del>
+						<br />
+					</>
+				)}
+				<Ins>{after}</Ins>
+			</span>
+		</div>
+	);
+}
+
 /** The foot of a waiting proposal: "Details" (when there is a review screen), then "Discard" and the black apply pill with its count. */
 function ProposalActions({
 	reviewLabel,
@@ -126,14 +167,14 @@ function ProposalActions({
 	return (
 		<>
 			{reviewLabel && onReview && (
-				<TextButton variant="underline" onClick={onReview}>
+				<Button variant="ghost" size="sm" onClick={onReview}>
 					{reviewLabel}
-				</TextButton>
+				</Button>
 			)}
 			<span className="grow" />
-			<TextButton variant="quiet" onClick={onDiscard} disabled={busy}>
+			<Button variant="ghost" size="sm" onClick={onDiscard} disabled={busy}>
 				{discardLabel}
-			</TextButton>
+			</Button>
 			<Button size="sm" onClick={onApply} loading={busy}>
 				{applyLabel}
 			</Button>
@@ -164,12 +205,12 @@ function ProposalResult({
 			{time !== undefined && <span className="text-monti-micro text-monti-subtle">{time}</span>}
 			<span className="grow" />
 			{undoLabel && onUndo && (
-				<TextButton variant="underline" onClick={onUndo} disabled={busy}>
+				<Button variant="ghost" size="sm" onClick={onUndo} disabled={busy}>
 					{undoLabel}
-				</TextButton>
+				</Button>
 			)}
 		</>
 	);
 }
 
-export { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow };
+export { ProposalActions, ProposalCard, ProposalEntry, ProposalItem, ProposalResult, ProposalRow };

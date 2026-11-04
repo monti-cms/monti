@@ -24,13 +24,12 @@
 
 `ChangeGroup`은 `.mt-change` 블록이다. `kind`는 `new`, `edit`, `drop` 중 하나이고(태그 색), `tag`는 앱의 말("New", "Edit", "Removed"), 그리고 `title`과 `identifier`(스키마에 적힌 그대로의 키, "summary → excerpt")가 있다. 자식은 이미 저장된 데이터를 어떻게 할지다. 선택지는 라디오나 체크가 있는 `Option` 행이다. `ChangeLabel`은 변경의 한 부분("what goes", "keep a copy")에 이름을 붙이며, 그 이름이 가리키는 `ChangeLines` 위에 흐린 잉크의 작은 mono로 놓인다. `ChangeNote`는 한 줄짜리 결과다(되돌릴 수 없으면 `danger`). `ChangeLines`는 `ChangeLine`을 담는다(`what`, `then`, 그리고 `default`, `danger`, `warning` 중 하나인 `tone`). `ChangeActions`는 변경 끝에 한 행으로 놓이는 버튼들이다.
 
-코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`이 아니다. `.note.is-add` 줄은 `ChangeNote`에 짝이 없다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
+코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`(묶음 머리, 코드는 `ListSection`)이 아니다. 시안의 `.note.is-add` 줄(앞에 초록 +)은 쓰지 않는다. 바뀐 값은 더하기든 빼기든 바꾸기든 전·후로 보인다. 짧은 값은 `ChangeLines` 안의 `ChangeLine` "전" · "후" 두 줄이고, 지운 값의 "후"는 "없음"이다. 긴 글(말투와 규칙)도 같은 줄이다. "전" · "후"는 왼쪽에, 값은 오른쪽 정렬로 두고, 값이 길면 오른쪽 정렬 그대로 줄바꿈한다. 둘 사이는 적어도 40px 띄운다. 달라진 낱말은 `Highlight`(베이지)로 칠한다(더한 문장은 "후"에, 지운 문장은 "전"에). 사람이 바꾼 것이라 파란색은 쓰지 않는다. 파란색은 AI 제안에만 쓴다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
 
 ## 나눈 검토 (`.mt-change-group`)
 
-배포된 사이트에서 데이터베이스에 바로 저장되는 설정(글을 쓰는 방식)과 파일 설정을 함께 바꾸면, 시트의 블록이 가는 곳에 따라 "바로 저장"과 "PR"로 나뉜다. 머리는 문장이 아닌 한 단어이고, 13px 굵게, 오른쪽에 개수(mono 12), 아래에 잉크 선이 있다. 파일 변경(`.mt-patch`)은 "PR" 아래에만 온다. 한쪽만 바뀌었으면 나누지 않는다(글을 쓰는 방식만 바뀌었으면 시트가 없고 버튼은 "저장"이다).
+배포된 사이트에서 데이터베이스에 바로 저장되는 설정(글을 쓰는 방식)과 파일 설정을 함께 바꾸면, 시트의 블록이 가는 곳에 따라 "바로 저장"과 "PR"로 나뉜다. 머리는 문장이 아닌 한 단어다. 묶음 하나가 `ListSection flush`(`title` "바로 저장", `count` 2)이고, 그 행은 `role="listitem"`인 `ChangeGroup`이다. 머리 모양은 도구 화면의 표 묶음과 같다(제목 바로 뒤 개수, 회색 선). 시안의 오른쪽 끝 개수와 잉크 선은 따르지 않는다. 같은 일을 하는 머리를 한 모양으로 두기 위해서다. 파일 변경(`.mt-patch`)은 "PR" 아래에만 온다. 한쪽만 바뀌었으면 나누지 않는다(글을 쓰는 방식만 바뀌었으면 시트가 없고 버튼은 "저장"이다).
 
-아직 `@monti-cms/ui`에 없다.
 
 ## 컬렉션 삭제
 
@@ -43,7 +42,7 @@
 
 ### 코드
 
-`DangerBlock`은 설정 탭 맨 아래에서 무언가를 그 데이터와 함께 지우는 단계다. 위에 위험 잉크의 선, 위험 잉크의 `title`이 있고, 위아래로 24px, 제목과 그 행 사이에 16px을 둔다. 행 하나는 `DangerRow`다. `name`, 그 뒤에 담고 있는 것을 적은 조용한 `meta` 줄("23 posts · 2 in the trash". 알 수 없으면 뺀다), 끝에 `action` 버튼이 있다. 삭제 검토는 아직 `@monti-cms/ui`에 없다.
+`DangerBlock`은 설정 탭 맨 아래에서 무언가를 그 데이터와 함께 지우는 단계다. 바로 위의 `Section`은 `last`로 가는 선을 두지 않는다. `DangerBlock`의 선이 그 경계라서, 둘 다 그으면 겹줄이 된다. 위에 위험 잉크의 선, 위험 잉크의 `title`이 있고, 위아래로 24px, 제목과 그 행 사이에 16px을 둔다. 행 하나는 `DangerRow`다. `name`, 그 뒤에 담고 있는 것을 적은 조용한 `meta` 줄("23 posts · 2 in the trash". 알 수 없으면 뺀다), 끝에 `action` 버튼이 있다. 삭제 검토는 아직 `@monti-cms/ui`에 없다.
 
 ## 파일 변경 (`.mt-patch`)
 
@@ -67,4 +66,4 @@
 
 ### 코드
 
-`NavLink`는 목록의 링크 하나다. 36px, 이름, 끝에 식별자(mono, 조용히)가 있고, 열린 링크는 현재 바탕에 semibold다. `dot`은 이름 뒤의 변경 점에 이름을 붙이고, `handle`(`NavLinkHandle`)은 포인터가 링크 위에 있는 동안 왼쪽 여백에 보이는 끌기 핸들이다. `RailLayout`은 링크(`nav`)를 내용 옆에 둔다. 좁으면 내용이 그 아래로 내려간다. `ChangeDot`(상태 참고)과 필드 윤곽을 위한 `FieldRow changed`(목록 참고). 취소선 행은 없다. 지울 컬렉션은 목록에서 빠진다.
+`NavLink`는 목록의 링크 하나다. 사이드바 행과 같은 행(`NAV_ROW`)을 종이 위에 둔 것이다. 36px, 이름, 끝에 식별자(사이드바의 개수와 같은 mono, 조용히)가 있고, 열린 링크는 현재 바탕에 semibold다. 가리키면 사이드바와 같은 `bg-selected`다. 열린 링크의 `bg-current`보다 한 단계 아래다. `dot`은 이름 뒤의 변경 점에 이름을 붙이고, `handle`(`DragHandle`)은 포인터가 링크 위에 있는 동안 왼쪽 여백에 보이는 끌기 핸들이다. `RailLayout`은 링크(`nav`)를 내용 옆에 둔다. 좁으면 내용이 그 아래로 내려간다. `RailAction`은 링크 아래의 조용한 텍스트 버튼("+ 새 컬렉션")이다. 12px 아래에 두고, 글자는 링크 이름과 같은 10px 안쪽에서 시작한다. `ChangeDot`(상태 참고)과 필드 윤곽을 위한 `FieldRow changed`(목록 참고). 취소선 행은 없다. 지울 컬렉션은 목록에서 빠진다.

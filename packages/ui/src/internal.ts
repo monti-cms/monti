@@ -7,7 +7,6 @@
  */
 
 export { Affix } from "./affix";
-export { AiAction } from "./ai-action";
 export {
 	AlertDialog,
 	AlertDialogAction,
@@ -22,20 +21,19 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Banner } from "./banner";
-export { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
+export { ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
-export { BulkToolbar } from "./bulk-toolbar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
-export { ChangesGroup, type ChangesItem } from "./changes-group";
-export { ChatError } from "./chat-error";
+export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
+export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
-export { ChatMessage } from "./chat-message";
+export { ChatEntryLink, ChatEntryList, ChatMessage } from "./chat-message";
 export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
 export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
@@ -77,6 +75,9 @@ export {
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
+	CompareShared,
 	CompareSide,
 	CompareText,
 	CompareTitle,
@@ -97,7 +98,7 @@ export { ConversationGroupLabel, ConversationList, ConversationRow, Conversation
 export { Count } from "./count";
 export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
-export { DescriptionItem, DescriptionList } from "./description-list";
+export { CountRow, DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,
 	DialogClose,
@@ -111,7 +112,9 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
+export { DocCallout, DocCode, DocTable } from "./doc-blocks";
 export { DotNote } from "./dot-note";
+export { DragHandle } from "./drag-handle";
 export { DropArea } from "./drop-area";
 export {
 	DropdownMenu,
@@ -131,8 +134,11 @@ export {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+export { EditorHeader, EditorTitleRule } from "./editor-header";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
+export { ErrorBox } from "./error-box";
+export { ErrorNote } from "./error-note";
 export {
 	FormField,
 	FormFieldDescription,
@@ -142,17 +148,16 @@ export {
 	FormFieldLegend,
 	FormFieldSet,
 	FormFieldTitle,
+	FormFieldWas,
 } from "./field";
 export { FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
+export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
-	FormatBar,
-	FormatBarButton,
 	FormatBarRequest,
-	FormatBarSeparator,
 	FormatButton,
 	type FormatMark,
 } from "./format-bar";
@@ -164,12 +169,13 @@ export { Image } from "./image";
 export { Input } from "./input";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
-export { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
+export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
+export { ListSection, ListSectionRow } from "./list-section";
 export { LockMark } from "./lock-mark";
-export { MapRow } from "./map-row";
+export { IssueRow, MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
@@ -177,9 +183,10 @@ export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { ModelMenuGroup, ModelMenuItem, ModelMenuThinking } from "./model-menu";
 export { MenuField, ModelMenu, ModelMenuButton } from "./model-menu";
 export type { MontiIcon } from "./monti-icon";
-export { NavLink, NavLinkHandle } from "./nav-link";
+export { NavLink } from "./nav-link";
 export { Option } from "./option";
-export { OptionRow, OptionRowHandle, OptionTable } from "./option-table";
+export { OptionRow, OptionTable } from "./option-table";
+export { OrderedRow } from "./ordered-row";
 export {
 	PageBody,
 	PageColumn,
@@ -188,7 +195,6 @@ export {
 	PageToolbarEnd,
 	type SelectAll,
 	type SelectAllState,
-	ToolbarDivider,
 } from "./page-header";
 export {
 	ListFooter,
@@ -205,16 +211,32 @@ export { Patch, type PatchLine } from "./patch";
 export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
-export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
+export { PropertyGroup, PropertyPanel } from "./property-list";
 export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
-export { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./proposal-card";
-export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES } from "./proposal-marks";
+export {
+	ProposalActions,
+	ProposalCard,
+	ProposalEntry,
+	ProposalItem,
+	ProposalResult,
+	ProposalRow,
+} from "./proposal-card";
+export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES, RequestAnchor } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
-export { RailLayout } from "./rail-layout";
+export { RailAction, RailLayout } from "./rail-layout";
+export { ReadValue } from "./read-value";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
-export { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote } from "./review";
+export {
+	ReviewCompare,
+	ReviewCompareHead,
+	ReviewGroup,
+	ReviewItem,
+	ReviewLine,
+	ReviewMore,
+	ReviewQuote,
+} from "./review";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
 export { SavedValue, SecretInput } from "./secret-input";
 export { Section } from "./section";
@@ -241,12 +263,14 @@ export {
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
+	SheetSummary,
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
 export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
 export { SidePanel } from "./side-panel";
 export {
+	folderTree,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -267,7 +291,6 @@ export {
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
-export { Spark } from "./spark";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
@@ -280,6 +303,7 @@ export {
 	RowActions,
 	RowCheck,
 	RowLink,
+	RowMore,
 	RowThumb,
 	RowTitle,
 	Table,
@@ -289,7 +313,6 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
-export { TableSection, TableSectionRow } from "./table-section";
 export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";

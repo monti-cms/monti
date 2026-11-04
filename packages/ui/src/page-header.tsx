@@ -78,7 +78,12 @@ function PageBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="page-body"
-			className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-8", className)}
+			// 8px of room at each side, taken back from the column by the negative margin: a text button's tint or a field's ring at the column's
+			// edge is not cut by the scroll, and the words stay where they were.
+			className={cn(
+				"relative -mx-monti-8 flex min-h-0 flex-1 flex-col overflow-y-auto px-monti-8 pb-monti-8",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -133,25 +138,4 @@ function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
 	);
 }
 
-/** A short vertical rule between two groups of a toolbar. */
-function ToolbarDivider({ className, ...props }: React.ComponentProps<"span">) {
-	return (
-		<span
-			data-slot="toolbar-divider"
-			aria-hidden
-			className={cn("h-3.5 shrink-0 border-monti-default border-l", className)}
-			{...props}
-		/>
-	);
-}
-
-export {
-	PageBody,
-	PageColumn,
-	PageHeader,
-	PageToolbar,
-	PageToolbarEnd,
-	type SelectAll,
-	type SelectAllState,
-	ToolbarDivider,
-};
+export { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd, type SelectAll, type SelectAllState };

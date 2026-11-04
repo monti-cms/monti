@@ -1,6 +1,5 @@
 "use client";
 
-import { Copy, FolderMoveTo, TrashCan } from "@carbon/icons-react";
 import type { FolderListItem } from "@monti-cms/core/site";
 import { formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
@@ -26,6 +25,7 @@ import {
 	Textarea,
 	TextButton,
 } from "@monti-cms/ui";
+import { Copy, FolderMoveTo, TrashCan } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
@@ -162,8 +162,12 @@ export function MediaPanel({
 				<Stack direction="row" gap={16} grow justify={isImage ? "end" : "between"} align="center">
 					{!isImage && (
 						<Inline gap={16}>
-							<TextButton onClick={onReplace}>{t("panel.replace")}</TextButton>
-							<TextButton onClick={onTrash}>{tc("lifecycle.trash")}</TextButton>
+							<Button variant="ghost" size="md" onClick={onReplace}>
+								{t("panel.replace")}
+							</Button>
+							<Button variant="ghost" size="md" onClick={onTrash}>
+								{tc("lifecycle.trash")}
+							</Button>
 						</Inline>
 					)}
 					<Button type="submit" disabled={!dirty || problem !== null || saving}>
@@ -179,15 +183,24 @@ export function MediaPanel({
 			)}
 			{media.publicUrl && (
 				<Inline gap={16}>
-					<TextButton
-						variant="underline"
+					<Button
+						variant="ghost"
+						size="md"
 						onClick={() => void copyText(media.publicUrl as string, t("panel.copiedUrl"), tc("copyFailed"))}
 					>
 						{t("panel.copyUrl")}
-					</TextButton>
-					<TextButton variant="underline" href={media.publicUrl} target="_blank" rel="noopener noreferrer">
+					</Button>
+					<Button
+						variant="ghost"
+						size="md"
+						nativeButton={false}
+						// biome-ignore lint/a11y/useAnchorContent: the children are passed to the rendered element by Button
+						// biome-ignore lint/a11y/useSemanticElements: the element is an <a>; the role overrides the one Button adds
+						// biome-ignore lint/a11y/noRedundantRoles: Button adds role="button" to a non-<button>, so the link role is needed
+						render={<a role="link" href={media.publicUrl} target="_blank" rel="noopener noreferrer" />}
+					>
 						{t("panel.openTab")}
-					</TextButton>
+					</Button>
 				</Inline>
 			)}
 

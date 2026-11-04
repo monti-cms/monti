@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, TrashCan } from "@carbon/icons-react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import {
 	horizontalListSortingStrategy,
@@ -19,6 +18,7 @@ import {
 	useTranslator,
 } from "@monti-cms/core/site";
 import {
+	Button,
 	FieldRow,
 	FieldTree,
 	FolderTab,
@@ -31,8 +31,8 @@ import {
 	Inline,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
+import { ArrowLeft, ArrowRight, TrashCan } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { tabLabel } from "../entries/layout-groups";
@@ -486,27 +486,27 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			) : (
 				list
 			)}
-			<Inline gap={20} paddingY={12}>
+			<Inline gap={4} paddingY={12}>
 				{!disabled && (
-					<TextButton type="button" onClick={() => setAdding(true)}>
+					<Button variant="ghost" size="sm" type="button" onClick={() => setAdding(true)}>
 						+ {t("field.add")}
-					</TextButton>
+					</Button>
 				)}
 				{!disabled && (
-					<TextButton type="button" quiet onClick={addGroupRow}>
+					<Button variant="ghost" size="sm" type="button" onClick={addGroupRow}>
 						+ {t("layout.addGroup")}
-					</TextButton>
+					</Button>
 				)}
 				{!disabled &&
 					offeredSets.map((set) => (
-						<TextButton key={`${set.plugin}:${set.id}`} type="button" quiet onClick={() => addSet(set)}>
+						<Button variant="ghost" size="sm" key={`${set.plugin}:${set.id}`} type="button" onClick={() => addSet(set)}>
 							+ {t("fields.addSet", { name: set.label })}
-						</TextButton>
+						</Button>
 					))}
 				{!disabled && !showTabs && (
-					<TextButton type="button" quiet onClick={addTabRow}>
+					<Button variant="ghost" size="sm" type="button" onClick={addTabRow}>
 						+ {t("layout.addTab")}
-					</TextButton>
+					</Button>
 				)}
 			</Inline>
 			<Text as="p" variant="meta" tone="subtle">

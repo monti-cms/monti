@@ -92,6 +92,8 @@ export interface FieldProposalView {
 	readonly value: unknown;
 	readonly current: boolean;
 	readonly open: () => void;
+	/** Takes the proposed value into the form, as the person's edit (what typing into the proposal does first). */
+	readonly accept: () => void;
 }
 
 /** The field changes drawn now, by field name, and the field the bubble is on (its tab comes forward). */
@@ -626,6 +628,7 @@ export function useProposalMarks(
 							setCurrent(item.id);
 							setCard(item.id);
 						},
+						accept: () => accept([item.id]),
 					},
 				]),
 		),

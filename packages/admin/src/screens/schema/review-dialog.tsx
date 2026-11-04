@@ -1,6 +1,5 @@
 "use client";
 
-import { Download } from "@carbon/icons-react";
 import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
@@ -13,7 +12,7 @@ import {
 	ChangeLine,
 	ChangeLines,
 	ChangeNote,
-	ChatError,
+	ErrorNote,
 	Input,
 	RadioGroup,
 	RadioItem,
@@ -32,6 +31,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Download } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {
@@ -799,37 +799,37 @@ export function ReviewDialog({
 						<Stack gap={0}>
 							{saveError && (
 								<Box paddingTop={16} paddingBottom={4}>
-									<ChatError
+									<ErrorNote
 										title={saveError.conflict ? t("save.conflict.title") : saveError.message}
 										actions={
 											saveError.conflict ? (
-												<TextButton type="button" onClick={reloadPage}>
+												<Button variant="ghost" size="sm" type="button" onClick={reloadPage}>
 													{t("save.reload")}
-												</TextButton>
+												</Button>
 											) : undefined
 										}
 									>
 										{saveError.conflict ? saveError.message : undefined}
-									</ChatError>
+									</ErrorNote>
 								</Box>
 							)}
-							{error && <ChatError title={error} />}
+							{error && <ErrorNote title={error} />}
 							{loading && !preview && (
 								<Text as="p" tone="subtle" role="status">
 									{tc("loading")}
 								</Text>
 							)}
 							{preview && !preview.valid && (
-								<ChatError title={t("review.invalid")}>
+								<ErrorNote title={t("review.invalid")}>
 									<IssueList issues={preview.issues} />
-								</ChatError>
+								</ErrorNote>
 							)}
 							{problems.length > 0 && (
-								<ChatError title={t("review.problems")}>
+								<ErrorNote title={t("review.problems")}>
 									{problems.map((problem) => (
 										<span key={`${problem.id}:${problem.message}`}>{problem.message}</span>
 									))}
-								</ChatError>
+								</ErrorNote>
 							)}
 							{preview?.valid && !preview.changed && (
 								<Text as="p" tone="subtle">
@@ -848,9 +848,9 @@ export function ReviewDialog({
 						</Stack>
 					</SheetBody>
 					<SheetFooter>
-						<TextButton type="button" onClick={() => onOpenChange(false)}>
+						<Button variant="ghost" size="lg" type="button" onClick={() => onOpenChange(false)}>
 							{tc("cancel")}
-						</TextButton>
+						</Button>
 						<Button
 							type="button"
 							variant={deletes ? "danger" : "primary"}

@@ -1,10 +1,19 @@
 "use client";
 
-import { Search } from "@carbon/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
 import type * as React from "react";
 import { cn } from "./cn";
-import { COMMAND_ITEM, MENU_SCROLL, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { Search } from "./icons";
+import {
+	COMMAND_ITEM,
+	MENU_EMPTY,
+	MENU_SCROLL,
+	MENU_SEARCH_FIELD,
+	MENU_SEARCH_ICON,
+	MENU_SEARCH_ROW,
+	MENU_SEPARATOR,
+	MenuTick,
+} from "./menu-parts";
 
 /**
  * A menu you can search: a search line on top, the rows under it, and the keyboard never leaves the line. It is the content of a card (a
@@ -23,19 +32,9 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
 /** The search line: a magnifier and the words, with a rule under it. */
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
-		<div
-			data-slot="command-input-wrapper"
-			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-monti-6 pb-[9px]"
-		>
-			<Search className="size-3.5 shrink-0 text-monti-subtle" aria-hidden />
-			<CommandPrimitive.Input
-				data-slot="command-input"
-				className={cn(
-					"w-full bg-transparent text-monti-body text-monti-default outline-hidden placeholder:text-monti-faint disabled:cursor-not-allowed disabled:opacity-45",
-					className,
-				)}
-				{...props}
-			/>
+		<div data-slot="command-input-wrapper" className={MENU_SEARCH_ROW}>
+			<Search className={MENU_SEARCH_ICON} aria-hidden />
+			<CommandPrimitive.Input data-slot="command-input" className={cn(MENU_SEARCH_FIELD, className)} {...props} />
 		</div>
 	);
 }
@@ -46,13 +45,7 @@ function CommandList({ className, ...props }: React.ComponentProps<typeof Comman
 }
 
 function CommandEmpty({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
-	return (
-		<CommandPrimitive.Empty
-			data-slot="command-empty"
-			className={cn("px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle", className)}
-			{...props}
-		/>
-	);
+	return <CommandPrimitive.Empty data-slot="command-empty" className={cn(MENU_EMPTY, className)} {...props} />;
 }
 
 /** Rows under a name (the `heading`), in the mono group-name look. */

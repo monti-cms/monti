@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { cn, ErrorBox } from "@monti-cms/ui";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { useAdminComponents } from "../../../admin-components";
 import { blocksMessages } from "../messages";
@@ -38,11 +38,7 @@ export class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
 			if (this.props.fallback) {
 				return this.props.fallback(this.state.error);
 			}
-			return (
-				<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
-					{this.state.error.message}
-				</div>
-			);
+			return <ErrorBox>{this.state.error.message}</ErrorBox>;
 		}
 		return this.props.children;
 	}
@@ -95,11 +91,7 @@ export function LazyFencePreview({
 		);
 	}
 	if (loadError) {
-		return (
-			<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
-				{t("preview.loadFailed", { label, error: loadError })}
-			</div>
-		);
+		return <ErrorBox>{t("preview.loadFailed", { label, error: loadError })}</ErrorBox>;
 	}
 	if (!Renderer) {
 		return (
@@ -168,11 +160,7 @@ export function MathPreview({ value, className }: { value: string; className?: s
 	}, [trimmed]);
 
 	if (error) {
-		return (
-			<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
-				{error}
-			</div>
-		);
+		return <ErrorBox>{error}</ErrorBox>;
 	}
 
 	if (!value.trim()) {

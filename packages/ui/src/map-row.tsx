@@ -1,6 +1,6 @@
-import { ArrowRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { ArrowRight } from "./icons";
 
 /**
  * A row of "match the fields" in an import: the key from the file (mono) on the left, an arrow, and what it goes into on the right (a `Select`),
@@ -47,4 +47,34 @@ function MapRow({
 	);
 }
 
-export { MapRow };
+/**
+ * A problem with a file to bring in that nothing can be picked for (what keeps a backup from being restored): its name on the first line, with the
+ * identifier it is about in mono after it (`code`, "series", "/about"), and one line under it in the warning color that says what it touches. The
+ * same lines as a `MapRow`, without the arrow and the select.
+ */
+function IssueRow({
+	name,
+	code,
+	warning,
+}: {
+	name: React.ReactNode;
+	code?: React.ReactNode;
+	warning: React.ReactNode;
+}) {
+	return (
+		<div data-slot="issue-row" className="flex flex-col gap-monti-2 border-monti-muted border-b py-monti-8">
+			<span className="min-w-0 text-monti-body text-monti-default">
+				{name}
+				{code !== undefined && (
+					<>
+						{" "}
+						<span className="font-mono">{code}</span>
+					</>
+				)}
+			</span>
+			<span className="text-monti-caption text-monti-warning">{warning}</span>
+		</div>
+	);
+}
+
+export { IssueRow, MapRow };

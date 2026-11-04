@@ -1,6 +1,6 @@
-import { Checkmark } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Checkmark } from "./icons";
 import { Shortcut, type ShortcutKeys } from "./shortcut";
 
 /**
@@ -20,7 +20,8 @@ export const SUB_ALIGN_OFFSET = -7;
 export const MENU_MOTION =
 	"origin-(--transform-origin) duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in";
 
-const ROW =
+/** The row every list draws: a menu, a searchable list and a pick list share it, and each adds how its current row is marked. */
+export const MENU_ROW =
 	"flex min-w-0 cursor-default select-none items-center gap-[10px] rounded-monti-md px-[9px] py-[7px] text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
 
 /**
@@ -28,13 +29,13 @@ const ROW =
  * level is open, take the selected background. A row that is the current value of a pick-one list does not: it ends in a {@link MenuTick}.
  */
 export const MENU_ITEM = cn(
-	ROW,
+	MENU_ROW,
 	"data-highlighted:bg-monti-selected data-highlighted:text-monti-default data-popup-open:bg-monti-selected data-popup-open:text-monti-default data-disabled:pointer-events-none data-disabled:text-monti-faint data-disabled:[&>svg]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-highlighted:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
 /** The same row inside a searchable list (cmdk marks the row it is on with `data-selected`). */
 export const COMMAND_ITEM = cn(
-	ROW,
+	MENU_ROW,
 	"data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-[selected=true]:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
@@ -50,6 +51,20 @@ export const MENU_TICK =
 
 /** The mark on a row that opens a second level. After a value it sits 4px from it. */
 export const MENU_SUB_MARK = "ml-auto [[data-slot=menu-value]+&]:ml-monti-4";
+
+/** The search row on top of a list card (a searchable list, a long menu): a magnifier and the words, then a rule, 4px above the first row. */
+export const MENU_SEARCH_ROW =
+	"mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-monti-6 pb-[9px] text-monti-default";
+
+/** The magnifier of a {@link MENU_SEARCH_ROW}. */
+export const MENU_SEARCH_ICON = "size-3.5 shrink-0 text-monti-subtle";
+
+/** The words of a {@link MENU_SEARCH_ROW}. */
+export const MENU_SEARCH_FIELD =
+	"min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-hidden placeholder:text-monti-faint disabled:cursor-not-allowed disabled:opacity-45";
+
+/** The line a list card shows when nothing matches: centered, subtle, with room above and below. */
+export const MENU_EMPTY = "px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle";
 
 /** A long list: one column, 320px high at most, scrolling inside. */
 export const MENU_SCROLL = "flex max-h-80 flex-col overflow-y-auto overscroll-contain";

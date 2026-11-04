@@ -8,6 +8,9 @@
  * The defaults below have zero specificity, so a value the host sets on `:root` or `html` wins.
  */
 
+/* The default chart look, the same as on the public page (`chart.css`). */
+@import "../chart.css";
+
 /*
  * (`:where(:root)` and `:where(:root, html)` are added only so these selectors differ from the admin file's own `:where(...)` token rules: no selector may be defined in two files.)
  * Defaults: accent colors per callout variant and chart series colors. The chart colors are read as `var(--monti-chart-N, var(--chart-N))`,

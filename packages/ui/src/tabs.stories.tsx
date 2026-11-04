@@ -1,13 +1,7 @@
-import { Document, Settings } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Stack } from "./stack";
-import { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
-import { Text } from "./text";
+import { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "./index";
 
-/**
- * Switches the view in the same place. Three forms: `line` (underlined, the picked one in ink at 600), `bar` (the row at the top of a pane, on a
- * rule) and `toolbar` (the filter row under a page title: bold, no underline). A tab can carry a mono count and a dot for something to handle.
- */
+/** Underlined text tabs that switch the view in place: language, status, a panel's parts. The picked one is ink at 600 with a 1.5px rule. */
 const meta = {
 	title: "Controls/Tabs/Tabs",
 	component: Tabs,
@@ -15,154 +9,88 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Panels() {
-	return (
-		<>
-			<TabsContent value="all">
-				<Text tone="muted">전체 탭의 내용</Text>
+/** `line` (the default): 13px tabs 20px apart. */
+export const Line: Story = {
+	render: () => (
+		<Tabs defaultValue="ko">
+			<TabsList>
+				<TabsTrigger value="ko">한국어</TabsTrigger>
+				<TabsTrigger value="en">English</TabsTrigger>
+				<TabsTrigger value="ja">日本語</TabsTrigger>
+			</TabsList>
+			<TabsContent value="ko">
+				<Text variant="note">한국어 원문</Text>
 			</TabsContent>
-			<TabsContent value="published">
-				<Text tone="muted">발행됨 탭의 내용</Text>
-			</TabsContent>
-			<TabsContent value="draft">
-				<Text tone="muted">초안 탭의 내용</Text>
-			</TabsContent>
-		</>
-	);
-}
+		</Tabs>
+	),
+};
 
-function Status({ variant }: { variant: "line" | "bar" | "toolbar" }) {
-	return (
+/** A count after the name in mono; a count that needs attention takes the warning tone; a dot marks a tab with something to handle. */
+export const CountsAndDots: Story = {
+	render: () => (
 		<Tabs defaultValue="all">
-			<TabsList variant={variant} inset="none" aria-label="상태">
+			<TabsList>
 				<TabsTrigger value="all" count={148}>
 					전체
 				</TabsTrigger>
-				<TabsTrigger value="published">발행됨</TabsTrigger>
-				<TabsTrigger value="draft" count={12}>
+				<TabsTrigger value="failed" count={3} countTone="warning" countLabel="실패한 전송 3개">
+					실패
+				</TabsTrigger>
+				<TabsTrigger value="seo" dot="warning" dotLabel="저장하지 않은 변경">
+					검색 노출
+				</TabsTrigger>
+				<TabsTrigger value="ai" dot="proposal" dotLabel="어시스턴트 제안">
+					요약
+				</TabsTrigger>
+			</TabsList>
+		</Tabs>
+	),
+};
+
+/** `bar`: the tab row at the top of a pane, 44px, its underline on the pane's own rule. */
+export const Bar: Story = {
+	render: () => (
+		<Tabs defaultValue="props">
+			<TabsList variant="bar">
+				<TabsTrigger value="props">속성</TabsTrigger>
+				<TabsTrigger value="seo">검색 노출</TabsTrigger>
+				<TabsTrigger value="activity">활동</TabsTrigger>
+			</TabsList>
+		</Tabs>
+	),
+};
+
+/** `toolbar`: the tabs under a page title, 14px, the picked one bold, no underline. */
+export const Toolbar: Story = {
+	render: () => (
+		<Tabs defaultValue="published">
+			<TabsList variant="toolbar">
+				<TabsTrigger value="all" count={148}>
+					전체
+				</TabsTrigger>
+				<TabsTrigger value="published" count={120}>
+					발행됨
+				</TabsTrigger>
+				<TabsTrigger value="draft" count={28}>
 					초안
 				</TabsTrigger>
 			</TabsList>
-			<Panels />
-		</Tabs>
-	);
-}
-
-export const Playground: Story = {
-	render: (args) => (
-		<Tabs defaultValue="all" {...args}>
-			<TabsList aria-label="상태">
-				<TabsTrigger value="all">전체</TabsTrigger>
-				<TabsTrigger value="published">발행됨</TabsTrigger>
-				<TabsTrigger value="draft">초안</TabsTrigger>
-			</TabsList>
-			<Panels />
 		</Tabs>
 	),
 };
 
-/** The three forms with a count on some tabs. */
-export const Variants: Story = {
-	render: () => (
-		<Stack gap={32}>
-			<Status variant="line" />
-			<Status variant="bar" />
-			<Status variant="toolbar" />
-		</Stack>
-	),
-};
-
-/** A dot says this tab has something to handle: warning for an unsaved change, proposal for an assistant suggestion. */
-export const Dots: Story = {
-	render: () => (
-		<Stack gap={32}>
-			{(["line", "bar", "toolbar"] as const).map((variant) => (
-				<Tabs key={variant} defaultValue="basic">
-					<TabsList variant={variant} inset="none" aria-label="설정">
-						<TabsTrigger value="basic">기본</TabsTrigger>
-						<TabsTrigger value="seo" dot="proposal" dotLabel="제안 있음">
-							SEO
-						</TabsTrigger>
-						<TabsTrigger value="stats" dot="warning" dotLabel="바뀜" count={2}>
-							통계
-						</TabsTrigger>
-					</TabsList>
-				</Tabs>
-			))}
-		</Stack>
-	),
-};
-
-export const WithIconsAndDisabled: Story = {
-	render: () => (
-		<Tabs defaultValue="seo">
-			<TabsList aria-label="보기">
-				<TabsTrigger value="write">
-					<Document aria-hidden />글
-				</TabsTrigger>
-				<TabsTrigger value="seo">
-					<Settings aria-hidden />
-					설정
-				</TabsTrigger>
-				<TabsTrigger value="more" disabled>
-					비활성
-				</TabsTrigger>
-			</TabsList>
-		</Tabs>
-	),
-};
-
-/** `bar` with the page gutter (`inset="page"`) and the panel gutter (the default). */
-export const BarInsets: Story = {
-	render: () => (
-		<Stack gap={24}>
-			{(["page", "panel"] as const).map((inset) => (
-				<Tabs key={inset} defaultValue="all">
-					<TabsList variant="bar" inset={inset} aria-label={inset}>
-						<TabsTrigger value="all">전체</TabsTrigger>
-						<TabsTrigger value="published">발행됨</TabsTrigger>
-					</TabsList>
-				</Tabs>
-			))}
-		</Stack>
-	),
-};
-
-/**
- * Tabs that go to another page (the languages of an entry) are links, not a tab list: no panels, and `aria-current="page"` on the one you are
- * on. The look is the `line` tabs'. Put them in a `nav`.
- */
+/** Tabs that go to other pages: links in the tab look, the current one marked. */
 export const Links: Story = {
 	render: () => (
-		<nav aria-label="언어">
-			<TabLinks>
-				<TabLink href="#ko" current>
-					KO
-				</TabLink>
-				<TabLink href="#en" count={3}>
-					EN
-				</TabLink>
-				<TabLink href="#ja" dot="warning" dotLabel="저장하지 않은 변경">
-					JA
-				</TabLink>
-			</TabLinks>
-		</nav>
-	),
-};
-
-/** The pages of one tool page, as links in the filter row under a title: the open one bold, a count after a name, and a count that needs attention in the warning tone. */
-export const ToolbarLinks: Story = {
-	render: () => (
-		<nav aria-label="도구 구역">
+		<nav>
 			<TabLinks variant="toolbar">
-				<TabLink href="#templates" current count={3}>
-					템플릿
+				<TabLink href="#" current>
+					가져오기
 				</TabLink>
-				<TabLink href="#data">데이터</TabLink>
-				<TabLink href="#events" count={1} countTone="warning" countLabel="전송 실패 1건">
-					활동 기록
+				<TabLink href="#">내보내기</TabLink>
+				<TabLink href="#" count={2} countTone="warning">
+					전달
 				</TabLink>
-				<TabLink href="#keys">API 키</TabLink>
 			</TabLinks>
 		</nav>
 	),

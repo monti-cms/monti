@@ -48,8 +48,7 @@
 		"react": ">=19",
 		"@monti-cms/ai": "workspace:^",
 		"mermaid": ">=11",
-		"recharts": ">=3",
-		"@carbon/icons-react": ">=11.90.0"
+		"recharts": ">=3"
 	},
 	"peerDependenciesMeta": {
 		"@monti-cms/ai": {
@@ -75,7 +74,6 @@
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"@carbon/icons-react": "11.90.0",
 		"mermaid": "^11.12.2",
 		"next": "16.4.3",
 		"next-mdx-remote": "^6.0.0",
@@ -89,7 +87,8 @@
 	"files": [
 		"dist",
 		"README.md",
-		"render.css"
+		"render.css",
+		"chart.css"
 	],
 	"publishConfig": {
 		"exports": {

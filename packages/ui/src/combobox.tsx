@@ -1,15 +1,16 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
-import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { Caret } from "./caret";
-import { CHIP, CHIP_REMOVE } from "./chip";
+import { CHIP, CHIP_REMOVABLE, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
+import { Close } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -19,7 +20,15 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 
 function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Props) {
 	return (
-		<ComboboxPrimitive.Trigger data-slot="combobox-trigger" className={cn(ICON_BUTTON, className)} {...props}>
+		<ComboboxPrimitive.Trigger
+			data-slot="combobox-trigger"
+			className={cn(
+				ICON_BUTTON,
+				"w-auto not-disabled:hover:bg-transparent not-disabled:active:bg-transparent aria-expanded:bg-transparent",
+				className,
+			)}
+			{...props}
+		>
 			<Caret solo className="size-3.5" />
 		</ComboboxPrimitive.Trigger>
 	);
@@ -28,7 +37,15 @@ function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Prop
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 	const labels = useUiLabels();
 	return (
-		<ComboboxPrimitive.Clear data-slot="combobox-clear" className={cn(ICON_BUTTON, className)} {...props}>
+		<ComboboxPrimitive.Clear
+			data-slot="combobox-clear"
+			className={cn(
+				ICON_BUTTON,
+				"w-auto not-disabled:hover:bg-transparent not-disabled:active:bg-transparent aria-expanded:bg-transparent",
+				className,
+			)}
+			{...props}
+		>
 			<Close className="pointer-events-none" aria-hidden />
 			<span className="sr-only">{labels.clear}</span>
 		</ComboboxPrimitive.Clear>
@@ -44,23 +61,40 @@ function ComboboxInput({
 	showClear = false,
 	size = "default",
 	mono = false,
+	proposal = false,
 	...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
 	showTrigger?: boolean;
 	showClear?: boolean;
-	size?: "sm" | "default";
+	size?: "sm" | "md" | "default";
 	mono?: boolean;
+	/** The picked value is one the assistant chose and nobody has touched: blue text and a 1.5px blue line, as `Input proposal`. */
+	proposal?: boolean;
 }) {
 	return (
 		<div
 			data-slot="combobox-input"
 			className={cn(
-				"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger",
+				cn(
+					FIELD_HOVER,
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
+					FIELD_INSET,
+				),
+				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
 				className,
 			)}
 		>
 			<ComboboxPrimitive.Input
-				render={<Input disabled={disabled} size={size} mono={mono} className="flex-1 border-b-0" />}
+				render={
+					<Input
+						disabled={disabled}
+						size={size}
+						mono={mono}
+						proposal={proposal}
+						// The field around it holds the room and the tint; the input inside takes neither.
+						className="h-full flex-1 border-b-0 px-0 hover:bg-transparent data-proposal:border-b-0"
+					/>
+				}
 				{...props}
 			/>
 			{showTrigger && (
@@ -146,10 +180,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 	return (
 		<ComboboxPrimitive.Empty
 			data-slot="combobox-empty"
-			className={cn(
-				"hidden w-full justify-center py-monti-8 text-center text-monti-body text-monti-muted group-data-empty/combobox-content:flex",
-				className,
-			)}
+			className={cn(MENU_EMPTY, "hidden w-full justify-center group-data-empty/combobox-content:flex", className)}
 			{...props}
 		/>
 	);
@@ -162,16 +193,19 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 }
 
 function ComboboxChips({
+	size = "default",
 	className,
 	...props
-}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
+	ComboboxPrimitive.Chips.Props & {
+		/** `sm` stands 28px high, as a small `ComboboxInput` does. */
+		size?: "sm" | "md" | "default";
+	}) {
 	return (
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
-			className={cn(
-				"flex flex-wrap items-center gap-monti-6 border-monti-default border-b py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
-				className,
-			)}
+			data-size={size}
+			className={cn(CHIPS_FIELD, className)}
 			{...props}
 		/>
 	);
@@ -189,8 +223,11 @@ function ComboboxChip({
 	return (
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
+			// The small chip (24px), as `TagInput`'s, so a row of chips stands in the field's own height.
 			className={cn(
 				CHIP,
+				CHIP_SM,
+				CHIP_REMOVABLE,
 				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
 				className,
 			)}
@@ -208,13 +245,7 @@ function ComboboxChip({
 }
 
 function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
-	return (
-		<ComboboxPrimitive.Input
-			data-slot="combobox-chip-input"
-			className={cn("h-7 min-w-16 flex-1 outline-none", className)}
-			{...props}
-		/>
-	);
+	return <ComboboxPrimitive.Input data-slot="combobox-chip-input" className={cn(CHIPS_INPUT, className)} {...props} />;
 }
 
 function useComboboxAnchor() {

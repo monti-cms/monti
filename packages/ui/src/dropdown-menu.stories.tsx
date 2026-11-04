@@ -1,8 +1,9 @@
-import { Archive, Copy, Edit, FolderMoveTo, OverflowMenuHorizontal, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Button } from "./button";
+import { Archive, Copy, Folder, Launch, OverflowMenuHorizontal, Tag, TrashCan } from "./icons";
 import {
+	Button,
+	Caret,
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
@@ -18,397 +19,181 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "./dropdown-menu";
-import { FilterButton } from "./filter-button";
-import { MenuShortcut, MenuValue } from "./menu-parts";
+	IconButton,
+	MenuShortcut,
+	MenuValue,
+} from "./index";
 
-/**
- * The menu card. Labels are mono; a row can end in a shortcut, a ✓ (the current value of a pick-one list) or a › (it picks a further value, at
- * the side). The pointed row and the row whose second level is open take the selected background. What cannot be undone is last, in red.
- */
+/** The floating menu card: 240px, rows with an icon, a name and a shortcut; what cannot be undone is last, in red. */
 const meta = {
 	title: "Controls/Menu/DropdownMenu",
 	component: DropdownMenu,
-	args: {},
-	render: (args) => (
-		<DropdownMenu {...args}>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>
-				<OverflowMenuHorizontal aria-hidden />더 보기
-			</DropdownMenuTrigger>
+} satisfies Meta<typeof DropdownMenu>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+const More = (
+	<IconButton label="더 보기" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+		<OverflowMenuHorizontal />
+	</IconButton>
+);
+
+/** The ⋯ menu of a post: actions, a rule, and the danger row at the bottom. */
+export const Actions: Story = {
+	render: () => (
+		<DropdownMenu defaultOpen>
+			{More}
 			<DropdownMenuContent>
 				<DropdownMenuItem>
-					<Edit aria-hidden />
-					이름 바꾸기
+					<Launch />새 탭에서 열기
 				</DropdownMenuItem>
 				<DropdownMenuItem>
-					<Copy aria-hidden />
+					<Copy />
 					복제
-					<MenuShortcut keys={["mod", "D"]} />
+					<MenuShortcut keys={["mod", "shift", "D"]} />
+				</DropdownMenuItem>
+				<DropdownMenuItem>
+					<Archive />
+					보관
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem variant="danger">
-					<TrashCan aria-hidden />
+					<TrashCan />
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	),
-} satisfies Meta<typeof DropdownMenu>;
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Playground: Story = {};
-
-export const Open: Story = { args: { defaultOpen: true }, render: meta.render };
-
-/** A group's name, shortcuts at the end, rows that go to the editor's block commands. */
-export const GroupsAndLabels: Story = {
-	render: () => (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>블록</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuGroup>
-					<DropdownMenuLabel>문단</DropdownMenuLabel>
-					<DropdownMenuItem>
-						위로
-						<MenuShortcut keys={["alt", "ArrowUp"]} />
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						아래로
-						<MenuShortcut keys={["alt", "ArrowDown"]} />
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						복제
-						<MenuShortcut keys={["mod", "shift", "D"]} />
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="danger">
-					삭제
-					<MenuShortcut keys={["mod", "shift", "Backspace"]} />
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	),
 };
 
-/** A row can say under its name what it leaves alone. */
-export const WithCaption: Story = {
+/** A row that needs one more value opens a second level at its side; the row shows the current value faintly. */
+export const SecondLevel: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>
-				<OverflowMenuHorizontal aria-hidden />더 보기
-			</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuItem>내보내기</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="danger" caption="한국어 원문은 그대로">
-					이 번역 휴지통으로
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	),
-};
-
-/** A row that cannot be used is faint, and its end says why. */
-export const DisabledItems: Story = {
-	render: () => (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 작업</DropdownMenuTrigger>
+			{More}
 			<DropdownMenuContent>
 				<DropdownMenuItem>
-					<Edit aria-hidden />
-					이름 바꾸기
+					<Copy />
+					복제
 				</DropdownMenuItem>
-				<DropdownMenuItem disabled>
-					<Archive aria-hidden />
-					보관<MenuShortcut>쓰는 중</MenuShortcut>
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="danger" disabled>
-					<TrashCan aria-hidden />
-					휴지통으로
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	),
-};
-
-function CheckboxDemo() {
-	const [showDrafts, setShowDrafts] = useState(true);
-	const [showTrash, setShowTrash] = useState(false);
-	return (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>열</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuCheckboxItem checked={showDrafts} onCheckedChange={setShowDrafts}>
-					초안
-				</DropdownMenuCheckboxItem>
-				<DropdownMenuCheckboxItem checked={showTrash} onCheckedChange={setShowTrash}>
-					휴지통
-				</DropdownMenuCheckboxItem>
-				<DropdownMenuCheckboxItem checked disabled>
-					발행됨
-				</DropdownMenuCheckboxItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-/** Several can be on: each row that is on ends in a ✓. */
-export const CheckboxItems: Story = { render: () => <CheckboxDemo /> };
-
-function RadioDemo() {
-	const [order, setOrder] = useState("recent");
-	return (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>정렬</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuRadioGroup value={order} onValueChange={setOrder}>
-					<DropdownMenuRadioItem value="recent">최근 수정순</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="title">제목순</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="old" disabled>
-						오래된 순
-					</DropdownMenuRadioItem>
-				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-/** Pick one: the current value is a ✓ at the end, never a background. */
-export const PickOne: Story = { render: () => <RadioDemo /> };
-
-const SORTS = [
-	"최근 수정",
-	"오래전 수정",
-	"최근 발행",
-	"오래전 발행",
-	"최근 만듦",
-	"오래전 만듦",
-	"제목 오름차순",
-	"제목 내림차순",
-];
-
-function SubmenuDemo() {
-	const [sort, setSort] = useState("최근 수정");
-	return (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
-			<DropdownMenuContent className="min-w-60">
 				<DropdownMenuSub defaultOpen>
 					<DropdownMenuSubTrigger>
-						정렬<MenuValue>{sort}</MenuValue>
+						<Folder />
+						폴더로
+						<MenuValue>에세이</MenuValue>
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent>
-						<DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
-							{SORTS.slice(0, 6).map((name) => (
-								<DropdownMenuRadioItem key={name} value={name}>
-									{name}
-								</DropdownMenuRadioItem>
-							))}
-							<DropdownMenuSeparator />
-							{SORTS.slice(6).map((name) => (
-								<DropdownMenuRadioItem key={name} value={name}>
-									{name}
-								</DropdownMenuRadioItem>
-							))}
+						<DropdownMenuRadioGroup value="essay">
+							<DropdownMenuRadioItem value="none">폴더 없음</DropdownMenuRadioItem>
+							<DropdownMenuRadioItem value="essay">에세이</DropdownMenuRadioItem>
+							<DropdownMenuRadioItem value="notes">작업 노트</DropdownMenuRadioItem>
 						</DropdownMenuRadioGroup>
 					</DropdownMenuSubContent>
 				</DropdownMenuSub>
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
-						열<MenuValue>4개</MenuValue>
+						<Tag />
+						태그
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
-						<DropdownMenuCheckboxItem box checked>
-							분류
-						</DropdownMenuCheckboxItem>
-						<DropdownMenuCheckboxItem box checked>
-							언어
-						</DropdownMenuCheckboxItem>
-					</DropdownMenuSubContent>
 				</DropdownMenuSub>
-				<DropdownMenuSub>
-					<DropdownMenuSubTrigger>
-						쪽마다<MenuValue>25</MenuValue>
-					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
-						<DropdownMenuItem>25</DropdownMenuItem>
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-/**
- * A row that picks a further value ends in a › (after its current value, faint) and opens a second level at the side: pointing at it or →
- * opens, ← closes. The row stays selected while its level is open, and the current value inside is a ✓ (one order, a rule between the date orders
- * and the title orders). Picking one applies it and closes the whole menu. There is no third level.
- */
-export const SideSubmenu: Story = { render: () => <SubmenuDemo /> };
-
-const TAGS: [string, number][] = [
-	["리액트", 38],
-	["타입스크립트", 21],
-	["넥스트", 17],
-	["회고", 9],
-	["성능", 8],
-	["도구", 6],
-	["디자인", 4],
-];
-
-function FilterDemo() {
-	const [picked, setPicked] = useState<Set<string>>(new Set(["리액트"]));
-	const [text, setText] = useState("");
-	const toggle = (name: string) =>
-		setPicked((current) => {
-			const next = new Set(current);
-			if (!next.delete(name)) next.add(name);
-			return next;
-		});
-	return (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<FilterButton />}>필터</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-55">
-				<DropdownMenuSearch label="필터 찾기" value="" onValueChange={() => undefined} />
-				{["언어", "번역", "날짜"].map((name) => (
-					<DropdownMenuSub key={name}>
-						<DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<DropdownMenuItem>{name}</DropdownMenuItem>
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-				))}
-				<DropdownMenuSeparator />
-				{["요약", "대표 이미지", "카테고리"].map((name) => (
-					<DropdownMenuSub key={name}>
-						<DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<DropdownMenuItem>{name}</DropdownMenuItem>
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-				))}
-				<DropdownMenuSub defaultOpen>
-					<DropdownMenuSubTrigger>태그</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent className="w-60">
-						<DropdownMenuSearch label="태그 찾기" value={text} onValueChange={setText} />
-						<DropdownMenuCheckboxItem box checked={picked.has("없음")} onCheckedChange={() => toggle("없음")}>
-							없음<MenuShortcut>12</MenuShortcut>
-						</DropdownMenuCheckboxItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuScroll>
-							{TAGS.filter(([name]) => name.includes(text)).map(([name, count]) => (
-								<DropdownMenuCheckboxItem
-									key={name}
-									box
-									checked={picked.has(name)}
-									onCheckedChange={() => toggle(name)}
-								>
-									{name}
-									<MenuShortcut>{count}</MenuShortcut>
-								</DropdownMenuCheckboxItem>
-							))}
-						</DropdownMenuScroll>
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-				<DropdownMenuSub>
-					<DropdownMenuSubTrigger>시리즈</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
-						<DropdownMenuItem>시리즈</DropdownMenuItem>
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-/**
- * The filter menu of a list: a search row, then only the names of what can be filtered (the common ones, a rule, the schema's fields), each opening its
- * values at the side. Where several values can be on they are boxes with their number at the end; a long list has its own search row and scrolls inside.
- */
-export const FilterTwoLevel: Story = { render: () => <FilterDemo /> };
-
-const COLUMNS = ["분류", "언어", "상태", "날짜", "요약", "시리즈"];
-
-function ColumnsDemo() {
-	const [shown, setShown] = useState(new Set(["분류", "언어", "상태", "날짜"]));
-	return (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
-			<DropdownMenuContent className="min-w-55">
-				{COLUMNS.map((name) => (
-					<DropdownMenuCheckboxItem
-						key={name}
-						box
-						checked={shown.has(name)}
-						onCheckedChange={(checked) =>
-							setShown((current) => {
-								const next = new Set(current);
-								if (checked) next.add(name);
-								else next.delete(name);
-								return next;
-							})
-						}
-					>
-						{name}
-					</DropdownMenuCheckboxItem>
-				))}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-/** The columns of a list: a box to show or hide each. The title is not in the list: it is always there. Their order is set in the list's head. */
-export const Columns: Story = { render: () => <ColumnsDemo /> };
-
-/** Rows that open a second level next to ordinary rows and a red one. */
-export const MixedRows: Story = {
-	render: () => (
-		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 작업</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuSub>
-					<DropdownMenuSubTrigger>
-						<FolderMoveTo aria-hidden />
-						폴더로
-					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
-						<DropdownMenuItem>루트</DropdownMenuItem>
-						<DropdownMenuItem>시리즈</DropdownMenuItem>
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-				<DropdownMenuSub>
-					<DropdownMenuSubTrigger>
-						<Tag aria-hidden />
-						태그 추가
-					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
-						<DropdownMenuItem>리액트</DropdownMenuItem>
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="danger">
-					<TrashCan aria-hidden />
-					휴지통으로
-				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	),
 };
 
-/** The card is capped at 20rem wide: a long label is cut instead of stretching the menu. */
-export const LongLabel: Story = {
+/** Picking one value: the current one has a ✓ at its end; picking applies it and closes the menu. Opened from a text button. */
+export const PickOne: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 고르기</DropdownMenuTrigger>
+			<DropdownMenuTrigger
+				render={
+					<Button variant="ghost" size="sm">
+						최근 수정 <Caret />
+					</Button>
+				}
+			/>
 			<DropdownMenuContent>
-				<DropdownMenuItem>
-					<span className="truncate">아주 긴 제목의 글이 메뉴 안에서 어떻게 보이는지 확인하기 위한 제목입니다</span>
-				</DropdownMenuItem>
-				<DropdownMenuItem>짧은 글</DropdownMenuItem>
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>정렬</DropdownMenuLabel>
+					<DropdownMenuRadioGroup value="updated">
+						<DropdownMenuRadioItem value="updated">최근 수정</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="published">발행일</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="title">제목</DropdownMenuRadioItem>
+					</DropdownMenuRadioGroup>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	),
+};
+
+/** Values several of which can be on start with a check box; a value some of the picked rows hold is mixed, with `n/N` at the end. */
+export const CheckBoxes: Story = {
+	render: () => (
+		<DropdownMenu defaultOpen>
+			{More}
+			<DropdownMenuContent>
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>태그</DropdownMenuLabel>
+					<DropdownMenuCheckboxItem box checked closeOnClick={false}>
+						회고
+					</DropdownMenuCheckboxItem>
+					<DropdownMenuCheckboxItem box mixed closeOnClick={false}>
+						에디터
+						<MenuShortcut>1/2</MenuShortcut>
+					</DropdownMenuCheckboxItem>
+					<DropdownMenuCheckboxItem box checked={false} closeOnClick={false}>
+						디자인
+					</DropdownMenuCheckboxItem>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	),
+};
+
+const BLOCKS = [
+	"문단",
+	"소제목",
+	"목록",
+	"인용",
+	"구분선",
+	"이미지",
+	"표",
+	"코드 블록",
+	"파일",
+	"다른 글 링크",
+	"각주",
+];
+
+/** A long menu: a search row on top and a list that scrolls inside at 320px. */
+export const Search: Story = {
+	render: function Render() {
+		const [query, setQuery] = useState("");
+		const rows = BLOCKS.filter((name) => name.includes(query));
+		return (
+			<DropdownMenu defaultOpen>
+				{More}
+				<DropdownMenuContent>
+					<DropdownMenuSearch value={query} onValueChange={setQuery} label="블록 찾기" />
+					<DropdownMenuScroll>
+						{rows.map((name) => (
+							<DropdownMenuItem key={name}>{name}</DropdownMenuItem>
+						))}
+					</DropdownMenuScroll>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		);
+	},
+};
+
+/** A row with a second line that says what it leaves alone. */
+export const Caption: Story = {
+	render: () => (
+		<DropdownMenu defaultOpen>
+			{More}
+			<DropdownMenuContent>
+				<DropdownMenuItem caption="한국어 원문은 그대로 둬요">영어로 번역</DropdownMenuItem>
+				<DropdownMenuItem caption="한국어 원문은 그대로 둬요">일본어로 번역</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	),

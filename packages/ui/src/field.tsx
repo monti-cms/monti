@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Label } from "./label";
+import { Del } from "./proposal-marks";
 import { TextButton } from "./text-button";
 
 function FormFieldSet({
@@ -68,7 +69,7 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 			role="group"
 			data-slot="field"
 			className={cn(
-				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
+				"group/field flex w-full flex-col gap-monti-4 *:data-[slot=label-row]:**:data-[tone=proposal]:opacity-0 data-[invalid=true]:text-monti-danger *:data-[slot=label-row]:**:data-[tone=proposal]:data-loading:opacity-100 hover:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100 focus-within:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100",
 				className,
 			)}
 			{...props}
@@ -86,8 +87,12 @@ export interface FormFieldChange {
 	undoName?: string;
 	/** Puts the saved value back. Without it the row has the dot only (a switch, which is undone by turning it back). */
 	onUndo?: () => void;
+	/** The undo button is drawn without `onUndo` (a screen spec's look, before its behavior is wired). */
+	undoShown?: boolean;
 	/** The undo button cannot be pressed (the screen is read-only). */
 	undoDisabled?: boolean;
+	/** `proposal`: the value is the assistant's and nobody has taken it yet; the dot is blue and the button discards it ("discard"). */
+	tone?: "warning" | "proposal";
 }
 
 /**
@@ -103,7 +108,7 @@ function FormFieldLabel({
 	const label = (
 		<Label
 			data-slot="field-label"
-			size="micro"
+			size="caption"
 			tone="subtle"
 			className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
 			{...props}
@@ -111,10 +116,10 @@ function FormFieldLabel({
 	);
 	if (changed) {
 		return (
-			<div data-slot="field-label-row" className="flex h-3.5 items-center gap-monti-8">
+			<div data-slot="label-row" className="flex h-4 items-center gap-monti-8">
 				{label}
-				<ChangeDot label={changed.label} />
-				{changed.onUndo && (
+				<ChangeDot tone={changed.tone} label={changed.label} />
+				{(changed.onUndo || changed.undoShown) && (
 					<TextButton
 						variant="underline"
 						quiet
@@ -133,7 +138,7 @@ function FormFieldLabel({
 	}
 	if (!action) return label;
 	return (
-		<div className="flex items-baseline justify-between gap-monti-8">
+		<div data-slot="label-row" className="flex items-baseline justify-between gap-monti-8">
 			{label}
 			{action}
 		</div>
@@ -168,13 +173,24 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 	);
 }
 
+/**
+ * The error line under a field. `reserve` keeps the line (20px, 6px below the control: the field's 2px and 4px more) while it is empty, for a field whose error comes back
+ * after the form is sent (a password): the button under it does not move when the error appears. `hint` fills that line in grey while there is no
+ * error, for what the user must know before typing ("10자 이상"); the error takes its place. (cms-allow-korean)
+ */
 function FormFieldError({
 	className,
 	children,
 	errors,
+	reserve = false,
+	hint,
 	...props
 }: React.ComponentProps<"div"> & {
 	errors?: Array<{ message?: string } | undefined>;
+	/** Keep the empty line so the form does not move when the error appears. */
+	reserve?: boolean;
+	/** With `reserve`: what the line says in grey while there is no error. */
+	hint?: React.ReactNode;
 }) {
 	const content = useMemo(() => {
 		if (children) {
@@ -198,15 +214,30 @@ function FormFieldError({
 		);
 	}, [children, errors]);
 
-	if (!content) {
+	if (!content && !reserve) {
 		return null;
+	}
+	if (!content && hint) {
+		return (
+			<div
+				data-slot="field-hint"
+				className={cn("mt-monti-4 min-h-5 text-monti-note text-monti-subtle", className)}
+				{...props}
+			>
+				{hint}
+			</div>
+		);
 	}
 
 	return (
 		<div
 			role="alert"
 			data-slot="field-error"
-			className={cn("whitespace-pre-wrap font-normal text-monti-danger text-monti-label", className)}
+			className={cn(
+				"whitespace-pre-wrap font-normal text-monti-danger text-monti-label",
+				reserve && "mt-monti-4 min-h-5",
+				className,
+			)}
 			{...props}
 		>
 			{content}
@@ -214,8 +245,14 @@ function FormFieldError({
 	);
 }
 
+/** The saved value an assistant's proposal would replace, struck through in blue right under the control. */
+function FormFieldWas({ className, ...props }: React.ComponentProps<"del">) {
+	return <Del data-slot="field-was" className={cn("block pt-monti-4 text-monti-caption", className)} {...props} />;
+}
+
 export {
 	FormField,
+	FormFieldWas,
 	FormFieldLabel,
 	FormFieldDescription,
 	FormFieldError,

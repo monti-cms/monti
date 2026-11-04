@@ -1,12 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { AiAction } from "./ai-action";
+import { Affix } from "./affix";
+import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldLegend, FormFieldSet } from "./field";
+import { Renew } from "./icons";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";
+import { Del } from "./proposal-marks";
+import { Spark } from "./spark";
 import { Stack } from "./stack";
+import { Text } from "./text";
+import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
 
 /**
@@ -62,6 +68,33 @@ export const States: Story = {
 	),
 };
 
+/** A reserved error line: the grey hint before the send, then the error in its place; the button under it stays where it was. */
+export const ReservedError: Story = {
+	render: () => (
+		<Stack gap={32}>
+			{[undefined, "10자 이상이어야 해요."].map((error) => (
+				<Stack key={error ?? "empty"} gap={12}>
+					<FormField data-invalid={error ? "true" : undefined}>
+						<FormFieldLabel htmlFor={`r-${error ? "bad" : "ok"}`}>비밀번호</FormFieldLabel>
+						<Input
+							id={`r-${error ? "bad" : "ok"}`}
+							type="password"
+							aria-invalid={error ? true : undefined}
+							defaultValue="••••••••••"
+						/>
+						<FormFieldError reserve hint="10자 이상">
+							{error}
+						</FormFieldError>
+					</FormField>
+					<Button variant="primary" width="full">
+						로그인
+					</Button>
+				</Stack>
+			))}
+		</Stack>
+	),
+};
+
 function WithFill({ initial, focus = false }: { initial: string; focus?: boolean }) {
 	const [value, setValue] = useState(initial);
 	const [proposal, setProposal] = useState(false);
@@ -70,13 +103,17 @@ function WithFill({ initial, focus = false }: { initial: string; focus?: boolean
 			<FormFieldLabel
 				htmlFor={`alt-${focus}`}
 				action={
-					<AiAction
-						filled={value !== ""}
+					<TextButton
+						tone="proposal"
+						size="micro"
 						onClick={() => {
 							setValue("책상 위의 아침 햇살");
 							setProposal(true);
 						}}
-					/>
+					>
+						{value === "" ? <Spark /> : <Renew />}
+						{value === "" ? "채우기" : "다시"}
+					</TextButton>
 				}
 			>
 				대체 텍스트
@@ -165,6 +202,35 @@ export const Changed: Story = {
 	),
 };
 
+/**
+ * A value the assistant proposed and nobody has taken yet: the same label row as a change, with the blue dot and "버리기", the value in blue in the
+ * control, and the saved value struck through under it.
+ */
+export const Proposed: Story = {
+	render: () => (
+		<FormFieldGroup>
+			<FormField>
+				<FormFieldLabel
+					htmlFor="p-preview"
+					changed={{
+						tone: "proposal",
+						label: "AI 제안",
+						undoLabel: "버리기",
+						undoName: "미리보기 경로 제안 버리기",
+						onUndo: () => {},
+					}}
+				>
+					미리보기 경로
+				</FormFieldLabel>
+				<Affix id="p-preview" prefix="/" defaultValue="draft" proposal />
+				<Text variant="meta" mono>
+					<Del>/preview</Del>
+				</Text>
+			</FormField>
+		</FormFieldGroup>
+	),
+};
+
 /** The plain Label alone, and next to a control it labels. */
 export const Labels: Story = {
 	render: () => (
@@ -217,5 +283,18 @@ export const SetLegendAsFieldLabel: Story = {
 				</Option>
 			</Stack>
 		</FormFieldSet>
+	),
+};
+
+/** An error of the whole form, not of one field (a GitHub account that is not the admin): the same red line, under the button, and a way out. */
+export const FormError: Story = {
+	render: () => (
+		<Stack gap={8} className="max-w-sm">
+			<Button width="full">GitHub로 로그인</Button>
+			<FormFieldError className="mt-monti-4">octo-kim은 관리자가 아니에요.</FormFieldError>
+			<Button variant="ghost" className="self-start">
+				다른 계정으로 로그인
+			</Button>
+		</Stack>
 	),
 };

@@ -1,8 +1,8 @@
 "use client";
 
-import { Unlink } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Inline, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Input, Label, Stack, Text } from "@monti-cms/ui";
+import { Unlink } from "@monti-cms/ui/icons";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
@@ -87,10 +87,10 @@ export function PopoverFormFooter({
 	return (
 		<Inline gap={8} justify={onRemove ? "between" : "end"}>
 			{onRemove && (
-				<TextButton type="button" variant="danger" onClick={onRemove}>
+				<Button variant="ghost-danger" size="sm" type="button" onClick={onRemove}>
 					{removeIcon}
 					{removeLabel}
-				</TextButton>
+				</Button>
 			)}
 			<Inline gap={8}>
 				<Button type="button" variant="secondary" size="sm" onClick={onCancel}>

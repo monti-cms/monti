@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { Fragment, type ReactElement, type ReactNode, useState } from "react";
+import { Button } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import {
@@ -18,7 +19,8 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { MenuShortcut, MenuValue } from "./menu-parts";
+import { MENU_EMPTY, MenuShortcut, MenuValue } from "./menu-parts";
+import { SELECT_TRIGGER } from "./select";
 
 /** One model of the menu. `value` is what `onValueChange` gets back (a key and a model, as the caller writes them). */
 export interface ModelMenuItem {
@@ -132,7 +134,7 @@ export function ModelMenu({
 							</Fragment>
 						))}
 					</DropdownMenuRadioGroup>
-					{shown.length === 0 && <p className="m-0 px-[9px] py-[7px] text-monti-faint text-monti-note">{emptyText}</p>}
+					{shown.length === 0 && <p className={cn("m-0", MENU_EMPTY)}>{emptyText}</p>}
 				</div>
 				{thinking && (
 					<>
@@ -179,22 +181,24 @@ export function ModelMenuButton({
 	label: string;
 }) {
 	return (
-		<button
-			type="button"
+		// A small ghost button pulled 4px into the box's padding: its ground sits 8px from the box's edge on the left as at the bottom, and the caret side is 6px, as tight as the words side looks.
+		<Button
+			variant="ghost"
+			size="sm"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="flex min-w-0 items-center gap-monti-6 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-subtle outline-none hover:text-monti-default focus-visible:text-monti-default aria-expanded:text-monti-default"
+			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-10 font-mono text-monti-meta text-monti-subtle"
 			{...props}
 		>
 			<span className="min-w-0 truncate">{model}</span>
 			{thinking && <span className="shrink-0 text-monti-faint">· {thinking}</span>}
-			<Caret solo className="size-3.5 shrink-0" />
-		</button>
+			<Caret solo />
+		</Button>
 	);
 }
 
 /**
- * A value picked from a menu, drawn as a field (the quick-task model, a plugin's key): an underline with the value (in mono with `mono`), a quieter
+ * A value picked from a menu, drawn as a field in the look of a closed `SelectTrigger` (the quick-task model, a plugin's key): an underline with the value (in mono with `mono`), a quieter
  * `meta` after it (the key of a model, the last characters of a key), and a caret. Without a value it shows `placeholder`, faint, or in the warning ink
  * with `warning` (a key a plugin still needs). It opens a menu, or a dialog when there is nothing to pick yet.
  */
@@ -204,6 +208,7 @@ export function MenuField({
 	mono = false,
 	placeholder,
 	warning = false,
+	size = "sm",
 	...props
 }: Omit<React.ComponentProps<"button">, "children" | "className" | "style" | "value"> & {
 	value?: ReactNode;
@@ -211,14 +216,17 @@ export function MenuField({
 	mono?: boolean;
 	placeholder?: ReactNode;
 	warning?: boolean;
+	/** As a `SelectTrigger`'s: `sm` (note text, the default: a settings row) or `default` (body text, beside a form's inputs). */
+	size?: "sm" | "md" | "default";
 }) {
 	const empty = value === undefined || value === null || value === "";
 	return (
 		<button
 			type="button"
 			data-slot="menu-field"
+			data-size={size}
 			data-warning={(empty && warning) || undefined}
-			className="flex w-full items-center justify-between gap-monti-8 rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-left text-monti-default text-monti-note outline-none transition-colors focus-visible:border-monti-contrast disabled:text-monti-faint aria-expanded:border-monti-contrast data-warning:text-monti-warning"
+			className={cn(SELECT_TRIGGER, "w-full data-warning:text-monti-warning")}
 			{...props}
 		>
 			<span className="flex min-w-0 items-baseline gap-monti-6">

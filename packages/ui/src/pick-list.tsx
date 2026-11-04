@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
-import { MENU_LABEL, MENU_SEPARATOR } from "./menu-parts";
+import { MENU_LABEL, MENU_ROW, MENU_SEPARATOR } from "./menu-parts";
 
 /**
  * A short list of kinds to pick one from, drawn as menu rows without the floating card (the kind of a new field: text, choice, media, link).
@@ -31,7 +31,8 @@ function PickListItem({
 			aria-selected={selected}
 			data-slot="pick-list-item"
 			className={cn(
-				"flex w-full min-w-0 cursor-pointer items-center gap-[10px] rounded-monti-md border-0 bg-transparent px-[9px] py-[7px] text-left text-monti-body text-monti-muted outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
+				MENU_ROW,
+				"w-full cursor-pointer border-0 bg-transparent text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}

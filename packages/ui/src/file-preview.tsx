@@ -1,5 +1,5 @@
-import { Document } from "@carbon/icons-react";
 import { cn } from "./cn";
+import { Document } from "./icons";
 
 /**
  * What a `Tile` shows for a file that has no picture to show (PDF, CSV, ZIP, text): a 20px file icon in the middle and the extension under it in mono

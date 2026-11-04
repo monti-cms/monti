@@ -1,9 +1,8 @@
-import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ICON_BUTTON, IconButton } from "./icon-button";
+import { IconButton } from "./icon-button";
+import { ArrowUp, Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "./icons";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** Round, 32px: the header's more (⋯), properties and assistant, a panel's close. The label is the screen reader name and the tooltip. */
 const meta = {
@@ -27,7 +26,7 @@ export const States: Story = {
 				<RightPanelOpen aria-hidden />
 			</IconButton>
 			<IconButton label="어시스턴트 열기">
-				<Spark className="size-monti-icon-md" />
+				<Spark aria-hidden />
 			</IconButton>
 			<IconButton label="닫기">
 				<Close aria-hidden />
@@ -53,20 +52,19 @@ export const Danger: Story = {
 	),
 };
 
-/** The name shows on hover; `side` picks where. Here each side is held open on its own button, far enough apart that none covers another. */
-export const TooltipSides: Story = {
+/** `variant="primary"`: the black round button that sends (the assistant's box, a note's reply), at `md` 32px and `sm` 28px, then disabled. */
+export const Primary: Story = {
 	render: () => (
-		<Stack direction="row" gap={0} justify="center" className="px-monti-32 py-monti-48">
-			{(["top", "right", "bottom", "left"] as const).map((side) => (
-				<div key={side} className="flex w-48 justify-center">
-					<Tooltip open>
-						<TooltipTrigger render={<button type="button" aria-label={side} className={ICON_BUTTON} />}>
-							<OverflowMenuHorizontal aria-hidden />
-						</TooltipTrigger>
-						<TooltipContent side={side}>{side}</TooltipContent>
-					</Tooltip>
-				</div>
-			))}
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="보내기" variant="primary">
+				<ArrowUp aria-hidden />
+			</IconButton>
+			<IconButton label="보내기" variant="primary" size="sm">
+				<ArrowUp aria-hidden />
+			</IconButton>
+			<IconButton label="보내기" variant="primary" disabled>
+				<ArrowUp aria-hidden />
+			</IconButton>
 		</Stack>
 	),
 };

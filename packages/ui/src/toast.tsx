@@ -1,9 +1,9 @@
 "use client";
 
-import { FolderMoveTo } from "@carbon/icons-react";
 import type { ReactNode } from "react";
 import { Toaster as Engine, toast as engine } from "sonner";
 import { cn } from "./cn";
+import { FolderMoveTo } from "./icons";
 
 /**
  * The id of this `Toaster`. Every toast of this file is addressed to it, so a `Toaster` of the site's own (a plain `sonner` one, which shows

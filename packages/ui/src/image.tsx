@@ -1,6 +1,7 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
+import type * as React from "react";
 import { useState } from "react";
 import { cn } from "./cn";
 import type { MontiIcon } from "./monti-icon";
@@ -25,7 +26,7 @@ const frameVariants = cva(
 			size: {
 				fill: "w-full",
 				thumb: "size-monti-control-sm",
-				"thumb-lg": "size-monti-control-md",
+				"thumb-lg": "size-monti-control-lg",
 				/** A file's picture in a list row: 40px wide at the ratio given (the tile's 4:3), so a row of files stays as tall as its title. */
 				row: "w-monti-40",
 				/** As big as an icon, no fill: a logo inside a button. */
@@ -49,12 +50,15 @@ function Image({
 	border,
 	className,
 	loading = "lazy",
+	onLoad,
 }: VariantProps<typeof frameVariants> & {
 	src?: string | null;
 	alt: string;
 	fit?: "cover" | "contain";
 	fallback?: MontiIcon;
 	loading?: "lazy" | "eager";
+	/** The picture has loaded (its natural size is on `event.currentTarget`). */
+	onLoad?: React.ReactEventHandler<HTMLImageElement>;
 	className?: string;
 }) {
 	const [failed, setFailed] = useState(false);
@@ -71,6 +75,7 @@ function Image({
 					alt={alt}
 					loading={loading}
 					onError={() => setFailed(true)}
+					onLoad={onLoad}
 					className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain")}
 				/>
 			) : (

@@ -1,8 +1,8 @@
 "use client";
 
-import { Checkmark } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
+import { Checkmark } from "@monti-cms/admin/icons";
 import { Box, cn, Stack, Text, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import {

@@ -1,8 +1,8 @@
 "use client";
 
-import { Copy, TrashCan } from "@carbon/icons-react";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
+import { Copy, TrashCan } from "@monti-cms/ui/icons";
 import { createTemplate, deleteTemplate, templatesKeys } from "../../api/templates";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";

@@ -1,14 +1,13 @@
 "use client";
 
-import { Upload } from "@carbon/icons-react";
 import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from "./dialog";
+import { Upload } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
-import { TextButton } from "./text-button";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
 interface MediaPickerFolder {
@@ -104,11 +103,11 @@ function MediaPicker({
 					</div>
 				</div>
 				<div className={cn(DIALOG_ACTIONS, "mt-monti-4")}>
-					<TextButton type="button" className="mr-auto" disabled={uploadDisabled} onClick={onUpload}>
+					<Button type="button" variant="ghost" className="mr-auto" disabled={uploadDisabled} onClick={onUpload}>
 						<Upload aria-hidden />
 						{uploadLabel}
-					</TextButton>
-					<DialogClose render={<TextButton />}>{labels.cancel}</DialogClose>
+					</Button>
+					<DialogClose render={<Button variant="ghost" />}>{labels.cancel}</DialogClose>
 					<Button type="button" disabled={confirmDisabled} onClick={onConfirm}>
 						{confirmLabel}
 					</Button>

@@ -1,6 +1,15 @@
 "use client";
 
-import { AiAction, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@monti-cms/ui";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	TextButton,
+	useUiLabels,
+} from "@monti-cms/ui";
+import { Renew, Spark } from "@monti-cms/ui/icons";
+import type * as React from "react";
 import type { ReactNode } from "react";
 import { ErrorNoticeView } from "../ui/error-notice";
 import type { SlotRequest } from "./registry";
@@ -30,6 +39,27 @@ export {
  * the target is empty, "↻ Again" once it has a value (`request.filled`), a spinner and "Writing…" while it works. Pressing it runs the action and puts
  * the result in at once. With more than one action attached it opens a list of them. Both are `null` when no action is attached.
  */
+/** The fill action of a label row: "✦ Fill" while the target is empty, "↻ Again" once it has a value, "Writing…" while it works. */
+function FillButton({
+	filled,
+	loading,
+	...props
+}: React.ComponentProps<typeof TextButton> & { filled?: boolean; loading?: boolean }) {
+	const labels = useUiLabels();
+	return (
+		<TextButton tone="proposal" size="micro" loading={loading} {...props}>
+			{loading ? (
+				labels.aiWorking
+			) : (
+				<>
+					{filled ? <Renew aria-hidden /> : <Spark />}
+					{filled ? labels.aiAgain : labels.aiFill}
+				</>
+			)}
+		</TextButton>
+	);
+}
+
 export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: ReactNode } {
 	const { actions, state, run } = useSlotActions(request);
 	if (actions.length === 0) return { trigger: null, panel: null };
@@ -38,7 +68,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	const first = actions[0];
 	const trigger =
 		actions.length === 1 ? (
-			<AiAction
+			<FillButton
 				filled={request.filled}
 				loading={busy}
 				disabled={request.disabled}
@@ -48,7 +78,9 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 		) : (
 			<DropdownMenu>
 				<DropdownMenuTrigger
-					render={<AiAction filled={request.filled} loading={busy} disabled={request.disabled} title={first?.label} />}
+					render={
+						<FillButton filled={request.filled} loading={busy} disabled={request.disabled} title={first?.label} />
+					}
 				/>
 				<DropdownMenuContent align="end">
 					{actions.map((action) => (

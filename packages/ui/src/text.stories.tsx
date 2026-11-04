@@ -19,8 +19,6 @@ export const Playground: Story = {};
 const VARIANTS = tokens.type.groups.flatMap((group) =>
 	group.styles.map((style) => style.name.replace("text-", "") as Role),
 );
-const TONES = ["default", "muted", "subtle", "faint", "proposal", "danger", "warning", "success", "inherit"] as const;
-const WEIGHTS = ["role", "medium", "semibold"] as const;
 
 export const AllVariants: Story = {
 	render: () => (
@@ -28,35 +26,6 @@ export const AllVariants: Story = {
 			{VARIANTS.map((variant) => (
 				<Text key={variant} as="div" variant={variant}>
 					{variant} · 글을 쓰고 발행해 보세요
-				</Text>
-			))}
-		</Stack>
-	),
-};
-
-/** Every variant in every tone. */
-export const VariantsByTone: Story = {
-	render: () => (
-		<Stack gap={16}>
-			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap={24} wrap align="baseline">
-					{TONES.map((tone) => (
-						<Text key={tone} variant={variant} tone={tone}>
-							{variant} {tone}
-						</Text>
-					))}
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-export const Weights: Story = {
-	render: () => (
-		<Stack gap={8}>
-			{WEIGHTS.map((weight) => (
-				<Text key={weight} as="div" weight={weight}>
-					weight {weight} · 발행됨
 				</Text>
 			))}
 		</Stack>
@@ -81,22 +50,6 @@ export const Truncate: Story = {
 	),
 };
 
-export const Elements: Story = {
-	render: () => (
-		<Stack gap={8}>
-			<Text as="label" htmlFor="title" variant="label">
-				제목
-			</Text>
-			<Text as="p" tone="muted">
-				문단으로 쓰는 본문
-			</Text>
-			<Text as="time" variant="caption" tone="subtle">
-				2026-10-22
-			</Text>
-		</Stack>
-	),
-};
-
 const HEADING_VARIANTS = ["label", "title", "page", "heading", "display"] as const;
 
 export const Headings: Story = {
@@ -107,32 +60,6 @@ export const Headings: Story = {
 					{variant} · 여름 여행 기록
 				</Heading>
 			))}
-		</Stack>
-	),
-};
-
-export const HeadingsByTone: Story = {
-	render: () => (
-		<Stack gap={8}>
-			{TONES.map((tone) => (
-				<Heading key={tone} tone={tone}>
-					title {tone}
-				</Heading>
-			))}
-		</Stack>
-	),
-};
-
-export const HeadingLevelsAndTruncate: Story = {
-	render: () => (
-		<Stack gap={8} className="max-w-xs">
-			<Heading as="h1" variant="page">
-				h1 · 글
-			</Heading>
-			<Heading as="h3">h3 · 설정</Heading>
-			<Heading as="h4" truncate>
-				h4 · 아주 긴 제목이 한 줄에 다 들어가지 않으면 잘려요
-			</Heading>
 		</Stack>
 	),
 };

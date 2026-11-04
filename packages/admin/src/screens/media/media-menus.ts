@@ -1,3 +1,4 @@
+import type { Folder, FolderListItem } from "@monti-cms/core/site";
 import {
 	Document,
 	Edit,
@@ -10,8 +11,7 @@ import {
 	RightPanelOpen,
 	TrashCan,
 	Upload,
-} from "@carbon/icons-react";
-import type { Folder, FolderListItem } from "@monti-cms/core/site";
+} from "@monti-cms/ui/icons";
 import type { MediaItem } from "../../api/media";
 import type { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";

@@ -1,6 +1,7 @@
-import { Add, DocumentAdd, Settings, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Add } from "./icons";
 import {
+	Button,
 	Command,
 	CommandEmpty,
 	CommandFooter,
@@ -9,119 +10,92 @@ import {
 	CommandItem,
 	CommandList,
 	CommandSeparator,
-} from "./command";
-import { MENU_CARD, MenuShortcut } from "./menu-parts";
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "./index";
 
-/**
- * A menu you can search: a search line on top, rows under it that scroll inside (320px at most), and an optional row for the whole list at the
- * bottom. Typing filters across groups; the keyboard never leaves the line. The card is a `PopoverContent` with `padding="menu"`.
- */
+/** A menu you can search, inside a `PopoverContent padding="menu"`: the search line, rows in groups, and a footer row for the whole list. */
 const meta = {
 	title: "Controls/Menu/Command",
 	component: Command,
-	decorators: [
-		(Story) => (
-			<div className={`${MENU_CARD} w-72 p-monti-6`}>
-				<Story />
-			</div>
-		),
-	],
 } satisfies Meta<typeof Command>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	render: (args) => (
-		<Command {...args}>
-			<CommandInput placeholder="찾기" />
-			<CommandList>
-				<CommandEmpty>맞는 것이 없어요</CommandEmpty>
-				<CommandGroup heading="글">
-					<CommandItem>
-						<DocumentAdd aria-hidden />새 글 쓰기
-						<MenuShortcut keys={["mod", "N"]} />
-					</CommandItem>
-					<CommandItem disabled>
-						<TrashCan aria-hidden />
-						휴지통으로<MenuShortcut>쓰는 중</MenuShortcut>
-					</CommandItem>
-					<CommandItem variant="danger">
-						<TrashCan aria-hidden />
-						휴지통 비우기
-					</CommandItem>
-				</CommandGroup>
-				<CommandSeparator />
-				<CommandGroup heading="설정">
-					<CommandItem>
-						<Settings aria-hidden />
-						사이트 설정
-						<MenuShortcut keys={["mod", ","]} />
-					</CommandItem>
-				</CommandGroup>
-			</CommandList>
-		</Command>
-	),
-};
+const Card = ({ children }: { children: React.ReactNode }) => (
+	<Popover defaultOpen>
+		<PopoverTrigger
+			render={
+				<Button variant="ghost" size="sm">
+					태그
+				</Button>
+			}
+		/>
+		<PopoverContent width="sm" padding="menu">
+			{children}
+		</PopoverContent>
+	</Popover>
+);
 
-/** Filtered to nothing. */
-export const NothingFound: Story = {
-	render: () => (
-		<Command>
-			<CommandInput placeholder="찾기" value="없는 것" />
-			<CommandList>
-				<CommandEmpty>맞는 것이 없어요</CommandEmpty>
-			</CommandList>
-		</Command>
-	),
-};
-
-/** Pick one: the current value is a ✓ at the end, and no row has the background until the pointer or the keyboard is on one. */
+/** Picking a tag: the current one ticked, a "+ New tag" footer. */
 export const PickOne: Story = {
 	render: () => (
-		<Command value="-">
-			<CommandList>
-				<CommandItem value="공개" checked>
-					공개
-				</CommandItem>
-				<CommandItem value="비공개">비공개</CommandItem>
-			</CommandList>
-		</Command>
+		<Card>
+			<Command>
+				<CommandInput placeholder="태그 찾기" />
+				<CommandList>
+					<CommandGroup heading="태그">
+						<CommandItem checked>회고</CommandItem>
+						<CommandItem>에디터</CommandItem>
+						<CommandItem>디자인</CommandItem>
+					</CommandGroup>
+				</CommandList>
+				<CommandFooter>
+					<Button variant="ghost" size="sm">
+						<Add />새 태그
+					</Button>
+				</CommandFooter>
+			</Command>
+		</Card>
 	),
 };
 
-const TAGS = [
-	"리액트",
-	"타입스크립트",
-	"CSS",
-	"접근성",
-	"디자인",
-	"성능",
-	"테스트",
-	"배포",
-	"이미지",
-	"번역",
-	"검색",
-	"보안",
-];
-
-/** A long list scrolls inside the card, and a row for the whole list stays under it. */
-export const ScrollingWithFooter: Story = {
+/** Rows in groups with a rule between them, and a danger row last in its group. */
+export const Groups: Story = {
 	render: () => (
-		<Command>
-			<CommandInput placeholder="태그 찾기" />
-			<CommandList>
-				<CommandEmpty>맞는 태그가 없어요</CommandEmpty>
-				{TAGS.concat(TAGS).map((tag, index) => (
-					<CommandItem key={index} value={`${tag}-${index}`} checked={index === 2}>
-						{tag}
-					</CommandItem>
-				))}
-			</CommandList>
-			<CommandFooter>
-				<CommandItem value="새 태그 만들기">
-					<Add aria-hidden />새 태그 만들기
-				</CommandItem>
-			</CommandFooter>
-		</Command>
+		<Card>
+			<Command>
+				<CommandInput placeholder="링크할 글 찾기" />
+				<CommandList>
+					<CommandGroup heading="게시글">
+						<CommandItem>봄에 쓴 첫 글</CommandItem>
+						<CommandItem>편집기를 다시 만든 이유</CommandItem>
+					</CommandGroup>
+					<CommandSeparator />
+					<CommandGroup heading="노트">
+						<CommandItem>읽은 책 정리</CommandItem>
+						<CommandItem variant="danger">링크 지우기</CommandItem>
+					</CommandGroup>
+				</CommandList>
+			</Command>
+		</Card>
+	),
+};
+
+/** Nothing matches: one centered faint line. */
+export const NoMatch: Story = {
+	render: () => (
+		<Card>
+			<Command>
+				<CommandInput placeholder="태그 찾기" value="여행" />
+				<CommandList>
+					<CommandEmpty>맞는 태그가 없어요</CommandEmpty>
+					<CommandGroup heading="태그">
+						<CommandItem>회고</CommandItem>
+					</CommandGroup>
+				</CommandList>
+			</Command>
+		</Card>
 	),
 };

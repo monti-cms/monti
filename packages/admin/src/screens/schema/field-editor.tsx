@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, ChevronDown, ChevronRight, Close } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fieldTraits, useTranslator } from "@monti-cms/core/site";
@@ -11,6 +10,7 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
+	DragHandle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
@@ -23,12 +23,12 @@ import {
 	Inline,
 	Input,
 	OptionRow,
-	OptionRowHandle,
 	OptionTable,
 	Stack,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Add, ChevronDown, ChevronRight, Close } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { AddFieldSheet } from "./add-field";
@@ -212,7 +212,7 @@ function OptionEditorRow({
 			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
 			handle={
 				canDrag ? (
-					<OptionRowHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}
@@ -310,11 +310,13 @@ function OptionsEditor({
 			</OptionTable>
 			{!disabled && (
 				<Inline gap={16} paddingTop={8}>
-					<TextButton onClick={addOne}>{t("options.add")}</TextButton>
+					<Button variant="ghost" size="sm" onClick={addOne}>
+						{t("options.add")}
+					</Button>
 					<Box as="span" grow />
 					{defaultValue !== undefined && defaultValue in options && (
 						<DropdownMenu>
-							<DropdownMenuTrigger render={<TextButton quiet />}>
+							<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 								{t("options.defaultIs", { label: options[defaultValue] || defaultValue })}
 								<Caret />
 							</DropdownMenuTrigger>

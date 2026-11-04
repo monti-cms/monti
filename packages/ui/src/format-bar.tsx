@@ -1,14 +1,13 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { Link } from "@carbon/icons-react";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
-import { BAR, BAR_BUTTON, BAR_SEPARATOR } from "./block-bar";
+import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
+import { BAR_BUTTON, FloatingBarButton } from "./floating-bar";
+import { Link } from "./icons";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** How each inline format looks on its button: the letter itself, in the style it gives. */
 const FORMAT_GLYPHS = {
@@ -26,54 +25,6 @@ const FORMAT_GLYPHS = {
 } satisfies Record<string, { glyph: ReactNode; className: string }>;
 
 type FormatMark = keyof typeof FORMAT_GLYPHS;
-
-/**
- * A button of the format bar: 28px high and at least as wide, its name in a tooltip (with its key combination when it has one). `pressed` keeps the
- * background while the format is on. It does not take the selection or the focus from the text on press. To make it the trigger of a menu or card, wrap it
- * with `trigger`: `trigger={(button) => <PopoverTrigger render={button} />}`.
- */
-function FormatBarButton({
-	label,
-	shortcut,
-	pressed,
-	tone,
-	trigger,
-	className,
-	children,
-	...props
-}: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
-	/** The name of the button: its screen reader name and its tooltip. */
-	label: string;
-	/** The key combination that does the same (`["mod", "B"]`), shown in the tooltip. */
-	shortcut?: ShortcutKeys;
-	pressed?: boolean;
-	/** `danger` for a button that removes something. */
-	tone?: "danger";
-	trigger?: (button: ReactElement) => ReactElement;
-	children: ReactNode;
-}) {
-	const button = (
-		<ButtonPrimitive
-			data-slot="format-bar-button"
-			type="button"
-			aria-label={label}
-			aria-pressed={pressed}
-			data-tone={tone}
-			// Do not take the selection or the focus from the text on press.
-			onMouseDown={(event) => event.preventDefault()}
-			className={cn(BAR_BUTTON, "min-w-7 px-monti-4 text-monti-body", className)}
-			{...props}
-		/>
-	);
-	return (
-		<Tooltip>
-			<TooltipTrigger render={trigger ? trigger(button) : button}>{children}</TooltipTrigger>
-			<TooltipContent side="top" shortcut={shortcut}>
-				{label}
-			</TooltipContent>
-		</Tooltip>
-	);
-}
 
 /**
  * One inline format of the format bar, drawn as the letter it gives (B, I, U …). `pressed` marks one the selected text already has. `more` is the ⋯
@@ -98,7 +49,7 @@ function FormatButton({
 	const labels = useUiLabels();
 	const { glyph, className: glyphClassName } = FORMAT_GLYPHS[mark];
 	return (
-		<FormatBarButton
+		<FloatingBarButton
 			label={label}
 			shortcut={shortcut}
 			pressed={mark === "more" ? undefined : pressed}
@@ -107,22 +58,8 @@ function FormatButton({
 			{...props}
 		>
 			{mark === "footnote" ? labels.footnoteMark : glyph}
-		</FormatBarButton>
+		</FloatingBarButton>
 	);
-}
-
-/**
- * The bar that floats above selected text: the inline formats as letters (`FormatButton`), a `FormatBarSeparator` between groups, and at the end the
- * button that asks the assistant (`FormatBarRequest`, "✦ Request ⌘J"). It is one row that does not change; there is no toolbar that stays on screen, this
- * bar, the block handle and the / menu hold every tool.
- */
-function FormatBar({ className, ...props }: ComponentProps<"div">) {
-	return <div data-slot="format-bar" role="toolbar" className={cn(BAR, "whitespace-nowrap", className)} {...props} />;
-}
-
-/** The line between two groups of formats. */
-function FormatBarSeparator() {
-	return <span data-slot="format-bar-separator" aria-hidden className={BAR_SEPARATOR} />;
 }
 
 /** The last button of the bar: a blue ✦ and the word that asks the assistant about the selected text. A button shows no shortcut. */
@@ -149,4 +86,4 @@ function FormatBarRequest({
 	);
 }
 
-export { FormatBar, FormatBarButton, FormatBarRequest, FormatBarSeparator, FormatButton, type FormatMark };
+export { FormatBarRequest, FormatButton, type FormatMark };

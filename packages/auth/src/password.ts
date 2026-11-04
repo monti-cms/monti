@@ -1,3 +1,4 @@
+import { CredentialsSignin } from "@auth/core/errors";
 import Credentials from "@auth/core/providers/credentials";
 import type { LoginAccountRefusal, LoginAccounts } from "@monti-cms/core/adapters";
 import type { PluginStorage } from "@monti-cms/core/server";
@@ -70,7 +71,8 @@ export function passwordAccounts(
 	storage: (plugin: string) => PluginStorage,
 	now: () => number = Date.now,
 ): LoginAccounts & {
-	authorize(email: string, password: string, clientIp?: string | null): Promise<string | null>;
+	/** The account id, `{ locked: true }` while too many recent misses refuse every try, or `null` for a wrong email or password. */
+	authorize(email: string, password: string, clientIp?: string | null): Promise<string | { locked: true } | null>;
 } {
 	const store = () => storage(PLUGIN);
 	const accounts = () => store().collection<StoredAccount>(ACCOUNTS);
@@ -188,7 +190,7 @@ export function passwordAccounts(
 			if (await blocked(keys)) {
 				// A refused attempt still counts against the client address, so a flood from one address keeps it refused.
 				await failed(keys.slice(1));
-				return null;
+				return { locked: true };
 			}
 			decoy ??= hashPassword("decoy");
 			const matches = await verifyPassword(password, account?.value.hash ?? (await decoy));
@@ -200,6 +202,11 @@ export function passwordAccounts(
 			return null;
 		},
 	};
+}
+
+/** A sign-in refused because of recent misses: Auth.js sends the browser back with `code=locked`, so the login screen can say to wait. */
+class LockedSignIn extends CredentialsSignin {
+	override code = "locked";
 }
 
 /**
@@ -242,6 +249,7 @@ export function password(options: PasswordOptions = {}): LoginProvider {
 						String(credentials?.password ?? ""),
 						clientIpOf(request, options.clientIpHeader),
 					);
+					if (typeof id === "object" && id !== null) throw new LockedSignIn();
 					return id ? { id, name: id, email: id } : null;
 				},
 			});

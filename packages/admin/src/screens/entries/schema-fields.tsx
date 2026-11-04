@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Renew } from "@carbon/icons-react";
 import type {
 	BacklinkField,
 	ConditionalField,
@@ -20,7 +19,6 @@ import {
 	useTranslator,
 } from "@monti-cms/core/site";
 import {
-	Affix,
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
@@ -42,6 +40,7 @@ import {
 	TextButton,
 	FormField as UiField,
 } from "@monti-cms/ui";
+import { ChevronDown, ChevronRight, Renew } from "@monti-cms/ui/icons";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
 	type FieldInputEntry,
@@ -51,7 +50,6 @@ import {
 } from "../../admin-components";
 import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
-import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import type { BacklinkChange } from "./backlink-changes";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
@@ -192,12 +190,51 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 }
 
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
-export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
+/**
+ * The button at the end of a text field's line that fills it from the start of the body, for a field with `fillFromBody`. It stands where
+ * the slug's regenerate button stands, since both make the value again from another one.
+ */
+export function useFillFromBodyButton(
+	collection: string,
+	definition: ValueField,
+	disabled: boolean,
+	setValue: (value: string) => void,
+): ReactNode {
+	const t = useTranslator(entriesMessages);
+	const site = useSite();
+	const store = useEntryFormStore();
+	const canFill = definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	if (!canFill) return null;
+	return (
+		<IconButton
+			label={t("field.fillFromBody")}
+			side="bottom"
+			disabled={disabled}
+			onClick={() => {
+				const currentDoc = store.getState().form.doc;
+				if (!currentDoc) return;
+				setValue(bodyExcerpt(site, currentDoc, fillFromBodyLength(definition as TextField)));
+			}}
+		>
+			<Renew aria-hidden />
+		</IconButton>
+	);
+}
+
+export function DefaultInput({
+	parts,
+	action,
+	...props
+}: FieldInputProps & {
+	parts?: FieldInputParts;
+	/** A control at the end of a text field's line (fill from the body). */
+	action?: ReactNode;
+}) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useAdminComponents();
-	// Opened in place in the properties list: the assistant's blue until edited, and Enter or Escape ends the edit.
+	// In the properties list: the assistant's blue until edited.
 	const edit = usePropertyEdit();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
 	if (registered && !isFieldInputParts(registered)) {
@@ -213,7 +250,7 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 			return field.multiline ? (
 				<Textarea
 					id={id}
-					size="sm"
+					size="md"
 					{...multilineProps(field)}
 					autoComplete="off"
 					value={text}
@@ -222,14 +259,12 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					onKeyDown={(event) => {
-						if (event.key === "Escape") edit?.done();
-					}}
+					action={action}
 				/>
 			) : (
 				<Input
 					id={id}
-					size="sm"
+					size="md"
 					autoComplete="off"
 					value={text}
 					proposal={edit?.proposal}
@@ -237,9 +272,7 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					onKeyDown={(event) => {
-						if ((event.key === "Enter" && !isComposingKey(event)) || event.key === "Escape") edit?.done();
-					}}
+					action={action}
 				/>
 			);
 		case "select": {
@@ -253,13 +286,9 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 					value={text || field.defaultValue}
 					items={items}
 					disabled={context.disabled}
-					defaultOpen={Boolean(edit)}
-					onOpenChange={(open) => {
-						if (!open) edit?.done();
-					}}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					<SelectTrigger id={id} size="sm" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
+					<SelectTrigger id={id} size="md" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -310,8 +339,6 @@ function FormBoundRow({ field }: { field: FieldState }) {
 }
 
 function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) {
-	const site = useSite();
-	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const entryId = useEntryFormSelector((state) => state.entryId);
@@ -342,33 +369,9 @@ function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) 
 	const Aside = parts?.Aside;
 	const Input = parts?.Input;
 
-	const canFillFromBody =
-		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+	const fillFromBody = useFillFromBodyButton(collection, definition, field.readOnly, field.setValue);
 
-	const fillFromBodyButton = canFillFromBody ? (
-		<IconButton
-			label={t("field.fillFromBody")}
-			side="bottom"
-			disabled={field.readOnly}
-			onClick={() => {
-				const currentDoc = store.getState().form.doc;
-				if (!currentDoc) return;
-				const length = fillFromBodyLength(definition as TextField);
-				const excerpt = bodyExcerpt(site, currentDoc, length);
-				field.setValue(excerpt);
-			}}
-		>
-			<Renew aria-hidden />
-		</IconButton>
-	) : null;
-
-	const aside =
-		fillFromBodyButton || Aside ? (
-			<Inline gap={4}>
-				{fillFromBodyButton}
-				{Aside && <Aside {...props} />}
-			</Inline>
-		) : undefined;
+	const aside = Aside ? <Aside {...props} /> : undefined;
 
 	return (
 		<FieldRow
@@ -380,7 +383,11 @@ function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) 
 			slot={Input === null ? undefined : (field.slotRequest ?? undefined)}
 			aside={aside}
 		>
-			{Input === null ? null : Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} />}
+			{Input === null ? null : Input ? (
+				<Input {...props} />
+			) : (
+				<DefaultInput {...props} parts={parts} action={fillFromBody} />
+			)}
 		</FieldRow>
 	);
 }
@@ -398,8 +405,9 @@ const SlugRow = memo(function SlugRow({ name, placeholder }: RowProps & { placeh
 			help={field.description}
 			slot={slot}
 		>
-			<Affix
+			<Input
 				id={field.ids.input}
+				mono
 				autoComplete="off"
 				aria-invalid={field.inputProps["aria-invalid"]}
 				aria-describedby={field.inputProps["aria-describedby"]}
@@ -608,7 +616,7 @@ function RecordLocaleField({
 			{multiline ? (
 				<Textarea
 					id={field.ids.input}
-					size="sm"
+					size="md"
 					{...multilineProps(definition)}
 					autoComplete="off"
 					lang={locale}
@@ -619,7 +627,7 @@ function RecordLocaleField({
 			) : (
 				<Input
 					id={field.ids.input}
-					size="sm"
+					size="md"
 					autoComplete="off"
 					lang={locale}
 					value={value}

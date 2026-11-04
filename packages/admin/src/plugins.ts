@@ -60,7 +60,7 @@ export interface AdminPlugin {
 	 */
 	readonly statusCells?: StatusCells | ((site: Site) => StatusCells);
 	/**
-	 * Sections the plugin adds to the API keys page, by name, after the saved keys: the AI plugin's Models section. Each renders a `TableSection` from
+	 * Sections the plugin adds to the API keys page, by name, after the saved keys: the AI plugin's Models section. Each renders a `ListSection` from
 	 * `@monti-cms/admin/kit`. The components are client components, so give them from a `"use client"` module.
 	 */
 	readonly keySections?: KeySections;

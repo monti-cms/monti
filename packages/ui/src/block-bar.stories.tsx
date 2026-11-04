@@ -1,71 +1,49 @@
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
-import { Image } from "./image";
-import { Stack } from "./stack";
+import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
+import { Box, FloatingBar, FloatingBarButton, Image, ResizeCorner, Separator, Stack } from "./index";
 
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
 	'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270"><rect width="480" height="270" fill="#8fb8de"/><circle cx="360" cy="75" r="36" fill="#f6d365"/><path d="M0 270V180l120-75 105 90 90-60 165 105v30z" fill="#4c7a5a"/></svg>',
 )}`;
 
 /**
- * The tools of a block that has settings, in a small floating row: align, then settings and crop after a rule. A tool that is on keeps its
- * background. Delete is not here; it is in the block menu.
+ * The tools of a selected image: the block bar above its top left (align | settings · crop), and a square handle on each bottom corner that
+ * changes the width when dragged. Delete is in the block menu, not here.
  */
-const meta = { title: "Monti/EditorTools/BlockBar", component: BlockBar } satisfies Meta<typeof BlockBar>;
+const meta = {
+	title: "Monti/EditorTools/BlockBar",
+	component: ResizeCorner,
+	args: { side: "right", label: "폭 바꾸기" },
+} satisfies Meta<typeof ResizeCorner>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	render: () => (
-		<BlockBar aria-label="이미지 도구">
-			<BlockBarButton label="왼쪽">
-				<TextAlignLeft aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="가운데" pressed>
-				<TextAlignCenter aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="오른쪽">
-				<TextAlignRight aria-hidden />
-			</BlockBarButton>
-			<BlockBarSeparator />
-			<BlockBarButton label="설정">
-				<SettingsAdjust aria-hidden />
-			</BlockBarButton>
-			<BlockBarButton label="자르기와 회전">
-				<Crop aria-hidden />
-			</BlockBarButton>
-		</BlockBar>
-	),
-};
-
-/** On a selected image: the bar above its top left, and a handle on each bottom corner to change the width. */
 export const OnImage: Story = {
 	render: () => (
-		<Stack gap={8} className="max-w-md">
-			<BlockBar aria-label="이미지 도구" className="self-start">
-				<BlockBarButton label="왼쪽">
+		<Stack gap={8} align="start" maxWidth="reading">
+			<FloatingBar aria-label="이미지 도구">
+				<FloatingBarButton label="왼쪽 정렬">
 					<TextAlignLeft aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="가운데" pressed>
+				</FloatingBarButton>
+				<FloatingBarButton label="가운데 정렬" pressed>
 					<TextAlignCenter aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="오른쪽">
+				</FloatingBarButton>
+				<FloatingBarButton label="오른쪽 정렬">
 					<TextAlignRight aria-hidden />
-				</BlockBarButton>
-				<BlockBarSeparator />
-				<BlockBarButton label="설정">
+				</FloatingBarButton>
+				<Separator orientation="vertical" length="bar" />
+				<FloatingBarButton label="설정">
 					<SettingsAdjust aria-hidden />
-				</BlockBarButton>
-				<BlockBarButton label="자르기와 회전">
+				</FloatingBarButton>
+				<FloatingBarButton label="자르기와 회전">
 					<Crop aria-hidden />
-				</BlockBarButton>
-			</BlockBar>
-			<div className="relative">
-				<Image src={SAMPLE} alt="" ratio="photo" />
-				<ResizeCorner side="left" label="너비 줄이기" />
-				<ResizeCorner side="right" label="너비 늘리기" />
-			</div>
+				</FloatingBarButton>
+			</FloatingBar>
+			<Box position="relative" width="full">
+				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" />
+				<ResizeCorner side="left" label="폭 바꾸기" />
+				<ResizeCorner side="right" label="폭 바꾸기" />
+			</Box>
 		</Stack>
 	),
 };

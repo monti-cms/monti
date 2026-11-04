@@ -1,131 +1,79 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "./button";
-import { Caret } from "./caret";
-import { Count } from "./count";
-import { FilterButton } from "./filter-button";
-import { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd, ToolbarDivider } from "./page-header";
-import { Tabs, TabsList, TabsTrigger } from "./tabs";
-import { TextButton } from "./text-button";
+import { Add } from "./icons";
+import {
+	Button,
+	FilterButton,
+	PageBody,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
+	SearchBox,
+	Separator,
+	TabLink,
+	TabLinks,
+	Text,
+	TextButton,
+} from "./index";
 
 /**
- * The top of a content page: the title (26px bold) with the one ink rule of the page, its address rule in mono beside it, and the page's actions
- * on the right (the secondary pill, then the one primary pill). Under it the toolbar holds the tabs and filters.
+ * The head of a content page: the title (26px bold) over the ink rule, the only heavy line of a page; the list's address rule in mono beside it; the
+ * actions at the right, the secondary pill first and the one primary pill last. Under it the 48px toolbar.
  */
 const meta = {
 	title: "Patterns/Frame/PageHeader",
-	component: PageHeader,
-	args: { title: "게시글", meta: "/posts/:slug" },
-} satisfies Meta<typeof PageHeader>;
+	parameters: { bleed: true },
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	render: (args) => (
-		<PageHeader {...args}>
-			<Button variant="secondary">검색</Button>
-			<Button>+ 새 글 쓰기</Button>
-		</PageHeader>
-	),
-};
-
-/** A settings page: no address, and the save group sits where the actions are. */
-export const Settings: Story = {
-	args: { title: "설정", meta: undefined },
-	render: (args) => (
-		<PageHeader {...args}>
-			<TextButton>
-				바뀐 곳 <Count tone="warning">2</Count>
-				<Caret />
-			</TextButton>
-			<TextButton>모두 되돌리기</TextButton>
-			<Button>저장하고 적용</Button>
-		</PageHeader>
-	),
-};
-
-/** Without actions, and with a title that does not fit: it wraps and the actions go under it. */
-export const Narrow: Story = {
-	render: (args) => (
-		<div className="max-w-sm">
-			<PageHeader {...args} title="여름 여행 기록과 이사 후기를 모아 둔 아주 긴 이름의 목록">
-				<Button variant="secondary">검색</Button>
-				<Button>+ 새 글 쓰기</Button>
-			</PageHeader>
-		</div>
-	),
-};
-
-function Filters() {
-	return (
-		<PageToolbarEnd>
-			<FilterButton>태그</FilterButton>
-			<FilterButton>언어</FilterButton>
-			<ToolbarDivider />
-			<FilterButton>최근 수정순</FilterButton>
-		</PageToolbarEnd>
-	);
-}
-
-/** The row under the title, as a list page has it (12px inside, like the rows): tabs on the left, the filters used most and the sort on the right, with a short rule between the groups. */
-export const Toolbar: Story = {
-	parameters: { bleed: true },
+/** A list page: the address rule and the actions. A collection list has no toolbar, so the column names come right under the rule. */
+export const List: Story = {
 	render: () => (
-		<PageToolbar inset>
-			<Tabs defaultValue="all">
-				<TabsList variant="toolbar" aria-label="상태">
-					<TabsTrigger value="all" count={148}>
-						전체
-					</TabsTrigger>
-					<TabsTrigger value="published">발행됨</TabsTrigger>
-					<TabsTrigger value="draft">초안</TabsTrigger>
-				</TabsList>
-			</Tabs>
-			<Filters />
-		</PageToolbar>
+		<PageColumn width="list">
+			<PageHeader title="게시글" meta="/posts/:slug">
+				<Button variant="secondary">가져오기</Button>
+				<Button>
+					<Add />새 글
+				</Button>
+			</PageHeader>
+			<PageBody>
+				<Text variant="note">목록</Text>
+			</PageBody>
+		</PageColumn>
 	),
 };
 
-/** A page inside a folder: the way back sits above the title, and the title row keeps its 36px. */
+/** A folder: the way back above the title. */
 export const Trail: Story = {
-	args: { title: "Blog Assets", meta: undefined },
-	render: (args) => (
-		<PageHeader {...args} trail={<span>미디어 /</span>}>
-			<Button variant="secondary">검색</Button>
-			<Button>올리기</Button>
-		</PageHeader>
+	render: () => (
+		<PageColumn width="list">
+			<PageHeader title="뉴스" trail={<TextButton variant="quiet">게시글 /</TextButton>} />
+		</PageColumn>
 	),
 };
 
-/** The header and the toolbar together, as a list page starts, in the column every page sits in. The body under them is what scrolls. */
-export const Page: Story = {
-	parameters: { bleed: true },
-	render: (args) => (
-		<div className="flex h-96">
-			<PageColumn>
-				<PageHeader {...args}>
-					<Button variant="secondary">검색</Button>
-					<Button>+ 새 글 쓰기</Button>
-				</PageHeader>
-				<PageToolbar inset>
-					<Tabs defaultValue="all">
-						<TabsList variant="toolbar" aria-label="상태">
-							<TabsTrigger value="all" count={148}>
-								전체
-							</TabsTrigger>
-							<TabsTrigger value="published">발행됨</TabsTrigger>
-							<TabsTrigger value="draft">초안</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<Filters />
-				</PageToolbar>
-				<PageBody>
-					{Array.from({ length: 12 }, (_, index) => (
-						<p key={index} className="m-0 border-monti-muted border-b py-monti-12 text-monti-body">
-							{index + 1}번째 줄
-						</p>
-					))}
-				</PageBody>
-			</PageColumn>
-		</div>
+/** The toolbar: tab links on the left; on the right, past a short rule, the search and a filter. */
+export const Toolbar: Story = {
+	render: () => (
+		<PageColumn width="content">
+			<PageHeader title="도구" />
+			<PageToolbar>
+				<nav>
+					<TabLinks variant="toolbar">
+						<TabLink href="#" current>
+							가져오기
+						</TabLink>
+						<TabLink href="#">내보내기</TabLink>
+						<TabLink href="#">전달</TabLink>
+					</TabLinks>
+				</nav>
+				<PageToolbarEnd>
+					<Separator orientation="vertical" length="control" flush />
+					<SearchBox value="" onValueChange={() => {}} aria-label="찾기" placeholder="찾기" />
+					<FilterButton>기간</FilterButton>
+				</PageToolbarEnd>
+			</PageToolbar>
+		</PageColumn>
 	),
 };

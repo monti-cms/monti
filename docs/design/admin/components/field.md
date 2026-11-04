@@ -2,27 +2,28 @@
 
 이 페이지는 값을 입력하거나 고르는 컨트롤을 다룬다. 입력란, 선택, 앞뒤가 고정된 필드, 검색 상자, 달력, 비밀 값, 그리고 필수 값과 읽기 전용 값의 규칙이다.
 
-모든 필드에는 밑줄이 하나 있다. 라벨은 위에 mono 11px로 두고, 오류는 아래에 한 줄로 둔다.
+모든 필드에는 밑줄이 하나 있다. 라벨은 위에 sans 12px로 두고, 오류는 아래에 한 줄로 둔다.
 
 ## 한 줄
 
 밑줄 하나가 있는 입력란. 상자 테두리는 쓰지 않는다.
 
-- 라벨은 필드 위에 mono 11px(`text-micro`, `fg-subtle`)로 둔다.
+- 라벨은 필드 위에 sans 12px(`text-caption`, `fg-subtle`)로 둔다. mono 11px는 값(14px)과 견주어 너무 작게 읽혀서 바꿨다.
 - 라벨 줄 끝의 텍스트 버튼("되돌리기", "버리기", "✦ 채우기")은 라벨 줄의 높이(14px)를 넘지 않는다. 필드가 바뀌어 버튼이 나타나도 아래 필드는 움직이지 않는다.
 - 포커스: 밑줄이 잉크색(`border-contrast`)이 된다.
 - 오류: 밑줄이 `fg-danger`가 되고, 아래에 오류 문장이 한 줄 있다(무엇이 잘못됐고 어떻게 고치는지).
-- 오류가 여럿이어도 사이를 띄우지 않는다(`.mt-errors`). 어떤 간격도 필드와 오류 사이의 2px보다 넓지 않다. 같은 문장은 한 번만 나온다. 하나면 그냥 글이고, 여럿이면 줄마다 점을 붙인다.
-- 플레이스홀더는 `fg-faint`이다. 필드 아래에 설명 글을 달지 않는다.
+- 오류가 여럿이어도 사이를 띄우지 않는다(`.mt-errors`). 보통 오류는 필드와 2px 떨어진다. 그보다 넓은 것은 자리를 지키는 줄(`reserve`)뿐이다. 같은 문장은 한 번만 나온다. 하나면 그냥 글이고, 여럿이면 줄마다 점을 붙인다.
+- 플레이스홀더는 `fg-faint`이다. 규칙이나 조건은 플레이스홀더에 쓰지 않는다. 첫 글자를 치면 사라지기 때문이다.
+- 필드 아래 설명은 사용자가 꼭 알아야 하거나, 없으면 오해할 내용일 때만 단다(비밀번호의 "10자 이상"). 설명은 `FormFieldError reserve`가 지키는 그 줄에 `fg-subtle`로 쓰고, 오류가 오면 같은 자리에서 오류로 바뀐다. 줄이 하나 더 생기지 않는다.
 - 주소나 식별자처럼 기계가 읽는 값은 mono(`.mt-input.mt-mono`)로 쓴다. mono 규칙이 이기므로, 입력란의 `font: inherit`가 글꼴을 되돌리지 않는다.
 
 ### 코드
 
-`Input`(밑줄이고 상자가 아니다. 포커스에서는 잉크색, `aria-invalid`일 때는 danger다. `proposal`은 어시스턴트가 쓰고 아무도 건드리지 않은 값을 파란 글자와 1.5px 파란 밑줄로 표시한다). `size="sm"`은 28px로 툴바, 필터, 표에 쓴다. `mono`는 고정폭 글자다. `inline`은 포커스 전까지 선 없이 글처럼 읽힌다(그 자리에서 고치는 이름). 제목 크기(`title`, `display`: 글 제목, 템플릿 이름)에서는 포커스가 캐럿만 보여 주고, 상자는 절대 보여 주지 않는다. `FormField`는 라벨 달린 필드를 배치한다. 라벨이 위(mono 11), 그다음 컨트롤, 그다음 많아야 한 줄의 오류다. 어시스턴트의 채우기 동작은 라벨 줄(`FormFieldLabel action`)에 있고, 포인터나 키보드가 이 필드 안에 있을 때만 보인다. `FormFieldLabel changed={{ label, undoLabel, undoName, onUndo }}`는 저장된 값과 다른 필드의 라벨 줄이다. 라벨 뒤에 바뀜 점이 있고, 끝에 작고 조용한 밑줄 텍스트 버튼(`TextButton variant="underline" quiet size="caption"`)이 있다. 줄 높이는 라벨의 14px로 고정되어 아래 필드가 움직이지 않는다. `onUndo`가 없으면 점만 있다(스위치). `TextButton`은 `quiet`(변형 위에 얹는 조용한 잉크)와 `size`(`note`, `caption`)를 받는다. 부품은 `FormField`, `FormFieldLabel`, `FormFieldError`, `FormFieldDescription`, `FormFieldTitle`, `FormFieldGroup`, `FormFieldSet`(`density`: 필드 사이 24, `compact` 16, `flush`는 간격 없음으로 속성 패널에 쓴다. 속성 패널은 묶음과 행이 스스로 간격을 가진다), `FormFieldLegend`(`variant="field"`는 묶음의 legend를 필드 라벨처럼 그린다. 컬렉션 종류 같은 선택지 묶음에 쓴다)다.
+`Input`(밑줄이고 상자가 아니다. 포커스에서는 잉크색, `aria-invalid`일 때는 danger다. `proposal`은 어시스턴트가 쓰고 아무도 건드리지 않은 값을 파란 글자와 1.5px 파란 밑줄로 표시한다). `Input`과 `Textarea`의 `action`은 줄 끝의 컨트롤이다(본문에서 가져오기). 밑줄은 그 아래까지 행 전체에 이어지고, 여러 줄이면 컨트롤은 첫 줄 높이에 있다. 다른 값에서 이 값을 다시 만드는 버튼은 라벨 줄이 아니라 이 자리에 둔다. 입력 칸의 높이는 버튼과 같은 단계다. 기본은 36px(`height-control-lg`)로 폼과 대화상자에 쓰고, `size="md"`는 32px(`height-control-md`)로 속성 패널과 사이드 패널에, `size="sm"`은 28px(`height-control-sm`)로 툴바, 필터, 표에 쓴다. `md`의 글자는 기본과 같고, `sm`만 13px이다. 여백과 줄 높이를 더해 높이를 만들지 않고 이 높이로 고정하며, 밑줄은 그 안에 든다. 그래서 같은 크기의 `Input`, `Select`, `Combobox`, 날짜 필드, `Affix`, `SecretInput`은 높이가 같고, 같은 크기의 버튼 옆에 두면 위아래가 맞는다. `Textarea`와 칩이 든 필드(`ComboboxChips`, `TagInput`, 둘 다 `size`를 받는다)는 한 줄일 때 같은 높이에서 시작해 줄이 늘면 아래로 커진다. `mono`는 고정폭 글자다. `inline`은 포커스 전까지 선 없이 글처럼 읽힌다(그 자리에서 고치는 이름). 제목 크기(`title`, `display`: 글 제목, 템플릿 이름)에서는 포커스가 캐럿만 보여 주고, 상자는 절대 보여 주지 않는다. `size="inherit"`는 놓인 글의 글자를 그대로 쓴다(블록의 제목, 탭 이름을 그 자리에서 고친다). 이때도 포커스는 캐럿만 보인다. `width="fit"`은 담은 글만큼만 넓다(탭 이름). `FormField`는 라벨 달린 필드를 배치한다. 라벨이 위(mono 11), 4px 아래에 컨트롤, 그다음 많아야 한 줄의 오류다. `FormFieldError reserve`는 비어 있어도 그 줄(컨트롤 아래 8px: 필드 안의 4px에 4px를 더한다. 높이 20px)을 지킨다. `hint`를 주면 오류가 없는 동안 그 줄에 회색 설명을 쓴다. 보낸 뒤에야 오류가 오는 필드(로그인의 비밀번호)에 쓴다. 오류가 떠도 아래 버튼이 움직이지 않는다. 폼 전체의 오류(GitHub 계정이 관리자가 아님)도 같은 `FormFieldError`를 필드 밖, 버튼 아래에 쓴다. 속성 패널의 한 행도 `FormField`이고, 행 구분선을 따로 긋지 않는다. 입력 부품의 밑줄이 이미 선이라, 선을 하나 더 그으면 한 행에 두 줄이 된다. 어시스턴트의 채우기 동작은 라벨 줄(`FormFieldLabel action`)에 있고, 포인터나 키보드가 이 필드 안에 있을 때만 보인다. `FormFieldLabel changed={{ label, undoLabel, undoName, onUndo }}`는 저장된 값과 다른 필드의 라벨 줄이다. 라벨 뒤에 바뀜 점이 있고, 끝에 작고 조용한 밑줄 텍스트 버튼(`TextButton variant="underline" quiet size="caption"`)이 있다. 줄 높이는 라벨의 14px로 고정되어 아래 필드가 움직이지 않는다. `onUndo`가 없으면 점만 있다(스위치). 어시스턴트가 제안한 값은 같은 줄에 `changed.tone="proposal"`을 준다. 점이 파랗고, 버튼은 "버리기"다. 값은 입력 부품의 `proposal`로 파랗게 보이고, 입력 바로 아래에 저장된 옛 값을 `Del`로 줄 그어 둔다(`FormFieldWas`: 4px 아래, caption 크기). `TextButton`은 `quiet`(변형 위에 얹는 조용한 잉크)와 `size`(`note`, `caption`)를 받는다. 부품은 `FormField`, `FormFieldLabel`, `FormFieldError`, `FormFieldDescription`, `FormFieldTitle`, `FormFieldGroup`, `FormFieldSet`(`density`: 필드 사이 24, `compact` 16, `flush`는 간격 없음으로 속성 패널에 쓴다. 속성 패널은 묶음과 행이 스스로 간격을 가진다), `FormFieldLegend`(`variant="field"`는 묶음의 legend를 필드 라벨처럼 그린다. 컬렉션 종류 같은 선택지 묶음에 쓴다)다. `ReadValue`는 여기서 고칠 수 없는 값(관리자 주소, 사이트 URL, 식별자)을 입력란 없이 라벨 아래 글로 보인다. 값은 라벨에서 6px 아래이고, `mono`(기본)는 주소와 식별자에 쓴다.
 
 ## 속성 목록
 
-글의 속성은 폼이 아니라 읽는 목록이다(Overlay › 사이드 패널 참고). 각 행은 라벨이 위에, 값이 아래에 있고 상자는 없다. 값을 누르면 그 자리에서 필드가 열린다(이 페이지의 밑줄 필드이고, 캐럿이 그 안에 있다). Enter(한 줄), Esc를 누르거나 행을 벗어나면 닫힌다. 필드가 열려 있는 동안 글자 수("28 / 120")는 라벨 줄 오른쪽 끝, 채우기 동작 옆에 있다. 빈 값은 `fg-faint`로 "비어 있음"이라고 읽힌다. 다른 값을 따르는 값(SEO 탭)은 무엇을 따르는지 말한다("제목과 같음 · 10/60"). 사람이 바꿀 수 없는 속성(번역에서 원문과 함께 쓰는 필드)은 글로만 보이고, 아래에 조용한 메모가 한 줄 있다.
+글의 속성은 읽는 목록처럼 보인다(Overlay › 사이드 패널 참고). 각 행은 라벨이 위에, 값이 아래에 있고 상자는 없다. 값 자리는 처음부터 이 페이지의 입력 부품이다(`Input`, `Textarea`, `Combobox`, `Select`, `Switch`, `Affix`). 폼과 같은 기본 입력칸이라 옅은 밑줄이 늘 보이고, 포커스하면 잉크 밑줄이 되며 캐럿이 그 안에 있다. 어시스턴트의 제안도 그 입력칸 안에 `proposal`로 들어 있다. 값을 글자나 버튼으로 그려 두었다가 누를 때 입력 부품으로 바꾸지 않는다. 포커스가 있는 동안 글자 수("28 / 120")는 라벨 줄 오른쪽 끝, 채우기 동작 옆에 있다. 자리마다의 부품은 [screens/editor.md](../screens/editor.md)의 속성 패널에 있다. 빈 값은 `fg-faint`로 "비어 있음"이라고 읽힌다. 다른 값을 따르는 값(SEO 탭)은 무엇을 따르는지 말한다("제목과 같음 · 10/60"). 사람이 바꿀 수 없는 속성(번역에서 원문과 함께 쓰는 필드)은 글로만 보이고, 아래에 조용한 메모가 한 줄 있다.
 
 ## 여러 줄
 
@@ -30,9 +31,9 @@
 
 ### 코드
 
-`Textarea`: `size="sm"`은 좁은 패널을 위해 note 크기 글자로 쓴다. `mono`는 코드와 소스 텍스트에 쓴다. `proposal`은 어시스턴트가 쓴 글을 표시한다.
+`Textarea`: `size="sm"`은 좁은 패널을 위해 note 크기 글자로 쓴다. `mono`는 코드와 소스 텍스트에 쓴다. `proposal`은 어시스턴트가 쓴 글을 표시한다. `rows`는 적어도 보이는 줄 수다. 글이 길어지면 그보다 커진다.
 
-`TagInput`은 밑줄 필드 하나에 담긴 짧은 값들의 목록이다. 값 하나하나가 `Chip`이고, 끝의 입력 칸에서 Enter나 쉼표를 치면(그리고 필드에서 포커스가 빠지면) 다음 값이 더해진다. 빈 입력 칸에서 Backspace를 누르면 마지막 칩이 지워진다.
+`TagInput`은 밑줄 필드 하나에 담긴 짧은 값들의 목록이다. 그 필드는 여러 값을 담는 콤보박스의 필드(`ComboboxChips`)와 같은 모양(`CHIPS_FIELD`)이다. 값 하나하나가 작은 `Chip`(`size="sm"`, 24px)이라 밑줄 필드의 줄 높이에 맞고, 끝의 입력 칸에서 Enter나 쉼표를 치면(그리고 필드에서 포커스가 빠지면) 다음 값이 더해진다. 빈 입력 칸에서 Backspace를 누르면 마지막 칩이 지워진다.
 
 ## 선택
 
@@ -40,7 +41,7 @@
 
 ### 코드
 
-`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
+`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px이고, note 크기 글자로 행의 20px 줄 위에 놓여 행 높이를 바꾸지 않는다)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
@@ -55,7 +56,7 @@
 
 ### 코드
 
-`Affix`: `prefix`와 `suffix`는 고정 글자다. `action`은 줄 맨 끝의 컨트롤이다(다시 만들기 버튼).
+`Affix`: `prefix`와 `suffix`는 고정 글자다. `width="full"`(기본)이면 입력하는 부분이 고정 글자가 남긴 폭을 모두 차지해 밑줄이 `Input`처럼 칸 끝까지 그어진다. `width="fit"`이면 입력한 글자만큼만 차지하고(세 글자보다 좁아지지 않는다) 뒤 고정 글자가 바로 붙는다. 컬렉션의 공개 주소("/posts/:slug")처럼 짧은 주소가 한 줄로 읽혀야 하는 곳에 쓴다. `action`은 줄 맨 끝의 컨트롤이다(다시 만들기 버튼). 고정 글자가 없는 값(속성 패널의 슬러그)은 `Affix`가 아니라 `action`이 붙은 `Input`이다. `Select`의 ▾와 같다.
 
 ## 펼침 표시 (`.mt-caret`)
 
@@ -67,11 +68,11 @@
 
 ## 짝 맞춤 행 (`.mt-map`, `.mt-map-row`)
 
-가져오기에서 파일의 키를 필드에 잇는 행. 왼쪽에 키(mono), 가운데에 →, 오른쪽에 `.mt-select`가 있고, 그 아래에 한 줄이 있다. 예시 값(`.ex`, 흐림)이나 메모(`.warn`, 주황)다. 가져오지 않는 키는 `.is-off`다(키가 흐려진다). ✦가 맞춘 선택은 `.mt-select.is-ai`(파랑)다. 요약 표(복원 미리보기)는 같은 행을 두 열로 쓴다.
+가져오기에서 파일의 키를 필드에 잇는 행. 왼쪽에 키(mono), 가운데에 →, 오른쪽에 `.mt-select`가 있고, 그 아래에 한 줄이 있다. 예시 값(`.ex`, 흐림)이나 메모(`.warn`, 주황)다. 가져오지 않는 키는 `.is-off`다(키가 흐려진다). ✦가 맞춘 선택은 `.mt-select.is-ai`(파랑)다. 이 행은 필드 맞추기에만 쓴다. 이름과 값을 늘어놓는 요약(복원 미리보기)은 `DescriptionList`, 무엇이 어떻게 되는지 적는 줄(주소를 바꾼 글)은 `ChangeLines`다. 복원을 막는 문제는 `IssueRow`다.
 
 ### 코드
 
-`MapRow`: `name`(키), `example`, `warning`(예시 대신 들어가는 경고 색 메모), `off`, 그리고 필드를 고르는 `Select`를 자식으로 받는다. 어시스턴트가 맞췄다면 그 선택에 `proposal`을 준다.
+`MapRow`: `name`(키), `example`, `warning`(예시 대신 들어가는 경고 색 메모), `off`, 그리고 필드를 고르는 `Select`를 자식으로 받는다. 어시스턴트가 맞췄다면 그 선택에 `proposal`을 준다. `IssueRow`(`name`, `code`, `warning`)는 고를 것이 없는 문제 한 행이다(복원을 막는 문제). 이름 줄 뒤에 `code`가 mono로 붙고, 그 아래 `MapRow`의 경고 줄과 같은 주황 한 줄이 있다. 행 사이는 가는 선이다.
 
 ## 검색 상자 (`.mt-searchbox`)
 
@@ -79,7 +80,7 @@
 
 ### 코드
 
-`SearchBox`: `targets`(찾을 곳)는 선택이다. 없으면 고르는 부분이 없다. `SearchToggle`은 페이지의 "검색" 버튼(돋보기가 있는 secondary 알약)으로, 그 자리에서 `SearchBox`를 열고 검색어 필드에 포커스를 준다. 상자는 검색어가 있거나 포커스가 있는 동안 남아 있다. 비우고 벗어나거나, 비우고 Escape를 누르면 다시 버튼이 된다.
+`SearchBox`: 끝의 ×(글자를 지우고 상자는 남긴다)는 칩의 ×와 같은 모양(`CHIP_REMOVE`)이다. `targets`(찾을 곳)는 선택이다. 없으면 고르는 부분이 없다. `SearchToggle`은 페이지의 "검색" 버튼(돋보기가 있는 secondary 알약)으로, 그 자리에서 `SearchBox`를 열고 검색어 필드에 포커스를 준다. 상자는 검색어가 있거나 포커스가 있는 동안 남아 있다. 비우고 벗어나거나, 비우고 Escape를 누르면 다시 버튼이 된다.
 
 ## 달력 (`.mt-cal`)
 
@@ -103,13 +104,13 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 다시 보여 주지 않는 값(저장된 키)을 바꾸는 자리. 필드 대신 지금 값의 흔적(`··· a1b2`, mono)과 끝에 텍스트 버튼 하나("바꾸기")를 보여 준다.
 
-- 높이와 글자 위치가 입력란과 같아서(33px, 위에서 6px), "바꾸기"가 필드(`.mt-secret`)를 열어도 아래가 움직이지 않는다.
+- 높이가 입력란과 같아서(36px), "바꾸기"가 필드(`.mt-secret`)를 열어도 아래가 움직이지 않는다.
 - 열린 필드 끝의 조용한 "그대로"(`.mt-secret > .mt-text-btn`)는 이 행으로 돌아가고 값을 그대로 둔다. 창 아래의 "취소"와 겹치지 않도록 "취소"라고 부르지 않는다. 비워 두어도 값은 그대로다.
 - 값을 읽을 수 없으면 필드가 처음부터 열려 있다. 아래에 `.mt-note` 한 줄이 있고, "그대로"는 없다.
 
 ### 코드
 
-`SecretInput`: 밑줄 하나에 mono 입력란과 24px 눈 버튼(`showLabel`·`hideLabel`이 이름)이 든 필드다. 포커스 중에는 밑줄이 잉크, `aria-invalid`이면 위험색이다. `keep`을 주면 줄 끝에 조용한 글자 버튼("그대로")이 붙는다. `SavedValue`: 입력란과 같은 높이(33px)에 mono 값과 끝의 밑줄 글자 버튼 하나(`action`, "바꾸기")를 둔 행이다. 밑줄은 보이지 않는다.
+`SecretInput`: mono 입력란 하나에, 끝의 `action` 자리로 눈 아이콘 버튼(`showLabel`·`hideLabel`이 이름, 칸보다 한 단계 작은 둥근 버튼)이 든 필드다. 포커스 중에는 밑줄이 잉크, `aria-invalid`이면 위험색이다. `keep`을 주면 줄 끝에 조용한 글자 버튼("그대로")이 붙는다. `SavedValue`: 입력란과 같은 높이(36px)에 mono 값과 끝의 밑줄 글자 버튼 하나(`action`, "바꾸기")를 둔 행이다. 밑줄은 보이지 않는다.
 
 ## 메뉴로 고르는 칸 (`.mt-select` 모양)
 
@@ -120,7 +121,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 ### 코드
 
-`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색)을 받는 버튼이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
+`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
 
 ## 필수 필드 (`.mt-label > .req`)
 

@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
-import { TextButton } from "./text-button";
 
 /** One line of a patch: kept (`same`), taken out (`remove`) or put in (`add`). */
 export interface PatchLine {
@@ -39,9 +39,9 @@ function Patch({
 				{added > 0 && <span className="text-monti-meta text-monti-success">+{added}</span>}
 				{removed > 0 && <span className="text-monti-danger text-monti-meta">−{removed}</span>}
 				{actionLabel && (
-					<TextButton type="button" onClick={onAction}>
+					<Button type="button" variant="ghost" size="sm" onClick={onAction}>
 						{actionLabel}
-					</TextButton>
+					</Button>
 				)}
 			</div>
 			<pre className="m-0 overflow-auto py-monti-6 text-monti-meta">

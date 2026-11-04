@@ -4,9 +4,9 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva } from "class-variance-authority";
 import type * as React from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 import { StatusBarList } from "./status-bar-list";
-import { TextButton } from "./text-button";
 import { TodoItem } from "./todo-item";
 
 /**
@@ -186,13 +186,17 @@ function StatusBarPluginCell({
 				(settings || fixAll) && (
 					<>
 						{settings ? (
-							<TextButton variant="quiet" onClick={settings.onClick}>
+							<Button variant="ghost" size="sm" onClick={settings.onClick}>
 								{settings.label}
-							</TextButton>
+							</Button>
 						) : (
 							<span />
 						)}
-						{fixAll && <TextButton onClick={fixAll.onClick}>{fixAll.label}</TextButton>}
+						{fixAll && (
+							<Button variant="ghost" size="sm" onClick={fixAll.onClick}>
+								{fixAll.label}
+							</Button>
+						)}
 					</>
 				)
 			}

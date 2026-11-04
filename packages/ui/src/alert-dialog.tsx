@@ -5,15 +5,14 @@ import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import {
+	BACKDROP,
 	DIALOG_ACTIONS,
-	DIALOG_BACKDROP,
 	DIALOG_DESCRIPTION,
 	DIALOG_HEADER,
 	DIALOG_SURFACE,
 	DIALOG_TITLE,
 	useModalFocus,
 } from "./dialog";
-import { TextButton } from "./text-button";
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
 	return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
@@ -29,11 +28,7 @@ function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
 
 function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdrop.Props) {
 	return (
-		<AlertDialogPrimitive.Backdrop
-			data-slot="alert-dialog-overlay"
-			className={cn(DIALOG_BACKDROP, className)}
-			{...props}
-		/>
+		<AlertDialogPrimitive.Backdrop data-slot="alert-dialog-overlay" className={cn(BACKDROP, className)} {...props} />
 	);
 }
 
@@ -102,7 +97,7 @@ function AlertDialogCancel({
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
 			className={cn(className)}
-			render={<TextButton variant={variant} />}
+			render={<Button variant={variant === "danger" ? "ghost-danger" : "ghost"} />}
 			{...props}
 		/>
 	);

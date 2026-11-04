@@ -1,23 +1,34 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
-import { DialogFormFooter } from "./dialog-form-footer";
-import { Stack } from "./stack";
-import { StoryCaption } from "./story-caption";
+import {
+	Dialog,
+	DialogContent,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	FormField,
+	FormFieldLabel,
+	Input,
+	Stack,
+} from "./index";
 
+/** The footer of a dialog that holds a form: Cancel and one pill; while the request runs the pill shows `busyLabel` with a spinner. */
 const meta = {
 	title: "Controls/Overlay/DialogFormFooter",
 	component: DialogFormFooter,
-	args: { onCancel: () => {}, busy: false, disabled: false },
+	args: { onCancel: () => {}, submitLabel: "내보내기", busyLabel: "내보내는 중…" },
 	render: (args) => (
 		<Dialog defaultOpen>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>새 글 만들기</DialogTitle>
-					<DialogDescription>제목을 정하고 저장해 주세요.</DialogDescription>
-				</DialogHeader>
-				<form onSubmit={(event) => event.preventDefault()}>
+			<DialogContent form>
+				<Stack as="form" gap={16}>
+					<DialogHeader>
+						<DialogTitle>고른 글 내보내기</DialogTitle>
+					</DialogHeader>
+					<FormField>
+						<FormFieldLabel htmlFor="file-name">파일 이름</FormFieldLabel>
+						<Input id="file-name" defaultValue="posts-2026-11" />
+					</FormField>
 					<DialogFormFooter {...args} />
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	),
@@ -25,30 +36,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const Ready: Story = {};
 
-/** The footer on its own, one row per state, each as wide as a dialog. */
-export const States: Story = {
-	parameters: { layout: "padded" },
-	render: () => {
-		const rows = [
-			{ name: "default", props: {} },
-			{ name: "disabled", props: { disabled: true } },
-			{ name: "busy", props: { busy: true } },
-			{ name: "submitLabel, cancelLabel", props: { submitLabel: "만들기", cancelLabel: "닫기" } },
-			{ name: "busy, busyLabel", props: { busy: true, submitLabel: "만들기", busyLabel: "만드는 중…" } },
-		];
-		return (
-			<Stack gap={24} className="max-w-[364px]">
-				{rows.map((row) => (
-					<Stack key={row.name} gap={4}>
-						<StoryCaption>{row.name}</StoryCaption>
-						<form onSubmit={(event) => event.preventDefault()}>
-							<DialogFormFooter onCancel={() => {}} {...row.props} />
-						</form>
-					</Stack>
-				))}
-			</Stack>
-		);
-	},
-};
+/** The request is running. */
+export const Busy: Story = { args: { busy: true } };
+
+/** Nothing to send yet. */
+export const Disabled: Story = { args: { disabled: true } };

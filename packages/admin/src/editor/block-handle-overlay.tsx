@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	BlockHandle,
@@ -19,6 +18,7 @@ import {
 	Icon,
 	MenuShortcut,
 } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type React from "react";
 import { type ReactNode, useRef, useState } from "react";
@@ -100,7 +100,7 @@ export function BlockHandleOverlay({
 		<div
 			ref={marks}
 			// design-allow: the marks follow the block under the pointer
-			style={{ position: "fixed", top: `${spot.top + 4}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
+			style={{ position: "fixed", top: `${spot.top + 3}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
 			className="flex items-center"
 		>
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}

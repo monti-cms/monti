@@ -37,6 +37,8 @@ import {
 	FormFieldError,
 	FormFieldLabel,
 	Input,
+	ListSection,
+	ListSectionRow,
 	MenuField,
 	MenuShortcut,
 	PickList,
@@ -51,10 +53,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Stack,
-	TableSection,
-	TableSectionRow,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { Fragment, type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
@@ -125,9 +124,9 @@ export function ApiKeysSettings() {
 						)}
 					</Box>
 				) : (
-					<>
-						<TableSection title={t("section.keys")} count={list.items.length}>
-							{list.items.length === 0 && <TableSectionRow title={t("row.none")} muted />}
+					<Stack gap={40} paddingTop={32}>
+						<ListSection title={t("section.keys")} count={list.items.length}>
+							{list.items.length === 0 && <ListSectionRow title={t("row.none")} muted />}
 							{list.items.map((key) => (
 								<KeyRow
 									key={key.id}
@@ -136,12 +135,12 @@ export function ApiKeysSettings() {
 									onDelete={() => setOpen({ kind: "delete", key })}
 								/>
 							))}
-						</TableSection>
+						</ListSection>
 						{Object.entries(sections).map(([name, Section]) => (
 							<Section key={name} />
 						))}
 						<SlotSection list={list} onAdd={(slot) => setOpen({ kind: "add", service: slot.service, slot })} />
-					</>
+					</Stack>
 				)}
 			</Stack>
 			{list && open?.kind === "pick" && (
@@ -169,7 +168,7 @@ function KeyRow({ apiKey, onEdit, onDelete }: { apiKey: ApiKeyView; onEdit: () =
 	const site = useSite();
 	const unused = apiKey.readable && apiKey.usage === 0;
 	return (
-		<TableSectionRow
+		<ListSectionRow
 			data-testid={`api-key-${apiKey.name}`}
 			title={apiKey.name}
 			{...(apiKey.tail ? { titleCount: t("row.tail", { tail: apiKey.tail }) } : {})}
@@ -184,12 +183,24 @@ function KeyRow({ apiKey, onEdit, onDelete }: { apiKey: ApiKeyView; onEdit: () =
 			muted={unused}
 			actions={
 				<>
-					<TextButton type="button" variant="underline" onClick={onEdit} aria-label={`${t("row.edit")} ${apiKey.name}`}>
+					<Button
+						variant="ghost"
+						size="sm"
+						type="button"
+						onClick={onEdit}
+						aria-label={`${t("row.edit")} ${apiKey.name}`}
+					>
 						{t("row.edit")}
-					</TextButton>
-					<TextButton type="button" variant="quiet" onClick={onDelete} aria-label={`${t("row.delete")} ${apiKey.name}`}>
+					</Button>
+					<Button
+						variant="ghost-danger"
+						size="sm"
+						type="button"
+						onClick={onDelete}
+						aria-label={`${t("row.delete")} ${apiKey.name}`}
+					>
 						{t("row.delete")}
-					</TextButton>
+					</Button>
 				</>
 			}
 		/>
@@ -210,7 +221,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 	if (rows.length === 0) return null;
 	const missing = rows.filter((row) => !row.slot.key).length;
 	return (
-		<TableSection
+		<ListSection
 			title={t("section.plugins")}
 			{...(missing > 0 && list.secretsAvailable ? { count: missing, countTone: "warning" as const } : {})}
 		>
@@ -228,7 +239,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 					/>
 				);
 				return (
-					<TableSectionRow
+					<ListSectionRow
 						key={labelId}
 						data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 						title={title}
@@ -261,7 +272,7 @@ function SlotSection({ list, onAdd }: { list: ApiKeyList; onAdd: (slot: ApiKeySl
 					/>
 				);
 			})}
-		</TableSection>
+		</ListSection>
 	);
 }
 
@@ -304,9 +315,9 @@ function ServiceDialog({
 					))}
 				</PickList>
 				<DialogFooter>
-					<TextButton type="button" onClick={onClose}>
+					<Button variant="ghost" size="lg" type="button" onClick={onClose}>
 						{tc("cancel")}
-					</TextButton>
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

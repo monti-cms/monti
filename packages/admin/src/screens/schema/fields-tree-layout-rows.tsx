@@ -2,11 +2,11 @@
 
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
-import { ArrowRight, CollapseAll, TrashCan } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { FieldRow, Input, Text } from "@monti-cms/ui";
+import { ArrowRight, CollapseAll, TrashCan } from "@monti-cms/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { tabLabel } from "../entries/layout-groups";
 import { schemaFieldsMessages } from "./fields.messages";

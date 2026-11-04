@@ -1,111 +1,204 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Count } from "./count";
-import { PageColumn, PageHeader } from "./page-header";
-import { Del, Ins } from "./proposal-marks";
-import { ReviewCompare, ReviewCompareHead, ReviewGroup, ReviewItem, ReviewMore, ReviewQuote } from "./review";
-import { Tabs, TabsList, TabsTrigger } from "./tabs";
-import { TextButton } from "./text-button";
+import { useState } from "react";
+import {
+	Box,
+	Button,
+	Del,
+	Ins,
+	ReviewCompare,
+	ReviewCompareHead,
+	ReviewGroup,
+	ReviewItem,
+	ReviewLine,
+	ReviewMore,
+	ReviewQuote,
+	Text,
+	TextButton,
+} from "./index";
 
-/** The review page of a proposal: the request quoted, then each group of changes with a check per change; side by side for text that was rewritten. */
+/**
+ * The parts of the review page of one proposal: the quoted request, groups of changes with a check per row (in or out), side by side rows, and
+ * the way to the rest of a long group.
+ */
 const meta = {
-	title: "Monti/Assistant/Review",
-	component: ReviewGroup,
-	parameters: { layout: "fullscreen" },
-	args: { title: "" },
-} satisfies Meta<typeof ReviewGroup>;
+	title: "Monti/Proposal/Review",
+	component: ReviewItem,
+	args: { included: true, includeLabel: "넣기", title: "가을 여행 기록" },
+	decorators: [
+		(Story) => (
+			<Box width="list">
+				<Story />
+			</Box>
+		),
+	],
+} satisfies Meta<typeof ReviewItem>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const page = (children: React.ReactNode) => (
-	<PageColumn>
-		<PageHeader title="제안 검토" meta="10. 26 10:51" />
-		<ReviewQuote>“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮겨 줘.”</ReviewQuote>
-		{children}
-	</PageColumn>
-);
-
-/** One line per change (flow 2 · 12): a field filled, one left out because it changed meanwhile, and entries moved. */
-export const OneLine: Story = {
-	render: () =>
-		page(
-			<>
-				<ReviewGroup title="요약 채우기" meta="글 2편 · 되돌릴 수 있음">
-					<ReviewItem included includeLabel="포함" title="타입 정리 메모" path="/types-memo" end={<Count>요약</Count>}>
-						<Del>비어 있음</Del> → <Ins>자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모.</Ins>
-					</ReviewItem>
-					<ReviewItem
-						included={false}
-						includeLabel="포함"
-						title="쓰는 중인 글"
-						path="/draft-post"
-						muted
-						end={
-							<>
-								<span className="text-monti-caption text-monti-warning">이 사이에 고쳐짐</span>
-								<TextButton variant="underline">다시 만들기</TextButton>
-							</>
-						}
-					>
-						<Del>비어 있음</Del> → <Ins>글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리.</Ins>
-					</ReviewItem>
-				</ReviewGroup>
-				<ReviewGroup
-					title="2024 폴더로 옮기기"
-					meta="글 11편 · 되돌릴 수 있음"
-					actions={<TextButton>11편 모두 빼기</TextButton>}
-				>
-					<ReviewItem
-						included
-						includeLabel="포함"
-						title="2024 회고"
-						path="/retro-2024"
-						end={<Count>폴더 없음 → 2024</Count>}
-					/>
-					<ReviewItem
-						included
-						includeLabel="포함"
-						title="리액트 18 정리"
-						path="/react-18"
-						end={<Count>폴더 없음 → 2024</Count>}
-					/>
-					<ReviewMore open={false} onOpenChange={() => undefined} moreLabel="6편 더 보기" lessLabel="접기" />
-				</ReviewGroup>
-			</>,
-		),
-};
-
-/** Side by side (flow 2 · 13): the text as it is and as proposed, with the field's name and the check in the gutter. */
-export const SideBySide: Story = {
-	render: () =>
-		page(
+/** A group with its rows: one in, one left out, one shown on one line. */
+export const Group: Story = {
+	render: () => (
+		<>
+			<ReviewQuote>“요약이 빈 글에 요약을 채워 줘”</ReviewQuote>
 			<ReviewGroup
-				title="요약 바꾸기"
-				meta="글 1편 · 되돌릴 수 있음"
+				title="요약 채우기"
+				meta="글 2편 · 되돌릴 수 있음"
 				actions={
-					<Tabs defaultValue="side">
-						<TabsList>
-							<TabsTrigger value="line">한 줄</TabsTrigger>
-							<TabsTrigger value="side">나란히</TabsTrigger>
-						</TabsList>
-					</Tabs>
+					<>
+						<Button variant="ghost" size="sm">
+							한 줄
+						</Button>
+						<Button variant="ghost" size="sm">
+							나란히
+						</Button>
+					</>
 				}
 			>
-				<ReviewCompareHead before="지금" after="제안" />
-				<ReviewCompare
-					included
-					includeLabel="포함"
-					label="요약"
-					before={
-						<>
-							예시 코드를 고친 뒤 다시 정리한 <Del>메모입니다.</Del>
-						</>
-					}
-					after={
-						<>
-							예시 코드를 고친 뒤 다시 정리한 <Ins>메모.</Ins>
-						</>
-					}
-				/>
-			</ReviewGroup>,
-		),
+				<ReviewItem included includeLabel="넣기" title="가을 여행 기록" path="/posts/autumn-trip" end="요약">
+					<Del>비어 있음</Del> → <Ins>단풍이 시작된 산길을 하루 동안 걸은 기록</Ins>
+				</ReviewItem>
+				<ReviewItem included={false} includeLabel="넣기" title="처음 쓰는 Monti" path="/posts/hello-monti" end="요약">
+					<Del>비어 있음</Del> → <Ins>설정 파일 없이 사이트를 고치는 법</Ins>
+				</ReviewItem>
+			</ReviewGroup>
+		</>
+	),
+};
+
+/** A row that changed meanwhile: the check is out and read-only, the row is dimmed, and it says why. */
+export const ChangedMeanwhile: Story = {
+	render: () => (
+		<ReviewGroup title="폴더 옮기기" meta="글 1편">
+			<ReviewItem
+				included={false}
+				readOnly
+				muted
+				includeLabel="넣기"
+				title="2023 회고"
+				path="/posts/2023-review"
+				end={
+					<>
+						<Text variant="note" tone="warning">
+							이 사이에 고쳐짐
+						</Text>
+						<TextButton>다시 만들기</TextButton>
+					</>
+				}
+			>
+				폴더 없음 → <Ins>2024</Ins>
+			</ReviewItem>
+		</ReviewGroup>
+	),
+};
+
+/** After applying: read-only checks and how each row went. */
+export const Applied: Story = {
+	render: () => (
+		<ReviewGroup title="폴더 옮기기" meta="글 2편">
+			<ReviewItem
+				included
+				readOnly
+				includeLabel="넣기"
+				title="2024 회고"
+				path="/posts/2024-review"
+				end={
+					<Text variant="note" tone="success">
+						✓ 2024로 옮김
+					</Text>
+				}
+			/>
+			<ReviewItem
+				included
+				readOnly
+				includeLabel="넣기"
+				title="겨울 준비"
+				path="/posts/winter"
+				end={
+					<Text variant="note" tone="danger">
+						못 함 · 그 사이 휴지통으로 감
+					</Text>
+				}
+			/>
+		</ReviewGroup>
+	),
+};
+
+/** A group that changes blocks of one entry, on one line: the check and the block's name in the gutter, the text with its marks in place. */
+export const OneLine: Story = {
+	render: () => (
+		<ReviewGroup
+			title="다듬기"
+			meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
+			actions={
+				<>
+					<Button variant="ghost" size="sm">
+						편집기에서 보기
+					</Button>
+					<Button variant="ghost" size="sm">
+						한 줄
+					</Button>
+					<Button variant="ghost" size="sm">
+						나란히
+					</Button>
+				</>
+			}
+		>
+			<ReviewLine included includeLabel="포함" label="요약">
+				예시 코드를 고친 뒤 다시 정리한 <Del>메모입니다.</Del> <Ins>메모.</Ins> 바뀐 코드와 <Del>그</Del> 이유를 한 번에{" "}
+				<Del>볼 수 있도록 정리했습니다.</Del> <Ins>봅니다.</Ins>
+			</ReviewLine>
+			<ReviewLine included includeLabel="포함" label="문단 1">
+				<Del>처음 글을</Del> 발행하고 나서 예시 코드에 오타가 있다는 걸 <Del>알게 되었습니다. 그래서</Del>{" "}
+				<Ins>알았습니다.</Ins> 코드를 <Del>고치고</Del> <Ins>고치면서</Ins> 글도 함께 손봤습니다.
+			</ReviewLine>
+			<ReviewLine included includeLabel="포함" label="문단 2">
+				<Del>
+					바뀐 부분은 크게 두 가지입니다. 첫째, 함수 이름을 더 알기 쉽게 바꿨습니다. 둘째, 오류가 났을 때 무엇이
+					잘못되었는지 알려 주는 메시지를 추가했습니다.
+				</Del>
+				<br />
+				<Ins>함수 이름을 알기 쉽게 바꾸고, 오류가 나면 원인을 알려 주는 메시지를 넣었습니다.</Ins>
+			</ReviewLine>
+		</ReviewGroup>
+	),
+};
+
+/** A text field side by side: now on the tool ground, the proposal next to it. */
+export const SideBySide: Story = {
+	render: () => (
+		<ReviewGroup title="다듬기" meta="글 1편 · 되돌릴 수 있음">
+			<ReviewCompareHead before="지금" after="제안" />
+			<ReviewCompare
+				included
+				includeLabel="넣기"
+				label="본문"
+				note="대부분 고침"
+				before="Monti는 글을 쓰는 사람이 코드를 몰라도 사이트를 고칠수 있게 해요."
+				after="Monti는 글을 쓰는 사람이 코드를 몰라도 사이트를 고칠 수 있게 합니다."
+			/>
+		</ReviewGroup>
+	),
+};
+
+/** A group of more than five rows: "6편 더 보기" while folded, "접기" once open. */
+export const More: Story = {
+	render: function Render() {
+		const [open, setOpen] = useState(false);
+		const rows = open ? 11 : 5;
+		return (
+			<ReviewGroup title="태그 정리" meta="글 11편">
+				{Array.from({ length: rows }, (_, index) => (
+					<ReviewItem
+						key={index}
+						included
+						includeLabel="넣기"
+						title={`여행 기록 ${index + 1}`}
+						path={`/posts/trip-${index + 1}`}
+						end="태그"
+					/>
+				))}
+				<ReviewMore open={open} onOpenChange={setOpen} moreLabel="6편 더 보기" lessLabel="접기" />
+			</ReviewGroup>
+		);
+	},
 };

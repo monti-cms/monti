@@ -1,6 +1,5 @@
 "use client";
 
-import { DocumentAdd, DocumentBlank, Folder, FolderAdd, FolderTree, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -13,6 +12,7 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
+import { DocumentAdd, DocumentBlank, Folder, FolderAdd, FolderTree, TrashCan } from "@monti-cms/admin/icons";
 import {
 	cn,
 	commonMessages,
@@ -71,7 +71,7 @@ export function CodeExplorerNodeView() {
 	];
 
 	return (
-		<BlockFrame className="my-monti-24 rounded-monti-md border bg-monti-page">
+		<BlockFrame boxed>
 			<div
 				contentEditable={false}
 				className="not-prose flex flex-col gap-monti-8 rounded-t-monti-md bg-monti-muted px-monti-12 py-monti-8"
@@ -105,14 +105,7 @@ export function CodeExplorerNodeView() {
 					</ul>
 				) : null}
 			</div>
-			<Content
-				className={cn(
-					"px-monti-12 pt-monti-8 pb-monti-12 text-monti-default",
-					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
-					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
-					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
-				)}
-			/>
+			<Content padded />
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<ToolbarButton label={t("add.file")} onClick={() => addEntry(NEW_FILE)}>

@@ -1,9 +1,9 @@
 "use client";
 
-import { Close } from "@carbon/icons-react";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline, Stack } from "@monti-cms/ui";
+import { Close } from "@monti-cms/ui/icons";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type Ref, useMemo, useState } from "react";
 import { useAdminComponents, useSourceFormat } from "../../admin-components";

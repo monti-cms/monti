@@ -1,7 +1,7 @@
 "use client";
 
 import { useCmsMutation, useTranslator } from "@monti-cms/admin";
-import { MenuField, ModelMenu, TableSection, TableSectionRow, useApiKeys } from "@monti-cms/admin/kit";
+import { ListSection, ListSectionRow, MenuField, ModelMenu, useApiKeys } from "@monti-cms/admin/kit";
 import { useEffect, useState } from "react";
 import { agentPanelMessages } from "./agent-panel.messages";
 import { aiKeys, setAiQuickModel } from "./api";
@@ -37,8 +37,8 @@ export function ModelSection() {
 	const quick = settings.quick;
 	const labelId = "model-quick";
 	return (
-		<TableSection title={t("models.title")}>
-			<TableSectionRow
+		<ListSection title={t("models.title")}>
+			<ListSectionRow
 				title={t("quick.title")}
 				meta={t("quick.uses")}
 				labelId={labelId}
@@ -76,6 +76,6 @@ export function ModelSection() {
 					)
 				}
 			/>
-		</TableSection>
+		</ListSection>
 	);
 }

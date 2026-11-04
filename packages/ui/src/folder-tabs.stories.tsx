@@ -1,78 +1,74 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ComponentProps, useState } from "react";
-import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
-import { Stack } from "./stack";
-import { Text } from "./text";
+import { Add } from "./icons";
+import {
+	FieldRow,
+	FieldTree,
+	FolderTab,
+	FolderTabEdit,
+	FolderTabs,
+	FolderTabsAdd,
+	FolderTabsBody,
+	FolderTabsList,
+	Input,
+} from "./index";
 
-/** Tabs that sit on a box like folder tabs, for a list of fields split into pages. The picked tab joins the box. */
-const meta = { title: "Controls/Tabs/FolderTabs", component: FolderTabs } satisfies Meta<typeof FolderTabs>;
+/** Tabs on a box like folder tabs, for a field list split into pages: the picked tab joins the box, the others are closed and grey. */
+const meta = {
+	title: "Controls/Tabs/FolderTabs",
+	component: FolderTabs,
+} satisfies Meta<typeof FolderTabs>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The add button appends a tab and opens it. The grips show where a tab is dragged by; the admin's field editor wires the dragging. */
-export const Playground: Story = {
-	render: (args) => <Demo {...args} />,
-};
+const add = (
+	<FolderTabsAdd aria-label="탭 추가">
+		<Add />
+	</FolderTabsAdd>
+);
 
-function Demo(props: ComponentProps<typeof FolderTabs>) {
-	const [tabs, setTabs] = useState([
-		{ id: "content", name: "내용", count: 6, locked: false },
-		{ id: "seo", name: "SEO", count: 3, locked: false },
-		{ id: "plugin", name: "분석", count: 2, locked: true },
-	]);
-	const [value, setValue] = useState("content");
-	return (
-		<FolderTabs {...props} value={value} onValueChange={(next) => setValue(String(next))}>
-			<FolderTabsList
-				add={
-					<FolderTabsAdd
-						aria-label="탭 추가"
-						onClick={() => {
-							const id = `tab-${tabs.length + 1}`;
-							setTabs([...tabs, { id, name: `새 탭 ${tabs.length + 1}`, count: 0, locked: false }]);
-							setValue(id);
-						}}
-					/>
-				}
-			>
-				{tabs.map((tab) => (
-					<FolderTab key={tab.id} value={tab.id} count={tab.count} locked={tab.locked}>
-						{tab.name}
-					</FolderTab>
-				))}
-			</FolderTabsList>
-			{tabs.map((tab) => (
-				<FolderTabsBody key={tab.id} value={tab.id}>
-					<Stack padding={16}>
-						<Text tone="muted">{tab.name} 탭의 필드</Text>
-					</Stack>
-				</FolderTabsBody>
-			))}
-		</FolderTabs>
-	);
-}
-
-/** A second tab picked, and a tab that stays where it is (no grip). */
-export const SecondPicked: Story = {
+/** Each tab has a grip, a name and its field count; a tab a plugin placed is locked. `+` at the end adds a tab. */
+export const Pages: Story = {
 	render: () => (
-		<FolderTabs defaultValue="seo">
-			<FolderTabsList add={<FolderTabsAdd aria-label="탭 추가" />}>
-				<FolderTab value="content" count={6} draggable={false}>
+		<FolderTabs defaultValue="content">
+			<FolderTabsList add={add}>
+				<FolderTab value="content" count={4}>
 					내용
 				</FolderTab>
-				<FolderTab value="seo" count={3}>
-					SEO
+				<FolderTab value="meta" count={3}>
+					분류
+				</FolderTab>
+				<FolderTab value="seo" count={2} locked draggable={false}>
+					검색 노출
 				</FolderTab>
 			</FolderTabsList>
 			<FolderTabsBody value="content">
-				<Stack padding={16}>
-					<Text tone="muted">내용 탭의 필드</Text>
-				</Stack>
+				<FieldTree>
+					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldRow name="summary" label="요약" kind="textarea" />
+					<FieldRow name="cover" label="표지" kind="image" />
+					<FieldRow name="body" label="본문" kind="markdown" />
+				</FieldTree>
 			</FolderTabsBody>
-			<FolderTabsBody value="seo">
-				<Stack padding={16}>
-					<Text tone="muted">SEO 탭의 필드</Text>
-				</Stack>
+		</FolderTabs>
+	),
+};
+
+/** The picked tab while its name is edited in place. */
+export const Rename: Story = {
+	render: () => (
+		<FolderTabs defaultValue="meta">
+			<FolderTabsList add={add}>
+				<FolderTab value="content" count={4}>
+					내용
+				</FolderTab>
+				<FolderTabEdit>
+					<Input aria-label="탭 이름" defaultValue="분류" size="inherit" width="fit" />
+				</FolderTabEdit>
+			</FolderTabsList>
+			<FolderTabsBody value="meta">
+				<FieldTree>
+					<FieldRow name="category" label="카테고리" kind="relation" />
+				</FieldTree>
 			</FolderTabsBody>
 		</FolderTabs>
 	),

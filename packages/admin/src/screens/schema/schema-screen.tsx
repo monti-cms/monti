@@ -1,6 +1,5 @@
 "use client";
 
-import { Locked } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
@@ -9,20 +8,22 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Banner,
 	Box,
-	ChatError,
+	Button,
 	CodeBlock,
+	DragHandle,
+	ErrorNote,
 	Heading,
 	Icon,
 	Inline,
 	NavLink,
-	NavLinkHandle,
+	RailAction,
 	RailLayout,
 	Section,
 	Stack,
 	Text,
-	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { Locked } from "@monti-cms/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -175,7 +176,7 @@ function CollectionNavItem({
 			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
 			handle={
 				writable ? (
-					<NavLinkHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}
@@ -380,16 +381,16 @@ function SchemaEditor({
 						)}
 						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
 						{applyFailed !== null && (
-							<ChatError
+							<ErrorNote
 								title={tReview("applyFailed.title")}
 								actions={
-									<TextButton type="button" onClick={reloadPage}>
+									<Button variant="ghost" size="sm" type="button" onClick={reloadPage}>
 										{tReview("save.reload")}
-									</TextButton>
+									</Button>
 								}
 							>
 								{tReview("applyFailed.text", { message: applyFailed })}
-							</ChatError>
+							</ErrorNote>
 						)}
 						{state.issues.length > 0 && (
 							<Stack gap={8} data-testid="schema-file-invalid">
@@ -437,11 +438,7 @@ function SchemaEditor({
 													))}
 												</SortableList>
 												{writable && (
-													<Box paddingTop={12} paddingX={10}>
-														<TextButton quiet onClick={() => setCreating(true)}>
-															{t("collection.create")}
-														</TextButton>
-													</Box>
+													<RailAction onClick={() => setCreating(true)}>{t("collection.create")}</RailAction>
 												)}
 											</>
 										}

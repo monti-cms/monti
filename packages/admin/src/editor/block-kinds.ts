@@ -3,6 +3,8 @@
  * Pure helpers over the document, so the menu only draws what they return.
  */
 
+import type { Site } from "@monti-cms/core/site";
+import { headingIcons, type MontiIcon } from "@monti-cms/ui";
 import {
 	Code,
 	ListBulleted,
@@ -13,9 +15,7 @@ import {
 	TextAlignCenter,
 	TextAlignLeft,
 	TextAlignRight,
-} from "@carbon/icons-react";
-import type { Site } from "@monti-cms/core/site";
-import { headingIcons, type MontiIcon } from "@monti-cms/ui";
+} from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";

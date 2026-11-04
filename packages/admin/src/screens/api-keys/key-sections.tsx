@@ -4,7 +4,7 @@ import { type ComponentType, createContext, type ReactNode, useContext, useMemo 
 
 /**
  * Sections plugins add to the API keys page, by name, drawn after the saved keys (`defineAdminPlugin({ keySections: { models: ModelSection } })`): the AI
- * plugin's Models section with the quick-task model. A section renders a `TableSection` from `@monti-cms/admin/kit`.
+ * plugin's Models section with the quick-task model. A section renders a `ListSection` from `@monti-cms/admin/kit`.
  */
 export type KeySections = Readonly<Record<string, ComponentType>>;
 

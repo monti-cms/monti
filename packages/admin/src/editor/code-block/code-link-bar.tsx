@@ -1,8 +1,8 @@
 "use client";
 
-import { Code } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Button, Icon, Inline, Text } from "@monti-cms/ui";
+import { Code } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { commonMessages } from "../../lib/common.messages";

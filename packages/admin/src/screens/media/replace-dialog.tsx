@@ -1,6 +1,5 @@
 "use client";
 
-import { Document } from "@carbon/icons-react";
 import { formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	AlertDialog,
@@ -17,6 +16,7 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
+import { Document } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";

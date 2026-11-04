@@ -1,53 +1,51 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChatMessage } from "./chat-message";
-import { Stack } from "./stack";
+import { Box, ChatEntryLink, ChatEntryList, ChatMessage, Stack } from "./index";
 
+/** A message: the admin's on the right in a paper bubble, the assistant's as plain text with no ground. */
 const meta = {
-	title: "Monti/Assistant/Message",
+	title: "Monti/Assistant/ChatMessage",
 	component: ChatMessage,
-	args: { author: "assistant", children: "초안인 글은 두 편이에요. 열어 보려던 글 하나는 이제 없어요." },
-	argTypes: { author: { control: "inline-radio", options: ["user", "assistant"] } },
+	decorators: [
+		(Story) => (
+			<Box width="assistant" padding={24} background="tool">
+				<Story />
+			</Box>
+		),
+	],
 } satisfies Meta<typeof ChatMessage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const User: Story = { args: { author: "user", children: "요약이 빈 글에 요약을 채워 줘" } };
 
-/** The admin's message is a quiet bubble; the assistant's answer is plain text. */
-export const Roles: Story = {
+/** Asked about rows picked in a list: "고른 글 2편" over the words. */
+export const UserWithContext: Story = {
+	args: { author: "user", context: "고른 글 2편", children: "이 글들에 태그를 달아 줘" },
+};
+
+/** Sent by a screen's button (a default request): a blue spark before the words. */
+export const UserRequest: Story = { args: { author: "user", request: true, children: "대체 텍스트 채우기" } };
+
+export const Assistant: Story = {
+	args: { author: "assistant", children: "요약이 빈 글 11편을 찾았어요. 요약을 채운 제안을 만들었어요." },
+};
+
+/** The answer is still coming: a thin blinking caret after the last word. */
+export const Streaming: Story = { args: { author: "assistant", streaming: true, children: "요약이 빈 글 11편을 찾" } };
+
+/** An answer that names entries: a numbered list under its words, each name a link to the entry in the editor with its slug after it. */
+export const EntryList: Story = {
 	render: () => (
-		<Stack gap={16} maxWidth="panel">
-			<ChatMessage author="user">초안인 글이 뭐야?</ChatMessage>
-			<ChatMessage author="assistant">초안인 글은 두 편이에요.</ChatMessage>
+		<Stack gap={12}>
+			<ChatMessage>요약이 빈 글은 두 편이에요.</ChatMessage>
+			<ChatEntryList>
+				<ChatEntryLink href="#edited-post" slug="/edited-post">
+					발행 후 고친 글
+				</ChatEntryLink>
+				<ChatEntryLink href="#draft-post" slug="/draft-post">
+					쓰는 중인 글
+				</ChatEntryLink>
+			</ChatEntryList>
 		</Stack>
 	),
-};
-
-/** The answer is still arriving: a thin blinking caret after the last word. */
-export const Streaming: Story = {
-	args: { streaming: true, children: "초안인 글은 두 편이고, 그중 하나는" },
-};
-
-/** Answers are plain text, not markdown: line breaks are kept and a long word wraps instead of widening the panel. */
-export const LongText: Story = {
-	render: () => (
-		<Stack gap={16} maxWidth="panel">
-			<ChatMessage author="user">
-				{"첫 줄\n둘째 줄\nhttps://example.com/a/very/long/address/that/has/no/spaces/at/all/and/keeps/going"}
-			</ChatMessage>
-			<ChatMessage>{"초안인 글은 두 편이에요.\n하나는 쓰는 중이고, 하나는 발행한 뒤에 고친 글이에요."}</ChatMessage>
-		</Stack>
-	),
-};
-
-/** What the admin's message was about: the rows they had picked, over the words. */
-export const WithContext: Story = {
-	args: { author: "user", context: "고른 글 2편", children: "이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮겨 줘." },
-	decorators: [(Story) => <Stack maxWidth="panel">{Story()}</Stack>],
-};
-
-/** A default request the admin pressed: a blue spark before the words. */
-export const Request: Story = {
-	args: { author: "user", request: true, children: "고른 이미지 3개에 대체 텍스트 채워 줘" },
-	decorators: [(Story) => <Stack maxWidth="panel">{Story()}</Stack>],
 };

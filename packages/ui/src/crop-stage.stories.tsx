@@ -1,31 +1,31 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CropStage } from "./crop-stage";
+import { CropStage, Stack } from "./index";
 
-const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420"><rect width="640" height="420" fill="#8d7a5d"/><circle cx="500" cy="110" r="44" fill="#cdbfa6"/><path d="M0 420V300l160-110 140 120 120-80 220 140v50z" fill="#5d4f3a"/></svg>',
+/** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. It has a size of its own, as a photo has. */
+const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
+	'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3c98b"/><stop offset="1" stop-color="#c76b4a"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1150" cy="300" r="120" fill="#fff3d6"/><path d="M0 700 L400 480 L800 700 L1200 520 L1600 700 V900 H0 Z" fill="#6b3a2e"/></svg>',
 )}`;
 
-/** The picture of the crop sheet in its frame (at most 380 high, the picture at most 360); the mask and the crop box lay over it in % of the picture. */
+/** The picture of the crop sheet: the tool ground with an edge, the picture centered. With a crop, the outside lies under the backdrop and the crop is a 2px ink box with corner handles. */
 const meta = {
-	title: "Monti/EditorTools/CropStage",
+	title: "Patterns/Sheet/CropStage",
 	component: CropStage,
 	args: {
-		src: SAMPLE,
-		alt: "자를 이미지",
-		cornerLabels: { nw: "왼쪽 위 손잡이", ne: "오른쪽 위 손잡이", sw: "왼쪽 아래 손잡이", se: "오른쪽 아래 손잡이" },
+		src: PHOTO,
+		alt: "노을 진 산",
+		cornerLabels: { nw: "왼쪽 위 모서리", ne: "오른쪽 위 모서리", sw: "왼쪽 아래 모서리", se: "오른쪽 아래 모서리" },
 	},
-	decorators: [
-		(Story) => (
-			<div className="max-w-monti-sheet">
-				<Story />
-			</div>
-		),
-	],
+	render: (args) => (
+		<Stack width="sheet">
+			<CropStage {...args} />
+		</Stack>
+	),
 } satisfies Meta<typeof CropStage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+/** A crop chosen. */
+export const Cropped: Story = { args: { crop: { x: 20, y: 15, width: 55, height: 60 } } };
 
-/** With a crop set: the picture outside it under the backdrop, the box and its four corners. */
-export const WithCrop: Story = { args: { crop: { x: 20, y: 15, width: 60, height: 60 } } };
+/** No crop yet: the whole picture. */
+export const Whole: Story = {};

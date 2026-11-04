@@ -2,10 +2,10 @@
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
-import { Add, Draggable, Locked } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { Add, Draggable, Locked } from "./icons";
 
 /**
  * Tabs that sit on a box like folder tabs, for a list of fields split into pages. The picked tab has the box's background and is open at the

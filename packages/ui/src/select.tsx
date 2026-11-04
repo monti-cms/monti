@@ -1,10 +1,11 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { FIELD_HOVER, FIELD_INSET } from "./hover";
+import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { useProposalDescription } from "./proposal-cue";
 
@@ -31,6 +32,16 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 }
 
 /**
+ * The look of a closed pick-one field, shared by {@link SelectTrigger} and `MenuField`: an underline, the value, and a caret at the end. The line turns
+ * ink while it has focus or its list is open. `data-size` is `default` (body text) or `sm` (note text, 2px less above and below).
+ */
+export const SELECT_TRIGGER = cn(
+	FIELD_HOVER,
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	FIELD_INSET,
+);
+
+/**
  * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,
  * which can search. `proposal` marks a value the assistant picked and nobody has touched.
  */
@@ -42,8 +53,11 @@ function SelectTrigger({
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
-	size?: "sm" | "default";
-	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter; `choice` at the end of a choice row (at least 120px, so the line reads as a field). */
+	size?: "sm" | "md" | "default";
+	/**
+	 * `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter; `choice` at the end of a choice row (at least 120px, so the line reads as a
+	 * field; at the note size, on the row's own 20px line with 1px under it, so the row keeps its height).
+	 */
 	width?: "fit" | "full" | "choice";
 	/** The assistant picked this value and nobody has touched it yet. Turn it off when the value is changed. */
 	proposal?: boolean;
@@ -52,11 +66,18 @@ function SelectTrigger({
 		<SelectPrimitive.Trigger
 			data-slot="select-trigger"
 			data-size={size}
+			data-width={width}
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				width === "full" ? "w-full" : width === "choice" ? "w-fit min-w-30" : "w-fit",
+				SELECT_TRIGGER,
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6",
+				width === "full"
+					? "w-full"
+					: width === "choice"
+						? // Two attributes, so the row's line wins over the size's own padding and type.
+							"w-fit min-w-30 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"
+						: "w-fit",
 				className,
 			)}
 			{...props}

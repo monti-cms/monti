@@ -53,7 +53,7 @@ export default defineAdminPlugin({
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
+블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`, 로그인 방법의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 `components`의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
@@ -63,7 +63,8 @@ import { View } from "@carbon/icons-react";
 export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
-`@monti-cms/blocks`의 각 블록과 `@monti-cms/ai`도 같은 방식으로 선언한다.
+Monti 자신의 패키지는 모든 아이콘을 한 목록 `@monti-cms/admin/icons`(디자인 시스템의 `@monti-cms/ui/icons`)에서 가져오고, Carbon을 직접
+가져오지 않는다. 이 저장소에서는 `pnpm check:design`이 이를 지킨다.
 
 ## 본문은 저장 문서
 
@@ -433,8 +434,8 @@ export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, C
 `select`·`focus({ child, at })`·`remove`·`textAround`(블록 앞뒤 글, AI 맥락용)를 준다. 컨테이너의 자식 `children`은 `addChild`·`removeChild`·`moveChild`·`setChildValue`로 다루며,
 `definition.children.min`·`max`를 지키고 범위를 벗어나면 `limit` 코드의 `EditorResult`를, 편집기가 잠겨 있으면 `read_only`를 돌려준다. `transact(tx => ...)`는 현재 문서를 읽는 여러 편집을
 문서 변경 한 번(되돌리기 한 번)으로 묶는다. 예를 들어 탭 이름을 바꾸면서 그 탭을 가리키는 기본 탭도 함께 바꿀 때 쓴다. `raw`(`{ editor, node, getPos }`)는 하나뿐인 탈출구이자
-Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다),
-`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다. 자식 블록은 `[data-monti-block-content]`의 첫 요소 안에 놓인다.
+Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않다. `<Content />`는 편집 가능한 중첩 본문을 그리고(`visibleChild`로 열린 탭처럼 자식 하나만 보인다. `padded`는 상자 블록의 안쪽 여백),
+`<BlockFrame />`은 선택 테두리와 마우스 올림 범위를 가진 바깥 요소다(`boxed`는 본문에 홀로 선 블록의 종이 바탕 가는 테두리 상자). 자식 블록은 `[data-monti-block-content]`의 첫 요소 안에 놓인다.
 
 `useEntryEditor(options)`는 화면을 뺀 항목 편집기다. 불러오기, 브라우저 복구본, 명시적 서버 저장, 발행, 상태 변경(보관·휴지통·복원), 복구와 충돌 상태를 맡는다.
 **서버 자동 저장이 아니다.** 편집하는 동안에는 브라우저에만 복구본이 남고(IndexedDB, 입력이 멈춘 뒤 기록하며 서버로 보내지 않는다),

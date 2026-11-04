@@ -2,11 +2,10 @@
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, LockMark, Section, Stack, Text } from "@monti-cms/ui";
+import { Box, LockMark, ReadValue, Section, Stack, Text } from "@monti-cms/ui";
 import { FlagSwitch, orUndefined, Pick, TextInput, useSchemaEdit, useSettingRevert } from "./controls";
 import { HostRows } from "./host-rows";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import { type Obj, sameJson, sectionOf, setSetting } from "./schema-model";
 import { schemaSiteMessages } from "./site.messages";
 import { problemAt } from "./site-problems";

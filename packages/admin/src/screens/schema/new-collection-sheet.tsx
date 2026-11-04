@@ -15,7 +15,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Stack,
-	TextButton,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
@@ -109,7 +108,9 @@ function NewCollectionForm({
 				<PublicPathField path={form.path} suggested={defaultPath(form.id)} onChange={setTypedPath} />
 			</SheetBody>
 			<SheetFooter>
-				<TextButton onClick={onCancel}>{tc("cancel")}</TextButton>
+				<Button variant="ghost" size="lg" onClick={onCancel}>
+					{tc("cancel")}
+				</Button>
 				<Button type="submit" disabled={!form.ready}>
 					{t("collection.createConfirm")}
 				</Button>

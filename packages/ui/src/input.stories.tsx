@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { IconButton } from "./icon-button";
+import { Renew } from "./icons";
 import { Input } from "./input";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
@@ -64,6 +66,58 @@ export const SizesAndMono: Story = {
 			<Input placeholder="기본: 폼" />
 			<Input mono defaultValue="cms-elements-details" />
 			<Input size="sm" mono defaultValue="/posts/:slug" />
+		</Stack>
+	),
+};
+
+/** Widths: `short` for a word, `number` for a short count, `fit` as wide as what it holds. */
+export const Widths: Story = {
+	render: () => (
+		<Stack gap={12}>
+			<Input width="short" defaultValue="노트" />
+			<Input width="number" defaultValue="120" inputMode="numeric" />
+			<Input width="fit" defaultValue="기본 정보" />
+		</Stack>
+	),
+};
+
+/** `inline` reads as text until focused, with no line: a name at the label size, a tab or group name (`title`), the post title (`display`), or the type of the text it stands in (`inherit`). */
+export const Inline: Story = {
+	render: () => (
+		<Stack gap={16}>
+			<Input appearance="inline" defaultValue="이름 바꾸기" aria-label="이름" />
+			<Input size="title" defaultValue="기본 정보" aria-label="탭 이름" />
+			<Input size="display" defaultValue="처음 쓰는 블로그 글" aria-label="제목" />
+			<Input size="inherit" defaultValue="참고" aria-label="블록 제목" />
+		</Stack>
+	),
+};
+
+/** `action`: a button at the end of the line (fill from the body). The underline runs under it too, and turns ink or danger with the field. */
+export const WithAction: Story = {
+	render: () => (
+		<Stack gap={24} className="max-w-sm">
+			<Input
+				size="sm"
+				aria-label="부제"
+				placeholder="비어 있음"
+				action={
+					<IconButton label="본문에서 가져오기">
+						<Renew aria-hidden />
+					</IconButton>
+				}
+			/>
+			<Input
+				size="sm"
+				aria-label="부제"
+				aria-invalid
+				defaultValue="너무 긴 부제"
+				action={
+					<IconButton label="본문에서 가져오기">
+						<Renew aria-hidden />
+					</IconButton>
+				}
+			/>
 		</Stack>
 	),
 };

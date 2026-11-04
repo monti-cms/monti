@@ -17,7 +17,7 @@ function Option({
 		<label
 			data-slot="option"
 			className={cn(
-				"flex cursor-pointer items-center gap-monti-10 text-monti-body has-data-disabled:cursor-not-allowed has-disabled:cursor-not-allowed has-data-disabled:opacity-45",
+				"[&:hover_[data-slot=checkbox]:not([data-disabled]):not([data-checked])]:border-(color:--monti-fg-muted) flex cursor-pointer items-center gap-monti-10 text-monti-body has-data-disabled:cursor-not-allowed has-disabled:cursor-not-allowed has-data-disabled:opacity-45 [&:hover_[data-slot=checkbox]:not([data-disabled])]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&:hover_[data-slot=switch]:not([data-checked])]:bg-(--monti-border-strong)",
 				spread && "justify-between",
 				className,
 			)}

@@ -1,192 +1,155 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Marker } from "./marker";
-import { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
-import { Highlight } from "./proposal-marks";
-import { Stack } from "./stack";
-import { Text } from "./text";
+import {
+	Box,
+	Highlight,
+	Marker,
+	MemoCard,
+	MemoCardPopover,
+	MemoDiff,
+	MemoMessage,
+	MemoThread,
+	RequestAnchor,
+	Text,
+} from "./index";
+
+const noop = () => {};
 
 /**
- * The card that opens under a mark in the text. The head holds a quiet discard and one black accept, in that order (no close
- * button: outside, Esc or the mark again closes it). The body is the conversation of the note or, for a changed source, the text before and after. The reply row
- * continues the note. Hover the head's buttons for their key combinations.
+ * The card under a mark in the text: the head (discard, then one black pill to accept), the thread or a before/after, and the reply row. There is no
+ * close button.
  */
 const meta = {
 	title: "Monti/Proposal/MemoCard",
 	component: MemoCard,
-	args: {
-		discardLabel: "버리기",
-		discardShortcut: ["mod", "Backspace"],
-		onDiscard: () => undefined,
-		acceptLabel: "받기",
-		acceptShortcut: ["mod", "Enter"],
-		onAccept: () => undefined,
-		children: null,
-	},
 } satisfies Meta<typeof MemoCard>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function useReply() {
+function useReply(placeholder: string, extra: { focus?: boolean; stop?: { label: string; onStop: () => void } } = {}) {
 	const [value, setValue] = useState("");
-	return {
-		placeholder: "이어서 요청",
-		value,
-		onValueChange: setValue,
-		onSend: () => setValue(""),
-		sendLabel: "보내기",
-	};
+	return { placeholder, value, onValueChange: setValue, onSend: () => setValue(""), sendLabel: "보내기", ...extra };
 }
 
-function Thread() {
-	return (
-		<MemoThread>
-			<MemoMessage author="나" time="10:58">
-				예시 하나 붙여 줘.
-			</MemoMessage>
-			<MemoMessage author="어시스턴트" ai time="고치는 중…" />
-		</MemoThread>
-	);
-}
-
-function WithReply(args: Story["args"]) {
-	const reply = useReply();
-	return (
-		<MemoCard {...(args as Required<NonNullable<Story["args"]>>)} reply={reply}>
-			<Thread />
-		</MemoCard>
-	);
-}
-
-export const Playground: Story = { render: (args) => <WithReply {...args} /> };
-
-function NewRequest() {
-	const [value, setValue] = useState("");
-	return (
-		<MemoCard
-			reply={{
-				placeholder: "요청",
-				value,
-				onValueChange: setValue,
-				onSend: () => setValue(""),
-				sendLabel: "보내기",
-				focus: true,
-			}}
-		/>
-	);
-}
-
-function WorkingCard() {
-	const [value, setValue] = useState("");
-	return (
-		<MemoCard
-			reply={{
-				placeholder: "이어서 요청",
-				value,
-				onValueChange: setValue,
-				onSend: () => setValue(""),
-				sendLabel: "보내기",
-				stop: { label: "멈추기", onStop: () => undefined },
-			}}
-		>
-			<Thread />
-		</MemoCard>
-	);
-}
-
-/** A request being worked on (flow 2 · 09c): the send button is the stop button, as in the chat. */
-export const Working: Story = { render: () => <WorkingCard /> };
-
-/** Words just selected to ask about (flow 2 · 09b): nothing to discard or accept yet, only the box, with the caret in it. */
-export const NewRequestOnSelection: Story = { render: () => <NewRequest /> };
-
-/** The mark in the margin and the card under it, as in the editor. */
-export const UnderMark: Story = {
-	render: (args) => (
-		<Stack gap={12} className="max-w-md">
-			<div className="flex items-center gap-monti-10">
-				<Marker tone="request" active onClick={() => undefined}>
-					1
-				</Marker>
-				<Text>
-					<Highlight>설정 화면은 그대로 두었다.</Highlight> 자주 바꾸지 않는 것까지…
-				</Text>
-			</div>
-			<WithReply {...args} />
-		</Stack>
-	),
-};
-
-/** Opened under a place in the text (`MemoCardPopover`): it hangs 8px under the start of the block it is about. */
-export const UnderBlock: Story = {
-	tags: ["visual"],
-	render: (args) => {
-		const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+/** A note with the assistant's answer waiting: accept or discard in the head, go on in the reply row. */
+export const Thread: Story = {
+	render: function Render() {
+		const reply = useReply("이어서 쓰기");
 		return (
-			<div className="max-w-md">
-				<p ref={setAnchor}>블로그를 다시 만든 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</p>
-				<MemoCardPopover
-					{...(args as Required<NonNullable<Story["args"]>>)}
-					anchor={() => anchor}
-					open={anchor !== null}
-					onOpenChange={() => undefined}
-				>
-					<Thread />
-				</MemoCardPopover>
-			</div>
-		);
-	},
-};
-
-/** A longer conversation: the discard and accept stay in the head. */
-export const LongThread: Story = {
-	render: (args) => {
-		const reply = useReply();
-		return (
-			<MemoCard {...(args as Required<NonNullable<Story["args"]>>)} reply={reply}>
+			<MemoCard
+				discardLabel="버리기"
+				onDiscard={noop}
+				discardShortcut={["mod", "Backspace"]}
+				acceptLabel="받기"
+				onAccept={noop}
+				acceptShortcut={["mod", "Enter"]}
+				reply={reply}
+			>
 				<MemoThread>
-					<MemoMessage author="나" time="10:58">
-						예시 하나 붙여 줘.
+					<MemoMessage author="나" time="10:41">
+						이 문장을 더 짧게 줄여 줘
 					</MemoMessage>
-					<MemoMessage author="어시스턴트" ai time="10:58">
-						설정 화면 예시로 "사이트 이름을 바꾸는 방법"을 넣었어요.
+					<MemoMessage author="어시스턴트" time="10:41" ai>
+						“Monti는 코드 없이 사이트를 고치게 합니다.”로 줄였어요.
 					</MemoMessage>
-					<MemoMessage author="나" time="11:02">
-						더 짧게. 한 문장으로.
-					</MemoMessage>
-					<MemoMessage author="어시스턴트" ai time="고치는 중…" />
 				</MemoThread>
 			</MemoCard>
 		);
 	},
 };
 
-/** A translated block whose source changed: the text before and after (the words that differ marked), and "Confirm" and "Translate again". */
-export const SourceChanged: Story = {
-	args: {
-		where: "원문 바뀜",
-		discardLabel: "확인",
-		discardShortcut: undefined,
-		acceptLabel: "다시 번역",
-		acceptShortcut: undefined,
-		acceptSpark: true,
+/** The assistant is working: its message is "…" and the reply row's button stops it. */
+export const Working: Story = {
+	render: function Render() {
+		const reply = useReply("이어서 쓰기", { stop: { label: "멈추기", onStop: noop } });
+		return (
+			<MemoCard discardLabel="버리기" onDiscard={noop} acceptLabel="받기" onAccept={noop} reply={reply}>
+				<MemoThread>
+					<MemoMessage author="나" time="10:41">
+						이 문장을 더 짧게 줄여 줘
+					</MemoMessage>
+					<MemoMessage author="어시스턴트" ai>
+						…
+					</MemoMessage>
+				</MemoThread>
+			</MemoCard>
+		);
 	},
-	render: (args) => (
-		<MemoCard {...args}>
+};
+
+/** Words just selected to ask about: nothing to deal with yet, so no head; it opens with the caret in the reply row. */
+export const NewRequest: Story = {
+	render: function Render() {
+		const reply = useReply("어시스턴트에게 요청", { focus: true });
+		return <MemoCard reply={reply} />;
+	},
+};
+
+/** A translated block whose source changed: what kind it is in the head, the source before and after, and accepting asks again ("✦ 다시 번역"). */
+export const SourceChanged: Story = {
+	render: () => (
+		<MemoCard
+			where="원문 바뀜"
+			discardLabel="확인"
+			onDiscard={noop}
+			acceptLabel="다시 번역"
+			onAccept={noop}
+			acceptSpark
+		>
 			<MemoDiff
 				beforeLabel="전"
 				afterLabel="후"
 				before={
 					<>
-						나머지는 <Highlight>필요할 때 꺼내 본다.</Highlight>
+						왼쪽 목록에서 컬렉션을 <Highlight>고릅니다</Highlight>.
 					</>
 				}
 				after={
 					<>
-						나머지는 <Highlight>접어 두고 필요할 때 펼친다.</Highlight>
+						왼쪽 목록에서 컬렉션을 <Highlight>고르고 새 글을 씁니다</Highlight>.
 					</>
 				}
 			/>
 		</MemoCard>
 	),
+};
+
+/** Opened under its place in the text: hangs 8px below the block of the mark; the text keeps the focus. */
+export const UnderText: Story = {
+	render: function Render() {
+		const [open, setOpen] = useState(true);
+		const reply = useReply("이어서 쓰기");
+		return (
+			<Box width="reading" paddingX={48} paddingY={24}>
+				<Box id="memo-anchor" position="relative">
+					<Marker tone="request" margin active={open} onClick={() => setOpen(!open)}>
+						2
+					</Marker>
+					<Text as="p" variant="reading">
+						Monti는 글을 쓰는 사람이 <RequestAnchor>설정 파일을 열지 않아도</RequestAnchor> 사이트를 고칠 수 있게
+						합니다.
+					</Text>
+				</Box>
+				<MemoCardPopover
+					anchor={() => document.getElementById("memo-anchor")}
+					open={open}
+					onOpenChange={setOpen}
+					discardLabel="버리기"
+					onDiscard={noop}
+					acceptLabel="받기"
+					onAccept={noop}
+					reply={reply}
+				>
+					<MemoThread>
+						<MemoMessage author="나" time="10:41">
+							이 말을 더 쉽게 바꿔 줘
+						</MemoMessage>
+						<MemoMessage author="어시스턴트" time="10:42" ai>
+							“코드를 몰라도”로 바꿨어요.
+						</MemoMessage>
+					</MemoThread>
+				</MemoCardPopover>
+			</Box>
+		);
+	},
 };

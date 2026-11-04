@@ -1,10 +1,10 @@
 "use client";
 
-import { Add, ArrowDown, ArrowUp } from "@carbon/icons-react";
 import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
+import { Add, ArrowDown, ArrowUp } from "./icons";
 import type { SelectAll } from "./page-header";
 import { TableHead, TableHeader } from "./table";
 

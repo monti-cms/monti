@@ -1,7 +1,7 @@
 /*
- * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
- * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
- * `monti-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
+ * Default chart (drawn on recharts, optional dependency `recharts`), for the public page (`render.client.tsx` loads it in the browser) and the
+ * editor preview (`./preview`), so a chart looks the same in both. Styled with `monti-block-chart-*` classes (this package's `chart.css`)
+ * without admin UI code or Tailwind. Colors are the series' theme variables (`--chart-1` to `--chart-5`).
  */
 
 import { createContext, type ReactElement, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -25,8 +25,7 @@ import {
 import { normalizeChartDsl, parseChartDsl } from "./dsl";
 import { estimateYAxisWidth, formatChartValue, toChartConfig } from "./helpers";
 import { CHART_LEGEND_HEIGHT, type ChartDimensions, DEFAULT_CHART_DIMENSIONS, resolvePieGeometry } from "./layout";
-import type { CartesianChartSpec, PieChartSpec } from "./types";
-import type { ChartConfig } from "./ui";
+import type { CartesianChartSpec, ChartConfig, NormalizedChartSpec, PieChartSpec } from "./types";
 
 interface FrameContext {
 	readonly config: ChartConfig;
@@ -274,8 +273,11 @@ function PieView({ spec }: { spec: PieChartSpec }) {
 /** Draws the chart source (`source`). If the syntax is wrong, draws nothing (the server already renders the error box). */
 export function ChartView({ source }: { readonly source: string }) {
 	const normalized = useMemo(() => normalizeChartDsl(parseChartDsl(source)), [source]);
-	const spec = normalized.spec;
-	if (!spec) return null;
+	return normalized.spec ? <ChartFigure spec={normalized.spec} /> : null;
+}
+
+/** Draws a chart whose source is already read and checked. */
+export function ChartFigure({ spec }: { readonly spec: NormalizedChartSpec }) {
 	return (
 		<figure className="monti-block-chart" data-state="ready">
 			{spec.type === "pie" ? <PieView spec={spec} /> : <CartesianView spec={spec} />}

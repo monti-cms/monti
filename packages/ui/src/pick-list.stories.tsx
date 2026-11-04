@@ -1,43 +1,60 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { PickList, PickListItem } from "./pick-list";
+import { ArrowRight, Calendar, Image, Link, ListBoxes, TextShortParagraph } from "./icons";
+import { Box, PickList, PickListItem, PickListLabel, PickListSeparator } from "./index";
 
-const KINDS = [
-	{ value: "text", label: "글자" },
-	{ value: "select", label: "고르기" },
-	{ value: "media", label: "미디어" },
-	{ value: "relation", label: "관계", mark: "→" },
-];
-
-function Demo({ initial = "text" }: { initial?: string }) {
-	const [picked, setPicked] = useState(initial);
-	return (
-		<PickList aria-label="종류" className="w-40">
-			{KINDS.map((kind) => (
-				<PickListItem
-					key={kind.value}
-					selected={picked === kind.value}
-					mark={kind.mark}
-					onClick={() => setPicked(kind.value)}
-				>
-					{kind.label}
-				</PickListItem>
-			))}
-		</PickList>
-	);
-}
-
-/**
- * The kinds of a new field, as menu rows on the page: the picked one is on the selected ground in ink, the rest muted, and a row that opens more
- * ends in a mark. One pick, no card around the list.
- */
-const meta = { title: "Controls/Menu/PickList", component: PickList, render: () => <Demo /> } satisfies Meta<
-	typeof PickList
->;
+/** Menu rows without the floating card, placed on a sheet: pick one kind to go to the next step. The picked row keeps the selected ground. */
+const meta = {
+	title: "Controls/Menu/PickList",
+	component: PickList,
+	args: { "aria-label": "필드 종류" },
+} satisfies Meta<typeof PickList>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+/** The kind of a new field. */
+export const Kinds: Story = {
+	render: (args) => (
+		<Box width="menu">
+			<PickList {...args}>
+				<PickListItem selected>
+					<TextShortParagraph />
+					텍스트
+				</PickListItem>
+				<PickListItem>
+					<ListBoxes />
+					선택
+				</PickListItem>
+				<PickListItem>
+					<Calendar />
+					날짜
+				</PickListItem>
+				<PickListItem>
+					<Image />
+					미디어
+				</PickListItem>
+				<PickListItem mark={<ArrowRight />}>
+					<Link />
+					다른 글 연결
+				</PickListItem>
+			</PickList>
+		</Box>
+	),
+};
 
-/** The row with a mark picked. */
-export const WithMark: Story = { render: () => <Demo initial="relation" /> };
+/** Groups with a name and a wider rule between them; a short note at the end of a row goes in `mark`. */
+export const Groups: Story = {
+	args: { "aria-label": "서비스" },
+	render: (args) => (
+		<Box width="menu">
+			<PickList {...args}>
+				<PickListLabel>AI</PickListLabel>
+				<PickListItem selected>Anthropic</PickListItem>
+				<PickListItem>OpenAI</PickListItem>
+				<PickListItem mark="Ollama">로컬 모델</PickListItem>
+				<PickListSeparator />
+				<PickListLabel>플러그인</PickListLabel>
+				<PickListItem mark="seo">검색 노출</PickListItem>
+			</PickList>
+		</Box>
+	),
+};

@@ -1,12 +1,10 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Close, Draggable } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, Text } from "@monti-cms/ui";
-// design-allow: the drag handle needs cursor and touch classes and the closed IconButton takes none (a drag handle part in ui would remove this)
-import { IconButton } from "@monti-cms/ui/internal";
+import { DragHandle, IconButton, OrderedRow, Text } from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Close } from "@monti-cms/ui/icons";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
 import type { RelationEntry } from "./use-relation-search";
@@ -39,25 +37,36 @@ export function SortableEntryRow({
 	});
 	const title = option?.title ?? tc("loading");
 	return (
-		<li
+		<OrderedRow
 			ref={setNodeRef}
-			// design-allow: dnd-kit moves the row while it is dragged
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"flex items-center gap-monti-4 rounded-monti-md border border-monti-muted bg-monti-page px-monti-4 py-monti-4 text-monti-caption",
-				isDragging && "relative z-10 shadow-monti-floating",
-			)}
+			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
+			handle={
+				<DragHandle
+					ref={setActivatorNodeRef}
+					aria-label={t("entry.drag", { title })}
+					disabled={disabled}
+					{...attributes}
+					{...listeners}
+				/>
+			}
+			actions={
+				<>
+					<IconButton label={t("entry.up", { title })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
+						<ArrowUp />
+					</IconButton>
+					<IconButton
+						label={t("entry.down", { title })}
+						disabled={disabled || index === count - 1}
+						onClick={() => onMove(1)}
+					>
+						<ArrowDown />
+					</IconButton>
+					<IconButton label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
+						<Close />
+					</IconButton>
+				</>
+			}
 		>
-			<IconButton
-				ref={setActivatorNodeRef}
-				label={t("entry.drag", { title })}
-				disabled={disabled}
-				className="cursor-grab touch-none active:cursor-grabbing"
-				{...attributes}
-				{...listeners}
-			>
-				<Draggable />
-			</IconButton>
 			<Text variant="caption" truncate>
 				{index + 1}. {title}
 				{/* Unpublished posts are missing from the collection's public list. */}
@@ -65,19 +74,6 @@ export function SortableEntryRow({
 					<Text tone="warning"> {t("entry.unpublished")}</Text>
 				)}
 			</Text>
-			<IconButton label={t("entry.up", { title })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
-				<ArrowUp />
-			</IconButton>
-			<IconButton
-				label={t("entry.down", { title })}
-				disabled={disabled || index === count - 1}
-				onClick={() => onMove(1)}
-			>
-				<ArrowDown />
-			</IconButton>
-			<IconButton label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
-				<Close />
-			</IconButton>
-		</li>
+		</OrderedRow>
 	);
 }

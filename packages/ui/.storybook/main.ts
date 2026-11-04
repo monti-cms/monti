@@ -22,27 +22,22 @@ const withFonts = async (head: string) => {
 	return `${head}<style>${bundledFonts(adminDir).css}</style>`;
 };
 
-// The design system's catalog: every component in every variant and state, in light and dark. The admin's screen states join it from
-// `packages/admin` and the plugins (dev only; nothing here ships).
+// The design system's catalog: every component in every variant and state, in light and dark (dev only; nothing here ships).
 const config: StorybookConfig = {
 	framework: "@storybook/react-vite",
-	stories: ["../src/**/*.stories.tsx", "../../{admin,ai,blocks,mdx,seo}/src/**/*.stories.tsx"],
-	addons: ["@storybook/addon-themes"],
+	stories: ["../src/**/*.stories.tsx"],
+	addons: ["@storybook/addon-themes", "storybook-addon-pseudo-states"],
 	// The `./fonts/...` urls in the rules below resolve against the preview's `iframe.html`.
 	staticDirs: [
 		{ from: pretendardSubsets, to: "/fonts/pretendard" },
 		{ from: plexFiles, to: "/fonts/ibm-plex-mono" },
-		// Pictures for the screen stories: an editor image needs an address of the site (`/...`), which a data URL is not.
-		{ from: path.resolve(here, "story-images"), to: "/story-images" },
 	],
 	previewHead: withFonts,
 	// The manager's chrome uses the same faces as the preview (`manager-theme.generated.ts` names them).
 	managerHead: withFonts,
-	// Screen stories build the test site, which picks its variant from the environment: the default one here.
 	viteFinal: (vite) => ({
 		...vite,
 		plugins: [...(vite.plugins ?? []), tailwindcss()],
-		define: { ...vite.define, "process.env.MONTI_TEST_SITE": "undefined" },
 	}),
 };
 

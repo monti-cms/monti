@@ -2,9 +2,9 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
-import { TextButton } from "./text-button";
 
 /**
  * The look of a modal, shared by `Dialog` and `AlertDialog`: the page ground with an emphasis edge, the largest radius and the overlay shadow, 28px
@@ -13,9 +13,9 @@ import { TextButton } from "./text-button";
 export const DIALOG_SURFACE =
 	"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 flex w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-monti-24 rounded-monti-xl border border-monti-emphasis bg-monti-page px-[28px] pt-[28px] pb-[22px] text-monti-body text-monti-default shadow-monti-overlay outline-none duration-100 data-closed:animate-out data-open:animate-in sm:max-w-[420px]";
 
-/** What sits behind a modal: the backdrop color alone, no blur. */
-export const DIALOG_BACKDROP =
-	"data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-monti-backdrop duration-100 data-closed:animate-out data-open:animate-in";
+/** What sits behind a modal, a sheet or the narrow-screen sidebar: the backdrop color alone, no blur, fading in and out over 150ms. */
+export const BACKDROP =
+	"fixed inset-0 isolate z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /** The title and the text under it. */
 export const DIALOG_HEADER = "flex flex-col gap-monti-16";
@@ -57,7 +57,7 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 }
 
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
-	return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn(DIALOG_BACKDROP, className)} {...props} />;
+	return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn(BACKDROP, className)} {...props} />;
 }
 
 const DIALOG_WIDTH = { default: "", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" } as const;
@@ -116,7 +116,9 @@ function DialogFooter({
 	const labels = useUiLabels();
 	return (
 		<div data-slot="dialog-footer" className={cn(DIALOG_ACTIONS, className)} {...props}>
-			{showCloseButton && <DialogPrimitive.Close render={<TextButton />}>{labels.cancel}</DialogPrimitive.Close>}
+			{showCloseButton && (
+				<DialogPrimitive.Close render={<Button variant="ghost" />}>{labels.cancel}</DialogPrimitive.Close>
+			)}
 			{children}
 		</div>
 	);

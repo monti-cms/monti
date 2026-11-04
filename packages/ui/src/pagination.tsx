@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
+import { Caret } from "./caret";
 import { cn } from "./cn";
 import {
 	DropdownMenu,
@@ -10,7 +10,9 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { ChevronLeft, ChevronRight } from "./icons";
 import { useUiLabels } from "./labels";
+import { TextButton } from "./text-button";
 
 /** The pager of a list, at the right end of the row under the table (the range, "1–25 / 148", goes at the left). */
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
@@ -146,20 +148,17 @@ function PageSizeMenu({
 	value: number;
 	/** Each size with how it reads ("25 per page"). */
 	options: readonly { value: number; label: string }[];
-	onValueChange: (value: number) => void;
+	/** Without it the menu is drawn and picks nothing. */
+	onValueChange?: (value: number) => void;
 }) {
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				aria-label={label}
-				data-slot="page-size"
-				className="inline-flex cursor-pointer items-center gap-monti-2 whitespace-nowrap border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-popup-open:text-monti-default [&_svg]:size-3"
-			>
+			<DropdownMenuTrigger aria-label={label} data-slot="page-size" render={<TextButton variant="quiet" size="meta" />}>
 				{options.find((option) => option.value === value)?.label ?? value}
-				<ChevronDown aria-hidden />
+				<Caret />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="start">
-				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange(Number(next))}>
+				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange?.(Number(next))}>
 					{options.map((option) => (
 						<DropdownMenuRadioItem key={option.value} value={String(option.value)}>
 							{option.label}

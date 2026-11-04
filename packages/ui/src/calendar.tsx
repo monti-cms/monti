@@ -1,11 +1,11 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { ChevronDown, ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import * as React from "react";
 import { type DayButton, DayPicker, getDefaultClassNames, type Locale } from "react-day-picker";
 import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
+import { ChevronDown, ChevronLeft, ChevronRight } from "./icons";
 
 /**
  * A month grid of 32px cells for picking a day or a range (the date filter's "pick a period"), as the design system draws it: weekdays in mono 11 subtle,

@@ -1,6 +1,5 @@
 "use client";
 
-import { Checkmark, ChevronSort, Code, CollapseAll, TextHighlight, View } from "@carbon/icons-react";
 import {
 	COLLAPSE,
 	type CodeLineEffect,
@@ -10,8 +9,15 @@ import {
 	setLineEffect,
 } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
-import { type CSSProperties, useEffect, useRef } from "react";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	MenuShortcut,
+} from "@monti-cms/ui";
+import { ChevronSort, Code, CollapseAll, TextHighlight, View } from "@monti-cms/ui/icons";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { codeBlockMessages } from "./messages";
 
@@ -24,49 +30,10 @@ interface LineMenuProps {
 	onClose: () => void;
 	/** Starts linking this line to body text (lets the user drag-select the body). */
 	onLinkText?: () => void;
-	style?: CSSProperties;
-}
-
-const ITEM_CLASS =
-	"flex w-full items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-4 text-left text-monti-caption hover:bg-monti-selected disabled:pointer-events-none disabled:opacity-50";
-
-interface ItemProps {
-	disabled?: boolean;
-	title?: string;
-	onSelect: () => void;
-	children: React.ReactNode;
-}
-
-function MenuItem({ disabled, title, onSelect, children }: ItemProps) {
-	return (
-		<button
-			type="button"
-			role="menuitem"
-			disabled={disabled}
-			title={title}
-			onMouseDown={(event) => event.preventDefault()}
-			onClick={onSelect}
-			className={ITEM_CLASS}
-		>
-			{children}
-		</button>
-	);
-}
-
-function CheckItem({ checked, onSelect, children }: ItemProps & { checked: boolean }) {
-	return (
-		<button
-			type="button"
-			role="menuitemcheckbox"
-			aria-checked={checked}
-			onMouseDown={(event) => event.preventDefault()}
-			onClick={onSelect}
-			className={ITEM_CLASS}
-		>
-			{children}
-			<Checkmark aria-hidden className={cn("ml-auto size-3.5", !checked && "invisible")} />
-		</button>
-	);
+	/** Where the menu opens: the clicked point, or the end of the picked line (viewport pixels, read each time the menu is placed). */
+	anchor: () => DOMRect;
+	/** `end` when the anchor is the line's right end, so the card ends there. */
+	align?: "start" | "end";
 }
 
 /**
@@ -98,10 +65,18 @@ export function lineMenuAvailable(
 }
 
 /** Menu that turns line effects (the effects and folds from the definition list) on and off for the lines picked in the line number gutter. Names and icons come from the effect definitions. */
-export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkText, style }: LineMenuProps) {
+export function LineMenu({
+	start,
+	end,
+	lineEffects,
+	onChange,
+	onClose,
+	onLinkText,
+	anchor,
+	align = "start",
+}: LineMenuProps) {
 	const site = useSite();
 	const t = useTranslator(codeBlockMessages);
-	const ref = useRef<HTMLDivElement>(null);
 	const iconByName = useIconByName();
 	// A fold equal to the picked range, or, when only one line is picked, a fold starting at that line (the first line with the › marker) (outermost first).
 	const startingHere = lineEffects
@@ -109,24 +84,10 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 		.sort((a, b) => b.end - a.end);
 	const collapse =
 		startingHere.find((effect) => effect.end === end) ?? (end - start === 1 ? startingHere[0] : undefined);
-	const collapseProblem = collapse ? null : canAddCollapse(lineEffects, start, end);
+	// A fold that cannot be added here (it would cross another) is not offered.
+	const canCollapse = !collapse && site.CODE_BLOCK_FEATURES.fold && !canAddCollapse(lineEffects, start, end);
 	const listed = lineEffectsToList(site, lineEffects, start, end);
-	const showFold = !!collapse || site.CODE_BLOCK_FEATURES.fold;
-
-	useEffect(() => {
-		const onDown = (event: MouseEvent) => {
-			if (event.target instanceof Node && !ref.current?.contains(event.target)) onClose();
-		};
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key === "Escape") onClose();
-		};
-		document.addEventListener("mousedown", onDown, true);
-		document.addEventListener("keydown", onKey, true);
-		return () => {
-			document.removeEventListener("mousedown", onDown, true);
-			document.removeEventListener("keydown", onKey, true);
-		};
-	}, [onClose]);
+	const showFold = !!collapse || canCollapse;
 
 	const setCollapseOpen = (open: boolean) =>
 		onChange(
@@ -136,77 +97,72 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 		);
 
 	return (
-		<div
-			ref={ref}
-			role="menu"
-			aria-label={
-				start + 1 === end
-					? t("lineMenu.lineEffects", { line: start + 1 })
-					: t("lineMenu.rangeEffects", { start: start + 1, end })
-			}
-			data-code-ui=""
-			contentEditable={false}
-			// design-allow: menu position measured from the clicked line, passed in
-			style={style}
-			className="absolute z-20 flex w-44 flex-col gap-monti-2 rounded-monti-md border bg-monti-page p-monti-4 font-sans text-monti-default shadow-monti-floating"
-		>
-			{listed.map((effect) => {
-				const active = hasLineEffect(lineEffects, effect.name, start, end);
-				const Icon = iconByName(effect.icon) ?? TextHighlight;
-				return (
-					<CheckItem
-						key={effect.name}
-						checked={active}
-						onSelect={() => onChange(setLineEffect(lineEffects, effect.name, start, end, !active))}
+		<DropdownMenu open onOpenChange={(open) => !open && onClose()}>
+			<DropdownMenuContent
+				anchor={{ getBoundingClientRect: anchor }}
+				align={align}
+				aria-label={
+					start + 1 === end
+						? t("lineMenu.lineEffects", { line: start + 1 })
+						: t("lineMenu.rangeEffects", { start: start + 1, end })
+				}
+			>
+				{listed.map((effect) => {
+					const active = hasLineEffect(lineEffects, effect.name, start, end);
+					const Icon = iconByName(effect.icon) ?? TextHighlight;
+					return (
+						<DropdownMenuCheckboxItem
+							key={effect.name}
+							checked={active}
+							onCheckedChange={() => onChange(setLineEffect(lineEffects, effect.name, start, end, !active))}
+						>
+							<Icon aria-hidden />
+							{effect.label}
+						</DropdownMenuCheckboxItem>
+					);
+				})}
+				{listed.length > 0 && showFold && <DropdownMenuSeparator />}
+				{collapse ? (
+					<>
+						<DropdownMenuItem onClick={() => onChange(lineEffects.filter((effect) => effect !== collapse))}>
+							<ChevronSort aria-hidden />
+							{t("lineMenu.uncollapse")}
+							<MenuShortcut>
+								{t("lineMenu.collapsedRange", { start: collapse.start + 1, end: collapse.end })}
+							</MenuShortcut>
+						</DropdownMenuItem>
+						<DropdownMenuCheckboxItem
+							checked={collapse.attrs.open === true}
+							onCheckedChange={() => setCollapseOpen(collapse.attrs.open !== true)}
+						>
+							<View aria-hidden />
+							{t("lineMenu.openFromStart")}
+						</DropdownMenuCheckboxItem>
+					</>
+				) : canCollapse ? (
+					<DropdownMenuItem
+						onClick={() =>
+							onChange(
+								[...lineEffects, { id: newEffectId(), name: COLLAPSE, start, end, attrs: {} } as CodeLineEffect].sort(
+									(a, b) => a.start - b.start || b.end - a.end,
+								),
+							)
+						}
 					>
-						<Icon aria-hidden className="size-3.5" />
-						{effect.label}
-					</CheckItem>
-				);
-			})}
-			{listed.length > 0 && showFold && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
-			{collapse ? (
-				<>
-					<MenuItem onSelect={() => onChange(lineEffects.filter((effect) => effect !== collapse))}>
-						<ChevronSort aria-hidden className="size-3.5" />
-						{t("lineMenu.uncollapse")}
-						<span className="ml-auto text-monti-muted">
-							{t("lineMenu.collapsedRange", { start: collapse.start + 1, end: collapse.end })}
-						</span>
-					</MenuItem>
-					<CheckItem
-						checked={collapse.attrs.open === true}
-						onSelect={() => setCollapseOpen(collapse.attrs.open !== true)}
-					>
-						<View aria-hidden className="size-3.5" />
-						{t("lineMenu.openFromStart")}
-					</CheckItem>
-				</>
-			) : site.CODE_BLOCK_FEATURES.fold ? (
-				<MenuItem
-					disabled={!!collapseProblem}
-					title={collapseProblem ?? undefined}
-					onSelect={() =>
-						onChange(
-							[...lineEffects, { id: newEffectId(), name: COLLAPSE, start, end, attrs: {} } as CodeLineEffect].sort(
-								(a, b) => a.start - b.start || b.end - a.end,
-							),
-						)
-					}
-				>
-					<CollapseAll aria-hidden className="size-3.5" />
-					{t("lineMenu.collapse")}
-				</MenuItem>
-			) : null}
-			{onLinkText && (
-				<>
-					{(listed.length > 0 || showFold) && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
-					<MenuItem onSelect={onLinkText}>
-						<Code aria-hidden className="size-3.5" />
-						{t("lineMenu.linkText")}
-					</MenuItem>
-				</>
-			)}
-		</div>
+						<CollapseAll aria-hidden />
+						{t("lineMenu.collapse")}
+					</DropdownMenuItem>
+				) : null}
+				{onLinkText && (
+					<>
+						{(listed.length > 0 || showFold) && <DropdownMenuSeparator />}
+						<DropdownMenuItem onClick={onLinkText}>
+							<Code aria-hidden />
+							{t("lineMenu.linkText")}
+						</DropdownMenuItem>
+					</>
+				)}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
+	Button,
 	Combobox,
 	ComboboxContent,
 	ComboboxEmpty,
@@ -23,26 +24,28 @@ import {
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	DragHandle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
+	IconButton,
 	Inline,
 	Input,
 	LanguageRow,
-	LanguageRowHandle,
 	LanguageSource,
 	LockMark,
 	MenuShortcut,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	ReadValue,
 	Section,
 	Stack,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
+import { Close } from "@monti-cms/ui/icons";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
@@ -53,7 +56,6 @@ import { SortableList } from "./fields-tree-dnd";
 import { customLocaleCode, findLocaleCodes, localeFromCode, localeName, sourceFirst } from "./locale-names";
 import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import { type Locale, localesOf, type Obj, sameJson, setProp } from "./schema-model";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
@@ -204,7 +206,7 @@ function AddLocale({
 				if (!next) setSearch("");
 			}}
 		>
-			<PopoverTrigger render={<TextButton />}>{t("locales.add")}</PopoverTrigger>
+			<PopoverTrigger render={<Button variant="ghost" size="sm" />}>{t("locales.add")}</PopoverTrigger>
 			<PopoverContent align="start" padding="menu">
 				<Command shouldFilter={false} label={t("locales.search")}>
 					<CommandInput value={search} onValueChange={setSearch} aria-label={t("locales.search")} autoFocus />
@@ -281,7 +283,7 @@ function OtherRow({
 			drag={{ transform: CSS.Translate.toString(transform) ?? undefined, transition, active: isDragging }}
 			handle={
 				editable ? (
-					<LanguageRowHandle
+					<DragHandle
 						ref={setActivatorNodeRef}
 						{...attributes}
 						{...listeners}
@@ -291,9 +293,9 @@ function OtherRow({
 			}
 		>
 			{editable && (
-				<TextButton variant="quiet" aria-label={t("locales.remove", { name: locale.name })} onClick={onRemove}>
-					×
-				</TextButton>
+				<IconButton label={t("locales.remove", { name: locale.name })} onClick={onRemove}>
+					<Close aria-hidden />
+				</IconButton>
 			)}
 		</LanguageRow>
 	);
@@ -373,7 +375,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 								<LanguageSource flag={t("locales.source")}>
 									{editable && locales.length > 1 && (
 										<DropdownMenu>
-											<DropdownMenuTrigger render={<TextButton variant="underline" quiet size="note" />}>
+											<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 												{t("locales.sourceChange")}
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">

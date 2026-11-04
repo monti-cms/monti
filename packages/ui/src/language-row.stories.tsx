@@ -1,114 +1,67 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
-import { TextButton } from "./text-button";
+import { Close } from "./icons";
+import { DragHandle, IconButton, LanguageRow, LanguageSource, Stack, TextButton } from "./index";
 
 /**
- * A content language: its name in itself, the code in mono, the display name when it differs. The source row sits first with the bold flag and the quiet
- * underlined change button at its end; the other rows have a drag handle and a quiet ×. A change dot marks a row that is new or whose role changed.
+ * One content language in Settings › Languages: its name in itself, the code in mono and the display name. The source row ends in a bold "원문" and the
+ * button that changes it; the others have a handle and a quiet ×.
  */
 const meta = {
-	title: "Controls/List/LanguageRow",
-	component: LanguageRow,
-	args: { name: "한국어", code: "ko" },
-	decorators: [
-		(Story) => (
-			<ul className="max-w-[560px]">
-				<Story />
-			</ul>
-		),
-	],
-} satisfies Meta<typeof LanguageRow>;
+	title: "Patterns/List/LanguageRow",
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const source = (
-	<LanguageSource flag="원문">
-		<TextButton variant="underline" quiet size="note">
-			바꾸기
-		</TextButton>
-	</LanguageSource>
-);
-const remove = (name: string) => (
-	<TextButton variant="quiet" aria-label={`${name} 빼기`}>
-		×
-	</TextButton>
+const remove = (
+	<IconButton label="빼기">
+		<Close />
+	</IconButton>
 );
 
-export const Playground: Story = {
-	render: (args) => <LanguageRow {...args}>{source}</LanguageRow>,
-};
-
-/** An editable list: the source row keeps the handle's column empty. */
-export const List: Story = {
+/** The source, an added language with its change dot, and one taken out (struck through). */
+export const Languages: Story = {
 	render: () => (
-		<>
-			<LanguageRow name="한국어" code="ko" label="한국어" handled>
-				{source}
+		<Stack as="ul" gap={0} width="content">
+			<LanguageRow name="한국어" code="ko" handled>
+				<LanguageSource flag="원문">
+					<TextButton variant="underline">바꾸기</TextButton>
+				</LanguageSource>
 			</LanguageRow>
-			<LanguageRow
-				name="English"
-				code="en"
-				label="영어"
-				handled
-				handle={<LanguageRowHandle aria-label="English 끌어서 순서 바꾸기" />}
-			>
-				{remove("English")}
+			<LanguageRow name="English" code="en" label="영어" handled handle={<DragHandle aria-label="끌어서 옮기기" />}>
+				{remove}
 			</LanguageRow>
 			<LanguageRow
 				name="日本語"
 				code="ja"
 				label="일본어"
-				dot="새로"
+				dot="새 언어"
 				handled
-				handle={<LanguageRowHandle aria-label="日本語 끌어서 순서 바꾸기" />}
+				handle={<DragHandle aria-label="끌어서 옮기기" />}
 			>
-				{remove("日本語")}
-			</LanguageRow>
-		</>
-	),
-};
-
-/** A language taken out and not saved yet: it stays in the list, struck through, until the draft is saved or the change is undone. */
-export const Gone: Story = {
-	render: () => (
-		<>
-			<LanguageRow name="한국어" code="ko" label="한국어" handled>
-				{source}
-			</LanguageRow>
-			<LanguageRow name="English" code="en" label="영어" dot="뺄 예정" gone handled />
-		</>
-	),
-};
-
-/** The source changed: both rows carry the dot. */
-export const SourceChanged: Story = {
-	render: () => (
-		<>
-			<LanguageRow name="English" code="en" label="영어" dot="원문 바뀜" handled>
-				{source}
+				{remove}
 			</LanguageRow>
 			<LanguageRow
-				name="한국어"
-				code="ko"
-				label="한국어"
-				dot="원문 바뀜"
+				name="Deutsch"
+				code="de"
+				label="독일어"
+				gone
 				handled
-				handle={<LanguageRowHandle aria-label="한국어 끌어서 순서 바꾸기" />}
+				handle={<DragHandle aria-label="끌어서 옮기기" />}
 			>
-				{remove("한국어")}
+				{remove}
 			</LanguageRow>
-		</>
+		</Stack>
 	),
 };
 
-/** A list that cannot be edited: no handles, no ×, and only the flag on the source row. */
-export const ReadOnly: Story = {
+/** A list that cannot be edited (a deployed site without the GitHub plugin): only the flag shows, no handles or ×. */
+export const Locked: Story = {
 	render: () => (
-		<>
-			<LanguageRow name="한국어" code="ko" label="한국어">
+		<Stack as="ul" gap={0} width="content">
+			<LanguageRow name="한국어" code="ko">
 				<LanguageSource flag="원문" />
 			</LanguageRow>
 			<LanguageRow name="English" code="en" label="영어" />
-		</>
+		</Stack>
 	),
 };

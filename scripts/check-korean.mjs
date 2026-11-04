@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Runtime code Hangul check. Korean strings in package runtime code (`packages/*\/src`) live only in the message dictionary files
- * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`), test helpers (`src/test`) and Storybook stories (`*.stories.*`, sample screens) are not checked.
+ * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`), test helpers (`src/test`), Storybook stories (`*.stories.*`, sample screens) and the reference screens (`packages/ui/src/screens/reference`) are not checked.
  *
  *   node scripts/check-korean.mjs            # list what remains; fails if any
  *   node scripts/check-korean.mjs packages/admin/src/screens/media   # only part of the tree
@@ -30,13 +30,15 @@ const roots = targets.length
 const SKIP_DIRS = new Set(["__test__", "node_modules", "dist", "test"]);
 const isMessages = (file) => /(^|[./])messages\.tsx?$/.test(path.basename(file));
 const isTest = (file) => /\.(test|stories)\.tsx?$/.test(file);
+/** The reference screens are sample screens drawn from design-system parts, as stories are: their Korean is the sample's words. */
+const isSample = (dir) => dir.endsWith(`${path.sep}screens${path.sep}reference`);
 
 const files = [];
 const walk = (dir) => {
 	for (const name of readdirSync(dir)) {
 		const full = path.join(dir, name);
 		if (statSync(full).isDirectory()) {
-			if (!SKIP_DIRS.has(name)) walk(full);
+			if (!SKIP_DIRS.has(name) && !isSample(full)) walk(full);
 		} else if (/\.tsx?$/.test(name) && !name.endsWith(".d.ts") && !isTest(name) && !isMessages(full)) {
 			files.push(full);
 		}

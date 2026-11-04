@@ -4,10 +4,10 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "@carbon/icons-react";
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { BACKDROP } from "./dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -16,7 +16,9 @@ import {
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { ICON_BUTTON, IconButton } from "./icon-button";
+import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "./icons";
 import { useUiLabels } from "./labels";
+import { NAV_ROW, NAV_ROW_END } from "./nav-link";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Segmented } from "./segmented";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -131,9 +133,12 @@ function SidebarProvider({
 	);
 }
 
-/** The rail as the design draws it: the tool ground, 20px above, 14px at the sides (6px folded, so the 36px rows fill the 48px rail), 16px below, rows 2px apart. */
+/**
+ * The rail as the design draws it: the tool ground, 12px above (open or folded, so the head row stays put), 14px at the sides, 16px below, rows
+ * 2px apart. Folded, 6px | 5px at the sides, so the 36px rows fill the 48px rail with its 1px edge and nothing scrolls sideways.
+ */
 const RAIL =
-	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default data-rail:px-[6px]";
+	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-12 pb-monti-16 text-monti-default data-rail:pr-[5px] data-rail:pl-[6px]";
 
 /**
  * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
@@ -161,7 +166,7 @@ function Sidebar({
 		return (
 			<DrawerPrimitive.Root open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<DrawerPrimitive.Portal>
-					<DrawerPrimitive.Backdrop className="fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+					<DrawerPrimitive.Backdrop className={BACKDROP} />
 					<DrawerPrimitive.Popup
 						dir={dir}
 						data-sidebar="sidebar"
@@ -271,8 +276,8 @@ function SidebarInset({
 }
 
 /**
- * The head row, 32px: the site's name (cut with an ellipsis when it is long) and the fold button ({@link SidebarRailToggle}). Folded, the row holds the
- * unfold button alone.
+ * The head row, 32px: the site's name and the fold button ({@link SidebarRailToggle}). Put the name in a span (a `Text`): it takes the room the row
+ * leaves, so the fold button sits at the row's end, and folded to a rail it is hidden, so the row holds the unfold button alone.
  */
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
@@ -280,7 +285,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-header"
 			data-sidebar="header"
 			className={cn(
-				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-0",
+				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:mb-monti-6 group-data-[rail]/rail:px-0 *:[span]:min-w-0 *:[span]:flex-1 group-data-[rail]/rail:*:[span]:hidden",
 				className,
 			)}
 			{...props}
@@ -349,7 +354,8 @@ function SidebarScreenMode({
 	defaultOpen,
 }: {
 	value: ScreenMode;
-	onValueChange: (mode: ScreenMode) => void;
+	/** Without it the modes are drawn and pick nothing (a screen spec's look, before its behavior is wired). */
+	onValueChange?: (mode: ScreenMode) => void;
 	labels: { label: string } & Record<ScreenMode, string>;
 	/** Opens the folded menu at first (for a story). */
 	defaultOpen?: boolean;
@@ -362,7 +368,7 @@ function SidebarScreenMode({
 					aria-label={labels.label}
 					tone="tool"
 					value={value}
-					onValueChange={onValueChange}
+					onValueChange={(mode) => onValueChange?.(mode)}
 					options={SCREEN_MODES.map((mode) => {
 						const Icon = SCREEN_MODE_ICONS[mode];
 						return { value: mode, label: <Icon aria-hidden />, "aria-label": labels[mode] };
@@ -378,7 +384,7 @@ function SidebarScreenMode({
 				<Icon aria-hidden />
 			</IconButton>
 			<DropdownMenuContent side="top" align="start">
-				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange(next as ScreenMode)}>
+				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange?.(next as ScreenMode)}>
 					{SCREEN_MODES.map((mode) => (
 						<DropdownMenuRadioItem key={mode} value={mode}>
 							{labels[mode]}
@@ -458,9 +464,8 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 /**
- * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the current ground (one step
- * darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground, which is paler than the
- * current one, so a row that is only pointed at is never taken for the open one.
+ * One row of the rail ({@link NAV_ROW} on the cream ground): an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the
+ * current ground (one step darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground.
  * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
  */
 function SidebarMenuButton({
@@ -485,7 +490,8 @@ function SidebarMenuButton({
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-current data-active:font-semibold group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					NAV_ROW,
+					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -526,17 +532,13 @@ function SidebarMenuBadge({
 		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
-			className={cn(
-				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums",
-				tone === "warning" ? "text-monti-warning" : "text-monti-subtle",
-				className,
-			)}
+			className={cn(NAV_ROW_END, tone === "warning" && "text-monti-warning", className)}
 			{...props}
 		/>
 	);
 }
 
-/** The folders under an open row, 13px muted. Each row keeps its own 36px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
+/** The folders under an open row, 13px muted. Each row keeps its own 38px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	return (
 		<ul
@@ -551,21 +553,74 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
+const SUB_DEPTH = ["pl-[38px]", "pl-[60px]", "pl-[82px]", "pl-[104px]"] as const;
+
+/**
+ * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
+ * with 4px of air above the first folder, ending 8px past the middle of the last folder's name. Every folder name stands 20px past its nearest rule.
+ */
+const SUB_LINE_X = ["before:left-[17px]", "before:left-[39px]", "before:left-[61px]", "before:left-[83px]"] as const;
+/** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
+const SUB_LINE_LEFT = [17, 39, 61, 83] as const;
+
+/**
+ * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
+ * whether it is the last at its depth under its parent (its rule ends at its middle), and which ancestors' rules run on past it (`through[d]`: the
+ * parent at depth `d` has a later sibling).
+ */
+export function folderTree(depths: readonly number[]) {
+	const hasLaterSibling = (index: number, depth: number) => {
+		for (let next = index + 1; next < depths.length; next++) {
+			if (depths[next] < depth) return false;
+			if (depths[next] === depth) return true;
+		}
+		return false;
+	};
+	return depths.map((depth, index) => {
+		const through: boolean[] = [];
+		for (let level = 0; level < depth; level++) through.push(hasLaterSibling(index, level));
+		const first = index === 0 || depths[index - 1] < depth;
+		return { first, last: !hasLaterSibling(index, depth), through };
+	});
+}
+
+const SUB_LINE =
+	"relative before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:border-monti-strong before:border-l before:content-['']";
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A row starts 36px in from the edge, and `depth` indents a folder inside another by 14px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row starts 38px in from the edge, and `depth` indents a folder inside another by 22px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
 	isActive = false,
 	depth = 0,
 	dropTarget = false,
+	tree,
 	className,
+	style,
 	...props
 }: useRender.ComponentProps<"a"> &
-	React.ComponentProps<"a"> & { isActive?: boolean; depth?: 0 | 1 | 2 | 3; dropTarget?: boolean }) {
+	React.ComponentProps<"a"> & {
+		isActive?: boolean;
+		depth?: 0 | 1 | 2 | 3;
+		dropTarget?: boolean;
+		/** The row's place in the tree, from {@link folderTree}: whether its rule ends here, and which ancestors' rules run past it. */
+		tree?: { first: boolean; last: boolean; through: readonly boolean[] };
+	}) {
+	// The ancestors' rules that run on past this row: 1px lines drawn as the row's background, at their depths' places.
+	const through = (tree?.through ?? []).flatMap((on, level) => (on ? [SUB_LINE_LEFT[level]] : []));
+	const lines: React.CSSProperties | undefined =
+		through.length === 0
+			? undefined
+			: {
+					backgroundImage: through
+						.map(() => "linear-gradient(var(--monti-border-strong), var(--monti-border-strong))")
+						.join(", "),
+					backgroundSize: through.map(() => "1px 100%").join(", "),
+					backgroundPosition: through.map((left) => `${left}px 0`).join(", "),
+					backgroundRepeat: "no-repeat",
+				};
 	return useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
@@ -573,8 +628,15 @@ function SidebarMenuSubButton({
 				className: cn(
 					"flex w-full cursor-pointer items-center justify-between gap-monti-8 rounded-monti-md border-0 bg-transparent py-[5px] pr-monti-10 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
+					SUB_LINE,
+					SUB_LINE_X[depth],
+					// 4px of air above a parent's first folder; the rule ends 8px past the middle of its last one.
+					tree
+						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-[calc(50%-8px)]")
+						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-[calc(50%-8px)]",
 					className,
 				),
+				style: lines || style ? { ...lines, ...style } : undefined,
 			},
 			props,
 		),

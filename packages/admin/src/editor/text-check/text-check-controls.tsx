@@ -1,10 +1,10 @@
 "use client";
 
-import { Information, ViewOff, Warning, WarningAlt } from "@carbon/icons-react";
 import type { TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
 import { Button, Icon, Inline, Popover, PopoverContent, Text, TextButton } from "@monti-cms/ui";
+import { Information, ViewOff, Warning, WarningAlt } from "@monti-cms/ui/icons";
 import { posToDOMRect } from "@tiptap/core";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
@@ -113,10 +113,10 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 						{t("explain")}
 					</TextButton>
 				)}
-				<TextButton type="button" onClick={() => controller.ignore(issue)}>
+				<Button variant="ghost" size="sm" type="button" onClick={() => controller.ignore(issue)}>
 					<ViewOff aria-hidden />
 					{t("ignore")}
-				</TextButton>
+				</Button>
 			</Inline>
 		</>
 	);

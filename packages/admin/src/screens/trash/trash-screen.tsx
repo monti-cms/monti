@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Inline, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Button, Inline, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
@@ -97,18 +97,20 @@ function TrashPage({ now = new Date() }: { now?: Date }) {
 					{state.folder
 						? folder && (
 								<>
-									<TextButton onClick={() => void actions.restore([folder])}>{t("folder.restore")}</TextButton>
-									<TextButton variant="danger" onClick={() => void actions.requestDelete([folder])}>
+									<Button variant="ghost" size="lg" onClick={() => void actions.restore([folder])}>
+										{t("folder.restore")}
+									</Button>
+									<Button variant="ghost-danger" size="lg" onClick={() => void actions.requestDelete([folder])}>
 										{tc("lifecycle.deletePermanently")}
-									</TextButton>
+									</Button>
 								</>
 							)
 						: view.total > 0 && (
 								<>
 									<TrashSearch view={view} />
-									<TextButton variant="danger" onClick={actions.openEmpty}>
+									<Button variant="ghost-danger" size="lg" onClick={actions.openEmpty}>
 										{t("emptyAction")}
-									</TextButton>
+									</Button>
 								</>
 							)}
 				</PageHeader>

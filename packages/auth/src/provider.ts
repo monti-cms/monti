@@ -74,7 +74,7 @@ export interface LoginProvider {
 	readonly name: string;
 	/** Button text per language, `en` required (`{ en: "Sign in with GitHub" }`). A site overrides it with `admin.messages["cms.auth"]["<id>.label"]`. */
 	readonly label: { readonly en: string } & Readonly<Record<string, string>>;
-	/** Icon of the button: an image address (an `https:` or `data:` URL). */
+	/** Icon of the button: its name in the admin's icon list (`logo--github`), drawn in the button's text color. An unknown name draws none. */
 	readonly icon?: string;
 	/**
 	 * `true` when every account of this provider is an admin, because the accounts are the admin accounts (the built-in password login). A person who signed in with the

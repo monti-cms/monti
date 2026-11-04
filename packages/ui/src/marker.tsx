@@ -1,7 +1,7 @@
-import { Chat } from "@carbon/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
+import { Chat } from "./icons";
 
 /** The dimmed look of text that is not decided yet: the source text a new translation starts from. It reads as a placeholder, and it is not published. */
 const UNTRANSLATED = "text-monti-faint";

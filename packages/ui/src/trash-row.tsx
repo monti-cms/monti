@@ -1,6 +1,7 @@
-import { Folder } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Folder } from "./icons";
+import { Spark } from "./spark";
 
 /**
  * The title cell of a trash row. Line one: the title in the quiet ink of what is out of use (a trashed folder has its folder icon before it), and its
@@ -47,12 +48,14 @@ function TrashRowTitle({
 
 /**
  * The date cell of a trash row, at the end of its cell: the day it was discarded ("10. 27"; the column's name says what the day is) over how long it
- * stays ("30 days left"). The days turn to the warning tone when `urgent` (three or fewer): the purge is near.
+ * stays ("30 days left"). The days turn to the warning tone when `urgent` (three or fewer): the purge is near. What the assistant discarded has its day
+ * in blue after a ✦ (`byAssistant`); pressing it opens the conversation.
  */
 function TrashRowDate({
 	date,
 	left,
 	urgent = false,
+	byAssistant,
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
@@ -61,10 +64,27 @@ function TrashRowDate({
 	/** Time left before the purge ("30 days left"). */
 	left: React.ReactNode;
 	urgent?: boolean;
+	/**
+	 * The assistant discarded it: the day is blue with a ✦ before it, and pressing it opens that conversation. `label` names the button for a screen
+	 * reader ("Open the conversation that discarded it").
+	 */
+	byAssistant?: { label: string; onOpen: () => void };
 }) {
 	return (
 		<span data-slot="trash-row-date" className={cn("inline-flex flex-col items-end gap-monti-4", className)} {...props}>
-			<span className="font-mono text-monti-meta text-monti-subtle">{date}</span>
+			{byAssistant ? (
+				<button
+					type="button"
+					aria-label={byAssistant.label}
+					onClick={byAssistant.onOpen}
+					className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+				>
+					<Spark aria-hidden className="size-monti-icon-xs" />
+					{date}
+				</button>
+			) : (
+				<span className="font-mono text-monti-meta text-monti-subtle">{date}</span>
+			)}
 			<span
 				data-slot="trash-row-left"
 				className={cn("font-mono text-monti-meta", urgent ? "text-monti-warning" : "text-monti-faint")}

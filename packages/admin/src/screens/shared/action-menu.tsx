@@ -1,6 +1,5 @@
 "use client";
 
-import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
 import {
@@ -26,7 +25,9 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 	MenuShortcut,
+	RowMore,
 } from "@monti-cms/ui";
+import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
 import { cloneElement, type ReactElement, type ReactNode } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
 import { sharedMessages } from "./messages";
@@ -214,11 +215,14 @@ export function ActionContextMenu({
 export function MoreActionsButton({
 	actions,
 	label,
+	row = false,
 	children,
 }: {
 	actions: MenuAction[];
 	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
+	/** At the end of a list row: the row's ⋯ letter (`RowMore`), not a round button. */
+	row?: boolean;
 	/** A group of rows above the actions, set apart by a rule (an editor's document tools), so a destructive action stays at the bottom. */
 	children?: ReactNode;
 }) {
@@ -226,9 +230,13 @@ export function MoreActionsButton({
 	if (items.length === 0 && !children) return null;
 	return (
 		<DropdownMenu>
-			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
-				<OverflowMenuHorizontal aria-hidden />
-			</IconButton>
+			{row ? (
+				<RowMore label={label} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+			) : (
+				<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+					<OverflowMenuHorizontal aria-hidden />
+				</IconButton>
+			)}
 			<DropdownMenuContent align="end">
 				{children}
 				{items.length > 0 && children && <DropdownMenuSeparator />}

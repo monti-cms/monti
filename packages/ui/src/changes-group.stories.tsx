@@ -1,76 +1,55 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { ChangesGroup, type ChangesItem } from "./changes-group";
-import { PageHeader } from "./page-header";
+import { ChangesGroup, type ChangesItem } from "./index";
+
+const noop = () => {};
+
+const ITEMS: ChangesItem[] = [
+	{ id: "title", name: "사이트 이름", tag: "바뀜", tone: "warning", onUndo: noop },
+	{ id: "ko", name: "언어 · 일본어", tag: "추가", tone: "success", onUndo: noop },
+	{ id: "notes", name: "메모", tag: "컬렉션 지움", tone: "danger", onUndo: noop },
+];
 
 /**
- * The save group of a settings screen's title row: how many places changed (it opens the list, each with its own undo), undo all, and the primary pill.
- * The pill stays but is disabled while the screen has an error that blocks saving.
+ * The save group in a settings title row while there are changes: "바뀐 곳 N ▾" opens the list with an undo per change, then "모두 되돌리기" and the one pill.
+ * It does not appear when nothing changed.
  */
 const meta = {
-	title: "Controls/Button/ChangesGroup",
+	title: "Monti/Change/ChangesGroup",
 	component: ChangesGroup,
-	tags: ["visual"],
-	parameters: { layout: "padded" },
+	args: {
+		label: "바뀐 곳",
+		listLabel: "바뀐 곳 목록",
+		countLabel: "바뀐 곳 3개",
+		items: ITEMS,
+		undoLabel: "되돌리기",
+		discardLabel: "모두 되돌리기",
+		onDiscard: noop,
+		saveLabel: "저장하고 적용",
+		onSave: noop,
+	},
 } satisfies Meta<typeof ChangesGroup>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const initial: ChangesItem[] = [
-	{ id: "a", name: "요약", tag: "이름", tone: "warning", onUndo: () => {} },
-	{ id: "b", name: "부제", tag: "지움", tone: "danger", onUndo: () => {} },
-	{ id: "c", name: "글 종류", tag: "새로", tone: "success", onUndo: () => {} },
-];
+export const Default: Story = {};
 
-function Demo({ saveDisabled }: { saveDisabled?: boolean }) {
-	const [items, setItems] = useState(initial);
-	return (
-		<div className="max-w-[880px]">
-			<PageHeader title="설정">
-				<ChangesGroup
-					label="바뀐 곳"
-					listLabel="바뀐 곳 목록"
-					countLabel={`바뀐 곳 ${items.length}개`}
-					items={items.map((item) => ({
-						...item,
-						onUndo: () => setItems((list) => list.filter((one) => one.id !== item.id)),
-					}))}
-					undoLabel="되돌리기"
-					discardLabel="모두 되돌리기"
-					onDiscard={() => setItems([])}
-					saveLabel="저장하고 적용"
-					onSave={() => {}}
-					saveDisabled={saveDisabled}
-				/>
-			</PageHeader>
-		</div>
-	);
-}
+/** Something blocks saving: the pill stays, disabled. */
+export const Blocked: Story = { args: { saveDisabled: true } };
 
-export const Playground: Story = { args: {} as never, render: () => <Demo /> };
+/** The changes delete saved values: the pill is red. */
+export const Deletes: Story = { args: { saveDanger: true, saveLabel: "지우고 적용" } };
 
-/** An error stops saving: the pill is there, off. */
-export const SaveBlocked: Story = { args: {} as never, render: () => <Demo saveDisabled /> };
-
-/** Values will be deleted: the pill is red and says what it does. */
-export const Dropping: Story = {
-	args: {} as never,
-	render: () => (
-		<div className="max-w-[880px]">
-			<PageHeader title="설정">
-				<ChangesGroup
-					label="바뀐 곳"
-					listLabel="바뀐 곳 목록"
-					countLabel="바뀐 곳 3개"
-					items={initial}
-					undoLabel="되돌리기"
-					discardLabel="모두 되돌리기"
-					onDiscard={() => {}}
-					saveLabel="지우고 적용"
-					saveDanger
-					onSave={() => {}}
-				/>
-			</PageHeader>
-		</div>
-	),
+/** The assistant's proposals wait in the form: "· 제안 N" in blue after the count, and the list ends with them, each with its own discard. */
+export const WithProposals: Story = {
+	args: {
+		proposals: {
+			label: "제안",
+			countLabel: "제안 2개",
+			discardLabel: "버리기",
+			items: [
+				{ id: "preview", name: "미리보기 경로", onDiscard: noop },
+				{ id: "locale-path", name: "주소에 언어 표시", onDiscard: noop },
+			],
+		},
+	},
 };

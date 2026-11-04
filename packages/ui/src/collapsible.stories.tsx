@@ -1,51 +1,46 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Caret } from "./caret";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
-import { Stack } from "./stack";
-import { Text } from "./text";
-import { TextButton } from "./text-button";
+import { Caret, Collapsible, CollapsibleContent, CollapsibleTrigger, Text } from "./index";
 
-function Example(props: { defaultOpen?: boolean; disabled?: boolean }) {
-	return (
-		<Collapsible {...props}>
-			<CollapsibleTrigger render={<TextButton variant="quiet" />}>
-				고급 설정
-				<Caret />
-			</CollapsibleTrigger>
-			<CollapsibleContent>
-				<Text as="p" tone="muted" className="pt-monti-8">
-					캐시 시간과 예약 발행 같은 드물게 쓰는 항목이에요.
-				</Text>
-			</CollapsibleContent>
-		</Collapsible>
-	);
-}
-
-/** A trigger and the content it opens. The trigger is a text button with the design system's caret after its text. */
+/** What opens and closes a part in place; the trigger ends with a `Caret`. A disabled trigger dims to .45. */
 const meta = {
-	title: "Patterns/List/Collapsible",
+	title: "Patterns/Frame/Collapsible",
 	component: Collapsible,
-	decorators: [
-		(Story) => (
-			<Stack className="max-w-sm">
-				<Story />
-			</Stack>
-		),
-	],
-	render: () => <Example defaultOpen />,
 } satisfies Meta<typeof Collapsible>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
-
-/** Closed, open, and disabled (dimmed). */
-export const States: Story = {
+export const Open: Story = {
 	render: () => (
-		<Stack gap={24}>
-			<Example />
-			<Example defaultOpen />
-			<Example disabled />
-		</Stack>
+		<Collapsible defaultOpen>
+			<CollapsibleTrigger>
+				고급 <Caret />
+			</CollapsibleTrigger>
+			<CollapsibleContent>
+				<Text variant="note">목록에서 숨기기, 기본값</Text>
+			</CollapsibleContent>
+		</Collapsible>
+	),
+};
+
+export const Closed: Story = {
+	render: () => (
+		<Collapsible>
+			<CollapsibleTrigger>
+				고급 <Caret />
+			</CollapsibleTrigger>
+			<CollapsibleContent>
+				<Text variant="note">목록에서 숨기기, 기본값</Text>
+			</CollapsibleContent>
+		</Collapsible>
+	),
+};
+
+export const Disabled: Story = {
+	render: () => (
+		<Collapsible>
+			<CollapsibleTrigger disabled>
+				고급 <Caret />
+			</CollapsibleTrigger>
+		</Collapsible>
 	),
 };

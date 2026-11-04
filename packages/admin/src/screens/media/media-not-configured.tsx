@@ -1,8 +1,8 @@
 "use client";
 
-import { Upload } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Button, PageBody, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Upload } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { AdminFrame } from "../shared/admin-frame";
 import { mediaMessages } from "./messages";

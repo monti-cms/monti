@@ -38,6 +38,8 @@
  *   off-system          Every class word in the admin UI packages (stories and test helpers too) is in the design system: a known role per
  *                       namespace, the weights, radius and shadows it keeps, no line height or letter spacing of its own, and on screens the
  *                       spacing scale. The roles are read from `packages/ui/styles/theme.css`; `OWN_TYPE` and `OWN_COLORS` name the exceptions.
+ *   icon-list           Only `packages/ui/src/icons.ts`, the one list of icons, imports `@carbon/icons-react` (stories and tests too, in
+ *                       every package). Code takes icons from `@monti-cms/ui/icons`, or `@monti-cms/admin/icons` in an extension.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -682,10 +684,6 @@ const DRAWING = new Map([
 		"the default custom block is drawn in the document: a frame with the component name above its body",
 	],
 	[
-		"admin/src/editor/blocks/block-issues.tsx",
-		"a notice under a block inside the document; block views stay free of UI packages",
-	],
-	[
 		"admin/src/editor/blocks/fence-preview/fence-preview-node-view.tsx",
 		"the preview block is drawn inside the document",
 	],
@@ -706,10 +704,6 @@ const DRAWING = new Map([
 		"the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together",
 	],
 	[
-		"admin/src/editor/code-block/line-menu.tsx",
-		"a menu beside the picked lines (absolute position inside the block, never takes focus from the code)",
-	],
-	[
 		"admin/src/editor/file-node-view.tsx",
 		"the file card is a block inside the document, with its name written in place",
 	],
@@ -720,10 +714,6 @@ const DRAWING = new Map([
 	[
 		"admin/src/editor/inline-bubble.tsx",
 		"the bubble floats at the selection (fixed coordinates, z-index, measured by ref)",
-	],
-	[
-		"admin/src/editor/internal-link-popup.tsx",
-		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
 	],
 	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
 	[
@@ -748,10 +738,6 @@ const DRAWING = new Map([
 		"extra room after the last block so the source can scroll as far as the translation does (35% of the viewport, in step with the editor)",
 	],
 	[
-		"admin/src/screens/entries/sortable-entry-row.tsx",
-		"a sortable row is moved by dnd-kit's transform (inline style) and lifts while dragged, and its handle needs a grab cursor and no touch scrolling",
-	],
-	[
 		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
 		"the drop rows of the field list: a drag transform on the row",
 	],
@@ -765,7 +751,6 @@ const DRAWING = new Map([
 	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],
-	["blocks/src/chart/ui.tsx", "chart geometry (recharts selectors, aspect ratio, tooltip and legend boxes, swatches)"],
 	["blocks/src/chart/view.tsx", "the public page's chart, styled by render.css"],
 	["blocks/src/code-explorer/view.tsx", "draws the explorer as the public post does"],
 	["blocks/src/collapsible/view.tsx", "draws the collapsible as the public post does"],
@@ -982,6 +967,23 @@ function checkThemeNames() {
 }
 checkThemeNames();
 
+/** Every icon comes from the one list: no other file of any package imports Carbon. */
+function checkIconList() {
+	const list = "packages/ui/src/icons.ts";
+	for (const pkg of readdirSync(path.join(root, "packages"))) {
+		const dir = path.join(root, "packages", pkg, "src");
+		if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) continue;
+		for (const file of sourcesUnder(dir, ["node_modules", "dist"])) {
+			if (rel(file) === list) continue;
+			const lexed = lex(readFileSync(file, "utf8"));
+			for (const { specifier, line, type } of specifiers(lexed))
+				if (!type && specifier.startsWith("@carbon/icons-react"))
+					add(file, line, "icon-list", `imports \`${specifier}\`; take the icon from \`@monti-cms/ui/icons\``);
+		}
+	}
+}
+checkIconList();
+
 /** Role names per namespace, read from the generated theme, so adding a role to `tokens.json` is all it takes. */
 const rolesOf = (namespace) =>
 	new Set([...themeCss.matchAll(new RegExp(`--${namespace}-monti-([a-z-]+?)(?:--[a-z-]+)?:`, "g"))].map((m) => m[1]));
@@ -1023,6 +1025,9 @@ const OWN_TYPE = new Map([
 	["ui/src/dialog.tsx", new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"])],
 	// The translation marker's text, 10px, the one size under the micro role (`.mt-marker`).
 	["ui/src/marker.tsx", new Set(["text-[10px]"])],
+	// Code in an entry's body keeps the reading line of 1.7 times its size (`.mt-doc-code` in `.text-reading`).
+	["ui/src/doc-blocks.tsx", new Set(["leading-[1.7]"])],
+	["ui/src/compare.tsx", new Set(["leading-[1.7]"])],
 	// The heading icon's level number, 8px mono in the corner of the 16px glyph (`.mt-ico-level .lv`).
 	["ui/src/heading-icon.tsx", new Set(["text-[8px]", "leading-[8px]"])],
 ]);
@@ -1114,6 +1119,7 @@ const HINTS = {
 	"theme-names":
 		"The theme and the token files define only the admin's own names (monti-), and the theme clears Tailwind's.",
 	"off-system": "Use the type roles, color roles, radius, weights and spacing scale of packages/ui/styles/theme.css.",
+	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

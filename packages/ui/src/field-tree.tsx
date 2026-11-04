@@ -27,7 +27,8 @@ const REMOVED = "text-monti-faint line-through decoration-1";
  * after it in the faint ink (`description`) and a short note of what is special about it (`note`: "renamed from", "new", "not in the panel"); `kind` at the end
  * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1) or in a branch of one (2).
  * `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names
- * line up. With `gripProps` the grip is the button the field is dragged by. `changed` is an unsaved change; `locked` (its name) puts a lock after the kind
+ * line up. With `gripProps` the grip is the button the field is dragged by. `changed` is an unsaved change; `problems` (its name) puts a red dot after
+ * the name for a field with something to fix before saving; `locked` (its name) puts a lock after the kind
  * for a field a plugin placed. `onOpen` makes the line open the field: its name is the button, and the whole line is its target. `children` sit at the end of
  * the line, over the kind (the row's own buttons). `motion` and `dragging` are the line while it is dragged or while others move aside for it.
  */
@@ -46,6 +47,7 @@ function FieldRow({
 	locked,
 	changed = false,
 	changedLabel,
+	problems,
 	onOpen,
 	openLabel,
 	motion,
@@ -70,6 +72,8 @@ function FieldRow({
 	changed?: boolean;
 	/** The name of the change dot for screen readers. */
 	changedLabel?: string;
+	/** The name of the red dot after the field's name: what must be fixed before saving ("2 problems"). */
+	problems?: string;
 	onOpen?: () => void;
 	/** The name of the button that opens the field. */
 	openLabel?: string;
@@ -128,6 +132,7 @@ function FieldRow({
 					name
 				)}
 				{changed && <ChangeDot label={changedLabel} />}
+				{problems && <ChangeDot tone="danger" label={problems} />}
 			</span>
 			<span className="min-w-0 truncate text-monti-note text-monti-subtle">
 				{label}

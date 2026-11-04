@@ -1,5 +1,28 @@
 "use client";
 
+import { charEffectByName } from "@monti-cms/core/code-block";
+import { useSite, useTranslator } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
+import {
+	Box,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	FloatingBar,
+	FloatingBarButton,
+	FormatBarRequest,
+	FormatButton,
+	type FormatMark,
+	Icon,
+	Inline,
+	MenuTick,
+	Popover,
+	PopoverContent,
+	Separator,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
 import {
 	ChatOperational,
 	Close,
@@ -11,30 +34,7 @@ import {
 	Unlink,
 	View,
 	ViewOff,
-} from "@carbon/icons-react";
-import { charEffectByName } from "@monti-cms/core/code-block";
-import { useSite, useTranslator } from "@monti-cms/core/site";
-import type { MontiIcon } from "@monti-cms/ui";
-import {
-	Box,
-	cn,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	FormatBar,
-	FormatBarButton,
-	FormatBarRequest,
-	FormatBarSeparator,
-	FormatButton,
-	type FormatMark,
-	Icon,
-	Inline,
-	MenuTick,
-	Separator,
-	Text,
-	TextButton,
-} from "@monti-cms/ui";
+} from "@monti-cms/ui/icons";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -48,7 +48,6 @@ import {
 	type EditorSelectionAction,
 	useAdminComponents,
 } from "../admin-components";
-import { isComposingKey } from "../lib/keyboard";
 import type { TranslatorFor } from "../translator";
 import { addedMarkName } from "./added-marks";
 import { allowanceOfState } from "./allowed-extension";
@@ -132,9 +131,9 @@ export function BubbleButton({
 	children: ReactNode;
 }) {
 	return (
-		<FormatBarButton label={label} pressed={pressed} tone={tone} onClick={onClick}>
+		<FloatingBarButton label={label} pressed={pressed} tone={tone} onClick={onClick}>
 			{children}
-		</FormatBarButton>
+		</FloatingBarButton>
 	);
 }
 
@@ -252,17 +251,6 @@ export function InlineBubble({
 			window.removeEventListener("mouseup", onPointerUp);
 		};
 	}, [editor]);
-
-	// Pressing outside the bubble with the input form open closes the form (same as popovers).
-	useEffect(() => {
-		if (!panel) return;
-		const onDown = (event: MouseEvent) => {
-			const bubble = bubbleRef.current;
-			if (bubble && event.target instanceof Node && !bubble.contains(event.target)) setPanel(null);
-		};
-		document.addEventListener("mousedown", onDown, true);
-		return () => document.removeEventListener("mousedown", onDown, true);
-	}, [panel]);
 
 	useEffect(() => {
 		if (!target && panel) setPanel(null);
@@ -697,83 +685,87 @@ export function InlineBubble({
 		return groups.map((group, index) => (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the groups are fixed in number and order.
 			<Fragment key={index}>
-				{index > 0 && <FormatBarSeparator />}
+				{index > 0 && <Separator orientation="vertical" length="bar" />}
 				{group}
 			</Fragment>
 		));
 	};
 
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
-	const surface = "rounded-monti-md border bg-monti-page text-monti-default backdrop-blur";
+	// A form opened from the bubble hangs from the same text, above it where there is room.
+	const textAnchor = {
+		getBoundingClientRect: () => {
+			try {
+				const range = anchorRange(target, ranged);
+				return posToDOMRect(editor.view, range.from, range.to);
+			} catch {
+				return new DOMRect();
+			}
+		},
+	};
 
-	return createPortal(
-		panel ? (
-			<div
-				ref={bubbleRef}
-				role="dialog"
-				aria-label={
-					panel.kind === "link"
-						? t("inlineBubble.linkPanel")
-						: panel.kind === "codeTooltip"
-							? t("inlineBubble.tooltipPanel")
-							: panel.kind === "footnote"
-								? t("inlineBubble.footnotePanel")
-								: panel.panel.label
-				}
-				data-monti-inline-bubble
-				// design-allow: bubble position computed from the selection
-				style={style}
-				className={cn(
-					surface,
-					"flex flex-col gap-monti-12 p-monti-12 text-monti-caption",
-					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-monti-8" : "w-80",
-				)}
-				onKeyDown={(event) => {
-					if (event.key === "Escape" && !isComposingKey(event)) {
-						event.preventDefault();
-						closePanel();
-					}
-				}}
-			>
-				{panel.kind === "link" ? (
-					<LinkForm editor={editor} draft={panel.draft} onDone={closePanel} />
-				) : panel.kind === "codeTooltip" ? (
-					<MarkTextForm
-						editor={editor}
-						mark={CODE_TOOLTIP_MARK_NAME}
-						attribute="content"
-						labels={CODE_TOOLTIP_LABELS(t)}
-						active={panel.active}
-						initial={panel.initial}
-						range={panel.range}
-						onDone={closePanel}
-					/>
-				) : panel.kind === "footnote" ? (
-					<FootnoteForm editor={editor} target={panel.target} onDone={closePanel} />
-				) : (
-					panel.panel.content
-				)}
-			</div>
-		) : (
-			// design-allow: bubble position computed from the selection
-			<div ref={bubbleRef} data-monti-inline-bubble style={style}>
-				<FormatBar
+	if (panel) {
+		return (
+			<Popover open onOpenChange={(open) => !open && closePanel()}>
+				<PopoverContent
+					anchor={textAnchor}
+					side="top"
+					sideOffset={GAP}
+					width={panel.kind === "extension" && panel.panel.size === "auto" ? "auto" : "md"}
+					finalFocus={false}
+					data-monti-inline-bubble
 					aria-label={
-						target.kind === "selection"
-							? t("inlineBubble.selectionLabel")
-							: target.kind === "footnote"
-								? t("inlineBubble.footnoteTitle")
-								: t("inlineBubble.effectLabel")
+						panel.kind === "link"
+							? t("inlineBubble.linkPanel")
+							: panel.kind === "codeTooltip"
+								? t("inlineBubble.tooltipPanel")
+								: panel.kind === "footnote"
+									? t("inlineBubble.footnotePanel")
+									: panel.panel.label
 					}
 				>
-					{target.kind === "selection"
-						? renderSelectionTools()
+					{panel.kind === "link" ? (
+						<LinkForm editor={editor} draft={panel.draft} onDone={closePanel} />
+					) : panel.kind === "codeTooltip" ? (
+						<MarkTextForm
+							editor={editor}
+							mark={CODE_TOOLTIP_MARK_NAME}
+							attribute="content"
+							labels={CODE_TOOLTIP_LABELS(t)}
+							active={panel.active}
+							initial={panel.initial}
+							range={panel.range}
+							onDone={closePanel}
+						/>
+					) : panel.kind === "footnote" ? (
+						<FootnoteForm editor={editor} target={panel.target} onDone={closePanel} />
+					) : (
+						panel.panel.content
+					)}
+				</PopoverContent>
+			</Popover>
+		);
+	}
+
+	return createPortal(
+		// design-allow: bubble position computed from the selection
+		<div ref={bubbleRef} data-monti-inline-bubble style={style}>
+			<FloatingBar
+				aria-label={
+					target.kind === "selection"
+						? t("inlineBubble.selectionLabel")
 						: target.kind === "footnote"
-							? renderFootnote(target)
-							: renderMarks(target.marks, target.rules)}
-				</FormatBar>
-			</div>
-		),
+							? t("inlineBubble.footnoteTitle")
+							: t("inlineBubble.effectLabel")
+				}
+			>
+				{target.kind === "selection"
+					? renderSelectionTools()
+					: target.kind === "footnote"
+						? renderFootnote(target)
+						: renderMarks(target.marks, target.rules)}
+			</FloatingBar>
+		</div>,
 		document.body,
 	);
 }

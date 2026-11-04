@@ -1,14 +1,15 @@
 "use client";
 
-import { View, ViewOff } from "@carbon/icons-react";
 import type * as React from "react";
 import { useState } from "react";
-import { cn } from "./cn";
+import { Button } from "./button";
+import { IconButton } from "./icon-button";
+import { View, ViewOff } from "./icons";
 import { Input } from "./input";
 import { TextButton } from "./text-button";
 
 /**
- * A value typed hidden (an API key): one underline holding the input and a 24px eye that shows what was just typed until it is pressed again. There is
+ * A value typed hidden (an API key): one underline field holding the input and, at its end, the eye (an icon button one size under the field) that shows what was just typed until it is pressed again. There is
  * no clear ×; a saved value is never shown again (that is a {@link SavedValue}). `keep` ends the line with a quiet text button that goes back to the
  * saved value ("Keep"). The underline turns ink while the input has focus, danger when `aria-invalid`.
  */
@@ -25,36 +26,32 @@ function SecretInput({
 	keep?: { label: string; onClick: () => void };
 }) {
 	const [shown, setShown] = useState(false);
+	// One field: the input with the eye (and "keep") as its action, so the tint covers the whole line and the eye sits inside it.
 	return (
-		<span
-			data-slot="secret-input"
-			className={cn(
-				"flex items-center gap-monti-4 border-monti-default border-b focus-within:border-monti-contrast",
-				props["aria-invalid"] && "border-monti-danger focus-within:border-monti-danger",
-			)}
-		>
+		<span data-slot="secret-input" className="block">
 			<Input
 				{...props}
 				type={shown ? "text" : "password"}
 				mono
 				autoComplete="off"
 				spellCheck={false}
-				className="border-b-0"
+				action={
+					<span className="flex items-center gap-monti-4">
+						{keep && (
+							<TextButton type="button" variant="quiet" size="note" onClick={keep.onClick}>
+								{keep.label}
+							</TextButton>
+						)}
+						<IconButton
+							label={shown ? hideLabel : showLabel}
+							pressed={shown}
+							onClick={() => setShown((value) => !value)}
+						>
+							{shown ? <ViewOff aria-hidden /> : <View aria-hidden />}
+						</IconButton>
+					</span>
+				}
 			/>
-			<button
-				type="button"
-				aria-label={shown ? hideLabel : showLabel}
-				aria-pressed={shown}
-				onClick={() => setShown((value) => !value)}
-				className="flex size-6 shrink-0 items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&_svg]:size-4"
-			>
-				{shown ? <ViewOff aria-hidden /> : <View aria-hidden />}
-			</button>
-			{keep && (
-				<TextButton type="button" variant="quiet" size="note" className="ml-monti-8" onClick={keep.onClick}>
-					{keep.label}
-				</TextButton>
-			)}
 		</span>
 	);
 }
@@ -73,12 +70,12 @@ function SavedValue({
 	return (
 		<span
 			data-slot="saved-value"
-			className="flex h-[33px] items-center gap-monti-12 border-transparent border-b py-monti-6"
+			className="flex h-monti-control-lg items-center gap-monti-12 border-transparent border-b"
 		>
 			<span className="min-w-0 flex-1 truncate font-mono text-monti-body">{children}</span>
-			<TextButton type="button" variant="underline" size="note" onClick={action.onClick}>
+			<Button type="button" variant="ghost" size="sm" onClick={action.onClick}>
 				{action.label}
-			</TextButton>
+			</Button>
 		</span>
 	);
 }

@@ -4,6 +4,7 @@ import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	BulkBar as BulkBarFrame,
+	Button,
 	Caret,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,7 +15,6 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	type SelectAllState,
-	TextButton,
 } from "@monti-cms/ui";
 import type { BulkItemResult, BulkParams, BulkSelection } from "../../api/entries";
 import { issueLine } from "../../api/error-message";
@@ -159,9 +159,14 @@ export function BulkBar({
 	};
 
 	const button = (action: Confirmed) => (
-		<TextButton key={action} variant={asks[action].destructive ? "danger" : "plain"} onClick={() => void apply(action)}>
+		<Button
+			size="sm"
+			key={action}
+			variant={asks[action].destructive ? "ghost-danger" : "ghost"}
+			onClick={() => void apply(action)}
+		>
 			{asks[action].label}
-		</TextButton>
+		</Button>
 	);
 	const relations = changeableRelations(site, collection);
 	const actions = [
@@ -169,7 +174,7 @@ export function BulkBar({
 			if (action === "folder.move") {
 				return (
 					<DropdownMenu key={action}>
-						<DropdownMenuTrigger render={<TextButton />}>
+						<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 							{asks["folder.move"].label}
 							<Caret />
 						</DropdownMenuTrigger>
@@ -192,7 +197,7 @@ export function BulkBar({
 			if (action === "change") {
 				return (
 					<DropdownMenu key={action}>
-						<DropdownMenuTrigger render={<TextButton />}>
+						<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 							{t("change")}
 							<Caret />
 						</DropdownMenuTrigger>

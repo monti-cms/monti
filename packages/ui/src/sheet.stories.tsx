@@ -1,248 +1,132 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "./button";
-import { ChangeGroup, ChangeNote } from "./change";
-import { FormField, FormFieldGroup, FormFieldLabel } from "./field";
-import { Input } from "./input";
-import { LockMark } from "./lock-mark";
-import { PickList, PickListItem } from "./pick-list";
+import { Calendar, ListBoxes, TextShortParagraph } from "./icons";
 import {
+	Button,
+	FormField,
+	FormFieldLabel,
+	Input,
+	LockMark,
+	PickList,
+	PickListItem,
 	Sheet,
 	SheetBody,
-	SheetClose,
 	SheetContent,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
+	SheetSummary,
 	SheetTitle,
-	SheetTrigger,
-} from "./sheet";
-import { Tabs, TabsList, TabsTrigger } from "./tabs";
-import { TextButton } from "./text-button";
+} from "./index";
 
-function Fields({ count = 2 }: { count?: number }) {
-	const fields = [
-		{ id: "label", label: "표시 이름", value: "시리즈", mono: false },
-		{ id: "name", label: "이름", value: "series", mono: true },
-		{ id: "slug", label: "주소", value: "/series/:slug", mono: true },
-		{ id: "note", label: "설명", value: "연재하는 글을 묶어요", mono: false },
-		{ id: "order", label: "순서", value: "1", mono: true },
-		{ id: "group", label: "묶음", value: "글", mono: false },
-		{ id: "icon", label: "아이콘", value: "book", mono: true },
-		{ id: "help", label: "도움말", value: "목록 맨 위에 보여요", mono: false },
-	];
-	return (
-		<FormFieldGroup>
-			{fields.slice(0, count).map((field) => (
-				<FormField key={field.id}>
-					<FormFieldLabel htmlFor={field.id}>{field.label}</FormFieldLabel>
-					<Input id={field.id} mono={field.mono} defaultValue={field.value} />
-				</FormField>
-			))}
-		</FormFieldGroup>
-	);
-}
-
-function Body({ title = "필드 추가", count }: { title?: string; count?: number }) {
-	return (
-		<>
-			<SheetHeader>
-				<SheetTitle>{title}</SheetTitle>
-			</SheetHeader>
-			<SheetBody>
-				<Fields count={count} />
-			</SheetBody>
-			<SheetFooter>
-				<SheetClose render={<TextButton />}>취소</SheetClose>
-				<Button>필드 추가</Button>
-			</SheetFooter>
-		</>
-	);
-}
-
-/**
- * The sheet: where work with several inputs happens (add a field, review a save). It opens from the right over a dimmed page, 520px wide, with a
- * 60px head (the title and a close button), the work, and Cancel with one pill at the bottom right. There is no other side.
- */
+/** Where work with several inputs happens: 520px from the right over a dimmed page, a 60px head, Cancel and one pill at the bottom. */
 const meta = {
-	title: "Patterns/Sheet/Sheet",
+	title: "Controls/Overlay/Sheet",
 	component: Sheet,
-	args: {},
-	render: (args) => (
-		<Sheet {...args}>
-			<SheetTrigger render={<Button variant="secondary" />}>필드 추가</SheetTrigger>
-			<SheetContent>
-				<Body />
-			</SheetContent>
-		</Sheet>
-	),
+	parameters: { bleed: true },
 } satisfies Meta<typeof Sheet>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+const Footer = (
+	<SheetFooter>
+		<Button variant="ghost">취소</Button>
+		<Button>추가</Button>
+	</SheetFooter>
+);
 
-export const Open: Story = { args: { defaultOpen: true }, render: meta.render };
-
-/** A body longer than the sheet scrolls between the head and the foot, which stay where they are. */
-export const LongBody: Story = {
-	render: () => (
-		<Sheet defaultOpen>
-			<SheetContent>
-				<Body count={8} />
-			</SheetContent>
-		</Sheet>
-	),
-};
-
-/** What the sheet is about, when the title alone does not say: the file name after it, in mono and quiet. */
-export const Of: Story = {
-	render: () => (
-		<Sheet defaultOpen>
-			<SheetContent>
-				<SheetHeader>
-					<SheetTitle of="blog-export.zip">가져오기</SheetTitle>
-				</SheetHeader>
-				<SheetBody>
-					<Fields count={3} />
-				</SheetBody>
-				<SheetFooter>
-					<SheetClose render={<TextButton />}>취소</SheetClose>
-					<Button>21편 가져오기</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
-	),
-};
-
-/** While the sheet is busy it cannot be left: no close button, and the pill says what is happening. */
-export const Busy: Story = {
-	render: () => (
-		<Sheet defaultOpen>
-			<SheetContent>
-				<SheetHeader closable={false}>
-					<SheetTitle of="blog-export.zip">가져오기</SheetTitle>
-				</SheetHeader>
-				<SheetBody>
-					<Fields count={3} />
-				</SheetBody>
-				<SheetFooter>
-					<Button loading>가져오는 중</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
-	),
-};
-
-/** A body split in two: a list of kinds on the left and the settings of the picked one on the right, under their own tabs (add a field). */
-export const Split: Story = {
-	render: () => (
-		<Sheet defaultOpen>
-			<SheetContent>
-				<SheetHeader>
-					<SheetTitle of="· 노트">필드 추가</SheetTitle>
-				</SheetHeader>
-				<SheetSplit
-					list={
-						<PickList aria-label="종류">
-							<PickListItem selected>글자</PickListItem>
-							<PickListItem>고르기</PickListItem>
-							<PickListItem>미디어</PickListItem>
-							<PickListItem mark="→">관계</PickListItem>
-						</PickList>
-					}
-				>
-					<Tabs defaultValue="basic" render={<div className="flex min-h-0 grow flex-col" />}>
-						<TabsList variant="bar" inset="panel">
-							<TabsTrigger value="basic">기본</TabsTrigger>
-							<TabsTrigger value="advanced">고급</TabsTrigger>
-						</TabsList>
-						<SheetBody>
-							<Fields count={3} />
-						</SheetBody>
-					</Tabs>
-				</SheetSplit>
-				<SheetFooter>
-					<SheetClose render={<TextButton />}>취소</SheetClose>
-					<Button>필드 추가</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
-	),
-};
-
-/** The editor of a field in sheet: titled sections one under another, a lock after the title of a section that cannot be changed. */
+/** Titled sections in the body; a section that cannot be changed ends its title with a lock. */
 export const Sections: Story = {
 	render: () => (
 		<Sheet defaultOpen>
 			<SheetContent>
 				<SheetHeader>
-					<SheetTitle of="· 노트">요약</SheetTitle>
+					<SheetTitle of="노트" ofMono={false}>
+						필드 추가
+					</SheetTitle>
 				</SheetHeader>
 				<SheetBody>
 					<SheetSection title="보기">
-						<Fields count={2} />
+						<FormField>
+							<FormFieldLabel htmlFor="label">라벨</FormFieldLabel>
+							<Input id="label" defaultValue="읽는 시간" />
+						</FormField>
 					</SheetSection>
 					<SheetSection
 						title={
 							<>
-								구조
-								<LockMark label="바꿀 수 없음" />
+								구조 <LockMark label="구조는 바꿀 수 없어요" />
 							</>
 						}
 					>
-						<Fields count={2} />
+						<FormField>
+							<FormFieldLabel htmlFor="name">이름</FormFieldLabel>
+							<Input id="name" defaultValue="readingTime" />
+						</FormField>
 					</SheetSection>
 				</SheetBody>
-				<SheetFooter>
-					<SheetClose render={<TextButton />}>취소</SheetClose>
-					<Button>저장</Button>
-				</SheetFooter>
+				{Footer}
 			</SheetContent>
 		</Sheet>
 	),
 };
 
-/** The quiet part of the title is plain text for a name and a count (`ofMono={false}`); it stays mono for a file name. */
-export const TitleOf: Story = {
+/** A body split in two: the kinds on the left, the picked kind's settings on the right. */
+export const Split: Story = {
 	render: () => (
 		<Sheet defaultOpen>
 			<SheetContent>
 				<SheetHeader>
-					<SheetTitle of="· 게시글 · 바뀐 곳 3" ofMono={false}>
-						검토
-					</SheetTitle>
+					<SheetTitle>필드 추가</SheetTitle>
+				</SheetHeader>
+				<SheetSplit
+					list={
+						<PickList aria-label="필드 종류">
+							<PickListItem selected>
+								<TextShortParagraph />
+								텍스트
+							</PickListItem>
+							<PickListItem>
+								<ListBoxes />
+								선택
+							</PickListItem>
+							<PickListItem>
+								<Calendar />
+								날짜
+							</PickListItem>
+						</PickList>
+					}
+				>
+					<SheetBody>
+						<FormField>
+							<FormFieldLabel htmlFor="split-label">라벨</FormFieldLabel>
+							<Input id="split-label" />
+						</FormField>
+						<SheetSummary>텍스트 필드 · 한 줄 · 비어 있어도 됨</SheetSummary>
+					</SheetBody>
+				</SheetSplit>
+				{Footer}
+			</SheetContent>
+		</Sheet>
+	),
+};
+
+/** Busy: no close button, so the sheet cannot be left; the title names what it is about in mono. */
+export const Busy: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader closable={false}>
+					<SheetTitle of="posts-2026.csv">가져오기</SheetTitle>
 				</SheetHeader>
 				<SheetBody>
-					<Fields count={2} />
+					<FormField>
+						<FormFieldLabel htmlFor="busy">컬렉션</FormFieldLabel>
+						<Input id="busy" defaultValue="게시글" disabled />
+					</FormField>
 				</SheetBody>
 				<SheetFooter>
-					<SheetClose render={<TextButton />}>취소</SheetClose>
-					<Button>적용</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
-	),
-};
-
-/** A body of change blocks (`blocks`): the first block brings its own 16px, so only 4px of the body's 20 stay above it. */
-export const Blocks: Story = {
-	render: () => (
-		<Sheet defaultOpen>
-			<SheetContent>
-				<SheetHeader>
-					<SheetTitle of="· 게시글 · 바뀐 곳 1" ofMono={false}>
-						검토
-					</SheetTitle>
-				</SheetHeader>
-				<SheetBody blocks>
-					<ChangeGroup kind="edit" tag="주소" title="공개 주소" identifier="게시글">
-						<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
-					</ChangeGroup>
-				</SheetBody>
-				<SheetFooter>
-					<SheetClose render={<TextButton />}>취소</SheetClose>
-					<Button>적용</Button>
+					<Button loading>가져오는 중…</Button>
 				</SheetFooter>
 			</SheetContent>
 		</Sheet>

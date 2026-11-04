@@ -1,62 +1,77 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MapRow } from "./map-row";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { Stack } from "./stack";
+import {
+	Box,
+	IssueRow,
+	MapRow,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Stack,
+	Text,
+} from "./index";
 
-/** One line of "match the fields" in an import: the key from the file, an arrow, and what it goes into. */
+/** A row of "match the fields" in an import: the key from the file, an arrow, the field it goes into, and an example or a warning under it. */
 const meta = {
-	title: "Controls/Field/MapRow",
-	component: MapRow,
-	args: { name: "title", children: null },
-} satisfies Meta<typeof MapRow>;
+	title: "Patterns/List/MapRow",
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 const FIELDS = [
 	{ value: "title", label: "제목" },
-	{ value: "summary", label: "요약" },
+	{ value: "publishedAt", label: "발행한 날" },
+	{ value: "tags", label: "태그" },
 	{ value: "skip", label: "가져오지 않음" },
 ];
 
-function FieldSelect({ value, proposal = false }: { value: string; proposal?: boolean }) {
-	return (
-		<Select defaultValue={value} items={FIELDS}>
-			<SelectTrigger size="sm" width="full" proposal={proposal}>
-				<SelectValue />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectItem value="title">제목</SelectItem>
-				<SelectItem value="summary">요약</SelectItem>
-				<SelectItem value="skip">가져오지 않음</SelectItem>
-			</SelectContent>
-		</Select>
-	);
-}
+const pick = (value: string, proposal = false) => (
+	<Select items={FIELDS} defaultValue={value}>
+		<SelectTrigger width="full" size="sm" proposal={proposal}>
+			<SelectValue />
+		</SelectTrigger>
+		<SelectContent>
+			{FIELDS.map((field) => (
+				<SelectItem key={field.value} value={field.value}>
+					{field.label}
+				</SelectItem>
+			))}
+		</SelectContent>
+	</Select>
+);
 
-export const Playground: Story = {
+/** An example, a warning, a match the assistant made (blue), and a key that is not imported (dimmed). */
+export const Rows: Story = {
 	render: () => (
-		<MapRow name="title" example="첫 번째 글">
-			<FieldSelect value="title" />
-		</MapRow>
+		<Stack gap={0} width="sheet">
+			<MapRow name="title" example="봄에 쓴 첫 글">
+				{pick("title")}
+			</MapRow>
+			<MapRow name="date" warning="날짜 3개를 읽을 수 없어요">
+				{pick("publishedAt")}
+			</MapRow>
+			<MapRow name="labels" example="회고, 에디터">
+				{pick("tags", true)}
+			</MapRow>
+			<MapRow name="legacy_id" example="8812" off>
+				{pick("skip")}
+			</MapRow>
+		</Stack>
 	),
 };
 
-/** An example value, a warning, a key that is not imported, and a match the assistant made. */
-export const States: Story = {
+/** What keeps a backup from being restored: one row per problem, its name with the identifier in mono, what it touches in the warning color. */
+export const Issues: Story = {
 	render: () => (
-		<Stack gap={0} className="max-w-md">
-			<MapRow name="title" example="첫 번째 글">
-				<FieldSelect value="title" />
-			</MapRow>
-			<MapRow name="excerpt" warning="비어 있는 글이 12편 있어요">
-				<FieldSelect value="summary" />
-			</MapRow>
-			<MapRow name="legacy_id" off example="1042">
-				<FieldSelect value="skip" />
-			</MapRow>
-			<MapRow name="intro" example="이 글은…">
-				<FieldSelect value="summary" proposal />
-			</MapRow>
-		</Stack>
+		<Box width="sheet">
+			<Stack gap={16}>
+				<Text>문제가 2개 있어서 복원하지 않아요.</Text>
+				<div>
+					<IssueRow name="이 사이트에 없는 필드" code="series" warning="글 14편이 이 값을 가지고 있어요" />
+					<IssueRow name="겹치는 주소" code="/about" warning="두 글이 같은 주소를 써요" />
+				</div>
+			</Stack>
+		</Box>
 	),
 };

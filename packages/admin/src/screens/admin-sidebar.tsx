@@ -1,11 +1,10 @@
 "use client";
 
-import { Image, SettingsAdjust, Tools, TrashCan } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Box,
 	Count,
+	folderTree,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -23,11 +22,12 @@ import {
 	Text,
 	useSidebar,
 } from "@monti-cms/ui";
+import { Image, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { type DragEvent, Fragment, type ReactNode, useState } from "react";
 import { AdminLink as Link } from "../router";
 import { ScreenModeSwitch } from "../ui/screen-mode";
 import { screensMessages } from "./messages";
-import { railFolders } from "./rail-folders";
+import { folderPath, railFolders } from "./rail-folders";
 import { useAdminFeatures } from "./shared/admin-features";
 import { CollectionIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
@@ -56,12 +56,13 @@ export interface AdminSidebarProps {
 	eventsCount?: number | null;
 }
 
-/** The folders of the open collection, under its row: top-level folders, and the folders inside the ones on the open path. Click opens one; entries can be dropped on one. */
+/** The folders of the open collection, under its row: its top-level folders only. The one the open folder sits in is the open row. Click opens one; entries can be dropped on one. */
 function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label: string; closeMobile: () => void }) {
 	const t = useTranslator(screensMessages);
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
-	const rows = railFolders(nav.folders, nav.currentFolder);
+	const rows = railFolders(nav.folders);
 	if (rows.length === 0) return null;
+	const openTop = folderPath(nav.folders, nav.currentFolder)[0]?.id;
 
 	const dropProps = (folderId: string) => ({
 		onDragOver: (event: DragEvent) => {
@@ -78,19 +79,21 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 		},
 	});
 
+	// The sidebar lists a collection's top-level folders only, so every row is at depth 0.
+	const tree = folderTree(rows.map(() => 0));
 	return (
 		<li>
 			<SidebarMenuSub aria-label={t("sidebar.folderTree", { label })}>
-				{rows.map(({ folder, depth }) => {
-					const active = nav.currentFolder === folder.id;
+				{rows.map((folder, index) => {
+					const active = openTop === folder.id;
 					return (
 						<li key={folder.id}>
 							<SidebarMenuSubButton
 								render={<button type="button" />}
 								isActive={active}
 								aria-current={active ? "true" : undefined}
-								depth={Math.min(depth, 3) as 0 | 1 | 2 | 3}
 								dropTarget={dropTarget === folder.id}
+								tree={tree[index]}
 								onClick={() => {
 									nav.onSelectFolder(folder.id);
 									closeMobile();
@@ -188,15 +191,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 	return (
 		<Sidebar label={t("sidebar.label")}>
 			<SidebarHeader>
-				{!rail && (
-					<Box grow minWidth={0}>
-						<Link href={site.adminHref()} onClick={closeMobile}>
-							<Text variant="title" truncate>
-								{site.SITE_NAME || "CMS"}
-							</Text>
-						</Link>
-					</Box>
-				)}
+				<Text variant="title" truncate>
+					<Link href={site.adminHref()} onClick={closeMobile}>
+						{site.SITE_NAME || "CMS"}
+					</Link>
+				</Text>
 				<SidebarRailToggle />
 			</SidebarHeader>
 			<SidebarContent>

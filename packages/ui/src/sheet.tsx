@@ -1,11 +1,11 @@
 "use client";
 
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
-import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { cn } from "./cn";
-import { useModalFocus } from "./dialog";
+import { BACKDROP, useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
+import { Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { PANEL_BODY, PANEL_FOOT, PANEL_HEAD, PANEL_TITLE } from "./side-panel";
 
@@ -26,16 +26,7 @@ function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
 }
 
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
-	return (
-		<SheetPrimitive.Backdrop
-			data-slot="sheet-overlay"
-			className={cn(
-				"fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <SheetPrimitive.Backdrop data-slot="sheet-overlay" className={cn(BACKDROP, className)} {...props} />;
 }
 
 /**
@@ -160,6 +151,20 @@ function SheetSection({
 	);
 }
 
+/** What the sheet will make, said in one quiet line on the tool ground at the end of its body (the field a new field becomes). */
+function SheetSummary({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sheet-summary"
+			className={cn(
+				"rounded-monti-lg bg-monti-tool px-monti-16 py-monti-12 text-monti-meta text-monti-muted",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
 /** Cancel (a text button) and the one pill, right-aligned, at the bottom of the sheet. */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return <div data-slot="sheet-footer" className={cn(PANEL_FOOT, "mt-auto", className)} {...props} />;
@@ -189,6 +194,7 @@ function SheetTitle({
 }
 
 export {
+	SheetSummary,
 	Sheet,
 	SheetBody,
 	SheetClose,

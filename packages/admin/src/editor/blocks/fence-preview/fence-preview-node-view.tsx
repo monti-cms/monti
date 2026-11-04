@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { cn, FormField, FormFieldLabel, Textarea } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { SELECTED_RING } from "../block-model";
 import { blocksMessages } from "../messages";
@@ -189,13 +189,13 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 					</div>
 
 					{/* Raw input field (mono, IME safe) */}
-					<div className="space-y-monti-4">
-						<label htmlFor={inputId} className="font-mono text-monti-caption text-monti-muted">
-							{t("fence.sourceCode")}
-						</label>
-						<textarea
+					<FormField>
+						<FormFieldLabel htmlFor={inputId}>{t("fence.sourceCode")}</FormFieldLabel>
+						<Textarea
 							id={inputId}
 							ref={textareaRef}
+							mono
+							rows={4}
 							value={draft}
 							placeholder={meta.placeholder}
 							spellCheck={false}
@@ -206,9 +206,8 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={handleKeyDown}
-							className="field-sizing-content min-h-24 w-full resize-y rounded-monti-md border border-monti-default bg-transparent px-monti-12 py-monti-8 font-mono text-monti-body outline-none transition-[color,box-shadow] placeholder:text-monti-subtle focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 md:text-monti-body"
 						/>
-					</div>
+					</FormField>
 				</div>
 			) : (
 				// When not selected, show only the preview

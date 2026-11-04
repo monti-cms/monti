@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { IconButton } from "./icon-button";
+import { Renew } from "./icons";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 import { Textarea } from "./textarea";
@@ -67,6 +69,31 @@ export const SizesAndMono: Story = {
 		<Stack gap={12} className="max-w-sm">
 			<Textarea size="sm" placeholder="작게: 패널 안의 메모" />
 			<Textarea mono defaultValue={"export const a = 1;\nexport const b = 2;"} />
+		</Stack>
+	),
+};
+
+/** `action`: a button at the end of the first line (fill from the body). The underline runs under it too. */
+export const WithAction: Story = {
+	render: () => (
+		<Stack gap={24} className="max-w-sm">
+			{[
+				{ key: "empty", value: "" },
+				{ key: "long", value: "단풍이 시작된 산길을 하루 동안 걸은 기록. 아침 일찍 출발해 능선을 따라 걸었다." },
+			].map(({ key, value }) => (
+				<Textarea
+					key={key}
+					size="sm"
+					aria-label="요약"
+					placeholder="비어 있음"
+					defaultValue={value}
+					action={
+						<IconButton label="본문에서 가져오기">
+							<Renew aria-hidden />
+						</IconButton>
+					}
+				/>
+			))}
 		</Stack>
 	),
 };

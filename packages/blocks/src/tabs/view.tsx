@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, Pen, Star, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,6 +9,7 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
+import { Add, Pen, Star, TrashCan } from "@monti-cms/admin/icons";
 import { cn } from "@monti-cms/admin/kit";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";
@@ -94,7 +94,8 @@ export function TabsNodeView() {
 									value={label}
 									required
 									autoFocus
-									size={Math.max(4, label.length + 1)}
+									width="fit"
+									align="center"
 									onCommit={(next) => renameTab(index, next)}
 									onEnter={() => {
 										setRenaming(null);
@@ -102,7 +103,6 @@ export function TabsNodeView() {
 									}}
 									onEscape={() => setRenaming(null)}
 									onBlur={() => setRenaming(null)}
-									className="text-center"
 								/>
 							</div>
 						) : (

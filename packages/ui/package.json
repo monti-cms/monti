@@ -7,7 +7,9 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./icons": "./src/icons.ts",
 		"./internal": "./src/internal.ts",
+		"./spec": "./src/spec-pack/index.tsx",
 		"./theme.css": "./styles/theme.css",
 		"./tokens.css": "./styles/tokens.css"
 	},
@@ -44,7 +46,9 @@
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
+		"storybook-addon-pseudo-states": "10.6.1",
 		"typescript": "^7.0.2",
+		"typescript-api": "npm:typescript@5.9.3",
 		"vite": "^8.3.0"
 	},
 	"files": [
@@ -58,9 +62,17 @@
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
 			},
+			"./icons": {
+				"types": "./dist/icons.d.ts",
+				"default": "./dist/icons.js"
+			},
 			"./internal": {
 				"types": "./dist/internal.d.ts",
 				"default": "./dist/internal.js"
+			},
+			"./spec": {
+				"types": "./dist/spec-pack/index.d.ts",
+				"default": "./dist/spec-pack/index.js"
 			},
 			"./theme.css": "./styles/theme.css",
 			"./tokens.css": "./styles/tokens.css"

@@ -6,9 +6,10 @@
 
 크림색 도구 바탕 위의 왼쪽 내비게이션이다. 위쪽 묶음은 콘텐츠이고, 아래쪽 묶음은 휴지통, 도구, 설정이다.
 
-- 포인터 아래의 행(`.mt-nav:hover`, 그림에서는 `.is-hover`)은 `bg-selected`다. 바탕이 크림색이므로, 종이 목록의 행 호버(`bg-muted`)보다 한 단계 어둡다.
+- 포인터 아래의 행(`.mt-nav:hover`, 그림에서는 `.is-hover`)은 `bg-selected`다. 열린 행의 `bg-current`보다 한 단계 아래다.
 - 현재 위치(`.mt-nav.is-on`)는 한 단계 더 어두운 `bg-current`이고 굵기 600이다. 그래서 포인터 아래의 행과 헷갈리지 않는다. 폴더가 있는 컬렉션은 열려 있을 때 그 아래에 트리를 보인다. 폴더 안에서는 컬렉션 행이 현재 위치로 남고, 트리에서 열린 폴더가 굵어진다.
-- 트리 행(`.mt-nav-sub a`)도 둥근 행이고, 호버하면 `bg-selected`다. 36px 들여쓰기는 행 안의 안쪽 여백이다. 그래서 배경은 위의 행과 같은 너비로 칠해지고 글자만 안으로 들어간다.
+- 사이드바에는 열린 컬렉션의 최상위 폴더만 한 줄씩 보인다. 폴더 안의 폴더는 사이드바에 펼치지 않고, 그 폴더를 열었을 때 목록 화면(경로 줄과 폴더 줄)에서 찾는다. 하위 폴더가 열려 있으면 그것이 속한 최상위 폴더가 열린 행이다.
+- 트리 행(`.mt-nav-sub a`)도 둥근 행이고, 호버하면 `bg-selected`다. 폴더 행에는 가는 나무 선(`border-strong`, 1px)이 있다. 꺾지 않는 세로선 하나가 위 행의 아이콘(하위 폴더면 위 폴더 이름의 첫 글자) 아래로 그 폴더들 옆을 지나간다. 첫 폴더 위에는 4px 여유를 두고, 선은 마지막 폴더 이름의 가운데보다 8px 아래에서 끝난다. 폴더 이름은 모든 단계에서 가장 가까운 선에서 20px 뒤에 선다(맨 위 단계 38px, 한 단계에 22px씩 더). 아래 깊이의 행을 지나는 위 깊이의 선은 끊기지 않는다. 화면은 폴더의 깊이 목록을 `folderTree`에 넣어 행마다 `tree`를 준다. 38px 들여쓰기는 행 안의 안쪽 여백이다. 그래서 배경은 위의 행과 같은 너비로 칠해지고 글자만 안으로 들어간다.
 - 숫자는 mono이고 오른쪽 끝에 있다.
 - 행은 높이 36px, 양옆 안쪽 여백 10px, `radius-md` 모양이다.
 
@@ -16,7 +17,9 @@
 
 `Sidebar`는 도구 바탕 위의 `nav`다. 오른쪽 가장자리를 따라 선이 있고, 사이트 이름이 든 머리, 묶음들의 행, 바닥이 있다. 쓰는 사람이 가장자리를 끌어 너비를 바꾼다(200px에서 400px, 끌기 전에는 232px, `width-sidebar`). 좁은 화면에서는 흐려진 페이지 위로 왼쪽에서 열리는 서랍이 된다. 시트처럼 모서리가 각지고 열린 쪽 가장자리에 선이 있다. `label`은 스크린 리더용 이름이다.
 
-부품: `SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`, `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 20px, 양옆 14px(접으면 6px라서 36px 행이 48px 레일을 채운다), 아래 16px이며, 행 사이는 2px다.
+부품: `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`, `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 12px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
+
+`SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 호버 바탕도 같은 `bg-selected`다(디자인 시스템의 색 규칙이 설정의 컬렉션 열을 이 목록에 넣는다). `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
 
 ## 머리 행
 

@@ -3,11 +3,11 @@
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
-import { ArrowRight, type ArrowUp, TrashCan, Undo } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, FieldRow, IconButton, Stack } from "@monti-cms/ui";
+import { ArrowRight, type ArrowUp, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { schemaChangesMessages } from "./changes.messages";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
@@ -236,16 +236,10 @@ export function Row({
 				}}
 				changed={changed || mark?.kind === "edited"}
 				changedLabel={ts("changed")}
+				problems={issues.length > 0 ? t("field.problems", { count: issues.length }) : undefined}
 				onOpen={() => ctx.onOpen(place, name)}
 				openLabel={t("field.toggle", { name })}
 			>
-				{issues.length > 0 && (
-					<span
-						role="img"
-						aria-label={t("field.problems", { count: issues.length })}
-						className="absolute top-1/2 right-1 size-1.5 -translate-y-1/2 rounded-monti-full bg-monti-danger-emphasis"
-					/>
-				)}
 				<RowButtons buttons={buttons} />
 				{moving && top && (
 					<MoveDialog

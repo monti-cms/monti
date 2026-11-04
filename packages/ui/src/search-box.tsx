@@ -1,10 +1,10 @@
 "use client";
 
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { Close, Search } from "@carbon/icons-react";
 import { type FocusEvent, type KeyboardEvent, useRef, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
+import { CHIP_REMOVE } from "./chip";
 import { cn } from "./cn";
 import {
 	DropdownMenu,
@@ -13,6 +13,7 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { Close, Search } from "./icons";
 import { useUiLabels } from "./labels";
 
 type SearchTarget<T extends string> = { value: T; label: string };
@@ -34,7 +35,8 @@ function SearchBox<T extends string = string>({
 	className,
 }: {
 	value: string;
-	onValueChange: (value: string) => void;
+	/** Without it the box is drawn and keeps no words. */
+	onValueChange?: (value: string) => void;
 	placeholder?: string;
 	"aria-label": string;
 	/** The places to look. Without them there is no picker. */
@@ -53,7 +55,7 @@ function SearchBox<T extends string = string>({
 		<div
 			data-slot="search-box"
 			className={cn(
-				"flex h-monti-control-md w-full max-w-80 items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/20",
+				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/20",
 				targets && current ? "pl-monti-4" : "pl-monti-12",
 				className,
 			)}
@@ -87,7 +89,7 @@ function SearchBox<T extends string = string>({
 				placeholder={placeholder}
 				value={value}
 				autoFocus={autoFocus}
-				onChange={(event) => onValueChange(event.target.value)}
+				onChange={(event) => onValueChange?.(event.target.value)}
 				className="min-w-0 flex-1 appearance-none truncate border-0 bg-transparent text-monti-body outline-none placeholder:text-monti-faint [&::-webkit-search-cancel-button]:hidden"
 			/>
 			{value !== "" && (
@@ -96,10 +98,10 @@ function SearchBox<T extends string = string>({
 					aria-label={labels.clear}
 					// The words go; the box stays, ready for new ones.
 					onClick={() => {
-						onValueChange("");
+						onValueChange?.("");
 						field.current?.focus();
 					}}
-					className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0 text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+					className={CHIP_REMOVE}
 				>
 					<Close aria-hidden className="size-4" />
 				</button>

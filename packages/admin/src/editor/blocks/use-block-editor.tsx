@@ -607,6 +607,8 @@ export interface ContentProps extends Omit<ComponentProps<"div">, "ref" | "child
 	readonly as?: ElementType;
 	/** Show only this child (0-based) and hide the others, like the active tab of tabs. Default: show all. */
 	readonly visibleChild?: number;
+	/** The inside of a boxed block: 12px at the sides, 8 above and 12 below, the first and last child's own margins dropped so they do not add to it. */
+	readonly padded?: boolean;
 }
 
 /**
@@ -618,7 +620,7 @@ export interface ContentProps extends Omit<ComponentProps<"div">, "ref" | "child
  *
  * @experimental
  */
-export function Content({ className, style, as, visibleChild, ...rest }: ContentProps) {
+export function Content({ className, style, as, visibleChild, padded = false, ...rest }: ContentProps) {
 	const block = useBlockEditor();
 	const scope = useId();
 	if (block.raw.node.type?.isLeaf) {
@@ -629,7 +631,7 @@ export function Content({ className, style, as, visibleChild, ...rest }: Content
 	const host = {
 		...rest,
 		as,
-		className: cn(className),
+		className: cn(padded && CONTENT_PADDING, className),
 		style,
 		"data-monti-block-content": "",
 		...(visibleChild === undefined ? {} : { "data-monti-content": scope }),
@@ -645,6 +647,16 @@ export function Content({ className, style, as, visibleChild, ...rest }: Content
 	);
 }
 
+/** The inside of a boxed block (`Content padded`). For nested custom blocks the wrapper inside the react renderer holds the margin. */
+const CONTENT_PADDING = cn(
+	"px-monti-12 pt-monti-8 pb-monti-12 text-monti-default",
+	"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
+	"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
+);
+
+/** The box of a block that stands in the text on its own (code explorer, collapsible, a site's block): a hairline box on the page ground, 24px above and below. */
+const BOXED = "my-monti-24 rounded-monti-md border bg-monti-page";
+
 /** Props of {@link BlockFrame}. Other attributes (`data-*`, `aria-*`, `style`, `id`) are passed to the frame element. */
 export interface BlockFrameProps extends Omit<ComponentProps<"div">, "ref"> {
 	/** Element to render. Default `div` (image uses `figure`). */
@@ -657,6 +669,8 @@ export interface BlockFrameProps extends Omit<ComponentProps<"div">, "ref"> {
 	readonly framed?: boolean;
 	/** Draw the selected ring while the block is selected. Default `true`. */
 	readonly selectedRing?: boolean;
+	/** The hairline box on the page ground, 24px above and below, of a block that stands on its own in the text. */
+	readonly boxed?: boolean;
 }
 
 /**
@@ -670,6 +684,7 @@ export function BlockFrame({
 	ref,
 	framed = true,
 	selectedRing = true,
+	boxed = false,
 	className,
 	children,
 	...rest
@@ -684,7 +699,12 @@ export function BlockFrame({
 			data-monti-block-frame=""
 			data-monti-framed={framed ? "" : undefined}
 			data-monti-container-node={isContainer ? block.raw.node.type.name : undefined}
-			className={cn(framed && "group/container relative", selectedRing && block.selected && SELECTED_RING, className)}
+			className={cn(
+				framed && "group/container relative",
+				boxed && BOXED,
+				selectedRing && block.selected && SELECTED_RING,
+				className,
+			)}
 		>
 			{children}
 			<BlockIssueNotice blockId={block.id} />

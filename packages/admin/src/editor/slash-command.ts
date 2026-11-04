@@ -1,3 +1,5 @@
+import { perSite, type Site } from "@monti-cms/core/site";
+import { headingIcons, type MontiIcon } from "@monti-cms/ui";
 import {
 	Code,
 	DataTable,
@@ -11,9 +13,7 @@ import {
 	Quotes,
 	Subtract,
 	TextSuperscript,
-} from "@carbon/icons-react";
-import { perSite, type Site } from "@monti-cms/core/site";
-import { headingIcons, type MontiIcon } from "@monti-cms/ui";
+} from "@monti-cms/ui/icons";
 import type { Editor, Range } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";

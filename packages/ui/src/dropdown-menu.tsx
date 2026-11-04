@@ -1,15 +1,18 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { ChevronRight, Search } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { ChevronRight, Search } from "./icons";
 import {
 	MENU_CARD,
 	MENU_ITEM,
 	MENU_LABEL,
 	MENU_MOTION,
 	MENU_SCROLL,
+	MENU_SEARCH_FIELD,
+	MENU_SEARCH_ICON,
+	MENU_SEARCH_ROW,
 	MENU_SEPARATOR,
 	MENU_SUB_MARK,
 	MenuTick,
@@ -241,12 +244,8 @@ function DropdownMenuSearch({
 	placeholder?: string;
 }) {
 	return (
-		<div
-			role="search"
-			data-slot="dropdown-menu-search"
-			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-[6px] pb-[9px] text-monti-default"
-		>
-			<Search aria-hidden className="size-3.5 shrink-0 text-monti-subtle" />
+		<div role="search" data-slot="dropdown-menu-search" className={MENU_SEARCH_ROW}>
+			<Search aria-hidden className={MENU_SEARCH_ICON} />
 			<input
 				type="text"
 				aria-label={label}
@@ -258,7 +257,7 @@ function DropdownMenuSearch({
 						return;
 					event.stopPropagation();
 				}}
-				className="min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
+				className={MENU_SEARCH_FIELD}
 			/>
 		</div>
 	);

@@ -1,6 +1,5 @@
 "use client";
 
-import { Restart } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -20,6 +19,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { Restart } from "@monti-cms/ui/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { errorText } from "../../api/client";
@@ -280,13 +280,15 @@ export function EventsScreen() {
 															>
 																{tc("retry")}
 															</Button>
-															<TextButton
+															<Button
+																variant="ghost"
+																size="sm"
 																type="button"
 																aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
 																onClick={() => void requestDismiss(key)}
 															>
 																{t("action.dismiss")}
-															</TextButton>
+															</Button>
 														</Inline>
 													)}
 												</TableCell>

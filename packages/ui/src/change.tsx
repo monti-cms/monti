@@ -82,15 +82,16 @@ function ChangeLines({ className, ...props }: ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="change-lines"
-			className={cn("m-0 grid grid-cols-[minmax(0,1fr)_auto] gap-x-monti-16 gap-y-monti-6 text-monti-note", className)}
+			className={cn("m-0 flex flex-col gap-monti-6 text-monti-note", className)}
 			{...props}
 		/>
 	);
 }
 
 /**
- * One line of `ChangeLines`. `then` is what happens: plain, `danger` for what is deleted, `warning` for what blocks the change (put the button that
- * clears it there).
+ * One line of `ChangeLines`: `what` on the left, `then` on the right, 40px apart at least. `then` is what happens: plain, `danger` for what is deleted,
+ * `warning` for what blocks the change (put the button that clears it there). A value too long for the line (a before and after of the writing
+ * rules) wraps, still right-aligned; mark the words that differ with `Highlight`.
  */
 function ChangeLine({
 	what,
@@ -102,11 +103,11 @@ function ChangeLine({
 	tone?: "default" | "danger" | "warning";
 }) {
 	return (
-		<>
+		<div data-slot="change-line" className="flex items-baseline justify-between gap-monti-40">
 			<span className="min-w-0 text-monti-muted">{what}</span>
 			<span
 				className={cn(
-					"whitespace-nowrap text-right",
+					"min-w-0 text-right",
 					tone === "default" && "text-monti-default",
 					tone === "danger" && "text-monti-danger",
 					tone === "warning" && "text-monti-warning",
@@ -114,7 +115,7 @@ function ChangeLine({
 			>
 				{then}
 			</span>
-		</>
+		</div>
 	);
 }
 

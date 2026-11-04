@@ -1,8 +1,8 @@
 "use client";
 
-import { TextColor } from "@carbon/icons-react";
 import type { AdminComponents, Site, Translator } from "@monti-cms/admin";
 import { allowsMark, type EditorMarkExtension, type MarkAttrs } from "@monti-cms/admin/editor";
+import { TextColor } from "@monti-cms/admin/icons";
 import { cleanTextColor, textColorProps } from "./colors";
 import { colorBlock } from "./definition";
 import { COLOR_MARK_NAME, TextColorPanel } from "./menu";

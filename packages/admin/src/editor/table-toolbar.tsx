@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { BlockBar, Inline, Separator } from "@monti-cms/ui";
+import { FloatingBar, Inline, Separator } from "@monti-cms/ui";
+import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -187,7 +187,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 			// design-allow: toolbar placed over the measured table
 			style={{ position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 30 }}
 		>
-			<BlockBar aria-label={t("tableToolbar.label")}>
+			<FloatingBar aria-label={t("tableToolbar.label")}>
 				{TABLE_TOOL_GROUPS(t).map((group, index) => (
 					<Inline key={group[0]?.label} gap={2}>
 						{index > 0 && <Separator orientation="vertical" length="control" />}
@@ -196,7 +196,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 						))}
 					</Inline>
 				))}
-			</BlockBar>
+			</FloatingBar>
 		</div>,
 		document.body,
 	);

@@ -1,28 +1,36 @@
 "use client";
 
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	BlockBar,
-	BlockBarButton,
-	BlockBarSeparator,
+	Button,
 	Count,
 	cn,
+	FloatingBar,
+	FloatingBarButton,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	Image,
 	Input,
 	Option,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
+	Separator,
 	Switch,
 	Text,
-	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
+import {
+	Crop,
+	Image as ImageIcon,
+	SettingsAdjust,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+} from "@monti-cms/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEditorState } from "@tiptap/react";
 import type React from "react";
@@ -263,9 +271,9 @@ export function ImageBlockView() {
 	};
 
 	const nextButton = (
-		<TextButton type="button" variant="quiet" onClick={goNext}>
+		<Button variant="ghost" size="sm" type="button" onClick={goNext}>
 			{t("imageNode.next")} <span className="text-monti-micro">↵</span>
-		</TextButton>
+		</Button>
 	);
 	const altField = (
 		<FormField>
@@ -329,18 +337,18 @@ export function ImageBlockView() {
 						(block.selected || isEditing) && "opacity-100",
 					)}
 				>
-					<BlockBar aria-label={t("imageNode.toolbar")}>
+					<FloatingBar aria-label={t("imageNode.toolbar")}>
 						{ALIGN_TOOLS(t).map((tool) => (
-							<BlockBarButton
+							<FloatingBarButton
 								key={tool.value}
 								label={tool.label}
 								pressed={(align || "center") === tool.value}
 								onClick={() => block.setValues({ align: tool.value })}
 							>
 								<tool.icon aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 						))}
-						<BlockBarSeparator />
+						<Separator orientation="vertical" length="bar" />
 						<Popover
 							open={isEditing}
 							onOpenChange={(open) => {
@@ -348,13 +356,13 @@ export function ImageBlockView() {
 								setAltOnly(false);
 							}}
 						>
-							<BlockBarButton
+							<FloatingBarButton
 								label={t("imageNode.settings")}
 								pressed={isEditing}
 								trigger={(button) => <PopoverTrigger render={button} />}
 							>
 								<SettingsAdjust aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 							{altOnly ? (
 								<PopoverContent
 									anchor={picture}
@@ -404,11 +412,11 @@ export function ImageBlockView() {
 							)}
 						</Popover>
 						{canRender && (
-							<BlockBarButton label={t("imageCrop.title")} onClick={() => setIsCropOpen(true)}>
+							<FloatingBarButton label={t("imageCrop.title")} onClick={() => setIsCropOpen(true)}>
 								<Crop aria-hidden />
-							</BlockBarButton>
+							</FloatingBarButton>
 						)}
-					</BlockBar>
+					</FloatingBar>
 				</div>
 			)}
 
@@ -450,28 +458,29 @@ export function ImageBlockView() {
 							/>
 						</div>
 					) : (
-						<div className="relative overflow-hidden rounded-monti-md bg-monti-muted">
-							<img
-								src={resolved && "url" in resolved ? resolved.url : ""}
-								alt={alt || ""}
-								className="h-auto w-full rounded-monti-md object-contain"
-								onLoad={(e) => {
-									const { naturalWidth, naturalHeight } = e.currentTarget;
-									if (naturalWidth > 0 && naturalHeight > 0) {
-										setAspectRatio(naturalWidth / naturalHeight);
-									}
-								}}
-							/>
-						</div>
+						<Image
+							src={resolved && "url" in resolved ? resolved.url : null}
+							alt={alt || ""}
+							ratio="auto"
+							fit="contain"
+							loading="eager"
+							onLoad={(e) => {
+								const { naturalWidth, naturalHeight } = e.currentTarget;
+								if (naturalWidth > 0 && naturalHeight > 0) {
+									setAspectRatio(naturalWidth / naturalHeight);
+								}
+							}}
+						/>
 					)
 				) : isChecking ? (
 					<Text as="p" tone="subtle" role="status">
 						{t("imageNode.loading")}
 					</Text>
 				) : (
-					<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
-						{t("imageNode.unavailable")}
-					</div>
+					<>
+						<Image src={null} alt="" ratio="wide" fallback={ImageIcon} />
+						<Text srOnly>{t("imageNode.unavailable")}</Text>
+					</>
 				)}
 				{/* The corner handles at the bottom of the picture: dragging one changes the width. */}
 				{showTools && (

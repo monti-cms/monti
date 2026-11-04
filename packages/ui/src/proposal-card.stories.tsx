@@ -1,120 +1,263 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ProposalActions, ProposalCard, ProposalItem, ProposalResult, ProposalRow } from "./proposal-card";
-import { Ins } from "./proposal-marks";
+import {
+	Box,
+	Ins,
+	ProposalActions,
+	ProposalCard,
+	ProposalEntry,
+	ProposalItem,
+	ProposalResult,
+	ProposalRow,
+} from "./index";
+
+const noop = () => {};
 
 /**
- * A proposal in the conversation: what it is and how much, where it stands, one row per group of changes, and the foot with what can be done. Once
- * applied the foot says how it went, with the time and a way back; what could not be applied is listed under it with the reason.
+ * A proposal in the conversation: the head with how much it changes and where it stands, a line per group of changes (or a file per new text),
+ * and the foot: waiting (details · discard · apply), applying, applied (✓ count · failed · time · undo all), or discarded (faint).
  */
 const meta = {
-	title: "Monti/Assistant/ProposalCard",
+	title: "Monti/Proposal/ProposalCard",
 	component: ProposalCard,
 	args: { title: "제안" },
 	decorators: [
 		(Story) => (
-			<div className="w-[332px]">
+			<Box width="assistant" padding={24}>
 				<Story />
-			</div>
+			</Box>
 		),
 	],
 } satisfies Meta<typeof ProposalCard>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const groups = (
+const ROWS = (
 	<>
 		<ProposalRow name="다듬기" detail="발행 후 고친 글" count="3곳" />
-		<ProposalRow name="요약 채우기" detail="고른 글" count="2편" />
-		<ProposalRow name="2024 폴더로 옮기기" count="11편" />
-		<ProposalRow name="휴지통으로" detail="쓰지 않는 이미지" count="3개" />
+		<ProposalRow name="요약 채우기" detail="요약이 빈 글" count="11편" />
+		<ProposalRow name="폴더 옮기기" detail="폴더 없는 글" count="4편" />
+		<ProposalRow name="태그 정리" detail="비슷한 태그" count="1건" />
 	</>
 );
 
-/** Waiting for review (flow 2 · 11): the groups, "상세 보기", "버리기" and the apply pill with the count. */
 export const Waiting: Story = {
-	args: {
-		summary: "4묶음 · 19건",
-		status: "검토 대기",
-		children: groups,
-		footer: (
-			<ProposalActions
-				reviewLabel="상세 보기"
-				onReview={() => undefined}
-				discardLabel="버리기"
-				onDiscard={() => undefined}
-				applyLabel="19건 적용"
-				onApply={() => undefined}
-			/>
-		),
-	},
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="4묶음 · 19건"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="상세 보기"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="19건 적용"
+					onApply={noop}
+				/>
+			}
+		>
+			{ROWS}
+		</ProposalCard>
+	),
 };
 
-/** Applied, one item not (flow 2 · 16): the result line with the time and "모두 되돌리기", then the item that failed with its reason. */
+/** Applying: the head counts and the pill works; nothing can be pressed. */
+export const Applying: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="4묶음 · 19건"
+			status="적용 중 9 / 17"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="상세 보기"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="19건 적용"
+					onApply={noop}
+					busy
+				/>
+			}
+		>
+			{ROWS}
+		</ProposalCard>
+	),
+};
+
+/** Applied with one failure: the result foot, and under it the item that could not be applied and why. */
 export const Applied: Story = {
-	args: {
-		summary: "4묶음 · 19건",
-		status: "적용됨",
-		statusTone: "success",
-		children: groups,
-		footer: (
-			<ProposalResult
-				appliedLabel="✓ 16건 적용"
-				failedLabel="1건 못 함"
-				time="10:52"
-				undoLabel="모두 되돌리기"
-				onUndo={() => undefined}
-			/>
-		),
-		after: <ProposalRow name="못 옮김" detail="겨울 사진" count="그 사이 휴지통으로 감" tone="danger" />,
-	},
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="4묶음 · 17건"
+			status="적용됨"
+			statusTone="success"
+			footer={
+				<ProposalResult
+					appliedLabel="✓ 16건 적용"
+					failedLabel="1건 못 함"
+					time="10:52"
+					undoLabel="모두 되돌리기"
+					onUndo={noop}
+				/>
+			}
+			after={<ProposalRow name="못 함" detail="겨울 준비 · 그 사이 휴지통으로 감" tone="danger" />}
+		>
+			{ROWS}
+		</ProposalCard>
+	),
 };
 
-/** New texts for media files (flow 2 · 19): each file's name and its proposed alt text; no review screen, so no "상세 보기". */
-export const AltText: Story = {
-	args: {
-		summary: "대체 텍스트 · 3개",
-		status: "검토 대기",
-		children: (
-			<>
-				<ProposalItem title="desk-morning.jpg">
-					<Ins>아침 햇빛이 드는 책상 위 노트북과 커피</Ins>
-				</ProposalItem>
-				<ProposalItem title="cover-cache.png">
-					<Ins>밝은 종이 위에 놓인 캐시 글 제목</Ins>
-				</ProposalItem>
-				<ProposalItem title="seoul-night.jpg">
-					<Ins>비 갠 밤, 불 켜진 서울 골목과 젖은 보도</Ins>
-				</ProposalItem>
-			</>
-		),
-		footer: (
-			<ProposalActions
-				discardLabel="버리기"
-				onDiscard={() => undefined}
-				applyLabel="3개 적용"
-				onApply={() => undefined}
-			/>
-		),
-	},
+/** Undone: the status says when. */
+export const Undone: Story = {
+	render: () => (
+		<ProposalCard title="제안" summary="4묶음 · 19건" status="되돌림 · 10:44" statusTone="subtle">
+			{ROWS}
+		</ProposalCard>
+	),
 };
 
-/** Discarded: faint, and it says so. */
+/** Discarded: the card is faint. */
 export const Discarded: Story = {
-	args: {
-		summary: "태그 지우기 · 4개",
-		status: "버림",
-		statusTone: "subtle",
-		muted: true,
-		children: <ProposalRow name="태그 지우기" count="4개" />,
-	},
+	render: () => (
+		<ProposalCard title="제안" summary="4묶음 · 19건" status="버림" statusTone="subtle" muted>
+			{ROWS}
+		</ProposalCard>
+	),
 };
 
-/** Undone from the card: what was undone, and when. */
-export const Reverted: Story = {
-	args: {
-		summary: "요약 채우기 · 2편",
-		status: "되돌림 · 10:44",
-		statusTone: "subtle",
-		children: <ProposalRow name="요약 채우기" detail="고른 글" count="2편" />,
-	},
+/** New text per file (alt texts): three files at most, then a faint "외 97개" line and "상세 보기". */
+export const Files: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="대체 텍스트 · 100개"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="상세 보기"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="100개 적용"
+					onApply={noop}
+				/>
+			}
+		>
+			<ProposalItem title="autumn-trail.jpg">
+				<Ins>단풍이 든 산길을 걷는 두 사람</Ins>
+			</ProposalItem>
+			<ProposalItem title="harbor-night.png">
+				<Ins>불이 켜진 밤 항구와 정박한 배들</Ins>
+			</ProposalItem>
+			<ProposalItem title="desk-setup.webp">
+				<Ins>노트북과 커피잔이 놓인 나무 책상</Ins>
+			</ProposalItem>
+			<ProposalRow detail="외 97개" />
+		</ProposalCard>
+	),
+};
+
+/** Three files or fewer: no "상세 보기". */
+export const FewFiles: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="대체 텍스트 · 2개"
+			status="검토 대기"
+			statusTone="warning"
+			footer={<ProposalActions discardLabel="버리기" onDiscard={noop} applyLabel="2개 적용" onApply={noop} />}
+		>
+			<ProposalItem title="autumn-trail.jpg">
+				<Ins>단풍이 든 산길을 걷는 두 사람</Ins>
+			</ProposalItem>
+			<ProposalItem title="harbor-night.png">
+				<Ins>불이 켜진 밤 항구와 정박한 배들</Ins>
+			</ProposalItem>
+		</ProposalCard>
+	),
+};
+
+/** A field filled on each entry (flow 6): the entry's name, slug and field, then the new text alone, since the old value was empty. */
+export const Entries: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="요약 채우기 · 글 2편"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="검토"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="적용"
+					onApply={noop}
+				/>
+			}
+		>
+			<ProposalEntry
+				name="발행 후 고친 글"
+				slug="/edited-post"
+				field="요약"
+				after="예시 코드를 고친 뒤 다시 정리한 메모. 바뀐 코드와 이유를 한 번에 봅니다."
+			/>
+			<ProposalEntry
+				name="쓰는 중인 글"
+				slug="/draft-post"
+				field="요약"
+				after="글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."
+			/>
+		</ProposalCard>
+	),
+};
+
+/** Many entries: the first three, then a quiet "외 4편" line; "검토" opens them all. A value that was there is struck through over the new one. */
+export const ManyEntries: Story = {
+	render: () => (
+		<ProposalCard
+			title="제안"
+			summary="요약 고치기 · 글 7편"
+			status="검토 대기"
+			statusTone="warning"
+			footer={
+				<ProposalActions
+					reviewLabel="검토"
+					onReview={noop}
+					discardLabel="버리기"
+					onDiscard={noop}
+					applyLabel="적용"
+					onApply={noop}
+				/>
+			}
+		>
+			<ProposalEntry
+				name="발행 후 고친 글"
+				slug="/edited-post"
+				field="요약"
+				before="예시 코드를 고친 메모입니다."
+				after="예시 코드를 고친 뒤 다시 정리한 메모."
+			/>
+			<ProposalEntry
+				name="쓰는 중인 글"
+				slug="/draft-post"
+				field="요약"
+				after="글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."
+			/>
+			<ProposalEntry
+				name="가을 산책"
+				slug="/autumn-walk"
+				field="요약"
+				before="산길을 걸었다."
+				after="단풍이 시작된 산길을 걸으며 본 것들."
+			/>
+			<ProposalRow detail="외 4편" />
+		</ProposalCard>
+	),
 };

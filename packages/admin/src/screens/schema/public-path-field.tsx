@@ -65,6 +65,7 @@ export function PublicPathField({
 							aria-label={t("collection.path")}
 							prefix="/"
 							suffix={segment === "" ? ":slug" : "/:slug"}
+							width="fit"
 							value={shown}
 							autoComplete="off"
 							placeholder="posts"

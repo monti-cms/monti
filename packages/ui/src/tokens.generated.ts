@@ -103,6 +103,74 @@ export const PADDING_BOTTOM = {
 	48: "pb-monti-48",
 } as const;
 
+/** Padding at the start of a row. */
+export const PADDING_LEFT = {
+	0: "pl-0",
+	2: "pl-monti-2",
+	4: "pl-monti-4",
+	6: "pl-monti-6",
+	8: "pl-monti-8",
+	10: "pl-monti-10",
+	12: "pl-monti-12",
+	16: "pl-monti-16",
+	20: "pl-monti-20",
+	24: "pl-monti-24",
+	32: "pl-monti-32",
+	40: "pl-monti-40",
+	48: "pl-monti-48",
+} as const;
+
+/** Padding at the end of a row. */
+export const PADDING_RIGHT = {
+	0: "pr-0",
+	2: "pr-monti-2",
+	4: "pr-monti-4",
+	6: "pr-monti-6",
+	8: "pr-monti-8",
+	10: "pr-monti-10",
+	12: "pr-monti-12",
+	16: "pr-monti-16",
+	20: "pr-monti-20",
+	24: "pr-monti-24",
+	32: "pr-monti-32",
+	40: "pr-monti-40",
+	48: "pr-monti-48",
+} as const;
+
+/** Space above, only for a screen spec's Spacing between two children (`spec/spacing.ts`). */
+export const MARGIN_TOP = {
+	0: "mt-0",
+	2: "mt-monti-2",
+	4: "mt-monti-4",
+	6: "mt-monti-6",
+	8: "mt-monti-8",
+	10: "mt-monti-10",
+	12: "mt-monti-12",
+	16: "mt-monti-16",
+	20: "mt-monti-20",
+	24: "mt-monti-24",
+	32: "mt-monti-32",
+	40: "mt-monti-40",
+	48: "mt-monti-48",
+} as const;
+
+/** Space before, only for a screen spec's Spacing between two children in a row (`spec/spacing.ts`). */
+export const MARGIN_LEFT = {
+	0: "ml-0",
+	2: "ml-monti-2",
+	4: "ml-monti-4",
+	6: "ml-monti-6",
+	8: "ml-monti-8",
+	10: "ml-monti-10",
+	12: "ml-monti-12",
+	16: "ml-monti-16",
+	20: "ml-monti-20",
+	24: "ml-monti-24",
+	32: "ml-monti-32",
+	40: "ml-monti-40",
+	48: "ml-monti-48",
+} as const;
+
 /** Surfaces, by background role. The black one carries its own text color, so what is written on it can be read. */
 export const BACKGROUND = {
 	page: "bg-monti-page",
@@ -159,8 +227,10 @@ export const MAX_WIDTH = {
 
 /** Heights of controls and bars. */
 export const HEIGHT = {
+	"control-lg": "h-monti-control-lg",
 	"control-md": "h-monti-control-md",
 	"control-sm": "h-monti-control-sm",
+	"control-xs": "h-monti-control-xs",
 	"icon-button": "h-monti-icon-button",
 	header: "h-monti-header",
 	toolbar: "h-monti-toolbar",
@@ -170,8 +240,10 @@ export const HEIGHT = {
 
 /** The least height of a box, by the same height tokens. */
 export const MIN_HEIGHT = {
+	"control-lg": "min-h-monti-control-lg",
 	"control-md": "min-h-monti-control-md",
 	"control-sm": "min-h-monti-control-sm",
+	"control-xs": "min-h-monti-control-xs",
 	"icon-button": "min-h-monti-icon-button",
 	header: "min-h-monti-header",
 	toolbar: "min-h-monti-toolbar",

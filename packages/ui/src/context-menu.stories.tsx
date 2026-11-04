@@ -1,6 +1,6 @@
-import { Copy, FolderMoveTo, FolderOpen, Launch, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fireEvent } from "storybook/test";
+import { useState } from "react";
+import { Archive, Copy, Folder, Launch, Tag, TrashCan, Undo } from "./icons";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -12,134 +12,166 @@ import {
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
-} from "./context-menu";
-import { MenuShortcut } from "./menu-parts";
-import { Text } from "./text";
+	DropdownMenuCheckboxItem,
+	DropdownMenuSearch,
+	MenuShortcut,
+	Text,
+} from "./index";
 
-/**
- * Opens the menu the way a right click does, at a point inside its target (its center), so a story shows the menu where it would open in use. Base UI
- * places a context menu at the pointer; there is no anchor to hold it open by.
- */
-const openAtTarget: NonNullable<Story["play"]> = async ({ canvasElement }) => {
-	const target = canvasElement.querySelector('[data-slot="context-menu-trigger"]');
-	if (!target) throw new Error("no context menu target");
-	const box = target.getBoundingClientRect();
-	fireEvent.contextMenu(target, { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
-};
-
-function Target({ children = "여기를 오른쪽 클릭하세요" }: { children?: string }) {
-	return (
-		<ContextMenuTrigger className="flex h-32 w-72 items-center justify-center rounded-monti-lg border border-monti-default">
-			<Text tone="muted">{children}</Text>
-		</ContextMenuTrigger>
-	);
-}
-
-/** What opens at the cursor on a row or tile: 232px, a 16px icon first, a shortcut or › last, and the red row at the bottom. */
+/** The row menu that opens at the cursor on a right click (232px): an icon on each row, a shortcut or › at the end, the danger row last. */
 const meta = {
 	title: "Controls/Menu/ContextMenu",
 	component: ContextMenu,
-	args: {},
-	render: (args) => (
-		<ContextMenu {...args}>
-			<Target />
+} satisfies Meta<typeof ContextMenu>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+const Row = (
+	<ContextMenuTrigger>
+		<Text>봄에 쓴 첫 글</Text>
+	</ContextMenuTrigger>
+);
+
+/** A post row: open, copy, the second levels, and the trash at the end. */
+export const Post: Story = {
+	render: () => (
+		<ContextMenu defaultOpen>
+			{Row}
 			<ContextMenuContent>
 				<ContextMenuItem>
-					<FolderOpen aria-hidden />
+					<Launch />
 					열기
 				</ContextMenuItem>
 				<ContextMenuItem>
-					<Launch aria-hidden />새 탭에서 열기
+					<Launch />새 탭에서 열기
 				</ContextMenuItem>
 				<ContextMenuItem>
-					<Copy aria-hidden />
+					<Copy />
 					복제
 				</ContextMenuItem>
 				<ContextMenuSeparator />
-				<ContextMenuSub>
+				<ContextMenuSub defaultOpen>
 					<ContextMenuSubTrigger>
-						<FolderMoveTo aria-hidden />
+						<Folder />
 						폴더로
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent>
-						<ContextMenuItem>루트</ContextMenuItem>
-						<ContextMenuItem>시리즈</ContextMenuItem>
+						<ContextMenuItem>에세이</ContextMenuItem>
+						<ContextMenuItem>작업 노트</ContextMenuItem>
 					</ContextMenuSubContent>
 				</ContextMenuSub>
 				<ContextMenuSub>
 					<ContextMenuSubTrigger>
-						<Tag aria-hidden />
-						태그 추가
+						<Tag />
+						태그
 					</ContextMenuSubTrigger>
-					<ContextMenuSubContent>
-						<ContextMenuItem>리액트</ContextMenuItem>
-					</ContextMenuSubContent>
 				</ContextMenuSub>
 				<ContextMenuSeparator />
+				<ContextMenuItem>
+					<Archive />
+					보관
+				</ContextMenuItem>
 				<ContextMenuItem variant="danger">
-					<TrashCan aria-hidden />
+					<TrashCan />
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
 	),
-} satisfies Meta<typeof ContextMenu>;
-export default meta;
-type Story = StoryObj<typeof meta>;
+};
 
-export const Playground: Story = {};
-
-export const Open: Story = { play: openAtTarget };
-
-/** A row that cannot be used is faint, and its end says why. */
-export const DisabledItems: Story = {
-	play: openAtTarget,
+/** Several rows picked: the menu starts with how many, holds what the bulk bar holds, and has no icons. */
+export const Several: Story = {
 	render: () => (
-		<ContextMenu>
-			<Target>글 목록의 한 줄</Target>
+		<ContextMenu defaultOpen>
+			{Row}
 			<ContextMenuContent>
-				<ContextMenuItem>
-					<FolderOpen aria-hidden />
-					열기
-				</ContextMenuItem>
-				<ContextMenuItem disabled>
-					<Copy aria-hidden />
-					복제<MenuShortcut>쓰는 중</MenuShortcut>
-				</ContextMenuItem>
+				<ContextMenuGroup>
+					<ContextMenuLabel>2개 항목</ContextMenuLabel>
+					<ContextMenuItem>발행</ContextMenuItem>
+					<ContextMenuItem>보관</ContextMenuItem>
+				</ContextMenuGroup>
+				<ContextMenuSub>
+					<ContextMenuSubTrigger>폴더로</ContextMenuSubTrigger>
+				</ContextMenuSub>
 				<ContextMenuSeparator />
-				<ContextMenuItem variant="danger" disabled>
-					<TrashCan aria-hidden />
+				<ContextMenuItem>내보내기</ContextMenuItem>
+				<ContextMenuItem variant="danger">
 					휴지통으로
+					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
 	),
 };
 
-/** With several rows picked, the menu starts with their count; what only works on one row (open, copy) is left out. */
-export const SeveralRows: Story = {
-	play: openAtTarget,
+const TAGS = [
+	{ name: "리액트", held: "all" },
+	{ name: "성능", held: "some", count: "1/2" },
+	{ name: "타입스크립트", held: "none" },
+	{ name: "넥스트", held: "none" },
+] as const;
+
+/** The tags of the picked rows, one level beside: the dropdown menu's search row and check boxes, as they are. A tag some of them hold is mixed. */
+function TagsLevel() {
+	const [query, setQuery] = useState("");
+	return (
+		<ContextMenuSub defaultOpen>
+			<ContextMenuSubTrigger>태그</ContextMenuSubTrigger>
+			<ContextMenuSubContent>
+				<DropdownMenuSearch value={query} onValueChange={setQuery} label="태그 찾기" />
+				{TAGS.filter((tag) => tag.name.includes(query)).map((tag) => (
+					<DropdownMenuCheckboxItem
+						key={tag.name}
+						box
+						checked={tag.held === "all"}
+						mixed={tag.held === "some"}
+						closeOnClick={false}
+					>
+						{tag.name}
+						{"count" in tag && <MenuShortcut>{tag.count}</MenuShortcut>}
+					</DropdownMenuCheckboxItem>
+				))}
+			</ContextMenuSubContent>
+		</ContextMenuSub>
+	);
+}
+
+/** Several rows, their tags open: a right-click menu takes the dropdown menu's rows as they are. */
+export const SeveralTags: Story = {
 	render: () => (
-		<ContextMenu>
-			<Target>글 목록의 한 줄</Target>
+		<ContextMenu defaultOpen>
+			{Row}
 			<ContextMenuContent>
 				<ContextMenuGroup>
 					<ContextMenuLabel>2개 항목</ContextMenuLabel>
+					<ContextMenuItem>발행</ContextMenuItem>
 				</ContextMenuGroup>
+				<ContextMenuSeparator />
 				<ContextMenuSub>
-					<ContextMenuSubTrigger>
-						<FolderMoveTo aria-hidden />
-						폴더로
-					</ContextMenuSubTrigger>
-					<ContextMenuSubContent>
-						<ContextMenuItem>루트</ContextMenuItem>
-					</ContextMenuSubContent>
+					<ContextMenuSubTrigger>카테고리</ContextMenuSubTrigger>
 				</ContextMenuSub>
+				<TagsLevel />
+			</ContextMenuContent>
+		</ContextMenu>
+	),
+};
+
+/** A trash row: restore, then delete for good. */
+export const Trash: Story = {
+	render: () => (
+		<ContextMenu defaultOpen>
+			{Row}
+			<ContextMenuContent>
+				<ContextMenuItem>
+					<Undo />
+					복원
+				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger">
-					<TrashCan aria-hidden />
-					휴지통으로
+					<TrashCan />
+					영구 삭제
 					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>
 			</ContextMenuContent>

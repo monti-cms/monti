@@ -3,13 +3,15 @@ import { cn } from "./cn";
 
 /**
  * One section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under. When the screen is narrow
- * the fields wrap under the title; `stacked` always puts them under it. `id` is the anchor a link can land on.
+ * the fields wrap under the title; `stacked` always puts them under it. `dense` is a group of options inside a stacked section's column (a collection's
+ * editor options): 20px above and below, its title 12px over them. `id` is the anchor a link can land on.
  */
 function Section({
 	title,
 	children,
 	last = false,
 	stacked = false,
+	dense = false,
 	className,
 	...props
 }: Omit<ComponentProps<"section">, "title" | "aria-labelledby"> & {
@@ -19,6 +21,8 @@ function Section({
 	stacked?: boolean;
 	/** The last section of the page: no hairline under it. */
 	last?: boolean;
+	/** A group of options in a stacked column: 20px above and below, the title 12px over them. Always stacked. */
+	dense?: boolean;
 }) {
 	const titleId = useId();
 	return (
@@ -26,17 +30,25 @@ function Section({
 			data-slot="section"
 			aria-labelledby={titleId}
 			className={cn(
-				"border-monti-muted py-monti-24",
-				stacked ? "flex flex-col gap-monti-16" : "flex flex-wrap gap-x-monti-40 gap-y-monti-8",
+				"border-monti-muted",
+				dense ? "flex flex-col gap-monti-12 py-monti-20" : "py-monti-24",
+				dense ? undefined : stacked ? "flex flex-col gap-monti-16" : "flex flex-wrap gap-x-monti-40 gap-y-monti-8",
 				!last && "border-b",
 				className,
 			)}
 			{...props}
 		>
-			<h2 id={titleId} className={cn("mb-0 text-monti-title", stacked ? "mt-0" : "mt-monti-6 flex-[1_1_180px]")}>
+			<h2
+				id={titleId}
+				className={cn("mb-0 text-monti-title", stacked || dense ? "mt-0" : "mt-monti-6 flex-[1_1_180px]")}
+			>
 				{title}
 			</h2>
-			{stacked ? children : <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-monti-16">{children}</div>}
+			{stacked || dense ? (
+				children
+			) : (
+				<div className="flex min-w-0 flex-[999_1_420px] flex-col gap-monti-24">{children}</div>
+			)}
 		</section>
 	);
 }

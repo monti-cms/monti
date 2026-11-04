@@ -53,7 +53,7 @@ Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugin
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon`, a code line effect's `icon` and a login method's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
 The admin package includes only the commonly used icons, so register other names with `icons` of the same `components`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
@@ -63,7 +63,8 @@ import { View } from "@carbon/icons-react";
 export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
-Each block of `@monti-cms/blocks` and `@monti-cms/ai` declare theirs the same way.
+Monti's own packages take every icon from one list, `@monti-cms/admin/icons` (the design system's `@monti-cms/ui/icons`), and never import
+Carbon directly; `pnpm check:design` enforces it in this repository.
 
 ## The body is a stored document
 
@@ -437,8 +438,9 @@ so typing in one field does not re-render the others. The default field UI (the 
 are managed with `addChild`, `removeChild`, `moveChild` and `setChildValue`; they respect `definition.children.min` and `max` and return an `EditorResult` with
 code `limit` when a bound would be broken (`read_only` while the editor is locked). `transact(tx => ...)` groups several edits, which read the live document, into one document change
 and so one undo step, for example renaming a tab and the default tab that points at it. `raw` (`{ editor, node, getPos }`) is the one escape hatch and the only place Tiptap and
-ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab) and `<BlockFrame />`
-is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-monti-block-content]`.
+ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab, and `padded` for the
+inside of a boxed block) and `<BlockFrame />` is the outer element with the selected ring and hover scope (`boxed` draws the hairline box on the page
+ground that a block standing on its own in the text has). The child blocks sit inside the first element of `[data-monti-block-content]`.
 
 `useEntryEditor(options)` is the entry editor without its screen: load, a local recovery copy, explicit server save, publish, status changes
 (archive, trash, restore), and recovery and conflict state. **It is not a server autosave.** While editing, only a recovery copy is kept in the browser

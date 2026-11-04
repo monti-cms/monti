@@ -1,3 +1,4 @@
+import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
 import {
 	Archive,
 	Copy,
@@ -11,8 +12,7 @@ import {
 	Tag,
 	TrashCan,
 	Upload,
-} from "@carbon/icons-react";
-import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
+} from "@monti-cms/ui/icons";
 import { createElement } from "react";
 import type { BulkParams, BulkSelection } from "../api/entries";
 import { commonMessages } from "../lib/common.messages";

@@ -1,8 +1,8 @@
 "use client";
 
-import { Upload } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { toast } from "@monti-cms/ui";
+import { Upload } from "@monti-cms/ui/icons";
 import { type DragEvent, useEffect, useState } from "react";
 import { mediaMessages } from "./messages";
 

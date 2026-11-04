@@ -3,7 +3,8 @@
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	BulkToolbar,
+	BulkBar,
+	Button,
 	Caret,
 	Chip,
 	DropdownMenu,
@@ -19,8 +20,7 @@ import {
 	PageToolbar,
 	PageToolbarEnd,
 	Segmented,
-	TextButton,
-	ToolbarDivider,
+	Separator,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { folderChoices, type MediaState, selectAllState, toggleKind, withKind } from "./media-state";
@@ -102,7 +102,7 @@ function FilterBar({ library }: { library: MediaLibraryView }) {
 				))}
 			{library.scoped && currentFolder && (
 				<>
-					<ToolbarDivider />
+					<Separator orientation="vertical" length="control" flush />
 					<Segmented
 						aria-label={t("scope.label")}
 						size="sm"
@@ -174,7 +174,7 @@ function PickBar({
 	const { picked, total } = library;
 	const current = pickedFolder === undefined ? "" : (pickedFolder ?? TOP);
 	return (
-		<BulkToolbar
+		<BulkBar
 			label={t("bulk.count", { count: picked.size })}
 			selectAll={{
 				state: selectAllState(picked.size, total),
@@ -186,7 +186,7 @@ function PickBar({
 			{...(onRequest ? { request: { label: t("bulk.altText"), onClick: onRequest } } : {})}
 		>
 			<DropdownMenu>
-				<DropdownMenuTrigger render={<TextButton />}>
+				<DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
 					{t("bulk.toFolder")}
 					<Caret />
 				</DropdownMenuTrigger>
@@ -212,8 +212,10 @@ function PickBar({
 					<DropdownMenuItem onClick={onNewFolder}>{t("bulk.newFolder")}</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<TextButton onClick={onTrash}>{t("bulk.trash")}</TextButton>
-		</BulkToolbar>
+			<Button variant="ghost" size="sm" onClick={onTrash}>
+				{t("bulk.trash")}
+			</Button>
+		</BulkBar>
 	);
 }
 

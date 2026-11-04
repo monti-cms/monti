@@ -1,12 +1,23 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
-import { Box, Button, FormFieldError, Heading, Image, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
-import type * as React from "react";
+import { ScreenSpec, type ScreenSpecDocument } from "@monti-cms/ui/spec";
 import type { AdminServer } from "../../host/server";
+import spec from "./login.screen.json";
+import { type LoginButton, type LoginError, type LoginMode, LoginView } from "./login-view";
 import { loginMessages } from "./messages";
 
+/** The `error` of the address, as the screen tells it: Auth.js's `CredentialsSignin`, or a reason from the first-admin route. */
+const ERRORS: Record<string, LoginError> = {
+	CredentialsSignin: "credentials",
+	confirm: "confirm",
+	email: "email",
+	password: "password",
+};
+
 /**
+ * Reads the session and the login methods and hands the screen what to show. The first sign-in screen (no error, at most one button) is drawn from
+ * `login.screen.json`, a pilot of screens written as data; every other state is still drawn by `LoginView`.
  * Sign in and out are plain form posts to the core API (its `v1/session/*` routes), not server actions: a server action cannot carry the
  * CMS instance, because the values it closes over must be serializable.
  */
@@ -17,7 +28,7 @@ export default async function AdminLoginPage({
 }: {
 	cms: Cms;
 	server: AdminServer;
-	/** The query of the address: `error` says why the last attempt did not work (Auth.js's `CredentialsSignin`, or a reason from the first-admin route). */
+	/** The query of the address: `error` says why the last attempt did not work (Auth.js's `CredentialsSignin`, with its `code`, or a reason from the first-admin route). */
 	searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 	const { site } = cms;
@@ -35,181 +46,85 @@ export default async function AdminLoginPage({
 		server.redirect(site.adminHref());
 	}
 
-	const isUnauthorizedUser = Boolean(accountId && !auth.isAdmin(accountId));
 	const providers = auth.providers;
-	const rawError = (await searchParams)?.error;
-	const error = Array.isArray(rawError) ? rawError[0] : rawError;
+	const query = await searchParams;
+	const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+	const code = first(query?.error);
+	// Auth.js's reason for a refused password sign-in: `locked` after too many recent misses.
+	const locked = code === "CredentialsSignin" && first(query?.code) === "locked";
+	const error = code ? (ERRORS[code] ?? "other") : undefined;
 	const accounts = auth.accounts;
-	const min = accounts?.minPasswordLength ?? 0;
 	// The built-in login with no account yet: the first admin is created here. The route that handles the form checks that again on the server.
 	const firstAdmin = Boolean(accounts) && !(await accounts?.hasAny());
-	const errorText = error
-		? ({
-				CredentialsSignin: t("errorCredentials"),
-				confirm: t("errorConfirm"),
-				email: t("errorEmail"),
-				password: t("errorPassword", { min }),
-				closed: t("errorClosed"),
-			}[error] ?? t("errorOther"))
-		: undefined;
-	const formProviders = providers.filter((candidate) => candidate.credentials);
-	const buttonProviders = providers.filter((candidate) => !candidate.credentials);
-	// With a single login method, use its name in the guidance text (e.g. "GitHub admin account").
-	const provider = providers.length === 1 ? (providers[0]?.name ?? "") : "";
+	const signInAction = (id: string) => adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(id)}`);
+	const passwordMethod = providers.find((candidate) => candidate.credentials);
+
+	const mode: LoginMode =
+		accountId && !auth.isAdmin(accountId)
+			? {
+					kind: "sign-in",
+					buttons: buttonsOf(providers, signInAction),
+					...(passwordMethod ? { passwordAction: signInAction(passwordMethod.id) } : {}),
+					denied: { name: session?.user?.name || accountId, signOutAction: adminApiUrl("/v1/session/sign-out") },
+				}
+			: firstAdmin
+				? {
+						kind: "first-admin",
+						action: adminApiUrl("/v1/session/first-admin"),
+						minPasswordLength: accounts?.minPasswordLength ?? 0,
+						...(error ? { errors: [error] } : {}),
+					}
+				: providers.length === 0
+					? { kind: "no-login" }
+					: code === "closed"
+						? { kind: "closed", signInHref: site.adminHref("/login") }
+						: {
+								kind: "sign-in",
+								buttons: buttonsOf(providers, signInAction),
+								...(passwordMethod ? { passwordAction: signInAction(passwordMethod.id) } : {}),
+								...(locked ? { locked: true } : error ? { error } : {}),
+							};
 
 	const siteName = site.config.site?.name?.trim() || "Monti";
-
-	return (
-		<Stack align="center" justify="center" gap={24} padding={16} minHeight="screen">
-			<Stack as="header" align="center" gap={4}>
-				<Heading as="h1" variant="heading">
-					{siteName}
-				</Heading>
-				<Text as="p" variant="caption" tone="muted">
-					{t("managedWith")}
-				</Text>
-			</Stack>
-			<Box width="full" maxWidth="assistant">
-				<Stack gap={24}>
-					<Stack gap={8}>
-						{firstAdmin ? (
-							<Text as="div" align="center" variant="title">
-								{t("firstAdminTitle")}
-							</Text>
-						) : null}
-						<Text as="div" align="center" tone="muted">
-							{firstAdmin
-								? t("firstAdminDescription")
-								: formProviders.length > 0 && buttonProviders.length === 0
-									? t("passwordDescription")
-									: t("description", { provider })}
-						</Text>
-					</Stack>
-					<Stack gap={12}>
-						{isUnauthorizedUser ? (
-							<Stack gap={8} align="center">
-								<Text as="div" align="center" tone="danger" weight="semibold">
-									{t("forbiddenTitle")}
-								</Text>
-								<Text as="div" align="center" tone="muted">
-									{t("forbidden", { provider, accountId: accountId ?? "" })}
-								</Text>
-								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
-									<Box paddingTop={8}>
-										<TextButton type="submit" variant="underline">
-											{t("signOut")}
-										</TextButton>
-									</Box>
-								</form>
-							</Stack>
-						) : firstAdmin ? (
-							<form method="post" action={adminApiUrl("/v1/session/first-admin")}>
-								<Stack gap={16}>
-									{errorText ? <SignInError text={errorText} /> : null}
-									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
-									<TextField
-										id="password"
-										name="password"
-										label={t("password")}
-										type="password"
-										autoComplete="new-password"
-										minLength={min}
-										hint={t("passwordHint", { min })}
-									/>
-									<TextField
-										id="confirm"
-										name="confirm"
-										label={t("confirmPassword")}
-										type="password"
-										autoComplete="new-password"
-										minLength={min}
-									/>
-									<Button type="submit" width="full">
-										{t("createFirstAdmin")}
-									</Button>
-								</Stack>
-							</form>
-						) : providers.length === 0 ? (
-							<Stack gap={8} align="center">
-								<Text as="div" align="center" tone="danger" weight="semibold">
-									{t("noLoginTitle")}
-								</Text>
-								<Text as="div" align="center" tone="muted">
-									{t("noLogin")}
-								</Text>
-							</Stack>
-						) : (
-							<Stack gap={16}>
-								{errorText ? <SignInError text={errorText} /> : null}
-								{formProviders.map((authProvider) => (
-									<form
-										key={authProvider.id}
-										method="post"
-										action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
-									>
-										<Stack gap={16}>
-											<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
-											<TextField
-												id="password"
-												name="password"
-												label={t("password")}
-												type="password"
-												autoComplete="current-password"
-											/>
-											<Button type="submit" width="full">
-												{t("signInSubmit")}
-											</Button>
-										</Stack>
-									</form>
-								))}
-								<Stack gap={8}>
-									{buttonProviders.map((authProvider) => (
-										<form
-											key={authProvider.id}
-											method="post"
-											action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
-										>
-											<Button type="submit" width="full">
-												{authProvider.icon ? <Image src={authProvider.icon} alt="" size="icon" radius="none" /> : null}
-												{t("signIn", { provider: authProvider.name })}
-											</Button>
-										</form>
-									))}
-								</Stack>
-							</Stack>
-						)}
-					</Stack>
-				</Stack>
-			</Box>
-		</Stack>
-	);
+	if (mode.kind === "sign-in" && !mode.error && !mode.denied && !mode.locked && mode.buttons.length <= 1) {
+		const [button] = mode.buttons;
+		return (
+			<ScreenSpec
+				// A JSON import types its numbers as `number`; `ScreenSpec` checks the spec against the catalog before it draws.
+				spec={spec as ScreenSpecDocument}
+				data={{
+					siteName,
+					password: Boolean(mode.passwordAction),
+					both: Boolean(mode.passwordAction && button),
+					github: button && {
+						name: button.name,
+						icon: button.icon,
+						variant: mode.passwordAction ? "secondary" : "primary",
+					},
+				}}
+				text={(key, params) => (key in loginMessages.messages.en ? t(key as LoginKey, params) : undefined)}
+				actions={{
+					...(mode.passwordAction ? { password: mode.passwordAction } : {}),
+					...(button ? { github: button.action } : {}),
+				}}
+			/>
+		);
+	}
+	return <LoginView t={t} siteName={siteName} mode={mode} />;
 }
 
-/** What went wrong with the sign-in that was just tried, under the form it was sent from. */
-function SignInError({ text }: { text: string }) {
-	return (
-		<Text as="div" align="center">
-			<FormFieldError>{text}</FormFieldError>
-		</Text>
-	);
-}
+type LoginKey = keyof typeof loginMessages.messages.en;
 
-/** One labelled input of the login forms. */
-function TextField({
-	id,
-	label,
-	hint,
-	...props
-}: { id: string; label: string; hint?: string } & Omit<React.ComponentProps<typeof Input>, "id">) {
-	return (
-		<Stack gap={8}>
-			<Label htmlFor={id}>{label}</Label>
-			{hint ? (
-				<Text as="p" variant="caption" tone="muted">
-					{hint}
-				</Text>
-			) : null}
-			<Input id={id} required {...props} />
-		</Stack>
-	);
-}
+/** The login methods that are one button each (every method but the email and password form). */
+const buttonsOf = (
+	providers: ReturnType<Cms["auth"]>["providers"],
+	signInAction: (id: string) => string,
+): LoginButton[] =>
+	providers
+		.filter((candidate) => !candidate.credentials)
+		.map((candidate) => ({
+			id: candidate.id,
+			name: candidate.name,
+			action: signInAction(candidate.id),
+			...(candidate.icon ? { icon: candidate.icon } : {}),
+		}));

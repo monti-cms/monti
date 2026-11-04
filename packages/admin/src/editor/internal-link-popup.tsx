@@ -1,9 +1,18 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import {
+	Command,
+	CommandEmpty,
+	CommandItem,
+	CommandList,
+	FormFieldError,
+	Popover,
+	PopoverContent,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
+import { useMemo } from "react";
 import { CollectionIcon } from "../screens/shared/collection-icon";
 import { type InternalLinkItem, internalLinkHref } from "./internal-link";
 import { editorMessages } from "./messages";
@@ -16,6 +25,8 @@ interface InternalLinkPopupProps {
 	coords: { top: number; left: number };
 	selectedIndex: number;
 	onSelect: (item: InternalLinkItem) => void;
+	/** The pointer is on the row at this index. */
+	onHighlight: (index: number) => void;
 	onClose: () => void;
 }
 
@@ -37,8 +48,8 @@ function itemMeta(site: Site, item: InternalLinkItem): string {
 }
 
 /**
- * `[[` internal entry link search results. Same look as the slash menu.
- * The editor handles focus and arrow keys; this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
+ * `[[` internal entry link search results, in the slash menu's card under the caret (`Popover` + `Command`). The editor keeps the focus and handles the
+ * arrow keys and Enter, so this only draws the row the keyboard is on (`selectedIndex`) and tells which row the pointer is on.
  */
 export function InternalLinkPopup({
 	items,
@@ -47,101 +58,61 @@ export function InternalLinkPopup({
 	coords,
 	selectedIndex,
 	onSelect,
+	onHighlight,
 	onClose,
 }: InternalLinkPopupProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
-	const [mounted, setMounted] = useState(false);
-	const listRef = useRef<HTMLDivElement>(null);
+	// The caret's line: the card opens under it (24px is the line the coordinates start).
+	const anchor = useMemo(
+		() => ({ getBoundingClientRect: () => new DOMRect(coords.left, coords.top, 1, 24) }),
+		[coords.left, coords.top],
+	);
 
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	useEffect(() => {
-		listRef.current
-			?.querySelector<HTMLElement>(`[data-index="${selectedIndex}"]`)
-			?.scrollIntoView({ block: "nearest" });
-	}, [selectedIndex]);
-
-	if (!mounted) return null;
-
-	return createPortal(
-		<div
-			ref={listRef}
-			role="listbox"
-			aria-label={t("internalLink.label")}
-			aria-busy={isLoading}
-			tabIndex={-1}
-			// design-allow: popup placed under the caret from measured coordinates
-			style={{ position: "fixed", top: `${coords.top + 24}px`, left: `${coords.left}px`, zIndex: 9999 }}
-			onKeyDown={(event) => {
-				if (event.key === "Escape") {
-					event.preventDefault();
-					onClose();
-				}
-			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-monti-lg border bg-monti-page p-monti-4 text-monti-default shadow-monti-floating"
-		>
-			{items.map((item, index) => (
-				<div
-					key={item.id}
-					role="option"
-					aria-selected={index === selectedIndex}
-					data-index={index}
-					tabIndex={-1}
-					onMouseDown={(event) => event.preventDefault()}
-					onClick={() => onSelect(item)}
-					onKeyDown={(event) => {
-						if (event.key === "Enter") onSelect(item);
-					}}
-					className={cn(
-						"flex cursor-pointer items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-8 outline-none",
-						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
-					)}
+	return (
+		<Popover open onOpenChange={(open) => !open && onClose()}>
+			<PopoverContent
+				anchor={anchor}
+				side="bottom"
+				align="start"
+				padding="menu"
+				width="md"
+				initialFocus={false}
+				finalFocus={false}
+				// Keep the focus in the body: pressing a row must not take it.
+				onMouseDown={(event) => event.preventDefault()}
+			>
+				<Command
+					shouldFilter={false}
+					value={String(selectedIndex)}
+					onValueChange={(value) => onHighlight(Number(value))}
 				>
-					<Inline
-						as="span"
-						aria-hidden
-						justify="center"
-						padding={8}
-						border="all"
-						radius="md"
-						background="page"
-						shrink={false}
-					>
-						<CollectionIcon collection={item.collection} />
-					</Inline>
-					<Stack as="span" gap={0} minWidth={0}>
-						<Text weight="medium" truncate>
-							{item.title}
-						</Text>
-						<Text variant="caption" tone="muted" truncate>
-							{itemMeta(site, item)}
-						</Text>
-					</Stack>
-				</div>
-			))}
-			{isLoading ? (
-				<Box as="div" paddingX={8} paddingY={8}>
-					<Text as="p" variant="caption" tone="muted" role="status">
-						{t("internalLink.searching")}
-					</Text>
-				</Box>
-			) : error ? (
-				<Box paddingX={8} paddingY={8}>
-					<FormFieldError>{error}</FormFieldError>
-				</Box>
-			) : (
-				items.length === 0 && (
-					<Box paddingX={8} paddingY={8}>
-						<Text as="p" variant="caption" tone="muted">
-							{t("internalLink.empty")}
-						</Text>
-					</Box>
-				)
-			)}
-		</div>,
-		document.body,
+					<CommandList label={t("internalLink.label")} aria-busy={isLoading}>
+						{items.map((item, index) => (
+							<CommandItem key={item.id} value={String(index)} onSelect={() => onSelect(item)}>
+								<CollectionIcon collection={item.collection} />
+								<Stack as="span" gap={2} minWidth={0}>
+									<Text tone="default" truncate>
+										{item.title}
+									</Text>
+									<Text variant="caption" tone="subtle" truncate>
+										{itemMeta(site, item)}
+									</Text>
+								</Stack>
+							</CommandItem>
+						))}
+						{isLoading ? (
+							<CommandEmpty role="status">{t("internalLink.searching")}</CommandEmpty>
+						) : error ? (
+							<CommandEmpty>
+								<FormFieldError>{error}</FormFieldError>
+							</CommandEmpty>
+						) : (
+							<CommandEmpty>{t("internalLink.empty")}</CommandEmpty>
+						)}
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
 	);
 }

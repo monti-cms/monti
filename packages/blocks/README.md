@@ -76,7 +76,7 @@ import "@monti-cms/blocks/styles.css";
 - Editor: callout, collapsible, tabs, columns and the code explorer come with their edit screens (admin theme colors, `styles.css`). Mermaid and chart are
   edited with a code input and a preview. The preview is drawn by this extension (the app installs the optional dependencies `mermaid` and `recharts`, which are loaded only when a preview opens),
   and if the site registers the same name through `fencePreviews` (`@monti-cms/admin`), that one wins. Chart colors are the CSS variables `--chart-1` to `--chart-5`,
-  and if the app does not set them, the defaults in `render.css` apply (the editor preview takes the app's `--chart-N` too, with the same defaults, as `--monti-chart-N`).
+  and if the app does not set them, the defaults in `render.css` apply (the editor preview takes the app's `--chart-N` too, with the same defaults, as `--monti-chart-N`). The chart preview is the public page's default chart (`chart.css`, which `render.css` imports), so a chart looks the same in the editor and on the default site.
 - Inline marks: the tooltip is offered in the formatting toolbar (after link), the text bubble and the slash menu; text color in the formatting toolbar (after inline marks) and the text bubble; and the code link in the text bubble
   (when the document has a code block) plus description, relink and unlink for the link at the cursor (see "Text marks" in the `@monti-cms/admin` README).
   Code line labels, the "Link to body" item in the code block line menu, the linking hint line and the highlight of the hovered line are core code block features, and they use this mark through this extension's

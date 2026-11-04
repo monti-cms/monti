@@ -1,43 +1,35 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { NavLink } from "./nav-link";
-import { RailLayout } from "./rail-layout";
-import { TextButton } from "./text-button";
+import { Add } from "./icons";
+import { Button, NavLink, RailLayout, Section, Text } from "./index";
 
-/** Links on the left and their content on the right; narrow, the content wraps under the links. */
+/** A page part with a list of links beside it, as the collections sit beside their editor in Settings. Narrow, the content wraps under the links. */
 const meta = {
-	title: "Patterns/RailLayout",
-	component: RailLayout,
-	args: { label: "컬렉션", rail: null, children: null },
-	decorators: [
-		(Story) => (
-			<div className="max-w-[880px]">
-				<Story />
-			</div>
-		),
-	],
-} satisfies Meta<typeof RailLayout>;
+	title: "Patterns/Frame/RailLayout",
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {
-	render: (args) => (
+export const Collections: Story = {
+	render: () => (
 		<RailLayout
-			{...args}
+			label="컬렉션"
 			rail={
 				<>
-					<NavLink active note="post" onSelect={() => undefined}>
+					<NavLink active note="posts" onSelect={() => {}}>
 						게시글
 					</NavLink>
-					<NavLink note="memo" onSelect={() => undefined}>
-						메모
+					<NavLink note="notes" onSelect={() => {}}>
+						노트
 					</NavLink>
-					<div className="pt-monti-12 pl-[10px]">
-						<TextButton quiet>+ 새 컬렉션</TextButton>
-					</div>
+					<Button variant="ghost" size="sm">
+						<Add />새 컬렉션
+					</Button>
 				</>
 			}
 		>
-			<p className="pt-monti-20 text-monti-body">컬렉션의 탭과 내용이 여기에 와요.</p>
+			<Section title="기본" last>
+				<Text variant="note">게시글 컬렉션의 설정</Text>
+			</Section>
 		</RailLayout>
 	),
 };

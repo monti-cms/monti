@@ -6,6 +6,7 @@ import {
 	Button,
 	Inline,
 	LockMark,
+	ReadValue,
 	Sheet,
 	SheetBody,
 	SheetContent,
@@ -19,7 +20,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
@@ -40,7 +40,6 @@ import { type CollectionEditing, KindOptions, kindChoices, LOCALIZED_KINDS } fro
 import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 import { schemaFieldsMessages } from "./fields.messages";
 import { schemaMessages } from "./messages";
-import { ReadValue } from "./read-value";
 import {
 	allFieldNames,
 	FIELD_KEY_ORDER,
@@ -307,9 +306,9 @@ export function FieldSheet({
 				<SheetFooter>
 					{!disabled && (
 						<Inline gap={12} grow minWidth={0}>
-							<TextButton variant="danger" disabled={blocked !== null} onClick={remove}>
+							<Button variant="ghost-danger" size="lg" disabled={blocked !== null} onClick={remove}>
 								{t("sheet.delete")}
-							</TextButton>
+							</Button>
 							{blocked && (
 								<Box minWidth={0}>
 									<Text variant="caption" tone="muted" data-testid="remove-blocked">
@@ -319,7 +318,9 @@ export function FieldSheet({
 							)}
 						</Inline>
 					)}
-					<TextButton onClick={onClose}>{tc("cancel")}</TextButton>
+					<Button variant="ghost" size="lg" onClick={onClose}>
+						{tc("cancel")}
+					</Button>
 					<Button type="button" disabled={disabled} onClick={apply}>
 						{t("sheet.save")}
 					</Button>

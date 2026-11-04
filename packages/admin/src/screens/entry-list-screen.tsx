@@ -1,6 +1,5 @@
 "use client";
 
-import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -15,6 +14,7 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
+import { Add, FolderAdd } from "@monti-cms/ui/icons";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { AdminEntriesTable } from "./admin-entries-table";
@@ -42,7 +42,11 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
-			{list.folders && <TextButton onClick={list.folders.addFolder}>{t("list.addFolder")}</TextButton>}
+			{list.folders && (
+				<Button variant="ghost" size="lg" onClick={list.folders.addFolder}>
+					{t("list.addFolder")}
+				</Button>
+			)}
 			<ListSearch state={list.state} onChange={list.update} />
 			<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 				<Add aria-hidden />

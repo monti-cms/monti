@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft } from "@carbon/icons-react";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
@@ -18,8 +17,8 @@ import {
 	StatusBarCell,
 	StatusBarSpacer,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
+import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
 import { errorText, isConflict } from "../../api/client";
@@ -87,10 +86,10 @@ function BackLink() {
 	const site = useSite();
 	const t = useTranslator(templatesMessages);
 	return (
-		<TextButton variant="quiet" render={<Link href={templatesHref(site)} />}>
+		<Button variant="ghost" size="sm" render={<Link href={templatesHref(site)} />} nativeButton={false} role="link">
 			<ChevronLeft aria-hidden />
 			{t("editor.back")}
-		</TextButton>
+		</Button>
 	);
 }
 
@@ -197,7 +196,9 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 
 			{conflict && (
 				<Banner tone="danger" role="alert" title={t("editor.conflict")} meta={t("editor.conflictMeta")} plainMeta>
-					<TextButton onClick={() => void loadServerCopy()}>{t("editor.loadServer")}</TextButton>
+					<Button variant="ghost" size="sm" onClick={() => void loadServerCopy()}>
+						{t("editor.loadServer")}
+					</Button>
 				</Banner>
 			)}
 

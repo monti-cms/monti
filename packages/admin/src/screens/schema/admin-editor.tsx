@@ -1,10 +1,9 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
-import { Box, Section, Stack } from "@monti-cms/ui";
+import { Box, ReadValue, Section, Stack } from "@monti-cms/ui";
 import { schemaAdminMessages } from "./admin.messages";
 import { FlagSwitch, Pick, useSettingRevert } from "./controls";
-import { ReadValue } from "./read-value";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
 
 const DEFAULT_CHOICE = "__default";
