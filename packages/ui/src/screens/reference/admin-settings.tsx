@@ -7,12 +7,14 @@ import {
 	PageColumn,
 	PageHeader,
 	PageToolbar,
+	ReadValue,
 	Section,
+	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 import { SettingsTabs, SwitchOption } from "./settings";
 
-/** Settings, Admin tab: the admin's own language, its features, its address. */
+/** Settings, Admin tab: the admin's own language, its features, its address, and the signed-in account. */
 export function AdminSettingsScreen() {
 	return (
 		<AdminFrame open="settings">
@@ -33,12 +35,16 @@ export function AdminSettingsScreen() {
 						<SwitchOption label="본문 템플릿" checked />
 						<SwitchOption label="번역" checked />
 					</Section>
-					<Section title="주소" last>
+					<Section title="주소">
 						{/* Set in the config file, so it can be changed here in local development, as the preview path can. */}
 						<FormField>
 							<FormFieldLabel htmlFor="admin-path">관리자 주소</FormFieldLabel>
 							<Affix id="admin-path" prefix="/" defaultValue="studio" />
 						</FormField>
+					</Section>
+					<Section title="계정" last>
+						<ReadValue label="로그인한 계정">me@example.dev</ReadValue>
+						<TextButton>로그아웃</TextButton>
 					</Section>
 				</PageBody>
 			</PageColumn>

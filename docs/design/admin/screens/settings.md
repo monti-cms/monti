@@ -145,8 +145,11 @@
 | 화면 언어 | `FormField` + `FormFieldLabel` "화면 언어" + `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 흐린 코드 "ko") | 고르면 관리자 화면의 말이 바뀐다. 사이트 탭처럼 절 제목 아래 작은 라벨을 둔다. |
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 · 번역 | 줄마다 `Option spread` + `Switch` | 바로 적용되는 켜기/끄기. |
-| 주소 절 | `Section`("주소", 마지막 절이라 `last`). 읽기 전용이면 제목 뒤 `LockMark` | |
+| 주소 절 | `Section`("주소"). 읽기 전용이면 제목 뒤 `LockMark` | |
 | 관리자 주소 | `FormField` + `FormFieldLabel` "관리자 주소" + `Affix`(`prefix` "/", 값 "studio") | 설정 파일에서 정하는 값이지만 미리보기 경로처럼 고칠 수 있다. 로컬 개발 모드에서는 바로 파일에 쓰고, 파일을 쓸 수 없는 곳(배포된 사이트)에서는 절 제목 뒤 `LockMark`와 함께 글로 보인다. |
+| 계정 절 | `Section`("계정", 마지막 절이라 `last`) | 2026-11-05 소유자 결정으로 더해졌다. 보드에는 없다. |
+| 로그인한 계정 | `ReadValue`(`label` "로그인한 계정", 이메일 또는 GitHub 아이디, mono) | 고칠 수 없는 값이다. |
+| "로그아웃" | `TextButton` | 누르면 세션을 끝내고 로그인 화면으로 간다. 묻지 않는다. 운영 사이트에서도 늘 있다. |
 
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Select, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Primitives/Text.
 
