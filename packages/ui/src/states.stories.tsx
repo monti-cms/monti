@@ -29,7 +29,8 @@ const meta = {
 	parameters: {
 		pseudo: {
 			hover: [".state-hover > *", ".state-hover tr", ".state-hover [data-slot=list-section-row]"],
-			focusVisible: [".state-focus > *"],
+			focus: [".state-focus input"],
+			focusVisible: [".state-focus > *", ".state-focus [data-slot=checkbox]", ".state-focus [data-slot=row-link]"],
 			focusWithin: [".state-focus > *"],
 			active: [".state-active > *", ".state-active tr"],
 		},

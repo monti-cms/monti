@@ -73,7 +73,7 @@ function SelectTrigger({
 				SELECT_TRIGGER,
 				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6",
 				width === "full"
-					? "w-[calc(100%-8px)]"
+					? "w-full"
 					: width === "choice"
 						? // Two attributes, so the row's line wins over the size's own padding and type.
 							"w-fit min-w-30 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"

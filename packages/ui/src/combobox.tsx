@@ -82,7 +82,8 @@ function ComboboxInput({
 						size={size}
 						mono={mono}
 						proposal={proposal}
-						className="flex-1 border-b-0 data-proposal:border-b-0"
+						// The field around it holds the room and the tint; the input inside takes neither.
+						className="flex-1 border-b-0 px-0 hover:bg-transparent data-proposal:border-b-0"
 					/>
 				}
 				{...props}
