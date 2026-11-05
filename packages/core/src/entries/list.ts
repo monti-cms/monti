@@ -512,23 +512,23 @@ export const listOperations = [
 		},
 		summary: (input) => ({ key: "list.savePrefs", values: { collection: input.collection } }),
 	}),
-	defineOperation<z.infer<typeof Show>, null>({
+	defineOperation({
 		name: "list.show",
 		kind: "screen",
 		description:
 			"Show the admin a list: open the collection with this query (search, filters, sort). Filters you set show as blue chips until the admin changes them. No data changes.",
 		input: Show,
-		run: () => {
+		run: (): null => {
 			throw new Error("list.show runs in the browser.");
 		},
 	}),
-	defineOperation<{ ids: string[] }, null>({
+	defineOperation({
 		name: "list.select",
 		kind: "screen",
 		description:
 			"Select rows on the list the admin sees (entry ids from entries.query), marked blue as yours until the admin touches them. No data changes.",
 		input: z.object({ ids: z.array(z.string()) }),
-		run: () => {
+		run: (): null => {
 			throw new Error("list.select runs in the browser.");
 		},
 	}),
