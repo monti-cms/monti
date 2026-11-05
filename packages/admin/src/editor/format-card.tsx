@@ -25,7 +25,7 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
-import { clearFormats, hasClearableFormat } from "./commands";
+import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
 import { markName, nodeName } from "./schema";
 
@@ -64,6 +64,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				selection instanceof TextSelection &&
 				!selection.empty &&
 				selection.$from.parent.type.name !== nodeName("codeBlock") &&
+				!inTableCell(selection.$from) &&
 				(current.isFocused || linking);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);

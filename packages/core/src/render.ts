@@ -119,9 +119,14 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 					null,
 					...(attrs.header ? rest : [first, ...rest]).map((cells, index) => row(cells, "td", index)),
 				);
+				// A table whose columns were sized keeps each column's share of the body, so it narrows with the page.
+				const widths = attrs.widths as number[] | undefined;
+				const columns = widths?.length
+					? h("colgroup", null, ...widths.map((width, at) => h("col", { key: at, style: { width: `${width}%` } })))
+					: null;
 				return attrs.header
-					? h("table", { key }, h("thead", null, row(first, "th", 0)), body)
-					: h("table", { key }, body);
+					? h("table", { key }, columns, h("thead", null, row(first, "th", 0)), body)
+					: h("table", { key }, columns, body);
 			}
 			case "image": {
 				const image = h("img", { src: media(attrs.media), alt: text(attrs.alt) ?? "", width: attrs.width });

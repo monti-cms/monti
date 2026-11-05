@@ -13,6 +13,7 @@ import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
+import { tableExtensions } from "./table";
 
 /** The editor's node for a block type: a block type may hold `:` or `-` (`component:PostCard`), an editor name may not. */
 export const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
@@ -66,19 +67,6 @@ function draw(block: CatalogBlock, data: Data, boxLabel: (block: CatalogBlock, d
 			return ["pre", data?.language ? { "data-language": String(data.language) } : {}, ["code", 0]];
 		case "divider":
 			return ["div", ["hr"]];
-		case "table": {
-			const rows = (data?.rows as string[][] | undefined) ?? [];
-			return [
-				"table",
-				[
-					"tbody",
-					...rows.map(
-						(row, index) =>
-							["tr", ...row.map((cell) => [data?.header && index === 0 ? "th" : "td", cell])] as DOMOutputSpec,
-					),
-				],
-			];
-		}
 		case "footnote":
 			return ["div", { "data-footnote": String(data?.id ?? "") }, 0];
 	}
@@ -151,31 +139,34 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 			.flatMap((block) => block.children ?? [])
 			.filter((type) => !kit.blocks.find((each) => each.type === type)?.menu),
 	);
-	const nodes = kit.blocks.map((block) =>
-		Node.create({
-			name: nodeName(block.type),
-			group: heldOnly.has(block.type) ? "held" : "block",
-			content:
-				block.holds === "text"
-					? block.type === "codeBlock"
-						? "text*"
-						: "inline*"
-					: block.holds === "blocks"
-						? block.children
-							? `(${block.children.map(nodeName).join(" | ")})+`
-							: "block+"
-						: undefined,
-			marks: block.type === "codeBlock" ? "" : undefined,
-			code: block.type === "codeBlock",
-			atom: block.holds === "nothing",
-			selectable: block.holds === "nothing",
-			defining: block.holds === "text" && block.type !== "paragraph",
-			isolating: block.holds === "nothing",
-			addAttributes: blockAttributes,
-			parseHTML: () => parse(block),
-			renderHTML: ({ node }) => draw(block, node.attrs.data as Data, boxLabel),
-		}),
-	);
+	// The table is Tiptap's own (its rows, cells, and column widths), tied to the stored block by `table.ts`.
+	const nodes = kit.blocks
+		.filter((block) => block.type !== "table")
+		.map((block) =>
+			Node.create({
+				name: nodeName(block.type),
+				group: heldOnly.has(block.type) ? "held" : "block",
+				content:
+					block.holds === "text"
+						? block.type === "codeBlock"
+							? "text*"
+							: "inline*"
+						: block.holds === "blocks"
+							? block.children
+								? `(${block.children.map(nodeName).join(" | ")})+`
+								: "block+"
+							: undefined,
+				marks: block.type === "codeBlock" ? "" : undefined,
+				code: block.type === "codeBlock",
+				atom: block.holds === "nothing",
+				selectable: block.holds === "nothing",
+				defining: block.holds === "text" && block.type !== "paragraph",
+				isolating: block.holds === "nothing",
+				addAttributes: blockAttributes,
+				parseHTML: () => parse(block),
+				renderHTML: ({ node }) => draw(block, node.attrs.data as Data, boxLabel),
+			}),
+		);
 	const unknown = Node.create({
 		name: UNKNOWN,
 		group: "block",
@@ -209,6 +200,7 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 		Text,
 		HardBreak,
 		...nodes,
+		...(kit.blocks.some((block) => block.type === "table") ? tableExtensions() : []),
 		unknown,
 		footnoteRef,
 		Bold,

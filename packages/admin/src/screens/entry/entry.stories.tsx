@@ -26,6 +26,26 @@ const firstPost = () =>
 		p("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다."),
 	);
 
+/** An entry with a table (T62): versions and what changed, the first row its head row. */
+const changelog = (widths?: number[]) =>
+	doc(
+		p("버전마다 무엇이 바뀌었는지 적어 둔다."),
+		{
+			id: `b_${++count}`,
+			type: "table",
+			attrs: {
+				header: true,
+				rows: [
+					["버전", "바뀐 것", "날짜"],
+					["1.0", "처음 공개", "2024-03-02"],
+					["2.0", "편집기 다시 만들기", "2025-11-20"],
+				],
+				...(widths ? { widths } : {}),
+			},
+		},
+		p("다음 버전은 아직 정하지 않았다."),
+	);
+
 async function templates(monti: Monti) {
 	await monti.run(
 		"templates.save",
@@ -44,7 +64,7 @@ async function templates(monti: Monti) {
 	);
 }
 
-type Kind = "draft" | "new" | "untitled" | "published" | "changed" | "archived";
+type Kind = "draft" | "new" | "untitled" | "published" | "changed" | "archived" | "table" | "tableSized";
 
 /** Makes the story's entry and returns its id. */
 async function entry(monti: Monti, kind: Kind): Promise<string> {
@@ -77,7 +97,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					title: kind === "untitled" ? "" : "첫 번째 글",
 					...(kind === "untitled" ? {} : { slug: "first-post" }),
 					values: { summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." },
-					doc: firstPost(),
+					doc: kind === "table" ? changelog() : kind === "tableSized" ? changelog([20, 50, 30]) : firstPost(),
 				},
 		admin,
 	)) as { output: { id: string } };
@@ -407,5 +427,124 @@ export const LinkAddress: Story = {
 		await userEvent.click(await all.findByRole("button", { name: "링크" }, wait));
 		await userEvent.type(await all.findByPlaceholderText("주소를 붙여 넣거나 글 찾기", {}, wait), "react.dev/learn");
 		await all.findByRole("option", { name: /react\.dev\/learn/ }, wait);
+	},
+};
+
+/** Puts the caret at the end of a cell's text. */
+async function inCell(body: HTMLElement, words: string) {
+	const cell = [...body.querySelectorAll("td, th")].find((each) => each.textContent === words);
+	if (!cell) throw new Error(`no cell "${words}"`);
+	await userEvent.click(cell);
+	return cell;
+}
+
+/** The table's cells as rows of text. */
+const cells = (body: HTMLElement) =>
+	[...body.querySelectorAll("tr")].map((row) => [...row.querySelectorAll("td, th")].map((cell) => cell.textContent));
+
+/** "/" and "표": an empty table goes in, three columns under a head row, the caret in its first cell (T62). */
+export const TableInsert: Story = {
+	loaders: site("new"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await userEvent.click(body);
+		await userEvent.keyboard("/표");
+		await userEvent.click(await all.findByRole("option", { name: /^표/ }, wait));
+		await waitFor(() => expect(body.querySelectorAll("th")).toHaveLength(3), wait);
+		await expect(body.querySelectorAll("tr")).toHaveLength(3);
+		await userEvent.keyboard("버전");
+		await expect(body.querySelector("th")?.textContent).toBe("버전");
+		await all.findByRole("button", { name: "1번째 열" }, wait);
+	},
+};
+
+/** The caret in a cell: a grip on its column's top edge and its row's left edge (T62). */
+export const TableGrips: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "편집기 다시 만들기");
+		await all.findByRole("button", { name: "2번째 열" }, wait);
+		await all.findByRole("button", { name: "3번째 행" }, wait);
+	},
+};
+
+/** The column grip pressed: the column is picked whole and its menu is open. */
+export const TableColumnMenu: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "편집기 다시 만들기");
+		await userEvent.click(await all.findByRole("button", { name: "2번째 열" }, wait));
+		await all.findByRole("menuitem", { name: "오른쪽에 열 넣기" }, wait);
+		await waitFor(() => expect(body.querySelectorAll(".selectedCell")).toHaveLength(3), wait);
+	},
+};
+
+/** A column put in from the menu: the table has four columns, and the save keeps it as rows of text. */
+export const TableAddColumn: Story = {
+	loaders: site("table"),
+	play: async (context) => {
+		await TableColumnMenu.play?.(context);
+		const { page, body, all } = await opened(context.canvasElement);
+		await userEvent.click(await all.findByRole("menuitem", { name: "오른쪽에 열 넣기" }, wait));
+		await waitFor(() => expect(cells(body)[0]).toEqual(["버전", "바뀐 것", "", "날짜"]), wait);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await saveCell(page, "저장됨");
+		const { site: made, id } = context.loaded as Loaded;
+		const read = (await made.monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc } };
+		const table = read.entry.doc.blocks.find((block) => block.type === "table");
+		await expect(table?.attrs?.rows).toEqual([
+			["버전", "바뀐 것", "", "날짜"],
+			["1.0", "처음 공개", "", "2024-03-02"],
+			["2.0", "편집기 다시 만들기", "", "2025-11-20"],
+		]);
+		await expect(table?.attrs?.header).toBe(true);
+	},
+};
+
+/** The pointer over the table: + strips on its right and bottom edges; the bottom one adds a row. */
+export const TableAddRow: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		const cell = await inCell(body, "처음 공개");
+		await userEvent.hover(cell);
+		await all.findByRole("button", { name: "열 더하기" }, wait);
+		await userEvent.click(await all.findByRole("button", { name: "행 더하기" }, wait));
+		await waitFor(() => expect(cells(body)).toHaveLength(4), wait);
+	},
+};
+
+/** The table's block menu turns its head row off: the first row is a plain row. */
+export const TableHeaderRow: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		const table = body.querySelector("table");
+		if (!table) throw new Error("no table");
+		// The handle follows the line the pointer is on, so the move needs its place.
+		const box = table.getBoundingClientRect();
+		fireEvent.mouseMove(table, { clientX: box.left + 20, clientY: box.top + 10 });
+		await userEvent.click(await all.findByRole("button", { name: "블록 메뉴" }, wait));
+		await userEvent.click(await all.findByRole("menuitemcheckbox", { name: "머리 행" }, wait));
+		await waitFor(() => expect(body.querySelectorAll("th")).toHaveLength(0), wait);
+	},
+};
+
+/** A table whose columns were sized: each keeps its share of the body (20 · 50 · 30 of the 676px its borders leave), so it is no wider than the body. */
+export const TableSized: Story = {
+	loaders: site("tableSized"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		await waitFor(
+			() =>
+				expect([...body.querySelectorAll("col")].map((col) => (col as HTMLElement).style.width)).toEqual([
+					"135px",
+					"338px",
+					"202px",
+				]),
+			wait,
+		);
 	},
 };

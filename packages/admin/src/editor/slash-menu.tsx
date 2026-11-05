@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import type { Block, Doc } from "@monti-cms/core";
 import {
 	Command,
 	CommandGroup,
@@ -18,9 +18,10 @@ import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import { BlockIcon } from "./block-icon";
 import { type BodyCatalogs, needsAttrs } from "./catalog";
-import { insertBlocks, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
+import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
 import { nodeName } from "./schema";
+import { tableToEditor } from "./table";
 
 type Group = "text" | "insert" | "component" | "templates";
 const GROUPS: Group[] = ["text", "insert", "component", "templates"];
@@ -42,10 +43,30 @@ type Item = {
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
 
 /**
- * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09), a table needs its
- * cell tools, a footnote its reference in the text.
+ * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09), a footnote its
+ * reference in the text.
  */
-const NOT_FROM_MENU = new Set(["image", "file", "table", "footnote"]);
+const NOT_FROM_MENU = new Set(["image", "file", "footnote"]);
+
+/** A new table: three columns, a head row and two rows under it, all empty. */
+const NEW_TABLE: Block = {
+	id: "",
+	type: "table",
+	attrs: { header: true, rows: Array.from({ length: 3 }, () => ["", "", ""]) },
+};
+
+/** Puts a new table in the line's place and the caret in its first cell. */
+const placeTable = (editor: Editor) => (tr: Transaction) => {
+	placeBefore(editor.schema.nodeFromJSON(tableToEditor(NEW_TABLE, null)))(tr);
+	let cell: number | null = null;
+	tr.doc.descendants((node, pos) => {
+		if (cell !== null) return false;
+		// The table just put in is the one without an id yet.
+		if (node.type.name === "table" && !node.attrs.blockId) cell = pos + 3;
+		return node.type.name !== "table";
+	});
+	if (cell !== null) tr.setSelection(TextSelection.create(tr.doc, cell));
+};
 
 /** The line the "/" is on, made empty: a text kind turns it; anything else goes in its place, and that line stays under it for writing on. */
 function putIn(editor: Editor, open: Open, make: (tr: Transaction) => void) {
@@ -116,7 +137,7 @@ export function useSlashMenu({
 				(block) =>
 					block.menu !== null &&
 					!NOT_FROM_MENU.has(block.type) &&
-					!needsAttrs(block) &&
+					(block.type === "table" || !needsAttrs(block)) &&
 					!["paragraph", "heading", "bulletList", "orderedList", "checklist", "quote", "codeBlock"].includes(
 						block.type,
 					),
@@ -130,6 +151,7 @@ export function useSlashMenu({
 				typed: block.type === "divider" ? "---" : undefined,
 				run: (editor) => {
 					if (!open) return;
+					if (block.type === "table") return putIn(editor, open, placeTable(editor));
 					const type = editor.schema.nodes[nodeName(block.type)];
 					if (!type) return;
 					const node = type.createAndFill() ?? type.create();
@@ -174,7 +196,9 @@ export function useSlashMenu({
 		const { $from } = selection;
 		const text = $from.parent.isTextblock ? $from.parent.textBetween(0, $from.parentOffset, "\n", "\0") : "";
 		const match =
-			selection.empty && $from.parent.type.name !== nodeName("codeBlock") ? /^\/([^\s/]*)$/.exec(text) : null;
+			selection.empty && $from.parent.type.name !== nodeName("codeBlock") && !inTableCell($from)
+				? /^\/([^\s/]*)$/.exec(text)
+				: null;
 		if (!match) {
 			dismissed.current = null;
 			setOpen(null);

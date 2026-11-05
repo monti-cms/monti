@@ -70,6 +70,8 @@ export function handleTarget($pos: ResolvedPos): number | null {
 	for (let depth = $pos.depth; depth >= 1; depth--) {
 		const node = $pos.node(depth);
 		const parent = $pos.node(depth - 1);
+		// A table's rows and cells are the table's, not blocks of their own: the handle is the table's.
+		if ("tableRole" in node.type.spec && depth > 1) continue;
 		if (depth === 1 || node.type.name === item || (!lists.has(parent.type.name) && parent.type.name !== item))
 			return $pos.before(depth);
 	}
@@ -244,3 +246,6 @@ export function clearFormats(state: EditorState, dispatch?: (tr: Transaction) =>
 	dispatch?.(tr.scrollIntoView());
 	return true;
 }
+
+/** Whether a place is inside a table's cell: its text is plain, so neither the "/" menu nor the format card opens there (doc 03, the table). */
+export const inTableCell = ($pos: ResolvedPos) => "tableRole" in $pos.parent.type.spec;

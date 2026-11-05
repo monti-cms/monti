@@ -2,6 +2,7 @@ import type { Block, Doc, Inline, Mark } from "@monti-cms/core";
 import type { JSONContent } from "@tiptap/core";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { KEPT_MARK, markName, markType, nodeName, UNKNOWN } from "./schema";
+import { tableFromEditor, tableToEditor } from "./table";
 
 type MarkJson = { type: string; attrs?: Record<string, unknown> };
 
@@ -51,6 +52,7 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		const id = fresh ? null : block.id;
 		const definition = byType.get(block.type);
 		if (!definition) return { type: UNKNOWN, attrs: { blockId: id, block } };
+		if (block.type === "table") return tableToEditor(block, id);
 		const node: JSONContent = { type: nodeName(block.type), attrs: { blockId: id, data: block.attrs ?? null } };
 		if (definition.holds === "text") {
 			const content = (block.content ?? []).map(inlineToEditor).filter((each) => each !== null);
@@ -79,6 +81,7 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 	const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
 	const fromEditor = (node: JSONContent): Block => {
 		if (node.type === UNKNOWN) return node.attrs?.block as Block;
+		if (node.type === "table") return tableFromEditor(node);
 		const definition = byName.get(node.type ?? "");
 		const data = node.attrs?.data as Record<string, unknown> | null | undefined;
 		const block: Block = { id: String(node.attrs?.blockId ?? ""), type: definition?.type ?? String(node.type) };

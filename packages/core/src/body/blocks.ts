@@ -106,9 +106,14 @@ export const coreBlocks: AnyBlockDefinition[] = [
 	defineBlock({
 		type: "table",
 		label: label("table"),
-		description: "A table of plain text cells; the first row is the header when `header` is true.",
+		description:
+			"A table of plain text cells; the first row is the header when `header` is true. `widths`, when set, is each column's share of the body in percent.",
 		menu: "text",
-		attrs: z.object({ header: z.boolean().optional(), rows: z.array(z.array(z.string())) }),
+		attrs: z.object({
+			header: z.boolean().optional(),
+			rows: z.array(z.array(z.string())),
+			widths: z.array(z.number().positive().max(100)).optional(),
+		}),
 		holds: "nothing",
 	}),
 	defineBlock({

@@ -103,6 +103,10 @@ export function docLength(doc: Doc): number {
 	const walk = (blocks: Doc["blocks"]) => {
 		for (const block of blocks) {
 			for (const inline of block.content ?? []) if (inline.type === "text") count += [...inline.text].length;
+			// A table's text is in its cells.
+			if (block.type === "table")
+				for (const row of (block.attrs?.rows as string[][] | undefined) ?? [])
+					for (const cell of row) count += [...cell].length;
 			if (block.children) walk(block.children);
 		}
 	};

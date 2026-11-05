@@ -1,6 +1,7 @@
 import {
 	BlockHandle,
 	DropdownMenu,
+	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
@@ -40,6 +41,7 @@ import {
 import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
 import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
+import { hasHeaderRow, toggleHeaderRow } from "./table";
 
 /** Where the handle floats: 64px left of the block (the + and the grip, 8 apart, then 8 to the text), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
@@ -289,6 +291,14 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 										</DropdownMenuRadioGroup>
 									</DropdownMenuSubContent>
 								</DropdownMenuSub>
+							) : null}
+							{node.type.name === "table" ? (
+								<DropdownMenuCheckboxItem
+									checked={hasHeaderRow(node)}
+									onCheckedChange={() => run((tr, pos) => toggleHeaderRow(tr, pos))}
+								>
+									{t("table.headerRow")}
+								</DropdownMenuCheckboxItem>
 							) : null}
 						</DropdownMenuGroup>
 						{name || kind || align ? <DropdownMenuSeparator /> : null}
