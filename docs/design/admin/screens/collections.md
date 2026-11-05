@@ -17,6 +17,8 @@
 | 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
 | 데이터베이스 적용 실패 (빠짐, 2026-11-05) | 틀의 알림 띠(`SchemaBanner`)가 맡는다 | 모든 화면 맨 위의 띠와 같은 말을 두 번 보이지 않는다. |
 
+| 제안 따라가기 | `ProposalBubbleDock` + `ProposalBubble`(`name` 요청의 말, ↑ n / N ↓, "모두 버리기" · "모두 받기") | 대기 중인 제안이 있을 때만. 단의 맨 아래 가운데에 뜬다. 이전 / 다음은 제안이 있는 컬렉션의 필드 탭을 연다. 제안 하나를 받거나 버리는 카드는 T41. |
+
 #### 컬렉션 목록
 
 | 자리 | 부품 | 이렇게 쓴다 |
@@ -60,7 +62,7 @@
 | 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField`, 값 자리의 입력 부품, 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
 | 미리볼 수 없음 | `Text variant="note"` "고칠 곳이 있어 미리볼 수 없어요." + `TodoItem blocking`(`title` 필드 이름, 아래 줄 "선택지가 없어요") | 행을 누르면 그 필드로 간다. 저장 묶음의 알약이 비활성이 된다. |
 
-스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Patterns/Frame/Banner, Controls/Button/TextButton, Controls/Status/ErrorNote, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/Tabs, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Field/Caret, Controls/Menu/DropdownMenu, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch.
+스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Status/ErrorNote, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch, Monti/Proposal/ProposalBubble.
 
 ### 뜨는 자리
 
@@ -84,7 +86,7 @@
 | 표시 이름 · 이름 · 도움말 | `FormField` + `Input` · `Input mono` · `Textarea` | |
 | 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch` | "발행 안 된 대상"은 08번 문서와 함께 온다(T42). |
 | 글자 설정 | "여러 줄" `Switch`, "최대 글자 수" · "줄 수" `Input mono width="number"`, "안내 문구" `Input`, "비어 있으면 본문에서 채우기" `Switch` | |
-| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
+| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 손잡이로 순서 바꾸기는 키보드 옮기기와 함께 온다(T43). 그때까지 `handle`은 비어 있다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
 | 필수 | `Option spread` + `Switch`(라벨 뒤 흐린 "!") | |
 | 언어 | `FormField` + `Segmented`("모두 같음" · "언어마다" · "원문 따름") | 셋 중 하나를 고르는 짧은 선택이다([choice.md](../components/choice.md) "몇 개 중 하나"). |
 | 요약 줄 | `Text variant="meta" mono` "series → Series" | 지금 설정을 스키마 말로 한 줄. |
@@ -105,7 +107,7 @@
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었어요", 회색 한 줄, `actions`에 "다시 불러오기") | 시트 맨 위. |
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. |
-| 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "132편에서 값이 사라져요. 되돌릴 수 없어요." |
+| 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "값이 사라져요. 되돌릴 수 없어요." |
 | 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 공개 주소의 전 / 후. 개수는 보이지 않는다(2026-11-05 바뀜: 개발 데이터의 숫자라 운영과 다르다). 컬렉션 삭제는 `ChangeNote` 한 줄이다. |
 | 영향받는 글 (빠짐, 2026-11-05) | | 개발 데이터의 글이라 운영에서 영향받는 글과 다르다. 개수와 같은 이유로 뺐다. |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
@@ -126,7 +128,7 @@
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
 | "미리보기 오류" | 4.09 | 미리보기 자리에 `TodoItem blocking`, 해당 `FieldRow tone="danger"`, 저장 알약 `saveDisabled` | Monti/EditorTools/TodoItem, Patterns/List/FieldTree |
 | "바뀐 곳 목록" | 4.10 | `ChangesGroup`의 목록 열림(요약 · 부제 · 글 종류, 각각 되돌리기) | Monti/Change/ChangesGroup |
-| "필드 검토" | 4.11 | 검토 `Sheet`: 이름 · 지움 · 필수 `ChangeGroup`, 영향받는 글 | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "필드 검토" | 4.11 | 검토 `Sheet`: 이름 · 지움 · 필수 `ChangeGroup` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "값 지우기" | 4.12 | 지움 블록에서 "값 지우기"를 고름, `ChangeNote danger`, 알약 `Button variant="danger"` "지우고 적용" | Monti/Change/ChangeGroup, Controls/Button/Button |
 | "주소 바꿈" | 4.13 | 기본 탭, `Affix` 값 "blog", 공개 주소 `ChangeDot`, 바뀐 곳 1 | Controls/Field/Affix, Controls/Status/ChangeDot |
 | "주소 검토" | 4.14 | 검토 `Sheet`: 주소 `ChangeGroup kind="edit"`, 전 / 후 / 발행된 글 `ChangeLines`, `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
@@ -152,7 +154,7 @@
 | "PR에 더하기" (빠짐, 2026-11-05) | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
 | "읽기 전용" | 11.17, 11.17c | 구조 절 `LockMark`, 식별자 · 종류 · 공개 주소는 글, 스위치 `disabled`, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |
-| "적용 실패" | 11.20 | `ErrorNote` "데이터베이스에 적용하지 못했어요" | Controls/Status/ErrorNote |
+| "적용 실패" | 11.20 | 틀의 알림 띠(`SchemaBanner`) "스키마를 데이터베이스에 적용하지 못했어요"와 "다시 적용" | Patterns/Frame/Banner |
 | "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ErrorNote` "파일이 바뀌었어요", 알약 비활성 | Controls/Overlay/Sheet, Controls/Status/ErrorNote |
 | `tab` "필드" · "기본" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
 | `sheetKind` "관계" · "글자" · "고르기" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 시트의 `PickListItem selected`와 그 종류의 설정 | Controls/Menu/PickList |

@@ -151,6 +151,13 @@ export function CollectionsScreen({
 		setPlan(planned.body);
 	};
 
+	// A removal's toast undoes it in the draft; once the draft is saved there is nothing left for it to undo.
+	const undoToasts = useRef<(string | number)[]>([]);
+	const saved = () => {
+		draft.saved();
+		for (const id of undoToasts.current.splice(0)) toast.dismiss(id);
+	};
+
 	const handled = useRef(0);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the banner's request opens the review once, when the schema has been read.
 	useEffect(() => {
@@ -198,7 +205,7 @@ export function CollectionsScreen({
 		const ok = await saveValues(data, draft.accepted, touched());
 		if (ok) {
 			await model.read.reload();
-			draft.saved();
+			saved();
 			toast(t("settings.saved"));
 		}
 		setBusy(false);
@@ -222,7 +229,7 @@ export function CollectionsScreen({
 		const fresh = await readOp.run();
 		if (fresh.ok) await saveValues(fresh.body, [], touched());
 		await model.read.reload();
-		draft.saved();
+		saved();
 		setPlan(null);
 		setBusy(false);
 		if (!result.body.output.applied) return;
@@ -239,9 +246,11 @@ export function CollectionsScreen({
 		draft.set(at.collection(c), null);
 		setActive(live.find((each) => each !== c) ?? null);
 		setTab("fields");
-		toast(t("settings.removed", { name }), {
-			action: { label: t("settings.undo"), onClick: () => draft.revert(at.collection(c)) },
-		});
+		undoToasts.current.push(
+			toast(t("settings.removed", { name }), {
+				action: { label: t("settings.undo"), onClick: () => draft.revert(at.collection(c)) },
+			}),
+		);
 	};
 
 	// The proposals the bubble walks: each place a pending item writes that the list draws.

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sql } from "kysely";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
@@ -345,6 +346,51 @@ export const DeleteReview: Story = {
 		await userEvent.click(await page.findByRole("button", { name: "지우기" }));
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
 		await body.findByText("이 컬렉션의 글이 모두 지워져요.", {}, wait);
+	},
+};
+
+/** Flow 4, step 06: the new collection is applied; the toast offers to open it. */
+export const Made: Story = {
+	loaders: site(),
+	play: async (context) => {
+		await NewCollectionReview.play?.(context);
+		const body = within(context.canvasElement.ownerDocument.body);
+		await userEvent.click(body.getByRole("button", { name: "적용" }));
+		await body.findByText("노트 컬렉션을 만들었어요", {}, wait);
+	},
+};
+
+/** Flow 4, step 18: the memos are deleted: gone from the list, and the toast says it is applied (the removal's undo toast is gone). */
+export const Deleted: Story = {
+	loaders: site(),
+	play: async (context) => {
+		await DeleteReview.play?.(context);
+		const body = within(context.canvasElement.ownerDocument.body);
+		await userEvent.click(body.getByRole("button", { name: "지우고 적용" }));
+		await body.findByText("적용됐어요", {}, wait);
+		// The removal's undo toast goes with the save: there is nothing left for it to undo.
+		await waitFor(() => expect(body.queryByText("메모 컬렉션을 지웠어요")).toBeNull(), wait);
+	},
+};
+
+/** The banner's review (T16): the schema file was edited by hand; "검토" opens this screen's review of what the edit changes. */
+export const HandEditReview: Story = {
+	loaders: site({
+		more: async (made) => {
+			// The database follows an older file: the memos were at /memos/:slug before the hand edit.
+			const older = structuredClone(schema);
+			(older.collections.memo as { path: string }).path = "/memos/:slug";
+			await sql`update schema_state set applied_hash = 'before-the-hand-edit', applied_schema = ${JSON.stringify(older)}::jsonb`.execute(
+				made.db,
+			);
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await page.findByText("스키마 파일을 직접 고쳤어요", {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "검토" }));
+		await body.findByText("옛 주소는 404가 돼요.", {}, wait);
 	},
 };
 

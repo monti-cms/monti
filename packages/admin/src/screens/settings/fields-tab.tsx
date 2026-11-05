@@ -168,7 +168,7 @@ export function FieldsTab({
 		) ?? 0;
 
 	return (
-		<Stack gap={12} paddingTop={4}>
+		<Stack gap={12} paddingTop={16}>
 			{layout.length > 1 ? (
 				<FolderTabs value={String(current)} onValueChange={(value) => onTab(Number(value))}>
 					<FolderTabsList
