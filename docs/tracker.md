@@ -76,7 +76,7 @@
 | T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀(`packages/admin/.storybook/pglite-site.ts`) | #437 |
 | T11 | 관리자 패키지 화면에서 `fetch`를 쓰면 린트가 막는다. `src/operations/**`만 예외 | #437 |
 | T12 | `check:design`이 `packages/admin/src`를 본다 | #437 |
-| T16 | 스키마 알림 띠(`SchemaBanner`, 목록 바로 위): 파일이 바뀜(개발 서버), 적용 실패와 "다시 적용". 운영의 `db:migrate` 누락은 화면이 아니라 서버 로그(T13). "검토" 버튼은 검토 화면과 함께(T15) | #437 |
+| T16 | 스키마 알림 띠(`SchemaBanner`, 틀의 `SidebarInset banner`: 모든 화면 맨 위): 파일이 바뀜(개발 서버), 적용 실패와 "다시 적용". 운영의 `db:migrate` 누락은 화면이 아니라 서버 로그(T13). "검토" 버튼은 검토 화면과 함께(T15) | #437 |
 | T22 | `entries.create`가 템플릿을 받는다 | #435 |
 | T23 | 할 일 "발행 안 된 글로 가는 링크"(알리기만). 본문 링크는 `monti:entry/<묶음 id>`로 글을 가리킨다 | #436 |
 | T24 | `entries.compare`가 본문을 블록마다 견준다 | #435 |

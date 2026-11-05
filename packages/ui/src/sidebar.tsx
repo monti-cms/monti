@@ -243,10 +243,13 @@ function SidebarTrigger({
 /**
  * The page beside the rail. `corner` is what sits in its top-right corner, 12px from both edges (the assistant's button); the page's own header keeps
  * clear of it, and a panel docked at the right edge covers it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
+ * `banner` is an alert about the whole site (a schema change saved but not applied): it spans the page edge to edge above everything, and the page,
+ * its corner included, moves down under it.
  */
 function SidebarInset({
 	fixed = false,
 	corner,
+	banner,
 	className,
 	children,
 	...props
@@ -254,14 +257,12 @@ function SidebarInset({
 	/** Inside a `fixed` frame: the main area clips to the window, so its own panes scroll. */
 	fixed?: boolean;
 	corner?: React.ReactNode;
+	/** A `Banner` about the whole site, above the page and its corner. */
+	banner?: React.ReactNode;
 }) {
 	const { isMobile } = useSidebar();
-	return (
-		<main
-			data-slot="sidebar-inset"
-			className={cn("relative flex w-full flex-1 flex-col bg-monti-page", fixed && "min-w-0 overflow-clip", className)}
-			{...props}
-		>
+	const page = (
+		<>
 			{isMobile ? (
 				<div className="flex h-monti-header shrink-0 items-center justify-between px-monti-12">
 					<SidebarTrigger />
@@ -271,6 +272,25 @@ function SidebarInset({
 				corner && <div className="absolute top-monti-12 right-monti-12 z-10">{corner}</div>
 			)}
 			{children}
+		</>
+	);
+	return (
+		<main
+			data-slot="sidebar-inset"
+			className={cn("relative flex w-full flex-1 flex-col bg-monti-page", fixed && "min-w-0 overflow-clip", className)}
+			{...props}
+		>
+			{banner ? (
+				<>
+					<div data-slot="sidebar-inset-banner" className="shrink-0">
+						{banner}
+					</div>
+					{/* The page under the banner: the corner is measured from here, so it moves down with the page. */}
+					<div className="relative flex min-h-0 min-w-0 flex-1 flex-col">{page}</div>
+				</>
+			) : (
+				page
+			)}
 		</main>
 	);
 }
