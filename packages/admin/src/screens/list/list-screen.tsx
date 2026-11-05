@@ -64,8 +64,8 @@ type SchemaRead = {
 /** A picked row; `proposal` while the assistant picked it and the admin has not touched it (`list.select`). */
 type Picked = Map<string, { proposal: boolean }>;
 
-/** A column's width by its kind (doc 06: widths come by kind; the title takes the rest). */
-function sizeOf(column: ListColumn): number | undefined {
+/** The width a column starts at by its kind (doc 06; the title takes the rest). */
+function kindSizeOf(column: ListColumn): number | undefined {
 	switch (column.kind) {
 		case "status":
 			return LIST_COLUMN_SIZE.status;
@@ -179,16 +179,40 @@ export function ListScreen({
 	// The order shown while a column is dragged; the rows follow it.
 	const [preview, setPreview] = useState<string[] | null>(null);
 	// What was just saved, shown until the columns are read again, so a dropped column does not jump back for a moment.
-	const [saving, setSaving] = useState<{ order: string[]; hidden: string[]; from: Columns | null } | null>(null);
+	const [saving, setSaving] = useState<{
+		order: string[];
+		hidden: string[];
+		widths: Record<string, number>;
+		from: Columns | null;
+	} | null>(null);
 	const pending = saving && saving.from === columnsRead.data ? saving : null;
 	const savePrefs = useOperation("list.savePrefs");
 	const allIds = pending?.order ?? (columns ?? []).map((column) => column.id);
 	const hidden = pending?.hidden ?? (columns ?? []).filter((column) => column.hidden).map((column) => column.id);
+	const widths =
+		pending?.widths ??
+		Object.fromEntries((columns ?? []).flatMap((column) => (column.width ? [[column.id, column.width]] : [])));
+	// The width of the column whose handle is being dragged, before it is saved on release.
+	const [dragWidth, setDragWidth] = useState<{ id: string; width: number } | null>(null);
 	const shownIds = (preview ?? allIds).filter((id) => !hidden.includes(id));
 	const shown = shownIds.flatMap((id) => (columns ?? []).filter((column) => column.id === id));
-	const keep = (order: string[], nextHidden: string[]) => {
-		setSaving({ order, hidden: nextHidden, from: columnsRead.data });
-		void savePrefs.run({ collection, order, hidden: nextHidden });
+	/** A column's width now: the one being dragged, the one the admin kept (never under its kind's), or its kind's. */
+	const sizeOf = (column: ListColumn) => {
+		const kind = kindSizeOf(column);
+		if (kind === undefined) return undefined;
+		const kept = dragWidth?.id === column.id ? dragWidth.width : widths[column.id];
+		return kept === undefined ? kind : Math.max(kind, kept);
+	};
+	const keep = (order: string[], nextHidden: string[], nextWidths = widths) => {
+		setSaving({ order, hidden: nextHidden, widths: nextWidths, from: columnsRead.data });
+		void savePrefs.run({ collection, order, hidden: nextHidden, widths: nextWidths });
+	};
+	const resize = (id: string, width: number | null, commit: boolean) => {
+		if (!commit) return setDragWidth(width === null ? null : { id, width });
+		setDragWidth(null);
+		const { [id]: _old, ...others } = widths;
+		const next = width === null ? others : { ...others, [id]: width };
+		if (widths[id] !== next[id]) keep(allIds, hidden, next);
 	};
 	const move = (from: string, to: string) => {
 		const order = allIds.filter((id) => id !== from);
@@ -341,6 +365,7 @@ export function ListScreen({
 		id: column.id,
 		label: label(column),
 		size: sizeOf(column),
+		kindSize: kindSizeOf(column),
 		align: column.kind === "date" ? "end" : "start",
 		sort: state.sort.by === column.id ? state.sort.dir : undefined,
 		filtered: state.filters.some((filter) => filterColumn(filter) === column.id),
@@ -537,6 +562,8 @@ export function ListScreen({
 							onPlace={move}
 							onStep={step}
 							onPreview={setPreview}
+							onResize={resize}
+							resizeLabel={(column) => t("list.resizeColumn", { column })}
 						/>
 					)}
 					<TableBody>

@@ -130,8 +130,11 @@ function ResizeHandle({
 			onPointerDown={(event) => {
 				if (event.button !== 0) return;
 				drag.current = { startX: event.clientX, startValue: value };
-				event.currentTarget.setPointerCapture?.(event.pointerId);
 				event.preventDefault();
+				// The pointer may already be gone (a pen lifted, a synthetic press); the drag still follows the moves the handle hears.
+				try {
+					event.currentTarget.setPointerCapture?.(event.pointerId);
+				} catch {}
 			}}
 			onPointerMove={(event) => {
 				if (drag.current) onChange(dragged(event), false);
@@ -140,7 +143,8 @@ function ResizeHandle({
 				if (!drag.current) return;
 				const next = dragged(event);
 				drag.current = null;
-				event.currentTarget.releasePointerCapture?.(event.pointerId);
+				if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+					event.currentTarget.releasePointerCapture(event.pointerId);
 				onChange(next, true);
 			}}
 			onPointerCancel={() => {

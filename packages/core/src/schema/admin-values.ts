@@ -8,10 +8,15 @@ export const FieldAdminValues = z.object({
 	optionLabels: z.record(z.string(), z.string()).optional(),
 });
 
-/** How a collection's list looks (doc 06): the column order, the hidden columns and the page size. Filters and sorting live in the address only. */
+/**
+ * How a collection's list looks (doc 06): the column order, the hidden columns, the widths the admin dragged and the page size. Filters and sorting live
+ * in the address only.
+ */
 export const ListPrefs = z.object({
 	order: z.array(z.string()).optional(),
 	hidden: z.array(z.string()).optional(),
+	/** Column id → width in px, for the columns the admin resized; the others keep their kind's width. The screen clamps it to the kind's width. */
+	widths: z.record(z.string(), z.number().int().positive().max(480)).optional(),
 	pageSize: z.union([z.literal(25), z.literal(50), z.literal(100)]).optional(),
 });
 

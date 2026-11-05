@@ -310,6 +310,63 @@ export const ColumnMoving: Story = {
 	},
 };
 
+/** Drags a column's resize handle by `by` px; lets go unless `hold`. */
+async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
+	const handle = await within(canvas).findByRole("separator", { name }, wait);
+	const box = handle.getBoundingClientRect();
+	const y = box.top + box.height / 2;
+	const at = (type: string, x: number) =>
+		handle.dispatchEvent(new PointerEvent(type, { bubbles: true, button: 0, buttons: 1, clientX: x, clientY: y }));
+	at("pointerdown", box.left);
+	for (let step = 1; step <= 4; step++) {
+		at("pointermove", box.left + (by * step) / 4);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	}
+	if (!hold) at("pointerup", box.left + by);
+	return handle;
+}
+const columnWidth = (canvas: HTMLElement, id: string) =>
+	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().width ?? 0);
+
+/** The tags column's handle held and dragged 80px right: the accent line on its edge, the column wider and the title narrower, rows too (06). */
+export const ColumnResizing: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		await dragHandle(canvasElement, "태그 열 너비 조절", 80, true);
+		await waitFor(() => expect(columnWidth(canvasElement, "tags")).toBe(152 + 80), wait);
+	},
+};
+
+/**
+ * The tags column dragged 80px wider and let go: the width is saved for posts. After going to the memos and back (the list read again, as after a
+ * reload) the tags column keeps it, and no column moved (06).
+ */
+export const ColumnResized: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made } = loaded as Loaded;
+		const page = within(canvasElement);
+		await rowsShown(canvasElement);
+		const order = () =>
+			[...canvasElement.querySelectorAll<HTMLElement>("th[data-column]")].map((th) => th.dataset.column);
+		const before = order();
+		await dragHandle(canvasElement, "태그 열 너비 조절", 80);
+		await waitFor(async () => {
+			const kept = await run<{ columns: { id: string; width?: number }[] }>(made.monti, "list.columns", {
+				collection: "post",
+			});
+			expect(kept.columns.find((column) => column.id === "tags")?.width).toBe(232);
+		}, wait);
+		await userEvent.click(page.getByRole("button", { name: "메모" }));
+		await waitFor(() => expect(canvasElement.querySelector("th[data-column=tags]")).toBeNull(), wait);
+		await userEvent.click(page.getByRole("button", { name: /^게시글/ }));
+		await rowsShown(canvasElement);
+		await waitFor(() => expect(columnWidth(canvasElement, "tags")).toBe(232), wait);
+		expect(order()).toEqual(before);
+	},
+};
+
 /** "25 per page ▾" under the table, opened upward: 25, 50, 100 (flow 7, step 02c). */
 export const PageSize: Story = {
 	loaders: site(),

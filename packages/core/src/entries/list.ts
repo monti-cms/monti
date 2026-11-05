@@ -66,6 +66,8 @@ export type ListColumn = {
 	/** What its menu filters by; `null` for none. */
 	filter: FilterOn | null;
 	hidden: boolean;
+	/** The width in px the admin dragged it to; without it the column has its kind's width (the title always takes the room left). */
+	width?: number;
 	/** A relation's target collection, and whether it holds many values. */
 	to?: string;
 	many?: boolean;
@@ -463,10 +465,15 @@ export function listColumns(
 	];
 	return {
 		pageSize: prefs.pageSize ?? 25,
-		columns: placed.map(({ shown, ...column }) => ({
-			...column,
-			hidden: column.id !== "title" && ((prefs.hidden ?? []).includes(column.id) || (!known.has(column.id) && !shown)),
-		})),
+		columns: placed.map(({ shown, ...column }) => {
+			const width = prefs.widths?.[column.id];
+			return {
+				...column,
+				hidden:
+					column.id !== "title" && ((prefs.hidden ?? []).includes(column.id) || (!known.has(column.id) && !shown)),
+				...(width === undefined || column.id === "title" ? {} : { width }),
+			};
+		}),
 	};
 }
 
@@ -493,7 +500,7 @@ export const listOperations = [
 		name: "list.columns",
 		kind: "read",
 		description:
-			"The columns a collection's list can show, from its schema, in the admin's order with the hidden ones marked, and the page size the admin keeps.",
+			"The columns a collection's list can show, from its schema, in the admin's order with the hidden ones marked and the widths the admin dragged, and the page size the admin keeps.",
 		input: z.object({ collection: z.string() }),
 		async run(input, ctx) {
 			return listColumns(collectionOf(ctx, input.collection), await adminValues(ctx, input.collection));
@@ -503,14 +510,16 @@ export const listOperations = [
 		name: "list.savePrefs",
 		kind: "write",
 		description:
-			"Keep how a collection's list looks: the column order, the hidden columns and the page size (25, 50 or 100). The title column cannot be hidden.",
+			"Keep how a collection's list looks: the column order, the hidden columns, the column widths in px (column id → width; a column left out has its kind's width) and the page size (25, 50 or 100). The title column cannot be hidden and has no width: it takes the room the others leave.",
 		input: z.object({ collection: z.string() }).extend(ListPrefs.shape),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		async check(input, ctx) {
 			const ids = new Set(listColumns(collectionOf(ctx, input.collection), {}).columns.map((column) => column.id));
-			for (const id of [...(input.order ?? []), ...(input.hidden ?? [])])
+			const widths = Object.keys(input.widths ?? {});
+			for (const id of [...(input.order ?? []), ...(input.hidden ?? []), ...widths])
 				if (!ids.has(id)) throw new CheckError({ key: "list.unknownColumn", values: { column: id } });
 			if (input.hidden?.includes("title")) throw new CheckError({ key: "list.titleHidden" });
+			if (widths.includes("title")) throw new CheckError({ key: "list.titleWidth" });
 		},
 		async run({ collection, ...prefs }, ctx) {
 			const values = await adminValues(ctx, collection);

@@ -6,6 +6,7 @@ import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { Add, ArrowDown, ArrowUp } from "./icons";
 import type { SelectAll } from "./page-header";
+import { ResizeHandle } from "./resize-handle";
 import { TableHead, TableHeader } from "./table";
 
 /** One column of a list as its head names it. */
@@ -14,6 +15,11 @@ type ListHeadColumn = {
 	label: string;
 	/** Width in px; without it the column takes the room the others leave (the title). */
 	size?: number;
+	/**
+	 * The width its kind starts at (`LIST_COLUMN_SIZE`). With `onResize` on the head, a column that has it gets a handle on its right edge: it is the
+	 * narrowest the column goes, and a double-click on the handle goes back to it.
+	 */
+	kindSize?: number;
 	align?: "start" | "end";
 	/** Set on the column the list is sorted by: its name is in ink with ↓ or ↑. */
 	sort?: "asc" | "desc";
@@ -24,11 +30,16 @@ type ListHeadColumn = {
 };
 
 /**
- * The width of a list's column by what it shows, in px (doc 06: widths come by kind, and nobody resizes them). The title has none: it takes the room the
- * others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary). `end` is the cell over the rows' ⋯.
+ * The width a list's column starts at by what it shows, in px (doc 06: the kind's width is where a column starts; the admin can drag it wider). The title
+ * has none: it takes the room the others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary). `end`
+ * is the cell over the rows' ⋯.
  */
 const LIST_COLUMN_SIZE = { status: 76, one: 84, many: 152, locale: 60, date: 84, end: 38 } as const;
 type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
+/** The widest a column can be dragged (core's `list.savePrefs` keeps no more). */
+const LIST_COLUMN_MAX = 480;
+/** The room a drag always leaves the title: a column grows only while the title is wider than this. */
+const TITLE_MIN = 200;
 
 /** The columns that are off, offered by the + at the end of the head row. */
 type ListHeadAdd = {
@@ -99,6 +110,11 @@ const MENU_REACH = 15;
  * name calls `onStep(id, -1 | 1)`.
  *
  * `selectAll` hangs a check in the left margin, on the line of the rows' checks: hidden until the pointer is on the head row, and it picks the page.
+ *
+ * With `onResize`, each column that has a `kindSize` gets a `ResizeHandle` on its right edge (not the title, which takes the room left, nor the end cell).
+ * Dragging it calls `onResize(id, width, false)` while the pointer is down and `onResize(id, width, true)` on release; the arrow keys step it as on a
+ * side panel, and a double-click calls `onResize(id, null, true)` (back to the kind's width). A width stays between `kindSize` and `LIST_COLUMN_MAX`, and
+ * never squeezes the title under `TITLE_MIN`. A press on a handle never starts moving the column.
  */
 function ListHead({
 	columns,
@@ -109,6 +125,8 @@ function ListHead({
 	onPlace,
 	onStep,
 	onPreview,
+	onResize,
+	resizeLabel,
 }: {
 	/** The columns shown, in order. */
 	columns: readonly ListHeadColumn[];
@@ -124,6 +142,10 @@ function ListHead({
 	onPlace?: (from: string, to: string) => void;
 	onStep?: (id: string, direction: -1 | 1) => void;
 	onPreview?: (order: string[] | null) => void;
+	/** Sets a column's width (`null`: back to its kind's width); `commit` is false while a drag is under way. Without it no column has a handle. */
+	onResize?: (id: string, width: number | null, commit: boolean) => void;
+	/** Each handle's screen reader name, from the column's name ("Resize Tags"). */
+	resizeLabel?: (label: string) => string;
 }) {
 	const row = React.useRef<HTMLTableRowElement>(null);
 	// The press in progress: where it started, where on the name it took hold, and the order when it started.
@@ -131,11 +153,28 @@ function ListHead({
 	const [drag, setDrag] = React.useState<{ id: string; offset: number } | null>(null);
 	// The column whose menu is open, and whether its card is lined up with the name's right side (a name near the end of the row).
 	const [open, setOpen] = React.useState<{ id: string; flip: boolean } | null>(null);
+	// The column whose handle is being dragged: its line stays drawn while the pointer leaves the handle.
+	const [resizing, setResizing] = React.useState<string | null>(null);
 	const dragged = React.useRef(false);
 	const pointerX = React.useRef(0);
 	const ids = columns.map((column) => column.id);
 	const cellOf = (id: string) =>
 		[...(row.current?.querySelectorAll<HTMLElement>("[data-column]") ?? [])].find((cell) => cell.dataset.column === id);
+	/** `width` within the column's limits: no narrower than its kind, no wider than the max or than what leaves the title its `TITLE_MIN`. */
+	const clampWidth = (column: ListHeadColumn, width: number) => {
+		const min = column.kindSize ?? 0;
+		const now = cellOf(column.id)?.getBoundingClientRect().width ?? column.size ?? min;
+		const title = columns.find((each) => each.size === undefined);
+		const spare = title ? (cellOf(title.id)?.getBoundingClientRect().width ?? TITLE_MIN) - TITLE_MIN : LIST_COLUMN_MAX;
+		const max = Math.max(min, Math.min(LIST_COLUMN_MAX, Math.max(now, now + spare)));
+		return Math.min(max, Math.max(min, Math.round(width)));
+	};
+	const resize = (column: ListHeadColumn, width: number, commit: boolean) => {
+		setResizing(commit ? null : column.id);
+		const next = clampWidth(column, width);
+		onResize?.(column.id, next === column.kindSize && commit ? null : next, commit);
+	};
+
 	/** How far the held name must be moved off its place (as laid out now) to sit under the pointer. */
 	const lift = (id: string, offset: number) => {
 		const cell = cellOf(id);
@@ -247,6 +286,8 @@ function ListHead({
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							onPointerDown={(event) => {
 								if (event.button !== 0 || !onPlace) return;
+								// The handle's press resizes; it never moves the column.
+								if ((event.target as Element).closest("[data-slot=resize-handle]")) return;
 								const box = event.currentTarget.getBoundingClientRect();
 								press.current = { id: column.id, x: event.clientX, grab: event.clientX - box.left, ids };
 								pointerX.current = event.clientX;
@@ -310,6 +351,22 @@ function ListHead({
 								>
 									{name}
 								</button>
+							)}
+							{onResize && column.kindSize !== undefined && column.size !== undefined && !drag && (
+								<ResizeHandle
+									value={column.size}
+									min={column.kindSize}
+									max={LIST_COLUMN_MAX}
+									onChange={(width, commit) => resize(column, width, commit)}
+									onReset={() => {
+										setResizing(null);
+										onResize(column.id, null, true);
+									}}
+									label={resizeLabel?.(column.label)}
+									resizing={resizing === column.id}
+									// Inside the column's right edge, in its padding: a stuck head cell paints over anything that reaches into the next one.
+									className="translate-x-0"
+								/>
 							)}
 						</TableHead>
 					);
