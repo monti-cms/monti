@@ -87,13 +87,24 @@ function MenuTick({ className, ...props }: React.ComponentProps<"span">) {
 
 /**
  * The end of a row: its key combination in `keys` (`["mod", "shift", "D"]`, written "⇧⌘D" on a Mac and "Ctrl+Shift+D" elsewhere), or other short
- * text as children (a count, a markdown shortcut such as "##", why a row cannot be used). Mono.
+ * text as children (a count, why a row cannot be used), in mono. `typed` is what the person can type in the text to get the same thing (a markdown
+ * shortcut: "###", "[]", ">"): it is drawn in the row's own sans letters, faint, because mono squeezes a run of "#" into a blur.
  */
-function MenuShortcut({ className, keys, children, ...props }: React.ComponentProps<"span"> & { keys?: ShortcutKeys }) {
+function MenuShortcut({
+	className,
+	keys,
+	typed = false,
+	children,
+	...props
+}: React.ComponentProps<"span"> & { keys?: ShortcutKeys; typed?: boolean }) {
 	return (
 		<span
 			data-slot="menu-shortcut"
-			className={cn("ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle", className)}
+			data-typed={typed || undefined}
+			className={cn(
+				"ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle data-typed:text-monti-faint data-typed:text-monti-note",
+				className,
+			)}
 			{...props}
 		>
 			{keys ? <Shortcut keys={keys} /> : children}

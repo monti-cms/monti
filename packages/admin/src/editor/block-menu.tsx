@@ -30,6 +30,7 @@ import {
 	canMove,
 	deleteBlock,
 	duplicateBlock,
+	KIND_SHORTCUTS,
 	kindKey,
 	kindOf,
 	moveBlock,
@@ -256,6 +257,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 													{each.type === "heading"
 														? t("editor.heading", { level: each.level })
 														: t(catalogs.kit.blocks.find((b) => b.type === each.type)?.label ?? each.type)}
+													{KIND_SHORTCUTS[kindKey(each)] ? (
+														<MenuShortcut typed>{KIND_SHORTCUTS[kindKey(each)]}</MenuShortcut>
+													) : null}
 												</DropdownMenuRadioItem>
 											))}
 										</DropdownMenuRadioGroup>

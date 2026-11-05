@@ -5,6 +5,7 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
+	MenuShortcut,
 	Popover,
 	PopoverContent,
 	Text,
@@ -32,6 +33,8 @@ type Item = {
 	words: string[];
 	/** The mark at the start of its row. */
 	icon: ReactNode;
+	/** The markdown that makes it when typed at the start of a line, shown at the end of its row. */
+	typed?: string;
 	/** Puts the block in on the line the "/" was typed on. */
 	run: (editor: Editor) => void | Promise<void>;
 };
@@ -103,6 +106,7 @@ export function useSlashMenu({
 			label: kind.type === "heading" ? t("editor.heading", { level: kind.level }) : label(kind.type),
 			words: [kind.type, KIND_SHORTCUTS[kindKey(kind)] ?? ""],
 			icon: <BlockIcon type={kind.type} level={kind.type === "heading" ? kind.level : undefined} />,
+			typed: KIND_SHORTCUTS[kindKey(kind)] || undefined,
 			run: (editor) => {
 				if (open) putIn(editor, open, turnLine(kind));
 			},
@@ -123,6 +127,7 @@ export function useSlashMenu({
 				label: t(block.label),
 				words: [block.type, block.type === "divider" ? "---" : ""],
 				icon: <BlockIcon type={block.type} />,
+				typed: block.type === "divider" ? "---" : undefined,
 				run: (editor) => {
 					if (!open) return;
 					const type = editor.schema.nodes[nodeName(block.type)];
@@ -287,6 +292,7 @@ function SlashMenu({
 										<CommandItem key={item.key} value={String(at)} onSelect={() => onChoose(item)}>
 											{item.icon}
 											<Text truncate>{item.label}</Text>
+											{item.typed ? <MenuShortcut typed>{item.typed}</MenuShortcut> : null}
 										</CommandItem>
 									))}
 								</CommandGroup>
