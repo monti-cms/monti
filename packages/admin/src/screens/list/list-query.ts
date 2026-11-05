@@ -59,7 +59,7 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 	const page = Number(params.get("page") ?? "1");
 	return {
 		filters,
-		search: { text: params.get("q") ?? "", in: params.get("in") === "fields" ? "fields" : "all" },
+		search: { text: params.get("q") ?? "", in: params.get("in") === "all" ? "all" : "fields" },
 		sort: SORTABLE.has(by)
 			? { by: by as ListState["sort"]["by"], dir: sortRaw.startsWith("-") ? "desc" : "asc" }
 			: { by: "updatedAt", dir: "desc" },
@@ -71,7 +71,8 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 export function writeState(state: ListState): URLSearchParams {
 	const params = new URLSearchParams();
 	if (state.search.text) params.set("q", state.search.text);
-	if (state.search.in === "fields") params.set("in", "fields");
+	// Title and address is where the screen searches first, as the reference list's box does.
+	if (state.search.in === "all") params.set("in", "all");
 	for (const filter of state.filters) {
 		const key = filterColumn(filter);
 		if (filter.on === "empty") params.set(key, "empty");

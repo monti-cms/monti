@@ -213,7 +213,7 @@ export const TitleSorted: Story = {
 		waitFor(() => expect(within(canvasElement).getByText("CMS elements")).toBeTruthy(), wait),
 };
 
-/** Two rows picked: the bulk bar takes the head row's place (flow 7, step 10; flow 9, step 04). */
+/** Two rows picked: the bulk bar takes the head row's place (flow 7, step 10). */
 export const Picked: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
@@ -263,4 +263,174 @@ export const NoMatch: Story = {
 export const Categories: Story = {
 	loaders: site(undefined, "#/c/category"),
 	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("일상")).toBeTruthy(), wait),
+};
+
+const body = () => within(document.body);
+/** Opens a column's menu by its name in the head row. */
+async function openColumn(canvas: HTMLElement, name: string) {
+	await waitFor(() => expect(within(canvas).getByRole("button", { name })).toBeTruthy(), wait);
+	await userEvent.click(within(canvas).getByRole("button", { name }));
+	await waitFor(() => expect(body().getByRole("menu")).toBeTruthy(), wait);
+}
+
+/** The title's menu: A → Z, Z → A (flow 7, step 01). */
+export const TitleMenu: Story = {
+	loaders: site(),
+	play: ({ canvasElement }) => openColumn(canvasElement, "제목"),
+};
+
+/** The + over the rows' ⋯: only the hidden columns (flow 7, step 02). */
+export const AddColumn: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "열 추가" }));
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "요약" })).toBeTruthy(), wait);
+	},
+};
+
+/** A column name held and dragged left: it follows the pointer and the others make room, rows too (flow 7, step 02b). */
+export const ColumnMoving: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const held = canvasElement.querySelector<HTMLElement>("th[data-column=tags]");
+		const row = held?.parentElement;
+		if (!held || !row) return;
+		const box = held.getBoundingClientRect();
+		let x = box.left + 20;
+		const y = box.top + box.height / 2;
+		held.dispatchEvent(
+			new PointerEvent("pointerdown", { bubbles: true, button: 0, buttons: 1, clientX: x, clientY: y }),
+		);
+		for (let step = 0; step < 6; step++) {
+			x -= 20;
+			row.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, buttons: 1, clientX: x, clientY: y }));
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		}
+	},
+};
+
+/** "25 per page ▾" under the table, opened upward: 25, 50, 100 (flow 7, step 02c). */
+export const PageSize: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "쪽마다 개수" }));
+		await waitFor(() => expect(body().getByRole("menuitemradio", { name: "100개씩" })).toBeTruthy(), wait);
+	},
+};
+
+/** The search box open, its "search in" menu showing title·address and all (flow 7, step 03). */
+export const SearchIn: Story = {
+	loaders: site(undefined, "#/c/post?q=리액트"),
+	play: async ({ canvasElement }) => {
+		const target = { name: /찾을 곳/ };
+		await waitFor(() => expect(within(canvasElement).getByRole("button", target)).toBeTruthy(), wait);
+		await userEvent.click(within(canvasElement).getByRole("button", target));
+		await waitFor(() => expect(body().getByRole("menu")).toBeTruthy(), wait);
+	},
+};
+
+/** The tags' menu: a search row, "None", each tag with its count (flow 7, step 04b). */
+export const TagMenu: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "태그");
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /리액트/ })).toBeTruthy(), wait);
+	},
+};
+
+/** The language's menu with "EN" picked: the groups that have an English entry (flow 7, step 04c; its translation group is T52). */
+export const LanguageMenu: Story = {
+	loaders: site(undefined, "#/c/post?locale=en"),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "언어");
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /EN/ })).toBeTruthy(), wait);
+	},
+};
+
+/** The summary column turned on with + and filtered by "empty" (flow 7, step 04d). */
+export const SummaryMenu: Story = {
+	loaders: site(async (made) => {
+		await made.monti.run(
+			"list.savePrefs",
+			{
+				collection: "post",
+				order: [
+					"status",
+					"title",
+					"summary",
+					"subtitle",
+					"category",
+					"tags",
+					"locale",
+					"updatedAt",
+					"publishedAt",
+					"createdAt",
+				],
+				hidden: ["subtitle", "publishedAt", "createdAt"],
+			},
+			admin,
+		);
+	}, "#/c/post?summary=empty"),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "요약");
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /비어 있음/ })).toBeTruthy(), wait);
+	},
+};
+
+/** Two filters at once: a dot on each filtered name, no chip row (flow 7, step 04e). */
+export const SeveralFilters: Story = {
+	loaders: site(undefined, "#/c/post?status=draft,changed&updatedAt=30d"),
+	play: ({ canvasElement }) =>
+		waitFor(() => expect(within(canvasElement).getByText("가을 사진 정리")).toBeTruthy(), wait),
+};
+
+/** The updated date's menu: newest or oldest first | today, 7 days, 30 days, pick dates (flow 7, step 05). */
+export const DateMenu: Story = {
+	loaders: site(undefined, "#/c/post?updatedAt=7d"),
+	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
+};
+
+/** "Pick dates" opens a calendar beside the menu (flow 7, step 05b). */
+export const DatePick: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "수정일");
+		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
+		await waitFor(() => expect(body().getByRole("grid")).toBeTruthy(), wait);
+	},
+};
+
+/** A range picked: the calendar shows it and stays open, the name has its dot (flow 7, step 05c). */
+export const DateRange: Story = {
+	loaders: site(undefined, "#/c/post?updatedAt=2026-10-05..2026-10-26"),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "수정일");
+		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
+		await waitFor(() => expect(body().getByRole("grid")).toBeTruthy(), wait);
+	},
+};
+
+/** A right click on one of two picked rows: the bulk bar's actions by the same names (flow 5, step 08). */
+export const RowsMenu: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const page = within(canvasElement);
+		await userEvent.click(page.getByRole("checkbox", { name: "리액트 서버 컴포넌트 다시 보기 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
+		const row = page.getByText("가을 사진 정리").closest("tr") as HTMLElement;
+		const box = row.getBoundingClientRect();
+		row.dispatchEvent(
+			new MouseEvent("contextmenu", {
+				bubbles: true,
+				cancelable: true,
+				clientX: box.left + 320,
+				clientY: box.top + box.height / 2,
+			}),
+		);
+		await waitFor(() => expect(body().getByText("2개 항목")).toBeTruthy(), wait);
+	},
 };

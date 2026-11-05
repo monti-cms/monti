@@ -260,6 +260,7 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 						mode="range"
 						language={language}
 						selected={picked}
+						defaultMonth={picked?.from}
 						onDayClick={(day) => {
 							if (start === null) return setStart(day);
 							const [from, to] = day < start ? [day, start] : [start, day];

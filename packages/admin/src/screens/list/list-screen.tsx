@@ -186,12 +186,18 @@ export function ListScreen({
 
 	// The order shown while a column is dragged; the rows follow it.
 	const [preview, setPreview] = useState<string[] | null>(null);
+	// What was just saved, shown until the columns are read again, so a dropped column does not jump back for a moment.
+	const [saving, setSaving] = useState<{ order: string[]; hidden: string[]; from: Columns | null } | null>(null);
+	const pending = saving && saving.from === columnsRead.data ? saving : null;
 	const savePrefs = useOperation("list.savePrefs");
-	const allIds = (columns ?? []).map((column) => column.id);
-	const hidden = (columns ?? []).filter((column) => column.hidden).map((column) => column.id);
+	const allIds = pending?.order ?? (columns ?? []).map((column) => column.id);
+	const hidden = pending?.hidden ?? (columns ?? []).filter((column) => column.hidden).map((column) => column.id);
 	const shownIds = (preview ?? allIds).filter((id) => !hidden.includes(id));
 	const shown = shownIds.flatMap((id) => (columns ?? []).filter((column) => column.id === id));
-	const keep = (order: string[], nextHidden: string[]) => void savePrefs.run({ collection, order, hidden: nextHidden });
+	const keep = (order: string[], nextHidden: string[]) => {
+		setSaving({ order, hidden: nextHidden, from: columnsRead.data });
+		void savePrefs.run({ collection, order, hidden: nextHidden });
+	};
 	const move = (from: string, to: string) => {
 		const order = allIds.filter((id) => id !== from);
 		order.splice(order.indexOf(to) + (allIds.indexOf(from) < allIds.indexOf(to) ? 1 : 0), 0, from);
@@ -290,7 +296,7 @@ export function ListScreen({
 				<SearchToggle
 					label={t("list.search")}
 					aria-label={t("list.search")}
-					placeholder={t("list.search")}
+					placeholder={state.search.in === "fields" ? t("list.searchFieldsPlaceholder") : t("list.search")}
 					value={words}
 					onValueChange={search}
 					targets={[
@@ -358,10 +364,45 @@ export function ListScreen({
 	}));
 	const colSpan = shown.length + 1;
 	const aiChips = state.filters.filter((filter) => state.ai.includes(filterColumn(filter)));
+	const stateNames: Record<string, string> = {
+		published: t("list.state.published"),
+		changed: t("list.state.changed"),
+		draft: t("list.state.draft"),
+		archived: t("list.state.archived"),
+	};
+	/** What an assistant's filter reads on its chip: the column, and the values it keeps where they have names here. */
 	const chipText = (filter: ListState["filters"][number]) => {
 		const column = columns?.find((each) => each.id === filterColumn(filter));
 		const named = column ? label(column) : filterColumn(filter);
-		return filter.on === "empty" ? t("list.chipEmpty", { column: named }) : named;
+		const values = (list: string[]) => t("list.chipValues", { column: named, values: list.join(", ") });
+		switch (filter.on) {
+			case "empty":
+				return t("list.chipEmpty", { column: named });
+			case "status":
+				return values(filter.any.map((value) => stateNames[value] ?? value));
+			case "locale":
+				return values(filter.any.map((value) => value.toUpperCase()));
+			case "select":
+				return values(
+					filter.any.map((value) =>
+						value === null
+							? t("list.none")
+							: (column?.options?.find((option) => option.value === value)?.label ?? value),
+					),
+				);
+			case "date":
+				return values([
+					filter.range === "today"
+						? t("list.today")
+						: filter.range === "7d"
+							? t("list.last7")
+							: filter.range === "30d"
+								? t("list.last30")
+								: `${shortDate(filter.range.from)} – ${shortDate(filter.range.to)}`,
+				]);
+			case "relation":
+				return named;
+		}
 	};
 
 	const cell = (row: ListRow, column: ListColumn, first: boolean): ReactNode => {
@@ -379,7 +420,7 @@ export function ListScreen({
 					<TableCell key={column.id}>
 						{check}
 						<EntryStatus status={row.state === "changed" ? "editing" : row.state} quiet={row.state === "published"}>
-							{t(`list.state.${row.state}`)}
+							{stateNames[row.state]}
 						</EntryStatus>
 					</TableCell>
 				);
@@ -488,7 +529,7 @@ export function ListScreen({
 							add={{
 								label: t("list.addColumn"),
 								columns: (columns ?? [])
-									.filter((column) => column.hidden)
+									.filter((column) => hidden.includes(column.id))
 									.map((column) => ({ id: column.id, label: label(column) })),
 								onAdd: (id) =>
 									keep(

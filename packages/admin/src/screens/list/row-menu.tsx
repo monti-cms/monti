@@ -1,5 +1,6 @@
 import type { ListRow } from "@monti-cms/core";
 import {
+	ContextMenuGroup,
 	ContextMenuItem,
 	ContextMenuLabel,
 	ContextMenuSeparator,
@@ -86,7 +87,9 @@ export function RowsMenuItems({
 	const { t } = useAdmin();
 	return (
 		<>
-			<ContextMenuLabel>{t("list.items", { count: rows.length })}</ContextMenuLabel>
+			<ContextMenuGroup>
+				<ContextMenuLabel>{t("list.items", { count: rows.length })}</ContextMenuLabel>
+			</ContextMenuGroup>
 			{document && publishable(rows).length > 0 && (
 				<ContextMenuItem onClick={() => actions.publish(rows)}>{t("list.publish")}</ContextMenuItem>
 			)}
