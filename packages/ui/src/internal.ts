@@ -330,7 +330,7 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
-export { TableAddStrip, TableGrip } from "./table-tools";
+export { TableAddStrip, TableColumnBorder, TableGrip } from "./table-tools";
 export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";

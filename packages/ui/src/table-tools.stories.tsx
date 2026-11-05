@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, EditorBody, Stack, TableAddStrip, TableGrip } from "./index";
+import { Box, EditorBody, Stack, TableAddStrip, TableColumnBorder, TableGrip } from "./index";
 
 /**
- * A table's tools in the editor: the grips on the caret's column and row, and the + strips along its right and bottom edges. The editor places them
+ * A table's tools in the editor: the grips on the caret's column and row, the borders between columns, and the + strips along its right and bottom edges. The editor places them
  * over the table with `EditorOverlay`; here they stand on their own.
  */
 const meta = {
@@ -75,5 +75,21 @@ export const Grid: Story = {
 				</table>
 			</EditorBody>
 		</Box>
+	),
+};
+
+/** The border between two columns: a thin hit area, its 2px ink line shown while it is pointed at, focused or dragged (`active`). */
+export const ColumnBorder: Story = {
+	render: () => (
+		<Stack direction="row" gap={24} align="start">
+			{/* design-allow: the size the editor gives the border, the table's height */}
+			<div style={{ width: 9, height: 96 }}>
+				<TableColumnBorder label="1·2번째 열 너비" />
+			</div>
+			{/* design-allow: the size the editor gives the border, the table's height */}
+			<div style={{ width: 9, height: 96 }}>
+				<TableColumnBorder label="2·3번째 열 너비" active />
+			</div>
+		</Stack>
 	),
 };

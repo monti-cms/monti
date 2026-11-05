@@ -75,4 +75,38 @@ function TableAddStrip({
 	);
 }
 
-export { TableAddStrip, TableGrip };
+/**
+ * The border between two columns of a table in the editor, to drag wider or narrower: a thin hit area over the border that shows a 2px ink line
+ * while it is pointed at, focused or dragged (`active`). The two columns beside it trade width; the table stays as wide as the body. It fills the box
+ * it is put in (`EditorOverlay` with the table's height). The arrow keys move it too.
+ */
+function TableColumnBorder({
+	label,
+	active = false,
+	className,
+	...props
+}: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
+	/** What it does, for screen readers ("Resize columns 2 and 3"). */
+	label: string;
+	/** Being dragged: the line stays while the pointer moves. */
+	active?: boolean;
+}) {
+	return (
+		<ButtonPrimitive
+			data-slot="table-column-border"
+			type="button"
+			aria-label={label}
+			data-active={active || undefined}
+			className={cn(
+				"group relative flex size-full cursor-col-resize items-stretch justify-center rounded-monti-full border-0 bg-transparent p-0 outline-none",
+				className,
+			)}
+			onMouseDown={(event) => event.preventDefault()}
+			{...props}
+		>
+			<span className="w-0.5 bg-transparent transition-colors group-hover:bg-monti-emphasis group-focus-visible:bg-monti-emphasis group-data-active:bg-monti-emphasis" />
+		</ButtonPrimitive>
+	);
+}
+
+export { TableAddStrip, TableColumnBorder, TableGrip };

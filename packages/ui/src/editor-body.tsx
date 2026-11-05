@@ -36,11 +36,8 @@ const EDITOR_BODY = cn(
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-code",
 	// A table is a light grid while it is written (every cell is a place to type), its head row only bolder (editor-tools.md, the table).
 	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-muted [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-muted [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
-	// The wrapper scrolls a table wider than the body; the block ground of its open menu stays inside it, or it would scroll too.
-	"[&_.tableWrapper]:mb-monti-20 [&_.tableWrapper]:overflow-x-auto [&_.tableWrapper_table]:mb-0 [&_.tableWrapper[data-menu-open]]:before:left-0! [&_.tableWrapper[data-menu-open]]:before:right-0!",
-	// Cells picked by dragging across them, and the border of a column being dragged wider.
+	// Cells picked by dragging across them.
 	"[&_.selectedCell]:bg-monti-selected",
-	"[&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-top-px [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis",
 	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-default [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",

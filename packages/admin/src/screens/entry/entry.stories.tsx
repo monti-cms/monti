@@ -501,6 +501,15 @@ async function inCell(body: HTMLElement, words: string) {
 	return cell;
 }
 
+/** The table's column widths as the editor draws them. */
+const shares = (body: HTMLElement) => [...body.querySelectorAll("col")].map((col) => (col as HTMLElement).style.width);
+
+/** The table is no wider than the body. */
+const fitsBody = (body: HTMLElement) => {
+	const table = body.querySelector("table");
+	return Boolean(table) && (table?.getBoundingClientRect().width ?? 0) <= body.getBoundingClientRect().width + 1;
+};
+
 /** The table's cells as rows of text. */
 const cells = (body: HTMLElement) =>
 	[...body.querySelectorAll("tr")].map((row) => [...row.querySelectorAll("td, th")].map((cell) => cell.textContent));
@@ -552,6 +561,7 @@ export const TableAddColumn: Story = {
 		const { page, body, all } = await opened(context.canvasElement);
 		await userEvent.click(await all.findByRole("menuitem", { name: "오른쪽에 열 넣기" }, wait));
 		await waitFor(() => expect(cells(body)[0]).toEqual(["버전", "바뀐 것", "", "날짜"]), wait);
+		await expect(fitsBody(body)).toBe(true);
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await saveCell(page, "저장됨");
 		const { site: made, id } = context.loaded as Loaded;
@@ -595,20 +605,47 @@ export const TableHeaderRow: Story = {
 	},
 };
 
-/** A table whose columns were sized: each keeps its share of the body (20 · 50 · 30 of the 676px its borders leave), so it is no wider than the body. */
+/** A table whose columns were sized: each keeps its share of the body (20 · 50 · 30), and the table is as wide as the body. */
 export const TableSized: Story = {
 	loaders: site("tableSized"),
 	play: async ({ canvasElement }) => {
 		const { body } = await opened(canvasElement);
-		await waitFor(
-			() =>
-				expect([...body.querySelectorAll("col")].map((col) => (col as HTMLElement).style.width)).toEqual([
-					"135px",
-					"338px",
-					"202px",
-				]),
-			wait,
-		);
+		await waitFor(() => expect(shares(body)).toEqual(["20%", "50%", "30%"]), wait);
+		await expect(fitsBody(body)).toBe(true);
+	},
+};
+
+/** A column put into a sized table: it gets an even share and the others make room in proportion; the table is still the body's width. */
+export const TableSizedAddColumn: Story = {
+	loaders: site("tableSized"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "편집기 다시 만들기");
+		await userEvent.click(await all.findByRole("button", { name: "2번째 열" }, wait));
+		await userEvent.click(await all.findByRole("menuitem", { name: "오른쪽에 열 넣기" }, wait));
+		await waitFor(() => expect(shares(body)).toEqual(["15%", "37.5%", "25%", "22.5%"]), wait);
+		await expect(fitsBody(body)).toBe(true);
+	},
+};
+
+/** A border dragged: only the two columns beside it trade width, and the table stays the body's width. */
+export const TableDragBorder: Story = {
+	loaders: site("tableSized"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "처음 공개");
+		const border = await all.findByRole("button", { name: "1·2번째 열 너비" }, wait);
+		const box = border.getBoundingClientRect();
+		const y = box.top + box.height / 2;
+		const x = box.left + box.width / 2;
+		const width = body.querySelector("table")?.getBoundingClientRect().width ?? 680;
+		await userEvent.pointer([
+			{ keys: "[MouseLeft>]", target: border, coords: { clientX: x, clientY: y } },
+			{ target: border, coords: { clientX: x + width * 0.1, clientY: y } },
+			{ keys: "[/MouseLeft]", target: border, coords: { clientX: x + width * 0.1, clientY: y } },
+		]);
+		await waitFor(() => expect(shares(body)).toEqual(["30%", "40%", "30%"]), wait);
+		await expect(fitsBody(body)).toBe(true);
 	},
 };
 
