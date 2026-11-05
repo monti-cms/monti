@@ -109,7 +109,7 @@ async function changeFields(canvasElement: HTMLElement) {
 	const screen = await settings(canvasElement);
 	const { page, body } = screen;
 	await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
-	fill(await body.findByLabelText("식별자"), "excerpt");
+	fill(await body.findByLabelText(/^식별자/), "excerpt");
 	await userEvent.click(body.getByRole("button", { name: "저장" }));
 
 	await userEvent.click(await page.findByRole("button", { name: "subtitle 열기" }));
@@ -117,7 +117,7 @@ async function changeFields(canvasElement: HTMLElement) {
 
 	await addField(screen, "고르기");
 	fill(body.getByLabelText("표시 이름"), "글 종류");
-	fill(body.getByLabelText("식별자"), "format");
+	fill(body.getByLabelText(/^식별자/), "format");
 	await userEvent.click(body.getByRole("button", { name: "+ 선택지" }));
 	await userEvent.click(body.getByRole("button", { name: "+ 선택지" }));
 	const values = body.getAllByLabelText("값");
@@ -148,7 +148,7 @@ export const AddTextField: Story = {
 		const screen = await settings(canvasElement);
 		await addField(screen, "글자");
 		fill(screen.body.getByLabelText("표시 이름"), "읽는 시간");
-		fill(screen.body.getByLabelText("식별자"), "readingTime");
+		fill(screen.body.getByLabelText(/^식별자/), "readingTime");
 	},
 };
 
@@ -158,7 +158,7 @@ export const AddSelectField: Story = {
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
 		await addField(screen, "고르기");
-		fill(screen.body.getByLabelText("식별자"), "format");
+		fill(screen.body.getByLabelText(/^식별자/), "format");
 		await userEvent.click(screen.body.getByRole("button", { name: "+ 선택지" }));
 		fill(screen.body.getAllByLabelText("값")[0] as HTMLElement, "memo");
 		fill(screen.body.getAllByLabelText("라벨")[0] as HTMLElement, "메모");
@@ -171,7 +171,7 @@ export const AddMediaField: Story = {
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
 		await addField(screen, "미디어");
-		fill(screen.body.getByLabelText("식별자"), "gallery");
+		fill(screen.body.getByLabelText(/^식별자/), "gallery");
 	},
 };
 
@@ -182,7 +182,7 @@ export const AddRelationField: Story = {
 		const screen = await settings(canvasElement);
 		await addField(screen, "관계");
 		fill(screen.body.getByLabelText("표시 이름"), "시리즈");
-		fill(screen.body.getByLabelText("식별자"), "series");
+		fill(screen.body.getByLabelText(/^식별자/), "series");
 	},
 };
 
@@ -256,7 +256,7 @@ export const PreviewProblem: Story = {
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
 		await addField(screen, "고르기");
-		fill(screen.body.getByLabelText("식별자"), "format");
+		fill(screen.body.getByLabelText(/^식별자/), "format");
 		await userEvent.click(screen.body.getByRole("button", { name: "필드 추가" }));
 		await sheetGone(screen.body);
 		await userEvent.click(await screen.page.findByRole("button", { name: "속성 패널 미리보기" }));

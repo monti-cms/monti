@@ -291,7 +291,9 @@ function FieldSheetBody({
 	const nameField =
 		structure && !fixedName ? (
 			<FormField>
-				<FormFieldLabel htmlFor="field-name">{t("settings.field.name")}</FormFieldLabel>
+				<FormFieldLabel htmlFor="field-name" required>
+					{t("settings.field.name")}
+				</FormFieldLabel>
 				<Input
 					id="field-name"
 					mono
