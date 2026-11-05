@@ -33,11 +33,11 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 속성 패널 탭 "기본 7 · SEO 3 +" | `FolderTabs`(`FolderTabsList`, `FolderTab` 손잡이 · 이름 · `count`, 플러그인이 둔 탭은 `locked`, 끝에 `FolderTabsAdd` "탭 추가") | 고른 탭의 필드만 보인다. 필드를 다른 탭 머리로 끌어 옮긴다. 탭 이름은 그 자리에서 고친다(`FolderTabEdit`). 탭이 하나뿐이면 탭 줄 없이 행만 있다. |
+| 속성 패널 탭 "기본 7 · SEO 3 +" | `FolderTabs`(`FolderTabsList`, `FolderTab` 손잡이 · 이름 · `count`, 플러그인이 둔 탭은 `locked`, 끝에 `FolderTabsAdd` "탭 추가") | 고른 탭의 필드만 보인다. 필드를 다른 탭 머리로 끌어 옮긴다. 탭 이름은 그 자리에서 고친다(`FolderTabEdit`). 탭은 늘 하나 이상 있다. 관리자 값에 배치가 없으면 "기본" 탭 하나에 모든 필드가 있다(2026-11-05 바뀜: 탭이 하나여도 탭 줄을 보인다). |
 | 필드 목록 | `FolderTabsBody` 안의 `FieldTree` | 탭이 하나뿐이면 `FieldTree`만. |
 | 필드 한 줄 | `FieldRow`(`name` mono, `label`, `description`, `kind` mono와 "!" 표시, 묶음 안은 `depth`, 바뀜은 `changed`, 이름 색 `tone`: 새로 `success`, 이름 바꿈 `warning`, 지움 `faint`, 문제 `danger`, ✦ 제안 `proposal`, `note` "← summary" · "지움" · "새로" · "✦ 제안" · "선택지 없음", 옮길 수 없으면 `grip={false}`) | 누르면(`onOpen`) 그 필드의 시트가 열리고, 고치는 것은 시트에서 한다. 손잡이로 순서를 바꾼다. |
 | 묶음 줄 "분류" | `FieldRow group` | 이름이 굵게 든 회색 띠. |
-| "+ 필드 추가" · "+ 묶음 추가" · "+ 탭 추가" | 셋 다 `Button variant="ghost" size="sm"` | 필드 추가는 필드 시트를 연다. 탭 추가는 탭이 하나뿐일 때만 여기 있다. 읽기 전용이면 "+ 필드 추가"가 없다. |
+| "+ 필드 추가" · "+ 묶음 추가" | 둘 다 `Button variant="ghost" size="sm"` | 필드 추가는 필드 시트를 연다. 탭 추가는 탭 줄 끝의 `FolderTabsAdd`가 한다. 읽기 전용이면 "+ 필드 추가"가 없다. |
 | 표시 설명 "! 필수 · → 관계 · [] 여러 개" | `Text variant="meta" tone="subtle"` | |
 
 #### 기본 탭
@@ -120,7 +120,7 @@
 |---|---|---|---|
 | "새 컬렉션" | 4.01 | 새 컬렉션 `Sheet` | Controls/Overlay/Sheet |
 | "새 컬렉션 오류" | 4.02 | 식별자 `aria-invalid`와 `FormFieldError`, "만들기" 비활성 | Controls/Field/Field |
-| "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), 탭 없이 `FieldTree`만(제목, 주소), "+ 탭 추가", 저장 묶음 바뀐 곳 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
+| "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 바뀐 곳 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
 | "새 컬렉션 검토" | 4.05 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `ChangeLines`(공개 주소, 필드), `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었어요"와 "보기" | Controls/Status/Toast |

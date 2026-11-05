@@ -169,58 +169,54 @@ export function FieldsTab({
 
 	return (
 		<Stack gap={12} paddingTop={16}>
-			{layout.length > 1 ? (
-				<FolderTabs value={String(current)} onValueChange={(value) => onTab(Number(value))}>
-					<FolderTabsList
-						add={
-							locked ? undefined : (
-								<FolderTabsAdd aria-label={t("settings.fields.addTab")} onClick={addTab}>
-									+
-								</FolderTabsAdd>
-							)
-						}
-					>
-						{layout.map((each, index) =>
-							renaming === index ? (
-								<FolderTabEdit key={`tab:${each.tab}`}>
-									<Input
-										appearance="inline"
-										width="fit"
-										aria-label={t("settings.fields.tabName")}
-										defaultValue={each.tab}
-										autoFocus
-										onBlur={(event) => {
-											const name = event.currentTarget.value.trim();
-											if (name && name !== each.tab)
-												setLayout(layout.map((one, at) => (at === index ? { ...one, tab: name } : one)));
-											setRenaming(null);
-										}}
-										onKeyDown={(event) => {
-											if (event.key === "Enter") event.currentTarget.blur();
-											if (event.key === "Escape") setRenaming(null);
-										}}
-									/>
-								</FolderTabEdit>
-							) : (
-								<FolderTab
-									key={`tab:${each.tab}`}
-									value={String(index)}
-									count={String(count(index))}
-									draggable={false}
-									onDoubleClick={() => setRenaming(index)}
-									onDragOver={over}
-									onDrop={drop({ tab: index })}
-								>
-									{each.tab}
-								</FolderTab>
-							),
-						)}
-					</FolderTabsList>
-					<FolderTabsBody value={String(current)}>{tree(current)}</FolderTabsBody>
-				</FolderTabs>
-			) : (
-				tree(0)
-			)}
+			<FolderTabs value={String(current)} onValueChange={(value) => onTab(Number(value))}>
+				<FolderTabsList
+					add={
+						locked ? undefined : (
+							<FolderTabsAdd aria-label={t("settings.fields.addTab")} onClick={addTab}>
+								+
+							</FolderTabsAdd>
+						)
+					}
+				>
+					{layout.map((each, index) =>
+						renaming === index ? (
+							<FolderTabEdit key={`tab:${each.tab}`}>
+								<Input
+									appearance="inline"
+									width="fit"
+									aria-label={t("settings.fields.tabName")}
+									defaultValue={each.tab}
+									autoFocus
+									onBlur={(event) => {
+										const name = event.currentTarget.value.trim();
+										if (name && name !== each.tab)
+											setLayout(layout.map((one, at) => (at === index ? { ...one, tab: name } : one)));
+										setRenaming(null);
+									}}
+									onKeyDown={(event) => {
+										if (event.key === "Enter") event.currentTarget.blur();
+										if (event.key === "Escape") setRenaming(null);
+									}}
+								/>
+							</FolderTabEdit>
+						) : (
+							<FolderTab
+								key={`tab:${each.tab}`}
+								value={String(index)}
+								count={String(count(index))}
+								draggable={false}
+								onDoubleClick={() => setRenaming(index)}
+								onDragOver={over}
+								onDrop={drop({ tab: index })}
+							>
+								{each.tab}
+							</FolderTab>
+						),
+					)}
+				</FolderTabsList>
+				<FolderTabsBody value={String(current)}>{tree(current)}</FolderTabsBody>
+			</FolderTabs>
 			<Stack gap={12}>
 				<Inline gap={4}>
 					{locked ? null : (
@@ -231,11 +227,6 @@ export function FieldsTab({
 					<Button variant="ghost" size="sm" onClick={addGroup}>
 						{t("settings.fields.addGroup")}
 					</Button>
-					{layout.length === 1 && !locked ? (
-						<Button variant="ghost" size="sm" onClick={addTab}>
-							{t("settings.fields.addTabText")}
-						</Button>
-					) : null}
 				</Inline>
 				<Text as="p" variant="meta" tone="subtle">
 					{t("settings.fields.legend")}
