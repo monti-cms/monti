@@ -1,5 +1,6 @@
 import type { Answers, Choice, FieldDefinition, SchemaChange } from "@monti-cms/core";
 import {
+	Box,
 	Button,
 	ChangeGroup,
 	ChangeLine,
@@ -16,7 +17,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Stack,
-	TextButton,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
@@ -329,13 +329,11 @@ function Body({
 			</SheetHeader>
 			<SheetBody blocks>
 				<Stack gap={12}>
+					{/* The change blocks bring their own 16px above; the note takes the same, so it does not sit on the header. */}
 					{conflict ? (
-						<ErrorNote
-							title={t("settings.review.fileChanged")}
-							actions={<TextButton onClick={onReload}>{t("settings.reload")}</TextButton>}
-						>
-							{t("settings.review.fileChangedLine")}
-						</ErrorNote>
+						<Box paddingTop={16}>
+							<ErrorNote title={t("settings.review.fileChanged")}>{t("settings.review.fileChangedLine")}</ErrorNote>
+						</Box>
 					) : null}
 					<Stack gap={0}>{plan.changes.map(block)}</Stack>
 				</Stack>
@@ -344,9 +342,14 @@ function Body({
 				<Button variant="ghost" disabled={applying} onClick={onClose}>
 					{t("settings.cancel")}
 				</Button>
-				<Button variant={danger ? "danger" : "primary"} disabled={conflict} loading={applying} onClick={apply}>
-					{danger ? t("settings.review.applyDelete") : t("settings.review.apply")}
-				</Button>
+				{/* With the file changed under the screen, reading it again is the one thing left to do: it takes the pill's place. */}
+				{conflict ? (
+					<Button onClick={onReload}>{t("settings.reload")}</Button>
+				) : (
+					<Button variant={danger ? "danger" : "primary"} loading={applying} onClick={apply}>
+						{danger ? t("settings.review.applyDelete") : t("settings.review.apply")}
+					</Button>
+				)}
 			</SheetFooter>
 		</SheetContent>
 	);
