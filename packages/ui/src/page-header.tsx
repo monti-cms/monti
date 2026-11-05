@@ -35,8 +35,9 @@ function PageHeader({
 }
 
 /**
- * The column every page sits in: centred, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It takes the height
- * the page has. The header and the toolbar keep their place; the body ({@link PageBody}) is what scrolls.
+ * The column every page sits in: centred, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It is as tall as
+ * what it holds, at least the page's height. The page scrolls as a whole, in the frame's page area: one scrollbar at the page's right edge, the header
+ * going up with the rows (2026-11-06, owner).
  *
  * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
  * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
@@ -53,15 +54,12 @@ function PageColumn({
 		<div
 			data-slot="page-column"
 			data-width={width}
-			className={cn(
-				"flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 pb-monti-40 md:px-monti-48",
-				className,
-			)}
+			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 pb-monti-40 md:px-monti-48", className)}
 			{...props}
 		>
 			<div
 				className={cn(
-					"mx-auto flex min-h-0 w-full flex-1 flex-col",
+					"mx-auto flex w-full flex-1 flex-col",
 					width === "list"
 						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
 						: "max-w-monti-content",
@@ -73,17 +71,14 @@ function PageColumn({
 	);
 }
 
-/** What is under the header and the toolbar of a page: it takes the height left and scrolls by itself (`relative`, so the screen-reader-only inputs inside scroll with it). */
+/** What is under the header and the toolbar of a page: it takes the height left, and scrolls with the page (`relative`, so the screen-reader-only inputs inside move with it). */
 function PageBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="page-body"
 			// 8px of room at each side, taken back from the column by the negative margin: a text button's tint or a field's ring at the column's
 			// edge is not cut by the scroll, and the words stay where they were.
-			className={cn(
-				"relative -mx-monti-8 flex min-h-0 flex-1 flex-col overflow-y-auto px-monti-8 pb-monti-8",
-				className,
-			)}
+			className={cn("relative -mx-monti-8 flex flex-1 flex-col px-monti-8 pb-monti-8", className)}
 			{...props}
 		/>
 	);

@@ -197,7 +197,7 @@ export function AdminFrame({
 				>
 					{/* As the app's frame: the page is the container its column measures, and a docked panel sits beside it. */}
 					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-						<Stack gap={0} grow minWidth={0} minHeight={0} container>
+						<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
 							{children}
 						</Stack>
 						{panel}

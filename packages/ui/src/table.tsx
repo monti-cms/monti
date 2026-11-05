@@ -3,7 +3,6 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
-import { useLayoutEffect, useRef, useState } from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
@@ -13,7 +12,7 @@ function Table({
 	className,
 	container = "scroll",
 	layout = "auto",
-	stickyHeader = false,
+	stickyHeader,
 	width,
 	columns,
 	style,
@@ -34,7 +33,7 @@ function Table({
 	container?: "scroll" | "none";
 	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
 	layout?: "auto" | "fixed";
-	/** The header row stays at the top while the rows scroll under it. */
+	/** The header row stays at the top while the rows scroll under it. On by default for a table the page scrolls (`container="none"`). */
 	stickyHeader?: boolean;
 }) {
 	return (
@@ -46,7 +45,9 @@ function Table({
 					layout === "fixed" && "table-fixed",
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
-					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
+					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					(stickyHeader ?? container === "none") &&
+						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)]",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -164,39 +165,15 @@ function RowCheck({
 }
 
 /**
- * The box a list's rows scroll in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
- * so scrolling does not cut them off, and out to the page's right edge, so its scrollbar runs at the edge of the page, not beside the last column. The rows
- * keep the column's width. Put the table in it (`container="none"`) inside a `PageColumn` (whose width the right edge is measured from); what holds it and
- * the toolbar above must not clip either.
+ * The box a list's rows sit in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
+ * so nothing cuts them off; the rows keep the column's width. It does not scroll: the page does, and the table's column heads stay at its top
+ * (`Table stickyHeader`). Put the table in it (`container="none"`); what holds it and the toolbar above must not clip either.
  */
-function ListScroll({ className, ref, ...props }: React.ComponentProps<"div">) {
-	const box = useRef<HTMLDivElement | null>(null);
-	// The scrollbar's width: 11px in Chrome, 8 in Firefox, 0 where bars overlay the page. The rows end where the column does, whatever it is.
-	const [bar, setBar] = useState(0);
-	useLayoutEffect(() => {
-		const element = box.current;
-		if (!element) return;
-		const measure = () => setBar(element.offsetWidth - element.clientWidth);
-		measure();
-		const observer = new ResizeObserver(measure);
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, []);
+function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
-			ref={(element) => {
-				box.current = element;
-				if (typeof ref === "function") ref(element);
-				else if (ref) ref.current = element;
-			}}
 			data-slot="list-scroll"
-			className={cn(
-				// The column is centered in the page (`100cqw`): half the difference is the room between its right edge and the page's.
-				"-mr-[calc((100cqw-100%)/2)] -ml-monti-32 flex min-h-0 flex-1 flex-col overflow-y-auto pr-[calc((100cqw-100%)/2-var(--monti-list-bar))] pl-monti-32",
-				className,
-			)}
-			// design-allow: the scrollbar's measured width
-			style={{ "--monti-list-bar": `${bar}px` } as React.CSSProperties}
+			className={cn("-ml-monti-32 flex flex-1 flex-col pl-monti-32", className)}
 			{...props}
 		/>
 	);
