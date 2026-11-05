@@ -97,6 +97,7 @@ function tokensCss(json) {
 			...plain("height"),
 			...plain("width"),
 			...plain("size"),
+			...plain("motion"),
 			...shadows.map((token) => themed(token, "light")),
 			...type,
 			...fonts,
@@ -159,6 +160,16 @@ function themeLines(json) {
 
 	section("Widths of columns, panels and sheets (w-monti-*, min-w-monti-*, max-w-monti-*).");
 	for (const { name } of json.width.tokens) add("container", strip(name, "width-"), `var(--monti-${name})`);
+
+	section(
+		"Motion: transitions take the normal duration and the standard ease by default; ease-monti-exit for leaving, duration-(--monti-duration-fast|slow) otherwise.",
+	);
+	for (const { name } of json.motion.tokens)
+		if (name.startsWith("ease-")) add("ease", strip(name, "ease-"), `var(--monti-${name})`);
+	out.push(
+		"\t--default-transition-duration: var(--monti-duration-normal);",
+		"\t--default-transition-timing-function: var(--monti-ease-standard);",
+	);
 
 	section("Shadows: floating surfaces only. The rest of the design is flat.");
 	for (const { name } of json.shadow.tokens) add("shadow", strip(name, "shadow-"), `var(--monti-${name})`);

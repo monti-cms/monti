@@ -57,7 +57,7 @@ function ConversationRow({
 			<button
 				type="button"
 				aria-current={current || undefined}
-				className="flex w-full cursor-pointer flex-col gap-monti-2 rounded-monti-md border-0 bg-transparent px-monti-12 py-monti-10 text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+				className="flex w-full cursor-pointer flex-col gap-monti-2 rounded-monti-md border-0 bg-transparent px-monti-12 py-monti-10 text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
 				{...props}
 			>
 				<span className={cn("truncate text-monti-body text-monti-default", menu !== undefined && "pr-monti-24")}>
@@ -83,7 +83,7 @@ function ConversationRowMore({
 		<button
 			type="button"
 			className={cn(
-				"flex cursor-pointer rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+				"flex cursor-pointer rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				className,
 			)}
 			{...props}

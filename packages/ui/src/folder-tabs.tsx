@@ -88,7 +88,7 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
@@ -149,7 +149,7 @@ function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props)
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				className,
 			)}
 			{...props}

@@ -52,7 +52,7 @@ function PaginationLink({ className, isActive, disabled, ...props }: PaginationL
 			data-slot="pagination-link"
 			data-active={isActive}
 			className={cn(
-				"inline-flex h-monti-control-md shrink-0 cursor-pointer items-center justify-center gap-monti-4 rounded-monti-full text-monti-body text-monti-muted no-underline outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-[active=true]:bg-monti-selected data-[active=true]:font-semibold data-[active=true]:text-monti-default [&_svg:not([class*='size-'])]:size-4",
+				"inline-flex h-monti-control-md shrink-0 cursor-pointer items-center justify-center gap-monti-4 rounded-monti-full text-monti-body text-monti-muted no-underline outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-[active=true]:bg-monti-selected data-[active=true]:font-semibold data-[active=true]:text-monti-default [&_svg:not([class*='size-'])]:size-4",
 				// A page button is never narrower than tall: one digit is a circle, more digits a pill.
 				"min-w-(--size-monti-control-md) px-monti-4",
 				disabled && "pointer-events-none opacity-45",

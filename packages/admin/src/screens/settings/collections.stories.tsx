@@ -387,6 +387,34 @@ export const Made: Story = {
 	},
 };
 
+/**
+ * A refused apply stays where the person acts (the feedback ladder in status.md): the review keeps open with the reason at its top, not a toast that goes.
+ * The site refuses `schema.apply` here.
+ */
+export const ApplyRefused: Story = {
+	loaders: site(),
+	render: (_args, { loaded }) => {
+		const { transport } = (loaded as Loaded).site;
+		return (
+			<MontiAdmin
+				transport={(name, input, options) =>
+					name === "schema.apply"
+						? Promise.resolve({ status: 500, body: { error: "unexpected" } })
+						: transport(name, input, options)
+				}
+				siteName="example.dev"
+			/>
+		);
+	},
+	play: async (context) => {
+		await NewCollectionReview.play?.(context);
+		const body = within(context.canvasElement.ownerDocument.body);
+		await userEvent.click(body.getByRole("button", { name: "적용" }));
+		await body.findByText("저장하지 못했어요. 다시 해 보세요.", {}, wait);
+		await expect(body.getByRole("button", { name: "적용" })).toBeInTheDocument();
+	},
+};
+
 /** Flow 4, step 18: the memos are deleted: gone from the list, and the toast says it is applied (the removal's undo toast is gone). */
 export const Deleted: Story = {
 	loaders: site(),

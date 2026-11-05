@@ -25,7 +25,7 @@ html:has(.monti-admin) body {
 @layer base {
 	:where(html:has(.monti-admin)) * {
 		border-color: var(--monti-border-muted);
-		outline-color: color-mix(in srgb, var(--monti-border-contrast) 20%, transparent);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 50%, transparent);
 	}
 }
 
@@ -60,4 +60,22 @@ html:has(.monti-admin) body {
 }
 .monti-admin *:hover::-webkit-scrollbar-thumb {
 	background: var(--monti-gray-8);
+}
+
+/*
+ * Reduced motion: when the person asks their system for less motion, nothing in the admin slides, fades or spins. Popups are portaled to the
+ * body, so the rule covers the whole document that holds the admin. A changing state still shows; it just does not travel.
+ */
+/* design-allow: the person's reduced-motion setting reaches every part at once; a utility on each element could miss one */
+@media (prefers-reduced-motion: reduce) {
+	html:has(.monti-admin) *,
+	html:has(.monti-admin) *::before,
+	html:has(.monti-admin) *::after {
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		transition-duration: 0.01ms !important;
+	}
 }

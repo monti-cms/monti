@@ -157,7 +157,7 @@ function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				"flex w-fit items-center gap-monti-8 text-monti-label group-data-[disabled=true]/field:opacity-50",
+				"flex w-fit items-center gap-monti-8 text-monti-label group-data-[disabled=true]/field:opacity-45",
 				className,
 			)}
 			{...props}

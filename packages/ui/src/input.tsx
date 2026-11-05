@@ -75,7 +75,7 @@ function Input({
 							size !== "title" &&
 								size !== "display" &&
 								size !== "inherit" &&
-								"focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+								"focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 						)
 					: cn(
 							// With an action the wrapper below draws the rule, the tint and the room; the input inside keeps none.

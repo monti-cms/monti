@@ -72,6 +72,7 @@ export function ReviewSheet({
 	model,
 	plan,
 	conflict,
+	refused,
 	applying,
 	onReload,
 	onClose,
@@ -81,6 +82,8 @@ export function ReviewSheet({
 	model: CollectionsDraft;
 	plan: Plan | null;
 	conflict: boolean;
+	/** Why the last apply was refused (not a conflict): it stays at the top of the review until the next try. */
+	refused?: string | null;
 	applying: boolean;
 	onReload: () => void;
 	onClose: () => void;
@@ -95,6 +98,7 @@ export function ReviewSheet({
 					model={model}
 					plan={plan}
 					conflict={conflict}
+					refused={refused}
 					applying={applying}
 					onReload={onReload}
 					onClose={onClose}
@@ -110,6 +114,7 @@ function Body({
 	model,
 	plan,
 	conflict,
+	refused,
 	applying,
 	onReload,
 	onClose,
@@ -119,6 +124,8 @@ function Body({
 	model: CollectionsDraft;
 	plan: Plan;
 	conflict: boolean;
+	/** Why the last apply was refused (not a conflict): it stays at the top of the review until the next try. */
+	refused?: string | null;
 	applying: boolean;
 	onReload: () => void;
 	onClose: () => void;
@@ -364,6 +371,11 @@ function Body({
 					{conflict ? (
 						<Box paddingBottom={12}>
 							<ErrorNote title={t("settings.review.fileChanged")}>{t("settings.review.fileChangedLine")}</ErrorNote>
+						</Box>
+					) : null}
+					{refused && !conflict ? (
+						<Box paddingBottom={12}>
+							<ErrorNote title={refused} />
 						</Box>
 					) : null}
 					{fixFirst}

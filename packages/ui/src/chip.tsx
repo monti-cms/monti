@@ -17,7 +17,7 @@ export const CHIP_SM = "h-monti-control-xs gap-monti-4 px-monti-8 text-monti-cap
 
 /** What a chip's remove mark looks like: lighter than the text. */
 export const CHIP_REMOVE =
-	"flex shrink-0 cursor-pointer rounded-monti-full border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/30";
+	"flex shrink-0 cursor-pointer rounded-monti-full border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50";
 
 /**
  * A chip that can be taken off answers as a whole, as most systems' chips do: one step darker under the pointer, one more while its × is pressed. The ×

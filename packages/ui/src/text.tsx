@@ -36,7 +36,7 @@ export const textVariants = cva("", {
 			success: "text-monti-success",
 			inherit: "",
 		},
-		weight: { role: "", medium: "font-medium", semibold: "font-semibold" },
+		weight: { role: "", semibold: "font-semibold" },
 		mono: { true: "font-mono" },
 		truncate: { true: "truncate" },
 		/** Read by screen readers, not shown (a column name over buttons, a label the layout already makes plain). */

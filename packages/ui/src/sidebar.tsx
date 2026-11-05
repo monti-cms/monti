@@ -174,7 +174,7 @@ function Sidebar({
 						data-mobile="true"
 						className={cn(
 							RAIL,
-							"fixed inset-y-0 left-0 z-50 h-full w-monti-sidebar max-w-full border-monti-emphasis border-r outline-none transition duration-200 ease-in-out data-ending-style:-translate-x-10 data-starting-style:-translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0",
+							"fixed inset-y-0 left-0 z-50 h-full w-monti-sidebar max-w-full border-monti-emphasis border-r outline-none transition duration-(--monti-duration-slow) ease-monti-standard data-ending-style:-translate-x-10 data-starting-style:-translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-(--monti-duration-normal) data-ending-style:ease-monti-exit",
 						)}
 					>
 						<DrawerPrimitive.Title className="sr-only">{labels.sidebarTitle}</DrawerPrimitive.Title>
@@ -511,7 +511,7 @@ function SidebarMenuButton({
 			{
 				className: cn(
 					NAV_ROW,
-					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:px-[10px] group-data-[rail]/rail:[&>svg:first-child]:ml-0 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:px-monti-10 group-data-[rail]/rail:[&>svg:first-child]:ml-0 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -646,7 +646,7 @@ function SidebarMenuSubButton({
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-[14px] text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-[14px] text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],

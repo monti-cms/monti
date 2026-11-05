@@ -55,7 +55,7 @@ function SearchBox<T extends string = string>({
 		<div
 			data-slot="search-box"
 			className={cn(
-				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/20",
+				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/50",
 				targets && current ? "pl-monti-4" : "pl-monti-12",
 				className,
 			)}
@@ -65,7 +65,7 @@ function SearchBox<T extends string = string>({
 					<DropdownMenuTrigger
 						// The name starts with the visible text (the place now picked), then says what the picker is.
 						aria-label={targetLabel ? `${current.label}, ${targetLabel}` : undefined}
-						className="inline-flex h-monti-control-sm shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+						className="inline-flex h-monti-control-sm shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
 					>
 						{current.label}
 						<Caret />

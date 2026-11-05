@@ -65,7 +65,7 @@ function EmptyStep({
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-baseline gap-monti-20 border-0 border-monti-muted border-b bg-transparent py-[22px] text-left text-monti-default no-underline outline-none focus-visible:bg-monti-selected",
+					"flex w-full cursor-pointer items-baseline gap-monti-20 border-0 border-monti-muted border-b bg-transparent py-monti-24 text-left text-monti-default no-underline outline-none focus-visible:bg-monti-selected",
 					className,
 				),
 				children: (

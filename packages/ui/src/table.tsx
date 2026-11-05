@@ -227,7 +227,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 			{
 				draggable: false,
 				className: cn(
-					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/20 focus-visible:after:ring-inset",
+					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
 					className,
 				),
 			},

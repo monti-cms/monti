@@ -48,10 +48,10 @@ function Textarea({
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
 				// One line stands as high as an `Input` of its size (28px small, 32px medium, 36px otherwise); more lines grow it downward.
 				size === "sm"
-					? "min-h-monti-control-sm py-[3px] text-monti-note leading-[1.6]"
+					? "min-h-monti-control-sm py-[3px] text-monti-note"
 					: size === "md"
-						? "min-h-monti-control-md py-monti-4 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]"
-						: "min-h-monti-control-lg py-monti-6 text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
+						? "min-h-monti-control-md py-monti-4 text-monti-reading md:text-monti-prose"
+						: "min-h-monti-control-lg py-monti-6 text-monti-reading md:text-monti-prose",
 				mono && "font-mono",
 				tall && "min-h-[52px]",
 				// With an action the line around it draws the rule, so the box keeps the height less that 1px.

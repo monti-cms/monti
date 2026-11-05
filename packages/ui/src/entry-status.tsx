@@ -52,7 +52,7 @@ function EntryStatus({
 			data-slot="entry-status"
 			data-status={status}
 			className={cn(
-				"inline-flex items-center gap-[7px] whitespace-nowrap font-medium text-monti-note",
+				"inline-flex items-center gap-[7px] whitespace-nowrap text-monti-label",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}

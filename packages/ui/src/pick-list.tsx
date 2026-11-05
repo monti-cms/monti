@@ -34,7 +34,7 @@ function PickListItem({
 			className={cn(
 				MENU_ROW,
 				// On the sheet's ground, not in a floating menu: a one-line row there is a pill.
-				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
+				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}

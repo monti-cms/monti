@@ -228,6 +228,12 @@
 	--container-monti-list: var(--monti-width-list);
 	--container-monti-reading: var(--monti-width-reading);
 
+	/* Motion: transitions take the normal duration and the standard ease by default; ease-monti-exit for leaving, duration-(--monti-duration-fast|slow) otherwise. */
+	--ease-monti-standard: var(--monti-ease-standard);
+	--ease-monti-exit: var(--monti-ease-exit);
+	--default-transition-duration: var(--monti-duration-normal);
+	--default-transition-timing-function: var(--monti-ease-standard);
+
 	/* Shadows: floating surfaces only. The rest of the design is flat. */
 	--shadow-monti-floating: var(--monti-shadow-floating);
 	--shadow-monti-overlay: var(--monti-shadow-overlay);
@@ -292,6 +298,15 @@
 	letter-spacing: var(--monti-text-body-tracking);
 }
 
+/* 14px/24px 400. UI text that runs over several lines: the assistant's answers and the admin's bubble, dialog descriptions, a multi-line field. Same size as body, a 24px line. */
+@utility text-monti-prose {
+	font-family: var(--monti-family, var(--monti-font-sans));
+	font-size: var(--monti-text-prose-size);
+	line-height: var(--monti-text-prose-line);
+	font-weight: var(--monti-text-prose-weight);
+	letter-spacing: var(--monti-text-prose-tracking);
+}
+
 /* 13px/18px 500. Tabs, filters, small buttons. */
 @utility text-monti-label {
 	font-family: var(--monti-family, var(--monti-font-sans));
@@ -326,6 +341,15 @@
 	line-height: var(--monti-text-meta-line);
 	font-weight: var(--monti-text-meta-weight);
 	letter-spacing: var(--monti-text-meta-tracking);
+}
+
+/* 12px/20px 400. Code and JSON over several lines: code blocks in the body and in comparisons. Meta's size on a 20px line. */
+@utility text-monti-code {
+	font-family: var(--monti-font-mono);
+	font-size: var(--monti-text-code-size);
+	line-height: var(--monti-text-code-line);
+	font-weight: var(--monti-text-code-weight);
+	letter-spacing: var(--monti-text-code-tracking);
 }
 
 /* 11px/14px 400. Field labels, group labels in menus and panels. */
