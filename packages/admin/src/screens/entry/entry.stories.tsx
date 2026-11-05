@@ -74,6 +74,23 @@ const noted = () =>
 		{ id: `b_${++count}`, type: "footnote", attrs: { id: "fn_state" }, content: text("상태는 색 대신 글자로 적었다.") },
 	);
 
+/**
+ * The assistant's body proposals on the reference entry (T32), from one request: a shorter phrase in the first paragraph, a line put in after the
+ * third, and the last paragraph taken out.
+ */
+async function proposeBody(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first, , third, last] = read.entry.doc.blocks;
+	if (!first || !third || !last) throw new Error("the reference entry has four blocks");
+	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
+	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
+	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
+	await edit([
+		{ op: "insert", after: third.id, blocks: [{ type: "paragraph", content: text("상태도 색 대신 글자로 적었다.") }] },
+	]);
+	await edit([{ op: "remove", blocks: [last.id] }]);
+}
+
 async function templates(monti: Monti) {
 	await monti.run(
 		"templates.save",
@@ -92,7 +109,17 @@ async function templates(monti: Monti) {
 	);
 }
 
-type Kind = "draft" | "new" | "untitled" | "published" | "changed" | "archived" | "table" | "tableSized" | "footnotes";
+type Kind =
+	| "draft"
+	| "new"
+	| "untitled"
+	| "published"
+	| "changed"
+	| "archived"
+	| "table"
+	| "tableSized"
+	| "footnotes"
+	| "proposed";
 
 /** Makes the story's entry and returns its id. */
 async function entry(monti: Monti, kind: Kind): Promise<string> {
@@ -149,6 +176,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	if (kind === "changed")
 		await monti.run("entries.save", { id, version: 2, values: { subtitle: "도구보다 글" } }, admin);
 	if (kind === "archived") await monti.run("entries.archive", { ids: [id] }, admin);
+	if (kind === "proposed") await proposeBody(monti, id);
 	return id;
 }
 
@@ -675,5 +703,76 @@ export const FootnoteGoTo: Story = {
 			const at = document.getSelection()?.anchorNode;
 			expect(at?.parentElement?.closest("[data-footnote]")?.getAttribute("data-n")).toBe("1");
 		}, wait);
+	},
+};
+
+/** The assistant's body proposals drawn over the text: struck-through words out, pale blue words in, the first looked at (T32). */
+export const BodyProposals: Story = {
+	loaders: site("proposed"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(2), wait);
+		await expect(body.querySelector("ins")?.textContent).toBe("만든");
+		await all.findByText("더 짧게 다듬기", {}, wait);
+		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/** ⌘↵ takes the proposal looked at: the words change, the change is unsaved, and the save marks the proposal applied. */
+export const BodyProposalTake: Story = {
+	loaders: site("proposed"),
+	play: async (context) => {
+		const { page, body } = await opened(context.canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(2), wait);
+		await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+		await waitFor(() => expect(body.textContent).toContain("블로그를 다시 만든 건"), wait);
+		await expect(body.querySelectorAll("ins")).toHaveLength(1);
+		await saveCell(page, "저장 전 변경사항");
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await saveCell(page, "저장됨");
+		const { site: made, id } = context.loaded as Loaded;
+		const left = (await made.monti.run("proposals.forTarget", { kind: "entry", id }, admin)) as unknown[];
+		await expect(left).toHaveLength(2);
+	},
+};
+
+/** "모두 받기": every proposal goes into the text at once, unsaved. */
+export const BodyProposalTakeAll: Story = {
+	loaders: site("proposed"),
+	play: async ({ canvasElement }) => {
+		const { page, body, all } = await opened(canvasElement);
+		await userEvent.click(await all.findByRole("button", { name: "모두 받기" }, wait));
+		await waitFor(() => expect(body.textContent).toContain("상태도 색 대신 글자로 적었다."), wait);
+		await expect(body.textContent).toContain("블로그를 다시 만든 건");
+		await expect(body.textContent).not.toContain("편집기도 같은 원칙으로");
+		await expect(body.querySelectorAll("ins, del")).toHaveLength(0);
+		await saveCell(page, "저장 전 변경사항");
+	},
+};
+
+/** Typing in a block a proposal touches takes that proposal first, then the typing goes over it. */
+export const BodyProposalTypeIn: Story = {
+	loaders: site("proposed"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(2), wait);
+		await select(body, "때문이다");
+		document.getSelection()?.collapseToEnd();
+		document.dispatchEvent(new Event("selectionchange"));
+		await userEvent.keyboard("!");
+		await waitFor(() => expect(body.textContent).toContain("블로그를 다시 만든 건"), wait);
+		await expect(body.textContent).toContain("때문이다!");
+	},
+};
+
+/** "모두 버리기": the proposals are gone from the text and the bubble with them; nothing changed. */
+export const BodyProposalDiscardAll: Story = {
+	loaders: site("proposed"),
+	play: async ({ canvasElement }) => {
+		const { page, body, all } = await opened(canvasElement);
+		await userEvent.click(await all.findByRole("button", { name: "모두 버리기" }, wait));
+		await waitFor(() => expect(body.querySelectorAll("ins, del")).toHaveLength(0), wait);
+		await expect(all.queryByRole("button", { name: "모두 받기" })).toBeNull();
+		await saveCell(page, "저장됨");
 	},
 };

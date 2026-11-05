@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
+import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
 import { useBodyEditor } from "./use-body-editor";
@@ -20,6 +21,7 @@ export function BodyEditor({
 	editable = true,
 	templates = false,
 	onEditor,
+	proposals,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -29,8 +31,15 @@ export function BodyEditor({
 	templates?: boolean;
 	/** Hands the editor to the screen once it is made, so a to-do row can take the cursor to its block. */
 	onEditor?: (editor: Editor | null) => void;
+	/**
+	 * The assistant's body proposals drawn over the text (T32), the one looked at (`current`), and what happens when one is taken here (the person
+	 * changed a block it touches, so it went in first).
+	 */
+	proposals?: { items: BodyProposal[]; current: string | null; onTaken: (id: string) => void };
 }) {
 	const editorRef = useRef<Editor | null>(null);
+	const latestProposals = useRef(proposals);
+	latestProposals.current = proposals;
 	const slash = useSlashMenu({ catalogs, templates, editorRef });
 	const editor = useBodyEditor({
 		doc,
@@ -39,12 +48,24 @@ export function BodyEditor({
 		onChange,
 		keyDown: slash.keyDown,
 		onSelection: slash.sync,
+		onTakeProposal: (id) => {
+			const item = latestProposals.current?.items.find((each) => each.id === id);
+			if (!item || !editorRef.current) return;
+			takeInEditor(editorRef.current, item, catalogs.kit);
+			latestProposals.current?.onTaken(id);
+		},
 	});
 	editorRef.current = editor;
 	const handle = useBlockHandle(editor, catalogs);
 	const tables = useTableTools(editor);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
+
+	const items = proposals?.items;
+	const current = proposals?.current ?? null;
+	useEffect(() => {
+		if (editor && !editor.isDestroyed) editor.view.dispatch(showProposals(editor.state, items ?? [], current));
+	}, [editor, items, current]);
 
 	useEffect(() => {
 		if (editor && editor.isEditable !== editable) editor.setEditable(editable, false);

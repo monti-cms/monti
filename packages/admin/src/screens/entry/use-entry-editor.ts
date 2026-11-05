@@ -1,4 +1,4 @@
-import type { Doc, EntryState, PublishTask } from "@monti-cms/core";
+import type { BodyOp, Doc, EntryState, PublishTask } from "@monti-cms/core";
 import { useCallback, useMemo, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
@@ -104,6 +104,15 @@ export function useEntryEditor(source: EditorSource) {
 		for (const change of draft.changes) keys.add(change.path);
 		return [...keys].filter((path) => path.startsWith("values.")).map((path) => path.slice("values.".length));
 	}, [base, draft.changes]);
+
+	/** The assistant's body proposals not yet taken (`body.edit` items, T32): the body editor draws them, the bubble walks them. */
+	const bodyProposals = useMemo(
+		() =>
+			draft.proposals
+				.filter(({ item }) => item.operation === "body.edit")
+				.map(({ item }) => ({ id: item.id, request: item.request, ops: (item.input as { ops: BodyOp[] }).ops })),
+		[draft.proposals],
+	);
 
 	const title = String(draft.value("title") ?? "");
 	const doc = (draft.value("doc") as Doc | undefined) ?? EMPTY;
@@ -220,6 +229,11 @@ export function useEntryEditor(source: EditorSource) {
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
 		signIn: signInAgain,
 		bodyKey,
+		bodyProposals,
+		/** A body proposal the body editor put in: counted as taken, and sent with the next save. */
+		takeBody: draft.markTaken,
+		discardProposal: draft.discard,
+		discardProposals: draft.discardAll,
 	};
 }
 
