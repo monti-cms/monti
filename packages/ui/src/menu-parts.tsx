@@ -70,7 +70,11 @@ export const MENU_SEARCH_FIELD =
 export const MENU_EMPTY = "px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle";
 
 /** A long list: one column, 320px high at most, scrolling inside. */
-export const MENU_SCROLL = "flex max-h-80 flex-col overflow-y-auto overscroll-contain";
+/**
+ * A menu's scrolling rows. The list reaches 2px into the card's right padding and keeps 2px before its bar, so the rows stay where they were and
+ * the bar sits in the middle between the rows and the card's edge (measured: about 6px on each side).
+ */
+export const MENU_SCROLL = "-mr-monti-2 flex max-h-80 flex-col overflow-y-auto overscroll-contain pr-monti-2";
 
 /** The ✓ of a row that is the current value. */
 function MenuTick({ className, ...props }: React.ComponentProps<"span">) {
