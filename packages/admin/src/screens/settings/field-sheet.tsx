@@ -322,11 +322,17 @@ function FieldSheetBody({
 					{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
 				</ReadValue>
 			)}
+			{/* The identifier is the one the field must have; the label goes over it, and while empty the screens show the identifier (doc 01). */}
+			{nameField}
 			<FormField>
 				<FormFieldLabel htmlFor="field-label">{t("settings.field.label")}</FormFieldLabel>
-				<Input id="field-label" value={form.label} onChange={(event) => set({ label: event.target.value })} />
+				<Input
+					id="field-label"
+					placeholder={form.name}
+					value={form.label}
+					onChange={(event) => set({ label: event.target.value })}
+				/>
 			</FormField>
-			{nameField}
 			<FormField>
 				<FormFieldLabel htmlFor="field-about">{t("settings.field.about")}</FormFieldLabel>
 				<Textarea
