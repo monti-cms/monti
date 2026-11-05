@@ -35,9 +35,12 @@ export function LoginScreen({
 	onSignedIn: () => void;
 }) {
 	const { t, siteName } = useAdmin();
+	// Another browser made the first admin while this one was filling the form: from then on this screen knows there is an admin, whatever the
+	// state it was opened with says, so going on leads to signing in and never back to the first-admin form.
+	const [adminMade, setAdminMade] = useState(false);
 	const [closed, setClosed] = useState(false);
 	const none = !state.methods.password && !state.methods.github;
-	const first = state.methods.password && !state.hasAdmin && !closed;
+	const first = state.methods.password && !state.hasAdmin && !adminMade;
 	const title = none ? t("login.notSetUp") : first ? t("login.firstAdmin") : undefined;
 	return (
 		<Stack gap={32} minHeight="screen" paddingTop={48} paddingBottom={24} paddingX={16} background="page">
@@ -64,7 +67,13 @@ export function LoginScreen({
 								{closed ? (
 									<Closed onSignIn={() => setClosed(false)} />
 								) : first ? (
-									<FirstAdmin onMade={onSignedIn} onClosed={() => setClosed(true)} />
+									<FirstAdmin
+										onMade={onSignedIn}
+										onClosed={() => {
+											setAdminMade(true);
+											setClosed(true);
+										}}
+									/>
 								) : (
 									<SignIn state={state} denied={denied} onSignedIn={onSignedIn} />
 								)}
