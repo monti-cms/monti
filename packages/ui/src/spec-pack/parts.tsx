@@ -1848,7 +1848,7 @@ function SourceColumn({ label, title, children }: { label?: string; title?: stri
 	return (
 		<BoxPart as="aside" aria-label={label} background="tool" border="right" grow minWidth={0}>
 			<BoxPart paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" className="mx-auto">
-				<Inline minHeight="icon-button">
+				<Inline minHeight="control-md">
 					<Text variant="meta" tone="subtle">
 						{label}
 					</Text>
@@ -1872,7 +1872,7 @@ function SourceColumn({ label, title, children }: { label?: string; title?: stri
  */
 function LanguageBar({ tabs, action }: { tabs?: React.ReactNode; action?: React.ReactNode }) {
 	return (
-		<Inline minHeight="icon-button" justify="between" gap={12}>
+		<Inline minHeight="control-md" justify="between" gap={12}>
 			{tabs}
 			{action}
 		</Inline>

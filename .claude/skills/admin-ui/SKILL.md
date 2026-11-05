@@ -39,6 +39,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 6. Before the change joins a shared branch, pass the three gates: `check:design`, the `design-review` agent on its diff, and a side-by-side of every changed state with its board at 1440×900.
 7. Before handing a screen over, check what a still screenshot cannot show:
    - Measure the rows of each group (heights and gaps in px, from the DOM): one group, one control height, one gap.
+   - Box controls (buttons, inputs, selects, chips, option and switch rows, menu rows, sidebar items) measure 36, 32, 28 or 24 and nothing else; a text control (`TextButton`, tabs, `FilterButton`, a drag handle) is pressable over at least 24px (`HIT_AREA`). `check:design` (`fixed-height`) catches raw heights in classes, not heights made of padding, so measure (tokens.md, 높이 기준).
    - Look at the in-between states: mid-drag (mouse held, screenshot), right after a press, after a retry or a reload.
    - Compare every panel with the board it reuses (a preview of the editor's property panel against the editor board), not only with its own map.
    - An agent's "matches the board" is a claim: look yourself.

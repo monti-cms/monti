@@ -7,6 +7,7 @@ import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { HIT_AREA } from "./hit-area";
 
 function Tabs({
 	className,
@@ -62,8 +63,7 @@ function TabsList({
 }
 
 /** The look of one tab, shared by the tab of a tab list and the link of a link list. */
-const TAB =
-	"inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-[1.5px] bg-transparent px-0 pt-monti-4 pb-[3px] text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:border-monti-contrast data-active:font-semibold data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12";
+const TAB = `${HIT_AREA} inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-[1.5px] bg-transparent px-0 pt-monti-4 pb-[3px] text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:border-monti-contrast data-active:font-semibold data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12`;
 
 type TabExtras = {
 	count?: React.ReactNode;

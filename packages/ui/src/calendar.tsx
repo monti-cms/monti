@@ -55,7 +55,7 @@ function Calendar({
 				month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
 				weekdays: cn("flex", defaultClassNames.weekdays),
 				weekday: cn(
-					"flex h-6 flex-1 items-center justify-center rounded-(--cell-radius) text-monti-micro text-monti-subtle select-none",
+					"flex h-monti-control-xs flex-1 items-center justify-center rounded-(--cell-radius) text-monti-micro text-monti-subtle select-none",
 					defaultClassNames.weekday,
 				),
 				week: cn("mt-monti-2 flex w-full", defaultClassNames.week),

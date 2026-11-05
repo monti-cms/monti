@@ -90,7 +90,7 @@ function MemoCard({
 	return (
 		<div data-slot="memo-card" className={cn(MENU_CARD, "w-[420px] max-w-full overflow-hidden", className)} {...props}>
 			{(where || onDiscard || onAccept) && (
-				<div className="flex h-12 items-center gap-monti-16 border-monti-muted border-b pr-monti-10 pl-monti-16">
+				<div className="flex h-monti-toolbar items-center gap-monti-16 border-monti-muted border-b pr-monti-10 pl-monti-16">
 					<span className="grow text-monti-caption text-monti-subtle">{where}</span>
 					{discardLabel && onDiscard && (
 						<WithShortcut label={discardLabel} shortcut={discardShortcut}>
@@ -111,7 +111,7 @@ function MemoCard({
 			)}
 			{children}
 			{reply && (
-				<div className="flex min-h-12 items-center gap-monti-8 border-monti-muted border-t pr-monti-10 pl-monti-16">
+				<div className="flex min-h-monti-toolbar items-center gap-monti-8 border-monti-muted border-t pr-monti-10 pl-monti-16">
 					<input
 						// biome-ignore lint/a11y/noAutofocus: a card opened to be written in (`reply.focus`) takes the caret, as the board draws it
 						autoFocus={reply.focus}

@@ -38,10 +38,10 @@ const DARK = ':where(html:is(.dark, [data-theme="dark"]):has(.monti-admin))';
 const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"Monti Plex Mono"' };
 
 /**
- * A height class carries its token's name whole (`height-icon-button` is `h-monti-icon-button`), so a 32px button size (`size-monti-icon-button`) can never
+ * A height class carries its token's name whole (`height-control-md` is `h-monti-control-md`), so a 32px button size (`size-monti-control-md`) can never
  * be mistaken for a 16px glyph size (`size-monti-icon-md`). The heights of square controls also get a `size-monti-*` class.
  */
-const SQUARE = new Set(["control-lg", "control-md", "control-sm", "control-xs", "icon-button"]);
+const SQUARE = new Set(["control-lg", "control-md", "control-sm", "control-xs"]);
 
 const ref = (value) => value.replace(/\{([\w-]+)\}/g, "var(--monti-$1)");
 const strip = (name, prefix) => name.slice(prefix.length);
@@ -148,7 +148,7 @@ function themeLines(json) {
 	for (const { name } of json.radius.tokens) add("radius", strip(name, "radius-"), `var(--monti-${name})`);
 
 	section(
-		"Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Glyph sizes are size-monti-icon-xs to -lg; the 32px icon button is size-monti-icon-button.",
+		"Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Glyph sizes are size-monti-icon-xs to -lg; the 32px icon button is size-monti-control-md.",
 	);
 	for (const { name } of json.height.tokens) {
 		const role = strip(name, "height-");

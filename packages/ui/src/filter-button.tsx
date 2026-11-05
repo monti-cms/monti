@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
 import { TEXT_HOVER } from "./hover";
 
 /**
@@ -24,6 +25,7 @@ function FilterButton({
 			type="button"
 			className={cn(
 				TEXT_HOVER,
+				HIT_AREA,
 				"inline-flex cursor-pointer items-center rounded-monti-full border-0 bg-transparent p-0 outline-none not-disabled:hover:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-expanded:text-monti-default",
 				filled ? "text-monti-default" : "text-monti-subtle",
 				className,

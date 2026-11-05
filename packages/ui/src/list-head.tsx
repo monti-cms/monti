@@ -309,7 +309,7 @@ function ListHead({
 						<DropdownMenu>
 							<DropdownMenuTrigger
 								aria-label={add.label}
-								className="mr-monti-4 ml-auto flex size-6 cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&_svg]:size-3.5"
+								className="mr-monti-4 ml-auto flex size-monti-control-xs cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&_svg]:size-3.5"
 							>
 								<Add aria-hidden />
 							</DropdownMenuTrigger>
