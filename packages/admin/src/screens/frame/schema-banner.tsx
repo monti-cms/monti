@@ -14,9 +14,10 @@ export function SchemaBanner() {
 	const schema = useRead<SchemaState>("schema.read");
 	const retry = useOperation("schema.retry");
 	const state = schema.data;
+	// The change file's name and the database's error are the developer's: the server's log has them (`schema.apply`), the line does not.
 	if (state?.failedChange)
 		return (
-			<Banner tone="danger" title={t("banner.failedChange")} meta={state.failedChange}>
+			<Banner tone="danger" title={t("banner.failedChange")}>
 				<TextButton
 					loading={retry.pending}
 					onClick={async () => {

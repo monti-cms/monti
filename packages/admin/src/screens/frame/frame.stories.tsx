@@ -82,11 +82,18 @@ export const FileChanged: Story = {
 	],
 };
 
-/** A schema change whose database step failed: its files are saved, and "apply again" finishes it (doc 12, T16). */
+/** A schema change whose database step failed: its files are saved, and "apply again" finishes it (doc 12, T16). Pressing it clears the line. */
 export const FailedChange: Story = {
 	loaders: [
 		async () => {
-			const site = await storySite({ schema, auth: { password: true }, signedIn: true, setup: labelCollections });
+			const site = await storySite({
+				schema,
+				auth: { password: true },
+				signedIn: true,
+				setup: labelCollections,
+				// The dev server, where "apply again" runs (it changes structure).
+				files: { write: async () => {}, readChanges: async () => [] },
+			});
 			await sql`update schema_state set failed_change = '2026-11-05-143207-post'`.execute(site.db);
 			return { site };
 		},

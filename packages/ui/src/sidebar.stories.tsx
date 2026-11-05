@@ -180,7 +180,7 @@ export const SiteBanner: Story = {
 	render: () => (
 		<Nav
 			banner={
-				<Banner tone="danger" title="스키마 변경이 저장됐지만 적용되지 않았어요" meta="2026-11-05-143207-post">
+				<Banner tone="danger" title="스키마를 데이터베이스에 적용하지 못했어요">
 					<TextButton>다시 적용</TextButton>
 				</Banner>
 			}
