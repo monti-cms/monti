@@ -20,6 +20,7 @@ import { BlockIcon } from "./block-icon";
 import { type BodyCatalogs, needsAttrs } from "./catalog";
 import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
+import { insertFootnote } from "./footnotes";
 import { nodeName } from "./schema";
 import { tableToEditor } from "./table";
 
@@ -43,10 +44,9 @@ type Item = {
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
 
 /**
- * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09), a footnote its
- * reference in the text.
+ * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09).
  */
-const NOT_FROM_MENU = new Set(["image", "file", "footnote"]);
+const NOT_FROM_MENU = new Set(["image", "file"]);
 
 /** A new table: three columns, a head row and two rows under it, all empty. */
 const NEW_TABLE: Block = {
@@ -137,7 +137,7 @@ export function useSlashMenu({
 				(block) =>
 					block.menu !== null &&
 					!NOT_FROM_MENU.has(block.type) &&
-					(block.type === "table" || !needsAttrs(block)) &&
+					(block.type === "table" || block.type === "footnote" || !needsAttrs(block)) &&
 					!["paragraph", "heading", "bulletList", "orderedList", "checklist", "quote", "codeBlock"].includes(
 						block.type,
 					),
@@ -152,6 +152,8 @@ export function useSlashMenu({
 				run: (editor) => {
 					if (!open) return;
 					if (block.type === "table") return putIn(editor, open, placeTable(editor));
+					// A footnote: its number where the "/" was, its text at the end of the body.
+					if (block.type === "footnote") return putIn(editor, open, (tr) => insertFootnote(tr, tr.selection.from));
 					const type = editor.schema.nodes[nodeName(block.type)];
 					if (!type) return;
 					const node = type.createAndFill() ?? type.create();
@@ -196,7 +198,10 @@ export function useSlashMenu({
 		const { $from } = selection;
 		const text = $from.parent.isTextblock ? $from.parent.textBetween(0, $from.parentOffset, "\n", "\0") : "";
 		const match =
-			selection.empty && $from.parent.type.name !== nodeName("codeBlock") && !inTableCell($from)
+			selection.empty &&
+			$from.parent.type.name !== nodeName("codeBlock") &&
+			$from.parent.type.name !== nodeName("footnote") &&
+			!inTableCell($from)
 				? /^\/([^\s/]*)$/.exec(text)
 				: null;
 		if (!match) {

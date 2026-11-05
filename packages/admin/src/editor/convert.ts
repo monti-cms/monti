@@ -63,8 +63,31 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		}
 		return node;
 	};
-	const blocks = doc.blocks.map(toEditor);
+	const blocks = footnotesLast(doc.blocks).map(toEditor);
 	return { type: "doc", content: blocks.length ? blocks : [{ type: "paragraph" }] };
+}
+
+/**
+ * The footnotes at the end, in the order their references come in the text, as the editor keeps them (`footnotes.ts`). A body written elsewhere (an
+ * assistant's edit, an import) may have them anywhere.
+ */
+function footnotesLast(blocks: Block[]): Block[] {
+	const order: string[] = [];
+	const visit = (list: Block[]) => {
+		for (const block of list) {
+			if (block.type === "footnote") continue;
+			for (const part of block.content ?? [])
+				if (part.type === "footnoteRef" && !order.includes(part.id)) order.push(part.id);
+			if (block.children) visit(block.children);
+		}
+	};
+	visit(blocks);
+	const rank = (block: Block) => {
+		const at = order.indexOf(String(block.attrs?.id));
+		return at === -1 ? Number.POSITIVE_INFINITY : at;
+	};
+	const notes = blocks.filter((block) => block.type === "footnote").sort((a, b) => rank(a) - rank(b));
+	return notes.length ? [...blocks.filter((block) => block.type !== "footnote"), ...notes] : blocks;
 }
 
 /** A block that holds blocks needs one: an empty item of the first kind it takes. */

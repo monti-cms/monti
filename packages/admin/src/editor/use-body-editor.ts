@@ -7,6 +7,7 @@ import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import type { BodyCatalogs, Catalog, CatalogBlock } from "./catalog";
 import { docFromEditor, docToEditor } from "./convert";
+import { Footnotes } from "./footnotes";
 import { bodyKeys } from "./keys";
 import { BlockIds, bodyStates } from "./plugins";
 import { bodyExtensions, nodeName } from "./schema";
@@ -66,6 +67,7 @@ export function useBodyEditor({
 				offered: () => isOffered,
 			}),
 			bodyKeys(() => latest.current.offered),
+			...(kit.blocks.some((block) => block.type === "footnote") ? [Footnotes] : []),
 			UndoRedo,
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,

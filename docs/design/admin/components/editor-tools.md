@@ -55,6 +55,20 @@
 
 `TableGrip`은 표 가장자리의 손잡이다. `along="column"`은 위 가장자리의 넓은 알약, `along="row"`는 왼쪽 가장자리의 긴 알약이다. 회색 바탕에 끌기 표시가 있고, 메뉴가 열린 동안(`active` 또는 `aria-expanded`) 잉크색이다. 눌러도 커서가 칸에서 나가지 않는다. 메뉴 트리거로 만들려면 `trigger`로 감싼다. `TableAddStrip`은 오른쪽 · 아래 가장자리의 + 띠다. 놓인 상자를 채우므로 `EditorOverlay`에 표의 높이(`height`)나 너비(`width`)를 준다. 손잡이는 `EditorOverlay place="center"`로 그 가장자리 위 한가운데에 놓는다. 격자, 고른 칸(`.selectedCell`), 끄는 열 경계(`.column-resize-handle`)의 모양은 `EditorBody`가 입힌다.
 
+## 각주
+
+기준 화면 `Screens/Reference/Editor` › FootnotePicked, FootnoteAdded(2026-11-06, 소유자).
+
+- 글자를 고르고 서식 카드의 각주 버튼("Note¹", 링크 뒤)을 누르면 고른 말 뒤에 번호가 붙고, 글 끝 각주 목록에 같은 번호의 줄이 생겨 커서가 그리로 간다. "/" 메뉴의 "각주"는 "/"를 친 자리에 번호를 넣는다.
+- 번호는 본문에 나오는 순서대로 매겨지고, 순서가 바뀌면 다시 매겨진다. 각주는 언제나 글 끝에 선 아래로 함께 놓인다.
+- 본문의 번호를 누르면 그 각주로 가고, 각주 앞의 번호를 누르면 처음 나온 본문 번호로 돌아온다.
+- 본문에서 각주의 마지막 번호를 지우면 그 각주도 지워진다. 각주를 지우면 그 번호들도 지워진다. ⌘Z는 둘을 함께 되돌린다.
+- 각주는 한 문단이다. 각주 안에서 Enter는 아무것도 하지 않고, "/" 메뉴와 각주 버튼도 없다.
+
+### 코드
+
+엔진 쪽은 관리자 편집기의 `footnotes.ts`다. 번호는 `data-n`으로 그리고, `EditorBody`가 본문 번호(`[data-footnote-ref]`, 흐린 위 첨자), 각주 줄(`[data-footnote]`, 왼쪽 여백의 번호), 첫 각주 위의 선(`[data-footnotes-start]`)을 입힌다. 사이트는 `renderDocument`가 같은 순서로 번호를 매기고 각주를 글 끝 `<section data-footnotes>`의 목록으로 그린다.
+
 ## 블록 도구 행 (`.mt-block-bar`)
 
 이미지처럼 설정이 있는 블록을 선택하면 그 블록 왼쪽 위에 나타나는 작은 도구 행이다. 28px 아이콘 버튼을 쓰고, 그룹 사이에 세로 선을 둔다. 눌린 상태는 `bg-selected`다.

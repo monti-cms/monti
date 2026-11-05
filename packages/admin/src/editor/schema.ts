@@ -188,7 +188,8 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 		atom: true,
 		addAttributes: () => ({ id: { default: null, rendered: false } }),
 		parseHTML: () => [{ tag: "sup[data-footnote-ref]" }],
-		renderHTML: ({ node }) => ["sup", { "data-footnote-ref": String(node.attrs.id ?? "") }, "*"],
+		// Its number is the order it comes in the text, drawn from `data-n` (`footnotes.ts`).
+		renderHTML: ({ node }) => ["sup", { "data-footnote-ref": String(node.attrs.id ?? "") }],
 	});
 	const kept = Mark.create({
 		name: KEPT_MARK,

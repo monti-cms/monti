@@ -211,6 +211,20 @@ describe("one check", () => {
 		);
 	});
 
+	it("03-1 footnotes are numbered as their references come in the text and drawn together at the end", () => {
+		const ref = (id: string) => ({ type: "footnoteRef" as const, id });
+		const body = doc(
+			{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "a" }, ref("n2")] },
+			{ id: "b_2", type: "footnote", attrs: { id: "n1" }, content: [{ type: "text", text: "first written" }] },
+			{ id: "b_3", type: "paragraph", content: [{ type: "text", text: "b" }, ref("n1"), ref("n2")] },
+			{ id: "b_4", type: "footnote", attrs: { id: "n2" }, content: [{ type: "text", text: "second written" }] },
+		);
+		expect(draw(body)).toBe(
+			'<p>a<sup><a href="#fn-n2" id="fnref-n2">1</a></sup></p><p>b<sup><a href="#fn-n1" id="fnref-n1">2</a></sup><sup><a href="#fn-n2">1</a></sup></p>' +
+				'<section data-footnotes=""><hr/><ol><li id="fn-n2">second written <a href="#fnref-n2">↩</a></li><li id="fn-n1">first written <a href="#fnref-n1">↩</a></li></ol></section>',
+		);
+	});
+
 	it("03-2 a person's save and the assistant's block edit refuse the same bodies", async () => {
 		const id = await newPost(doc(p("b_1", "Hello")));
 		const bad = [

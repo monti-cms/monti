@@ -46,6 +46,34 @@ const changelog = (widths?: number[]) =>
 		p("다음 버전은 아직 정하지 않았다."),
 	);
 
+/** An entry with two footnotes, stored out of order: "처음" is noted second in the text but kept first (T62). */
+const noted = () =>
+	doc(
+		{
+			id: `b_${++count}`,
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "목록에는 지금 상태만 남겼다." },
+				{ type: "footnoteRef", id: "fn_state" },
+			],
+		},
+		{
+			id: `b_${++count}`,
+			type: "footnote",
+			attrs: { id: "fn_first" },
+			content: text("처음 판은 정적 사이트 생성기로 만들었다."),
+		},
+		{
+			id: `b_${++count}`,
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "처음 만든 건 2019년이다." },
+				{ type: "footnoteRef", id: "fn_first" },
+			],
+		},
+		{ id: `b_${++count}`, type: "footnote", attrs: { id: "fn_state" }, content: text("상태는 색 대신 글자로 적었다.") },
+	);
+
 async function templates(monti: Monti) {
 	await monti.run(
 		"templates.save",
@@ -64,7 +92,7 @@ async function templates(monti: Monti) {
 	);
 }
 
-type Kind = "draft" | "new" | "untitled" | "published" | "changed" | "archived" | "table" | "tableSized";
+type Kind = "draft" | "new" | "untitled" | "published" | "changed" | "archived" | "table" | "tableSized" | "footnotes";
 
 /** Makes the story's entry and returns its id. */
 async function entry(monti: Monti, kind: Kind): Promise<string> {
@@ -97,7 +125,14 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					title: kind === "untitled" ? "" : "첫 번째 글",
 					...(kind === "untitled" ? {} : { slug: "first-post" }),
 					values: { summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." },
-					doc: kind === "table" ? changelog() : kind === "tableSized" ? changelog([20, 50, 30]) : firstPost(),
+					doc:
+						kind === "table"
+							? changelog()
+							: kind === "tableSized"
+								? changelog([20, 50, 30])
+								: kind === "footnotes"
+									? noted()
+									: firstPost(),
 				},
 		admin,
 	)) as { output: { id: string } };
@@ -546,5 +581,99 @@ export const TableSized: Story = {
 				]),
 			wait,
 		);
+	},
+};
+
+/** The footnotes' numbers and texts, in the order the editor shows them. */
+const notes = (body: HTMLElement) => ({
+	refs: [...body.querySelectorAll("[data-footnote-ref]")].map((ref) => ref.getAttribute("data-n")),
+	notes: [...body.querySelectorAll("[data-footnote]")].map(
+		(note) => `${note.getAttribute("data-n")}. ${note.textContent}`,
+	),
+});
+
+/** Footnotes are numbered as their references come in the text, and sit together at the end in that order, whatever order they were kept in. */
+export const FootnoteNumbers: Story = {
+	loaders: site("footnotes"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		await waitFor(
+			() =>
+				expect(notes(body)).toEqual({
+					refs: ["1", "2"],
+					notes: ["1. 상태는 색 대신 글자로 적었다.", "2. 처음 판은 정적 사이트 생성기로 만들었다."],
+				}),
+			wait,
+		);
+	},
+};
+
+/** Words picked and "Note¹" pressed: a number after them, its footnote at the end with the caret in it, the others renumbered; the save keeps both. */
+export const FootnoteAdd: Story = {
+	loaders: site("footnotes"),
+	play: async (context) => {
+		const { page, body, all } = await opened(context.canvasElement);
+		await select(body, "지금 상태만");
+		await userEvent.click(await all.findByRole("button", { name: "각주" }, wait));
+		await userEvent.keyboard("상태 말고는 덜어냈다.");
+		await waitFor(
+			() =>
+				expect(notes(body)).toEqual({
+					refs: ["1", "2", "3"],
+					notes: [
+						"1. 상태 말고는 덜어냈다.",
+						"2. 상태는 색 대신 글자로 적었다.",
+						"3. 처음 판은 정적 사이트 생성기로 만들었다.",
+					],
+				}),
+			wait,
+		);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await saveCell(page, "저장됨");
+		const { site: made, id } = context.loaded as Loaded;
+		const read = (await made.monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc } };
+		const kept = read.entry.doc.blocks;
+		await expect(kept.filter((block) => block.type === "footnote")).toHaveLength(3);
+		await expect(kept[0]?.content?.some((part) => part.type === "footnoteRef")).toBe(true);
+	},
+};
+
+/** A footnote's number taken out of the text: the footnote goes with it, and the rest are renumbered. */
+export const FootnoteRemove: Story = {
+	loaders: site("footnotes"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		// The caret just after the first number, at the end of its line.
+		const line = body.querySelector("[data-footnote-ref]")?.parentElement;
+		if (!line) throw new Error("no footnote reference");
+		body.focus();
+		document.getSelection()?.collapse(line, line.childNodes.length);
+		document.dispatchEvent(new Event("selectionchange"));
+		await userEvent.keyboard("{Backspace}");
+		await waitFor(
+			() => expect(notes(body)).toEqual({ refs: ["1"], notes: ["1. 처음 판은 정적 사이트 생성기로 만들었다."] }),
+			wait,
+		);
+	},
+};
+
+/** A reference's number pressed: the caret goes to its footnote. */
+export const FootnoteGoTo: Story = {
+	loaders: site("footnotes"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		const ref = body.querySelector("[data-footnote-ref]");
+		if (!ref) throw new Error("no footnote reference");
+		// The editor reads a press by where it is, so the press needs its place.
+		const box = ref.getBoundingClientRect();
+		await userEvent.pointer({
+			keys: "[MouseLeft]",
+			target: ref,
+			coords: { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 },
+		});
+		await waitFor(() => {
+			const at = document.getSelection()?.anchorNode;
+			expect(at?.parentElement?.closest("[data-footnote]")?.getAttribute("data-n")).toBe("1");
+		}, wait);
 	},
 };

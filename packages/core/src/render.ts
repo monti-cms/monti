@@ -53,10 +53,35 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	const marks = new Map((options.marks ?? []).map((mark) => [mark.type, mark]));
 	const media = (id: unknown) => (options.mediaUrl ? options.mediaUrl(String(id)) : String(id));
 
+	// Footnotes are numbered in the order their references come in the text (doc 03, T62).
+	const numbers = new Map<string, number>();
+	const count = (list: Block[]) => {
+		for (const block of list) {
+			if (block.type === "footnote") continue;
+			for (const part of block.content ?? [])
+				if (part.type === "footnoteRef" && !numbers.has(part.id)) numbers.set(part.id, numbers.size + 1);
+			if (block.children) count(block.children);
+		}
+	};
+	count(doc.blocks);
+	const anchored = new Set<string>();
+
 	const inline = (part: Inline, key: number): Node | string => {
 		if (part.type === "hardBreak") return h("br", { key });
-		if (part.type === "footnoteRef")
-			return h("sup", { key }, h("a", { href: `#fn-${part.id}`, id: `fnref-${part.id}` }, part.id));
+		if (part.type === "footnoteRef") {
+			// The footnote's "↩" goes back to its first reference: only that one carries the id.
+			const first = !anchored.has(part.id);
+			anchored.add(part.id);
+			return h(
+				"sup",
+				{ key },
+				h(
+					"a",
+					{ href: `#fn-${part.id}`, id: first ? `fnref-${part.id}` : undefined },
+					String(numbers.get(part.id) ?? ""),
+				),
+			);
+		}
 		const wrapped = (part.marks ?? []).reduceRight<Node | string>((inner, mark, index) => {
 			const props = index === 0 ? { key } : null;
 			const Site = marks.get(mark.type)?.Site;
@@ -109,7 +134,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			case "divider":
 				return h("hr", { key });
 			case "footnote":
-				return h("p", { key, id: `fn-${attrs.id}` }, ...inner);
+				return h("li", { key, id: `fn-${attrs.id}` }, ...inner, " ", h("a", { href: `#fnref-${attrs.id}` }, "↩"));
 			case "table": {
 				const [first = [], ...rest] = (attrs.rows as string[][] | undefined) ?? [];
 				const row = (cells: string[], cell: string, index: number) =>
@@ -151,5 +176,14 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			console.warn(`Monti: no block definition for "${block.type}" (${block.id}); it is not drawn.`);
 		return drawn ?? null;
 	};
-	return doc.blocks.map(draw).filter((node) => node !== null);
+	// The footnotes go together at the end, under a rule, in the order of their numbers; one no text points at goes last.
+	const order = (block: Block) => numbers.get(String(block.attrs?.id)) ?? Number.POSITIVE_INFINITY;
+	const notes = doc.blocks.filter((block) => block.type === "footnote").sort((a, b) => order(a) - order(b));
+	const drawn = doc.blocks
+		.filter((block) => block.type !== "footnote")
+		.map(draw)
+		.filter((node) => node !== null);
+	if (notes.length === 0) return drawn;
+	const list = notes.map(draw).filter((node) => node !== null);
+	return [...drawn, h("section", { key: "footnotes", "data-footnotes": "" }, h("hr", null), h("ol", null, ...list))];
 }
