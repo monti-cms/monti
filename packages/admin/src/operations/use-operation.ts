@@ -47,16 +47,22 @@ export function useOperation<Output = unknown>(name: string) {
 
 /**
  * Reads with an operation when the screen opens, whenever `reload` is called, and with `afterWrites` after every write that goes through (the
- * sidebar's counts, doc 15).
+ * sidebar's counts, doc 15). With `skip` it reads nothing (a new record has nothing to read yet).
  */
-export function useRead<Output>(name: string, input: unknown = {}, options: { afterWrites?: boolean } = {}) {
+export function useRead<Output>(
+	name: string,
+	input: unknown = {},
+	options: { afterWrites?: boolean; skip?: boolean } = {},
+) {
 	const { onWrite } = useAdmin();
 	const { run } = useOperation<Output>(name);
 	const [data, setData] = useState<Output | null>(null);
 	const [refusal, setRefusal] = useState<Refusal | null>(null);
 	const key = JSON.stringify(input);
 	const latest = useRef(0);
+	const skip = options.skip ?? false;
 	const reload = useCallback(async () => {
+		if (skip) return;
 		const call = ++latest.current;
 		const result = await run(JSON.parse(key));
 		if (call !== latest.current) return;
@@ -64,7 +70,7 @@ export function useRead<Output>(name: string, input: unknown = {}, options: { af
 			setData(result.body);
 			setRefusal(null);
 		} else setRefusal(result.refusal);
-	}, [run, key]);
+	}, [run, key, skip]);
 	useEffect(() => {
 		void reload();
 	}, [reload]);

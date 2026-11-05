@@ -15,7 +15,22 @@
 	},
 	"dependencies": {
 		"@monti-cms/core": "workspace:*",
-		"@monti-cms/ui": "workspace:*"
+		"@monti-cms/ui": "workspace:*",
+		"@tiptap/core": "3.31.3",
+		"@tiptap/extension-bold": "3.31.3",
+		"@tiptap/extension-code": "3.31.3",
+		"@tiptap/extension-document": "3.31.3",
+		"@tiptap/extension-hard-break": "3.31.3",
+		"@tiptap/extension-italic": "3.31.3",
+		"@tiptap/extension-link": "3.31.3",
+		"@tiptap/extension-strike": "3.31.3",
+		"@tiptap/extension-subscript": "3.31.3",
+		"@tiptap/extension-superscript": "3.31.3",
+		"@tiptap/extension-text": "3.31.3",
+		"@tiptap/extension-underline": "3.31.3",
+		"@tiptap/extensions": "3.31.3",
+		"@tiptap/pm": "3.31.3",
+		"@tiptap/react": "3.31.3"
 	},
 	"peerDependencies": {
 		"@carbon/icons-react": ">=11.90.0",

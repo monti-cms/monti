@@ -1,0 +1,75 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "./cn";
+import { HELD } from "./sortable";
+
+/**
+ * Something the editor floats at a point of the screen it measured: the block handle in a block's margin, the format bar over selected words. The
+ * point is in viewport pixels; `place` says which corner or edge of the thing sits on it: `start` its top left, `above` the middle of its bottom edge.
+ * It draws no surface of its own; what it holds does (`BlockHandle`, `FloatingBar`).
+ */
+function EditorOverlay({
+	top,
+	left,
+	width,
+	place = "start",
+	children,
+}: {
+	top: number;
+	left: number;
+	/** As wide as what it stands for (a held block, a drop line). */
+	width?: number;
+	place?: "start" | "above";
+	children: ReactNode;
+}) {
+	if (typeof document === "undefined") return null;
+	return createPortal(
+		<div
+			data-slot="editor-overlay"
+			className="pointer-events-auto fixed z-40 flex items-center data-[place=above]:-translate-x-1/2 data-[place=above]:-translate-y-full"
+			data-place={place}
+			style={{ top, left, width }}
+		>
+			{children}
+		</div>,
+		document.body,
+	);
+}
+
+/**
+ * A block of the text in hand while it is dragged: a small card (at most 280px wide) with the block's kind and the start of its text, beside the
+ * pointer, never the block at full width over the text it is moving through. Its surface is the lifted look of every dragged thing (`HELD`: the page
+ * ground and the floating shadow). The block itself stays in place, dimmed (`EditorBody`'s `data-held`).
+ */
+function HeldBlock({ kind, text }: { kind: string; text: string }) {
+	return (
+		<div
+			data-slot="held-block"
+			className={cn(
+				HELD,
+				"pointer-events-none flex max-w-[280px] items-baseline gap-monti-8 rounded-monti-md px-monti-12 py-monti-6 text-monti-body",
+			)}
+		>
+			<span className="shrink-0 text-monti-meta text-monti-subtle">{kind}</span>
+			{text ? <span className="min-w-0 truncate">{text}</span> : null}
+		</div>
+	);
+}
+
+/**
+ * Where a dragged block lands: a 2px ink line in the middle of the gap between two blocks, as wide as the block it lands beside, with an 8px ring
+ * at its start that sticks out 4px to the left, so the line reads as a place, not a rule of the text.
+ */
+function DropLine() {
+	return (
+		<div
+			data-slot="drop-line"
+			aria-hidden
+			className="pointer-events-none relative h-0.5 w-full bg-monti-emphasis before:absolute before:top-1/2 before:left-0 before:size-2 before:-translate-y-1/2 before:rounded-monti-full before:border-2 before:border-monti-contrast before:bg-monti-page before:content-['']"
+		/>
+	);
+}
+
+export { DropLine, EditorOverlay, HeldBlock };

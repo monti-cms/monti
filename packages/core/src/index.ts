@@ -12,7 +12,7 @@ export {
 	defineMark,
 	type MarkDefinition,
 } from "./body/blocks";
-export type { Block, Doc, Inline, Mark, NewBlock } from "./body/doc";
+export { type Block, type Doc, type Inline, type Mark, type NewBlock, newBlockId, plainText } from "./body/doc";
 export type { BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";

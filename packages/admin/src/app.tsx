@@ -11,6 +11,8 @@ import { filterColumn, type ListState, writeState } from "./screens/list/list-qu
 import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
+import { TemplateEditor } from "./screens/templates/template-editor";
+import { TemplatesScreen } from "./screens/templates/templates-screen";
 import { useSession } from "./session";
 
 /** The words the `@monti-cms/ui` parts write themselves, from the admin's dictionary (`ui.*`). */
@@ -39,6 +41,8 @@ function placeOf(route: Route): Place | null {
 			return "settings";
 		case "place":
 			return route.place;
+		// The template editor is outside the frame: no row of the sidebar is its (doc 15).
+		case "template":
 		case "home":
 			return null;
 	}
@@ -90,6 +94,15 @@ function Signed() {
 		[screen, go],
 	);
 	const open = (place: Place) => leave(() => go(routeOf(place)));
+	if (route.screen === "template")
+		return (
+			<TemplateEditor
+				key={route.id ?? "new"}
+				id={route.id}
+				onBack={() => leave(() => go({ screen: "place", place: "tools" }))}
+				onSaved={(id) => go({ screen: "template", id }, { replace: true })}
+			/>
+		);
 	return (
 		<AdminFrame
 			open={placeOf(route)}
@@ -104,6 +117,8 @@ function Signed() {
 		>
 			{route.screen === "settings" ? (
 				<CollectionsScreen onOpen={open} review={review} />
+			) : route.screen === "place" && route.place === "tools" ? (
+				<TemplatesScreen onOpen={(id) => go({ screen: "template", id })} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}

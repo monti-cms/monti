@@ -91,12 +91,11 @@ const ADMIN_CSS_SELECTORS = new Map([
 	["html:has(.monti-admin) body", null],
 	[":where(html:has(.monti-admin)) *", "base"],
 	[".monti-admin", null],
-	[".monti-admin *", null],
-	[".monti-admin *:hover", null],
-	[".monti-admin ::-webkit-scrollbar", null],
-	[".monti-admin ::-webkit-scrollbar-track", null],
-	[".monti-admin ::-webkit-scrollbar-thumb", null],
-	[".monti-admin *:hover::-webkit-scrollbar-thumb", null],
+	// The scrollbar, on the whole document: popups are portaled to the body and scroll too.
+	["html:has(.monti-admin) body *", null],
+	["html:has(.monti-admin) body ::-webkit-scrollbar", null],
+	["html:has(.monti-admin) body ::-webkit-scrollbar-track", null],
+	["html:has(.monti-admin) body ::-webkit-scrollbar-thumb", null],
 ]);
 
 /** What `@monti-cms/ui` is built on: a screen reaches these only through its parts. (`react-day-picker/locale` is date data, not a part.) */

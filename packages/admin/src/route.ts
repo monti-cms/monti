@@ -10,6 +10,8 @@ export type Route =
 	| { screen: "settings" }
 	/** Media, trash and tools: their screens come with docs 09, 11 and 13. */
 	| { screen: "place"; place: "media" | "trash" | "tools" }
+	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
+	| { screen: "template"; id: string | null }
 	| { screen: "home" };
 
 const PLACES = new Set(["media", "trash", "tools"]);
@@ -24,6 +26,7 @@ export function parseRoute(hash: string): Route {
 		return { screen: "list", collection: parts[1], params: new URLSearchParams(search) };
 	}
 	if (parts[0] === "settings") return { screen: "settings" };
+	if (parts[0] === "templates" && parts[1]) return { screen: "template", id: parts[1] === "new" ? null : parts[1] };
 	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: parts[0] as "media" | "trash" | "tools" };
 	return { screen: "home" };
 }
@@ -41,6 +44,8 @@ export function href(route: Route): string {
 			return "#/settings/collections";
 		case "place":
 			return `#/${route.place}`;
+		case "template":
+			return `#/templates/${route.id === null ? "new" : encodeURIComponent(route.id)}`;
 		case "home":
 			return "#/";
 	}
