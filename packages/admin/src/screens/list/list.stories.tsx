@@ -387,7 +387,7 @@ export const SeveralFilters: Story = {
 		waitFor(() => expect(within(canvasElement).getByText("가을 사진 정리")).toBeTruthy(), wait),
 };
 
-/** The updated date's menu: newest or oldest first | today, 7 days, 30 days, pick dates (flow 7, step 05). */
+/** The updated date's menu: newest or oldest first | all dates, today, 7 days, 30 days, pick a day, pick dates (flow 7, step 05). */
 export const DateMenu: Story = {
 	loaders: site(undefined, "#/c/post?updatedAt=7d"),
 	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
@@ -413,12 +413,12 @@ export const DateRange: Story = {
 	},
 };
 
-/** One day: the same day pressed twice. The calendar marks it; pressing the ✓ "pick dates" row again lifts the filter (2026-11-06). */
+/** One day: "pick a day" opens a one-day calendar; one press filters to that day and the calendar shows it ("all dates" lifts it, 2026-11-06). */
 export const DateOneDay: Story = {
 	loaders: site(undefined, "#/c/post?updatedAt=2026-10-26..2026-10-26"),
 	play: async ({ canvasElement }) => {
 		await openColumn(canvasElement, "수정일");
-		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
+		await userEvent.hover(body().getByRole("menuitem", { name: "하루 고르기" }));
 		await waitFor(() => expect(body().getByRole("button", { name: /10월 26일.*선택됨/ })).toBeTruthy(), wait);
 	},
 };

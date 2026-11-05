@@ -401,7 +401,9 @@ export function ListScreen({
 							? t("list.last7")
 							: filter.range === "30d"
 								? t("list.last30")
-								: `${shortDate(filter.range.from)} – ${shortDate(filter.range.to)}`,
+								: filter.range.from === filter.range.to
+									? shortDate(`${filter.range.from}T00:00`)
+									: `${shortDate(`${filter.range.from}T00:00`)} – ${shortDate(`${filter.range.to}T00:00`)}`,
 				]);
 			case "relation":
 				return named;

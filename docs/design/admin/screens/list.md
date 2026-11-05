@@ -25,8 +25,9 @@
 | 모두 선택 | `ListHead`의 `selectAll`(`state` `none`·`some`·`all`) | 포인터가 머리 위에 있을 때 보인다. 지금 쪽만 고른다. |
 | 열 메뉴의 정렬 (제목, 날짜) | `DropdownMenuRadioGroup` + `DropdownMenuRadioItem` | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
 | 열 메뉴의 거를 값 | `DropdownMenuCheckboxItem box`, 끝에 개수 `MenuShortcut` | 상태: 발행됨 · 수정 중 · 초안 · 보관됨. 관계(카테고리, 태그): 맨 위 `DropdownMenuSearch`, "없음", `DropdownMenuSeparator`, 항목(많으면 `DropdownMenuScroll`). 언어: 관리자 화면 언어로 된 언어 이름들("한국어", "영어"), 구분선, `DropdownMenuLabel` "번역", 번역 없음 · 원문 바뀜 · 최신. 텍스트 필드(검색 설명): "비어 있음" 하나. 골라도 메뉴는 열려 있다. |
-| 날짜 열의 거를 값 | `DropdownMenuRadioItem`(오늘 · 최근 7일 · 최근 30일 · 기간 고르기) | 한 번에 하나. "기간 고르기"는 옆에 달력을 연다. ✓가 붙은 줄을 다시 누르면 거르기가 풀린다(2026-11-06). |
-| 기간 달력 | 날짜 메뉴의 `DropdownMenuSub`, `DropdownMenuSubContent bare` 안에 `Calendar`(기간) | 처음 누른 날이 시작, 다음 날이 끝. 같은 날을 두 번 누르면 그 하루다. 끝을 누르면 적용하고, 달력은 기간을 보이며 열려 있다. |
+| 날짜 열의 거를 값 | `DropdownMenuRadioItem`(모든 날짜 · 오늘 · 최근 7일 · 최근 30일), `DropdownMenuSub` "하루 고르기" · "기간 고르기" | 한 번에 하나, 지금 것에 ✓. 거르기가 없으면 "모든 날짜"에 ✓가 있고, 그것을 누르면 거르기가 풀린다(2026-11-06 소유자). |
+| 하루 달력 | "하루 고르기"의 `DropdownMenuSubContent bare` 안에 `Calendar`(하루) | 한 번 누르면 그 하루로 거르고, 달력은 그날을 보이며 열려 있다. |
+| 기간 달력 | "기간 고르기"의 `DropdownMenuSubContent bare` 안에 `Calendar`(기간) | 처음 누른 날이 시작, 다음 날이 끝. 끝을 누르면 적용하고, 달력은 기간을 보이며 열려 있다. |
 | "열 숨기기" | `DropdownMenuItem` | 거를 값 아래, 구분선 뒤. 제목 열에는 없다. |
 | 열 추가 + | `ListHead`의 `add`(`label` "열 추가", `columns`는 숨긴 열, `onAdd`) | 숨긴 열만 체크 없이 나열한다. 고르면 그 열이 생기고 목록에서 빠진다. 숨긴 열이 없으면 +도 없다. |
 | 열 옮기기 | `ListHead`의 `onPlace` · `onStep` · `onPreview` | 이름을 끌면 들려서 따라오고 다른 열이 비켜난다. 놓으면 저장. 키보드는 Alt + ←→. |

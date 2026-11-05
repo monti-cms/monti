@@ -226,24 +226,31 @@ const fromIso = (value: string) => {
 };
 
 /**
- * A date column: sort newest or oldest first | today, 7 days, 30 days, or a range picked on a calendar beside the menu (flow 7, steps 05–05c). The
- * first day pressed starts the range, the next one ends it and applies it; the calendar stays open showing it.
+ * A date column: sort newest or oldest first | all dates, today, 7 days, 30 days, one day, or a range (flow 7, steps 05–05c; 2026-11-06 owner,
+ * after other products: a day and a range are separate rows, and "all dates" is the way out). One day is picked with one press on its calendar;
+ * a range's first press starts it and the next one ends it and applies it. Both calendars stay open showing what is on.
  */
 function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 	const { t, language } = useAdmin();
 	const field = column.id as "updatedAt" | "publishedAt" | "createdAt";
 	const current = filterOf(state, column.id);
 	const range = current?.on === "date" ? current.range : null;
+	const fixed = typeof range === "string" ? range : null;
+	const day = range !== null && typeof range !== "string" && range.from === range.to ? range.from : null;
+	const span = range !== null && typeof range !== "string" && range.from !== range.to ? range : null;
 	const [start, setStart] = useState<Date | null>(null);
-	const ranged = range !== null && typeof range !== "string" ? range : null;
 	const picked =
 		start !== null
 			? { from: start, to: undefined }
-			: ranged
-				? { from: fromIso(ranged.from), to: fromIso(ranged.to) }
+			: span
+				? { from: fromIso(span.from), to: fromIso(span.to) }
 				: undefined;
-	const pick = (value: "today" | "7d" | "30d") =>
-		setFilter(column.id, range === value ? null : { on: "date", field, range: value });
+	const apply = (next: typeof range) => {
+		setStart(null);
+		setFilter(column.id, next === null ? null : { on: "date", field, range: next });
+	};
+	// Each row says which way of filtering is on; "all dates" is on when none is.
+	const on = fixed ?? (day ? "day" : span ? "range" : "all");
 	return (
 		<>
 			<DropdownMenuRadioGroup
@@ -254,29 +261,44 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 				<DropdownMenuRadioItem value="asc">{t("list.oldest")}</DropdownMenuRadioItem>
 			</DropdownMenuRadioGroup>
 			<DropdownMenuSeparator />
-			<DropdownMenuRadioGroup value={typeof range === "string" ? range : ""}>
-				<DropdownMenuRadioItem value="today" closeOnClick={false} onClick={() => pick("today")}>
+			<DropdownMenuRadioGroup
+				value={on === "day" || on === "range" ? "" : on}
+				onValueChange={(value) => apply(value === "all" ? null : (value as "today" | "7d" | "30d"))}
+			>
+				<DropdownMenuRadioItem value="all" closeOnClick={false}>
+					{t("list.allDates")}
+				</DropdownMenuRadioItem>
+				<DropdownMenuRadioItem value="today" closeOnClick={false}>
 					{t("list.today")}
 				</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="7d" closeOnClick={false} onClick={() => pick("7d")}>
+				<DropdownMenuRadioItem value="7d" closeOnClick={false}>
 					{t("list.last7")}
 				</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="30d" closeOnClick={false} onClick={() => pick("30d")}>
+				<DropdownMenuRadioItem value="30d" closeOnClick={false}>
 					{t("list.last30")}
 				</DropdownMenuRadioItem>
 			</DropdownMenuRadioGroup>
 			<DropdownMenuSub>
-				<DropdownMenuSubTrigger
-					chevron={false}
-					// Like the rows above, the picked row pressed again turns its filter off.
-					onClick={() => {
-						if (!ranged) return;
-						setStart(null);
-						setFilter(column.id, null);
-					}}
-				>
+				<DropdownMenuSubTrigger chevron={false}>
+					{t("list.pickDay")}
+					{day && <MenuTick />}
+				</DropdownMenuSubTrigger>
+				<DropdownMenuSubContent bare>
+					<Calendar
+						mode="single"
+						language={language}
+						selected={day ? fromIso(day) : undefined}
+						defaultMonth={day ? fromIso(day) : undefined}
+						onSelect={(next) => {
+							if (next) apply({ from: iso(next), to: iso(next) });
+						}}
+					/>
+				</DropdownMenuSubContent>
+			</DropdownMenuSub>
+			<DropdownMenuSub>
+				<DropdownMenuSubTrigger chevron={false}>
 					{t("list.pickRange")}
-					{ranged && <MenuTick />}
+					{span && <MenuTick />}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar
@@ -286,11 +308,10 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 						selected={picked}
 						onSelect={() => {}}
 						defaultMonth={picked?.from}
-						onDayClick={(day) => {
-							if (start === null) return setStart(day);
-							const [from, to] = day < start ? [day, start] : [start, day];
-							setStart(null);
-							setFilter(column.id, { on: "date", field, range: { from: iso(from), to: iso(to) } });
+						onDayClick={(pressed) => {
+							if (start === null) return setStart(pressed);
+							const [from, to] = pressed < start ? [pressed, start] : [start, pressed];
+							apply({ from: iso(from), to: iso(to) });
 						}}
 					/>
 				</DropdownMenuSubContent>
