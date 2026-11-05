@@ -313,6 +313,13 @@ function FieldSheetBody({
 	// What the field is: the label the admin reads, the identifier the site's code uses, and what it is for, which the assistant reads (doc 10).
 	const about = (
 		<Stack gap={20}>
+			{/* A saved field's kind first: it is what the field is, and it never changes (the add sheet picks it on the left). */}
+			{adding ? null : (
+				<ReadValue label={t("settings.field.kindLabel")} mono={false}>
+					{kindWord(form.kind)}
+					{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
+				</ReadValue>
+			)}
 			<FormField>
 				<FormFieldLabel htmlFor="field-label">{t("settings.field.label")}</FormFieldLabel>
 				<Input id="field-label" value={form.label} onChange={(event) => set({ label: event.target.value })} />
@@ -483,7 +490,6 @@ function FieldSheetBody({
 		<SheetSection title={t("settings.field.rules")}>
 			{/* The rows stand at a control's height, so they sit close: the height is their spacing. */}
 			<Stack gap={4}>
-				{adding ? null : rule(t("settings.field.kindLabel"), <Text tone="subtle">{kindWord(form.kind)}</Text>)}
 				{required}
 				{form.kind === "text" ? (
 					<>

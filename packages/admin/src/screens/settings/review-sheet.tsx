@@ -197,6 +197,7 @@ function Body({
 						identifier={`${change.from} → ${change.field}`}
 					>
 						<RadioGroup
+							height="md"
 							aria-label={t("settings.review.valuesOf", { name: change.from ?? "" })}
 							value={current?.radio}
 							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}
@@ -220,18 +221,20 @@ function Body({
 						identifier={change.field}
 					>
 						<RadioGroup
+							height="md"
 							aria-label={t("settings.review.valuesOf", { name: change.field ?? "" })}
 							value={current?.radio}
 							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}
 						>
-							<RadioItem value="clear" label={t("settings.review.clearValues")} hint={count(change.count)} />
+							{/* The choice that keeps the values comes first, as in a rename and a new required field; the default stays clearing (doc 01). */}
 							{moves.length > 0 ? (
 								<RadioItem
 									value="move"
 									label={t("settings.review.moveTo")}
 									control={
 										<PickOne
-											width="choice"
+											width="fit"
+											size="md"
 											label={t("settings.review.moveTo")}
 											items={moves.map((move) => ({ value: move, label: fieldLabel(c, move) }))}
 											value={current?.radio === "move" ? (current.move ?? null) : null}
@@ -241,6 +244,7 @@ function Body({
 									}
 								/>
 							) : null}
+							<RadioItem value="clear" label={t("settings.review.clearValues")} hint={count(change.count)} />
 						</RadioGroup>
 						{current?.radio !== "move" ? <ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote> : null}
 					</ChangeGroup>
@@ -266,7 +270,8 @@ function Body({
 				const fill =
 					def?.kind === "select" ? (
 						<PickOne
-							width="choice"
+							width="fit"
+							size="md"
 							label={t("settings.review.fillWith")}
 							items={def.options.map((option) => ({
 								value: option,
@@ -277,7 +282,7 @@ function Body({
 						/>
 					) : (
 						<Input
-							size="sm"
+							size="md"
 							width="short"
 							aria-label={t("settings.review.fillWith")}
 							value={String(current?.fill ?? "")}
@@ -287,6 +292,7 @@ function Body({
 				return (
 					<ChangeGroup key={change.id} kind="new" tag={t("changes.required")} title={name} identifier={identifier}>
 						<RadioGroup
+							height="md"
 							aria-label={t("settings.review.emptyOf", { name: change.field ?? "" })}
 							value={current?.radio}
 							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}

@@ -6,12 +6,22 @@ import type * as React from "react";
 import { cn } from "./cn";
 import { Option } from "./option";
 
-/** One choice out of a few, as a column of `RadioItem` rows. */
-function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
+/**
+ * One choice out of a few, as a column of `RadioItem` rows. `height` stands every row at a control's height, 4px apart, so a row that holds a select or an
+ * input is as high as one that does not (the review's choices: `md`).
+ */
+function RadioGroup({ className, height, ...props }: RadioGroupPrimitive.Props & { height?: "md" | "sm" }) {
 	return (
 		<RadioGroupPrimitive
 			data-slot="radio-group"
-			className={cn("group/radio-group flex flex-col gap-monti-12", className)}
+			data-height={height}
+			className={cn(
+				"group/radio-group flex flex-col",
+				height ? "gap-monti-4" : "gap-monti-12",
+				height === "md" && "[&>[data-slot=radio-item]]:min-h-monti-control-md",
+				height === "sm" && "[&>[data-slot=radio-item]]:min-h-monti-control-sm",
+				className,
+			)}
 			{...props}
 		/>
 	);
