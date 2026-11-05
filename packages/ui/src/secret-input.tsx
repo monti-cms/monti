@@ -9,16 +9,22 @@ import { Input } from "./input";
 import { TextButton } from "./text-button";
 
 /**
- * A value typed hidden (an API key): one underline field holding the input and, at its end, the eye (an icon button one size under the field) that shows what was just typed until it is pressed again. There is
- * no clear ×; a saved value is never shown again (that is a {@link SavedValue}). `keep` ends the line with a quiet text button that goes back to the
- * saved value ("Keep"). The underline turns ink while the input has focus, danger when `aria-invalid`.
+ * A value typed hidden (an API key, a password): one underline field holding the input and, at its end, the eye (an icon button one size under the
+ * field) that shows what was just typed until it is pressed again. There is no clear ×; a saved value is never shown again (that is a
+ * {@link SavedValue}). `keep` ends the line with a quiet text button that goes back to the saved value ("Keep"). The underline turns ink while the
+ * input has focus, danger when `aria-invalid`. A key is mono and keeps the browser's autofill out; `kind="password"` is in the body font and lets the
+ * browser's password manager fill it (give it `autoComplete`).
  */
 function SecretInput({
 	showLabel,
 	hideLabel,
 	keep,
+	kind = "key",
+	autoComplete,
 	...props
 }: Omit<React.ComponentProps<"input">, "type" | "className" | "style" | "size" | "width"> & {
+	/** `key` (the default): mono, no autofill. `password`: the body font, and the `autoComplete` it is given. */
+	kind?: "key" | "password";
 	/** The eye's name while the value is hidden ("Show key") and while it shows ("Hide key"). */
 	showLabel: string;
 	hideLabel: string;
@@ -32,8 +38,8 @@ function SecretInput({
 			<Input
 				{...props}
 				type={shown ? "text" : "password"}
-				mono
-				autoComplete="off"
+				mono={kind === "key"}
+				autoComplete={kind === "key" ? "off" : autoComplete}
 				spellCheck={false}
 				action={
 					<span className="flex items-center gap-monti-4">
@@ -42,11 +48,8 @@ function SecretInput({
 								{keep.label}
 							</TextButton>
 						)}
-						<IconButton
-							label={shown ? hideLabel : showLabel}
-							pressed={shown}
-							onClick={() => setShown((value) => !value)}
-						>
+						{/* Not a pressed toggle: the icon and the name already say which way it is, so it keeps no background while shown. */}
+						<IconButton label={shown ? hideLabel : showLabel} onClick={() => setShown((value) => !value)}>
 							{shown ? <ViewOff aria-hidden /> : <View aria-hidden />}
 						</IconButton>
 					</span>

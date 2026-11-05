@@ -85,6 +85,7 @@ const ALL_RULES = ["file-name", "missing-key", "unreferenced"];
 /** The packages checked, with their rules. A rebuilt package joins when it has a dictionary. */
 const PACKAGES = {
 	core: ALL_RULES,
+	admin: ALL_RULES,
 };
 const packages = Object.keys(PACKAGES).filter((name) => only.length === 0 || only.includes(name));
 

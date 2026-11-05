@@ -1,10 +1,10 @@
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { signedInApi } from "./__test__/admin";
 import { testDatabase } from "./__test__/database";
 import { createNotesTables, type NotesTables, noteKinds, noteOperations } from "./__test__/notes";
 import { RETRY_MINUTES } from "./engine/deliveries";
-import { createAdminApi } from "./entry/api";
 import { runCli } from "./entry/cli";
 import { agentTools, callAgentTool } from "./entry/tools";
 import { ConflictError } from "./errors";
@@ -37,7 +37,7 @@ const site = (options: Partial<MontiOptions> = {}) =>
 	});
 
 const notes = () => db.selectFrom("note").selectAll().orderBy("id").execute();
-const api = (monti = site()) => createAdminApi(monti, { authenticate: async () => true });
+const api = (monti = site()) => signedInApi(monti);
 const post = (name: string, body: unknown) =>
 	new Request(`https://site.test/admin/api/operations/${name}`, { method: "POST", body: JSON.stringify(body) });
 

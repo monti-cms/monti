@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Document, Image as ImageIcon, Settings, Tools, TrashCan } from "./icons";
+import { Document, Image as ImageIcon, Settings, Spark, Tools, TrashCan } from "./icons";
 import {
+	Banner,
 	Box,
 	Count,
 	folderTree,
+	IconButton,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -23,6 +25,7 @@ import {
 	SidebarRailToggle,
 	SidebarScreenMode,
 	Text,
+	TextButton,
 } from "./index";
 
 /**
@@ -52,7 +55,15 @@ type Story = StoryObj<typeof meta>;
 /** Stands in for the app's router link. */
 const RouterLink = (props: React.ComponentProps<"a">) => <a {...props} />;
 
-function Nav({ rail = false, folders = TOP }: { rail?: boolean; folders?: readonly Folder[] }) {
+function Nav({
+	rail = false,
+	folders = TOP,
+	banner,
+}: {
+	rail?: boolean;
+	folders?: readonly Folder[];
+	banner?: React.ReactNode;
+}) {
 	const tree = folderTree(folders.map((folder) => folder.depth));
 	const [mode, setMode] = useState<"system" | "light" | "dark">("system");
 	return (
@@ -138,7 +149,15 @@ function Nav({ rail = false, folders = TOP }: { rail?: boolean; folders?: readon
 					</SidebarFoot>
 				</SidebarFooter>
 			</Sidebar>
-			<SidebarInset fixed>
+			<SidebarInset
+				fixed
+				banner={banner}
+				corner={
+					<IconButton label="어시스턴트 열기">
+						<Spark className="size-monti-icon-lg" />
+					</IconButton>
+				}
+			>
 				<Box padding={24}>
 					<Text variant="note">페이지</Text>
 				</Box>
@@ -155,3 +174,16 @@ export const FolderOpen: Story = { render: () => <Nav folders={ESSAYS_OPEN} /> }
 
 /** Folded to the rail: icons only, names in tooltips, a dot on the tools icon for a failure. */
 export const Rail: Story = { render: () => <Nav rail /> };
+
+/** An alert about the whole site (a schema change saved but not applied): edge to edge above the page, which moves down under it, ✦ included. */
+export const SiteBanner: Story = {
+	render: () => (
+		<Nav
+			banner={
+				<Banner tone="danger" title="스키마를 데이터베이스에 적용하지 못했어요">
+					<TextButton>다시 적용</TextButton>
+				</Banner>
+			}
+		/>
+	),
+};

@@ -23,7 +23,7 @@ const clone = (doc: Doc): Doc => structuredClone(doc);
 
 function find(doc: Doc, id: string): { block: Block; siblings: Block[] } {
 	for (const found of walk(doc.blocks)) if (found.block.id === id) return found;
-	throw new CheckError({ key: "body.unknownBlock", values: { block: id } });
+	throw new CheckError({ key: "body.noBlock", values: { block: id } });
 }
 
 /** Puts blocks after `after` in the list it sits in, or first in the doc for `null`. */

@@ -23,7 +23,7 @@
 | 01 | 1 | 만드는 중 | #433 |
 | 02 | 1 | 만드는 중 | #434 |
 | 03 | 1 | 만드는 중 | #435, #436 |
-| 15 | 2 | 대기 | |
+| 15 | 2 | 만드는 중 | |
 | 05 | 2 | 대기 | |
 | 06 | 2 | 대기 | |
 | 04 | 3 | 대기 | |
@@ -40,27 +40,25 @@
 
 | 번호 | 할 일 | 할 때 | 나온 곳 |
 |---|---|---|---|
-| T1 | `useOperation(name)`: 기능을 부르는 화면 훅. 버전을 함께 보내고 충돌이면 다시 불러오기를 보인다 | 15 | 00 화면 쪽 조각, #432 |
 | T2 | `useProposals(target)`: 화면의 레코드에 걸린 대기 제안 | 05 | 00 화면 쪽 조각, #432 |
 | T3 | `entries.query`: 00-5의 뒤 절반(사람이 목록에서 거를 수 있는 것은 에이전트도 거른다) | 06 | 00 끝 조건, #432 |
 | T5 | 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`). 명령 `deliveries:run`은 있다 | 13 | #432 |
 | T6 | 사람이 누른 "다시 보내기"는 시도 수를 처음부터 센다(`deliveries.retry`) | 13 | 13 보내기 |
 | T7 | 30일 지난 되돌리기 스냅숏 지우기. 휴지통 정리와 같은 때(`monti trash:purge`) | 11 | 13 결정 기록, #432 |
-| T8 | 말 사전: 기능 요약과 오류의 `Message` 키(`errors.*`, `activity.*`, `proposals.*`, `schema.*`, `collections.*`, `entries.*`, `body.*`, `templates.*`, `blocks.*`, `marks.*`)를 ko · en 사전에 두고 `check:messages`가 core 사전을 보게 한다 | 15 | #432, 01·02·03(키만 있다) |
-| T9 | 관리자 API의 로그인 확인: `createAdminApi`의 `authenticate`를 세션으로 채운다 | 15 | #432 |
-| T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀 | 15 | build.md 규칙 6 |
-| T11 | 새 관리자 패키지에서 `fetch` 금지 린트가 걸리는지 확인한다(`biome.json`, `packages/admin/src/operations/**`만 예외) | 15 | build.md 규칙 3, #432 |
-| T12 | `check:design`이 새 관리자 패키지를 다시 본다(`SOURCES`, 관리자 스타일시트 `@source`, 옛 플러그인 경로 정리) | 15 | #432 |
-| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다 | 출시 전 | #432에서 지움, 01 |
+| T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다. 운영 사이트가 시작할 때 데이터베이스가 스키마보다 뒤에 있으면(`schema.read`의 `fileChanged`) `monti db:migrate`를 돌리라고 서버 로그에 남긴다 | 출시 전 | #432에서 지움, 01 |
 | T14 | 릴리스 묶음(`scripts/pack-release.mjs`, `release.yml`)을 새 패키지에 맞춘다 | 출시 전 | #432 |
-| T15 | 01의 화면: 설정 › 컬렉션(`useSchemaDraft`, `ChangeReview`, 속성 패널 미리보기 `PropertyPanel`), 흐름 4 전부와 흐름 11·15–20(끝 조건 01-2). 관리자 패키지가 생긴 뒤(2단계) | 01 | 01 화면 쪽 조각 |
-| T16 | 관리자 화면 위 알림 띠: 개발 서버는 "파일이 바뀌었어요 · 검토"(`schema.read`의 `fileChanged`, `syncSchemaFile`의 review), 운영은 "`monti db:migrate`를 돌려 주세요", 적용 실패는 "다시 적용"(`failedChange`) | 15 | 01 |
+| T15 | 01의 화면: 설정 › 컬렉션(`useSchemaDraft`, `ChangeReview`, 속성 패널 미리보기 `PropertyPanel`), 흐름 4 전부와 흐름 11·15–20(끝 조건 01-2). 관리자 패키지가 생긴 뒤(2단계). 알림 띠 "파일이 바뀌었어요"의 "검토" 버튼도 이 화면이 생길 때 단다(T16) | 01 | 01 화면 쪽 조각 |
 | T21 | 02의 화면: `useEntryEditor`(저장 칸 네 가지, 브라우저 임시 저장, 충돌), `usePublish`, `EntryStatus`, `CompareView`. 흐름 1 전부(끝 조건 02-1·02-2의 화면 쪽). 편집기 화면(2단계)에서 | 02 | 02 화면 쪽 조각 |
 | T31 | 03의 화면: `useBodyEditor`(블록 정의로 ProseMirror 스키마, `/` 메뉴, 바꾸기 메뉴), `BlockHandle`, `FormatCard`, `SlashMenu`, `ImageTools`. 흐름 1의 02~06단계, 기준 화면 TemplateEditor(끝 조건 03-1의 편집기 쪽, 03-4). 편집기 화면(2단계)에서 | 03 | 03 화면 쪽 조각 |
 | T32 | `ProposalMarks`: 블록 id로 받은 본문 제안을 본문 위에 그린다 | 05 | 03 화면 쪽 조각 |
 | T33 | 이미지 블록의 `media`가 미디어 라이브러리를 가리킨다. 본문 이미지를 "쓰는 곳"에 넣고, 기준 화면 ImageInsert(붙여 넣기 · 끌어 넣기 · 올리는 막대) | 09 | 03 |
 | T34 | MDX와 지시문 문법(`:::callout`) 읽기 · 내보내기 플러그인 | 14 | 03 원칙 1 |
 | T35 | `@monti-cms/blocks`(콜아웃, 탭, 단 나누기, 접기, 코드 탐색기, 수식, 차트, 다이어그램, 툴팁, 글자 색)를 `defineBlock`으로 다시 만들고 `monti add`로 사이트 소스에 넣는다. 옛 코드는 `9c69629f` 이전 기록 | 출시 전 | 03 블록 표 |
+| T36 | 사이드바와 로그인 화면의 사이트 이름을 설정 › 사이트에서 읽는다. 지금은 `MontiAdmin`의 `siteName` | 12 | 15 |
+| T37 | 관리자 화면의 주소: 사이드바 줄과 화면을 주소로 잇고, 들어오면 마지막 화면을 연다(15 로그인 흐름의 "마지막 화면") | 06 | 15 |
+| T38 | 사이드바 휴지통 n이 글 말고 폴더와 미디어도 센다(휴지통 화면의 줄 수) | 11 | 15-3 |
+| T39 | 세션이 끝나면 편집기 저장 칸이 "로그인이 풀렸어요"가 된다(`useSession`, 02) | 02 | 15 화면 쪽 조각 |
+| T40 | 빈 컬렉션 화면의 세 시작(첫 글 쓰기 · 쓰던 글 가져오기 · 템플릿으로 쓰기, `EmptyStep href`)과 "+ 새 글 쓰기". 지금은 "아직 글이 없어요." 한 줄만. 컬렉션마다의 말("아직 메모가 없어요.")도 여기서 | 06 | 15 |
 | T25 | 할 일 "대체 텍스트 없는 이미지 n개"(막는다). 본문과 미디어 필드의 이미지 | 09 | 02 할 일 표 |
 | T26 | `entries.create`가 사이트의 언어만 받는다. 지금은 아무 언어 이름이나 받는다 | 04 | 02 |
 | T27 | 항목 컬렉션은 저장하면 바로 발행본이 된다. 지금 `entries.publish`는 항목을 거절하고, 사이트 읽기에 항목이 없다 | 08 | 02 원칙 |
@@ -72,6 +70,13 @@
 
 | 번호 | 할 일 | PR |
 |---|---|---|
+| T1 | `useOperation(name)`과 `useRead`: 화면은 이것으로만 서버에 닿는다. 쓰기가 끝나면 사이드바 개수를 다시 읽는다 | #437 |
+| T8 | 말 사전: core 사전(`coreMessages`)과 관리자 사전(`adminMessages`), `check:messages`가 둘 다 본다 | #437 |
+| T9 | 관리자 API의 로그인 확인: 세션 쿠키(`httpOnly`)가 없으면 로그인 기능만 받는다 | #437 |
+| T10 | Storybook 화면 스토리를 PGlite 위의 진짜 기능으로 돌리는 틀(`packages/admin/.storybook/pglite-site.ts`) | #437 |
+| T11 | 관리자 패키지 화면에서 `fetch`를 쓰면 린트가 막는다. `src/operations/**`만 예외 | #437 |
+| T12 | `check:design`이 `packages/admin/src`를 본다 | #437 |
+| T16 | 스키마 알림 띠(`SchemaBanner`, 틀의 `SidebarInset banner`: 모든 화면 맨 위): 파일이 바뀜(개발 서버), 적용 실패와 "다시 적용". 운영의 `db:migrate` 누락은 화면이 아니라 서버 로그(T13). "검토" 버튼은 검토 화면과 함께(T15) | #437 |
 | T22 | `entries.create`가 템플릿을 받는다 | #435 |
 | T23 | 할 일 "발행 안 된 글로 가는 링크"(알리기만). 본문 링크는 `monti:entry/<묶음 id>`로 글을 가리킨다 | #436 |
 | T24 | `entries.compare`가 본문을 블록마다 견준다 | #435 |

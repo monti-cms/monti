@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { randomUUID } from "../bytes";
 import { editableEntry, entryOf, saveWorking } from "../entries/operations";
 import { CheckError, ConflictError } from "../errors";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
+import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
-import { createAdminApi } from "../entry/api";
 import { agentTools, callAgentTool } from "../entry/tools";
 import { createMonti } from "../monti";
 import { migrateContent, readSchemaState } from "./apply";
@@ -52,7 +52,7 @@ const renames = [{ collection: "post", from: "summary", to: "excerpt" }];
 let root: string;
 const dev = (schema: Schema = base) => createMonti({ db, schema, files: schemaFilesAt(root) });
 const live = (schema: Schema = base) => createMonti({ db, schema, files: null });
-const api = (monti: ReturnType<typeof createMonti>) => createAdminApi(monti, { authenticate: async () => true });
+const api = (monti: ReturnType<typeof createMonti>) => signedInApi(monti);
 const post = (name: string, input: unknown) =>
 	new Request(`https://site.test/api/operations/${name}`, { method: "POST", body: JSON.stringify({ input }) });
 

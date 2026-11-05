@@ -1,3 +1,5 @@
+export type { AuthSettings } from "./auth/operations";
+export type { Session } from "./auth/session";
 export {
 	type AnyBlockDefinition,
 	type BlockCheck,
@@ -36,6 +38,7 @@ export {
 	type MontiError,
 	UnknownOperationError,
 } from "./errors";
+export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {
 	type Actor,

@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
 import type { Kysely, Transaction } from "kysely";
+import type { Session } from "../auth/session";
+import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
 import {
@@ -31,6 +32,8 @@ export type RunOptions = {
 	versions?: Record<string, number>;
 	conversationId?: string;
 	proposalItemId?: string;
+	/** The admin API's session, for the operations that read or end it. */
+	session?: Session | null;
 };
 
 export type WriteResult<Output> = {
@@ -48,7 +51,12 @@ export function parseInput(operation: AnyOperation, input: unknown): unknown {
 	return parsed.data;
 }
 
-export function context(engine: Engine, db: Kysely<Database> | Transaction<Database>, actor: Actor) {
+export function context(
+	engine: Engine,
+	db: Kysely<Database> | Transaction<Database>,
+	actor: Actor,
+	session: Session | null = null,
+) {
 	const events: MontiEvent[] = [];
 	const created: RecordRef[] = [];
 	const ctx: OperationContext = {
@@ -58,13 +66,20 @@ export function context(engine: Engine, db: Kysely<Database> | Transaction<Datab
 		created: (ref) => created.push(ref),
 		site: engine.site,
 		now: engine.now,
+		session,
 	};
 	return { ctx, events, created };
 }
 
 /** Runs a read: no transaction, no log. */
-export async function runRead(engine: Engine, operation: AnyOperation, input: unknown, actor: Actor): Promise<unknown> {
-	return operation.run(parseInput(operation, input), context(engine, engine.db, actor).ctx);
+export async function runRead(
+	engine: Engine,
+	operation: AnyOperation,
+	input: unknown,
+	actor: Actor,
+	session: Session | null = null,
+): Promise<unknown> {
+	return operation.run(parseInput(operation, input), context(engine, engine.db, actor, session).ctx);
 }
 
 /** The current state of each record, `null` where it does not exist. */
@@ -104,7 +119,7 @@ export async function runWrite<Output>(
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
 	return engine.db.transaction().execute(async (trx) => {
-		const { ctx, events, created } = context(engine, trx, options.actor);
+		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		const before = await loadRecords(engine, trx, touched);
 

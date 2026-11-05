@@ -60,6 +60,64 @@ importers:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/admin:
+    dependencies:
+      '@monti-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@monti-cms/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
+      '@electric-sql/pglite':
+        specifier: 0.5.15
+        version: 0.5.15
+      '@fontsource/ibm-plex-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@storybook/addon-themes':
+        specifier: 10.6.1
+        version: 10.6.1(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3))
+      '@storybook/react-vite':
+        specifier: 10.6.1
+        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3))(typescript@7.0.2)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.3.0(@types/react@19.3.0)
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.8
+      pretendard:
+        specifier: ^1.3.9
+        version: 1.3.9
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-dom:
+        specifier: 19.2.3
+        version: 19.2.3(react@19.2.3)
+      storybook:
+        specifier: 10.6.1
+        version: 10.6.1(@types/react@19.3.0)(react@19.2.3)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.0
+        version: 8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+
   packages/core:
     dependencies:
       jiti:
@@ -422,6 +480,9 @@ packages:
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
+
+  '@electric-sql/pglite@0.5.15':
+    resolution: {integrity: sha512-ERZWgaRTxueGV4cvL1tfpAOzFCWTXoUtbCBqnf2FhHDVs/so9eAKaanvrwWF9Dntx7BYsmFQujVQ0/B4S8Mmiw==}
 
   '@emnapi/core@1.11.0':
     resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
@@ -3243,6 +3304,8 @@ snapshots:
   '@conventional-changelog/template@1.4.0': {}
 
   '@date-fns/tz@1.5.0': {}
+
+  '@electric-sql/pglite@0.5.15': {}
 
   '@emnapi/core@1.11.0':
     dependencies:

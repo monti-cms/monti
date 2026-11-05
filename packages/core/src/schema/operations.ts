@@ -179,6 +179,8 @@ export const schemaOperations = [
 			try {
 				await applyChange(ctx.db, change, input.draft);
 			} catch (error) {
+				// The screen says only that applying failed; the developer finds the change file and the reason here.
+				console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
 				await sql`rollback to savepoint schema_apply`.execute(ctx.db);
 				await setSchemaState(ctx.db, state?.schema ?? input.draft, change.id);
 				return { changeId: change.id, applied: false, error: String(error), changes };

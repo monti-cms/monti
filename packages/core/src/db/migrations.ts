@@ -182,6 +182,35 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0005_auth": {
+		async up(db) {
+			await db.schema
+				.createTable("monti_admin")
+				.addColumn("id", "integer", (column) => column.primaryKey().check(sql`id = 1`))
+				.addColumn("email", "text", (column) => column.notNull())
+				.addColumn("password_hash", "text", (column) => column.notNull())
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.execute();
+			await db.schema
+				.createTable("monti_session")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("token_hash", "text", (column) => column.notNull().unique())
+				.addColumn("who", "text", (column) => column.notNull())
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addColumn("expires_at", "timestamptz", (column) => column.notNull())
+				.execute();
+			await db.schema
+				.createTable("monti_sign_in_attempt")
+				.addColumn("email", "text", (column) => column.notNull())
+				.addColumn("at", "timestamptz", (column) => column.notNull())
+				.execute();
+			await db.schema
+				.createIndex("monti_sign_in_attempt_email")
+				.on("monti_sign_in_attempt")
+				.columns(["email", "at"])
+				.execute();
+		},
+	},
 };
 
 /** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */

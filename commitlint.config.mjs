@@ -22,7 +22,7 @@ export default {
 			2,
 			"always",
 			// The packages that exist, and the repo's own areas. A new package adds its scope here.
-			["core", "ui", "scripts", "ci", "deps", "release", "repo"],
+			["core", "ui", "admin", "scripts", "ci", "deps", "release", "repo"],
 		],
 	},
 };

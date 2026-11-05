@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "../bytes";
 import type { ProposalItemState } from "../db/schema";
 import { ConflictError, isMontiError } from "../errors";
 import type { AnyOperation, Message, Preview } from "../operation";

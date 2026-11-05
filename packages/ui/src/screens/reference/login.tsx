@@ -7,6 +7,7 @@ import {
 	FormFieldLabel,
 	Heading,
 	Input,
+	SecretInput,
 	Separator,
 	Stack,
 	Text,
@@ -193,7 +194,14 @@ function PasswordField({
 	return (
 		<FormField>
 			<FormFieldLabel htmlFor={id}>{label}</FormFieldLabel>
-			<Input id={id} type="password" defaultValue={value} aria-invalid={error ? true : undefined} />
+			<SecretInput
+				kind="password"
+				id={id}
+				defaultValue={value}
+				showLabel="비밀번호 보기"
+				hideLabel="비밀번호 가리기"
+				aria-invalid={error ? true : undefined}
+			/>
 			{/* The line stays when empty: the error comes back after a send, and the button must not move. */}
 			<FormFieldError reserve hint={hint}>
 				{error}

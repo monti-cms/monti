@@ -1,5 +1,6 @@
 import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
+import type { Session } from "./auth/session";
 import type { Database } from "./db/schema";
 import type { Site } from "./site";
 
@@ -52,6 +53,8 @@ export interface OperationContext {
 	site: Site;
 	/** The engine's clock (tests set it). */
 	now(): Date;
+	/** The signed-in admin's session, from the admin API's cookie; `null` elsewhere (the CLI, the assistant, before sign-in). */
+	session: Session | null;
 }
 
 /** What a write would change, without writing it. */
@@ -77,6 +80,8 @@ export type OperationDefinition<Input, Output> = {
 	 * structure change is reversed by a new change (doc 00).
 	 */
 	structure?: boolean;
+	/** It runs without a session: the sign-in operations. Only the admin API offers it, never a tool or a command (doc 15). */
+	open?: boolean;
 	/** For the model. The admin never sees it. */
 	description: string;
 	input: z.ZodType<Input>;

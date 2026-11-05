@@ -44,7 +44,8 @@ export function createReader(options: ReaderOptions) {
 			/** The `token` of `entries.previewLink`. */
 			preview?: string;
 		}): Promise<{ entry: SiteEntry } | { redirect: string } | null> {
-			const previewId = where.preview && options.secret ? readPreviewToken(options.secret, where.preview, now()) : null;
+			const previewId =
+				where.preview && options.secret ? await readPreviewToken(options.secret, where.preview, now()) : null;
 			if (previewId) {
 				const row = await db
 					.selectFrom("entries")

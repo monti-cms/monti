@@ -54,8 +54,12 @@ admin can write back. `monti.config.ts` imports it and names the database:
 import { defineConfig } from "@monti-cms/core";
 import schema from "./monti.schema";
 
-export default defineConfig({ schema, database: process.env.DATABASE_URL });
+export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: { password: true } });
 ```
+
+`auth` holds the ways the one admin signs in: `password: true`, `github: { clientId, clientSecret, admin }`, or both. With the password way the
+first visit to the admin makes the admin. The admin API (`createAdminApi`) answers only the sign-in operations without its `httpOnly` session
+cookie; a session ends after 30 days unused. A forgotten password is reset on the server with `monti admin:reset-password`.
 
 Labels, help texts, layout and editor permissions are admin values in the database (`collections.updateAdminValues`), editable on the live site too.
 
@@ -67,6 +71,7 @@ deploy, and has no way to change structure.
 monti db:setup          # create the tables and follow every change file
 monti db:migrate        # on deploy: follow the change files this database has not
 monti deliveries:run    # send webhook retries that are due
+monti admin:reset-password  # set the admin's password, sign every browser out
 monti help              # every operation, each one a command
 monti schema.read
 ```

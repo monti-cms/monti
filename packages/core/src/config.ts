@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
+import type { AuthSettings } from "./auth/operations";
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Database } from "./db/schema";
 import type { Receiver } from "./engine/deliveries";
@@ -23,6 +24,8 @@ export type MontiConfig = {
 	 * `production`. On the live site structure is locked.
 	 */
 	dev?: boolean;
+	/** How the admin signs in: `{ password: true }`, `{ github: { clientId, clientSecret, admin } }`, or both (`monti init` writes it). */
+	auth?: Partial<AuthSettings>;
 	/** Signs preview links. Left out, `MONTI_SECRET`. */
 	secret?: string;
 };
@@ -43,6 +46,7 @@ export function openMonti(config: MontiConfig, root: string): Monti {
 		files: dev ? schemaFilesAt(root) : null,
 		plugins: config.plugins,
 		blocks: config.blocks,
+		auth: config.auth,
 		marks: config.marks,
 		receivers: config.receivers,
 		secret: config.secret ?? process.env.MONTI_SECRET ?? null,

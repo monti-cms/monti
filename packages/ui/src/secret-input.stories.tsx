@@ -26,6 +26,18 @@ export const Typed: Story = { args: { defaultValue: "sk-ant-api03-Qx7mR2vLp9TzW4
 /** The service refused it: the line turns danger (the message under it is a `FormFieldError`). */
 export const Invalid: Story = { args: { defaultValue: "sk-ant-api03-Qx7mR2vLp9TzW4nB8cKd", "aria-invalid": true } };
 
+/** A password (the login screen): the body font, and the browser's password manager may fill it. */
+export const Password: Story = {
+	args: {
+		kind: "password",
+		showLabel: "비밀번호 보기",
+		hideLabel: "비밀번호 가리기",
+		placeholder: "",
+		autoComplete: "current-password",
+		defaultValue: "correct horse",
+	},
+};
+
 /** In the edit dialog: 바꾸기 opens the input in place, 그대로 goes back. */
 export const SavedThenReplaced: Story = {
 	render: (args) => {
