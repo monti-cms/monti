@@ -47,7 +47,7 @@ function Table({
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
 					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
 					(stickyHeader ?? container === "none") &&
-						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)]",
+						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}

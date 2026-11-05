@@ -243,7 +243,7 @@ function ListHead({
 							aria-sort={column.sort === "asc" ? "ascending" : column.sort === "desc" ? "descending" : undefined}
 							// The select-all inside the first name would be read as part of it.
 							aria-label={index === 0 && selectAll ? column.label : undefined}
-							className="relative touch-none select-none font-normal data-held:z-1 data-held:bg-monti-selected data-held:shadow-monti-floating"
+							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							onPointerDown={(event) => {
 								if (event.button !== 0 || !onPlace) return;
