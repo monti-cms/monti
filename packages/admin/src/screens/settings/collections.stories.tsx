@@ -214,6 +214,22 @@ export const ChangesList: Story = {
 	},
 };
 
+/** The changes list: a row's "되돌리기" puts that change back and keeps the list open; pressing a row opens its field. */
+export const ChangesListRows: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await changeFields(canvasElement);
+		await openChanges(page, body);
+		const menu = within(await body.findByRole("menu"));
+		const subtitle = menu.getByRole("menuitem", { name: /부제/ });
+		await userEvent.click(within(subtitle).getByRole("button", { name: "되돌리기" }));
+		await waitFor(() => expect(menu.queryByRole("menuitem", { name: /부제/ })).toBeNull(), wait);
+		await expect(body.getByRole("menu")).toBeInTheDocument();
+		await userEvent.click(menu.getByRole("menuitem", { name: /요약/ }));
+		await body.findByRole("dialog", { name: /요약/ }, wait);
+	},
+};
+
 /** Flow 4, steps 11–12: the review, a choice for each change; removing a field deletes its values, so the pill is red. */
 export const Review: Story = {
 	loaders: site(),

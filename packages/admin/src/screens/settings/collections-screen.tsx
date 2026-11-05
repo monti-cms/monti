@@ -273,6 +273,34 @@ export function CollectionsScreen({
 		}
 	};
 
+	/** Where a row of the changes list goes: a field opens its sheet, an address or a name the basics, the editor's items its tab, the layout the fields. */
+	const goTo = (path: string) => {
+		const place = placeOf(path);
+		if (!place || !model.shown(at.collection(place.collection))) return undefined;
+		return () => {
+			openCollection(place.collection);
+			if (place.kind === "field" || place.kind === "fieldValue") {
+				setTab("fields");
+				// A field that goes cannot be opened; its row in the list is where it is seen.
+				if (model.shown(at.field(place.collection, place.key)))
+					setFieldSheet({ collection: place.collection, key: place.key });
+			} else if (place.kind === "editor") setTab("editor");
+			else if (place.kind === "path" || (place.kind === "collectionValue" && place.value !== "layout"))
+				setTab("basics");
+			else setTab("fields");
+		};
+	};
+	/** A proposal's row goes to the first place it changes, as the bubble's arrows do. */
+	const goToProposal = (id: string) => {
+		const target = proposed.find(({ item }) => item.id === id);
+		return target
+			? () => {
+					openCollection(target.collection);
+					setTab("fields");
+				}
+			: undefined;
+	};
+
 	const saveGroup =
 		rows.length > 0 ? (
 			<ChangesGroup
@@ -284,6 +312,7 @@ export function CollectionsScreen({
 					name: row.name,
 					tag: row.tag,
 					tone: row.tone,
+					onOpen: row.paths[0] ? goTo(row.paths[0]) : undefined,
 					onUndo: () => {
 						for (const path of row.paths) draft.revert(path);
 					},
@@ -303,6 +332,7 @@ export function CollectionsScreen({
 								items: draft.proposals.map(({ item }) => ({
 									id: item.id,
 									name: item.request,
+									onOpen: goToProposal(item.id),
 									onDiscard: () => void draft.discard(item.id),
 								})),
 							}

@@ -9,23 +9,67 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { MenuShortcut } from "./menu-parts";
 import { Text } from "./text";
+import { TextButton } from "./text-button";
 
-/** One change in the list: its name, how it changed (the tag is colored by `tone`) and the button that puts it back. */
+/** One change in the list: its name, how it changed (the tag is colored by `tone`), where pressing the row goes (`onOpen`: the field, the tab) and the button that puts it back. */
 interface ChangesItem {
 	id: string;
 	name: ReactNode;
 	tag: ReactNode;
 	tone: "warning" | "danger" | "success";
+	onOpen?: () => void;
 	onUndo: () => void;
 }
 
-/** What the assistant proposed and nobody has taken yet: the field's name and the button that discards the proposal. */
+/** What the assistant proposed and nobody has taken yet: the field's name, where pressing the row goes, and the button that discards the proposal. */
 interface ProposalsItem {
 	id: string;
 	name: ReactNode;
+	onOpen?: () => void;
 	onDiscard: () => void;
+}
+
+/**
+ * One row of the list: pressing the row goes to the place (`onOpen`); the button at its end puts it back and keeps the list open, so several can be undone
+ * in a row. Delete or Backspace on the row does the same as its button.
+ */
+function ChangeRow({
+	children,
+	onOpen,
+	action,
+	onAction,
+}: {
+	children: ReactNode;
+	onOpen?: () => void;
+	action: string;
+	onAction: () => void;
+}) {
+	return (
+		<DropdownMenuItem
+			onClick={onOpen}
+			closeOnClick={Boolean(onOpen)}
+			onKeyDown={(event) => {
+				if (event.key !== "Delete" && event.key !== "Backspace") return;
+				event.preventDefault();
+				onAction();
+			}}
+		>
+			{children}
+			<TextButton
+				variant="quiet"
+				size="meta"
+				className="ml-auto"
+				tabIndex={-1}
+				onClick={(event) => {
+					event.stopPropagation();
+					onAction();
+				}}
+			>
+				{action}
+			</TextButton>
+		</DropdownMenuItem>
+	);
 }
 
 /**
@@ -163,29 +207,27 @@ function ChangesGroup({
 			list={
 				<>
 					{items.map((item) => (
-						<DropdownMenuItem key={item.id} onClick={item.onUndo}>
+						<ChangeRow key={item.id} onOpen={item.onOpen} action={undoLabel} onAction={item.onUndo}>
 							<span className="inline-flex items-baseline gap-monti-4">
 								{item.name}{" "}
 								<Text variant="meta" tone={item.tone}>
 									{item.tag}
 								</Text>
 							</span>
-							<MenuShortcut>{undoLabel}</MenuShortcut>
-						</DropdownMenuItem>
+						</ChangeRow>
 					))}
 					{proposals && proposals.items.length > 0 && (
 						<>
 							<DropdownMenuSeparator />
 							{proposals.items.map((item) => (
-								<DropdownMenuItem key={item.id} onClick={item.onDiscard}>
+								<ChangeRow key={item.id} onOpen={item.onOpen} action={proposals.discardLabel} onAction={item.onDiscard}>
 									<span className="inline-flex items-baseline gap-monti-4">
 										{item.name}{" "}
 										<Text variant="meta" tone="proposal">
 											{proposals.label}
 										</Text>
 									</span>
-									<MenuShortcut>{proposals.discardLabel}</MenuShortcut>
-								</DropdownMenuItem>
+								</ChangeRow>
 							))}
 						</>
 					)}
