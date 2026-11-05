@@ -1,7 +1,5 @@
 import {
-	Box,
 	Button,
-	Inline,
 	ListSection,
 	ListSectionRow,
 	MenuField,
@@ -9,12 +7,9 @@ import {
 	PageColumn,
 	PageHeader,
 	PageToolbar,
-	SavedValue,
-	SecretInput,
 	Stack,
 	TabLink,
 	TabLinks,
-	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
@@ -24,7 +19,7 @@ const KEYS = [
 	{ name: "예전 Gemini 키", tail: "9f0c", meta: "이번 달 사용 없음", unused: true },
 ];
 
-/** The keys plugins ask for. Each slot is one service's, so its key is typed in its row; `tail` when one is in. */
+/** The keys plugins ask for, one row per slot; `tail` when a key is in. */
 const SLOTS: readonly { id: string; title: string; detail?: string; meta: string; tail?: string }[] = [
 	{ id: "bareun", title: "바른 맞춤법", meta: "bareun" },
 	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia", tail: "4410" },
@@ -32,9 +27,24 @@ const SLOTS: readonly { id: string; title: string; detail?: string; meta: string
 ];
 
 /**
- * Tools, API keys tab: the AI services' keys (the models come from them), and where keys are used. The quick task picks a model from those keys; a
- * plugin's slot takes its own key right in its row (typed hidden, then "넣기"; once in, its last four and "바꾸기 · 지우기").
+ * Tools, API keys tab: three tables. The AI services' keys (the models come from them); the one model this screen picks (the quick task's); the
+ * keys plugins ask for, one row per slot. Every key row looks and acts the same: its last four after its name, "편집 · 지우기" when it is in, and
+ * "키 넣기" when it is not, all through the same key window (a plugin's has its service set).
  */
+/** A key row's actions: change it (the key window) and remove it. */
+function KeyActions() {
+	return (
+		<>
+			<Button variant="ghost" size="sm">
+				편집
+			</Button>
+			<Button variant="ghost-danger" size="sm">
+				지우기
+			</Button>
+		</>
+	);
+}
+
 export function ApiKeysScreen() {
 	return (
 		<AdminFrame open="tools">
@@ -57,7 +67,7 @@ export function ApiKeysScreen() {
 				</PageToolbar>
 				<PageBody>
 					<Stack gap={40} paddingTop={32}>
-						<ListSection title="저장된 키">
+						<ListSection title="AI 키">
 							{KEYS.map((key) => (
 								<ListSectionRow
 									key={key.name}
@@ -70,21 +80,12 @@ export function ApiKeysScreen() {
 									}
 									meta={key.meta}
 									metaTone={key.unused ? "faint" : "muted"}
-									actions={
-										<>
-											<Button variant="ghost" size="sm">
-												편집
-											</Button>
-											<Button variant="ghost-danger" size="sm">
-												지우기
-											</Button>
-										</>
-									}
+									actions={<KeyActions />}
 								/>
 							))}
 						</ListSection>
-						{/* One table of where each key is used: the quick task's model, then the plugins' key slots. */}
-						<ListSection title="쓰는 곳">
+						{/* The one model this screen picks; the list comes from the AI keys above. */}
+						<ListSection title="모델">
 							<ListSectionRow
 								title="빠른 작업"
 								labelId="model-quick"
@@ -99,37 +100,31 @@ export function ApiKeysScreen() {
 									/>
 								}
 							/>
+						</ListSection>
+						{/* A plugin's slot is a key row like the AI keys: the same window adds and changes it, with its service already set. */}
+						<ListSection title="플러그인 키">
 							{SLOTS.map((slot) => (
 								<ListSectionRow
 									key={slot.id}
 									title={slot.title}
 									detail={slot.detail}
+									titleCount={
+										slot.tail ? (
+											<>
+												{"··· "}
+												{slot.tail}
+											</>
+										) : undefined
+									}
 									meta={slot.meta}
 									metaTone="subtle"
-									labelId={`slot-${slot.id}`}
-									control={
+									actions={
 										slot.tail ? (
-											<Inline gap={12} align="center">
-												<Box grow minWidth={0}>
-													<SavedValue action={{ label: "바꾸기", onClick: () => {} }}>
-														{"··· "}
-														{slot.tail}
-													</SavedValue>
-												</Box>
-												<TextButton variant="quiet">지우기</TextButton>
-											</Inline>
+											<KeyActions />
 										) : (
-											<Inline gap={12} align="center">
-												<Box grow minWidth={0}>
-													<SecretInput
-														aria-labelledby={`slot-${slot.id}`}
-														placeholder="키 넣기"
-														showLabel="키 보기"
-														hideLabel="키 숨기기"
-													/>
-												</Box>
-												<Button variant="secondary">넣기</Button>
-											</Inline>
+											<Button variant="ghost" size="sm">
+												키 넣기
+											</Button>
 										)
 									}
 								/>
