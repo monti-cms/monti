@@ -2,10 +2,12 @@
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
+import { useDndContext } from "@dnd-kit/core";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { Add, Draggable, Locked } from "./icons";
+import { HELD, SLOT } from "./sortable";
 
 /**
  * Tabs that sit on a box like folder tabs, for a list of fields split into pages. The picked tab has the box's background and is open at the
@@ -15,12 +17,26 @@ function FolderTabs({ className, ...props }: TabsPrimitive.Root.Props) {
 	return <TabsPrimitive.Root data-slot="folder-tabs" className={cn("flex flex-col", className)} {...props} />;
 }
 
-/** The row of tabs. `add` is the button that adds a tab (`FolderTabsAdd`). */
-function FolderTabsList({ add, children, className, ...props }: TabsPrimitive.List.Props & { add?: React.ReactNode }) {
+/**
+ * The row of tabs. `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
+ * the focus.
+ */
+function FolderTabsList({
+	add,
+	children,
+	className,
+	onKeyDown,
+	...props
+}: TabsPrimitive.List.Props & { add?: React.ReactNode }) {
+	const { active } = useDndContext();
 	return (
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
 			className={cn("relative z-1 -mb-px flex items-end gap-monti-4", className)}
+			onKeyDown={(event) => {
+				onKeyDown?.(event);
+				if (active && event.key.startsWith("Arrow")) event.preventBaseUIHandler();
+			}}
 			{...props}
 		>
 			{children}
@@ -41,7 +57,8 @@ export interface TabMotion {
 
 /**
  * One tab: a grip to drag it by, its name, and how many fields it holds. `locked` marks a tab a plugin placed, which cannot be moved or
- * removed. `motion` and `dragging` are the tab while it is dragged, or while the others move aside for it.
+ * removed. `motion` moves the tab while it makes room for another; `dragging` is the gap the tab in hand left. `dropTarget` is the tab a field or
+ * group is held over: dropped there, it goes to the end of this tab. The tab in hand itself is {@link FolderTabLifted}.
  */
 function FolderTab({
 	children,
@@ -50,6 +67,7 @@ function FolderTab({
 	draggable = true,
 	motion,
 	dragging = false,
+	dropTarget = false,
 	className,
 	...props
 }: Omit<TabsPrimitive.Tab.Props, "style"> & {
@@ -59,15 +77,20 @@ function FolderTab({
 	draggable?: boolean;
 	motion?: TabMotion;
 	dragging?: boolean;
+	/** A field or group is held over this tab. */
+	dropTarget?: boolean;
 }) {
 	return (
 		<TabsPrimitive.Tab
 			data-slot="folder-tab"
+			data-held={dragging || undefined}
+			data-drop-target={dropTarget || undefined}
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
 				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
-				dragging && "z-10 opacity-80",
+				dragging && SLOT,
+				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
 			)}
 			{...props}
@@ -77,6 +100,29 @@ function FolderTab({
 			{count !== undefined && <Count>{count}</Count>}
 			{locked && <Locked aria-hidden className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
+	);
+}
+
+/**
+ * The tab in hand, drawn by the `Sortable` overlay over the page (outside the tab row): the tab's shape with its name and count, floating on the
+ * page ground with the floating shadow.
+ */
+function FolderTabLifted({
+	children,
+	count,
+	className,
+	...props
+}: Omit<React.ComponentProps<"div">, "style"> & { count?: React.ReactNode }) {
+	return (
+		<div
+			data-slot="folder-tab-lifted"
+			className={cn(FOLDER_TAB, HELD, "cursor-grabbing font-semibold text-monti-default", className)}
+			{...props}
+		>
+			<Draggable aria-hidden className="size-3.5 text-monti-faint" />
+			{children}
+			{count !== undefined && <Count>{count}</Count>}
+		</div>
 	);
 }
 
@@ -113,7 +159,10 @@ function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props)
 	);
 }
 
-/** The box under the tabs: the fields of the picked tab (a `FieldTree` without its outer rules, the box has its own). Its top-left corner is square, where the picked tab joins it. */
+/**
+ * The box under the tabs: the fields of the picked tab (a `FieldTree` without its outer rules, the box has its own). Its top-left corner is square, where
+ * the picked tab joins it.
+ */
 function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 	return (
 		<TabsPrimitive.Panel
@@ -127,4 +176,4 @@ function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 	);
 }
 
-export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList };
+export { FolderTab, FolderTabEdit, FolderTabLifted, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList };

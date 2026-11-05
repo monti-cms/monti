@@ -37,9 +37,9 @@ import {
 	FormFieldLabel,
 	Heading,
 	IconButton,
-	Image,
 	Inline,
 	Input,
+	MediaInput,
 	MenuShortcut,
 	PropertyGroup,
 	PropertyPanel,
@@ -270,13 +270,8 @@ export function EntryProperties({
 					/>
 				</FormField>
 				<FormField>
-					<FormFieldLabel>대표 이미지</FormFieldLabel>
-					<Box paddingTop={4}>
-						<Image src={null} alt="" ratio="banner" radius="sm" />
-					</Box>
-					<Text variant="caption" tone="subtle">
-						cover-react.png
-					</Text>
+					<FormFieldLabel htmlFor="cover">대표 이미지</FormFieldLabel>
+					<MediaInput id="cover" size="md" value={{ name: "cover-react.png" }} onClear={() => {}} clearLabel="빼기" />
 				</FormField>
 				{summary ?? (
 					<FormField>

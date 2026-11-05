@@ -55,3 +55,36 @@ export const Playground: Story = {
 		</>
 	),
 };
+
+/** While dragging: the choice in hand floats (page ground, floating shadow, drawn by the `Sortable` overlay), its place stays as a gap, and the one it passed has moved up. */
+export const Held: Story = {
+	render: (args) => (
+		<div className="relative">
+			<OptionTable {...args}>
+				{ROWS.map((row, index) => (
+					<OptionRow
+						key={row.value}
+						handle={<DragHandle aria-label={`끌어서 순서 바꾸기: ${row.value}`} />}
+						value={<Input appearance="inline" mono aria-label="값" defaultValue={row.value} />}
+						label={<Input appearance="inline" aria-label="라벨" defaultValue={row.label} />}
+						drag={
+							index === 0
+								? { transform: "translate3d(0px, 37px, 0)", active: true }
+								: index === 1
+									? { transform: "translate3d(0px, -37px, 0)" }
+									: undefined
+						}
+					/>
+				))}
+			</OptionTable>
+			<div className="absolute inset-x-0 top-[66px]">
+				<OptionRow
+					drag={{ lifted: true }}
+					handle={<DragHandle aria-hidden tabIndex={-1} />}
+					value={<Input appearance="inline" mono aria-label="값" defaultValue="note" />}
+					label={<Input appearance="inline" aria-label="라벨" defaultValue="메모" />}
+				/>
+			</div>
+		</div>
+	),
+};

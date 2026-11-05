@@ -5,6 +5,7 @@ import {
 	FormField,
 	FormFieldLabel,
 	Input,
+	MediaInput,
 	PropertyGroup,
 	PropertyPanel,
 	Stack,
@@ -75,24 +76,24 @@ export function PreviewPanel({
 		);
 	};
 	const input = (def: FieldDefinition, id: string, placeholder: string, key: string) => {
-		if (def.kind === "slug") return <Input id={id} size="sm" mono placeholder={t("settings.preview.fromTitle")} />;
+		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={t("settings.preview.fromTitle")} />;
 		if (def.kind === "text")
 			return def.multiline ? (
 				<Textarea
 					id={id}
-					size="sm"
+					size="md"
 					rows={Number(model.shown(at.fieldValue(c, key, "rows")) ?? 0) || undefined}
 					placeholder={placeholder}
 				/>
 			) : (
-				<Input id={id} size="sm" placeholder={placeholder} />
+				<Input id={id} size="md" placeholder={placeholder} />
 			);
 		if (def.kind === "select") {
 			const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
 			return (
 				<PickOne
 					id={id}
-					size="sm"
+					size="md"
 					items={def.options.map((option) => ({ value: option, label: labels[option] ?? option }))}
 					value={null}
 					onChange={() => {}}
@@ -103,14 +104,10 @@ export function PreviewPanel({
 		if (def.kind === "relation")
 			return (
 				<Combobox items={[]}>
-					<ComboboxInput id={id} size="sm" placeholder={t("settings.preview.none")} />
+					<ComboboxInput id={id} size="md" placeholder={t("settings.preview.none")} />
 				</Combobox>
 			);
-		return (
-			<Text variant="note" tone="faint">
-				{t("settings.preview.empty")}
-			</Text>
-		);
+		return <MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />;
 	};
 
 	return (

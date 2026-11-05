@@ -1,6 +1,7 @@
 import type { FieldDefinition, LocaleMode } from "@monti-cms/core";
 import {
 	Button,
+	DragHandle,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
@@ -23,13 +24,16 @@ import {
 	SheetSplit,
 	SheetSummary,
 	SheetTitle,
+	Sortable,
+	SortableList,
 	Stack,
 	Switch,
 	Text,
 	Textarea,
 	TextButton,
+	useSortableItem,
 } from "@monti-cms/ui";
-import { type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
@@ -157,6 +161,25 @@ function summaryOf(form: Form) {
 
 /** What the sheet is open on: a new field of a collection, or one of its fields by its place in the draft. */
 export type FieldSheetOpen = { collection: string; key: string | null };
+
+const optionId = (index: number) => `o:${index}`;
+
+/** A choice of a select that is dragged by its handle to a new place; without `moveLabel` it stays where it is (structure is locked). */
+function SortableOption({
+	id,
+	moveLabel,
+	...row
+}: Omit<ComponentProps<typeof OptionRow>, "handle" | "drag" | "ref"> & { id: string; moveLabel?: string }) {
+	const item = useSortableItem(id, { disabled: !moveLabel });
+	return (
+		<OptionRow
+			ref={item.ref}
+			handle={moveLabel ? <DragHandle {...item.handle} aria-label={moveLabel} /> : undefined}
+			drag={{ ...item.motion, active: item.held }}
+			{...row}
+		/>
+	);
+}
 
 /**
  * The field sheet (flow 4, step 04; flow 11, step 17b). Adding: pick one of the four kinds, then its settings. Editing a field: the same settings, its
@@ -319,58 +342,92 @@ function FieldSheetBody({
 	const options =
 		form.kind === "select" ? (
 			<Stack gap={8}>
-				<OptionTable valueLabel={t("settings.field.optionValue")} labelLabel={t("settings.field.optionLabel")}>
-					{form.options.map((option, index) => (
-						<OptionRow
-							// biome-ignore lint/suspicious/noArrayIndexKey: a row's value is what is typed in it; its place is its identity.
-							key={index}
-							value={
-								structure ? (
-									<Input
-										appearance="inline"
-										mono
-										aria-label={t("settings.field.optionValue")}
-										value={option.value}
-										onChange={(event) =>
-											set({
-												options: form.options.map((one, at) =>
-													at === index ? { ...one, value: event.target.value } : one,
-												),
-											})
-										}
-									/>
-								) : (
-									<Text mono>{option.value}</Text>
-								)
-							}
-							label={
-								<Input
-									appearance="inline"
-									aria-label={t("settings.field.optionLabel")}
-									value={option.label}
-									onChange={(event) =>
-										set({
-											options: form.options.map((one, at) =>
-												at === index ? { ...one, label: event.target.value } : one,
-											),
-										})
+				<Sortable
+					nameOf={(id) => {
+						const option = form.options[Number(id.slice(2))];
+						return option ? option.value || option.label : "";
+					}}
+					onDrop={({ active, over }) => {
+						if (!over) return;
+						const from = Number(active.id.slice(2));
+						const to = Number(over.id.slice(2));
+						if (from === to) return;
+						const options = [...form.options];
+						const [moved] = options.splice(from, 1);
+						if (moved) options.splice(to, 0, moved);
+						set({ options });
+					}}
+					overlay={(active) => {
+						const option = form.options[Number(active.id.slice(2))];
+						return option ? (
+							<OptionRow
+								drag={{ lifted: true }}
+								handle={<DragHandle aria-hidden tabIndex={-1} />}
+								value={<Text mono>{option.value}</Text>}
+								label={<Text>{option.label}</Text>}
+							/>
+						) : null;
+					}}
+				>
+					<OptionTable valueLabel={t("settings.field.optionValue")} labelLabel={t("settings.field.optionLabel")}>
+						<SortableList id="options" items={form.options.map((_, index) => optionId(index))}>
+							{form.options.map((option, index) => (
+								<SortableOption
+									// biome-ignore lint/suspicious/noArrayIndexKey: a row's value is what is typed in it; its place is its identity.
+									key={index}
+									id={optionId(index)}
+									moveLabel={
+										structure ? t("settings.field.moveOption", { value: option.value || option.label }) : undefined
+									}
+									value={
+										structure ? (
+											<Input
+												appearance="inline"
+												mono
+												aria-label={t("settings.field.optionValue")}
+												value={option.value}
+												onChange={(event) =>
+													set({
+														options: form.options.map((one, at) =>
+															at === index ? { ...one, value: event.target.value } : one,
+														),
+													})
+												}
+											/>
+										) : (
+											<Text mono>{option.value}</Text>
+										)
+									}
+									label={
+										<Input
+											appearance="inline"
+											aria-label={t("settings.field.optionLabel")}
+											value={option.label}
+											onChange={(event) =>
+												set({
+													options: form.options.map((one, at) =>
+														at === index ? { ...one, label: event.target.value } : one,
+													),
+												})
+											}
+										/>
+									}
+									action={
+										structure ? (
+											<TextButton
+												variant="quiet"
+												aria-label={t("settings.field.removeOption", { value: option.value })}
+												onClick={() => set({ options: form.options.filter((_, at) => at !== index) })}
+											>
+												×
+											</TextButton>
+										) : undefined
 									}
 								/>
-							}
-							action={
-								structure ? (
-									<TextButton
-										variant="quiet"
-										aria-label={t("settings.field.removeOption", { value: option.value })}
-										onClick={() => set({ options: form.options.filter((_, at) => at !== index) })}
-									>
-										×
-									</TextButton>
-								) : undefined
-							}
-						/>
-					))}
-				</OptionTable>
+							))}
+						</SortableList>
+					</OptionTable>
+				</Sortable>
 				{structure ? (
 					<Inline gap={0}>
 						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "" }] })}>

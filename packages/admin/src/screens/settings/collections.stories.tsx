@@ -19,27 +19,23 @@ type Story = StoryObj<typeof meta>;
 const admin = { actor: "admin" } as const;
 const wait = { timeout: 15000 };
 
+/** The posts' admin values the reference screens show: a Korean name, the field labels and help. */
+const postValues = {
+	label: "게시글",
+	folders: true,
+	fields: {
+		title: { label: "제목" },
+		slug: { label: "주소" },
+		summary: { label: "요약", description: "목록과 검색 결과에 나오는 한 문장. 결론을 먼저." },
+		subtitle: { label: "부제" },
+		cover: { label: "대표 이미지", description: "대체 텍스트는 보이는 것만, 80자 안." },
+		category: { label: "카테고리" },
+	},
+};
+
 /** The admin values the reference screens show: Korean names, the posts' field labels and help. */
 async function setup(monti: Monti) {
-	await monti.run(
-		"collections.updateAdminValues",
-		{
-			collection: "post",
-			values: {
-				label: "게시글",
-				folders: true,
-				fields: {
-					title: { label: "제목" },
-					slug: { label: "주소" },
-					summary: { label: "요약", description: "목록과 검색 결과에 나오는 한 문장. 결론을 먼저." },
-					subtitle: { label: "부제" },
-					cover: { label: "대표 이미지", description: "대체 텍스트는 보이는 것만, 80자 안." },
-					category: { label: "카테고리" },
-				},
-			},
-		},
-		admin,
-	);
+	await monti.run("collections.updateAdminValues", { collection: "post", values: postValues }, admin);
 	await monti.run("collections.updateAdminValues", { collection: "memo", values: { label: "메모" } }, admin);
 	await monti.run("collections.updateAdminValues", { collection: "category", values: { label: "카테고리" } }, admin);
 	for (const [title, summary] of [
@@ -454,5 +450,80 @@ export const Proposal: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await settings(canvasElement);
 		await page.findByRole("button", { name: "readingTime 열기" }, wait);
+	},
+};
+
+/** The posts' panel in two tabs: "기본" and "SEO" (subtitle and cover). */
+const twoTabs = async ({ monti }: StorySite) => {
+	await monti.run(
+		"collections.updateAdminValues",
+		{
+			collection: "post",
+			values: {
+				...postValues,
+				layout: [
+					{ tab: "기본", fields: ["title", "slug", "summary", "category"] },
+					{ tab: "SEO", fields: ["subtitle", "cover"] },
+				],
+			},
+		},
+		admin,
+	);
+};
+
+/** The fields' names in the order the outline shows them. */
+const fieldOrder = (page: ReturnType<typeof within>) =>
+	within(page.getByRole("tabpanel"))
+		.getAllByRole("button", { name: / 열기$/ })
+		.map((button: HTMLElement) => button.getAttribute("aria-label")?.replace(/ 열기$/, ""));
+
+const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/** A tab renamed through its right-click menu: "이름 바꾸기" opens the name in place, Enter keeps it. */
+export const TabRenamedFromMenu: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.pointer({ keys: "[MouseRight]", target: page.getByRole("tab", { name: /^기본/ }) });
+		await userEvent.click(await body.findByRole("menuitem", { name: "이름 바꾸기" }));
+		const name = await page.findByRole("textbox", { name: "탭 이름" }, wait);
+		await waitFor(() => expect(name).toHaveFocus(), wait);
+		fill(name, "글 정보");
+		fireEvent.keyDown(name, { key: "Enter" });
+		await page.findByRole("tab", { name: /^글 정보/ }, wait);
+	},
+};
+
+/** A tab deleted through its right-click menu: its fields join the end of the first tab, and the tab row keeps one tab (no "지우기" then). */
+export const TabDeleted: Story = {
+	loaders: site({ more: twoTabs }),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.pointer({ keys: "[MouseRight]", target: await page.findByRole("tab", { name: /^SEO/ }, wait) });
+		await userEvent.click(await body.findByRole("menuitem", { name: "지우기" }));
+		await waitFor(() => expect(page.queryByRole("tab", { name: /^SEO/ })).toBeNull(), wait);
+		await waitFor(
+			() => expect(fieldOrder(page)).toEqual(["title", "slug", "summary", "category", "subtitle", "cover"]),
+			wait,
+		);
+	},
+};
+
+/** Fields reordered with the keyboard: Space lifts summary by its grip, ↓ moves it past subtitle, Space drops it there. */
+export const KeyboardReorder: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await expect(fieldOrder(page)).toEqual(["title", "slug", "summary", "subtitle", "cover", "category"]);
+		page.getByRole("button", { name: "summary 옮기기" }).focus();
+		await userEvent.keyboard("[Space]");
+		await pause(100);
+		await userEvent.keyboard("[ArrowDown]");
+		await pause(300);
+		await userEvent.keyboard("[Space]");
+		await waitFor(
+			() => expect(fieldOrder(page)).toEqual(["title", "slug", "subtitle", "summary", "cover", "category"]),
+			wait,
+		);
 	},
 };

@@ -150,12 +150,20 @@ export {
 	FormFieldTitle,
 	FormFieldWas,
 } from "./field";
-export { FieldRow, FieldTree } from "./field-tree";
+export { FieldGroup, FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
-export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
+export {
+	FolderTab,
+	FolderTabEdit,
+	FolderTabLifted,
+	FolderTabs,
+	FolderTabsAdd,
+	FolderTabsBody,
+	FolderTabsList,
+} from "./folder-tabs";
 export {
 	FormatBarRequest,
 	FormatButton,
@@ -177,6 +185,7 @@ export { ListSection, ListSectionRow } from "./list-section";
 export { LockMark } from "./lock-mark";
 export { IssueRow, MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
+export { MediaInput } from "./media-input";
 export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
@@ -291,6 +300,7 @@ export {
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
+export { Sortable, type SortableEvent, SortableList, type SortableRef, useSortableItem } from "./sortable";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";

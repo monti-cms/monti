@@ -262,44 +262,6 @@ export function shownLayout(layout: Layout | undefined, keys: string[], defaultT
 	}));
 }
 
-/** Moves `key` in the layout: before `before` (a field's key), into the end of `group`, or to the end of `tab`. */
-export function moveInLayout(
-	layout: Layout,
-	key: string,
-	to: { before: string } | { group: string; tab: number } | { tab: number },
-): Layout {
-	const without = layout.map((tab) => ({
-		tab: tab.tab,
-		fields: tab.fields
-			.filter((entry) => entry !== key)
-			.map((entry) =>
-				typeof entry === "string" ? entry : { group: entry.group, fields: entry.fields.filter((each) => each !== key) },
-			),
-	}));
-	if ("before" in to) {
-		for (const tab of without) {
-			const index = tab.fields.indexOf(to.before);
-			if (index >= 0) {
-				tab.fields.splice(index, 0, key);
-				return without;
-			}
-			for (const entry of tab.fields)
-				if (typeof entry !== "string" && entry.fields.includes(to.before)) {
-					entry.fields.splice(entry.fields.indexOf(to.before), 0, key);
-					return without;
-				}
-		}
-		return layout;
-	}
-	const tab = without[to.tab];
-	if (!tab) return layout;
-	if ("group" in to) {
-		const group = tab.fields.find((entry) => typeof entry !== "string" && entry.group === to.group);
-		if (group && typeof group !== "string") group.fields.push(key);
-	} else tab.fields.push(key);
-	return without;
-}
-
 /**
  * The places an assistant's `schema.apply` writes, read against the saved schema: the collections it adds or deletes, the addresses it changes, the
  * fields it adds, renames, changes or removes, and the labels it gives what it makes.

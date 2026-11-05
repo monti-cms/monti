@@ -33,10 +33,10 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 속성 패널 탭 "기본 7 · SEO 3 +" | `FolderTabs`(`FolderTabsList`, `FolderTab` 손잡이 · 이름 · `count`, 플러그인이 둔 탭은 `locked`, 끝에 `FolderTabsAdd` "탭 추가") | 고른 탭의 필드만 보인다. 필드를 다른 탭 머리로 끌어 옮긴다. 탭 이름은 그 자리에서 고친다(`FolderTabEdit`). 탭은 늘 하나 이상 있다. 관리자 값에 배치가 없으면 "기본" 탭 하나에 모든 필드가 있다(2026-11-05 바뀜: 탭이 하나여도 탭 줄을 보인다). |
+| 속성 패널 탭 "기본 7 · SEO 3 +" | `FolderTabs`(`FolderTabsList`, `FolderTab` 손잡이 · 이름 · `count`, 플러그인이 둔 탭은 `locked`, 끝에 `FolderTabsAdd` "탭 추가") | 고른 탭의 필드만 보인다. 필드를 다른 탭 머리로 끌어 옮긴다. 탭 이름은 더블클릭이나 오른쪽 클릭 메뉴(`ContextMenu` "이름 바꾸기" · "지우기")로 그 자리에서 고친다(`FolderTabEdit`). 끌기는 [list.md](../components/list.md) "끌어서 옮기기"를 따른다. 탭은 늘 하나 이상 있다. 관리자 값에 배치가 없으면 "기본" 탭 하나에 모든 필드가 있다(2026-11-05 바뀜: 탭이 하나여도 탭 줄을 보인다). |
 | 필드 목록 | `FolderTabsBody` 안의 `FieldTree` | 탭이 하나뿐이면 `FieldTree`만. |
 | 필드 한 줄 | `FieldRow`(`name` mono, `label`, `description`, `kind` mono와 "!" 표시, 묶음 안은 `depth`, 바뀜은 `changed`, 이름 색 `tone`: 새로 `success`, 이름 바꿈 `warning`, 지움 `faint`, 문제 `danger`, ✦ 제안 `proposal`, `note` "← summary" · "지움" · "새로" · "✦ 제안" · "선택지 없음", 옮길 수 없으면 `grip={false}`) | 누르면(`onOpen`) 그 필드의 시트가 열리고, 고치는 것은 시트에서 한다. 손잡이로 순서를 바꾼다. |
-| 묶음 줄 "분류" | `FieldRow group` | 이름이 굵게 든 회색 띠. |
+| 묶음 줄 "분류" | `FieldGroup`(묶음 띠 `FieldRow group`과 그 아래 묶음 안 필드들) | 이름이 굵게 든 회색 띠. 띠의 손잡이로 묶음을 그 필드들과 함께 옮긴다. 필드는 묶음 안팎으로 끌어 옮긴다. |
 | "+ 필드 추가" · "+ 묶음 추가" | 둘 다 `Button variant="ghost" size="sm"` | 필드 추가는 필드 시트를 연다. 탭 추가는 탭 줄 끝의 `FolderTabsAdd`가 한다. 읽기 전용이면 "+ 필드 추가"가 없다. |
 | 표시 설명 "! 필수 · → 관계 · [] 여러 개" | `Text variant="meta" tone="subtle"` | |
 
@@ -59,7 +59,7 @@
 |---|---|---|
 | 패널 | `SidePanel`(`width="panel"`, `title` "미리보기"와 흐린 "· 저장 안 됨", 닫기 ×) | 저장하지 않은 필드 목록으로 글의 속성 패널을 그린다. ✦ 버튼을 가린다. |
 | 탭 줄 "기본 · SEO" | `TabsList variant="bar"` | |
-| 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField`, 값 자리의 입력 부품, 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
+| 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField`, 값 자리의 입력 부품(`md`, 미디어는 `MediaInput`), 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
 | 미리볼 수 없음 | `Text variant="note"` "고칠 곳이 있어 미리볼 수 없어요." + `TodoItem blocking`(`title` 필드 이름, 아래 줄 "선택지가 없어요") | 행을 누르면 그 필드로 간다. 저장 묶음의 알약이 비활성이 된다. |
 
 스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Status/ErrorNote, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch, Monti/Proposal/ProposalBubble.
@@ -86,7 +86,7 @@
 | 표시 이름 · 이름 · 도움말 | `FormField` + `Input` · `Input mono` · `Textarea` | |
 | 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch` | "발행 안 된 대상"은 08번 문서와 함께 온다(T42). |
 | 글자 설정 | "여러 줄" `Switch`, "최대 글자 수" · "줄 수" `Input mono width="number"`, "안내 문구" `Input`, "비어 있으면 본문에서 채우기" `Switch` | |
-| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 손잡이로 순서 바꾸기는 키보드 옮기기와 함께 온다(T43). 그때까지 `handle`은 비어 있다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
+| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 손잡이로 순서를 바꾼다(끌기와 키보드, [list.md](../components/list.md) "끌어서 옮기기"). 구조를 바꿀 수 없는 운영 사이트에서는 손잡이가 없다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
 | 필수 | `Option spread` + `Switch`(라벨 뒤 흐린 "!") | |
 | 언어 | `FormField` + `Segmented`("모두 같음" · "언어마다" · "원문 따름") | 셋 중 하나를 고르는 짧은 선택이다([choice.md](../components/choice.md) "몇 개 중 하나"). |
 | 요약 줄 | `Text variant="meta" mono` "series → Series" | 지금 설정을 스키마 말로 한 줄. |

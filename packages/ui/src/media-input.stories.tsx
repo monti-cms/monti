@@ -1,0 +1,42 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { FormField, FormFieldLabel, Input, MediaInput, Stack } from "./index";
+
+/** A media field: the same underline as an input, the file's name after a small thumbnail, or the faint placeholder while empty. */
+const meta = {
+	title: "Controls/Field/MediaInput",
+	component: MediaInput,
+	tags: ["visual"],
+} satisfies Meta<typeof MediaInput>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** Empty, chosen and proposed, beside an input of the same size so the lines read as one form. */
+export const States: Story = {
+	render: () => (
+		<Stack gap={16} width="panel">
+			<FormField>
+				<FormFieldLabel htmlFor="summary">요약</FormFieldLabel>
+				<Input id="summary" size="sm" placeholder="비어 있음" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="cover-empty">대표 이미지</FormFieldLabel>
+				<MediaInput id="cover-empty" size="sm" placeholder="비어 있음" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="cover">대표 이미지</FormFieldLabel>
+				<MediaInput id="cover" size="sm" value={{ name: "cover-react.png" }} onClear={() => {}} clearLabel="빼기" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="cover-ai">공유 이미지</FormFieldLabel>
+				<MediaInput
+					id="cover-ai"
+					size="sm"
+					value={{ name: "og-react.png" }}
+					proposal
+					onClear={() => {}}
+					clearLabel="빼기"
+				/>
+			</FormField>
+		</Stack>
+	),
+};

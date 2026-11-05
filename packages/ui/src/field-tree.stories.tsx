@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FieldRow, FieldTree } from "./index";
+import { FieldGroup, FieldRow, FieldTree } from "./index";
 
 /** The outline of a collection's fields: one line per field with a grip, the name (mono), the label and the kind at the end. */
 const meta = {
@@ -59,5 +59,63 @@ export const Openable: Story = {
 			<FieldRow name="title !" label="제목" kind="text" onOpen={() => {}} openLabel="제목 필드 열기" />
 			<FieldRow name="summary" label="요약" kind="textarea" onOpen={() => {}} openLabel="요약 필드 열기" />
 		</FieldTree>
+	),
+};
+
+/** A group with its fields as one block: the band's grip moves the group and its fields together. */
+export const Group: Story = {
+	render: () => (
+		<FieldTree>
+			<FieldRow name="title !" label="제목" kind="text" />
+			<FieldGroup name="검색 노출">
+				<FieldRow name="seoTitle" label="검색 제목" kind="text" depth={1} />
+				<FieldRow name="seoImage" label="공유 이미지" kind="image" depth={1} />
+			</FieldGroup>
+			<FieldRow name="tags" label="태그" kind="[] → tag" />
+		</FieldTree>
+	),
+};
+
+/**
+ * While dragging: the line in hand floats over the page (the whole line on the page ground, with the floating shadow, drawn by the `Sortable`
+ * overlay), its place stays as a gap, and the line it passed has moved up into its place. A group in hand floats with its fields.
+ */
+export const Held: Story = {
+	render: () => (
+		<div className="flex w-[640px] flex-col gap-monti-32">
+			<div className="relative">
+				<FieldTree>
+					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldRow
+						name="summary"
+						label="요약"
+						kind="text · 120"
+						dragging
+						motion={{ transform: "translate3d(0px, 41px, 0)" }}
+					/>
+					<FieldRow name="cover" label="표지" kind="image" motion={{ transform: "translate3d(0px, -41px, 0)" }} />
+					<FieldRow name="tags" label="태그" kind="[] → tag" />
+				</FieldTree>
+				<div className="absolute inset-x-0 top-[70px]">
+					<FieldRow lifted name="summary" label="요약" kind="text · 120" />
+				</div>
+			</div>
+			<div className="relative">
+				<FieldTree>
+					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldGroup name="검색 노출" dragging>
+						<FieldRow name="seoTitle" label="검색 제목" kind="text" depth={1} />
+						<FieldRow name="seoImage" label="공유 이미지" kind="image" depth={1} />
+					</FieldGroup>
+					<FieldRow name="tags" label="태그" kind="[] → tag" />
+				</FieldTree>
+				<div className="absolute inset-x-0 top-[24px]">
+					<FieldGroup lifted name="검색 노출">
+						<FieldRow name="seoTitle" label="검색 제목" kind="text" depth={1} />
+						<FieldRow name="seoImage" label="공유 이미지" kind="image" depth={1} />
+					</FieldGroup>
+				</div>
+			</div>
+		</div>
 	),
 };

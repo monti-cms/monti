@@ -57,6 +57,7 @@ export const Shortcut = close(open.Shortcut);
 export const FilterButton = close(open.FilterButton);
 export const FolderTab = close(open.FolderTab);
 export const FolderTabEdit = close(open.FolderTabEdit);
+export const FolderTabLifted = close(open.FolderTabLifted);
 export const FolderTabs = close(open.FolderTabs);
 export const FolderTabsAdd = close(open.FolderTabsAdd);
 export const FolderTabsBody = close(open.FolderTabsBody);
@@ -196,6 +197,7 @@ export const ListFooter = close(open.ListFooter);
 export const PageSizeMenu = close(open.PageSizeMenu);
 export const ListHead = close(open.ListHead);
 export const LockMark = close(open.LockMark);
+export const MediaInput = close(open.MediaInput);
 export const NavLink = close(open.NavLink);
 export const RailAction = close(open.RailAction);
 export const RailLayout = close(open.RailLayout);
@@ -312,6 +314,7 @@ export const ChangeLabel = close(open.ChangeLabel);
 export const ChangeLine = close(open.ChangeLine);
 export const ChangeLines = close(open.ChangeLines);
 export const ChangeNote = close(open.ChangeNote);
+export const FieldGroup = close(open.FieldGroup);
 export const FieldRow = close(open.FieldRow);
 export const FieldTree = close(open.FieldTree);
 export const FormatButton = close(open.FormatButton);
@@ -388,6 +391,8 @@ export type {
 	SelectAllState,
 	ShortcutKey,
 	ShortcutKeys,
+	SortableEvent,
+	SortableRef,
 	Spacing,
 	StackProps,
 	UiLabels,
@@ -404,6 +409,8 @@ export {
 	SearchToggle,
 	Segmented,
 	Select,
+	Sortable,
+	SortableList,
 	stackVariants,
 	Toaster,
 	textVariants,
@@ -412,5 +419,6 @@ export {
 	useIsMobile,
 	useShortcut,
 	useSidebar,
+	useSortableItem,
 	useUiLabels,
 } from "./internal";

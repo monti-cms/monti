@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { HELD } from "./sortable";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
@@ -43,7 +44,7 @@ function LanguageRow({
 				"grid items-center gap-x-monti-12 border-monti-muted border-b px-monti-8 py-monti-10",
 				handle && "hover:bg-monti-muted",
 				handled ? "grid-cols-[16px_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]",
-				drag?.active && "relative z-10 bg-monti-page opacity-80 shadow-monti-floating",
+				drag?.active && HELD,
 				className,
 			)}
 			style={drag ? { transform: drag.transform, transition: drag.transition } : undefined}
