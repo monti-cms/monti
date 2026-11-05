@@ -250,8 +250,11 @@ export const Preview: Story = {
 	},
 };
 
-/** Flow 4, step 09: a choice field without choices: the panel lists it instead, and saving is blocked. */
-export const PreviewProblem: Story = {
+/**
+ * Flow 4, step 09: a select with no choices. The save is not blocked: pressing it opens the review, which lists what is to fix first and has no pill;
+ * a line opens its field. The preview still previews.
+ */
+export const FixFirst: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
@@ -259,8 +262,11 @@ export const PreviewProblem: Story = {
 		fill(screen.body.getByLabelText(/^식별자/), "format");
 		await userEvent.click(screen.body.getByRole("button", { name: "필드 추가" }));
 		await sheetGone(screen.body);
-		await userEvent.click(await screen.page.findByRole("button", { name: "속성 패널 미리보기" }));
-		await screen.page.findByText("고칠 곳이 있어 미리볼 수 없어요.", {}, wait);
+		await userEvent.click(screen.page.getByRole("button", { name: "저장하고 적용" }));
+		const review = within(await screen.body.findByRole("dialog", {}, wait));
+		await review.findByText("고칠 곳", {}, wait);
+		await expect(review.queryByRole("button", { name: "적용" })).toBeNull();
+		await review.findByText("선택지가 없어요");
 	},
 };
 

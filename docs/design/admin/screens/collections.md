@@ -13,7 +13,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움" · "주소" · 그 밖의 고침은 "바뀜"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 미리보기에 고칠 곳이 있으면 `saveDisabled`. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
+| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움" · "주소" · 그 밖의 고침은 "바뀜"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 고칠 곳이 있어도 막지 않는다. 누르면 검토가 열리고 거기서 알린다. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
 | 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
 | 데이터베이스 적용 실패 (빠짐, 2026-11-05) | 틀의 알림 띠(`SchemaBanner`)가 맡는다 | 모든 화면 맨 위의 띠와 같은 말을 두 번 보이지 않는다. |
 
@@ -60,7 +60,7 @@
 | 패널 | `SidePanel`(`width="panel"`, `title` "미리보기"와 흐린 "· 저장 안 됨", 닫기 ×) | 저장하지 않은 필드 목록으로 글의 속성 패널을 그린다. ✦ 버튼을 가린다. |
 | 탭 줄 "기본 · SEO" | `TabsList variant="bar"` | |
 | 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField`, 값 자리의 입력 부품(`md`, 미디어는 `MediaInput`), 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. |
-| 미리볼 수 없음 | `Text variant="note"` "고칠 곳이 있어 미리볼 수 없어요." + `TodoItem blocking`(`title` 필드 이름, 아래 줄 "선택지가 없어요") | 행을 누르면 그 필드로 간다. 저장 묶음의 알약이 비활성이 된다. |
+| 미리볼 수 없음 (빠짐, 2026-11-05) | | 미리보기는 고칠 곳이 있어도 미리보기를 그린다(선택지 없는 고르기는 빈 고르기 상자). 고칠 곳은 저장할 때 검토 맨 위에서 알린다. |
 
 스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Status/ErrorNote, Patterns/Frame/RailLayout, Patterns/Frame/NavLink, Controls/Tabs/FolderTabs, Patterns/List/FieldTree, Primitives/Text, Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Choice/Option, Controls/Choice/Switch, Primitives/LockMark, Controls/Status/ChangeDot, Controls/Field/Affix, Patterns/Frame/DangerBlock, Controls/Button/Button, Controls/Overlay/SidePanel, Monti/Proposal/PropertyPanel, Monti/EditorTools/TodoItem, Controls/Overlay/Sheet, Controls/Choice/Radio, Controls/Menu/PickList, Controls/Field/Textarea, Controls/Field/Select, Primitives/OptionTable, Controls/Button/DragHandle, Controls/Choice/Segmented, Monti/Change/ChangeGroup, Monti/Change/Patch, Monti/Proposal/ProposalBubble.
 
@@ -103,6 +103,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 바뀐 곳 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 "다시 불러오기". 발에는 "취소"와 알약 하나만 있다. |
+| 고칠 곳 | 변경 블록과 같은 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 필드 이름, `identifier`) + `ChangeNote danger` 무엇이 문제인지 + `TextButton` "열기" | 검토의 맨 위, 다른 변경 블록과 같은 모양이다. 저장을 누른 그때 알린다. "열기"는 검토를 닫고 그 필드 시트를 연다. 고칠 곳이 남아 있는 동안 발에는 "취소"만 있다(2026-11-05, 소유자). |
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었어요", 회색 한 줄) | 시트 맨 위, 위로 변경 블록과 같은 16px. 이때 발의 알약은 "다시 불러오기"다. 할 수 있는 일이 그것뿐이라 비활성 "적용" 대신 그 자리에 둔다(2026-11-05, 소유자). |
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
@@ -125,7 +126,7 @@
 | "만듦" | 4.06 | `toast` "노트를 만들었어요"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 바뀐 곳 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
-| "미리보기 오류" | 4.09 | 미리보기 자리에 `TodoItem blocking`, 해당 `FieldRow tone="danger"`, 저장 알약 `saveDisabled` | Monti/EditorTools/TodoItem, Patterns/List/FieldTree |
+| "고칠 곳" | 4.09 | 해당 `FieldRow tone="danger"`. 저장을 누르면 검토 맨 위에 "고칠 곳" 변경 블록과 "열기", 발에 알약 없음 | Monti/Change/ChangeGroup, Patterns/List/FieldTree |
 | "바뀐 곳 목록" | 4.10 | `ChangesGroup`의 목록 열림(요약 · 부제 · 글 종류, 각각 되돌리기) | Monti/Change/ChangesGroup |
 | "필드 검토" | 4.11 | 검토 `Sheet`: 이름 · 지움 · 필수 `ChangeGroup` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "값 지우기" | 4.12 | 지움 블록에서 "값 지우기"를 고름, `ChangeNote danger`, 알약 `Button variant="danger"` "지우고 적용" | Monti/Change/ChangeGroup, Controls/Button/Button |

@@ -7,6 +7,7 @@ import {
 	ChangeLines,
 	ChangeNote,
 	ErrorNote,
+	Inline,
 	Input,
 	RadioGroup,
 	RadioItem,
@@ -17,6 +18,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Stack,
+	TextButton,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
@@ -74,6 +76,7 @@ export function ReviewSheet({
 	onReload,
 	onClose,
 	onApply,
+	onOpenField,
 }: {
 	model: CollectionsDraft;
 	plan: Plan | null;
@@ -82,6 +85,8 @@ export function ReviewSheet({
 	onReload: () => void;
 	onClose: () => void;
 	onApply: (answers: Answers) => void;
+	/** Opens a field's sheet from a line of what is to fix. */
+	onOpenField: (collection: string, key: string) => void;
 }) {
 	return (
 		<Sheet open={plan !== null} onOpenChange={(next) => !next && !applying && onClose()}>
@@ -94,6 +99,7 @@ export function ReviewSheet({
 					onReload={onReload}
 					onClose={onClose}
 					onApply={onApply}
+					onOpenField={onOpenField}
 				/>
 			) : null}
 		</Sheet>
@@ -108,6 +114,7 @@ function Body({
 	onReload,
 	onClose,
 	onApply,
+	onOpenField,
 }: {
 	model: CollectionsDraft;
 	plan: Plan;
@@ -116,8 +123,32 @@ function Body({
 	onReload: () => void;
 	onClose: () => void;
 	onApply: (answers: Answers) => void;
+	onOpenField: (collection: string, key: string) => void;
 }) {
 	const { t } = useAdmin();
+	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
+	const problems = model.problems;
+	const fixFirst = problems.map((problem) => {
+		const key = problem.field
+			? model.fields(problem.collection).find((each) => model.fieldName(problem.collection, each) === problem.field)
+			: undefined;
+		return (
+			<ChangeGroup
+				key={`${problem.collection}:${problem.field}:${problem.code}`}
+				kind="drop"
+				tag={t("settings.review.toFix")}
+				title={key ? model.fieldLabel(problem.collection, key) : model.label(problem.collection)}
+				identifier={problem.field ?? problem.collection}
+			>
+				<Inline gap={12} align="baseline">
+					<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
+					{key ? (
+						<TextButton onClick={() => onOpenField(problem.collection, key)}>{t("settings.review.open")}</TextButton>
+					) : null}
+				</Inline>
+			</ChangeGroup>
+		);
+	});
 	const [picks, setPicks] = useState<Record<string, Pick>>(() =>
 		Object.fromEntries(
 			plan.changes.flatMap((change) => {
@@ -335,7 +366,10 @@ function Body({
 							<ErrorNote title={t("settings.review.fileChanged")}>{t("settings.review.fileChangedLine")}</ErrorNote>
 						</Box>
 					) : null}
-					<Stack gap={0}>{plan.changes.map(block)}</Stack>
+					<Stack gap={0}>
+						{fixFirst}
+						{plan.changes.map(block)}
+					</Stack>
 				</Stack>
 			</SheetBody>
 			<SheetFooter>
@@ -343,7 +377,8 @@ function Body({
 					{t("settings.cancel")}
 				</Button>
 				{/* With the file changed under the screen, reading it again is the one thing left to do: it takes the pill's place. */}
-				{conflict ? (
+				{/* While something is to fix there is nothing to apply: no pill. */}
+				{problems.length > 0 ? null : conflict ? (
 					<Button onClick={onReload}>{t("settings.reload")}</Button>
 				) : (
 					<Button variant={danger ? "danger" : "primary"} loading={applying} onClick={apply}>

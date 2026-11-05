@@ -8,10 +8,8 @@ import {
 	MediaInput,
 	PropertyGroup,
 	PropertyPanel,
-	Stack,
 	Text,
 	Textarea,
-	TodoItem,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
@@ -34,19 +32,17 @@ function runs(entries: Layout[number]["fields"]) {
 }
 
 /**
- * The property panel preview (flow 4, steps 08–09): the entry editor's property panel drawn from the unsaved fields, as it will look. When the draft has
- * something to fix, the panel lists that instead and the save is blocked; a line goes to the field.
+ * The property panel preview (flow 4, step 08): the entry editor's property panel drawn from the unsaved fields, as it will look, problems and all (a
+ * select with no choices is an empty select). What is to fix is told when saving, at the top of the review.
  */
 export function PreviewPanel({
 	model,
 	collection: c,
 	onClose,
-	onOpenField,
 }: {
 	model: CollectionsDraft;
 	collection: string;
 	onClose: () => void;
-	onOpenField: (key: string) => void;
 }) {
 	const { t } = useAdmin();
 	const keys = model.fields(c).filter((key) => model.shown(at.field(c, key)));
@@ -57,8 +53,6 @@ export function PreviewPanel({
 	);
 	const [tab, setTab] = useState("0");
 	const picked = layout[Number(tab)] ?? layout[0];
-	const problems = model.problems.filter((problem) => problem.collection === c);
-	const keyOf = (name: string) => keys.find((key) => model.fieldName(c, key) === name);
 
 	// The editor's rule for required fields (components/field.md): a red * after the label, but only in a panel that also has fields left empty.
 	const defs = keys
@@ -131,31 +125,11 @@ export function PreviewPanel({
 			onValueChange={setTab}
 			tabs={layout.map((each, index) => ({ value: String(index), label: each.tab }))}
 		>
-			{problems.length > 0 ? (
-				<Stack gap={12}>
-					<Text as="p" variant="note">
-						{t("settings.preview.blocked")}
-					</Text>
-					{problems.map((problem) => {
-						const key = problem.field ? keyOf(problem.field) : undefined;
-						return (
-							<TodoItem
-								key={`${problem.field}:${problem.code}`}
-								blocking
-								title={key ? model.fieldLabel(c, key) : model.label(c)}
-								detail={t(`settings.problem.${problem.code}`)}
-								onOpen={key ? () => onOpenField(key) : undefined}
-							/>
-						);
-					})}
-				</Stack>
-			) : (
-				runs(picked?.fields ?? []).map((run) => (
-					<PropertyGroup key={run.key} title={run.title}>
-						{run.fields.map(row)}
-					</PropertyGroup>
-				))
-			)}
+			{runs(picked?.fields ?? []).map((run) => (
+				<PropertyGroup key={run.key} title={run.title}>
+					{run.fields.map(row)}
+				</PropertyGroup>
+			))}
 		</PropertyPanel>
 	);
 }

@@ -322,7 +322,7 @@ export function CollectionsScreen({
 				onDiscard={draft.revertAll}
 				saveLabel={locked ? t("settings.save") : t("settings.saveApply")}
 				onSave={() => void save()}
-				saveDisabled={model.problems.length > 0 || busy}
+				saveDisabled={busy}
 				proposals={
 					draft.proposals.length > 0
 						? {
@@ -447,12 +447,7 @@ export function CollectionsScreen({
 				</SettingsPage>
 			</Stack>
 			{preview && shownTab === "fields" && current ? (
-				<PreviewPanel
-					model={model}
-					collection={current}
-					onClose={() => setPreview(false)}
-					onOpenField={(key) => setFieldSheet({ collection: current, key })}
-				/>
+				<PreviewPanel model={model} collection={current} onClose={() => setPreview(false)} />
 			) : null}
 			<FieldSheet model={model} open={fieldSheet} onClose={() => setFieldSheet(null)} />
 			<NewCollectionSheet
@@ -476,6 +471,12 @@ export function CollectionsScreen({
 				}}
 				onClose={() => setPlan(null)}
 				onApply={(answers) => void apply(answers)}
+				onOpenField={(c, key) => {
+					setPlan(null);
+					openCollection(c);
+					setTab("fields");
+					setFieldSheet({ collection: c, key });
+				}}
 			/>
 		</Inline>
 	);
