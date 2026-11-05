@@ -188,19 +188,21 @@ export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string }
 	);
 }
 
-/** The posts list's search: a list with a body searches its title and address, or everything, as the admin does. */
+/** The posts list's search: everywhere at first, or only the title, the address or the body (screens/list.md, the search row). */
 export function PostSearch() {
 	return (
 		<SearchToggle
 			label="검색"
 			value=""
 			aria-label="검색"
-			placeholder="제목·주소 검색"
+			placeholder="검색"
 			targets={[
-				{ value: "fields", label: "제목·주소" },
 				{ value: "all", label: "전체" },
+				{ value: "title", label: "제목" },
+				{ value: "slug", label: "주소" },
+				{ value: "body", label: "본문" },
 			]}
-			target="fields"
+			target="all"
 			targetLabel="찾을 곳"
 		/>
 	);

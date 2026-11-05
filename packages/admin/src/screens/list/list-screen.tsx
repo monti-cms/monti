@@ -297,12 +297,14 @@ export function ListScreen({
 				<SearchToggle
 					label={t("list.search")}
 					aria-label={t("list.search")}
-					placeholder={state.search.in === "fields" ? t("list.searchFieldsPlaceholder") : t("list.search")}
+					placeholder={t("list.search")}
 					value={words}
 					onValueChange={search}
 					targets={[
-						{ value: "fields", label: t("list.searchFields") },
 						{ value: "all", label: t("list.searchAll") },
+						{ value: "title", label: t("list.searchTitle") },
+						{ value: "slug", label: t("list.searchSlug") },
+						{ value: "body", label: t("list.searchBody") },
 					]}
 					target={state.search.in}
 					onTargetChange={(target) => setState({ ...state, page: 1, search: { text: words, in: target } })}

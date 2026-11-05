@@ -39,8 +39,8 @@ export const ListQuery = z.object({
 	folder: z.string().nullable().optional(),
 	/** Inside a folder: that folder (`here`), or the whole collection (`all`). */
 	scope: z.enum(["here", "all"]).default("here"),
-	/** Title and address (`fields`), or those and the body's text too (`all`). */
-	search: z.object({ text: z.string(), in: z.enum(["fields", "all"]).default("all") }).optional(),
+	/** Everywhere (`all`), or only the title, the address or the body's text. */
+	search: z.object({ text: z.string(), in: z.enum(["all", "title", "slug", "body"]).default("all") }).optional(),
 	/** All must match; one filter's values match any. */
 	filters: z.array(Filter).default([]),
 	sort: z.object({ by: z.enum(SORTS), dir: z.enum(["asc", "desc"]) }).default({ by: "updatedAt", dir: "desc" }),
@@ -179,10 +179,13 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 	const text = query.search?.text.trim();
 	if (text) {
 		const pattern = like(text);
+		const where = query.search?.in ?? "all";
+		const columns = where === "all" ? ["title", "slug", "body_text"] : [where === "body" ? "body_text" : where];
 		parts.push(
-			query.search?.in === "fields"
-				? sql`(rep.title ilike ${pattern} or rep.slug ilike ${pattern})`
-				: sql`(rep.title ilike ${pattern} or rep.slug ilike ${pattern} or rep.body_text ilike ${pattern})`,
+			sql`(${sql.join(
+				columns.map((column) => sql`${sql.ref(`rep.${column}`)} ilike ${pattern}`),
+				sql` or `,
+			)})`,
 		);
 	}
 	const kept = query.filters.filter((filter) => !skip?.(filter));
@@ -469,7 +472,7 @@ export const listOperations = [
 		name: "entries.query",
 		kind: "read",
 		description:
-			"Find entries of a collection with the list's query: search the title and address (or the body too), filter by status, relation values, select options, languages, dates or empty fields, sort, and read a page. One row per translation group. It is the same query the list screen runs, so what a person filters, you can filter.",
+			"Find entries of a collection with the list's query: search everywhere or only the title, the address or the body, filter by status, relation values, select options, languages, dates or empty fields, sort, and read a page. One row per translation group. It is the same query the list screen runs, so what a person filters, you can filter.",
 		input: ListQuery,
 		run: (input, ctx) => runListQuery(ctx, input),
 	}),

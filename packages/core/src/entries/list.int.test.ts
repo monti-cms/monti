@@ -145,8 +145,12 @@ describe("the list query", () => {
 		expect(await titles({ filters: [{ on: "status", any: ["changed", "draft"] }] })).toHaveLength(3);
 	});
 
-	it("06-1 search finds Korean in the title, the address, or with `all` the body's text", async () => {
-		expect(await titles({ search: { text: "컴포넌트", in: "fields" } })).toEqual(["리액트 서버 컴포넌트 다시 보기"]);
+	it("06-1 search finds Korean everywhere, or only in the title, the address or the body", async () => {
+		expect(await titles({ search: { text: "컴포넌트", in: "title" } })).toEqual(["리액트 서버 컴포넌트 다시 보기"]);
+		expect(await titles({ search: { text: "컴포넌트", in: "body" } })).toEqual(["첫 번째 글"]);
+		// Publishing made the first post's address from its title: "첫-번째-글".
+		expect(await titles({ search: { text: "-번째", in: "slug" } })).toEqual(["첫 번째 글"]);
+		expect(await titles({ search: { text: "-번째", in: "title" } })).toEqual([]);
 		expect(await titles({ search: { text: "컴포넌트", in: "all" } })).toEqual([
 			"리액트 서버 컴포넌트 다시 보기",
 			"첫 번째 글",

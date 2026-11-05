@@ -2,18 +2,21 @@ import type { ListColumn, ListFilter } from "@monti-cms/core";
 
 /**
  * The list's query in its address (doc 06: filters, search and sort live in the address only). One key per filtered column, values comma-joined:
- * `?status=draft,changed&tags=<group>,~none&summary=empty&updatedAt=7d&sort=-updatedAt&q=text&in=fields&page=2`. `ai` names the columns the
+ * `?status=draft,changed&tags=<group>,~none&summary=empty&updatedAt=7d&sort=-updatedAt&q=text&in=title&page=2`. `ai` names the columns the
  * assistant filtered (`list.show`), drawn as blue chips until the admin touches them.
  */
 export type ListState = {
 	filters: ListFilter[];
-	search: { text: string; in: "fields" | "all" };
+	search: { text: string; in: SearchIn };
 	sort: { by: "title" | "slug" | "updatedAt" | "publishedAt" | "createdAt"; dir: "asc" | "desc" };
 	page: number;
 	ai: string[];
 };
 
 export const NONE = "~none";
+/** Where the search looks: everywhere first, or only the title, the address or the body (screens/list.md, the search row). */
+export const SEARCH_IN = ["all", "title", "slug", "body"] as const;
+type SearchIn = (typeof SEARCH_IN)[number];
 const SORTABLE = new Set(["title", "slug", "updatedAt", "publishedAt", "createdAt"]);
 const RANGE = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/;
 
@@ -59,7 +62,7 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 	const page = Number(params.get("page") ?? "1");
 	return {
 		filters,
-		search: { text: params.get("q") ?? "", in: params.get("in") === "all" ? "all" : "fields" },
+		search: { text: params.get("q") ?? "", in: SEARCH_IN.find((place) => place === params.get("in")) ?? "all" },
 		sort: SORTABLE.has(by)
 			? { by: by as ListState["sort"]["by"], dir: sortRaw.startsWith("-") ? "desc" : "asc" }
 			: { by: "updatedAt", dir: "desc" },
@@ -71,8 +74,7 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 export function writeState(state: ListState): URLSearchParams {
 	const params = new URLSearchParams();
 	if (state.search.text) params.set("q", state.search.text);
-	// Title and address is where the screen searches first, as the reference list's box does.
-	if (state.search.in === "all") params.set("in", "all");
+	if (state.search.in !== "all") params.set("in", state.search.in);
 	for (const filter of state.filters) {
 		const key = filterColumn(filter);
 		if (filter.on === "empty") params.set(key, "empty");
