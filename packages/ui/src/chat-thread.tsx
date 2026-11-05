@@ -9,7 +9,7 @@ function ChatThread({ className, children, ...props }: ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="chat-thread"
-			className={cn("flex min-h-0 flex-1 flex-col-reverse overflow-auto", className)}
+			className={cn("flex min-h-0 flex-1 scroll-py-monti-8 flex-col-reverse overflow-auto", className)}
 			{...props}
 		>
 			<div className="flex flex-col gap-monti-24 p-monti-24">{children}</div>
