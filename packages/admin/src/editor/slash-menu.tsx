@@ -5,7 +5,6 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-	MenuShortcut,
 	Popover,
 	PopoverContent,
 	Text,
@@ -13,9 +12,10 @@ import {
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
+import { BlockIcon } from "./block-icon";
 import { type BodyCatalogs, needsAttrs } from "./catalog";
 import { insertBlocks, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
@@ -30,7 +30,8 @@ type Item = {
 	label: string;
 	/** Words it is found by besides its label: its block type, its markdown. */
 	words: string[];
-	shortcut?: string;
+	/** The mark at the start of its row. */
+	icon: ReactNode;
 	/** Puts the block in on the line the "/" was typed on. */
 	run: (editor: Editor) => void | Promise<void>;
 };
@@ -101,7 +102,7 @@ export function useSlashMenu({
 			group: "text",
 			label: kind.type === "heading" ? t("editor.heading", { level: kind.level }) : label(kind.type),
 			words: [kind.type, KIND_SHORTCUTS[kindKey(kind)] ?? ""],
-			shortcut: KIND_SHORTCUTS[kindKey(kind)] || undefined,
+			icon: <BlockIcon type={kind.type} level={kind.type === "heading" ? kind.level : undefined} />,
 			run: (editor) => {
 				if (open) putIn(editor, open, turnLine(kind));
 			},
@@ -121,7 +122,7 @@ export function useSlashMenu({
 				group: block.type === "divider" ? "text" : block.menu === "component" ? "component" : "insert",
 				label: t(block.label),
 				words: [block.type, block.type === "divider" ? "---" : ""],
-				shortcut: block.type === "divider" ? "---" : undefined,
+				icon: <BlockIcon type={block.type} />,
 				run: (editor) => {
 					if (!open) return;
 					const type = editor.schema.nodes[nodeName(block.type)];
@@ -136,6 +137,7 @@ export function useSlashMenu({
 					group: "templates",
 					label: template.name,
 					words: [t("slash.templateWord")],
+					icon: <BlockIcon type="template" />,
 					run: async (editor) => {
 						if (!open) return;
 						const answer = await get.run({ id: template.id });
@@ -283,8 +285,8 @@ function SlashMenu({
 								<CommandGroup key={group} heading={titles[group]}>
 									{rows.map(({ item, at }) => (
 										<CommandItem key={item.key} value={String(at)} onSelect={() => onChoose(item)}>
+											{item.icon}
 											<Text truncate>{item.label}</Text>
-											{item.shortcut ? <MenuShortcut>{item.shortcut}</MenuShortcut> : null}
 										</CommandItem>
 									))}
 								</CommandGroup>

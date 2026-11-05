@@ -23,13 +23,13 @@ import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import { type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { BlockIcon } from "./block-icon";
 import { alignable, type BodyCatalogs } from "./catalog";
 import {
 	addBelow,
 	canMove,
 	deleteBlock,
 	duplicateBlock,
-	KIND_SHORTCUTS,
 	kindKey,
 	kindOf,
 	moveBlock,
@@ -252,12 +252,10 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 										>
 											{kinds.map((each) => (
 												<DropdownMenuRadioItem key={kindKey(each)} value={kindKey(each)}>
+													<BlockIcon type={each.type} level={each.type === "heading" ? each.level : undefined} />
 													{each.type === "heading"
 														? t("editor.heading", { level: each.level })
 														: t(catalogs.kit.blocks.find((b) => b.type === each.type)?.label ?? each.type)}
-													{KIND_SHORTCUTS[kindKey(each)] ? (
-														<MenuShortcut>{KIND_SHORTCUTS[kindKey(each)]}</MenuShortcut>
-													) : null}
 												</DropdownMenuRadioItem>
 											))}
 										</DropdownMenuRadioGroup>
