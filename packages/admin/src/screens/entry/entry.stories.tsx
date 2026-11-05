@@ -75,6 +75,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					collection: "post",
 					locale: "ko",
 					title: kind === "untitled" ? "" : "첫 번째 글",
+					...(kind === "untitled" ? {} : { slug: "first-post" }),
 					values: { summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." },
 					doc: firstPost(),
 				},
@@ -199,7 +200,7 @@ export const PublishBlocked: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		await all.findByText("발행할 수 없어요 · 할 일 1개를 먼저 해 주세요", {}, wait);
+		await all.findByText("발행할 수 없어요 · 할 일 2개를 먼저 해 주세요", {}, wait);
 		await all.findByRole("button", { name: /제목 쓰기/ }, wait);
 	},
 };
@@ -209,7 +210,7 @@ export const TodoGoesThere: Story = {
 	loaders: site("untitled"),
 	play: async ({ canvasElement }) => {
 		const { page, title, all } = await opened(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "할 일 1" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "할 일 2" }, wait));
 		await userEvent.click(await all.findByRole("button", { name: /제목 쓰기/ }, wait));
 		await waitFor(() => expect(title).toHaveFocus());
 	},

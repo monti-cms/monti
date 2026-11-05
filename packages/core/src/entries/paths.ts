@@ -1,4 +1,4 @@
-import { type Kysely, sql, type Transaction } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import type { Schema } from "../schema/define";
 import type { Entry } from "./record";
@@ -33,23 +33,13 @@ export async function slugPublishedByOther(db: Db, entry: Entry, slug: string): 
 }
 
 /**
- * The slug the entry publishes under: its own, or for an empty one a slug from the title, with `-2`, `-3`… when another entry of the collection and
- * language has it, published or not (doc 02, flow 1 step 02).
+ * The slug the entry publishes under, and whether another entry of the collection and language is published under it. An empty slug is a to-do that
+ * blocks publishing (doc 02, 2026-11-06): publishing never makes one.
  */
 export async function publishSlug(db: Db, entry: Entry): Promise<{ slug: string; taken: boolean }> {
-	if (entry.slug !== "") return { slug: entry.slug, taken: await slugPublishedByOther(db, entry, entry.slug) };
-	const base = slugify(entry.title) || entry.id.slice(0, 8);
-	const used = new Set(
-		(
-			await sql<{
-				slug: string;
-			}>`select slug from entries where collection = ${entry.collection} and locale = ${entry.locale} and id <> ${entry.id}
-				union select slug from entry_published where collection = ${entry.collection} and locale = ${entry.locale} and entry_id <> ${entry.id}`.execute(
-				db,
-			)
-		).rows.map((row) => row.slug),
-	);
-	let slug = base;
-	for (let n = 2; used.has(slug); n += 1) slug = `${base}-${n}`;
-	return { slug, taken: false };
+	if (entry.slug === "") return { slug: "", taken: false };
+	return { slug: entry.slug, taken: await slugPublishedByOther(db, entry, entry.slug) };
 }
+
+/** Where a preview opens an entry that has no slug yet: a stand-in made from the title, never saved. */
+export const previewSlug = (entry: Entry) => entry.slug || slugify(entry.title) || entry.id.slice(0, 8);

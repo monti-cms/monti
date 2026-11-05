@@ -34,7 +34,7 @@ export const fieldValue = (entry: Pick<Entry, "title" | "slug" | "values">, fiel
 
 /**
  * The publish to-do list: the editor's "to do n", the publish button and publishing many from the list all read this one result. `slugTaken` comes from
- * `publishSlug`, since the slug may still be made at publish time.
+ * `publishSlug`.
  */
 export async function publishTasks(
 	db: Kysely<Database> | Transaction<Database>,
@@ -45,9 +45,9 @@ export async function publishTasks(
 	const schema = site.schema();
 	const fields: Record<string, FieldDefinition> = schema.collections[entry.collection]?.fields ?? {};
 	const tasks: PublishTask[] = [];
-	// An empty slug is made from the title when publishing, so it is never a task.
+	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
 	for (const [field, definition] of Object.entries(fields))
-		if (definition.required && field !== "slug" && isEmpty(fieldValue(entry, field)))
+		if ((definition.required || field === "slug") && isEmpty(fieldValue(entry, field)))
 			tasks.push({
 				code: "required",
 				field,

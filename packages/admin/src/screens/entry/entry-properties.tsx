@@ -138,8 +138,8 @@ export function EntryProperties({
 	const keys = panelFields(schema, collection);
 	// A red * only in a panel that also has fields that may stay empty (components/field.md, required fields).
 	const marksRequired = keys.some((key) => !definitions[key]?.required);
-	// An empty address is made from the title when publishing (doc 02), so it is never a field to fill.
-	const required = (key: string) => key !== "slug" && Boolean(definitions[key]?.required);
+	// An empty address always blocks publishing (doc 02), whatever the schema says.
+	const required = (key: string) => key === "slug" || Boolean(definitions[key]?.required);
 	const empty = t("entry.empty");
 
 	const row = (key: string) => {

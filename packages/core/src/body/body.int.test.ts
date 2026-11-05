@@ -76,8 +76,18 @@ const p = (id: string, text: string, extra: Partial<Block> = {}): Block => ({
 });
 const doc = (...blocks: Block[]): Doc => ({ type: "doc", blocks });
 
+let posts = 0;
 async function newPost(body: Doc) {
-	return (await write("entries.create", { collection: "post", locale: "ko", title: "Hello", doc: body })).output.id;
+	// Each post its own address, so publishing several in one test is never blocked by a taken one.
+	return (
+		await write("entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "Hello",
+			slug: `hello-${++posts}`,
+			doc: body,
+		})
+	).output.id;
 }
 const setEditor = (editor: object) =>
 	write("collections.updateAdminValues", { collection: "post", values: { editor } });
@@ -353,7 +363,7 @@ describe("links to entries", () => {
 		};
 		expect(await drawn()).toBe("<p>see this</p>");
 		await write("entries.publish", { ids: [target] });
-		expect(await drawn()).toBe('<p><a href="/posts/hello">see this</a></p>');
+		expect(await drawn()).toMatch(/^<p><a href="\/posts\/hello-\d+">see this<\/a><\/p>$/);
 		await write("entries.save", { id: target, version: await version(target), slug: "renamed" });
 		await write("entries.publish", { ids: [target] });
 		expect(await drawn()).toBe('<p><a href="/posts/renamed">see this</a></p>');

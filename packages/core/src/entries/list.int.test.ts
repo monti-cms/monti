@@ -5,6 +5,7 @@ import { createMonti } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import type { Facet, ListColumn, ListRow } from "./list";
+import { slugify } from "./paths";
 
 const db = await testDatabase();
 
@@ -59,7 +60,14 @@ const columns = async (collection: string) =>
 
 async function create(collection: string, title: string, values: Record<string, unknown> = {}, doc?: unknown) {
 	const created = (
-		await run<{ output: { id: string } }>("entries.create", { collection, locale: "ko", title, values, doc })
+		await run<{ output: { id: string } }>("entries.create", {
+			collection,
+			locale: "ko",
+			title,
+			slug: slugify(title),
+			values,
+			doc,
+		})
 	).output.id;
 	return created;
 }
