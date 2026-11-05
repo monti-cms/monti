@@ -94,7 +94,7 @@ const placeBefore = (node: EditorNode) => (tr: Transaction) => {
 };
 
 /**
- * The "/" menu (doc 03, menu.md): one level, under the "/" typed at the start of a line, the focus kept in the text (arrows, Enter and Esc work from
+ * The "/" menu (doc 03, menu.md): one level, under a "/" typed anywhere in a line, the focus kept in the text (arrows, Enter and Esc work from
  * there). Its groups are the text blocks, the blocks to insert, the site's components and the templates; typing the word for templates leaves the templates only.
  * Only what the collection's editor offers is in it.
  */
@@ -202,14 +202,15 @@ export function useSlashMenu({
 			$from.parent.type.name !== nodeName("codeBlock") &&
 			$from.parent.type.name !== nodeName("footnote") &&
 			!inTableCell($from)
-				? /^\/([^\s/]*)$/.exec(text)
+				? // A "/" anywhere in the line, with the words typed after it (2026-11-06 owner, as Notion): Esc closes it when a "/" is only a slash.
+					/\/([^\s/]*)$/.exec(text)
 				: null;
 		if (!match) {
 			dismissed.current = null;
 			setOpen(null);
 			return;
 		}
-		const from = $from.start();
+		const from = $from.pos - match[0].length;
 		if (dismissed.current === from) return;
 		const caret = editor.view.coordsAtPos($from.pos);
 		setOpen((current) => {

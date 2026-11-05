@@ -776,3 +776,20 @@ export const BodyProposalDiscardAll: Story = {
 		await saveCell(page, "저장됨");
 	},
 };
+
+/** "/" in the middle of a sentence opens the menu too (as Notion): "/각주" puts a footnote's number right there. */
+export const SlashMidSentence: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await select(body, "지금 상태만");
+		document.getSelection()?.collapseToEnd();
+		document.dispatchEvent(new Event("selectionchange"));
+		await userEvent.keyboard("/각주");
+		await all.findByRole("option", { name: /각주/ }, wait);
+		await userEvent.keyboard("{Enter}");
+		await waitFor(() => expect(body.querySelectorAll("[data-footnote]")).toHaveLength(1), wait);
+		const line = body.querySelector("[data-footnote-ref]")?.parentElement?.textContent;
+		await expect(line).toBe("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.");
+	},
+};
