@@ -262,6 +262,31 @@ describe("removing a field", () => {
 		expect((await postValues())[0]).toEqual({ summary: "first" });
 	});
 
+	it("01-5 a renamed field keeps its label and its place in the layout; a removed field's admin values go with it", async () => {
+		await db
+			.insertInto("collection_admin_values")
+			.values({
+				collection: "post",
+				values: JSON.stringify({
+					label: "글",
+					fields: { summary: { label: "요약" }, subtitle: { label: "부제" } },
+					layout: [{ tab: "기본", fields: ["title", "subtitle", { group: "더", fields: ["summary"] }] }],
+				}),
+			})
+			.execute();
+		await dev().run("schema.apply", { draft: edited, renames, answers: reviewAnswers }, { actor: "admin" });
+		const row = await db
+			.selectFrom("collection_admin_values")
+			.select("values")
+			.where("collection", "=", "post")
+			.executeTakeFirstOrThrow();
+		expect(row.values).toEqual({
+			label: "글",
+			fields: { excerpt: { label: "요약" } },
+			layout: [{ tab: "기본", fields: ["title", { group: "더", fields: ["excerpt"] }] }],
+		});
+	});
+
 	it("01-5 moving keeps the values in the other field, without overwriting what it has", async () => {
 		await addEntry("post", { subtitle: "moved" });
 		await dev().run(
