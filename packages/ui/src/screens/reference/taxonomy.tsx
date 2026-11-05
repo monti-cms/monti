@@ -1,22 +1,24 @@
 import { OverflowMenuHorizontal } from "../../icons";
 import {
 	Button,
+	DragHandle,
+	FilterButton,
 	FormField,
 	FormFieldLabel,
 	IconButton,
 	Inline,
 	Input,
-	ListHead,
 	PageColumn,
 	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
 	RowActions,
-	RowCheck,
-	RowLink,
 	RowMore,
-	RowTitle,
 	SearchToggle,
 	SidePanel,
 	Stack,
+	TabLink,
+	TabLinks,
 	Table,
 	TableBody,
 	TableCell,
@@ -24,27 +26,21 @@ import {
 	Tabs,
 	TabsList,
 	TabsTrigger,
-	Text,
 	Textarea,
 	TextButton,
+	TrashRowTitle,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
 const CATEGORIES = [
-	{ title: "개발", address: "/dev", note: "코드와 도구 이야기", count: "글 3" },
-	{ title: "일상", address: "/life", note: "하루하루 적은 것", count: "글 2" },
-	{ title: "회고", address: "/retro", note: "영어 이름 없음", count: "글 1", warning: true },
+	{ title: "개발", address: "/dev", meta: "Development · 코드와 도구 이야기", count: "글 3" },
+	{ title: "일상", address: "/life", meta: "Life", count: "글 2" },
+	{ title: "회고", address: "/retro", meta: "영어 이름 없음", count: "글 1", warning: true },
 ];
 
-const COLUMNS = [
-	{ id: "이름", label: "이름", sort: "asc" },
-	{ id: "글 수", label: "글 수", align: "end", size: 64 },
-] as const;
-
 /**
- * The categories, one open in the panel beside them. The list is a collection list: search in the title row, the column names over the rows
- * (no tabs), a check and a ⋯ on every row. The panel holds the open item's fields at the side panel's height (`md`); nothing has changed, so it
- * has no save group yet.
+ * The categories in the order the admin set by dragging (the site shows them in this order), one open in the panel beside them. The panel holds
+ * the open item's fields at the side panel's height (`md`); nothing has changed, so it has no save group yet.
  */
 export function TaxonomyScreen() {
 	return (
@@ -57,23 +53,30 @@ export function TaxonomyScreen() {
 							<SearchToggle label="검색" value="" aria-label="검색" placeholder="이름·주소 검색" />
 							<Button variant="secondary">+ 카테고리 추가</Button>
 						</PageHeader>
-						<Table container="none" layout="fixed">
-							<ListHead
-								selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
-								columns={COLUMNS}
-								end={38}
-							/>
+						<PageToolbar inset>
+							<TabLinks variant="toolbar">
+								<TabLink href="#" current>
+									전체
+								</TabLink>
+							</TabLinks>
+							<PageToolbarEnd>
+								<FilterButton>이름순</FilterButton>
+							</PageToolbarEnd>
+						</PageToolbar>
+						<Table container="none" layout="fixed" columns={[26, undefined, 52, 34]}>
 							<TableBody>
 								{CATEGORIES.map((category, index) => (
 									<TableRow key={category.title} twoLine selected={index === 0}>
+										<TableCell>
+											<DragHandle aria-label={`${category.title} 옮기기`} />
+										</TableCell>
 										<TableCell truncate>
-											<RowCheck checked={false} label={`${category.title} 고르기`} />
-											<Stack gap={2} minWidth={0}>
-												<RowTitle title={<RowLink href="#">{category.title}</RowLink>} address={category.address} />
-												<Text variant="note" tone={category.warning ? "warning" : "subtle"} truncate>
-													{category.note}
-												</Text>
-											</Stack>
+											<TrashRowTitle
+												title={category.title}
+												address={category.address}
+												meta={category.meta}
+												metaTone={category.warning ? "warning" : undefined}
+											/>
 										</TableCell>
 										<TableCell align="end">
 											<TextButton variant="underline" size="note">

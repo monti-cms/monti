@@ -44,7 +44,7 @@
 
 ### 코드
 
-`DangerBlock`은 설정 탭 맨 아래에서 무언가를 그 데이터와 함께 지우는 단계다. `Section`에는 선이 없으므로 `DangerBlock`의 위험 잉크 선이 그 위 내용과의 하나뿐인 경계다. 위에 위험 잉크의 선, 위험 잉크의 `title`이 있고, 위아래로 24px, 제목과 그 행 사이에 16px을 둔다. 행 하나는 `DangerRow`다. `name`, 그 뒤에 담고 있는 것을 적은 조용한 `meta` 줄("23 posts · 2 in the trash". 알 수 없으면 뺀다), 끝에 `action` 버튼이 있다. 삭제 검토는 아직 `@monti-cms/ui`에 없다.
+`DangerBlock`은 설정 탭 맨 아래에서 무언가를 그 데이터와 함께 지우는 단계다. 바로 위의 `Section`은 `last`로 가는 선을 두지 않는다. `DangerBlock`의 선이 그 경계라서, 둘 다 그으면 겹줄이 된다. 선이 없는 `stacked` 절 아래에서는 `DangerBlock`의 선이 하나뿐인 경계다. 위에 위험 잉크의 선, 위험 잉크의 `title`이 있고, 위아래로 24px, 제목과 그 행 사이에 16px을 둔다. 행 하나는 `DangerRow`다. `name`, 그 뒤에 담고 있는 것을 적은 조용한 `meta` 줄("23 posts · 2 in the trash". 알 수 없으면 뺀다), 끝에 `action` 버튼이 있다. 삭제 검토는 아직 `@monti-cms/ui`에 없다.
 
 ## 파일 변경 (`.mt-patch`)
 

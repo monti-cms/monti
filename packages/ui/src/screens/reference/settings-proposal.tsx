@@ -58,7 +58,7 @@ export function SettingsProposalScreen() {
 						</FormField>
 						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
 					</Section>
-					<Section title="공개 주소">
+					<Section title="공개 주소" last>
 						<FormField>
 							<FormFieldLabel
 								htmlFor="locale-path"

@@ -82,6 +82,7 @@ export function TranslatePairedScreen() {
 						<CompareRow head source="10. 26 수정" translation="09. 20 수정" />
 						<CompareRow
 							title
+							name="제목"
 							source={
 								<Heading as="h2" variant="page">
 									첫 번째 글
@@ -94,6 +95,7 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name="문단"
 							source={
 								<CompareBody>
 									블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
@@ -106,6 +108,7 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name="문단"
 							note="원문 바뀜"
 							current
 							source={
@@ -117,6 +120,14 @@ export function TranslatePairedScreen() {
 							translation={<CompareBody>The list keeps only the title, the address and the status.</CompareBody>}
 						/>
 						<CompareRow
+							name={
+								<Stack gap={0}>
+									<span>콜아웃</span>
+									<Text variant="meta" tone="faint">
+										제목 + 본문
+									</Text>
+								</Stack>
+							}
 							source={
 								<CompareBody>
 									<DocCallout source>
@@ -137,6 +148,14 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name={
+								<Stack gap={0}>
+									<span>이미지</span>
+									<Text variant="meta" tone="faint">
+										같은 파일
+									</Text>
+								</Stack>
+							}
 							source={
 								<ImageSide>
 									<ReadValue label="캡션">서울의 밤, 작업실 창밖</ReadValue>
@@ -157,6 +176,14 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name={
+								<Stack gap={0}>
+									<span>코드 블록</span>
+									<Text variant="meta" tone="faint">
+										tsx
+									</Text>
+								</Stack>
+							}
 							source={<DocCode source>{CODE}</DocCode>}
 							translation={
 								<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
@@ -165,6 +192,7 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name="표"
 							source={
 								<DocTable
 									head={["버전", "바뀐 점", "옮길 때"]}
@@ -185,6 +213,7 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name="목록"
 							source={
 								<CompareBody>
 									<ul>
@@ -205,6 +234,7 @@ export function TranslatePairedScreen() {
 							}
 						/>
 						<CompareRow
+							name="문단"
 							note="원문에 추가"
 							source={<CompareBody>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</CompareBody>}
 							translation={

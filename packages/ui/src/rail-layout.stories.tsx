@@ -27,7 +27,7 @@ export const Collections: Story = {
 				</>
 			}
 		>
-			<Section title="기본">
+			<Section title="기본" last>
 				<Text variant="note">게시글 컬렉션의 설정</Text>
 			</Section>
 		</RailLayout>

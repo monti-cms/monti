@@ -55,7 +55,7 @@ export function LocalesScreen() {
 							</Box>
 						</Stack>
 					</Section>
-					<Section title="시간대">
+					<Section title="시간대" last>
 						<ShownSelect id="time-zone" value="Asia/Seoul" label="시간대" />
 					</Section>
 				</PageBody>

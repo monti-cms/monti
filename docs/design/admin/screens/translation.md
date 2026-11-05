@@ -95,7 +95,7 @@
 | 언어 탭 | `TabLinks` + `TabLink` | EditorTranslate와 같다. 보드는 여기만 창 맨 위 탭(`.mt-tabs--bar`)으로 그렸지만 편집기의 언어 탭과 같은 부품으로 맞춘다. 탭 줄과 원문 보기가 한 줄에 서고, 그 아래 가는 선 하나. |
 | 원문 보기 | `Segmented size="sm" inline`, "나란히"가 골라짐 | "끔"과 "옆 창"은 EditorTranslate로 돌아간다. |
 | 머리 행 (10. 26 수정 / 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 고친 날만 잉크 선 아래 mono 작은 줄로. 어느 쪽이 원문이고 어느 언어인지는 탭과 원문 칸의 도구 바탕이 이미 말한다(2026-11-05 소유자, 원칙 8). |
-| 블록 한 행 | `CompareRow`(`source` 원문, `translation` 번역. 블록 종류 이름은 없다: 블록이 스스로 보인다, 2026-11-05 소유자) | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 쓰고 있는 행은 `current`. 원문 칸은 글로만 보인다. |
+| 블록 한 행 | `CompareRow`(`name` 블록 종류와 그 아래 흐린 내용 설명, `source` 원문, `translation` 번역) | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 쓰고 있는 행은 `current`. 원문 칸은 글로만 보인다. |
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. |
 | 여백의 상태 "원문 바뀜" · "원문에 추가" | `CompareRow`의 `note` | 둘 다 주황. 원문 쪽 바뀐 말은 `Highlight`. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
@@ -115,7 +115,7 @@
 
 ### 보드의 이름을 부품으로
 
-- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `note`, `current`). 보드의 블록 종류 이름(`name`)은 쓰지 않는다. 제목 행(`.mt-pair--title`)은 `CompareRow title`이다.
+- `.mt-pair` 짝 행: `CompareRows`와 `CompareRow`(`head`, `name`, `note`, `current`). 왼쪽 좁은 칸의 블록 종류("문단", "콜아웃 · 제목 + 본문")는 짝을 읽는 길잡이라 남긴다(2026-11-05 소유자). 제목 행(`.mt-pair--title`)은 `CompareRow title`이다.
 - `.mt-src-changed` 원문에서 바뀐 말: `Highlight`.
 - `.mt-shared` 원문과 같음: `CompareShared`. 원문 블록을 흐린 글자로, 아래 "따로 고치기" `TextButton`. 어느 언어인지는 탭이 말한다.
 - 본문 블록: 블록 패키지의 블록 그대로.

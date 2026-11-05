@@ -2208,12 +2208,14 @@ function PairRows({ children }: { children?: React.ReactNode }) {
 
 /**
  * One row of `PairRows`. `kind` `head` is the row of the two sides' edit dates (`source` and `translation` are its words), `title` the two titles (from the
- * data); any other row is one block (its kind is not named: the block shows itself): a `note` when its source moved, `current` while it is written, and the
+ * data); any other row is one block: its `name` (and `sub`, what is in it), a `note` when its source moved, `current` while it is written, and the
  * two sides' text from the data (`changed` source words are marked; an `untranslated` translation is the source, faint). `shared` is the translation
  * of a block both languages use, with the button (`sharedAction`) that makes a copy for this language.
  */
 function PairRow({
 	kind,
+	name,
+	sub,
 	note,
 	current,
 	sourceLabel,
@@ -2224,6 +2226,8 @@ function PairRow({
 	sharedAction,
 }: {
 	kind?: "head" | "title" | "block";
+	name?: string;
+	sub?: string;
 	note?: string;
 	current?: boolean;
 	sourceLabel?: string;
@@ -2247,6 +2251,16 @@ function PairRow({
 			head={kind === "head"}
 			title={kind === "title"}
 			current={current}
+			name={
+				sub ? (
+					<>
+						{name}
+						<span className="block text-monti-faint">{sub}</span>
+					</>
+				) : (
+					name
+				)
+			}
 			note={note}
 			source={kind === "head" ? sourceLabel : side(source, true)}
 			translation={

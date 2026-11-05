@@ -118,7 +118,7 @@ const moves: readonly { title: string; path: string; included: boolean }[] = [
 /**
  * The review page of the assistant's proposal: what was asked, then each group of changes, every row its own check; `side` shows the rewrites
  * side by side. A row's `end` says only a result or a failure, never what the group title already says. The page body spaces the parts: 16px
- * under the quote, 32px between groups.
+ * under the header, 32px under the quote and between groups.
  */
 export function ProposalReviewView({ side = false }: { side?: boolean }) {
 	return (
@@ -135,7 +135,7 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 					</PageHeader>
 				</Stack>
 				<PageBody>
-					<Stack gap={16}>
+					<Stack gap={32} paddingTop={16}>
 						<ReviewQuote>
 							“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고, ‘발행 후 고친 글’은 더 짧게 다듬어 줘. 쓰지 않는
 							이미지도 지워 줘.”
@@ -174,9 +174,9 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 								)}
 							</ReviewGroup>
 							<ReviewGroup title="요약 채우기" meta="글 2편">
-								{/* The old summary was empty: the new one stands alone, with no struck "비어 있음 →" before it. */}
+								{/* The old summary was empty: the new one stands alone in the proposal's mark, with no struck "비어 있음 →" before it. */}
 								<ReviewItem included includeLabel="타입 정리 메모 넣기" title="타입 정리 메모" path="/types-memo">
-									자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모.
+									{marked([["ins", "자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모."]])}
 								</ReviewItem>
 								<ReviewItem
 									included={false}
@@ -195,7 +195,7 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 										</>
 									}
 								>
-									글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리.
+									{marked([["ins", "글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."]])}
 								</ReviewItem>
 							</ReviewGroup>
 							<ReviewGroup title="2024 폴더로 옮기기" meta="글 11편" actions={<TextButton>11편 모두 빼기</TextButton>}>

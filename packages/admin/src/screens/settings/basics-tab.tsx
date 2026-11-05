@@ -5,6 +5,7 @@ import {
 	DangerRow,
 	FormField,
 	FormFieldLabel,
+	Grid,
 	Input,
 	LockMark,
 	Option,
@@ -26,7 +27,7 @@ export const addressOf = (part: string) => {
 
 /**
  * A collection's basic tab (flow 4, steps 13 and 15; flow 11, step 17c): one group, in the field sheet's order: the identifier (never changes,
- * its lock on its row), the kind, the name the admin reads, the public address (the file's, locked on its row on the live site) and folders.
+ * its lock on its row) and the kind side by side, the name the admin reads, the public address (the file's, locked on its row on the live site) and folders.
  * No section names the system's split between file and admin values (README principle 9). Deleting it takes it out of the list at once; the
  * review is the last check.
  */
@@ -50,13 +51,15 @@ export function BasicsTab({
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
-				<ReadValue label={t("settings.basics.identifier")} mono>
-					{c}
-					<LockMark label={t("settings.basics.fixed")} />
-				</ReadValue>
-				<ReadValue label={t("settings.basics.kind")} mono={false}>
-					{t(`settings.kind.${kind}`)}
-				</ReadValue>
+				<Grid columns={2} gap={24}>
+					<ReadValue label={t("settings.basics.identifier")} mono>
+						{c}
+						<LockMark label={t("settings.basics.fixed")} />
+					</ReadValue>
+					<ReadValue label={t("settings.basics.kind")} mono={false}>
+						{t(`settings.kind.${kind}`)}
+					</ReadValue>
+				</Grid>
 				<FormField>
 					<FormFieldLabel htmlFor="collection-label">{t("settings.basics.label")}</FormFieldLabel>
 					<Input

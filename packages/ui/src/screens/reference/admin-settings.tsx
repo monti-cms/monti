@@ -46,7 +46,7 @@ export function AdminSettingsScreen() {
 							<Affix id="admin-path" prefix="/" defaultValue="studio" />
 						</FormField>
 					</Section>
-					<Section title="계정">
+					<Section title="계정" last>
 						<ReadValue label="로그인한 계정">me@example.dev</ReadValue>
 						<TextButton>로그아웃</TextButton>
 					</Section>

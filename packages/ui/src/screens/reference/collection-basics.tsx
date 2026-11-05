@@ -5,6 +5,7 @@ import {
 	DangerRow,
 	FormField,
 	FormFieldLabel,
+	Grid,
 	Input,
 	LockMark,
 	Option,
@@ -24,13 +25,15 @@ export function CollectionBasicsScreen() {
 		<AdminFrame open="settings">
 			<CollectionSettings tab="basics">
 				<Stack gap={24} paddingY={24}>
-					<ReadValue label="식별자" mono>
-						post
-						<LockMark label="바꿀 수 없음" />
-					</ReadValue>
-					<ReadValue label="종류" mono={false}>
-						본문이 있는 글
-					</ReadValue>
+					<Grid columns={2} gap={24}>
+						<ReadValue label="식별자" mono>
+							post
+							<LockMark label="바꿀 수 없음" />
+						</ReadValue>
+						<ReadValue label="종류" mono={false}>
+							본문이 있는 글
+						</ReadValue>
+					</Grid>
 					<FormField>
 						<FormFieldLabel htmlFor="collection-label">표시 이름</FormFieldLabel>
 						<Input id="collection-label" defaultValue="게시글" />

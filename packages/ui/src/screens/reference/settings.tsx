@@ -172,7 +172,7 @@ export function SettingsScreen() {
 						</FormField>
 						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
 					</Section>
-					<Section title="공개 주소">
+					<Section title="공개 주소" last>
 						<FormField>
 							<FormFieldLabel>주소에 언어 표시</FormFieldLabel>
 							<ShownSelect value="항상" />
