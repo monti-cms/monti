@@ -14,7 +14,7 @@ function DragHandle({ className, ...props }: Omit<React.ComponentProps<"button">
 			data-slot="drag-handle"
 			className={cn(
 				HIT_AREA,
-				"flex cursor-grab touch-none items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+				"flex cursor-grab touch-none items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 				className,
 			)}
 			{...props}

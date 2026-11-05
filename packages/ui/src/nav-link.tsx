@@ -4,11 +4,11 @@ import { cn } from "./cn";
 import { HELD } from "./sortable";
 
 /**
- * The row of a navigation, the rail's (`SidebarMenuButton`) and a page's own ({@link NavLink}): 36px, the name 10px in, the open one on the current
+ * The row of a navigation, the rail's (`SidebarMenuButton`) and a page's own ({@link NavLink}): a 36px pill (a one-line row on the page ground), the name 10px in, the open one on the current
  * ground and semibold. Pointing at a row gives it the selected ground, one step under the open one's current ground, on the rail and on paper alike.
  */
 export const NAV_ROW =
-	"flex h-monti-control-lg w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body no-underline outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default not-disabled:hover:bg-monti-selected data-active:bg-monti-current data-active:font-semibold";
+	"flex h-monti-control-lg w-full min-w-0 items-center gap-monti-10 rounded-monti-full border-0 bg-transparent px-monti-10 text-left text-monti-body no-underline outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default not-disabled:hover:bg-monti-selected data-active:bg-monti-current data-active:font-semibold";
 
 /** The count or identifier at the end of a {@link NAV_ROW}: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 export const NAV_ROW_END =

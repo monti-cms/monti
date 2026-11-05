@@ -33,7 +33,8 @@ function PickListItem({
 			data-slot="pick-list-item"
 			className={cn(
 				MENU_ROW,
-				"w-full cursor-pointer border-0 bg-transparent text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
+				// On the sheet's ground, not in a floating menu: a one-line row there is a pill.
+				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}
