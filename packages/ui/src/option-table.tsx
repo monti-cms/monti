@@ -5,30 +5,18 @@ import { HELD, SLOT } from "./sortable";
 const COLUMNS = "grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1fr)_32px] items-center gap-monti-8";
 
 /**
- * The choices of a select as a small table: a head with the two columns (value in mono, label), then one {@link OptionRow} per choice. The value is what is
- * stored and the label is what the writer sees. The rows are the `children`; a button that adds one goes after the table.
+ * The choices of a select as a small table: one {@link OptionRow} per choice, with no head. The value (mono) is what is stored and the label is what the
+ * writer sees; while empty, each input says which it is by its placeholder. The rows are the `children`; a button that adds one goes after the table.
  */
 function OptionTable({
-	valueLabel,
-	labelLabel,
 	className,
 	children,
 	...props
-}: Omit<React.ComponentProps<"div">, "children"> & {
-	valueLabel: string;
-	labelLabel: string;
-	children?: React.ReactNode;
-}) {
+}: Omit<React.ComponentProps<"ul">, "children"> & { children?: React.ReactNode }) {
 	return (
-		<div data-slot="option-table" className={cn("flex flex-col", className)} {...props}>
-			<div aria-hidden="true" className={cn(COLUMNS, "pb-monti-8 text-monti-micro text-monti-subtle")}>
-				<span />
-				<span>{valueLabel}</span>
-				<span>{labelLabel}</span>
-				<span />
-			</div>
-			<ul className="m-0 flex list-none flex-col p-0">{children}</ul>
-		</div>
+		<ul data-slot="option-table" className={cn("m-0 flex list-none flex-col p-0", className)} {...props}>
+			{children}
+		</ul>
 	);
 }
 

@@ -33,8 +33,8 @@
 
 ## 선택 상자의 선택지 (`OptionTable`)
 
-필드를 추가하거나 고치는 시트 안에 있는 선택 상자 필드의 선택지다. 머리(mono인 값, 라벨)가 있는 작은 표에 선택지마다 한 행이 있고, 그 아래에 "+ 선택지"가 있다. 값은 저장되는 것(mono)이고 라벨은 쓰는 사람이 보는 것이다. 둘 다 누르기 전까지는 글로 읽힌다. 행에는 순서를 바꾸는 손잡이와 빼는 ×가 있다. 기본값은 줄 끝의 조용한 메뉴에서 고른다("기본값 · 메모 ▾").
+필드를 추가하거나 고치는 시트 안에 있는 선택 상자 필드의 선택지다. 머리 없는 작은 표에 선택지마다 한 행이 있고(값과 라벨은 비어 있는 동안 플레이스홀더 "값" · "라벨"로 알린다. 2026-11-05, 소유자), 그 아래에 "+ 선택지"가 있다. 값은 저장되는 것(mono)이고 라벨은 쓰는 사람이 보는 것이다. 둘 다 누르기 전까지는 글로 읽힌다. 행에는 순서를 바꾸는 손잡이와 빼는 ×가 있다. 기본값은 줄 끝의 조용한 메뉴에서 고른다("기본값 · 메모 ▾").
 
 ### 코드
 
-`OptionTable`(`valueLabel`, `labelLabel`)과 `OptionRow` 행(`value`, `label`, `DragHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환, 손에 든 행이 떠난 빈자리(`active`), 뜬 행(`lifted`)에 쓰는 `drag`). 끄는 법은 [list.md](list.md) "끌어서 옮기기"를 따른다(`Sortable`, `SortableList`, `useSortableItem`).
+`OptionTable`(머리 없음)과 `OptionRow` 행(`value`, `label`, `DragHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환, 손에 든 행이 떠난 빈자리(`active`), 뜬 행(`lifted`)에 쓰는 `drag`). 끄는 법은 [list.md](list.md) "끌어서 옮기기"를 따른다(`Sortable`, `SortableList`, `useSortableItem`).

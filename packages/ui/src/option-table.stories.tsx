@@ -17,7 +17,6 @@ const ROWS = [
 const meta = {
 	title: "Primitives/OptionTable",
 	component: OptionTable,
-	args: { valueLabel: "값", labelLabel: "라벨" },
 	decorators: [
 		(Story) => (
 			<div className="w-[420px]">

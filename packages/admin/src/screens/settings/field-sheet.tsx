@@ -363,7 +363,7 @@ function FieldSheetBody({
 							) : null;
 						}}
 					>
-						<OptionTable valueLabel={t("settings.field.optionValue")} labelLabel={t("settings.field.optionLabel")}>
+						<OptionTable>
 							<SortableList id="options" items={form.options.map((_, index) => optionId(index))}>
 								{form.options.map((option, index) => (
 									<SortableOption
@@ -379,6 +379,7 @@ function FieldSheetBody({
 													appearance="inline"
 													mono
 													aria-label={t("settings.field.optionValue")}
+													placeholder={t("settings.field.optionValue")}
 													value={option.value}
 													onChange={(event) =>
 														set({
@@ -396,6 +397,7 @@ function FieldSheetBody({
 											<Input
 												appearance="inline"
 												aria-label={t("settings.field.optionLabel")}
+												placeholder={t("settings.field.optionLabel")}
 												value={option.label}
 												onChange={(event) =>
 													set({
