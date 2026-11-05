@@ -8,6 +8,8 @@ import { useRead } from "./operations/use-operation";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { LoginScreen } from "./screens/login/login-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
+import { TemplateEditor } from "./screens/templates/template-editor";
+import { TemplatesScreen } from "./screens/templates/templates-screen";
 import { useSession } from "./session";
 
 /** The words the `@monti-cms/ui` parts write themselves, from the admin's dictionary (`ui.*`). */
@@ -50,11 +52,22 @@ function Signed() {
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [open, setOpen] = useState<Place | null>(null);
 	const [review, setReview] = useState(0);
+	// The template editor is a page of its own, outside the frame (tools.md); `id` is `null` for a new template.
+	const [template, setTemplate] = useState<{ id: string | null } | null>(null);
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	const place = open ?? (first ? { collection: first } : null);
 	const go = (next: Place) => leave(() => setOpen(next));
+	if (template)
+		return (
+			<TemplateEditor
+				key={template.id ?? "new"}
+				id={template.id}
+				onBack={() => leave(() => setTemplate(null))}
+				onSaved={(id) => setTemplate({ id })}
+			/>
+		);
 	return (
 		<AdminFrame
 			open={place}
@@ -69,6 +82,8 @@ function Signed() {
 		>
 			{place === "settings" ? (
 				<CollectionsScreen onOpen={go} review={review} />
+			) : place === "tools" ? (
+				<TemplatesScreen onOpen={(id) => setTemplate({ id })} />
 			) : place !== null && typeof place === "object" ? (
 				<CollectionPage name={place.collection} count={counts.data?.collections[place.collection] ?? 0} />
 			) : null}

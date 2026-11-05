@@ -120,9 +120,8 @@ export function EntryHeader({
 						</SplitButton>
 					</>
 				) : (
-					<Button>
-						저장 <Text variant="micro">⌘S</Text>
-					</Button>
+					// A button shows no shortcut (button.md); ⌘S is in its tooltip.
+					<Button>저장</Button>
 				)}
 				{panel ? (
 					<IconButton label="속성" side="bottom" pressed={panelOpen}>

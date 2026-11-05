@@ -22,7 +22,7 @@
 
 ### 코드
 
-`BlockHandleOverlay`(관리자 화면 편집기)는 가리킨 블록 옆에 핸들을 놓고, `block-kinds.ts`(종류, 블록의 종류, 정렬, 바꾸기)와 `block-commands.ts`(옮기기, 복제, 삭제, 아래에 더하기)로 메뉴를 만든다. `BlockHandle`은 왼쪽 여백의 두 표시를 가진다. 아래에 빈 블록을 더하고 블록 고르기를 여는 +, 그리고 그립이다. 그립을 누르면 블록 메뉴가 열리고 끌면 블록이 옮겨지므로, 그립이 끌기 이벤트를 받는다(`onDragStart`, `onDragEnd`, `draggable`). `active`는 메뉴가 열린 동안 그립을 눌린 상태로 둔다. 그립을 메뉴 트리거로 만들려면 `trigger`로 감싼다. `trigger={(grip) => <DropdownMenuTrigger render={grip} />}`. `Block`은 편집기 본문의 블록 하나다. 메뉴가 열린 동안(`active`) 블록 바탕을 가진다. 글자 모양은 정하지 않는다. 안의 글자는 편집기 것이다. 블록 메뉴 자체는 `DropdownMenu`이고, "/" 메뉴는 `Command`다. `HeadingIcon`과 `headingIcons`는 "바꾸기" 행에 쓰는 단계별(2, 3, 4) 제목 글리프다.
+`BlockHandleOverlay`(관리자 화면 편집기)는 가리킨 블록 옆에 핸들을 놓고, `block-kinds.ts`(종류, 블록의 종류, 정렬, 바꾸기)와 `block-commands.ts`(옮기기, 복제, 삭제, 아래에 더하기)로 메뉴를 만든다. `BlockHandle`은 왼쪽 여백의 두 표시를 가진다. 아래에 빈 블록을 더하고 블록 고르기를 여는 +, 그리고 그립이다. 그립을 누르면 블록 메뉴가 열리고 끌면 블록이 옮겨지므로, 그립이 끌기 이벤트를 받는다(`onDragStart`, `onDragEnd`, `draggable`). `active`는 메뉴가 열린 동안 그립을 눌린 상태로 둔다. 그립을 메뉴 트리거로 만들려면 `trigger`로 감싼다. `trigger={(grip) => <DropdownMenuTrigger render={grip} />}`. `Block`은 편집기 본문의 블록 하나다. 메뉴가 열린 동안(`active`) 블록 바탕을 가진다. 글자 모양은 정하지 않는다. 안의 글자는 편집기 것이다. 블록 메뉴 자체는 `DropdownMenu`이고, "/" 메뉴는 `Command`다. `EditorOverlay`는 편집기가 잰 화면 위 한 점에 무언가를 띄운다. 블록 여백의 손잡이(`place="start"`, 그 점이 왼쪽 위), 고른 글자 위의 서식 바(`place="above"`, 그 점이 아래 가장자리 가운데)다. 자기 바탕은 없고, 안에 든 부품이 그린다. `HeadingIcon`과 `headingIcons`는 "바꾸기" 행에 쓰는 단계별(2, 3, 4) 제목 글리프다.
 
 ## 서식 카드
 
@@ -68,4 +68,13 @@
 
 편집기 안에서 글과 함께 놓이는 블록이다. 콜아웃은 첫 줄이 굵은 회색 상자다. 코드는 같은 상자에 고정폭 12px이다. 표는 머리 행 아래에 진한 선을, 행마다 옅은 선을 둔다. 숫자 열은 `td.num`(고정폭)이다. 나란히 보기와 글 비교도 같은 부품을 쓴다.
 
-아직 `@monti-cms/ui`에 편집기 블록으로 들어 있지 않다. `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.
+### 코드
+
+`EditorBody`는 편집기의 글 단이다. 편집기 엔진이 그리는 맨 요소(`p`, `h2`~`h4`, `ul`, `ol`, `blockquote`, `pre`, `table`, `hr`)에 본문 모양을 입힌다. 읽기 글자(17 / 30), 문단 아래 20, 소제목 위 32 · 아래 12, 줄마다 이어지는 목록 항목, 코드와 표는 `DocCode` · `DocTable`과 같은 안쪽 상자다. 구분선은 위 8 · 아래 28이다(문단 아래 20과 합쳐 위아래가 비슷해 보이게). 체크 목록(`ul[data-checklist]`)의 칸은 `Checkbox`와 같은 14px 칸이고 `data-checked`면 채워진다. 상태는 엔진이 붙이는 `data-` 속성으로 정한다.
+
+- `data-empty`와 `data-placeholder`: 커서가 놓인 빈 줄의 "/ 를 눌러 블록 넣기".
+- `data-menu-open`: 메뉴가 열린 블록의 블록 바탕(`Block active`와 같은 바탕과 모서리).
+- `data-off`와 `data-off-label`: 컬렉션의 편집기가 더는 내놓지 않는 블록. 흐린 글자 뒤에 "끈 블록"이 붙는다.
+- `data-box`와 `data-box-label`: 편집기가 보이기만 하고 여기서 고치지 않는 블록. 사이트가 더는 정의하지 않는 블록(그대로 남는다)이나, 고치는 화면이 그 기능과 함께 오는 블록이 이름을 단 조용한 상자로 보인다.
+
+`CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.

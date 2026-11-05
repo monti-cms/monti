@@ -268,7 +268,7 @@ describe("block ids", () => {
 });
 
 describe("templates", () => {
-	it("03-4 an entry started from a template gets its blocks with new ids; removing a template can be undone", async () => {
+	it("03-4 the template list names each template's sections; an entry started from a template gets its blocks with new ids; removing a template can be undone", async () => {
 		const body = doc(p("b_1", "도입"), {
 			id: "b_2",
 			type: "heading",
@@ -277,7 +277,7 @@ describe("templates", () => {
 		});
 		const template = (await write("templates.save", { name: "기본 글", doc: body })).output.id;
 		expect(await read("templates.list", {})).toEqual([
-			expect.objectContaining({ id: template, name: "기본 글", blocks: 2 }),
+			expect.objectContaining({ id: template, name: "기본 글", sections: ["본문"] }),
 		]);
 
 		const id = (await write("entries.create", { collection: "post", locale: "ko", template })).output.id;

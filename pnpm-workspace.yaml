@@ -1,2 +1,7 @@
 packages:
   - "packages/*"
+
+# @tiptap/react's optional menus follow the editor's own version, not the newest release.
+overrides:
+  "@tiptap/extension-bubble-menu": 3.31.3
+  "@tiptap/extension-floating-menu": 3.31.3
