@@ -17,7 +17,7 @@
 | "발행하기 ▾" | `SplitButton`(`menu`에 `DropdownMenuItem` 둘: "발행하기" · "오늘 날짜로 다시 발행", 각각 아래에 발행일) | 한 번 발행한 글에만 ▾가 있다. 초안은 `Button variant="primary"` "발행하기". 바뀐 것이 없으면 "발행됨"으로 비활성. 발행하는 동안 `loading`. 발행일은 이 메뉴로만 정한다. |
 | 속성 | `IconButton pressed` | 속성 패널을 열고 닫는다. 열린 동안 눌린 바탕. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록" · "복제" · "보관" · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기", "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. |
-| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | 발행 알약 뒤, 화면 도구(속성 · ⋯ · ✦) 앞. 주 동작 알약은 혼자 서고, 화면 도구는 선 너머 오른쪽 끝에 한 묶음으로 선다. ⋯의 행은 발행의 변형이 아니므로 `발행하기 ▾` 안에 넣지 않는다(2026-11-05, 소유자). |
 | 휴지통 글의 머리 | `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 저장 · 미리보기 · 발행 · ⋯ 대신 보인다. 영구 삭제는 `AlertDialog`로 묻는다. |
 
 ### 글 단
@@ -29,9 +29,9 @@
 | 제목 | 편집기 제목 칸(`Input appearance="inline" size="display"`와 같은 모양) | 늘 입력 칸이다. 포커스는 캐럿만 보인다. |
 | 본문 블록 | `Block`(메뉴가 열린 블록은 `active`) | 글자 모양은 편집기의 것. |
 | 블록 손잡이 | `BlockHandle`(`trigger`로 `DropdownMenuTrigger`를 감싼다, 메뉴가 열린 동안 `active`) | +는 아래에 빈 블록을 넣고 "/" 메뉴를 연다. 그립을 누르면 블록 메뉴, 끌면 옮긴다. |
-| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 끝에 마크다운 단축 `MenuShortcut`, 행에 아이콘은 없다) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
+| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 행 앞에 블록 아이콘: 제목은 `HeadingIcon`. 행 끝에 마크다운 단축 `MenuShortcut typed`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
 | 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드 / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. |
-| "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`, `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
+| "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`(행 앞에 블록 아이콘, 제목은 `HeadingIcon`, 행 끝에 마크다운 단축 `MenuShortcut typed`), `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
 | 이미지 도구 행 | `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
 | 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Input`(플레이스홀더 "본문 맞춤"), "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
@@ -93,6 +93,13 @@
 | 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
 | 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
 | 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+
+### 링크 칸 (서식 카드의 링크 버튼 아래)
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 칸 | `Popover`(링크 `FormatButton`이 트리거) 안 `FormField`: "링크 주소" `Input mono`(플레이스홀더 "https://") | Enter로 고른 글자에 주소를 단다. 비우고 Enter면 링크를 뗀다. |
+| 링크 떼기 | 링크가 있는 글자일 때만 입력 칸 옆 `IconButton`("링크 지우기") | |
 
 ## 흐름 1 · 글 쓰고 발행하기
 

@@ -6,7 +6,7 @@ import { defineOperation, type OperationContext, type RecordRef } from "../opera
 import { defineRecordKind } from "../records";
 import { blockOn, markOn } from "./blocks";
 import { assertDoc, editorOf } from "./check";
-import { asDoc, type Doc, DocShape } from "./doc";
+import { asDoc, type Doc, DocShape, plainText, walk } from "./doc";
 import { applyOps, BodyOpShape } from "./edit";
 import { bodyText } from "./text";
 
@@ -120,14 +120,17 @@ export const bodyOperations = [
 	defineOperation({
 		name: "templates.list",
 		kind: "read",
-		description: "List the body templates, one list for the whole site.",
+		description:
+			"List the body templates, one list for the whole site, each with the text of its headings (its sections).",
 		input: z.object({}),
 		async run(_input, ctx) {
 			const rows = await ctx.db.selectFrom("templates").selectAll().orderBy("name").execute();
 			return rows.map((row) => ({
 				id: row.id,
 				name: row.name,
-				blocks: asDoc(row.doc).blocks.length,
+				sections: [...walk(asDoc(row.doc).blocks)]
+					.filter(({ block }) => block.type === "heading")
+					.map(({ block }) => plainText(block.content)),
 				version: row.version,
 				updatedAt: row.updated_at,
 			}));

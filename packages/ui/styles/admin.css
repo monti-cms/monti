@@ -38,28 +38,25 @@ html:has(.monti-admin) body {
 	overflow-wrap: anywhere;
 }
 
-/* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */
-.monti-admin,
-.monti-admin * {
+/*
+ * Thin scrollbar, shown whenever the box scrolls (not only under the pointer: it is how the person knows there is more). On the whole document
+ * that holds the admin, not only its root: popups (menus, the "/" menu, popovers, dialogs) are portaled to the body and scroll too.
+ */
+html:has(.monti-admin) body,
+html:has(.monti-admin) body * {
 	scrollbar-width: thin;
-	scrollbar-color: transparent transparent;
-}
-.monti-admin *:hover {
 	scrollbar-color: var(--monti-gray-8) transparent;
 }
-.monti-admin ::-webkit-scrollbar {
+html:has(.monti-admin) body ::-webkit-scrollbar {
 	width: 8px;
 	height: 8px;
 }
-.monti-admin ::-webkit-scrollbar-track {
+html:has(.monti-admin) body ::-webkit-scrollbar-track {
 	background: transparent;
 }
-.monti-admin ::-webkit-scrollbar-thumb {
-	background: transparent;
-	border-radius: 999px;
-}
-.monti-admin *:hover::-webkit-scrollbar-thumb {
+html:has(.monti-admin) body ::-webkit-scrollbar-thumb {
 	background: var(--monti-gray-8);
+	border-radius: 999px;
 }
 
 /*

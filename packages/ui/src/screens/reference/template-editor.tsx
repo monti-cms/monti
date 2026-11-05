@@ -1,20 +1,17 @@
 import {
-	Block,
 	BlockHandle,
-	Box,
+	EditorBody,
 	EditorTitleRule,
 	FormFieldLabel,
-	Inline,
 	Input,
 	Stack,
 	StatusBar,
 	StatusBarCell,
 	StatusBarSpacer,
-	Text,
 } from "../../index";
-import { BodyBlock, BodyHeading, EditorPage, EntryHeader, Paragraph } from "./editor-notion";
+import { EditorPage, EntryHeader } from "./editor-notion";
 
-/** A template's editor: its name typed as the title, then the guide text in the quiet ink, the list's handle shown. */
+/** A template's editor: its name typed as the title, then its body as the entry editor draws one, the list's handle shown. */
 export function TemplateEditorScreen() {
 	return (
 		<EditorPage
@@ -41,49 +38,27 @@ export function TemplateEditorScreen() {
 				/>
 				<EditorTitleRule />
 			</Stack>
-			<BodyHeading>서론</BodyHeading>
-			<BodyBlock gap={8}>
-				<Paragraph tone="muted">이 글에서 무엇을 다루는지 한두 문장으로.</Paragraph>
-			</BodyBlock>
-			<BodyBlock gap={24}>
-				<BodyHeading>본론</BodyHeading>
-			</BodyBlock>
-			<BodyBlock gap={8}>
-				<Box position="relative">
-					{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left, 3px down: the 24px handle centred on the 30px line) */}
-					<div style={{ position: "absolute", top: 3, left: -64 }}>
-						<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" />
-					</div>
-					{/* Each item of a list is a block of its own, as the editor makes it: the handle and the tint are on one item only. */}
-					<Block active>
-						<ListItem>첫 번째 요점</ListItem>
-					</Block>
-				</Box>
-				<Block>
-					<ListItem>두 번째 요점</ListItem>
-				</Block>
-			</BodyBlock>
-			<BodyBlock gap={24}>
-				<BodyHeading>결론</BodyHeading>
-			</BodyBlock>
-			<BodyBlock gap={8}>
-				<Paragraph tone="muted">한 줄 요약과 다음에 읽을 글.</Paragraph>
-			</BodyBlock>
-			<BodyBlock gap={24}>
-				<Paragraph tone="faint">/ 를 눌러 블록 넣기</Paragraph>
-			</BodyBlock>
+			{/* The body is the entry editor's own (tools.md: the template editor's body is the editor's), drawn by the part the editor draws it with. */}
+			<EditorBody>
+				<div className="ProseMirror">
+					<h2>서론</h2>
+					<p>이 글에서 무엇을 다루는지 한두 문장으로.</p>
+					<h2>본론</h2>
+					<ul>
+						<li className="relative" data-menu-open="">
+							{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left of the list, 3px down: the 24px handle centred on the 30px line) */}
+							<span className="absolute" style={{ top: 3, left: -92 }}>
+								<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" active />
+							</span>
+							첫 번째 요점
+						</li>
+						<li>두 번째 요점</li>
+					</ul>
+					<h2>결론</h2>
+					<p>한 줄 요약과 다음에 읽을 글.</p>
+					<p data-empty="" data-placeholder="/ 를 눌러 블록 넣기" />
+				</div>
+			</EditorBody>
 		</EditorPage>
-	);
-}
-
-/** One item of a bulleted list in the editor's body: the bullet, then its words. */
-function ListItem({ children }: { children: React.ReactNode }) {
-	return (
-		<Inline gap={10} align="baseline">
-			<Text variant="reading" tone="muted" aria-hidden>
-				•
-			</Text>
-			<Paragraph tone="muted">{children}</Paragraph>
-		</Inline>
 	);
 }

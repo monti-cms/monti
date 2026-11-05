@@ -76,11 +76,13 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	const plain = (block: Block, inner: unknown[]): Node | null | undefined => {
 		const attrs = block.attrs ?? {};
 		const key = block.id;
+		// An aligned paragraph or heading says so in its style (doc 03, the block menu's "align"); left is the default and adds nothing.
+		const aligned = attrs.align === "center" || attrs.align === "right" ? { textAlign: attrs.align } : undefined;
 		switch (block.type) {
 			case "paragraph":
-				return h("p", { key }, ...inner);
+				return h("p", { key, style: aligned }, ...inner);
 			case "heading":
-				return h(`h${Number(attrs.level ?? 2)}`, { key }, ...inner);
+				return h(`h${Number(attrs.level ?? 2)}`, { key, style: aligned }, ...inner);
 			case "bulletList":
 				return h("ul", { key }, ...inner);
 			case "orderedList":

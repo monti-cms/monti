@@ -9,7 +9,7 @@
 | 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" |  |
 | 페이지 단 | `PageColumn` | 템플릿, 데이터, API 키는 `width="content"`, 활동 기록은 `width="list"`. |
 | 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
-| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
+| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 도구가 템플릿 하나뿐인 동안에는 탭 줄이 없다(설정의 탭 줄과 같다). 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
 | ✦ 어시스턴트 열기 | 공통 틀 | 사이드 패널이 열린 동안에는 가려진다. |
 
 ## 템플릿 (Templates)
@@ -25,7 +25,8 @@
 | 표 | `Table`(`TableBody`, `TableRow twoLine`, `TableCell`) | 열 이름 행은 없다. |
 | 이름 · 제목들 | 이름 `RowLink`(템플릿 편집기로), 아래 `Text variant="note" tone="subtle" truncate`("서론 · 본론 · 결론") | 아래 줄은 템플릿의 제목들을 한 줄로 늘어놓는다. 행 어디를 눌러도 편집기가 열린다. |
 | 고친 날 "10. 20 고침" | `Count` | |
-| ⋯ | `RowActions` 안 `IconButton`(`label` "더보기") + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 늘 보인다. 보드는 포인터가 있는 행에만 글자 버튼으로 그렸지만 [list.md](../components/list.md)와 [button.md](../components/button.md)를 따른다. |
+| ⋯ | `RowActions` 안 `RowMore`(`label` "더 보기") + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 늘 보인다. 보드는 포인터가 있는 행에만 글자 버튼으로 그렸지만 [list.md](../components/list.md)와 [button.md](../components/button.md)를 따른다. |
+| 빈 목록 | `Empty`(`title` "아직 템플릿이 없어요.") | 시작은 머리의 "+ 템플릿 추가"다. |
 
 스토리: Controls/Button/Button, Patterns/List/Table, Primitives/Text, Controls/Status/Count, Controls/Button/IconButton, Controls/Menu/DropdownMenu.
 
@@ -43,9 +44,9 @@
 | "저장 안 됨" | `EntryStatus status="editing"` | 바뀐 것이 있는 동안만. |
 | "저장" | `Button variant="primary"`(저장하는 동안 `loading`) | 늘 있다. 발행이 없으므로 이 페이지의 검은 알약 하나다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
 | ⋯ | `IconButton` + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 새 템플릿에는 없다. |
-| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | "저장" 알약 뒤, ⋯와 ✦ 앞. 편집기 머리와 같다([editor.md](editor.md)). |
 | ✦ 어시스턴트 열기 | [common.md](common.md)의 ✦ 어시스턴트 열기 | 머리 줄 끝. |
-| 이름 | `Input appearance="inline" size="display"`(플레이스홀더와 이름 "템플릿 이름"), 아래 잉크 선 `Box border="bottom-contrast"` | 라벨 없이 글 제목 자리에 놓인다. 비었으면 `FormFieldError`. |
+| 이름 | `Input appearance="inline" size="display"`(플레이스홀더와 이름 "템플릿 이름"), 아래 잉크 선 `EditorTitleRule` | 라벨 없이 글 제목 자리에 놓인다. 이름 없이 저장하면 그 아래 `FormFieldError`("이름을 써 주세요."). |
 | 본문 | 편집기 본문 | 읽기 폭. 블록과 메뉴는 [editor.md](editor.md)와 같다. |
 | 상태 표시줄 | `StatusBar`: `StatusBarSpacer` 뒤 `StatusBarCell end`(글자 수) | 글자 수만 있다. |
 
@@ -56,6 +57,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 머리 바로 아래. 저장이 거절됐을 때만. |
+| 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했어요", `plainMeta`), 끝에 `TextButton` "다시 시도" | 머리 바로 아래. 템플릿을 읽지 못했을 때만. |
 
 ## 데이터 (Data)
 

@@ -57,10 +57,15 @@ const text = (type: string, description: string, extra: Partial<AnyBlockDefiniti
 	defineBlock({ type, label: label(type), description, holds: "text", menu: "text", ...extra });
 
 /** The blocks a blog post needs, and nothing more (doc 03, "which block lives where"). */
+/** Where a paragraph's or a heading's lines sit; left when left out (the block menu's "align", doc 03). */
+const align = z.enum(["left", "center", "right"]).optional();
+
 export const coreBlocks: AnyBlockDefinition[] = [
-	text("paragraph", "A paragraph of text."),
-	text("heading", "A section heading, level 2 to 4.", {
-		attrs: z.object({ level: z.number().int().min(2).max(4) }),
+	text("paragraph", "A paragraph of text, aligned left unless `align` says center or right.", {
+		attrs: z.object({ align }),
+	}),
+	text("heading", "A section heading, level 2 to 4, aligned left unless `align` says center or right.", {
+		attrs: z.object({ level: z.number().int().min(2).max(4), align }),
 	}),
 	defineBlock({
 		type: "bulletList",
