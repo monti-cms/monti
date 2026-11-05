@@ -8,6 +8,7 @@ import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliv
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
 import { planUndo, undo } from "./engine/undo";
+import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
@@ -211,6 +212,7 @@ export function createMonti(options: MontiOptions) {
 		...engineOperations(engine, () => [...operations.values()]),
 		...schemaOperations,
 		...entryOperations,
+		...listOperations,
 		...bodyOperations,
 		...authOperations,
 	])

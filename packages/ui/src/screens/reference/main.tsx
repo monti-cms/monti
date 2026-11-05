@@ -11,6 +11,7 @@ import {
 	DropdownMenuItem,
 	EntryStatus,
 	type EntryStatusKind,
+	LIST_COLUMN_SIZE,
 	ListFooter,
 	ListHead,
 	ListScroll,
@@ -149,12 +150,12 @@ const POSTS: readonly Post[] = [
 ];
 
 const COLUMNS = [
-	{ id: "상태", label: "상태", size: 76 },
+	{ id: "상태", label: "상태", size: LIST_COLUMN_SIZE.status },
 	{ id: "제목", label: "제목" },
-	{ id: "카테고리", label: "카테고리", size: 84 },
-	{ id: "태그", label: "태그", size: 152 },
-	{ id: "언어", label: "언어", size: 60 },
-	{ id: "수정일", label: "수정일", sort: "desc", align: "end", size: 72 },
+	{ id: "카테고리", label: "카테고리", size: LIST_COLUMN_SIZE.one },
+	{ id: "태그", label: "태그", size: LIST_COLUMN_SIZE.many },
+	{ id: "언어", label: "언어", size: LIST_COLUMN_SIZE.locale },
+	{ id: "수정일", label: "수정일", sort: "desc", align: "end", size: LIST_COLUMN_SIZE.date },
 ] as const;
 
 const more = (
@@ -187,19 +188,21 @@ export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string }
 	);
 }
 
-/** The posts list's search: a list with a body searches its title and address, or everything, as the admin does. */
+/** The posts list's search: everywhere at first, or only the title, the address or the body (screens/list.md, the search row). */
 export function PostSearch() {
 	return (
 		<SearchToggle
 			label="검색"
 			value=""
 			aria-label="검색"
-			placeholder="제목·주소 검색"
+			placeholder="검색"
 			targets={[
-				{ value: "fields", label: "제목·주소" },
 				{ value: "all", label: "전체" },
+				{ value: "title", label: "제목" },
+				{ value: "slug", label: "주소" },
+				{ value: "body", label: "본문" },
 			]}
-			target="fields"
+			target="all"
 			targetLabel="찾을 곳"
 		/>
 	);
@@ -267,7 +270,7 @@ export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
 						<ListHead
 							selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
 							columns={COLUMNS}
-							end={38}
+							end={LIST_COLUMN_SIZE.end}
 							add={{ label: "열 추가", columns: [{ id: "more", label: "열 추가" }], onAdd: () => {} }}
 						/>
 						<TableBody>

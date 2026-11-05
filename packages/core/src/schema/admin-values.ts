@@ -8,6 +8,13 @@ export const FieldAdminValues = z.object({
 	optionLabels: z.record(z.string(), z.string()).optional(),
 });
 
+/** How a collection's list looks (doc 06): the column order, the hidden columns and the page size. Filters and sorting live in the address only. */
+export const ListPrefs = z.object({
+	order: z.array(z.string()).optional(),
+	hidden: z.array(z.string()).optional(),
+	pageSize: z.union([z.literal(25), z.literal(50), z.literal(100)]).optional(),
+});
+
 type LayoutField = string | { group: string; fields: string[] };
 
 /** A collection's admin values (doc 01, "where values live"). */
@@ -33,5 +40,6 @@ export const AdminValues = z.object({
 		})
 		.partial()
 		.optional(),
+	list: ListPrefs.optional(),
 });
 export type AdminValues = z.infer<typeof AdminValues>;

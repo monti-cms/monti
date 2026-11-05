@@ -182,7 +182,13 @@ export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from 
 export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
-export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
+export {
+	LIST_COLUMN_SIZE,
+	type ListColumnSize,
+	ListHead,
+	type ListHeadAdd,
+	type ListHeadColumn,
+} from "./list-head";
 export { ListSection, ListSectionRow } from "./list-section";
 export { LockMark } from "./lock-mark";
 export { IssueRow, MapRow } from "./map-row";

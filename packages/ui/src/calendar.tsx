@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import * as React from "react";
 import { type DayButton, DayPicker, getDefaultClassNames, type Locale } from "react-day-picker";
+import { enUS, ko } from "react-day-picker/locale";
 import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
 import { ChevronDown, ChevronLeft, ChevronRight } from "./icons";
@@ -15,10 +16,14 @@ function Calendar({
 	className,
 	classNames,
 	showOutsideDays = true,
-	locale,
+	language,
+	locale = language === "ko" ? ko : language === "en" ? enUS : undefined,
 	components,
 	...props
-}: React.ComponentProps<typeof DayPicker>) {
+}: React.ComponentProps<typeof DayPicker> & {
+	/** The admin's language, for the month and weekday names (a screen passes this instead of a date library's locale). */
+	language?: "ko" | "en";
+}) {
 	const defaultClassNames = getDefaultClassNames();
 
 	return (

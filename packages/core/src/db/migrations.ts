@@ -211,6 +211,25 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0006_list": {
+		async up(db) {
+			// Search finds Korean too, so it uses trigram indexes (doc 06). The extension is the database's, shared by every site in it: use it where
+			// another site put it, or put it in `public`.
+			const found = await sql<{
+				schema: string;
+			}>`select extnamespace::regnamespace::text as schema from pg_extension where extname = 'pg_trgm'`.execute(db);
+			const trgm = found.rows[0]?.schema ?? "public";
+			if (found.rows.length === 0)
+				await sql`create extension if not exists pg_trgm with schema ${sql.id(trgm)}`.execute(db);
+			// The body's text, taken from its blocks when it is saved, so search reads one column (doc 06, decisions).
+			await sql`alter table entries add column body_text text generated always as
+				(jsonb_path_query_array(doc, 'strict $.**.text', '{}', true)::text) stored`.execute(db);
+			for (const column of ["title", "slug", "body_text"])
+				await sql`create index ${sql.id(`entries_${column}_trgm`)} on entries using gin (${sql.id(column)} ${sql.id(trgm, "gin_trgm_ops")})`.execute(
+					db,
+				);
+		},
+	},
 };
 
 /** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */

@@ -84,6 +84,8 @@ export interface EntryTable {
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 	trashed_at: Date | null;
+	/** The body's text, made by the database from the blocks (search reads it). */
+	body_text: ColumnType<string | null, never, never>;
 }
 
 /** `draft` was never published; `archived` was taken off the site (doc 02). "Changed" is `published` with `has_unpublished_changes`. */

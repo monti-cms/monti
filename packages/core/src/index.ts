@@ -22,6 +22,15 @@ export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
 export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
 export type { ApplyResult, ItemRef } from "./engine/proposals";
 export type { UndoPlan } from "./engine/undo";
+export {
+	type ColumnKind,
+	type Facet,
+	type Filter as ListFilter,
+	type ListColumn,
+	type ListQuery,
+	type ListRow,
+	PAGE_SIZES,
+} from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";
 export { createReader, type ReaderOptions, type SiteEntry } from "./entries/reader";

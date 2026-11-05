@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import {
 	createAdminApi,
 	createMonti,
@@ -57,7 +58,8 @@ export async function storySite({
 	setup?: (monti: Monti) => Promise<void>;
 	signedIn?: boolean;
 }): Promise<StorySite> {
-	const db = new Kysely<Database>({ dialect: pgliteDialect(new PGlite()) });
+	// Search uses trigram indexes (doc 06), as on the live site's Postgres.
+	const db = new Kysely<Database>({ dialect: pgliteDialect(new PGlite({ extensions: { pg_trgm } })) });
 	await migrateToLatest(db);
 	await migrateContent(db, schema, []);
 	const monti = createMonti({ db, schema, files: null, ...options });

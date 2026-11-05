@@ -54,7 +54,7 @@ export async function markChanges(db: Db, id: string): Promise<void> {
 }
 
 type Snapshot = {
-	row: Record<string, unknown> & { version: number };
+	row: Record<string, unknown> & { version: number; body_text?: unknown };
 	published: Record<string, unknown> | null;
 	oldPaths: Record<string, unknown>[];
 };
@@ -93,7 +93,9 @@ export const entryRecord = defineRecordKind({
 			return;
 		}
 		const { row, published, oldPaths } = data as Snapshot;
-		const values = jsonColumns(row) as never;
+		// The database makes the body's text itself; it takes no value for it.
+		const { body_text: _made, ...kept } = row;
+		const values = jsonColumns(kept) as never;
 		await db
 			.insertInto("entries")
 			.values({ ...(values as object), version: row.version + 1 } as never)
