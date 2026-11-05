@@ -12,13 +12,17 @@ function FieldTree({ className, ...props }: ComponentProps<"ul">) {
 	return <ul data-slot="field-tree" className={cn("m-0 list-none p-0", className)} {...props} />;
 }
 
-/** The ink of a name: `warning` is a renamed field, `success` a new one, `faint` one that goes, `danger` one that cannot be saved as it is. */
+/**
+ * The ink of a name: `warning` is a renamed field, `success` a new one, `faint` one that goes, `danger` one that cannot be saved as it is, `proposal` one the
+ * assistant proposes (blue is the assistant's only).
+ */
 const NAME_TONE = {
 	default: "",
 	warning: "text-monti-warning",
 	success: "text-monti-success",
 	danger: "text-monti-danger",
 	faint: "text-monti-faint",
+	proposal: "text-monti-proposal",
 } as const;
 const REMOVED = "text-monti-faint line-through decoration-1";
 

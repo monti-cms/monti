@@ -47,6 +47,7 @@ export const Changes: Story = {
 			/>
 			<FieldRow name="legacyId" label="이전 ID" kind="text" removed />
 			<FieldRow name="cover" label="표지" kind="image" tone="danger" problems="고칠 것 2개" />
+			<FieldRow name="series" label="시리즈" note="✦ 제안" tone="proposal" kind="→ Series" />
 		</FieldTree>
 	),
 };
