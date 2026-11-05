@@ -332,24 +332,24 @@ const rightEdge = (canvas: HTMLElement, id: string) =>
 	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().right ?? 0);
 
 /**
- * The tags column's right edge held and dragged 80px right: the edge stays under the pointer with its accent line, the columns after it move along,
- * the title stays put (pinned at its width by the drag), rows too (06).
+ * The edge between the title and the category held and dragged 80px left: the edge stays under the pointer with its accent line, the title is 80px
+ * narrower and the category 80px wider, every other edge stays, rows too (06).
  */
 export const ColumnResizing: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		await rowsShown(canvasElement);
-		const title = rightEdge(canvasElement, "title");
-		const start = rightEdge(canvasElement, "tags");
-		await dragHandle(canvasElement, "태그 열 너비 조절", 80, true);
-		await waitFor(() => expect(rightEdge(canvasElement, "tags")).toBe(start + 80), wait);
-		await expect(rightEdge(canvasElement, "title")).toBe(title);
+		const edge = rightEdge(canvasElement, "title");
+		const after = rightEdge(canvasElement, "category");
+		await dragHandle(canvasElement, "제목 열 너비 조절", -80, true);
+		await waitFor(() => expect(rightEdge(canvasElement, "title")).toBe(edge - 80), wait);
+		await expect(rightEdge(canvasElement, "category")).toBe(after);
 	},
 };
 
 /**
- * The tags column dragged 80px wider and let go: the width is saved for posts. After going to the memos and back (the list read again, as after a
- * reload) the tags column keeps it, and no column moved (06).
+ * The same edge dragged 80px left and let go: the category's width is saved for posts. After going to the memos and back (the list read again, as after
+ * a reload) the category keeps it, and no column moved (06).
  */
 export const ColumnResized: Story = {
 	loaders: site(),
@@ -360,18 +360,18 @@ export const ColumnResized: Story = {
 		const order = () =>
 			[...canvasElement.querySelectorAll<HTMLElement>("th[data-column]")].map((th) => th.dataset.column);
 		const before = order();
-		await dragHandle(canvasElement, "태그 열 너비 조절", 80);
+		await dragHandle(canvasElement, "제목 열 너비 조절", -80);
 		await waitFor(async () => {
 			const kept = await run<{ columns: { id: string; width?: number }[] }>(made.monti, "list.columns", {
 				collection: "post",
 			});
-			expect(kept.columns.find((column) => column.id === "tags")?.width).toBe(232);
+			expect(kept.columns.find((column) => column.id === "category")?.width).toBe(164);
 		}, wait);
 		await userEvent.click(page.getByRole("button", { name: "메모" }));
-		await waitFor(() => expect(canvasElement.querySelector("th[data-column=tags]")).toBeNull(), wait);
+		await waitFor(() => expect(canvasElement.querySelector("th[data-column=category]")).toBeNull(), wait);
 		await userEvent.click(page.getByRole("button", { name: /^게시글/ }));
 		await rowsShown(canvasElement);
-		await waitFor(() => expect(columnWidth(canvasElement, "tags")).toBe(232), wait);
+		await waitFor(() => expect(columnWidth(canvasElement, "category")).toBe(164), wait);
 		expect(order()).toEqual(before);
 	},
 };

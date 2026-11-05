@@ -15,11 +15,8 @@ export const FieldAdminValues = z.object({
 export const ListPrefs = z.object({
 	order: z.array(z.string()).optional(),
 	hidden: z.array(z.string()).optional(),
-	/**
-	 * Column id → width in px, for the columns the admin resized; the others keep their kind's width, and the title without one takes the room left.
-	 * The screen clamps it per kind (480 at most, the title 960).
-	 */
-	widths: z.record(z.string(), z.number().int().positive().max(960)).optional(),
+	/** Column id → width in px, for the columns the admin resized; the others keep their kind's width. The screen keeps it between 60 and 480. */
+	widths: z.record(z.string(), z.number().int().positive().max(480)).optional(),
 	pageSize: z.union([z.literal(25), z.literal(50), z.literal(100)]).optional(),
 });
 

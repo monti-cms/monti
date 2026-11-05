@@ -196,12 +196,10 @@ export function ListScreen({
 	const [dragWidths, setDragWidths] = useState<Record<string, number> | null>(null);
 	const shownIds = (preview ?? allIds).filter((id) => !hidden.includes(id));
 	const shown = shownIds.flatMap((id) => (columns ?? []).filter((column) => column.id === id));
-	/** A column's width now: the one being dragged or kept (never under its kind's), or its kind's; the title without one takes the room left. */
+	/** A column's width now: the one being dragged or kept, or its kind's; the title takes the room left. */
 	const sizeOf = (column: ListColumn) => {
 		const kind = kindSizeOf(column);
-		const kept = (dragWidths ?? widths)[column.id];
-		if (kind === undefined) return kept;
-		return kept === undefined ? kind : Math.max(kind, kept);
+		return kind === undefined ? undefined : ((dragWidths ?? widths)[column.id] ?? kind);
 	};
 	const keep = (order: string[], nextHidden: string[], nextWidths = widths) => {
 		setSaving({ order, hidden: nextHidden, widths: nextWidths, from: columnsRead.data });
@@ -385,9 +383,7 @@ export function ListScreen({
 			/>
 		),
 	}));
-	// Once the title has a width too, the room left over is an empty cell before the rows' ⋯ (ListHead draws its head).
-	const filler = shown.every((column) => sizeOf(column) !== undefined);
-	const colSpan = shown.length + (filler ? 2 : 1);
+	const colSpan = shown.length + 1;
 	const aiChips = state.filters.filter((filter) => state.ai.includes(filterColumn(filter)));
 	const stateNames: Record<string, string> = {
 		published: t("list.state.published"),
@@ -522,11 +518,7 @@ export function ListScreen({
 				</PageToolbar>
 			)}
 			<ListScroll>
-				<Table
-					container="none"
-					layout="fixed"
-					columns={[...shown.map(sizeOf), ...(filler ? [undefined] : []), LIST_COLUMN_SIZE.end]}
-				>
+				<Table container="none" layout="fixed" columns={[...shown.map(sizeOf), LIST_COLUMN_SIZE.end]}>
 					{pickedRows.length > 0 ? (
 						<BulkBar
 							label={t("list.selected", { count: pickedRows.length })}
@@ -598,7 +590,6 @@ export function ListScreen({
 							const line = (
 								<TableRow key={row.id} selected={mine !== undefined} proposal={mine?.proposal}>
 									{shown.map((column, index) => cell(row, column, index === 0))}
-									{filler && <TableCell filler />}
 									<TableCell align="end">
 										<RowActions>
 											<DropdownMenu>

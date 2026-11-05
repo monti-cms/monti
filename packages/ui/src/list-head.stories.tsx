@@ -84,7 +84,7 @@ const KIND = {
 	summary: LIST_COLUMN_SIZE.many,
 	updated: LIST_COLUMN_SIZE.date,
 } as const;
-type Id = keyof typeof KIND | "title";
+type Id = keyof typeof KIND;
 
 /** The head of a list whose columns the admin resizes: the widths live in the story's state, as the screen keeps them per collection. */
 function ResizableHead({ start }: { start: Partial<Record<Id, number>> }) {
@@ -96,25 +96,16 @@ function ResizableHead({ start }: { start: Partial<Record<Id, number>> }) {
 				Object.entries({ ...current, ...changes }).filter((entry): entry is [string, number] => entry[1] !== null),
 			),
 		);
-	// Once the title has a width too, the room left over is an empty cell before the end.
-	const filler = widths.title !== undefined;
 	return (
 		<Table
 			container="none"
 			layout="fixed"
-			columns={[
-				size("status"),
-				widths.title,
-				size("summary"),
-				size("updated"),
-				...(filler ? [undefined] : []),
-				LIST_COLUMN_SIZE.end,
-			]}
+			columns={[size("status"), undefined, size("summary"), size("updated"), LIST_COLUMN_SIZE.end]}
 		>
 			<ListHead
 				columns={[
 					{ id: "status", label: "상태", size: size("status"), kindSize: KIND.status, menu: statusMenu },
-					{ id: "title", label: "제목", size: widths.title },
+					{ id: "title", label: "제목" },
 					{ id: "summary", label: "요약", size: size("summary"), kindSize: KIND.summary },
 					{
 						id: "updated",
@@ -142,7 +133,6 @@ function ResizableHead({ start }: { start: Partial<Record<Id, number>> }) {
 					<TableCell align="end" tone="muted">
 						8. 3
 					</TableCell>
-					{filler && <TableCell filler />}
 					<TableCell />
 				</TableRow>
 			</TableBody>
@@ -151,12 +141,12 @@ function ResizableHead({ start }: { start: Partial<Record<Id, number>> }) {
 }
 
 /**
- * Every column, the title too, has a handle on its right edge, invisible until pointed at or focused. Here the title was dragged to 420px (the room left
- * over is empty at the end) and the summary column's handle has the keyboard focus: the accent line inside its right edge. ← → step it by 16px (Shift
- * 64), double-click goes back to its kind's width (the title: back to taking the room left).
+ * The edge between two columns has a handle inside the right edge of the column on its left, invisible until pointed at or focused. Here the edge
+ * between the summary and the date has the keyboard focus and was stepped right once: the summary is 16px wider and the date 16px narrower, the
+ * row keeps its width. An edge beside the title widens or narrows the title, which takes the room left.
  */
 export const Resizable: Story = {
-	render: () => <ResizableHead start={{ title: 420, summary: 240 }} />,
+	render: () => <ResizableHead start={{ summary: 240 }} />,
 	play: async ({ canvasElement }) => {
 		const handle = within(canvasElement).getByRole("separator", { name: "요약 열 너비 조절" });
 		handle.focus();
