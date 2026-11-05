@@ -403,6 +403,7 @@ export {
 	cn,
 	DEFAULT_UI_LABELS,
 	folderTree,
+	LIST_COLUMN_SIZE,
 	PROPOSAL_MARK_CLASSES,
 	SearchBox,
 	SearchToggle,

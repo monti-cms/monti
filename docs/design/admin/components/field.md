@@ -98,7 +98,7 @@
 
 ### 코드
 
-`Calendar`(하루나 기간을 고르는 달 격자)와 `CalendarDayButton`.
+`Calendar`(하루나 기간을 고르는 달 격자)와 `CalendarDayButton`. 화면은 `language`("ko" · "en")로 달과 요일 이름을 고른다.
 
 ## 필드 아래 줄 (`.mt-note`)
 

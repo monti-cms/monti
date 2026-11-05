@@ -23,6 +23,13 @@ type ListHeadColumn = {
 	menu?: React.ReactNode;
 };
 
+/**
+ * The width of a list's column by what it shows, in px (doc 06: widths come by kind, and nobody resizes them). The title has none: it takes the room the
+ * others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary). `end` is the cell over the rows' ⋯.
+ */
+const LIST_COLUMN_SIZE = { status: 76, one: 84, many: 152, locale: 60, date: 72, end: 38 } as const;
+type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
+
 /** The columns that are off, offered by the + at the end of the head row. */
 type ListHeadAdd = {
 	/** The name of the + button ("Add column"). */
@@ -328,5 +335,5 @@ function ListHead({
 	);
 }
 
-export { ListHead };
-export type { ListHeadAdd, ListHeadColumn };
+export { LIST_COLUMN_SIZE, ListHead };
+export type { ListColumnSize, ListHeadAdd, ListHeadColumn };
