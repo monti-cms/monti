@@ -123,6 +123,8 @@ export function EntryHeader({
 					// A button shows no shortcut (button.md); ⌘S is in its tooltip.
 					<Button>저장</Button>
 				)}
+				{/* The pill stands alone: the line sets it apart from the screen's tools (the panes, ⋯, ✦). */}
+				<Separator orientation="vertical" length="control" flush />
 				{panel ? (
 					<IconButton label="속성" side="bottom" pressed={panelOpen}>
 						<RightPanelOpen aria-hidden />
@@ -131,7 +133,6 @@ export function EntryHeader({
 				<IconButton label="더 보기" side="bottom">
 					<OverflowMenuHorizontal aria-hidden />
 				</IconButton>
-				<Separator orientation="vertical" length="control" flush />
 				<IconButton label="어시스턴트 열기" side="bottom">
 					<Spark aria-hidden />
 				</IconButton>

@@ -116,6 +116,8 @@ export function TemplateEditor({
 					<Button variant="primary" loading={save.pending} onClick={() => void write()}>
 						{t("templates.save")}
 					</Button>
+					{/* The pill stands alone: the line sets it apart from the screen's tools (⋯, ✦). */}
+					<Separator orientation="vertical" length="control" flush />
 					{id ? (
 						<DropdownMenu>
 							<IconButton
@@ -146,7 +148,6 @@ export function TemplateEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					) : null}
-					<Separator orientation="vertical" length="control" flush />
 					<IconButton label={t("frame.assistant")} side="bottom">
 						<Spark aria-hidden />
 					</IconButton>

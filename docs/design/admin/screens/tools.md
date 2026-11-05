@@ -44,7 +44,7 @@
 | "저장 안 됨" | `EntryStatus status="editing"` | 바뀐 것이 있는 동안만. |
 | "저장" | `Button variant="primary"`(저장하는 동안 `loading`) | 늘 있다. 발행이 없으므로 이 페이지의 검은 알약 하나다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
 | ⋯ | `IconButton` + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 새 템플릿에는 없다. |
-| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | ⋯와 ✦ 사이. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | "저장" 알약 뒤, ⋯와 ✦ 앞. 편집기 머리와 같다([editor.md](editor.md)). |
 | ✦ 어시스턴트 열기 | [common.md](common.md)의 ✦ 어시스턴트 열기 | 머리 줄 끝. |
 | 이름 | `Input appearance="inline" size="display"`(플레이스홀더와 이름 "템플릿 이름"), 아래 잉크 선 `EditorTitleRule` | 라벨 없이 글 제목 자리에 놓인다. 이름 없이 저장하면 그 아래 `FormFieldError`("이름을 써 주세요."). |
 | 본문 | 편집기 본문 | 읽기 폭. 블록과 메뉴는 [editor.md](editor.md)와 같다. |
