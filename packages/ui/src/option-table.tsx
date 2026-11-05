@@ -21,7 +21,7 @@ function OptionTable({
 }) {
 	return (
 		<div data-slot="option-table" className={cn("flex flex-col", className)} {...props}>
-			<div aria-hidden="true" className={cn(COLUMNS, "py-monti-8 text-monti-micro text-monti-subtle")}>
+			<div aria-hidden="true" className={cn(COLUMNS, "pb-monti-8 text-monti-micro text-monti-subtle")}>
 				<span />
 				<span>{valueLabel}</span>
 				<span>{labelLabel}</span>

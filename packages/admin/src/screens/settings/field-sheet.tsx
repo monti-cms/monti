@@ -331,95 +331,98 @@ function FieldSheetBody({
 		</Stack>
 	);
 
+	// A select's choices are its values, not a rule: their own section, between what the field is and its rules. The table comes with the first row.
 	const options =
 		form.kind === "select" ? (
-			<Stack gap={8}>
-				<Sortable
-					nameOf={(id) => {
-						const option = form.options[Number(id.slice(2))];
-						return option ? option.value || option.label : "";
-					}}
-					onDrop={({ active, over }) => {
-						if (!over) return;
-						const from = Number(active.id.slice(2));
-						const to = Number(over.id.slice(2));
-						if (from === to) return;
-						const options = [...form.options];
-						const [moved] = options.splice(from, 1);
-						if (moved) options.splice(to, 0, moved);
-						set({ options });
-					}}
-					overlay={(active) => {
-						const option = form.options[Number(active.id.slice(2))];
-						return option ? (
-							<OptionRow
-								drag={{ lifted: true }}
-								handle={<DragHandle aria-hidden tabIndex={-1} />}
-								value={<Text mono>{option.value}</Text>}
-								label={<Text>{option.label}</Text>}
-							/>
-						) : null;
-					}}
-				>
-					<OptionTable valueLabel={t("settings.field.optionValue")} labelLabel={t("settings.field.optionLabel")}>
-						<SortableList id="options" items={form.options.map((_, index) => optionId(index))}>
-							{form.options.map((option, index) => (
-								<SortableOption
-									// biome-ignore lint/suspicious/noArrayIndexKey: a row's value is what is typed in it; its place is its identity.
-									key={index}
-									id={optionId(index)}
-									moveLabel={
-										structure ? t("settings.field.moveOption", { value: option.value || option.label }) : undefined
-									}
-									value={
-										structure ? (
+			<SheetSection title={t("settings.field.options")}>
+				{form.options.length > 0 ? (
+					<Sortable
+						nameOf={(id) => {
+							const option = form.options[Number(id.slice(2))];
+							return option ? option.value || option.label : "";
+						}}
+						onDrop={({ active, over }) => {
+							if (!over) return;
+							const from = Number(active.id.slice(2));
+							const to = Number(over.id.slice(2));
+							if (from === to) return;
+							const options = [...form.options];
+							const [moved] = options.splice(from, 1);
+							if (moved) options.splice(to, 0, moved);
+							set({ options });
+						}}
+						overlay={(active) => {
+							const option = form.options[Number(active.id.slice(2))];
+							return option ? (
+								<OptionRow
+									drag={{ lifted: true }}
+									handle={<DragHandle aria-hidden tabIndex={-1} />}
+									value={<Text mono>{option.value}</Text>}
+									label={<Text>{option.label}</Text>}
+								/>
+							) : null;
+						}}
+					>
+						<OptionTable valueLabel={t("settings.field.optionValue")} labelLabel={t("settings.field.optionLabel")}>
+							<SortableList id="options" items={form.options.map((_, index) => optionId(index))}>
+								{form.options.map((option, index) => (
+									<SortableOption
+										// biome-ignore lint/suspicious/noArrayIndexKey: a row's value is what is typed in it; its place is its identity.
+										key={index}
+										id={optionId(index)}
+										moveLabel={
+											structure ? t("settings.field.moveOption", { value: option.value || option.label }) : undefined
+										}
+										value={
+											structure ? (
+												<Input
+													appearance="inline"
+													mono
+													aria-label={t("settings.field.optionValue")}
+													value={option.value}
+													onChange={(event) =>
+														set({
+															options: form.options.map((one, at) =>
+																at === index ? { ...one, value: event.target.value } : one,
+															),
+														})
+													}
+												/>
+											) : (
+												<Text mono>{option.value}</Text>
+											)
+										}
+										label={
 											<Input
 												appearance="inline"
-												mono
-												aria-label={t("settings.field.optionValue")}
-												value={option.value}
+												aria-label={t("settings.field.optionLabel")}
+												value={option.label}
 												onChange={(event) =>
 													set({
 														options: form.options.map((one, at) =>
-															at === index ? { ...one, value: event.target.value } : one,
+															at === index ? { ...one, label: event.target.value } : one,
 														),
 													})
 												}
 											/>
-										) : (
-											<Text mono>{option.value}</Text>
-										)
-									}
-									label={
-										<Input
-											appearance="inline"
-											aria-label={t("settings.field.optionLabel")}
-											value={option.label}
-											onChange={(event) =>
-												set({
-													options: form.options.map((one, at) =>
-														at === index ? { ...one, label: event.target.value } : one,
-													),
-												})
-											}
-										/>
-									}
-									action={
-										structure ? (
-											<TextButton
-												variant="quiet"
-												aria-label={t("settings.field.removeOption", { value: option.value })}
-												onClick={() => set({ options: form.options.filter((_, at) => at !== index) })}
-											>
-												×
-											</TextButton>
-										) : undefined
-									}
-								/>
-							))}
-						</SortableList>
-					</OptionTable>
-				</Sortable>
+										}
+										action={
+											structure ? (
+												<TextButton
+													variant="quiet"
+													aria-label={t("settings.field.removeOption", { value: option.value })}
+													onClick={() => set({ options: form.options.filter((_, at) => at !== index) })}
+												>
+													×
+												</TextButton>
+											) : undefined
+										}
+									/>
+								))}
+							</SortableList>
+						</OptionTable>
+					</Sortable>
+				) : null}
 				{structure ? (
 					<Inline gap={0}>
 						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "" }] })}>
@@ -427,7 +430,7 @@ function FieldSheetBody({
 						</TextButton>
 					</Inline>
 				) : null}
-			</Stack>
+			</SheetSection>
 		) : null;
 
 	const required = switchRow(
@@ -474,7 +477,6 @@ function FieldSheetBody({
 						)}
 					</>
 				) : null}
-				{options}
 				{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
 				{form.kind === "media"
 					? pickRow(
@@ -512,6 +514,7 @@ function FieldSheetBody({
 	const sections = (
 		<Stack gap={0}>
 			{about}
+			{options}
 			{rules}
 		</Stack>
 	);
