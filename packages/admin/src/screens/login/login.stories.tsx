@@ -74,6 +74,18 @@ export const Closed: Story = {
 	},
 };
 
+/** After "이미 관리자가 있어요", "로그인하기" leads to signing in: the screen keeps knowing there is an admin and never shows the first-admin form again. */
+export const ClosedThenSignIn: Story = {
+	loaders: site({ schema, auth: password }),
+	play: async (context) => {
+		await Closed.play?.(context);
+		const page = within(context.canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "로그인하기" }));
+		await expect(await page.findByLabelText("이메일")).toBeInTheDocument();
+		await expect(page.queryByLabelText("비밀번호 확인")).toBeNull();
+	},
+};
+
 /** Flow 8, step 05: email and password, or GitHub. */
 export const SignIn: Story = { loaders: site(withAdmin) };
 

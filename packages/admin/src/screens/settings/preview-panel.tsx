@@ -1,0 +1,135 @@
+import type { FieldDefinition } from "@monti-cms/core";
+import {
+	Combobox,
+	ComboboxInput,
+	FormField,
+	FormFieldLabel,
+	Input,
+	MediaInput,
+	PropertyGroup,
+	PropertyPanel,
+	Text,
+	Textarea,
+} from "@monti-cms/ui";
+import { useState } from "react";
+import { useAdmin } from "../../operations/admin-context";
+import { PickOne } from "./pick-one";
+import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
+import type { CollectionsDraft } from "./use-collections-draft";
+
+/** A tab's entries as the panel groups them: the loose fields between groups run together, each group under its name. */
+function runs(entries: Layout[number]["fields"]) {
+	const out: { key: string; title?: string; fields: string[] }[] = [];
+	for (const entry of entries) {
+		if (typeof entry !== "string") out.push({ key: `group:${entry.group}`, title: entry.group, fields: entry.fields });
+		else {
+			const last = out.at(-1);
+			if (last && last.title === undefined) last.fields.push(entry);
+			else out.push({ key: `run:${entry}`, fields: [entry] });
+		}
+	}
+	return out;
+}
+
+/**
+ * The property panel preview (flow 4, step 08): the entry editor's property panel drawn from the unsaved fields, as it will look, problems and all (a
+ * select with no choices is an empty select). What is to fix is told when saving, at the top of the review.
+ */
+export function PreviewPanel({
+	model,
+	collection: c,
+	onClose,
+}: {
+	model: CollectionsDraft;
+	collection: string;
+	onClose: () => void;
+}) {
+	const { t } = useAdmin();
+	const keys = model.fields(c).filter((key) => model.shown(at.field(c, key)));
+	const layout = shownLayout(
+		model.draft.value(at.collectionValue(c, "layout")) as Layout | undefined,
+		keys,
+		t("settings.fields.defaultTab"),
+	);
+	const [tab, setTab] = useState("0");
+	const picked = layout[Number(tab)] ?? layout[0];
+
+	// The editor's rule for required fields (components/field.md): a red * after the label, but only in a panel that also has fields left empty.
+	const defs = keys
+		.filter((key) => key !== "title")
+		.flatMap((key) => {
+			const field = model.shown(at.field(c, key)) as DraftField | null;
+			return field ? [field.def] : [];
+		});
+	const marksRequired = defs.some((def) => !def.required);
+
+	const row = (key: string) => {
+		// The title is the editor's heading, not a property (flow 1).
+		if (key === "title") return null;
+		const field = model.shown(at.field(c, key)) as DraftField | null;
+		if (!field) return null;
+		const id = `preview-${key}`;
+		const placeholder = t("settings.preview.empty");
+		return (
+			<FormField key={key}>
+				<FormFieldLabel htmlFor={id} required={marksRequired && Boolean(field.def.required)}>
+					{model.fieldLabel(c, key)}
+				</FormFieldLabel>
+				{input(field.def, id, placeholder, key)}
+			</FormField>
+		);
+	};
+	const input = (def: FieldDefinition, id: string, placeholder: string, key: string) => {
+		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={t("settings.preview.fromTitle")} />;
+		if (def.kind === "text")
+			return def.multiline ? (
+				<Textarea id={id} size="md" placeholder={placeholder} />
+			) : (
+				<Input id={id} size="md" placeholder={placeholder} />
+			);
+		if (def.kind === "select") {
+			const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
+			return (
+				<PickOne
+					id={id}
+					size="md"
+					items={def.options.map((option) => ({ value: option, label: labels[option] ?? option }))}
+					value={null}
+					onChange={() => {}}
+					placeholder={placeholder}
+				/>
+			);
+		}
+		if (def.kind === "relation")
+			return (
+				<Combobox items={[]}>
+					<ComboboxInput id={id} size="md" placeholder={t("settings.preview.none")} />
+				</Combobox>
+			);
+		return <MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />;
+	};
+
+	return (
+		<PropertyPanel
+			label={t("settings.preview.title")}
+			title={
+				<>
+					{t("settings.preview.title")}{" "}
+					<Text tone="faint" weight="role">
+						{t("settings.preview.unsaved")}
+					</Text>
+				</>
+			}
+			onClose={onClose}
+			value={tab}
+			onValueChange={setTab}
+			tabs={layout.map((each, index) => ({ value: String(index), label: each.tab }))}
+		>
+			{runs(picked?.fields ?? []).map((run) => (
+				<PropertyGroup key={run.key} title={run.title}>
+					{run.fields.map(row)}
+				</PropertyGroup>
+			))}
+		</PropertyPanel>
+	);
+}

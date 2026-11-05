@@ -9,9 +9,9 @@ type SchemaState = { locked: boolean; fileChanged: boolean; failedChange: string
  * sits in the frame's banner slot, edge to edge above every screen, which moves down under it (status.md). A live site whose database is behind its schema shows nothing: the
  * admin cannot run `monti db:migrate`, so the server's log says it (doc 01, decisions).
  */
-export function SchemaBanner() {
+export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 	const { t } = useAdmin();
-	const schema = useRead<SchemaState>("schema.read");
+	const schema = useRead<SchemaState>("schema.read", {}, { afterWrites: true });
 	const retry = useOperation("schema.retry");
 	const state = schema.data;
 	// The change file's name and the database's error are the developer's: the server's log has them (`schema.apply`), the line does not.
@@ -28,6 +28,10 @@ export function SchemaBanner() {
 				</TextButton>
 			</Banner>
 		);
-	// The review lives in settings › collections (doc 01, T15); until then the line only tells.
-	return state?.fileChanged && !state.locked ? <Banner title={t("banner.fileChanged")} /> : null;
+	// Its review button opens the review in settings › collections, where the person says what the hand edit means for stored values (doc 01).
+	return state?.fileChanged && !state.locked ? (
+		<Banner title={t("banner.fileChanged")}>
+			{onReview ? <TextButton onClick={onReview}>{t("banner.review")}</TextButton> : null}
+		</Banner>
+	) : null;
 }

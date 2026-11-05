@@ -43,6 +43,14 @@
 
 `Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px이고, note 크기 글자로 행의 20px 줄 위에 놓여 행 높이를 바꾸지 않는다)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
 
+## 미디어 필드
+
+대표 이미지, 공유 이미지, 파일처럼 미디어를 고르는 필드도 다른 필드와 같은 모양이다(2026-11-05, 소유자). 밑줄 한 줄에, 고른 파일이면 20px 썸네일과 파일 이름, 비었으면 흐린 "비어 있음"이 있다. 끝에는 고른 파일을 빼는 ×, 비었으면 흐린 이미지 아이콘이 있다. 줄을 누르면 미디어 고르기가 열린다. 그림을 크게 보이지 않는다. 옆의 입력, 고르기와 한 양식으로 읽히게 한다.
+
+### 코드
+
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄).
+
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
 바꿀 수 있는 부분만 입력란이다. 양 끝은 흐린 mono 글자로 고정되어 있어서, 하나의 주소로 읽힌다.

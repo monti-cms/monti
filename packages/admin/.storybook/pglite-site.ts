@@ -64,8 +64,8 @@ export async function storySite({
 	await setup?.(monti);
 	const api = createAdminApi(monti);
 	let token: string | null = null;
-	const transport: Transport = async (name, input, versions) => {
-		const answer = await api.call(name, { input, versions }, token);
+	const transport: Transport = async (name, input, options = {}) => {
+		const answer = await api.call(name, { input, ...options }, token);
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};

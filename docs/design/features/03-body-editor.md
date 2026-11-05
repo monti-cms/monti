@@ -191,7 +191,7 @@ sequenceDiagram
 
 | 기능 | 종류 | 하는 일 |
 |---|---|---|
-| `blocks.catalog` | read | 컬렉션에서 켠 블록과 서식, 설명, attrs 스키마 |
+| `blocks.catalog` | read | 컬렉션에서 켠 블록과 서식, 설명, attrs 스키마. 컬렉션 없이 부르면 사이트의 모든 블록과 서식(설정 › 컬렉션의 에디터 탭이 고를 목록) |
 | `body.read` | read | 블록 id가 붙은 읽기 쉬운 본문. 블록 몇 개만 고를 수 있다 |
 | `body.edit` | write | 블록 연산으로 고치는 본을 바꾼다 |
 | `templates.list` · `templates.get` | read | 템플릿 목록과 하나 |

@@ -14,6 +14,7 @@ import {
 import type { RecordKind, RecordState } from "../records";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
+import { markApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -34,6 +35,8 @@ export type RunOptions = {
 	proposalItemId?: string;
 	/** The admin API's session, for the operations that read or end it. */
 	session?: Session | null;
+	/** Proposal items the person took in the screen and saves with this write (doc 05): they become applied, tied to its activity row. */
+	accepted?: string[];
 };
 
 export type WriteResult<Output> = {
@@ -167,6 +170,14 @@ export async function runWrite<Output>(
 						};
 					}),
 				)
+				.execute();
+		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
+		const conversation = await markApplied(trx, options.accepted ?? [], activityId);
+		if (conversation && !options.conversationId)
+			await trx
+				.updateTable("monti_activity")
+				.set({ conversation_id: conversation })
+				.where("id", "=", activityId)
 				.execute();
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events);
 		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));

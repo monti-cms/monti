@@ -5,6 +5,7 @@ import {
 	FieldTree,
 	FolderTab,
 	FolderTabEdit,
+	FolderTabLifted,
 	FolderTabs,
 	FolderTabsAdd,
 	FolderTabsBody,
@@ -71,5 +72,38 @@ export const Rename: Story = {
 				</FieldTree>
 			</FolderTabsBody>
 		</FolderTabs>
+	),
+};
+
+/**
+ * While dragging: the tab in hand floats over the row (page ground, floating shadow, drawn by the `Sortable` overlay) and its place stays as a gap;
+ * a field held over the "분류" header marks it as where it goes (`dropTarget`).
+ */
+export const Held: Story = {
+	render: () => (
+		<div className="relative">
+			<FolderTabs defaultValue="content">
+				<FolderTabsList add={add}>
+					<FolderTab value="content" count={4}>
+						내용
+					</FolderTab>
+					<FolderTab value="meta" count={3} dropTarget>
+						분류
+					</FolderTab>
+					<FolderTab value="seo" count={2} dragging>
+						검색 노출
+					</FolderTab>
+				</FolderTabsList>
+				<FolderTabsBody value="content">
+					<FieldTree>
+						<FieldRow name="title !" label="제목" kind="text" />
+						<FieldRow name="summary" label="요약" kind="textarea" />
+					</FieldTree>
+				</FolderTabsBody>
+			</FolderTabs>
+			<div className="absolute top-[-6px] left-[230px]">
+				<FolderTabLifted count={2}>검색 노출</FolderTabLifted>
+			</div>
+		</div>
 	),
 };

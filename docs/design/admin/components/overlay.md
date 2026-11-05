@@ -46,7 +46,7 @@
 
 `Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). 흐린 페이지 위에 왼쪽 가장자리에 선을 두고 열리며, 모서리가 각지고 `shadow-sheet`를 가진다. 폭은 정해져 있다. `SheetHeader`에는 ✦ 자리가 없다. `closable={false}`이면(시트가 일하는 중이라 떠날 수 없다) 닫기 버튼이 없다. 본문이 시트보다 길면 스크롤된다. 제목 끝에 `SheetTitle of`로 시트가 무엇에 관한 것인지 붙일 수 있다("필드 추가 · 노트").
 
-`SheetSection`은 본문의 제목 있는 한 부분이다("보기", 그다음 "구조"). 제목은 14px semibold이고, 그 아래에 필드가 오며, 다음 섹션은 8px 더 아래에 온다. 제목 끝에 `LockMark`를 둘 수 있다. `SheetSplit`은 본문을 둘로 나눈다. 왼쪽에 목록(150px, 오른쪽 가장자리에 선), 오른쪽에 자기 탭 아래의 작업이 온다. "필드 추가"가 이것을 쓴다. 종류는 `PickList`(listbox)이고, 고른 종류의 설정이 그 옆에 "기본"과 "고급" 탭 아래에 놓인다. `SheetSummary`는 본문 끝에서 만들어질 것을 한 줄로 말한다(도구 바탕, `radius-lg`, 12/16 안쪽 여백, meta 크기의 muted 글자).
+`SheetSection`은 본문의 제목 있는 한 부분이다(필드 시트의 "입력 규칙"). 제목은 14px semibold이고, 그 아래에 필드가 오며, 다음 섹션은 40px 아래에 온다. 선은 긋지 않고 여백만으로 절을 나눈다(2026-11-05, 소유자). 필드 사이(18px)보다 확실히 넓어서 필드의 밑줄과 섞이지 않는다. 제목 끝에 `LockMark`를 둘 수 있다. `SheetSplit`은 본문을 둘로 나눈다. 왼쪽에 목록(150px, 오른쪽 가장자리에 선), 오른쪽에 자기 탭 아래의 작업이 온다. "필드 추가"가 이것을 쓴다. 종류는 `PickList`(listbox)이고, 고른 종류의 설정이 그 옆에 "기본"과 "고급" 탭 아래에 놓인다. `SheetSummary`는 본문 끝에서 만들어질 것을 한 줄로 말한다(도구 바탕, `radius-lg`, 12/16 안쪽 여백, meta 크기의 muted 글자).
 
 ## 사이드 패널
 

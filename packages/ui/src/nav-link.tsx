@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { HELD } from "./sortable";
 
 /**
  * The row of a navigation, the rail's (`SidebarMenuButton`) and a page's own ({@link NavLink}): 36px, the name 10px in, the open one on the current
@@ -45,7 +46,7 @@ function NavLink({
 	return (
 		<div
 			data-slot="nav-link"
-			className={cn("group/nav relative", drag?.active && "z-10 opacity-80", className)}
+			className={cn("group/nav relative", drag?.active && HELD, className)}
 			style={drag ? { transform: drag.transform, transition: drag.transition } : undefined}
 			{...props}
 		>

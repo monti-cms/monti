@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { HELD } from "./sortable";
 
 /**
  * One item of an ordered list a writer arranges (the posts of a series): a quiet box on the page ground with `handle` (a {@link DragHandle}) first, the
@@ -23,7 +24,7 @@ function OrderedRow({
 			data-slot="ordered-row"
 			className={cn(
 				"flex items-center gap-monti-4 rounded-monti-md border border-monti-muted bg-monti-page p-monti-4 text-monti-caption",
-				drag?.active && "relative z-10 shadow-monti-floating",
+				drag?.active && HELD,
 				className,
 			)}
 			style={drag ? { transform: drag.transform, transition: drag.transition } : undefined}

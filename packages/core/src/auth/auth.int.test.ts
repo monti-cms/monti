@@ -151,6 +151,10 @@ describe("first admin and sign-in", () => {
 		const denied = await back(state);
 		expect(denied.headers.get("location")).toBe("/admin?denied=octo-kim");
 		expect(me.cookie()).toBe("");
+		// Trying again after a refusal asks GitHub for its account picker; a first try does not.
+		expect(location.searchParams.get("prompt")).toBeNull();
+		const again = await me.send(new Request("https://site.test/admin/api/auth/github?pick=1"));
+		expect(new URL(again.headers.get("location") ?? "").searchParams.get("prompt")).toBe("select_account");
 
 		login = "Monti-Owner";
 		const allowed = await back(state);

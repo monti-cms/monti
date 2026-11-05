@@ -1,0 +1,156 @@
+import {
+	Affix,
+	Button,
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	FormFieldLegend,
+	FormFieldSet,
+	Inline,
+	Input,
+	LockMark,
+	RadioGroup,
+	RadioItem,
+	Sheet,
+	SheetBody,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from "@monti-cms/ui";
+import { useState } from "react";
+import { useAdmin } from "../../operations/admin-context";
+import { addressOf, addressPart } from "./basics-tab";
+import { at, type DraftField } from "./schema-draft";
+import type { CollectionsDraft } from "./use-collections-draft";
+
+/** A collection's identifier: the schema's rule (`checkSchema`), so a wrong one is caught before it is made. */
+const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
+
+/**
+ * The new collection sheet (flow 4, steps 01–02): its name, its identifier (fixed once made), its kind and its public address. Its create button puts it in the
+ * draft with `title` and `slug`, the two fields every collection starts with (step 03); the review applies it.
+ */
+export function NewCollectionSheet({
+	model,
+	open,
+	onClose,
+	onMade,
+}: {
+	model: CollectionsDraft;
+	open: boolean;
+	onClose: () => void;
+	onMade: (collection: string) => void;
+}) {
+	return (
+		<Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+			{open ? <Body model={model} onClose={onClose} onMade={onMade} /> : null}
+		</Sheet>
+	);
+}
+
+function Body({
+	model,
+	onClose,
+	onMade,
+}: {
+	model: CollectionsDraft;
+	onClose: () => void;
+	onMade: (collection: string) => void;
+}) {
+	const { t } = useAdmin();
+	const [label, setLabel] = useState("");
+	const [id, setId] = useState("");
+	const [kind, setKind] = useState<"document" | "item">("document");
+	const [path, setPath] = useState<string | null>(null);
+	const taken = model.collections.includes(id);
+	const error = !id
+		? null
+		: !IDENTIFIER.test(id)
+			? t("settings.new.badId")
+			: taken
+				? t("settings.field.nameTaken")
+				: null;
+	const ready = label.trim() !== "" && id !== "" && error === null;
+	const address = path ?? addressOf(id);
+
+	const make = () => {
+		const { draft } = model;
+		draft.set(at.collection(id), { kind });
+		draft.set(at.path(id), address);
+		draft.set(at.collectionValue(id, "label"), label.trim());
+		draft.set(at.field(id, "title"), { name: "title", def: { kind: "text", required: true } } satisfies DraftField);
+		draft.set(at.field(id, "slug"), {
+			name: "slug",
+			def: { kind: "slug", required: true, from: "title" },
+		} satisfies DraftField);
+		onMade(id);
+	};
+
+	return (
+		<SheetContent>
+			<SheetHeader>
+				<SheetTitle>{t("settings.new.title")}</SheetTitle>
+			</SheetHeader>
+			<SheetBody>
+				<FormField>
+					<FormFieldLabel htmlFor="collection-name" required>
+						{t("settings.new.name")}
+					</FormFieldLabel>
+					<Input id="collection-name" required value={label} onChange={(event) => setLabel(event.target.value)} />
+				</FormField>
+				<FormField>
+					<Inline gap={6} align="center">
+						<FormFieldLabel htmlFor="collection-id" required>
+							{t("settings.basics.identifier")}
+						</FormFieldLabel>
+						<LockMark label={t("settings.basics.fixed")} />
+					</Inline>
+					<Input
+						id="collection-id"
+						mono
+						required
+						value={id}
+						aria-invalid={error ? true : undefined}
+						onChange={(event) => setId(event.target.value.trim())}
+					/>
+					{error ? <FormFieldError>{error}</FormFieldError> : null}
+				</FormField>
+				<FormFieldSet>
+					<FormFieldLegend variant="field">{t("settings.basics.kind")}</FormFieldLegend>
+					<RadioGroup
+						aria-label={t("settings.basics.kind")}
+						value={kind}
+						onValueChange={(value) => setKind(value as "document" | "item")}
+					>
+						<RadioItem
+							value="document"
+							label={t("settings.new.document")}
+							description={t("settings.new.documentHint")}
+						/>
+						<RadioItem value="item" label={t("settings.new.item")} description={t("settings.new.itemHint")} />
+					</RadioGroup>
+				</FormFieldSet>
+				<FormField>
+					<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
+					<Affix
+						id="collection-address"
+						prefix="/"
+						suffix="/:slug"
+						width="fit"
+						value={addressPart(address)}
+						onChange={(event) => setPath(addressOf(event.target.value))}
+					/>
+				</FormField>
+			</SheetBody>
+			<SheetFooter>
+				<Button variant="ghost" onClick={onClose}>
+					{t("settings.cancel")}
+				</Button>
+				<Button disabled={!ready} onClick={make}>
+					{t("settings.new.make")}
+				</Button>
+			</SheetFooter>
+		</SheetContent>
+	);
+}

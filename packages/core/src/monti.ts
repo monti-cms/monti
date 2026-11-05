@@ -6,13 +6,20 @@ import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
-import { type ApplyResult, applyProposal, createProposal, proposeItem } from "./engine/proposals";
+import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
 import { planUndo, undo } from "./engine/undo";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
-import { type Actor, type AnyOperation, defineOperation, type OperationKind, type Preview } from "./operation";
+import {
+	type Actor,
+	type AnyOperation,
+	defineOperation,
+	type OperationKind,
+	type Preview,
+	recordKey,
+} from "./operation";
 import type { RecordKind } from "./records";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
@@ -98,6 +105,53 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 				all()
 					.filter((operation) => available(operation, ctx.actor, ctx.site.files !== null))
 					.map(describe),
+		}),
+		defineOperation({
+			name: "proposals.forTarget",
+			kind: "read",
+			description:
+				"The assistant's pending proposal items aimed at one record (an entry, the schema, a collection's admin values): what a screen draws as blue pencil. Each has its operation, input and the request it came from.",
+			input: z.object({ kind: z.string(), id: z.string() }),
+			async run(input, ctx) {
+				const rows = await ctx.db
+					.selectFrom("monti_proposal_item")
+					.innerJoin("monti_proposal", "monti_proposal.id", "monti_proposal_item.proposal_id")
+					.select([
+						"monti_proposal_item.id",
+						"monti_proposal_item.proposal_id as proposalId",
+						"monti_proposal_item.operation",
+						"monti_proposal_item.input",
+						"monti_proposal_item.base_versions as baseVersions",
+						"monti_proposal.request",
+						"monti_proposal.conversation_id as conversationId",
+					])
+					.where("monti_proposal_item.state", "=", "pending")
+					.orderBy("monti_proposal.created_at")
+					.orderBy("monti_proposal_item.position")
+					.execute();
+				const key = recordKey(input);
+				return rows.filter((row) => key in row.baseVersions);
+			},
+		}),
+		defineOperation({
+			name: "proposals.discard",
+			kind: "write",
+			humanOnly: true,
+			description: "Throw away pending proposal items. Only a person does it; it is never an agent tool.",
+			input: z.object({ ids: z.array(z.string()).min(1) }),
+			async run(input, ctx) {
+				const items = await ctx.db
+					.updateTable("monti_proposal_item")
+					.set({ state: "discarded" })
+					.where("id", "in", input.ids)
+					.where("state", "=", "pending")
+					.returning(["id", "proposal_id"])
+					.execute();
+				for (const proposalId of new Set(items.map((item) => item.proposal_id)))
+					await settleProposal(ctx.db, proposalId);
+				return { discarded: items.map((item) => item.id) };
+			},
+			summary: (_input, output) => ({ key: "proposals.discard", values: { count: output.discarded.length } }),
 		}),
 		defineOperation({
 			name: "activity.undo",

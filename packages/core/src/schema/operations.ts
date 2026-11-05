@@ -14,14 +14,13 @@ type Db = Kysely<Database> | Transaction<Database>;
 
 // Zod shapes of the schema, for the operations' inputs (and so the agent's tools describe them).
 const LocaleMode = z.enum(["same", "perLocale", "fromSource"]);
-const FieldBase = { required: z.boolean().optional(), asTitle: z.boolean().optional(), locale: LocaleMode.optional() };
+const FieldBase = { required: z.boolean().optional(), locale: LocaleMode.optional() };
 const Field = z.discriminatedUnion("kind", [
 	z.object({
 		kind: z.literal("text"),
 		...FieldBase,
 		multiline: z.boolean().optional(),
 		max: z.number().optional(),
-		fillFromBody: z.boolean().optional(),
 	}),
 	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
 	z.object({ kind: z.literal("select"), ...FieldBase, options: z.array(z.string()), many: z.boolean().optional() }),

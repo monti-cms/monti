@@ -1,5 +1,6 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "../db/schema";
+import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
 import { schemaHash } from "./plan";
@@ -7,6 +8,42 @@ import { schemaHash } from "./plan";
 type Db = Kysely<Database> | Transaction<Database>;
 
 const empty = (field: string) => sql<boolean>`coalesce(values->>${field}, '') = ''`;
+
+/**
+ * A field's admin values (its label, help, place in the layout) follow the field: a rename carries them to the new name, a removal drops them. The
+ * live site applies the same steps, so its labels follow too (doc 01).
+ */
+async function followField(db: Db, collection: string, from: string, to: string | null) {
+	const row = await db
+		.selectFrom("collection_admin_values")
+		.select("values")
+		.where("collection", "=", collection)
+		.executeTakeFirst();
+	if (!row) return;
+	const values = row.values as AdminValues;
+	type Layout = NonNullable<AdminValues["layout"]>;
+	const rename = (names: string[]) => names.flatMap((name) => (name !== from ? [name] : to ? [to] : []));
+	const { [from]: moved, ...fields } = values.fields ?? {};
+	const next: AdminValues = {
+		...values,
+		...(values.fields ? { fields: moved && to ? { ...fields, [to]: moved } : fields } : {}),
+		...(values.layout
+			? {
+					layout: values.layout.map((tab) => ({
+						...tab,
+						fields: tab.fields.flatMap((each): Layout[number]["fields"] =>
+							typeof each === "string" ? rename([each]) : [{ ...each, fields: rename(each.fields) }],
+						),
+					})),
+				}
+			: {}),
+	};
+	await db
+		.updateTable("collection_admin_values")
+		.set((eb) => ({ values: JSON.stringify(next), version: eb("version", "+", 1) }))
+		.where("collection", "=", collection)
+		.execute();
+}
 
 async function applyStep(db: Db, step: ChangeStep) {
 	// A field step changes the working copy and what the site shows alike (doc 02): the site's code changes with the schema.
@@ -37,6 +74,7 @@ async function applyStep(db: Db, step: ChangeStep) {
 					sql`(values - ${step.from}::text) || jsonb_build_object(${step.to}::text, values->${step.from})`,
 					sql<boolean>`values ? ${step.from}`,
 				);
+			await followField(db, step.collection, step.from, step.to);
 			return;
 		case "removeField":
 			if (step.values === "clear")
@@ -46,6 +84,7 @@ async function applyStep(db: Db, step: ChangeStep) {
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
 					sql<boolean>`values ? ${step.field}`,
 				);
+			await followField(db, step.collection, step.field, null);
 			return;
 		case "fillField":
 			await entries(

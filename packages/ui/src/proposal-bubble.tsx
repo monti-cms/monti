@@ -96,15 +96,15 @@ function ProposalBubble({
 }
 
 /**
- * Where the bubble floats: at the bottom of the scrolling editor column, centered, 12px over the status bar, staying there as the text scrolls under it. Put
- * it last in the column; only the bubble takes the pointer.
+ * Where the bubble floats: at the bottom of the scrolling column, centered, 12px over its end, staying there as the content scrolls under it; on a page
+ * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer.
  */
 function ProposalBubbleDock({ className, ...props }: ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="proposal-bubble-dock"
 			className={cn(
-				"pointer-events-none sticky bottom-monti-12 z-10 flex justify-center px-monti-16 *:pointer-events-auto",
+				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex justify-center px-monti-16 *:pointer-events-auto",
 				className,
 			)}
 			{...props}

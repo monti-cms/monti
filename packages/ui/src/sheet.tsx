@@ -140,7 +140,7 @@ function SheetSection({
 		<section
 			data-slot="sheet-section"
 			aria-labelledby={titleId}
-			className={cn("not-first:mt-monti-8 flex flex-col gap-[18px]", className)}
+			className={cn("not-first:mt-monti-40 flex flex-col gap-[18px]", className)}
 			{...props}
 		>
 			<h2 id={titleId} className="m-0 font-semibold text-monti-body">

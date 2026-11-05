@@ -5,8 +5,6 @@ export const FieldAdminValues = z.object({
 	label: z.string().optional(),
 	/** For the assistant: how to fill the field. The screen does not show it. */
 	description: z.string().optional(),
-	placeholder: z.string().optional(),
-	rows: z.number().int().positive().optional(),
 	optionLabels: z.record(z.string(), z.string()).optional(),
 });
 

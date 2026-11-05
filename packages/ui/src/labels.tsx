@@ -37,6 +37,13 @@ export interface UiLabels {
 	sidebarUnfold: string;
 	sidebarResize: string;
 	resize: string;
+	/** How to move a sortable thing with the keyboard, read when its handle takes focus. */
+	sortInstructions: string;
+	/** Said when a thing is lifted (`{name}`), moved over another (`{over}`), dropped there, or put back. */
+	sortLifted: string;
+	sortOver: string;
+	sortDropped: string;
+	sortCancelled: string;
 }
 
 export const DEFAULT_UI_LABELS: UiLabels = {
@@ -66,6 +73,11 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	sidebarUnfold: "Expand sidebar",
 	sidebarResize: "Resize sidebar",
 	resize: "Resize",
+	sortInstructions: "Press Space to lift, the arrow keys to move, Space to drop, Escape to put it back.",
+	sortLifted: "Lifted {name}.",
+	sortOver: "{name} is over {over}.",
+	sortDropped: "Dropped {name} on {over}.",
+	sortCancelled: "Put {name} back.",
 };
 
 const LabelsContext = createContext<UiLabels>(DEFAULT_UI_LABELS);

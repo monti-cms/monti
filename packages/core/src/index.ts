@@ -38,6 +38,7 @@ export {
 	type MontiError,
 	UnknownOperationError,
 } from "./errors";
+export { canonical, sameJson } from "./json";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {

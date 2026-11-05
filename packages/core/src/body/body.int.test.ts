@@ -109,6 +109,8 @@ describe("one definition", () => {
 		expect((await read<Catalog>("blocks.catalog", { collection: "post" })).blocks.map((block) => block.type)).toEqual([
 			"paragraph",
 		]);
+		// Without a collection it lists every block, for the settings that choose among them.
+		expect((await read<Catalog>("blocks.catalog", {})).blocks.map((block) => block.type)).toContain("callout");
 		await setEditor({ blocks: "all" });
 
 		const body = doc({ id: "b_1", type: "callout", attrs: { tone: "warn" }, children: [p("b_2", "Careful")] });
