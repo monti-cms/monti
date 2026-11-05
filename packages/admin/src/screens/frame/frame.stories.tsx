@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -30,18 +30,21 @@ const signedIn = (
 	setup?: (site: StorySite["monti"]) => Promise<void>,
 	options: Partial<Parameters<typeof storySite>[0]> = {},
 ) => [
-	async () => ({
-		site: await storySite({
-			schema,
-			auth: { password: true },
-			signedIn: true,
-			setup: async (monti) => {
-				await labelCollections(monti);
-				await setup?.(monti);
-			},
-			...options,
-		}),
-	}),
+	async () => {
+		startAt();
+		return {
+			site: await storySite({
+				schema,
+				auth: { password: true },
+				signedIn: true,
+				setup: async (monti) => {
+					await labelCollections(monti);
+					await setup?.(monti);
+				},
+				...options,
+			}),
+		};
+	},
 ];
 
 /** Flow 8, step 03: the first admin is in, and the first collection is empty. A new site has no counts. */
@@ -68,6 +71,7 @@ export const Counts: Story = {
 export const FileChanged: Story = {
 	loaders: [
 		async () => {
+			startAt();
 			const site = await storySite({
 				schema,
 				auth: { password: true },
@@ -86,6 +90,7 @@ export const FileChanged: Story = {
 export const FailedChange: Story = {
 	loaders: [
 		async () => {
+			startAt();
 			const site = await storySite({
 				schema,
 				auth: { password: true },

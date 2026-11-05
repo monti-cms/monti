@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -24,7 +24,12 @@ async function form(canvasElement: HTMLElement) {
 /** Fills a field as typing would, through the input's change event. */
 const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
-const site = (options: Parameters<typeof storySite>[0]) => [async () => ({ site: await storySite(options) })];
+const site = (options: Parameters<typeof storySite>[0]) => [
+	async () => {
+		startAt();
+		return { site: await storySite(options) };
+	},
+];
 const password = { password: true };
 const github = { clientId: "id", clientSecret: "secret", admin: "monti-owner" };
 const withAdmin = {

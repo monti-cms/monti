@@ -2,7 +2,7 @@ import { defineSchema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { createScreenChannel, type ScreenChannel } from "../../operations/admin-context";
 import { schema as storySchema } from "../story-schema";
@@ -138,8 +138,7 @@ async function setup(monti: Monti) {
 
 const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
 	async (): Promise<Loaded> => {
-		localStorage.removeItem("monti.lastScreen");
-		window.history.replaceState(null, "", hash);
+		startAt(hash);
 		const made = await storySite({ schema, auth: { password: true }, signedIn: true, setup });
 		await more?.(made);
 		return { site: made, screen: createScreenChannel() };

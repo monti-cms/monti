@@ -1,7 +1,7 @@
 import type { Doc } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -60,9 +60,12 @@ async function setup(monti: Monti) {
 }
 
 const site = ({ empty = false } = {}) => [
-	async () => ({
-		site: await storySite({ schema, auth: { password: true }, signedIn: true, setup: empty ? undefined : setup }),
-	}),
+	async () => {
+		startAt();
+		return {
+			site: await storySite({ schema, auth: { password: true }, signedIn: true, setup: empty ? undefined : setup }),
+		};
+	},
 ];
 
 /** Opens tools from the sidebar and waits for the templates. */

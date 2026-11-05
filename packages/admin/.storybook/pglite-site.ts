@@ -81,3 +81,13 @@ export async function storySite({
 	}
 	return { monti, transport, db };
 }
+
+/**
+ * Starts a screen story where it says, as a fresh visit: stories run one after another in one page, so the address a story moved to (`#/templates/…`)
+ * and what the admin keeps in this browser (the last screen, unsaved drafts) would open the next story somewhere else. Call it first in a loader.
+ */
+export function startAt(hash = "#/") {
+	for (const key of Object.keys(localStorage))
+		if (key === "monti.lastScreen" || key.startsWith("monti.draft.")) localStorage.removeItem(key);
+	window.history.replaceState(null, "", hash);
+}

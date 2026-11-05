@@ -1,7 +1,7 @@
 import type { Doc } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -109,14 +109,12 @@ const site = (kind: Kind, kept?: { version: number; mine: [string, unknown][] })
 				id = await entry(monti, kind);
 			},
 		});
-		localStorage.removeItem("monti.lastScreen");
-		for (const key of Object.keys(localStorage)) if (key.startsWith("monti.draft.")) localStorage.removeItem(key);
+		startAt(`#/c/post/${id}`);
 		if (kept)
 			localStorage.setItem(
 				`monti.draft.entry:${id}`,
 				JSON.stringify({ ...kept, savedAt: "2026-10-26T01:12:00.000Z", accepted: [] }),
 			);
-		window.history.replaceState(null, "", `#/c/post/${id}`);
 		return { site: made, id };
 	},
 ];

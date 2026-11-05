@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -55,8 +55,8 @@ const devFiles = { write: async () => {}, readChanges: async () => [] };
 
 const site = (options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void> } = {}) => [
 	async () => {
-		// The draft keeps unsaved changes in this browser (doc 05); every story starts from the saved values.
-		localStorage.removeItem("monti.draft.schema:current");
+		// The draft keeps unsaved changes in this browser (doc 05); every story starts from the saved values, at the first screen.
+		startAt();
 		const made = await storySite({
 			schema,
 			auth: { password: true },
