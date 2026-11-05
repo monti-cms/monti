@@ -60,8 +60,8 @@ function OptionRow({
 			data-held={drag?.active || undefined}
 			className={cn(
 				COLUMNS,
-				// The cells are inputs (32px high, they read as text): 2px above and below make the board's 37px row.
-				"border-monti-muted border-b py-monti-2 text-monti-note",
+				// The cells are inline inputs with no height of their own: the row stands at a control's height (32px, as in sheets and side panels).
+				"min-h-monti-control-md border-monti-muted border-b text-monti-note",
 				drag?.active && SLOT,
 				drag?.lifted && "border-0",
 				drag?.lifted && HELD,
