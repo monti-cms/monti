@@ -70,7 +70,13 @@ export const MENU_SEARCH_FIELD =
 export const MENU_EMPTY = "px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle";
 
 /** A long list: one column, 320px high at most, scrolling inside. */
-export const MENU_SCROLL = "flex max-h-80 flex-col overflow-y-auto overscroll-contain";
+/**
+ * A menu's scrolling rows. The admin's thin scrollbar takes 8px of room (it is not the overlay kind), so the list keeps that room always
+ * (`scrollbar-gutter`) and reaches 8px past the card's right padding for it: the bar sits in the card's padding and the rows sit as far from
+ * the card's right edge as from its left. Its bar shows whenever it scrolls (`data-scrollbar="always"`, admin.css).
+ */
+export const MENU_SCROLL =
+	"-mr-monti-8 flex max-h-80 flex-col overflow-y-auto overscroll-contain [scrollbar-gutter:stable]";
 
 /** The ✓ of a row that is the current value. */
 function MenuTick({ className, ...props }: React.ComponentProps<"span">) {

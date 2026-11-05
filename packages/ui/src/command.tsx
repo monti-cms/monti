@@ -41,7 +41,14 @@ function CommandInput({ className, ...props }: React.ComponentProps<typeof Comma
 
 /** The rows: one column, 320px high at most, scrolling inside. */
 function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
-	return <CommandPrimitive.List data-slot="command-list" className={cn(MENU_SCROLL, className)} {...props} />;
+	return (
+		<CommandPrimitive.List
+			data-slot="command-list"
+			data-scrollbar="always"
+			className={cn(MENU_SCROLL, className)}
+			{...props}
+		/>
+	);
 }
 
 function CommandEmpty({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {

@@ -42,13 +42,21 @@ html:has(.monti-admin) body {
  * Thin, unobtrusive scrollbar. The thumb darkens only on hover. On the whole document that holds the admin, not only its root: popups (menus, the
  * "/" menu, popovers, dialogs) are portaled to the body and scroll too.
  */
-html:has(.monti-admin) body,
-html:has(.monti-admin) body * {
-	scrollbar-width: thin;
-	scrollbar-color: transparent transparent;
-}
-html:has(.monti-admin) body *:hover {
-	scrollbar-color: var(--monti-gray-8) transparent;
+/* Browsers without the `::-webkit-scrollbar` rules below (Firefox) take the standard ones. Chrome would let these override its own 8px bar with
+   an 11px one, so they are kept from it: every browser draws the same 8px bar, and a menu can leave exactly that room for it. */
+/* design-allow: the standard scrollbar properties, only for browsers that lack the 8px webkit bar, so every browser's bar is the same width */
+@supports not selector(::-webkit-scrollbar) {
+	html:has(.monti-admin) body,
+	html:has(.monti-admin) body * {
+		scrollbar-width: thin;
+		scrollbar-color: transparent transparent;
+	}
+	html:has(.monti-admin) body *:hover {
+		scrollbar-color: var(--monti-gray-8) transparent;
+	}
+	html:has(.monti-admin) body [data-scrollbar="always"] {
+		scrollbar-color: var(--monti-gray-7) transparent;
+	}
 }
 html:has(.monti-admin) body ::-webkit-scrollbar {
 	width: 8px;
@@ -63,6 +71,11 @@ html:has(.monti-admin) body ::-webkit-scrollbar-thumb {
 }
 html:has(.monti-admin) body *:hover::-webkit-scrollbar-thumb {
 	background: var(--monti-gray-8);
+}
+/* A list cut off inside a floating card (a menu, the "/" menu) shows its bar whenever it scrolls, not only under the pointer: the bar is how
+   the person knows there is more below. */
+html:has(.monti-admin) body [data-scrollbar="always"]::-webkit-scrollbar-thumb {
+	background: var(--monti-gray-7);
 }
 
 /*
