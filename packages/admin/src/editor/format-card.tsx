@@ -25,6 +25,7 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
+import { clearFormats, hasClearableFormat } from "./commands";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
 import { markName, nodeName } from "./schema";
 
@@ -73,6 +74,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				left: sameLine ? (start.left + end.right) / 2 : start.left,
 				active: Object.fromEntries(GROUPS.flat().map(({ type }) => [type, current.isActive(markName(type))])),
 				href: String(current.getAttributes("link").href ?? ""),
+				clearable: hasClearableFormat(current.state),
 			};
 		},
 	});
@@ -110,6 +112,18 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 								/>
 							),
 						)}
+						{/* After the text formats, and only while the words have one: takes them all off at once (a link stays). */}
+						{at === 0 && state.clearable ? (
+							<FormatButton
+								mark="clear"
+								label={t("format.clear")}
+								shortcut={["mod", "\\"]}
+								onClick={() => {
+									clearFormats(editor.state, editor.view.dispatch);
+									editor.commands.focus();
+								}}
+							/>
+						) : null}
 					</Inline>
 				))}
 			</FloatingBar>

@@ -3,6 +3,7 @@ import { exitCode, lift, newlineInCode } from "@tiptap/pm/commands";
 import { TextSelection } from "@tiptap/pm/state";
 import type { Catalog } from "./catalog";
 import {
+	clearFormats,
 	deleteBlock,
 	duplicateBlock,
 	handleTarget,
@@ -93,6 +94,8 @@ export function bodyKeys(offered: () => Catalog) {
 					return false;
 				},
 				"Mod-Enter": ({ editor }) => exitCode(editor.state, editor.view.dispatch),
+				// Clear formatting: the selected words, or with nothing selected the run of formats the caret is in.
+				"Mod-\\": ({ editor }) => clearFormats(editor.state, editor.view.dispatch),
 				Backspace: ({ editor }) => {
 					if (!atStart(editor)) return false;
 					const { $from } = editor.state.selection;

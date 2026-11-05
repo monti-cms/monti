@@ -3,6 +3,7 @@ import { EditorCompareScreen } from "./editor-compare";
 import { EditorNotionScreen } from "./editor-notion";
 import { EditorProposalScreen } from "./editor-proposal";
 import { EditorTranslateScreen } from "./editor-translate";
+import { FormatClearScreen } from "./format-clear";
 import { ImageInsertScreen } from "./image-insert";
 import { LinkCardScreen } from "./link-card";
 import { SignedOutEditorScreen, SignedOutListScreen } from "./signed-out";
@@ -38,3 +39,8 @@ export const LinkCardLinked: Story = { render: () => <LinkCardScreen state="link
 export const SignedOutEditor: Story = { render: () => <SignedOutEditorScreen /> };
 /** The session ended on a list: the same banner, edge to edge over every screen. */
 export const SignedOutList: Story = { render: () => <SignedOutListScreen /> };
+
+/** Words picked with formats on part of them: "서식 지우기" at the end of the text formats. */
+export const FormatClear: Story = { render: () => <FormatClearScreen state="formatted" /> };
+/** After "서식 지우기": the words are plain, so the button is gone. */
+export const FormatClearCleared: Story = { render: () => <FormatClearScreen state="cleared" /> };
