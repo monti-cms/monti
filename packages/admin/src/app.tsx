@@ -5,7 +5,6 @@ import { AdminProvider, type Language, useAdmin } from "./operations/admin-conte
 import type { Transport } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
-import { SchemaBanner } from "./screens/frame/schema-banner";
 import { LoginScreen } from "./screens/login/login-screen";
 import { useSession } from "./session";
 
@@ -40,7 +39,6 @@ function CollectionPage({ name, count }: { name: string; count: number }) {
 	return (
 		<PageColumn width="list">
 			<PageHeader title={data?.adminValues[name]?.label ?? name} meta={data?.schema.collections[name]?.path} />
-			<SchemaBanner />
 			{count === 0 ? <Empty title={t("empty.title")} /> : null}
 		</PageColumn>
 	);

@@ -23,6 +23,7 @@ import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@m
 import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { SchemaBanner } from "./schema-banner";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
 
 /** A sidebar place: a collection by name, or one of the fixed rows. */
@@ -162,6 +163,7 @@ export function AdminFrame({
 				</Sidebar>
 				<SidebarInset
 					fixed
+					banner={<SchemaBanner />}
 					corner={
 						<IconButton label={t("frame.assistant")}>
 							<Spark className="size-monti-icon-lg" />

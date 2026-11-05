@@ -5,8 +5,8 @@ import { useOperation, useRead } from "../../operations/use-operation";
 type SchemaState = { locked: boolean; fileChanged: boolean; failedChange: string | null };
 
 /**
- * The schema's alert line (T16): a change saved but not applied, or a hand-edited schema file on the dev server. It sits directly above a screen's
- * list, never across the top of the page, where the ✦ button is (status.md). A live site whose database is behind its schema shows nothing: the
+ * The schema's alert line (T16): a change saved but not applied, or a hand-edited schema file on the dev server. It is about the whole site, so it
+ * sits in the frame's banner slot, edge to edge above every screen, which moves down under it (status.md). A live site whose database is behind its schema shows nothing: the
  * admin cannot run `monti db:migrate`, so the server's log says it (doc 01, decisions).
  */
 export function SchemaBanner() {
