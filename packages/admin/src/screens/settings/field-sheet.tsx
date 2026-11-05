@@ -579,12 +579,7 @@ function FieldSheetBody({
 					list={
 						<PickList aria-label={t("settings.field.kinds")}>
 							{KINDS.map((kind) => (
-								<PickListItem
-									key={kind}
-									selected={form.kind === kind}
-									mark={kind === "relation" ? "→" : undefined}
-									onClick={() => set({ kind })}
-								>
+								<PickListItem key={kind} selected={form.kind === kind} onClick={() => set({ kind })}>
 									{kindWord(kind)}
 								</PickListItem>
 							))}
