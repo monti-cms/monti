@@ -432,6 +432,20 @@ function FieldSheetBody({
 						</TextButton>
 					</Inline>
 				) : null}
+				{/* How many of the choices are picked belongs with the choices, not with the rules. */}
+				{switchRow(t("settings.field.many"), form.many, (many) => set({ many }))}
+			</SheetSection>
+		) : null;
+
+	// What a relation picks from: the collection it points at, how many, and whether a name not in the list makes a new entry.
+	const picks =
+		form.kind === "relation" ? (
+			<SheetSection title={t("settings.field.picks")}>
+				<Stack gap={4}>
+					{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
+					{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
+					{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) => set({ createMissing }))}
+				</Stack>
 			</SheetSection>
 		) : null;
 
@@ -479,7 +493,6 @@ function FieldSheetBody({
 						)}
 					</>
 				) : null}
-				{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
 				{form.kind === "media"
 					? pickRow(
 							t("settings.field.accept"),
@@ -492,15 +505,6 @@ function FieldSheetBody({
 							(accept) => set({ accept: accept as Form["accept"] }),
 						)
 					: null}
-				{form.kind === "relation" ? (
-					<>
-						{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
-						{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
-						{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) =>
-							set({ createMissing }),
-						)}
-					</>
-				) : null}
 				{pickRow(
 					t("settings.field.locale"),
 					"field-locale",
@@ -517,6 +521,7 @@ function FieldSheetBody({
 		<Stack gap={0}>
 			{about}
 			{options}
+			{picks}
 			{rules}
 		</Stack>
 	);
