@@ -1,12 +1,10 @@
 import { useRef } from "react";
-import { Renew } from "../../icons";
 import {
 	Box,
 	CurrentProposal,
 	Del,
 	FormField,
 	FormFieldLabel,
-	IconButton,
 	Ins,
 	Marker,
 	MemoCardPopover,
@@ -52,14 +50,10 @@ export function EditorProposalScreen() {
 								요약
 							</FormFieldLabel>
 							<Textarea
+								size="md"
 								id="ref-summary"
 								defaultValue="리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것."
 								proposal
-								action={
-									<IconButton label="본문에서 가져오기">
-										<Renew aria-hidden />
-									</IconButton>
-								}
 							/>
 						</FormField>
 					}

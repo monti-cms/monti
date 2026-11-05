@@ -26,6 +26,9 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 - Before building something, search `packages/ui/src/index.ts` and the component pages for an existing part. Reuse it; extend it with a prop only if the docs describe that variant.
 - A place that takes input holds the input part itself from the start (`Input`, `Textarea`, `Combobox`, `Select`, `Switch` …). Never draw the value as text or a button that turns into the input when pressed.
 - If the board disagrees with the docs or with an existing part (a width, a color, a label), do not pick one. Stop and report it.
+- A map row or a board detail is not a reason by itself. For each part a place gets, say what the person does with it; a mark, line or column that repeats what is already shown is dropped (and the map changed), not built.
+- No control is greyed out without its reason shown where the person acts (README principles 7–10).
+- A pressable thing's shape comes from where it sits (button.md, 모양 기준): a pill on the page ground at one line's height; 6px only for rows in a floating surface and blocks taller than a line; no shape for text buttons, tabs and whole rows. Every pressable thing changes when pointed at; nothing that cannot be pressed shows a pointer.
 
 ## Order of work
 
@@ -35,6 +38,12 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 4. Then the screen, composing only those parts.
 5. Run `pnpm check:design` with the other checks.
 6. Before the change joins a shared branch, pass the three gates: `check:design`, the `design-review` agent on its diff, and a side-by-side of every changed state with its board at 1440×900.
+7. Before handing a screen over, check what a still screenshot cannot show:
+   - Measure the rows of each group (heights and gaps in px, from the DOM): one group, one control height, one gap.
+   - Box controls (buttons, inputs, selects, chips, option and switch rows, menu rows, sidebar items) measure 36, 32, 28 or 24 and nothing else; a text control (`TextButton`, tabs, `FilterButton`, a drag handle) is pressable over at least 24px (`HIT_AREA`). `check:design` (`fixed-height`) catches raw heights in classes, not heights made of padding, so measure (tokens.md, 높이 기준).
+   - Look at the in-between states: mid-drag (mouse held, screenshot), right after a press, after a retry or a reload.
+   - Compare every panel with the board it reuses (a preview of the editor's property panel against the editor board), not only with its own map.
+   - An agent's "matches the board" is a claim: look yourself.
 
 ## When you brief another agent
 

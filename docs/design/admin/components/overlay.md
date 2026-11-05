@@ -32,7 +32,7 @@
 
 ### 코드
 
-`Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`. `DialogPortal`과 `DialogOverlay`는 `DialogContent`가 이미 그리는 포털과 흐린 바탕이라 화면에서 쓰지 않는다)와 `AlertDialog`(다른 무엇보다 먼저 답해야 하는 질문. 자기 버튼이나 Escape로만 닫힌다)가 있다. `AlertDialog`는 `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction`과 함께 쓴다(`AlertDialogPortal`과 `AlertDialogOverlay`는 `Dialog`의 것과 같은 짝이다). `AlertDialogContent`에는 `wide` 크기(520px)가 있다. 건드리는 것을 줄마다 선택지와 함께 나열하는 질문(영구 삭제 검토)에 쓴다. `DialogFormFooter`는 폼을 담은 대화상자의 푸터다. 취소 글자 버튼과 알약 하나가 있고, 알약은 요청이 도는 동안 `busyLabel`을 보인다. 모달이 열리면 포커스는 첫 텍스트 필드에, 없으면 모달 자체에 간다. 그래서 모달이 나타나는 순간 포커스 링을 보이는 버튼이 없다.
+`Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`. `DialogPortal`과 `DialogOverlay`는 `DialogContent`가 이미 그리는 포털과 흐린 바탕이라 화면에서 쓰지 않는다)와 `AlertDialog`(다른 무엇보다 먼저 답해야 하는 질문. 자기 버튼이나 Escape로만 닫힌다)가 있다. `AlertDialog`는 `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction`과 함께 쓴다(`AlertDialogPortal`과 `AlertDialogOverlay`는 `Dialog`의 것과 같은 짝이다). `AlertDialogContent`에는 `wide` 크기(520px)가 있다. 건드리는 것을 줄마다 선택지와 함께 나열하는 질문(영구 삭제 검토)에 쓴다. `DialogFormFooter`는 폼을 담은 대화상자의 푸터다. 취소 글자 버튼과 알약 하나가 있고, 알약은 요청이 도는 동안 `busyLabel`을 보인다. 꺼진 상태(`disabled`)는 없다. 폼이 아직 준비되지 않았어도 알약은 눌리고, 누른 그때 고칠 필드가 오류 줄(`aria-invalid` + `FormFieldError`)과 포커스로 까닭을 말한다(원칙 7). 모달이 열리면 포커스는 첫 텍스트 필드에, 없으면 모달 자체에 간다. 그래서 모달이 나타나는 순간 포커스 링을 보이는 버튼이 없다.
 
 ## 시트
 
@@ -46,7 +46,7 @@
 
 `Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). 흐린 페이지 위에 왼쪽 가장자리에 선을 두고 열리며, 모서리가 각지고 `shadow-sheet`를 가진다. 폭은 정해져 있다. `SheetHeader`에는 ✦ 자리가 없다. `closable={false}`이면(시트가 일하는 중이라 떠날 수 없다) 닫기 버튼이 없다. 본문이 시트보다 길면 스크롤된다. 제목 끝에 `SheetTitle of`로 시트가 무엇에 관한 것인지 붙일 수 있다("필드 추가 · 노트").
 
-`SheetSection`은 본문의 제목 있는 한 부분이다(필드 시트의 "입력 규칙"). 제목은 14px semibold이고, 그 아래에 필드가 오며, 다음 섹션은 40px 아래에 온다. 선은 긋지 않고 여백만으로 절을 나눈다(2026-11-05, 소유자). 필드 사이(18px)보다 확실히 넓어서 필드의 밑줄과 섞이지 않는다. 제목 끝에 `LockMark`를 둘 수 있다. `SheetSplit`은 본문을 둘로 나눈다. 왼쪽에 목록(150px, 오른쪽 가장자리에 선), 오른쪽에 자기 탭 아래의 작업이 온다. "필드 추가"가 이것을 쓴다. 종류는 `PickList`(listbox)이고, 고른 종류의 설정이 그 옆에 "기본"과 "고급" 탭 아래에 놓인다. `SheetSummary`는 본문 끝에서 만들어질 것을 한 줄로 말한다(도구 바탕, `radius-lg`, 12/16 안쪽 여백, meta 크기의 muted 글자).
+`SheetBody`의 자식은 18px 간격이다(필드 사이). `SheetSection`을 담은 본문은 자기 부분들을 40px 간격으로 세운다. 제목 없는 첫 부분(필드 시트의 "이 필드는 무엇인가": 식별자, 라벨, 설명)도 그 부분 하나로 센다. `SheetSection`은 본문의 제목 있는 한 부분이다(필드 시트의 "입력 규칙"). 제목은 14px semibold이고, 그 아래에 필드가 18px 간격으로 온다. 자기 둘레에 여백을 갖지 않는다. 절 사이 40px는 본문이 정하므로, 화면이 간격을 0으로 감싸 되돌리는 일은 없다. 선은 긋지 않고 여백만으로 절을 나눈다(2026-11-05, 소유자). 필드 사이(18px)보다 확실히 넓어서 필드의 밑줄과 섞이지 않는다. 절 이름은 사람이 그 값으로 하는 일이다(원칙 9). 잠긴 값은 절 제목이 아니라 그 줄에 자물쇠(`LockMark`)로 보이고, 값은 글로 읽힌다. 검토 시트처럼 변경 블록이 이어지는 본문은 따로 표시하지 않는다. 첫 블록은 위 여백 없이 본문 안쪽 여백(20px)에서 시작한다([change.md](change.md)). `SheetSplit`은 본문을 둘로 나눈다. 왼쪽에 목록(150px, 오른쪽 가장자리에 선), 오른쪽에 자기 탭 아래의 작업이 온다. "필드 추가"가 이것을 쓴다. 종류는 `PickList`(listbox)이고, 고른 종류의 설정이 그 옆에 놓인다. 만들어질 것을 본문 끝에서 한 줄로 다시 말하는 요약 줄은 두지 않는다. 시트가 이미 그것을 보이고 있다(원칙 8). `SheetSummary`는 없앴다.
 
 ## 사이드 패널
 
@@ -60,7 +60,7 @@
 
 ### 코드
 
-`PropertyPanel`은 글의 속성 창이다. 폭 300px의 `SidePanel`로, 머리 자리에 탭 바(`TabsList variant="bar"`)가 있고, 제목과 닫기 버튼이 없으며, 그 아래에 속성들이 있다. `PropertyGroup`은 조용한 소제목("분류")을 붙일 수 있는 행 묶음이다. 행 사이는 20px이고, 묶음은 따로 선을 긋지 않는다. 속성 하나는 `FormField`다. 행의 선은 값 자리 입력 부품의 밑줄 하나뿐이다. 위에 레이블(`FormFieldLabel`, mono 11)이 있고 레이블 행 오른쪽 끝에 `action`이 있으며, 아래에 값 자리의 입력 부품(`size="md"`, 32px)이 처음부터 있다(필드 › 속성 목록 참고). 바꿀 수 없는 값은 글(`Text variant="note"`)로, 그 까닭은 `FormFieldDescription` 한 줄로 둔다. 어시스턴트가 쓰거나 제안한 값은 그 입력 부품의 `proposal`이다. 어시스턴트 버튼은 포인터나 키보드가 행 안에 있는 동안, 그리고 일하는 동안에만 보인다.
+`PropertyPanel`은 글의 속성 창이다. 폭 300px의 `SidePanel`로, 머리 자리에 탭 바(`TabsList variant="bar"`)가 있고, 제목과 닫기 버튼이 없으며, 그 아래에 속성들이 있다. `PropertyGroup`은 조용한 소제목("분류", 첫 행 12px 위)을 붙일 수 있는 행 묶음이다. 행 사이는 20px이고, 묶음은 따로 선을 긋지 않는다. 묶음은 자기 둘레에 여백을 갖지 않는다. 창이 탭 바 아래 20px, 묶음 사이 24px를 정한다. 속성 하나는 `FormField`다. 행의 선은 값 자리 입력 부품의 밑줄 하나뿐이다. 위에 레이블(`FormFieldLabel`, mono 11)이 있고 레이블 행 오른쪽 끝에 `action`이 있으며, 아래에 값 자리의 입력 부품(`size="md"`, 32px)이 처음부터 있다(필드 › 속성 목록 참고). 바꿀 수 없는 값은 글(`Text variant="note"`)로, 그 까닭은 `FormFieldDescription` 한 줄로 둔다. 어시스턴트가 쓰거나 제안한 값은 그 입력 부품의 `proposal`이다. 어시스턴트 버튼은 포인터나 키보드가 행 안에 있는 동안, 그리고 일하는 동안에만 보인다.
 
 `SidePanel`: `title`은 넣지 않아도 된다(없으면 머리가 없다. 이때 `aria-label`을 주고, 고정된 탭 행이면 `bar`를 준다). `width`는 `side`(360px. 목록 옆의 파일이나 활동), `panel`(300px. 글의 속성), `assistant`(380px) 중 하나이고, 그 폭에서 시작한다. 관리자는 왼쪽 가장자리를 끌어(또는 포커스 후 화살표 키로) 시작 폭의 두 배까지 넓힐 수 있고, 시작 폭보다 좁힐 수는 없다. 두 번 누르면 시작 폭으로 돌아간다. 바꾼 폭은 이 브라우저에 `resizeKey`(기본 `panel:<width>`, 같은 종류의 패널끼리 나눠 쓴다)로 기억된다. 사이드바와 같은 `ResizeHandle`이다. 제목은 16px bold다. 머리에 패널 아이콘 버튼과 닫기 버튼을 받을 수 있고(닫기 버튼은 `onClose`가 있거나, 동작 없이 모양만 그릴 때 `closable`이면 보인다), 알약 하나를 담는 발(`footer`, 위에 선)을 받는다. 어시스턴트의 입력 상자는 `composer`에 둔다. 위에 선이 없고 위 12px·양옆과 아래 16px이다. 패널 안의 다른 보기(어시스턴트의 지난 대화)는 `back`(이름과 동작)으로 제목 앞에 뒤로 가기 버튼을 둔다. 패널의 이름은 그 제목이다. 화면 옆에 한 행으로 둔다. 좁은 화면에서는 폭 전체를 차지한다. `onSubmit`이 있으면 본문과 발이 한 폼이 된다. 시트와 함께 쓰는 모양은 `PANEL_*` 문자열이다(60px 머리, 위 20px·양옆 24의 본문).
 

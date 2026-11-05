@@ -2,28 +2,26 @@
 
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
-import { Option } from "./option";
+import { Option, OptionContext } from "./option";
 
 /**
- * One choice out of a few, as a column of `RadioItem` rows. `height` stands every row at a control's height, 4px apart, so a row that holds a select or an
- * input is as high as one that does not (the review's choices: `md`).
+ * One choice out of a few, as a column of `RadioItem` rows. Every row stands at a control's height, `md` (32px) unless `height` says `sm`, 4px apart, so a
+ * row that holds a select or an input is as high as one that does not.
  */
-function RadioGroup({ className, height, ...props }: RadioGroupPrimitive.Props & { height?: "md" | "sm" }) {
+function RadioGroup({ className, height = "md", ...props }: RadioGroupPrimitive.Props & { height?: "md" | "sm" }) {
+	const outer = React.useContext(OptionContext);
+	const rows = React.useMemo(() => ({ ...outer, height }), [outer, height]);
 	return (
-		<RadioGroupPrimitive
-			data-slot="radio-group"
-			data-height={height}
-			className={cn(
-				"group/radio-group flex flex-col",
-				height ? "gap-monti-4" : "gap-monti-12",
-				height === "md" && "[&>[data-slot=radio-item]]:min-h-monti-control-md",
-				height === "sm" && "[&>[data-slot=radio-item]]:min-h-monti-control-sm",
-				className,
-			)}
-			{...props}
-		/>
+		<OptionContext value={rows}>
+			<RadioGroupPrimitive
+				data-slot="radio-group"
+				data-height={height}
+				className={cn("group/radio-group flex flex-col gap-monti-4", className)}
+				{...props}
+			/>
+		</OptionContext>
 	);
 }
 

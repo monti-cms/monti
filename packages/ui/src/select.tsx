@@ -54,11 +54,8 @@ function SelectTrigger({
 	...props
 }: SelectPrimitive.Trigger.Props & {
 	size?: "sm" | "md" | "default";
-	/**
-	 * `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter; `choice` at the end of a choice row (at least 120px, so the line reads as a
-	 * field; at the note size, on the row's own 20px line with 1px under it, so the row keeps its height).
-	 */
-	width?: "fit" | "full" | "choice";
+	/** `full` in a form, beside full-width inputs; `fit` in a toolbar, a filter or at the end of a row (a review's choice, a field's rule). */
+	width?: "fit" | "full";
 	/** The assistant picked this value and nobody has touched it yet. Turn it off when the value is changed. */
 	proposal?: boolean;
 }) {
@@ -72,12 +69,7 @@ function SelectTrigger({
 			className={cn(
 				SELECT_TRIGGER,
 				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6",
-				width === "full"
-					? "w-full"
-					: width === "choice"
-						? // Two attributes, so the row's line wins over the size's own padding and type.
-							"w-fit min-w-30 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"
-						: "w-fit",
+				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}
 			{...props}

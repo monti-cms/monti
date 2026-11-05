@@ -11,7 +11,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Rows with text buttons, each its own column; the meta line by state: usage, nothing used yet (faint, the title muted), unreadable (danger). */
+/** Rows with text buttons, each its own column; the meta line by state: usage, nothing used yet (faint, the title muted), unreadable (danger). Rows with a meta line are 74px. */
 export const Keys: Story = {
 	render: () => (
 		<ListSection title="저장된 키" count={3}>
@@ -57,7 +57,7 @@ export const Keys: Story = {
 	),
 };
 
-/** A row that ends in one 320px control, named by the row's title. */
+/** A row that ends in one 320px control, named by the row's title: a title alone is 52px, the control stands in it. */
 export const Control: Story = {
 	render: () => (
 		<ListSection title="모델" count={1} countTone="warning">
@@ -71,7 +71,7 @@ export const Control: Story = {
 	),
 };
 
-/** A review sheet's groups: what is saved at once and what goes into a pull request. The changes have no inset, so the titles are `flush`. */
+/** A review sheet's groups: what is saved at once and what goes into a pull request. The changes have no inset, so the titles are `flush`, and the list keeps 16px under the line. */
 export const ReviewSheet: Story = {
 	render: () => (
 		<Box width="sheet">

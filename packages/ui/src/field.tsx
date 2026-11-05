@@ -46,12 +46,19 @@ function FormFieldLegend({
 	);
 }
 
-function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
+/** Fields in a column, 24px apart; `density="compact"` puts them 16px apart (a group inside a group). The group spaces its own fields. */
+function FormFieldGroup({
+	className,
+	density = "default",
+	...props
+}: React.ComponentProps<"div"> & { density?: "default" | "compact" }) {
 	return (
 		<div
 			data-slot="field-group"
+			data-density={density}
 			className={cn(
-				"group/field-group @container/field-group flex w-full flex-col gap-monti-24 data-[slot=checkbox-group]:gap-monti-12 *:data-[slot=field-group]:gap-monti-16",
+				"group/field-group @container/field-group flex w-full flex-col",
+				density === "compact" ? "gap-monti-16" : "gap-monti-24",
 				className,
 			)}
 			{...props}

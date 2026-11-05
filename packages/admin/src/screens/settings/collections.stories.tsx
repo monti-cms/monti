@@ -147,6 +147,11 @@ export const AddTextField: Story = {
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
 		await addField(screen, "글자");
+		// The add button is never greyed out: pressed with no identifier, the identifier says so and takes the focus (README principle 7).
+		await userEvent.click(screen.body.getByRole("button", { name: "필드 추가" }));
+		await screen.body.findByText("이 칸을 채워요.");
+		await expect(screen.body.getByLabelText(/^식별자/)).toHaveFocus();
+		await expect(screen.body.getByLabelText(/^식별자/)).toHaveAttribute("aria-invalid", "true");
 		fill(screen.body.getByLabelText("표시 이름"), "읽는 시간");
 		fill(screen.body.getByLabelText(/^식별자/), "readingTime");
 	},
@@ -319,7 +324,11 @@ export const NewCollectionTaken: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
-		fill(await body.findByLabelText(/^이름/), "글");
+		// The create button is never greyed out: pressed with both empty, each says so and the first takes the focus (README principle 7).
+		await userEvent.click(await body.findByRole("button", { name: "만들기" }));
+		await expect(await body.findAllByText("이 칸을 채워요.")).toHaveLength(2);
+		await expect(body.getByLabelText(/^이름/)).toHaveFocus();
+		fill(body.getByLabelText(/^이름/), "글");
 		fill(body.getByLabelText(/^식별자/), "post");
 		await body.findByText("이미 쓰는 이름이에요.");
 	},
@@ -424,7 +433,8 @@ export const ReadOnlyBasics: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
-		await page.findByText("구조");
+		// The public address is the file's: on the live site it reads as text, its lock on its own row.
+		await page.findByRole("img", { name: "운영 사이트에서는 잠김" });
 	},
 };
 

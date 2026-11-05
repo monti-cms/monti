@@ -1,4 +1,4 @@
-import { Box, Checkbox, Grid, Inline, Option, Section, Text, TextButton } from "@monti-cms/ui";
+import { Checkbox, Grid, Inline, Option, Section, Text, TextButton } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at, HEADINGS, listedBlocks } from "./schema-draft";
 import type { CollectionsDraft } from "./use-collections-draft";
@@ -29,31 +29,29 @@ export function EditorTab({ model, collection: c }: { model: CollectionsDraft; c
 	}));
 
 	const choices = (items: Choice[]) => (
-		// Each option row stands in 36px: 6px above and below its line, 16px between rows (the board's grid).
-		<Box paddingY={6}>
-			<Grid columns={3} gap={16}>
-				{items.map((item) => (
-					<Option key={item.path}>
-						<Checkbox
-							checked={draft.value(item.path) !== false}
-							onCheckedChange={(checked) => draft.set(item.path, checked)}
-						/>
-						{item.mono ? (
-							<Text mono tone="inherit">
-								{item.label}
-							</Text>
-						) : (
-							item.label
-						)}
-						{model.changed.includes(item.path) ? (
-							<Text variant="meta" tone="warning">
-								{t("settings.editor.changed")}
-							</Text>
-						) : null}
-					</Option>
-				))}
-			</Grid>
-		</Box>
+		// Each option row stands at the medium control height (32px), 4px apart, like every group of choices.
+		<Grid columns={3} gap={4}>
+			{items.map((item) => (
+				<Option key={item.path}>
+					<Checkbox
+						checked={draft.value(item.path) !== false}
+						onCheckedChange={(checked) => draft.set(item.path, checked)}
+					/>
+					{item.mono ? (
+						<Text mono tone="inherit">
+							{item.label}
+						</Text>
+					) : (
+						item.label
+					)}
+					{model.changed.includes(item.path) ? (
+						<Text variant="meta" tone="warning">
+							{t("settings.editor.changed")}
+						</Text>
+					) : null}
+				</Option>
+			))}
+		</Grid>
 	);
 
 	return (
@@ -81,7 +79,7 @@ export function EditorTab({ model, collection: c }: { model: CollectionsDraft; c
 			<Section stacked dense title={t("settings.editor.marks")}>
 				{choices(marks)}
 			</Section>
-			<Section stacked dense last title={t("settings.editor.headings")}>
+			<Section stacked dense title={t("settings.editor.headings")}>
 				{choices(headings)}
 			</Section>
 		</>

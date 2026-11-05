@@ -21,7 +21,7 @@ interface MediaPickerFolder {
 /**
  * The library as a picker (images to insert, a cover image, files to attach): a 760px modal with the folders at the left, a search box and the files as
  * three columns of tiles at the right, "Upload" at the bottom left, and Cancel and the one pill at the bottom right. Choosing and then pressing the
- * pill puts the file in at once; there is no step after it. The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
+ * pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there (`confirmHidden`). The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
  * `folders` under the top entry `allLabel`; `folder` is the picked one, `null` for all.
  */
 function MediaPicker({
@@ -41,7 +41,7 @@ function MediaPicker({
 	uploadDisabled,
 	confirmLabel,
 	onConfirm,
-	confirmDisabled,
+	confirmHidden,
 	notice,
 	children,
 }: {
@@ -65,7 +65,8 @@ function MediaPicker({
 	uploadDisabled?: boolean;
 	confirmLabel: string;
 	onConfirm: () => void;
-	confirmDisabled?: boolean;
+	/** Nothing is picked yet: the pill is not there until a file is (a greyed pill would say nothing about why). */
+	confirmHidden?: boolean;
 	/** Shown in place of the tiles when there is something to say instead (the list could not be loaded, nothing is there). */
 	notice?: React.ReactNode;
 	children?: React.ReactNode;
@@ -108,9 +109,11 @@ function MediaPicker({
 						{uploadLabel}
 					</Button>
 					<DialogClose render={<Button variant="ghost" />}>{labels.cancel}</DialogClose>
-					<Button type="button" disabled={confirmDisabled} onClick={onConfirm}>
-						{confirmLabel}
-					</Button>
+					{confirmHidden ? null : (
+						<Button type="button" onClick={onConfirm}>
+							{confirmLabel}
+						</Button>
+					)}
 				</div>
 			</DialogContent>
 		</Dialog>
@@ -138,7 +141,7 @@ function PickerFolder({
 			className={cn(
 				// A sub-folder is indented one step (24 instead of the row's 10).
 				depth > 0 && "pl-monti-24",
-				"flex h-8 w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
+				"flex h-monti-control-md w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
 				on ? "bg-monti-current font-semibold text-monti-default" : "text-monti-muted",
 			)}
 		>

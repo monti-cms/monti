@@ -21,6 +21,7 @@ function Affix({
 	action,
 	proposal = false,
 	width = "full",
+	size = "default",
 	className,
 	...props
 }: Omit<React.ComponentProps<"input">, "size" | "prefix"> & {
@@ -34,6 +35,8 @@ function Affix({
 	proposal?: boolean;
 	/** `full` runs the typed part to the field's end; `fit` keeps it as wide as its words, the suffix right after. */
 	width?: "full" | "fit";
+	/** The field's height: `default` 36px (forms), `md` 32px (a side panel, among its other `md` fields). */
+	size?: "default" | "md";
 }) {
 	// A click on the field's own text or empty space goes to the input; a click on the action, or on the input itself, is left alone.
 	const focusInput = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -49,11 +52,13 @@ function Affix({
 		<div
 			data-slot="affix"
 			data-proposal={proposal || undefined}
+			data-size={size}
 			onClick={focusInput}
 			className={cn(
 				cn(
-					"group/affix flex h-monti-control-lg cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+					"group/affix flex cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
 				),
+				size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
 				bare &&
 					"border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				className,

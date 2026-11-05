@@ -18,7 +18,7 @@ const remove = (
 	</IconButton>
 );
 
-/** The source, an added language with its change dot, and one taken out (struck through). */
+/** The source, an added language with its change dot, and one taken out (struck through). Every row is 36px; the × and the small button sit in it with no margins. */
 export const Languages: Story = {
 	render: () => (
 		<Stack as="ul" gap={0} width="content">

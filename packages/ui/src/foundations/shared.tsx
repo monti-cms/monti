@@ -11,7 +11,7 @@ export { tokens };
 
 export const px = (name: string) => `var(--monti-${name})`;
 
-/** The class a token is used through: `bg-tool` → `bg-monti-tool`, `fg-faint` → `text-monti-faint`, `width-sheet` → `w-monti-sheet`, `height-icon-button` → `h-monti-icon-button`. */
+/** The class a token is used through: `bg-tool` → `bg-monti-tool`, `fg-faint` → `text-monti-faint`, `width-sheet` → `w-monti-sheet`, `height-control-md` → `h-monti-control-md`. */
 const CLASS_PREFIX: Record<string, string> = { fg: "text", width: "w", height: "h" };
 export const classOf = (token: string) => {
 	const [group, ...rest] = token.split("-");

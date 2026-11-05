@@ -20,9 +20,12 @@ export const SUB_ALIGN_OFFSET = -7;
 export const MENU_MOTION =
 	"origin-(--transform-origin) duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in";
 
-/** The row every list draws: a menu, a searchable list and a pick list share it, and each adds how its current row is marked. */
+/**
+ * The row every list draws: a menu, a searchable list and a pick list share it, and each adds how its current row is marked. It stands at the medium
+ * control height (32px), the same as a medium field or button, with no padding of its own above or below: the words sit in the middle.
+ */
 export const MENU_ROW =
-	"flex min-w-0 cursor-default select-none items-center gap-[10px] rounded-monti-md px-[9px] py-[7px] text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
+	"flex min-h-monti-control-md min-w-0 cursor-default select-none items-center gap-[10px] rounded-monti-md px-[9px] text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
 
 /**
  * One row of a menu or picker list (Base UI: menu, select, combobox). The row the pointer or the keyboard is on, and the row whose second

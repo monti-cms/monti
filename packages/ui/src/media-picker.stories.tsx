@@ -55,7 +55,7 @@ function Picker({ files = false }: { files?: boolean }) {
 			onUpload={() => {}}
 			confirmLabel="넣기"
 			onConfirm={() => {}}
-			confirmDisabled={picked === null}
+			confirmHidden={picked === null}
 		>
 			{items.map((item) => (
 				<Tile

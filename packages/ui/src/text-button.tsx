@@ -5,6 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
 import { useUiLabels } from "./labels";
 import { Spinner } from "./spinner";
 
@@ -18,7 +19,7 @@ import { Spinner } from "./spinner";
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	`inline cursor-pointer rounded-monti-sm border-0 decoration-1 underline-offset-4 not-disabled:hover:underline not-disabled:active:decoration-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/30 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${HIT_AREA} inline cursor-pointer rounded-monti-sm border-0 decoration-1 underline-offset-4 not-disabled:hover:underline not-disabled:active:decoration-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/30 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {

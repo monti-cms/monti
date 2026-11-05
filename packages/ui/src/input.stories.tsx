@@ -93,27 +93,29 @@ export const Inline: Story = {
 	),
 };
 
-/** `action`: a button at the end of the line (fill from the body). The underline runs under it too, and turns ink or danger with the field. */
+/** `action`: a button at the end of the line (make the address again from the title). The underline runs under it too, and turns ink or danger with the field. */
 export const WithAction: Story = {
 	render: () => (
 		<Stack gap={24} className="max-w-sm">
 			<Input
 				size="sm"
-				aria-label="부제"
-				placeholder="비어 있음"
+				aria-label="주소"
+				placeholder="제목에서 만들어요"
+				mono
 				action={
-					<IconButton label="본문에서 가져오기">
+					<IconButton label="제목으로 다시 만들기">
 						<Renew aria-hidden />
 					</IconButton>
 				}
 			/>
 			<Input
 				size="sm"
-				aria-label="부제"
+				aria-label="주소"
 				aria-invalid
-				defaultValue="너무 긴 부제"
+				mono
+				defaultValue="first post"
 				action={
-					<IconButton label="본문에서 가져오기">
+					<IconButton label="제목으로 다시 만들기">
 						<Renew aria-hidden />
 					</IconButton>
 				}

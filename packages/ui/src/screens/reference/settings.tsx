@@ -28,13 +28,18 @@ import {
 } from "../../index";
 import { AdminFrame } from "./frame";
 
-/** The settings tabs; `open` is the current one, `dot` marks it changed. */
+type SettingsTab = "site" | "locales" | "schema" | "admin";
+
+/**
+ * The settings tabs; `open` is the current one. `changed` marks the other tabs that hold unsaved changes: the open tab never carries the dot,
+ * since its own changes are on the page and in the save group.
+ */
 export function SettingsTabs({
 	open,
-	dot,
+	changed = {},
 }: {
-	open: "site" | "locales" | "schema" | "admin";
-	dot?: "warning" | "proposal";
+	open: SettingsTab;
+	changed?: Partial<Record<SettingsTab, "warning" | "proposal">>;
 }) {
 	const tabs = [
 		["site", "사이트"],
@@ -45,7 +50,7 @@ export function SettingsTabs({
 	return (
 		<TabLinks variant="toolbar">
 			{tabs.map(([id, label]) => (
-				<TabLink key={id} current={id === open} dot={id === open ? dot : undefined}>
+				<TabLink key={id} current={id === open} dot={id === open ? undefined : changed[id]}>
 					{label}
 				</TabLink>
 			))}
@@ -57,27 +62,40 @@ export function SettingsTabs({
 export function ShownSelect({
 	value,
 	width = "full",
+	size,
 	proposal,
 	id,
+	label,
 }: {
 	value: string;
-	width?: "fit" | "full" | "choice";
+	width?: "fit" | "full";
+	size?: "sm" | "md" | "default";
 	proposal?: boolean;
 	id?: string;
+	/** The name for a screen reader when no label names the select (the section title does). */
+	label?: string;
 }) {
 	return (
 		<Select items={[{ value: "shown", label: value }]} value="shown">
-			<SelectTrigger id={id} width={width} proposal={proposal}>
+			<SelectTrigger id={id} width={width} size={size} proposal={proposal} aria-label={label}>
 				<SelectValue />
 			</SelectTrigger>
 		</Select>
 	);
 }
 
-/** A setting turned on or off at once. */
-export function SwitchOption({ label, checked = false }: { label: React.ReactNode; checked?: boolean }) {
+/** A setting turned on or off at once. `height` is that of the inputs around it: `lg` on a settings page, `md` (the default) in a sheet. */
+export function SwitchOption({
+	label,
+	checked = false,
+	height,
+}: {
+	label: React.ReactNode;
+	checked?: boolean;
+	height?: "lg" | "md";
+}) {
 	return (
-		<Option spread>
+		<Option spread height={height}>
 			{label}
 			<Switch checked={checked} />
 		</Option>
@@ -104,7 +122,7 @@ export function SettingsScreen() {
 					<ChangesBar label="바뀐 곳" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
 				</PageHeader>
 				<PageToolbar>
-					<SettingsTabs open="site" dot="warning" />
+					<SettingsTabs open="site" />
 				</PageToolbar>
 				<PageBody>
 					<Section title="이름과 링크">
@@ -152,7 +170,7 @@ export function SettingsScreen() {
 							<FormFieldLabel htmlFor="preview">미리보기 경로</FormFieldLabel>
 							<Affix id="preview" prefix="/" defaultValue="preview" />
 						</FormField>
-						<SwitchOption label="미리보기 경로에 언어 넣기" checked />
+						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
 					</Section>
 					<Section title="공개 주소" last>
 						<FormField>

@@ -20,7 +20,7 @@ const FILES = [
 	{ name: "hero-dark.png", detail: "2560×1440" },
 ];
 
-/** Inserting an image: the library open as a picker over the editor. */
+/** Inserting an image: the library open as a picker over the editor, nothing picked yet, so no "넣기" pill until a tile is. */
 export function ImageInsertScreen() {
 	return (
 		<>
@@ -76,6 +76,7 @@ export function ImageInsertScreen() {
 				onUpload={still}
 				confirmLabel="넣기"
 				onConfirm={still}
+				confirmHidden
 			>
 				{FILES.map((file) => (
 					<Tile

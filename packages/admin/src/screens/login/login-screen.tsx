@@ -19,6 +19,8 @@ import { useOperation } from "../../operations/use-operation";
 import type { AuthState } from "../../session";
 
 const MIN_PASSWORD = 10;
+/** The fields of a form stand this far apart, in every state: their reserved error lines already hold the room under each. */
+const FIELD_GAP = 16;
 const VERSION = pkg.version.split(".").slice(0, 2).join(".");
 
 /**
@@ -54,9 +56,12 @@ export function LoginScreen({
 							<Box border="bottom-contrast" />
 						</Stack>
 						{none ? (
-							<Text as="p" variant="title">
-								{title}
-							</Text>
+							<Stack gap={24}>
+								<Text as="p" variant="title">
+									{title}
+								</Text>
+								<Text as="p">{t("login.setUpAuth", { file: "monti.config.ts" })}</Text>
+							</Stack>
 						) : (
 							<Stack gap={24}>
 								{title !== undefined ? (
@@ -115,7 +120,7 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 				{withPassword ? (
 					<form onSubmit={submit}>
 						<Stack gap={12}>
-							<Stack gap={24}>
+							<Stack gap={FIELD_GAP}>
 								<FormField>
 									<FormFieldLabel htmlFor="email">{t("login.email")}</FormFieldLabel>
 									<Input
@@ -197,7 +202,7 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 		<form onSubmit={submit}>
 			<Stack gap={12}>
 				<Stack gap={12}>
-					<Stack gap={24}>
+					<Stack gap={FIELD_GAP}>
 						<FormField>
 							<FormFieldLabel htmlFor="email">{t("login.email")}</FormFieldLabel>
 							<Input
@@ -210,38 +215,36 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 							/>
 							<FormFieldError reserve>{shown.email}</FormFieldError>
 						</FormField>
-						<Stack gap={16}>
-							<FormField>
-								<FormFieldLabel htmlFor="password">{t("login.password")}</FormFieldLabel>
-								<SecretInput
-									kind="password"
-									showLabel={t("login.showPassword")}
-									hideLabel={t("login.hidePassword")}
-									id="password"
-									autoComplete="new-password"
-									value={password}
-									onChange={(event) => setPassword(event.target.value)}
-									aria-invalid={shown.password ? true : undefined}
-								/>
-								<FormFieldError reserve hint={t("login.passwordHint", { min: MIN_PASSWORD })}>
-									{shown.password}
-								</FormFieldError>
-							</FormField>
-							<FormField>
-								<FormFieldLabel htmlFor="confirm">{t("login.confirm")}</FormFieldLabel>
-								<SecretInput
-									kind="password"
-									showLabel={t("login.showPassword")}
-									hideLabel={t("login.hidePassword")}
-									id="confirm"
-									autoComplete="new-password"
-									value={confirm}
-									onChange={(event) => setConfirm(event.target.value)}
-									aria-invalid={shown.confirm ? true : undefined}
-								/>
-								<FormFieldError reserve>{shown.confirm}</FormFieldError>
-							</FormField>
-						</Stack>
+						<FormField>
+							<FormFieldLabel htmlFor="password">{t("login.password")}</FormFieldLabel>
+							<SecretInput
+								kind="password"
+								showLabel={t("login.showPassword")}
+								hideLabel={t("login.hidePassword")}
+								id="password"
+								autoComplete="new-password"
+								value={password}
+								onChange={(event) => setPassword(event.target.value)}
+								aria-invalid={shown.password ? true : undefined}
+							/>
+							<FormFieldError reserve hint={t("login.passwordHint", { min: MIN_PASSWORD })}>
+								{shown.password}
+							</FormFieldError>
+						</FormField>
+						<FormField>
+							<FormFieldLabel htmlFor="confirm">{t("login.confirm")}</FormFieldLabel>
+							<SecretInput
+								kind="password"
+								showLabel={t("login.showPassword")}
+								hideLabel={t("login.hidePassword")}
+								id="confirm"
+								autoComplete="new-password"
+								value={confirm}
+								onChange={(event) => setConfirm(event.target.value)}
+								aria-invalid={shown.confirm ? true : undefined}
+							/>
+							<FormFieldError reserve>{shown.confirm}</FormFieldError>
+						</FormField>
 					</Stack>
 					<Button type="submit" variant="primary" width="full" loading={create.pending}>
 						{create.pending ? t("login.creating") : t("login.create")}
@@ -257,8 +260,8 @@ function Closed({ onSignIn }: { onSignIn: () => void }) {
 	const { t } = useAdmin();
 	return (
 		<Stack gap={16} paddingTop={16}>
-			<FormFieldError>{t("auth.adminExists")}</FormFieldError>
-			<Button type="button" variant="secondary" width="full" onClick={onSignIn}>
+			<Text as="p">{t("auth.adminExists")}</Text>
+			<Button type="button" variant="primary" width="full" onClick={onSignIn}>
 				{t("login.goSignIn")}
 			</Button>
 		</Stack>

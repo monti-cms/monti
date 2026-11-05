@@ -54,7 +54,8 @@ function PropertyPanel({
 					</TabsList>
 				}
 			>
-				<TabsContent value={value} className="px-monti-24 pt-monti-8 pb-monti-32">
+				{/* The pane spaces its groups: 20px under the tab bar, 24px between groups. */}
+				<TabsContent value={value} className="flex flex-col gap-monti-24 px-monti-24 pt-monti-20 pb-monti-32">
 					{children}
 				</TabsContent>
 			</SidePanel>
@@ -62,7 +63,10 @@ function PropertyPanel({
 	);
 }
 
-/** A run of rows, with an optional quiet subheading above it ("Classification"), 20px between rows. No rule of its own: each input draws its line. */
+/**
+ * A run of rows, with an optional quiet subheading above it ("Classification", 12px over the first row), 20px between rows. No rule of its own: each input
+ * draws its line. It keeps no room around itself: the {@link PropertyPanel} puts 24px between groups.
+ */
 function PropertyGroup({
 	title,
 	className,
@@ -74,15 +78,15 @@ function PropertyGroup({
 		<section
 			data-slot="property-group"
 			aria-labelledby={title ? titleId : undefined}
-			className={cn("flex flex-col", className)}
+			className={cn("flex flex-col gap-monti-12", className)}
 			{...props}
 		>
 			{title && (
-				<h3 id={titleId} className="m-0 pt-monti-16 pb-monti-2 font-normal text-monti-micro text-monti-muted">
+				<h3 id={titleId} className="m-0 font-normal text-monti-micro text-monti-muted">
 					{title}
 				</h3>
 			)}
-			<div className="flex flex-col gap-monti-20 py-monti-10">{children}</div>
+			<div className="flex flex-col gap-monti-20">{children}</div>
 		</section>
 	);
 }

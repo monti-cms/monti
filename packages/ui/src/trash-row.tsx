@@ -47,9 +47,10 @@ function TrashRowTitle({
 }
 
 /**
- * The date cell of a trash row, at the end of its cell: the day it was discarded ("10. 27"; the column's name says what the day is) over how long it
- * stays ("30 days left"). The days turn to the warning tone when `urgent` (three or fewer): the purge is near. What the assistant discarded has its day
- * in blue after a ✦ (`byAssistant`); pressing it opens the conversation.
+ * The date cell of a trash row, at the end of its cell: how long it stays ("30 days left"), and over it the day it was discarded when `date` is
+ * given ("10. 27"; the column's name says what the day is). The trash list gives only the days left: the day it was thrown away says the same
+ * thing twice. The days turn to the warning tone when `urgent` (three or fewer): the purge is near. What the assistant discarded is blue after a ✦
+ * (`byAssistant`, on the day, or on the days left when there is no day); pressing it opens the conversation.
  */
 function TrashRowDate({
 	date,
@@ -59,8 +60,8 @@ function TrashRowDate({
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
-	/** The day ("10. 27"). */
-	date: React.ReactNode;
+	/** The day ("10. 27"); left out where the days left say enough (the trash list). */
+	date?: React.ReactNode;
 	/** Time left before the purge ("30 days left"). */
 	left: React.ReactNode;
 	urgent?: boolean;
@@ -70,27 +71,30 @@ function TrashRowDate({
 	 */
 	byAssistant?: { label: string; onOpen: () => void };
 }) {
+	const assistant = (words: React.ReactNode) =>
+		byAssistant ? (
+			<button
+				type="button"
+				aria-label={byAssistant.label}
+				onClick={byAssistant.onOpen}
+				className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+			>
+				<Spark aria-hidden className="size-monti-icon-xs" />
+				{words}
+			</button>
+		) : null;
 	return (
 		<span data-slot="trash-row-date" className={cn("inline-flex flex-col items-end gap-monti-4", className)} {...props}>
-			{byAssistant ? (
-				<button
-					type="button"
-					aria-label={byAssistant.label}
-					onClick={byAssistant.onOpen}
-					className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+			{date !== undefined &&
+				(assistant(date) ?? <span className="font-mono text-monti-meta text-monti-subtle">{date}</span>)}
+			{(date === undefined && assistant(left)) || (
+				<span
+					data-slot="trash-row-left"
+					className={cn("font-mono text-monti-meta", urgent ? "text-monti-warning" : "text-monti-faint")}
 				>
-					<Spark aria-hidden className="size-monti-icon-xs" />
-					{date}
-				</button>
-			) : (
-				<span className="font-mono text-monti-meta text-monti-subtle">{date}</span>
+					{left}
+				</span>
 			)}
-			<span
-				data-slot="trash-row-left"
-				className={cn("font-mono text-monti-meta", urgent ? "text-monti-warning" : "text-monti-faint")}
-			>
-				{left}
-			</span>
 		</span>
 	);
 }

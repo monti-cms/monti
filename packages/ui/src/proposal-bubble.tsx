@@ -7,7 +7,7 @@ import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
 const STEP =
-	"cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45";
+	"cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45";
 
 /**
  * The pill that floats over the status bar while proposals are waiting: the name of the request (a spark and the words, cut with … when long, so the source is clear even

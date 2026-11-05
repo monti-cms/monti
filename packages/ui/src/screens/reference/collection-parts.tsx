@@ -14,13 +14,10 @@ const collections = [
  */
 export function CollectionSettings({
 	tab,
-	changed,
 	save,
 	children,
 }: {
 	tab: "basics" | "editor";
-	/** The collections tab has an unsaved change. */
-	changed?: boolean;
 	save?: React.ReactNode;
 	children: React.ReactNode;
 }) {
@@ -31,9 +28,8 @@ export function CollectionSettings({
 				<TabLinks variant="toolbar">
 					<TabLink>사이트</TabLink>
 					<TabLink>언어</TabLink>
-					<TabLink current dot={changed ? "warning" : undefined}>
-						컬렉션
-					</TabLink>
+					{/* The open tab carries no dot: its own changes are on the page and in the save group. */}
+					<TabLink current>컬렉션</TabLink>
 					<TabLink>관리자</TabLink>
 				</TabLinks>
 			</PageToolbar>

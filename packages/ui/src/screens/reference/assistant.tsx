@@ -310,11 +310,13 @@ export function AssistantScreen() {
 							</PaginationItem>
 							{["1", "2", "3", "4", "5", "6"].map((page) => (
 								<PaginationItem key={page}>
-									<PaginationLink isActive={page === "1"}>{page}</PaginationLink>
+									<PaginationLink href="#" isActive={page === "1"}>
+										{page}
+									</PaginationLink>
 								</PaginationItem>
 							))}
 							<PaginationItem>
-								<PaginationNext />
+								<PaginationNext href="#" />
 							</PaginationItem>
 						</PaginationContent>
 					</Pagination>

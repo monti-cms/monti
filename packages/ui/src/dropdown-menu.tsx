@@ -103,14 +103,14 @@ function DropdownMenuItem({
 	variant?: "default" | "danger";
 	/** A small square row in a grid of rows (a color sample), its content centered. */
 	swatch?: boolean;
-	/** A second line under the name that says what the row leaves alone ("The Korean original stays"), small and faint. */
+	/** A second line under the name that says what the row leaves alone ("The Korean original stays"), small and faint. The row is then two lines tall, 7px above and below. */
 	caption?: React.ReactNode;
 }) {
 	return (
 		<MenuPrimitive.Item
 			data-slot="dropdown-menu-item"
 			data-variant={variant}
-			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", caption && "items-start", className)}
+			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", caption && "items-start py-[7px]", className)}
 			{...props}
 		>
 			{caption ? (

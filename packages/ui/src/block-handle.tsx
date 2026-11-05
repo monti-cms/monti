@@ -6,7 +6,7 @@ import { cn } from "./cn";
 import { Grip } from "./grip";
 
 const HANDLE_BUTTON =
-	"flex size-6 cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-monti-faint outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:bg-monti-selected aria-expanded:text-monti-default data-active:bg-monti-selected data-active:text-monti-default";
+	"flex size-monti-control-xs cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-faint outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:bg-monti-selected aria-expanded:text-monti-default data-active:bg-monti-selected data-active:text-monti-default";
 
 /**
  * The two marks in the left margin of an editor block: a + that adds an empty block below this one and opens the block picker (the same list as typing "/"), and the grip. Pressing the grip opens the block menu and dragging it

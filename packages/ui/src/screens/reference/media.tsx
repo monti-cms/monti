@@ -1,4 +1,4 @@
-import { FolderAdd, FolderParent, Upload } from "../../icons";
+import { FolderAdd, Upload } from "../../icons";
 import {
 	DropArea,
 	DropdownMenuItem,
@@ -37,11 +37,11 @@ const FILES: readonly { name: string; detail: string; picture?: string; ext?: st
 	{ name: "cybersecurity-code.jpg", detail: "1600×900 · 글 2", picture: sample("#2f3a2c", "#121611") },
 	{ name: "desk-morning.jpg", detail: "2400×1600 · 글 1", picture: sample("#d8cdb8", "#a69479") },
 	{ name: "seoul-night.jpg", detail: "3000×2000 · 글 1", picture: sample("#3a3f55", "#1c1e2b") },
-	{ name: "notes-scan.pdf", detail: "PDF · 2.1 MB · 사용 안 함", ext: "PDF" },
+	{ name: "notes-scan.pdf", detail: "2.1 MB · 사용 안 함", ext: "PDF" },
 	{ name: "cafe-window.jpg", detail: "2000×1333 · 글 1", picture: sample("#b9a184", "#6d5a44") },
 ];
 
-/** A media folder: the way up, its folders, then its files as tiles. */
+/** A media folder: its folders, then its files as tiles. The way up is the path over the title; a file's kind is on its tile once. */
 export function MediaScreen() {
 	return (
 		<AdminFrame open="media" folders={MEDIA_FOLDERS}>
@@ -90,7 +90,6 @@ export function MediaScreen() {
 				<DropArea>
 					<Stack gap={24} paddingTop={24} paddingX={12}>
 						<Grid columns="folders">
-							<FolderTile name="상위 폴더로" icon={<FolderParent aria-hidden />} />
 							<FolderTile name="covers" count={6} />
 							<FolderTile name="diagrams" count={3} />
 						</Grid>

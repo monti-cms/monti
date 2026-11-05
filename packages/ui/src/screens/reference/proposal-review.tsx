@@ -1,6 +1,7 @@
 import { ChevronLeft } from "../../icons";
 import {
 	Button,
+	PageBody,
 	PageColumn,
 	PageHeader,
 	ReviewCompare,
@@ -100,6 +101,12 @@ const blocks: readonly { label: string; line: Marked; before: Marked; after: Mar
 	},
 ];
 
+const files: readonly { name: string; folder: string }[] = [
+	{ name: "old-cover.png", folder: "Blog Assets" },
+	{ name: "scan-01.jpg", folder: "Blog Assets/scans" },
+	{ name: "tmp.gif", folder: "Blog Assets" },
+];
+
 const moves: readonly { title: string; path: string; included: boolean }[] = [
 	{ title: "2024 회고", path: "/retro-2024", included: true },
 	{ title: "리액트 18 정리", path: "/react-18", included: true },
@@ -108,7 +115,11 @@ const moves: readonly { title: string; path: string; included: boolean }[] = [
 	{ title: "블로그 이전 기록", path: "/blog-move", included: true },
 ];
 
-/** The review page of the assistant's proposal: what was asked, then each group of changes; `side` shows the rewrites side by side. */
+/**
+ * The review page of the assistant's proposal: what was asked, then each group of changes, every row its own check; `side` shows the rewrites
+ * side by side. A row's `end` says only a result or a failure, never what the group title already says. The page body spaces the parts: 16px
+ * under the header, 32px under the quote and between groups.
+ */
 export function ProposalReviewView({ side = false }: { side?: boolean }) {
 	return (
 		<AdminFrame open={null}>
@@ -123,119 +134,97 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 						<Button>17건 적용</Button>
 					</PageHeader>
 				</Stack>
-				<ReviewQuote>
-					“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고, ‘발행 후 고친 글’은 더 짧게 다듬어 줘. 쓰지 않는
-					이미지도 지워 줘.”
-				</ReviewQuote>
-				<ReviewGroup
-					title="다듬기"
-					meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
-					actions={
-						<>
-							<Button variant="ghost" size="sm">
-								편집기에서 보기
-							</Button>
-							<Separator orientation="vertical" length="control" flush />
-							<TabLinks>
-								<TabLink current={!side}>한 줄</TabLink>
-								<TabLink current={side}>나란히</TabLink>
-							</TabLinks>
-						</>
-					}
-				>
-					{side ? <ReviewCompareHead before="지금" after="제안" /> : null}
-					{blocks.map((block) =>
-						side ? (
-							<ReviewCompare
-								key={block.label}
-								included
-								includeLabel={`${block.label} 넣기`}
-								label={block.label}
-								before={marked(block.before)}
-								after={marked(block.after)}
-							/>
-						) : (
-							<ReviewLine key={block.label} included includeLabel={`${block.label} 넣기`} label={block.label}>
-								{marked(block.line)}
-							</ReviewLine>
-						),
-					)}
-				</ReviewGroup>
-				<ReviewGroup title="요약 채우기" meta="글 2편 · 되돌릴 수 있음">
-					<ReviewItem
-						included
-						includeLabel="타입 정리 메모 넣기"
-						title="타입 정리 메모"
-						path="/types-memo"
-						end={
-							<Text variant="micro" tone="subtle">
-								요약
-							</Text>
-						}
-					>
-						{marked([
-							["del", "비어 있음"],
-							" → ",
-							["ins", "자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모."],
-						])}
-					</ReviewItem>
-					<ReviewItem
-						included={false}
-						includeLabel="쓰는 중인 글 넣기"
-						title="쓰는 중인 글"
-						path="/draft-post"
-						muted
-						end={
-							<>
-								<Text variant="caption" tone="warning">
-									이 사이에 고쳐짐
-								</Text>{" "}
-								<TextButton variant="underline" size="caption">
-									다시 만들기
-								</TextButton>
-							</>
-						}
-					>
-						{marked([
-							["del", "비어 있음"],
-							" → ",
-							["ins", "글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."],
-						])}
-					</ReviewItem>
-				</ReviewGroup>
-				<ReviewGroup
-					title="2024 폴더로 옮기기"
-					meta="글 11편 · 되돌릴 수 있음"
-					actions={
-						<Button variant="ghost" size="sm">
-							11편 모두 빼기
-						</Button>
-					}
-				>
-					{moves.map((move) => (
-						<ReviewItem
-							key={move.path}
-							included={move.included}
-							includeLabel={`${move.title} 넣기`}
-							title={move.title}
-							path={move.path}
-							end={
-								<Text mono variant="meta" tone="subtle">
-									폴더 없음 → 2024
-								</Text>
-							}
-						/>
-					))}
-					<ReviewMore open={false} onOpenChange={none} moreLabel="6편 더 보기" lessLabel="접기" />
-				</ReviewGroup>
-				<ReviewGroup title="휴지통으로 보내기" meta="파일 3개 · 41 MB · 되돌릴 수 있음">
-					<ReviewItem
-						included
-						includeLabel="쓰지 않는 이미지 3개 넣기"
-						title="쓰지 않는 이미지 3개"
-						path="old-cover.png · scan-01.jpg · tmp.gif"
-					/>
-				</ReviewGroup>
+				<PageBody>
+					<Stack gap={32} paddingTop={16}>
+						<ReviewQuote>
+							“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고, ‘발행 후 고친 글’은 더 짧게 다듬어 줘. 쓰지 않는
+							이미지도 지워 줘.”
+						</ReviewQuote>
+						<Stack gap={32}>
+							<ReviewGroup
+								title="다듬기"
+								meta="발행 후 고친 글 · 3곳"
+								actions={
+									<>
+										<TextButton variant="underline">편집기에서 보기</TextButton>
+										<Separator orientation="vertical" length="control" flush />
+										<TabLinks>
+											<TabLink current={!side}>한 줄</TabLink>
+											<TabLink current={side}>나란히</TabLink>
+										</TabLinks>
+									</>
+								}
+							>
+								{side ? <ReviewCompareHead before="지금" after="제안" /> : null}
+								{blocks.map((block) =>
+									side ? (
+										<ReviewCompare
+											key={block.label}
+											included
+											includeLabel={`${block.label} 넣기`}
+											label={block.label}
+											before={marked(block.before)}
+											after={marked(block.after)}
+										/>
+									) : (
+										<ReviewLine key={block.label} included includeLabel={`${block.label} 넣기`} label={block.label}>
+											{marked(block.line)}
+										</ReviewLine>
+									),
+								)}
+							</ReviewGroup>
+							<ReviewGroup title="요약 채우기" meta="글 2편">
+								{/* The old summary was empty: the new one stands alone in the proposal's mark, with no struck "비어 있음 →" before it. */}
+								<ReviewItem included includeLabel="타입 정리 메모 넣기" title="타입 정리 메모" path="/types-memo">
+									{marked([["ins", "자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모."]])}
+								</ReviewItem>
+								<ReviewItem
+									included={false}
+									includeLabel="쓰는 중인 글 넣기"
+									title="쓰는 중인 글"
+									path="/draft-post"
+									muted
+									end={
+										<>
+											<Text variant="caption" tone="warning">
+												이 사이에 고쳐짐
+											</Text>{" "}
+											<TextButton variant="underline" size="caption">
+												다시 만들기
+											</TextButton>
+										</>
+									}
+								>
+									{marked([["ins", "글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."]])}
+								</ReviewItem>
+							</ReviewGroup>
+							<ReviewGroup title="2024 폴더로 옮기기" meta="글 11편" actions={<TextButton>11편 모두 빼기</TextButton>}>
+								{moves.map((move) => (
+									<ReviewItem
+										key={move.path}
+										included={move.included}
+										includeLabel={`${move.title} 넣기`}
+										title={move.title}
+										path={move.path}
+									/>
+								))}
+								<ReviewMore open={false} onOpenChange={none} moreLabel="6편 더 보기" lessLabel="접기" />
+							</ReviewGroup>
+							<ReviewGroup title="휴지통으로 보내기" meta="파일 3개 · 41 MB">
+								{/* Each file is its own row to keep or leave out, as in every other group. */}
+								{files.map((file) => (
+									<ReviewItem
+										key={file.name}
+										included
+										includeLabel={`${file.name} 넣기`}
+										title={file.name}
+										path={file.folder}
+									/>
+								))}
+							</ReviewGroup>
+						</Stack>
+					</Stack>
+				</PageBody>
 			</PageColumn>
 		</AdminFrame>
 	);

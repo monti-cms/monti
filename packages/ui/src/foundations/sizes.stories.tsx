@@ -46,7 +46,7 @@ export const Widths: Story = {
 export const Icons: Story = {
 	render: () => (
 		<Page>
-			<Group title="size-monti-icon-* (glyphs; the 32px button is size-monti-icon-button)">
+			<Group title="size-monti-icon-* (glyphs; the 32px button is size-monti-control-md)">
 				{tokens.size.tokens.map(({ name, value, usage }) => (
 					<Spec key={name} name={`${classOf(name)} · ${value}`} usage={usage}>
 						<div className="rounded-monti-sm bg-monti-emphasis" style={{ width: px(name), height: px(name) }} />

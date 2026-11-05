@@ -64,7 +64,7 @@ export const NothingPicked: Story = {
 	),
 };
 
-/** Full width, small, inline (as wide as its cells), icons only, disabled. */
+/** Full width `md` (32px, frame included), `sm` (28px), inline (as wide as its cells), icons only (as tall as words), disabled. */
 export const Variants: Story = {
 	args: { value: "same", onValueChange: () => {}, options: MODES },
 	render: () => (

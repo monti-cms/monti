@@ -26,7 +26,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 제안이 있는 탭 | `PropertyPanel`의 `tabs`(`dot` "proposal") | 다른 탭에 제안이 있으면 탭 이름 뒤에 파란 점. 보드의 "SEO" 탭이 그렇다. |
-| 제안을 기다리는 값 (요약, SEO 설명) | 그 입력칸(`Textarea size="sm"`) 안에 제안 값, `proposal` | 제안은 입력칸 안의 파란 글자다. 바로 고칠 수 있고, 고치면 보통 색이 된다. 받기와 버리기는 버블과 메모 카드에서 한다. 버리면 옛 값으로 돌아간다. 보드는 `Del` + `Ins` 글자로 그렸지만 입력칸을 따른다(2026-11-03 소유자 결정). |
+| 제안을 기다리는 값 (요약, SEO 설명) | 그 입력칸(`Textarea size="md"`) 안에 제안 값, `proposal` | 제안은 입력칸 안의 파란 글자다. 바로 고칠 수 있고, 고치면 보통 색이 된다. 받기와 버리기는 버블과 메모 카드에서 한다. 버리면 옛 값으로 돌아간다. 보드는 `Del` + `Ins` 글자로 그렸지만 입력칸을 따른다(2026-11-03 소유자 결정). |
 | 그 밖의 속성 | [editor.md](editor.md)의 속성 패널과 같다 | |
 
 #### 상태 표시줄
@@ -52,7 +52,7 @@
 ## 글 편집기 · 비교 (EditorCompare)
 
 - 보드: `EditorCompare.dc.html`. 상태와 흐름 단계: [screens.md › EditorCompare](../screens.md#editorcompare).
-- 공통 틀: 상태 표시줄은 [editor.md](editor.md)와 같은 `StatusBar`다. 편집기 주소에 `?compare=conflict`나 `?compare=draft`가 붙은 화면이고, 편집기의 저장하지 않은 입력은 그대로 남는다.
+- 공통 틀: 상태 표시줄은 없다. 제목이 무엇의 비교인지 말하고 "다른 곳 3"은 머리에 한 번만 있다(2026-11-05, 원칙 8). 편집기 주소에 `?compare=conflict`나 `?compare=draft`가 붙은 화면이고, 편집기의 저장하지 않은 입력은 그대로 남는다.
 
 ### 기본 틀
 
@@ -72,21 +72,13 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 두 단 | `Compare` 안 `CompareSide` 둘(`label` "내 입력 · 저장 안 됨" · "서버 최신본 · v4 · 10:41 저장", 또는 "임시 저장본 · 이 브라우저 · 10. 26 10:12" · "서버 저장본 · 10. 26 09:58") | 틈 없이 선 하나를 두고 나란히 놓는다. 높이는 상태 표시줄까지 채운다. |
+| 두 단 | `Compare` 안 `CompareSide` 둘(`label` "내 입력 · 저장 안 됨" · "서버 최신본 · v4 · 10:41 저장", 또는 "임시 저장본 · 이 브라우저 · 10. 26 10:12" · "서버 저장본 · 10. 26 09:58") | 틈 없이 선 하나를 두고 나란히 놓는다. 높이는 화면 아래까지 채운다. |
 | 다른 속성 "요약" | `CompareSide`의 `properties`에 `CompareProperty`(값이 없으면 `empty` "비어 있음") | 서로 다른 속성만 나열한다. |
 | 제목 | `CompareTitle` | 페이지 크기 글자. |
 | 본문 | `CompareBody` 안 `CompareHeading`, `CompareParagraph`, 코드 블록은 `CompareCode` | 읽히는 모양 그대로(읽기 크기). |
 | 다른 말 | `CompareText changed` | 양쪽 모두 같은 강조 바탕. 한쪽에만 있는 블록은 그 블록 전체가 `changed`다. |
 
-#### 상태 표시줄
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 줄 | `StatusBar` | |
-| 상태 "편집 충돌" · "브라우저에만 임시 저장됨" | `StatusBarCell render={<span />}`(`tone` 충돌은 위험, 임시 저장본은 경고) | 알리기만 한다. |
-| "다른 곳 3" | `StatusBarSpacer` 뒤 `StatusBarCell end` | |
-
-스토리: Controls/Button/TextButton, Primitives/Text, Primitives/Separator, Controls/Button/Button, Monti/Change/Compare, Patterns/Frame/StatusBar.
+스토리: Controls/Button/TextButton, Primitives/Text, Primitives/Separator, Controls/Button/Button, Monti/Change/Compare.
 
 ### 흐름 1 · 글 쓰고 발행하기
 
@@ -94,5 +86,5 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `mode` "편집 충돌" | 1.17 | 제목 "서버 최신본과 비교", 왼쪽 "내 입력 · 저장 안 됨", 오른쪽 "서버 최신본 · v4 · 10:41 저장", 곁 동작 "서버 최신본 불러오기", 주 동작 "내 입력으로 저장", 상태 "편집 충돌"(위험) |  |
-| `mode` "임시 저장본" | 1.19 | 제목 "임시 저장본과 비교", 왼쪽 "임시 저장본 · 이 브라우저 · 10. 26 10:12", 오른쪽 "서버 저장본 · 10. 26 09:58", 곁 동작 "버리기", 주 동작 "임시 저장본 불러오기", 상태 "브라우저에만 임시 저장됨"(경고) |  |
+| `mode` "편집 충돌" | 1.17 | 제목 "서버 최신본과 비교", 왼쪽 "내 입력 · 저장 안 됨", 오른쪽 "서버 최신본 · v4 · 10:41 저장", 곁 동작 "서버 최신본 불러오기", 주 동작 "내 입력으로 저장" |  |
+| `mode` "임시 저장본" | 1.19 | 제목 "임시 저장본과 비교", 왼쪽 "임시 저장본 · 이 브라우저 · 10. 26 10:12", 오른쪽 "서버 저장본 · 10. 26 09:58", 곁 동작 "버리기", 주 동작 "임시 저장본 불러오기" |  |

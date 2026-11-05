@@ -180,7 +180,7 @@ export function AdminFrame({
 								value={mode}
 								onValueChange={setMode}
 								defaultOpen={modeOpen}
-								labels={{ label: "화면 모드", system: "시스템", light: "라이트", dark: "다크" }}
+								labels={{ label: "화면 모드", system: "시스템", light: "밝게", dark: "어둡게" }}
 							/>
 						</SidebarFoot>
 					</SidebarFooter>

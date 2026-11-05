@@ -14,8 +14,8 @@ type SegmentedOption<T extends string> = {
 
 /**
  * A short choice of one among a few (every language the same / per language / follow the source): joined cells in a thin rounded frame, the
- * picked cell on the selected background and 600 (`value={null}` while none is picked yet). `size="sm"` for panels and filter rows; `inline` makes it as wide as its cells instead of
- * its container.
+ * picked cell on the selected background and 600 (`value={null}` while none is picked yet). It stands at a control's height, frame included: `md` 32px
+ * (13px words), `sm` 28px (12px words) for filter rows and tight panels. `inline` makes it as wide as its cells instead of its container.
  */
 function Segmented<T extends string>({
 	value,
@@ -30,6 +30,7 @@ function Segmented<T extends string>({
 	value: T | null;
 	onValueChange: (value: T) => void;
 	options: readonly SegmentedOption<T>[];
+	/** `md` 32px, `sm` 28px, frame included. */
 	size?: "md" | "sm";
 	/** `tool` on a tool surface (the sidebar), where the selected ground is the hover: a cell under the pointer takes it and the pressed cell takes the current ground. */
 	tone?: "default" | "tool";
@@ -49,8 +50,8 @@ function Segmented<T extends string>({
 				if (picked !== undefined) onValueChange(picked as T);
 			}}
 			className={cn(
-				"flex overflow-hidden rounded-monti-lg border border-monti-default",
-				size === "sm" ? "text-monti-caption" : "text-monti-note",
+				"flex overflow-hidden rounded-monti-full border border-monti-default p-[2px]",
+				size === "sm" ? "h-monti-control-sm text-monti-caption" : "h-monti-control-md text-monti-note",
 				inline && "w-fit",
 			)}
 		>
@@ -60,15 +61,11 @@ function Segmented<T extends string>({
 					value={option.value}
 					aria-label={option["aria-label"]}
 					className={cn(
-						"flex items-center justify-center whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:font-semibold data-pressed:text-monti-default",
+						"flex items-center justify-center whitespace-nowrap rounded-monti-full border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:font-semibold data-pressed:text-monti-default",
 						tone === "tool"
 							? "not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-current"
 							: "data-pressed:bg-monti-selected",
 						inline ? "flex-none px-monti-10" : "flex-1",
-						// The design system's `sm` is 12px type on a 20px line with 5px above and below, 32px tall. The role's 16px line takes 7px to be as tall.
-						"py-[7px]",
-						// A cell holding only an icon is as tall as one holding text (14px of padding and the role's 20px line), so a row of icons is 36px, like the others.
-						size === "md" && "min-h-[34px]",
 					)}
 				>
 					{option.label}

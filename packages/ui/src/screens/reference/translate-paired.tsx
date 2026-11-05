@@ -1,8 +1,6 @@
 import {
 	Box,
-	Button,
 	CompareBody,
-	CompareParagraph,
 	CompareRow,
 	CompareRows,
 	CompareShared,
@@ -22,10 +20,10 @@ import {
 	StatusBar,
 	StatusBarCell,
 	StatusBarSpacer,
-	Tabs,
-	TabsList,
-	TabsTrigger,
+	TabLink,
+	TabLinks,
 	Text,
+	TextButton,
 	Untranslated,
 } from "../../index";
 import { EntryHeader, still } from "./editor-notion";
@@ -50,18 +48,17 @@ function ImageSide({ children, faint }: { children: React.ReactNode; faint?: boo
 export function TranslatePairedScreen() {
 	return (
 		<Stack gap={0} minHeight="screen" background="page">
-			<EntryHeader address="/en/posts/first-post" status="published" statusLabel="발행됨" />
-			<Inline gap={0} align="stretch">
-				<Box grow minWidth={0}>
-					<Tabs value="English">
-						<TabsList variant="bar">
-							<TabsTrigger value="한국어">한국어</TabsTrigger>
-							<TabsTrigger value="English">English</TabsTrigger>
-							<TabsTrigger value="+ 언어">+ 언어</TabsTrigger>
-						</TabsList>
-					</Tabs>
-				</Box>
-				<Inline minHeight="panebar" gap={8} border="bottom" paddingX={24} shrink={false}>
+			<EntryHeader address="/en/posts/first-post" status="published" statusLabel="발행됨" panelOpen={false} />
+			<Inline gap={0} align="stretch" border="bottom">
+				{/* The same language tabs as the editor's: one tab, one page. */}
+				<Inline grow minWidth={0} minHeight="panebar" paddingX={24}>
+					<TabLinks>
+						<TabLink>한국어</TabLink>
+						<TabLink current>English</TabLink>
+						<TabLink render={<button type="button" />}>+ 언어</TabLink>
+					</TabLinks>
+				</Inline>
+				<Inline minHeight="panebar" gap={8} paddingX={24} shrink={false}>
 					<Text variant="note" tone="subtle">
 						원문
 					</Text>
@@ -82,7 +79,7 @@ export function TranslatePairedScreen() {
 			<Box grow paddingX={40} paddingTop={24} paddingBottom={48}>
 				<Box maxWidth="list" paddingX={8} centered>
 					<CompareRows>
-						<CompareRow head source="원문 · 한국어 · 10. 26 수정" translation="번역 · English · 09. 20 수정" />
+						<CompareRow head source="10. 26 수정" translation="09. 20 수정" />
 						<CompareRow
 							title
 							name="제목"
@@ -189,13 +186,7 @@ export function TranslatePairedScreen() {
 							}
 							source={<DocCode source>{CODE}</DocCode>}
 							translation={
-								<CompareShared
-									action={
-										<Button variant="ghost" size="sm">
-											English에서만 따로 고치기
-										</Button>
-									}
-								>
+								<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
 									<DocCode>{CODE}</DocCode>
 								</CompareShared>
 							}

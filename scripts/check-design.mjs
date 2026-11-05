@@ -38,6 +38,11 @@
  *   off-system          Every class word in the admin UI packages (stories and test helpers too) is in the design system: a known role per
  *                       namespace, the weights, radius and shadows it keeps, no line height or letter spacing of its own, and on screens the
  *                       spacing scale. The roles are read from `packages/ui/styles/theme.css`; `OWN_TYPE` and `OWN_COLORS` name the exceptions.
+ *   fixed-height        A raw height of 24px or more (`h-7`, `min-h-12`, `size-6`, `h-[52px]`) outside stories. Controls take the height tokens
+ *                       (`h-monti-control-md`); a row, bar or picture box with a measured height of its own is listed in `FIXED_HEIGHTS` with
+ *                       its reason. An entry the file no longer uses fails too.
+ *   control-shape       A pressable class string (`cursor-pointer` with a ground on hover or state) has pill corners, or 6px in a file SIX_PX
+ *                       names with its reason. Other corners (`rounded-monti-sm`, `-lg`, `rounded-[5px]`) fail.
  *   icon-list           Only `packages/ui/src/icons.ts`, the one list of icons, imports `@carbon/icons-react` (stories and tests too, in
  *                       every package). Code takes icons from `@monti-cms/ui/icons`, or `@monti-cms/admin/icons` in an extension.
  *   design-allow        A `design-allow` marker without a reason.
@@ -1028,6 +1033,159 @@ function checkOffSystem() {
 }
 checkOffSystem();
 
+/**
+ * Fixed heights that are not controls, each with its reason (the height standard in tokens.md). A control takes a height token (`h-monti-control-md`); a row, a bar
+ * or a picture box that has a measured height of its own is named here. Keyed by the file under `packages/`, then the class.
+ */
+const FIXED_HEIGHTS = new Map([
+	[
+		"ui/src/layout.ts",
+		new Map([["min-h-64", '`minHeight="empty"`: the room an empty list or drop area keeps, not a control']]),
+	],
+	[
+		"ui/src/list-section.tsx",
+		new Map([
+			["h-[52px]", "a list row of one line (title and note), measured in the list board"],
+			["h-[74px]", "a list row with its meta line, measured in the list board"],
+		]),
+	],
+	[
+		"ui/src/patch.tsx",
+		new Map([["h-10", "the file name row heading a code change, a row of the card, not a control"]]),
+	],
+	["ui/src/table.tsx", new Map([["h-10", "the table's head row, measured in the list board"]])],
+	[
+		"ui/src/proposal-bubble.tsx",
+		new Map([["h-11", "the floating bar that holds the proposal's buttons (32px each), a bar, not a control"]]),
+	],
+	[
+		"ui/src/textarea.tsx",
+		new Map([["min-h-[52px]", "`tall`: a textarea opens two lines high; a control's token is its one-line height"]]),
+	],
+	["ui/src/tile.tsx", new Map([["h-13", "a folder tile in the media grid, a card, not a control"]])],
+	["ui/src/uploading-image.tsx", new Map([["h-60", "the picture box of an image being uploaded"]])],
+	["ui/src/spec-pack/parts.tsx", new Map([["h-24", "a sample picture in the spec pack's image block"]])],
+]);
+
+/** A raw height of 24px or more (`h-7`, `min-h-12`, `size-6`, `h-[52px]`): the height of a control, a row or a box that the tokens should name. */
+function fixedHeight(utility) {
+	const step = /^(?:min-h|h|size)-(\d+(?:\.\d+)?)$/.exec(utility);
+	if (step) return Number(step[1]) * 4 >= 24;
+	const px = /^(?:min-h|h|size)-\[(\d+(?:\.\d+)?)px\]$/.exec(utility);
+	return px ? Number(px[1]) >= 24 : false;
+}
+
+function checkFixedHeights() {
+	const packagesDir = path.join(root, "packages");
+	const seen = new Set();
+	for (const pkg of ADMIN_UI_PACKAGES) {
+		for (const full of sourcesUnder(path.join(packagesDir, pkg, "src"), [
+			"__test__",
+			"node_modules",
+			"dist",
+			"foundations",
+		])) {
+			if (!inTargets(full) || /\.(stories|test)\./.test(full)) continue;
+			const file = path.relative(packagesDir, full).split(path.sep).join("/");
+			const source = readFileSync(full, "utf8");
+			const allowed = allowedLines(full, lex(source));
+			for (const literal of source.matchAll(/"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)) {
+				const line = source.slice(0, literal.index).split("\n").length;
+				if (allowed.has(line)) continue;
+				for (const word of literal[0]
+					.slice(1, -1)
+					.replace(/\$\{[^}]*\}/g, " ")
+					.split(/\s+/)) {
+					const utility = splitTop(word, ":").at(-1).text.replace(/^!/, "");
+					if (!fixedHeight(utility)) continue;
+					if (FIXED_HEIGHTS.get(file)?.has(utility)) {
+						seen.add(`${file} ${utility}`);
+						continue;
+					}
+					add(
+						full,
+						line,
+						"fixed-height",
+						`\`${word}\`: a control takes a height token; a row or box names its reason in FIXED_HEIGHTS`,
+					);
+				}
+			}
+		}
+	}
+	if (targets.length > 0) return;
+	for (const [file, classes] of FIXED_HEIGHTS)
+		for (const utility of classes.keys())
+			if (!seen.has(`${file} ${utility}`))
+				add(
+					path.join(packagesDir, file),
+					1,
+					"fixed-height",
+					`FIXED_HEIGHTS names \`${utility}\`, which the file no longer uses`,
+				);
+}
+checkFixedHeights();
+
+/**
+ * Where a pressable thing may have 6px corners (`rounded-monti-md`) instead of a pill (button.md, 모양 기준): rows inside a floating surface (menus,
+ * pickers) and blocks taller than one line (cards, tiles, a two-line conversation row). Keyed by the file under `packages/`, with the reason.
+ */
+const SIX_PX = new Map([
+	["ui/src/menu-parts.tsx", "rows of a floating menu follow the menu's own corners"],
+	["ui/src/conversation-list.tsx", "a conversation row is two lines tall, a block"],
+	["ui/src/tile.tsx", "a media or folder tile is a card"],
+	["ui/src/todo-item.tsx", "a to-do is a two-line block"],
+	["ui/src/media-picker.tsx", "a picked file is a card"],
+	["ui/src/block-handle.tsx", "the block in hand is a block of the body, not the handle (the handle is a pill)"],
+]);
+
+/** A check box is a square mark, not a ground: its 4px corner (`rounded-monti-sm`) stays. Keyed by file, with the class. */
+const CHECK_MARKS = new Map([
+	["ui/src/checkbox.tsx", "rounded-monti-sm"],
+	["ui/src/dropdown-menu.tsx", "rounded-monti-sm"],
+]);
+
+/**
+ * A pressable thing that lays a ground (`hover:bg-…`, `data-…:bg-…`) has one of two shapes: a pill (`rounded-monti-full`), or 6px where SIX_PX says
+ * why. Any other corner (`rounded-monti-sm`, `-lg`, `-xl`, `rounded-[5px]`) is the fragment this rule stops. Checked per class string.
+ */
+function checkControlShapes() {
+	const uiDir = path.join(root, "packages/ui/src");
+	for (const full of sourcesUnder(uiDir, ["__test__", "node_modules", "dist", "foundations", "screens", "spec-pack"])) {
+		if (!inTargets(full) || /\.(stories|test)\./.test(full)) continue;
+		const file = path.relative(path.join(root, "packages"), full).split(path.sep).join("/");
+		const source = readFileSync(full, "utf8");
+		const allowed = allowedLines(full, lex(source));
+		for (const literal of source.matchAll(/"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)) {
+			const line = source.slice(0, literal.index).split("\n").length;
+			if (allowed.has(line)) continue;
+			const words = literal[0]
+				.slice(1, -1)
+				.replace(/\$\{[^}]*\}/g, " ")
+				.split(/\s+/)
+				.filter(Boolean);
+			const last = (word) => splitTop(word, ":").at(-1).text.replace(/^!/, "");
+			// Pressable with a ground: a background laid on hover, press or a state (a row pointed at, a toggle's pressed cell). A control that lays no
+			// ground (a text button) shows no corner, so its corner is not a shape.
+			if (!words.some((word) => word.includes(":") && /^bg-monti-/.test(last(word)))) continue;
+			for (const word of words) {
+				if (word.includes(":")) continue;
+				const corner = /^rounded(?:-[a-z]{1,2})?-(.+)$/.exec(word);
+				if (!corner) continue;
+				const size = corner[1];
+				if (size === "monti-full" || size === "none" || size === "(--cell-radius)") continue;
+				if (size === "monti-md" && SIX_PX.has(file)) continue;
+				if (CHECK_MARKS.get(file) === word) continue;
+				add(full, line, "control-shape", `\`${word}\`: a pressable thing is a pill, or 6px where SIX_PX names why`);
+			}
+		}
+	}
+	if (targets.length > 0) return;
+	for (const file of SIX_PX.keys())
+		if (!existsSync(path.join(root, "packages", file)))
+			add(path.join(root, "packages", file), 1, "control-shape", "SIX_PX names a file that is gone");
+}
+checkControlShapes();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1042,6 +1200,10 @@ const HINTS = {
 	"theme-names":
 		"The theme and the token files define only the admin's own names (monti-), and the theme clears Tailwind's.",
 	"off-system": "Use the type roles, color roles, radius, weights and spacing scale of packages/ui/styles/theme.css.",
+	"control-shape":
+		"Pressable things are pills; 6px only for rows in floating menus and blocks taller than a line (SIX_PX, button.md 모양 기준).",
+	"fixed-height":
+		"Controls stand at the height tokens (control-lg/md/sm/xs); a fixed row or box height is listed in FIXED_HEIGHTS with its reason.",
 	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };

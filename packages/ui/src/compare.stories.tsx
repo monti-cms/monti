@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
-	Button,
 	Compare,
 	CompareBody,
 	CompareCode,
@@ -17,6 +16,7 @@ import {
 	Heading,
 	Highlight,
 	Text,
+	TextButton,
 } from "./index";
 
 /**
@@ -126,15 +126,13 @@ export const TranslationRows: Story = {
 	render: () => (
 		<Box paddingX={40} paddingY={24}>
 			<CompareRows>
-				<CompareRow head source="원문 · 한국어 · 10. 26 수정" translation="번역 · English · 09. 20 수정" />
+				<CompareRow head source="10. 26 수정" translation="09. 20 수정" />
 				<CompareRow
-					name="제목"
 					title
 					source={<Heading variant="page">첫 번째 글</Heading>}
 					translation={<Heading variant="page">The first post</Heading>}
 				/>
 				<CompareRow
-					name="문단"
 					source={
 						<Text variant="reading">
 							블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
@@ -147,7 +145,6 @@ export const TranslationRows: Story = {
 					}
 				/>
 				<CompareRow
-					name="문단"
 					note="원문 바뀜"
 					current
 					source={
@@ -158,22 +155,14 @@ export const TranslationRows: Story = {
 					translation={<Text variant="reading">The list keeps only the title, the address and the status.</Text>}
 				/>
 				<CompareRow
-					name="코드 블록"
 					source={<CompareCode>{CODE}</CompareCode>}
 					translation={
-						<CompareShared
-							action={
-								<Button variant="ghost" size="sm">
-									English에서만 따로 고치기
-								</Button>
-							}
-						>
+						<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
 							<CompareCode>{CODE}</CompareCode>
 						</CompareShared>
 					}
 				/>
 				<CompareRow
-					name="문단"
 					note="원문에 추가"
 					source={<Text variant="reading">편집기도 같은 원칙으로 정리했다.</Text>}
 					translation={

@@ -19,13 +19,32 @@ const KEYS = [
 	{ name: "예전 Gemini 키", tail: "9f0c", meta: "이번 달 사용 없음", unused: true },
 ];
 
-const SLOTS = [
+/** The keys plugins ask for, one row per slot; `tail` when a key is in. */
+const SLOTS: readonly { id: string; title: string; detail?: string; meta: string; tail?: string }[] = [
 	{ id: "bareun", title: "바른 맞춤법", meta: "bareun" },
-	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia", muted: true },
-	{ id: "algolia-admin", title: "Algolia 검색", detail: "관리 키", meta: "algolia", muted: true },
+	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia", tail: "4410" },
+	{ id: "algolia-admin", title: "Algolia 검색", detail: "관리 키", meta: "algolia" },
 ];
 
-/** Tools, API keys tab: the saved keys, the model each task uses, and the keys plugins ask for. */
+/**
+ * Tools, API keys tab: three tables. The AI services' keys (the models come from them); the one model this screen picks (the quick task's); the
+ * keys plugins ask for, one row per slot. Every key row looks and acts the same: its last four after its name, "편집 · 지우기" when it is in, and
+ * "키 넣기" when it is not, all through the same key window (a plugin's has its service set).
+ */
+/** A key row's actions: change it (the key window) and remove it. */
+function KeyActions() {
+	return (
+		<>
+			<Button variant="ghost" size="sm">
+				편집
+			</Button>
+			<Button variant="ghost-danger" size="sm">
+				지우기
+			</Button>
+		</>
+	);
+}
+
 export function ApiKeysScreen() {
 	return (
 		<AdminFrame open="tools">
@@ -48,7 +67,7 @@ export function ApiKeysScreen() {
 				</PageToolbar>
 				<PageBody>
 					<Stack gap={40} paddingTop={32}>
-						<ListSection title="저장된 키" count="3">
+						<ListSection title="AI 키">
 							{KEYS.map((key) => (
 								<ListSectionRow
 									key={key.name}
@@ -61,19 +80,11 @@ export function ApiKeysScreen() {
 									}
 									meta={key.meta}
 									metaTone={key.unused ? "faint" : "muted"}
-									actions={
-										<>
-											<Button variant="ghost" size="sm">
-												편집
-											</Button>
-											<Button variant="ghost-danger" size="sm">
-												지우기
-											</Button>
-										</>
-									}
+									actions={<KeyActions />}
 								/>
 							))}
 						</ListSection>
+						{/* The one model this screen picks; the list comes from the AI keys above. */}
 						<ListSection title="모델">
 							<ListSectionRow
 								title="빠른 작업"
@@ -90,18 +101,31 @@ export function ApiKeysScreen() {
 								}
 							/>
 						</ListSection>
-						<ListSection title="플러그인" count="3" countTone="warning">
+						{/* A plugin's slot is a key row like the AI keys: the same window adds and changes it, with its service already set. */}
+						<ListSection title="플러그인 키">
 							{SLOTS.map((slot) => (
 								<ListSectionRow
 									key={slot.id}
 									title={slot.title}
 									detail={slot.detail}
+									titleCount={
+										slot.tail ? (
+											<>
+												{"··· "}
+												{slot.tail}
+											</>
+										) : undefined
+									}
 									meta={slot.meta}
 									metaTone="subtle"
-									muted={slot.muted}
-									labelId={`slot-${slot.id}`}
-									control={
-										<MenuField aria-labelledby={`slot-${slot.id}`} placeholder="키 없음" size="default" warning />
+									actions={
+										slot.tail ? (
+											<KeyActions />
+										) : (
+											<Button variant="ghost" size="sm">
+												키 넣기
+											</Button>
+										)
 									}
 								/>
 							))}

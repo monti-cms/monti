@@ -9,6 +9,7 @@ import {
 	PageToolbar,
 	ReadValue,
 	Section,
+	Stack,
 	TextButton,
 } from "../../index";
 import { AdminFrame } from "./frame";
@@ -32,8 +33,11 @@ export function AdminSettingsScreen() {
 						</FormField>
 					</Section>
 					<Section title="기능">
-						<SwitchOption label="본문 템플릿" checked />
-						<SwitchOption label="번역" checked />
+						{/* One group of switch rows: one height, 4px apart. */}
+						<Stack gap={4}>
+							<SwitchOption label="본문 템플릿" checked height="lg" />
+							<SwitchOption label="번역" checked height="lg" />
+						</Stack>
 					</Section>
 					<Section title="주소">
 						{/* Set in the config file, so it can be changed here in local development, as the preview path can. */}

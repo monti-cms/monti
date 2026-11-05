@@ -512,10 +512,6 @@
 					"kind": "variant",
 					"enum": ["block", "head", "title"]
 				},
-				"name": {
-					"kind": "text",
-					"type": "string"
-				},
 				"note": {
 					"kind": "text",
 					"type": "string"
@@ -533,10 +529,6 @@
 					"fields": ["kind", "text", "changed", "faint", "picture", "label", "placeholder", "editable"]
 				},
 				"sourceLabel": {
-					"kind": "text",
-					"type": "string"
-				},
-				"sub": {
 					"kind": "text",
 					"type": "string"
 				},
@@ -1256,12 +1248,7 @@
 			"bind": false,
 			"children": true,
 			"slots": [],
-			"props": {
-				"blocks": {
-					"kind": "flag",
-					"type": "boolean"
-				}
-			},
+			"props": {},
 			"events": []
 		},
 		"SheetSplit": {
@@ -1270,19 +1257,6 @@
 			"children": true,
 			"slots": ["list"],
 			"props": {},
-			"events": []
-		},
-		"SheetSummary": {
-			"kind": "part",
-			"bind": false,
-			"children": false,
-			"slots": [],
-			"props": {
-				"text": {
-					"kind": "text",
-					"type": "string"
-				}
-			},
 			"events": []
 		},
 		"Folder": {
@@ -1914,7 +1888,7 @@
 				},
 				"size": {
 					"kind": "variant",
-					"enum": ["default", "sm"]
+					"enum": ["default", "md", "sm"]
 				},
 				"value": {
 					"kind": "text",
@@ -1926,7 +1900,7 @@
 				},
 				"width": {
 					"kind": "variant",
-					"enum": ["choice", "fit", "full"]
+					"enum": ["fit", "full"]
 				}
 			},
 			"events": []
@@ -2012,10 +1986,6 @@
 			"slots": ["title"],
 			"props": {
 				"dense": {
-					"kind": "flag",
-					"type": "boolean"
-				},
-				"last": {
 					"kind": "flag",
 					"type": "boolean"
 				},
@@ -3223,7 +3193,7 @@
 				},
 				"tone": {
 					"kind": "variant",
-					"enum": ["danger"]
+					"enum": ["danger", "quiet"]
 				}
 			},
 			"events": []

@@ -61,11 +61,11 @@ function Body({ faint }: { faint?: boolean }) {
 export function EditorTranslateScreen() {
 	return (
 		<EditorPage
-			header={<EntryHeader address="/en/first-post" status="draft" statusLabel="초안" />}
+			header={<EntryHeader address="/en/first-post" status="draft" statusLabel="초안" panelOpen={false} />}
 			beside={
 				<Box as="aside" aria-label="한국어 원문 · 읽기 전용" background="tool" border="right" grow minWidth={0}>
 					<Box paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" centered>
-						<Inline minHeight="icon-button">
+						<Inline minHeight="control-md">
 							<Text variant="meta" tone="subtle">
 								한국어 원문 · 읽기 전용
 							</Text>
@@ -83,7 +83,7 @@ export function EditorTranslateScreen() {
 				</Box>
 			}
 			head={
-				<Inline minHeight="icon-button" justify="between" gap={12}>
+				<Inline minHeight="control-md" justify="between" gap={12}>
 					<Box grow minWidth={0}>
 						<TabLinks>
 							<TabLink>한국어</TabLink>

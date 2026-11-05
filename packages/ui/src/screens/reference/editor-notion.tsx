@@ -75,6 +75,7 @@ export function EntryHeader({
 	statusLabel,
 	publish = true,
 	panel = true,
+	panelOpen = true,
 	wide = false,
 }: {
 	back?: string;
@@ -85,6 +86,8 @@ export function EntryHeader({
 	publish?: boolean;
 	/** The properties pane's toggle. */
 	panel?: boolean;
+	/** The properties pane is open beside the text: the toggle is pressed. A screen without the pane (a translation) leaves it unpressed. */
+	panelOpen?: boolean;
 	/** 16px between the bar's parts (a template's bar), not 12. */
 	wide?: boolean;
 }) {
@@ -122,7 +125,7 @@ export function EntryHeader({
 					</Button>
 				)}
 				{panel ? (
-					<IconButton label="속성" side="bottom" pressed>
+					<IconButton label="속성" side="bottom" pressed={panelOpen}>
 						<RightPanelOpen aria-hidden />
 					</IconButton>
 				) : null}
@@ -285,16 +288,7 @@ export function EntryProperties({
 						>
 							요약
 						</FormFieldLabel>
-						<Textarea
-							size="md"
-							id="ref-summary"
-							placeholder="비어 있음"
-							action={
-								<IconButton label="본문에서 가져오기">
-									<Renew aria-hidden />
-								</IconButton>
-							}
-						/>
+						<Textarea size="md" id="ref-summary" placeholder="비어 있음" />
 					</FormField>
 				)}
 			</PropertyGroup>
@@ -412,7 +406,7 @@ function NotionStatusBar() {
 				defaultOpen
 			>
 				{/* A row only takes you to its place; filling is the field's own ✦ there, beside what it fills. */}
-				<TodoItem title="요약 쓰기" detail="요약 · 비어 있음" current />
+				<TodoItem title="요약 쓰기" detail="속성 · 비어 있음" current />
 				<TodoItem title="대체 텍스트 없는 이미지 2개" detail="대표 이미지 · 본문 1" />
 				<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
 			</StatusBarList>

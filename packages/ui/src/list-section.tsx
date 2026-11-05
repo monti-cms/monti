@@ -20,7 +20,7 @@ function ListSection({
 	/** How many rows, or how many need attention (`countTone="warning"`). */
 	count?: React.ReactNode;
 	countTone?: "default" | "warning";
-	/** The rows have no inset of their own (a review sheet's changes): the title starts at the edge with them, not 12px in. */
+	/** The rows have no inset of their own (a review sheet's changes): the title starts at the edge with them, not 12px in, and the list keeps 16px under the line, since the first change block has none above. */
 	flush?: boolean;
 }) {
 	const titleId = useId();
@@ -36,14 +36,18 @@ function ListSection({
 				{title}
 				{count !== undefined && count !== null && <Count tone={countTone}>{count}</Count>}
 			</h2>
-			<div role="list">{children}</div>
+			<div role="list" className={cn(flush && "pt-monti-16")}>
+				{children}
+			</div>
 		</section>
 	);
 }
 
 /**
  * One row of a {@link ListSection}: a title (body text in ink, or `muted`) with an optional count after it ("··· a1b2"), a meta line under it, and at
- * the end either text buttons (`actions`, each its own column) or one 320px control (`control`, a select or a model field).
+ * the end either text buttons (`actions`, each its own column) or one 320px control (`control`, a select or a model field). A row has one fixed height
+ * for its kind, whatever it ends in: 52px for a title alone, 74px for a title with a meta line (its line inside). A control (36px) stands in the row
+ * without making it taller.
  */
 function ListSectionRow({
 	title,
@@ -78,7 +82,8 @@ function ListSectionRow({
 			role="listitem"
 			data-slot="list-section-row"
 			className={cn(
-				"relative grid items-center gap-monti-20 border-monti-muted border-b px-monti-12 py-monti-16",
+				"relative grid items-center gap-monti-20 border-monti-muted border-b px-monti-12",
+				meta !== undefined ? "h-[74px]" : "h-[52px]",
 				control ? "grid-cols-[minmax(0,1fr)_320px]" : "auto-cols-auto grid-flow-col grid-cols-[minmax(0,1fr)]",
 			)}
 			{...props}

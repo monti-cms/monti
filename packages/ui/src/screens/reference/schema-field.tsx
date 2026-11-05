@@ -1,11 +1,7 @@
 import {
 	Button,
-	FormField,
-	FormFieldLabel,
 	Inline,
 	Input,
-	ReadValue,
-	Segmented,
 	Sheet,
 	SheetBody,
 	SheetContent,
@@ -14,25 +10,15 @@ import {
 	SheetSection,
 	SheetTitle,
 	Stack,
-	Tabs,
-	TabsList,
-	TabsTrigger,
-	Text,
-	Textarea,
 } from "../../index";
+import { FieldAbout, PickRule, REQUIRED, RuleRow, SwitchRule } from "./field-sheet-parts";
 import { AdminFrame } from "./frame";
 import { SchemaPage } from "./schema";
-import { SwitchOption } from "./settings";
-
-const LOCALIZE = [
-	{ value: "same", label: "모두 같음" },
-	{ value: "each", label: "언어마다" },
-	{ value: "source", label: "원문 따름" },
-];
 
 /**
- * Settings, Collections tab, with a saved field's sheet open (a field row was clicked): the same sheet as adding one, without the kind list,
- * its name and kind read only, and a delete at the foot.
+ * Settings, Collections tab, with a saved field's sheet open (a field row was clicked): the same sheet as adding one, without the kind list. Its
+ * kind reads first, then the identifier, the label and the assistant's description; then the rules of what may be typed, each a 32px row; a delete
+ * at the foot.
  */
 export function SchemaFieldScreen() {
 	return (
@@ -45,40 +31,32 @@ export function SchemaFieldScreen() {
 							요약
 						</SheetTitle>
 					</SheetHeader>
-					<Tabs value="basic" fill>
-						<TabsList variant="bar" inset="panel">
-							<TabsTrigger value="basic">기본</TabsTrigger>
-							<TabsTrigger value="advanced">고급</TabsTrigger>
-						</TabsList>
-						<SheetBody>
-							<Stack gap={0}>
-								<SheetSection title="보기">
-									<FormField>
-										<FormFieldLabel htmlFor="field-label">표시 이름</FormFieldLabel>
-										<Input id="field-label" defaultValue="요약" />
-									</FormField>
-									<FormField>
-										<FormFieldLabel htmlFor="field-help">도움말</FormFieldLabel>
-										<Textarea id="field-help" tall defaultValue="목록과 검색 결과에 나오는 한 문장. 결론을 먼저." />
-									</FormField>
-								</SheetSection>
-								<SheetSection title="구조">
-									<ReadValue label="이름">summary</ReadValue>
-									<ReadValue label="종류" mono={false}>
-										글자 · 120자까지
-									</ReadValue>
-									<SwitchOption label="필수" />
-									<SwitchOption label="제목으로 사용" />
-									<Stack gap={6}>
-										<Text variant="micro" tone="subtle">
-											언어
-										</Text>
-										<Segmented aria-label="언어" value="each" onValueChange={() => {}} options={LOCALIZE} />
-									</Stack>
-								</SheetSection>
+					<SheetBody>
+						<FieldAbout
+							kind="글자"
+							name="summary"
+							label="요약"
+							about="목록과 검색 결과에 나오는 한 문장. 결론을 먼저."
+						/>
+						<SheetSection title="입력 규칙">
+							<Stack gap={4}>
+								<SwitchRule label={REQUIRED} />
+								<SwitchRule label="여러 줄" />
+								<RuleRow label="최대 글자 수">
+									<Input
+										aria-label="최대 글자 수"
+										mono
+										size="md"
+										width="number"
+										align="end"
+										placeholder="제한 없음"
+										defaultValue="120"
+									/>
+								</RuleRow>
+								<PickRule label="언어" value="모두 같음" />
 							</Stack>
-						</SheetBody>
-					</Tabs>
+						</SheetSection>
+					</SheetBody>
 					<SheetFooter>
 						<Inline gap={12} grow minWidth={0}>
 							<Button variant="ghost-danger">필드 삭제</Button>

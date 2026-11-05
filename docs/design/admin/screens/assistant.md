@@ -34,8 +34,8 @@
 | 멈춘 도구 줄 | `ToolCallLine status="failed"` | 빨간 ×와 "… 에서 멈춤". |
 | 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 크레딧 부족: "Anthropic 크레딧이 부족해요" · "다른 모델로 보내기". 연결 끊김: "연결이 끊겼어요" · "이어서 하기". 보내기는 미리 막지 않고, 보낸 뒤에 이 답장으로 알린다. |
 | 옮기지 못한 이동 | 답의 글 + 글 이름 `TextButton variant="underline"` + mono 주소 + `Button variant="secondary" size="sm"` "저장하고 열기" | 저장하지 않은 편집이 있어 화면을 옮기지 않았을 때. 대화 안의 답으로 알린다. |
-| 여러 묶음 제안 | `ProposalCard`(`summary` "4묶음 · 19건") 안에 `ProposalRow` 넷(`name`, `detail`, `count`) | 기다림: `ProposalActions` "상세 보기" · "버리기" · [19건 적용]. 적용 뒤: `ProposalResult` "✓ 16건 적용" · "1건 못 함" · 시각 · "모두 되돌리기", `after`에 `ProposalRow tone="danger"` "못 옮김 · 겨울 사진 · 그 사이 휴지통으로 감". |
-| 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "상세 보기"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "상세 보기". |
+| 여러 묶음 제안 | `ProposalCard`(`summary` "4묶음 · 19건") 안에 `ProposalRow` 넷(`name`, `detail`, `count`) | 기다림: `ProposalActions` "검토" · "버리기" · [19건 적용]. 적용 뒤: `ProposalResult` "✓ 16건 적용" · "1건 못 함" · 시각 · "모두 되돌리기", `after`에 `ProposalRow tone="danger"` "못 옮김 · 겨울 사진 · 그 사이 휴지통으로 감". |
+| 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "검토"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "검토". |
 | 지운 제안 (다시 연 대화) | `ProposalCard` 안에 `ProposalRow`(`detail`에 `Del`로 태그들, `count` "글 0편") |  |
 | 설정 · 스키마 제안 | 도구 줄과 답의 글만 | 제안은 그 화면에 파랗게 표시된다. 카드는 없다. |
 | 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest kind="request"` · `Suggest kind="recent"` | |
@@ -118,9 +118,9 @@
 | 오른쪽 (검토) | `TextButton variant="quiet"` "버리기", `Button variant="primary"` "17건 적용"(번역은 "3편 적용") | 넣은 항목만 적용한다. |
 | 오른쪽 (적용 중) | `Text variant="note"` "적용 중", `Count` "9 / 17", `Progress inline` | 알약 자리를 차지한다. |
 | 오른쪽 (결과) | `Text variant="note"` "✓ 16건 적용" · "1건 못 함", `Button variant="secondary"` "모두 되돌리기" |  |
-| 요청 | `ReviewQuote` | 따옴표로 인용한 요청. |
-| 묶음 | `ReviewGroup`(`title` "다듬기", `meta` "발행 후 고친 글 · 3곳 · 되돌릴 수 있음", `actions`) | 묶음 전체의 일은 `actions`: `TextButton variant="underline"` "편집기에서 보기", `Separator orientation="vertical" length="control"`, 보기 전환 "한 줄 · 나란히"(`Tabs` + `TabsList variant="line"`), 또는 `TextButton` "11편 모두 빼기", "모두 펼치기". |
-| 항목 (한 줄) | `ReviewItem`(`included`, `onIncludedChange`, `includeLabel` "포함", `title`, `path` mono, `end` 필드나 결과, `children`에 `Del` · `Ins`) | 체크로 넣고 뺀다. `end`: "요약", "폴더 없음 → 2024", 결과 뒤 "✓ 2024로 옮김"이나 빨간 "못 옮김 · 그 사이 휴지통으로 감". 체크는 `ReviewItem`이 그린다. |
+| 요청 | `ReviewQuote` | 따옴표로 인용한 요청. 요청과 묶음들은 `PageBody` 안의 `Stack`이 띄운다: 머리 아래 16px, 요청 아래와 묶음 사이 32px(예전 부품 여백과 같은 자리). 검토 부품은 자기 바깥 여백이 없다. |
+| 묶음 | `ReviewGroup`(`title` "다듬기", `meta` "발행 후 고친 글 · 3곳", `actions`) | 묶음 전체의 일은 `actions`: `TextButton variant="underline"` "편집기에서 보기", `Separator orientation="vertical" length="control"`, 보기 전환 "한 줄 · 나란히"(`Tabs` + `TabsList variant="line"`), 또는 `TextButton` "11편 모두 빼기", "모두 펼치기". `meta`는 대상과 양만 말한다. 제안은 모두 되돌릴 수 있으므로 "되돌릴 수 있음"은 적지 않는다(원칙 8). 모든 묶음은 줄마다 체크가 있다. 휴지통으로 보내는 묶음도 파일마다 한 줄이고, 여러 파일을 한 항목으로 묶지 않는다(2026-11-05 소유자). |
+| 항목 (한 줄) | `ReviewItem`(`included`, `onIncludedChange`, `includeLabel` "포함", `title`, `path` mono, `end` 결과나 실패, `children`에 `Del` · `Ins`) | 체크로 넣고 뺀다. `end`는 결과("✓ 2024로 옮김")와 실패(빨간 "못 옮김 · 그 사이 휴지통으로 감", "이 사이에 고쳐짐")만 말한다. 묶음 이름이 이미 말하는 필드("요약")나 할 일("폴더 없음 → 2024")은 줄마다 되풀이하지 않는다(원칙 8). 옛 값이 비었으면 줄 그은 "비어 있음 →" 없이 새 값만, 제안 표시(`Ins`, 파란 바탕)로 보인다. 체크는 `ReviewItem`이 그린다. |
 | 다듬기 묶음의 블록 한 행 | 왼쪽 칸에 체크(`includeLabel` "포함"), 블록 이름 "요약" · "문단 1". 바뀐 정도를 따로 적는 메모는 없다(글의 `Del` · `Ins`가 이미 보여 준다). 오른쪽 칸에 그 블록 글과 `Del` · `Ins` | `ReviewLine`(`included`, `includeLabel` "포함", `label` 블록 이름, children 글). 한 글 안의 블록마다 한 행이다. 나란히 보기의 `ReviewCompare`와 왼쪽 칸이 같다. |
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
 | 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `before`, `after`) |  |

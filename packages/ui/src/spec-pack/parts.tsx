@@ -98,7 +98,6 @@ import {
 	SheetHeader,
 	Sheet as SheetRoot,
 	SheetSplit as SheetSplitPart,
-	SheetSummary as SheetSummaryPart,
 	SheetTitle,
 } from "../sheet";
 import { SidePanel } from "../side-panel";
@@ -711,9 +710,9 @@ function OptionCheck({
 	noteTone?: "warning";
 	checked?: boolean;
 }) {
-	// A row of options is 32px tall (`.mt-option`, 6px above and below its line).
+	// A row of options is 32px tall (`.mt-option`): the option's own height.
 	return (
-		<Option className="py-monti-6">
+		<Option>
 			<Checkbox checked={checked ?? false} />
 			{mono ? <Text mono>{label}</Text> : label}
 			{note && (
@@ -734,8 +733,8 @@ function SelectBox({
 	warning,
 }: {
 	value?: string;
-	size?: "sm" | "default";
-	width?: "fit" | "full" | "choice";
+	size?: "sm" | "md" | "default";
+	width?: "fit" | "full";
 	/** The assistant picked the value and nobody has touched it. */
 	proposal?: boolean;
 	/** The value is in the warning ink: nothing to pick yet ("No key"). */
@@ -1225,9 +1224,9 @@ function Sheet({
 	);
 }
 
-/** What a sheet is for, scrolling when it is long; `blocks` for a run of change blocks, which bring their own room above. */
-function SheetBody({ blocks, children }: { blocks?: boolean; children?: React.ReactNode }) {
-	return <SheetBodyPart blocks={blocks}>{children}</SheetBodyPart>;
+/** What a sheet is for, scrolling when it is long. */
+function SheetBody({ children }: { children?: React.ReactNode }) {
+	return <SheetBodyPart>{children}</SheetBodyPart>;
 }
 
 /** A sheet's body in two: `list` on the left (the kinds of a new field), the work on the right. */
@@ -1351,11 +1350,6 @@ function ChangeRow({ what, result }: { what?: string; result?: string }) {
 	return <ChangeLine what={what} then={result} />;
 }
 
-/** What a sheet will make, in one quiet line at the end of its body. */
-function SheetSummary({ text }: { text?: string }) {
-	return <SheetSummaryPart>{text}</SheetSummaryPart>;
-}
-
 /** Where files can be dropped (the folders and the file grid); `over` while files are dragged over it. */
 function DropZone({ over, children }: { over?: boolean; children?: React.ReactNode }) {
 	return <DropArea over={over}>{children}</DropArea>;
@@ -1468,13 +1462,13 @@ function marked(run: Marked | undefined) {
 /** What the admin asked, quoted under a review page's title (the admin's own words, from the data). */
 function ReviewAsk({ text }: { text?: string }) {
 	// The room above it is the screen's (a Spacing before it), so the quote is drawn without its own.
-	return <ReviewQuote className="mt-0">{text}</ReviewQuote>;
+	return <ReviewQuote>{text}</ReviewQuote>;
 }
 
 /** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
 function ReviewHead({ title, meta, actions }: { title?: string; meta?: string; actions?: React.ReactNode }) {
 	// The room above it is the screen's (a Spacing before it), so the group is drawn without its own.
-	return <ReviewGroup title={title} meta={meta} actions={actions} className="mt-0" />;
+	return <ReviewGroup title={title} meta={meta} actions={actions} />;
 }
 
 /**
@@ -1854,7 +1848,7 @@ function SourceColumn({ label, title, children }: { label?: string; title?: stri
 	return (
 		<BoxPart as="aside" aria-label={label} background="tool" border="right" grow minWidth={0}>
 			<BoxPart paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" className="mx-auto">
-				<Inline minHeight="icon-button">
+				<Inline minHeight="control-md">
 					<Text variant="meta" tone="subtle">
 						{label}
 					</Text>
@@ -1878,7 +1872,7 @@ function SourceColumn({ label, title, children }: { label?: string; title?: stri
  */
 function LanguageBar({ tabs, action }: { tabs?: React.ReactNode; action?: React.ReactNode }) {
 	return (
-		<Inline minHeight="icon-button" justify="between" gap={12}>
+		<Inline minHeight="control-md" justify="between" gap={12}>
 			{tabs}
 			{action}
 		</Inline>
@@ -2213,7 +2207,7 @@ function PairRows({ children }: { children?: React.ReactNode }) {
 }
 
 /**
- * One row of `PairRows`. `kind` `head` is the row of the two sides' names (`source` and `translation` are its words), `title` the two titles (from the
+ * One row of `PairRows`. `kind` `head` is the row of the two sides' edit dates (`source` and `translation` are its words), `title` the two titles (from the
  * data); any other row is one block: its `name` (and `sub`, what is in it), a `note` when its source moved, `current` while it is written, and the
  * two sides' text from the data (`changed` source words are marked; an `untranslated` translation is the source, faint). `shared` is the translation
  * of a block both languages use, with the button (`sharedAction`) that makes a copy for this language.
@@ -2273,13 +2267,7 @@ function PairRow({
 				kind === "head" ? (
 					translationLabel
 				) : shared ? (
-					<CompareShared
-						action={
-							<Button variant="ghost" size="sm">
-								{sharedAction}
-							</Button>
-						}
-					>
+					<CompareShared action={<TextButton variant="underline">{sharedAction}</TextButton>}>
 						{side(translation, false)}
 					</CompareShared>
 				) : (
@@ -2808,7 +2796,6 @@ export const parts = {
 	Sheet,
 	SheetBody,
 	SheetSplit,
-	SheetSummary,
 	Folder,
 	FolderTabRow,
 	FolderTabItem,
@@ -3040,8 +3027,6 @@ export const CATALOG = {
 		kind: "part",
 		props: {
 			kind: "variant",
-			name: "text",
-			sub: "text",
 			note: "text",
 			current: "flag",
 			sourceLabel: "text",
@@ -3147,9 +3132,8 @@ export const CATALOG = {
 	ChangeRows: { kind: "part", props: {} },
 	ChangeRow: { kind: "part", props: { what: "text", result: "text" } },
 	Sheet: { kind: "overlay", props: { title: "text", of: "text" } },
-	SheetBody: { kind: "part", props: { blocks: "flag" } },
+	SheetBody: { kind: "part", props: {} },
 	SheetSplit: { kind: "part", props: {} },
-	SheetSummary: { kind: "part", props: { text: "text" } },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
 	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },
@@ -3227,7 +3211,7 @@ export const CATALOG = {
 		props: { value: "state", prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" },
 	},
 	VerticalRule: { kind: "part", props: {} },
-	Section: { kind: "part", props: { stacked: "flag", last: "flag", dense: "flag" } },
+	Section: { kind: "part", props: { stacked: "flag", dense: "flag" } },
 	OptionCheck: {
 		kind: "part",
 		props: { label: "text", note: "text", checked: "flag", mono: "flag", noteTone: "variant" },

@@ -21,7 +21,7 @@ function RailLayout({
 }) {
 	return (
 		<div data-slot="rail-layout" className={cn("flex flex-wrap gap-x-monti-40", className)} {...props}>
-			<nav aria-label={label} className="flex flex-[1_1_160px] flex-col gap-monti-2 pt-monti-20">
+			<nav aria-label={label} className="flex flex-[1_1_160px] flex-col gap-monti-4 pt-monti-20">
 				{rail}
 			</nav>
 			<div className="min-w-0 flex-[999_1_480px]">{children}</div>

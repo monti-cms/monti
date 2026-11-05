@@ -40,8 +40,9 @@ function LanguageRow({
 		<li
 			data-slot="language-row"
 			className={cn(
-				// 8px in at both ends, as a field's words are, so a tint stays in the column. Only a row that can be moved answers the pointer.
-				"grid items-center gap-x-monti-12 border-monti-muted border-b px-monti-8 py-monti-10",
+				// A row stands at the large control height (36px, its line inside), so the × icon button (32px) and a small button (28px) fit with no margins
+				// of their own. 8px in at both ends, as a field's words are, so a tint stays in the column. Only a row that can be moved answers the pointer.
+				"grid h-monti-control-lg items-center gap-x-monti-12 border-monti-muted border-b px-monti-8",
 				handle && "hover:bg-monti-muted",
 				handled ? "grid-cols-[16px_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]",
 				drag?.active && HELD,
@@ -57,10 +58,7 @@ function LanguageRow({
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
 			</span>
-			{/* An icon button (the × that takes the language out) keeps the row's height and keeps 2px from the row's end, as a field's action does. */}
-			<span className="flex items-center justify-end [&>[data-slot=icon-button]]:-my-monti-6 [&>[data-slot=icon-button]]:-mr-monti-6 [&_[data-slot=button]]:-my-monti-4">
-				{children}
-			</span>
+			<span className="flex items-center justify-end">{children}</span>
 		</li>
 	);
 }

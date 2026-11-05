@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconButton } from "./icon-button";
-import { Renew } from "./icons";
+import { Close } from "./icons";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 import { Textarea } from "./textarea";
@@ -73,7 +73,7 @@ export const SizesAndMono: Story = {
 	),
 };
 
-/** `action`: a button at the end of the first line (fill from the body). The underline runs under it too. */
+/** `action`: a button at the end of the first line (here, clearing the value). The underline runs under it too. */
 export const WithAction: Story = {
 	render: () => (
 		<Stack gap={24} className="max-w-sm">
@@ -88,8 +88,8 @@ export const WithAction: Story = {
 					placeholder="비어 있음"
 					defaultValue={value}
 					action={
-						<IconButton label="본문에서 가져오기">
-							<Renew aria-hidden />
+						<IconButton label="요약 지우기">
+							<Close aria-hidden />
 						</IconButton>
 					}
 				/>

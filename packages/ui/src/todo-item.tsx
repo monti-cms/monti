@@ -89,8 +89,8 @@ function TodoItem({
 					type="button"
 					onClick={onAction}
 					className={cn(
-						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-						proposal ? "text-monti-proposal" : "text-monti-muted",
+						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note decoration-1 underline-offset-4 outline-none hover:underline focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+						proposal ? "text-monti-proposal" : "text-monti-muted hover:text-monti-default",
 					)}
 				>
 					{proposal && <Spark className="size-monti-icon-xs" />}

@@ -6,12 +6,12 @@ import { Caret } from "./caret";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 
-/** What the admin asked, quoted under the title of the review page. */
+/** What the admin asked, quoted under the title of the review page. It keeps no room around itself: the page puts it 16px under the title. */
 function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
 	return (
 		<p
 			data-slot="review-quote"
-			className={cn("mt-monti-16 font-normal text-monti-muted text-monti-title", className)}
+			className={cn("m-0 font-normal text-monti-muted text-monti-title", className)}
 			{...props}
 		/>
 	);
@@ -19,7 +19,8 @@ function ReviewQuote({ className, ...props }: ComponentProps<"p">) {
 
 /**
  * A group of changes on the review page: its name in bold, what and how much in mono ("2 entries · can be undone"), and at the end what applies to the whole
- * group (the "One line / Side by side" tabs, "Leave out all 11"). The group's rows follow it.
+ * group (the "One line / Side by side" tabs, "Leave out all 11"). The group's rows follow it. It keeps no room around itself: the page puts its groups
+ * 32px apart.
  */
 function ReviewGroup({
 	title,
@@ -30,7 +31,7 @@ function ReviewGroup({
 	...props
 }: Omit<ComponentProps<"section">, "title"> & { title: ReactNode; meta?: ReactNode; actions?: ReactNode }) {
 	return (
-		<section data-slot="review-group" className={cn("mt-monti-32", className)} {...props}>
+		<section data-slot="review-group" className={className} {...props}>
 			<h2 className="flex items-baseline gap-monti-12 border-monti-default border-b pb-monti-12 font-bold text-monti-body">
 				{title}
 				{meta !== undefined && <span className="font-normal text-monti-meta text-monti-subtle">{meta}</span>}
@@ -121,12 +122,15 @@ function ReviewItem({
 	);
 }
 
-/** The column names over side-by-side changes ("Now", "Proposed"). */
+/**
+ * The column names over side-by-side changes ("Now", "Proposed"): the first row of the group, as tall as a medium control (32px), the names at its foot,
+ * 4px over the first change.
+ */
 function ReviewCompareHead({ before, after }: { before: ReactNode; after: ReactNode }) {
 	return (
 		<div
 			data-slot="review-compare-head"
-			className="-mx-monti-12 grid grid-cols-[104px_repeat(2,minmax(0,1fr))] px-monti-12 pt-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
+			className="-mx-monti-12 grid h-monti-control-md grid-cols-[104px_repeat(2,minmax(0,1fr))] items-end px-monti-12 pb-monti-4 text-monti-micro text-monti-subtle"
 		>
 			<span />
 			<span className="px-monti-20">{before}</span>

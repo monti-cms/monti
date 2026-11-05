@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FormField, FormFieldLabel, Input, LockMark, Section, Stack } from "./index";
+import { FormField, FormFieldLabel, Input, LockMark, Section, Stack, Text } from "./index";
 
-/** One section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under. */
+/** One section of a settings screen: the title in a column on the left, the fields beside it. A hairline under each section but the last; stacked sections are parted by space alone. */
 const meta = {
 	title: "Patterns/Frame/Section",
 } satisfies Meta;
@@ -15,7 +15,7 @@ const field = (id: string, label: string, value: string) => (
 	</FormField>
 );
 
-/** Two sections; the last has no hairline; a section that is all structure ends its title with a lock. */
+/** Two sections, a hairline between them (the last has none); a locked value carries its lock on its own row, not on the section title. */
 export const Sections: Story = {
 	render: () => (
 		<Stack gap={0} width="content">
@@ -23,21 +23,20 @@ export const Sections: Story = {
 				{field("site-name", "사이트 이름", "몬티 블로그")}
 				{field("site-url", "주소", "https://monti.blog")}
 			</Section>
-			<Section
-				last
-				title={
-					<>
-						언어 <LockMark label="구조는 바꿀 수 없어요" />
-					</>
-				}
-			>
-				{field("tz", "시간대", "Asia/Seoul")}
+			<Section title="공개 주소" last>
+				<FormField>
+					<FormFieldLabel>
+						주소에 언어 표시
+						<LockMark label="바꿀 수 없음" />
+					</FormFieldLabel>
+					<Text>항상</Text>
+				</FormField>
 			</Section>
 		</Stack>
 	),
 };
 
-/** `dense`: groups of options in a stacked column (a collection's editor options), 20px apart from their rules. */
+/** `dense`: groups of options in a stacked column (a collection's editor options), 20px above and below each. */
 export const Dense: Story = {
 	render: () => (
 		<Stack gap={0} width="content">
@@ -55,7 +54,7 @@ export const Dense: Story = {
 export const Stacked: Story = {
 	render: () => (
 		<Stack gap={0} width="panel">
-			<Section title="기본" stacked last>
+			<Section title="기본" stacked>
 				{field("col-name", "이름", "게시글")}
 			</Section>
 		</Stack>

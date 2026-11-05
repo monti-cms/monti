@@ -32,9 +32,12 @@ export const TEXT_HOVER =
  */
 export const FIELD_ACTION = "-mr-monti-6 shrink-0";
 
-/** The button size under each field size, for {@link FIELD_ACTION}. */
-export const FIELD_ACTION_SIZE = {
-	lg: "",
-	md: "[&_[data-slot=icon-button]]:size-monti-control-sm",
-	sm: "[&_[data-slot=icon-button]]:size-monti-control-xs [&_[data-slot=icon-button]_svg]:size-3.5",
+/**
+ * The icon button size under each field size, for {@link FIELD_ACTION}: the field gives it to the buttons in its end control (`IconButtonContext`), so a
+ * caller passes a plain `IconButton`.
+ */
+export const FIELD_ACTION_BUTTON = {
+	lg: {},
+	md: { size: "sm" },
+	sm: { size: "xs" },
 } as const;

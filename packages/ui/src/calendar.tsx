@@ -25,7 +25,7 @@ function Calendar({
 		<DayPicker
 			showOutsideDays={showOutsideDays}
 			className={cn(
-				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-monti-12 [--cell-radius:var(--monti-radius-md)] [--cell-size:--spacing(8)]",
+				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-monti-12 [--cell-radius:var(--monti-radius-full)] [--cell-size:--spacing(8)]",
 				String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
 				String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
 				className,
@@ -55,7 +55,7 @@ function Calendar({
 				month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
 				weekdays: cn("flex", defaultClassNames.weekdays),
 				weekday: cn(
-					"flex h-6 flex-1 items-center justify-center rounded-(--cell-radius) text-monti-micro text-monti-subtle select-none",
+					"flex h-monti-control-xs flex-1 items-center justify-center rounded-(--cell-radius) text-monti-micro text-monti-subtle select-none",
 					defaultClassNames.weekday,
 				),
 				week: cn("mt-monti-2 flex w-full", defaultClassNames.week),

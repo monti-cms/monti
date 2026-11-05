@@ -7,12 +7,13 @@ import { MENU_LABEL, MENU_ROW, MENU_SEPARATOR } from "./menu-parts";
  * It stays on the page and the picked row stays marked. Name it with `aria-label`. Rows are {@link PickListItem}s, the options of a listbox.
  */
 function PickList({ className, ...props }: Omit<React.ComponentProps<"div">, "role">) {
-	return <div role="listbox" data-slot="pick-list" className={cn("flex flex-col", className)} {...props} />;
+	return <div role="listbox" data-slot="pick-list" className={cn("flex flex-col gap-monti-4", className)} {...props} />;
 }
 
 /**
- * One kind in a {@link PickList}: its name, and `mark` at the end when picking it opens more (→). The picked row takes the selected background and
- * the ink color; the others are muted.
+ * One kind in a {@link PickList}: its name, and `mark` at the end for a real add-on to the name (the plugin a kind comes from: "Ollama", "seo"). It never
+ * carries an arrow: the row's place in the list already says that picking it shows more beside it. The picked row takes the selected background and the
+ * ink color; the others are muted. A row is 32px, like every menu row.
  */
 function PickListItem({
 	selected = false,
@@ -32,7 +33,8 @@ function PickListItem({
 			data-slot="pick-list-item"
 			className={cn(
 				MENU_ROW,
-				"w-full cursor-pointer border-0 bg-transparent text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
+				// On the sheet's ground, not in a floating menu: a one-line row there is a pill.
+				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}

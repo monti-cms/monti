@@ -116,7 +116,7 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 
 /**
  * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
- * is the head (`head`): the name of each side in the small mono line, under the ink rule.
+ * is the head (`head`): each side's last edit date in the small mono line, under the ink rule.
  */
 function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
 	return <div data-slot="compare-rows" className={cn("flex flex-col", className)} {...props} />;
@@ -143,7 +143,7 @@ function CompareRow({
 	name?: React.ReactNode;
 	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. (cms-allow-korean: quotes the words) */
 	note?: React.ReactNode;
-	/** The head row: each side's name, date and language in the small mono line. */
+	/** The head row: each side's last edit date in the small mono line. */
 	head?: boolean;
 	/** The title row: the two titles at the page heading size. */
 	title?: boolean;
@@ -194,7 +194,7 @@ function CompareRow({
 
 /**
  * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
- * `Button variant="ghost" size="sm"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
+ * `TextButton variant="underline"`, "따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
  */
 function CompareShared({
 	action,
