@@ -7,7 +7,7 @@ import { MENU_LABEL, MENU_ROW, MENU_SEPARATOR } from "./menu-parts";
  * It stays on the page and the picked row stays marked. Name it with `aria-label`. Rows are {@link PickListItem}s, the options of a listbox.
  */
 function PickList({ className, ...props }: Omit<React.ComponentProps<"div">, "role">) {
-	return <div role="listbox" data-slot="pick-list" className={cn("flex flex-col", className)} {...props} />;
+	return <div role="listbox" data-slot="pick-list" className={cn("flex flex-col gap-monti-4", className)} {...props} />;
 }
 
 /**
@@ -34,7 +34,7 @@ function PickListItem({
 			className={cn(
 				MENU_ROW,
 				// On the sheet's ground, not in a floating menu: a one-line row there is a pill.
-				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-selected aria-selected:text-monti-default",
+				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}

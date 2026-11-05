@@ -466,7 +466,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
 		<ul
 			data-slot="sidebar-menu"
 			data-sidebar="menu"
-			className={cn("m-0 flex w-full min-w-0 list-none flex-col gap-monti-2 p-0", className)}
+			className={cn("m-0 flex w-full min-w-0 list-none flex-col gap-monti-4 p-0", className)}
 			{...props}
 		/>
 	);
@@ -511,7 +511,7 @@ function SidebarMenuButton({
 			{
 				className: cn(
 					NAV_ROW,
-					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:px-[10px] group-data-[rail]/rail:[&>svg:first-child]:ml-0 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -565,7 +565,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-0 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
+				"m-0 flex list-none flex-col gap-monti-4 pt-monti-4 pr-0 pb-monti-6 pl-0 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
 				className,
 			)}
 			{...props}
@@ -573,13 +573,13 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-[38px]", "pl-[60px]", "pl-[82px]", "pl-[104px]"] as const;
+const SUB_DEPTH = ["pl-[42px]", "pl-[64px]", "pl-[86px]", "pl-[108px]"] as const;
 
 /**
  * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
  * with 4px of air above the first folder, ending 8px past the middle of the last folder's name. Every folder name stands 20px past its nearest rule.
  */
-const SUB_LINE_X = ["before:left-[17px]", "before:left-[39px]", "before:left-[61px]", "before:left-[83px]"] as const;
+const SUB_LINE_X = ["before:left-[21px]", "before:left-[43px]", "before:left-[65px]", "before:left-[87px]"] as const;
 /** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
 const SUB_LINE_LEFT = [17, 39, 61, 83] as const;
 
@@ -646,7 +646,7 @@ function SidebarMenuSubButton({
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-monti-10 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-[14px] text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],
