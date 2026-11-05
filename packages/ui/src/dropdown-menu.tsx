@@ -265,9 +265,7 @@ function DropdownMenuSearch({
 
 /** A long list in a menu: one column, 320px high at most, scrolling inside. */
 function DropdownMenuScroll({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div data-slot="dropdown-menu-scroll" data-scrollbar="always" className={cn(MENU_SCROLL, className)} {...props} />
-	);
+	return <div data-slot="dropdown-menu-scroll" className={cn(MENU_SCROLL, className)} {...props} />;
 }
 
 function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
