@@ -1,11 +1,13 @@
-import { Empty, PageColumn, PageHeader, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
+import { Empty, PageColumn, PageHeader, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
 import { type ReactNode, useMemo, useState } from "react";
+import { LeaveGuardProvider, useLeave } from "./draft/leave-guard";
 import { adminMessages } from "./messages";
 import { AdminProvider, type Language, useAdmin } from "./operations/admin-context";
 import type { Transport } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { LoginScreen } from "./screens/login/login-screen";
+import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { useSession } from "./session";
 
 /** The words the `@monti-cms/ui` parts write themselves, from the admin's dictionary (`ui.*`). */
@@ -47,11 +49,27 @@ function CollectionPage({ name, count }: { name: string; count: number }) {
 function Signed() {
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [open, setOpen] = useState<Place | null>(null);
+	const [review, setReview] = useState(0);
+	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
+	const leave = useLeave();
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	const place = open ?? (first ? { collection: first } : null);
+	const go = (next: Place) => leave(() => setOpen(next));
 	return (
-		<AdminFrame open={place} onOpen={setOpen} counts={counts.data}>
-			{place !== null && typeof place === "object" ? (
+		<AdminFrame
+			open={place}
+			onOpen={go}
+			onReview={() =>
+				leave(() => {
+					setOpen("settings");
+					setReview((count) => count + 1);
+				})
+			}
+			counts={counts.data}
+		>
+			{place === "settings" ? (
+				<CollectionsScreen onOpen={go} review={review} />
+			) : place !== null && typeof place === "object" ? (
 				<CollectionPage name={place.collection} count={counts.data?.collections[place.collection] ?? 0} />
 			) : null}
 		</AdminFrame>
@@ -87,7 +105,10 @@ export function MontiAdmin({
 		<AdminProvider transport={transport} siteName={siteName} language={language} apiBase={apiBase}>
 			<AdminUiLabels>
 				<TooltipProvider>
-					<Shell denied={denied} />
+					<LeaveGuardProvider>
+						<Shell denied={denied} />
+					</LeaveGuardProvider>
+					<Toaster />
 				</TooltipProvider>
 			</AdminUiLabels>
 		</AdminProvider>

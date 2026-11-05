@@ -20,7 +20,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { SchemaBanner } from "./schema-banner";
@@ -34,6 +34,18 @@ type SchemaRead = {
 	adminValues: Record<string, { label?: string }>;
 };
 export type FrameCounts = { collections: Record<string, number>; trash: number; failedDeliveries: number };
+
+const CornerContext = createContext<((covered: boolean) => void) | null>(null);
+
+/** A panel docked at the page's right edge covers the ✦ button in the frame's corner while `covered` (common.md: the button goes under the panel). */
+export function useCoverCorner(covered: boolean) {
+	const cover = useContext(CornerContext);
+	useEffect(() => {
+		if (!cover || !covered) return;
+		cover(true);
+		return () => cover(false);
+	}, [cover, covered]);
+}
 
 const same = (a: Place | null, b: Place) =>
 	a !== null && (typeof a === "string" || typeof b === "string" ? a === b : a.collection === b.collection);
@@ -81,18 +93,24 @@ function Row({
 export function AdminFrame({
 	open,
 	onOpen,
+	onReview,
 	counts,
 	children,
 }: {
 	open: Place | null;
 	onOpen: (place: Place) => void;
+	/** Opens the review of a schema file edited by hand (the banner's review button, T16). */
+	onReview?: () => void;
 	/** The sidebar's numbers; the app reads them and reads them again after a write that changes them. */
 	counts: FrameCounts | null;
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
-	const schema = useRead<SchemaRead>("schema.read");
+	// Read again after every write: a saved collection's label and a new collection's row show at once (flow 4, step 06).
+	const schema = useRead<SchemaRead>("schema.read", {}, { afterWrites: true });
 	const [mode, setMode] = useScreenMode();
+	const [covered, setCovered] = useState(false);
+	const cover = useMemo(() => (next: boolean) => setCovered(next), []);
 	const [rail, setRail] = useSidebarRail();
 	const collections = Object.entries(schema.data?.schema.collections ?? {});
 	const state = schema.data;
@@ -163,20 +181,24 @@ export function AdminFrame({
 				</Sidebar>
 				<SidebarInset
 					fixed
-					banner={<SchemaBanner />}
+					banner={<SchemaBanner onReview={onReview} />}
 					corner={
-						<IconButton label={t("frame.assistant")}>
-							<Spark className="size-monti-icon-lg" />
-						</IconButton>
+						covered ? undefined : (
+							<IconButton label={t("frame.assistant")}>
+								<Spark className="size-monti-icon-lg" />
+							</IconButton>
+						)
 					}
 				>
-					<Stack gap={0} grow minWidth={0} minHeight={0} container>
-						<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-							<Stack gap={0} grow minWidth={0} minHeight={0} container>
-								{children}
-							</Stack>
-						</Inline>
-					</Stack>
+					<CornerContext.Provider value={cover}>
+						<Stack gap={0} grow minWidth={0} minHeight={0} container>
+							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+								<Stack gap={0} grow minWidth={0} minHeight={0} container>
+									{children}
+								</Stack>
+							</Inline>
+						</Stack>
+					</CornerContext.Provider>
 				</SidebarInset>
 			</SidebarProvider>
 		</Text>

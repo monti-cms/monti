@@ -13,9 +13,9 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 미리보기에 고칠 곳이 있으면 `saveDisabled`. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
+| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움" · "주소" · 그 밖의 고침은 "바뀜"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 미리보기에 고칠 곳이 있으면 `saveDisabled`. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
 | 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
-| 데이터베이스 적용 실패 | `ErrorNote`(`title` "데이터베이스에 적용하지 못했어요", 회색 한 줄, `actions`에 `TextButton` "다시 적용" · "다시 불러오기") | 컬렉션 탭 줄 바로 아래. |
+| 데이터베이스 적용 실패 (빠짐, 2026-11-05) | 틀의 알림 띠(`SchemaBanner`)가 맡는다 | 모든 화면 맨 위의 띠와 같은 말을 두 번 보이지 않는다. |
 
 #### 컬렉션 목록
 
@@ -23,9 +23,9 @@
 |---|---|---|
 | 목록과 내용 | `RailLayout`(`label` "컬렉션", `rail`에 목록) | 좁으면 내용이 목록 아래로 내려간다. |
 | 컬렉션 하나 | `NavLink`(`active`, `note`에 식별자 mono, 바뀐 컬렉션은 `dot`) | 누르면 그 컬렉션을 연다. 지울 컬렉션은 곧바로 목록에서 빠진다. |
-| "+ 새 컬렉션" | `TextButton variant="quiet"` | 새 컬렉션 시트를 연다. 읽기 전용이면 없다. |
+| "+ 새 컬렉션" | `RailAction` | 새 컬렉션 시트를 연다. 읽기 전용이면 없다. |
 | 컬렉션 탭 "기본 · 필드 10 · 에디터" | `PageToolbar` 안의 `TabLinks` + `TabLink`(필드 탭은 `count`) | 탭 하나가 페이지 하나다. |
-| "속성 패널 미리보기" | `PageToolbarEnd` 안의 `TextButton`(`aria-pressed`) | 필드 탭에만 있다. 누르면 미리보기 사이드 패널을 열고 닫는다. |
+| "속성 패널 미리보기" | `PageToolbarEnd` 안의 `Button variant="ghost" size="sm"`(`aria-pressed`) | 필드 탭에만 있다. 누르면 미리보기 사이드 패널을 열고 닫는다. |
 
 #### 필드 탭
 
@@ -33,9 +33,9 @@
 |---|---|---|
 | 속성 패널 탭 "기본 7 · SEO 3 +" | `FolderTabs`(`FolderTabsList`, `FolderTab` 손잡이 · 이름 · `count`, 플러그인이 둔 탭은 `locked`, 끝에 `FolderTabsAdd` "탭 추가") | 고른 탭의 필드만 보인다. 필드를 다른 탭 머리로 끌어 옮긴다. 탭 이름은 그 자리에서 고친다(`FolderTabEdit`). 탭이 하나뿐이면 탭 줄 없이 행만 있다. |
 | 필드 목록 | `FolderTabsBody` 안의 `FieldTree` | 탭이 하나뿐이면 `FieldTree`만. |
-| 필드 한 줄 | `FieldRow`(`name` mono, `label`, `description`, `kind` mono와 "!" 표시, 묶음 안은 `depth`, 바뀜은 `changed`, 이름 색 `tone`: 새로 `success`, 이름 바꿈 `warning`, 지움 `faint`, 문제 `danger`, `note` "← summary" · "지움" · "새로" · "✦ 제안" · "선택지 없음", 옮길 수 없으면 `grip={false}`) | 누르면(`onOpen`) 그 필드의 시트가 열리고, 고치는 것은 시트에서 한다. 손잡이로 순서를 바꾼다. |
+| 필드 한 줄 | `FieldRow`(`name` mono, `label`, `description`, `kind` mono와 "!" 표시, 묶음 안은 `depth`, 바뀜은 `changed`, 이름 색 `tone`: 새로 `success`, 이름 바꿈 `warning`, 지움 `faint`, 문제 `danger`, ✦ 제안 `proposal`, `note` "← summary" · "지움" · "새로" · "✦ 제안" · "선택지 없음", 옮길 수 없으면 `grip={false}`) | 누르면(`onOpen`) 그 필드의 시트가 열리고, 고치는 것은 시트에서 한다. 손잡이로 순서를 바꾼다. |
 | 묶음 줄 "분류" | `FieldRow group` | 이름이 굵게 든 회색 띠. |
-| "+ 필드 추가" · "+ 묶음 추가" · "+ 탭 추가" | `TextButton` · `TextButton variant="quiet"` · `TextButton variant="quiet"` | 필드 추가는 필드 시트를 연다. 탭 추가는 탭이 하나뿐일 때만 여기 있다. 읽기 전용이면 "+ 필드 추가"가 없다. |
+| "+ 필드 추가" · "+ 묶음 추가" · "+ 탭 추가" | 셋 다 `Button variant="ghost" size="sm"` | 필드 추가는 필드 시트를 연다. 탭 추가는 탭이 하나뿐일 때만 여기 있다. 읽기 전용이면 "+ 필드 추가"가 없다. |
 | 표시 설명 "! 필수 · → 관계 · [] 여러 개" | `Text variant="meta" tone="subtle"` | |
 
 #### 기본 탭
@@ -48,8 +48,8 @@
 | "구조" 절 | `Section stacked`("구조"). 읽기 전용이면 제목 뒤 `LockMark` | 구조(파일에 있는 설정)는 보기와 다른 절이다([field.md](../components/field.md) "읽기 전용"). |
 | 식별자 | `FormField`의 라벨과 `Text mono`, 값 바로 뒤 `LockMark` | 절대 바꿀 수 없는 값이라 글로 보인다. |
 | 종류 | 라벨과 `Text` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
-| 공개 주소 | `Option spread` + `Switch`(바뀌면 이름 뒤 `ChangeDot`), 그 아래 `Affix`(`prefix` "/", `suffix` "/:slug", mono) | 끄면 주소 칸이 없다. 읽기 전용이면 `Text mono` "/posts/:slug"와 `Switch disabled`. |
-| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + `DangerRow`(`name`, `meta` "글 148편 · 폴더 3개", `action`에 `Button variant="outline-danger" size="sm"` "지우기") | 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
+| 공개 주소 | `FormField` 라벨(바뀌면 뒤에 `ChangeDot`) + `Affix`(`prefix` "/", `suffix` "/:slug", mono) | 모든 컬렉션에 공개 주소가 있다(01번 문서). 켜고 끄는 스위치는 없다. 읽기 전용이면 `Text mono` "/posts/:slug". |
+| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + `DangerRow`(`name`, `action`에 `Button variant="outline-danger" size="sm"` "지우기") | 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
 #### 속성 패널 미리보기
 
@@ -73,7 +73,7 @@
 | 시트 | `Sheet`(`SheetTitle` "새 컬렉션"), 발은 "취소" · `Button` "만들기" | 오류가 있으면 "만들기"가 비활성. |
 | 이름 · 식별자 | `FormField` + `FormFieldLabel required` + `Input` / `Input mono`, 식별자 라벨 뒤 `LockMark` | 식별자는 만든 뒤 바꿀 수 없다. 이미 쓰는 식별자면 `aria-invalid`와 `FormFieldError` "이미 쓰는 이름이에요." |
 | 종류 | `FormFieldSet` + `FormFieldLegend variant="field"` "종류" + `RadioGroup`과 `RadioItem`(`description` "게시글, 노트처럼 본문이 있어요" · "카테고리, 태그처럼 짧아요") | 문서 · 항목 중 하나. |
-| 공개 주소 | `Option spread` + `Switch`, 그 아래 `Affix`(`prefix` "/", `suffix` "/:slug") | |
+| 공개 주소 | `FormField` 라벨 + `Affix`(`prefix` "/", `suffix` "/:slug") | 스위치는 없다. |
 
 #### 필드 시트
 
@@ -81,12 +81,10 @@
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "필드 추가", `of` 컬렉션 이름), 본문은 `SheetSplit`, 발은 "취소" · "필드 추가" | |
 | 종류 고르기 (왼쪽) | `PickList` + `PickListItem`("글자" · "고르기" · "미디어" · "관계", 관계는 `mark` "→", 고른 것은 `selected`) | 고르면 오른쪽이 그 종류의 설정으로 바뀐다. |
-| "기본 · 고급" | `Tabs` + `TabsList variant="bar"` + `TabsTrigger` + `TabsContent` | 한 시트 안에서 바꾼다. |
 | 표시 이름 · 이름 · 도움말 | `FormField` + `Input` · `Input mono` · `Textarea` | |
-| 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch`, "발행 안 된 시리즈" `Select` | |
+| 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch` | "발행 안 된 대상"은 08번 문서와 함께 온다(T42). |
 | 글자 설정 | "여러 줄" `Switch`, "최대 글자 수" · "줄 수" `Input mono width="number"`, "안내 문구" `Input`, "비어 있으면 본문에서 채우기" `Switch` | |
-| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 줄 끝 `TextButton variant="quiet"` "기본값 · 메모" + `Caret` + `DropdownMenu`로 기본값을 고른다. |
-| 선택지마다 다른 필드 | `Option spread` + `Switch` | |
+| 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
 | 필수 | `Option spread` + `Switch`(라벨 뒤 흐린 "!") | |
 | 언어 | `FormField` + `Segmented`("모두 같음" · "언어마다" · "원문 따름") | 셋 중 하나를 고르는 짧은 선택이다([choice.md](../components/choice.md) "몇 개 중 하나"). |
 | 요약 줄 | `Text variant="meta" mono` "series → Series" | 지금 설정을 스키마 말로 한 줄. |
@@ -106,10 +104,10 @@
 | 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 바뀐 곳 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 비활성. 발에는 "취소"와 알약 하나만 있다. |
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었어요", 회색 한 줄, `actions`에 "다시 불러오기") | 시트 맨 위. |
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
-| 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기") | 하나를 고른다. |
+| 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "132편에서 값이 사라져요. 되돌릴 수 없어요." |
 | 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 공개 주소의 전 / 후. 개수는 보이지 않는다(2026-11-05 바뀜: 개발 데이터의 숫자라 운영과 다르다). 컬렉션 삭제는 `ChangeNote` 한 줄이다. |
-| 영향받는 글 | `Text variant="note"` 안의 `TextButton variant="underline"` 글 링크 | "첫 번째 글, 발행 후 고친 글 외 146편". |
+| 영향받는 글 (빠짐, 2026-11-05) | | 개발 데이터의 글이라 운영에서 영향받는 글과 다르다. 개수와 같은 이유로 뺐다. |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
 
 ### 흐름 4 · 컬렉션
@@ -171,7 +169,7 @@
 |---|---|---|
 | 묶음 "블록" · "서식" · "제목 단계" | `Section stacked`(제목은 묶음 이름) | 이 컬렉션의 편집기가 쓸 수 있는 것을 묶음마다 고른다. 처음에는 모두 켜져 있다. |
 | "모두 허용" | 블록 묶음 제목 뒤 `TextButton variant="quiet"` | 누르면 그 묶음을 모두 켠다. |
-| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 바뀐 곳이 된다. 끈 항목은 흐린 글자. |
-| 바뀐 항목 | 이름 뒤 `Text variant="caption" tone="warning"` "· 바뀜" | 저장한 값과 다를 때만. |
+| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 바뀐 곳이 된다. |
+| 바뀐 항목 | 이름 뒤 `Text variant="meta" tone="warning"` "· 바뀜" | 저장한 값과 다를 때만. |
 
 스토리: Patterns/Frame/Section, Controls/Button/TextButton, Primitives/Grid, Controls/Choice/Option, Controls/Choice/Checkbox, Primitives/Text.

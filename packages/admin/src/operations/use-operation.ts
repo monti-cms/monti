@@ -1,7 +1,7 @@
 import type { Message } from "@monti-cms/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "./admin-context";
-import type { Answer } from "./transport";
+import type { Answer, CallOptions } from "./transport";
 
 /** Why an operation did not go through, as the screen shows it. `conflict`: the record changed since it was read, so the screen reloads it. */
 export type Refusal = { status: number; error: string; reason: Message | null };
@@ -12,7 +12,7 @@ const refusalOf = (answer: Answer): Refusal => {
 };
 
 /**
- * Calls one operation (build.md rule 3: screens reach the server only this way). `run` sends the input and the versions the screen read; it
+ * Calls one operation (build.md rule 3: screens reach the server only this way). `run` sends the input, the versions the screen read and the proposals it took; it
  * resolves to the answer's body, or to a refusal the screen shows.
  */
 export function useOperation<Output = unknown>(name: string) {
@@ -22,11 +22,11 @@ export function useOperation<Output = unknown>(name: string) {
 	const run = useCallback(
 		async (
 			input: unknown = {},
-			versions?: Record<string, number>,
+			options?: CallOptions,
 		): Promise<{ ok: true; body: Output } | { ok: false; refusal: Refusal }> => {
 			setPending(true);
 			try {
-				const answer = await transport(name, input, versions);
+				const answer = await transport(name, input, options);
 				if (answer.status === 200) {
 					setRefusal(null);
 					// A write's answer names its activity row; a read's does not.
