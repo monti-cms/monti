@@ -437,6 +437,23 @@ function FieldSheetBody({
 			</SheetSection>
 		) : null;
 
+	// What files a media field takes: the shape of its value, like a select's choices, so above the rules.
+	const files =
+		form.kind === "media" ? (
+			<SheetSection title={t("settings.field.files")}>
+				{pickRow(
+					t("settings.field.accept"),
+					"field-accept",
+					[
+						{ value: "image", label: t("settings.field.accept.image") },
+						{ value: "any", label: t("settings.field.accept.any") },
+					],
+					form.accept,
+					(accept) => set({ accept: accept as Form["accept"] }),
+				)}
+			</SheetSection>
+		) : null;
+
 	// What a relation picks from: the collection it points at, how many, and whether a name not in the list makes a new entry.
 	const picks =
 		form.kind === "relation" ? (
@@ -493,18 +510,6 @@ function FieldSheetBody({
 						)}
 					</>
 				) : null}
-				{form.kind === "media"
-					? pickRow(
-							t("settings.field.accept"),
-							"field-accept",
-							[
-								{ value: "image", label: t("settings.field.accept.image") },
-								{ value: "any", label: t("settings.field.accept.any") },
-							],
-							form.accept,
-							(accept) => set({ accept: accept as Form["accept"] }),
-						)
-					: null}
 				{pickRow(
 					t("settings.field.locale"),
 					"field-locale",
@@ -522,6 +527,7 @@ function FieldSheetBody({
 			{about}
 			{options}
 			{picks}
+			{files}
 			{rules}
 		</Stack>
 	);
