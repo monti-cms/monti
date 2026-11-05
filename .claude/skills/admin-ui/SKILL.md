@@ -14,7 +14,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 3. The family page in `docs/design/admin/components/` for every part you touch.
 4. The screen's part map in `docs/design/admin/screens/` (which part goes in each place and how it behaves; what it does not name is not used). Use only the parts it names; if a place needs another part, change the map first.
 5. `docs/design/admin/screens.md` and the `flows/` file for the screen and flow you build.
-6. The board on the canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) for the look. Read the live version with the Artifact tool.
+6. The screen's reference story (`packages/ui/src/screens/reference`, Storybook Screens/Reference) for the look. The canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) shows a flow's order only: since 2026-11-05 it is not kept up, so where its corners, rings or spacing differ from the repo, the repo is right.
 
 ## Rules
 
