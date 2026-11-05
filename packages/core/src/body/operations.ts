@@ -59,10 +59,10 @@ export const bodyOperations = [
 		name: "blocks.catalog",
 		kind: "read",
 		description:
-			"The blocks and marks the editor of a collection offers: for each block its description, what it holds and its attrs JSON schema. Read it before inserting or changing blocks.",
-		input: z.object({ collection: z.string() }),
+			"The blocks and marks the editor of a collection offers: for each block its description, what it holds and its attrs JSON schema. Read it before inserting or changing blocks. Without a collection: every block and mark the site has.",
+		input: z.object({ collection: z.string().optional() }),
 		async run(input, ctx) {
-			const editor = await editorOf(ctx.db, input.collection);
+			const editor = input.collection === undefined ? undefined : await editorOf(ctx.db, input.collection);
 			return {
 				blocks: [...ctx.site.kit.blocks.values()]
 					.filter((block) => blockOn(editor, { type: block.type }))
