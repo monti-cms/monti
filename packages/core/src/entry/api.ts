@@ -109,6 +109,8 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			authorize.searchParams.set("client_id", github.clientId);
 			authorize.searchParams.set("redirect_uri", `${url.origin}${url.pathname}/callback`);
 			authorize.searchParams.set("state", state);
+			// After a refused account GitHub would send the same one straight back: `?pick=1` asks it to show its account picker.
+			if (url.searchParams.get("pick") === "1") authorize.searchParams.set("prompt", "select_account");
 			return new Response(null, {
 				status: 302,
 				headers: { location: authorize.toString(), "set-cookie": cookie(request, STATE_COOKIE, state, 600) },

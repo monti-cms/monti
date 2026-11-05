@@ -64,7 +64,7 @@
 
 - 보드: `Flow8Step09.dc.html`
 - 화면: `Login` (attempt "GitHub 권한 없음")
-- 관리자가 아닌 GitHub 계정: "octo-kim은 관리자가 아니에요."와 함께 "다른 계정으로 로그인"이 나온다.
+- 관리자가 아닌 GitHub 계정: "octo-kim 계정은 관리자가 아니에요."가 나온다. 다시 "GitHub로 로그인"을 누르면 GitHub의 계정 고르기가 열린다.
 
 ## "예외"
 

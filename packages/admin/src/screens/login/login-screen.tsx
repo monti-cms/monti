@@ -150,8 +150,10 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 				) : null}
 				{withPassword && state.methods.github ? <Separator label={t("login.or")} /> : null}
 				{state.methods.github ? (
-					// A plain form: the browser goes to GitHub and comes back to the admin (doc 15).
+					// A plain form: the browser goes to GitHub and comes back to the admin (doc 15). After a refused account GitHub would hand the same
+					// one back, so the next try asks it for its account picker.
 					<form method="get" action={`${apiBase}/auth/github`}>
+						{denied ? <input type="hidden" name="pick" value="1" /> : null}
 						<Button variant={withPassword ? "secondary" : "primary"} width="full" pendingLabel={t("login.signingIn")}>
 							<LogoGithub aria-hidden />
 							{t("login.github")}
@@ -160,16 +162,7 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 				) : null}
 			</Stack>
 			{other || withPassword ? <FormFieldError reserve>{other ? t("login.failed") : undefined}</FormFieldError> : null}
-			{denied ? (
-				<Stack gap={8} align="start">
-					<FormFieldError>{t("login.denied", { login: denied })}</FormFieldError>
-					<form method="get" action={`${apiBase}/auth/github`}>
-						<Button variant="ghost" type="submit">
-							{t("login.otherAccount")}
-						</Button>
-					</form>
-				</Stack>
-			) : null}
+			{denied ? <FormFieldError>{t("login.denied", { login: denied })}</FormFieldError> : null}
 		</Stack>
 	);
 }
