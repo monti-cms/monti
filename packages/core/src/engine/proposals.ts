@@ -1,5 +1,6 @@
+import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
-import type { ProposalItemState } from "../db/schema";
+import type { Database, ProposalItemState } from "../db/schema";
 import { ConflictError, isMontiError } from "../errors";
 import type { AnyOperation, Message, Preview } from "../operation";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
@@ -187,16 +188,54 @@ export async function applyProposal(
 		}
 	}
 
-	const states = await engine.db
+	await settleProposal(engine.db, proposalId);
+	return results;
+}
+
+/** A proposal's status from its items': all still waiting, all thrown away, all done, or some of each. */
+export async function settleProposal(db: Kysely<Database> | Transaction<Database>, proposalId: string): Promise<void> {
+	const states = await db
 		.selectFrom("monti_proposal_item")
 		.select("state")
 		.where("proposal_id", "=", proposalId)
 		.execute();
-	const status = states.every((row) => row.state === "discarded")
-		? "discarded"
-		: states.every((row) => row.state === "applied" || row.state === "discarded")
-			? "applied"
-			: "partial";
-	await engine.db.updateTable("monti_proposal").set({ status }).where("id", "=", proposalId).execute();
-	return results;
+	const status = states.every((row) => row.state === "pending")
+		? "pending"
+		: states.every((row) => row.state === "discarded")
+			? "discarded"
+			: states.every((row) => row.state === "applied" || row.state === "discarded")
+				? "applied"
+				: "partial";
+	await db.updateTable("monti_proposal").set({ status }).where("id", "=", proposalId).execute();
+}
+
+/**
+ * Items a person took in a screen and saved with the screen's own write (doc 05): they become applied, tied to that write's activity row, so the
+ * activity log shows them with ✦ and their conversation, and undoing the write undoes them. Only pending items are taken.
+ */
+export async function markApplied(
+	trx: Transaction<Database>,
+	itemIds: string[],
+	activityId: string,
+): Promise<string | null> {
+	if (itemIds.length === 0) return null;
+	const items = await trx
+		.selectFrom("monti_proposal_item")
+		.innerJoin("monti_proposal", "monti_proposal.id", "monti_proposal_item.proposal_id")
+		.select(["monti_proposal_item.id", "monti_proposal_item.proposal_id", "monti_proposal.conversation_id"])
+		.where("monti_proposal_item.id", "in", itemIds)
+		.where("monti_proposal_item.state", "=", "pending")
+		.execute();
+	if (items.length === 0) return null;
+	await trx
+		.updateTable("monti_proposal_item")
+		.set({ state: "applied", activity_id: activityId })
+		.where(
+			"id",
+			"in",
+			items.map((item) => item.id),
+		)
+		.execute();
+	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
+	return items[0].conversation_id;
 }
