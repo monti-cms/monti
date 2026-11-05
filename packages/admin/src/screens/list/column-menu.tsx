@@ -110,6 +110,7 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
 }
 
 function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
+	const languageName = useLanguageName();
 	const facets = useFacets(query, "locale");
 	const current = filterOf(state, "locale");
 	const chosen = current?.on === "locale" ? current.any : [];
@@ -119,7 +120,7 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 			{locales.map((value) => (
 				<ValueRow
 					key={value}
-					label={value.toUpperCase()}
+					label={languageName(value)}
 					counted={count(facets, value)}
 					checked={chosen.includes(value)}
 					onToggle={() => {
@@ -131,6 +132,19 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 			<HideRow onHide={onHide} />
 		</>
 	);
+}
+
+/** A language's name in the admin's language ("en" reads "English" in English and its Korean name in Korean), its code when the browser has no name for it. */
+export function useLanguageName() {
+	const { language } = useAdmin();
+	const names = new Intl.DisplayNames([language], { type: "language" });
+	return (code: string) => {
+		try {
+			return names.of(code) ?? code.toUpperCase();
+		} catch {
+			return code.toUpperCase();
+		}
+	};
 }
 
 /** A relation or select column: "None", then each value with its count; a relation searches its values on top (components/list.md, column menu). */
@@ -221,11 +235,12 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 	const current = filterOf(state, column.id);
 	const range = current?.on === "date" ? current.range : null;
 	const [start, setStart] = useState<Date | null>(null);
+	const ranged = range !== null && typeof range !== "string" ? range : null;
 	const picked =
 		start !== null
 			? { from: start, to: undefined }
-			: range !== null && typeof range !== "string"
-				? { from: fromIso(range.from), to: fromIso(range.to) }
+			: ranged
+				? { from: fromIso(ranged.from), to: fromIso(ranged.to) }
 				: undefined;
 	const pick = (value: "today" | "7d" | "30d") =>
 		setFilter(column.id, range === value ? null : { on: "date", field, range: value });
@@ -251,15 +266,25 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 				</DropdownMenuRadioItem>
 			</DropdownMenuRadioGroup>
 			<DropdownMenuSub>
-				<DropdownMenuSubTrigger chevron={false}>
+				<DropdownMenuSubTrigger
+					chevron={false}
+					// Like the rows above, the picked row pressed again turns its filter off.
+					onClick={() => {
+						if (!ranged) return;
+						setStart(null);
+						setFilter(column.id, null);
+					}}
+				>
 					{t("list.pickRange")}
-					{range !== null && typeof range !== "string" && <MenuTick />}
+					{ranged && <MenuTick />}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar
 						mode="range"
 						language={language}
+						// The calendar follows `selected` only when it has `onSelect`; the days pressed are handled in `onDayClick`.
 						selected={picked}
+						onSelect={() => {}}
 						defaultMonth={picked?.from}
 						onDayClick={(day) => {
 							if (start === null) return setStart(day);

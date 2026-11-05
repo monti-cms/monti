@@ -565,7 +565,7 @@ export const adminMessages = defineMessages({
 			"list.searchIn": "찾을 곳",
 			"list.searchFields": "제목·주소",
 			"list.searchAll": "전체",
-			"list.new": "+ 새 {label} 쓰기",
+			"list.new": "+ 새 {label}",
 			"list.moreNew": "더 만들기",
 			"list.fromTemplate": "템플릿으로 쓰기",
 			"list.emptyTitle": "아직 {label} 없어요.",

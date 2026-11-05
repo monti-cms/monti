@@ -341,12 +341,12 @@ export const TagMenu: Story = {
 	},
 };
 
-/** The language's menu with "EN" picked: the groups that have an English entry (flow 7, step 04c; its translation group is T52). */
+/** The language's menu with English picked, its languages named in the admin's language: the groups that have an English entry (flow 7, step 04c; its translation group is T52). */
 export const LanguageMenu: Story = {
 	loaders: site(undefined, "#/c/post?locale=en"),
 	play: async ({ canvasElement }) => {
 		await openColumn(canvasElement, "언어");
-		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /EN/ })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /영어/ })).toBeTruthy(), wait);
 	},
 };
 
@@ -410,6 +410,16 @@ export const DateRange: Story = {
 		await openColumn(canvasElement, "수정일");
 		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
 		await waitFor(() => expect(body().getByRole("grid")).toBeTruthy(), wait);
+	},
+};
+
+/** One day: the same day pressed twice. The calendar marks it; pressing the ✓ "pick dates" row again lifts the filter (2026-11-06). */
+export const DateOneDay: Story = {
+	loaders: site(undefined, "#/c/post?updatedAt=2026-10-26..2026-10-26"),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "수정일");
+		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
+		await waitFor(() => expect(body().getByRole("button", { name: /10월 26일.*선택됨/ })).toBeTruthy(), wait);
 	},
 };
 

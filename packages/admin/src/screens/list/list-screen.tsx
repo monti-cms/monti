@@ -48,7 +48,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
-import { ColumnMenu } from "./column-menu";
+import { ColumnMenu, useLanguageName } from "./column-menu";
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -123,6 +123,7 @@ export function ListScreen({
 }) {
 	const { t, language, screen } = useAdmin();
 	const label = useColumnLabel();
+	const languageName = useLanguageName();
 	const schema = useRead<SchemaRead>("schema.read");
 	const columnsRead = useRead<Columns>("list.columns", { collection }, { afterWrites: true });
 	const columns = columnsRead.data?.columns ?? null;
@@ -381,7 +382,7 @@ export function ListScreen({
 			case "status":
 				return values(filter.any.map((value) => stateNames[value] ?? value));
 			case "locale":
-				return values(filter.any.map((value) => value.toUpperCase()));
+				return values(filter.any.map(languageName));
 			case "select":
 				return values(
 					filter.any.map((value) =>
