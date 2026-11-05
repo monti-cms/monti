@@ -33,7 +33,8 @@ function PropertyPanel({
 }) {
 	return (
 		<Tabs
-			className="h-full w-full shrink-0 gap-0 sm:w-monti-panel"
+			// As wide as the panel inside: it is the panel that is dragged wider, so a fixed width here would push it off the right edge.
+			className="h-full w-full shrink-0 gap-0 sm:w-auto"
 			value={value}
 			onValueChange={(next) => onValueChange(String(next))}
 		>
