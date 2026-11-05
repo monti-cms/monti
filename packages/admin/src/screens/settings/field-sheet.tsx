@@ -5,8 +5,6 @@ import {
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
-	FormFieldLegend,
-	FormFieldSet,
 	Inline,
 	Input,
 	LockMark,
@@ -15,8 +13,6 @@ import {
 	OptionTable,
 	PickList,
 	PickListItem,
-	RadioGroup,
-	RadioItem,
 	ReadValue,
 	Sheet,
 	SheetBody,
@@ -246,15 +242,52 @@ function FieldSheetBody({
 		onClose();
 	};
 
-	const switchRow = (label: ReactNode, checked: boolean, onChange: (checked: boolean) => void) => (
+	const lock = <LockMark label={t("settings.locked")} />;
+	/**
+	 * One input rule: its name at the start, its control at the end. On the live site a rule is in the schema file, so its name carries the lock and its
+	 * control is off or reads as text.
+	 */
+	const rule = (label: ReactNode, control: ReactNode) => (
 		<Option spread>
-			{label}
-			<Switch checked={checked} onCheckedChange={onChange} disabled={!structure} />
+			{structure ? (
+				label
+			) : (
+				<Inline gap={6} align="center">
+					{label}
+					{lock}
+				</Inline>
+			)}
+			{control}
 		</Option>
 	);
+	const switchRow = (label: ReactNode, checked: boolean, onChange: (checked: boolean) => void) =>
+		rule(
+			label,
+			structure ? (
+				<Switch checked={checked} onCheckedChange={onChange} />
+			) : (
+				<Text tone="subtle">{checked ? t("settings.field.on") : t("settings.field.off")}</Text>
+			),
+		);
+	/** A rule with a few values: a select at the end of the row, or its value as text on the live site. */
+	const pickRow = (
+		label: ReactNode,
+		id: string,
+		items: { value: string; label: string }[],
+		value: string,
+		onChange: (value: string) => void,
+	) =>
+		rule(
+			label,
+			structure ? (
+				<PickOne id={id} width="choice" size="sm" items={items} value={value} onChange={onChange} />
+			) : (
+				<Text tone="subtle">{items.find((item) => item.value === value)?.label ?? value}</Text>
+			),
+		);
 	const kindWord = (kind: Kind) => t(`settings.field.kind.${kind}`);
 
-	// The name is structure: the add sheet asks it with the label; a saved field's sheet has it under structure, where changing it is a rename.
+	// The identifier is in the schema: renaming it is a rename the review asks about; on the live site it reads as text with the lock.
 	const nameField =
 		structure && !fixedName ? (
 			<FormField>
@@ -269,26 +302,33 @@ function FieldSheetBody({
 				{nameError ? <FormFieldError>{nameError}</FormFieldError> : null}
 			</FormField>
 		) : (
-			<ReadValue label={t("settings.field.name")}>{form.name}</ReadValue>
+			<ReadValue label={t("settings.field.name")}>
+				<Inline gap={6} align="center">
+					{form.name}
+					{lock}
+				</Inline>
+			</ReadValue>
 		);
 
-	// The view: admin values, which change on the live site too (doc 01).
-	const view = (
-		<>
+	// What the field is: the label the admin reads, the identifier the site's code uses, and what it is for, which the assistant reads (doc 10).
+	const about = (
+		<Stack gap={20}>
 			<FormField>
 				<FormFieldLabel htmlFor="field-label">{t("settings.field.label")}</FormFieldLabel>
 				<Input id="field-label" value={form.label} onChange={(event) => set({ label: event.target.value })} />
 			</FormField>
+			{nameField}
 			<FormField>
-				<FormFieldLabel htmlFor="field-help">{t("settings.field.help")}</FormFieldLabel>
+				<FormFieldLabel htmlFor="field-about">{t("settings.field.about")}</FormFieldLabel>
 				<Textarea
-					id="field-help"
+					id="field-about"
 					tall
+					placeholder={t("settings.field.aboutPlaceholder")}
 					value={form.description}
 					onChange={(event) => set({ description: event.target.value })}
 				/>
 			</FormField>
-		</>
+		</Stack>
 	);
 
 	const options =
@@ -402,68 +442,73 @@ function FieldSheetBody({
 		(required) => set({ required }),
 	);
 
-	// The structure the person can change: required first, then what this kind has, then the language.
-	const settings = structure ? (
-		<>
+	// The input rules: one row each, its control at the end. Required first, then what this kind has, then the language.
+	const rules = (
+		<SheetSection title={t("settings.field.rules")}>
+			{adding ? null : rule(t("settings.field.kindLabel"), <Text tone="subtle">{kindWord(form.kind)}</Text>)}
 			{required}
 			{form.kind === "text" ? (
 				<>
 					{switchRow(t("settings.field.multiline"), form.multiline, (multiline) => set({ multiline }))}
-					<FormField>
-						<FormFieldLabel htmlFor="field-max">{t("settings.field.max")}</FormFieldLabel>
-						<Input
-							id="field-max"
-							mono
-							width="number"
-							inputMode="numeric"
-							placeholder={t("settings.field.noLimit")}
-							value={form.max}
-							onChange={(event) => set({ max: event.target.value.replace(/\D/g, "") })}
-						/>
-					</FormField>
+					{rule(
+						t("settings.field.max"),
+						structure ? (
+							<Input
+								id="field-max"
+								mono
+								width="choice"
+								inputMode="numeric"
+								align="end"
+								placeholder={t("settings.field.noLimit")}
+								value={form.max}
+								onChange={(event) => set({ max: event.target.value.replace(/\D/g, "") })}
+							/>
+						) : (
+							<Text tone="subtle">
+								{form.max ? t("settings.field.maxValue", { max: form.max }) : t("settings.field.noLimit")}
+							</Text>
+						),
+					)}
 				</>
 			) : null}
 			{options}
 			{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
-			{form.kind === "media" ? (
-				<FormField>
-					<FormFieldLabel htmlFor="field-accept">{t("settings.field.accept")}</FormFieldLabel>
-					<PickOne
-						id="field-accept"
-						items={[
+			{form.kind === "media"
+				? pickRow(
+						t("settings.field.accept"),
+						"field-accept",
+						[
 							{ value: "image", label: t("settings.field.accept.image") },
 							{ value: "any", label: t("settings.field.accept.any") },
-						]}
-						value={form.accept}
-						onChange={(accept) => set({ accept: accept as Form["accept"] })}
-					/>
-				</FormField>
-			) : null}
+						],
+						form.accept,
+						(accept) => set({ accept: accept as Form["accept"] }),
+					)
+				: null}
 			{form.kind === "relation" ? (
 				<>
-					<FormField>
-						<FormFieldLabel htmlFor="field-target">{t("settings.field.target")}</FormFieldLabel>
-						<PickOne id="field-target" items={targets} value={form.to} onChange={(to) => set({ to })} />
-					</FormField>
+					{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
 					{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
 					{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) => set({ createMissing }))}
 				</>
 			) : null}
-			<FormFieldSet>
-				<FormFieldLegend variant="field">{t("settings.field.locale")}</FormFieldLegend>
-				<RadioGroup value={form.locale} onValueChange={(locale) => set({ locale: locale as LocaleMode })}>
-					{LOCALES.map((value) => (
-						<RadioItem
-							key={value}
-							value={value}
-							label={t(`settings.field.locale.${value}`)}
-							description={t(`settings.field.locale.${value}.note`)}
-						/>
-					))}
-				</RadioGroup>
-			</FormFieldSet>
-		</>
-	) : null;
+			{pickRow(
+				t("settings.field.locale"),
+				"field-locale",
+				LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
+				form.locale,
+				(locale) => set({ locale: locale as LocaleMode }),
+			)}
+		</SheetSection>
+	);
+
+	// The same two parts in every field sheet, on the dev server and on the live site alike: what the field is, then its input rules.
+	const sections = (
+		<Stack gap={0}>
+			{about}
+			{rules}
+		</Stack>
+	);
 
 	const title = adding ? t("settings.field.add") : model.fieldLabel(c, open.key as string);
 	const head = (
@@ -480,62 +525,6 @@ function FieldSheetBody({
 	);
 
 	// The same order as the structure the dev server edits: name, kind, required, then what the kind has, then the language.
-	const lockedFacts = (
-		<>
-			<ReadValue label={t("settings.field.name")}>{form.name}</ReadValue>
-			<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-				{kindWord(form.kind)}
-				{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
-			</ReadValue>
-			{switchRow(t("settings.field.required"), form.required, () => {})}
-			{form.kind === "text" ? switchRow(t("settings.field.multiline"), form.multiline, () => {}) : null}
-			{form.kind === "text" && form.max ? (
-				<ReadValue label={t("settings.field.max")} mono={false}>
-					{t("settings.field.maxValue", { max: form.max })}
-				</ReadValue>
-			) : null}
-			<ReadValue label={t("settings.field.locale")} mono={false}>
-				{t(`settings.field.locale.${form.locale}`)}
-			</ReadValue>
-		</>
-	);
-
-	// The same two sections in every field sheet: the view (admin values) above, the structure (the schema file) below, locked on the live site.
-	const sections = (
-		<Stack gap={0}>
-			<SheetSection title={t("settings.field.view")}>
-				{view}
-				{locked ? options : null}
-			</SheetSection>
-			<SheetSection
-				title={
-					locked ? (
-						<Inline gap={6} align="center">
-							{t("settings.field.structure")}
-							<LockMark label={t("settings.locked")} />
-						</Inline>
-					) : (
-						t("settings.field.structure")
-					)
-				}
-			>
-				{locked ? (
-					lockedFacts
-				) : (
-					<>
-						{nameField}
-						{adding ? null : (
-							<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-								{kindWord(form.kind)}
-							</ReadValue>
-						)}
-						{settings}
-					</>
-				)}
-			</SheetSection>
-		</Stack>
-	);
-
 	if (adding)
 		return (
 			<SheetContent>

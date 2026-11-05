@@ -76,7 +76,7 @@ function SelectTrigger({
 					? "w-full"
 					: width === "choice"
 						? // Two attributes, so the row's line wins over the size's own padding and type.
-							"w-fit min-w-30 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"
+							"w-fit min-w-30 data-[width=choice]:data-[size]:h-5 data-[width=choice]:data-[size]:py-0 data-[width=choice]:data-[size]:pb-px data-[width=choice]:data-[size]:text-monti-note"
 						: "w-fit",
 				className,
 			)}
