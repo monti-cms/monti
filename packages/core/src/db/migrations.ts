@@ -224,7 +224,23 @@ export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
 		migrationLockTableName: "monti_migration_lock",
 		migrationTableSchema: rows[0].schema,
 	});
-	const { error, results } = await migrator.migrateToLatest();
-	const failed = results?.find((result) => result.status === "Error");
-	if (error || failed) throw new Error(`Migration ${failed?.migrationName ?? ""} failed`, { cause: error });
+	// Before it runs a step, the migrator lists every table in the database and reads each one. When another site (another schema) drops or
+	// changes a table between the list and the read, Postgres answers "relation does not exist" (42P01) or "column does not exist" (42703) about
+	// that other schema's table. No step has run yet, so trying again is safe; a step of ours that fails is not retried.
+	for (let attempt = 1; ; attempt++) {
+		const { error, results } = await migrator.migrateToLatest();
+		const failed = results?.find((result) => result.status === "Error");
+		if (!error && !failed) return;
+		if (!failed && attempt < 5 && racedWithAnotherSchema(error, rows[0].schema)) continue;
+		throw new Error(`Migration ${failed?.migrationName ?? ""} failed`, { cause: error });
+	}
+}
+
+/** Whether the migrator's table listing lost a race with another schema's DDL (see `migrateToLatest`). */
+function racedWithAnotherSchema(error: unknown, schema: string): boolean {
+	const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
+	if (code !== "42P01" && code !== "42703") return false;
+	// A relation named with its schema is another site's; a bare name or ours could be a step of our own.
+	const named = typeof message === "string" ? /relation "([^".]+)\.[^"]+"/.exec(message) : null;
+	return code === "42703" || (named !== null && named[1] !== schema);
 }
