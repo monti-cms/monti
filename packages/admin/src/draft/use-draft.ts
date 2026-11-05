@@ -15,7 +15,14 @@ export type CellState =
 
 export type Change = { path: Path; before: unknown; after: unknown };
 
-type Stored = { version: number | string; savedAt?: string; mine: [Path, unknown][]; accepted: string[] };
+type Stored = {
+	version: number | string;
+	savedAt?: string;
+	mine: [Path, unknown][];
+	accepted: string[];
+	/** Kept because the session ended (`leftSignedOut`): the person did not leave it, so it goes back in by itself. */
+	signedOut?: boolean;
+};
 
 /** My changes this browser kept from an earlier visit, offered before they go in (`restore: "ask"`). */
 export type BrowserCopy = { version: number | string; savedAt: Date | null; mine: [Path, unknown][] };
@@ -42,6 +49,7 @@ export function useDraft({
 	version,
 	proposalValues,
 	restore = "same-version",
+	leftSignedOut = false,
 }: {
 	target: Target;
 	/** The saved values, by path; `null` while they load. */
@@ -55,6 +63,11 @@ export function useDraft({
 	 * and go in only when the person loads them (the entry editor, doc 02: flows 1·18 and 1·19).
 	 */
 	restore?: "same-version" | "ask";
+	/**
+	 * The session ended while these changes were being made (doc 15). The browser's copy is marked, and when the screen opens again after signing in it
+	 * goes back in without asking, as long as the server still has the version it was made on; otherwise it is offered as any other.
+	 */
+	leftSignedOut?: boolean;
 }) {
 	const proposals = useProposals(target);
 	const discardOp = useOperation("proposals.discard");
@@ -70,7 +83,12 @@ export function useDraft({
 		if (version === null || restoredFor === version) return;
 		const stored = readStored(target);
 		if (restore === "ask") {
-			if (!asked.current && stored && stored.mine.length > 0) setOffered(stored);
+			if (!asked.current && stored && stored.mine.length > 0) {
+				if (stored.signedOut && stored.version === version) {
+					setMine(new Map(stored.mine));
+					setAccepted(stored.accepted);
+				} else setOffered(stored);
+			}
 			asked.current = true;
 		} else if (stored && stored.version === version) {
 			// The browser's copy of my changes comes back when it was made on the version the server still has.
@@ -93,10 +111,11 @@ export function useDraft({
 						savedAt: new Date().toISOString(),
 						mine: [...mine],
 						accepted,
+						...(leftSignedOut ? { signedOut: true } : {}),
 					} satisfies Stored),
 				);
 		} catch {}
-	}, [target, version, mine, accepted, restoredFor, offered]);
+	}, [target, version, mine, accepted, restoredFor, offered, leftSignedOut]);
 
 	/** The pending items not yet taken, with the places they write. */
 	const pending = useMemo(

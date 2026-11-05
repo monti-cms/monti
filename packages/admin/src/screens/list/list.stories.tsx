@@ -444,3 +444,17 @@ export const RowsMenu: Story = {
 		await waitFor(() => expect(body().getByText("2개 항목")).toBeTruthy(), wait);
 	},
 };
+
+/** The session ended while the list was open: the next read comes back without one, and the banner stands at the top of the page (doc 15). */
+export const SessionEnded: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made } = loaded as Loaded;
+		const page = within(canvasElement);
+		await page.findByText("발행 후 고친 글", {}, { timeout: 15000 });
+		await made.db.deleteFrom("monti_session").execute();
+		await userEvent.click(page.getByRole("button", { name: "메모" }));
+		await page.findByText("로그인이 풀렸어요", {}, { timeout: 15000 });
+		await expect(page.getByRole("button", { name: "다시 로그인" })).toBeVisible();
+	},
+};

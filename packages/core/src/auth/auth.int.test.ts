@@ -76,7 +76,7 @@ describe("first admin and sign-in", () => {
 	it("15-1 the first visit makes the first admin, who is signed in at once; a second first admin is told one exists", async () => {
 		const me = browser();
 		expect((await me.call("auth.state")).body).toEqual({
-			methods: { password: true, github: false },
+			methods: { password: true, external: [] },
 			hasAdmin: false,
 			session: null,
 		});
@@ -127,7 +127,7 @@ describe("first admin and sign-in", () => {
 		const monti = site({ auth: { github } });
 		const me = browser(monti, { fetch: fakeGitHub });
 		expect((await me.call("auth.state")).body).toMatchObject({
-			methods: { password: false, github: true },
+			methods: { password: false, external: [{ id: "github", label: "GitHub", path: "auth/github" }] },
 			hasAdmin: true,
 		});
 		expect((await me.call("auth.signIn", { email: "a@b.c", password: "x" })).body).toMatchObject({
@@ -164,7 +164,7 @@ describe("first admin and sign-in", () => {
 
 	it("15-1 a site with no way to sign in says so", async () => {
 		expect((await browser(site({ auth: {} })).call("auth.state")).body).toMatchObject({
-			methods: { password: false, github: false },
+			methods: { password: false, external: [] },
 		});
 	});
 });

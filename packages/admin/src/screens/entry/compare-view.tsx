@@ -21,6 +21,7 @@ import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { compareBodies, type Part, wordDiff } from "./compare-entries";
 import { clock, dayTime } from "./dates";
@@ -167,6 +168,7 @@ export function CompareView({
 	const savedAt = editor.browserCopy?.savedAt;
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
+			<SessionEndedBanner />
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>

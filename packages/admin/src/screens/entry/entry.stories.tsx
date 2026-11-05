@@ -314,17 +314,43 @@ export const Archived: Story = {
 	},
 };
 
-/** The session ended while writing: the save cell says so, and the input waits in this browser (T39). */
+/**
+ * The session ended while writing: the save is refused, the banner stands at the top of the screen and the save cell says so (T39). The screen
+ * stays, so a sentence can be finished first.
+ */
 export const SignedOut: Story = {
 	loaders: site("draft"),
 	play: async ({ canvasElement, loaded }) => {
 		const { site: made } = loaded as Loaded;
-		const { page, title } = await opened(canvasElement);
+		const { page, title, all } = await opened(canvasElement);
 		await saveCell(page, "저장됨");
 		await userEvent.type(title, " 다시 쓰기");
 		await made.db.deleteFrom("monti_session").execute();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect(await page.findByRole("button", { name: "로그인이 풀렸어요" }, wait)).toBeVisible();
+		await page.findByText("저장하지 않은 입력은 이 브라우저에 남아 있어요", {}, wait);
+	},
+};
+
+/**
+ * "다시 로그인": to the login screen and back. The address brings back the same entry, and what was typed goes back in by itself, ready to save
+ * (doc 15, T39).
+ */
+export const SignedInAgain: Story = {
+	loaders: site("draft"),
+	play: async (context) => {
+		await SignedOut.play?.(context);
+		const page = within(context.canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "다시 로그인" }));
+		await userEvent.type(await page.findByLabelText("이메일", {}, wait), "me@example.dev");
+		await userEvent.type(page.getByLabelText("비밀번호"), "story password");
+		await userEvent.click(page.getByRole("button", { name: "로그인" }));
+		const title = await page.findByRole("textbox", { name: "제목" }, wait);
+		await waitFor(() => expect(title).toHaveValue("첫 번째 글 다시 쓰기"), wait);
+		await expect(page.queryByText("로그인이 풀렸어요")).toBeNull();
+		await expect(page.queryByText("이 브라우저에 저장하지 않은 편집이 있어요")).toBeNull();
+		await userEvent.click(page.getByRole("button", { name: "저장 전 변경사항" }));
+		await saveCell(page, "저장됨");
 	},
 };
 

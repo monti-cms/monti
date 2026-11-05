@@ -160,6 +160,7 @@ export function LanguageTabs({ english = "English", englishDot }: { english?: st
  */
 export function EditorPage({
 	header,
+	banner,
 	head,
 	side,
 	beside,
@@ -168,6 +169,8 @@ export function EditorPage({
 	children,
 }: {
 	header: React.ReactNode;
+	/** A `Banner` about the whole entry, edge to edge under the bar (a conflict, an ended session). */
+	banner?: React.ReactNode;
 	/** Over the title (the language tabs). */
 	head?: React.ReactNode;
 	/** The pane at the right (the properties). */
@@ -182,6 +185,7 @@ export function EditorPage({
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
 			{header}
+			{banner}
 			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">
 				{beside}
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>

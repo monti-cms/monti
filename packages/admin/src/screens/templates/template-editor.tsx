@@ -30,6 +30,7 @@ import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useEntryEditor } from "../entry/use-entry-editor";
+import { SessionEndedBanner } from "../frame/session-ended";
 
 /**
  * The template editor (tools.md, doc 03): a page of its own, outside the frame. The name stands where an entry's title does, over the body with every
@@ -66,6 +67,26 @@ export function TemplateEditor({
 
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
+			{/* Every banner of the screen stands at its very top, broader first (common.md, banners). */}
+			<SessionEndedBanner />
+			{editor.loadRefusal ? (
+				<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
+					<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
+				</Banner>
+			) : null}
+			{editor.conflict ? (
+				<Banner tone="danger" title={t("templates.conflict")} plainMeta>
+					<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
+				</Banner>
+			) : null}
+			{editor.browserCopy ? (
+				<Banner title={t("entry.browserCopy")}>
+					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
+						{t("entry.dropCopy")}
+					</TextButton>
+				</Banner>
+			) : null}
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -115,24 +136,6 @@ export function TemplateEditor({
 					</IconButton>
 				</Inline>
 			</EditorHeader>
-			{editor.loadRefusal ? (
-				<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
-					<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.conflict ? (
-				<Banner tone="danger" title={t("templates.conflict")} plainMeta>
-					<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.browserCopy ? (
-				<Banner title={t("entry.browserCopy")}>
-					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
-					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
-						{t("entry.dropCopy")}
-					</TextButton>
-				</Banner>
-			) : null}
 			<Stack gap={0} grow minHeight={0} overflow="y" paddingX={48} paddingTop={16}>
 				<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 					<Stack gap={0} paddingTop={16} paddingBottom={32}>

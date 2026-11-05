@@ -41,6 +41,7 @@ import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
+import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
@@ -271,6 +272,43 @@ export function EntryEditor({
 
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
+			{/* Every banner of the screen stands at its very top, broader first: the session over this entry's own (common.md, banners). */}
+			<SessionEndedBanner />
+			{editor.loadRefusal ? (
+				<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+					<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
+				</Banner>
+			) : null}
+			{editor.conflict ? (
+				<Banner
+					tone="danger"
+					title={
+						editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
+					}
+					meta={t("entry.conflictMeta")}
+					plainMeta
+				>
+					<TextButton variant="underline" onClick={() => onCompare("conflict")}>
+						{t("entry.compare")}
+					</TextButton>
+					<TextButton onClick={() => void editor.loadLatest()}>{t("entry.loadLatest")}</TextButton>
+				</Banner>
+			) : null}
+			{editor.browserCopy ? (
+				<Banner
+					title={t("entry.browserCopy")}
+					meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
+				>
+					<TextButton variant="underline" onClick={() => onCompare("draft")}>
+						{t("entry.compare")}
+					</TextButton>
+					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
+						{t("entry.dropCopy")}
+					</TextButton>
+				</Banner>
+			) : null}
+			{trashed ? <Banner tone="neutral" title={t("entry.trashedBanner")} /> : null}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -332,41 +370,6 @@ export function EntryEditor({
 					</IconButton>
 				</Inline>
 			</EditorHeader>
-			{editor.loadRefusal ? (
-				<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
-					<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.conflict ? (
-				<Banner
-					tone="danger"
-					title={
-						editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
-					}
-					meta={t("entry.conflictMeta")}
-					plainMeta
-				>
-					<TextButton variant="underline" onClick={() => onCompare("conflict")}>
-						{t("entry.compare")}
-					</TextButton>
-					<TextButton onClick={() => void editor.loadLatest()}>{t("entry.loadLatest")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.browserCopy ? (
-				<Banner
-					title={t("entry.browserCopy")}
-					meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
-				>
-					<TextButton variant="underline" onClick={() => onCompare("draft")}>
-						{t("entry.compare")}
-					</TextButton>
-					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
-					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
-						{t("entry.dropCopy")}
-					</TextButton>
-				</Banner>
-			) : null}
-			{trashed ? <Banner tone="neutral" title={t("entry.trashedBanner")} /> : null}
 			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
 					<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>

@@ -5,6 +5,7 @@ import { EditorProposalScreen } from "./editor-proposal";
 import { EditorTranslateScreen } from "./editor-translate";
 import { ImageInsertScreen } from "./image-insert";
 import { LinkCardScreen } from "./link-card";
+import { SignedOutEditorScreen, SignedOutListScreen } from "./signed-out";
 import { TemplateEditorScreen } from "./template-editor";
 import { TranslatePairedScreen } from "./translate-paired";
 
@@ -32,3 +33,8 @@ export const LinkCardSearch: Story = { render: () => <LinkCardScreen state="sear
 export const LinkCardAddress: Story = { render: () => <LinkCardScreen state="address" /> };
 /** Opened on words that link to an entry: that entry, and the way to take the link off. */
 export const LinkCardLinked: Story = { render: () => <LinkCardScreen state="linked" /> };
+
+/** The session ended while writing: the banner under the bar, the save cell saying so. */
+export const SignedOutEditor: Story = { render: () => <SignedOutEditorScreen /> };
+/** The session ended on a list: the same banner, edge to edge over every screen. */
+export const SignedOutList: Story = { render: () => <SignedOutListScreen /> };

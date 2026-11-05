@@ -96,6 +96,7 @@ export function AdminFrame({
 	mode: modeStart = "system",
 	fixed = true,
 	panel,
+	banner,
 	children,
 }: {
 	/** The open row; `null` when no row is open (a screen reached from elsewhere). */
@@ -111,6 +112,8 @@ export function AdminFrame({
 	corner?: boolean;
 	/** A panel docked at the page's right edge (the assistant, the properties), beside the page as the app's frame puts it. */
 	panel?: React.ReactNode;
+	/** A `Banner` about the whole site, edge to edge above the page (a schema change, an ended session). */
+	banner?: React.ReactNode;
 	/** The screen mode picked at first. */
 	mode?: "system" | "light" | "dark";
 	/** Holds the window as the app does; off to draw two frames side by side (a board comparing sidebars). */
@@ -187,6 +190,7 @@ export function AdminFrame({
 				</Sidebar>
 				<SidebarInset
 					fixed
+					banner={banner}
 					corner={
 						corner ? (
 							<IconButton label="어시스턴트 열기">

@@ -3,7 +3,8 @@ import { useRead } from "./operations/use-operation";
 
 /** `auth.state`: the ways to sign in, whether there is an admin, who is signed in (doc 15). */
 export type AuthState = {
-	methods: { password: boolean; github: boolean };
+	/** A password, and sign-ins at another site (GitHub) with the admin API path that starts each. */
+	methods: { password: boolean; external: { id: string; label: string; path: string }[] };
 	hasAdmin: boolean;
 	session: { who: string } | null;
 };

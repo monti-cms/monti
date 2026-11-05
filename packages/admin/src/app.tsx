@@ -149,10 +149,21 @@ function Signed() {
 }
 
 function Gate({ denied }: { denied?: string }) {
+	const resume = useAdmin().session.resume;
 	const session = useSession();
 	if (!session.state) return null;
 	if (!session.state.session)
-		return <LoginScreen state={session.state} denied={denied} onSignedIn={() => void session.reload()} />;
+		return (
+			<LoginScreen
+				state={session.state}
+				denied={denied}
+				onSignedIn={() => {
+					// Back in after the session ended: the banner goes, and the address brings back the screen that was open.
+					resume();
+					void session.reload();
+				}}
+			/>
+		);
 	return <Signed />;
 }
 

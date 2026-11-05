@@ -2,8 +2,9 @@ import type { Doc, EntryState, PublishTask } from "@monti-cms/core";
 import { useCallback, useMemo, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
+import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { useSession } from "../../session";
+import { useSignInAgain } from "../frame/session-ended";
 
 /** What the editor writes: an entry, or a template (its name stands where an entry's title does). `id` is `null` for a new template. */
 export type EditorSource = { kind: "entry"; id: string } | { kind: "template"; id: string | null };
@@ -79,7 +80,8 @@ export function useEntryEditor(source: EditorSource) {
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
-	const session = useSession();
+	const { session } = useAdmin();
+	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
 	const base = useMemo(() => (loaded ? basePaths(loaded) : null), [loaded]);
 	const version = loaded ? ("entry" in loaded ? loaded.entry.version : loaded.version) : null;
@@ -90,10 +92,10 @@ export function useEntryEditor(source: EditorSource) {
 		version,
 		proposalValues: isEntry ? entryProposal : noProposal,
 		restore: "ask",
+		leftSignedOut: session.ended,
 	});
 	/** Another save got in first: when, so the banner can say it. */
 	const [conflict, setConflict] = useState<{ at: Date | null } | null>(null);
-	const [signedOut, setSignedOut] = useState(false);
 	/** Bumped when the body shown changes other than by typing (the latest loaded, a kept copy taken): the body editor mounts again. */
 	const [bodyKey, setBodyKey] = useState(0);
 
@@ -106,6 +108,7 @@ export function useEntryEditor(source: EditorSource) {
 	const title = String(draft.value("title") ?? "");
 	const doc = (draft.value("doc") as Doc | undefined) ?? EMPTY;
 
+	const signedOut = session.ended;
 	const saveState: SaveState = signedOut
 		? "signedOut"
 		: conflict
@@ -150,8 +153,8 @@ export function useEntryEditor(source: EditorSource) {
 				: { ...(source.id ? { id: source.id, version: at ?? version } : {}), name: title.trim(), doc };
 			const answer = await saveOp.run(input, { accepted: draft.accepted });
 			if (!answer.ok) {
-				if (answer.refusal.status === 401) setSignedOut(true);
-				else if (answer.refusal.error === "conflict") {
+				// An ended session is the admin's state (useOperation hears it); the save waits here until the person signs in again.
+				if (answer.refusal.error === "conflict") {
 					const latest = await latestOp.run({ id: source.id });
 					const at = latest.ok
 						? "entry" in latest.body
@@ -163,7 +166,6 @@ export function useEntryEditor(source: EditorSource) {
 				return null;
 			}
 			setConflict(null);
-			setSignedOut(false);
 			// A new template becomes a page of its own; the screen moves to it.
 			if (source.id === null) {
 				draft.saved();
@@ -215,8 +217,8 @@ export function useEntryEditor(source: EditorSource) {
 			setBodyKey((key) => key + 1);
 		},
 		dropBrowserCopy: draft.dropBrowserCopy,
-		/** The session ended: the person signs in again, and finds the input waiting in this browser. */
-		signIn: () => void session.reload(),
+		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
+		signIn: signInAgain,
 		bodyKey,
 	};
 }
