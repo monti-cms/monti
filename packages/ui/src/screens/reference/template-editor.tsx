@@ -46,9 +46,9 @@ export function TemplateEditorScreen() {
 					<h2>본론</h2>
 					<ul>
 						<li className="relative" data-menu-open="">
-							{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (64px left of the list, 3px down: the 24px handle centred on the 30px line) */}
-							<span className="absolute" style={{ top: 3, left: -92 }}>
-								<BlockHandle addLabel="아래에 블록 넣기" gripLabel="블록 메뉴" active />
+							{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (32px left of the list, 3px down: the 24px handle centred on the 30px line) */}
+							<span className="absolute" style={{ top: 3, left: -60 }}>
+								<BlockHandle gripLabel="블록 메뉴" active />
 							</span>
 							첫 번째 요점
 						</li>

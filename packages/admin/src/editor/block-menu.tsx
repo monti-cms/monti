@@ -27,7 +27,6 @@ import { useAdmin } from "../operations/admin-context";
 import { BlockIcon } from "./block-icon";
 import { alignable, type BodyCatalogs } from "./catalog";
 import {
-	addBelow,
 	canMove,
 	deleteBlock,
 	duplicateBlock,
@@ -43,11 +42,13 @@ import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
 import { hasHeaderRow, toggleHeaderRow } from "./table";
 
-/** Where the handle floats: 64px left of the block (the + and the grip, 8 apart, then 8 to the text), centred on the block's first line. */
+/** Where the handle floats: 32px left of the block (the 24px grip, then 8 to the text), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
 
 const HANDLE = 24;
-const LEFT = 64;
+const LEFT = 32;
+/** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
+const REACH = 64;
 
 /** The handle's place beside a block's element. A list item's handle sits left of its list, so the bullet stays in view. */
 function spotOf(element: HTMLElement, pos: number): Spot {
@@ -104,7 +105,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		if (!editor) return;
 		const move = (event: MouseEvent) => {
 			const body = editor.view.dom.getBoundingClientRect();
-			if (event.clientX < body.left - LEFT || event.clientX > body.right) return;
+			if (event.clientX < body.left - REACH || event.clientX > body.right) return;
 			if (event.clientY < body.top || event.clientY > body.bottom) return;
 			point(event.clientX, event.clientY);
 		};
@@ -243,10 +244,8 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 			<EditorOverlay top={spot.top} left={spot.left}>
 				<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 					<BlockHandle
-						addLabel={t("editor.add")}
 						gripLabel={t("editor.blockMenu")}
 						active={open}
-						onAdd={() => run(addBelow)}
 						onPointerDown={pressGrip}
 						trigger={(grip) => <DropdownMenuTrigger render={grip} />}
 					/>

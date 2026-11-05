@@ -9,24 +9,19 @@ const HANDLE_BUTTON =
 	"flex size-monti-control-xs cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-faint outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 aria-expanded:bg-monti-selected aria-expanded:text-monti-default data-active:bg-monti-selected data-active:text-monti-default";
 
 /**
- * The two marks in the left margin of an editor block: a + that adds an empty block below this one and opens the block picker (the same list as typing "/"), and the grip. Pressing the grip opens the block menu and dragging it
- * moves the block, so the grip takes the drag events (`onDragStart`, `onDragEnd`, `draggable`). While the menu is open `active` keeps the grip pressed.
+ * The grip in the left margin of an editor block (no + beside it: a new block starts with Enter and "/", 2026-11-06 owner). Pressing it opens the block
+ * menu and dragging it moves the block, so the grip takes the drag events (`onDragStart`, `onDragEnd`, `draggable`). While the menu is open `active` keeps the grip pressed.
  * To make the grip the trigger of a menu, wrap it with `trigger`: `trigger={(grip) => <DropdownMenuTrigger render={grip} />}`.
  */
 function BlockHandle({
-	addLabel,
 	gripLabel,
-	onAdd,
 	active = false,
 	trigger,
 	className,
 	...props
-}: Omit<ButtonPrimitive.Props, "aria-label" | "children" | "onClick"> & {
-	/** The name of the + button for screen readers. */
-	addLabel: string;
+}: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** The name of the grip for screen readers. */
 	gripLabel: string;
-	onAdd?: () => void;
 	/** The block menu is open. */
 	active?: boolean;
 	trigger?: (grip: ReactElement) => ReactElement;
@@ -43,10 +38,7 @@ function BlockHandle({
 		</ButtonPrimitive>
 	);
 	return (
-		<span data-slot="block-handle" className={cn("flex gap-monti-8", className)}>
-			<ButtonPrimitive type="button" aria-label={addLabel} className={HANDLE_BUTTON} onClick={onAdd}>
-				+
-			</ButtonPrimitive>
+		<span data-slot="block-handle" className={cn("flex", className)}>
 			{trigger ? trigger(grip) : grip}
 		</span>
 	);
