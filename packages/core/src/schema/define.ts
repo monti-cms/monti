@@ -63,6 +63,7 @@ export type SchemaProblem = {
 		| "badPath"
 		| "missingTitle"
 		| "missingSlug"
+		| "fixedOptional"
 		| "noOptions"
 		| "duplicateOption"
 		| "unknownTarget"
@@ -83,6 +84,10 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 			problems.push({ collection: name, field: "title", code: "missingTitle" });
 		if (collection.fields.slug?.kind !== "slug")
 			problems.push({ collection: name, field: "slug", code: "missingSlug" });
+		// Every entry has a title and an address: the two fixed fields are always required.
+		for (const fixed of ["title", "slug"] as const)
+			if (collection.fields[fixed] && collection.fields[fixed].required !== true)
+				problems.push({ collection: name, field: fixed, code: "fixedOptional" });
 		for (const [fieldName, field] of Object.entries(collection.fields)) {
 			const at = { collection: name, field: fieldName };
 			if (!IDENTIFIER.test(fieldName)) problems.push({ ...at, code: "badIdentifier" });

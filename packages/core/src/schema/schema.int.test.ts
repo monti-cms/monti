@@ -203,6 +203,14 @@ describe("review before values change", () => {
 		]);
 		await expect(dev().run("schema.apply", { draft: broken }, { actor: "admin" })).rejects.toThrow("Check failed");
 	});
+
+	it("01-4 the title and the slug, every collection's fixed fields, are always required", async () => {
+		const optional = withPostFields({ title: { ...title, required: false }, slug: { kind: "slug" } });
+		expect(await dev().run("schema.check", { draft: optional }, { actor: "admin" })).toEqual([
+			{ collection: "post", field: "title", code: "fixedOptional" },
+			{ collection: "post", field: "slug", code: "fixedOptional" },
+		]);
+	});
 });
 
 describe("removing a collection", () => {

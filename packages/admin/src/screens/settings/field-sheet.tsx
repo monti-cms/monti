@@ -481,16 +481,26 @@ function FieldSheetBody({
 			</SheetSection>
 		) : null;
 
-	const required = switchRow(
-		// One child, so the spread row keeps the "!" beside its word.
+	// One child, so the spread row keeps the "!" beside its word.
+	const requiredLabel = (
 		<span>
 			{t("settings.field.required")}{" "}
 			<Text tone="faint" mono>
 				!
 			</Text>
-		</span>,
-		form.required,
-		(required) => set({ required }),
+		</span>
+	);
+	// The title and the slug are always required (doc 01): their row reads as text with the lock, on the dev server too.
+	const required = fixedName ? (
+		<Option spread height="md">
+			<Inline gap={6} align="center">
+				{requiredLabel}
+				{lock}
+			</Inline>
+			<Text tone="subtle">{t("settings.field.on")}</Text>
+		</Option>
+	) : (
+		switchRow(requiredLabel, form.required, (required) => set({ required }))
 	);
 
 	// The input rules: one row each, its control at the end. Required first, then what this kind has, then the language.
