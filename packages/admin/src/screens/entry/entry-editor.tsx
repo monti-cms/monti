@@ -32,7 +32,7 @@ import {
 	TooltipTrigger,
 	useShortcut,
 } from "@monti-cms/ui";
-import { ChevronLeft, OverflowMenuHorizontal, RightPanelOpen, Spark } from "@monti-cms/ui/icons";
+import { Archive, ChevronLeft, Copy, Export, OverflowMenuHorizontal, RightPanelOpen, Spark } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
@@ -345,6 +345,7 @@ export function EntryEditor({
 										if (copy.ok) onOpen(copy.body.output.id);
 									}}
 								>
+									<Copy aria-hidden />
 									{t("entry.duplicate")}
 								</DropdownMenuItem>
 								<DropdownMenuItem
@@ -352,6 +353,7 @@ export function EntryEditor({
 										if ((await archive.run({ ids: [id] })).ok) await editor.reload();
 									}}
 								>
+									<Archive aria-hidden />
 									{t("entry.archive")}
 								</DropdownMenuItem>
 								<DropdownMenuItem
@@ -360,6 +362,7 @@ export function EntryEditor({
 										if (file.ok) download(`${collection}-${slug || id}.json`, file.body);
 									}}
 								>
+									<Export aria-hidden />
 									{t("entry.export")}
 								</DropdownMenuItem>
 							</DropdownMenuContent>
