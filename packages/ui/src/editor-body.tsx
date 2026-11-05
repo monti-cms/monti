@@ -16,7 +16,7 @@ import { cn } from "./cn";
  * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
  */
 const EDITOR_BODY = cn(
-	"flex min-h-full flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:outline-none",
+	"flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
 	"[&_.ProseMirror>*:first-child]:mt-0",
 	// Text blocks.
 	"[&_p]:mt-0 [&_p]:mb-monti-20",

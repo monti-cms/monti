@@ -5,6 +5,7 @@ import { createMonti } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import type { Facet, ListColumn, ListRow } from "./list";
+import { slugify } from "./paths";
 
 const db = await testDatabase();
 
@@ -59,7 +60,14 @@ const columns = async (collection: string) =>
 
 async function create(collection: string, title: string, values: Record<string, unknown> = {}, doc?: unknown) {
 	const created = (
-		await run<{ output: { id: string } }>("entries.create", { collection, locale: "ko", title, values, doc })
+		await run<{ output: { id: string } }>("entries.create", {
+			collection,
+			locale: "ko",
+			title,
+			slug: slugify(title),
+			values,
+			doc,
+		})
 	).output.id;
 	return created;
 }
@@ -184,6 +192,14 @@ describe("the list query", () => {
 		await expect(query({ filters: [{ on: "empty", field: "title" }] })).rejects.toMatchObject({
 			reason: { key: "list.badFilter" },
 		});
+	});
+
+	it("06-1 a group filter finds the entries a body link or a relation points at, one row per group", async () => {
+		const groups = [await groupOf(ids.first), await groupOf(ids.rsc)];
+		expect(await titles({ filters: [{ on: "group", any: groups }] })).toEqual([
+			"리액트 서버 컴포넌트 다시 보기",
+			"첫 번째 글",
+		]);
 	});
 
 	it("06-1 date filters count days in the admin's time zone", async () => {

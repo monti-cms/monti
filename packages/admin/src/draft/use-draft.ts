@@ -1,5 +1,5 @@
 import { sameJson } from "@monti-cms/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOperation } from "../operations/use-operation";
 import { type ProposalItem, type Target, useProposals } from "./use-proposals";
 
@@ -15,7 +15,17 @@ export type CellState =
 
 export type Change = { path: Path; before: unknown; after: unknown };
 
-type Stored = { version: number | string; mine: [Path, unknown][]; accepted: string[] };
+type Stored = {
+	version: number | string;
+	savedAt?: string;
+	mine: [Path, unknown][];
+	accepted: string[];
+	/** Kept because the session ended (`leftSignedOut`): the person did not leave it, so it goes back in by itself. */
+	signedOut?: boolean;
+};
+
+/** My changes this browser kept from an earlier visit, offered before they go in (`restore: "ask"`). */
+export type BrowserCopy = { version: number | string; savedAt: Date | null; mine: [Path, unknown][] };
 
 const storageKey = (target: Target) => `monti.draft.${target.kind}:${target.id}`;
 
@@ -38,6 +48,8 @@ export function useDraft({
 	base,
 	version,
 	proposalValues,
+	restore = "same-version",
+	leftSignedOut = false,
 }: {
 	target: Target;
 	/** The saved values, by path; `null` while they load. */
@@ -45,6 +57,17 @@ export function useDraft({
 	version: number | string | null;
 	/** The places a proposal item writes and their new values, as this screen reads the item's input. */
 	proposalValues: (item: ProposalItem) => Record<Path, unknown>;
+	/**
+	 * What happens to changes this browser kept from an earlier visit. `same-version`: they come back by themselves when they were made on the version
+	 * the server still has, and are dropped otherwise (a settings screen, 05-2). `ask`: whatever their version, they are offered first (`browserCopy`)
+	 * and go in only when the person loads them (the entry editor, doc 02: flows 1·18 and 1·19).
+	 */
+	restore?: "same-version" | "ask";
+	/**
+	 * The session ended while these changes were being made (doc 15). The browser's copy is marked, and when the screen opens again after signing in it
+	 * goes back in without asking, as long as the server still has the version it was made on; otherwise it is offered as any other.
+	 */
+	leftSignedOut?: boolean;
 }) {
 	const proposals = useProposals(target);
 	const discardOp = useOperation("proposals.discard");
@@ -52,29 +75,47 @@ export function useDraft({
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
 	const [accepted, setAccepted] = useState<string[]>([]);
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
+	const [offered, setOffered] = useState<Stored | null>(null);
+	// `ask` looks at the browser's copy once, when the screen first has the server's values: later versions are the person's own saves.
+	const asked = useRef(false);
 
-	// The browser's copy of my changes comes back when it was made on the version the server still has.
 	useEffect(() => {
 		if (version === null || restoredFor === version) return;
 		const stored = readStored(target);
-		if (stored && stored.version === version) {
+		if (restore === "ask") {
+			if (!asked.current && stored && stored.mine.length > 0) {
+				if (stored.signedOut && stored.version === version) {
+					setMine(new Map(stored.mine));
+					setAccepted(stored.accepted);
+				} else setOffered(stored);
+			}
+			asked.current = true;
+		} else if (stored && stored.version === version) {
+			// The browser's copy of my changes comes back when it was made on the version the server still has.
 			setMine(new Map(stored.mine));
 			setAccepted(stored.accepted);
 		}
 		setRestoredFor(version);
-	}, [target, version, restoredFor]);
+	}, [target, version, restoredFor, restore]);
 
 	useEffect(() => {
-		if (version === null || restoredFor !== version) return;
+		// While a kept copy waits for an answer, it stays as it is: what is typed meanwhile is not kept over it.
+		if (version === null || restoredFor !== version || offered) return;
 		try {
 			if (mine.size === 0) localStorage.removeItem(storageKey(target));
 			else
 				localStorage.setItem(
 					storageKey(target),
-					JSON.stringify({ version, mine: [...mine], accepted } satisfies Stored),
+					JSON.stringify({
+						version,
+						savedAt: new Date().toISOString(),
+						mine: [...mine],
+						accepted,
+						...(leftSignedOut ? { signedOut: true } : {}),
+					} satisfies Stored),
 				);
 		} catch {}
-	}, [target, version, mine, accepted, restoredFor]);
+	}, [target, version, mine, accepted, restoredFor, offered, leftSignedOut]);
 
 	/** The pending items not yet taken, with the places they write. */
 	const pending = useMemo(
@@ -202,6 +243,28 @@ export function useDraft({
 		discardAll: () => discard(pending.map(({ item }) => item.id)),
 		/** The items taken into this draft: the save sends them (`accepted`), and the server marks them applied with it. */
 		accepted,
+		/** Changes this browser kept from an earlier visit, waiting to be loaded or dropped (`restore: "ask"`). */
+		browserCopy: offered
+			? ({
+					version: offered.version,
+					savedAt: offered.savedAt ? new Date(offered.savedAt) : null,
+					mine: offered.mine,
+				} satisfies BrowserCopy)
+			: null,
+		/** The kept changes go in over what the server has now. */
+		loadBrowserCopy: () => {
+			if (!offered) return;
+			setMine(new Map(offered.mine));
+			setAccepted(offered.accepted);
+			setOffered(null);
+		},
+		/** The kept changes are thrown away. */
+		dropBrowserCopy: () => {
+			try {
+				localStorage.removeItem(storageKey(target));
+			} catch {}
+			setOffered(null);
+		},
 		/** After the save went through: the server's values are the new base, so my changes are gone. */
 		saved: () => {
 			setMine(new Map());

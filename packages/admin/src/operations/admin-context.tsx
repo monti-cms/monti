@@ -1,5 +1,5 @@
 import { coreMessages, formatMessage, type Message, type MessageBundle } from "@monti-cms/core";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
 import type { Transport } from "./transport";
 
@@ -46,6 +46,11 @@ type AdminContext = {
 	screen: ScreenChannel;
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
 	t: (message: Message | string, values?: Message["values"]) => string;
+	/**
+	 * The session ended while the admin was open (a call came back without one, doc 15): every screen shows the banner at its top until the person
+	 * signs in again (`resume`).
+	 */
+	session: { ended: boolean; end: () => void; resume: () => void };
 };
 
 const Context = createContext<AdminContext | null>(null);
@@ -68,7 +73,12 @@ export function AdminProvider({
 	screen?: ScreenChannel;
 	children: ReactNode;
 }) {
-	const value = useMemo<AdminContext>(() => {
+	const [ended, setEnded] = useState(false);
+	// The ways to change it never change, so a call that ends the session does not make every screen's reads anew.
+	const end = useCallback(() => setEnded(true), []);
+	const resume = useCallback(() => setEnded(false), []);
+	const session = useMemo(() => ({ ended, end, resume }), [ended, end, resume]);
+	const base = useMemo<Omit<AdminContext, "session">>(() => {
 		const listeners = new Set<() => void>();
 		return {
 			screen: screen ?? createScreenChannel(),
@@ -87,6 +97,8 @@ export function AdminProvider({
 				formatMessage(BUNDLES, language, typeof message === "string" ? { key: message, values } : message),
 		};
 	}, [transport, language, siteName, apiBase, screen]);
+	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
+	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

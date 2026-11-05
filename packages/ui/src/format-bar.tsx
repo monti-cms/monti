@@ -4,7 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
 import { BAR_BUTTON, FloatingBarButton } from "./floating-bar";
-import { Link } from "./icons";
+import { Code, Erase, Link } from "./icons";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -15,13 +15,16 @@ const FORMAT_GLYPHS = {
 	italic: { glyph: "I", className: "italic" },
 	underline: { glyph: "U", className: "underline" },
 	strike: { glyph: "S", className: "line-through" },
-	code: { glyph: "</>", className: "font-mono text-monti-meta" },
+	// An icon, not "</>": three letters made its button wider than the others.
+	code: { glyph: <Code aria-hidden className="size-4" />, className: "" },
 	superscript: { glyph: "x²", className: "text-monti-label" },
 	subscript: { glyph: "x₂", className: "text-monti-label" },
 	link: { glyph: <Link aria-hidden className="size-4" />, className: "" },
 	// The glyph is a word of the app's language (`footnoteMark` in the ui labels), so it is read from them in `FormatButton`.
 	footnote: { glyph: null, className: "text-monti-label" },
 	more: { glyph: "⋯", className: "" },
+	/** Takes every format off the selected words (not a link: that is where they go, and the link card takes it off). */
+	clear: { glyph: <Erase aria-hidden className="size-4" />, className: "" },
 } satisfies Record<string, { glyph: ReactNode; className: string }>;
 
 type FormatMark = keyof typeof FORMAT_GLYPHS;
@@ -52,7 +55,7 @@ function FormatButton({
 		<FloatingBarButton
 			label={label}
 			shortcut={shortcut}
-			pressed={mark === "more" ? undefined : pressed}
+			pressed={mark === "more" || mark === "clear" ? undefined : pressed}
 			trigger={trigger}
 			className={cn(glyphClassName, className)}
 			{...props}

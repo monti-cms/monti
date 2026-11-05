@@ -32,11 +32,16 @@ export const authOperations = [
 		name: "auth.state",
 		kind: "read",
 		open: true,
-		description: "The ways to sign in, whether there is an admin yet, and who is signed in.",
+		description:
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {
-				methods: { password: ctx.site.auth.password, github: ctx.site.auth.github !== null },
+				methods: {
+					password: ctx.site.auth.password,
+					// The screens draw one button per sign-in at another site and know none of them by name, so another (or a plugin's) is one more row here.
+					external: ctx.site.auth.github ? [{ id: "github", label: "GitHub", path: "auth/github" }] : [],
+				},
 				hasAdmin: await hasAdmin(ctx),
 				session: ctx.session ? { who: ctx.session.who } : null,
 			};

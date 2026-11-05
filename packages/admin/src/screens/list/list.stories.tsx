@@ -2,7 +2,7 @@ import { defineSchema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { createScreenChannel, type ScreenChannel } from "../../operations/admin-context";
 import { schema as storySchema } from "../story-schema";
@@ -138,8 +138,7 @@ async function setup(monti: Monti) {
 
 const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
 	async (): Promise<Loaded> => {
-		localStorage.removeItem("monti.lastScreen");
-		window.history.replaceState(null, "", hash);
+		startAt(hash);
 		const made = await storySite({ schema, auth: { password: true }, signedIn: true, setup });
 		await more?.(made);
 		return { site: made, screen: createScreenChannel() };
@@ -393,17 +392,44 @@ export const DateMenu: Story = {
 	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
 };
 
-/** "Pick dates" opens a calendar beside the menu (flow 7, step 05b). */
-export const DatePick: Story = {
+/** A day of the month the calendar opens on (this one): its button's name and its date in the address. */
+const thisMonth = (day: number) => {
+	const now = new Date();
+	const month = now.getMonth() + 1;
+	return {
+		name: new RegExp(`${month}월 ${day}일`),
+		iso: `${now.getFullYear()}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+	};
+};
+
+/** "하루 고르기": one press on a day filters to that day; the calendar marks it and stays open (flow 7, step 05b). */
+export const DatePickDay: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "수정일");
+		await userEvent.hover(body().getByRole("menuitem", { name: "하루 고르기" }));
+		const day = thisMonth(3);
+		await userEvent.click(await body().findByRole("button", { name: day.name }, wait));
+		await waitFor(() => expect(window.location.hash).toContain(`updatedAt=${day.iso}..${day.iso}`), wait);
+		await body().findByRole("button", { name: new RegExp(`${day.name.source}.*선택됨`) }, wait);
+	},
+};
+
+/** "기간 고르기": the first press starts the range, the second ends it and filters (flow 7, step 05b). */
+export const DatePickRange: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		await openColumn(canvasElement, "수정일");
 		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
-		await waitFor(() => expect(body().getByRole("grid")).toBeTruthy(), wait);
+		const [from, to] = [thisMonth(2), thisMonth(5)];
+		await userEvent.click(await body().findByRole("button", { name: from.name }, wait));
+		await expect(window.location.hash).not.toContain("updatedAt");
+		await userEvent.click(body().getByRole("button", { name: to.name }));
+		await waitFor(() => expect(window.location.hash).toContain(`updatedAt=${from.iso}..${to.iso}`), wait);
 	},
 };
 
-/** A range picked: the calendar shows it and stays open, the name has its dot (flow 7, step 05c). */
+/** Opened again on a range picked before: the range calendar shows it, the name has its dot (flow 7, step 05c). */
 export const DateRange: Story = {
 	loaders: site(undefined, "#/c/post?updatedAt=2026-10-05..2026-10-26"),
 	play: async ({ canvasElement }) => {
@@ -413,7 +439,7 @@ export const DateRange: Story = {
 	},
 };
 
-/** One day: "pick a day" opens a one-day calendar; one press filters to that day and the calendar shows it ("all dates" lifts it, 2026-11-06). */
+/** Opened again on a day picked before: "하루 고르기" is ticked and its calendar shows the day ("모든 날짜" lifts it, 2026-11-06). */
 export const DateOneDay: Story = {
 	loaders: site(undefined, "#/c/post?updatedAt=2026-10-26..2026-10-26"),
 	play: async ({ canvasElement }) => {
@@ -442,5 +468,19 @@ export const RowsMenu: Story = {
 			}),
 		);
 		await waitFor(() => expect(body().getByText("2개 항목")).toBeTruthy(), wait);
+	},
+};
+
+/** The session ended while the list was open: the next read comes back without one, and the banner stands at the top of the page (doc 15). */
+export const SessionEnded: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made } = loaded as Loaded;
+		const page = within(canvasElement);
+		await page.findByText("발행 후 고친 글", {}, { timeout: 15000 });
+		await made.db.deleteFrom("monti_session").execute();
+		await userEvent.click(page.getByRole("button", { name: "메모" }));
+		await page.findByText("로그인이 풀렸어요", {}, { timeout: 15000 });
+		await expect(page.getByRole("button", { name: "다시 로그인" })).toBeVisible();
 	},
 };

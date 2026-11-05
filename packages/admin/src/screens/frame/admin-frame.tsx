@@ -24,6 +24,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { SchemaBanner } from "./schema-banner";
+import { SessionEndedBanner } from "./session-ended";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
 
 /** A sidebar place: a collection by name, or one of the fixed rows. */
@@ -181,7 +182,13 @@ export function AdminFrame({
 				</Sidebar>
 				<SidebarInset
 					fixed
-					banner={<SchemaBanner onReview={onReview} />}
+					// The whole site's states, broader first: an ended session over a schema change (common.md, banners).
+					banner={
+						<>
+							<SessionEndedBanner />
+							<SchemaBanner onReview={onReview} />
+						</>
+					}
 					corner={
 						covered ? undefined : (
 							<IconButton label={t("frame.assistant")}>
@@ -193,7 +200,8 @@ export function AdminFrame({
 					<CornerContext.Provider value={cover}>
 						<Stack gap={0} grow minWidth={0} minHeight={0} container>
 							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-								<Stack gap={0} grow minWidth={0} minHeight={0} container>
+								{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
+								<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
 									{children}
 								</Stack>
 							</Inline>

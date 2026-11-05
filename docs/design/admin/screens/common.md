@@ -7,7 +7,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 왼쪽 내비게이션 | `Sidebar`와 그 가족(`SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarScreenMode`, `SidebarRailToggle`) | 자리마다의 쓰임은 [sidebar.md](sidebar.md). 현재 위치는 `SidebarMenuButton`의 활성 상태다. |
-| 페이지 단 | `PageColumn` | 목록 화면(글, 미디어, 휴지통, 도구의 표)은 `width="list"`, 설정과 입력 화면은 `width="content"`. 스크롤되는 것은 `PageBody`다. 표가 있는 목록 화면은 표를 담은 `ListScroll`이 스크롤한다. |
+| 페이지 단 | `PageColumn` | 목록 화면(글, 미디어, 휴지통, 도구의 표)은 `width="list"`, 설정과 입력 화면은 `width="content"`. 페이지 전체가 하나로 스크롤한다. 틀의 페이지 자리(사이드바 옆, 붙은 패널이 있으면 그 옆)가 스크롤하고, 스크롤바는 그 오른쪽 끝에 위에서 아래까지 하나뿐이다. 머리(제목, 검색, 새 글)는 위로 같이 올라가고, 표의 열 이름 줄만 위에 붙어 남는다. 페이지 번호는 목록 끝에 온다. 단 안의 상자(`PageBody`, `ListScroll`)는 스크롤하지 않는다(2026-11-06 소유자: 단 가운데에 선 표의 스크롤바는 이상하다. GitHub 이슈 목록, WordPress 관리자 목록과 같은 방식). |
 | 제목 행 | `PageHeader` | `title`은 화면 이름, `meta`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로나 "‹ 어시스턴트" 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
 | 제목 아래 탭 (설정, 도구) | `PageToolbar` 안의 `TabLinks`와 `TabLink` | 탭 하나가 페이지 하나다(주소가 바뀐다). 고른 탭은 굵기만 다르다(밑줄 없음). 저장하지 않은 것이 있는 다른 탭은 이름 뒤에 `ChangeDot`. 열린 탭에는 점을 붙이지 않는다. 그 바뀐 곳은 페이지와 저장 묶음이 이미 보인다(원칙 8). |
 | 설정 한 절 | `Section` | 왼쪽에 제목, 오른쪽에 필드. 절마다 위아래 24px과 아래 가는 선, 마지막 절은 `last`로 선이 없다. `stacked`·`dense` 절은 선 없이 여백만으로 나뉜다(원칙 10). 절 이름은 사람이 하는 일이다(원칙 9). 잠긴 값은 절 제목이 아니라 그 줄에 `LockMark`를 붙인다(라벨 뒤, 또는 식별자처럼 값 뒤). 잠긴 스위치는 스위치 대신 글 "켜짐" · "꺼짐"으로 읽히고 그 줄에 자물쇠가 있다. |
@@ -26,7 +26,7 @@
 | 사이드 패널 | `SidePanel`(`width` `side`·`panel`·`assistant`) | 화면 옆에서 함께 보는 것(파일, 활동 자세히, 항목, 어시스턴트). 머리 끝의 ×로 닫는다. 저장할 것이 있으면 `footer`에 알약 하나. |
 | 결과 한 줄 | `toast`(`Toaster`가 그린다), 실패는 `toast.error` | 동작 직후의 한 줄과, 있으면 `action` 하나("되돌리기", "보기"). 꼭 봐야 하는 것은 할 일이나 상태 줄에도 남긴다. |
 | 그릴 수 없는 미리보기 | `ErrorBox` | 블록 미리보기가 오류로 그려지지 않을 때. 줄바꿈을 지키고 `role="alert"`. |
-| 목록 위나 편집기 위 알림 | `Banner`(`tone` `warning`·`danger`·`neutral`) | 글 전체에 관한 것은 편집기 머리 바로 아래, 목록에 관한 것은 그 목록 바로 위. 오른쪽 끝에 `TextButton` 동작. 경고도 실패도 아닌 상태(휴지통에 있는 글)는 `neutral`. |
+| 화면의 알림 띠 | `Banner`(`tone` `warning`·`danger`·`neutral`) | 화면에 대한 띠는 모두 화면 맨 위 한 자리에, 가장자리에서 가장자리까지 선다. 사이드바 틀이 있는 화면은 틀의 띠 자리(`SidebarInset banner`), 편집기처럼 틀 밖의 화면은 머리 줄보다 위다. 여럿이면 위아래로 쌓고 넓은 일이 위다(로그인 풀림 › 스키마 변경 › 이 글의 충돌 · 임시 저장본 · 휴지통). 오른쪽 끝에 `TextButton` 동작. 경고도 실패도 아닌 상태(휴지통에 있는 글)는 `neutral`. 칸 하나, 행 하나의 문제는 띠가 아니라 그 옆 한 줄이다(status.md). 2026-11-06 소유자: 머리 위와 아래를 나누지 않는다. 맨 위가 가장 잘 보인다. |
 | 아이콘만 있는 버튼의 이름 | `Tooltip`(`TooltipTrigger`, `TooltipContent`) — `IconButton`의 `label`이 이미 그린다 | 한두 낱말과 단축키. |
 
 ### 고른 글 내보내기 (Dialogs)

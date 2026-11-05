@@ -12,7 +12,7 @@ function Table({
 	className,
 	container = "scroll",
 	layout = "auto",
-	stickyHeader = false,
+	stickyHeader,
 	width,
 	columns,
 	style,
@@ -33,7 +33,7 @@ function Table({
 	container?: "scroll" | "none";
 	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
 	layout?: "auto" | "fixed";
-	/** The header row stays at the top while the rows scroll under it. */
+	/** The header row stays at the top while the rows scroll under it. On by default for a table the page scrolls (`container="none"`). */
 	stickyHeader?: boolean;
 }) {
 	return (
@@ -45,7 +45,9 @@ function Table({
 					layout === "fixed" && "table-fixed",
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
-					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
+					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					(stickyHeader ?? container === "none") &&
+						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -163,15 +165,15 @@ function RowCheck({
 }
 
 /**
- * The box a list's rows scroll in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
- * so scrolling does not cut them off; the rows keep the column's width. Put the table in it (`container="none"`); what holds it and the toolbar above must
- * not clip either.
+ * The box a list's rows sit in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
+ * so nothing cuts them off; the rows keep the column's width. It does not scroll: the page does, and the table's column heads stay at its top
+ * (`Table stickyHeader`). Put the table in it (`container="none"`); what holds it and the toolbar above must not clip either.
  */
 function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="list-scroll"
-			className={cn("-ml-monti-32 flex min-h-0 flex-1 flex-col overflow-y-auto pl-monti-32", className)}
+			className={cn("-ml-monti-32 flex flex-1 flex-col pl-monti-32", className)}
 			{...props}
 		/>
 	);

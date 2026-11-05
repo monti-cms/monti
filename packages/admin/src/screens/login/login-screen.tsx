@@ -12,7 +12,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { LogoGithub } from "@monti-cms/ui/icons";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import pkg from "../../../package.json";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
@@ -41,7 +41,7 @@ export function LoginScreen({
 	// state it was opened with says, so going on leads to signing in and never back to the first-admin form.
 	const [adminMade, setAdminMade] = useState(false);
 	const [closed, setClosed] = useState(false);
-	const none = !state.methods.password && !state.methods.github;
+	const none = !state.methods.password && state.methods.external.length === 0;
 	const first = state.methods.password && !state.hasAdmin && !adminMade;
 	const title = none ? t("login.notSetUp") : first ? t("login.firstAdmin") : undefined;
 	return (
@@ -94,6 +94,13 @@ export function LoginScreen({
 	);
 }
 
+/** The icon of a sign-in at another site, by its id; one with no icon here is a button with its name alone. */
+const EXTERNAL_ICON: Record<string, ReactNode> = { github: <LogoGithub aria-hidden /> };
+
+/**
+ * The sign-in form (doc 15): the email and password when that way is on, then a button for each sign-in at another site that `auth.state` lists
+ * (the screen knows none of them by name). Such a button sends the browser there and back.
+ */
 function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: string; onSignedIn: () => void }) {
 	const { t, apiBase } = useAdmin();
 	const signIn = useOperation("auth.signIn");
@@ -153,18 +160,26 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 						</Stack>
 					</form>
 				) : null}
-				{withPassword && state.methods.github ? <Separator label={t("login.or")} /> : null}
-				{state.methods.github ? (
-					// A plain form: the browser goes to GitHub and comes back to the admin (doc 15). After a refused account GitHub would hand the same
-					// one back, so the next try asks it for its account picker.
-					<form method="get" action={`${apiBase}/auth/github`}>
-						{denied ? <input type="hidden" name="pick" value="1" /> : null}
-						<Button variant={withPassword ? "secondary" : "primary"} width="full" pendingLabel={t("login.signingIn")}>
-							<LogoGithub aria-hidden />
-							{t("login.github")}
-						</Button>
-					</form>
-				) : null}
+				{withPassword && state.methods.external.length > 0 ? <Separator label={t("login.or")} /> : null}
+				{state.methods.external.map((method, index) => {
+					const variant = withPassword || index > 0 ? "secondary" : "primary";
+					const label = (
+						<>
+							{EXTERNAL_ICON[method.id]}
+							{t("login.with", { label: method.label })}
+						</>
+					);
+					return (
+						// A plain form: the browser goes to the other site and comes back to the admin (doc 15). After a refused account the site would
+						// hand the same one back, so the next try asks it for its account picker.
+						<form key={method.id} method="get" action={`${apiBase}/${method.path}`}>
+							{denied ? <input type="hidden" name="pick" value="1" /> : null}
+							<Button variant={variant} width="full" pendingLabel={t("login.signingIn")}>
+								{label}
+							</Button>
+						</form>
+					);
+				})}
 			</Stack>
 			{other || withPassword ? <FormFieldError reserve>{other ? t("login.failed") : undefined}</FormFieldError> : null}
 			{denied ? <FormFieldError>{t("login.denied", { login: denied })}</FormFieldError> : null}

@@ -1,7 +1,8 @@
+import { getMarkRange } from "@tiptap/core";
 import { type Node as EditorNode, Fragment, type ResolvedPos, type Schema } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
+import { type EditorState, NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Catalog } from "./catalog";
-import { nodeName } from "./schema";
+import { KEPT_MARK, markName, nodeName } from "./schema";
 
 /** A kind a text block can be turned into (the block menu's "turn into", the markdown shortcuts, the "/" menu's text blocks). */
 export type Kind =
@@ -205,4 +206,41 @@ export function insertBlocks(tr: Transaction, blocks: EditorNode[]) {
 	else tr.insert(at + block.nodeSize, blocks);
 	const end = tr.mapping.map(at + block.nodeSize);
 	return tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(end, tr.doc.content.size)), -1));
+}
+
+/** The formats "clear formatting" takes off: every mark but a link (where the words go, taken off in the link card) and a kept one (doc 03: kept as it is). */
+function clearable(schema: Schema) {
+	const keep = new Set([markName("link"), KEPT_MARK]);
+	return Object.values(schema.marks).filter((type) => !keep.has(type.name));
+}
+
+/** Whether the selected words have a format that "clear formatting" would take off: the format card shows the button only then. */
+export function hasClearableFormat(state: EditorState): boolean {
+	const { from, to, empty } = state.selection;
+	return !empty && clearable(state.schema).some((type) => state.doc.rangeHasMark(from, to, type));
+}
+
+/**
+ * "Clear formatting" (⌘\, editor-tools.md): takes the formats off the selected words; with nothing selected, off the run of each format the caret is
+ * in, so a bold word is cleared without picking it. A link stays. `false` when there is nothing to take off.
+ */
+export function clearFormats(state: EditorState, dispatch?: (tr: Transaction) => void): boolean {
+	const types = clearable(state.schema);
+	const { from, to, empty, $from } = state.selection;
+	const tr = state.tr;
+	if (!empty) {
+		if (!hasClearableFormat(state)) return false;
+		for (const type of types) tr.removeMark(from, to, type);
+	} else {
+		const here = types.filter((type) => type.isInSet(state.storedMarks ?? $from.marks()));
+		if (here.length === 0) return false;
+		for (const type of here) {
+			const range = getMarkRange($from, type);
+			if (range) tr.removeMark(range.from, range.to, type);
+		}
+		// What is typed next at the caret is plain too.
+		tr.setStoredMarks([]);
+	}
+	dispatch?.(tr.scrollIntoView());
+	return true;
 }

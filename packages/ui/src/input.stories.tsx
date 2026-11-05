@@ -100,7 +100,7 @@ export const WithAction: Story = {
 			<Input
 				size="sm"
 				aria-label="주소"
-				placeholder="제목에서 만들어요"
+				placeholder="비어 있음"
 				mono
 				action={
 					<IconButton label="제목으로 다시 만들기">

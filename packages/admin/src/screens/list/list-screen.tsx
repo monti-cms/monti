@@ -45,6 +45,7 @@ import {
 } from "@monti-cms/ui";
 import { Template } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -93,16 +94,6 @@ function useColumnLabel() {
 		createdAt: t("list.column.createdAt"),
 	};
 	return (column: ListColumn) => names[column.id] ?? column.label ?? column.id;
-}
-
-/** Saves a file the browser downloads (the bulk bar's export). */
-function download(name: string, data: unknown) {
-	const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, "\t")], { type: "application/json" }));
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = name;
-	link.click();
-	URL.revokeObjectURL(url);
 }
 
 /**

@@ -6,6 +6,7 @@ import { runCli } from "../entry/cli";
 import { createMonti, definePlugin, type Plugin } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
+import { slugify } from "./paths";
 import { createReader } from "./reader";
 
 const db = await testDatabase();
@@ -50,7 +51,8 @@ const get = (id: string, monti = site()) => read<Got>("entries.get", { id }, mon
 const version = async (id: string) => (await get(id)).entry.version;
 
 async function newPost(title: string, values: Record<string, unknown> = { summary: "short" }) {
-	return (await write("entries.create", { collection: "post", locale: "ko", title, values })).output.id;
+	return (await write("entries.create", { collection: "post", locale: "ko", title, slug: slugify(title), values }))
+		.output.id;
 }
 const fromSite = (slug: string) => reader().entry({ collection: "post", locale: "ko", slug });
 
@@ -68,12 +70,21 @@ describe("writing and publishing", () => {
 		expect((await get(id)).state).toBe("draft");
 
 		await write("entries.save", { id, version: await version(id), title: "첫 번째 글", values: { format: "memo" } });
+		// No address yet: publishing does not make one, it is a to-do like an empty required field (2026-11-06).
 		await expect(write("entries.publish", { ids: [id] })).rejects.toMatchObject({
-			reason: { key: "entries.publishBlocked", values: { count: 1 } },
+			reason: { key: "entries.publishBlocked", values: { count: 2 } },
 		});
-		expect((await get(id)).tasks).toEqual([expect.objectContaining({ code: "required", field: "summary" })]);
+		expect((await get(id)).tasks).toEqual([
+			expect.objectContaining({ code: "required", field: "slug", blocking: true }),
+			expect.objectContaining({ code: "required", field: "summary" }),
+		]);
 
-		await write("entries.save", { id, version: await version(id), values: { summary: "A first post." } });
+		await write("entries.save", {
+			id,
+			version: await version(id),
+			slug: "첫-번째-글",
+			values: { summary: "A first post." },
+		});
 		await write("entries.publish", { ids: [id] });
 		const published = await get(id);
 		expect(published.state).toBe("published");
@@ -104,7 +115,7 @@ describe("writing and publishing", () => {
 			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
 		});
 		const id = await newPost("Hello");
-		await write("entries.save", { id, version: await version(id), title: "Hello there" }, monti);
+		await write("entries.save", { id, version: await version(id), title: "Hello there", slug: "hello-there" }, monti);
 		await write("entries.publish", { ids: [id] }, monti);
 		expect(sent).toEqual([
 			expect.objectContaining({ type: "entry.saved" }),
@@ -298,12 +309,20 @@ describe("one to-do list", () => {
 });
 
 describe("published paths", () => {
-	it("02-5 changing a published slug sends the old one on; an empty slug comes from the title, with -2 when taken", async () => {
+	it("02-5 changing a published slug sends the old one on; an empty slug blocks the publish and is never made", async () => {
 		const first = await newPost("Hello");
-		const second = await newPost("Hello");
-		await write("entries.publish", { ids: [first, second] });
+		const second = (
+			await write("entries.create", { collection: "post", locale: "ko", title: "Hello", values: { summary: "s" } })
+		).output.id;
+		const result = await write<{ published: string[]; blocked: string[] }>("entries.publish", { ids: [first, second] });
+		expect(result.output).toEqual({ published: [first], blocked: [second] });
+		expect((await get(second)).entry.slug).toBe("");
+		expect((await get(second)).tasks).toEqual([
+			expect.objectContaining({ code: "required", field: "slug", blocking: true }),
+		]);
+		await write("entries.save", { id: second, version: await version(second), slug: "hello-2" });
+		await write("entries.publish", { ids: [second] });
 		expect((await get(first)).entry.slug).toBe("hello");
-		expect((await get(second)).entry.slug).toBe("hello-2");
 
 		await write("entries.save", { id: first, version: await version(first), slug: "hello-world" });
 		expect(await fromSite("hello")).toMatchObject({ entry: { id: first } });

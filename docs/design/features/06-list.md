@@ -41,7 +41,8 @@ type Filter =
   | { on: "select"; field: string; any: (string | null)[] }          // null = 없음
   | { on: "locale"; any: string[] }                                  // the group has these languages
   | { on: "date"; field: "updatedAt" | "publishedAt" | "createdAt"; range: "today" | "7d" | "30d" | { from: string; to: string } }
-  | { on: "empty"; field: string };                                  // "비어 있음"
+  | { on: "empty"; field: string }                                   // "비어 있음"
+  | { on: "group"; any: string[] };                                 // 이 묶음의 글: 본문 링크와 관계가 가리키는 글(편집기의 링크 칸, 02)
 ```
 
 ```mermaid

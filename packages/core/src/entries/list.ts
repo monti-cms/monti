@@ -26,6 +26,8 @@ const Filter = z.discriminatedUnion("on", [
 		range: z.union([z.enum(["today", "7d", "30d"]), z.object({ from: z.iso.date(), to: z.iso.date() })]),
 	}),
 	z.object({ on: z.literal("empty"), field: z.string() }),
+	/** Entries by their translation group: what a body link (`monti:entry/<group>`) and a relation point at. */
+	z.object({ on: z.literal("group"), any: z.array(z.string()).min(1) }),
 ]);
 export type Filter = z.infer<typeof Filter>;
 
@@ -126,6 +128,8 @@ function filterSql(filter: Filter, query: ListQuery, definition: CollectionDefin
 	switch (filter.on) {
 		case "status":
 			return sql`${stateSql} in (${list(filter.any)})`;
+		case "group":
+			return sql`rep.translation_group in (${list(filter.any)})`;
 		case "locale":
 			return sql`exists (select 1 from entries x where x.translation_group = rep.translation_group and x.trashed_at is null
 				and x.locale in (${list(filter.any)}))`;
@@ -310,7 +314,8 @@ export async function runListQuery(
 }
 
 /** The column a filter belongs to, so a column's counts leave out its own filter. */
-const columnOf = (filter: Filter) => (filter.on === "status" || filter.on === "locale" ? filter.on : filter.field);
+const columnOf = (filter: Filter) =>
+	filter.on === "status" || filter.on === "locale" || filter.on === "group" ? filter.on : filter.field;
 
 /** For one column's menu: each value with how many rows have it, the other columns' filters still applied (doc 06, `entries.facets`). */
 export async function runFacets(ctx: OperationContext, query: ListQuery, column: string): Promise<Facet[]> {

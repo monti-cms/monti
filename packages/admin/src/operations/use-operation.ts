@@ -16,7 +16,8 @@ const refusalOf = (answer: Answer): Refusal => {
  * resolves to the answer's body, or to a refusal the screen shows.
  */
 export function useOperation<Output = unknown>(name: string) {
-	const { transport, wrote } = useAdmin();
+	const { transport, wrote, session } = useAdmin();
+	const end = session.end;
 	const [pending, setPending] = useState(false);
 	const [refusal, setRefusal] = useState<Refusal | null>(null);
 	const run = useCallback(
@@ -34,13 +35,15 @@ export function useOperation<Output = unknown>(name: string) {
 					return { ok: true, body: answer.body as Output };
 				}
 				const refused = refusalOf(answer);
+				// No session: it ended while the admin was open. Every screen hears it, not only the one that called (doc 15).
+				if (answer.status === 401 && refused.error === "unauthenticated") end();
 				setRefusal(refused);
 				return { ok: false, refusal: refused };
 			} finally {
 				setPending(false);
 			}
 		},
-		[transport, name, wrote],
+		[transport, name, wrote, end],
 	);
 	return { run, pending, refusal, clear: () => setRefusal(null) };
 }

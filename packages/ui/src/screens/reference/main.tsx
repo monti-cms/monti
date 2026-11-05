@@ -257,9 +257,9 @@ function PostRowMenu() {
 }
 
 /** The posts list. With `rowMenu`, a row's right-click menu is open. */
-export function MainScreen({ rowMenu = false }: { rowMenu?: boolean } = {}) {
+export function MainScreen({ rowMenu = false, banner }: { rowMenu?: boolean; banner?: React.ReactNode } = {}) {
 	return (
-		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }}>
+		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }} banner={banner}>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<PostSearch />

@@ -6,7 +6,7 @@ import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import type { Schema } from "../schema/define";
-import { publicPath, publishSlug, slugify } from "./paths";
+import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
 import { fieldValue, type PublishTask, publishTasks } from "./tasks";
@@ -176,7 +176,7 @@ export const entryOperations = [
 		name: "entries.create",
 		kind: "write",
 		description:
-			"Create an entry in a collection and language, optionally with a title, field values and either a body or a template (templates.list) to start the body from. It starts as a draft with an empty slug, made from the title when it is first published.",
+			"Create an entry in a collection and language, optionally with a title, slug, field values and either a body or a template (templates.list) to start the body from. It starts as a draft. An empty slug blocks publishing until one is set.",
 		input: z.object({ collection: z.string(), locale: z.string().min(1), template: z.string().optional(), ...Draft }),
 		async check(input, ctx) {
 			checkDraft(ctx.site.schema(), input.collection, input);
@@ -289,7 +289,7 @@ export const entryOperations = [
 		name: "entries.checkPublish",
 		kind: "read",
 		description:
-			"The publish to-do list of an entry: empty required fields, a slug another entry is published under, and plugins' checks. Blocking rows stop the publish.",
+			"The publish to-do list of an entry: empty required fields, an empty slug, a slug another entry is published under, and plugins' checks. Blocking rows stop the publish.",
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const { tasks, slug } = await tasksOf(ctx, await entryOf(ctx, input.id));
@@ -300,7 +300,7 @@ export const entryOperations = [
 		name: "entries.publish",
 		kind: "write",
 		description:
-			'Publish entries: copy each working copy to the site. An empty slug is made from the title. Republishing keeps the first publish date ("keep") or sets today ("today"). Entries with blocking to-do rows are left alone; the preview lists them.',
+			'Publish entries: copy each working copy to the site. An entry with an empty slug or another blocking to-do row is not published. Republishing keeps the first publish date ("keep") or sets today ("today"). Entries with blocking to-do rows are left alone; the preview lists them.',
 		input: Ids.extend({ date: z.enum(["keep", "today"]).default("keep") }),
 		touches: (input) => input.ids.map(ref),
 		async preview(input, ctx) {
@@ -331,7 +331,7 @@ export const entryOperations = [
 				if (blocked) continue;
 				// Again per entry: an entry published earlier in this loop may have taken the slug.
 				const { slug, taken } = await publishSlug(ctx.db, entry);
-				if (taken) continue;
+				if (taken || slug === "") continue;
 				const previous = await oldSlug(ctx, entry);
 				const version = entry.version + 1;
 				await ctx.db
@@ -495,7 +495,7 @@ export const entryOperations = [
 			if (entry.title === "" && (entry.doc === null || entry.doc === undefined))
 				throw new CheckError({ key: "entries.nothingToPreview" });
 			const expiresAt = new Date(ctx.now().getTime() + PREVIEW_MINUTES * 60_000);
-			const { slug } = await publishSlug(ctx.db, entry);
+			const slug = previewSlug(entry);
 			return {
 				token: await previewToken(ctx.site.secret, entry.id, expiresAt),
 				path: publicPath(ctx.site.schema(), entry.collection, slug),

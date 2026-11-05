@@ -30,7 +30,7 @@
 | 본문 블록 | `Block`(메뉴가 열린 블록은 `active`) | 글자 모양은 편집기의 것. |
 | 블록 손잡이 | `BlockHandle`(`trigger`로 `DropdownMenuTrigger`를 감싼다, 메뉴가 열린 동안 `active`) | +는 아래에 빈 블록을 넣고 "/" 메뉴를 연다. 그립을 누르면 블록 메뉴, 끌면 옮긴다. |
 | 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 행 앞에 블록 아이콘: 제목은 `HeadingIcon`. 행 끝에 마크다운 단축 `MenuShortcut typed`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
-| 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드 / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. |
+| 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드, 서식이 있을 때 `clear` / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. 서식 지우기(⌘\)는 고른 범위 안의 서식을 링크만 남기고 모두 뺀다(editor-tools.md). |
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿 · 이 자리에 넣어요", `CommandItem`(행 앞에 블록 아이콘, 제목은 `HeadingIcon`, 행 끝에 마크다운 단축 `MenuShortcut typed`), `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
 | 이미지 도구 행 | `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
@@ -86,20 +86,28 @@
 
 흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
 
-### 알림 띠 (머리 바로 아래, 가장자리에서 가장자리까지)
+### 알림 띠 (화면 맨 위, 머리 줄보다 위, 가장자리에서 가장자리까지)
+
+화면의 띠는 모두 이 한 자리에 쌓인다. 넓은 일이 위다([common.md](common.md)의 "화면의 알림 띠").
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
+| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸어요", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있어요" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸어요"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
 | 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
 | 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
 | 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
 
 ### 링크 칸 (서식 카드의 링크 버튼 아래)
 
+기준 화면: `Screens/Reference/Editor` › LinkCardOpen · LinkCardSearch · LinkCardAddress · LinkCardLinked. 칸은 하나이고, 친 것이 링크를 정한다(노션과 같다, 2026-11-06 소유자).
+
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 칸 | `Popover`(링크 `FormatButton`이 트리거) 안 `FormField`: "링크 주소" `Input mono`(플레이스홀더 "https://") | Enter로 고른 글자에 주소를 단다. 비우고 Enter면 링크를 뗀다. |
-| 링크 떼기 | 링크가 있는 글자일 때만 입력 칸 옆 `IconButton`("링크 지우기") | |
+| 칸 | `Popover`(링크 `FormatButton`이 트리거, `padding="menu"`, `width="md"`) 안 `Command`: `CommandInput`(플레이스홀더 "주소를 붙여 넣거나 글 찾기", 이름 "링크 주소") | `/` 메뉴와 같은 모양이다. 화살표와 Enter로 행을 고른다. |
+| 막 열었을 때 | `CommandGroup` "최근에 고친 글": `CommandItem`(앞 `Document` 아이콘, 글 제목, 끝 `MenuValue` 컬렉션 이름) | 문서 컬렉션마다 가장 최근에 고친 글을 모아 다섯 줄. |
+| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글이 없어요" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
+| 주소를 쳤을 때 | `CommandGroup` "주소": `CommandItem`(앞 `Link` 아이콘, 주소, 끝 `MenuShortcut` "↵") | `https://` · `mailto:` · `/` · `#`로 시작하거나 `react.dev` 같은 도메인이면 주소다(도메인에는 `https://`를 붙인다). Enter로 바깥 링크를 건다. |
+| 이미 링크가 걸린 글자 | 글 링크면 칸에 그 글 제목, `CommandGroup` "지금 링크"에 그 글(`checked`). 바깥 링크면 칸에 그 주소 | 아래에 `CommandSeparator`와 "링크 떼기"(`Unlink` 아이콘) 행. |
 
 ## 흐름 1 · 글 쓰고 발행하기
 

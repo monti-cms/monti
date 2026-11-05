@@ -56,8 +56,9 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 머리 바로 아래. 저장이 거절됐을 때만. |
-| 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했어요", `plainMeta`), 끝에 `TextButton` "다시 시도" | 머리 바로 아래. 템플릿을 읽지 못했을 때만. |
+| 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 화면 맨 위(머리 줄보다 위). 저장이 거절됐을 때만. |
+| 저장하지 않은 편집 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요"), 끝에 `TextButton` "불러오기" · `TextButton variant="quiet"` "버리기" | 화면 맨 위(머리 줄보다 위). 저장하지 않고 닫은 편집이 이 브라우저에 남아 있을 때만. 글 편집기와 같은 임시 저장(`useEntryEditor`)이다. 템플릿에는 비교 화면이 없다. |
+| 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했어요", `plainMeta`), 끝에 `TextButton` "다시 시도" | 화면 맨 위(머리 줄보다 위). 템플릿을 읽지 못했을 때만. |
 
 ## 데이터 (Data)
 

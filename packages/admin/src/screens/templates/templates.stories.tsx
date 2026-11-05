@@ -1,7 +1,7 @@
 import type { Doc } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { type StorySite, storySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
@@ -60,9 +60,12 @@ async function setup(monti: Monti) {
 }
 
 const site = ({ empty = false } = {}) => [
-	async () => ({
-		site: await storySite({ schema, auth: { password: true }, signedIn: true, setup: empty ? undefined : setup }),
-	}),
+	async () => {
+		startAt();
+		return {
+			site: await storySite({ schema, auth: { password: true }, signedIn: true, setup: empty ? undefined : setup }),
+		};
+	},
 ];
 
 /** Opens tools from the sidebar and waits for the templates. */
@@ -88,19 +91,45 @@ const pointAt = (element: Element) => {
 	fireEvent.mouseMove(element, { clientX: rect.left + 8, clientY: rect.top + 8 });
 };
 
-/** Selects words in the text the way a drag does. */
+/** Selects words in the text the way a drag does. The words may run over several pieces of one block (a bold part and a plain part). */
 async function select(text: HTMLElement, words: string) {
-	const node = [...text.querySelectorAll("p, li, h2")].find((each) => each.textContent?.includes(words));
-	const textNode = node?.firstChild;
-	if (!textNode) throw new Error(`no text "${words}"`);
-	const start = textNode.textContent?.indexOf(words) ?? 0;
-	text.focus();
-	const range = document.createRange();
-	range.setStart(textNode, start);
-	range.setEnd(textNode, start + words.length);
-	const selection = document.getSelection();
-	selection?.removeAllRanges();
-	selection?.addRange(range);
+	const pieces: Text[] = [];
+	const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) pieces.push(node as Text);
+	for (const block of new Set(pieces.map((piece) => piece.parentElement?.closest("p, li, h2")))) {
+		const inBlock = pieces.filter((piece) => piece.parentElement?.closest("p, li, h2") === block);
+		const at = inBlock
+			.map((piece) => piece.data)
+			.join("")
+			.indexOf(words);
+		if (at < 0) continue;
+		const find = (offset: number): [Text, number] => {
+			let left = offset;
+			for (const piece of inBlock) {
+				if (left <= piece.data.length) return [piece, left];
+				left -= piece.data.length;
+			}
+			throw new Error("past the block");
+		};
+		text.focus();
+		const range = document.createRange();
+		range.setStart(...find(at));
+		range.setEnd(...find(at + words.length));
+		const selection = document.getSelection();
+		selection?.removeAllRanges();
+		selection?.addRange(range);
+		document.dispatchEvent(new Event("selectionchange"));
+		return;
+	}
+	throw new Error(`no text "${words}"`);
+}
+
+/** Puts the caret inside the given words, nothing selected. */
+async function caretIn(text: HTMLElement, words: string) {
+	await select(text, words);
+	// One letter back from the end: the start may sit at the end of the plain piece before the words.
+	const picked = document.getSelection();
+	picked?.collapse(picked.focusNode, Math.max(0, picked.focusOffset - 1));
 	document.dispatchEvent(new Event("selectionchange"));
 }
 
@@ -165,6 +194,37 @@ export const FormatCard: Story = {
 	},
 };
 
+/** "서식 지우기": on the format card only while the picked words have a format; one press takes them all off (a link stays). */
+export const ClearFormatting: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { text, body } = await editor(canvasElement);
+		await select(text, "무엇을 다루는지");
+		await body.findByRole("toolbar", { name: "서식" }, wait);
+		await expect(body.queryByRole("button", { name: "서식 지우기" })).toBeNull();
+		await userEvent.click(body.getByRole("button", { name: "굵게" }));
+		await userEvent.click(body.getByRole("button", { name: "기울임" }));
+		// A wider pick that holds the formatted words still offers it.
+		await select(text, "이 글에서 무엇을 다루는지 한두");
+		await userEvent.click(await body.findByRole("button", { name: "서식 지우기" }, wait));
+		await waitFor(() => expect(text.querySelector("strong, em")).toBeNull(), wait);
+		await waitFor(() => expect(body.queryByRole("button", { name: "서식 지우기" })).toBeNull(), wait);
+	},
+};
+
+/** ⌘\ with the caret inside formatted words, nothing picked: that run of formats comes off. */
+export const ClearAtCaret: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { text, body } = await editor(canvasElement);
+		await select(text, "무엇을 다루는지");
+		await userEvent.click(await body.findByRole("button", { name: "굵게" }, wait));
+		await caretIn(text, "무엇을 다루는지");
+		await userEvent.keyboard("{Meta>}\\{/Meta}");
+		await waitFor(() => expect(text.querySelector("strong")).toBeNull(), wait);
+	},
+};
+
 /** A new template: no name yet, the empty body's one line says how to add a block. Saving without a name says so under the name. */
 export const NewTemplate: Story = {
 	loaders: site(),
@@ -212,7 +272,7 @@ export const Dragging: Story = {
 		const first = (await within(text).findByText("첫 번째 요점")).getBoundingClientRect();
 		for (const to of [y + 10, first.top + 4, first.bottom - 4])
 			window.dispatchEvent(new PointerEvent("pointermove", { clientX: x + 8, clientY: to }));
-		await body.findByText("서론", { selector: "[data-slot=held-block] h2" }, wait);
+		await body.findByText("서론", { selector: "[data-slot=held-block] span" }, wait);
 	},
 };
 
