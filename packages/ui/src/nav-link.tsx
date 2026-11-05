@@ -8,7 +8,7 @@ import { HELD } from "./sortable";
  * ground and semibold. Pointing at a row gives it the selected ground, one step under the open one's current ground, on the rail and on paper alike.
  */
 export const NAV_ROW =
-	"flex h-monti-control-lg w-full min-w-0 items-center gap-monti-10 rounded-monti-full border-0 bg-transparent px-monti-16 text-left [&>svg:first-child]:-ml-[2px] text-monti-body no-underline outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default not-disabled:hover:bg-monti-selected data-active:bg-monti-current data-active:font-semibold";
+	"flex h-monti-control-lg w-full min-w-0 items-center gap-monti-10 rounded-monti-full border-0 bg-transparent px-monti-16 text-left [&>svg:first-child]:-ml-[2px] text-monti-body no-underline outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:bg-monti-current aria-[current=page]:font-semibold aria-[current=page]:text-monti-default not-disabled:hover:bg-monti-selected data-active:bg-monti-current data-active:font-semibold";
 
 /** The count or identifier at the end of a {@link NAV_ROW}: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 export const NAV_ROW_END =

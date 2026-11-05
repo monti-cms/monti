@@ -1,5 +1,6 @@
 import { type AdminValues, type Answers, sameJson } from "@monti-cms/core";
 import {
+	Banner,
 	Button,
 	ChangesGroup,
 	Inline,
@@ -108,6 +109,8 @@ export function CollectionsScreen({
 	const [plan, setPlan] = useState<Plan | null>(null);
 	const [conflict, setConflict] = useState(false);
 	const [busy, setBusy] = useState(false);
+	// Why the last save or apply was refused. It stays where the person acts (the feedback ladder in status.md), not in a toast that goes.
+	const [refused, setRefused] = useState<string | null>(null);
 	const [position, setPosition] = useState(0);
 
 	useLeaveGuard({ changes: rows, revertAll: draft.revertAll });
@@ -126,6 +129,7 @@ export function CollectionsScreen({
 
 	const openReview = async () => {
 		if (!data || !built) return;
+		setRefused(null);
 		setBusy(true);
 		const [fresh, planned] = await Promise.all([
 			readOp.run(),
@@ -133,7 +137,7 @@ export function CollectionsScreen({
 		]);
 		setBusy(false);
 		if (!planned.ok) {
-			toast.error(planned.refusal.reason ? t(planned.refusal.reason) : t("settings.saveFailed"));
+			setRefused(planned.refusal.reason ? t(planned.refusal.reason) : t("settings.saveFailed"));
 			return;
 		}
 		// The file changed after this screen read it (another tab, a hand edit): the review says so and cannot apply (flow 11, step 19).
@@ -173,7 +177,7 @@ export function CollectionsScreen({
 			);
 			first = false;
 			if (!result.ok) {
-				toast.error(result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed"));
+				setRefused(result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed"));
 				return false;
 			}
 		}
@@ -191,6 +195,7 @@ export function CollectionsScreen({
 	const save = async () => {
 		if (!data || !built) return;
 		if (!locked && model.structureChanged) return openReview();
+		setRefused(null);
 		setBusy(true);
 		const ok = await saveValues(data, draft.accepted, touched());
 		if (ok) {
@@ -203,6 +208,7 @@ export function CollectionsScreen({
 
 	const apply = async (answers: Answers) => {
 		if (!data || !built) return;
+		setRefused(null);
 		setBusy(true);
 		const made = Object.keys(built.schema.collections).filter((c) => !data.schema.collections[c]);
 		const result = await applyOp.run(
@@ -212,7 +218,7 @@ export function CollectionsScreen({
 		if (!result.ok) {
 			setBusy(false);
 			if (result.refusal.status === 409) setConflict(true);
-			else toast.error(result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed"));
+			else setRefused(result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed"));
 			return;
 		}
 		// The apply moved a renamed field's admin values itself; what is left is the admin values the person changed alongside (a label, the layout).
@@ -339,6 +345,7 @@ export function CollectionsScreen({
 			<Stack gap={0} grow minWidth={0} minHeight={0} container>
 				<SettingsPage save={saveGroup}>
 					<PageBody>
+						{refused && !plan ? <Banner tone="danger" title={refused} /> : null}
 						{data ? (
 							<RailLayout
 								label={t("settings.collections")}
@@ -454,6 +461,7 @@ export function CollectionsScreen({
 				model={model}
 				plan={plan}
 				conflict={conflict}
+				refused={plan ? refused : null}
 				applying={busy}
 				onReload={() => {
 					setPlan(null);

@@ -19,7 +19,7 @@ function Suggest({
 			data-kind={kind}
 			type="button"
 			className={cn(
-				"flex min-h-monti-control-md w-full cursor-pointer items-center gap-monti-10 rounded-monti-full border-0 bg-transparent px-[14px] py-monti-6 text-left text-monti-body text-monti-default outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&>svg:first-child]:-ml-[2px] [&>svg]:shrink-0 [&>svg]:text-monti-subtle",
+				"flex min-h-monti-control-md w-full cursor-pointer items-center gap-monti-10 rounded-monti-full border-0 bg-transparent px-[14px] py-monti-6 text-left text-monti-body text-monti-default outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset [&>svg:first-child]:-ml-[2px] [&>svg]:shrink-0 [&>svg]:text-monti-subtle",
 				className,
 			)}
 			{...props}
@@ -42,7 +42,7 @@ function SuggestList({ className, children, ...props }: ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="suggest-list"
-			className={cn("flex min-h-0 flex-1 flex-col-reverse overflow-auto", className)}
+			className={cn("flex min-h-0 flex-1 scroll-py-monti-8 flex-col-reverse overflow-auto", className)}
 			{...props}
 		>
 			<div className="flex flex-col gap-monti-4 px-monti-12 pt-monti-12 pb-monti-4">{children}</div>

@@ -14,7 +14,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 3. The family page in `docs/design/admin/components/` for every part you touch.
 4. The screen's part map in `docs/design/admin/screens/` (which part goes in each place and how it behaves; what it does not name is not used). Use only the parts it names; if a place needs another part, change the map first.
 5. `docs/design/admin/screens.md` and the `flows/` file for the screen and flow you build.
-6. The board on the canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) for the look. Read the live version with the Artifact tool.
+6. The screen's reference story (`packages/ui/src/screens/reference`, Storybook Screens/Reference) for the look. The canvas (https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co) shows a flow's order only: since 2026-11-05 it is not kept up, so where its corners, rings or spacing differ from the repo, the repo is right.
 
 ## Rules
 
@@ -28,6 +28,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 - If the board disagrees with the docs or with an existing part (a width, a color, a label), do not pick one. Stop and report it.
 - A map row or a board detail is not a reason by itself. For each part a place gets, say what the person does with it; a mark, line or column that repeats what is already shown is dropped (and the map changed), not built.
 - No control is greyed out without its reason shown where the person acts (README principles 7–10).
+- Tab through the screen and look at each focus ring whole: a row that spans its box draws the ring inside (`ring-inset`), and a scrolling box keeps `scroll-py-monti-8`; an outside ring at a scrolling edge is cut (tokens.md, 상태).
 - A pressable thing's shape comes from where it sits (button.md, 모양 기준): a pill on the page ground at one line's height; 6px only for rows in a floating surface and blocks taller than a line; no shape for text buttons, tabs and whole rows. Every pressable thing changes when pointed at; nothing that cannot be pressed shows a pointer.
 
 ## Order of work

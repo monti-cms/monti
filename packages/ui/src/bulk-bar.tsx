@@ -62,7 +62,7 @@ function BulkBar({
 					/>
 				</span>
 			)}
-			<span className="font-bold text-monti-default">{label}</span>
+			<span className="font-semibold text-monti-default">{label}</span>
 			{request && (
 				<>
 					<Separator orientation="vertical" length="control" flush />

@@ -96,6 +96,11 @@
 	--monti-size-icon-sm: 14px;
 	--monti-size-icon-md: 16px;
 	--monti-size-icon-lg: 20px;
+	--monti-duration-fast: 100ms;
+	--monti-duration-normal: 150ms;
+	--monti-duration-slow: 200ms;
+	--monti-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+	--monti-ease-exit: cubic-bezier(0.4, 0, 1, 1);
 	--monti-shadow-floating: 0 12px 32px rgba(40, 32, 20, 0.14);
 	--monti-shadow-overlay: 0 24px 60px rgba(30, 24, 14, 0.18);
 	--monti-shadow-sheet: -20px 0 50px rgba(30, 24, 14, 0.12);
@@ -123,6 +128,10 @@
 	--monti-text-body-line: 20px;
 	--monti-text-body-weight: 400;
 	--monti-text-body-tracking: 0em;
+	--monti-text-prose-size: 14px;
+	--monti-text-prose-line: 24px;
+	--monti-text-prose-weight: 400;
+	--monti-text-prose-tracking: 0em;
 	--monti-text-label-size: 13px;
 	--monti-text-label-line: 18px;
 	--monti-text-label-weight: 500;
@@ -139,6 +148,10 @@
 	--monti-text-meta-line: 16px;
 	--monti-text-meta-weight: 400;
 	--monti-text-meta-tracking: 0em;
+	--monti-text-code-size: 12px;
+	--monti-text-code-line: 20px;
+	--monti-text-code-weight: 400;
+	--monti-text-code-tracking: 0em;
 	--monti-text-micro-size: 11px;
 	--monti-text-micro-line: 14px;
 	--monti-text-micro-weight: 400;

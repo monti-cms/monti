@@ -45,7 +45,7 @@ function SheetContent({ className, children, ...props }: SheetPrimitive.Popup.Pr
 				initialFocus={initialFocus}
 				data-slot="sheet-content"
 				className={cn(
-					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-200 ease-in-out data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0",
+					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-(--monti-duration-slow) ease-monti-standard data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-(--monti-duration-normal) data-ending-style:ease-monti-exit",
 					"sm:w-monti-sheet",
 					className,
 				)}
@@ -141,7 +141,7 @@ function SheetSection({
 		<section
 			data-slot="sheet-section"
 			aria-labelledby={titleId}
-			className={cn("flex flex-col gap-[18px]", className)}
+			className={cn("flex flex-col gap-monti-20", className)}
 			{...props}
 		>
 			<h2 id={titleId} className="m-0 font-semibold text-monti-body">

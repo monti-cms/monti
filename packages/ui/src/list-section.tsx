@@ -29,7 +29,7 @@ function ListSection({
 			<h2
 				id={titleId}
 				className={cn(
-					"m-0 flex items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-bold text-monti-label",
+					"m-0 flex items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-semibold text-monti-label",
 					!flush && "px-monti-12",
 				)}
 			>

@@ -32,7 +32,7 @@ function ReviewGroup({
 }: Omit<ComponentProps<"section">, "title"> & { title: ReactNode; meta?: ReactNode; actions?: ReactNode }) {
 	return (
 		<section data-slot="review-group" className={className} {...props}>
-			<h2 className="flex items-baseline gap-monti-12 border-monti-default border-b pb-monti-12 font-bold text-monti-body">
+			<h2 className="flex items-baseline gap-monti-12 border-monti-default border-b pb-monti-12 font-semibold text-monti-body">
 				{title}
 				{meta !== undefined && <span className="font-normal text-monti-meta text-monti-subtle">{meta}</span>}
 				{actions !== undefined && (
@@ -153,7 +153,7 @@ type ReviewBlockProps = {
 /** The gutter of a change to one block: the check, then the block's name with its note under it. */
 function ReviewGutter({ included, onIncludedChange, includeLabel, readOnly, label, note }: ReviewBlockProps) {
 	return (
-		<span className="flex items-start gap-[10px] py-[15px] pr-monti-12 text-monti-micro text-monti-subtle">
+		<span className="flex items-start gap-monti-10 py-monti-16 pr-monti-12 text-monti-micro text-monti-subtle">
 			<IncludeCheck included={included} onIncludedChange={onIncludedChange} label={includeLabel} readOnly={readOnly} />
 			<span className="flex flex-col">
 				{label}

@@ -27,7 +27,7 @@ function Progress({
 			className={cn(inline ? "w-[120px]" : "w-full", className)}
 		>
 			<ProgressPrimitive.Track className="relative h-[3px] w-full overflow-hidden rounded-[2px] bg-(--monti-border-default)">
-				<ProgressPrimitive.Indicator className="h-full bg-(--monti-fg-default) transition-[width] duration-300" />
+				<ProgressPrimitive.Indicator className="h-full bg-(--monti-fg-default) transition-[width] duration-(--monti-duration-slow)" />
 			</ProgressPrimitive.Track>
 		</ProgressPrimitive.Root>
 	);

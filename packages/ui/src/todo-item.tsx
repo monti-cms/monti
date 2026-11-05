@@ -50,7 +50,7 @@ function TodoItem({
 			data-slot="todo-item"
 			data-current={current || undefined}
 			className={cn(
-				"relative flex items-center gap-[10px] rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default data-current:bg-monti-selected",
+				"relative flex items-center gap-monti-10 rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default data-current:bg-monti-selected",
 				className,
 			)}
 			{...props}
@@ -77,7 +77,7 @@ function TodoItem({
 				<button
 					type="button"
 					onClick={onOpen}
-					className="flex min-w-0 grow cursor-pointer flex-col items-stretch gap-monti-2 border-0 bg-transparent p-0 text-left text-inherit outline-none after:absolute after:inset-0 after:rounded-monti-md focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/20"
+					className="flex min-w-0 grow cursor-pointer flex-col items-stretch gap-monti-2 border-0 bg-transparent p-0 text-left text-inherit outline-none after:absolute after:inset-0 after:rounded-monti-md focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50"
 				>
 					{text}
 				</button>
@@ -89,7 +89,7 @@ function TodoItem({
 					type="button"
 					onClick={onAction}
 					className={cn(
-						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note decoration-1 underline-offset-4 outline-none hover:underline focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note decoration-1 underline-offset-4 outline-none hover:underline focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 						proposal ? "text-monti-proposal" : "text-monti-muted hover:text-monti-default",
 					)}
 				>

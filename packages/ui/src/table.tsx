@@ -227,7 +227,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 			{
 				draggable: false,
 				className: cn(
-					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/20 focus-visible:after:ring-inset",
+					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
 					className,
 				),
 			},
@@ -308,7 +308,7 @@ function TableHead({
 			className={cn(
 				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
-				truncate && "max-w-0 truncate",
+				truncate && "max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top",
 				tone === "muted" && "text-monti-muted",
@@ -343,7 +343,7 @@ function TableCell({
 				// make the line taller than either, and the row 2px taller than the design system's 42.
 				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
-				truncate && "max-w-0 truncate",
+				truncate && "max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",

@@ -69,7 +69,7 @@ function ToolCallLine({
 						className={cn(
 							LINE,
 							tone,
-							"group/line cursor-pointer border-0 bg-transparent p-0 py-[3px] outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+							"group/line cursor-pointer border-0 bg-transparent p-0 py-[3px] outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 						)}
 					>
 						{summary}

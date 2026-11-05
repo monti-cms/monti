@@ -840,7 +840,7 @@ function checkThemeNames() {
 			offset: match.index + match[0].indexOf("{") + 1,
 		}));
 		const allowed =
-			/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|spacing|radius|height|size|container|shadow)-monti-|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold|bold)$|tracking-caps$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/;
+			/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|spacing|radius|height|size|container|shadow|ease)-monti-|default-transition-(?:duration|timing-function)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold|bold)$|tracking-caps$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/;
 		const declarations = blocks.flatMap(({ text, offset }) =>
 			[...text.matchAll(/(--[\w-]+(?:-\*)?)\s*:\s*([^;]+);/g)].map((match) => ({
 				name: match[1],
@@ -944,18 +944,63 @@ const OWN_COLORS = new Set([
 	"seo/src/admin/preview.tsx",
 ]);
 /** Type the design system's own parts set outside the roles, by file: what the role does not cover. */
+/**
+ * Parts whose spacing leaves the scale on purpose (the spacing section of tokens.md): a pill's sides from its height, an optical pull, a measure taken from a board.
+ * Anywhere else a part takes the spacing scale too. Keyed by file, with why; a listed file that no longer leaves the scale fails.
+ */
+const OFF_SCALE_SPACE = new Map([
+	[
+		"ui/src/button.tsx",
+		"pill sides from the height rule (36→18 filled, 32→14) and the loading ring's optical sides and gap (13/15, 7), the leading icon's 2px pull",
+	],
+	[
+		"ui/src/chat-input.tsx",
+		"the box's text sits 18px in to line up with its round corner; the send button's room under the text",
+	],
+	["ui/src/chat-message.tsx", "the bubble's sides follow its 14px corner; 3px lines its first line with the avatar"],
+	["ui/src/command.tsx", "menu rows' 9px sides line the words up with the menu's 12px corner and 1px border"],
+	["ui/src/dropdown-menu.tsx", "a caption row 7px tall above and below, measured in the menu board"],
+	["ui/src/entry-status.tsx", "the status dot's 7px gap, measured with the dot's own 1px ring"],
+	["ui/src/field-tree.tsx", "a field nested in a group stands one grip (28px) or grip and name column (44px) in"],
+	["ui/src/floating-bar.tsx", "the bar's 3px ring around its 28px buttons"],
+	["ui/src/heading-icon.tsx", "the level number's 2px pull into the glyph"],
+	["ui/src/label.tsx", "a 2px gap that makes the required mark read as part of its word"],
+	["ui/src/marker.tsx", "the marker's 5px end beside its 10px letters"],
+	[
+		"ui/src/menu-parts.tsx",
+		"menu rows' 9px sides line the words up with the menu's 12px corner and 1px border; separators sit 5px clear",
+	],
+	["ui/src/nav-link.tsx", "the leading icon's 2px pull into the pill side"],
+	[
+		"ui/src/page-header.tsx",
+		"the title's 18px over the ink rule and the meta's 3px baseline lift, measured in the header board",
+	],
+	["ui/src/pick-list.tsx", "pill sides from the height rule (32→14)"],
+	["ui/src/proposal-bubble.tsx", "the arrows' 7px gap, measured in the bubble"],
+	["ui/src/proposal-marks.tsx", "2px of colour beyond the marked letters"],
+	["ui/src/review.tsx", "3px drops the check box to the first line's middle"],
+	["ui/src/segmented.tsx", "the track's 2px ring around its cells"],
+	["ui/src/separator.tsx", "a vertical rule 3px clear of the words on each side"],
+	[
+		"ui/src/sidebar.tsx",
+		"pill sides from the height rule (32→14); the tree's folder indents step 22px from the parent's icon",
+	],
+	["ui/src/split-button.tsx", "the split pill's sides and the loading ring's optical sides and gap, as Button"],
+	["ui/src/status-bar-list.tsx", "a menu's rows: 9px sides as menu-parts"],
+	["ui/src/suggest.tsx", "pill sides from the height rule (32→14) and the leading icon's 2px pull"],
+	["ui/src/tabs.tsx", "3px under a tab's words to its 1.5px rule, measured in the tabs board"],
+	["ui/src/textarea.tsx", "the small field's 3px keeps one line at 28px with the 20px line"],
+	["ui/src/tile.tsx", "a tile's caption sides follow its 14px picture corner; 44px leaves room for its menu button"],
+	["ui/src/todo-item.tsx", "to-dos are menu rows (9px sides); 11px drops the done mark to the first line's middle"],
+	["ui/src/tool-call-line.tsx", "3px keeps a tool line at the 20px line inside 26px"],
+]);
+
+/** Files where `font-bold` is not stress but the thing itself: bold text in an entry's body, the format bar's B, the toolbar's open tab (tokens.md). */
+const BOLD_OK = new Set(["ui/src/doc-blocks.tsx", "ui/src/format-bar.tsx", "ui/src/tabs.tsx"]);
+
 const OWN_TYPE = new Map([
-	// Text that runs over several lines in a field takes the design system's own line of 1.6 times the size (`.mt-textarea`).
-	["ui/src/textarea.tsx", new Set(["leading-[1.6]"])],
-	// The conversation's own line heights: 1.6 times the size in the admin's bubble and 1.7 in the assistant's answer (`.mt-msg-user`).
-	["ui/src/chat-message.tsx", new Set(["leading-[1.6]", "leading-[1.7]"])],
-	// The modal's own type: a 20px title (28px line, -0.015em) and text at 1.65 times the size (`.mt-dialog-title`, `.mt-dialog` text).
-	["ui/src/dialog.tsx", new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"])],
 	// The translation marker's text, 10px, the one size under the micro role (`.mt-marker`).
 	["ui/src/marker.tsx", new Set(["text-[10px]"])],
-	// Code in an entry's body keeps the reading line of 1.7 times its size (`.mt-doc-code` in `.text-reading`).
-	["ui/src/doc-blocks.tsx", new Set(["leading-[1.7]"])],
-	["ui/src/compare.tsx", new Set(["leading-[1.7]"])],
 	// The heading icon's level number, 8px mono in the corner of the 16px glyph (`.mt-ico-level .lv`).
 	["ui/src/heading-icon.tsx", new Set(["text-[8px]", "leading-[8px]"])],
 ]);
@@ -991,6 +1036,9 @@ function offSystem(utility, inUi, ownColors) {
 	if (/^font-(thin|extralight|light|extrabold|black)$/.test(utility))
 		return "weight outside normal, medium, semibold, bold";
 	if (/^leading-(?!none$)/.test(utility)) return "line height comes with the text role";
+	if (/^duration-\d+$/.test(utility))
+		return "motion: duration-(--monti-duration-fast|normal|slow), or nothing for the normal one";
+	if (/^ease-(linear|in|out|in-out)$/.test(utility)) return "motion: ease-monti-standard or ease-monti-exit";
 	if (/^tracking-(?!caps$)/.test(utility)) return "letter spacing: only tracking-caps";
 	if (/^rounded(-[a-z]+)?-(xs|2xl|3xl|4xl|dialog)$/.test(utility) || utility === "rounded")
 		return "radius outside sm, md, lg, xl, full";
@@ -1007,6 +1055,7 @@ function offSystem(utility, inUi, ownColors) {
  * template string in the admin UI packages counts, stories and test helpers too. Spacing on screens takes the scale (`gap-monti-8`); the parts of
  * `@monti-cms/ui` may use in-between numbers of their own.
  */
+const offScaleSeen = new Set();
 function checkOffSystem() {
 	const packagesDir = path.join(root, "packages");
 	for (const pkg of ADMIN_UI_PACKAGES) {
@@ -1026,12 +1075,50 @@ function checkOffSystem() {
 					if (OWN_TYPE.get(file)?.has(utility)) continue;
 					const why = offSystem(utility, inUi, OWN_COLORS.has(file));
 					if (why) add(full, line, "off-system", `\`${word}\`: ${why}`);
+					// Weights come with the type role (the type section of tokens.md): 600 to stress, 700 only on the big titles' roles. Bold in body text and the format bar's
+					// B show what bold is; the toolbar's open tab is 700 by its rule.
+					if (utility === "font-bold" && !BOLD_OK.has(file))
+						add(full, line, "off-system", `\`${word}\`: stress is font-semibold; 700 comes with the title roles`);
+					if (utility === "font-medium")
+						add(full, line, "off-system", `\`${word}\`: 500 comes only with text-monti-label`);
+					// Parts take the spacing scale too, except where OFF_SCALE_SPACE says why.
+					if (
+						inUi &&
+						!file.includes("/screens/") &&
+						!file.includes("/spec-pack/") &&
+						/^-?(?:p[xytblrse]?|m[xytblrse]?|gap(?:-[xy])?)-\[\d+(?:\.\d+)?px\]$/.test(utility)
+					) {
+						if (OFF_SCALE_SPACE.has(file)) offScaleSeen.add(file);
+						else
+							add(
+								full,
+								line,
+								"off-system",
+								`\`${word}\`: spacing takes the scale; a part that must leave it says why in OFF_SCALE_SPACE`,
+							);
+					}
+					// One focus ring (the states section of tokens.md): 2px at half ink, or the field's ink underline. Light rings on dark ground (on-emphasis) keep their own.
+					if (/focus/.test(word.split(":").slice(0, -1).join(":"))) {
+						if (/^ring-(\d+|\[\d+px\])$/.test(utility) && utility !== "ring-2")
+							add(full, line, "off-system", `\`${word}\`: the focus ring is 2px (ring-2)`);
+						if (/^(ring|outline)-monti-contrast\/\d+$/.test(utility) && !utility.endsWith("/50"))
+							add(full, line, "off-system", `\`${word}\`: the focus ring is half ink (ring-monti-contrast/50)`);
+					}
 				}
 			}
 		}
 	}
 }
 checkOffSystem();
+if (targets.length === 0)
+	for (const file of OFF_SCALE_SPACE.keys())
+		if (!offScaleSeen.has(file))
+			add(
+				path.join(root, "packages", file),
+				1,
+				"off-system",
+				"OFF_SCALE_SPACE names a file that keeps to the scale now",
+			);
 
 /**
  * Fixed heights that are not controls, each with its reason (the height standard in tokens.md). A control takes a height token (`h-monti-control-md`); a row, a bar
@@ -1126,7 +1213,7 @@ function checkFixedHeights() {
 checkFixedHeights();
 
 /**
- * Where a pressable thing may have 6px corners (`rounded-monti-md`) instead of a pill (button.md, 모양 기준): rows inside a floating surface (menus,
+ * Where a pressable thing may have 6px corners (`rounded-monti-md`) instead of a pill (the shape rule in button.md): rows inside a floating surface (menus,
  * pickers) and blocks taller than one line (cards, tiles, a two-line conversation row). Keyed by the file under `packages/`, with the reason.
  */
 const SIX_PX = new Map([
@@ -1201,7 +1288,7 @@ const HINTS = {
 		"The theme and the token files define only the admin's own names (monti-), and the theme clears Tailwind's.",
 	"off-system": "Use the type roles, color roles, radius, weights and spacing scale of packages/ui/styles/theme.css.",
 	"control-shape":
-		"Pressable things are pills; 6px only for rows in floating menus and blocks taller than a line (SIX_PX, button.md 모양 기준).",
+		"Pressable things are pills; 6px only for rows in floating menus and blocks taller than a line (SIX_PX, the shape rule in button.md).",
 	"fixed-height":
 		"Controls stand at the height tokens (control-lg/md/sm/xs); a fixed row or box height is listed in FIXED_HEIGHTS with its reason.",
 	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",

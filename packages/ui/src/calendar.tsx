@@ -39,12 +39,12 @@ function Calendar({
 				nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-monti-4", defaultClassNames.nav),
 				button_previous: cn(
 					ICON_BUTTON,
-					"size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+					"size-(--cell-size) p-0 select-none aria-disabled:opacity-45",
 					defaultClassNames.button_previous,
 				),
 				button_next: cn(
 					ICON_BUTTON,
-					"size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+					"size-(--cell-size) p-0 select-none aria-disabled:opacity-45",
 					defaultClassNames.button_next,
 				),
 				month_caption: cn(
@@ -143,7 +143,7 @@ function CalendarDayButton({
 			data-outside={modifiers.outside || undefined}
 			className={cn(
 				ICON_BUTTON,
-				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-monti-4 rounded-(--cell-radius) border-0 text-monti-default text-monti-note leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-selected data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
+				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-monti-4 rounded-(--cell-radius) border-0 text-monti-default text-monti-note leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-selected data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-2 group-data-[focused=true]/day:ring-monti-contrast/50 [&>span]:text-monti-caption [&>span]:opacity-70",
 				// The days of the neighboring months, but not one that is picked (it is a black cell and reads on its own).
 				"data-[range-end=true]:data-outside:text-monti-on-emphasis data-[range-middle=true]:data-outside:text-monti-faint data-[range-start=true]:data-outside:text-monti-on-emphasis data-[selected-single=true]:data-outside:text-monti-on-emphasis data-outside:text-monti-faint",
 				defaultClassNames.day,

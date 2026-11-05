@@ -11,21 +11,20 @@ import { useUiLabels } from "./labels";
  * around (22 below), 420px wide. The title is 20px with an ink rule under it, the text below it 16px lower, and the actions a row at the bottom right.
  */
 export const DIALOG_SURFACE =
-	"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 flex w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-monti-24 rounded-monti-xl border border-monti-emphasis bg-monti-page px-[28px] pt-[28px] pb-[22px] text-monti-body text-monti-default shadow-monti-overlay outline-none duration-100 data-closed:animate-out data-open:animate-in sm:max-w-[420px]";
+	"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 flex w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-monti-24 rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-24 pt-monti-24 pb-monti-20 text-monti-body text-monti-default shadow-monti-overlay outline-none duration-(--monti-duration-fast) data-closed:animate-out data-open:animate-in sm:max-w-[420px]";
 
 /** What sits behind a modal, a sheet or the narrow-screen sidebar: the backdrop color alone, no blur, fading in and out over 150ms. */
 export const BACKDROP =
-	"fixed inset-0 isolate z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0";
+	"fixed inset-0 isolate z-50 bg-monti-backdrop transition-opacity duration-(--monti-duration-normal) data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /** The title and the text under it. */
 export const DIALOG_HEADER = "flex flex-col gap-monti-16";
-export const DIALOG_TITLE =
-	"border-monti-contrast border-b pb-[14px] font-bold text-[20px] leading-[28px] tracking-[-0.015em] text-monti-default";
+export const DIALOG_TITLE = "border-monti-contrast border-b pb-monti-12 text-monti-heading text-monti-default";
 export const DIALOG_DESCRIPTION =
-	"text-monti-body text-monti-muted leading-[1.65] *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-monti-default";
+	"text-monti-prose text-monti-muted *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-monti-default";
 
 /** Cancel (a text button) and the one pill, right-aligned, 18px apart. */
-export const DIALOG_ACTIONS = "flex flex-wrap items-center justify-end gap-[18px]";
+export const DIALOG_ACTIONS = "flex flex-wrap items-center justify-end gap-monti-16";
 
 /**
  * Where focus lands when a modal opens: the first text field if there is one, else the modal itself, so no button shows a focus ring the moment it

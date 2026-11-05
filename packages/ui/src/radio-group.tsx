@@ -54,7 +54,7 @@ function RadioItem({
 			<RadioPrimitive.Root
 				value={value}
 				disabled={disabled}
-				className="size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-faint bg-transparent outline-none transition-[border-width,border-color] focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-checked:border-[4.5px] data-checked:border-monti-contrast"
+				className="size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-faint bg-transparent outline-none transition-[border-width,border-color] focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-checked:border-[4.5px] data-checked:border-monti-contrast"
 			/>
 			<span>{label}</span>
 			{description && <span className="text-monti-meta text-monti-subtle">{description}</span>}

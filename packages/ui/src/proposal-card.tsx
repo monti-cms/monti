@@ -3,8 +3,8 @@ import { Button } from "./button";
 import { cn } from "./cn";
 import { Del, Ins } from "./proposal-marks";
 
-const ROW = "flex items-baseline gap-monti-8 border-monti-muted border-t px-[14px] py-monti-10 text-monti-note";
-const FOOT = "flex items-center gap-[14px] border-monti-default border-t px-[14px] py-monti-10 text-monti-note";
+const ROW = "flex items-baseline gap-monti-8 border-monti-muted border-t px-monti-16 py-monti-10 text-monti-note";
+const FOOT = "flex items-center gap-monti-12 border-monti-default border-t px-monti-16 py-monti-10 text-monti-note";
 
 /**
  * A proposal in the conversation: the head says what it is and how much ("Proposal · 4 groups · 19") and where it stands ("Waiting for review"), then one row per group of
@@ -45,14 +45,14 @@ function ProposalCard({
 			)}
 			{...props}
 		>
-			<div className="flex items-center gap-monti-8 px-[14px] py-monti-10">
-				<b className="font-bold text-monti-label">{title}</b>
+			<div className="flex items-center gap-monti-8 px-monti-16 py-monti-10">
+				<b className="font-semibold text-monti-label">{title}</b>
 				{summary !== undefined && <span className="text-monti-micro text-monti-subtle">{summary}</span>}
 				<span className="grow" />
 				{status !== undefined && (
 					<span
 						className={cn(
-							"font-medium text-monti-caption",
+							"font-semibold text-monti-caption",
 							statusTone === "warning" && "text-monti-warning",
 							statusTone === "success" && "text-monti-success",
 							statusTone === "subtle" && "text-monti-subtle",

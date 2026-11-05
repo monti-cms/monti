@@ -8,8 +8,8 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 	variants: {
 		/** The admin's own message is a paper bubble on the right; the assistant's answer is plain text with no background. */
 		author: {
-			user: "max-w-[85%] self-end rounded-monti-xl rounded-br-monti-sm border border-monti-default bg-monti-page px-[14px] py-monti-10 text-monti-default leading-[1.6]",
-			assistant: "text-monti-default leading-[1.7]",
+			user: "max-w-[85%] self-end rounded-monti-xl rounded-br-monti-sm border border-monti-default bg-monti-page px-[14px] py-monti-10 text-monti-default text-monti-prose",
+			assistant: "text-monti-default text-monti-prose",
 		},
 		/** The answer is still arriving: a thin blinking caret after the last word, the height of the text. */
 		streaming: {

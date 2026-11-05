@@ -71,17 +71,17 @@ function Tile({
 			data-slot="tile"
 			data-selected={selected || undefined}
 			data-status={status}
-			className={cn("group/tile relative flex min-w-0 flex-col gap-monti-8", dimmed && "opacity-50", className)}
+			className={cn("group/tile relative flex min-w-0 flex-col gap-monti-8", dimmed && "opacity-60", className)}
 		>
 			<button
 				type="button"
 				aria-pressed={selected}
 				className={cn(
-					"flex min-w-0 flex-col gap-monti-8 border-0 bg-transparent p-0 text-left outline-none focus-visible:*:first:ring-3",
+					"flex min-w-0 flex-col gap-monti-8 border-0 bg-transparent p-0 text-left outline-none focus-visible:*:first:ring-2",
 					// A picked or open tile keeps its ink ring under the keyboard's focus (a fainter ring there would hide the state); the focus only thickens it.
 					selected || current
 						? "focus-visible:*:first:ring-monti-contrast"
-						: "focus-visible:*:first:ring-monti-contrast/20",
+						: "focus-visible:*:first:ring-monti-contrast/50",
 				)}
 				{...props}
 			>
@@ -219,7 +219,7 @@ function FolderTile({
 		</>
 	);
 	const look = cn(
-		"flex h-13 w-full min-w-0 items-center gap-[10px] rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 in-data-popup-open:bg-monti-selected",
+		"flex h-13 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 in-data-popup-open:bg-monti-selected",
 		selected && "bg-monti-selected",
 		dropTarget && "bg-monti-selected ring-[1.5px] ring-monti-contrast ring-inset",
 		className,

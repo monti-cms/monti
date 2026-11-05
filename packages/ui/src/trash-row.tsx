@@ -77,7 +77,7 @@ function TrashRowDate({
 				type="button"
 				aria-label={byAssistant.label}
 				onClick={byAssistant.onOpen}
-				className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+				className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
 			>
 				<Spark aria-hidden className="size-monti-icon-xs" />
 				{words}

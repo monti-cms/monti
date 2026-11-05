@@ -47,7 +47,7 @@ function Banner({
 				data-tone={tone}
 				role="status"
 				className={cn(
-					"border-monti-default border-b bg-monti-tool px-monti-24 py-[10px] text-monti-note",
+					"border-monti-default border-b bg-monti-tool px-monti-24 py-monti-10 text-monti-note",
 					ink,
 					className,
 				)}
@@ -71,7 +71,7 @@ function Banner({
 			data-tone={tone}
 			role="status"
 			className={cn(
-				"flex items-center gap-monti-16 border-monti-default border-b bg-monti-tool px-monti-24 py-[10px] text-monti-note",
+				"flex items-center gap-monti-16 border-monti-default border-b bg-monti-tool px-monti-24 py-monti-10 text-monti-note",
 				className,
 			)}
 			{...props}
