@@ -250,7 +250,7 @@ describe("the list query", () => {
 });
 
 describe("columns", () => {
-	it("06-2 every collection's columns come from its schema: the same system columns, then its own fields", async () => {
+	it("06-2 every collection's columns come from its schema and its kind: the system columns, then its own fields", async () => {
 		const shape = (list: ListColumn[]) => list.map((column) => `${column.id}${column.hidden ? "?" : ""}`);
 		expect(shape(await columns("post"))).toEqual([
 			"status",
@@ -259,7 +259,6 @@ describe("columns", () => {
 			"format?",
 			"category",
 			"tags",
-			"cover?",
 			"locale",
 			"updatedAt",
 			"publishedAt?",
@@ -273,15 +272,8 @@ describe("columns", () => {
 			"publishedAt?",
 			"createdAt?",
 		]);
-		expect(shape(await columns("category"))).toEqual([
-			"status",
-			"title",
-			"about?",
-			"locale",
-			"updatedAt",
-			"publishedAt?",
-			"createdAt?",
-		]);
+		// An item collection is live on save: no status and no publish date.
+		expect(shape(await columns("category"))).toEqual(["title", "about?", "locale", "updatedAt", "createdAt?"]);
 		expect((await columns("post")).find((column) => column.id === "tags")).toMatchObject({
 			kind: "relation",
 			filter: "relation",

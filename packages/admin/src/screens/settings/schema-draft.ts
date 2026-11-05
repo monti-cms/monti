@@ -211,6 +211,13 @@ function collectionValues(
 		const everything = editor.blocks === "all" && editor.marks === "all" && editor.headings.length === HEADINGS.length;
 		if (!everything || saved?.editor) out.editor = editor;
 	} else if (saved?.editor) out.editor = saved.editor;
+	// The list's columns are the list's to keep (doc 06, `list.savePrefs`); a renamed field keeps its place there.
+	if (saved?.list) {
+		const renamed = (ids?: string[]) => ids?.map((id) => names.get(id) ?? id);
+		out.list = { ...saved.list, order: renamed(saved.list.order), hidden: renamed(saved.list.hidden) };
+		if (!out.list.order) delete out.list.order;
+		if (!out.list.hidden) delete out.list.hidden;
+	}
 	return out;
 }
 

@@ -1,11 +1,14 @@
-import { Empty, PageColumn, PageHeader, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
-import { type ReactNode, useMemo, useState } from "react";
+import { Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { LeaveGuardProvider, useLeave } from "./draft/leave-guard";
 import { adminMessages } from "./messages";
-import { AdminProvider, type Language, useAdmin } from "./operations/admin-context";
+import { AdminProvider, type Language, type ScreenChannel, useAdmin } from "./operations/admin-context";
 import type { Transport } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
+import { type Route, useRoute } from "./route";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
+import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
+import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { useSession } from "./session";
@@ -26,51 +29,89 @@ function AdminUiLabels({ children }: { children: ReactNode }) {
 	return <UiLabelsProvider labels={labels}>{children}</UiLabelsProvider>;
 }
 
-type SchemaRead = {
-	schema: { collections: Record<string, { path: string }> };
-	adminValues: Record<string, { label?: string }>;
-};
-
-/**
- * A collection's page. Its list is doc 06's; until then a collection with no entries shows the empty line (flow 8, step 03). Its three ways to start
- * lead to the editor and the tools, which are not built yet, so they are not shown (T40).
- */
-function CollectionPage({ name, count }: { name: string; count: number }) {
-	const { t } = useAdmin();
-	const { data } = useRead<SchemaRead>("schema.read");
-	return (
-		<PageColumn width="list">
-			<PageHeader title={data?.adminValues[name]?.label ?? name} meta={data?.schema.collections[name]?.path} />
-			{count === 0 ? <Empty title={t("empty.title")} /> : null}
-		</PageColumn>
-	);
+/** The sidebar row a route belongs to. */
+function placeOf(route: Route): Place | null {
+	switch (route.screen) {
+		case "list":
+		case "entry":
+			return { collection: route.collection };
+		case "settings":
+			return "settings";
+		case "place":
+			return route.place;
+		case "home":
+			return null;
+	}
 }
 
+const routeOf = (place: Place): Route =>
+	typeof place === "object"
+		? // A collection's row opens its first list: no filters, newest change first (doc 06, decisions).
+			{ screen: "list", collection: place.collection, params: new URLSearchParams() }
+		: place === "settings"
+			? { screen: "settings" }
+			: { screen: "place", place };
+
 function Signed() {
+	const { screen } = useAdmin();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
-	const [open, setOpen] = useState<Place | null>(null);
+	const { route, go } = useRoute();
 	const [review, setReview] = useState(0);
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
 	const first = Object.keys(counts.data?.collections ?? {})[0];
-	const place = open ?? (first ? { collection: first } : null);
-	const go = (next: Place) => leave(() => setOpen(next));
+	// A first visit with no last screen opens the first collection.
+	useEffect(() => {
+		if (route.screen === "home" && first) go(routeOf({ collection: first }), { replace: true });
+	}, [route.screen, first, go]);
+	// The assistant shows the admin a list (`list.show`): the query goes in the address, its filters marked as the assistant's.
+	useEffect(
+		() =>
+			screen.on("list.show", (input) => {
+				const shown = input as {
+					collection: string;
+					filters?: ListState["filters"];
+					search?: ListState["search"];
+					sort?: ListState["sort"];
+				};
+				const filters = shown.filters ?? [];
+				go({
+					screen: "list",
+					collection: shown.collection,
+					params: writeState({
+						filters,
+						search: shown.search ?? { text: "", in: "all" },
+						sort: shown.sort ?? { by: "updatedAt", dir: "desc" },
+						page: 1,
+						ai: filters.map(filterColumn),
+					}),
+				});
+			}),
+		[screen, go],
+	);
+	const open = (place: Place) => leave(() => go(routeOf(place)));
 	return (
 		<AdminFrame
-			open={place}
-			onOpen={go}
+			open={placeOf(route)}
+			onOpen={open}
 			onReview={() =>
 				leave(() => {
-					setOpen("settings");
+					go({ screen: "settings" });
 					setReview((count) => count + 1);
 				})
 			}
 			counts={counts.data}
 		>
-			{place === "settings" ? (
-				<CollectionsScreen onOpen={go} review={review} />
-			) : place !== null && typeof place === "object" ? (
-				<CollectionPage name={place.collection} count={counts.data?.collections[place.collection] ?? 0} />
+			{route.screen === "settings" ? (
+				<CollectionsScreen onOpen={open} review={review} />
+			) : route.screen === "list" ? (
+				<ListScreen
+					key={route.collection}
+					collection={route.collection}
+					params={route.params}
+					count={counts.data?.collections[route.collection]}
+					go={go}
+				/>
 			) : null}
 		</AdminFrame>
 	);
@@ -93,6 +134,7 @@ export function MontiAdmin({
 	language = "ko",
 	apiBase,
 	denied,
+	screen,
 }: {
 	transport: Transport;
 	siteName: string;
@@ -100,9 +142,11 @@ export function MontiAdmin({
 	apiBase?: string;
 	/** The GitHub account that was turned away (`?denied=` on the admin's address). */
 	denied?: string;
+	/** The assistant's way to move the screen (`list.show`, `list.select`); the admin makes its own when left out. */
+	screen?: ScreenChannel;
 }) {
 	return (
-		<AdminProvider transport={transport} siteName={siteName} language={language} apiBase={apiBase}>
+		<AdminProvider transport={transport} siteName={siteName} language={language} apiBase={apiBase} screen={screen}>
 			<AdminUiLabels>
 				<TooltipProvider>
 					<LeaveGuardProvider>

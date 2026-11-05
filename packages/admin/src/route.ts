@@ -1,0 +1,95 @@
+import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Where the admin is: its address is the hash (`#/c/post?status=draft`), so the site mounts one admin path, and reload, a new tab and back open the
+ * same screen (T37, doc 06 decisions).
+ */
+export type Route =
+	| { screen: "list"; collection: string; params: URLSearchParams }
+	| { screen: "entry"; collection: string; id: string }
+	| { screen: "settings" }
+	/** Media, trash and tools: their screens come with docs 09, 11 and 13. */
+	| { screen: "place"; place: "media" | "trash" | "tools" }
+	| { screen: "home" };
+
+const PLACES = new Set(["media", "trash", "tools"]);
+
+const LAST = "monti.lastScreen";
+
+export function parseRoute(hash: string): Route {
+	const [path = "", search = ""] = hash.replace(/^#/, "").split("?");
+	const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
+	if (parts[0] === "c" && parts[1]) {
+		if (parts[2]) return { screen: "entry", collection: parts[1], id: parts[2] };
+		return { screen: "list", collection: parts[1], params: new URLSearchParams(search) };
+	}
+	if (parts[0] === "settings") return { screen: "settings" };
+	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: parts[0] as "media" | "trash" | "tools" };
+	return { screen: "home" };
+}
+
+/** The hash of a route: what links carry, so "open in a new tab" opens the same screen. */
+export function href(route: Route): string {
+	switch (route.screen) {
+		case "list": {
+			const search = route.params.toString();
+			return `#/c/${encodeURIComponent(route.collection)}${search ? `?${search}` : ""}`;
+		}
+		case "entry":
+			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}`;
+		case "settings":
+			return "#/settings/collections";
+		case "place":
+			return `#/${route.place}`;
+		case "home":
+			return "#/";
+	}
+}
+
+const read = () => {
+	try {
+		return localStorage.getItem(LAST);
+	} catch {
+		return null;
+	}
+};
+
+/**
+ * The route in the address. Opening the admin with no route reopens the last screen of this browser (doc 15, the sign-in flow's "last screen").
+ * `go` adds a history entry; `{ replace: true }` changes the address in place (typing in the search box).
+ */
+export function useRoute() {
+	const [hash, setHash] = useState(() => {
+		const current = window.location.hash;
+		if (parseRoute(current).screen !== "home") return current;
+		const last = read();
+		if (last && parseRoute(last).screen !== "home") {
+			window.history.replaceState(null, "", last);
+			return last;
+		}
+		return current;
+	});
+	useEffect(() => {
+		const follow = () => setHash(window.location.hash);
+		window.addEventListener("hashchange", follow);
+		window.addEventListener("popstate", follow);
+		return () => {
+			window.removeEventListener("hashchange", follow);
+			window.removeEventListener("popstate", follow);
+		};
+	}, []);
+	useEffect(() => {
+		if (parseRoute(hash).screen === "home") return;
+		try {
+			localStorage.setItem(LAST, hash);
+		} catch {}
+	}, [hash]);
+	const go = useCallback((route: Route, options: { replace?: boolean } = {}) => {
+		const next = href(route);
+		if (next === window.location.hash) return;
+		if (options.replace) window.history.replaceState(null, "", next);
+		else window.history.pushState(null, "", next);
+		setHash(next);
+	}, []);
+	return { route: parseRoute(hash), go };
+}

@@ -7,8 +7,8 @@ import type { CollectionDefinition, FieldDefinition } from "../schema/define";
 import { adminValuesRecord } from "../schema/operations";
 import type { EntryState } from "./operations";
 
-/** What a list column is, which decides its menu: how it sorts and what it filters by (doc 06, "열"). */
-export type ColumnKind = "status" | "title" | "locale" | "date" | "relation" | "select" | "text" | "media";
+/** What a list column is, which decides its menu: how it sorts and what it filters by (doc 06, columns). */
+export type ColumnKind = "status" | "title" | "locale" | "date" | "relation" | "select" | "text";
 
 const STATES = ["published", "changed", "draft", "archived"] as const satisfies readonly EntryState[];
 const DATE_COLUMNS = ["updatedAt", "publishedAt", "createdAt"] as const;
@@ -195,7 +195,7 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 const icu = new WeakMap<object, Promise<boolean>>();
 /**
  * Titles mix Korean and English, so they sort by Unicode's rules (ICU) where the database has them: a libc collation such as macOS's `en_US.UTF-8`
- * puts "첫 번째" before "리액트".
+ * puts a title starting with a later syllable before an earlier one.
  */
 function hasIcu(ctx: OperationContext): Promise<boolean> {
 	let known = icu.get(ctx.db);
@@ -382,14 +382,14 @@ async function adminValues(ctx: OperationContext, collection: string): Promise<A
 	return (record?.data as AdminValues | undefined) ?? {};
 }
 
+/** Media fields get their column with the media library (doc 09, T59): a cell shows the picture. */
 const KIND_OF: Partial<Record<FieldDefinition["kind"], ColumnKind>> = {
 	relation: "relation",
 	select: "select",
 	text: "text",
-	media: "media",
 };
 
-/** Every column a collection's list can show, in the default order, with whether it shows before the admin changes it (doc 06, "열"). */
+/** Every column a collection's list can show, in the default order, with whether it shows before the admin changes it (doc 06, columns). */
 function schemaColumns(definition: CollectionDefinition, values: AdminValues): (ListColumn & { shown: boolean })[] {
 	const fields = Object.entries(definition.fields).flatMap(([name, field]) => {
 		const kind = KIND_OF[field.kind];
@@ -422,13 +422,17 @@ function schemaColumns(definition: CollectionDefinition, values: AdminValues): (
 		({ id, kind: "date", field: id, sortable: true, filter: "date", hidden: false, shown }) satisfies ListColumn & {
 			shown: boolean;
 		};
+	// An item collection (tags, categories) is live on save: it has no state to show and no publish date (doc 02, principles).
+	const document = definition.kind === "document";
 	return [
-		{ id: "status", kind: "status", sortable: false, filter: "status", hidden: false, shown: true },
+		...(document
+			? [{ id: "status", kind: "status", sortable: false, filter: "status", hidden: false, shown: true } as const]
+			: []),
 		{ id: "title", kind: "title", sortable: true, filter: null, hidden: false, shown: true },
 		...fields,
 		{ id: "locale", kind: "locale", sortable: false, filter: "locale", hidden: false, shown: true },
 		date("updatedAt", true),
-		date("publishedAt", false),
+		...(document ? [date("publishedAt", false)] : []),
 		date("createdAt", false),
 	];
 }
