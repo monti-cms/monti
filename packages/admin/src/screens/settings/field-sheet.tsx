@@ -248,7 +248,7 @@ function FieldSheetBody({
 	 * control is off or reads as text.
 	 */
 	const rule = (label: ReactNode, control: ReactNode) => (
-		<Option spread>
+		<Option spread height="md">
 			{structure ? (
 				label
 			) : (
@@ -280,7 +280,7 @@ function FieldSheetBody({
 		rule(
 			label,
 			structure ? (
-				<PickOne id={id} width="choice" size="sm" items={items} value={value} onChange={onChange} />
+				<PickOne id={id} width="fit" size="md" items={items} value={value} onChange={onChange} />
 			) : (
 				<Text tone="subtle">{items.find((item) => item.value === value)?.label ?? value}</Text>
 			),
@@ -445,60 +445,66 @@ function FieldSheetBody({
 	// The input rules: one row each, its control at the end. Required first, then what this kind has, then the language.
 	const rules = (
 		<SheetSection title={t("settings.field.rules")}>
-			{adding ? null : rule(t("settings.field.kindLabel"), <Text tone="subtle">{kindWord(form.kind)}</Text>)}
-			{required}
-			{form.kind === "text" ? (
-				<>
-					{switchRow(t("settings.field.multiline"), form.multiline, (multiline) => set({ multiline }))}
-					{rule(
-						t("settings.field.max"),
-						structure ? (
-							<Input
-								id="field-max"
-								mono
-								width="choice"
-								inputMode="numeric"
-								align="end"
-								placeholder={t("settings.field.noLimit")}
-								value={form.max}
-								onChange={(event) => set({ max: event.target.value.replace(/\D/g, "") })}
-							/>
-						) : (
-							<Text tone="subtle">
-								{form.max ? t("settings.field.maxValue", { max: form.max }) : t("settings.field.noLimit")}
-							</Text>
-						),
-					)}
-				</>
-			) : null}
-			{options}
-			{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
-			{form.kind === "media"
-				? pickRow(
-						t("settings.field.accept"),
-						"field-accept",
-						[
-							{ value: "image", label: t("settings.field.accept.image") },
-							{ value: "any", label: t("settings.field.accept.any") },
-						],
-						form.accept,
-						(accept) => set({ accept: accept as Form["accept"] }),
-					)
-				: null}
-			{form.kind === "relation" ? (
-				<>
-					{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
-					{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
-					{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) => set({ createMissing }))}
-				</>
-			) : null}
-			{pickRow(
-				t("settings.field.locale"),
-				"field-locale",
-				LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
-				form.locale,
-				(locale) => set({ locale: locale as LocaleMode }),
-			)}
+			{/* The rows stand at a control's height, so they sit close: the height is their spacing. */}
+			<Stack gap={4}>
+				{adding ? null : rule(t("settings.field.kindLabel"), <Text tone="subtle">{kindWord(form.kind)}</Text>)}
+				{required}
+				{form.kind === "text" ? (
+					<>
+						{switchRow(t("settings.field.multiline"), form.multiline, (multiline) => set({ multiline }))}
+						{rule(
+							t("settings.field.max"),
+							structure ? (
+								<Input
+									id="field-max"
+									mono
+									size="md"
+									width="number"
+									inputMode="numeric"
+									align="end"
+									placeholder={t("settings.field.noLimit")}
+									value={form.max}
+									onChange={(event) => set({ max: event.target.value.replace(/\D/g, "") })}
+								/>
+							) : (
+								<Text tone="subtle">
+									{form.max ? t("settings.field.maxValue", { max: form.max }) : t("settings.field.noLimit")}
+								</Text>
+							),
+						)}
+					</>
+				) : null}
+				{options}
+				{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
+				{form.kind === "media"
+					? pickRow(
+							t("settings.field.accept"),
+							"field-accept",
+							[
+								{ value: "image", label: t("settings.field.accept.image") },
+								{ value: "any", label: t("settings.field.accept.any") },
+							],
+							form.accept,
+							(accept) => set({ accept: accept as Form["accept"] }),
+						)
+					: null}
+				{form.kind === "relation" ? (
+					<>
+						{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
+						{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
+						{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) =>
+							set({ createMissing }),
+						)}
+					</>
+				) : null}
+				{pickRow(
+					t("settings.field.locale"),
+					"field-locale",
+					LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
+					form.locale,
+					(locale) => set({ locale: locale as LocaleMode }),
+				)}
+			</Stack>
 		</SheetSection>
 	);
 

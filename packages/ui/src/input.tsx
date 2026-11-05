@@ -39,12 +39,8 @@ function Input({
 	size?: keyof typeof INLINE_SIZE;
 	/** Fixed-width letters for slugs, paths, keys and code. */
 	mono?: boolean;
-	/**
-	 * `number` for a short count or limit (96px), `short` for a word (the small panel width), `fit` as wide as what it holds (a tab's name), `choice` a
-	 * short value at the end of a choice row (96px, at the note size on the row's own 20px line with 1px under it, so the row keeps the height of a switch
-	 * row; like a select's `choice`).
-	 */
-	width?: "full" | "short" | "number" | "fit" | "choice";
+	/** `number` for a short count or limit (96px), `short` for a word (the small panel width), `fit` as wide as what it holds (a tab's name). */
+	width?: "full" | "short" | "number" | "fit";
 	/**
 	 * `inline` reads as text until focused, with no line at all (a name edited in place); its size can be a heading's: `title` (a tab or
 	 * group name) or `display` (the post title), or `inherit`, the type of the text it stands in (a block's title). A heading-size field shows only its caret when focused, never a box around it; a smaller inline
@@ -88,14 +84,9 @@ function Input({
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
 				// An underline field stands as high as a button of its size: 28px small, 32px medium (side panels), 36px otherwise, its rule inside. With an action the line around it holds the height.
-				!inline &&
-					(action
-						? "h-full self-stretch py-0"
-						: width === "choice"
-							? "h-5 pt-0 pb-px md:text-monti-note"
-							: cn("py-0", fieldHeight)),
+				!inline && (action ? "h-full self-stretch py-0" : cn("py-0", fieldHeight)),
 				width === "short" && "w-monti-menu",
-				(width === "number" || width === "choice") && "w-24",
+				width === "number" && "w-24",
 				width === "fit" && "field-sizing-content w-auto min-w-[4ch]",
 				mono && "font-mono",
 				srOnly && "sr-only",
