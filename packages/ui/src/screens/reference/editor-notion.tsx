@@ -263,7 +263,7 @@ export function EntryProperties({
 						size="md"
 						id="ref-address"
 						defaultValue="first-post"
-						placeholder="제목에서 만들어요"
+						placeholder="비어 있음"
 						mono
 						action={
 							<IconButton label="제목으로 다시 만들기">

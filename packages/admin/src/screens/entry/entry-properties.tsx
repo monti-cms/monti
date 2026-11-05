@@ -164,7 +164,7 @@ export function EntryProperties({
 						size="md"
 						mono
 						value={text}
-						placeholder={t("entry.slugFromTitle")}
+						placeholder={empty}
 						disabled={readOnly}
 						onChange={(event) => editor.set(path, event.target.value)}
 						action={

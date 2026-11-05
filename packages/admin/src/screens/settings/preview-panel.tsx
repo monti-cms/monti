@@ -80,7 +80,7 @@ export function PreviewPanel({
 		);
 	};
 	const input = (def: FieldDefinition, id: string, placeholder: string, key: string) => {
-		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={t("settings.preview.fromTitle")} />;
+		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={placeholder} />;
 		if (def.kind === "text")
 			return def.multiline ? (
 				<Textarea id={id} size="md" placeholder={placeholder} />
