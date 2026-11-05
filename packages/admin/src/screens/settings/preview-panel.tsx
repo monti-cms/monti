@@ -66,8 +66,7 @@ export function PreviewPanel({
 		const field = model.shown(at.field(c, key)) as DraftField | null;
 		if (!field) return null;
 		const id = `preview-${key}`;
-		const placeholder =
-			(model.shown(at.fieldValue(c, key, "placeholder")) as string | undefined) ?? t("settings.preview.empty");
+		const placeholder = t("settings.preview.empty");
 		return (
 			<FormField key={key}>
 				<FormFieldLabel htmlFor={id}>{model.fieldLabel(c, key)}</FormFieldLabel>
@@ -79,12 +78,7 @@ export function PreviewPanel({
 		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={t("settings.preview.fromTitle")} />;
 		if (def.kind === "text")
 			return def.multiline ? (
-				<Textarea
-					id={id}
-					size="md"
-					rows={Number(model.shown(at.fieldValue(c, key, "rows")) ?? 0) || undefined}
-					placeholder={placeholder}
-				/>
+				<Textarea id={id} size="md" placeholder={placeholder} />
 			) : (
 				<Input id={id} size="md" placeholder={placeholder} />
 			);

@@ -5,6 +5,8 @@ import {
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	FormFieldLegend,
+	FormFieldSet,
 	Inline,
 	Input,
 	LockMark,
@@ -13,8 +15,9 @@ import {
 	OptionTable,
 	PickList,
 	PickListItem,
+	RadioGroup,
+	RadioItem,
 	ReadValue,
-	Segmented,
 	Sheet,
 	SheetBody,
 	SheetContent,
@@ -22,7 +25,6 @@ import {
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
-	SheetSummary,
 	SheetTitle,
 	Sortable,
 	SortableList,
@@ -41,6 +43,7 @@ import type { CollectionsDraft } from "./use-collections-draft";
 
 /** The four kinds a person makes (doc 01); `slug` is every collection's own and is never made here. */
 const KINDS = ["text", "select", "media", "relation"] as const;
+const LOCALES = ["same", "perLocale", "fromSource"] as const;
 type Kind = (typeof KINDS)[number] | "slug";
 
 /** A field's name: the schema's identifier rule (`checkSchema`), so a wrong one is caught before it is added. */
@@ -51,13 +54,9 @@ type Form = {
 	name: string;
 	label: string;
 	description: string;
-	placeholder: string;
-	rows: string;
 	multiline: boolean;
 	max: string;
-	fillFromBody: boolean;
 	required: boolean;
-	asTitle: boolean;
 	locale: LocaleMode;
 	options: { value: string; label: string }[];
 	many: boolean;
@@ -71,13 +70,9 @@ const blank = (to: string): Form => ({
 	name: "",
 	label: "",
 	description: "",
-	placeholder: "",
-	rows: "",
 	multiline: false,
 	max: "",
-	fillFromBody: false,
 	required: false,
-	asTitle: false,
 	locale: "same",
 	options: [],
 	many: false,
@@ -95,13 +90,9 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 		name: field.name,
 		label: String(values.label ?? ""),
 		description: String(values.description ?? ""),
-		placeholder: String(values.placeholder ?? ""),
-		rows: values.rows ? String(values.rows) : "",
 		multiline: def.kind === "text" && Boolean(def.multiline),
 		max: def.kind === "text" && def.max ? String(def.max) : "",
-		fillFromBody: def.kind === "text" && Boolean(def.fillFromBody),
 		required: Boolean(def.required),
-		asTitle: Boolean(def.asTitle),
 		locale: def.locale ?? "same",
 		options: def.kind === "select" ? def.options.map((value) => ({ value, label: labels[value] ?? "" })) : [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
@@ -118,7 +109,6 @@ const clean = <T,>(value: T): T =>
 function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 	const common = {
 		required: form.required,
-		asTitle: form.asTitle,
 		// "All the same" is what a field without a mode does; a mode it had stays written.
 		locale: form.locale === "same" && !was?.locale ? undefined : form.locale,
 	};
@@ -128,7 +118,6 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 			...common,
 			multiline: form.multiline,
 			max: form.max ? Number(form.max) : undefined,
-			fillFromBody: form.fillFromBody,
 		});
 	if (form.kind === "slug") return clean({ ...(was as FieldDefinition), ...common, kind: "slug" });
 	if (form.kind === "select")
@@ -145,19 +134,9 @@ const adminOf = (form: Form): Record<FieldValue, unknown> => {
 	return {
 		label: form.label || undefined,
 		description: form.description || undefined,
-		placeholder: form.kind === "text" && form.placeholder ? form.placeholder : undefined,
-		rows: form.kind === "text" && Number(form.rows) > 0 ? Number(form.rows) : undefined,
 		optionLabels: Object.keys(labels).length > 0 ? labels : undefined,
 	};
 };
-
-/** The one-line summary at the sheet's end: the setting in the schema's words ("series → series"). */
-function summaryOf(form: Form) {
-	const name = form.name || "…";
-	if (form.kind === "relation") return `${name} → ${form.to}${form.many ? " []" : ""}`;
-	if (form.kind === "text") return `${name} · text${form.max ? ` · ${form.max}` : ""}`;
-	return `${name} · ${form.kind}`;
-}
 
 /** What the sheet is open on: a new field of a collection, or one of its fields by its place in the draft. */
 export type FieldSheetOpen = { collection: string; key: string | null };
@@ -184,7 +163,7 @@ function SortableOption({
 /**
  * The field sheet (flow 4, step 04; flow 11, step 17b). Adding: pick one of the four kinds, then its settings. Editing a field: the same settings, its
  * kind fixed; changing its name is a rename (the review moves its values). On the live site the structure is text and switches are off; only the view
- * (label, help, placeholder, rows, option labels) changes. Nothing goes in the draft until the sheet's add or save button.
+ * (label, help, option labels) changes. Nothing goes in the draft until the sheet's add or save button.
  */
 export function FieldSheet({
 	model,
@@ -274,10 +253,6 @@ function FieldSheetBody({
 		</Option>
 	);
 	const kindWord = (kind: Kind) => t(`settings.field.kind.${kind}`);
-	const locales = (["same", "perLocale", "fromSource"] as const).map((value) => ({
-		value,
-		label: t(`settings.field.locale.${value}`),
-	}));
 
 	// The name is structure: the add sheet asks it with the label; a saved field's sheet has it under structure, where changing it is a rename.
 	const nameField =
@@ -297,13 +272,13 @@ function FieldSheetBody({
 			<ReadValue label={t("settings.field.name")}>{form.name}</ReadValue>
 		);
 
+	// The view: admin values, which change on the live site too (doc 01).
 	const view = (
 		<>
 			<FormField>
 				<FormFieldLabel htmlFor="field-label">{t("settings.field.label")}</FormFieldLabel>
 				<Input id="field-label" value={form.label} onChange={(event) => set({ label: event.target.value })} />
 			</FormField>
-			{adding ? nameField : null}
 			<FormField>
 				<FormFieldLabel htmlFor="field-help">{t("settings.field.help")}</FormFieldLabel>
 				<Textarea
@@ -313,29 +288,6 @@ function FieldSheetBody({
 					onChange={(event) => set({ description: event.target.value })}
 				/>
 			</FormField>
-			{form.kind === "text" ? (
-				<>
-					<FormField>
-						<FormFieldLabel htmlFor="field-placeholder">{t("settings.field.placeholder")}</FormFieldLabel>
-						<Input
-							id="field-placeholder"
-							value={form.placeholder}
-							onChange={(event) => set({ placeholder: event.target.value })}
-						/>
-					</FormField>
-					<FormField>
-						<FormFieldLabel htmlFor="field-rows">{t("settings.field.rows")}</FormFieldLabel>
-						<Input
-							id="field-rows"
-							mono
-							width="number"
-							inputMode="numeric"
-							value={form.rows}
-							onChange={(event) => set({ rows: event.target.value.replace(/\D/g, "") })}
-						/>
-					</FormField>
-				</>
-			) : null}
 		</>
 	);
 
@@ -438,8 +390,22 @@ function FieldSheetBody({
 			</Stack>
 		) : null;
 
+	const required = switchRow(
+		// One child, so the spread row keeps the "!" beside its word.
+		<span>
+			{t("settings.field.required")}{" "}
+			<Text tone="faint" mono>
+				!
+			</Text>
+		</span>,
+		form.required,
+		(required) => set({ required }),
+	);
+
+	// The structure the person can change: required first, then what this kind has, then the language.
 	const settings = structure ? (
 		<>
+			{required}
 			{form.kind === "text" ? (
 				<>
 					{switchRow(t("settings.field.multiline"), form.multiline, (multiline) => set({ multiline }))}
@@ -450,11 +416,11 @@ function FieldSheetBody({
 							mono
 							width="number"
 							inputMode="numeric"
+							placeholder={t("settings.field.noLimit")}
 							value={form.max}
 							onChange={(event) => set({ max: event.target.value.replace(/\D/g, "") })}
 						/>
 					</FormField>
-					{switchRow(t("settings.field.fillFromBody"), form.fillFromBody, (fillFromBody) => set({ fillFromBody }))}
 				</>
 			) : null}
 			{options}
@@ -483,29 +449,19 @@ function FieldSheetBody({
 					{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) => set({ createMissing }))}
 				</>
 			) : null}
-			{switchRow(
-				// One child, so the spread row keeps the "!" beside its word.
-				<span>
-					{t("settings.field.required")}{" "}
-					<Text tone="faint" mono>
-						!
-					</Text>
-				</span>,
-				form.required,
-				(required) => set({ required }),
-			)}
-			{existing ? switchRow(t("settings.field.asTitle"), form.asTitle, (asTitle) => set({ asTitle })) : null}
-			<Stack gap={6}>
-				<Text variant="micro" tone="subtle">
-					{t("settings.field.locale")}
-				</Text>
-				<Segmented
-					aria-label={t("settings.field.locale")}
-					value={form.locale}
-					onValueChange={(locale) => set({ locale })}
-					options={locales}
-				/>
-			</Stack>
+			<FormFieldSet>
+				<FormFieldLegend variant="field">{t("settings.field.locale")}</FormFieldLegend>
+				<RadioGroup value={form.locale} onValueChange={(locale) => set({ locale: locale as LocaleMode })}>
+					{LOCALES.map((value) => (
+						<RadioItem
+							key={value}
+							value={value}
+							label={t(`settings.field.locale.${value}`)}
+							description={t(`settings.field.locale.${value}.note`)}
+						/>
+					))}
+				</RadioGroup>
+			</FormFieldSet>
 		</>
 	) : null;
 
@@ -521,6 +477,63 @@ function FieldSheetBody({
 		<Button variant="ghost" onClick={onClose}>
 			{t("settings.cancel")}
 		</Button>
+	);
+
+	// The same order as the structure the dev server edits: name, kind, required, then what the kind has, then the language.
+	const lockedFacts = (
+		<>
+			<ReadValue label={t("settings.field.name")}>{form.name}</ReadValue>
+			<ReadValue label={t("settings.field.kindLabel")} mono={false}>
+				{kindWord(form.kind)}
+				{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
+			</ReadValue>
+			{switchRow(t("settings.field.required"), form.required, () => {})}
+			{form.kind === "text" ? switchRow(t("settings.field.multiline"), form.multiline, () => {}) : null}
+			{form.kind === "text" && form.max ? (
+				<ReadValue label={t("settings.field.max")} mono={false}>
+					{t("settings.field.maxValue", { max: form.max })}
+				</ReadValue>
+			) : null}
+			<ReadValue label={t("settings.field.locale")} mono={false}>
+				{t(`settings.field.locale.${form.locale}`)}
+			</ReadValue>
+		</>
+	);
+
+	// The same two sections in every field sheet: the view (admin values) above, the structure (the schema file) below, locked on the live site.
+	const sections = (
+		<Stack gap={0}>
+			<SheetSection title={t("settings.field.view")}>
+				{view}
+				{locked ? options : null}
+			</SheetSection>
+			<SheetSection
+				title={
+					locked ? (
+						<Inline gap={6} align="center">
+							{t("settings.field.structure")}
+							<LockMark label={t("settings.locked")} />
+						</Inline>
+					) : (
+						t("settings.field.structure")
+					)
+				}
+			>
+				{locked ? (
+					lockedFacts
+				) : (
+					<>
+						{nameField}
+						{adding ? null : (
+							<ReadValue label={t("settings.field.kindLabel")} mono={false}>
+								{kindWord(form.kind)}
+							</ReadValue>
+						)}
+						{settings}
+					</>
+				)}
+			</SheetSection>
+		</Stack>
 	);
 
 	if (adding)
@@ -543,11 +556,7 @@ function FieldSheetBody({
 						</PickList>
 					}
 				>
-					<SheetBody>
-						{view}
-						{settings}
-						<SheetSummary>{summaryOf(form)}</SheetSummary>
-					</SheetBody>
+					<SheetBody>{sections}</SheetBody>
 				</SheetSplit>
 				<SheetFooter>
 					{cancel}
@@ -558,62 +567,10 @@ function FieldSheetBody({
 			</SheetContent>
 		);
 
-	const lockedFacts = (
-		<>
-			<ReadValue label={t("settings.field.name")}>{form.name}</ReadValue>
-			<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-				{kindWord(form.kind)}
-				{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
-			</ReadValue>
-			{form.kind === "text" && form.max ? (
-				<ReadValue label={t("settings.field.max")} mono={false}>
-					{t("settings.field.maxValue", { max: form.max })}
-				</ReadValue>
-			) : null}
-			<ReadValue label={t("settings.field.locale")} mono={false}>
-				{t(`settings.field.locale.${form.locale}`)}
-			</ReadValue>
-			{switchRow(t("settings.field.required"), form.required, () => {})}
-			{form.kind === "text" ? switchRow(t("settings.field.multiline"), form.multiline, () => {}) : null}
-			{form.kind === "text" ? switchRow(t("settings.field.fillFromBody"), form.fillFromBody, () => {}) : null}
-		</>
-	);
-
 	return (
 		<SheetContent>
 			{head}
-			<SheetBody>
-				<Stack gap={0}>
-					<SheetSection title={t("settings.field.view")}>
-						{view}
-						{locked ? options : null}
-					</SheetSection>
-					<SheetSection
-						title={
-							locked ? (
-								<Inline gap={6} align="center">
-									{t("settings.field.structure")}
-									<LockMark label={t("settings.locked")} />
-								</Inline>
-							) : (
-								t("settings.field.structure")
-							)
-						}
-					>
-						{locked ? (
-							lockedFacts
-						) : (
-							<>
-								{nameField}
-								<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-									{kindWord(form.kind)}
-								</ReadValue>
-								{settings}
-							</>
-						)}
-					</SheetSection>
-				</Stack>
-			</SheetBody>
+			<SheetBody>{sections}</SheetBody>
 			<SheetFooter>
 				{structure && !fixedName ? (
 					<Inline gap={12} grow minWidth={0}>

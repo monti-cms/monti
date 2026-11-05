@@ -83,21 +83,21 @@
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "필드 추가", `of` 컬렉션 이름), 본문은 `SheetSplit`, 발은 "취소" · "필드 추가" | |
 | 종류 고르기 (왼쪽) | `PickList` + `PickListItem`("글자" · "고르기" · "미디어" · "관계", 관계는 `mark` "→", 고른 것은 `selected`) | 고르면 오른쪽이 그 종류의 설정으로 바뀐다. |
-| 표시 이름 · 이름 · 도움말 | `FormField` + `Input` · `Input mono` · `Textarea` | |
-| 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch` | "발행 안 된 대상"은 08번 문서와 함께 온다(T42). |
-| 글자 설정 | "여러 줄" `Switch`, "최대 글자 수" · "줄 수" `Input mono width="number"`, "안내 문구" `Input`, "비어 있으면 본문에서 채우기" `Switch` | |
+| 두 절 "보기" · "구조" | `SheetSection` 둘. "보기"는 표시 이름 `Input`, 도움말 `Textarea`(관리자 값, 운영에서도 고친다). "구조"는 이름 `Input mono`, 필수, 그 종류의 설정, 언어 순서(스키마 파일) | 더하기 시트, 고치기 시트, 읽기 전용 시트가 같은 두 절이다(2026-11-05, 소유자). 읽기 전용이면 "구조" 제목 끝에 `LockMark`. |
+| 관계 설정 | "가리킬 컬렉션" `Select`, "여러 개 고르기" · "목록에 없으면 새로 만들기" `Option spread` + `Switch` | |
+| 글자 설정 | "여러 줄" `Option spread` + `Switch`, "최대 글자 수" `Input mono width="number"`(플레이스홀더 "제한 없음") | 줄 수, 안내 문구, 비어 있으면 본문에서 채우기, 제목으로 사용은 없다(2026-11-05, 소유자, 01 결정 기록). |
 | 고르기의 선택지 | `OptionTable`(`valueLabel` "값", `labelLabel` "라벨") + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 손잡이로 순서를 바꾼다(끌기와 키보드, [list.md](../components/list.md) "끌어서 옮기기"). 구조를 바꿀 수 없는 운영 사이트에서는 손잡이가 없다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). |
 | 필수 | `Option spread` + `Switch`(라벨 뒤 흐린 "!") | |
-| 언어 | `FormField` + `Segmented`("모두 같음" · "언어마다" · "원문 따름") | 셋 중 하나를 고르는 짧은 선택이다([choice.md](../components/choice.md) "몇 개 중 하나"). |
-| 요약 줄 | `Text variant="meta" mono` "series → Series" | 지금 설정을 스키마 말로 한 줄. |
+| 언어 | `FormFieldSet` + `FormFieldLegend variant="field"` "언어" + `RadioGroup`, `RadioItem`마다 `description`("언어와 상관없이 값 하나" · "언어마다 따로 써요" · "비어 있으면 원문 값을 써요") | 이름만으로 뜻이 읽히지 않아 설명이 있는 라디오다(2026-11-05, 소유자). 사이트 언어가 하나면 없다(T46). |
+| 요약 줄 (빠짐, 2026-11-05) | | 이름 칸과 종류 목록이 이미 보이는 말을 되풀이해서 뺐다. |
 
 #### 필드 시트 · 읽기 전용
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` 필드 이름, `of` 컬렉션), 발은 "취소" · "저장" | |
-| "보기" | `SheetSection`: 표시 이름 `Input`, 도움말 `Textarea`, 안내 문구 `Input`, 줄 수 `Input mono width="number"` | 관리자 설정이라 고칠 수 있다. |
-| "구조" | `SheetSection`(제목 끝 `LockMark`): 이름 `Text mono`, 종류 · 최대 글자 수 · 언어 `Text`, 필수 · 여러 줄 · 본문에서 채우기 `Switch disabled` | 잠긴 값은 글, 스위치는 흐리게. |
+| "보기" | `SheetSection`: 표시 이름 `Input`, 도움말 `Textarea`, 고르기면 선택지의 라벨 | 관리자 설정이라 고칠 수 있다. |
+| "구조" | `SheetSection`(제목 끝 `LockMark`): 이름 `Text mono`, 종류 · 최대 글자 수 · 언어 `Text`, 필수 · 여러 줄 `Switch disabled` | 잠긴 값은 글, 스위치는 흐리게. |
 
 #### 검토 시트
 

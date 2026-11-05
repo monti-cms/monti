@@ -29,7 +29,7 @@ export type Catalog = {
 export type DraftField = { name: string; def: FieldDefinition };
 
 /** The admin values of a field the screen edits. */
-export const FIELD_VALUES = ["label", "description", "placeholder", "rows", "optionLabels"] as const;
+export const FIELD_VALUES = ["label", "description", "optionLabels"] as const;
 export type FieldValue = (typeof FIELD_VALUES)[number];
 
 /** The heading levels a body can have (doc 03): the editor tab turns each on or off. */

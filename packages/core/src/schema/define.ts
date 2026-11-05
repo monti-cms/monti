@@ -8,8 +8,6 @@ export type LocaleMode = "same" | "perLocale" | "fromSource";
 
 type FieldBase = {
 	required?: boolean;
-	/** Shown instead of the title in lists and relation pickers. */
-	asTitle?: boolean;
 	locale?: LocaleMode;
 };
 
@@ -17,8 +15,6 @@ export type TextField = FieldBase & {
 	kind: "text";
 	multiline?: boolean;
 	max?: number;
-	/** Filled from the body when left empty (the assistant's quick task, doc 10). */
-	fillFromBody?: boolean;
 };
 /** The entry's address part. Every collection has one, named `slug`. */
 export type SlugField = FieldBase & { kind: "slug"; from?: string };

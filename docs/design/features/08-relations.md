@@ -17,7 +17,7 @@
 
 - 기준 화면: `Screens/Reference/Lists` › Taxonomy, Main(카테고리 · 태그 열, 행 메뉴), `Screens/Reference/Editor` › EditorNotion(속성 패널의 카테고리 · 태그 · 시리즈).
 - 흐름: [흐름 7](../admin/flows/07-list-tidy-up.md)의 04b, 06~10단계, [흐름 1](../admin/flows/01-write-and-publish.md)의 07단계.
-- 관계 필드의 설정(가리킬 컬렉션, 여러 개, 새로 만들기, 발행 안 된 대상)은 01번 문서에 있다.
+- 관계 필드의 설정(가리킬 컬렉션, 여러 개, 새로 만들기)은 01번 문서에 있다. 발행 안 된 대상을 어떻게 다룰지 고르는 설정은 필요해지면 여기서 정한다(T42, 그만둔 일).
 
 ## 모양
 
