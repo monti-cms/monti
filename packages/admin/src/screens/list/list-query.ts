@@ -25,7 +25,7 @@ const orNull = (value: string) => (value === NONE ? null : value);
 
 /** The column a filter is on: what its key in the address is, and whose head shows its dot. */
 export const filterColumn = (filter: ListFilter) =>
-	filter.on === "status" || filter.on === "locale" ? filter.on : filter.field;
+	filter.on === "status" || filter.on === "locale" || filter.on === "group" ? filter.on : filter.field;
 
 /** Reads the address with the collection's columns: a key no column filters by is left out, so an old link never breaks the list. */
 export function readState(params: URLSearchParams, columns: readonly ListColumn[]): ListState {

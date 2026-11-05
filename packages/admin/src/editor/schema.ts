@@ -12,6 +12,7 @@ import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
 import type { Catalog, CatalogBlock } from "./catalog";
+import { ENTRY_LINK } from "./link-targets";
 
 /** The editor's node for a block type: a block type may hold `:` or `-` (`component:PostCard`), an editor name may not. */
 export const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
@@ -215,7 +216,14 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 		Underline,
 		Strike,
 		Code,
-		Link.configure({ openOnClick: false, autolink: false, linkOnPaste: true }),
+		Link.configure({
+			openOnClick: false,
+			autolink: false,
+			linkOnPaste: true,
+			// A link to an entry of the site (`monti:entry/<group>`, doc 03) is a link like any address; the mark would drop the unknown scheme.
+			protocols: ["monti"],
+			isAllowedUri: (url, context) => url.startsWith(ENTRY_LINK) || context.defaultValidate(url),
+		}),
 		Superscript,
 		Subscript,
 		kept,

@@ -96,10 +96,15 @@
 
 ### 링크 칸 (서식 카드의 링크 버튼 아래)
 
+기준 화면: `Screens/Reference/Editor` › LinkCardOpen · LinkCardSearch · LinkCardAddress · LinkCardLinked. 칸은 하나이고, 친 것이 링크를 정한다(노션과 같다, 2026-11-06 소유자).
+
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 칸 | `Popover`(링크 `FormatButton`이 트리거) 안 `FormField`: "링크 주소" `Input mono`(플레이스홀더 "https://") | Enter로 고른 글자에 주소를 단다. 비우고 Enter면 링크를 뗀다. |
-| 링크 떼기 | 링크가 있는 글자일 때만 입력 칸 옆 `IconButton`("링크 지우기") | |
+| 칸 | `Popover`(링크 `FormatButton`이 트리거, `padding="menu"`, `width="md"`) 안 `Command`: `CommandInput`(플레이스홀더 "주소를 붙여 넣거나 글 찾기", 이름 "링크 주소") | `/` 메뉴와 같은 모양이다. 화살표와 Enter로 행을 고른다. |
+| 막 열었을 때 | `CommandGroup` "최근에 고친 글": `CommandItem`(앞 `Document` 아이콘, 글 제목, 끝 `MenuValue` 컬렉션 이름) | 문서 컬렉션마다 가장 최근에 고친 글을 모아 다섯 줄. |
+| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글이 없어요" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
+| 주소를 쳤을 때 | `CommandGroup` "주소": `CommandItem`(앞 `Link` 아이콘, 주소, 끝 `MenuShortcut` "↵") | `https://` · `mailto:` · `/` · `#`로 시작하거나 `react.dev` 같은 도메인이면 주소다(도메인에는 `https://`를 붙인다). Enter로 바깥 링크를 건다. |
+| 이미 링크가 걸린 글자 | 글 링크면 칸에 그 글 제목, `CommandGroup` "지금 링크"에 그 글(`checked`). 바깥 링크면 칸에 그 주소 | 아래에 `CommandSeparator`와 "링크 떼기"(`Unlink` 아이콘) 행. |
 
 ## 흐름 1 · 글 쓰고 발행하기
 

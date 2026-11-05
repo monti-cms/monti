@@ -186,6 +186,14 @@ describe("the list query", () => {
 		});
 	});
 
+	it("06-1 a group filter finds the entries a body link or a relation points at, one row per group", async () => {
+		const groups = [await groupOf(ids.first), await groupOf(ids.rsc)];
+		expect(await titles({ filters: [{ on: "group", any: groups }] })).toEqual([
+			"리액트 서버 컴포넌트 다시 보기",
+			"첫 번째 글",
+		]);
+	});
+
 	it("06-1 date filters count days in the admin's time zone", async () => {
 		// 03:00 UTC is noon in Seoul: "today" there began at 15:00 UTC the day before.
 		expect(await titles({ filters: [{ on: "date", field: "updatedAt", range: "today" }] })).toEqual(["가을 사진 정리"]);

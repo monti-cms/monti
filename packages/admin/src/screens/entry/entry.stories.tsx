@@ -1,6 +1,6 @@
 import type { Doc } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
@@ -81,6 +81,13 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 		admin,
 	)) as { output: { id: string } };
 	const id = made.output.id;
+	// Other entries a link can find (T63).
+	for (const title of ["리액트 다시 만들기 1편 · 상태", "리액트 다시 만들기 2편 · 렌더링", "읽을 것"])
+		await monti.run(
+			"entries.create",
+			{ collection: title === "읽을 것" ? "memo" : "post", locale: "ko", title },
+			admin,
+		);
 	if (kind === "published" || kind === "changed")
 		await monti.run("entries.publish", { ids: [id], date: "keep" }, admin);
 	if (kind === "changed")
@@ -317,5 +324,63 @@ export const SignedOut: Story = {
 		await made.db.deleteFrom("monti_session").execute();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect(await page.findByRole("button", { name: "로그인이 풀렸어요" }, wait)).toBeVisible();
+	},
+};
+
+/** Selects words in the body the way a drag does, so the format card shows. */
+async function select(body: HTMLElement, words: string) {
+	const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+	let textNode: Node | null = walker.nextNode();
+	while (textNode && !textNode.textContent?.includes(words)) textNode = walker.nextNode();
+	if (!textNode) throw new Error(`no text "${words}"`);
+	const start = textNode.textContent?.indexOf(words) ?? 0;
+	body.focus();
+	const range = document.createRange();
+	range.setStart(textNode, start);
+	range.setEnd(textNode, start + words.length);
+	const selection = document.getSelection();
+	selection?.removeAllRanges();
+	selection?.addRange(range);
+	document.dispatchEvent(new Event("selectionchange"));
+}
+
+/** Words typed in the link card find the site's entries (T63). */
+export const LinkSearch: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await select(body, "지금 상태만");
+		await userEvent.click(await all.findByRole("button", { name: "링크" }, wait));
+		const field = await all.findByPlaceholderText("주소를 붙여 넣거나 글 찾기", {}, wait);
+		await userEvent.type(field, "리액트");
+		await all.findByRole("option", { name: /리액트 다시 만들기 2편/ }, wait);
+	},
+};
+
+/** An entry picked: the words link to it, and the card opened on them again shows it with the way to take the link off. */
+export const LinkedEntry: Story = {
+	loaders: site("draft"),
+	play: async (context) => {
+		await LinkSearch.play?.(context);
+		const all = within(context.canvasElement.ownerDocument.body);
+		const { body } = await opened(context.canvasElement);
+		await userEvent.click(await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait));
+		await waitFor(() => expect(body.querySelector("a")).not.toBeNull(), wait);
+		await select(body, "지금 상태만");
+		fireEvent.click(await all.findByRole("button", { name: "링크" }, wait));
+		await all.findByRole("option", { name: /링크 떼기/ }, wait);
+		await all.findByText("지금 링크", {}, wait);
+	},
+};
+
+/** An address typed: one row, and it links out. */
+export const LinkAddress: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await select(body, "지금 상태만");
+		await userEvent.click(await all.findByRole("button", { name: "링크" }, wait));
+		await userEvent.type(await all.findByPlaceholderText("주소를 붙여 넣거나 글 찾기", {}, wait), "react.dev/learn");
+		await all.findByRole("option", { name: /react\.dev\/learn/ }, wait);
 	},
 };

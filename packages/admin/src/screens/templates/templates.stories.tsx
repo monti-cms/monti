@@ -212,7 +212,7 @@ export const Dragging: Story = {
 		const first = (await within(text).findByText("첫 번째 요점")).getBoundingClientRect();
 		for (const to of [y + 10, first.top + 4, first.bottom - 4])
 			window.dispatchEvent(new PointerEvent("pointermove", { clientX: x + 8, clientY: to }));
-		await body.findByText("서론", { selector: "[data-slot=held-block] h2" }, wait);
+		await body.findByText("서론", { selector: "[data-slot=held-block] span" }, wait);
 	},
 };
 

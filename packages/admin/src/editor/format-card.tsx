@@ -1,24 +1,31 @@
 import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
 	EditorOverlay,
 	FloatingBar,
 	FormatButton,
 	type FormatMark,
-	FormField,
-	FormFieldLabel,
-	IconButton,
 	Inline,
-	Input,
+	MenuShortcut,
+	MenuValue,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 	Separator,
+	Text,
 } from "@monti-cms/ui";
-import { Unlink } from "@monti-cms/ui/icons";
+import { Document, Link, Unlink } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
+import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
 import { markName, nodeName } from "./schema";
 
 /** The bar's two groups (editor-tools.md): the text formats, then the smaller ones and the link. */
@@ -110,7 +117,11 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 	);
 }
 
-/** The link button and its field: Enter sets the address on the selected words; an empty address takes the link off. */
+/**
+ * The link button and its card (T63): one field, as Notion's. What is typed decides the link: an address links out, other words find the site's
+ * entries, and picking one links to the entry itself (`monti:entry/<group>`), so the link holds when its address changes. Words that already link
+ * show where to, and the way to take the link off.
+ */
 function LinkButton({
 	editor,
 	label,
@@ -127,17 +138,40 @@ function LinkButton({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { t } = useAdmin();
-	const [value, setValue] = useState(href);
-	const apply = (address: string) => {
+	const external = href !== "" && !href.startsWith(ENTRY_LINK);
+	const [text, setText] = useState(external ? href : "");
+	const [typed, setTyped] = useState(false);
+	const targets = useLinkTargets({ open, text, href });
+	const linked = targets.linked;
+	// Opened on words that link to an entry: the field shows that entry, until something is typed.
+	const shown = !typed && linked && text === "" ? linked.title : text;
+	const address = addressOf(shown);
+	const current = linked && shown === linked.title;
+	const apply = (next: string) => {
 		const chain = editor.chain().focus().extendMarkRange("link");
-		(address.trim() ? chain.setLink({ href: address.trim() }) : chain.unsetLink()).run();
+		(next ? chain.setLink({ href: next }) : chain.unsetLink()).run();
 		onOpenChange(false);
 	};
+	const row = (target: LinkTarget, checked = false) => (
+		<CommandItem
+			key={target.group}
+			value={`entry:${target.group}`}
+			checked={checked}
+			onSelect={() => apply(`${ENTRY_LINK}${target.group}`)}
+		>
+			<Document aria-hidden />
+			<Text truncate>{target.title}</Text>
+			<MenuValue>{target.draft ? t("format.draftIn", { collection: target.collection }) : target.collection}</MenuValue>
+		</CommandItem>
+	);
 	return (
 		<Popover
 			open={open}
 			onOpenChange={(next) => {
-				if (next) setValue(href);
+				if (next) {
+					setText(external ? href : "");
+					setTyped(false);
+				}
 				onOpenChange(next);
 			}}
 		>
@@ -147,31 +181,47 @@ function LinkButton({
 				pressed={pressed}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			/>
-			<PopoverContent side="bottom" align="center" width="md">
-				<FormField>
-					<FormFieldLabel htmlFor="monti-link-address">{t("format.address")}</FormFieldLabel>
-					<Inline gap={8}>
-						<Input
-							id="monti-link-address"
-							autoFocus
-							mono
-							value={value}
-							placeholder="https://"
-							onChange={(event) => setValue(event.target.value)}
-							onKeyDown={(event) => {
-								if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-									event.preventDefault();
-									apply(value);
-								}
-							}}
-						/>
-						{pressed ? (
-							<IconButton label={t("format.unlink")} onClick={() => apply("")}>
-								<Unlink aria-hidden />
-							</IconButton>
+			<PopoverContent side="bottom" align="center" padding="menu" width="md">
+				<Command shouldFilter={false}>
+					<CommandInput
+						autoFocus
+						value={shown}
+						placeholder={t("format.find")}
+						aria-label={t("format.address")}
+						onValueChange={(next) => {
+							setText(next);
+							setTyped(true);
+						}}
+					/>
+					<CommandList aria-label={t("format.targets")}>
+						{address ? (
+							<CommandGroup heading={t("format.addressGroup")}>
+								<CommandItem value="address" onSelect={() => apply(address)}>
+									<Link aria-hidden />
+									<Text truncate>{address.replace(/^https?:\/\//, "")}</Text>
+									<MenuShortcut>↵</MenuShortcut>
+								</CommandItem>
+							</CommandGroup>
+						) : current && linked ? (
+							<CommandGroup heading={t("format.current")}>{row(linked, true)}</CommandGroup>
+						) : targets.found.length > 0 ? (
+							<CommandGroup heading={targets.recent ? t("format.recent") : t("format.entries")}>
+								{targets.found.map((target) => row(target))}
+							</CommandGroup>
+						) : shown.trim() !== "" ? (
+							<CommandEmpty>{t("format.noEntry")}</CommandEmpty>
 						) : null}
-					</Inline>
-				</FormField>
+						{pressed ? (
+							<>
+								<CommandSeparator />
+								<CommandItem value="unlink" onSelect={() => apply("")}>
+									<Unlink aria-hidden />
+									{t("format.unlink")}
+								</CommandItem>
+							</>
+						) : null}
+					</CommandList>
+				</Command>
 			</PopoverContent>
 		</Popover>
 	);
