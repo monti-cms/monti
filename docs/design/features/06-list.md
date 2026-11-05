@@ -25,21 +25,21 @@
 ```ts
 type ListQuery = {
   collection: string;
-  folder?: string | null;            // null = top level; omitted with scope "all"
+  folder?: string | null;            // null = top level; omitted = every folder
   scope?: "here" | "all";            // inside a folder: this folder or every folder
-  search?: { text: string; in: "all" | "title" | "slug" | "body" };
+  search?: { text: string; in: "fields" | "all" };   // fields = title and address; all = and the body's text
   filters: Filter[];                 // all must match
-  sort: { by: ColumnId; dir: "asc" | "desc" };
+  sort: { by: "title" | "slug" | "updatedAt" | "publishedAt" | "createdAt"; dir: "asc" | "desc" };
   page: number;
-  pageSize: 25 | 50 | 100;
+  pageSize: number;                  // the screen offers 25 · 50 · 100; the agent reads up to 500
+  timeZone: string;                  // the admin's, for "today" and date ranges
 };
 
 type Filter =
-  | { on: "status"; any: ("published" | "editing" | "draft" | "archived")[] }
-  | { on: "relation"; field: string; any: (string | null)[] }        // null = 없음
-  | { on: "select"; field: string; any: string[] }
+  | { on: "status"; any: ("published" | "changed" | "draft" | "archived")[] }
+  | { on: "relation"; field: string; any: (string | null)[] }        // translation group ids; null = 없음
+  | { on: "select"; field: string; any: (string | null)[] }          // null = 없음
   | { on: "locale"; any: string[] }                                  // the group has these languages
-  | { on: "translation"; any: ("missing" | "sourceChanged" | "current")[] }
   | { on: "date"; field: "updatedAt" | "publishedAt" | "createdAt"; range: "today" | "7d" | "30d" | { from: string; to: string } }
   | { on: "empty"; field: string };                                  // "비어 있음"
 ```
@@ -63,7 +63,9 @@ flowchart LR
 
 - 질의는 화면 주소에 들어 있다. 뒤로 가기, 새 탭에서 열기, 새로 고침이 같은 목록을 보인다.
 - `entries.facets`는 열 메뉴를 열 때 그 열의 값마다 개수를 센다. 다른 거르기는 걸린 채로 센다("발행됨 130 · 초안 12").
-- 찾기는 제목, 주소, 본문 글자에서 찾는다. 본문 글자는 저장할 때 블록에서 뽑아 따로 둔다. 한국어도 찾을 수 있게 Postgres의 trigram 색인을 쓴다.
+- 찾기는 "제목·주소"나 "전체"(본문 글자까지)에서 찾는다. 본문 글자는 데이터베이스가 블록에서 뽑아 따로 둔다(`body_text`, 저장하면 따라 바뀌는 열). 한국어도 찾을 수 있게 Postgres의 trigram 색인을 쓴다.
+- 상태 거르기가 없으면 보관된 글은 빠진다. 상태 메뉴의 "보관됨"을 고르면 보인다.
+- 번역 거르기(번역 없음 · 원문 바뀜 · 최신)는 04번 문서가 원문과 번역의 짝을 만든 뒤에 더한다(진행 기록 T52).
 
 ## 열
 
@@ -113,7 +115,7 @@ flowchart LR
 
 ## 빈 목록
 
-- 컬렉션에 글이 하나도 없으면 표 대신 "아직 {컬렉션}이 없어요" 한 줄만 보인다. 시작하는 길(새로 쓰기, 가져오기, 템플릿으로 쓰기)은 머리의 "+ 새 글 쓰기 ▾" 나뉜 알약에 있다(2026-11-05 소유자: 번호 붙은 세 시작은 뺐다).
+- 컬렉션에 글이 하나도 없으면 표 대신 "아직 {컬렉션}이 없어요." 한 줄과 그 아래 세 시작(`EmptyStep`: 첫 글 쓰기, 쓰던 글 가져오기, 템플릿으로 쓰기)이 보인다. 둘째 줄 설명은 없다. 같은 길이 머리의 "+ 새 글 쓰기 ▾" 나뉜 알약에도 있다(2026-11-05 소유자: 한 줄만 두니 화면이 비어 보였다).
 - 거르기나 찾기 때문에 행이 없으면 빈 목록이 아니다. "맞는 글이 없어요"와 "거르기 풀기"를 보인다.
 
 ## 기능 목록
@@ -148,9 +150,14 @@ flowchart LR
 - 2026-11-05: 목록은 번역 묶음마다 한 줄이고 원문 글이 대표한다. 언어 거르기는 "그 언어의 글이 있는 묶음"이다.
 - 2026-11-05: 찾기는 Postgres trigram 색인으로 한다. 본문 글자는 저장할 때 뽑아 둔다.
 - 2026-11-05: 열 너비는 종류마다 정하고 사람이 바꾸지 않는다.
+- 2026-11-05: 찾을 곳은 기준 화면(`Screens/Reference/Lists` › Main)대로 "제목·주소"와 "전체" 둘이다. 이 문서의 처음 초안은 전체 · 제목 · 주소 · 본문 넷이었다.
+- 2026-11-05: 상태 이름은 02의 `EntryState`(`changed`)를 그대로 쓴다. 한 상태에 이름 둘을 두지 않는다.
+- 2026-11-05: 제목 정렬은 데이터베이스에 ICU 정렬(`und-x-icu`)이 있으면 그것을 쓴다. macOS의 `en_US.UTF-8` 같은 libc 정렬은 "첫 번째"를 "리액트" 앞에 둔다.
+- 2026-11-05: 저장하는 열 순서는 그때의 모든 열이다. 순서에 없는 열은 그 뒤에 생긴 열이라 맨 뒤에 기본 보이기로 온다.
+- 2026-11-05: 관리자 화면의 주소는 해시(`#/c/post?status=draft`)다. 사이트는 관리자 경로 하나만 걸면 되고, 새로 고침과 새 탭이 같은 화면을 연다(T37).
 
 ## 끝 조건
 
-- 흐름 7의 01~05, 10단계와 흐름 3·12가 `entries.query`, `entries.facets`, `list.*`만으로 된다.
-- 게시글, 메모, 카테고리 목록이 같은 코드로 그려지고, 다른 것은 스키마에서 온 열뿐이다.
-- 에이전트가 `list.show`로 띄운 목록과 사람이 같은 거르기를 건 목록이 같은 행을 보인다.
+- **06-1** 흐름 7의 01~05, 10단계와 흐름 3·12가 `entries.query`, `entries.facets`, `list.*`만으로 된다. 흐름 3·12의 번역 거르기는 04에서(T52).
+- **06-2** 게시글, 메모, 카테고리 목록이 같은 코드로 그려지고, 다른 것은 스키마에서 온 열뿐이다.
+- **06-3** 에이전트가 `list.show`로 띄운 목록과 사람이 같은 거르기를 건 목록이 같은 행을 보인다.
