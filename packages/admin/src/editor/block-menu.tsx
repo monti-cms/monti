@@ -98,6 +98,20 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		[editor, open, held],
 	);
 
+	// The pointer is watched over the text and over the margin left of it where the handle sits (as Notion does): reaching for the handle from the
+	// side shows it too.
+	useEffect(() => {
+		if (!editor) return;
+		const move = (event: MouseEvent) => {
+			const body = editor.view.dom.getBoundingClientRect();
+			if (event.clientX < body.left - LEFT || event.clientX > body.right) return;
+			if (event.clientY < body.top || event.clientY > body.bottom) return;
+			point(event.clientX, event.clientY);
+		};
+		window.addEventListener("mousemove", move);
+		return () => window.removeEventListener("mousemove", move);
+	}, [editor, point]);
+
 	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
 	useEffect(() => {
 		if (!editor || !spot) return;
@@ -337,5 +351,5 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 			</EditorOverlay>
 		);
 	};
-	return { point, overlay: overlay() };
+	return { overlay: overlay() };
 }
