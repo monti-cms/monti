@@ -47,7 +47,7 @@ function FolderTabsList({
 
 /** What every tab shares: 36px, a line on three sides, rounded at the top. */
 const FOLDER_TAB =
-	"inline-flex h-9 items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
+	"inline-flex h-monti-control-lg items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
 
 /** What moves a tab while it is dragged, or while the others make room for it. */
 export interface TabMotion {
@@ -149,7 +149,7 @@ function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props)
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"inline-flex h-9 cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 				className,
 			)}
 			{...props}

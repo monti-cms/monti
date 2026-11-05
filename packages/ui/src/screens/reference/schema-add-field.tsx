@@ -12,7 +12,6 @@ import {
 	SheetFooter,
 	SheetHeader,
 	SheetSplit,
-	SheetSummary,
 	SheetTitle,
 	Stack,
 	Tabs,
@@ -104,7 +103,6 @@ export function SchemaAddFieldScreen() {
 									</Text>
 									<Segmented aria-label="언어" value="same" onValueChange={() => {}} options={LOCALIZE} />
 								</Stack>
-								<SheetSummary>series → Series</SheetSummary>
 							</SheetBody>
 						</Tabs>
 					</SheetSplit>

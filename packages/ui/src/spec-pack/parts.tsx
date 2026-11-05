@@ -98,7 +98,6 @@ import {
 	SheetHeader,
 	Sheet as SheetRoot,
 	SheetSplit as SheetSplitPart,
-	SheetSummary as SheetSummaryPart,
 	SheetTitle,
 } from "../sheet";
 import { SidePanel } from "../side-panel";
@@ -711,9 +710,9 @@ function OptionCheck({
 	noteTone?: "warning";
 	checked?: boolean;
 }) {
-	// A row of options is 32px tall (`.mt-option`, 6px above and below its line).
+	// A row of options is 32px tall (`.mt-option`): the option's own height.
 	return (
-		<Option className="py-monti-6">
+		<Option>
 			<Checkbox checked={checked ?? false} />
 			{mono ? <Text mono>{label}</Text> : label}
 			{note && (
@@ -734,8 +733,8 @@ function SelectBox({
 	warning,
 }: {
 	value?: string;
-	size?: "sm" | "default";
-	width?: "fit" | "full" | "choice";
+	size?: "sm" | "md" | "default";
+	width?: "fit" | "full";
 	/** The assistant picked the value and nobody has touched it. */
 	proposal?: boolean;
 	/** The value is in the warning ink: nothing to pick yet ("No key"). */
@@ -1225,9 +1224,9 @@ function Sheet({
 	);
 }
 
-/** What a sheet is for, scrolling when it is long; `blocks` for a run of change blocks, which bring their own room above. */
-function SheetBody({ blocks, children }: { blocks?: boolean; children?: React.ReactNode }) {
-	return <SheetBodyPart blocks={blocks}>{children}</SheetBodyPart>;
+/** What a sheet is for, scrolling when it is long. */
+function SheetBody({ children }: { children?: React.ReactNode }) {
+	return <SheetBodyPart>{children}</SheetBodyPart>;
 }
 
 /** A sheet's body in two: `list` on the left (the kinds of a new field), the work on the right. */
@@ -1351,11 +1350,6 @@ function ChangeRow({ what, result }: { what?: string; result?: string }) {
 	return <ChangeLine what={what} then={result} />;
 }
 
-/** What a sheet will make, in one quiet line at the end of its body. */
-function SheetSummary({ text }: { text?: string }) {
-	return <SheetSummaryPart>{text}</SheetSummaryPart>;
-}
-
 /** Where files can be dropped (the folders and the file grid); `over` while files are dragged over it. */
 function DropZone({ over, children }: { over?: boolean; children?: React.ReactNode }) {
 	return <DropArea over={over}>{children}</DropArea>;
@@ -1468,13 +1462,13 @@ function marked(run: Marked | undefined) {
 /** What the admin asked, quoted under a review page's title (the admin's own words, from the data). */
 function ReviewAsk({ text }: { text?: string }) {
 	// The room above it is the screen's (a Spacing before it), so the quote is drawn without its own.
-	return <ReviewQuote className="mt-0">{text}</ReviewQuote>;
+	return <ReviewQuote>{text}</ReviewQuote>;
 }
 
 /** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
 function ReviewHead({ title, meta, actions }: { title?: string; meta?: string; actions?: React.ReactNode }) {
 	// The room above it is the screen's (a Spacing before it), so the group is drawn without its own.
-	return <ReviewGroup title={title} meta={meta} actions={actions} className="mt-0" />;
+	return <ReviewGroup title={title} meta={meta} actions={actions} />;
 }
 
 /**
@@ -2808,7 +2802,6 @@ export const parts = {
 	Sheet,
 	SheetBody,
 	SheetSplit,
-	SheetSummary,
 	Folder,
 	FolderTabRow,
 	FolderTabItem,
@@ -3147,9 +3140,8 @@ export const CATALOG = {
 	ChangeRows: { kind: "part", props: {} },
 	ChangeRow: { kind: "part", props: { what: "text", result: "text" } },
 	Sheet: { kind: "overlay", props: { title: "text", of: "text" } },
-	SheetBody: { kind: "part", props: { blocks: "flag" } },
+	SheetBody: { kind: "part", props: {} },
 	SheetSplit: { kind: "part", props: {} },
-	SheetSummary: { kind: "part", props: { text: "text" } },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
 	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },

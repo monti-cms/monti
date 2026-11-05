@@ -84,19 +84,20 @@ function SheetHeader({
 	);
 }
 
-/** What the sheet is for; it scrolls when it is longer than the sheet. */
-function SheetBody({
-	className,
-	blocks = false,
-	...props
-}: React.ComponentProps<"div"> & {
-	/** The body is a run of change blocks, which bring their own 16px above: only 4px of the body's 20 stay over the first. */
-	blocks?: boolean;
-}) {
+/**
+ * What the sheet is for; it scrolls when it is longer than the sheet. Its children stand 18px apart, the room between fields; a body that holds
+ * {@link SheetSection}s stands its parts 40px apart instead, so the sections are told apart by space alone (an untitled first part, what the field is,
+ * counts as one of them).
+ */
+function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sheet-body"
-			className={cn(PANEL_BODY, "min-h-0 grow overflow-y-auto", blocks && "pt-monti-4", className)}
+			className={cn(
+				PANEL_BODY,
+				"min-h-0 grow overflow-y-auto has-[>[data-slot=sheet-section]]:gap-monti-40",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -126,8 +127,8 @@ function SheetSplit({
 }
 
 /**
- * A titled part of a sheet's body, like View and Structure in the editor of a field: the title in 14px semibold and the fields under it. A later section starts
- * 8px lower. The title may end in a {@link LockMark} when the whole section cannot be changed.
+ * A titled part of a sheet's body, like the input rules in the editor of a field: the title in 14px semibold and the fields under it, 18px apart. It keeps no
+ * room around itself: the {@link SheetBody} that holds it puts 40px between its parts. The title may end in a {@link LockMark} when the whole section cannot be changed.
  */
 function SheetSection({
 	title,
@@ -140,7 +141,7 @@ function SheetSection({
 		<section
 			data-slot="sheet-section"
 			aria-labelledby={titleId}
-			className={cn("not-first:mt-monti-40 flex flex-col gap-[18px]", className)}
+			className={cn("flex flex-col gap-[18px]", className)}
 			{...props}
 		>
 			<h2 id={titleId} className="m-0 font-semibold text-monti-body">
@@ -148,20 +149,6 @@ function SheetSection({
 			</h2>
 			{children}
 		</section>
-	);
-}
-
-/** What the sheet will make, said in one quiet line on the tool ground at the end of its body (the field a new field becomes). */
-function SheetSummary({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="sheet-summary"
-			className={cn(
-				"rounded-monti-lg bg-monti-tool px-monti-16 py-monti-12 text-monti-meta text-monti-muted",
-				className,
-			)}
-			{...props}
-		/>
 	);
 }
 
@@ -194,7 +181,6 @@ function SheetTitle({
 }
 
 export {
-	SheetSummary,
 	Sheet,
 	SheetBody,
 	SheetClose,

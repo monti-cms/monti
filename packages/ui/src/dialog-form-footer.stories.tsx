@@ -11,7 +11,10 @@ import {
 	Stack,
 } from "./index";
 
-/** The footer of a dialog that holds a form: Cancel and one pill; while the request runs the pill shows `busyLabel` with a spinner. */
+/**
+ * The footer of a dialog that holds a form: Cancel and one pill; while the request runs the pill shows `busyLabel` with a spinner. The pill is never
+ * greyed out: pressed with the form not ready, the form shows why at the field.
+ */
 const meta = {
 	title: "Controls/Overlay/DialogFormFooter",
 	component: DialogFormFooter,
@@ -40,6 +43,3 @@ export const Ready: Story = {};
 
 /** The request is running. */
 export const Busy: Story = { args: { busy: true } };
-
-/** Nothing to send yet. */
-export const Disabled: Story = { args: { disabled: true } };

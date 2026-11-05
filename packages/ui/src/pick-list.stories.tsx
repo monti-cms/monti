@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ArrowRight, Calendar, Image, Link, ListBoxes, TextShortParagraph } from "./icons";
+import { Calendar, Image, Link, ListBoxes, TextShortParagraph } from "./icons";
 import { Box, PickList, PickListItem, PickListLabel, PickListSeparator } from "./index";
 
 /** Menu rows without the floating card, placed on a sheet: pick one kind to go to the next step. The picked row keeps the selected ground. */
@@ -11,7 +11,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The kind of a new field. */
+/** The kind of a new field: 32px rows, the picked one on the selected ground. */
 export const Kinds: Story = {
 	render: (args) => (
 		<Box width="menu">
@@ -32,7 +32,7 @@ export const Kinds: Story = {
 					<Image />
 					미디어
 				</PickListItem>
-				<PickListItem mark={<ArrowRight />}>
+				<PickListItem>
 					<Link />
 					다른 글 연결
 				</PickListItem>
@@ -41,7 +41,7 @@ export const Kinds: Story = {
 	),
 };
 
-/** Groups with a name and a wider rule between them; a short note at the end of a row goes in `mark`. */
+/** Groups with a name and a wider rule between them; a real add-on to a name (the plugin it comes from) goes in `mark`. Rows are 32px. */
 export const Groups: Story = {
 	args: { "aria-label": "서비스" },
 	render: (args) => (

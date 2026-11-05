@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_ACTION, FIELD_ACTION_SIZE, FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButton } from "./icon-button";
 import { Close, Image as ImageIcon } from "./icons";
 import { useProposalDescription } from "./proposal-cue";
@@ -82,9 +82,13 @@ function MediaInput({
 					<span className="truncate">{placeholder}</span>
 				)}
 			</button>
-			<span className={cn(FIELD_ACTION, FIELD_ACTION_SIZE[size === "default" ? "lg" : size])}>
+			<span className={FIELD_ACTION}>
 				{value && onClear ? (
-					<IconButton label={clearLabel ?? ""} onClick={onClear}>
+					<IconButton
+						{...FIELD_ACTION_BUTTON[size === "default" ? "lg" : size]}
+						label={clearLabel ?? ""}
+						onClick={onClear}
+					>
 						<Close />
 					</IconButton>
 				) : (

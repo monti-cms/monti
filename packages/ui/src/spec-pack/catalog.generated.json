@@ -1256,12 +1256,7 @@
 			"bind": false,
 			"children": true,
 			"slots": [],
-			"props": {
-				"blocks": {
-					"kind": "flag",
-					"type": "boolean"
-				}
-			},
+			"props": {},
 			"events": []
 		},
 		"SheetSplit": {
@@ -1270,19 +1265,6 @@
 			"children": true,
 			"slots": ["list"],
 			"props": {},
-			"events": []
-		},
-		"SheetSummary": {
-			"kind": "part",
-			"bind": false,
-			"children": false,
-			"slots": [],
-			"props": {
-				"text": {
-					"kind": "text",
-					"type": "string"
-				}
-			},
 			"events": []
 		},
 		"Folder": {
@@ -1914,7 +1896,7 @@
 				},
 				"size": {
 					"kind": "variant",
-					"enum": ["default", "sm"]
+					"enum": ["default", "md", "sm"]
 				},
 				"value": {
 					"kind": "text",
@@ -1926,7 +1908,7 @@
 				},
 				"width": {
 					"kind": "variant",
-					"enum": ["choice", "fit", "full"]
+					"enum": ["fit", "full"]
 				}
 			},
 			"events": []
@@ -3223,7 +3205,7 @@
 				},
 				"tone": {
 					"kind": "variant",
-					"enum": ["danger"]
+					"enum": ["danger", "quiet"]
 				}
 			},
 			"events": []

@@ -2,7 +2,8 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
-import { FIELD_ACTION, FIELD_ACTION_SIZE, FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
+import { IconButtonContext } from "./icon-button";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -93,14 +94,10 @@ function Textarea({
 		>
 			{textarea}
 			{/* A 32px button over a 28px or 32px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
-			<span
-				className={cn(
-					FIELD_ACTION,
-					FIELD_ACTION_SIZE[size === "sm" ? "sm" : size === "md" ? "md" : "lg"],
-					"mt-monti-2",
-				)}
-			>
-				{action}
+			<span className={cn(FIELD_ACTION, "mt-monti-2")}>
+				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : size === "md" ? "md" : "lg"]}>
+					{action}
+				</IconButtonContext>
 			</span>
 		</div>
 	);

@@ -358,18 +358,16 @@ function Body({
 					{t("settings.review.title")}
 				</SheetTitle>
 			</SheetHeader>
-			<SheetBody blocks>
-				<Stack gap={12}>
-					{/* The change blocks bring their own 16px above; the note takes the same, so it does not sit on the header. */}
+			<SheetBody>
+				{/* One run: the first block starts at the body's top; under the note, a block keeps its own 16px above, 12px more from the note. */}
+				<Stack gap={0}>
 					{conflict ? (
-						<Box paddingTop={16}>
+						<Box paddingBottom={12}>
 							<ErrorNote title={t("settings.review.fileChanged")}>{t("settings.review.fileChangedLine")}</ErrorNote>
 						</Box>
 					) : null}
-					<Stack gap={0}>
-						{fixFirst}
-						{plan.changes.map(block)}
-					</Stack>
+					{fixFirst}
+					{plan.changes.map(block)}
 				</Stack>
 			</SheetBody>
 			<SheetFooter>

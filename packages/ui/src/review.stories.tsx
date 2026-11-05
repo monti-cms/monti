@@ -12,6 +12,7 @@ import {
 	ReviewLine,
 	ReviewMore,
 	ReviewQuote,
+	Stack,
 	Text,
 	TextButton,
 } from "./index";
@@ -35,10 +36,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A group with its rows: one in, one left out, one shown on one line. */
+/** The quote, then a group 32px under it (the page spaces them; the parts keep no room around themselves); one row in, one left out. */
 export const Group: Story = {
 	render: () => (
-		<>
+		<Stack gap={32}>
 			<ReviewQuote>“요약이 빈 글에 요약을 채워 줘”</ReviewQuote>
 			<ReviewGroup
 				title="요약 채우기"
@@ -61,7 +62,7 @@ export const Group: Story = {
 					<Del>비어 있음</Del> → <Ins>설정 파일 없이 사이트를 고치는 법</Ins>
 				</ReviewItem>
 			</ReviewGroup>
-		</>
+		</Stack>
 	),
 };
 
@@ -163,7 +164,7 @@ export const OneLine: Story = {
 	),
 };
 
-/** A text field side by side: now on the tool ground, the proposal next to it. */
+/** A text field side by side: now on the tool ground, the proposal next to it; the column names stand in a 32px row at the top of the group. */
 export const SideBySide: Story = {
 	render: () => (
 		<ReviewGroup title="다듬기" meta="글 1편 · 되돌릴 수 있음">

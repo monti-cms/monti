@@ -208,7 +208,7 @@
 | `height-control-lg` | 36px | 기본 크기의 버튼(알약)과 입력 칸. 폼, 대화상자, 페이지 헤더. |
 | `height-control-md` | 32px | 중간 버튼과 입력 칸(`size="md"`). 속성 패널과 사이드 패널. |
 | `height-control-sm` | 28px | 작은 버튼과 작은 입력 칸(`size="sm"`). 툴바, 필터, 표, 카드 안. |
-| `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). |
+| `height-control-xs` | 24px | 작은 칩: 필드 안의 값(태그). 작은 둥근 아이콘 버튼(행의 ⋯, 메시지 아래 동작, 작은 입력 칸 끝의 컨트롤, `size-monti-control-xs`). |
 | `height-icon-button` | 32px | 둥근 아이콘 버튼(정사각형: 폭 = 높이). |
 | `height-header` | 60px | 편집기의 앱 헤더, 도구 패널과 시트의 헤더. |
 | `height-toolbar` | 48px | 페이지 제목 아래의 탭과 필터 줄. |

@@ -38,6 +38,26 @@ export const States: Story = {
 	),
 };
 
+/** The three sizes, `md` 32px, `sm` 28px, `xs` 24px (a row's ⋯), then `tone="quiet"`: faint until pointed at (a message's actions). */
+export const Sizes: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="더보기">
+				<OverflowMenuHorizontal aria-hidden />
+			</IconButton>
+			<IconButton label="더보기" size="sm">
+				<OverflowMenuHorizontal aria-hidden />
+			</IconButton>
+			<IconButton label="더보기" size="xs">
+				<OverflowMenuHorizontal aria-hidden />
+			</IconButton>
+			<IconButton label="지우기" size="xs" tone="quiet">
+				<TrashCan aria-hidden />
+			</IconButton>
+		</Stack>
+	),
+};
+
 /** `tone="danger"` is for a button that deletes or removes something: a red icon, and the red wash on hover. */
 export const Danger: Story = {
 	render: () => (

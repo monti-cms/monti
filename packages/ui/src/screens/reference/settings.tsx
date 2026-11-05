@@ -57,17 +57,19 @@ export function SettingsTabs({
 export function ShownSelect({
 	value,
 	width = "full",
+	size,
 	proposal,
 	id,
 }: {
 	value: string;
-	width?: "fit" | "full" | "choice";
+	width?: "fit" | "full";
+	size?: "sm" | "md" | "default";
 	proposal?: boolean;
 	id?: string;
 }) {
 	return (
 		<Select items={[{ value: "shown", label: value }]} value="shown">
-			<SelectTrigger id={id} width={width} proposal={proposal}>
+			<SelectTrigger id={id} width={width} size={size} proposal={proposal}>
 				<SelectValue />
 			</SelectTrigger>
 		</Select>

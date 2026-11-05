@@ -11,8 +11,9 @@ function PickList({ className, ...props }: Omit<React.ComponentProps<"div">, "ro
 }
 
 /**
- * One kind in a {@link PickList}: its name, and `mark` at the end when picking it opens more (→). The picked row takes the selected background and
- * the ink color; the others are muted.
+ * One kind in a {@link PickList}: its name, and `mark` at the end for a real add-on to the name (the plugin a kind comes from: "Ollama", "seo"). It never
+ * carries an arrow: the row's place in the list already says that picking it shows more beside it. The picked row takes the selected background and the
+ * ink color; the others are muted. A row is 32px, like every menu row.
  */
 function PickListItem({
 	selected = false,

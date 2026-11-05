@@ -16,7 +16,7 @@ export function PickOne({
 	items: { value: string; label: string }[];
 	value: string | null;
 	onChange: (value: string) => void;
-	width?: "full" | "fit" | "choice";
+	width?: "full" | "fit";
 	size?: "sm" | "md" | "default";
 	disabled?: boolean;
 	/** The name for screen readers when no label points at it. */

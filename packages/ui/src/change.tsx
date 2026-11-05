@@ -1,9 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { OptionContext } from "./option";
 
 const changeVariants = cva(
-	"grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-monti-12 border-monti-muted border-b py-monti-16 *:data-[slot=change-body]:col-start-2 [&_[data-slot=radio-group]:not([data-height])]:gap-monti-10 [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-note [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-muted [&_:is([data-slot=option],[data-slot=radio-item]):has([data-checked])]:text-monti-default",
+	"grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-monti-12 border-monti-muted border-b py-monti-16 first:pt-0 *:data-[slot=change-body]:col-start-2",
 	{
 		variants: {
 			/** What the change is: a new field (green), an edit (yellow), a removal (red). */
@@ -16,10 +17,15 @@ const changeVariants = cva(
 	},
 );
 
+/** What a change's choice rows are told: quiet words. One object, so the rows do not render again for nothing. */
+const QUIET = { text: "quiet" } as const;
+
 /**
  * One change in the review that opens before a schema is saved: a tag for the kind, the name in bold with its key at the end of the line, and under
  * them, from the same left edge, what to do with the data already saved (radio choices, a result line, a list of what is affected). `tag` is the app's word
- * ("New", "Edit", "Removed"). Choices are `Option` rows with a radio or a check; their text is 13px, one step under the name.
+ * ("New", "Edit", "Removed"). Choices are `Option` rows with a radio or a check: the block tells them to read `quiet` (13px, one step under the name,
+ * muted until picked). Blocks follow each other with 16px above and below and a line between; the first of a run has none above, so it starts where its
+ * container's padding ends.
  */
 function ChangeGroup({
 	kind,
@@ -49,7 +55,7 @@ function ChangeGroup({
 				)}
 			</span>
 			<div data-slot="change-body" className="flex min-w-0 flex-col gap-monti-10">
-				{children}
+				<OptionContext value={QUIET}>{children}</OptionContext>
 			</div>
 		</section>
 	);

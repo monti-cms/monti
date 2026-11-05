@@ -17,7 +17,7 @@
 - **ghost-danger**: 지우거나 비우는 ghost("비우기", "영구 삭제"). 빨간 글자, 가리키면 `bg-danger-muted`.
 - **sm**: 카드와 패널 안의 알약("적용", "저장"). 높이 `height-control-sm`(28px), 글자 13px, 좌우 여백 12px.
 - 글자를 가운데에 두는 것은 글꼴의 몫이다. 위아래 여백은 같다. 아래 여백을 더 줘서 글자를 들어 올리지 않는다.
-- **비활성**: 불투명도 .45. 왜 비활성인지는 버튼이 아니라 옆의 글이나 남은 할 일이 알려 준다.
+- **누를 수 없을 때**: 흐린 알약을 두고 끝내지 않는다(원칙 7). 아직 준비되지 않은 폼의 알약도 누를 수 있고, 누른 그때 고칠 곳이 그 자리에서 말한다. 필드 시트의 "필드 추가"는 빈 식별자 칸에 오류 줄("이 칸을 채워요.")을 띄우고 그 칸으로 포커스를 옮긴다. 흐린 알약(불투명도 .45)은 지금 정말 할 수 없는 일에만 쓰고, 그 까닭은 사람이 누르려는 그 자리에서 읽힌다. 나뉜 알약의 "발행됨"처럼 라벨이 까닭을 말하거나, 바로 옆에 까닭이 있다.
 - **로딩**(`.is-loading`): 도는 고리(`.mt-spinner`, 14px, `sm`에서는 12px)가 앞에 오고, 라벨은 하고 있는 일을 말한다("저장 중…", "올리는 중 64%").
   - 앞 아이콘은 고리로 바뀐다.
   - 채움은 그대로 두고 버튼을 흐리게 하지 않는다. 비활성처럼 다시 누를 수 없다. 흐리게 하지 않는 까닭은 "할 수 없는" 것이 아니라 "하고 있는" 것이기 때문이다.
@@ -74,7 +74,7 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 ### 코드
 
-`IconButton`: `label`은 접근성 이름이자 호버 툴팁이다. `variant`는 `ghost`(기본)나 `primary`(검은 바탕), `size`는 `md`(32px)나 `sm`(28px)다. `pressed`는 켜져 있는 동안 배경을 유지하는 토글로 만든다. `tone="danger"`는 빨간 버전이다. 메뉴나 팝오버를 열려면 `trigger`를 넘긴다. 예: `trigger={(button) => <PopoverTrigger render={button} />}`.
+`IconButton`: `label`은 접근성 이름이자 호버 툴팁이다. `variant`는 `ghost`(기본)나 `primary`(검은 바탕), `size`는 `md`(32px), `sm`(28px), `xs`(24px, 아이콘 14px)다. 20px 같은 그 밖의 크기는 없다. `pressed`는 켜져 있는 동안 배경을 유지하는 토글로 만든다. `tone="danger"`는 빨간 버전이고, `tone="quiet"`는 가리키기 전까지 `fg-faint`인 조용한 버전이다(메시지 아래 동작, 대기 중인 말). 자기가 그리지 않는 아이콘 버튼을 담는 부품은 `IconButtonContext`로 크기와 톤을 정해 준다. 입력 칸의 끝 컨트롤은 칸보다 한 단계 작고(`Input`, `Textarea`), 메시지 아래 줄은 `xs` + `quiet`다(`ChatMessageActions`). 버튼에 직접 준 prop이 이긴다. 부모가 자손 선택자로 버튼의 크기나 색을 덮어쓰지 않는다. 메뉴나 팝오버를 열려면 `trigger`를 넘긴다. 예: `trigger={(button) => <PopoverTrigger render={button} />}`.
 
 ## 나뉜 알약
 
@@ -88,7 +88,7 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 ### 코드
 
-`SplitButton`: `label`, `menu`(항목들, `DropdownMenuItem`으로), `menuLabel`(캐럿 쪽 반의 스크린 리더 이름이자 툴팁), `loading`과 `disabled`(둘 다 양쪽 반에 적용). 메뉴는 알약 전체 아래에 달린다. 로딩 중인 알약은 채움을 지킨다.
+`SplitButton`: `label`, `menu`(항목들, `DropdownMenuItem`으로), `menuLabel`(캐럿 쪽 반의 스크린 리더 이름이자 툴팁), `loading`과 `disabled`(둘 다 양쪽 반에 적용). `disabled`는 지금 정말 할 수 없을 때만 쓰고, 그때 `label`이 까닭을 말한다("발행됨", 원칙 7). 메뉴는 알약 전체 아래에 달린다. 로딩 중인 알약은 채움을 지킨다.
 
 ## 스피너
 

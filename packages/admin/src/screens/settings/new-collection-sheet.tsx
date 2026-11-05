@@ -18,7 +18,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { addressOf, addressPart } from "./basics-tab";
 import { at, type DraftField } from "./schema-draft";
@@ -64,8 +64,15 @@ function Body({
 	const [kind, setKind] = useState<"document" | "item">("document");
 	const [path, setPath] = useState<string | null>(null);
 	const taken = model.collections.includes(id);
+	// Creating is never greyed out (README principle 7): pressed with a field empty, that field says so and takes the focus.
+	const [tried, setTried] = useState(false);
+	const nameInput = useRef<HTMLInputElement>(null);
+	const idInput = useRef<HTMLInputElement>(null);
+	const labelError = tried && label.trim() === "" ? t("settings.fillIn") : null;
 	const error = !id
-		? null
+		? tried
+			? t("settings.fillIn")
+			: null
 		: !IDENTIFIER.test(id)
 			? t("settings.new.badId")
 			: taken
@@ -75,6 +82,11 @@ function Body({
 	const address = path ?? addressOf(id);
 
 	const make = () => {
+		if (!ready) {
+			setTried(true);
+			(label.trim() === "" ? nameInput : idInput).current?.focus();
+			return;
+		}
 		const { draft } = model;
 		draft.set(at.collection(id), { kind });
 		draft.set(at.path(id), address);
@@ -97,7 +109,15 @@ function Body({
 					<FormFieldLabel htmlFor="collection-name" required>
 						{t("settings.new.name")}
 					</FormFieldLabel>
-					<Input id="collection-name" required value={label} onChange={(event) => setLabel(event.target.value)} />
+					<Input
+						ref={nameInput}
+						id="collection-name"
+						required
+						value={label}
+						aria-invalid={labelError ? true : undefined}
+						onChange={(event) => setLabel(event.target.value)}
+					/>
+					{labelError ? <FormFieldError>{labelError}</FormFieldError> : null}
 				</FormField>
 				<FormField>
 					<Inline gap={6} align="center">
@@ -107,6 +127,7 @@ function Body({
 						<LockMark label={t("settings.basics.fixed")} />
 					</Inline>
 					<Input
+						ref={idInput}
 						id="collection-id"
 						mono
 						required
@@ -147,9 +168,7 @@ function Body({
 				<Button variant="ghost" onClick={onClose}>
 					{t("settings.cancel")}
 				</Button>
-				<Button disabled={!ready} onClick={make}>
-					{t("settings.new.make")}
-				</Button>
+				<Button onClick={make}>{t("settings.new.make")}</Button>
 			</SheetFooter>
 		</SheetContent>
 	);

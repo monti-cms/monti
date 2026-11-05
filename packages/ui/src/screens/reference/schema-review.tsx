@@ -42,7 +42,7 @@ export function SchemaReviewScreen() {
 							검토
 						</SheetTitle>
 					</SheetHeader>
-					<SheetBody blocks>
+					<SheetBody>
 						<Stack gap={12}>
 							<Stack gap={0}>
 								<ChangeGroup kind="edit" tag="이름" title="요약" identifier="summary → excerpt">
@@ -57,7 +57,7 @@ export function SchemaReviewScreen() {
 										<RadioItem
 											value="move"
 											label="다른 필드로 옮기기"
-											control={<ShownSelect value="필드" width="choice" />}
+											control={<ShownSelect value="필드" size="md" width="fit" />}
 										/>
 									</RadioGroup>
 								</ChangeGroup>
@@ -66,7 +66,7 @@ export function SchemaReviewScreen() {
 										<RadioItem
 											value="fill"
 											label="빈 글 148편 채우기"
-											control={<ShownSelect value="메모" width="choice" />}
+											control={<ShownSelect value="메모" size="md" width="fit" />}
 										/>
 										<RadioItem value="leave" label="그대로 두기" />
 									</RadioGroup>

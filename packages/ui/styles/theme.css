@@ -206,6 +206,7 @@
 	--height-monti-control-sm: var(--monti-height-control-sm);
 	--size-monti-control-sm: var(--monti-height-control-sm);
 	--height-monti-control-xs: var(--monti-height-control-xs);
+	--size-monti-control-xs: var(--monti-height-control-xs);
 	--height-monti-icon-button: var(--monti-height-icon-button);
 	--size-monti-icon-button: var(--monti-height-icon-button);
 	--height-monti-header: var(--monti-height-header);

@@ -13,6 +13,7 @@ import {
 	Option,
 	RadioGroup,
 	RadioItem,
+	Stack,
 } from "./index";
 
 /**
@@ -43,7 +44,7 @@ export const New: Story = {
 	),
 };
 
-/** An edit with radio choices; the choice that needs one more answer carries it at the end of its row. */
+/** An edit with radio choices: the block tells its rows to read quiet (13px, muted until picked); each row is 32px, 4px apart. */
 export const EditWithChoices: Story = {
 	render: () => (
 		<ChangeGroup kind="edit" tag="바꿈" title="요약" identifier="summary → excerpt">
@@ -126,5 +127,31 @@ export const LongText: Story = {
 				/>
 			</ChangeLines>
 		</ChangeGroup>
+	),
+};
+
+/**
+ * A run of blocks, as the review sheet shows them: the first starts at the top of its container (nothing above it), each next one 16px under the line
+ * of the one before. The container puts no gap between them.
+ */
+export const Run: Story = {
+	render: () => (
+		<Stack gap={0}>
+			<ChangeGroup kind="edit" tag="이름" title="요약" identifier="summary → excerpt">
+				<RadioGroup defaultValue="move">
+					<RadioItem value="move" label="값 옮기기" hint="148편" />
+					<RadioItem value="empty" label="빈 칸으로 시작" />
+				</RadioGroup>
+			</ChangeGroup>
+			<ChangeGroup kind="drop" tag="지움" title="부제" identifier="subtitle">
+				<RadioGroup defaultValue="clear">
+					<RadioItem value="clear" label="값 지우기" hint="132편" />
+					<RadioItem value="keep" label="그대로 두기" />
+				</RadioGroup>
+			</ChangeGroup>
+			<ChangeGroup kind="new" tag="추가" title="읽는 시간" identifier="readingTime">
+				<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
+			</ChangeGroup>
+		</Stack>
 	),
 };

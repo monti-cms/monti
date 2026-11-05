@@ -5,7 +5,7 @@ import {
 	FormField,
 	FormFieldLabel,
 	Input,
-	LockMark,
+	Option,
 	PickList,
 	PickListItem,
 	Sheet,
@@ -15,8 +15,9 @@ import {
 	SheetHeader,
 	SheetSection,
 	SheetSplit,
-	SheetSummary,
 	SheetTitle,
+	Stack,
+	Switch,
 } from "./index";
 
 /** Where work with several inputs happens: 520px from the right over a dimmed page, a 60px head, Cancel and one pill at the bottom. */
@@ -35,34 +36,41 @@ const Footer = (
 	</SheetFooter>
 );
 
-/** Titled sections in the body; a section that cannot be changed ends its title with a lock. */
+/**
+ * What the field is (untitled, first), then titled sections, 40px apart: the body spaces its parts, a section keeps no room of its own. The rows of a
+ * section stand at the medium control height (32px), 4px apart.
+ */
 export const Sections: Story = {
 	render: () => (
 		<Sheet defaultOpen>
 			<SheetContent>
 				<SheetHeader>
-					<SheetTitle of="노트" ofMono={false}>
+					<SheetTitle of="· 노트" ofMono={false}>
 						필드 추가
 					</SheetTitle>
 				</SheetHeader>
 				<SheetBody>
-					<SheetSection title="보기">
+					<Stack gap={20}>
+						<FormField>
+							<FormFieldLabel htmlFor="name">식별자</FormFieldLabel>
+							<Input id="name" mono defaultValue="readingTime" />
+						</FormField>
 						<FormField>
 							<FormFieldLabel htmlFor="label">라벨</FormFieldLabel>
 							<Input id="label" defaultValue="읽는 시간" />
 						</FormField>
-					</SheetSection>
-					<SheetSection
-						title={
-							<>
-								구조 <LockMark label="구조는 바꿀 수 없어요" />
-							</>
-						}
-					>
-						<FormField>
-							<FormFieldLabel htmlFor="name">이름</FormFieldLabel>
-							<Input id="name" defaultValue="readingTime" />
-						</FormField>
+					</Stack>
+					<SheetSection title="입력 규칙">
+						<Stack gap={4}>
+							<Option spread>
+								필수
+								<Switch />
+							</Option>
+							<Option spread>
+								여러 줄
+								<Switch defaultChecked />
+							</Option>
+						</Stack>
 					</SheetSection>
 				</SheetBody>
 				{Footer}
@@ -102,7 +110,6 @@ export const Split: Story = {
 							<FormFieldLabel htmlFor="split-label">라벨</FormFieldLabel>
 							<Input id="split-label" />
 						</FormField>
-						<SheetSummary>텍스트 필드 · 한 줄 · 비어 있어도 됨</SheetSummary>
 					</SheetBody>
 				</SheetSplit>
 				{Footer}

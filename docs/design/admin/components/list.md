@@ -69,7 +69,7 @@
 - 제목은 잉크색 `text-body`(14 / 400)이고, 그 아래에 주소가 mono `fg-faint`로 있다.
 - 행 어디를 눌러도 그 항목이 열린다. 제목은 행 전체를 덮는 링크라서 제목을 정확히 누르지 않아도 된다. 체크박스와 ⋯는 그 위에 있어 따로 누른다.
 - ⋯는 늘 보인다. 체크박스는 포인터가 행 위에 있을 때와 고른 행에만 보인다. 체크박스는 표의 왼쪽 바깥 여백(-26px)에 걸린다. 목록의 스크롤 상자는 왼쪽 여백으로 32px 더 들어가므로 체크박스가 잘리지 않고 가로 스크롤도 생기지 않는다.
-- 행의 ⋯는 둥근 버튼이 아니라 글자 버튼(`RowMore`, 16px 글자, `fg-muted`, 포인터를 올리면 잉크색)이다. 행의 한 줄(20px)에 놓여서 행은 10px, 그 줄, 10px이다(구분선을 더해 41px). ⋯ 열은 46px(글자와 열 여백)이다. 페이지 머리나 패널의 ⋯는 그대로 32px 둥근 버튼(`IconButton`)이다.
+- 행의 ⋯는 작은 둥근 아이콘 버튼(`RowMore`: `IconButton size="xs"`, 24px, 아이콘 14px, `fg-muted`, 가리키면 잉크색과 `bg-selected`)이다. 높이가 컨트롤 단계에 없는 글자 버튼(20px)은 쓰지 않는다(원칙 10). 행을 높이지 않고 행 가운데에 선다. 페이지 머리나 패널의 ⋯는 32px 둥근 버튼(`IconButton`)이다.
 - 제목 아래에 `text-note`로 둘째 줄이 있는 행(템플릿의 섹션)은 위아래가 10 대신 16px이다.
 - 격자 목록(미디어)도 같은 규칙을 따른다. 타일 격자는 `.mt-tiles`(좌우 여백 12px)이고, 그 위의 도구 행은 `.mt-table-head`다. 그래서 글 표와 미디어 격자의 첫 글자가 같은 세로선에 있다.
 - 미디어의 목록 보기에는 열 이름 행이 없다. 조건과 순서는 그 위의 도구 행에 있다. 파일 행은 10px, 40×30 그림(4:3, `radius-sm`; `Image size="row"`), 10px이라서 구분선을 더해 51px이다. 형식, 크기, 치수, 날짜는 mono `text-meta`다. 날짜는 글 목록처럼 짧게 쓴다("10. 12"). 치수가 없는 파일(PDF)은 그 칸을 비우고 "—"도 쓰지 않는다. 폴더 행은 16px 아이콘을 그림 열에, 이름을 이름 열에 두고 그 뒤에 개수를 붙이며, ⋯가 없으므로(폴더로 할 수 있는 일은 오른쪽 클릭 메뉴에 있다) 41px이다.
@@ -80,7 +80,7 @@
 
 ### 코드
 
-`Table`(`TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`과 함께)은 고정 레이아웃 표를 그린다. 너비를 주지 않은 `layout="auto"` 표에서는 열이 내용 너비를 가지고, `truncate`인 열(제목)이 남은 자리를 모두 가진다. 화면 명세는 이 기본을 쓴다. 옵션: px 단위 `columns` 너비, 전체 너비, `scroll`(표가 자기 상자 안에서 가로로 스크롤한다) 또는 `none`(페이지나 부모가 스크롤한다. 고정 헤더와 왼쪽 여백에 걸리는 행 체크에 필요하다), 크기를 바꿀 수 있는 열을 위한 `layout="fixed"`, 고정 헤더, 새 행을 불러오는 동안의 더 조용한 "stale" 상태. 행 부품: `RowCheck`, `RowLink`, `RowTitle`(한 줄에 잉크색 제목, 12px 뒤 흐린 mono 주소. 자리가 모자라면 주소가 먼저 줄어든다. `folder`이면 앞에 16px 폴더 아이콘과 8px, 주소 자리에는 담은 것 "글 2". 다른 열은 회색이다), `RowActions`, `RowThumb`(미디어 행의 40px 썸네일 열. 파일의 그림이거나, 그림들 아래 가운데에 놓인 폴더 행의 아이콘), `ListScroll`. `TableRow twoLine`은 제목 아래 둘째 줄이 있는 행이다(템플릿의 절, 카테고리의 설명). `ListHead`는 열 이름 행을 그린다. 열마다 `ListHeadColumn`이 있고, px 단위 `width`(없으면 다른 열이 남긴 자리를 차지한다), `sorted`(이름이 잉크색이고 ↓나 ↑가 붙는다), `filtered`(이름 뒤에 점이 붙는다), `menu`(메뉴의 행: 정렬, 거를 값, 숨기기)를 받는다. `ListHeadAdd`는 꺼진 열을 끝의 +로 내밀고, + 버튼의 이름("Add column")을 준다. 메뉴 카드는 220px이고 행 글자가 이름의 선에서 시작한다(카드는 이름 옆으로 15px 더 나간다). 끌기는 포인터가 조금 움직인 뒤에, 버튼을 누르고 있는 동안에만 시작한다. 그래서 누르기는 클릭으로 남고, 메뉴를 연 누르기는 끌기가 되지 않는다. 끄는 이름은 그 가운데가 이웃의 가운데에 닿을 때 이웃의 자리를 차지하므로, 두 열이 서로 자리를 왔다 갔다 바꾸지 않는다.
+`Table`(`TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`과 함께)은 고정 레이아웃 표를 그린다. 너비를 주지 않은 `layout="auto"` 표에서는 열이 내용 너비를 가지고, `truncate`인 열(제목)이 남은 자리를 모두 가진다. 화면 명세는 이 기본을 쓴다. 옵션: px 단위 `columns` 너비, 전체 너비, `scroll`(표가 자기 상자 안에서 가로로 스크롤한다) 또는 `none`(페이지나 부모가 스크롤한다. 고정 헤더와 왼쪽 여백에 걸리는 행 체크에 필요하다), 크기를 바꿀 수 있는 열을 위한 `layout="fixed"`, 고정 헤더, 새 행을 불러오는 동안의 더 조용한 "stale" 상태. 행 부품: `RowCheck`, `RowLink`, `RowTitle`(한 줄에 잉크색 제목, 12px 뒤 흐린 mono 주소. 자리가 모자라면 주소가 먼저 줄어든다. `folder`이면 앞에 16px 폴더 아이콘과 8px, 주소 자리에는 담은 것 "글 2". 다른 열은 회색이다), `RowActions`, `RowThumb`(미디어 행의 40px 썸네일 열. 파일의 그림이거나, 그림들 아래 가운데에 놓인 폴더 행의 아이콘), `ListScroll`. `TableRow twoLine`은 제목 아래 둘째 줄이 있는 행이다(템플릿의 절, 카테고리의 설명). `TableRow`의 `aria-disabled`(흐린 행, .45)는 지금 정말 열 수 없는 행에만 쓰고, 까닭은 그 행 안의 글로 읽힌다(원칙 7). `ListHead`는 열 이름 행을 그린다. 열마다 `ListHeadColumn`이 있고, px 단위 `width`(없으면 다른 열이 남긴 자리를 차지한다), `sorted`(이름이 잉크색이고 ↓나 ↑가 붙는다), `filtered`(이름 뒤에 점이 붙는다), `menu`(메뉴의 행: 정렬, 거를 값, 숨기기)를 받는다. `ListHeadAdd`는 꺼진 열을 끝의 +로 내밀고, + 버튼의 이름("Add column")을 준다. 메뉴 카드는 220px이고 행 글자가 이름의 선에서 시작한다(카드는 이름 옆으로 15px 더 나간다). 끌기는 포인터가 조금 움직인 뒤에, 버튼을 누르고 있는 동안에만 시작한다. 그래서 누르기는 클릭으로 남고, 메뉴를 연 누르기는 끌기가 되지 않는다. 끄는 이름은 그 가운데가 이웃의 가운데에 닿을 때 이웃의 자리를 차지하므로, 두 열이 서로 자리를 왔다 갔다 바꾸지 않는다.
 
 `@monti-cms/ui`의 `List`와 `ListItem`은 다른 부품이다. 짧은 줄의 목록(`bullet`은 줄마다 점을 찍고, `none`은 그냥 세로로 늘어놓는다)으로, 한 단계가 할 일이나 폴더에 든 것을 보여 줄 때 쓴다.
 
@@ -224,7 +224,7 @@
 
 ### 코드
 
-`ListSection`(`title`, `count`, `countTone`, 행에 안쪽 여백이 없을 때 `flush`)은 제목과 개수가 붙은 행 목록이다. 자기 바깥 여백을 갖지 않고, 놓는 쪽의 `gap`이 묶음 사이를 띄운다. 행은 도구 화면의 `ListSectionRow`이거나 검토 시트의 `ChangeGroup`이다. 행 부품은 `ListSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 행은 보기만 하는 목록이라 포인터가 올라가도 바탕이 바뀌지 않는다. 동작은 끝의 글자 버튼과 컨트롤에만 있다. `meta` 줄은 늘 mono 12다. 쓰임새나 상태("이번 달 1.24M 토큰")에도, 식별자(플러그인 코드 "bareun", `metaTone="subtle"`)에도 같은 줄을 쓴다. 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
+`ListSection`(`title`, `count`, `countTone`, 행에 안쪽 여백이 없을 때 `flush`)은 제목과 개수가 붙은 행 목록이다. 자기 바깥 여백을 갖지 않고, 놓는 쪽의 `gap`이 묶음 사이를 띄운다. 행은 도구 화면의 `ListSectionRow`이거나 검토 시트의 `ChangeGroup`이다. 행 부품은 `ListSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 행 높이는 행의 종류마다 하나로 고정된다. 제목만 있는 행은 52px, `meta` 줄이 있는 행은 74px이다(아래 선 포함). 끝에 무엇이 오든(글자 버튼, 36px 컨트롤) 높이는 같다. 컨트롤이 행을 키우지 않는다. 행은 보기만 하는 목록이라 포인터가 올라가도 바탕이 바뀌지 않는다. 동작은 끝의 글자 버튼과 컨트롤에만 있다. `meta` 줄은 늘 mono 12다. 쓰임새나 상태("이번 달 1.24M 토큰")에도, 식별자(플러그인 코드 "bareun", `metaTone="subtle"`)에도 같은 줄을 쓴다. 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
 
 ## 휴지통 안의 폴더
 
@@ -275,4 +275,4 @@
 
 ### 코드
 
-`LanguageRow`(이름, `code`, `label`, `dot`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `DragHandle`(손잡이), `LanguageSource`(굵은 표시와 작은 ghost 버튼 하나 "바꾸기"). 행은 양 끝 8px 안에 내용을 두고, 옮길 수 있는 행(`handle`이 있는 행)만 가리키면 `bg-muted`가 깔린다. 원문 행은 고정이라 반응하지 않는다. 언어를 빼는 ×는 행 끝의 `IconButton`(`Close`)이고, 행 높이를 늘리지 않으며 행 끝에서 2px 떨어진다(칸 안 버튼과 같다). 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`, "직접 입력" 창은 `DialogTitle`이 `of`("새 언어 · tlh")를 받는 `Dialog`다.
+`LanguageRow`(이름, `code`, `label`, `dot`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `DragHandle`(손잡이), `LanguageSource`(굵은 표시와 작은 ghost 버튼 하나 "바꾸기"). 행은 양 끝 8px 안에 내용을 두고, 옮길 수 있는 행(`handle`이 있는 행)만 가리키면 `bg-muted`가 깔린다. 원문 행은 고정이라 반응하지 않는다. 행은 36px(`height-control-lg`, 아래 선 포함)로 선다. 언어를 빼는 ×는 행 끝의 `IconButton`(`Close`, 32px)이고, 원문 행의 "바꾸기"는 작은 버튼(28px)이다. 둘 다 행 안에 그대로 들어가고, 음수 여백으로 행에 맞추지 않는다. 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`, "직접 입력" 창은 `DialogTitle`이 `of`("새 언어 · tlh")를 받는 `Dialog`다.

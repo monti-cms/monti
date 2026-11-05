@@ -31,7 +31,7 @@ import {
 	TextButton,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { type ComponentProps, type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
@@ -216,8 +216,13 @@ function FieldSheetBody({
 	const others = keys
 		.filter((key) => key !== open.key && draft.value(at.field(c, key)))
 		.map((key) => model.fieldName(c, key));
+	// Saving is never greyed out (README principle 7): pressed with no identifier, the field says so and takes the focus.
+	const [tried, setTried] = useState(false);
+	const nameInput = useRef<HTMLInputElement>(null);
 	const nameError = !form.name
-		? null
+		? tried
+			? t("settings.fillIn")
+			: null
 		: !IDENTIFIER.test(form.name)
 			? t("settings.field.badName")
 			: others.includes(form.name)
@@ -226,6 +231,11 @@ function FieldSheetBody({
 	const ready = form.name !== "" && nameError === null;
 
 	const save = () => {
+		if (!ready) {
+			setTried(true);
+			nameInput.current?.focus();
+			return;
+		}
 		const key = open.key ?? newFieldKey(keys, form.name);
 		if (structure)
 			draft.set(at.field(c, key), { name: form.name, def: defOf(form, existing?.def ?? null) } satisfies DraftField);
@@ -295,6 +305,7 @@ function FieldSheetBody({
 					{t("settings.field.name")}
 				</FormFieldLabel>
 				<Input
+					ref={nameInput}
 					id="field-name"
 					mono
 					value={form.name}
@@ -545,15 +556,16 @@ function FieldSheetBody({
 		</SheetSection>
 	);
 
-	// The same two parts in every field sheet, on the dev server and on the live site alike: what the field is, then its input rules.
+	// The same two parts in every field sheet, on the dev server and on the live site alike: what the field is, then its input rules. The body puts 40px
+	// between them.
 	const sections = (
-		<Stack gap={0}>
+		<>
 			{about}
 			{options}
 			{picks}
 			{files}
 			{rules}
-		</Stack>
+		</>
 	);
 
 	const title = adding ? t("settings.field.add") : model.fieldLabel(c, open.key as string);
@@ -590,9 +602,7 @@ function FieldSheetBody({
 				</SheetSplit>
 				<SheetFooter>
 					{cancel}
-					<Button disabled={!ready} onClick={save}>
-						{t("settings.field.addButton")}
-					</Button>
+					<Button onClick={save}>{t("settings.field.addButton")}</Button>
 				</SheetFooter>
 			</SheetContent>
 		);
@@ -610,9 +620,7 @@ function FieldSheetBody({
 					</Inline>
 				) : null}
 				{cancel}
-				<Button disabled={!ready} onClick={save}>
-					{t("settings.save")}
-				</Button>
+				<Button onClick={save}>{t("settings.save")}</Button>
 			</SheetFooter>
 		</SheetContent>
 	);
