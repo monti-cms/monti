@@ -12,13 +12,15 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	DropLine,
 	EditorOverlay,
+	HeldBlock,
 	MenuShortcut,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
-import { NodeSelection, type Transaction } from "@tiptap/pm/state";
+import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { type DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { alignable, type BodyCatalogs } from "./catalog";
 import {
@@ -26,7 +28,6 @@ import {
 	canMove,
 	deleteBlock,
 	duplicateBlock,
-	handleTarget,
 	KIND_SHORTCUTS,
 	kindKey,
 	kindOf,
@@ -34,7 +35,8 @@ import {
 	offeredKinds,
 	turnInto,
 } from "./commands";
-import { markMenuOpen } from "./plugins";
+import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
+import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
 
 /** Where the handle floats: 64px left of the block (the + and the grip, 8 apart, then 8 to the text), centred on the block's first line. */
@@ -52,16 +54,21 @@ function spotOf(element: HTMLElement, pos: number): Spot {
 	return { pos, top: rect.top + Math.max(0, (line - HANDLE) / 2), left: left - LEFT };
 }
 
-/** The block under the pointer that has a handle, and its element. */
-function blockAt(editor: Editor, x: number, y: number): { pos: number; element: HTMLElement } | null {
-	const { view } = editor;
-	const hit = view.posAtCoords({ left: x, top: y });
-	if (!hit) return null;
-	const atom = hit.inside >= 0 ? view.state.doc.nodeAt(hit.inside) : null;
-	const pos = atom?.isBlock && atom.isAtom ? hit.inside : handleTarget(view.state.doc.resolve(hit.pos));
-	if (pos === null) return null;
-	const element = view.nodeDOM(pos);
-	return element instanceof HTMLElement ? { pos, element } : null;
+/** A drag in progress: the block in hand, its picture, where it is held from, and where it would land. */
+type Held = { from: number; html: string; left: number; width: number; y: number; drop: Drop | null };
+
+/** The pointer moves this far (px) before a press on the grip becomes a drag, so a press still opens the menu (list.md, `Sortable`). */
+const DRAG_AFTER = 4;
+
+/** The copy in hand hangs this far (px) under the pointer, so it covers neither the drop line nor the block above it. */
+const HELD_BELOW = 8;
+
+/** A block's picture for the copy in hand: a list item keeps its list around it, so its bullet or number shows. */
+function pictureOf(element: HTMLElement) {
+	if (element.tagName !== "LI" || !element.parentElement) return element.outerHTML;
+	const list = element.parentElement.cloneNode(false) as HTMLElement;
+	list.innerHTML = element.outerHTML;
+	return list.outerHTML;
 }
 
 /**
@@ -72,12 +79,15 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 	const { t } = useAdmin();
 	const [spot, setSpot] = useState<Spot | null>(null);
 	const [open, setOpen] = useState(false);
+	const [held, setHeld] = useState<Held | null>(null);
+	// Set from the moment a press becomes a drag until just after it is let go, so the press that ends a drag does not open the menu.
+	const dragging = useRef(false);
 	const element = useRef<HTMLElement | null>(null);
 
 	const point = useCallback(
-		(x: number, y: number) => {
-			if (!editor?.isEditable || open) return;
-			const found = blockAt(editor, x, y);
+		(_x: number, y: number) => {
+			if (!editor?.isEditable || open || held) return;
+			const found = blockAtLine(editor.view, y);
 			if (!found) return;
 			element.current = found.element;
 			const next = spotOf(found.element, found.pos);
@@ -85,7 +95,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 				current && current.pos === next.pos && current.top === next.top && current.left === next.left ? current : next,
 			);
 		},
-		[editor, open],
+		[editor, open, held],
 	);
 
 	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
@@ -116,24 +126,83 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 	};
 
 	const changeOpen = (next: boolean) => {
+		// A press that became a drag does not open the menu.
+		if (next && dragging.current) return;
 		setOpen(next);
 		if (editor) editor.view.dispatch(markMenuOpen(editor.state, next && spot ? spot.pos : null));
 	};
 
-	const dragStart = (event: DragEvent<HTMLElement>) => {
-		if (!editor || !spot) return;
-		changeOpen(false);
+	/**
+	 * Dragging the grip (list.md, moving by dragging): after 4px the block lifts, its place stays as a gap, its copy follows the pointer and a line shows
+	 * where it lands. Letting go moves it; Esc puts it back. A press without a move still opens the menu.
+	 */
+	const pressGrip = (event: PointerEvent<HTMLElement>) => {
+		if (!editor || !spot || event.button !== 0 || !element.current) return;
 		const { view } = editor;
-		const selection = NodeSelection.create(view.state.doc, spot.pos);
-		view.dispatch(view.state.tr.setSelection(selection));
-		// The editor moves what is being dragged when it is dropped in the text, as a move of the block itself (it keeps its id).
-		view.dragging = { slice: selection.content(), move: true };
-		event.dataTransfer.effectAllowed = "move";
-		event.dataTransfer.setData("text/plain", selection.node.textContent);
-		if (element.current) event.dataTransfer.setDragImage(element.current, 0, 0);
+		const from = spot.pos;
+		const block = element.current;
+		const startX = event.clientX;
+		const startY = event.clientY;
+		let lifted: Held | null = null;
+		const move = (moved: globalThis.PointerEvent) => {
+			if (!lifted) {
+				if (Math.hypot(moved.clientX - startX, moved.clientY - startY) < DRAG_AFTER) return;
+				const rect = block.getBoundingClientRect();
+				dragging.current = true;
+				changeOpen(false);
+				lifted = {
+					from,
+					html: pictureOf(block),
+					left: rect.left,
+					width: rect.width,
+					y: moved.clientY,
+					drop: null,
+				};
+				view.dispatch(markHeld(view.state, from));
+			}
+			lifted = { ...lifted, y: moved.clientY, drop: dropAt(view, from, moved.clientY) };
+			setHeld(lifted);
+		};
+		const finish = (put: boolean) => {
+			window.removeEventListener("pointermove", move);
+			window.removeEventListener("pointerup", up);
+			window.removeEventListener("keydown", key, true);
+			if (!lifted) return;
+			const tr = markHeld(view.state, null);
+			if (put && lifted.drop) moveTo(tr, from, lifted.drop);
+			view.dispatch(tr.scrollIntoView());
+			view.focus();
+			setHeld(null);
+			setSpot(null);
+			setTimeout(() => {
+				dragging.current = false;
+			}, 0);
+		};
+		const up = () => finish(true);
+		const key = (pressed: KeyboardEvent) => {
+			if (pressed.key !== "Escape") return;
+			pressed.preventDefault();
+			finish(false);
+		};
+		window.addEventListener("pointermove", move);
+		window.addEventListener("pointerup", up);
+		window.addEventListener("keydown", key, true);
 	};
 
 	const overlay = () => {
+		if (held)
+			return (
+				<>
+					<EditorOverlay top={held.y + HELD_BELOW} left={held.left} width={held.width}>
+						<HeldBlock html={held.html} />
+					</EditorOverlay>
+					{held.drop ? (
+						<EditorOverlay top={held.drop.line.top} left={held.drop.line.left} width={held.drop.line.width}>
+							<DropLine />
+						</EditorOverlay>
+					) : null}
+				</>
+			);
 		if (!editor || !spot || !editor.isEditable) return null;
 		const { doc } = editor.state;
 		const node = doc.nodeAt(spot.pos);
@@ -153,8 +222,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 						gripLabel={t("editor.blockMenu")}
 						active={open}
 						onAdd={() => run(addBelow)}
-						draggable
-						onDragStart={dragStart}
+						onPointerDown={pressGrip}
 						trigger={(grip) => <DropdownMenuTrigger render={grip} />}
 					/>
 					<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>

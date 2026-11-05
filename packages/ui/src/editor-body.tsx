@@ -8,6 +8,7 @@ import { cn } from "./cn";
  *
  * - `data-empty` with `data-placeholder`: the empty line the cursor is on says how to add a block.
  * - `data-menu-open`: the block whose menu is open has the block background (`Block active`).
+ * - `data-held`: the block being dragged leaves its place as a gap (`SLOT`) while its lifted copy (`HeldBlock`) follows the pointer.
  * - `data-off`: a block the collection's editor no longer offers stays, in the faint ink, with its `data-off-label` after it.
  * - `data-box`: a block the editor shows but does not edit here, in a quiet box with its `data-box-label`: one the site no longer defines (kept
  *   as it is), or one whose own editor comes with its feature.
@@ -42,6 +43,7 @@ const EDITOR_BODY = cn(
 	"[&_[data-empty]]:before:pointer-events-none [&_[data-empty]]:before:float-left [&_[data-empty]]:before:h-0 [&_[data-empty]]:before:text-monti-faint [&_[data-empty]]:before:content-[attr(data-placeholder)]",
 	"[&_[data-menu-open]]:relative [&_[data-menu-open]]:isolate [&_[data-menu-open]]:before:pointer-events-none [&_[data-menu-open]]:before:absolute [&_[data-menu-open]]:before:-inset-x-monti-8 [&_[data-menu-open]]:before:inset-y-0 [&_[data-menu-open]]:before:-z-10 [&_[data-menu-open]]:before:rounded-monti-md [&_[data-menu-open]]:before:bg-monti-block [&_li[data-menu-open]]:before:-left-monti-28",
 	// A list item's ground covers its marker too, as `Block active` does in the reference.
+	"[&_[data-held]]:opacity-0",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
 	"[&_[data-box]]:mb-monti-20 [&_[data-box]]:rounded-monti-lg [&_[data-box]]:bg-monti-muted [&_[data-box]]:px-monti-16 [&_[data-box]]:py-monti-12 [&_[data-box]]:text-monti-note [&_[data-box]]:text-monti-subtle [&_[data-box]]:before:content-[attr(data-box-label)]",
 );

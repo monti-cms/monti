@@ -198,3 +198,20 @@ export const SavedElsewhere: Story = {
 		await waitFor(() => expect(page.getByText("저장 안 됨")).toBeVisible());
 	},
 };
+
+/** Mid-drag: "서론" in hand over the list, its place left as a gap, the line between the two points where it lands (the list will be cut there). */
+export const Dragging: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { text, body } = await editor(canvasElement);
+		pointAt(await within(text).findByText("서론"));
+		const grip = (await body.findByRole("button", { name: "블록 메뉴" }, wait)).getBoundingClientRect();
+		const x = grip.left + grip.width / 2;
+		const y = grip.top + grip.height / 2;
+		fireEvent.pointerDown(body.getByRole("button", { name: "블록 메뉴" }), { button: 0, clientX: x, clientY: y });
+		const first = (await within(text).findByText("첫 번째 요점")).getBoundingClientRect();
+		for (const to of [y + 10, first.top + 4, first.bottom - 4])
+			window.dispatchEvent(new PointerEvent("pointermove", { clientX: x + 8, clientY: to }));
+		await body.findByText("서론", { selector: "[data-slot=held-block] h2" }, wait);
+	},
+};

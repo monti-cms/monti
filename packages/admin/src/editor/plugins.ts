@@ -46,10 +46,14 @@ export const BlockIds = Extension.create({
 	},
 });
 
-const statesKey = new PluginKey<{ menuOpen: number | null }>("montiBodyStates");
+type Marked = { menuOpen: number | null; held: number | null };
+const statesKey = new PluginKey<Marked>("montiBodyStates");
 
 /** Marks the block whose menu is open (`data-menu-open`), or none. */
 export const markMenuOpen = (state: EditorState, pos: number | null) => state.tr.setMeta(statesKey, { menuOpen: pos });
+
+/** Marks the block being dragged (`data-held`): its place stays as a gap while its copy follows the pointer. */
+export const markHeld = (state: EditorState, pos: number | null) => state.tr.setMeta(statesKey, { held: pos });
 
 export type BodyStateLabels = { placeholder: string; off: string };
 
@@ -73,12 +77,13 @@ export function bodyStates({
 				new Plugin({
 					key: statesKey,
 					state: {
-						init: () => ({ menuOpen: null as number | null }),
+						init: (): Marked => ({ menuOpen: null, held: null }),
 						apply: (transaction, value) => {
-							const meta = transaction.getMeta(statesKey) as { menuOpen: number | null } | undefined;
-							if (meta) return meta;
-							if (value.menuOpen === null || !transaction.docChanged) return value;
-							return { menuOpen: transaction.mapping.map(value.menuOpen) };
+							const meta = transaction.getMeta(statesKey) as Partial<Marked> | undefined;
+							if (meta) return { ...value, ...meta };
+							if (!transaction.docChanged) return value;
+							const map = (pos: number | null) => (pos === null ? null : transaction.mapping.map(pos));
+							return { menuOpen: map(value.menuOpen), held: map(value.held) };
 						},
 					},
 					props: {
@@ -104,10 +109,15 @@ export function bodyStates({
 								decorations.push(Decoration.node(pos, pos + node.nodeSize, { "data-off": "", "data-off-label": off }));
 								return false;
 							});
-							const menuOpen = statesKey.getState(state)?.menuOpen;
-							const menuNode = menuOpen === null || menuOpen === undefined ? null : doc.nodeAt(menuOpen);
-							if (menuOpen !== null && menuOpen !== undefined && menuNode)
-								decorations.push(Decoration.node(menuOpen, menuOpen + menuNode.nodeSize, { "data-menu-open": "" }));
+							const marked = statesKey.getState(state);
+							for (const [pos, attribute] of [
+								[marked?.menuOpen, "data-menu-open"],
+								[marked?.held, "data-held"],
+							] as const) {
+								const node = pos === null || pos === undefined ? null : doc.nodeAt(pos);
+								if (node && pos !== null && pos !== undefined)
+									decorations.push(Decoration.node(pos, pos + node.nodeSize, { [attribute]: "" }));
+							}
 							return DecorationSet.create(doc, decorations);
 						},
 					},
