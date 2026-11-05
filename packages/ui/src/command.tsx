@@ -40,8 +40,24 @@ function CommandInput({ className, ...props }: React.ComponentProps<typeof Comma
 }
 
 /** The rows: one column, 320px high at most, scrolling inside. */
-function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
-	return <CommandPrimitive.List data-slot="command-list" className={cn(MENU_SCROLL, className)} {...props} />;
+/**
+ * The list of rows. Its name for screen readers is `aria-label` (or `label`): the list primitive names itself "Suggestions" over an `aria-label`, so
+ * the name is passed as its `label`.
+ */
+function CommandList({
+	className,
+	label,
+	"aria-label": ariaLabel,
+	...props
+}: React.ComponentProps<typeof CommandPrimitive.List>) {
+	return (
+		<CommandPrimitive.List
+			data-slot="command-list"
+			className={cn(MENU_SCROLL, className)}
+			label={label ?? ariaLabel}
+			{...props}
+		/>
+	);
 }
 
 function CommandEmpty({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {

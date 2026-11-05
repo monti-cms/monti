@@ -18,6 +18,7 @@ export function BodyEditor({
 	onChange,
 	editable = true,
 	templates = false,
+	onEditor,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -25,6 +26,8 @@ export function BodyEditor({
 	editable?: boolean;
 	/** The "/" menu offers the templates. Off where a template itself is written. */
 	templates?: boolean;
+	/** Hands the editor to the screen once it is made, so a to-do row can take the cursor to its block. */
+	onEditor?: (editor: Editor | null) => void;
 }) {
 	const editorRef = useRef<Editor | null>(null);
 	const slash = useSlashMenu({ catalogs, templates, editorRef });
@@ -38,6 +41,8 @@ export function BodyEditor({
 	});
 	editorRef.current = editor;
 	const handle = useBlockHandle(editor, catalogs);
+
+	useEffect(() => onEditor?.(editor), [editor, onEditor]);
 
 	useEffect(() => {
 		if (editor && editor.isEditable !== editable) editor.setEditable(editable, false);

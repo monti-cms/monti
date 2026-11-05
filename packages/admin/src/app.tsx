@@ -6,6 +6,7 @@ import { AdminProvider, type Language, type ScreenChannel, useAdmin } from "./op
 import type { Transport } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
+import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
@@ -13,7 +14,7 @@ import { LoginScreen } from "./screens/login/login-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
-import { useSession } from "./session";
+import { SessionProvider, useSession } from "./session";
 
 /** The words the `@monti-cms/ui` parts write themselves, from the admin's dictionary (`ui.*`). */
 function AdminUiLabels({ children }: { children: ReactNode }) {
@@ -35,13 +36,13 @@ function AdminUiLabels({ children }: { children: ReactNode }) {
 function placeOf(route: Route): Place | null {
 	switch (route.screen) {
 		case "list":
-		case "entry":
 			return { collection: route.collection };
 		case "settings":
 			return "settings";
 		case "place":
 			return route.place;
-		// The template editor is outside the frame: no row of the sidebar is its (doc 15).
+		// The entry and template editors are pages of their own, outside the frame: no row of the sidebar is theirs (doc 15).
+		case "entry":
 		case "template":
 		case "home":
 			return null;
@@ -94,6 +95,21 @@ function Signed() {
 		[screen, go],
 	);
 	const open = (place: Place) => leave(() => go(routeOf(place)));
+	if (route.screen === "entry")
+		return (
+			<EntryEditor
+				key={route.id}
+				collection={route.collection}
+				id={route.id}
+				compare={route.compare ?? null}
+				onBack={() => leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))}
+				// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
+				onCompare={(compare) =>
+					go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) })
+				}
+				onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
+			/>
+		);
 	if (route.screen === "template")
 		return (
 			<TemplateEditor
@@ -132,7 +148,7 @@ function Signed() {
 	);
 }
 
-function Shell({ denied }: { denied?: string }) {
+function Gate({ denied }: { denied?: string }) {
 	const session = useSession();
 	if (!session.state) return null;
 	if (!session.state.session)
@@ -165,7 +181,9 @@ export function MontiAdmin({
 			<AdminUiLabels>
 				<TooltipProvider>
 					<LeaveGuardProvider>
-						<Shell denied={denied} />
+						<SessionProvider>
+							<Gate denied={denied} />
+						</SessionProvider>
 					</LeaveGuardProvider>
 					<Toaster />
 				</TooltipProvider>

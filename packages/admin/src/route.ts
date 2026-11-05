@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from "react";
  */
 export type Route =
 	| { screen: "list"; collection: string; params: URLSearchParams }
-	| { screen: "entry"; collection: string; id: string }
+	/** An entry in the editor; `compare` shows the comparison over it (`?compare=conflict` or `?compare=draft`, screens.md EditorCompare). */
+	| { screen: "entry"; collection: string; id: string; compare?: "conflict" | "draft" }
 	| { screen: "settings" }
 	/** Media, trash and tools: their screens come with docs 09, 11 and 13. */
 	| { screen: "place"; place: "media" | "trash" | "tools" }
@@ -22,7 +23,15 @@ export function parseRoute(hash: string): Route {
 	const [path = "", search = ""] = hash.replace(/^#/, "").split("?");
 	const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
 	if (parts[0] === "c" && parts[1]) {
-		if (parts[2]) return { screen: "entry", collection: parts[1], id: parts[2] };
+		if (parts[2]) {
+			const compare = new URLSearchParams(search).get("compare");
+			return {
+				screen: "entry",
+				collection: parts[1],
+				id: parts[2],
+				...(compare === "conflict" || compare === "draft" ? { compare } : {}),
+			};
+		}
 		return { screen: "list", collection: parts[1], params: new URLSearchParams(search) };
 	}
 	if (parts[0] === "settings") return { screen: "settings" };
@@ -39,7 +48,7 @@ export function href(route: Route): string {
 			return `#/c/${encodeURIComponent(route.collection)}${search ? `?${search}` : ""}`;
 		}
 		case "entry":
-			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}`;
+			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}${route.compare ? `?compare=${route.compare}` : ""}`;
 		case "settings":
 			return "#/settings/collections";
 		case "place":
