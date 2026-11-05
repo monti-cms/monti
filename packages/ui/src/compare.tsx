@@ -116,20 +116,19 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 
 /**
  * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
- * is the head (`head`): the name of each side in the small mono line, under the ink rule.
+ * is the head (`head`): each side's last edit date in the small mono line, under the ink rule.
  */
 function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
 	return <div data-slot="compare-rows" className={cn("flex flex-col", className)} {...props} />;
 }
 
 /**
- * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source (cms-allow-korean)
- * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
+ * One block in `CompareRows`: the narrow column on the left holds only a note in the warning tone when the source moved since the translation (cms-allow-korean)
+ * ("원문 바뀜", "원문에 추가"; the block's kind is not named, the block shows itself); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
  * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`. The row of the entry's
- * title is `title`: the two titles in `Heading variant="page"`, its name set lower to sit by them.
+ * title is `title`: the two titles in `Heading variant="page"`, its note set lower to sit by them.
  */
 function CompareRow({
-	name,
 	note,
 	head = false,
 	title = false,
@@ -139,11 +138,9 @@ function CompareRow({
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children" | "title"> & {
-	/** The kind of block ("문단"); empty on the head row. (cms-allow-korean: quotes the words) */
-	name?: React.ReactNode;
 	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. (cms-allow-korean: quotes the words) */
 	note?: React.ReactNode;
-	/** The head row: each side's name, date and language in the small mono line. */
+	/** The head row: each side's last edit date in the small mono line. */
 	head?: boolean;
 	/** The title row: the two titles at the page heading size. */
 	title?: boolean;
@@ -169,7 +166,6 @@ function CompareRow({
 					title && "pt-monti-20",
 				)}
 			>
-				{name}
 				{note && <span className="text-monti-warning">{note}</span>}
 			</span>
 			<div
@@ -194,7 +190,7 @@ function CompareRow({
 
 /**
  * A block the translation shares with its source (a code block): the source's block in faint letters, and under it the one way out, `action` (a
- * `Button variant="ghost" size="sm"`, "English에서만 따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
+ * `TextButton variant="underline"`, "따로 고치기"), which makes a copy for this language. Goes in the translation side of a `CompareRow`. (cms-allow-korean)
  */
 function CompareShared({
 	action,

@@ -9,7 +9,7 @@
 | 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" |  |
 | 페이지 단 | `PageColumn` | 템플릿, 데이터, API 키는 `width="content"`, 활동 기록은 `width="list"`. |
 | 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
-| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 개수는 `TabLink count`("템플릿 3"), 실패한 전송 수는 `countTone="warning"`("활동 기록 1"). 플러그인이 더한 도구 페이지도 탭이 된다. |
+| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
 | ✦ 어시스턴트 열기 | 공통 틀 | 사이드 패널이 열린 동안에는 가려진다. |
 
 ## 템플릿 (Templates)
@@ -69,11 +69,9 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "백업" 절 | `Section` | 왼쪽 제목, 오른쪽 내용. "가져오기" 절은 빠졌다(2026-11-05 소유자: 가져오기는 컬렉션 목록의 "+ 새 글 쓰기 ▾" 메뉴로). |
-| "백업 받기" | `Button variant="primary"` | 누르면 고를 것 없이 바로 만든다. 만드는 동안 `loading`, 라벨은 "만드는 중 64%". |
-| "마지막 백업 10. 20" | `Text variant="note" tone="subtle"`, 날짜는 `mono` | 없으면 "없음". |
-| "미디어 파일도 담기 2.1 GB" | `Option` + `Checkbox`, 크기는 그 메모 | 기본은 꺼짐. 바로 적용되는 설정이 아니라 이번 백업의 선택이라 체크박스다. |
-| "zip 파일 고르기" | `Button variant="secondary"`, 뒤에 숨은 `Input type="file" srOnly` | 파일을 고르거나 놓으면 읽기 시작한다. 옆에 받는 종류 `Text variant="meta" tone="subtle"`("Monti 백업 · .md/.mdx 묶음"). |
-| 고른 파일 줄 | 파일 이름 `Text variant="note" mono`, 그 옆 상태 `Text variant="note"`("읽는 중…" `tone="subtle"`, "읽지 못했어요" `tone="danger"`) |  |
+| "미디어 파일도 담기 2.1 GB" | `Option` + `Checkbox`, 크기는 그 메모 | 기본은 꺼짐. 바로 적용되는 설정이 아니라 이번 백업의 선택이라 체크박스다. 무엇을 담을지 먼저 고르고 받으므로 알약 위에 둔다. |
+| "백업 받기" | `Button variant="primary"` | 누르면 그 선택대로 바로 만든다. 만드는 동안 `loading`, 라벨은 "만드는 중 64%". |
+| "마지막 백업 10. 20" | `Text variant="note" tone="subtle"`, 날짜는 `mono` | 알약 옆. 없으면 "없음". |
 
 스토리: Patterns/Frame/Section, Controls/Button/Button, Primitives/Text, Controls/Choice/Option, Controls/Choice/Checkbox, Controls/Field/Input, Controls/Overlay/Sheet, Controls/Field/Field, Patterns/List/MapRow, Controls/Field/Select, Controls/Choice/Segmented, Controls/Choice/Switch, Controls/Button/TextButton, Patterns/Frame/DescriptionList.
 
@@ -104,15 +102,13 @@
 
 ### 흐름 9 · 데이터
 
-단계: 9.01, 9.02, 9.03, 9.05, 9.06, 9.07, 9.08, 9.09, 9.11, 9.12, 9.13, 9.14, 9.15. 단계마다 보이는 것은 [flows/09-data.md](../flows/09-data.md)에 있다.
+단계: 9.01, 9.02, 9.03, 9.06, 9.07, 9.08, 9.09, 9.12, 9.13, 9.14, 9.15. 단계마다 보이는 것은 [flows/09-data.md](../flows/09-data.md)에 있다.
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `stage` "기본" | 9.01 | 두 절 |  |
+| `stage` "기본" | 9.01 | "백업" 절 하나 |  |
 | "백업 중" | 9.02 | "백업 받기" `Button loading` "만드는 중 64%" | Controls/Button/Button |
 | "백업 받음" | 9.03 | `toast` "백업을 저장했어요", 마지막 백업 "오늘 09:12" | Controls/Status/Toast |
-| "읽는 중" | 9.05 | 파일 줄 "읽는 중…" |  |
-| "못 읽음" | 9.11 | 파일 줄 "읽지 못했어요"(`tone="danger"`) |  |
 | "가져오기" | 9.06 | 시트: 요약, "들어갈 곳", "필드 맞추기" |  |
 | "가져오기 아래" | 9.07 | 시트 아래쪽: "발행", "이미지", "알아 두세요" |  |
 | "가져오는 중" | 9.08 | 시트 `SheetHeader closable={false}`, 알약 `loading` "가져오는 중 12/21" |  |
@@ -133,12 +129,12 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 `disabled`. |
+| "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 숨는다. 키를 저장할 수 없는 이유는 알림 띠 하나가 말한다(원칙 7). |
 | 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없어요" 또는 "키를 저장할 수 없어요", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
-| 표 묶음 "저장된 키" · "모델" · "플러그인" | `ListSection`(`title`, `count`, 기다리는 키가 있으면 `countTone="warning"`) | 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
-| 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`와 `muted`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
-| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"` `disabled`. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
-| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", `meta` 플러그인 코드 `metaTone="subtle"`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 플러그인 코드는 mono다(`ListSectionRow`의 `meta`는 늘 mono 12다). 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 비밀값이 없으면 흐리고 누를 수 없지만 펼침 표시는 남는다. |
+| 표 묶음 "저장된 키" · "쓰는 곳" | `ListSection`(`title`, 개수 없음) | "쓰는 곳"은 키가 쓰이는 자리 하나의 표다. 빠른 작업 모델 행이 먼저, 그 아래 플러그인 키 자리들(2026-11-05 소유자: "모델"과 "플러그인"을 하나로). 행이 다 보이므로 개수를 붙이지 않는다. 키가 빈 자리는 그 행의 "키 없음"이 말한다(원칙 8). 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
+| 저장된 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
+| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"`이고, 누르면 "키 추가" 창(서비스 고르기)이 열린다. 서버 비밀값이 없으면 행이 숨는다. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
+| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", `meta` 플러그인 코드 `metaTone="subtle"`), `control`에 `MenuField`(`value` 키 이름, `meta` "··· 4410", 비었으면 `placeholder` "키 없음"과 `warning`) | 플러그인 코드는 mono다(`ListSectionRow`의 `meta`는 늘 mono 12다). 키가 없을 때 누르면 그 서비스가 골라진 "키 추가" 창이 열린다(`onClick`). 키가 없어도 행을 흐리게 하지 않는다. "키 없음"이 말한다. 서버 비밀값이 없으면 자리들이 숨는다. |
 
 스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 
@@ -184,7 +180,7 @@
 | "모델 바뀜" | 10.13b | 빠른 작업 값 "gpt-5-mini · OpenAI 회사", `toast` "빠른 작업 모델을 바꿨어요" | Controls/Status/Toast |
 | "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없어요", 행마다 `metaTone="danger"` "읽을 수 없어요" | Patterns/Frame/Banner |
 | "다시 넣기" | 10.14b | 편집 창: 키가 처음부터 `SecretInput`(포커스, `required`), `FormFieldDescription` "키를 다시 넣어 주세요." | Controls/Field/SecretInput, Controls/Field/Field |
-| "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없어요", "+ 키 추가" `disabled`, 저장된 키 "없음", 빠른 작업 `MenuField` `disabled`, 플러그인 자리 흐림 | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
+| "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없어요" 하나가 이유를 말한다. "+ 키 추가", 빠른 작업 행, 플러그인 자리는 숨고, 저장된 키 "없음" | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
 
 ## 활동 기록 (Events)
 
@@ -199,12 +195,12 @@
 |---|---|---|
 | 걸린 필터 | `Chip`(`onRemove`, `removeLabel` "필터 지우기"): "글: 첫 번째 글", "전송: 실패" | 탭 줄 오른쪽(`PageToolbarEnd`). ×로 그 필터만 뺀다. |
 | "종류 ▾" | `FilterButton`(값이 있으면 `filled`, "종류: AI 제안") + `DropdownMenu`: 종류마다 `DropdownMenuRadioItem`(앞 아이콘, AI 제안은 `Spark`), 구분선, "전송" `DropdownMenuSub`("대기" · "보냄" · "실패" · "취소됨", 끝에 개수 `MenuShortcut`) | 전송 값을 고르면 `Chip`이 된다. 보드의 행 메뉴 카드(`.mt-menu--ctx`)는 필터 버튼이 여는 메뉴이므로 `DropdownMenu`로 그린다. |
-| 실패 알림 | `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 목록 바로 위, 단 안에. 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
+| 실패 알림 | `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 목록 바로 위, 단 안에 뜬다. 실패 하나는 그 행이 상태와 "다시 보내기"로 말하므로 띠를 두지 않는다(원칙 8, 2026-11-05 소유자). 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
 | 날짜 묶음 "오늘 · 10. 26" | `Text variant="meta" tone="subtle"`, 표 안쪽 12px에 맞춘다 |  |
 | 목록 | `Table` + `TableBody` + `TableRow` + `TableCell`, 아래 `ListFooter`와 `Pagination` | 행 어디를 눌러도 자세히 패널이 열린다(`RowLink`). 열린 행은 `selected`. |
 | 시각 | `TableCell` 안 `Count` |  |
-| 무엇 · 어디 | `Text`(잉크) 두 줄: 무엇 "“더 짧게 다듬어 줘…”", 아래 `Text variant="meta" tone="subtle" truncate` "어시스턴트 제안 · 첫 번째 글 · 본문 5곳". AI 제안은 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}` |  |
-| 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: `EntryStatus status="failed"` "실패", `Text variant="meta"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
+| 무엇 · 어디 | `Text`(잉크) 두 줄: 무엇 "“더 짧게 다듬어 줘…”", 아래 `Text variant="meta" tone="subtle" truncate` 어디서 "첫 번째 글 · 본문 5곳". AI 제안은 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}` | 아래 줄은 일이 일어난 곳만 말한다. ✦가 말하는 "어시스턴트 제안", 제목이 말하는 "글 발행" · "글 저장"은 되풀이하지 않는다(원칙 8). |
+| 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: 빨간 상태 하나 `EntryStatus status="failed"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
 | 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없어요", "아직 기록이 없어요"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
 
 스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
@@ -229,7 +225,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `stage` "기본" | 2.17, 2.18 | 거르지 않은 목록, 실패 1건 `Banner`, 탭 "활동 기록 1" | Patterns/Frame/Banner |
+| `stage` "기본" | 2.17, 2.18 | 거르지 않은 목록, 실패한 행 하나(띠 없음), 탭 "활동 기록 1" |  |
 | `filter` "전체" · "전송 실패" · "글 하나" | 2.17, 2.18 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
 
 ### 흐름 9 · 데이터
@@ -238,7 +234,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `stage` "기본" | 9.10 | 거르지 않은 목록, 실패 1건 `Banner`, 탭 "활동 기록 1" | Patterns/Frame/Banner |
+| `stage` "기본" | 9.10 | 거르지 않은 목록, 실패한 행 하나(띠 없음), 탭 "활동 기록 1" |  |
 | `filter` "전체" · "전송 실패" · "글 하나" | 9.10 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
 | `withImport` · `importDetail` | 9.10 | 가져오기 행, 가져오기 자세히 `SidePanel` | Controls/Overlay/SidePanel |
 
@@ -248,17 +244,17 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "실패만" | 12.01b | `Chip` "전송: 실패", 실패한 행만, `Banner`에 "보기" 없음 | Patterns/Frame/Banner |
+| "실패만" | 12.01b | `Chip` "전송: 실패", 실패한 행만 |  |
 | "다시 보내는 중" | 12.02 | 그 행의 "다시 보내기"가 "보내는 중…"(다시 누를 수 없음) |  |
 | "다시 보냄" | 12.02b | 빈 목록 "실패한 전송이 없어요" + "필터 끄기", `toast` "보냈어요", 알림 없음 | Controls/Status/Toast |
 | "자세히" | 12.03 | 자세히 `SidePanel`(이벤트 · 항목 · 전송 · 2), 그 행 `selected`, ✦ 가려짐 | Controls/Overlay/SidePanel |
 | "취소 확인" | 12.04 | 자세히 패널 위 `AlertDialog` | Controls/Overlay/AlertDialog |
 | "취소됨" | 12.04b | 그 행의 결과 "취소됨"(흐림), `toast` "전송을 취소했어요" | Controls/Status/Toast |
-| "실패 알림" | 12.01 | `Banner` "전송 실패 1건" + "보기" · "모두 다시 보내기" | Patterns/Frame/Banner |
+| "실패 알림" | 12.01 | 실패한 행 하나: `EntryStatus` "3번 실패"와 "다시 보내기". 띠는 없다(실패가 하나라서) |  |
 | "실패 3건" | 12.05 | 실패한 행 셋(각 "N번 실패"), `Banner` "전송 실패 3건", 탭 개수 3 | Patterns/Frame/Banner |
 | "모두 보내는 중" | 12.06 | `Banner`의 "모두 다시 보내기"와 실패한 행들이 "보내는 중…" | Patterns/Frame/Banner |
 | "모두 보냄" | 12.07 | 알림 없음, `toast` "3건 보냈어요" | Controls/Status/Toast |
-| "일부 실패" | 12.08 | `Banner` "전송 실패 1건", 남은 행 "1번 실패", `toast` "2건 보냈어요 · 1건 실패" | Patterns/Frame/Banner, Controls/Status/Toast |
+| "일부 실패" | 12.08 | 남은 실패 행 하나 "1번 실패"(띠는 사라진다), `toast` "2건 보냈어요 · 1건 실패" | Controls/Status/Toast |
 | "필터 메뉴" | 12.09 | "종류" `DropdownMenu`와 "전송" `DropdownMenuSub`가 열림 | Controls/Menu/DropdownMenu |
 | "필터 걸림" | 12.09b | `Chip` "전송: 대기", 기다리는 행만 |  |
 | "구독자 없음" | 12.10 | 전송 열이 없는 행들(기록만), 알림 없음 |  |

@@ -1,4 +1,4 @@
-import { Box, ChangesGroup, Checkbox, Grid, Inline, Option, Section, Text, TextButton } from "../../index";
+import { ChangesGroup, Checkbox, Grid, Inline, Option, Section, Text, TextButton } from "../../index";
 import { CollectionSettings } from "./collection-parts";
 import { AdminFrame } from "./frame";
 
@@ -42,28 +42,26 @@ const headings: readonly Choice[] = [{ label: "H2", checked: true }, { label: "H
 
 function Choices({ items, mono }: { items: readonly Choice[]; mono?: boolean }) {
 	return (
-		// Each option row stands in 36px: 6px above and below its line, 16px between rows.
-		<Box paddingY={6}>
-			<Grid columns={3} gap={16}>
-				{items.map((item) => (
-					<Option key={item.label}>
-						<Checkbox checked={item.checked ?? false} />
-						{mono ? (
-							<Text mono tone="inherit">
-								{item.label}
-							</Text>
-						) : (
-							item.label
-						)}
-						{item.note ? (
-							<Text variant="meta" tone="warning">
-								{item.note}
-							</Text>
-						) : null}
-					</Option>
-				))}
-			</Grid>
-		</Box>
+		// One group of choice rows: each stands at the control height (32px), 4px apart.
+		<Grid columns={3} gap={4}>
+			{items.map((item) => (
+				<Option key={item.label}>
+					<Checkbox checked={item.checked ?? false} />
+					{mono ? (
+						<Text mono tone="inherit">
+							{item.label}
+						</Text>
+					) : (
+						item.label
+					)}
+					{item.note ? (
+						<Text variant="meta" tone="warning">
+							{item.note}
+						</Text>
+					) : null}
+				</Option>
+			))}
+		</Grid>
 	);
 }
 
@@ -73,7 +71,6 @@ export function CollectionEditorScreen() {
 		<AdminFrame open="settings">
 			<CollectionSettings
 				tab="editor"
-				changed
 				save={
 					<ChangesGroup
 						label="바뀐 곳"
@@ -105,7 +102,7 @@ export function CollectionEditorScreen() {
 				<Section stacked dense title="서식">
 					<Choices items={marks} />
 				</Section>
-				<Section stacked dense last title="제목 단계">
+				<Section stacked dense title="제목 단계">
 					<Choices items={headings} mono />
 				</Section>
 			</CollectionSettings>

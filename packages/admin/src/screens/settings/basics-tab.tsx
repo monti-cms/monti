@@ -5,13 +5,11 @@ import {
 	DangerRow,
 	FormField,
 	FormFieldLabel,
-	Grid,
-	Inline,
 	Input,
 	LockMark,
 	Option,
 	ReadValue,
-	Section,
+	Stack,
 	Switch,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
@@ -27,9 +25,10 @@ export const addressOf = (part: string) => {
 };
 
 /**
- * A collection's basic tab (flow 4, steps 13 and 15; flow 11, step 17c): its view (name, folders) is an admin value and always editable; its
- * structure (identifier, kind, public address) is the file's, locked on the live site. Deleting it takes it out of the list at once; the review is the
- * last check.
+ * A collection's basic tab (flow 4, steps 13 and 15; flow 11, step 17c): one group, in the field sheet's order: the identifier (never changes,
+ * its lock on its row), the kind, the name the admin reads, the public address (the file's, locked on its row on the live site) and folders.
+ * No section names the system's split between file and admin values (README principle 9). Deleting it takes it out of the list at once; the
+ * review is the last check.
  */
 export function BasicsTab({
 	model,
@@ -48,10 +47,16 @@ export function BasicsTab({
 	const path = String(draft.value(pathPlace) ?? "/:slug");
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
-	const lock = t("settings.basics.fixed");
 	return (
 		<>
-			<Section title={t("settings.basics.view")} stacked>
+			<Stack gap={24} paddingY={24}>
+				<ReadValue label={t("settings.basics.identifier")} mono>
+					{c}
+					<LockMark label={t("settings.basics.fixed")} />
+				</ReadValue>
+				<ReadValue label={t("settings.basics.kind")} mono={false}>
+					{t(`settings.kind.${kind}`)}
+				</ReadValue>
 				<FormField>
 					<FormFieldLabel htmlFor="collection-label">{t("settings.basics.label")}</FormFieldLabel>
 					<Input
@@ -61,39 +66,11 @@ export function BasicsTab({
 						onChange={(event) => draft.set(labelPlace, event.target.value || undefined)}
 					/>
 				</FormField>
-				<Option spread>
-					{t("settings.basics.folders")}
-					<Switch
-						checked={Boolean(draft.value(foldersPlace))}
-						onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
-					/>
-				</Option>
-			</Section>
-			<Section
-				title={
-					locked ? (
-						<Inline gap={6} align="center">
-							{t("settings.basics.structure")}
-							<LockMark label={t("settings.locked")} />
-						</Inline>
-					) : (
-						t("settings.basics.structure")
-					)
-				}
-				stacked
-				last
-			>
-				<Grid columns={2} gap={24}>
-					<ReadValue label={t("settings.basics.identifier")} mono>
-						{c}
-						<LockMark label={lock} />
-					</ReadValue>
-					<ReadValue label={t("settings.basics.kind")} mono={false}>
-						{t(`settings.kind.${kind}`)}
-					</ReadValue>
-				</Grid>
 				{locked ? (
-					<ReadValue label={t("settings.basics.path")}>{path}</ReadValue>
+					<ReadValue label={t("settings.basics.path")}>
+						{path}
+						<LockMark label={t("settings.locked")} />
+					</ReadValue>
 				) : (
 					<FormField>
 						<FormFieldLabel
@@ -120,7 +97,15 @@ export function BasicsTab({
 						/>
 					</FormField>
 				)}
-			</Section>
+				{/* At the height of the inputs above it (36px): one group, one control height. */}
+				<Option spread height="lg">
+					{t("settings.basics.folders")}
+					<Switch
+						checked={Boolean(draft.value(foldersPlace))}
+						onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
+					/>
+				</Option>
+			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
 					<DangerRow

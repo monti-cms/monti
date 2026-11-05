@@ -13,14 +13,14 @@ import {
 	Inline,
 	Separator,
 	Stack,
-	StatusBar,
-	StatusBarCell,
-	StatusBarSpacer,
 	Text,
 	TextButton,
 } from "../../index";
 
-/** An edit conflict: what was typed here beside the server's latest version, the words that differ marked on both sides. */
+/**
+ * An edit conflict: what was typed here beside the server's latest version, the words that differ marked on both sides. No status bar: the
+ * title says it is a conflict and the head counts the differences once.
+ */
 export function EditorCompareScreen() {
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
@@ -91,13 +91,6 @@ export function EditorCompareScreen() {
 					</CompareSide>
 				</Compare>
 			</Stack>
-			<StatusBar>
-				<StatusBarCell tone="danger" dot={false}>
-					편집 충돌
-				</StatusBarCell>
-				<StatusBarSpacer />
-				<StatusBarCell end>다른 곳 3</StatusBarCell>
-			</StatusBar>
 		</Stack>
 	);
 }

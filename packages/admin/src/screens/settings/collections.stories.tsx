@@ -433,7 +433,8 @@ export const ReadOnlyBasics: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
-		await page.findByText("구조");
+		// The public address is the file's: on the live site it reads as text, its lock on its own row.
+		await page.findByRole("img", { name: "운영 사이트에서는 잠김" });
 	},
 };
 

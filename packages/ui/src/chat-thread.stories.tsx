@@ -55,7 +55,7 @@ export const Conversation: Story = {
 					statusTone="warning"
 					footer={
 						<ProposalActions
-							reviewLabel="상세 보기"
+							reviewLabel="검토"
 							onReview={noop}
 							discardLabel="버리기"
 							onDiscard={noop}

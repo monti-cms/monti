@@ -3,8 +3,6 @@ import {
 	Box,
 	Button,
 	DragHandle,
-	FormField,
-	FormFieldLabel,
 	IconButton,
 	LanguageRow,
 	LanguageSource,
@@ -57,11 +55,8 @@ export function LocalesScreen() {
 							</Box>
 						</Stack>
 					</Section>
-					<Section title="시간대" last>
-						<FormField>
-							<FormFieldLabel htmlFor="time-zone">시간대</FormFieldLabel>
-							<ShownSelect id="time-zone" value="Asia/Seoul" />
-						</FormField>
+					<Section title="시간대">
+						<ShownSelect id="time-zone" value="Asia/Seoul" label="시간대" />
 					</Section>
 				</PageBody>
 			</PageColumn>

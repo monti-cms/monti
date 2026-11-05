@@ -44,13 +44,12 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "보기" 절 | `Section stacked`("보기") | 관리자 설정이라 늘 고칠 수 있다. |
-| 표시 이름 | `FormField` + `Input` | 처음부터 입력 칸이다. |
-| 폴더 사용 | `Option spread` + `Switch` | |
-| "구조" 절 | `Section stacked`("구조"). 읽기 전용이면 제목 뒤 `LockMark` | 구조(파일에 있는 설정)는 보기와 다른 절이다([field.md](../components/field.md) "읽기 전용"). |
-| 식별자 | `FormField`의 라벨과 `Text mono`, 값 바로 뒤 `LockMark` | 절대 바꿀 수 없는 값이라 글로 보인다. |
-| 종류 | 라벨과 `Text` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
-| 공개 주소 | `FormField` 라벨(바뀌면 뒤에 `ChangeDot`) + `Affix`(`prefix` "/", `suffix` "/:slug", mono) | 모든 컬렉션에 공개 주소가 있다(01번 문서). 켜고 끄는 스위치는 없다. 읽기 전용이면 `Text mono` "/posts/:slug". |
+| 묶음 | `Stack gap={24} paddingY={24}` 하나 | 절 이름이 없다. 파일 설정인지 관리자 값인지는 사람이 하는 일이 아니라서 절로 나누지 않는다(원칙 9, 2026-11-05 소유자). 줄은 필드 시트와 같은 순서다: 식별자, 종류, 표시 이름, 공개 주소, 폴더 사용. |
+| 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
+| 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
+| 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. |
+| 공개 주소 | `FormField` 라벨(바뀌면 `FormFieldLabel changed`) + `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`, mono) | 모든 컬렉션에 공개 주소가 있다(01번 문서). 켜고 끄는 스위치는 없다. 운영 사이트에서는 `ReadValue` "/posts/:slug"와 그 줄의 `LockMark`("운영 사이트에서는 잠김"). |
+| 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). |
 | 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + `DangerRow`(`name`, `action`에 `Button variant="outline-danger" size="sm"` "지우기") | 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
 #### 속성 패널 미리보기
@@ -152,7 +151,7 @@
 | "운영 검토" (빠짐, 2026-11-05) | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
 | "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었어요"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
 | "PR에 더하기" (빠짐, 2026-11-05) | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
-| "읽기 전용" | 11.17, 11.17c | 구조 절 `LockMark`, 식별자 · 종류 · 공개 주소는 글, 스위치 `disabled`, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
+| "읽기 전용" | 11.17, 11.17c | 공개 주소 줄의 `LockMark`, 식별자 · 종류 · 공개 주소는 글, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |
 | "적용 실패" | 11.20 | 틀의 알림 띠(`SchemaBanner`) "스키마를 데이터베이스에 적용하지 못했어요"와 "다시 적용" | Patterns/Frame/Banner |
 | "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ErrorNote` "파일이 바뀌었어요", 알약 비활성 | Controls/Overlay/Sheet, Controls/Status/ErrorNote |

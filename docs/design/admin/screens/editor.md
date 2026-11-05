@@ -13,7 +13,7 @@
 | 주소 `/posts/…` | `Text variant="meta" tone="faint"` | 읽기만 한다. 고치는 곳은 속성 패널의 "주소"다. |
 | 발행 상태 | `EntryStatus`(`published`·`editing`·`draft`) | 상태 말과 점. |
 | "저장" | `TextButton` | 누르면 저장한다. 라벨은 "저장"이고, 단축키는 툴팁에만 있다(보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다). |
-| "미리보기" | `Button variant="secondary"` | 공개 화면을 연다. 볼 것이 없으면 비활성. |
+| "미리보기" | `Button variant="secondary"` | 공개 화면을 연다. 볼 것이 없으면(제목도 본문도 빈 새 글) 알약이 없다. 흐리게 두지 않는다(원칙 7, 2026-11-05 소유자). |
 | "발행하기 ▾" | `SplitButton`(`menu`에 `DropdownMenuItem` 둘: "발행하기" · "오늘 날짜로 다시 발행", 각각 아래에 발행일) | 한 번 발행한 글에만 ▾가 있다. 초안은 `Button variant="primary"` "발행하기". 바뀐 것이 없으면 "발행됨"으로 비활성. 발행하는 동안 `loading`. 발행일은 이 메뉴로만 정한다. |
 | 속성 | `IconButton pressed` | 속성 패널을 열고 닫는다. 열린 동안 눌린 바탕. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록" · "복제" · "보관" · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기", "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. |
@@ -50,14 +50,14 @@
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
 | 주소 | `Input mono`(슬러그만, 끝 `action`은 다시 만들기 `IconButton`). 앞뒤 고정 글자가 없어 `Affix`가 아니다 | 늘 입력 칸이다. "/posts/"는 붙이지 않는다. 전체 주소는 머리의 주소 줄에 있고, 패널 폭은 긴 슬러그에 쓴다. 고정 글자가 없으니 밑줄은 아이콘까지 행 전체다. |
 | 대표 이미지 | `MediaInput size="md"`(고른 파일이면 썸네일과 파일 이름과 ×, 비었으면 "비어 있음") | 다른 필드와 같은 밑줄 한 줄이다(2026-11-05, 소유자). 누르면 `MediaPicker`를 담은 `Dialog`가 열린다. |
-| 요약 | `Textarea size="sm"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="micro"`("✦ 채우기", 값이 있으면 "↻ 다시"). "비어 있으면 본문에서 채우기"를 켠 필드는 입력 줄 끝(`Textarea`·`Input`의 `action`)에 `IconButton`(`Renew`, 이름 "본문에서 가져오기")이 늘 있다. 주소의 다시 만들기와 같은 자리다. 둘 다 다른 값에서 이 값을 다시 만든다. 라벨 줄에는 어시스턴트의 일만 있다. |
-| 한 줄 글 필드 | `Input size="sm"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
+| 요약 | `Textarea size="md"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="micro"`("✦ 채우기", 값이 있으면 "↻ 다시"). 본문에서 채우는 일은 이 "✦ 채우기"가 한다. 입력 줄 끝의 "본문에서 가져오기" 버튼은 없앴다(2026-11-05 소유자). |
+| 한 줄 글 필드 | `Input size="md"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
 | 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. |
 | 태그 (관계 여럿) | `Combobox` + `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`) | 고른 값은 칩, 끝의 입력 칸에서 더한다. |
 | 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 플레이스홀더 "없음" | 다른 필드처럼 라벨 줄 끝에 "✦ 채우기"(`TextButton tone="proposal" size="micro"`)가 그 필드를 가리킬 때만 보인다. 고른 값은 `proposal`(파란 글자)로 남고 버튼은 "↻ 다시"가 된다. 보드의 값 옆 "✦ 추천"은 이 버튼으로 바뀐다(2026-11-03 소유자 결정). |
-| 고르기 필드 (`select`) | `Select` + `SelectTrigger size="sm" width="full"` | 늘 트리거가 있다. 누르면 목록. |
+| 고르기 필드 (`select`) | `Select` + `SelectTrigger size="md" width="full"` | 늘 트리거가 있다. 누르면 목록. |
 | 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
-| 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="sm"`, `Textarea size="sm"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
+| 다른 값을 따르는 값 (SEO 제목 · 설명 · 공유 이미지) | 그 종류의 입력 부품(`Input size="md"`, `Textarea size="md"`, 이미지)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 된다. |
 | 어시스턴트가 쓴 값, 받기를 기다리는 제안 | 각 입력 부품의 `proposal`(파란 글자, 파란 밑줄) | 제안은 입력칸 안에 들어 있고 바로 고칠 수 있다. 고치거나 받으면 보통 색, 버리면 옛 값으로 돌아간다. |
 | 사람이 바꿀 수 없는 값 (번역에서 원문과 함께 쓰는 필드) | `FormField` + `FormFieldLabel` + `Text variant="note"`, 아래 `FormFieldDescription` 한 줄 | 입력 부품이 없다. |
 
@@ -67,7 +67,7 @@
 |---|---|---|
 | 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
 | 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌". 누를 일이 있으면 칸이 버튼이다(저장 전 변경사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 `StatusBarAnnouncer`. |
-| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 남은 것이 없으면 "할 일 없음"과 ✓ 행만. |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 남은 것이 없으면 "할 일 없음"과 ✓ 행만. |
 | 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
 

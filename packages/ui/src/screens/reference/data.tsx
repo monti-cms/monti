@@ -14,7 +14,7 @@ import {
 } from "../../index";
 import { AdminFrame } from "./frame";
 
-/** Tools, on its data tab: a backup to take and a backup to bring in. */
+/** Tools, on its data tab: a backup to take, with or without the media files. */
 export function DataScreen() {
 	return (
 		<AdminFrame open="tools">
@@ -32,12 +32,7 @@ export function DataScreen() {
 				</PageToolbar>
 				<Section title="백업">
 					<Stack gap={12}>
-						<Inline gap={16}>
-							<Button variant="primary">백업 받기</Button>
-							<Text as="span" variant="note" tone="subtle">
-								마지막 백업 <Text mono>10. 20</Text>
-							</Text>
-						</Inline>
+						{/* What goes into the backup is chosen before the pill that takes it. */}
 						<Option>
 							<Checkbox checked={false} />
 							미디어 파일도 담기
@@ -45,6 +40,12 @@ export function DataScreen() {
 								2.1 GB
 							</Text>
 						</Option>
+						<Inline gap={16}>
+							<Button variant="primary">백업 받기</Button>
+							<Text as="span" variant="note" tone="subtle">
+								마지막 백업 <Text mono>10. 20</Text>
+							</Text>
+						</Inline>
 					</Stack>
 				</Section>
 			</PageColumn>

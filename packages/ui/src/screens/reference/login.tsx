@@ -28,6 +28,9 @@ export type LoginState =
 	| { readonly kind: "closed" }
 	| { readonly kind: "no-login" };
 
+/** The fields of a form stand this far apart, in every state: their reserved error lines already hold the room under each. */
+const FIELD_GAP = 16;
+
 /** The login screen: the site's name over the ink rule, then one narrow form, and the version at the foot. */
 export function LoginScreen({ state }: { state: LoginState }) {
 	const title =
@@ -47,18 +50,17 @@ export function LoginScreen({ state }: { state: LoginState }) {
 							</Heading>
 							<Box border="bottom-contrast" />
 						</Stack>
-						{title !== undefined || state.kind !== "no-login" ? (
-							<Stack gap={24}>
-								{title !== undefined ? (
-									<Text as="p" variant="title">
-										{title}
-									</Text>
-								) : null}
-								{state.kind === "sign-in" ? <SignIn {...state} /> : null}
-								{state.kind === "first-admin" ? <FirstAdmin {...state} /> : null}
-								{state.kind === "closed" ? <Closed /> : null}
-							</Stack>
-						) : null}
+						<Stack gap={24}>
+							{title !== undefined ? (
+								<Text as="p" variant="title">
+									{title}
+								</Text>
+							) : null}
+							{state.kind === "sign-in" ? <SignIn {...state} /> : null}
+							{state.kind === "first-admin" ? <FirstAdmin {...state} /> : null}
+							{state.kind === "closed" ? <Closed /> : null}
+							{state.kind === "no-login" ? <NoLogin /> : null}
+						</Stack>
 					</Stack>
 				</Box>
 			</Stack>
@@ -81,7 +83,7 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 				{password ? (
 					<form>
 						<Stack gap={12}>
-							<Stack gap={24}>
+							<Stack gap={FIELD_GAP}>
 								<EmailField />
 								<PasswordField id="password" label="비밀번호" value="aaaaaaaaaa" error={passwordError} />
 							</Stack>
@@ -106,16 +108,8 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 					{error === "other" ? "로그인하지 못했어요. 다시 시도해 주세요." : undefined}
 				</FormFieldError>
 			) : null}
-			{denied ? (
-				<Stack gap={8} align="start">
-					<FormFieldError>{denied}는 관리자가 아니에요.</FormFieldError>
-					<form>
-						<Button variant="ghost" type="submit">
-							다른 계정으로 로그인
-						</Button>
-					</form>
-				</Stack>
-			) : null}
+			{/* "GitHub로 로그인" opens GitHub's account picker now, so the line needs no button of its own. */}
+			{denied ? <FormFieldError>{denied}는 관리자가 아니에요.</FormFieldError> : null}
 		</Stack>
 	);
 }
@@ -126,23 +120,21 @@ function FirstAdmin({ errors = [] }: Extract<LoginState, { kind: "first-admin" }
 		<form>
 			<Stack gap={12}>
 				<Stack gap={12}>
-					<Stack gap={24}>
+					<Stack gap={FIELD_GAP}>
 						<EmailField />
-						<Stack gap={16}>
-							<PasswordField
-								id="password"
-								label="비밀번호"
-								value={wrong ? "aaaaaa" : "aaaaaaaaaa"}
-								hint="10자 이상"
-								error={errors.includes("password") ? "10자 이상이어야 해요." : undefined}
-							/>
-							<PasswordField
-								id="confirm"
-								label="비밀번호 확인"
-								value={wrong ? "aaaaaaa" : "aaaaaaaaaa"}
-								error={errors.includes("confirm") ? "두 비밀번호가 같지 않아요." : undefined}
-							/>
-						</Stack>
+						<PasswordField
+							id="password"
+							label="비밀번호"
+							value={wrong ? "aaaaaa" : "aaaaaaaaaa"}
+							hint="10자 이상"
+							error={errors.includes("password") ? "10자 이상이어야 해요." : undefined}
+						/>
+						<PasswordField
+							id="confirm"
+							label="비밀번호 확인"
+							value={wrong ? "aaaaaaa" : "aaaaaaaaaa"}
+							error={errors.includes("confirm") ? "두 비밀번호가 같지 않아요." : undefined}
+						/>
 					</Stack>
 					<Button variant="primary" width="full" pendingLabel="생성 중…">
 						생성
@@ -154,16 +146,26 @@ function FirstAdmin({ errors = [] }: Extract<LoginState, { kind: "first-admin" }
 	);
 }
 
+/** Nothing failed: the admin exists already, so the one thing to do, signing in, is the pill. */
 function Closed() {
 	return (
 		<Stack gap={16} paddingTop={16}>
-			<FormFieldError>이미 관리자가 있어요.</FormFieldError>
+			<Text as="p">이미 관리자가 있어요.</Text>
 			<form>
-				<Button type="submit" variant="secondary" width="full">
+				<Button type="submit" variant="primary" width="full">
 					로그인하기
 				</Button>
 			</form>
 		</Stack>
+	);
+}
+
+/** Where login is turned on: the one place to fix it, named. */
+function NoLogin() {
+	return (
+		<Text as="p">
+			<Text mono>monti.config.ts</Text>의 <Text mono>auth</Text>에 로그인 방법을 넣어 주세요.
+		</Text>
 	);
 }
 

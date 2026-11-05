@@ -55,9 +55,7 @@ export function SchemaAddFieldScreen() {
 								<PickListItem>글자</PickListItem>
 								<PickListItem>고르기</PickListItem>
 								<PickListItem>미디어</PickListItem>
-								<PickListItem selected mark="→">
-									관계
-								</PickListItem>
+								<PickListItem selected>관계</PickListItem>
 							</PickList>
 						}
 					>

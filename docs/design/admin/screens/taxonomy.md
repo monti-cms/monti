@@ -49,11 +49,10 @@
 |---|---|---|
 | 패널 | `SidePanel width="side"`(`title` 항목 이름, `actions`에 ⋯ `IconButton` + `DropdownMenu` "휴지통으로", `onClose`, `onSubmit`) | 목록 옆에 열린다. |
 | 언어 탭 | `Tabs` + `TabsList variant="line"` + `TabsTrigger` | 언어마다 이름과 설명을 따로 쓴다. 패널 안에서 바뀐다. |
-| 이름 | `FormField` + `FormFieldLabel` + `Input` | 늘 입력 칸이다. |
-| 주소 | `FormField` + `Input mono` | 늘 입력 칸이다. |
-| 설명 | `FormField` + `Textarea size="sm"` | 늘 입력 칸이다. |
-| 쓰는 글 | `FormFieldLabel` 아래 `Text mono`("3편") + `TextButton variant="underline"` "목록에서 보기 →" | 그 항목으로 거른 글 목록으로 간다. |
-| 발 | `SidePanel footer`: `Text variant="note" tone="subtle"`("바뀐 곳 없음") + `Button variant="primary"` "저장" | 바뀐 것이 없으면 저장은 비활성이다. |
+| 이름 | `FormField` + `FormFieldLabel` + `Input size="md"` | 늘 입력 칸이다. 사이드 패널의 기본 높이 `md`(32px, 원칙 10). |
+| 주소 | `FormField` + `Input mono size="md"` | 늘 입력 칸이다. |
+| 설명 | `FormField` + `Textarea size="md"` | 늘 입력 칸이다. |
+| 발 | `SidePanel footer`: `Text variant="note" tone="subtle"`("바뀐 곳 1") + `Button variant="primary" size="md"` "저장" | 바뀐 곳이 생겨야 나타난다. 바뀐 것이 없으면 발 자체가 없다(설정 › 컬렉션의 저장 묶음과 같다, 2026-11-05 소유자). 쓰는 글 수와 그 목록으로 가는 길은 목록 행의 "글 3"이 이미 준다(원칙 8). |
 
 ### 흐름 7 · 목록 정리
 

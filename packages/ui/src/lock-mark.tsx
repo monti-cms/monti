@@ -2,7 +2,7 @@ import { cn } from "./cn";
 import { Locked } from "./icons";
 
 /**
- * The lock after a read-only value or a section title: this cannot be changed. 12px and faint, 6px from the text before it. `label` names it for screen
+ * The lock after a read-only value or its row's label: this cannot be changed. It goes on the locked row, never on a section title. 12px and faint, 6px from the text before it. `label` names it for screen
  * readers ("cannot be changed"); the meaning is in the name, never in the icon alone. `flush` drops the margin where a row already spaces it (beside a label).
  */
 function LockMark({ label, flush = false, className }: { label: string; flush?: boolean; className?: string }) {

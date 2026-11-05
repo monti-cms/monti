@@ -124,3 +124,8 @@ export const SlugOnly: Story = {
 		</Stack>
 	),
 };
+
+/** `size="md"`: 32px, among a side panel's other `md` fields (a file's name in the media panel). */
+export const Medium: Story = {
+	args: { size: "md", prefix: undefined, suffix: ".jpg", defaultValue: "desk-morning", "aria-label": "파일 이름" },
+};

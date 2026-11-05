@@ -5,51 +5,45 @@ import {
 	DangerRow,
 	FormField,
 	FormFieldLabel,
-	Grid,
 	Input,
 	LockMark,
 	Option,
 	ReadValue,
-	Section,
 	Stack,
 	Switch,
 } from "../../index";
 import { CollectionSettings } from "./collection-parts";
 import { AdminFrame } from "./frame";
 
-/** A collection's basics: its name and folders, its fixed structure, its public address, and deleting it. */
+/**
+ * A collection's basics: one group in the field sheet's order (identifier with its lock, kind, name, public address, folders), with no section
+ * named after the system's file-or-admin split; then deleting it.
+ */
 export function CollectionBasicsScreen() {
 	return (
 		<AdminFrame open="settings">
 			<CollectionSettings tab="basics">
-				<Section title="보기" stacked>
+				<Stack gap={24} paddingY={24}>
+					<ReadValue label="식별자" mono>
+						post
+						<LockMark label="바꿀 수 없음" />
+					</ReadValue>
+					<ReadValue label="종류" mono={false}>
+						본문이 있는 글
+					</ReadValue>
 					<FormField>
 						<FormFieldLabel htmlFor="collection-label">표시 이름</FormFieldLabel>
 						<Input id="collection-label" defaultValue="게시글" />
 					</FormField>
-					<Option spread>
+					<FormField>
+						<FormFieldLabel htmlFor="collection-path">공개 주소</FormFieldLabel>
+						<Affix id="collection-path" prefix="/" suffix="/:slug" defaultValue="posts" width="fit" />
+					</FormField>
+					<Option spread height="lg">
 						폴더 사용
 						<Switch checked />
 					</Option>
-				</Section>
-				<Section title="구조" stacked last>
-					<Grid columns={2} gap={24}>
-						<ReadValue label="식별자" mono>
-							post
-							<LockMark label="바꿀 수 없음" />
-						</ReadValue>
-						<ReadValue label="종류" mono={false}>
-							본문이 있는 글
-						</ReadValue>
-					</Grid>
-					<Stack gap={8}>
-						<Option spread>
-							공개 주소
-							<Switch checked />
-						</Option>
-						<Affix aria-label="공개 주소" prefix="/" suffix="/:slug" defaultValue="posts" width="fit" />
-					</Stack>
-				</Section>
+				</Stack>
 				<DangerBlock title="컬렉션 지우기">
 					<DangerRow
 						name="게시글"

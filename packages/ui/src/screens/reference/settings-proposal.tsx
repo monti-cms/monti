@@ -14,7 +14,7 @@ import {
 import { AdminFrame } from "./frame";
 import { SettingsTabs, ShownSelect, SiteUrl, SwitchOption } from "./settings";
 
-/** Settings, Site tab, with the assistant's two proposals waiting beside one change of the admin's. */
+/** Settings, Site tab, with the assistant's two proposals waiting beside one change of the admin's: "바뀐 곳 1 · 제안 2", counted apart. */
 export function SettingsProposalScreen() {
 	return (
 		<AdminFrame open="settings">
@@ -22,7 +22,7 @@ export function SettingsProposalScreen() {
 				<PageHeader title="설정">
 					<ChangesBar
 						label="바뀐 곳"
-						count={3}
+						count={1}
 						proposalsLabel="제안"
 						proposalsCount={2}
 						discardLabel="모두 되돌리기"
@@ -30,7 +30,7 @@ export function SettingsProposalScreen() {
 					/>
 				</PageHeader>
 				<PageToolbar>
-					<SettingsTabs open="site" dot="warning" />
+					<SettingsTabs open="site" />
 				</PageToolbar>
 				<PageBody>
 					<Section title="이름과 링크">
@@ -56,9 +56,9 @@ export function SettingsProposalScreen() {
 							<Affix id="preview" prefix="/" defaultValue="draft" proposal />
 							<FormFieldWas>/preview</FormFieldWas>
 						</FormField>
-						<SwitchOption label="미리보기 경로에 언어 넣기" checked />
+						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
 					</Section>
-					<Section title="공개 주소" last>
+					<Section title="공개 주소">
 						<FormField>
 							<FormFieldLabel
 								htmlFor="locale-path"

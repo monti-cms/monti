@@ -13,9 +13,9 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 경로 "미디어 / Blog Assets /" | `PageHeader`의 `trail`에 `TextButton variant="underline"`(지나온 폴더마다 하나) | 누르면 그 폴더로 간다. 폴더 안에서만 보인다(최상위와 "저장소 없음"에는 없다). |
+| 경로 "미디어 / Blog Assets /" | `PageHeader`의 `trail`에 `TextButton variant="underline"`(지나온 폴더마다 하나) | 누르면 그 폴더로 간다. 폴더 안에서만 보인다(최상위와 "저장소 없음"에는 없다). 위로 가는 길은 이것 하나다. 격자 첫 칸의 "상위 폴더로" 타일은 두지 않는다(2026-11-05 소유자, 원칙 8). |
 | 제목 "Blog Assets" · 개수 | `PageHeader`(`title`은 연 폴더 이름, `meta`는 개수 "14개") | 필터가 걸려도 `meta`는 개수만 쓴다. |
-| "올리기 ▾" | `SplitButton`(앞에 `Upload`, `menuLabel` "더 만들기", `menu`에 `DropdownMenuItem` "새 폴더"(`FolderAdd`)) | 왼쪽은 파일 고르기를 연다. 저장소가 없으면 비활성이다. "새 폴더"는 폴더 타일 행 끝에 새 폴더를 만들고 이름 칸을 연다. 검색, 고르기, 저장소 없음 동안에는 "새 폴더"가 없다. (2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 검은 알약의 메뉴에 둔다.) |
+| "올리기 ▾" | `SplitButton`(앞에 `Upload`, `menuLabel` "더 만들기", `menu`에 `DropdownMenuItem` "새 폴더"(`FolderAdd`)) | 왼쪽은 파일 고르기를 연다. 저장소가 없으면 흐리게 남기지 않고 숨는다. 그때 화면의 알약은 "연결 방법"이다(2026-11-05 소유자, 원칙 7). "새 폴더"는 폴더 타일 행 끝에 새 폴더를 만들고 이름 칸을 연다. 검색, 고르기, 저장소 없음 동안에는 "새 폴더"가 없다. (2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 검은 알약의 메뉴에 둔다.) |
 | "검색" | `SearchToggle` → `SearchBox` | 누르면 그 자리에서 검색 칸이 열리고 포커스가 간다. 검색어가 있는 동안 남는다. 미디어는 찾을 곳(`targets`)이 없다. 검색어는 검색 칸에만 있다. |
 
 #### 도구 행 (`PageToolbar inset`)
@@ -50,17 +50,16 @@
 |---|---|---|
 | 놓을 곳 | `DropArea`(`over`) | 파일을 끌어 오면 지금 폴더 영역 둘레에 잉크 선이 생긴다. 아래 가운데에 `toast.dropHint` "여기에 올려요". |
 | 폴더 타일 행 | `Grid columns="folders"`, 칸마다 `FolderTile`(`name`, `count`) | 누르면 그 폴더로 들어간다. 파일을 그 위로 끌면 그 타일이 `dropTarget`이 되고 영역 선은 꺼지며, 알림이 "**covers**에 올려요"가 된다. |
-| "상위 폴더로" | `FolderTile` | 폴더 안에서 첫 칸이다. 최상위, 검색 중, 저장소 없음에는 없다. |
 | 새 폴더 · 이름 바꾸기 | `FolderTile` 안 `RenameField fill` | "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 이름을 지키고, Esc는 버린다. |
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
 | 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". |
 | 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 받는 종류를 말한다("이미지 · PDF · ZIP · 텍스트만"). |
 | 너무 큰 파일 | `Tile status="interrupted"`(`actions` "줄여서 다시" · "빼기") | 그림은 흐리게 남고 테는 없다. 세부 줄 "14 MB · 10 MB까지". |
-| 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. |
+| 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
 | (빠짐, 2026-11-05) 제안 메모 카드 | `MemoCardPopover`(`where` "대체 텍스트 · desk-morning.jpg", `onDiscard`, `onAccept`, `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage` | 제안 표시를 누르면 그 타일에 열린다. 받기와 버리기는 머리에 있고 그 파일만 다룬다. |
-| 저장소 없음 | `Text weight="semibold"` "미디어 저장소가 없어요", 그 아래 `Text variant="note" tone="subtle"` 한 줄, 끝에 `TextButton variant="underline"` "연결 방법" | 상자도 빈 상태 부품도 없이 두 줄이다. "올리기"는 비활성으로 남는다. |
+| 저장소 없음 | `Text weight="semibold"` "미디어 저장소가 없어요", 그 아래 `Text variant="note" tone="subtle"` 한 줄, 머리의 `Button variant="primary"` "연결 방법"(`href`) | 상자도 빈 상태 부품도 없이 두 줄이다. 할 수 있는 일이 연결 하나뿐이라 그 일이 알약이 되고, "올리기 ▾"는 없다(2026-11-05 소유자, 원칙 7). |
 
 #### 목록 보기
 
@@ -91,17 +90,17 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. |
-| ⋯ | `IconButton` + `DropdownMenu`("파일 바꾸기" · "ID 복사" · "휴지통으로" `variant="danger"`) | 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
+| 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. 패널의 필드는 모두 `md`(32px, 원칙 10). |
+| ⋯ | `IconButton` + `DropdownMenu`("파일 바꾸기" · "ID 복사" · "휴지통으로" `variant="danger"`) | 이미지와 파일(PDF) 모두 같은 ⋯다. 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
 | 미리보기 | `Image`(이미지), `FilePreview framed`(파일) | |
 | "주소 복사" · "새 탭에서 열기" | `TextButton variant="underline"` | |
-| 파일 이름 | `FormField` + `FormFieldLabel` + `Affix suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
-| 폴더 | `FormField` + `Select`(`SelectTrigger width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
-| (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="sm"` | 늘 입력 칸이다. 이미지에만 있다. |
-| 기본 캡션 | `FormField` + `Input size="sm"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
+| 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
+| 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
+| (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
+| 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `Stack`, 행마다 `TextButton`(`href` 그 글) + `Text variant="micro" tone="subtle"`(자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). |
-| 저장 | `SidePanel footer`의 `Button variant="primary"` | 파일(PDF)은 발에서 "파일 바꾸기" · "휴지통으로"(`TextButton`)가 알약 앞에 온다. |
+| 저장 | `SidePanel footer`의 `Button variant="primary"` | 이미지와 파일이 같다. "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |
 
 ### 흐름 2 · 어시스턴트
 
@@ -121,7 +120,7 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `mode` "최상위" | 6.07 | 경로 없음, `FolderTile` 행(상위 폴더 없음), 어느 폴더에도 없는 파일 `Tile` | Patterns/List/Tile |
-| `mode` "폴더 안" | 6.08 | 경로, "상위 폴더로" `FolderTile`, 하위 폴더, 파일 `Tile`(기본값) | Patterns/List/Tile |
+| `mode` "폴더 안" | 6.08 | 경로, 하위 폴더, 파일 `Tile`(기본값). "상위 폴더로" 타일은 없다 | Patterns/List/Tile |
 | (빠짐, 2026-11-05) `mode` "필터 열기" | 6.22 | "대체 텍스트 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "새 폴더" | 6.09 | 폴더 행 끝 `FolderTile` + `RenameField` | Patterns/List/Tile, Patterns/List/RenameField |
 | `mode` "폴더 우클릭" | 6.10 | 폴더 `ContextMenu` | Controls/Menu/ContextMenu |
@@ -146,12 +145,12 @@
 | (빠짐, 2026-11-05) `mode` "대체 텍스트 메모" | 6.26 | `MemoCardPopover`가 한 타일에 열림 | Monti/Proposal/MemoCard |
 | `mode` "휴지통으로 옮김" | 6.27 | 그 타일이 빠지고 `toast` + "되돌리기" | Controls/Status/Toast |
 | `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
-| `mode` "저장소 없음" | 6.31 | 저장소 없음의 두 줄과 "연결 방법", 도구 행 없음, "올리기" 비활성 | Primitives/Text, Controls/Button/TextButton |
+| `mode` "저장소 없음" | 6.31 | 저장소 없음의 두 줄, 머리의 알약 "연결 방법", 도구 행 없음, "올리기 ▾" 없음 | Primitives/Text, Controls/Button/Button |
 | `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "종류 파일" | 6.33 | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
 | `mode` "PDF 올리는 중" | 6.34 | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 | Patterns/List/FilePreview, Patterns/List/Tile |
 | `mode` "받지 않는 형식" | 6.35 | `FilePreview`가 든 `Tile status="failed"`(빼기) | Patterns/List/FilePreview, Patterns/List/Tile |
-| `mode` "PDF 열기" | 6.36 | 파일용 옆 패널(대체 텍스트와 캡션 없음, 발에 "파일 바꾸기" · "휴지통으로") |  |
+| `mode` "PDF 열기" | 6.36 | 파일용 옆 패널(대체 텍스트와 캡션 없음, "파일 바꾸기" · "휴지통으로"는 이미지처럼 ⋯ 안) |  |
 
 ## 이미지 넣기 (ImageInsert)
 
@@ -167,7 +166,7 @@
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 글자 버튼이다. 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
-| "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 `confirmDisabled`. |
+| "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 
 스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview.
 

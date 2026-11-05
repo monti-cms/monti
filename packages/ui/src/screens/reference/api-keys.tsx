@@ -21,11 +21,11 @@ const KEYS = [
 
 const SLOTS = [
 	{ id: "bareun", title: "바른 맞춤법", meta: "bareun" },
-	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia", muted: true },
-	{ id: "algolia-admin", title: "Algolia 검색", detail: "관리 키", meta: "algolia", muted: true },
+	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia" },
+	{ id: "algolia-admin", title: "Algolia 검색", detail: "관리 키", meta: "algolia" },
 ];
 
-/** Tools, API keys tab: the saved keys, the model each task uses, and the keys plugins ask for. */
+/** Tools, API keys tab: the saved keys, and where they are used (the quick task's model, the keys plugins ask for). */
 export function ApiKeysScreen() {
 	return (
 		<AdminFrame open="tools">
@@ -48,7 +48,7 @@ export function ApiKeysScreen() {
 				</PageToolbar>
 				<PageBody>
 					<Stack gap={40} paddingTop={32}>
-						<ListSection title="저장된 키" count="3">
+						<ListSection title="저장된 키">
 							{KEYS.map((key) => (
 								<ListSectionRow
 									key={key.name}
@@ -74,7 +74,8 @@ export function ApiKeysScreen() {
 								/>
 							))}
 						</ListSection>
-						<ListSection title="모델">
+						{/* One table of where each key is used: the quick task's model, then the plugins' key slots. */}
+						<ListSection title="쓰는 곳">
 							<ListSectionRow
 								title="빠른 작업"
 								labelId="model-quick"
@@ -89,8 +90,6 @@ export function ApiKeysScreen() {
 									/>
 								}
 							/>
-						</ListSection>
-						<ListSection title="플러그인" count="3" countTone="warning">
 							{SLOTS.map((slot) => (
 								<ListSectionRow
 									key={slot.id}
@@ -98,7 +97,6 @@ export function ApiKeysScreen() {
 									detail={slot.detail}
 									meta={slot.meta}
 									metaTone="subtle"
-									muted={slot.muted}
 									labelId={`slot-${slot.id}`}
 									control={
 										<MenuField aria-labelledby={`slot-${slot.id}`} placeholder="키 없음" size="default" warning />

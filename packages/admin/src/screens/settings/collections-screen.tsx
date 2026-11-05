@@ -39,24 +39,14 @@ type Tab = "basics" | "fields" | "editor";
  * Settings (the page's title and its tabs). Only the collections tab is built; the other tabs come with their docs (11, 12), so they are not shown (hide what
  * cannot be done).
  */
-function SettingsPage({
-	changed,
-	save,
-	children,
-}: {
-	changed: boolean;
-	save: React.ReactNode;
-	children: React.ReactNode;
-}) {
+function SettingsPage({ save, children }: { save: React.ReactNode; children: React.ReactNode }) {
 	const { t } = useAdmin();
 	return (
 		<PageColumn>
 			<PageHeader title={t("settings.title")}>{save}</PageHeader>
 			<PageToolbar>
 				<TabLinks variant="toolbar">
-					<TabLink current dot={changed ? "warning" : undefined} dotLabel={changed ? t("settings.changed") : undefined}>
-						{t("settings.tab.collections")}
-					</TabLink>
+					<TabLink current>{t("settings.tab.collections")}</TabLink>
 				</TabLinks>
 			</PageToolbar>
 			{children}
@@ -347,7 +337,7 @@ export function CollectionsScreen({
 	return (
 		<Inline align="stretch" gap={0} grow minHeight={0}>
 			<Stack gap={0} grow minWidth={0} minHeight={0} container>
-				<SettingsPage changed={rows.length > 0} save={saveGroup}>
+				<SettingsPage save={saveGroup}>
 					<PageBody>
 						{data ? (
 							<RailLayout

@@ -2,14 +2,14 @@ import { type ComponentProps, type ReactNode, useId } from "react";
 import { cn } from "./cn";
 
 /**
- * One section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under. When the screen is narrow
- * the fields wrap under the title; `stacked` always puts them under it, and stacked sections are parted by space alone, with no hairline. `dense` is a group of options inside a stacked section's column (a collection's
- * editor options): 20px above and below, its title 12px over them. `id` is the anchor a link can land on.
+ * One section of a settings screen: the title in a column on the left, the fields beside it. Sections are parted by space alone (24px above and
+ * below each), never by a line. When the screen is narrow the fields wrap under the title; `stacked` always puts them under it. `dense` is a
+ * group of options inside a stacked section's column (a collection's editor options): 20px above and below, its title 12px over them. `id` is
+ * the anchor a link can land on.
  */
 function Section({
 	title,
 	children,
-	last = false,
 	stacked = false,
 	dense = false,
 	className,
@@ -19,8 +19,6 @@ function Section({
 	children: ReactNode;
 	/** The title over the fields instead of beside them: a section in a column that is already narrow (a collection's basics). */
 	stacked?: boolean;
-	/** The last section of the page: no hairline under it (stacked sections have none anyway). */
-	last?: boolean;
 	/** A group of options in a stacked column: 20px above and below, the title 12px over them. Always stacked. */
 	dense?: boolean;
 }) {
@@ -30,10 +28,8 @@ function Section({
 			data-slot="section"
 			aria-labelledby={titleId}
 			className={cn(
-				"border-monti-muted",
 				dense ? "flex flex-col gap-monti-12 py-monti-20" : "py-monti-24",
 				dense ? undefined : stacked ? "flex flex-col gap-monti-16" : "flex flex-wrap gap-x-monti-40 gap-y-monti-8",
-				!last && !stacked && !dense && "border-b",
 				className,
 			)}
 			{...props}

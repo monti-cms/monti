@@ -34,7 +34,7 @@ export function TemplatesScreen() {
 				</PageHeader>
 				<PageToolbar inset>
 					<TabLinks variant="toolbar">
-						<TabLink href="#" current count="3">
+						<TabLink href="#" current>
 							템플릿
 						</TabLink>
 						<TabLink href="#">데이터</TabLink>

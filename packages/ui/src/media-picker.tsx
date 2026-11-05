@@ -21,7 +21,7 @@ interface MediaPickerFolder {
 /**
  * The library as a picker (images to insert, a cover image, files to attach): a 760px modal with the folders at the left, a search box and the files as
  * three columns of tiles at the right, "Upload" at the bottom left, and Cancel and the one pill at the bottom right. Choosing and then pressing the
- * pill puts the file in at once; there is no step after it. The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
+ * pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there (`confirmHidden`). The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
  * `folders` under the top entry `allLabel`; `folder` is the picked one, `null` for all.
  */
 function MediaPicker({
@@ -41,7 +41,7 @@ function MediaPicker({
 	uploadDisabled,
 	confirmLabel,
 	onConfirm,
-	confirmDisabled,
+	confirmHidden,
 	notice,
 	children,
 }: {
@@ -65,7 +65,8 @@ function MediaPicker({
 	uploadDisabled?: boolean;
 	confirmLabel: string;
 	onConfirm: () => void;
-	confirmDisabled?: boolean;
+	/** Nothing is picked yet: the pill is not there until a file is (a greyed pill would say nothing about why). */
+	confirmHidden?: boolean;
 	/** Shown in place of the tiles when there is something to say instead (the list could not be loaded, nothing is there). */
 	notice?: React.ReactNode;
 	children?: React.ReactNode;
@@ -108,9 +109,11 @@ function MediaPicker({
 						{uploadLabel}
 					</Button>
 					<DialogClose render={<Button variant="ghost" />}>{labels.cancel}</DialogClose>
-					<Button type="button" disabled={confirmDisabled} onClick={onConfirm}>
-						{confirmLabel}
-					</Button>
+					{confirmHidden ? null : (
+						<Button type="button" onClick={onConfirm}>
+							{confirmLabel}
+						</Button>
+					)}
 				</div>
 			</DialogContent>
 		</Dialog>

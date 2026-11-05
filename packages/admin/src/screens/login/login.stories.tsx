@@ -131,5 +131,11 @@ export const GitHubDenied: Story = {
 	),
 };
 
-/** Flow 8, step 10: `monti init` chose no way to sign in. */
-export const NoLogin: Story = { loaders: site({ schema, auth: {} }) };
+/** Flow 8, step 10: `monti init` chose no way to sign in. The screen names the one place to fix it. */
+export const NoLogin: Story = {
+	loaders: site({ schema, auth: {} }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await expect(await page.findByText("monti.config.ts의 auth에 로그인 방법을 넣어 주세요.")).toBeInTheDocument();
+	},
+};

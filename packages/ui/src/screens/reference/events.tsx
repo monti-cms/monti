@@ -1,5 +1,4 @@
 import {
-	Banner,
 	Box,
 	Count,
 	EntryStatus,
@@ -39,7 +38,7 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:58",
 		title: "“더 짧게 다듬어 줘. 말투는 그대로.”",
-		sub: "어시스턴트 제안 · 첫 번째 글 · 본문 5곳",
+		sub: "첫 번째 글 · 본문 5곳",
 		proposal: true,
 		end: (
 			<>
@@ -51,7 +50,7 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:52",
 		title: "“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고…”",
-		sub: "어시스턴트 제안 · 16건 · 다듬기 3곳 · 요약 1편 · 폴더 이동 9편 · 휴지통 3개",
+		sub: "다듬기 3곳 · 요약 1편 · 폴더 이동 9편 · 휴지통 3개",
 		proposal: true,
 		end: (
 			<>
@@ -63,7 +62,7 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:51",
 		title: "“예전 스캔 파일 지워 줘”",
-		sub: "어시스턴트 제안 · 미디어 2개 휴지통으로",
+		sub: "미디어 2개",
 		proposal: true,
 		end: (
 			<>
@@ -75,7 +74,7 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:42",
 		title: '"발행 후 고친 글" 저장',
-		sub: "글 저장 · post/edited-post",
+		sub: "post/edited-post",
 		end: (
 			<Text as="span" variant="note" tone="subtle">
 				보내는 중
@@ -85,7 +84,7 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:41",
 		title: "“이 글 영어로 옮겨 줘”",
-		sub: "어시스턴트 제안 · 첫 번째 글 · English 4곳",
+		sub: "첫 번째 글 · English 4곳",
 		proposal: true,
 		end: (
 			<>
@@ -99,13 +98,10 @@ const EVENTS: readonly Event[] = [
 	{
 		time: "10:40",
 		title: '"첫 번째 글" 발행',
-		sub: "글 발행 · post/first-post",
+		sub: "post/first-post",
 		end: (
 			<Inline gap={12} align="baseline">
-				<EntryStatus status="failed">실패</EntryStatus>
-				<Text as="span" variant="meta" tone="subtle">
-					3번 실패
-				</Text>
+				<EntryStatus status="failed">3번 실패</EntryStatus>
 				<TextButton variant="underline" size="note">
 					다시 보내기
 				</TextButton>
@@ -116,7 +112,10 @@ const EVENTS: readonly Event[] = [
 	{ time: "09:15", title: "이미지 cover-react.png 올림", sub: "미디어 · Blog Assets" },
 ];
 
-/** Tools, on its activity tab: a failed send on top, then today's events, newest first. */
+/**
+ * Tools, on its activity tab: today's events, newest first. A row's second line says only where it happened (✦ already says the assistant
+ * proposed it, the title says what was done); the one failed send shows in its own row, with no banner over it.
+ */
 export function EventsScreen() {
 	return (
 		<AdminFrame open="tools">
@@ -135,10 +134,6 @@ export function EventsScreen() {
 						<FilterButton>종류</FilterButton>
 					</PageToolbarEnd>
 				</PageToolbar>
-				<Banner title="전송 실패 1건" meta="10. 26" tone="danger">
-					<TextButton variant="underline">보기</TextButton>
-					<TextButton>모두 다시 보내기</TextButton>
-				</Banner>
 				<Stack gap={4} paddingTop={24}>
 					<Box paddingX={12}>
 						<Text as="p" variant="meta" tone="subtle">

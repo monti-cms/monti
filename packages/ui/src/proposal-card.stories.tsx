@@ -49,7 +49,7 @@ export const Waiting: Story = {
 			statusTone="warning"
 			footer={
 				<ProposalActions
-					reviewLabel="상세 보기"
+					reviewLabel="검토"
 					onReview={noop}
 					discardLabel="버리기"
 					onDiscard={noop}
@@ -73,7 +73,7 @@ export const Applying: Story = {
 			statusTone="warning"
 			footer={
 				<ProposalActions
-					reviewLabel="상세 보기"
+					reviewLabel="검토"
 					onReview={noop}
 					discardLabel="버리기"
 					onDiscard={noop}
@@ -130,7 +130,7 @@ export const Discarded: Story = {
 	),
 };
 
-/** New text per file (alt texts): three files at most, then a faint "외 97개" line and "상세 보기". */
+/** New text per file (alt texts): three files at most, then a faint "외 97개" line and "검토". */
 export const Files: Story = {
 	render: () => (
 		<ProposalCard
@@ -140,7 +140,7 @@ export const Files: Story = {
 			statusTone="warning"
 			footer={
 				<ProposalActions
-					reviewLabel="상세 보기"
+					reviewLabel="검토"
 					onReview={noop}
 					discardLabel="버리기"
 					onDiscard={noop}
@@ -163,7 +163,7 @@ export const Files: Story = {
 	),
 };
 
-/** Three files or fewer: no "상세 보기". */
+/** Three files or fewer: no "검토". */
 export const FewFiles: Story = {
 	render: () => (
 		<ProposalCard

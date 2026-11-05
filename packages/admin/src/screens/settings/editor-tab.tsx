@@ -79,7 +79,7 @@ export function EditorTab({ model, collection: c }: { model: CollectionsDraft; c
 			<Section stacked dense title={t("settings.editor.marks")}>
 				{choices(marks)}
 			</Section>
-			<Section stacked dense last title={t("settings.editor.headings")}>
+			<Section stacked dense title={t("settings.editor.headings")}>
 				{choices(headings)}
 			</Section>
 		</>

@@ -43,11 +43,11 @@
 
 ### 코드
 
-원문 보기 전환은 `Segmented`다(`size="sm"`, `inline`). 짝 보기는 `CompareRows` 안의 `CompareRow`다. 첫 행은 `head`(각 칸의 이름, 언어, 고친 날), 블록마다 `name`(블록 종류), 원문이 움직였으면 `note`(주황), 고치는 중이면 `current`, 그리고 `source`와 `translation`. 제목 행은 `title`이다(두 칸에 `Heading variant="page"`, 여백의 이름은 20px 아래에서 시작한다). 원문과 함께 쓰는 블록(코드)의 번역 칸은 `CompareShared`다. 원문 블록을 흐린 글자로 보이고, 그 아래 `action`에 `TextButton variant="underline"` "English에서만 따로 고치기"를 둔다(사이 8px). 원문 칸의 코드 블록은 도구 바탕 위에서 `bg-selected`로 깔린다. 본문 블록은 블록 패키지가 편집기에 그리는 블록을 그대로 쓴다. 옆 창은 `ResizablePane` 안의 `Box background="tool"`이다. 비교 보기는 `Compare`다(상태 표시줄의 이웃 참고: `screens.md`의 글 비교 화면, EditorCompare).
+원문 보기 전환은 `Segmented`다(`size="sm"`, `inline`). 짝 보기는 `CompareRows` 안의 `CompareRow`다. 첫 행은 `head`(각 칸의 고친 날만. 어느 쪽이 원문이고 어느 언어인지는 탭과 바탕이 말한다), 왼쪽 좁은 칸에는 원문이 움직였을 때만 `note`(주황). 블록 종류 이름은 두지 않는다. 블록이 스스로 보인다(2026-11-05 소유자, 원칙 8). 고치는 중이면 `current`, 그리고 `source`와 `translation`. 제목 행은 `title`이다(두 칸에 `Heading variant="page"`, 여백의 메모는 20px 아래에서 시작한다). 원문과 함께 쓰는 블록(코드)의 번역 칸은 `CompareShared`다. 원문 블록을 흐린 글자로 보이고, 그 아래 `action`에 `TextButton variant="underline"` "따로 고치기"를 둔다(사이 8px). 원문 칸의 코드 블록은 도구 바탕 위에서 `bg-selected`로 깔린다. 본문 블록은 블록 패키지가 편집기에 그리는 블록을 그대로 쓴다. 옆 창은 `ResizablePane` 안의 `Box background="tool"`이다. 비교 보기는 `Compare`다(상태 표시줄의 이웃 참고: `screens.md`의 글 비교 화면, EditorCompare).
 
 ## 원문과 같음 (`.mt-shared`)
 
-코드 블록처럼 번역하지 않는 블록은 원문을 그대로 쓴다. 번역 칸에는 점선 상자 대신 원문 블록을 흐린 글자로 두고(아직 번역하지 않은 블록과 같은 규칙), 그 아래 `TextButton variant="underline"` "English에서만 따로 고치기"를 둔다. 누르면 그 순간 이 언어용 사본을 만든다.
+코드 블록처럼 번역하지 않는 블록은 원문을 그대로 쓴다. 번역 칸에는 점선 상자 대신 원문 블록을 흐린 글자로 두고(아직 번역하지 않은 블록과 같은 규칙), 그 아래 `TextButton variant="underline"` "따로 고치기"를 둔다. 어느 언어의 사본인지는 탭이 말한다. 누르면 그 순간 이 언어용 사본을 만든다.
 
 ## 번역 실행
 

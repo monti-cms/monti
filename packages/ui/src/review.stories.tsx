@@ -43,7 +43,7 @@ export const Group: Story = {
 			<ReviewQuote>“요약이 빈 글에 요약을 채워 줘”</ReviewQuote>
 			<ReviewGroup
 				title="요약 채우기"
-				meta="글 2편 · 되돌릴 수 있음"
+				meta="글 2편"
 				actions={
 					<>
 						<Button variant="ghost" size="sm">
@@ -129,7 +129,7 @@ export const OneLine: Story = {
 	render: () => (
 		<ReviewGroup
 			title="다듬기"
-			meta="발행 후 고친 글 · 3곳 · 되돌릴 수 있음"
+			meta="발행 후 고친 글 · 3곳"
 			actions={
 				<>
 					<Button variant="ghost" size="sm">
@@ -167,7 +167,7 @@ export const OneLine: Story = {
 /** A text field side by side: now on the tool ground, the proposal next to it; the column names stand in a 32px row at the top of the group. */
 export const SideBySide: Story = {
 	render: () => (
-		<ReviewGroup title="다듬기" meta="글 1편 · 되돌릴 수 있음">
+		<ReviewGroup title="다듬기" meta="글 1편">
 			<ReviewCompareHead before="지금" after="제안" />
 			<ReviewCompare
 				included
