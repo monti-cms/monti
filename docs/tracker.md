@@ -46,7 +46,7 @@
 | T7 | 30일 지난 되돌리기 스냅숏 지우기. 휴지통 정리와 같은 때(`monti trash:purge`) | 11 | 13 결정 기록, #432 |
 | T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다. 운영 사이트가 시작할 때 데이터베이스가 스키마보다 뒤에 있으면(`schema.read`의 `fileChanged`) `monti db:migrate`를 돌리라고 서버 로그에 남긴다 | 출시 전 | #432에서 지움, 01 |
 | T14 | 릴리스 묶음(`scripts/pack-release.mjs`, `release.yml`)을 새 패키지에 맞춘다 | 출시 전 | #432 |
-| T21 | 02의 화면: `useEntryEditor`(`useDraft` 위에: 저장 칸 네 가지, 브라우저 임시 저장, 충돌, 칸의 제안 표시 05-1), `usePublish`, `EntryStatus`, `CompareView`. 흐름 1 전부(끝 조건 02-1·02-2의 화면 쪽). 편집기 화면(2단계)에서 | 02 | 02 화면 쪽 조각 |
+| T21 | 02의 화면: `useEntryEditor`(`useDraft` 위에: 저장 칸 네 가지, 브라우저 임시 저장, 충돌, 칸의 제안 표시 05-1, 필수 필드 라벨 끝의 빨간 `*`(components/field.md "필수 필드"; 설정의 속성 패널 미리보기는 #438에서 따른다), `usePublish`, `EntryStatus`, `CompareView`. 흐름 1 전부(끝 조건 02-1·02-2의 화면 쪽). 편집기 화면(2단계)에서 | 02 | 02 화면 쪽 조각 |
 | T31 | 03의 화면: `useBodyEditor`(블록 정의로 ProseMirror 스키마, `/` 메뉴, 바꾸기 메뉴), `BlockHandle`, `FormatCard`, `SlashMenu`, `ImageTools`. 흐름 1의 02~06단계, 기준 화면 TemplateEditor(끝 조건 03-1의 편집기 쪽, 03-4). 편집기 화면(2단계)에서 | 03 | 03 화면 쪽 조각 |
 | T32 | `ProposalMarks`: 블록 id로 받은 본문 제안을 본문 위에 그린다. `useDraft`의 제안을 편집기 본문에 잇는 일이라 편집기 화면(T31)과 함께 | 03 | 03 화면 쪽 조각, 05 |
 | T33 | 이미지 블록의 `media`가 미디어 라이브러리를 가리킨다. 본문 이미지를 "쓰는 곳"에 넣고, 기준 화면 ImageInsert(붙여 넣기 · 끌어 넣기 · 올리는 막대) | 09 | 03 |

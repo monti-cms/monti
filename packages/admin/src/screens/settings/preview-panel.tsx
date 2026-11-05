@@ -60,6 +60,15 @@ export function PreviewPanel({
 	const problems = model.problems.filter((problem) => problem.collection === c);
 	const keyOf = (name: string) => keys.find((key) => model.fieldName(c, key) === name);
 
+	// The editor's rule for required fields (components/field.md): a red * after the label, but only in a panel that also has fields left empty.
+	const defs = keys
+		.filter((key) => key !== "title")
+		.flatMap((key) => {
+			const field = model.shown(at.field(c, key)) as DraftField | null;
+			return field ? [field.def] : [];
+		});
+	const marksRequired = defs.some((def) => !def.required);
+
 	const row = (key: string) => {
 		// The title is the editor's heading, not a property (flow 1).
 		if (key === "title") return null;
@@ -69,7 +78,9 @@ export function PreviewPanel({
 		const placeholder = t("settings.preview.empty");
 		return (
 			<FormField key={key}>
-				<FormFieldLabel htmlFor={id}>{model.fieldLabel(c, key)}</FormFieldLabel>
+				<FormFieldLabel htmlFor={id} required={marksRequired && Boolean(field.def.required)}>
+					{model.fieldLabel(c, key)}
+				</FormFieldLabel>
 				{input(field.def, id, placeholder, key)}
 			</FormField>
 		);
