@@ -7,7 +7,9 @@ import {
 	Paragraph,
 	Quotes,
 	Subtract,
+	Table,
 	Template,
+	TextFootnote,
 } from "@monti-cms/ui/icons";
 
 /**
@@ -32,6 +34,10 @@ export function BlockIcon({ type, level }: { type: string; level?: number }) {
 			return <Code aria-hidden />;
 		case "divider":
 			return <Subtract aria-hidden />;
+		case "table":
+			return <Table aria-hidden />;
+		case "footnote":
+			return <TextFootnote aria-hidden />;
 		case "template":
 			return <Template aria-hidden />;
 	}

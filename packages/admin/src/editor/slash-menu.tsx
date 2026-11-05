@@ -13,7 +13,7 @@ import {
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import { BlockIcon } from "./block-icon";
@@ -290,6 +290,16 @@ function SlashMenu({
 		() => ({ getBoundingClientRect: () => new DOMRect(caret.left, caret.top, 1, caret.bottom - caret.top) }),
 		[caret],
 	);
+	// The keys move the highlight from the text, not from the list: the list follows it, so the row stays in view.
+	const listLabel = t("slash.label");
+	useEffect(() => {
+		const frame = requestAnimationFrame(() =>
+			document
+				.querySelector(`[aria-label="${listLabel}"] [cmdk-item][data-value="${index}"]`)
+				?.scrollIntoView({ block: "nearest" }),
+		);
+		return () => cancelAnimationFrame(frame);
+	}, [index, listLabel]);
 	const titles: Record<Group, string> = {
 		text: t("slash.text"),
 		insert: t("slash.insert"),
@@ -311,7 +321,7 @@ function SlashMenu({
 			>
 				<Command shouldFilter={false} value={String(index)} onValueChange={(value) => onHighlight(Number(value))}>
 					<CommandInput value={query} readOnly placeholder={t("slash.find")} aria-label={t("slash.find")} />
-					<CommandList aria-label={t("slash.label")}>
+					<CommandList aria-label={listLabel}>
 						{GROUPS.map((group) => {
 							const rows = items.flatMap((item, at) => (item.group === group ? [{ item, at }] : []));
 							if (rows.length === 0) return null;
