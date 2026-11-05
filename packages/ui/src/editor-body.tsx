@@ -6,9 +6,10 @@ import { cn } from "./cn";
  * code and tables in the inner box the read-only blocks use (`DocCode`, `DocTable`). The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
  * and marks a state with a `data-` attribute; this part gives them their looks:
  *
+ * - `data-align` (`center`, `right`): where a paragraph's or a heading's lines sit.
  * - `data-empty` with `data-placeholder`: the empty line the cursor is on says how to add a block.
  * - `data-menu-open`: the block whose menu is open has the block background (`Block active`).
- * - `data-held`: the block being dragged leaves its place as a gap (`SLOT`) while its lifted copy (`HeldBlock`) follows the pointer.
+ * - `data-held`: the block being dragged stays in its place, dimmed to 40%, while a small card (`HeldBlock`) follows the pointer.
  * - `data-off`: a block the collection's editor no longer offers stays, in the faint ink, with its `data-off-label` after it.
  * - `data-box`: a block the editor shows but does not edit here, in a quiet box with its `data-box-label`: one the site no longer defines (kept
  *   as it is), or one whose own editor comes with its feature.
@@ -19,6 +20,7 @@ const EDITOR_BODY = cn(
 	"[&_.ProseMirror>*:first-child]:mt-0",
 	// Text blocks.
 	"[&_p]:mt-0 [&_p]:mb-monti-20",
+	"[&_[data-align=center]]:text-center [&_[data-align=right]]:text-right",
 	"[&_h2]:mt-monti-32 [&_h2]:mb-monti-12 [&_h2]:text-monti-heading",
 	"[&_h3]:mt-monti-32 [&_h3]:mb-monti-12 [&_h3]:text-monti-title",
 	"[&_h4]:mt-monti-32 [&_h4]:mb-monti-12 [&_h4]:text-monti-reading [&_h4]:font-semibold",
@@ -43,7 +45,7 @@ const EDITOR_BODY = cn(
 	"[&_[data-empty]]:before:pointer-events-none [&_[data-empty]]:before:float-left [&_[data-empty]]:before:h-0 [&_[data-empty]]:before:text-monti-faint [&_[data-empty]]:before:content-[attr(data-placeholder)]",
 	"[&_[data-menu-open]]:relative [&_[data-menu-open]]:isolate [&_[data-menu-open]]:before:pointer-events-none [&_[data-menu-open]]:before:absolute [&_[data-menu-open]]:before:-inset-x-monti-8 [&_[data-menu-open]]:before:inset-y-0 [&_[data-menu-open]]:before:-z-10 [&_[data-menu-open]]:before:rounded-monti-md [&_[data-menu-open]]:before:bg-monti-block [&_li[data-menu-open]]:before:-left-monti-28",
 	// A list item's ground covers its marker too, as `Block active` does in the reference.
-	"[&_[data-held]]:opacity-0",
+	"[&_[data-held]]:opacity-40",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
 	"[&_[data-box]]:mb-monti-20 [&_[data-box]]:rounded-monti-lg [&_[data-box]]:bg-monti-muted [&_[data-box]]:px-monti-16 [&_[data-box]]:py-monti-12 [&_[data-box]]:text-monti-note [&_[data-box]]:text-monti-subtle [&_[data-box]]:before:content-[attr(data-box-label)]",
 );

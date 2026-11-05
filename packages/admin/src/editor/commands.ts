@@ -89,11 +89,16 @@ function made(schema: Schema, kind: Kind, node: EditorNode): EditorNode {
 					? Fragment.from(schema.text(text))
 					: Fragment.empty
 				: node.content;
+	// A paragraph turned into a heading, or back, keeps where its lines sit.
+	const align = node.attrs.data?.align as string | undefined;
 	switch (kind.type) {
 		case "paragraph":
-			return named(schema, "paragraph").create({ blockId: id }, content);
+			return named(schema, "paragraph").create({ blockId: id, data: align ? { align } : null }, content);
 		case "heading":
-			return named(schema, "heading").create({ blockId: id, data: { level: kind.level } }, content);
+			return named(schema, "heading").create(
+				{ blockId: id, data: { level: kind.level, ...(align ? { align } : {}) } },
+				content,
+			);
 		case "codeBlock":
 			return named(schema, "codeBlock").create({ blockId: id }, content);
 		case "quote":

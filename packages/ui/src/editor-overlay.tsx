@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "./cn";
-import { EditorBody } from "./editor-body";
 import { HELD } from "./sortable";
 
 /**
@@ -40,29 +39,35 @@ function EditorOverlay({
 }
 
 /**
- * A block of the text in hand while it is dragged: the same lifted look as every dragged thing (`HELD`: the page ground and the floating shadow), with
- * the block's own text in the body's looks. The editor holds it just under the pointer, so it never covers the line where it lands or the block
- * above that line. `html` is the block as the editor drew it; it is a picture, never edited.
+ * A block of the text in hand while it is dragged: a small card (at most 280px wide) with the block's kind and the start of its text, beside the
+ * pointer, never the block at full width over the text it is moving through. Its surface is the lifted look of every dragged thing (`HELD`: the page
+ * ground and the floating shadow). The block itself stays in place, dimmed (`EditorBody`'s `data-held`).
  */
-function HeldBlock({ html }: { html: string }) {
+function HeldBlock({ kind, text }: { kind: string; text: string }) {
 	return (
-		<div data-slot="held-block" className={cn(HELD, "pointer-events-none w-full rounded-monti-md px-monti-8")}>
-			<EditorBody
-				className="py-monti-4 [&>*]:my-0 [&_h2]:mt-0 [&_h3]:mt-0 [&_h4]:mt-0 [&_ol]:mb-0 [&_p]:mb-0 [&_ul]:mb-0"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: the editor's own drawing of a block, copied to show it in hand
-				dangerouslySetInnerHTML={{ __html: html }}
-			/>
+		<div
+			data-slot="held-block"
+			className={cn(
+				HELD,
+				"pointer-events-none flex max-w-[280px] items-baseline gap-monti-8 rounded-monti-md px-monti-12 py-monti-6 text-monti-body",
+			)}
+		>
+			<span className="shrink-0 text-monti-meta text-monti-subtle">{kind}</span>
+			{text ? <span className="min-w-0 truncate">{text}</span> : null}
 		</div>
 	);
 }
 
-/** Where a dragged block lands: a 2px ink line between two blocks, as wide as the block it lands beside. */
+/**
+ * Where a dragged block lands: a 2px ink line in the middle of the gap between two blocks, as wide as the block it lands beside, with an 8px ring
+ * at its start that sticks out 4px to the left, so the line reads as a place, not a rule of the text.
+ */
 function DropLine() {
 	return (
 		<div
 			data-slot="drop-line"
 			aria-hidden
-			className="pointer-events-none h-0.5 w-full rounded-monti-full bg-monti-emphasis"
+			className="pointer-events-none relative h-0.5 w-full bg-monti-emphasis before:absolute before:top-1/2 before:left-0 before:size-2 before:-translate-y-1/2 before:rounded-monti-full before:border-2 before:border-monti-contrast before:bg-monti-page before:content-['']"
 		/>
 	);
 }

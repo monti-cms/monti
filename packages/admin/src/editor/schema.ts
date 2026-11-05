@@ -34,13 +34,23 @@ const blockAttributes = () => ({
 
 type Data = Record<string, unknown> | null;
 
+/** A paragraph's or heading's alignment, for `EditorBody` to draw (`data-align`); left is the default and adds nothing. */
+const aligned = (data: Data): Record<string, string> =>
+	data?.align === "center" || data?.align === "right" ? { "data-align": String(data.align) } : {};
+
+/** An element's own alignment when it is pasted in. */
+const alignOf = (element: HTMLElement) => {
+	const align = element.style.textAlign || element.getAttribute("data-align");
+	return align === "center" || align === "right" ? align : undefined;
+};
+
 /** The element a block is drawn as. `EditorBody` gives these their looks; a block the editor shows but does not edit is a box with its name. */
 function draw(block: CatalogBlock, data: Data, boxLabel: (block: CatalogBlock, data: Data) => string): DOMOutputSpec {
 	switch (block.type) {
 		case "paragraph":
-			return ["p", 0];
+			return ["p", aligned(data), 0];
 		case "heading":
-			return [`h${Number(data?.level ?? 2)}`, 0];
+			return [`h${Number(data?.level ?? 2)}`, aligned(data), 0];
 		case "bulletList":
 			return ["ul", 0];
 		case "orderedList":
@@ -80,11 +90,22 @@ function parse(block: CatalogBlock) {
 	const own = [{ tag: `div[data-block="${block.type}"]` }];
 	switch (block.type) {
 		case "paragraph":
-			return [{ tag: "p" }];
+			return [
+				{
+					tag: "p",
+					getAttrs: (element: HTMLElement) => {
+						const align = alignOf(element);
+						return { data: align ? { align } : null };
+					},
+				},
+			];
 		case "heading":
 			return [1, 2, 3, 4, 5, 6].map((level) => ({
 				tag: `h${level}`,
-				getAttrs: () => ({ data: { level: Math.min(4, Math.max(2, level)) } }),
+				getAttrs: (element: HTMLElement) => {
+					const align = alignOf(element);
+					return { data: { level: Math.min(4, Math.max(2, level)), ...(align ? { align } : {}) } };
+				},
 			}));
 		case "bulletList":
 			return [{ tag: "ul" }];

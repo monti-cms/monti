@@ -18,6 +18,7 @@ import {
 	MenuShortcut,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
+import type { Node as EditorNode } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import { type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -54,22 +55,18 @@ function spotOf(element: HTMLElement, pos: number): Spot {
 	return { pos, top: rect.top + Math.max(0, (line - HANDLE) / 2), left: left - LEFT };
 }
 
-/** A drag in progress: the block in hand, its picture, where it is held from, and where it would land. */
-type Held = { from: number; html: string; left: number; width: number; y: number; drop: Drop | null };
+/** A drag in progress: the block in hand (its kind and text for the card), the pointer, and where it would land. */
+type Held = { from: number; kind: string; text: string; x: number; y: number; drop: Drop | null };
 
 /** The pointer moves this far (px) before a press on the grip becomes a drag, so a press still opens the menu (list.md, `Sortable`). */
 const DRAG_AFTER = 4;
 
-/** The copy in hand hangs this far (px) under the pointer, so it covers neither the drop line nor the block above it. */
-const HELD_BELOW = 8;
+/** Where the card in hand sits from the pointer (px): beside it, so it never covers the line where the block lands. */
+const CARD_RIGHT = 16;
+const CARD_BELOW = 8;
 
-/** A block's picture for the copy in hand: a list item keeps its list around it, so its bullet or number shows. */
-function pictureOf(element: HTMLElement) {
-	if (element.tagName !== "LI" || !element.parentElement) return element.outerHTML;
-	const list = element.parentElement.cloneNode(false) as HTMLElement;
-	list.innerHTML = element.outerHTML;
-	return list.outerHTML;
-}
+/** The drop line's ring sticks out this far (px) left of the block it lands beside. */
+const RING_OUT = 4;
 
 /**
  * The block handle (doc 03, editor-tools.md): the + and the grip in the margin of the block under the pointer. The + puts an empty line with "/" under
@@ -140,27 +137,26 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		if (!editor || !spot || event.button !== 0 || !element.current) return;
 		const { view } = editor;
 		const from = spot.pos;
-		const block = element.current;
 		const startX = event.clientX;
 		const startY = event.clientY;
 		let lifted: Held | null = null;
 		const move = (moved: globalThis.PointerEvent) => {
 			if (!lifted) {
 				if (Math.hypot(moved.clientX - startX, moved.clientY - startY) < DRAG_AFTER) return;
-				const rect = block.getBoundingClientRect();
 				dragging.current = true;
 				changeOpen(false);
+				const node = view.state.doc.nodeAt(from);
 				lifted = {
 					from,
-					html: pictureOf(block),
-					left: rect.left,
-					width: rect.width,
+					kind: node ? kindName(node, view.state.doc.resolve(from).parent) : "",
+					text: (node?.textContent ?? "").slice(0, 120),
+					x: moved.clientX,
 					y: moved.clientY,
 					drop: null,
 				};
 				view.dispatch(markHeld(view.state, from));
 			}
-			lifted = { ...lifted, y: moved.clientY, drop: dropAt(view, from, moved.clientY) };
+			lifted = { ...lifted, x: moved.clientX, y: moved.clientY, drop: dropAt(view, from, moved.clientY) };
 			setHeld(lifted);
 		};
 		const finish = (put: boolean) => {
@@ -189,15 +185,27 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		window.addEventListener("keydown", key, true);
 	};
 
+	/** A block's kind as the menu names it ("Heading 2", "List item"). */
+	const kindName = (node: EditorNode, parent: EditorNode) => {
+		const kind = kindOf(node, parent);
+		if (kind?.type === "heading") return t("editor.heading", { level: kind.level });
+		const block = catalogs.kit.blocks.find((each) => nodeName(each.type) === node.type.name);
+		return block ? t(block.label) : "";
+	};
+
 	const overlay = () => {
 		if (held)
 			return (
 				<>
-					<EditorOverlay top={held.y + HELD_BELOW} left={held.left} width={held.width}>
-						<HeldBlock html={held.html} />
+					<EditorOverlay top={held.y + CARD_BELOW} left={held.x + CARD_RIGHT}>
+						<HeldBlock kind={held.kind} text={held.text} />
 					</EditorOverlay>
 					{held.drop ? (
-						<EditorOverlay top={held.drop.line.top} left={held.drop.line.left} width={held.drop.line.width}>
+						<EditorOverlay
+							top={held.drop.line.top}
+							left={held.drop.line.left - RING_OUT}
+							width={held.drop.line.width + RING_OUT}
+						>
 							<DropLine />
 						</EditorOverlay>
 					) : null}

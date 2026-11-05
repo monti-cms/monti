@@ -120,6 +120,29 @@ describe("one definition", () => {
 		expect((await get(id)).tasks).toEqual([expect.objectContaining({ code: "block", block: "b_1", blocking: true })]);
 	});
 
+	it("03-1 an aligned paragraph or heading keeps its alignment on the site, and the body check takes it; left adds nothing", async () => {
+		const styles: unknown[] = [];
+		const record: CreateElement<string> = (type, props, ...children) => {
+			if (type === "p" || type === "h2") styles.push(props?.style);
+			return html(type, props, ...children);
+		};
+		const body = doc(
+			{ id: "b_1", type: "heading", attrs: { level: 2, align: "center" }, content: [{ type: "text", text: "Title" }] },
+			{ id: "b_2", type: "paragraph", attrs: { align: "right" }, content: [{ type: "text", text: "end" }] },
+			{ id: "b_3", type: "paragraph", attrs: { align: "left" }, content: [{ type: "text", text: "start" }] },
+		);
+		renderDocument(body, { createElement: record });
+		expect(styles).toEqual([{ textAlign: "center" }, { textAlign: "right" }, undefined]);
+		const id = (await write("entries.create", { collection: "post", locale: "ko", title: "정렬" })).output.id;
+		const { version } = (await get(id)).entry;
+		await write("entries.save", { id, version, doc: body });
+		expect(((await get(id)).entry.doc as Doc).blocks.map((block) => block.attrs?.align)).toEqual([
+			"center",
+			"right",
+			"left",
+		]);
+	});
+
 	it("03-1 core blocks are drawn as plain HTML, and a block the site does not define is left out", () => {
 		const body = doc(
 			{ id: "b_1", type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Title" }] },

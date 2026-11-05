@@ -215,3 +215,15 @@ export const Dragging: Story = {
 		await body.findByText("서론", { selector: "[data-slot=held-block] h2" }, wait);
 	},
 };
+
+/** The block menu of a paragraph with "정렬" open: left, center, right (flow 1, step 05). */
+export const AlignMenu: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { text, body } = await editor(canvasElement);
+		pointAt(await within(text).findByText("이 글에서 무엇을 다루는지 한두 문장으로."));
+		await userEvent.click(await body.findByRole("button", { name: "블록 메뉴" }, wait));
+		await userEvent.click(await body.findByRole("menuitem", { name: /정렬/ }, wait));
+		await body.findByRole("menuitemradio", { name: /가운데/ }, wait);
+	},
+};
