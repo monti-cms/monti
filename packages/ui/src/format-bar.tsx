@@ -4,7 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
 import { BAR_BUTTON, FloatingBarButton } from "./floating-bar";
-import { Erase, Link } from "./icons";
+import { Code, Erase, Link } from "./icons";
 import { useUiLabels } from "./labels";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -15,7 +15,8 @@ const FORMAT_GLYPHS = {
 	italic: { glyph: "I", className: "italic" },
 	underline: { glyph: "U", className: "underline" },
 	strike: { glyph: "S", className: "line-through" },
-	code: { glyph: "</>", className: "font-mono text-monti-meta" },
+	// An icon, not "</>": three letters made its button wider than the others.
+	code: { glyph: <Code aria-hidden className="size-4" />, className: "" },
 	superscript: { glyph: "x²", className: "text-monti-label" },
 	subscript: { glyph: "x₂", className: "text-monti-label" },
 	link: { glyph: <Link aria-hidden className="size-4" />, className: "" },
