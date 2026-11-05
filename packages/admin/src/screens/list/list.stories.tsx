@@ -310,6 +310,72 @@ export const ColumnMoving: Story = {
 	},
 };
 
+/** Drags a column's resize handle by `by` px; lets go unless `hold`. */
+async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
+	const handle = await within(canvas).findByRole("separator", { name }, wait);
+	const box = handle.getBoundingClientRect();
+	const y = box.top + box.height / 2;
+	const at = (type: string, x: number) =>
+		handle.dispatchEvent(new PointerEvent(type, { bubbles: true, button: 0, buttons: 1, clientX: x, clientY: y }));
+	at("pointerdown", box.left);
+	for (let step = 1; step <= 4; step++) {
+		at("pointermove", box.left + (by * step) / 4);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	}
+	if (!hold) at("pointerup", box.left + by);
+	return handle;
+}
+const columnWidth = (canvas: HTMLElement, id: string) =>
+	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().width ?? 0);
+
+const rightEdge = (canvas: HTMLElement, id: string) =>
+	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().right ?? 0);
+
+/**
+ * The edge between the title and the category held and dragged 80px left: the edge stays under the pointer with its accent line, the title is 80px
+ * narrower and the category 80px wider, every other edge stays, rows too (06).
+ */
+export const ColumnResizing: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const edge = rightEdge(canvasElement, "title");
+		const after = rightEdge(canvasElement, "category");
+		await dragHandle(canvasElement, "제목 열 너비 조절", -80, true);
+		await waitFor(() => expect(rightEdge(canvasElement, "title")).toBe(edge - 80), wait);
+		await expect(rightEdge(canvasElement, "category")).toBe(after);
+	},
+};
+
+/**
+ * The same edge dragged 80px left and let go: the category's width is saved for posts. After going to the memos and back (the list read again, as after
+ * a reload) the category keeps it, and no column moved (06).
+ */
+export const ColumnResized: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made } = loaded as Loaded;
+		const page = within(canvasElement);
+		await rowsShown(canvasElement);
+		const order = () =>
+			[...canvasElement.querySelectorAll<HTMLElement>("th[data-column]")].map((th) => th.dataset.column);
+		const before = order();
+		await dragHandle(canvasElement, "제목 열 너비 조절", -80);
+		await waitFor(async () => {
+			const kept = await run<{ columns: { id: string; width?: number }[] }>(made.monti, "list.columns", {
+				collection: "post",
+			});
+			expect(kept.columns.find((column) => column.id === "category")?.width).toBe(164);
+		}, wait);
+		await userEvent.click(page.getByRole("button", { name: "메모" }));
+		await waitFor(() => expect(canvasElement.querySelector("th[data-column=category]")).toBeNull(), wait);
+		await userEvent.click(page.getByRole("button", { name: /^게시글/ }));
+		await rowsShown(canvasElement);
+		await waitFor(() => expect(columnWidth(canvasElement, "category")).toBe(164), wait);
+		expect(order()).toEqual(before);
+	},
+};
+
 /** "25 per page ▾" under the table, opened upward: 25, 50, 100 (flow 7, step 02c). */
 export const PageSize: Story = {
 	loaders: site(),
