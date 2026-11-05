@@ -325,23 +325,22 @@ describe("columns", () => {
 		});
 	});
 
-	it("06-1 the widths the admin drags are kept per collection; a column left out has its kind's width and the title has none", async () => {
-		await run("list.savePrefs", { collection: "post", widths: { tags: 240, updatedAt: 120 } });
+	it("06-1 the widths the admin drags are kept per collection, the title's too; a column left out has its kind's width", async () => {
+		await run("list.savePrefs", { collection: "post", widths: { title: 420, tags: 240, updatedAt: 120 } });
 		await run("list.savePrefs", { collection: "post", pageSize: 25 });
 		const width = async (collection: string, id: string) =>
 			(await columns(collection)).find((column) => column.id === id)?.width;
+		expect(await width("post", "title")).toBe(420);
 		expect(await width("post", "tags")).toBe(240);
 		expect(await width("post", "updatedAt")).toBe(120);
 		expect(await width("post", "category")).toBeUndefined();
 		expect(await width("memo", "updatedAt")).toBeUndefined();
 
-		// The screen saves the whole map: a column reset to its kind's width is left out.
+		// The screen saves the whole map: a column reset to its kind's width (the title: to the room left) is left out.
 		await run("list.savePrefs", { collection: "post", widths: { tags: 240 } });
 		expect(await width("post", "updatedAt")).toBeUndefined();
+		expect(await width("post", "title")).toBeUndefined();
 
-		await expect(run("list.savePrefs", { collection: "post", widths: { title: 300 } })).rejects.toMatchObject({
-			reason: { key: "list.titleWidth" },
-		});
 		await expect(run("list.savePrefs", { collection: "post", widths: { nope: 100 } })).rejects.toMatchObject({
 			reason: { key: "list.unknownColumn" },
 		});

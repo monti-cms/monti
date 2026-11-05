@@ -192,27 +192,31 @@ export function ListScreen({
 	const widths =
 		pending?.widths ??
 		Object.fromEntries((columns ?? []).flatMap((column) => (column.width ? [[column.id, column.width]] : [])));
-	// The width of the column whose handle is being dragged, before it is saved on release.
-	const [dragWidth, setDragWidth] = useState<{ id: string; width: number } | null>(null);
+	// The widths while a handle is being dragged, before they are saved on release.
+	const [dragWidths, setDragWidths] = useState<Record<string, number> | null>(null);
 	const shownIds = (preview ?? allIds).filter((id) => !hidden.includes(id));
 	const shown = shownIds.flatMap((id) => (columns ?? []).filter((column) => column.id === id));
-	/** A column's width now: the one being dragged, the one the admin kept (never under its kind's), or its kind's. */
+	/** A column's width now: the one being dragged or kept (never under its kind's), or its kind's; the title without one takes the room left. */
 	const sizeOf = (column: ListColumn) => {
 		const kind = kindSizeOf(column);
-		if (kind === undefined) return undefined;
-		const kept = dragWidth?.id === column.id ? dragWidth.width : widths[column.id];
+		const kept = (dragWidths ?? widths)[column.id];
+		if (kind === undefined) return kept;
 		return kept === undefined ? kind : Math.max(kind, kept);
 	};
 	const keep = (order: string[], nextHidden: string[], nextWidths = widths) => {
 		setSaving({ order, hidden: nextHidden, widths: nextWidths, from: columnsRead.data });
 		void savePrefs.run({ collection, order, hidden: nextHidden, widths: nextWidths });
 	};
-	const resize = (id: string, width: number | null, commit: boolean) => {
-		if (!commit) return setDragWidth(width === null ? null : { id, width });
-		setDragWidth(null);
-		const { [id]: _old, ...others } = widths;
-		const next = width === null ? others : { ...others, [id]: width };
-		if (widths[id] !== next[id]) keep(allIds, hidden, next);
+	const resize = (changes: Record<string, number | null>, commit: boolean) => {
+		const next = Object.fromEntries(
+			// Onto the drag in progress: a width it pinned on its first move (the title) is not sent again.
+			Object.entries({ ...(dragWidths ?? widths), ...changes }).filter(
+				(entry): entry is [string, number] => entry[1] !== null,
+			),
+		);
+		if (!commit) return setDragWidths(next);
+		setDragWidths(null);
+		if (JSON.stringify(next) !== JSON.stringify(widths)) keep(allIds, hidden, next);
 	};
 	const move = (from: string, to: string) => {
 		const order = allIds.filter((id) => id !== from);
@@ -381,7 +385,9 @@ export function ListScreen({
 			/>
 		),
 	}));
-	const colSpan = shown.length + 1;
+	// Once the title has a width too, the room left over is an empty cell before the rows' ⋯ (ListHead draws its head).
+	const filler = shown.every((column) => sizeOf(column) !== undefined);
+	const colSpan = shown.length + (filler ? 2 : 1);
 	const aiChips = state.filters.filter((filter) => state.ai.includes(filterColumn(filter)));
 	const stateNames: Record<string, string> = {
 		published: t("list.state.published"),
@@ -516,7 +522,11 @@ export function ListScreen({
 				</PageToolbar>
 			)}
 			<ListScroll>
-				<Table container="none" layout="fixed" columns={[...shown.map(sizeOf), LIST_COLUMN_SIZE.end]}>
+				<Table
+					container="none"
+					layout="fixed"
+					columns={[...shown.map(sizeOf), ...(filler ? [undefined] : []), LIST_COLUMN_SIZE.end]}
+				>
 					{pickedRows.length > 0 ? (
 						<BulkBar
 							label={t("list.selected", { count: pickedRows.length })}
@@ -588,6 +598,7 @@ export function ListScreen({
 							const line = (
 								<TableRow key={row.id} selected={mine !== undefined} proposal={mine?.proposal}>
 									{shown.map((column, index) => cell(row, column, index === 0))}
+									{filler && <TableCell filler />}
 									<TableCell align="end">
 										<RowActions>
 											<DropdownMenu>

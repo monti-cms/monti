@@ -328,13 +328,22 @@ async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = 
 const columnWidth = (canvas: HTMLElement, id: string) =>
 	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().width ?? 0);
 
-/** The tags column's handle held and dragged 80px right: the accent line on its edge, the column wider and the title narrower, rows too (06). */
+const rightEdge = (canvas: HTMLElement, id: string) =>
+	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().right ?? 0);
+
+/**
+ * The tags column's right edge held and dragged 80px right: the edge stays under the pointer with its accent line, the columns after it move along,
+ * the title stays put (pinned at its width by the drag), rows too (06).
+ */
 export const ColumnResizing: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		await rowsShown(canvasElement);
+		const title = rightEdge(canvasElement, "title");
+		const start = rightEdge(canvasElement, "tags");
 		await dragHandle(canvasElement, "태그 열 너비 조절", 80, true);
-		await waitFor(() => expect(columnWidth(canvasElement, "tags")).toBe(152 + 80), wait);
+		await waitFor(() => expect(rightEdge(canvasElement, "tags")).toBe(start + 80), wait);
+		await expect(rightEdge(canvasElement, "title")).toBe(title);
 	},
 };
 

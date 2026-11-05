@@ -84,26 +84,37 @@ const KIND = {
 	summary: LIST_COLUMN_SIZE.many,
 	updated: LIST_COLUMN_SIZE.date,
 } as const;
+type Id = keyof typeof KIND | "title";
 
 /** The head of a list whose columns the admin resizes: the widths live in the story's state, as the screen keeps them per collection. */
-function ResizableHead({ start }: { start: Partial<Record<keyof typeof KIND, number>> }) {
-	const [widths, setWidths] = React.useState<Partial<Record<keyof typeof KIND, number>>>(start);
+function ResizableHead({ start }: { start: Partial<Record<Id, number>> }) {
+	const [widths, setWidths] = React.useState<Partial<Record<Id, number>>>(start);
 	const size = (id: keyof typeof KIND) => widths[id] ?? KIND[id];
-	const onResize = (id: string, width: number | null) =>
-		setWidths((current) => {
-			const { [id as keyof typeof KIND]: _old, ...others } = current;
-			return width === null ? others : { ...others, [id]: width };
-		});
+	const onResize = (changes: Record<string, number | null>) =>
+		setWidths((current) =>
+			Object.fromEntries(
+				Object.entries({ ...current, ...changes }).filter((entry): entry is [string, number] => entry[1] !== null),
+			),
+		);
+	// Once the title has a width too, the room left over is an empty cell before the end.
+	const filler = widths.title !== undefined;
 	return (
 		<Table
 			container="none"
 			layout="fixed"
-			columns={[size("status"), undefined, size("summary"), size("updated"), LIST_COLUMN_SIZE.end]}
+			columns={[
+				size("status"),
+				widths.title,
+				size("summary"),
+				size("updated"),
+				...(filler ? [undefined] : []),
+				LIST_COLUMN_SIZE.end,
+			]}
 		>
 			<ListHead
 				columns={[
 					{ id: "status", label: "상태", size: size("status"), kindSize: KIND.status, menu: statusMenu },
-					{ id: "title", label: "제목" },
+					{ id: "title", label: "제목", size: widths.title },
 					{ id: "summary", label: "요약", size: size("summary"), kindSize: KIND.summary },
 					{
 						id: "updated",
@@ -131,6 +142,7 @@ function ResizableHead({ start }: { start: Partial<Record<keyof typeof KIND, num
 					<TableCell align="end" tone="muted">
 						8. 3
 					</TableCell>
+					{filler && <TableCell filler />}
 					<TableCell />
 				</TableRow>
 			</TableBody>
@@ -139,32 +151,16 @@ function ResizableHead({ start }: { start: Partial<Record<keyof typeof KIND, num
 }
 
 /**
- * Every column but the title and the end cell has a handle on its right edge, invisible until pointed at or focused. Here the summary column was dragged
- * wider and its handle has the keyboard focus: the accent line inside the column's right edge. ← → step it by 16px (Shift 64), double-click goes back to
- * its kind's width; the title gives up the room.
+ * Every column, the title too, has a handle on its right edge, invisible until pointed at or focused. Here the title was dragged to 420px (the room left
+ * over is empty at the end) and the summary column's handle has the keyboard focus: the accent line inside its right edge. ← → step it by 16px (Shift
+ * 64), double-click goes back to its kind's width (the title: back to taking the room left).
  */
 export const Resizable: Story = {
-	render: () => <ResizableHead start={{ summary: 240 }} />,
+	render: () => <ResizableHead start={{ title: 420, summary: 240 }} />,
 	play: async ({ canvasElement }) => {
 		const handle = within(canvasElement).getByRole("separator", { name: "요약 열 너비 조절" });
 		handle.focus();
 		await userEvent.keyboard("{ArrowRight}");
 		await waitFor(() => expect(handle).toHaveAttribute("aria-valuenow", "256"));
-	},
-};
-
-/** Mid-drag: the pointer holds the date column's handle and has moved it 60px right; the line stays drawn while it is held. */
-export const Resizing: Story = {
-	render: () => <ResizableHead start={{}} />,
-	play: async ({ canvasElement }) => {
-		const handle = within(canvasElement).getByRole("separator", { name: "수정일 열 너비 조절" });
-		const box = handle.getBoundingClientRect();
-		const y = box.top + box.height / 2;
-		const at = (type: string, x: number) =>
-			handle.dispatchEvent(new PointerEvent(type, { bubbles: true, button: 0, buttons: 1, clientX: x, clientY: y }));
-		at("pointerdown", box.left);
-		at("pointermove", box.left + 30);
-		at("pointermove", box.left + 60);
-		await waitFor(() => expect(handle).toHaveAttribute("aria-valuenow", String(LIST_COLUMN_SIZE.date + 60)));
 	},
 };
