@@ -224,11 +224,12 @@ export function SourceViewPicker({ value, onChange }: { value: SourceView; onCha
 	);
 }
 
-/** The source's words with the ones changed since the translation underlined in the warning color (`CompareText source`). */
-const Words = ({ parts }: { parts: Part[] }) =>
+/** The source's words with the ones changed since the translation underlined in the warning color (`CompareText source`); `removed`: the words
+ * before the change, the ones gone faint and struck through. */
+const Words = ({ parts, removed = false }: { parts: Part[]; removed?: boolean }) =>
 	parts.map((part, index) => (
 		// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one text, in order
-		<CompareText key={index} changed={part.changed} source>
+		<CompareText key={index} changed={part.changed} source removed={removed}>
 			{part.text}
 		</CompareText>
 	));
@@ -611,7 +612,7 @@ export function TranslationMargin({
 				<MemoDiff
 					beforeLabel={t("translation.before")}
 					afterLabel={t("translation.after")}
-					before={<Words parts={diff.mine} />}
+					before={<Words parts={diff.mine} removed />}
 					{...(mark.kind === "removed"
 						? { none: t("translation.mark.gone") }
 						: { after: <Words parts={diff.server} /> })}

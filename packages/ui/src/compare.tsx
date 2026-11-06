@@ -235,19 +235,24 @@ function CompareShared({
 
 /** The underline of a source's words that changed since its translation: the warning color of "Changed", whatever ground it sits on. */
 const SOURCE_CHANGE = "underline decoration-1 decoration-monti-warning underline-offset-4";
+/** The words the source had before and no longer has (the "before" of a changed block): faint and struck through, as `Del` draws them. */
+const SOURCE_REMOVED = "line-through text-monti-faint";
 
 /**
  * A run of the entry's text: the words that `changed` are marked, the others are plain. Two versions of one entry mark them on the highlight; a
  * translation's source (`source`) marks the words that changed since it was translated with an underline in the warning color, which shows on the
- * tool ground and on the block being written alike (2026-11-06 owner).
+ * tool ground and on the block being written alike (2026-11-06 owner). `removed` is the source's words before the change: words it no longer has
+ * are faint and struck through instead, so "before" and "after" never mark the same way.
  */
 function CompareText({
 	changed = false,
 	source = false,
+	removed = false,
 	children,
 }: {
 	changed?: boolean;
 	source?: boolean;
+	removed?: boolean;
 	children: React.ReactNode;
 }) {
 	if (!changed) return children;
@@ -258,7 +263,7 @@ function CompareText({
 	return (
 		<>
 			{before}
-			<span data-slot="source-change" className={SOURCE_CHANGE}>
+			<span data-slot="source-change" className={removed ? SOURCE_REMOVED : SOURCE_CHANGE}>
 				{words}
 			</span>
 			{after}
