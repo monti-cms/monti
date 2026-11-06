@@ -51,6 +51,7 @@ import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
+	decidedOnly,
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
@@ -418,7 +419,16 @@ export function EntryEditor({
 					{head}
 					{/* The pill stands alone: the line sets it apart from the screen's tools (the panel, ⋯, ✦). */}
 					<Separator orientation="vertical" length="control" flush />
-					<IconButton label={t("entry.properties")} side="bottom" pressed={panel} onClick={() => setPanel(!panel)}>
+					<IconButton
+						label={t("entry.properties")}
+						side="bottom"
+						pressed={panel}
+						onClick={() => {
+							// The properties take the place of the source beside the text: one pane at a time.
+							if (!panel && translation.isTranslation) setView("off");
+							setPanel(!panel);
+						}}
+					>
 						<RightPanelOpen aria-hidden />
 					</IconButton>
 					{readOnly ? null : (
@@ -431,23 +441,28 @@ export function EntryEditor({
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem
-									onClick={async () => {
-										const copy = await duplicate.run({ id });
-										if (copy.ok) onOpen(copy.body.output.id);
-									}}
-								>
-									<Copy aria-hidden />
-									{t("entry.duplicate")}
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={async () => {
-										if ((await archive.run({ ids: [id] })).ok) await editor.reload();
-									}}
-								>
-									<Archive aria-hidden />
-									{t("entry.archive")}
-								</DropdownMenuItem>
+								{/* A translation is not copied (its source is) and has no rows of its own here (screens/translation.md, ⋯). */}
+								{translation.isTranslation ? null : (
+									<>
+										<DropdownMenuItem
+											onClick={async () => {
+												const copy = await duplicate.run({ id });
+												if (copy.ok) onOpen(copy.body.output.id);
+											}}
+										>
+											<Copy aria-hidden />
+											{t("entry.duplicate")}
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={async () => {
+												if ((await archive.run({ ids: [id] })).ok) await editor.reload();
+											}}
+										>
+											<Archive aria-hidden />
+											{t("entry.archive")}
+										</DropdownMenuItem>
+									</>
+								)}
 								<DropdownMenuItem
 									onClick={async () => {
 										const file = await exporter.run({ ids: [id] });
@@ -469,13 +484,14 @@ export function EntryEditor({
 				{beside}
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
 					{paired && compared ? (
-						<Stack gap={0} grow width="full" paddingBottom={48}>
+						<Stack gap={0} grow width="full" maxWidth="list" centered paddingBottom={48}>
 							<Box paddingBottom={16}>{languages}</Box>
 							<PairedView
 								compared={compared}
 								translationTitle={editor.title}
 								doc={editor.doc}
 								catalogs={catalogs}
+								translationUpdatedAt={read?.entry.updatedAt ?? null}
 								onDetach={translation.blockMenu.detach}
 							/>
 						</Stack>
@@ -603,11 +619,12 @@ export function EntryEditor({
 								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
 							}
 							onConfirmAll={() => void translation.confirmAll()}
+							onRemove={(block) => void translation.decide([{ do: "remove", block }])}
 						/>
 					) : null}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
-						{t("entry.chars", { count: docLength(editor.doc) })}
+						{t("entry.chars", { count: docLength(decidedOnly(editor.doc)) })}
 					</StatusBarCell>
 				</StatusBar>
 			) : null}

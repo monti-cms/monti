@@ -114,6 +114,15 @@ export const SourceChanged: Story = {
 	),
 };
 
+/** A block new in the source: only its words, and bringing it in (it comes in dimmed) or leaving it out of this language. */
+export const SourceAdded: Story = {
+	render: () => (
+		<MemoCard where="새로" discardLabel="빼기" onDiscard={noop} acceptLabel="넣기" onAccept={noop}>
+			<MemoDiff afterLabel="원문" after="다음 글에서는 번역을 다룬다." />
+		</MemoCard>
+	),
+};
+
 /** Opened under its place in the text: hangs 8px below the block of the mark; the text keeps the focus. */
 export const UnderText: Story = {
 	render: function Render() {

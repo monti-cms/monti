@@ -26,12 +26,13 @@
 | "✦ 번역" (탭 줄 오른쪽) | `TextButton tone="proposal"`(`Spark`) 뒤에 `Separator orientation="vertical" length="control"` | 흐린 블록이 남아 있을 때만 보인다. 남은 흐린 블록을 모두 번역한다. |
 | 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
-| 흐린 블록 | `Untranslated` | 아직 정하지 않은 블록. 원문이 옅게 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. |
+| 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`) | 아직 정하지 않은 블록. 원문이 옅게 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 흐림이 바로 사라진다. |
 | 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 유지" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |
-| "원문 유지" 표시 | `Marker tone="keep" margin` "원문" | 왼쪽 여백에 붙는다. |
+| "원문 유지" 표시 | `EditorMargin` 안의 `Marker tone="keep"` "원문" | 왼쪽 여백에 붙는다. 원문을 따르는 블록(코드처럼 옮길 글자가 없는 블록)에도 같은 표시가 붙는다. |
+| 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
 | 번역 제안 (블록이 비었을 때 채운 것) | `Fill` | 바탕 없는 파란 글자. 받거나 버리기는 버블에서. |
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
-| 원문 바뀜 표시 | `Marker tone="changed" margin` "바뀜" · "새로" · "지워짐"(카드가 열리면 `active`) | "바뀜"을 누르면 카드가 열린다. "새로"는 흐린 블록(`Untranslated`)으로 들어온다. "지워짐"은 블록 메뉴로 지우거나 둔다. |
+| 원문 바뀜 표시 | `EditorMargin` 안의 `Marker tone="changed"` "바뀜" · "새로" · "지워짐"(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "새로"는 들어올 자리에 흐린 줄로 보이고, 카드에서 "넣기"(흐린 블록으로 들어온다) · "빼기"(이 언어에서 뺀다)를 고른다. "지워짐" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
 | 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 바뀜", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 `Highlight`. 바깥을 누르거나 Esc로 닫는다. |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 

@@ -178,7 +178,7 @@ function MemoMessage({
 
 /**
  * The body of a card about a changed source: the text before and after, two lines with their names in the margin. Mark the words that differ with
- * `Highlight`.
+ * `Highlight`. A block that is new in the source has no before: leave out `before` and `beforeLabel`, and only the after line shows.
  */
 function MemoDiff({
 	beforeLabel,
@@ -188,9 +188,9 @@ function MemoDiff({
 	className,
 	...props
 }: Omit<ComponentProps<"div">, "children"> & {
-	beforeLabel: string;
+	beforeLabel?: string;
 	afterLabel: string;
-	before: ReactNode;
+	before?: ReactNode;
 	after: ReactNode;
 }) {
 	return (
@@ -202,8 +202,12 @@ function MemoDiff({
 			)}
 			{...props}
 		>
-			<span className="text-monti-caption text-monti-faint">{beforeLabel}</span>
-			<span className="text-monti-body text-monti-muted">{before}</span>
+			{before === undefined ? null : (
+				<>
+					<span className="text-monti-caption text-monti-faint">{beforeLabel}</span>
+					<span className="text-monti-body text-monti-muted">{before}</span>
+				</>
+			)}
 			<span className="text-monti-caption text-monti-faint">{afterLabel}</span>
 			<span className="text-monti-body">{after}</span>
 		</div>

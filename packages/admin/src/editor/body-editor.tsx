@@ -82,6 +82,8 @@ export function BodyEditor({
 			// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
 			onClick={(event) => {
 				const target = event.target as Node;
+				// A mark in the margin opens its card; it is not a press under the text.
+				if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
 				// A press under the last block puts the cursor at the end of the text.
 				if (editor && event.currentTarget.contains(target) && !editor.view.dom.contains(target))
 					editor.chain().focus("end").run();

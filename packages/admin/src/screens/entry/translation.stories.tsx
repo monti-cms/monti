@@ -1,6 +1,6 @@
 import type { Doc, Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { fireEvent, userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
@@ -156,6 +156,31 @@ export const NewTranslation: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await page.findByRole("complementary", { name: "한국어 원문 · 읽기 전용" }, wait);
+	},
+};
+
+/** A dimmed block's menu: keep it in the source's words, or remove it (flow 3, step 04). */
+export const PendingMenu: Story = {
+	loaders: site("new", "english"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		const heading = await page.findByText("무엇을 덜어냈나", { selector: "h2" }, wait);
+		const line = heading.getBoundingClientRect();
+		fireEvent.mouseMove(heading, { clientX: line.left + 8, clientY: line.top + 8 });
+		await userEvent.click(
+			await within(canvasElement.ownerDocument.body).findByRole("button", { name: "블록 메뉴" }, wait),
+		);
+	},
+};
+
+/** The status bar's "원문 바뀜 3" open: each mark's block, and "모두 확인" (flow 3, step 09). */
+export const ChangesList: Story = {
+	loaders: site("changed", "english"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "원문 바뀜 3" }, wait));
 	},
 };
 

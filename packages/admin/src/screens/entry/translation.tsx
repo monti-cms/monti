@@ -17,6 +17,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
 	EditorMargin,
+	EditorTitleRule,
 	Heading,
 	Inline,
 	Marker,
@@ -40,6 +41,7 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } fro
 import type { BlockTranslation } from "../../editor/block-menu";
 import type { BodyCatalogs } from "../../editor/catalog";
 import { findBlock } from "../../editor/proposal-marks";
+import { showGhosts } from "../../editor/translation";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type Part, shownBlocks, wordDiff } from "./compare-entries";
@@ -213,19 +215,35 @@ const Words = ({ parts }: { parts: Part[] }) =>
 		</CompareText>
 	));
 
+/** The source's changed blocks with the words that changed on the highlight: what the translation saw before, against the source now. */
+function changedWords(compared: Compared): Map<string, Part[]> {
+	return new Map(
+		compared.marks.flatMap((mark) =>
+			mark.kind === "changed" ? [[mark.from, wordDiff(textOf(mark.before), textOf(mark.after)).server] as const] : [],
+		),
+	);
+}
+
+/** A block read only, in the looks of the comparison, its changed words marked when `parts` are given. */
+function ReadBlock({ block, parts }: { block: Block; parts?: Part[] }) {
+	const shown = shownBlocks({ type: "doc", blocks: [block] })[0];
+	const words = parts ? <Words parts={parts} /> : shown?.text;
+	return shown?.look === "heading" ? (
+		<CompareHeading>{words}</CompareHeading>
+	) : shown?.look === "code" ? (
+		<CompareCode>{words}</CompareCode>
+	) : (
+		<CompareParagraph>{words}</CompareParagraph>
+	);
+}
+
 /** A body read only, block by block, in the looks of the comparison. */
-function ReadBody({ doc }: { doc: Doc }) {
+function ReadBody({ doc, changed }: { doc: Doc; changed: Map<string, Part[]> }) {
 	return (
 		<CompareBody>
-			{shownBlocks(doc).map((block) =>
-				block.look === "heading" ? (
-					<CompareHeading key={block.id}>{block.text}</CompareHeading>
-				) : block.look === "code" ? (
-					<CompareCode key={block.id}>{block.text}</CompareCode>
-				) : (
-					<CompareParagraph key={block.id}>{block.text}</CompareParagraph>
-				),
-			)}
+			{doc.blocks.map((block) => (
+				<ReadBlock key={block.id} block={block} parts={changed.get(block.id)} />
+			))}
 		</CompareBody>
 	);
 }
@@ -258,9 +276,10 @@ export function SourcePane({ compared, localeName }: { compared: Compared; local
 						<Heading as="h1" variant="display" tone="muted">
 							{compared.source.title}
 						</Heading>
+						<EditorTitleRule />
 					</Stack>
 					<Text tone="muted">
-						<ReadBody doc={compared.source.doc} />
+						<ReadBody doc={compared.source.doc} changed={changedWords(compared)} />
 					</Text>
 				</Box>
 			</Box>
@@ -268,8 +287,9 @@ export function SourcePane({ compared, localeName }: { compared: Compared; local
 	);
 }
 
-const textOf = (block: Block | null | undefined) =>
-	block ? (shownBlocks({ type: "doc", blocks: [block] })[0]?.text ?? "") : "";
+function textOf(block: Block | null | undefined) {
+	return block ? (shownBlocks({ type: "doc", blocks: [block] })[0]?.text ?? "") : "";
+}
 
 /**
  * "Source changed 3" in the status bar (translation.md): a note, not a to-do, so a cell of its own. Its list names each mark's block and goes to it;
@@ -280,12 +300,15 @@ export function SourceChangedCell({
 	doc,
 	onGo,
 	onConfirmAll,
+	onRemove,
 }: {
 	compared: Compared;
 	doc: Doc;
 	/** To the block a mark is on, or the one a new block goes after. */
 	onGo: (block: string | null) => void;
 	onConfirmAll: () => void;
+	/** Removes a block whose source block was removed. */
+	onRemove: (block: string) => void;
 }) {
 	const { t } = useAdmin();
 	const [open, setOpen] = useState(false);
@@ -317,6 +340,15 @@ export function SourceChangedCell({
 					key={mark.kind === "added" ? `added:${mark.from}` : mark.block}
 					title={textOf(mark.kind === "added" ? mark.source : (blocks.get(mark.block) ?? mark.before))}
 					marker={<Marker tone="changed">{t(`translation.mark.${mark.kind}`)}</Marker>}
+					{...(mark.kind === "removed"
+						? {
+								actionLabel: t("translation.remove"),
+								onAction: () => {
+									setOpen(false);
+									onRemove(mark.block);
+								},
+							}
+						: {})}
 					onOpen={() => {
 						setOpen(false);
 						onGo(mark.kind === "added" ? mark.after : mark.block);
@@ -334,12 +366,14 @@ export function SourceChangedCell({
 export function PairedView({
 	compared,
 	translationTitle,
+	translationUpdatedAt,
 	doc,
 	catalogs,
 	onDetach,
 }: {
 	compared: Compared;
 	translationTitle: string;
+	translationUpdatedAt: string | null;
 	/** The translation as it is being written (the draft). */
 	doc: Doc;
 	catalogs: BodyCatalogs | null;
@@ -363,8 +397,14 @@ export function PairedView({
 					key={`added:${mark.from}`}
 					name={mark.source ? kind(mark.source) : ""}
 					note={t("translation.mark.added")}
-					source={textOf(mark.source)}
-					translation={<Untranslated>{textOf(mark.source)}</Untranslated>}
+					source={mark.source ? <ReadBlock block={mark.source} /> : null}
+					translation={
+						mark.source ? (
+							<Untranslated>
+								<ReadBlock block={mark.source} />
+							</Untranslated>
+						) : null
+					}
 				/>
 			));
 	rows.push(...added(null));
@@ -378,10 +418,12 @@ export function PairedView({
 				key={block.id}
 				name={kind(block)}
 				note={mark ? t(`translation.mark.${mark.kind}`) : undefined}
-				source={changed ? <Words parts={changed} /> : textOf(source)}
+				source={source ? <ReadBlock block={source} parts={changed ?? undefined} /> : null}
 				translation={
 					link?.state === "pending" ? (
-						<Untranslated>{textOf(block)}</Untranslated>
+						<Untranslated>
+							<ReadBlock block={block} />
+						</Untranslated>
 					) : link?.state === "followSource" ? (
 						<CompareShared
 							action={
@@ -390,10 +432,10 @@ export function PairedView({
 								</TextButton>
 							}
 						>
-							{textOf(source ?? block)}
+							<ReadBlock block={source ?? block} />
 						</CompareShared>
 					) : (
-						textOf(block)
+						<ReadBlock block={block} />
 					)
 				}
 			/>,
@@ -403,7 +445,7 @@ export function PairedView({
 	const updated = (at: string | null) => (at ? day(new Date(at), language) : "");
 	return (
 		<CompareRows>
-			<CompareRow head source={updated(compared.source.updatedAt)} translation="" />
+			<CompareRow head source={updated(compared.source.updatedAt)} translation={updated(translationUpdatedAt)} />
 			<CompareRow
 				title
 				source={
@@ -421,6 +463,12 @@ export function PairedView({
 		</CompareRows>
 	);
 }
+
+/** A body without its blocks still in the source's words: what the character count counts (a new translation counts none). */
+export const decidedOnly = (doc: Doc): Doc => ({
+	...doc,
+	blocks: doc.blocks.filter((block) => block.link?.state !== "pending"),
+});
 
 /** "The source changed · Oct 26 · 3 places" with "Confirm all" (translation.md, the banner). */
 export function SourceChangedBanner({ compared, onConfirmAll }: { compared: Compared; onConfirmAll: () => void }) {
@@ -472,7 +520,9 @@ export function TranslationMargin({
 		const next: Placed[] = [];
 		for (const mark of marks) {
 			const key = mark.kind === "added" ? `added:${mark.from}` : mark.block;
-			const top = mark.kind === "added" ? (mark.after ? topOf(mark.after, true) : 0) : topOf(mark.block);
+			const ghost = mark.kind === "added" ? editor.view.dom.querySelector(`[data-ghost="${CSS.escape(key)}"]`) : null;
+			const top =
+				mark.kind === "added" ? (ghost ? ghost.getBoundingClientRect().top - origin : null) : topOf(mark.block);
 			if (top !== null) next.push({ key, top, mark, keep: false });
 		}
 		editor.state.doc.forEach((node) => {
@@ -486,18 +536,34 @@ export function TranslationMargin({
 		setPlaced(next);
 	}, [editor, marks]);
 
-	useLayoutEffect(() => measure(), [measure]);
+	// A block new in the source shows as a dimmed line where it would go, until it is brought in or left out.
+	useLayoutEffect(() => {
+		if (editor.isDestroyed) return;
+		const ghosts = marks.flatMap((mark) =>
+			mark.kind === "added" ? [{ key: `added:${mark.from}`, after: mark.after, text: textOf(mark.source) }] : [],
+		);
+		editor.view.dispatch(showGhosts(editor.state, ghosts));
+		measure();
+	}, [editor, marks, measure]);
 	useEffect(() => {
+		// The text's width changes with the panes beside it, and its lines with it: measure again whenever its box does.
+		const resized = new ResizeObserver(() => measure());
+		resized.observe(editor.view.dom);
 		editor.on("update", measure);
-		window.addEventListener("resize", measure);
 		return () => {
+			resized.disconnect();
 			editor.off("update", measure);
-			window.removeEventListener("resize", measure);
 		};
 	}, [editor, measure]);
 
-	const anchorOf = (key: string) => () =>
-		editor.view.dom.closest("[data-slot=editor-body]")?.querySelector(`[data-mark-key="${CSS.escape(key)}"]`) ?? null;
+	/** A card hangs under the block of its mark (`MemoCardPopover`): the block, or the dimmed line of a new one. */
+	const anchorOf = (mark: TranslationMark) => () => {
+		if (editor.isDestroyed) return null;
+		if (mark.kind === "added")
+			return editor.view.dom.querySelector(`[data-ghost="${CSS.escape(`added:${mark.from}`)}"]`);
+		const found = findBlock(editor.state.doc, mark.block);
+		return found ? (editor.view.nodeDOM(found.pos) as Element | null) : null;
+	};
 	const card = (item: Placed) => {
 		const mark = item.mark;
 		if (!mark) return null;
@@ -507,7 +573,7 @@ export function TranslationMargin({
 			onDecide(decision);
 		};
 		const shared = {
-			anchor: anchorOf(item.key),
+			anchor: anchorOf(mark),
 			open: open === item.key,
 			onOpenChange: (next: boolean) => !next && close(),
 		};
@@ -521,9 +587,7 @@ export function TranslationMargin({
 					acceptLabel={t("translation.bringIn")}
 					onAccept={() => decide({ do: "add", from: mark.from })}
 				>
-					<Box paddingX={16} paddingTop={16} paddingBottom={16}>
-						<Text variant="body">{textOf(mark.source)}</Text>
-					</Box>
+					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source)} />
 				</MemoCardPopover>
 			);
 		const diff = wordDiff(textOf(mark.before), textOf(mark.after));
@@ -533,6 +597,10 @@ export function TranslationMargin({
 				where={t(mark.kind === "changed" ? "translation.mark.changedWhere" : "translation.mark.removedWhere")}
 				discardLabel={t("translation.confirm")}
 				onDiscard={() => decide({ do: "confirm", block: mark.block })}
+				// A block whose source block is gone: confirm keeps it on its own, or remove it here too (doc 04, the marks).
+				{...(mark.kind === "removed"
+					? { acceptLabel: t("translation.remove"), onAccept: () => decide({ do: "remove", block: mark.block }) }
+					: {})}
 			>
 				<MemoDiff
 					beforeLabel={t("translation.before")}
