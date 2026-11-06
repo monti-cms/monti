@@ -146,17 +146,17 @@ export const oneLanguage = defineSchema({
 const paragraph = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
 
 /** Posts written in full and translated into English and Japanese; `changed` ones were changed and published again after (doc 04, flow 3 step 08). */
-export const TRANSLATED = [
+export const translatedPosts = [
 	{ title: "서울의 밤", changed: true },
 	{ title: "타입스크립트 5.9 정리", changed: false },
 	{ title: "여름 휴가 메모", changed: true },
 ] as const;
 
-/** Gives the `TRANSLATED` posts a body and their translations through the operations, and changes and republishes the source of the `changed` ones. */
+/** Gives the `translatedPosts` posts a body and their translations through the operations, and changes and republishes the source of the `changed` ones. */
 export async function translated({ monti, db }: StorySite) {
 	const versionOf = async (id: string) =>
 		(await db.selectFrom("entries").select("version").where("id", "=", id).executeTakeFirstOrThrow()).version;
-	for (const { title, changed } of TRANSLATED) {
+	for (const { title, changed } of translatedPosts) {
 		const { id } = await db
 			.selectFrom("entries")
 			.select("id")

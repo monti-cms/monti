@@ -752,7 +752,7 @@ export const adminMessages = defineMessages({
 			"list.emptyTitle": "아직 {label} 없어요.",
 			"list.first": "첫 {label} 쓰기",
 			"list.noMatch": "맞는 글이 없어요.",
-			"list.clearFilters": "거르기 풀기",
+			"list.clearFilters": "필터 해제",
 			"list.selectAll": "이 페이지 모두 고르기",
 			"list.pick": "{title} 고르기",
 			"list.aiPicked": "AI가 고름",

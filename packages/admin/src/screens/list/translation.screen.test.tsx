@@ -88,7 +88,7 @@ describe("the list's language column", () => {
 		// A group that lacks a language is never up to date.
 		const total = countOf(/^한국어/);
 		expect(countOf(/^번역 없음/) + countOf(/^최신/)).toBeLessThanOrEqual(total);
-		expect(countOf(/^원문 바뀜/)).toBe(list.TRANSLATED.filter((post) => post.changed).length);
+		expect(countOf(/^원문 바뀜/)).toBe(list.translatedPosts.filter((post) => post.changed).length);
 	});
 
 	it("04-1 3.12 picking 'source changed' leaves the groups with a changed translation and dots the language column; the assistant's same filter reads '번역: 원문 바뀜' on its chip", async () => {
@@ -99,7 +99,7 @@ describe("the list's language column", () => {
 		await userEvent.click(menuRow(/^원문 바뀜/));
 		await expect.element(menuRow(/^원문 바뀜/)).toHaveAttribute("aria-checked", "true");
 		await expect.poll(() => window.location.hash).toContain("translation=sourceChanged");
-		const changed = list.TRANSLATED.filter((post) => post.changed).map((post) => post.title);
+		const changed = list.translatedPosts.filter((post) => post.changed).map((post) => post.title);
 		await expect.element(page.getByText(`1–${counted} / ${counted}`)).toBeVisible();
 		for (const title of changed) await expect.element(page.getByRole("link", { name: title })).toBeVisible();
 		expect(dotted()).toBe(true);
