@@ -1,6 +1,6 @@
 import type { Doc, Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fireEvent, userEvent, within } from "storybook/test";
+import { fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
@@ -165,7 +165,12 @@ export const PendingMenu: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
-		const heading = await page.findByText("무엇을 덜어냈나", { selector: "h2" }, wait);
+		// The undecided heading is empty: the source's words are its placeholder.
+		const heading = await waitFor(() => {
+			const found = canvasElement.querySelector<HTMLElement>("h2[data-source-placeholder*='무엇을 덜어냈나']");
+			if (!found) throw new Error("no undecided heading yet");
+			return found;
+		}, wait);
 		const line = heading.getBoundingClientRect();
 		fireEvent.mouseMove(heading, { clientX: line.left + 8, clientY: line.top + 8 });
 		await userEvent.click(
