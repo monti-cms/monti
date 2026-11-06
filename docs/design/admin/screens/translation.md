@@ -32,7 +32,7 @@
 | 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
 | 번역 제안 (블록이 비었을 때 채운 것) | `Fill` | 바탕 없는 파란 글자. 받거나 버리기는 버블에서. |
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
-| 원문 바뀜 표시 | `EditorMargin` 안의 `Marker tone="changed"` "바뀜" · "새로" · "지워짐"(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "새로"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "지워짐" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
+| 원문 바뀜 표시 | `EditorMargin` 안의 `Marker` "바뀜"(`changed`, 주황) · "지워짐"(`removed`, 빨강) · "새로"(`added`, 초록)(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "새로"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "지워짐" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
 | 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 바뀜", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 `Highlight`. 바깥을 누르거나 Esc로 닫는다. |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 
@@ -41,7 +41,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem blocking` "흐린 블록 1" + 끝 동작 "✦ 번역"은 `proposal`, 아래 `TodoDone` "제목 · 주소 · 원문 유지 1") | 흐린 블록이 발행을 막는 할 일이다. 행을 누르면 그 블록으로 간다. 제안이 도착한 동안 칸은 "제안 6". |
-| "원문 바뀜 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 `marker`로 `Marker tone="changed"`, 끝 동작 "✦ 다시 번역" · "✦ 번역" · "지우기", `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
+| "원문 바뀜 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 앞에 `tag` "바뀜" · "지워짐" · "새로"를 그 색으로, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 바뀜 "확인", 지워짐 "지우기", 새로 "빼기"(설정의 "바뀐 곳" 목록과 같은 모양, 2026-11-06 소유자). 줄을 누르면 그 블록으로 간다. `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
 스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner, Patterns/Frame/ResizablePane, Primitives/Box.
@@ -74,7 +74,7 @@
 | `stage` "블록 고르기" | 3.04 | 흐린 블록 둘, 그중 하나에 `BlockHandle`과 흐린 블록 메뉴 | Monti/EditorTools/BlockHandle |
 | `stage` "발행 막힘" | 3.06 | 흐린 블록 하나, 할 일 `StatusBarList` 열림, `toast.error`와 "이동" | Patterns/Frame/StatusBarList, Controls/Status/Toast |
 | `stage` "발행됨" | 3.07 | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었어요"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
-| `stage` "원문 바뀜" | 3.09 | 원문 바뀜 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 `Highlight`, 블록마다 `Marker tone="changed"`, "원문 바뀜" `StatusBarList` 열림 | Patterns/Frame/Banner, Controls/Status/ChangeDot, Monti/Proposal/Marks, Monti/Translation/Marks, Patterns/Frame/StatusBarList |
+| `stage` "원문 바뀜" | 3.09 | 원문 바뀜 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 `Highlight`, 블록마다 `Marker`(`changed` · `removed` · `added`), "원문 바뀜" `StatusBarList` 열림 | Patterns/Frame/Banner, Controls/Status/ChangeDot, Monti/Proposal/Marks, Monti/Translation/Marks, Patterns/Frame/StatusBarList |
 | `stage` "바뀜 카드" | 3.10 | "바뀜" `Marker active`와 `MemoCard` + `MemoDiff` | Monti/Translation/Marks, Monti/Proposal/MemoCard |
 | `stage` "다시 번역" | 3.11 | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble, Controls/Status/EntryStatus |
 | `stage` "번역 지우기" | 3.15 | ⋯ `DropdownMenu` 열림 | Controls/Menu/DropdownMenu |

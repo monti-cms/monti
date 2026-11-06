@@ -328,30 +328,40 @@ function textOf(block: Block | null | undefined) {
 	return block ? (shownBlocks({ type: "doc", blocks: [block] })[0]?.text ?? "") : "";
 }
 
+/** Each mark's word in the colors the changes lists use for the same words: changed, removed, new (translation.md, 2026-11-06 owner). */
+export const MARK_TONE = { changed: "warning", removed: "danger", added: "success" } as const;
+const MARKER_TONE = { changed: "changed", removed: "removed", added: "added" } as const;
+
 /**
- * "Source changed 3" in the status bar (translation.md): a note, not a to-do, so a cell of its own. Its list names each mark's block and goes to it;
- * "Confirm all" under it confirms the changed and removed ones.
+ * "Source changed 3" in the status bar (translation.md): a note, not a to-do, so a cell of its own. Its list is drawn as the changes lists are: a row
+ * per mark, its word in front, the block's words on one line, and the one decision at the end ("Confirm" a changed block, "Remove" a removed one,
+ * "Leave out" a new one); pressing the row goes to the block. "Confirm all" under it confirms the changed and removed ones.
  */
 export function SourceChangedCell({
 	compared,
 	doc,
 	onGo,
 	onConfirmAll,
-	onRemove,
+	onDecide,
 }: {
 	compared: Compared;
 	doc: Doc;
 	/** To the block a mark is on: its id, or for a block new in the source the source block's id (the editor's block paired with it). */
-	onGo: (block: string | null) => void;
+	onGo: (block: string) => void;
 	onConfirmAll: () => void;
-	/** Removes a block whose source block was removed. */
-	onRemove: (block: string) => void;
+	onDecide: (decision: Decision) => void;
 }) {
 	const { t } = useAdmin();
 	const [open, setOpen] = useState(false);
 	const { marks } = compared;
 	if (marks.length === 0) return null;
 	const blocks = new Map(doc.blocks.map((block) => [block.id, block]));
+	const decisionOf = (mark: TranslationMark): { label: string; decision: Decision } =>
+		mark.kind === "changed"
+			? { label: t("translation.confirm"), decision: { do: "confirm", block: mark.block } }
+			: mark.kind === "removed"
+				? { label: t("translation.remove"), decision: { do: "remove", block: mark.block } }
+				: { label: t("translation.skip"), decision: { do: "skip", from: mark.from } };
 	return (
 		<StatusBarList
 			trigger={<StatusBarCell tone="warning">{t("translation.changedCount", { count: marks.length })}</StatusBarCell>}
@@ -372,26 +382,23 @@ export function SourceChangedCell({
 				) : undefined
 			}
 		>
-			{marks.map((mark) => (
-				<TodoItem
-					key={mark.kind === "added" ? `added:${mark.from}` : mark.block}
-					title={textOf(mark.kind === "added" ? mark.source : (blocks.get(mark.block) ?? mark.before))}
-					marker={<Marker tone="changed">{t(`translation.mark.${mark.kind}`)}</Marker>}
-					{...(mark.kind === "removed"
-						? {
-								actionLabel: t("translation.remove"),
-								onAction: () => {
-									setOpen(false);
-									onRemove(mark.block);
-								},
-							}
-						: {})}
-					onOpen={() => {
-						setOpen(false);
-						onGo(mark.kind === "added" ? mark.after : mark.block);
-					}}
-				/>
-			))}
+			{marks.map((mark) => {
+				const { label, decision } = decisionOf(mark);
+				return (
+					<TodoItem
+						key={mark.kind === "added" ? `added:${mark.from}` : mark.block}
+						title={textOf(mark.kind === "added" ? mark.source : (blocks.get(mark.block) ?? mark.before))}
+						tag={t(`translation.mark.${mark.kind}`)}
+						tagTone={MARK_TONE[mark.kind]}
+						actionLabel={label}
+						onAction={() => onDecide(decision)}
+						onOpen={() => {
+							setOpen(false);
+							onGo(mark.kind === "added" ? mark.from : mark.block);
+						}}
+					/>
+				);
+			})}
 		</StatusBarList>
 	);
 }
@@ -416,11 +423,10 @@ export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs 
 			source: new Map(compared.source.doc.blocks.map((block) => [block.id, shown(block)])),
 			kinds: new Map((catalogs?.kit.blocks ?? []).map((block) => [nodeName(block.type), t(block.label)])),
 			notes: new Map(
-				compared.marks.map((mark) =>
-					mark.kind === "added"
-						? ([mark.from, t("translation.mark.added")] as const)
-						: ([mark.block, t(`translation.mark.${mark.kind}`)] as const),
-				),
+				compared.marks.map((mark) => [
+					mark.kind === "added" ? mark.from : mark.block,
+					{ text: t(`translation.mark.${mark.kind}`), tone: MARK_TONE[mark.kind] },
+				]),
 			),
 		};
 	}, [compared, catalogs, t]);
@@ -619,7 +625,7 @@ export function TranslationMargin({
 			{item.mark ? (
 				<span data-mark-key={item.key}>
 					<Marker
-						tone="changed"
+						tone={MARKER_TONE[item.mark.kind]}
 						active={open === item.key}
 						onClick={() => setOpen(open === item.key ? null : item.key)}
 					>

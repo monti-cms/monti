@@ -651,7 +651,7 @@ export function EntryEditor({
 								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
 							}
 							onConfirmAll={() => void translation.confirmAll()}
-							onRemove={(block) => void translation.decide([{ do: "remove", block }])}
+							onDecide={(decision) => void translation.decide([decision])}
 						/>
 					) : null}
 					<StatusBarSpacer />

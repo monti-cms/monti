@@ -227,7 +227,7 @@
 | `height-header` | 60px | 편집기의 앱 헤더, 도구 패널과 시트의 헤더. |
 | `height-toolbar` | 48px | 페이지 제목 아래의 탭과 필터 줄. |
 | `height-panebar` | 44px | 창 안의 막대: 원문 창 머리, 속성 탭. |
-| `height-statusbar` | 30px | 상태 표시줄. |
+| `height-statusbar` | 26px | 상태 표시줄. |
 
 ### 높이 기준
 

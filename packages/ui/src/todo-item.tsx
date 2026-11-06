@@ -6,15 +6,16 @@ import { Spark } from "./spark";
 
 /**
  * One thing to fix, in the list a status bar cell opens: a ring, the title, one short line under it, and the one action that goes to it at the
- * right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `marker` replaces the ring with a `Marker`
- * (a translated block whose source changed). `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and
+ * right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `tag` replaces the ring with a word in its
+ * `tagTone` ("Changed", "Removed", "New": a translated block whose source moved, as the changes lists write them), and the title is cut to one line. `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and
  * makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place.
  */
 function TodoItem({
 	title,
 	detail,
 	blocking = false,
-	marker,
+	tag,
+	tagTone = "warning",
 	current = false,
 	onOpen,
 	actionLabel,
@@ -28,8 +29,9 @@ function TodoItem({
 	detail?: React.ReactNode;
 	/** Stops publishing. */
 	blocking?: boolean;
-	/** A `Marker` in front of the title, instead of the ring. */
-	marker?: React.ReactNode;
+	/** A word in front of the title, instead of the ring; the title is then one line. */
+	tag?: React.ReactNode;
+	tagTone?: "warning" | "danger" | "success";
 	current?: boolean;
 	/** Goes to where the problem is. */
 	onOpen?: () => void;
@@ -41,7 +43,7 @@ function TodoItem({
 	const labels = useUiLabels();
 	const text = (
 		<>
-			<span>{title}</span>
+			<span className={cn(tag !== undefined && "truncate")}>{title}</span>
 			{detail && <span className="truncate text-monti-caption text-monti-subtle">{detail}</span>}
 		</>
 	);
@@ -55,9 +57,19 @@ function TodoItem({
 			)}
 			{...props}
 		>
-			{marker ? (
-				<span data-slot="todo-mark" className="flex min-w-11 shrink-0 justify-center">
-					{marker}
+			{tag !== undefined ? (
+				<span
+					data-slot="todo-mark"
+					className={cn(
+						"w-11 shrink-0 whitespace-nowrap text-monti-meta",
+						tagTone === "danger"
+							? "text-monti-danger"
+							: tagTone === "success"
+								? "text-monti-success"
+								: "text-monti-warning",
+					)}
+				>
+					{tag}
 				</span>
 			) : (
 				<span

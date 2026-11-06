@@ -88,8 +88,8 @@ export type PairedRows = {
 	source: Map<string, PairedSourceBlock>;
 	/** The kind of a block by its editor node's name. */
 	kinds: Map<string, string>;
-	/** A block's note by its id ("Changed", "Removed"), or by its source block's id for a block new in the source ("New"). */
-	notes: Map<string, string>;
+	/** A block's note by its id ("Changed", "Removed"), or by its source block's id for a block new in the source ("New"), in its color. */
+	notes: Map<string, { text: string; tone: "warning" | "danger" | "success" }>;
 };
 
 const pairedKey = new PluginKey<PairedRows | null>("montiTranslationPaired");
@@ -120,13 +120,13 @@ function sourceWords(element: HTMLElement, block: PairedSourceBlock | undefined)
 	element.append(holder);
 }
 
-function kindCell(kind: string, note: string | undefined) {
+function kindCell(kind: string, note: { text: string; tone: string } | undefined) {
 	return cell("kind", (element) => {
 		element.append(kind);
 		if (note) {
 			const noted = document.createElement("span");
-			noted.setAttribute("data-pair-note", "");
-			noted.textContent = note;
+			noted.setAttribute("data-pair-note", note.tone);
+			noted.textContent = note.text;
 			element.append(noted);
 		}
 	});
@@ -161,7 +161,7 @@ const PairedRowsPlugin = new Plugin<PairedRows | null>({
 				const kind = rows.kinds.get(node.type.name) ?? "";
 				const note = rows.notes.get(id) ?? (from ? rows.notes.get(from) : undefined);
 				widget(pos, -3, `rule:${id}`, () => cell("rule"));
-				widget(pos, -2, `kind:${id}:${kind}:${note ?? ""}`, () => kindCell(kind, note));
+				widget(pos, -2, `kind:${id}:${kind}:${note ? `${note.tone}:${note.text}` : ""}`, () => kindCell(kind, note));
 				widget(pos, -1, `source:${id}:${wordsKey(source)}`, () =>
 					cell("source", (element) => sourceWords(element, source)),
 				);

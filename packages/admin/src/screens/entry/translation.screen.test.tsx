@@ -326,6 +326,21 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(body().element().children).toHaveLength(6);
 	});
 
+	it("04-2 the status bar's '원문 바뀜' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {
+		await open(SourceChanged);
+		await userEvent.click(page.getByRole("button", { name: "원문 바뀜 3" }));
+		const list = page.getByRole("dialog");
+		const rows = () => [...list.element().querySelectorAll("[data-slot=todo-item]")];
+		await expect.poll(() => rows().length).toBe(3);
+		const rowOf = (word: string) =>
+			rows().find((row) => row.querySelector("[data-slot=todo-mark]")?.textContent === word);
+		const actionOf = (word: string) => [...(rowOf(word)?.querySelectorAll("button") ?? [])].at(-1)?.textContent;
+		expect([actionOf("바뀜"), actionOf("지워짐"), actionOf("새로")]).toEqual(["확인", "지우기", "빼기"]);
+		await userEvent.click(list.getByRole("button", { name: "확인", exact: true }));
+		await expect.element(page.getByRole("button", { name: "원문 바뀜 2" })).toBeVisible();
+		await expect.element(mark("바뀜")).not.toBeInTheDocument();
+	});
+
 	it("04-2 '빼기' leaves a block new in the source out of this language", async () => {
 		await open(SourceChanged);
 		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();

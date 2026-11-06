@@ -22,8 +22,8 @@ export const Tones: Story = {
 	render: () => (
 		<Stack direction="row" gap={12} align="center">
 			<Marker tone="changed">바뀜</Marker>
-			<Marker tone="changed">새로</Marker>
-			<Marker tone="changed">지워짐</Marker>
+			<Marker tone="added">새로</Marker>
+			<Marker tone="removed">지워짐</Marker>
 			<Marker tone="keep">원문</Marker>
 			<Marker tone="request">1</Marker>
 			<Marker tone="request">…</Marker>
