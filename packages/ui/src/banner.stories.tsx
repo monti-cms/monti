@@ -19,7 +19,7 @@ const actions = (
 
 /** `warning` (the default): something to know about the whole page, with a small mono detail. */
 export const Warning: Story = {
-	args: { title: "한국어 원문이 바뀌었어요", meta: "10. 26 · 블록 2개", children: actions },
+	args: { title: "한국어 원문이 변경됐어요", meta: "10. 26 · 블록 2개", children: actions },
 };
 
 /** `danger`: something failed. */

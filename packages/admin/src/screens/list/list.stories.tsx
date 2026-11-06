@@ -434,17 +434,17 @@ export const LanguageMenu: Story = {
 	loaders: site(translated, "#/c/post?locale=en"),
 	play: async ({ canvasElement }) => {
 		await openColumn(canvasElement, "언어");
-		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 바뀜/ })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 변경/ })).toBeTruthy(), wait);
 	},
 };
 
-/** "원문 바뀜" picked in the language's menu: the groups with a translation behind its source, the language column dotted (flow 3, step 12). */
+/** "원문 변경" picked in the language's menu: the groups with a translation behind its source, the language column dotted (flow 3, step 12). */
 export const SourceChanged: Story = {
 	loaders: site(translated, "#/c/post?translation=sourceChanged"),
 	play: async ({ canvasElement }) => {
 		await waitFor(() => expect(within(canvasElement).getByText("여름 휴가 메모")).toBeTruthy(), wait);
 		await openColumn(canvasElement, "언어");
-		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 바뀜/ })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 변경/ })).toBeTruthy(), wait);
 	},
 };
 

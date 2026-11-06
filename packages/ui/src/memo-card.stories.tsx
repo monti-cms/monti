@@ -89,7 +89,7 @@ export const NewRequest: Story = {
 export const SourceChanged: Story = {
 	render: () => (
 		<MemoCard
-			where="원문 바뀜"
+			where="원문 변경"
 			discardLabel="확인"
 			onDiscard={noop}
 			acceptLabel="다시 번역"

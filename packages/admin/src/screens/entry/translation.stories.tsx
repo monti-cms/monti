@@ -174,13 +174,13 @@ export const PendingMenu: Story = {
 	},
 };
 
-/** The status bar's "원문 바뀜 3" open: each mark's block, and "모두 확인" (flow 3, step 09). */
+/** The status bar's "원문 변경 3" open: each mark's block, and "모두 확인" (flow 3, step 09). */
 export const ChangesList: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "원문 바뀜 3" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "원문 변경 3" }, wait));
 	},
 };
 
@@ -189,7 +189,7 @@ export const SourceChanged: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
-		await page.findByText("원문이 바뀌었어요", undefined, wait);
+		await page.findByText("원문이 변경됐어요", undefined, wait);
 		await userEvent.click(page.getByRole("button", { name: "끔" }));
 	},
 };
@@ -201,7 +201,7 @@ export const ChangedCard: Story = {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "변경" }, wait));
-		await within(canvasElement.ownerDocument.body).findByText("원문 바뀜", undefined, wait);
+		await within(canvasElement.ownerDocument.body).findByText("원문 변경", undefined, wait);
 	},
 };
 

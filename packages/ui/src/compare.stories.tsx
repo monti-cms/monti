@@ -145,7 +145,7 @@ export const TranslationRows: Story = {
 					}
 				/>
 				<CompareRow
-					note="원문 바뀜"
+					note="원문 변경"
 					current
 					source={
 						<Text variant="reading">

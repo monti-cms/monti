@@ -32,7 +32,7 @@ const body = () => page.getByRole("textbox", { name: "본문" });
 /** A mark in the text's left margin ("변경", "추가", "삭제"). */
 const mark = (name: string) => page.getByRole("button", { name, exact: true });
 const tabs = () => page.getByRole("navigation", { name: "언어" });
-/** A language's tab: its name, and "원문이 바뀜" after it when it has a dot. */
+/** A language's tab: its name, and "원문 변경" after it when it has a dot. */
 const tab = (name: string) => tabs().getByRole("button").filter({ hasText: name });
 const addLanguage = () => tabs().getByRole("button", { name: "+ 언어" });
 const faint = () => body().element().querySelectorAll("[data-untranslated]").length;
@@ -191,16 +191,16 @@ describe("flow 3, a translation", () => {
 	it("04-1 3.08 after the source is published again, the English tab has a dot", async () => {
 		await open(LanguageMenu);
 		await userEvent.keyboard("{Escape}");
-		await expect.element(tab("English").getByLabelText("원문이 바뀜")).toBeInTheDocument();
-		await expect.element(tab("한국어").getByLabelText("원문이 바뀜")).not.toBeInTheDocument();
+		await expect.element(tab("English").getByLabelText("원문 변경")).toBeInTheDocument();
+		await expect.element(tab("한국어").getByLabelText("원문 변경")).not.toBeInTheDocument();
 	});
 
 	it("04-1 3.09 the translation shows a margin mark on each changed, added and removed block, and a banner with '모두 확인'", async () => {
 		await open(SourceChanged);
 		await expect.element(page.getByRole("button", { name: "끔" })).toHaveAttribute("aria-pressed", "true");
-		await expect.element(page.getByText("원문이 바뀌었어요")).toBeVisible();
+		await expect.element(page.getByText("원문이 변경됐어요")).toBeVisible();
 		// The status bar counts them in a cell of its own, apart from the to-do list.
-		await expect.element(page.getByRole("button", { name: "원문 바뀜 3" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "원문 변경 3" })).toBeVisible();
 		await expect.element(mark("변경")).toBeVisible();
 		await expect.element(mark("추가")).toBeVisible();
 		await expect.element(mark("삭제")).toBeVisible();
@@ -326,9 +326,9 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(body().element().children).toHaveLength(6);
 	});
 
-	it("04-2 the status bar's '원문 바뀜' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {
+	it("04-2 the status bar's '원문 변경' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {
 		await open(SourceChanged);
-		await userEvent.click(page.getByRole("button", { name: "원문 바뀜 3" }));
+		await userEvent.click(page.getByRole("button", { name: "원문 변경 3" }));
 		const list = page.getByRole("dialog");
 		const rows = () => [...list.element().querySelectorAll("[data-slot=todo-item]")];
 		await expect.poll(() => rows().length).toBe(3);
@@ -337,7 +337,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		const actionOf = (word: string) => [...(rowOf(word)?.querySelectorAll("button") ?? [])].at(-1)?.textContent;
 		expect([actionOf("변경"), actionOf("삭제"), actionOf("추가")]).toEqual(["확인", "지우기", "빼기"]);
 		await userEvent.click(list.getByRole("button", { name: "확인", exact: true }));
-		await expect.element(page.getByRole("button", { name: "원문 바뀜 2" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
 		await expect.element(mark("변경")).not.toBeInTheDocument();
 	});
 

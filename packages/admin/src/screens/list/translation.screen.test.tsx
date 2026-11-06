@@ -38,15 +38,15 @@ const column = (name: string) => page.getByRole("button", { name, exact: true })
 const languageHead = () => document.querySelector<HTMLElement>("th[data-column=locale]");
 const dotted = () => languageHead()?.querySelector("[data-slot=column-dot]") !== null;
 const menuRow = (name: RegExp) => page.getByRole("menuitemcheckbox", { name });
-/** The count at the end of a menu row ("원문 바뀜 2" → 2). */
+/** The count at the end of a menu row ("원문 변경 2" → 2). */
 const countOf = (name: RegExp) =>
 	Number(/(\d+)\s*$/.exec(menuRow(name).element().textContent ?? "")?.[1] ?? Number.NaN);
-const TRANSLATION_ROWS = [/^번역 없음/, /^원문 바뀜/, /^최신/];
+const TRANSLATION_ROWS = [/^번역 없음/, /^원문 변경/, /^최신/];
 
 async function openLanguageMenu() {
 	await expect.element(column("언어")).toBeVisible();
 	await userEvent.click(column("언어"));
-	await expect.element(menuRow(/^원문 바뀜/)).toBeVisible();
+	await expect.element(menuRow(/^원문 변경/)).toBeVisible();
 }
 
 describe("the list's language column", () => {
@@ -82,39 +82,39 @@ describe("the list's language column", () => {
 		const rows = (await page.getByRole("menuitemcheckbox").all()).map((row) => row.element().textContent ?? "");
 		// The languages by name, each with a count, then the translation filters in their order.
 		expect(rows.slice(0, 3).map((row) => row.replace(/\d+$/, ""))).toEqual(["한국어", "영어", "일본어"]);
-		expect(rows.slice(3).map((row) => row.replace(/\d+$/, ""))).toEqual(["번역 없음", "원문 바뀜", "최신"]);
+		expect(rows.slice(3).map((row) => row.replace(/\d+$/, ""))).toEqual(["번역 없음", "원문 변경", "최신"]);
 		for (const row of rows) expect(row).toMatch(/\d+$/);
 		await expect.element(page.getByRole("menu").getByText("번역", { exact: true })).toBeVisible();
 		// A group that lacks a language is never up to date.
 		const total = countOf(/^한국어/);
 		expect(countOf(/^번역 없음/) + countOf(/^최신/)).toBeLessThanOrEqual(total);
-		expect(countOf(/^원문 바뀜/)).toBe(list.translatedPosts.filter((post) => post.changed).length);
+		expect(countOf(/^원문 변경/)).toBe(list.translatedPosts.filter((post) => post.changed).length);
 	});
 
-	it("04-1 3.12 picking 'source changed' leaves the groups with a changed translation and dots the language column; the assistant's same filter reads '번역: 원문 바뀜' on its chip", async () => {
+	it("04-1 3.12 picking 'source changed' leaves the groups with a changed translation and dots the language column; the assistant's same filter reads '번역: 원문 변경' on its chip", async () => {
 		const story = withSite(list.Main, "#/c/post");
 		await story.run();
 		await openLanguageMenu();
-		const counted = countOf(/^원문 바뀜/);
-		await userEvent.click(menuRow(/^원문 바뀜/));
-		await expect.element(menuRow(/^원문 바뀜/)).toHaveAttribute("aria-checked", "true");
+		const counted = countOf(/^원문 변경/);
+		await userEvent.click(menuRow(/^원문 변경/));
+		await expect.element(menuRow(/^원문 변경/)).toHaveAttribute("aria-checked", "true");
 		await expect.poll(() => window.location.hash).toContain("translation=sourceChanged");
 		const changed = list.translatedPosts.filter((post) => post.changed).map((post) => post.title);
 		await expect.element(page.getByText(`1–${counted} / ${counted}`)).toBeVisible();
 		for (const title of changed) await expect.element(page.getByRole("link", { name: title })).toBeVisible();
 		expect(dotted()).toBe(true);
 		// A person's filter is the dot and the check, never a chip (components/list.md).
-		await expect.element(page.getByText("번역: 원문 바뀜")).not.toBeInTheDocument();
+		await expect.element(page.getByText("번역: 원문 변경")).not.toBeInTheDocument();
 
 		// Picking another one adds it, as in every column's menu: the rows of either are left. Picking each again takes it off.
 		await userEvent.click(menuRow(/^번역 없음/));
 		await expect.poll(() => window.location.hash).toContain("translation=missing%2CsourceChanged");
-		await expect.element(menuRow(/^원문 바뀜/)).toHaveAttribute("aria-checked", "true");
+		await expect.element(menuRow(/^원문 변경/)).toHaveAttribute("aria-checked", "true");
 		await expect.element(menuRow(/^번역 없음/)).toHaveAttribute("aria-checked", "true");
-		const both = countOf(/^원문 바뀜/) + countOf(/^번역 없음/);
+		const both = countOf(/^원문 변경/) + countOf(/^번역 없음/);
 		await expect.element(page.getByText(`/ ${both}`, { exact: false })).toBeVisible();
 		await userEvent.click(menuRow(/^번역 없음/));
-		await userEvent.click(menuRow(/^원문 바뀜/));
+		await userEvent.click(menuRow(/^원문 변경/));
 		await expect.poll(() => window.location.hash).not.toContain("translation=");
 		await expect.poll(dotted).toBe(false);
 		await userEvent.keyboard("{Escape}");
@@ -122,7 +122,7 @@ describe("the list's language column", () => {
 		story
 			.loaded()
 			.screen.run("list.show", { collection: "post", filters: [{ on: "translation", any: ["sourceChanged"] }] });
-		await expect.element(page.getByText("번역: 원문 바뀜")).toBeVisible();
+		await expect.element(page.getByText("번역: 원문 변경")).toBeVisible();
 		for (const title of changed) await expect.element(page.getByRole("link", { name: title })).toBeVisible();
 	});
 

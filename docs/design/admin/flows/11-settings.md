@@ -68,7 +68,7 @@
 - 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 사용자가 원문 언어 메뉴("원문 바꾸기")를 열면 언어 고르기가 열린다.
 
-### 단계 07b: "개발 서버 · 언어 · 고르면 맨 위로 · 원문이 바뀜 · 두 줄에 바뀐 곳 표시 (검토를 거쳐 저장)"
+### 단계 07b: "개발 서버 · 언어 · 고르면 맨 위로 · 원문 변경 · 두 줄에 바뀐 곳 표시 (검토를 거쳐 저장)"
 
 - 보드: `Flow11Step07b.dc.html`
 - 화면: `Locales` (stage "원문 바꿈")
