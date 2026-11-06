@@ -74,10 +74,6 @@ export function BodyEditor({
 	return (
 		<EditorBody
 			// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
-			onMouseMove={(event) => {
-				tables.point(event.target, event.clientX, event.clientY);
-			}}
-			onMouseLeave={tables.leave}
 			onClick={(event) => {
 				const target = event.target as Node;
 				// A press under the last block puts the cursor at the end of the text.
