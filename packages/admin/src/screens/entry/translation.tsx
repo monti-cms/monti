@@ -224,11 +224,11 @@ export function SourceViewPicker({ value, onChange }: { value: SourceView; onCha
 	);
 }
 
-/** Words with the changed ones on the highlight. */
+/** The source's words with the ones changed since the translation underlined in the warning color (`CompareText source`). */
 const Words = ({ parts }: { parts: Part[] }) =>
 	parts.map((part, index) => (
 		// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one text, in order
-		<CompareText key={index} changed={part.changed}>
+		<CompareText key={index} changed={part.changed} source>
 			{part.text}
 		</CompareText>
 	));

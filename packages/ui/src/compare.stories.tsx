@@ -149,7 +149,10 @@ export const TranslationRows: Story = {
 					current
 					source={
 						<Text variant="reading">
-							목록에는 제목과 주소, 지금 상태만 남겼다. <Highlight>나머지는 필요할 때 꺼내 본다.</Highlight>
+							목록에는 제목과 주소, 지금 상태만 남겼다.{" "}
+							<CompareText changed source>
+								나머지는 필요할 때 꺼내 본다.
+							</CompareText>
 						</Text>
 					}
 					translation={<Text variant="reading">The list keeps only the title, the address and the status.</Text>}

@@ -67,7 +67,7 @@ const EDITOR_BODY = cn(
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
  * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
+ * words `mark`, underlined in the warning color, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
 	"[&_.ProseMirror]:grid [&_.ProseMirror]:grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] [&_.ProseMirror]:items-stretch",
@@ -76,7 +76,8 @@ const PAIRED = cn(
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
 	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:font-mono [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
 	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
-	"[&_[data-pair=source]_mark]:rounded-monti-sm [&_[data-pair=source]_mark]:bg-monti-highlight [&_[data-pair=source]_mark]:px-px [&_[data-pair=source]_mark]:text-inherit",
+	// The source's words that changed since the translation: the warning underline of `CompareText source`.
+	"[&_[data-pair=source]_mark]:bg-transparent [&_[data-pair=source]_mark]:text-inherit [&_[data-pair=source]_mark]:underline [&_[data-pair=source]_mark]:decoration-1 [&_[data-pair=source]_mark]:decoration-monti-warning [&_[data-pair=source]_mark]:underline-offset-4",
 	"[&_[data-pair-heading]]:text-monti-heading [&_[data-pair-code]]:block [&_[data-pair-code]]:whitespace-pre-wrap [&_[data-pair-code]]:rounded-monti-lg [&_[data-pair-code]]:bg-monti-selected [&_[data-pair-code]]:px-monti-16 [&_[data-pair-code]]:py-monti-12 [&_[data-pair-code]]:font-mono [&_[data-pair-code]]:text-monti-code",
 	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on the block
 	// ground on both sides (`bg-block`, the ground of the block a handle or menu is about); words picked in it take the stronger `bg-selection`: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),

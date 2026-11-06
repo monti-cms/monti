@@ -233,9 +233,37 @@ function CompareShared({
 	);
 }
 
-/** A run of the entry's text: the words that `changed` are on the highlight, the others are plain. */
-function CompareText({ changed = false, children }: { changed?: boolean; children: React.ReactNode }) {
-	return changed ? <Highlight>{children}</Highlight> : children;
+/** The underline of a source's words that changed since its translation: the warning color of "Changed", whatever ground it sits on. */
+const SOURCE_CHANGE = "underline decoration-1 decoration-monti-warning underline-offset-4";
+
+/**
+ * A run of the entry's text: the words that `changed` are marked, the others are plain. Two versions of one entry mark them on the highlight; a
+ * translation's source (`source`) marks the words that changed since it was translated with an underline in the warning color, which shows on the
+ * tool ground and on the block being written alike (2026-11-06 owner).
+ */
+function CompareText({
+	changed = false,
+	source = false,
+	children,
+}: {
+	changed?: boolean;
+	source?: boolean;
+	children: React.ReactNode;
+}) {
+	if (!changed) return children;
+	if (!source) return <Highlight>{children}</Highlight>;
+	// The line runs under the words only: the spaces around a changed run stay outside it.
+	const [, before = "", words = children, after = ""] =
+		typeof children === "string" ? (/^(\s*)([\s\S]*?)(\s*)$/.exec(children) ?? []) : [];
+	return (
+		<>
+			{before}
+			<span data-slot="source-change" className={SOURCE_CHANGE}>
+				{words}
+			</span>
+			{after}
+		</>
+	);
 }
 
 export {
