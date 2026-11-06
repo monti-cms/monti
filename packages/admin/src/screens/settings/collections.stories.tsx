@@ -9,6 +9,7 @@ type Loaded = { site: StorySite };
 type Monti = StorySite["monti"];
 
 const meta = {
+	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/Settings/Collections",
 	render: (_args, { loaded }) => <MontiAdmin transport={(loaded as Loaded).site.transport} siteName="example.dev" />,
@@ -17,7 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const admin = { actor: "admin" } as const;
-const wait = { timeout: 15000 };
+export const wait = { timeout: 15000 };
 
 /** The posts' admin values the reference screens show: a Korean name, the field labels and help. */
 const postValues = {
@@ -53,7 +54,7 @@ async function setup(monti: Monti) {
 /** The dev server: it has the schema files (a story writes none), so structure can change. */
 const devFiles = { write: async () => {}, readChanges: async () => [] };
 
-const site = (options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void> } = {}) => [
+export const site = (options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void> } = {}) => [
 	async () => {
 		// The draft keeps unsaved changes in this browser (doc 05); every story starts from the saved values, at the first screen.
 		startAt();
@@ -70,7 +71,7 @@ const site = (options: { files?: typeof devFiles | null; more?: (site: StorySite
 ];
 
 /** Fills a field as typing would, through the input's change event (`userEvent.type` does not reach these inputs). */
-const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
+export const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
 /** Waits until the open sheet has gone, so the next click reaches the page instead of its closing backdrop. */
 const sheetGone = (body: ReturnType<typeof within>) =>
@@ -81,7 +82,7 @@ const collectionLink = (page: ReturnType<typeof within>, name: RegExp) =>
 	within(page.getByRole("navigation", { name: "컬렉션" })).getByRole("button", { name });
 
 /** Opens "바뀐 곳 ▾" once its group has settled (it appears with the first change, and a second press would close the list). */
-async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typeof within>) {
+export async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typeof within>) {
 	const trigger = await page.findByRole("button", { name: "바뀐 곳" });
 	await new Promise((done) => setTimeout(done, 300));
 	await userEvent.click(trigger);
@@ -89,7 +90,7 @@ async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typ
 }
 
 /** Opens settings from the sidebar and waits for the collections; sheets and menus are in the body, outside the canvas. */
-async function settings(canvasElement: HTMLElement) {
+export async function settings(canvasElement: HTMLElement) {
 	const page = within(canvasElement);
 	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
 	await page.findByRole("button", { name: "summary 열기" }, wait);
@@ -105,7 +106,7 @@ async function addField(
 }
 
 /** Flow 4, step 07: summary renamed to excerpt, subtitle removed, a new required choice "글 종류" with its choices. */
-async function changeFields(canvasElement: HTMLElement) {
+export async function changeFields(canvasElement: HTMLElement) {
 	const screen = await settings(canvasElement);
 	const { page, body } = screen;
 	await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
@@ -216,22 +217,6 @@ export const ChangesList: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, body } = await changeFields(canvasElement);
 		await openChanges(page, body);
-	},
-};
-
-/** The changes list: a row's "되돌리기" puts that change back and keeps the list open; pressing a row opens its field. */
-export const ChangesListRows: Story = {
-	loaders: site(),
-	play: async ({ canvasElement }) => {
-		const { page, body } = await changeFields(canvasElement);
-		await openChanges(page, body);
-		const menu = within(await body.findByRole("menu"));
-		const subtitle = menu.getByRole("menuitem", { name: /부제/ });
-		await userEvent.click(within(subtitle).getByRole("button", { name: "되돌리기" }));
-		await waitFor(() => expect(menu.queryByRole("menuitem", { name: /부제/ })).toBeNull(), wait);
-		await expect(body.getByRole("menu")).toBeInTheDocument();
-		await userEvent.click(menu.getByRole("menuitem", { name: /요약/ }));
-		await body.findByRole("dialog", { name: /요약/ }, wait);
 	},
 };
 
@@ -415,19 +400,6 @@ export const ApplyRefused: Story = {
 	},
 };
 
-/** Flow 4, step 18: the memos are deleted: gone from the list, and the toast says it is applied (the removal's undo toast is gone). */
-export const Deleted: Story = {
-	loaders: site(),
-	play: async (context) => {
-		await DeleteReview.play?.(context);
-		const body = within(context.canvasElement.ownerDocument.body);
-		await userEvent.click(body.getByRole("button", { name: "지우고 적용" }));
-		await body.findByText("적용됐어요", {}, wait);
-		// The removal's undo toast goes with the save: there is nothing left for it to undo.
-		await waitFor(() => expect(body.queryByText("메모 컬렉션을 지웠어요")).toBeNull(), wait);
-	},
-};
-
 /** The banner's review (T16): the schema file was edited by hand; "검토" opens this screen's review of what the edit changes. */
 export const HandEditReview: Story = {
 	loaders: site({
@@ -514,7 +486,7 @@ export const Proposal: Story = {
 };
 
 /** The posts' panel in two tabs: "기본" and "SEO" (subtitle and cover). */
-const twoTabs = async ({ monti }: StorySite) => {
+export const twoTabs = async ({ monti }: StorySite) => {
 	await monti.run(
 		"collections.updateAdminValues",
 		{
@@ -532,58 +504,9 @@ const twoTabs = async ({ monti }: StorySite) => {
 };
 
 /** The fields' names in the order the outline shows them. */
-const fieldOrder = (page: ReturnType<typeof within>) =>
+export const fieldOrder = (page: ReturnType<typeof within>) =>
 	within(page.getByRole("tabpanel"))
 		.getAllByRole("button", { name: / 열기$/ })
 		.map((button: HTMLElement) => button.getAttribute("aria-label")?.replace(/ 열기$/, ""));
 
-const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
-
-/** A tab renamed through its right-click menu: "이름 바꾸기" opens the name in place, Enter keeps it. */
-export const TabRenamedFromMenu: Story = {
-	loaders: site(),
-	play: async ({ canvasElement }) => {
-		const { page, body } = await settings(canvasElement);
-		await userEvent.pointer({ keys: "[MouseRight]", target: page.getByRole("tab", { name: /^기본/ }) });
-		await userEvent.click(await body.findByRole("menuitem", { name: "이름 바꾸기" }));
-		const name = await page.findByRole("textbox", { name: "탭 이름" }, wait);
-		await waitFor(() => expect(name).toHaveFocus(), wait);
-		fill(name, "글 정보");
-		fireEvent.keyDown(name, { key: "Enter" });
-		await page.findByRole("tab", { name: /^글 정보/ }, wait);
-	},
-};
-
-/** A tab deleted through its right-click menu: its fields join the end of the first tab, and the tab row keeps one tab (no "지우기" then). */
-export const TabDeleted: Story = {
-	loaders: site({ more: twoTabs }),
-	play: async ({ canvasElement }) => {
-		const { page, body } = await settings(canvasElement);
-		await userEvent.pointer({ keys: "[MouseRight]", target: await page.findByRole("tab", { name: /^SEO/ }, wait) });
-		await userEvent.click(await body.findByRole("menuitem", { name: "지우기" }));
-		await waitFor(() => expect(page.queryByRole("tab", { name: /^SEO/ })).toBeNull(), wait);
-		await waitFor(
-			() => expect(fieldOrder(page)).toEqual(["title", "slug", "summary", "category", "subtitle", "cover"]),
-			wait,
-		);
-	},
-};
-
-/** Fields reordered with the keyboard: Space lifts summary by its grip, ↓ moves it past subtitle, Space drops it there. */
-export const KeyboardReorder: Story = {
-	loaders: site(),
-	play: async ({ canvasElement }) => {
-		const { page } = await settings(canvasElement);
-		await expect(fieldOrder(page)).toEqual(["title", "slug", "summary", "subtitle", "cover", "category"]);
-		page.getByRole("button", { name: "summary 옮기기" }).focus();
-		await userEvent.keyboard("[Space]");
-		await pause(100);
-		await userEvent.keyboard("[ArrowDown]");
-		await pause(300);
-		await userEvent.keyboard("[Space]");
-		await waitFor(
-			() => expect(fieldOrder(page)).toEqual(["title", "slug", "subtitle", "summary", "cover", "category"]),
-			wait,
-		);
-	},
-};
+export const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
