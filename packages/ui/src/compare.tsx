@@ -116,8 +116,7 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 
 /**
  * A block of the source shown beside its translation (the source pane). `current` while the cursor is in the translation's block paired with it: it
- * is on the selected ground, a little wider than its words, so one sees which source block is being translated (gray, not the beige block
- * ground: words picked in it take the beige highlight).
+ * is on the block ground, a little wider than its words, so one sees which source block is being translated.
  */
 function CompareBlock({ current = false, className, ...props }: React.ComponentProps<"div"> & { current?: boolean }) {
 	return (
@@ -125,7 +124,7 @@ function CompareBlock({ current = false, className, ...props }: React.ComponentP
 			data-slot="compare-block"
 			data-current={current || undefined}
 			className={cn(
-				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-selected",
+				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-block",
 				className,
 			)}
 			{...props}

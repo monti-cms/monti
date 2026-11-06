@@ -34,6 +34,7 @@
 	--monti-bg-selected: var(--monti-gray-4);
 	--monti-bg-current: var(--monti-gray-6);
 	--monti-bg-highlight: #e8e1cf;
+	--monti-bg-selection: #dccfb0;
 	--monti-bg-block: #efe9dc;
 	--monti-bg-emphasis: var(--monti-gray-12);
 	--monti-fg-on-emphasis: var(--monti-gray-1);
@@ -186,6 +187,7 @@
 	--monti-bg-page: var(--monti-gray-2);
 	--monti-bg-tool: var(--monti-gray-1);
 	--monti-bg-highlight: #3a352a;
+	--monti-bg-selection: #4a4232;
 	--monti-bg-block: #2a2722;
 	--monti-fg-on-emphasis: var(--monti-gray-2);
 	--monti-bg-backdrop: rgba(10, 9, 8, 0.55);

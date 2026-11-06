@@ -77,6 +77,7 @@
 	--background-color-monti-selected: var(--monti-bg-selected);
 	--background-color-monti-current: var(--monti-bg-current);
 	--background-color-monti-highlight: var(--monti-bg-highlight);
+	--background-color-monti-selection: var(--monti-bg-selection);
 	--background-color-monti-block: var(--monti-bg-block);
 	--background-color-monti-emphasis: var(--monti-bg-emphasis);
 	--background-color-monti-success-muted: var(--monti-bg-success-muted);

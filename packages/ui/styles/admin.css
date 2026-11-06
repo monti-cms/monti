@@ -39,11 +39,11 @@ html:has(.monti-admin) body {
 }
 
 /*
- * Text picked by dragging takes the highlight ground, never the browser's blue: the same ground as the words that differ between two versions. On the
- * whole document, as popups are portaled to the body. Not `bg-block`: that is the ground of the block being written, which a picked word sits on.
+ * Text picked by dragging takes the admin's own ground, never the browser's blue (tokens.md, `bg-selection`): a step stronger than the highlight, so
+ * it shows on the page, the tool ground, the block being written and highlighted words alike. On the whole document, as popups are portaled to the body.
  */
 html:has(.monti-admin) ::selection {
-	background-color: var(--monti-bg-highlight);
+	background-color: var(--monti-bg-selection);
 	color: inherit;
 }
 
