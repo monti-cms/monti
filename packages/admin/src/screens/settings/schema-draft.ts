@@ -142,7 +142,8 @@ export function newFieldKey(taken: string[], name: string): string {
 
 /** The schema the draft makes, the renames it holds and, for each collection, its admin values in full under the fields' names now. */
 export function build(read: SchemaRead, changed: Path[], value: Values, catalog: Catalog | null) {
-	const schema: Schema = { collections: {} };
+	// The languages are the settings' language tab's (doc 04): this screen keeps them as they are.
+	const schema: Schema = { locales: read.schema.locales, collections: {} };
 	const renames: Rename[] = [];
 	const adminValues: Record<string, AdminValues> = {};
 	for (const c of collectionKeys(read, changed)) {

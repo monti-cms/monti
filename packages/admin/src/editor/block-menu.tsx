@@ -41,6 +41,7 @@ import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
 import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
 import { hasHeaderRow, toggleHeaderRow } from "./table";
+import { linkOf } from "./translation";
 
 /** Where the handle floats: 32px left of the block (the 24px grip, then 8 to the text), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
@@ -76,7 +77,10 @@ const RING_OUT = 4;
  * The block handle (doc 03, editor-tools.md): the + and the grip in the margin of the block under the pointer. The + puts an empty line with "/" under
  * the block; the grip opens the block menu, and dragging it moves the block. The menu hides what cannot be done (the first block's "move up").
  */
-export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
+/** What a translation's block menu does besides the usual (doc 04): keep a pending block in the source's words, or change a followed one here. */
+export type BlockTranslation = { keep: (blockId: string) => void; detach: (blockId: string) => void };
+
+export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, translation?: BlockTranslation) {
 	const { t } = useAdmin();
 	const [spot, setSpot] = useState<Spot | null>(null);
 	const [open, setOpen] = useState(false);
@@ -239,6 +243,47 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		const kinds = offeredKinds(catalogs.offered);
 		const name = kind?.type === "heading" ? t("editor.heading", { level: kind.level }) : block ? t(block.label) : null;
 		const align = alignable(block) ? String(node.attrs.data?.align ?? "left") : null;
+		// A translation's top-level block carries its link (doc 04).
+		const link = translation && $pos.depth === 0 ? linkOf(node) : null;
+		const blockId = String(node.attrs.blockId ?? "");
+		const decide = (action: (id: string) => void) => {
+			changeOpen(false);
+			setSpot(null);
+			action(blockId);
+		};
+
+		// A block still in the source's words: decide what it becomes, block by block (translation.md: the dimmed block's menu).
+		if (link?.state === "pending" && translation)
+			return (
+				<EditorOverlay top={spot.top} left={spot.left}>
+					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
+						<BlockHandle
+							gripLabel={t("editor.blockMenu")}
+							active={open}
+							onPointerDown={pressGrip}
+							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+						/>
+						<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
+							<DropdownMenuGroup>
+								{name ? <DropdownMenuLabel>{name}</DropdownMenuLabel> : null}
+								<DropdownMenuItem onClick={() => decide(translation.keep)}>
+									{t("translation.keepSource")}
+								</DropdownMenuItem>
+							</DropdownMenuGroup>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => {
+									run(deleteBlock);
+									setSpot(null);
+								}}
+							>
+								<TrashCan aria-hidden />
+								{t("translation.remove")}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</EditorOverlay>
+			);
 
 		return (
 			<EditorOverlay top={spot.top} left={spot.left}>
@@ -252,6 +297,11 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 					<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
 						<DropdownMenuGroup>
 							{name ? <DropdownMenuLabel>{name}</DropdownMenuLabel> : null}
+							{link?.state === "followSource" && translation ? (
+								<DropdownMenuItem onClick={() => decide(translation.detach)}>
+									{t("translation.detach")}
+								</DropdownMenuItem>
+							) : null}
 							{kind && kinds.length > 1 ? (
 								<DropdownMenuSub>
 									<DropdownMenuSubTrigger>

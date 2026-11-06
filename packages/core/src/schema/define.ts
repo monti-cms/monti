@@ -41,7 +41,7 @@ export type CollectionDefinition = {
 	fields: Record<string, FieldDefinition>;
 };
 
-/** One language of the site: its code (`ko`, `zh-Hant`) and its name in that language ("한국어"). */
+/** One language of the site: its code (`ko`, `zh-Hant`) and its name in that language ("한국어", cms-allow-korean: a language's own name). */
 export type LocaleDefinition = { code: string; name: string };
 
 /**
@@ -65,7 +65,7 @@ export function localeModeOf(name: string, field: FieldDefinition): LocaleMode {
 	return field.locale ?? (name === "title" ? "perLocale" : name === "slug" ? "fromSource" : "same");
 }
 
-/** Whether the site writes in more than one language: then the admin shows language tabs, "+ 언어" and the list's language column (doc 04). */
+/** Whether the site writes in more than one language: then the admin shows language tabs, "+ Language" and the list's language column (doc 04). */
 export const translates = (schema: Schema) => schema.locales.list.length > 1;
 
 /** The schema of `monti.schema.ts`. It is a plain value: the admin writes this file back, so it holds no code. */

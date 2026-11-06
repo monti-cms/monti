@@ -14,6 +14,7 @@ import type { DOMOutputSpec } from "@tiptap/pm/model";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
 import { tableExtensions } from "./table";
+import { TranslationBlocks } from "./translation";
 
 /** The editor's node for a block type: a block type may hold `:` or `-` (`component:PostCard`), an editor name may not. */
 export const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
@@ -32,6 +33,8 @@ export const markType = (name: string) => Object.entries(MARK_NAMES).find(([, ed
 const blockAttributes = () => ({
 	blockId: { default: null, keepOnSplit: false, rendered: false },
 	data: { default: null, rendered: false },
+	/** In a translation, the source block it is paired with and what was decided for it (doc 04). A split-off half is a new block, unpaired. */
+	link: { default: null, keepOnSplit: false, rendered: false },
 });
 
 type Data = Record<string, unknown> | null;
@@ -198,6 +201,7 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 	});
 	return [
 		Document.extend({ content: "block+" }),
+		TranslationBlocks,
 		Text,
 		HardBreak,
 		...nodes,

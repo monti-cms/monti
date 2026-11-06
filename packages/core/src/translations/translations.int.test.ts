@@ -273,6 +273,10 @@ describe("pending blocks", () => {
 		await decideAll(id);
 		await write("entries.publish", { ids: [id] });
 		expect((await get(id)).state).toBe("published");
+		// The site shows a translation under its language (`exceptSource`); the source keeps its path.
+		expect((await read<{ published: { path: string } }>("entries.get", { id })).published.path).toBe(
+			"/en/posts/first-post",
+		);
 		const found = await reader().entry({ collection: "post", locale: "en", slug: "first-post" });
 		expect(found && "entry" in found && found.entry.title).toBe("First post");
 	});

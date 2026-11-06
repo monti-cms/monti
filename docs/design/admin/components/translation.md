@@ -29,7 +29,7 @@
 
 ### 코드
 
-`tone="changed"`인 `Marker`(번역한 뒤 원문이 바뀐 블록: "바뀜", "새로", "지워짐". 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
+`tone="changed"`인 `Marker`(번역한 뒤 원문이 바뀐 블록: "바뀜", "새로", "지워짐". 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). 편집기 안에서는 블록 위치를 재서 `EditorMargin`(`top`은 블록 위에서 잰 값, 글 왼쪽 12px 밖)에 `Marker`를 건다. 본문과 함께 스크롤된다. 편집기 본문의 흐린 블록은 `EditorBody`의 `data-untranslated`다(`Untranslated`와 같은 `fg-faint`). mono 10px의 18px 높이 태그다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
 
 ## 나란히 보기 (`.mt-pair`)
 

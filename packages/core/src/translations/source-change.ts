@@ -11,7 +11,7 @@ import { rememberBlocks } from "./source";
 type Db = Kysely<Database> | Transaction<Database>;
 
 /**
- * The source language changes from `from` to `to` (doc 04, "원문 언어를 바꾸면"). In every group with an entry in `from`:
+ * The source language changes from `from` to `to` (doc 04, changing the source language). In every group with an entry in `from`:
  * - the entry in `to` becomes the source; a group without one gets a draft of it, its blocks copied from the old source as pending blocks;
  * - the old source and the other translations are paired again with the new source's blocks;
  * - what the site shows does not change: the same links are written into the published copies, so a published entry stays published.

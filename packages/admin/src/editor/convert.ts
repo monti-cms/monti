@@ -53,7 +53,11 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		const definition = byType.get(block.type);
 		if (!definition) return { type: UNKNOWN, attrs: { blockId: id, block } };
 		if (block.type === "table") return tableToEditor(block, id);
-		const node: JSONContent = { type: nodeName(block.type), attrs: { blockId: id, data: block.attrs ?? null } };
+		// A translation's link goes along so the editor can draw the block's state; the core keeps the link itself on save (doc 04).
+		const node: JSONContent = {
+			type: nodeName(block.type),
+			attrs: { blockId: id, data: block.attrs ?? null, link: fresh ? null : (block.link ?? null) },
+		};
 		if (definition.holds === "text") {
 			const content = (block.content ?? []).map(inlineToEditor).filter((each) => each !== null);
 			if (content.length) node.content = content;
@@ -109,6 +113,8 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 		const data = node.attrs?.data as Record<string, unknown> | null | undefined;
 		const block: Block = { id: String(node.attrs?.blockId ?? ""), type: definition?.type ?? String(node.type) };
 		if (data && Object.keys(data).length) block.attrs = data;
+		const link = node.attrs?.link as Block["link"] | null | undefined;
+		if (link) block.link = link;
 		if (definition?.holds === "text") {
 			const content = (node.content ?? []).map(inlineFromEditor).filter((each) => each !== null);
 			if (content.length) block.content = content;

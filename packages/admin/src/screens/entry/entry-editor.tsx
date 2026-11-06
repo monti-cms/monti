@@ -1,6 +1,7 @@
 import { type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
+	Box,
 	Button,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -49,6 +50,17 @@ import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
+import {
+	LocaleTabs,
+	PairedView,
+	SourceChangedBanner,
+	SourceChangedCell,
+	SourcePane,
+	type SourceView,
+	SourceViewPicker,
+	TranslationMargin,
+	useTranslation,
+} from "./translation";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 
@@ -116,7 +128,44 @@ export function EntryEditor({
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
-	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug) : null;
+	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug, read?.entry.locale) : null;
+
+	// Languages (doc 04): the tabs over the title, and in a translation its source beside it, side by side, or not at all.
+	const translation = useTranslation(id, schema.data?.schema, editor);
+	const compared = translation.compared;
+	const [view, setView] = useState<SourceView>("side");
+	const showView = (next: SourceView) => {
+		setView(next);
+		// The source takes the place of the properties beside the text (translation.md, the head row).
+		if (next !== "off") setPanel(false);
+	};
+	const opensBeside = translation.isTranslation && view !== "off";
+	useEffect(() => {
+		if (opensBeside) setPanel(false);
+	}, [opensBeside]);
+	const sourceName = (code: string) =>
+		schema.data?.schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
+	const beside =
+		compared && view === "side" ? (
+			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} />
+		) : null;
+	const paired = Boolean(compared) && view === "paired";
+	const languages =
+		translation.multilingual && schema.data ? (
+			<Inline minHeight="control-md" justify="between" gap={12}>
+				<LocaleTabs
+					schema={schema.data.schema}
+					group={translation.group}
+					current={id}
+					onOpen={onOpen}
+					onCreate={async (code) => {
+						const made = await translation.create(code);
+						if (made) onOpen(made);
+					}}
+				/>
+				{translation.isTranslation ? <SourceViewPicker value={view} onChange={showView} /> : null}
+			</Inline>
+		) : null;
 
 	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
 	const [looking, setLooking] = useState(0);
@@ -349,6 +398,9 @@ export function EntryEditor({
 				</Banner>
 			) : null}
 			{trashed ? <Banner tone="neutral" title={t("entry.trashedBanner")} /> : null}
+			{compared && !readOnly ? (
+				<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
+			) : null}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -413,43 +465,70 @@ export function EntryEditor({
 					</IconButton>
 				</Inline>
 			</EditorHeader>
-			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">
+				{beside}
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
-					<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-						<Stack gap={0} paddingTop={16} paddingBottom={32}>
-							<FormField>
-								<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
-									{t("entry.title")}
-								</FormFieldLabel>
-								<Input
-									id={fieldInputId("title")}
-									value={editor.title}
-									placeholder={t("entry.title")}
-									size="display"
-									appearance="inline"
-									disabled={readOnly}
-									onChange={(event) => editor.set("title", event.target.value)}
-								/>
-							</FormField>
-							<EditorTitleRule />
-						</Stack>
-						{read && catalogs ? (
-							<BodyEditor
-								key={editor.bodyKey}
+					{paired && compared ? (
+						<Stack gap={0} grow width="full" paddingBottom={48}>
+							<Box paddingBottom={16}>{languages}</Box>
+							<PairedView
+								compared={compared}
+								translationTitle={editor.title}
 								doc={editor.doc}
 								catalogs={catalogs}
-								onChange={(doc) => editor.set("doc", doc)}
-								editable={!readOnly}
-								templates
-								onEditor={keepEditor}
-								proposals={{
-									items: editor.bodyProposals,
-									current: walking?.id ?? null,
-									onTaken: editor.takeBody,
-								}}
+								onDetach={translation.blockMenu.detach}
 							/>
-						) : null}
-					</Stack>
+						</Stack>
+					) : (
+						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
+							{languages}
+							<Stack gap={0} paddingTop={16} paddingBottom={32}>
+								<FormField>
+									<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
+										{t("entry.title")}
+									</FormFieldLabel>
+									<Input
+										id={fieldInputId("title")}
+										value={editor.title}
+										placeholder={compared?.source.title || t("entry.title")}
+										size="display"
+										appearance="inline"
+										disabled={readOnly}
+										onChange={(event) => editor.set("title", event.target.value)}
+									/>
+								</FormField>
+								<EditorTitleRule />
+							</Stack>
+							{read && catalogs ? (
+								<BodyEditor
+									key={editor.bodyKey}
+									doc={editor.doc}
+									catalogs={catalogs}
+									onChange={(doc) => editor.set("doc", doc)}
+									editable={!readOnly}
+									templates
+									onEditor={keepEditor}
+									proposals={{
+										items: editor.bodyProposals,
+										current: walking?.id ?? null,
+										onTaken: editor.takeBody,
+									}}
+									translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
+									margin={
+										translation.isTranslation
+											? (made) => (
+													<TranslationMargin
+														editor={made}
+														marks={compared?.marks ?? []}
+														onDecide={(decision) => void translation.decide([decision])}
+													/>
+												)
+											: undefined
+									}
+								/>
+							) : null}
+						</Stack>
+					)}
 					{walking ? (
 						<ProposalBubbleDock>
 							<ProposalBubble
@@ -476,6 +555,7 @@ export function EntryEditor({
 						tab={tab}
 						onTab={setTab}
 						readOnly={readOnly}
+						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
 					/>
 				) : null}
 			</Inline>
@@ -515,6 +595,16 @@ export function EntryEditor({
 							<TodoDone>{filled.join(" · ")}</TodoDone>
 						) : null}
 					</StatusBarList>
+					{compared && !readOnly ? (
+						<SourceChangedCell
+							compared={compared}
+							doc={editor.doc}
+							onGo={(block) =>
+								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
+							}
+							onConfirmAll={() => void translation.confirmAll()}
+						/>
+					) : null}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						{t("entry.chars", { count: docLength(editor.doc) })}

@@ -249,7 +249,7 @@ export const entryOperations = [
 				published: published
 					? {
 							slug: published.slug,
-							path: publicPath(ctx.site.schema(), entry.collection, published.slug),
+							path: publicPath(ctx.site.schema(), entry.collection, published.slug, entry.locale),
 							publishedAt: published.published_at,
 							fromVersion: published.from_version,
 						}
@@ -393,7 +393,7 @@ export const entryOperations = [
 					.onConflict((conflict) => conflict.column("entry_id").doUpdateSet(copy))
 					.execute();
 				const paths = [slug, ...(previous && previous.slug !== slug ? [previous.slug] : [])].flatMap(
-					(each) => publicPath(schema, entry.collection, each) ?? [],
+					(each) => publicPath(schema, entry.collection, each, entry.locale) ?? [],
 				);
 				ctx.emit({
 					type: "entry.published",
@@ -433,7 +433,7 @@ export const entryOperations = [
 						ids: [entry.id],
 						collection: entry.collection,
 						locale: entry.locale,
-						paths: [publicPath(ctx.site.schema(), entry.collection, previous.slug) ?? []].flat(),
+						paths: [publicPath(ctx.site.schema(), entry.collection, previous.slug, entry.locale) ?? []].flat(),
 					});
 				archived.push(entry.id);
 			}
@@ -531,7 +531,7 @@ export const entryOperations = [
 			const slug = previewSlug(entry);
 			return {
 				token: await previewToken(ctx.site.secret, entry.id, expiresAt),
-				path: publicPath(ctx.site.schema(), entry.collection, slug),
+				path: publicPath(ctx.site.schema(), entry.collection, slug, entry.locale),
 				expiresAt,
 			};
 		},

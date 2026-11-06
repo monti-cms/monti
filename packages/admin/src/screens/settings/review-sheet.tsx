@@ -27,12 +27,16 @@ import { at } from "./schema-draft";
 import type { CollectionsDraft } from "./use-collections-draft";
 
 /** What `schema.plan` answers: what must be fixed first, and each change with its choices (the first is the default). */
-export type Plan = { problems: unknown[]; changes: SchemaChange[] };
+/** A change of a collection. The languages' changes are the language tab's (doc 04), never in this review. */
+export type CollectionChange = SchemaChange & { collection: string };
+export const ofCollection = <T extends { collection?: string }>(item: T): item is T & { collection: string } =>
+	item.collection !== undefined;
+export type Plan = { problems: unknown[]; changes: CollectionChange[] };
 
 /** The person's pick for one change: the radio, and the extra answer a pick may need (the field to move values to, the value to fill). */
 type Pick = { radio: string; move?: string; fill?: unknown };
 
-const firstPick = (change: SchemaChange): Pick | null => {
+const firstPick = (change: CollectionChange): Pick | null => {
 	const first = change.choices?.[0];
 	if (!first) return null;
 	if (first.do === "renameField") return { radio: first.values };
@@ -46,7 +50,7 @@ const firstPick = (change: SchemaChange): Pick | null => {
 	return { radio: "confirm" };
 };
 
-const answerOf = (change: SchemaChange, pick: Pick): Choice | null => {
+const answerOf = (change: CollectionChange, pick: Pick): Choice | null => {
 	const first = change.choices?.[0];
 	if (!first) return null;
 	if (first.do === "renameField") return { do: "renameField", values: pick.radio as "move" | "empty" };
@@ -58,7 +62,7 @@ const answerOf = (change: SchemaChange, pick: Pick): Choice | null => {
 };
 
 /** A pick that throws stored values away: the apply pill turns into the red delete-and-apply (change.md). */
-const deletes = (change: SchemaChange, pick: Pick | undefined) =>
+const deletes = (change: CollectionChange, pick: Pick | undefined) =>
 	change.do === "removeCollection" ||
 	(change.do === "removeField" && pick?.radio !== "move") ||
 	(change.do === "renameField" && pick?.radio === "empty");
@@ -167,7 +171,7 @@ function Body({
 	const pick = (id: string, patch: Partial<Pick>) =>
 		setPicks((current) => ({ ...current, [id]: { ...(current[id] as Pick), ...patch } }));
 	const draftSchema = model.built?.schema;
-	const definition = (change: SchemaChange): FieldDefinition | undefined =>
+	const definition = (change: CollectionChange): FieldDefinition | undefined =>
 		change.field ? draftSchema?.collections[change.collection]?.fields[change.field] : undefined;
 	const keyOf = (collection: string, name: string) =>
 		model.fields(collection).find((each) => model.fieldName(collection, each) === name) ?? name;
@@ -186,7 +190,7 @@ function Body({
 	const danger = plan.changes.some((change) => deletes(change, picks[change.id]));
 	const collections = [...new Set(plan.changes.map((change) => model.label(change.collection)))].join(", ");
 
-	const block = (change: SchemaChange) => {
+	const block = (change: CollectionChange) => {
 		const c = change.collection;
 		const current = picks[change.id];
 		const count = (n: number | undefined) => (n === undefined ? undefined : t("settings.review.count", { count: n }));

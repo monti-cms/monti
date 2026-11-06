@@ -1,4 +1,4 @@
-import { type AdminValues, type Answers, sameJson } from "@monti-cms/core";
+import { type AdminValues, type Answers, type SchemaChange, sameJson } from "@monti-cms/core";
 import {
 	Banner,
 	Button,
@@ -30,7 +30,7 @@ import { FieldSheet, type FieldSheetOpen } from "./field-sheet";
 import { FieldsTab } from "./fields-tab";
 import { NewCollectionSheet } from "./new-collection-sheet";
 import { PreviewPanel } from "./preview-panel";
-import { type Plan, ReviewSheet } from "./review-sheet";
+import { ofCollection, type Plan, ReviewSheet } from "./review-sheet";
 import { at, placeOf, type SchemaRead, savedValues } from "./schema-draft";
 import { type CollectionsDraft, useCollectionsDraft } from "./use-collections-draft";
 
@@ -96,7 +96,7 @@ export function CollectionsScreen({
 	const model = useCollectionsDraft();
 	const { data, draft, rows, built } = model;
 	const readOp = useOperation<SchemaRead>("schema.read");
-	const planOp = useOperation<Plan>("schema.plan");
+	const planOp = useOperation<{ problems: unknown[]; changes: SchemaChange[] }>("schema.plan");
 	const applyOp = useOperation<{ output: { applied: boolean } }>("schema.apply");
 	const updateOp = useOperation("collections.updateAdminValues");
 
@@ -142,7 +142,7 @@ export function CollectionsScreen({
 		}
 		// The file changed after this screen read it (another tab, a hand edit): the review says so and cannot apply (flow 11, step 19).
 		setConflict(fresh.ok && fresh.body.hash !== data.hash);
-		setPlan(planned.body);
+		setPlan({ ...planned.body, changes: planned.body.changes.filter(ofCollection) });
 	};
 
 	// A removal's toast undoes it in the draft; once the draft is saved there is nothing left for it to undo.

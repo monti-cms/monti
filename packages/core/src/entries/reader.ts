@@ -128,7 +128,7 @@ export function createReader(options: ReaderOptions) {
 				.where("old_paths.locale", "=", where.locale)
 				.where("old_paths.slug", "=", where.slug)
 				.executeTakeFirst();
-			const path = moved && publicPath(schema, where.collection, moved.slug);
+			const path = moved && publicPath(schema, where.collection, moved.slug, where.locale);
 			return path ? { redirect: path } : null;
 		},
 
@@ -145,7 +145,7 @@ export function createReader(options: ReaderOptions) {
 				.execute();
 			return Object.fromEntries(
 				rows.flatMap((row) => {
-					const path = publicPath(schema, row.collection, row.slug);
+					const path = publicPath(schema, row.collection, row.slug, locale);
 					return path ? [[row.group, path]] : [];
 				}),
 			);

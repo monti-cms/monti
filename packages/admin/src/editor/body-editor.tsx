@@ -1,8 +1,8 @@
 import type { Doc } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
-import { useEffect, useRef } from "react";
-import { useBlockHandle } from "./block-menu";
+import { type ReactNode, useEffect, useRef } from "react";
+import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
@@ -22,6 +22,8 @@ export function BodyEditor({
 	templates = false,
 	onEditor,
 	proposals,
+	translation,
+	margin,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -36,6 +38,10 @@ export function BodyEditor({
 	 * changed a block it touches, so it went in first).
 	 */
 	proposals?: { items: BodyProposal[]; current: string | null; onTaken: (id: string) => void };
+	/** A translation's block menu rows (doc 04). */
+	translation?: BlockTranslation;
+	/** What hangs in the text's left margin, drawn for the editor once it is made (a translation's marks). */
+	margin?: (editor: Editor) => ReactNode;
 }) {
 	const editorRef = useRef<Editor | null>(null);
 	const latestProposals = useRef(proposals);
@@ -56,7 +62,7 @@ export function BodyEditor({
 		},
 	});
 	editorRef.current = editor;
-	const handle = useBlockHandle(editor, catalogs);
+	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
@@ -82,6 +88,7 @@ export function BodyEditor({
 			}}
 		>
 			<EditorContent editor={editor} />
+			{editor && margin ? margin(editor) : null}
 			{handle.overlay}
 			{tables.overlay}
 			{slash.menu}
