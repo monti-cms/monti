@@ -162,3 +162,12 @@ export const UnderText: Story = {
 		);
 	},
 };
+
+/** A block gone from the source: its words before, and after it "지워짐" in the faint ink of nothing, so it never reads as the new words. */
+export const SourceRemoved: Story = {
+	render: () => (
+		<MemoCard where="원문에서 지워짐" discardLabel="확인" onDiscard={noop} acceptLabel="지우기" onAccept={noop}>
+			<MemoDiff beforeLabel="전" afterLabel="후" before="목록에는 제목과 주소, 상태만 남겼다." none="지워짐" />
+		</MemoCard>
+	),
+};

@@ -26,7 +26,7 @@
 | "✦ 번역" (탭 줄 오른쪽) | `TextButton tone="proposal"`(`Spark`) 뒤에 `Separator orientation="vertical" length="control"` | 흐린 블록이 남아 있을 때만 보인다. 남은 흐린 블록을 모두 번역한다. |
 | 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
-| 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`) | 아직 정하지 않은 블록. 원문이 옅게 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 흐림이 바로 사라진다. |
+| 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`와 `data-source-placeholder`) | 아직 정하지 않은 블록. 비어 있고 원문은 자리 표시 글로만 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 자리 표시가 사라지고 친 글만 남는다. |
 | 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 유지" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |
 | "원문 유지" 표시 | `EditorMargin` 안의 `Marker tone="keep"` "원문" | 왼쪽 여백에 붙는다. 원문을 따르는 블록(코드처럼 옮길 글자가 없는 블록)에도 같은 표시가 붙는다. |
 | 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
@@ -96,9 +96,9 @@
 | 언어 탭 | `TabLinks` + `TabLink` | EditorTranslate와 같다. 보드는 여기만 창 맨 위 탭(`.mt-tabs--bar`)으로 그렸지만 편집기의 언어 탭과 같은 부품으로 맞춘다. 탭 줄과 원문 보기가 한 줄에 서고, 그 아래 가는 선 하나. |
 | 원문 보기 | `Segmented size="sm" inline`, "나란히"가 골라짐 | "끔"과 "옆 창"은 EditorTranslate로 돌아간다. |
 | 머리 행 (10. 26 수정 / 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 고친 날만 잉크 선 아래 mono 작은 줄로. 어느 쪽이 원문이고 어느 언어인지는 탭과 원문 칸의 도구 바탕이 이미 말한다(2026-11-05 소유자, 원칙 8). |
-| 블록 한 행 | `CompareRow`(`name` 블록 종류와 그 아래 흐린 내용 설명, `source` 원문, `translation` 번역) | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기와 같은 블록이고 그 자리에서 쓴다. 쓰고 있는 행은 `current`. 원문 칸은 글로만 보인다. |
-| 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다. |
-| 여백의 상태 "원문 바뀜" · "원문에 추가" | `CompareRow`의 `note` | 둘 다 주황. 원문 쪽 바뀐 말은 `Highlight`. |
+| 블록 한 행 | `EditorBody paired`: 편집기 하나가 행으로 놓이고, 블록마다 앞에 블록 종류와 원문 칸이 붙는다 | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기 그대로라 그 자리에서 쓴다. 커서가 있는 행은 원문 칸과 번역 칸이 함께 블록 바탕이다. 원문 칸은 글로만 보인다. |
+| 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
+| 여백의 상태 "원문 바뀜" · "원문에 추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 둘 다 주황. 원문 쪽 바뀐 말은 `Highlight`. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |

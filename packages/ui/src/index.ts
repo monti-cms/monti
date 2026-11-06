@@ -32,6 +32,7 @@ export const DangerBlock = close(open.DangerBlock);
 export const DangerRow = close(open.DangerRow);
 export const Chip = close(open.Chip);
 export const Compare = close(open.Compare);
+export const CompareBlock = close(open.CompareBlock);
 export const CompareBody = close(open.CompareBody);
 export const CompareCode = close(open.CompareCode);
 export const CompareHeading = close(open.CompareHeading);

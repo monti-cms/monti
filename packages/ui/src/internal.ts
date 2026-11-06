@@ -70,6 +70,7 @@ export {
 } from "./command";
 export {
 	Compare,
+	CompareBlock,
 	CompareBody,
 	CompareCode,
 	CompareHeading,

@@ -42,6 +42,7 @@ import { download } from "../../download";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
+import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -60,6 +61,7 @@ import {
 	type SourceView,
 	SourceViewPicker,
 	TranslationMargin,
+	usePairedRows,
 	useTranslation,
 } from "./translation";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
@@ -109,8 +111,10 @@ export function EntryEditor({
 	const [tab, setTab] = useState(0);
 	const [todoOpen, setTodoOpen] = useState(false);
 	const body = useRef<Editor | null>(null);
+	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
 	const keepEditor = useCallback((made: Editor | null) => {
 		body.current = made;
+		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
@@ -144,13 +148,25 @@ export function EntryEditor({
 	useEffect(() => {
 		if (opensBeside) setPanel(false);
 	}, [opensBeside]);
+	// The source block paired with the translation's block the cursor is in, marked beside it (translation.md, the source pane).
+	const [pair, setPair] = useState<string | null>(null);
+	useEffect(() => {
+		if (!bodyEditor || !translation.isTranslation) return;
+		const sync = () => setPair(bodyEditor.isFocused ? pairedSource(bodyEditor.state) : null);
+		const events = ["selectionUpdate", "focus", "blur"] as const;
+		for (const event of events) bodyEditor.on(event, sync);
+		return () => {
+			for (const event of events) bodyEditor.off(event, sync);
+		};
+	}, [bodyEditor, translation.isTranslation]);
 	const sourceName = (code: string) =>
 		schema.data?.schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
 	const beside =
 		compared && view === "side" ? (
-			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} />
+			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} current={pair} />
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
+	const pairedRows = usePairedRows(paired ? compared : null, editor.doc, catalogs);
 	const languages =
 		translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
@@ -287,6 +303,54 @@ export function EntryEditor({
 				: t("entry.todo.body");
 
 	const hasContent = editor.title.trim() !== "" || editor.doc.blocks.length > 0;
+
+	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
+	const titleField = (size: "display" | "inherit") => (
+		<FormField>
+			<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
+				{t("entry.title")}
+			</FormFieldLabel>
+			<Input
+				id={fieldInputId("title")}
+				value={editor.title}
+				placeholder={compared?.source.title || t("entry.title")}
+				size={size}
+				appearance="inline"
+				disabled={readOnly}
+				onChange={(event) => editor.set("title", event.target.value)}
+			/>
+		</FormField>
+	);
+	const bodyField = (rows: PairedRows | null) =>
+		read && catalogs ? (
+			<BodyEditor
+				key={editor.bodyKey}
+				doc={editor.doc}
+				catalogs={catalogs}
+				onChange={(doc) => editor.set("doc", doc)}
+				editable={!readOnly}
+				templates
+				onEditor={keepEditor}
+				proposals={{
+					items: editor.bodyProposals,
+					current: walking?.id ?? null,
+					onTaken: editor.takeBody,
+				}}
+				translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
+				paired={rows}
+				margin={
+					translation.isTranslation && !rows
+						? (made) => (
+								<TranslationMargin
+									editor={made}
+									marks={compared?.marks ?? []}
+									onDecide={(decision) => void translation.decide([decision])}
+								/>
+							)
+						: undefined
+				}
+			/>
+		) : null;
 	const publishedAt = publish.publishedAt;
 
 	const head = readOnly ? (
@@ -488,61 +552,20 @@ export function EntryEditor({
 							<Box paddingBottom={16}>{languages}</Box>
 							<PairedView
 								compared={compared}
-								translationTitle={editor.title}
-								doc={editor.doc}
-								catalogs={catalogs}
 								translationUpdatedAt={read?.entry.updatedAt ?? null}
-								onDetach={translation.blockMenu.detach}
-							/>
+								title={titleField("inherit")}
+							>
+								{bodyField(pairedRows)}
+							</PairedView>
 						</Stack>
 					) : (
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 							{languages}
 							<Stack gap={0} paddingTop={16} paddingBottom={32}>
-								<FormField>
-									<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
-										{t("entry.title")}
-									</FormFieldLabel>
-									<Input
-										id={fieldInputId("title")}
-										value={editor.title}
-										placeholder={compared?.source.title || t("entry.title")}
-										size="display"
-										appearance="inline"
-										disabled={readOnly}
-										onChange={(event) => editor.set("title", event.target.value)}
-									/>
-								</FormField>
+								{titleField("display")}
 								<EditorTitleRule />
 							</Stack>
-							{read && catalogs ? (
-								<BodyEditor
-									key={editor.bodyKey}
-									doc={editor.doc}
-									catalogs={catalogs}
-									onChange={(doc) => editor.set("doc", doc)}
-									editable={!readOnly}
-									templates
-									onEditor={keepEditor}
-									proposals={{
-										items: editor.bodyProposals,
-										current: walking?.id ?? null,
-										onTaken: editor.takeBody,
-									}}
-									translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
-									margin={
-										translation.isTranslation
-											? (made) => (
-													<TranslationMargin
-														editor={made}
-														marks={compared?.marks ?? []}
-														onDecide={(decision) => void translation.decide([decision])}
-													/>
-												)
-											: undefined
-									}
-								/>
-							) : null}
+							{bodyField(null)}
 						</Stack>
 					)}
 					{walking ? (

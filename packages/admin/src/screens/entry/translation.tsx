@@ -2,6 +2,7 @@ import { type Block, type Doc, type EntryState, type Schema, translates } from "
 import {
 	Banner,
 	Box,
+	CompareBlock,
 	CompareBody,
 	CompareCode,
 	CompareHeading,
@@ -37,11 +38,11 @@ import {
 	Untranslated,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { BlockTranslation } from "../../editor/block-menu";
 import type { BodyCatalogs } from "../../editor/catalog";
 import { findBlock } from "../../editor/proposal-marks";
-import { showGhosts } from "../../editor/translation";
+import { type PairedRows, type PairedSourceBlock, showGhosts } from "../../editor/translation";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type Part, shownBlocks, wordDiff } from "./compare-entries";
@@ -237,20 +238,38 @@ function ReadBlock({ block, parts }: { block: Block; parts?: Part[] }) {
 	);
 }
 
-/** A body read only, block by block, in the looks of the comparison. */
-function ReadBody({ doc, changed }: { doc: Doc; changed: Map<string, Part[]> }) {
+/** A body read only, block by block, in the looks of the comparison; `current` is the block on the block ground. */
+function ReadBody({ doc, changed, current }: { doc: Doc; changed: Map<string, Part[]>; current: string | null }) {
 	return (
 		<CompareBody>
 			{doc.blocks.map((block) => (
-				<ReadBlock key={block.id} block={block} parts={changed.get(block.id)} />
+				<CompareBlock key={block.id} data-block={block.id} current={block.id === current}>
+					<ReadBlock block={block} parts={changed.get(block.id)} />
+				</CompareBlock>
 			))}
 		</CompareBody>
 	);
 }
 
-/** The source beside the translation, read only, on the tool ground (translation.md, the source pane). */
-export function SourcePane({ compared, localeName }: { compared: Compared; localeName: string }) {
+/**
+ * The source beside the translation, read only, on the tool ground (translation.md, the source pane). `current` is the source block paired with the
+ * translation's block the cursor is in: it is on the block ground, and the pane scrolls to keep it in view.
+ */
+export function SourcePane({
+	compared,
+	localeName,
+	current,
+}: {
+	compared: Compared;
+	localeName: string;
+	current: string | null;
+}) {
 	const { t } = useAdmin();
+	const pane = useRef<HTMLElement>(null);
+	useEffect(() => {
+		if (!current) return;
+		pane.current?.querySelector(`[data-block="${CSS.escape(current)}"]`)?.scrollIntoView({ block: "nearest" });
+	}, [current]);
 	return (
 		<ResizablePane
 			resizeKey="monti.translation.source"
@@ -260,6 +279,7 @@ export function SourcePane({ compared, localeName }: { compared: Compared; local
 			label={t("translation.sourceWidth")}
 		>
 			<Box
+				ref={pane}
 				as="aside"
 				aria-label={t("translation.sourcePane", { language: localeName })}
 				background="tool"
@@ -279,7 +299,7 @@ export function SourcePane({ compared, localeName }: { compared: Compared; local
 						<EditorTitleRule />
 					</Stack>
 					<Text tone="muted">
-						<ReadBody doc={compared.source.doc} changed={changedWords(compared)} />
+						<ReadBody doc={compared.source.doc} changed={changedWords(compared)} current={current} />
 					</Text>
 				</Box>
 			</Box>
@@ -360,107 +380,88 @@ export function SourceChangedCell({
 }
 
 /**
- * The source and the translation block by block (TranslatePaired): a row per translation block with the source block it is paired with, and a row for
- * each block new in the source. A block that follows the source shows it faint, with "Change here only".
+ * What the side-by-side rows show beside the translation's blocks (TranslatePaired): each source block with the words that changed marked, each
+ * translation block's kind and its note, and the source blocks new since the translation.
+ */
+export function usePairedRows(compared: Compared | null, doc: Doc, catalogs: BodyCatalogs | null): PairedRows | null {
+	const { t } = useAdmin();
+	return useMemo(() => {
+		if (!compared) return null;
+		const kind = (block: Block) => {
+			const definition = catalogs?.kit.blocks.find((each) => each.type === block.type);
+			return definition ? t(definition.label) : block.type;
+		};
+		const changed = changedWords(compared);
+		const shown = (block: Block): PairedSourceBlock => {
+			const look = shownBlocks({ type: "doc", blocks: [block] })[0]?.look;
+			return {
+				look: look === "heading" ? "heading" : look === "code" ? "code" : "text",
+				parts: changed.get(block.id) ?? [{ text: textOf(block), changed: false }],
+			};
+		};
+		return {
+			source: new Map(compared.source.doc.blocks.map((block) => [block.id, shown(block)])),
+			kinds: new Map(doc.blocks.map((block) => [block.id, kind(block)])),
+			notes: new Map(
+				compared.marks.flatMap((mark) =>
+					mark.kind === "added" ? [] : [[mark.block, t(`translation.mark.${mark.kind}`)] as const],
+				),
+			),
+			added: compared.marks.flatMap((mark) =>
+				mark.kind === "added" && mark.source
+					? [
+							{
+								key: `added:${mark.from}`,
+								after: mark.after,
+								kind: kind(mark.source),
+								note: t("translation.mark.added"),
+								block: shown(mark.source),
+							},
+						]
+					: [],
+			),
+		};
+	}, [compared, doc, catalogs, t]);
+}
+
+/**
+ * The source and the translation side by side (TranslatePaired): the head with each side's last edit, the titles, the translation's written in
+ * place, then `children`, the body editor laid out as the rows beside the source (`BodyEditor paired`), where the translation is written too.
  */
 export function PairedView({
 	compared,
-	translationTitle,
 	translationUpdatedAt,
-	doc,
-	catalogs,
-	onDetach,
+	title,
+	children,
 }: {
 	compared: Compared;
-	translationTitle: string;
 	translationUpdatedAt: string | null;
-	/** The translation as it is being written (the draft). */
-	doc: Doc;
-	catalogs: BodyCatalogs | null;
-	onDetach: (block: string) => void;
+	/** The translation's title field. */
+	title: ReactNode;
+	children: ReactNode;
 }) {
-	const { t, language } = useAdmin();
-	const sourceBlocks = new Map(compared.source.doc.blocks.map((block) => [block.id, block]));
-	const kind = (block: Block) => {
-		const definition = catalogs?.kit.blocks.find((each) => each.type === block.type);
-		return definition ? t(definition.label) : block.type;
-	};
-	const markOf = (id: string) => compared.marks.find((mark) => mark.kind !== "added" && mark.block === id);
-	const rows: ReactNode[] = [];
-	const added = (after: string | null) =>
-		compared.marks
-			.filter(
-				(mark): mark is Extract<TranslationMark, { kind: "added" }> => mark.kind === "added" && mark.after === after,
-			)
-			.map((mark) => (
-				<CompareRow
-					key={`added:${mark.from}`}
-					name={mark.source ? kind(mark.source) : ""}
-					note={t("translation.mark.added")}
-					source={mark.source ? <ReadBlock block={mark.source} /> : null}
-					translation={
-						mark.source ? (
-							<Untranslated>
-								<ReadBlock block={mark.source} />
-							</Untranslated>
-						) : null
-					}
-				/>
-			));
-	rows.push(...added(null));
-	for (const block of doc.blocks) {
-		const link = block.link;
-		const source = link ? sourceBlocks.get(link.from) : undefined;
-		const mark = markOf(block.id);
-		const changed = mark?.kind === "changed" ? wordDiff(textOf(mark.before), textOf(mark.after)).server : null;
-		rows.push(
-			<CompareRow
-				key={block.id}
-				name={kind(block)}
-				note={mark ? t(`translation.mark.${mark.kind}`) : undefined}
-				source={source ? <ReadBlock block={source} parts={changed ?? undefined} /> : null}
-				translation={
-					link?.state === "pending" ? (
-						<Untranslated>
-							<ReadBlock block={block} />
-						</Untranslated>
-					) : link?.state === "followSource" ? (
-						<CompareShared
-							action={
-								<TextButton variant="underline" onClick={() => onDetach(block.id)}>
-									{t("translation.detach")}
-								</TextButton>
-							}
-						>
-							<ReadBlock block={source ?? block} />
-						</CompareShared>
-					) : (
-						<ReadBlock block={block} />
-					)
-				}
-			/>,
-		);
-		rows.push(...added(block.id));
-	}
+	const { language } = useAdmin();
 	const updated = (at: string | null) => (at ? day(new Date(at), language) : "");
 	return (
-		<CompareRows>
-			<CompareRow head source={updated(compared.source.updatedAt)} translation={updated(translationUpdatedAt)} />
-			<CompareRow
-				title
-				source={
-					<Heading as="h2" variant="page">
-						{compared.source.title}
-					</Heading>
-				}
-				translation={
-					<Heading as="h2" variant="page">
-						{translationTitle || <Untranslated>{compared.source.title}</Untranslated>}
-					</Heading>
-				}
-			/>
-			{rows}
-		</CompareRows>
+		<Stack gap={0}>
+			<CompareRows>
+				<CompareRow head source={updated(compared.source.updatedAt)} translation={updated(translationUpdatedAt)} />
+				<CompareRow
+					title
+					source={
+						<Heading as="h2" variant="page">
+							{compared.source.title}
+						</Heading>
+					}
+					translation={
+						<Heading as="h2" variant="page">
+							{title}
+						</Heading>
+					}
+				/>
+			</CompareRows>
+			{children}
+		</Stack>
 	);
 }
 
@@ -606,7 +607,9 @@ export function TranslationMargin({
 					beforeLabel={t("translation.before")}
 					afterLabel={t("translation.after")}
 					before={<Words parts={diff.mine} />}
-					after={mark.kind === "removed" ? t("translation.mark.gone") : <Words parts={diff.server} />}
+					{...(mark.kind === "removed"
+						? { none: t("translation.mark.gone") }
+						: { after: <Words parts={diff.server} /> })}
 				/>
 			</MemoCardPopover>
 		);

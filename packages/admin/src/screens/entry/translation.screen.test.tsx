@@ -2,7 +2,7 @@ import { defineSchema } from "@monti-cms/core";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { pointerPath, scrollsSideways } from "../../../../../testing/input";
+import { pointerPath, scrollsSideways, typeKorean } from "../../../../../testing/input";
 import { schema } from "../story-schema";
 import * as stories from "./translation.stories";
 
@@ -43,9 +43,17 @@ async function open(story: { run: () => Promise<unknown> }) {
 	await expect.element(body(), { timeout: 15000 }).toBeVisible();
 }
 
+/** An undecided block, by the source's words it shows as its placeholder. */
+const undecided = (words: string) =>
+	[...body().element().querySelectorAll<HTMLElement>("[data-source-placeholder]")].find((block) =>
+		block.dataset.sourcePlaceholder?.includes(words),
+	) ?? null;
+/** A block of the text: an undecided one by its placeholder, another by its words. */
+const blockLine = (words: string) => undecided(words) ?? body().getByText(words, { exact: false }).element();
+
 /** The pointer moves to a block's line and presses its handle, as a hand does. */
 async function blockMenu(words: string) {
-	const line = body().getByText(words, { exact: false }).element().getBoundingClientRect();
+	const line = blockLine(words).getBoundingClientRect();
 	await pointerPath([
 		{ x: line.left + 40, y: line.top + 8 },
 		{ x: line.left - 20, y: line.top + 8 },
@@ -122,11 +130,11 @@ describe("flow 3, a translation", () => {
 
 		await blockMenu("목록에는 제목과 주소");
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
-		await expect.element(body().getByText("목록에는 제목과 주소", { exact: false })).not.toBeInTheDocument();
+		await expect.poll(() => undecided("목록에는 제목과 주소")).toBeNull();
 		await expect.poll(faint).toBe(2);
 
-		await userEvent.click(body().getByText("편집기도 같은 원칙으로", { exact: false }));
-		await userEvent.keyboard("{End} Done.");
+		await userEvent.click(blockLine("편집기도 같은 원칙으로"));
+		await userEvent.keyboard("Done.");
 		await expect.poll(faint).toBe(1);
 	});
 
@@ -136,9 +144,16 @@ describe("flow 3, a translation", () => {
 			.element(page.getByText("The editor follows the same rule", { exact: false }), { timeout: 15000 })
 			.toBeVisible();
 		await expect.element(page.getByRole("button", { name: "나란히" })).toHaveAttribute("aria-pressed", "true");
-		const row = (words: string) => page.getByText(words, { exact: false }).element().closest("[data-slot=compare-row]");
-		expect(row("The editor follows the same rule")).toBe(row("편집기도 같은 원칙으로"));
-		expect(row("What I took out")).toBe(row("무엇을 덜어냈나"));
+		// A block and its source start on one line.
+		const top = (words: string) =>
+			(
+				page
+					.getByText(words, { exact: false })
+					.element()
+					.closest("[data-pair=source] > div, .ProseMirror > *") as Element
+			).getBoundingClientRect().top;
+		expect(Math.abs(top("The editor follows the same rule") - top("편집기도 같은 원칙으로"))).toBeLessThan(2);
+		expect(Math.abs(top("What I took out") - top("무엇을 덜어냈나"))).toBeLessThan(2);
 		// The new source block has a row of its own, noted.
 		await expect.element(page.getByText("다음 글에서는 번역을 다룬다.").first()).toBeVisible();
 	});
@@ -150,8 +165,8 @@ describe("flow 3, a translation", () => {
 		await expect.element(pending).toBeVisible();
 		await userEvent.click(pending);
 		const at = window.getSelection()?.anchorNode;
-		const block = (at instanceof Element ? at : at?.parentElement)?.closest("[data-untranslated]");
-		expect(block?.textContent).toContain("블로그를 다시 만들기로");
+		const block = (at instanceof Element ? at : at?.parentElement)?.closest<HTMLElement>("[data-untranslated]");
+		expect(block?.dataset.sourcePlaceholder).toContain("블로그를 다시 만들기로");
 	});
 
 	it("04-1 3.07 with every block decided the translation publishes under /en/…", async () => {
@@ -219,5 +234,92 @@ describe("flow 3, a translation", () => {
 		await expect
 			.element(page.getByRole("textbox", { name: "요약" }))
 			.toHaveValue("What I took out of the blog, and what I kept.");
+	});
+});
+
+describe("writing a translation (owner review, 2026-11-06)", () => {
+	it("[reach] the pointer comes from a changed block's words to its '바뀜' mark and presses it: the card opens, the block handle stands clear of the mark", async () => {
+		await open(SourceChanged);
+		const words = body().getByText("I rebuilt the blog", { exact: false }).element().getBoundingClientRect();
+		const marked = mark("바뀜").element().getBoundingClientRect();
+		const on = { x: marked.left + marked.width / 2, y: marked.top + marked.height / 2 };
+		await pointerPath([{ x: words.left + 40, y: words.top + 8 }, on]);
+		// The handle a pointer on the block shows is there, and what is under the pointer is still the mark.
+		await expect.element(page.getByRole("button", { name: "블록 메뉴" })).toBeVisible();
+		expect(document.elementFromPoint(on.x, on.y)?.closest("[data-slot=marker]")).toBe(mark("바뀜").element());
+		await userEvent.click(mark("바뀜"));
+		await expect.element(page.getByText("원문 바뀜", { exact: true })).toBeVisible();
+	});
+	it("04-1 3.02 a new translation's undecided block is empty with the source as its placeholder: typing gives the block only the typed words", async () => {
+		await open(NewTranslation);
+		await expect.poll(() => undecided("블로그를 다시 만들기로")).not.toBeNull();
+		const block = undecided("블로그를 다시 만들기로") as HTMLElement;
+		expect(block.textContent).toBe("");
+		await userEvent.click(block);
+		await userEvent.keyboard("I rebuilt the blog.");
+		await expect.poll(() => body().element().firstElementChild?.textContent).toBe("I rebuilt the blog.");
+		expect(undecided("블로그를 다시 만들기로")).toBeNull();
+		await expect.poll(faint).toBe(3);
+	});
+
+	it("[input] Korean typed through the IME into a placeholder block is the block's only words", async () => {
+		await open(NewTranslation);
+		await expect.poll(() => undecided("편집기도 같은 원칙으로")).not.toBeNull();
+		await userEvent.click(undecided("편집기도 같은 원칙으로") as HTMLElement);
+		await typeKorean("편집");
+		await expect.poll(() => body().element().children[4]?.textContent).toBe("편집");
+		await expect.poll(faint).toBe(3);
+	});
+
+	it("04-1 an undecided block nobody typed in is saved still undecided, in the source's words", async () => {
+		await open(NewTranslation);
+		await expect.poll(() => undecided("블로그를 다시 만들기로")).not.toBeNull();
+		await userEvent.click(undecided("블로그를 다시 만들기로") as HTMLElement);
+		await userEvent.keyboard("I rebuilt the blog.");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("저장됨").first()).toBeVisible();
+		// The saved body, shown again: the three left undecided come back as placeholders of the source's words.
+		await userEvent.click(page.getByRole("button", { name: "나란히" }));
+		await userEvent.click(page.getByRole("button", { name: "끔" }));
+		await expect.poll(() => undecided("무엇을 덜어냈나")).not.toBeNull();
+		await expect.poll(faint).toBe(3);
+		await expect.element(body().getByText("I rebuilt the blog.")).toBeVisible();
+	});
+
+	it("[input] Backspace in an untouched placeholder block leaves the block where it is", async () => {
+		await open(NewTranslation);
+		await expect.poll(() => undecided("무엇을 덜어냈나")).not.toBeNull();
+		await userEvent.click(undecided("무엇을 덜어냈나") as HTMLElement);
+		await userEvent.keyboard("{Backspace}{Backspace}");
+		expect(undecided("무엇을 덜어냈나")).not.toBeNull();
+		await expect.poll(faint).toBe(4);
+	});
+
+	it("04-1 3.05 the cursor in a translation block marks its source block in the pane beside", async () => {
+		await open(SourceChanged);
+		await userEvent.click(page.getByRole("button", { name: "옆 창" }));
+		const pane = page.getByRole("complementary", { name: /원문/ });
+		await expect.element(pane).toBeVisible();
+		await userEvent.click(body().getByText("The editor follows the same rule", { exact: false }));
+		const marked = () => pane.element().querySelector("[data-slot=compare-block][data-current]")?.textContent ?? "";
+		await expect.poll(marked).toContain("편집기도 같은 원칙으로");
+		await userEvent.click(body().getByText("I rebuilt the blog", { exact: false }));
+		await expect.poll(marked).toContain("블로그를 다시 만들기로");
+	});
+
+	it("04-1 3.05 side by side, a row's translation is written in place, and the row being written is marked on both sides", async () => {
+		await SideBySide.run();
+		const line = page.getByText("The editor follows the same rule", { exact: false });
+		await expect.element(line, { timeout: 15000 }).toBeVisible();
+		await userEvent.click(line);
+		await userEvent.keyboard("{End} Done.");
+		await expect.element(page.getByText("only the writing shows. Done.", { exact: false })).toBeVisible();
+		const current = () => body().element().querySelector("[data-pair-current]")?.textContent ?? "";
+		expect(current()).toContain("Done.");
+		const source = () =>
+			body().element().querySelector("[data-pair=source]:has(+ [data-pair-current])")?.textContent ?? "";
+		expect(source()).toContain("편집기도 같은 원칙으로");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("저장됨").first()).toBeVisible();
 	});
 });

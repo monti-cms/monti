@@ -115,6 +115,25 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 }
 
 /**
+ * A block of the source shown beside its translation (the source pane). `current` while the cursor is in the translation's block paired with it: it
+ * is on the block ground, the ground the editor gives the block it is about, a little wider than its words, so one sees which source block is being
+ * translated.
+ */
+function CompareBlock({ current = false, className, ...props }: React.ComponentProps<"div"> & { current?: boolean }) {
+	return (
+		<div
+			data-slot="compare-block"
+			data-current={current || undefined}
+			className={cn(
+				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-block",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/**
  * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
  * is the head (`head`): each side's last edit date in the small mono line, under the ink rule.
  */
@@ -182,7 +201,8 @@ function CompareRow({
 			</div>
 			<div
 				className={cn(
-					"min-w-0 border-monti-default border-l px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0",
+					// 40px before the words: the block handle of the translation written here (24px, 8px off the words) stays inside the cell.
+					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40 **:data-[slot=compare-code]:mb-0",
 					current && "bg-monti-block",
 				)}
 			>
@@ -221,6 +241,7 @@ function CompareText({ changed = false, children }: { changed?: boolean; childre
 
 export {
 	Compare,
+	CompareBlock,
 	CompareBody,
 	CompareCode,
 	CompareHeading,

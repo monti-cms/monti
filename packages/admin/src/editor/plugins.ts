@@ -94,7 +94,9 @@ export function bodyStates({
 							const { doc, selection } = state;
 							const only = doc.childCount === 1 ? doc.firstChild : null;
 							doc.forEach((node, pos) => {
-								const empty = node.type.name === "paragraph" && node.content.size === 0;
+								// An undecided block of a translation shows the source's words instead (translation.ts).
+								const undecided = (node.attrs.link as { state?: string } | null)?.state === "pending";
+								const empty = node.type.name === "paragraph" && node.content.size === 0 && !undecided;
 								const underCursor = selection.empty && selection.$from.depth === 1 && selection.$from.before(1) === pos;
 								if (empty && editor.isEditable && (underCursor || node === only))
 									decorations.push(
