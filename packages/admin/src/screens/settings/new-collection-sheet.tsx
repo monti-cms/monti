@@ -155,23 +155,22 @@ function Body({
 					</RadioGroup>
 				</FormFieldSet>
 				<FormField>
-					<FormFieldLabel
-						htmlFor={kind === "document" || publicPage ? "collection-address" : undefined}
-						action={
-							kind === "item" ? (
-								<Switch
-									checked={publicPage}
-									aria-label={t("settings.basics.publicPage")}
-									onCheckedChange={setPublicPage}
-								/>
-							) : undefined
-						}
-					>
-						{t("settings.basics.path")}
-					</FormFieldLabel>
+					{kind === "item" ? (
+						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
+							<label htmlFor="collection-public-page" className="cursor-pointer text-monti-body">
+								{t("settings.basics.path")}
+							</label>
+							<span className="ml-auto">
+								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
+							</span>
+						</div>
+					) : (
+						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
+					)}
 					{(kind === "document" || publicPage) && (
 						<Affix
 							id="collection-address"
+							aria-label={kind === "item" ? t("settings.basics.path") : undefined}
 							prefix="/"
 							suffix="/:slug"
 							width="fit"

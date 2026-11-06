@@ -2,7 +2,6 @@ import {
 	Affix,
 	Button,
 	DangerBlock,
-	DangerRow,
 	FormField,
 	FormFieldLabel,
 	Grid,
@@ -48,15 +47,11 @@ export function CollectionBasicsScreen() {
 					</Option>
 				</Stack>
 				<DangerBlock title="컬렉션 지우기">
-					<DangerRow
-						name="게시글"
-						meta="글 148편 · 폴더 3개"
-						action={
-							<Button variant="outline-danger" size="sm">
-								지우기
-							</Button>
-						}
-					/>
+					<div className="flex justify-end">
+						<Button variant="outline-danger" size="sm">
+							지우기
+						</Button>
+					</div>
 				</DangerBlock>
 			</CollectionSettings>
 		</AdminFrame>

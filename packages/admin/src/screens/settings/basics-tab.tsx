@@ -1,8 +1,8 @@
 import {
 	Affix,
 	Button,
+	ChangeDot,
 	DangerBlock,
-	DangerRow,
 	FormField,
 	FormFieldLabel,
 	Grid,
@@ -12,6 +12,7 @@ import {
 	ReadValue,
 	Stack,
 	Switch,
+	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
@@ -92,24 +93,34 @@ export function BasicsTab({
 					)
 				) : (
 					<FormField>
-						<FormFieldLabel
-							htmlFor={path !== undefined ? "collection-path" : undefined}
-							changed={pathChanged}
-							action={
-								kind === "item" ? (
+						{kind === "item" ? (
+							<div className="flex min-h-monti-control-lg items-center gap-monti-8">
+								<label htmlFor="collection-public-page" className="cursor-pointer text-monti-body">
+									{t("settings.basics.path")}
+								</label>
+								{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+								<div className="ml-auto flex items-center gap-monti-12">
+									{pathChanged?.onUndo ? (
+										<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
+											{pathChanged.undoLabel}
+										</TextButton>
+									) : null}
 									<Switch
+										id="collection-public-page"
 										checked={path !== undefined}
-										aria-label={t("settings.basics.publicPage")}
 										onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
 									/>
-								) : undefined
-							}
-						>
-							{t("settings.basics.path")}
-						</FormFieldLabel>
+								</div>
+							</div>
+						) : (
+							<FormFieldLabel htmlFor="collection-path" changed={pathChanged}>
+								{t("settings.basics.path")}
+							</FormFieldLabel>
+						)}
 						{path !== undefined && (
 							<Affix
 								id="collection-path"
+								aria-label={kind === "item" ? t("settings.basics.path") : undefined}
 								prefix="/"
 								suffix="/:slug"
 								width="fit"
@@ -130,14 +141,11 @@ export function BasicsTab({
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
-					<DangerRow
-						name={model.label(c)}
-						action={
-							<Button variant="outline-danger" size="sm" onClick={onDelete}>
-								{t("settings.basics.deleteButton")}
-							</Button>
-						}
-					/>
+					<div className="flex justify-end">
+						<Button variant="outline-danger" size="sm" onClick={onDelete}>
+							{t("settings.basics.deleteButton")}
+						</Button>
+					</div>
 				</DangerBlock>
 			)}
 		</>

@@ -330,7 +330,7 @@ export const NewItemCollection: Story = {
 		const { page, body } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
 		await userEvent.click(body.getByRole("radio", { name: /항목/ }));
-		await expect(body.queryByLabelText("공개 주소")).toBeNull();
+		await expect(body.queryByRole("textbox", { name: "공개 주소" })).toBeNull();
 	},
 };
 

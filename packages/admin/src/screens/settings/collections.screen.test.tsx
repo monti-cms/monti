@@ -8,11 +8,11 @@ const { NewItemCollection } = composeStories(collections);
 describe("collection public pages", () => {
 	it("keeps an item private until its public-page switch is enabled", async () => {
 		await NewItemCollection.run();
-		const publicPage = page.getByRole("switch", { name: "공개 주소 사용" });
+		const publicPage = page.getByRole("switch", { name: "공개 주소" });
 		await expect.element(publicPage).not.toBeChecked();
-		await expect.element(page.getByLabelText("공개 주소", { exact: true })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("textbox", { name: "공개 주소" })).not.toBeInTheDocument();
 		await publicPage.click();
 		await expect.element(publicPage).toBeChecked();
-		await expect.element(page.getByLabelText("공개 주소", { exact: true })).toBeVisible();
+		await expect.element(page.getByRole("textbox", { name: "공개 주소" })).toBeVisible();
 	});
 });
