@@ -2,7 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { fingerprint } from "../bytes";
 import type { Database } from "../db/schema";
 import { canonical, sameJson } from "../json";
-import type { CollectionDefinition, FieldDefinition, Schema } from "./define";
+import type { CollectionDefinition, FieldDefinition, LocalesDefinition, Schema } from "./define";
 import type { ChangeStep } from "./files";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -15,14 +15,28 @@ export type Choice =
 	| { do: "renameField"; values: "move" | "empty" }
 	| { do: "removeField"; values: "clear" | { move: string } }
 	| { do: "addRequiredField"; fill: unknown | null }
-	| { do: "removeCollection"; confirm: true };
+	| { do: "removeCollection"; confirm: true }
+	| { do: "removeLocale"; confirm: true };
 
 export type SchemaChange = {
 	/** Stable within a plan: the review answers a change by this id. */
 	id: string;
-	do: "addCollection" | "removeCollection" | "changePath" | "addField" | "removeField" | "renameField" | "changeField";
-	collection: string;
+	do:
+		| "addCollection"
+		| "removeCollection"
+		| "changePath"
+		| "addField"
+		| "removeField"
+		| "renameField"
+		| "changeField"
+		| "addLocale"
+		| "removeLocale"
+		| "changeSource";
+	/** Absent for a change of the languages (doc 04). */
+	collection?: string;
 	field?: string;
+	/** The language added or removed, or the new source language. */
+	locale?: string;
 	/** For a rename, the old name; for a path change, the old path. */
 	from?: string;
 	to?: string;
@@ -89,6 +103,46 @@ export async function planSchema(
 				collection: name,
 				choices: [{ do: "removeCollection", confirm: true }],
 			});
+	changes.push(...(await planLocales(db, current.locales, draft.locales)));
+	return changes;
+}
+
+/**
+ * The language changes (doc 04): an added language touches nothing; a removed one deletes its translations, so the review asks for the red "delete
+ * and apply" even when this database has none; a new source language makes a draft in each group without an entry in it (counted here).
+ */
+async function planLocales(db: Db, before: LocalesDefinition, after: LocalesDefinition): Promise<SchemaChange[]> {
+	const changes: SchemaChange[] = [];
+	const had = new Set(before.list.map((locale) => locale.code));
+	const has = new Set(after.list.map((locale) => locale.code));
+	for (const code of has) if (!had.has(code)) changes.push({ id: `addLocale:${code}`, do: "addLocale", locale: code });
+	for (const code of had)
+		if (!has.has(code)) {
+			const row = await db
+				.selectFrom("entries")
+				.select((eb) => eb.fn.countAll<string>().as("all"))
+				.where("locale", "=", code)
+				.executeTakeFirstOrThrow();
+			changes.push({
+				id: `removeLocale:${code}`,
+				do: "removeLocale",
+				locale: code,
+				count: Number(row.all),
+				choices: [{ do: "removeLocale", confirm: true }],
+			});
+		}
+	if (before.source !== after.source) {
+		const { rows } = await sql<{ all: string }>`select count(distinct translation_group) as all from entries g
+			where g.trashed_at is null and not exists (select 1 from entries n where n.translation_group = g.translation_group
+				and n.locale = ${after.source} and n.trashed_at is null)`.execute(db);
+		changes.push({
+			id: "changeSource",
+			do: "changeSource",
+			from: before.source,
+			locale: after.source,
+			count: Number(rows[0]?.all ?? 0),
+		});
+	}
 	return changes;
 }
 
@@ -181,6 +235,8 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 	const steps: ChangeStep[] = [];
 	const missing: string[] = [];
 	for (const change of changes) {
+		if (change.do === "changeSource")
+			steps.push({ do: "changeSource", from: String(change.from), to: String(change.locale) });
 		if (!change.choices) continue;
 		const given = ([] as Choice[]).concat(answers[change.id] ?? []);
 		const kinds = new Set(change.choices.map((choice) => choice.do));
@@ -189,9 +245,10 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 			missing.push(change.id);
 			continue;
 		}
-		const collection = change.collection;
+		const collection = change.collection ?? "";
 		const field = change.field as string;
 		for (const choice of given) {
+			if (choice.do === "removeLocale") steps.push({ do: "removeLocale", locale: String(change.locale) });
 			if (choice.do === "removeCollection") steps.push({ do: "removeCollection", collection });
 			if (choice.do === "renameField")
 				steps.push({ do: "renameField", collection, from: change.from as string, to: field, values: choice.values });

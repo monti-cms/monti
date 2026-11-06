@@ -29,6 +29,7 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 				monti.db,
 				config.schema,
 				await readChangeFiles(path.join(root, "monti", "changes")),
+				monti.site.kit,
 			);
 			io.out(applied.length > 0 ? `Applied ${applied.join(", ")}.` : "The database is up to date.");
 			return 0;

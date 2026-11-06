@@ -14,6 +14,7 @@ import { entryLink } from "./links";
 const db = await testDatabase();
 
 const schema = defineSchema({
+	locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 	collections: {
 		post: {
 			kind: "document",

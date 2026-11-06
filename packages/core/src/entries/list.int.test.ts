@@ -10,6 +10,14 @@ import { slugify } from "./paths";
 const db = await testDatabase();
 
 const schema = defineSchema({
+	locales: {
+		source: "ko",
+		list: [
+			{ code: "ko", name: "한국어" },
+			{ code: "en", name: "English" },
+		],
+		prefix: "exceptSource",
+	},
 	collections: {
 		post: {
 			kind: "document",

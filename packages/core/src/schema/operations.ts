@@ -2,13 +2,13 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
-import { defineOperation } from "../operation";
+import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind } from "../records";
 import { AdminValues } from "./admin-values";
 import { applyChange, pendingChanges, readSchemaState, setSchemaState } from "./apply";
 import { checkSchema, type Schema } from "./define";
 import type { ChangeFile } from "./files";
-import { type Answers, planSchema, schemaHash, stepsFor } from "./plan";
+import { type Answers, type Rename as FieldRename, planSchema, schemaHash, stepsFor } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -33,7 +33,13 @@ const Field = z.discriminatedUnion("kind", [
 		createMissing: z.boolean().optional(),
 	}),
 ]);
+export const LocalesInput = z.object({
+	source: z.string(),
+	list: z.array(z.object({ code: z.string(), name: z.string() })),
+	prefix: z.enum(["always", "exceptSource", "never"]),
+});
 const SchemaInput: z.ZodType<Schema> = z.object({
+	locales: LocalesInput,
 	collections: z.record(
 		z.string(),
 		z.object({ kind: z.enum(["document", "item"]), path: z.string(), fields: z.record(z.string(), Field) }),
@@ -45,7 +51,57 @@ const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("removeField"), values: z.union([z.literal("clear"), z.object({ move: z.string() })]) }),
 	z.object({ do: z.literal("addRequiredField"), fill: z.unknown() }),
 	z.object({ do: z.literal("removeCollection"), confirm: z.literal(true) }),
+	z.object({ do: z.literal("removeLocale"), confirm: z.literal(true) }),
 ]);
+export const AnswersInput = z.record(z.string(), z.union([ChoiceInput, z.array(ChoiceInput)])).default({});
+
+/** Refuses a draft that has problems or leaves a change that touches stored values unanswered. */
+export async function checkApply(ctx: OperationContext, draft: Schema, renames: FieldRename[], answers: Answers) {
+	if (checkSchema(draft).length > 0) throw new CheckError({ key: "schema.hasProblems" });
+	const state = await readSchemaState(ctx.db);
+	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
+	const { missing } = stepsFor(changes, answers);
+	if (missing.length > 0)
+		throw new CheckError({ key: "schema.choicesMissing", values: { changes: missing.join(", ") } });
+}
+
+/**
+ * Applies a draft schema on the dev server (doc 01, and the languages of doc 04): the file and a change file first, then the change on the database.
+ * When the database step fails, the files stay and "apply again" (`schema.retry`) applies them.
+ */
+export async function applySchema(
+	ctx: OperationContext,
+	draft: Schema,
+	renames: FieldRename[],
+	answers: Answers,
+	adminValues: Record<string, AdminValues> = {},
+) {
+	const files = ctx.site.files;
+	if (!files) throw new Error("Structure is locked on the live site.");
+	const state = await readSchemaState(ctx.db);
+	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
+	const { steps } = stepsFor(changes, answers);
+	const now = new Date();
+	const label = [...new Set(changes.map((change) => change.collection ?? "locales"))].join("-") || "schema";
+	const change: ChangeFile = {
+		id: changeId(now, label),
+		steps,
+		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
+	};
+	await files.write(draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+	ctx.site.setSchema(draft);
+	await sql`savepoint schema_apply`.execute(ctx.db);
+	try {
+		await applyChange(ctx.db, change, draft, ctx.site.kit);
+	} catch (error) {
+		// The screen says only that applying failed; the developer finds the change file and the reason here.
+		console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
+		await sql`rollback to savepoint schema_apply`.execute(ctx.db);
+		await setSchemaState(ctx.db, state?.schema ?? draft, change.id);
+		return { changeId: change.id, applied: false, error: String(error), changes };
+	}
+	return { changeId: change.id, applied: true, changes };
+}
 
 /** The applied schema: its version guards against two saves over each other; it is never undone (a structure change has no undo). */
 export const schemaRecord = defineRecordKind({
@@ -146,46 +202,12 @@ export const schemaOperations = [
 		input: z.object({
 			draft: SchemaInput,
 			renames: z.array(Rename).default([]),
-			answers: z.record(z.string(), z.union([ChoiceInput, z.array(ChoiceInput)])).default({}),
+			answers: AnswersInput,
 			adminValues: z.record(z.string(), AdminValues).default({}),
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
-		async check(input, ctx) {
-			if (checkSchema(input.draft).length > 0) throw new CheckError({ key: "schema.hasProblems" });
-			const state = await readSchemaState(ctx.db);
-			const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), input.draft, input.renames);
-			const { missing } = stepsFor(changes, input.answers as Answers);
-			if (missing.length > 0)
-				throw new CheckError({ key: "schema.choicesMissing", values: { changes: missing.join(", ") } });
-		},
-		async run(input, ctx) {
-			const files = ctx.site.files;
-			if (!files) throw new Error("Structure is locked on the live site.");
-			const state = await readSchemaState(ctx.db);
-			const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), input.draft, input.renames);
-			const { steps } = stepsFor(changes, input.answers as Answers);
-			const now = new Date();
-			const label = [...new Set(changes.map((change) => change.collection))].join("-") || "schema";
-			const change: ChangeFile = {
-				id: changeId(now, label),
-				steps,
-				...(Object.keys(input.adminValues).length > 0 ? { firstAdminValues: input.adminValues } : {}),
-			};
-			// The file first (doc 12): if the database step fails, the file is saved and "apply again" (schema.retry) applies it.
-			await files.write(input.draft, change, schemaHash(input.draft) !== schemaHash(ctx.site.schema()));
-			ctx.site.setSchema(input.draft);
-			await sql`savepoint schema_apply`.execute(ctx.db);
-			try {
-				await applyChange(ctx.db, change, input.draft);
-			} catch (error) {
-				// The screen says only that applying failed; the developer finds the change file and the reason here.
-				console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
-				await sql`rollback to savepoint schema_apply`.execute(ctx.db);
-				await setSchemaState(ctx.db, state?.schema ?? input.draft, change.id);
-				return { changeId: change.id, applied: false, error: String(error), changes };
-			}
-			return { changeId: change.id, applied: true, changes };
-		},
+		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
+		run: (input, ctx) => applySchema(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },
@@ -203,7 +225,7 @@ export const schemaOperations = [
 			const files = ctx.site.files;
 			if (!files) throw new Error("Structure is locked on the live site.");
 			const pending = await pendingChanges(ctx.db, await files.readChanges());
-			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema());
+			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema(), ctx.site.kit);
 			await setSchemaState(ctx.db, ctx.site.schema(), null);
 			return { applied: pending.map((change) => change.id) };
 		},

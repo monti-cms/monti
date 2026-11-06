@@ -12,6 +12,7 @@ import { createReader } from "./reader";
 const db = await testDatabase();
 
 const schema = defineSchema({
+	locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 	collections: {
 		post: {
 			kind: "document",
@@ -224,7 +225,7 @@ describe("what the site reads", () => {
 		const id = await newPost("Hello", { summary: "s", format: "memo" });
 		await write("entries.publish", { ids: [id] });
 		const { format: _gone, ...fields } = schema.collections.post.fields;
-		const newCode = { collections: { ...schema.collections, post: { ...schema.collections.post, fields } } };
+		const newCode = { ...schema, collections: { ...schema.collections, post: { ...schema.collections.post, fields } } };
 		const site = createReader({ db, schema: newCode });
 		const found = (await site.entry({ collection: "post", locale: "ko", slug: "hello" })) as {
 			entry: { values: object };
@@ -244,7 +245,7 @@ describe("what the site reads", () => {
 		const id = await newPost("Hello", { summary: "s", format: "memo" });
 		await write("entries.publish", { ids: [id] });
 		const { format: _gone, ...fields } = schema.collections.post.fields;
-		const without = { collections: { ...schema.collections, post: { ...schema.collections.post, fields } } };
+		const without = { ...schema, collections: { ...schema.collections, post: { ...schema.collections.post, fields } } };
 		await migrateContent(db, without, [
 			{ id: "1-remove-format", steps: [{ do: "removeField", collection: "post", field: "format", values: "clear" }] },
 		]);

@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { assertDoc } from "../body/check";
-import { blockMap, type Doc, withNewIds } from "../body/doc";
+import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
-import type { Schema } from "../schema/define";
+import { localeModeOf, type Schema } from "../schema/define";
+import { blockHashes, keepLinks } from "../translations/links";
+import { addSkips, isTranslation, rememberBlocks } from "../translations/source";
 import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
@@ -177,8 +179,17 @@ export const entryOperations = [
 		kind: "write",
 		description:
 			"Create an entry in a collection and language, optionally with a title, slug, field values and either a body or a template (templates.list) to start the body from. It starts as a draft. An empty slug blocks publishing until one is set.",
-		input: z.object({ collection: z.string(), locale: z.string().min(1), template: z.string().optional(), ...Draft }),
+		input: z.object({
+			collection: z.string(),
+			/** Always the site's source language; a translation is made with translations.create (doc 04). */
+			locale: z.string().min(1).optional(),
+			template: z.string().optional(),
+			...Draft,
+		}),
 		async check(input, ctx) {
+			const { source } = ctx.site.schema().locales;
+			if (input.locale !== undefined && input.locale !== source)
+				throw new CheckError({ key: "entries.notSourceLocale", values: { locale: input.locale, source } });
 			checkDraft(ctx.site.schema(), input.collection, input);
 			if (input.template !== undefined && input.doc !== undefined)
 				throw new CheckError({ key: "entries.docAndTemplate" });
@@ -186,6 +197,7 @@ export const entryOperations = [
 		},
 		async run(input, ctx) {
 			const id = randomUUID();
+			const locale = ctx.site.schema().locales.source;
 			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, input);
 			if (input.template !== undefined) {
 				const template = await ctx.db
@@ -205,7 +217,7 @@ export const entryOperations = [
 					id,
 					collection: input.collection,
 					translation_group: randomUUID(),
-					locale: input.locale,
+					locale,
 					title: working.title,
 					slug: working.slug,
 					values: JSON.stringify(working.values),
@@ -213,7 +225,7 @@ export const entryOperations = [
 				})
 				.execute();
 			ctx.created(ref(id));
-			ctx.emit({ type: "entry.saved", ids: [id], collection: input.collection, locale: input.locale, version: 1 });
+			ctx.emit({ type: "entry.saved", ids: [id], collection: input.collection, locale, version: 1 });
 			return { id };
 		},
 		summary: (input) => ({ key: "entries.create", values: { title: input.title ?? "" } }),
@@ -255,12 +267,26 @@ export const entryOperations = [
 		touches: (input) => [ref(input.id)],
 		async check(input, ctx) {
 			const entry = await editableEntry(ctx, input.id, input.version);
-			checkDraft(ctx.site.schema(), entry.collection, input);
+			const schema = ctx.site.schema();
+			checkDraft(schema, entry.collection, input);
+			// A translation's `same` fields are the source's: they are changed there (doc 04, field values).
+			if (isTranslation(schema, entry))
+				for (const field of Object.keys(input.values ?? {})) {
+					const definition = schema.collections[entry.collection]?.fields[field];
+					if (definition && localeModeOf(field, definition) === "same")
+						throw new CheckError({ key: "entries.sameField", values: { field } });
+				}
 			await checkBodyOf(ctx, input.doc, entry.doc);
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
-			return saveWorking(ctx, entry, applyDraft(entry, input));
+			const working = applyDraft(entry, input);
+			if (input.doc === undefined || working.doc === null) return saveWorking(ctx, entry, working);
+			// The links are the core's: the save keeps them, whatever the editor sent (doc 04).
+			const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {});
+			const saved = await saveWorking(ctx, entry, { ...working, doc });
+			await addSkips(ctx.db, entry, skipped);
+			return saved;
 		},
 		summary: (input) => ({ key: "entries.save", values: { id: input.id } }),
 	}),
@@ -357,7 +383,10 @@ export const entryOperations = [
 					doc: entry.doc === null ? null : JSON.stringify(entry.doc),
 					published_at: previous && input.date === "keep" ? previous.published_at : now,
 					from_version: version,
+					// What a translation's marks are counted against (doc 04).
+					block_hashes: JSON.stringify(blockHashes(entry.doc as Doc | null)),
 				};
+				if (!isTranslation(schema, entry)) await rememberBlocks(ctx.db, asDoc(entry.doc).blocks);
 				await ctx.db
 					.insertInto("entry_published")
 					.values({ entry_id: entry.id, ...copy })
@@ -437,8 +466,12 @@ export const entryOperations = [
 		name: "entries.duplicate",
 		kind: "write",
 		description:
-			"Copy an entry's working copy into a new draft of the same collection and language, with an empty slug.",
+			"Copy a source-language entry's working copy into a new draft of the same collection, with an empty slug. A translation is not copied: copy its source and translate the copy.",
 		input: z.object({ id: z.string() }),
+		async check(input, ctx) {
+			if (isTranslation(ctx.site.schema(), await entryOf(ctx, input.id)))
+				throw new CheckError({ key: "entries.duplicateTranslation" });
+		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
 			const id = randomUUID();

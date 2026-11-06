@@ -26,6 +26,13 @@ import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { createSite } from "./site";
+import { translationOperations } from "./translations/operations";
+
+/** A site without a schema file yet: one language and no collections. */
+const EMPTY_SCHEMA: Schema = {
+	locales: { source: "en", list: [{ code: "en", name: "English" }], prefix: "never" },
+	collections: {},
+};
 
 /** A plugin adds operations (and the records and receivers they need) the same way the core does, so they become API routes, tools and commands too. */
 export type Plugin = {
@@ -192,7 +199,7 @@ export function createMonti(options: MontiOptions) {
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
 	const now = options.now ?? (() => new Date());
-	const site = createSite(options.schema ?? { collections: {} }, options.files ?? null, {
+	const site = createSite(options.schema ?? EMPTY_SCHEMA, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
 		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
@@ -213,6 +220,7 @@ export function createMonti(options: MontiOptions) {
 		...schemaOperations,
 		...entryOperations,
 		...listOperations,
+		...translationOperations,
 		...bodyOperations,
 		...authOperations,
 	])

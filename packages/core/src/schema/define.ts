@@ -41,7 +41,32 @@ export type CollectionDefinition = {
 	fields: Record<string, FieldDefinition>;
 };
 
-export type Schema = { collections: Record<string, CollectionDefinition> };
+/** One language of the site: its code (`ko`, `zh-Hant`) and its name in that language ("한국어"). */
+export type LocaleDefinition = { code: string; name: string };
+
+/**
+ * The site's languages (doc 04): the list, the source language every new entry is written in, and how a public address shows the language. The site's
+ * code builds its paths from these, so they live in the file.
+ */
+export type LocalesDefinition = {
+	source: string;
+	list: LocaleDefinition[];
+	/** `/en/posts/…` for every language, for all but the source, or never. */
+	prefix: "always" | "exceptSource" | "never";
+};
+
+export type Schema = { locales: LocalesDefinition; collections: Record<string, CollectionDefinition> };
+
+/**
+ * How a field's value relates to the language when the schema names no mode: the title is written per language, the address starts from the source's,
+ * and every other field is one value for all languages (doc 04).
+ */
+export function localeModeOf(name: string, field: FieldDefinition): LocaleMode {
+	return field.locale ?? (name === "title" ? "perLocale" : name === "slug" ? "fromSource" : "same");
+}
+
+/** Whether the site writes in more than one language: then the admin shows language tabs, "+ 언어" and the list's language column (doc 04). */
+export const translates = (schema: Schema) => schema.locales.list.length > 1;
 
 /** The schema of `monti.schema.ts`. It is a plain value: the admin writes this file back, so it holds no code. */
 export function defineSchema(schema: Schema): Schema {
@@ -52,12 +77,20 @@ export const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
 /** Names a collection may not take: its read view (`monti_<collection>`) would clash with the core's own tables. */
 export const RESERVED_COLLECTIONS = new Set(["activity", "delivery", "proposal", "migration"]);
 export const PATH = /^(\/[a-z0-9-]+)*\/:slug$/;
+/** A language code: `ko`, `en`, `zh-Hant`, `pt-BR`. */
+export const LOCALE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 
 /** What the schema must fix before it can be saved (flow 4, step 09). */
 export type SchemaProblem = {
-	collection: string;
+	/** Absent for a problem of the languages. */
+	collection?: string;
 	field?: string;
+	locale?: string;
 	code:
+		| "noLocales"
+		| "badLocale"
+		| "duplicateLocale"
+		| "unknownSource"
 		| "badIdentifier"
 		| "reserved"
 		| "badPath"
@@ -73,6 +106,16 @@ export type SchemaProblem = {
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
 	const problems: SchemaProblem[] = [];
+	const { locales } = schema;
+	if (locales.list.length === 0) problems.push({ code: "noLocales" });
+	const codes = new Set<string>();
+	for (const { code } of locales.list) {
+		if (!LOCALE.test(code)) problems.push({ locale: code, code: "badLocale" });
+		if (codes.has(code)) problems.push({ locale: code, code: "duplicateLocale" });
+		codes.add(code);
+	}
+	if (locales.list.length > 0 && !codes.has(locales.source))
+		problems.push({ locale: locales.source, code: "unknownSource" });
 	const paths = new Map<string, string>();
 	for (const [name, collection] of Object.entries(schema.collections)) {
 		if (!IDENTIFIER.test(name)) problems.push({ collection: name, code: "badIdentifier" });

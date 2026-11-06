@@ -16,6 +16,7 @@ import { syncSchemaFile } from "./sync";
 const db = await testDatabase();
 
 const base = defineSchema({
+	locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 	collections: {
 		post: {
 			kind: "document",
@@ -37,6 +38,7 @@ const base = defineSchema({
 
 /** `base` with its post fields replaced. */
 const withPostFields = (fields: Schema["collections"][string]["fields"]): Schema => ({
+	...base,
 	collections: { ...base.collections, post: { ...base.collections.post, fields } },
 });
 const { title, slug } = base.collections.post.fields;
@@ -217,9 +219,10 @@ describe("removing a collection", () => {
 	it("01-4 removing a collection waits for the delete-and-apply answer, then deletes its entries; a relation still pointing at it must be fixed first", async () => {
 		await addEntry("memo", {});
 		const { memo: _memo, ...rest } = base.collections;
-		const withoutMemo = { collections: rest };
+		const withoutMemo = { ...base, collections: rest };
 		await expect(dev().run("schema.apply", { draft: withoutMemo }, { actor: "admin" })).rejects.toThrow("Check failed");
 		const pointing = {
+			...base,
 			collections: {
 				post: {
 					...base.collections.post,

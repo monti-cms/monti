@@ -1,8 +1,9 @@
 import type { Kysely } from "kysely";
-import type { Doc } from "../body/doc";
+import { asDoc, type Doc } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
 import type { Schema } from "../schema/define";
+import { siteDoc, translatedFields } from "../translations/source";
 import { publicPath } from "./paths";
 import { readPreviewToken } from "./preview";
 
@@ -36,6 +37,38 @@ const onlySchemaFields = (schema: Schema, collection: string, values: Record<str
 export function createReader(options: ReaderOptions) {
 	const { db, schema } = options;
 	const now = options.now ?? (() => new Date());
+	/**
+	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
+	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
+	 */
+	async function forSite(entry: SiteEntry): Promise<SiteEntry> {
+		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
+		if (entry.locale === schema.locales.source) return { ...entry, doc: doc && siteDoc(doc, null) };
+		const source = await db
+			.selectFrom("entries as e")
+			.innerJoin("entries as s", (join) =>
+				join
+					.onRef("s.translation_group", "=", "e.translation_group")
+					.on("s.locale", "=", schema.locales.source)
+					.on("s.trashed_at", "is", null),
+			)
+			.innerJoin("entry_published as sp", "sp.entry_id", "s.id")
+			.select(["sp.title", "sp.slug", "sp.values", "sp.doc"])
+			.where("e.id", "=", entry.id)
+			.executeTakeFirst();
+		const fields = translatedFields(
+			schema,
+			entry.collection,
+			{ title: entry.title, slug: entry.slug, values: entry.values },
+			source ?? null,
+		);
+		return {
+			...entry,
+			title: fields.title,
+			values: onlySchemaFields(schema, entry.collection, fields.values),
+			doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
+		};
+	}
 	return {
 		async entry(where: {
 			collection: string;
@@ -55,7 +88,7 @@ export function createReader(options: ReaderOptions) {
 					.executeTakeFirst();
 				if (row)
 					return {
-						entry: {
+						entry: await forSite({
 							id: row.id,
 							collection: row.collection,
 							locale: row.locale,
@@ -64,7 +97,7 @@ export function createReader(options: ReaderOptions) {
 							values: onlySchemaFields(schema, row.collection, row.values),
 							doc: row.doc,
 							publishedAt: null,
-						},
+						}),
 					};
 			}
 			const copy = await db
@@ -76,7 +109,7 @@ export function createReader(options: ReaderOptions) {
 				.executeTakeFirst();
 			if (copy)
 				return {
-					entry: {
+					entry: await forSite({
 						id: copy.entry_id,
 						collection: copy.collection,
 						locale: copy.locale,
@@ -85,7 +118,7 @@ export function createReader(options: ReaderOptions) {
 						values: onlySchemaFields(schema, copy.collection, copy.values),
 						doc: copy.doc,
 						publishedAt: copy.published_at,
-					},
+					}),
 				};
 			const moved = await db
 				.selectFrom("old_paths")
@@ -127,16 +160,20 @@ export function createReader(options: ReaderOptions) {
 				.where("locale", "=", where.locale)
 				.orderBy("published_at", "desc")
 				.execute();
-			return rows.map((copy) => ({
-				id: copy.entry_id,
-				collection: copy.collection,
-				locale: copy.locale,
-				title: copy.title,
-				slug: copy.slug,
-				values: onlySchemaFields(schema, copy.collection, copy.values),
-				doc: copy.doc,
-				publishedAt: copy.published_at,
-			}));
+			return Promise.all(
+				rows.map((copy) =>
+					forSite({
+						id: copy.entry_id,
+						collection: copy.collection,
+						locale: copy.locale,
+						title: copy.title,
+						slug: copy.slug,
+						values: onlySchemaFields(schema, copy.collection, copy.values),
+						doc: copy.doc,
+						publishedAt: copy.published_at,
+					}),
+				),
+			);
 		},
 	};
 }
