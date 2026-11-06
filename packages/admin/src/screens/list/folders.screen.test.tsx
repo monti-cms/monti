@@ -4,7 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { scrollsSideways } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
-const { Main, Categories } = composeStories(list);
+const { Main, Categories, Empty } = composeStories(list);
 
 const main = () => page.getByRole("main");
 const table = () => main().getByRole("table");
@@ -46,6 +46,13 @@ describe("folders in the list", () => {
 		await Main.run();
 		await newFolder("2024");
 		await expect.element(sidebarFolders().getByRole("link", { name: /2024/ })).toBeVisible();
+	});
+
+	it("[line-start] '새 폴더' in a collection with no posts yet still makes a folder row to name", async () => {
+		await Empty.run();
+		await expect.element(main().getByText("아직 메모가 없어요.")).toBeVisible();
+		await newFolder("아이디어");
+		await expect.element(main().getByText("아직 메모가 없어요.")).not.toBeInTheDocument();
 	});
 
 	it("[flow 5·01] Esc in the new folder's name drops the folder", async () => {

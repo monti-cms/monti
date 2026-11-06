@@ -82,7 +82,8 @@ async function setup(monti: Monti, languages: readonly string[]) {
 							subtitle: { label: "부제" },
 						},
 					}
-				: { label };
+				: // Memos are sorted in folders too; categories and tags are not (doc 07: "폴더 사용" is the collection's).
+					{ label, ...(collection === "memo" ? { folders: true } : {}) };
 		await run(monti, "collections.updateAdminValues", { collection, values });
 	}
 	// Flow 1, step 02: the site's templates, so the new pill and the empty list offer "from a template".
@@ -387,6 +388,61 @@ export const FolderRemoveConfirm: Story = {
 		await rightClick(canvasElement, "시리즈 원고");
 		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }, wait));
 		await waitFor(() => expect(body().getByRole("alertdialog")).toBeTruthy(), wait);
+	},
+};
+
+/** A folder of drafts deleted without a question: the toast says so and offers undo (flow 5, step 06). */
+export const FolderRemoved: Story = {
+	loaders: site(async (made) => {
+		const [draft] = await made.db.selectFrom("entries").select("id").where("title", "=", "가을 사진 정리").execute();
+		const box = await run(made.monti, "folders.create", {
+			scope: { collection: "post" },
+			parentId: null,
+			name: "임시",
+		});
+		await run(made.monti, "entries.moveToFolder", { ids: [draft?.id ?? ""], folder: box.output.id });
+	}),
+	play: async ({ canvasElement }) => {
+		await rightClick(canvasElement, "임시");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }, wait));
+		await waitFor(() => expect(body().getByRole("button", { name: "되돌리기" })).toBeTruthy(), wait);
+	},
+};
+
+/** A folder renamed in its row: the field over its name, the whole name picked (flow 5, step 04). */
+export const FolderRename: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rightClick(canvasElement, "시리즈 원고");
+		await userEvent.click(await body().findByRole("menuitem", { name: "이름 바꾸기" }, wait));
+		await waitFor(() => expect(within(canvasElement).getByRole("textbox", { name: "폴더 이름" })).toBeTruthy(), wait);
+	},
+};
+
+/** Two picked rows right-clicked, "폴더로 ▸" open: no icons in this menu (flow 5, step 08). */
+export const RowsMenuToFolder: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const page = within(canvasElement);
+		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
+		await rightClick(canvasElement, "가을 사진 정리");
+		await userEvent.click(body().getByRole("menuitem", { name: "폴더로" }));
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
+	},
+};
+
+/** The bulk bar's "폴더로 ▾" open: the top level ticked, where both picked rows are (flow 5, step 08). */
+export const BulkToFolder: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const page = within(canvasElement);
+		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
+		await userEvent.click(page.getByRole("button", { name: "폴더로" }));
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
 	},
 };
 

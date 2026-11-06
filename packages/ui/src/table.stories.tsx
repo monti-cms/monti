@@ -3,6 +3,7 @@ import {
 	Box,
 	EntryStatus,
 	ListScroll,
+	RenameField,
 	RowActions,
 	RowCheck,
 	RowLink,
@@ -118,6 +119,37 @@ export const Folder: Story = {
 					<RowActions>
 						<RowMore label="더 보기" />
 					</RowActions>
+				</TableCell>
+			</TableRow>
+			{rows(() => ({}))}
+		</Frame>
+	),
+};
+
+/** A folder being named (new, or renamed): the field takes the name's place after the icon, its underline whole, the row as high as the others. */
+export const FolderNaming: Story = {
+	render: () => (
+		<Frame>
+			<TableRow>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle
+						folder
+						editing
+						title={
+							<RenameField
+								value="새 폴더"
+								onValueChange={() => {}}
+								onCommit={() => {}}
+								onCancel={() => {}}
+								label="폴더 이름"
+							/>
+						}
+					/>
+				</TableCell>
+				<TableCell />
+				<TableCell>
+					<RowActions />
 				</TableCell>
 			</TableRow>
 			{rows(() => ({}))}

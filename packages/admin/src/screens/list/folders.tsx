@@ -62,48 +62,61 @@ export const folderPath = (folders: Folders, id: string) =>
 		.map((folder) => folder.name)
 		.join(" / ");
 
-/**
- * "To folder ▸" (screens/list.md, row menus): the top level and every folder, the current place ticked. In a right-click menu or a ⋯ menu; `except`
- * leaves out a folder and what is under it (a folder cannot go inside itself).
- */
-export function MoveToFolderMenu({
+/** The places a row can go: the top level and every folder (but `except` and what is under it), the current one ticked. */
+export function FolderTargets({
 	context,
-	label,
 	folders,
 	current,
 	except,
 	onPick,
 }: {
 	context: boolean;
-	label: string;
 	folders: Folders;
+	/** Where the rows are now; `undefined` when they are in different places. */
 	current: string | null | undefined;
 	except?: string;
 	onPick: (folder: string | null) => void;
 }) {
 	const { t } = useAdmin();
-	const Sub = context ? ContextMenuSub : DropdownMenuSub;
-	const Trigger = context ? ContextMenuSubTrigger : DropdownMenuSubTrigger;
-	const Content = context ? ContextMenuSubContent : DropdownMenuSubContent;
 	const Item = context ? ContextMenuItem : DropdownMenuItem;
 	const shown = folders.list.filter((folder) => !except || !folders.path(folder.id).some((up) => up.id === except));
 	return (
+		<>
+			<Item onClick={() => onPick(null)}>
+				{t("folders.top")}
+				{current === null && <MenuTick />}
+			</Item>
+			{shown.map((folder) => (
+				<Item key={folder.id} onClick={() => onPick(folder.id)}>
+					{folderPath(folders, folder.id)}
+					{current === folder.id && <MenuTick />}
+				</Item>
+			))}
+		</>
+	);
+}
+
+/**
+ * "To folder ▸" (screens/list.md, row menus): a sub-menu of {@link FolderTargets}, in a right-click menu or a ⋯ menu. `icon` only in one row's
+ * menu: the picked rows' menu has no icons.
+ */
+export function MoveToFolderMenu({
+	context,
+	label,
+	icon = true,
+	...targets
+}: Parameters<typeof FolderTargets>[0] & { label: string; icon?: boolean }) {
+	const Sub = context ? ContextMenuSub : DropdownMenuSub;
+	const Trigger = context ? ContextMenuSubTrigger : DropdownMenuSubTrigger;
+	const Content = context ? ContextMenuSubContent : DropdownMenuSubContent;
+	return (
 		<Sub>
 			<Trigger>
-				<Folder aria-hidden />
+				{icon && <Folder aria-hidden />}
 				{label}
 			</Trigger>
 			<Content>
-				<Item onClick={() => onPick(null)}>
-					{t("folders.top")}
-					{current === null && <MenuTick />}
-				</Item>
-				{shown.map((folder) => (
-					<Item key={folder.id} onClick={() => onPick(folder.id)}>
-						{folderPath(folders, folder.id)}
-						{current === folder.id && <MenuTick />}
-					</Item>
-				))}
+				<FolderTargets context={context} {...targets} />
 			</Content>
 		</Sub>
 	);
@@ -172,7 +185,7 @@ export function useRemoveFolder() {
 		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
 		const { activityId } = result.body;
 		toast(t("folders.removed", { name: folder.name }), {
-			action: { label: t("folders.undo"), onClick: () => void undo.run({ id: activityId }) },
+			action: { label: t("settings.undo"), onClick: () => void undo.run({ id: activityId }) },
 		});
 	};
 	const start = (folder: FolderNode) => (folder.published > 0 ? setAsking(folder) : void run(folder));
@@ -186,7 +199,7 @@ export function useRemoveFolder() {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel>{t("folders.cancel")}</AlertDialogCancel>
+					<AlertDialogCancel>{t("ui.cancel")}</AlertDialogCancel>
 					<AlertDialogAction variant="danger" onClick={() => asking && void run(asking)}>
 						{t("folders.toTrash")}
 					</AlertDialogAction>

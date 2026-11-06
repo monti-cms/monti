@@ -54,7 +54,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { ColumnMenu, useLanguageName } from "./column-menu";
-import { FolderMenuItems, MoveToFolderMenu, useFolders, useRemoveFolder } from "./folders";
+import { FolderMenuItems, FolderTargets, MoveToFolderMenu, useFolders, useRemoveFolder } from "./folders";
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -291,7 +291,7 @@ export function ListScreen({
 		// A new folder goes where the person is looking: a search or filter is cleared first (screens/list.md, new folder).
 		if (state.search.text || state.filters.length > 0)
 			setState({ ...state, page: 1, search: { ...state.search, text: "" }, filters: [], ai: [] });
-		setNaming({ id: null, name: t("folders.newName") });
+		setNaming({ id: null, name: t("folders.new") });
 	};
 	const entryRoute = (row: ListRow): Route => ({ screen: "entry", collection, id: row.id });
 	const ids = (list: ListRow[]) => ({ ids: list.map((row) => row.id) });
@@ -417,7 +417,7 @@ export function ListScreen({
 	);
 
 	// No entry at all: one line, and under it the ways to start (T40). Filters that match nothing are not this (below).
-	if (count === 0)
+	if (count === 0 && folders.list.length === 0 && naming === null)
 		return (
 			<PageColumn width="list">
 				{header}
@@ -586,25 +586,35 @@ export function ListScreen({
 	};
 
 	/** "To folder ▸" for a row's menus and the picked rows' menu (flow 5·07, 5·08). */
-	const toFolder = (list: ListRow[], context: boolean) =>
+	/** Where picked rows are: one place they share, or `undefined` when they differ. */
+	const placeOf = (list: ListRow[]) =>
+		list.every((row) => row.folderId === list[0]?.folderId) ? (list[0]?.folderId ?? null) : undefined;
+	const toFolder = (list: ListRow[], context: boolean, icon = true) =>
 		foldersOn ? (
 			<MoveToFolderMenu
 				context={context}
+				icon={icon}
 				label={t("folders.to")}
 				folders={folders}
-				current={list.length === 1 ? (list[0]?.folderId ?? null) : undefined}
+				current={placeOf(list)}
 				onPick={(folder) => void moveRows(list, folder)}
 			/>
 		) : null;
 	const rowsMenuFor = (row: ListRow) =>
 		picked.has(row.id) && pickedRows.length > 1 ? (
-			<RowsMenuItems rows={pickedRows} actions={actions} document={document} toFolder={toFolder(pickedRows, true)} />
+			<RowsMenuItems
+				rows={pickedRows}
+				actions={actions}
+				document={document}
+				toFolder={toFolder(pickedRows, true, false)}
+			/>
 		) : (
 			<RowMenuItems row={row} actions={actions} context document={document} toFolder={toFolder([row], true)} />
 		);
 
 	// Folder rows lead the rows while nothing is searched or filtered: a search or a filter looks for entries (doc 07, inside a folder).
-	const looking = Boolean(state.search.text.trim()) || state.filters.length > 0;
+	const searching = Boolean(state.search.text.trim());
+	const looking = searching || state.filters.length > 0;
 	const folderRows = foldersOn && !looking ? folders.children(state.folder) : [];
 	const folderHref = (folder: string | null) =>
 		href({
@@ -695,9 +705,9 @@ export function ListScreen({
 		<PageColumn width="list">
 			{removeFolder.dialog}
 			{header}
-			{(aiChips.length > 0 || (openFolder && looking)) && (
+			{(aiChips.length > 0 || (openFolder && searching)) && (
 				<PageToolbar inset>
-					{openFolder && looking && (
+					{openFolder && searching && (
 						<>
 							<Segmented
 								size="sm"
@@ -743,27 +753,6 @@ export function ListScreen({
 								),
 							}}
 						>
-							{foldersOn && (
-								<DropdownMenu>
-									<DropdownMenuTrigger render={<TextButton />}>
-										{t("folders.to")}
-										<Caret />
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="start">
-										<DropdownMenuItem onClick={() => void moveRows(pickedRows, null)}>
-											{t("folders.top")}
-										</DropdownMenuItem>
-										{folders.list.map((folder) => (
-											<DropdownMenuItem key={folder.id} onClick={() => void moveRows(pickedRows, folder.id)}>
-												{folders
-													.path(folder.id)
-													.map((up) => up.name)
-													.join(" / ")}
-											</DropdownMenuItem>
-										))}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							)}
 							{document && publishable(pickedRows).length > 0 && (
 								<TextButton onClick={() => void actions.publish(pickedRows)}>{t("list.publish")}</TextButton>
 							)}
@@ -771,6 +760,22 @@ export function ListScreen({
 								<TextButton onClick={() => actions.unarchive(pickedRows)}>{t("list.unarchive")}</TextButton>
 							) : (
 								<TextButton onClick={() => actions.archive(pickedRows)}>{t("list.archive")}</TextButton>
+							)}
+							{foldersOn && (
+								<DropdownMenu>
+									<DropdownMenuTrigger render={<TextButton />}>
+										{t("folders.to")}
+										<Caret />
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="start">
+										<FolderTargets
+											context={false}
+											folders={folders}
+											current={placeOf(pickedRows)}
+											onPick={(folder) => void moveRows(pickedRows, folder)}
+										/>
+									</DropdownMenuContent>
+								</DropdownMenu>
 							)}
 						</BulkBar>
 					) : (
