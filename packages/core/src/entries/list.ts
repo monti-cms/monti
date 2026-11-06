@@ -377,10 +377,13 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		);
 	}
 	if (column === "locale") {
+		// The groups are picked first (materialized, so the planner keeps it so): joined to their entries before the filters, a translation filter
+		// would run once per entry and per group, which grows with the square of the list.
 		const { rows } = await sql<{ locale: string; count: string }>`
-			select x.locale, count(distinct rep.translation_group) as count from ${from}
-			join entries x on x.translation_group = rep.translation_group and x.trashed_at is null
-			where ${where} group by x.locale order by count(distinct rep.translation_group) desc, x.locale`.execute(ctx.db);
+			with picked as materialized (select rep.translation_group from ${from} where ${where})
+			select x.locale, count(distinct picked.translation_group) as count from picked
+			join entries x on x.translation_group = picked.translation_group and x.trashed_at is null
+			group by x.locale order by count(distinct picked.translation_group) desc, x.locale`.execute(ctx.db);
 		return rows.map((row) => ({ value: row.locale, count: Number(row.count) }));
 	}
 	const field = fieldOf(definition, column, ["relation", "select", "text", "media"]);

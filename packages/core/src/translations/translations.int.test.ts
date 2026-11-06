@@ -481,6 +481,16 @@ describe("translation status", () => {
 			{ value: "sourceChanged", count: 1 },
 			{ value: "upToDate", count: 0 },
 		]);
+		// The language column's counts under a translation filter: only the changed group, in each language it has.
+		const languages = await read<{ values: { value: string; count: number }[] }>("entries.facets", {
+			collection: "post",
+			column: "locale",
+			filters: [{ on: "translation", is: "sourceChanged", locales: ["en"] }],
+		});
+		expect(languages.values).toEqual([
+			{ value: "en", count: 1 },
+			{ value: "ko", count: 1 },
+		]);
 	});
 
 	it("T52 the list row of a group is its source-language entry, whichever was made first", async () => {
