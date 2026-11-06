@@ -187,8 +187,23 @@ export interface SignInAttemptTable {
 	at: Date;
 }
 
+/** A folder (doc 07): a box in the admin, never on the site. `collection` is the collection whose entries it holds; `null` holds media. */
+export interface FolderTable {
+	id: string;
+	collection: string | null;
+	/** `null` is the top level. */
+	parent_id: string | null;
+	/** Unique among its siblings. */
+	name: string;
+	position: Generated<number>;
+	version: Generated<number>;
+	created_at: Generated<Date>;
+	trashed_at: Date | null;
+}
+
 export interface Database {
 	entries: EntryTable;
+	folders: FolderTable;
 	entry_published: EntryPublishedTable;
 	source_blocks: SourceBlockTable;
 	old_paths: OldPathTable;

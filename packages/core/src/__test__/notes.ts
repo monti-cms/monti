@@ -4,10 +4,10 @@ import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind } from "../records";
 
-/** A small record kind for the engine's tests: notes in folders. */
+/** A small record kind for the engine's tests: notes in boxes. */
 export type NotesTables = {
-	note: { id: string; version: number; body: string; folder_id: string | null };
-	folder: { id: string; version: number; name: string };
+	note: { id: string; version: number; body: string; box_id: string | null };
+	note_box: { id: string; version: number; name: string };
 };
 
 type NotesDb = Kysely<NotesTables>;
@@ -19,17 +19,17 @@ export async function createNotesTables(db: NotesDb) {
 		.addColumn("id", "text", (column) => column.primaryKey())
 		.addColumn("version", "integer", (column) => column.notNull())
 		.addColumn("body", "text", (column) => column.notNull())
-		.addColumn("folder_id", "text")
+		.addColumn("box_id", "text")
 		.execute();
 	await db.schema
-		.createTable("folder")
+		.createTable("note_box")
 		.addColumn("id", "text", (column) => column.primaryKey())
 		.addColumn("version", "integer", (column) => column.notNull())
 		.addColumn("name", "text", (column) => column.notNull())
 		.execute();
 }
 
-const tableKind = (kind: "note" | "folder") =>
+const tableKind = (kind: "note" | "note_box") =>
 	defineRecordKind({
 		kind,
 		async load(db, ids) {
@@ -48,17 +48,17 @@ const tableKind = (kind: "note" | "folder") =>
 		},
 	});
 
-export const noteKinds = [tableKind("note"), tableKind("folder")];
+export const noteKinds = [tableKind("note"), tableKind("note_box")];
 
 export const notesCreate = defineOperation({
 	name: "notes.create",
 	kind: "write",
 	description: "Create a note.",
-	input: z.object({ id: z.string(), body: z.string(), folderId: z.string().nullable().default(null) }),
+	input: z.object({ id: z.string(), body: z.string(), boxId: z.string().nullable().default(null) }),
 	async run(input, ctx) {
 		await notes(ctx)
 			.insertInto("note")
-			.values({ id: input.id, version: 1, body: input.body, folder_id: input.folderId })
+			.values({ id: input.id, version: 1, body: input.body, box_id: input.boxId })
 			.execute();
 		ctx.created({ kind: "note", id: input.id });
 		ctx.emit({ type: "note.created", ids: [input.id] });
@@ -85,38 +85,34 @@ export const notesEdit = defineOperation({
 	summary: (input) => ({ key: "notes.edit", values: { count: input.ids.length } }),
 });
 
-export const foldersCreate = defineOperation({
-	name: "folders.create",
+export const boxesCreate = defineOperation({
+	name: "boxes.create",
 	kind: "write",
-	description: "Create a folder; returns its id.",
+	description: "Create a box; returns its id.",
 	input: z.object({ name: z.string() }),
 	async run(input, ctx) {
-		const id = `folder-${input.name}`;
-		await notes(ctx).insertInto("folder").values({ id, version: 1, name: input.name }).execute();
-		ctx.created({ kind: "folder", id });
+		const id = `box-${input.name}`;
+		await notes(ctx).insertInto("note_box").values({ id, version: 1, name: input.name }).execute();
+		ctx.created({ kind: "note_box", id });
 		return { id };
 	},
-	summary: () => ({ key: "folders.create" }),
+	summary: () => ({ key: "boxes.create" }),
 });
 
 export const notesMove = defineOperation({
 	name: "notes.move",
 	kind: "write",
-	description: "Move notes into a folder.",
-	input: z.object({ ids: z.array(z.string()).min(1), folderId: z.string() }),
+	description: "Move notes into a box.",
+	input: z.object({ ids: z.array(z.string()).min(1), boxId: z.string() }),
 	touches: (input) => input.ids.map((id) => ({ kind: "note", id })),
 	async check(input, ctx) {
-		const folder = await notes(ctx)
-			.selectFrom("folder")
-			.select("id")
-			.where("id", "=", input.folderId)
-			.executeTakeFirst();
-		if (!folder) throw new CheckError({ key: "folders.missing" });
+		const box = await notes(ctx).selectFrom("note_box").select("id").where("id", "=", input.boxId).executeTakeFirst();
+		if (!box) throw new CheckError({ key: "boxes.missing" });
 	},
 	async run(input, ctx) {
 		await notes(ctx)
 			.updateTable("note")
-			.set((eb) => ({ folder_id: input.folderId, version: eb("version", "+", 1) }))
+			.set((eb) => ({ box_id: input.boxId, version: eb("version", "+", 1) }))
 			.where("id", "in", input.ids)
 			.execute();
 	},
@@ -151,4 +147,4 @@ export const notesOpen = defineOperation({
 	run: () => undefined,
 });
 
-export const noteOperations = [notesCreate, notesEdit, foldersCreate, notesMove, notesPurge, notesList, notesOpen];
+export const noteOperations = [notesCreate, notesEdit, boxesCreate, notesMove, notesPurge, notesList, notesOpen];

@@ -46,7 +46,7 @@ beforeEach(async () => {
 	await db.deleteFrom("monti_activity").execute();
 	await db.deleteFrom("monti_proposal").execute();
 	await db.deleteFrom("note").execute();
-	await db.deleteFrom("folder").execute();
+	await db.deleteFrom("note_box").execute();
 	sent.length = 0;
 	hookUp = true;
 	clock = new Date("2026-11-05T00:00:00Z");
@@ -149,24 +149,24 @@ describe("the assistant proposes", () => {
 		await monti.run("notes.create", { id: "a", body: "x" }, { actor: "admin" });
 		const session = async () => {
 			const proposalId = await monti.proposals.create("c1", "file it");
-			const folder = await monti.proposals.add(proposalId, "folders.create", { name: "2024" });
+			const box = await monti.proposals.add(proposalId, "boxes.create", { name: "2024" });
 			const move = await monti.proposals.add(proposalId, "notes.move", {
 				ids: ["a"],
-				folderId: { $item: folder.itemId },
+				boxId: { $item: box.itemId },
 			});
-			return { proposalId, folder, move };
+			return { proposalId, box, move };
 		};
 
 		const kept = await session();
 		await monti.proposals.apply(kept.proposalId);
-		expect((await notes())[0].folder_id).toBe("folder-2024");
+		expect((await notes())[0].box_id).toBe("box-2024");
 
-		await db.updateTable("note").set({ folder_id: null }).execute();
-		await db.deleteFrom("folder").execute();
+		await db.updateTable("note").set({ box_id: null }).execute();
+		await db.deleteFrom("note_box").execute();
 		const dropped = await session();
 		const results = await monti.proposals.apply(dropped.proposalId, [dropped.move.itemId]);
 		expect(results.map((result) => result.state)).toEqual(["discarded", "skipped"]);
-		expect((await notes())[0].folder_id).toBeNull();
+		expect((await notes())[0].box_id).toBeNull();
 	});
 });
 

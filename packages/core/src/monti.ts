@@ -13,6 +13,7 @@ import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
+import { folderOperations, folderRecord } from "./folders/operations";
 import {
 	type Actor,
 	type AnyOperation,
@@ -191,6 +192,7 @@ export function createMonti(options: MontiOptions) {
 		...schemaRecordKinds,
 		entryRecord,
 		templateRecord,
+		folderRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -221,6 +223,7 @@ export function createMonti(options: MontiOptions) {
 		...entryOperations,
 		...listOperations,
 		...translationOperations,
+		...folderOperations,
 		...bodyOperations,
 		...authOperations,
 	])

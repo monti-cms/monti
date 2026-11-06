@@ -8,6 +8,7 @@ import {
 	DropdownMenuSeparator,
 } from "@monti-cms/ui";
 import { Archive, Copy, Launch } from "@monti-cms/ui/icons";
+import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 
 /** What a row's menu does; the list wires each to an operation of doc 02 (doc 06, principle 5: the list has no write of its own). */
@@ -26,20 +27,23 @@ export const publishable = (rows: ListRow[]) => rows.filter((row) => row.state =
 export const allArchived = (rows: ListRow[]) => rows.length > 0 && rows.every((row) => row.state === "archived");
 
 /**
- * One row's menu, the same from its ⋯ and from a right click: open, open in a new tab, duplicate | archive. The rows of docs 07, 08 and 11 (to a
- * folder, category, tag, to the trash) join with those docs (T54–T56).
+ * One row's menu, the same from its ⋯ and from a right click: open, open in a new tab, duplicate | to a folder | archive. The rows of docs 08 and 11
+ * (category, tag, to the trash) join with those docs (T55, T56).
  */
 export function RowMenuItems({
 	row,
 	actions,
 	context,
 	document,
+	toFolder,
 }: {
 	row: ListRow;
 	actions: RowActions;
 	context: boolean;
 	/** A document collection; an item one (tags) has no archive (components/list.md, bulk bar). */
 	document: boolean;
+	/** The "to folder ▸" submenu, when the collection uses folders (doc 07). */
+	toFolder?: ReactNode;
 }) {
 	const { t } = useAdmin();
 	const Item = context ? ContextMenuItem : DropdownMenuItem;
@@ -58,6 +62,8 @@ export function RowMenuItems({
 				<Copy aria-hidden />
 				{t("list.duplicate")}
 			</Item>
+			{toFolder && <Separator />}
+			{toFolder}
 			{document && <Separator />}
 			{!document ? null : row.state === "archived" ? (
 				<Item onClick={() => actions.unarchive([row])}>
@@ -79,10 +85,12 @@ export function RowsMenuItems({
 	rows,
 	actions,
 	document,
+	toFolder,
 }: {
 	rows: ListRow[];
 	actions: RowActions;
 	document: boolean;
+	toFolder?: ReactNode;
 }) {
 	const { t } = useAdmin();
 	return (
@@ -98,6 +106,7 @@ export function RowsMenuItems({
 			) : (
 				<ContextMenuItem onClick={() => actions.archive(rows)}>{t("list.archive")}</ContextMenuItem>
 			)}
+			{toFolder}
 			{document && <ContextMenuSeparator />}
 			<ContextMenuItem onClick={() => actions.exportRows(rows)}>{t("list.export")}</ContextMenuItem>
 		</>

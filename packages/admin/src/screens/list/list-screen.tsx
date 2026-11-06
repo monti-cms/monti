@@ -2,6 +2,7 @@ import type { ListColumn, ListRow } from "@monti-cms/core";
 import {
 	BulkBar,
 	Button,
+	Caret,
 	Chip,
 	ContextMenu,
 	ContextMenuContent,
@@ -27,13 +28,16 @@ import {
 	PageHeader,
 	PageSizeMenu,
 	PageToolbar,
+	RenameField,
 	RowActions,
 	RowCheck,
 	RowLink,
 	RowMore,
 	RowTitle,
 	SearchToggle,
+	Segmented,
 	type SelectAll,
+	Separator,
 	SplitButton,
 	Table,
 	TableBody,
@@ -43,13 +47,14 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { Template } from "@monti-cms/ui/icons";
+import { FolderAdd, Template } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { ColumnMenu, useLanguageName } from "./column-menu";
+import { FolderMenuItems, FolderTargets, MoveToFolderMenu, useFolders, useRemoveFolder } from "./folders";
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -59,7 +64,7 @@ type Columns = { columns: ListColumn[]; pageSize: number };
 type Page = { rows: ListRow[]; total: number };
 type SchemaRead = {
 	schema: { collections: Record<string, { path: string; kind: "document" | "item" }> };
-	adminValues: Record<string, { label?: string }>;
+	adminValues: Record<string, { label?: string; folders?: boolean }>;
 };
 /** A picked row; `proposal` while the assistant picked it and the admin has not touched it (`list.select`). */
 type Picked = Map<string, { proposal: boolean }>;
@@ -120,7 +125,14 @@ export function ListScreen({
 	const columns = columnsRead.data?.columns ?? null;
 	const pageSize = columnsRead.data?.pageSize ?? 25;
 	const state = useMemo(() => readState(params, columns ?? []), [params, columns]);
-	const query = useMemo(() => toQuery(collection, state, pageSize), [collection, state, pageSize]);
+	// Folders (doc 07): on when the collection uses them (its admin value); the list then shows one folder at a time.
+	const foldersOn = schema.data?.adminValues[collection]?.folders === true;
+	const folders = useFolders(collection, foldersOn);
+	const openFolder = foldersOn && state.folder ? (folders.byId.get(state.folder) ?? null) : null;
+	const query = useMemo(
+		() => toQuery(collection, state, pageSize, foldersOn),
+		[collection, state, pageSize, foldersOn],
+	);
 	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 }, { afterWrites: true });
 	const rows = columns ? (page.data?.rows ?? null) : null;
 	const total = page.data?.total ?? 0;
@@ -241,6 +253,45 @@ export function ListScreen({
 		unarchive: useOperation("entries.unarchive"),
 		publish: useOperation<{ output: { published: string[]; blocked: string[] } }>("entries.publish"),
 		exportRows: useOperation<unknown>("entries.export"),
+		moveToFolder: useOperation("entries.moveToFolder"),
+		createFolder: useOperation<{ output: { id: string } }>("folders.create"),
+		renameFolder: useOperation("folders.rename"),
+		moveFolder: useOperation("folders.move"),
+	};
+	const removeFolder = useRemoveFolder();
+	/** A folder being named: a new one on top of the rows (`id` null) or one being renamed (flow 5·01, 5·04). */
+	const [naming, setNaming] = useState<{ id: string | null; name: string } | null>(null);
+	const goFolder = (folder: string | null) =>
+		setState({
+			...state,
+			folder,
+			everywhere: false,
+			page: 1,
+			search: { ...state.search, text: "" },
+			filters: [],
+			ai: [],
+		});
+	const moveRows = async (list: ListRow[], folder: string | null) => {
+		const result = await run.moveToFolder.run({ ids: list.map((row) => row.id), folder });
+		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+		setPicked(new Map());
+	};
+	const keepName = async (value: string) => {
+		const name = value.trim();
+		const target = naming;
+		setNaming(null);
+		if (!target || !name) return;
+		const result =
+			target.id === null
+				? await run.createFolder.run({ scope: { collection }, parentId: state.folder, name })
+				: await run.renameFolder.run({ id: target.id, name });
+		if (!result.ok) toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+	};
+	const startNewFolder = () => {
+		// A new folder goes where the person is looking: a search or filter is cleared first (screens/list.md, new folder).
+		if (state.search.text || state.filters.length > 0)
+			setState({ ...state, page: 1, search: { ...state.search, text: "" }, filters: [], ai: [] });
+		setNaming({ id: null, name: t("folders.new") });
 	};
 	const entryRoute = (row: ListRow): Route => ({ screen: "entry", collection, id: row.id });
 	const ids = (list: ListRow[]) => ({ ids: list.map((row) => row.id) });
@@ -270,35 +321,53 @@ export function ListScreen({
 	};
 	const create = async (template?: string) => {
 		const result = await run.create.run({ collection, locale: language, ...(template ? { template } : {}) });
-		if (result.ok) go({ screen: "entry", collection, id: result.body.output.id });
+		if (!result.ok) return;
+		const id = result.body.output.id;
+		// A post written inside a folder belongs to it.
+		if (openFolder) await run.moveToFolder.run({ ids: [id], folder: openFolder.id });
+		go({ screen: "entry", collection, id });
 	};
 
-	const name = schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
+	const name = openFolder?.name ?? collectionName;
 	// Items (tags, categories) are live on save: no publishing, no archive (doc 02; components/list.md, bulk bar).
 	const document = schema.data?.schema.collections[collection]?.kind !== "item";
 	const path = schema.data?.schema.collections[collection]?.path;
-	const newLabel = t("list.new", { label: name });
+	const newLabel = t("list.new", { label: collectionName });
 	const templateList = templates.data ?? [];
-	const newButton =
+	const fromTemplate =
 		templateList.length > 0 ? (
+			<DropdownMenuSub>
+				<DropdownMenuSubTrigger>
+					<Template aria-hidden />
+					{t("list.fromTemplate")}
+				</DropdownMenuSubTrigger>
+				<DropdownMenuSubContent>
+					{templateList.map((template) => (
+						<DropdownMenuItem key={template.id} onClick={() => void create(template.id)}>
+							{template.name}
+						</DropdownMenuItem>
+					))}
+				</DropdownMenuSubContent>
+			</DropdownMenuSub>
+		) : null;
+	// The one black pill; its menu holds the rarer ways to add, and it is a plain pill when the menu would be empty (screens/list.md).
+	const newButton =
+		foldersOn || fromTemplate ? (
 			<SplitButton
 				onClick={() => void create()}
 				loading={run.create.pending}
 				menuLabel={t("list.moreNew")}
 				menu={
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<Template aria-hidden />
-							{t("list.fromTemplate")}
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							{templateList.map((template) => (
-								<DropdownMenuItem key={template.id} onClick={() => void create(template.id)}>
-									{template.name}
-								</DropdownMenuItem>
-							))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
+					<>
+						{foldersOn && (
+							<DropdownMenuItem onClick={startNewFolder}>
+								<FolderAdd aria-hidden />
+								{t("folders.new")}
+							</DropdownMenuItem>
+						)}
+						{fromTemplate}
+					</>
 				}
 			>
 				{newLabel}
@@ -310,7 +379,21 @@ export function ListScreen({
 		);
 
 	const header = (
-		<PageHeader title={name} meta={path}>
+		<PageHeader
+			title={name}
+			meta={openFolder ? undefined : path}
+			trail={
+				openFolder ? (
+					<Inline gap={4}>
+						{[{ id: null, name: collectionName }, ...folders.path(openFolder.id).slice(0, -1)].map((up) => (
+							<TextButton key={up.id ?? "top"} variant="underline" onClick={() => goFolder(up.id)}>
+								{`${up.name} /`}
+							</TextButton>
+						))}
+					</Inline>
+				) : undefined
+			}
+		>
 			{count !== 0 && (
 				<SearchToggle
 					label={t("list.search")}
@@ -334,7 +417,7 @@ export function ListScreen({
 	);
 
 	// No entry at all: one line, and under it the ways to start (T40). Filters that match nothing are not this (below).
-	if (count === 0)
+	if (count === 0 && folders.list.length === 0 && naming === null)
 		return (
 			<PageColumn width="list">
 				{header}
@@ -502,18 +585,144 @@ export function ListScreen({
 		}
 	};
 
+	/** "To folder ▸" for a row's menus and the picked rows' menu (flow 5·07, 5·08). */
+	/** Where picked rows are: one place they share, or `undefined` when they differ. */
+	const placeOf = (list: ListRow[]) =>
+		list.every((row) => row.folderId === list[0]?.folderId) ? (list[0]?.folderId ?? null) : undefined;
+	const toFolder = (list: ListRow[], context: boolean, icon = true) =>
+		foldersOn ? (
+			<MoveToFolderMenu
+				context={context}
+				icon={icon}
+				label={t("folders.to")}
+				folders={folders}
+				current={placeOf(list)}
+				onPick={(folder) => void moveRows(list, folder)}
+			/>
+		) : null;
 	const rowsMenuFor = (row: ListRow) =>
 		picked.has(row.id) && pickedRows.length > 1 ? (
-			<RowsMenuItems rows={pickedRows} actions={actions} document={document} />
+			<RowsMenuItems
+				rows={pickedRows}
+				actions={actions}
+				document={document}
+				toFolder={toFolder(pickedRows, true, false)}
+			/>
 		) : (
-			<RowMenuItems row={row} actions={actions} context document={document} />
+			<RowMenuItems row={row} actions={actions} context document={document} toFolder={toFolder([row], true)} />
 		);
+
+	// Folder rows lead the rows while nothing is searched or filtered: a search or a filter looks for entries (doc 07, inside a folder).
+	const searching = Boolean(state.search.text.trim());
+	const looking = searching || state.filters.length > 0;
+	const folderRows = foldersOn && !looking ? folders.children(state.folder) : [];
+	const folderHref = (folder: string | null) =>
+		href({
+			screen: "list",
+			collection,
+			params: writeState({
+				...state,
+				folder,
+				everywhere: false,
+				page: 1,
+				filters: [],
+				ai: [],
+				search: { ...state.search, text: "" },
+			}),
+		});
+	// The end cell holds the row's actions, or an empty actions box, so every row of the list is one height (the ⋯ sets it).
+	const folderRow = (key: string, title: ReactNode, end: ReactNode = <RowActions />) => (
+		<TableRow key={key}>
+			{shown.map((column) =>
+				column.kind === "title" ? (
+					<TableCell key={column.id} truncate>
+						{title}
+					</TableCell>
+				) : (
+					<TableCell key={column.id} />
+				),
+			)}
+			<TableCell align="end">{end}</TableCell>
+		</TableRow>
+	);
+	const namingField = (
+		<RenameField
+			value={naming?.name ?? ""}
+			onValueChange={(value) => setNaming((current) => (current ? { ...current, name: value } : current))}
+			onCommit={(value) => void keepName(value)}
+			onCancel={() => setNaming(null)}
+			label={t("folders.name")}
+		/>
+	);
+	const folderLines = [
+		openFolder && !looking
+			? folderRow(
+					"up",
+					<RowTitle folder title={<RowLink href={folderHref(openFolder.parentId)}>{t("folders.up")}</RowLink>} />,
+				)
+			: null,
+		naming?.id === null ? folderRow("new", <RowTitle folder editing title={namingField} />) : null,
+		...folderRows.map((folder) => {
+			const items = (context: boolean) => (
+				<FolderMenuItems
+					context={context}
+					folder={folder}
+					folders={folders}
+					onOpen={() => goFolder(folder.id)}
+					onRename={() => setNaming({ id: folder.id, name: folder.name })}
+					onMove={(parent) => void run.moveFolder.run({ id: folder.id, parentId: parent })}
+					onRemove={() => removeFolder.start(folder)}
+				/>
+			);
+			const line = folderRow(
+				folder.id,
+				naming?.id === folder.id ? (
+					<RowTitle folder editing title={namingField} />
+				) : (
+					<RowTitle
+						folder
+						title={<RowLink href={folderHref(folder.id)}>{folder.name}</RowLink>}
+						address={t("folders.holds", { count: folder.count })}
+					/>
+				),
+				<RowActions>
+					<DropdownMenu>
+						<RowMore label={t("list.rowMenu")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+						<DropdownMenuContent align="end">{items(false)}</DropdownMenuContent>
+					</DropdownMenu>
+				</RowActions>,
+			);
+			return (
+				<ContextMenu key={folder.id}>
+					<ContextMenuTrigger render={line} />
+					<ContextMenuContent>{items(true)}</ContextMenuContent>
+				</ContextMenu>
+			);
+		}),
+	];
 
 	return (
 		<PageColumn width="list">
+			{removeFolder.dialog}
 			{header}
-			{aiChips.length > 0 && (
+			{(aiChips.length > 0 || (openFolder && searching)) && (
 				<PageToolbar inset>
+					{openFolder && searching && (
+						<>
+							<Segmented
+								size="sm"
+								inline
+								aria-label={t("folders.searchIn")}
+								value={state.everywhere ? "all" : "here"}
+								onValueChange={(value) => setState({ ...state, page: 1, everywhere: value === "all" })}
+								options={[
+									{ value: "here", label: openFolder.name },
+									{ value: "all", label: t("folders.everywhere") },
+								]}
+							/>
+							{aiChips.length > 0 && <Separator orientation="vertical" length="control" />}
+						</>
+					)}
 					{aiChips.map((filter) => (
 						<Chip
 							key={filterColumn(filter)}
@@ -552,6 +761,22 @@ export function ListScreen({
 							) : (
 								<TextButton onClick={() => actions.archive(pickedRows)}>{t("list.archive")}</TextButton>
 							)}
+							{foldersOn && (
+								<DropdownMenu>
+									<DropdownMenuTrigger render={<TextButton />}>
+										{t("folders.to")}
+										<Caret />
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="start">
+										<FolderTargets
+											context={false}
+											folders={folders}
+											current={placeOf(pickedRows)}
+											onPick={(folder) => void moveRows(pickedRows, folder)}
+										/>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
 						</BulkBar>
 					) : (
 						<ListHead
@@ -578,7 +803,8 @@ export function ListScreen({
 						/>
 					)}
 					<TableBody>
-						{rows?.length === 0 && (
+						{folderLines}
+						{rows?.length === 0 && folderLines.every((line) => line === null) && (
 							<TableRow>
 								<TableCell colSpan={colSpan}>
 									<Inline gap={12}>
@@ -607,7 +833,13 @@ export function ListScreen({
 													trigger={(button) => <DropdownMenuTrigger render={button} />}
 												/>
 												<DropdownMenuContent align="end">
-													<RowMenuItems row={row} actions={actions} context={false} document={document} />
+													<RowMenuItems
+														row={row}
+														actions={actions}
+														context={false}
+														document={document}
+														toFolder={toFolder([row], false)}
+													/>
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</RowActions>
