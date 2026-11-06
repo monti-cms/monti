@@ -9,6 +9,7 @@ import { cn } from "./cn";
  * - `data-align` (`center`, `right`): where a paragraph's or a heading's lines sit.
  * - `data-empty` with `data-placeholder`: the empty line the cursor is on says how to add a block.
  * - `data-menu-open`: the block whose menu is open has the block background (`Block active`).
+ * - `data-untranslated`: a translation's block still in the source's words, not decided yet, in the faint ink (`Untranslated`, doc 04).
  * - `data-held`: the block being dragged stays in its place, dimmed to 40%, while a small card (`HeldBlock`) follows the pointer.
  * - `data-off`: a block the collection's editor no longer offers stays, in the faint ink, with its `data-off-label` after it.
  * - `data-box`: a block the editor shows but does not edit here, in a quiet box with its `data-box-label`: one the site no longer defines (kept
@@ -16,7 +17,7 @@ import { cn } from "./cn";
  * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
  */
 const EDITOR_BODY = cn(
-	"flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
+	"relative flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
 	"[&_.ProseMirror>*:first-child]:mt-0",
 	// Text blocks.
 	"[&_p]:mt-0 [&_p]:mb-monti-20",
@@ -51,6 +52,7 @@ const EDITOR_BODY = cn(
 	"[&_[data-menu-open]]:relative [&_[data-menu-open]]:isolate [&_[data-menu-open]]:before:pointer-events-none [&_[data-menu-open]]:before:absolute [&_[data-menu-open]]:before:-left-monti-8 [&_[data-menu-open]]:before:-right-monti-8 [&_[data-menu-open]]:before:inset-y-0 [&_[data-menu-open]]:before:-z-10 [&_[data-menu-open]]:before:rounded-monti-md [&_[data-menu-open]]:before:bg-monti-block [&_li[data-menu-open]]:before:-left-monti-24",
 	// A list item's ground covers its marker too, as `Block active` does in the reference.
 	"[&_[data-held]]:opacity-40",
+	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
 	"[&_[data-box]]:mb-monti-20 [&_[data-box]]:rounded-monti-lg [&_[data-box]]:bg-monti-muted [&_[data-box]]:px-monti-16 [&_[data-box]]:py-monti-12 [&_[data-box]]:text-monti-note [&_[data-box]]:text-monti-subtle [&_[data-box]]:before:content-[attr(data-box-label)]",
 );

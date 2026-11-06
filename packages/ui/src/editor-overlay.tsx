@@ -42,6 +42,24 @@ function EditorOverlay({
 }
 
 /**
+ * Something hung in the text's left margin, level with a block: a translation's marks ("Changed", "New", "Source"). It sits in `EditorBody`, `top`
+ * px below the body's top (the block's own top, measured), its right edge 12px left of the text, so it scrolls with the text. It draws no surface of
+ * its own; what it holds does (`Marker`).
+ */
+function EditorMargin({ top, children }: { top: number; children: ReactNode }) {
+	return (
+		<div
+			data-slot="editor-margin"
+			className="absolute right-[calc(100%+12px)] flex items-center gap-monti-4"
+			// design-allow: the block's top, measured in the editor
+			style={{ top }}
+		>
+			{children}
+		</div>
+	);
+}
+
+/**
  * A block of the text in hand while it is dragged: a small card (at most 280px wide) with the block's kind and the start of its text, beside the
  * pointer, never the block at full width over the text it is moving through. Its surface is the lifted look of every dragged thing (`HELD`: the page
  * ground and the floating shadow). The block itself stays in place, dimmed (`EditorBody`'s `data-held`).
@@ -75,4 +93,4 @@ function DropLine() {
 	);
 }
 
-export { DropLine, EditorOverlay, HeldBlock };
+export { DropLine, EditorMargin, EditorOverlay, HeldBlock };

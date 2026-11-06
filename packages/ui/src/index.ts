@@ -311,6 +311,7 @@ export const TableGrip = close(open.TableGrip);
 export const TableAddStrip = close(open.TableAddStrip);
 export const TableColumnBorder = close(open.TableColumnBorder);
 export const EditorBody = close(open.EditorBody);
+export const EditorMargin = close(open.EditorMargin);
 export const EditorOverlay = close(open.EditorOverlay);
 export const HeldBlock = close(open.HeldBlock);
 export const DropLine = close(open.DropLine);
