@@ -156,7 +156,9 @@ function Body({
 				</FormFieldSet>
 				<FormField>
 					<div className="flex min-h-monti-control-xs items-center gap-monti-8">
-						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
+						<FormFieldLabel htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}>
+							{t("settings.basics.path")}
+						</FormFieldLabel>
 						{kind === "item" ? (
 							<span className="ml-auto">
 								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
