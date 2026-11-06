@@ -27,7 +27,7 @@ const schema = defineSchema({
 });
 
 const admin = { actor: "admin" } as const;
-const wait = { timeout: 15000 };
+export const wait = { timeout: 15000 };
 
 /** The reference list's rows (`Screens/Reference/Lists` › Main): status, title, address, category, tags, other languages and date. */
 const POSTS = [
@@ -51,7 +51,7 @@ const POSTS = [
 	],
 ] as const;
 
-const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
+export const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
 	monti.run(name, input, admin) as Promise<Output>;
 
 async function create(monti: Monti, collection: string, title: string, slug: string) {
@@ -136,7 +136,7 @@ async function setup(monti: Monti) {
 		from generate_series(1, 138) n`.execute(monti.db);
 }
 
-const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
+export const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
 	async (): Promise<Loaded> => {
 		startAt(hash);
 		const made = await storySite({ schema, auth: { password: true }, signedIn: true, setup });
@@ -146,6 +146,7 @@ const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
 ];
 
 const meta = {
+	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/List",
 	render: (_args, { loaded }) => {
@@ -156,7 +157,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const rowsShown = (canvas: HTMLElement) =>
+export const rowsShown = (canvas: HTMLElement) =>
 	waitFor(() => expect(within(canvas).getByText("발행 후 고친 글")).toBeTruthy(), wait);
 
 /** Flow 1, step 01: the posts list as the reference draws it, newest change first, 25 of 148. */
@@ -264,9 +265,9 @@ export const Categories: Story = {
 	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("일상")).toBeTruthy(), wait),
 };
 
-const body = () => within(document.body);
+export const body = () => within(document.body);
 /** Opens a column's menu by its name in the head row. */
-async function openColumn(canvas: HTMLElement, name: string) {
+export async function openColumn(canvas: HTMLElement, name: string) {
 	await waitFor(() => expect(within(canvas).getByRole("button", { name })).toBeTruthy(), wait);
 	await userEvent.click(within(canvas).getByRole("button", { name }));
 	await waitFor(() => expect(body().getByRole("menu")).toBeTruthy(), wait);
@@ -311,7 +312,7 @@ export const ColumnMoving: Story = {
 };
 
 /** Drags a column's resize handle by `by` px; lets go unless `hold`. */
-async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
+export async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
 	const handle = await within(canvas).findByRole("separator", { name }, wait);
 	const box = handle.getBoundingClientRect();
 	const y = box.top + box.height / 2;
@@ -325,7 +326,7 @@ async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = 
 	if (!hold) at("pointerup", box.left + by);
 	return handle;
 }
-const columnWidth = (canvas: HTMLElement, id: string) =>
+export const columnWidth = (canvas: HTMLElement, id: string) =>
 	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().width ?? 0);
 
 const rightEdge = (canvas: HTMLElement, id: string) =>
@@ -344,35 +345,6 @@ export const ColumnResizing: Story = {
 		await dragHandle(canvasElement, "제목 열 너비 조절", -80, true);
 		await waitFor(() => expect(rightEdge(canvasElement, "title")).toBe(edge - 80), wait);
 		await expect(rightEdge(canvasElement, "category")).toBe(after);
-	},
-};
-
-/**
- * The same edge dragged 80px left and let go: the category's width is saved for posts. After going to the memos and back (the list read again, as after
- * a reload) the category keeps it, and no column moved (06).
- */
-export const ColumnResized: Story = {
-	loaders: site(),
-	play: async ({ canvasElement, loaded }) => {
-		const { site: made } = loaded as Loaded;
-		const page = within(canvasElement);
-		await rowsShown(canvasElement);
-		const order = () =>
-			[...canvasElement.querySelectorAll<HTMLElement>("th[data-column]")].map((th) => th.dataset.column);
-		const before = order();
-		await dragHandle(canvasElement, "제목 열 너비 조절", -80);
-		await waitFor(async () => {
-			const kept = await run<{ columns: { id: string; width?: number }[] }>(made.monti, "list.columns", {
-				collection: "post",
-			});
-			expect(kept.columns.find((column) => column.id === "category")?.width).toBe(164);
-		}, wait);
-		await userEvent.click(page.getByRole("button", { name: "메모" }));
-		await waitFor(() => expect(canvasElement.querySelector("th[data-column=category]")).toBeNull(), wait);
-		await userEvent.click(page.getByRole("button", { name: /^게시글/ }));
-		await rowsShown(canvasElement);
-		await waitFor(() => expect(columnWidth(canvasElement, "category")).toBe(164), wait);
-		expect(order()).toEqual(before);
 	},
 };
 
@@ -495,26 +467,6 @@ export const DatePickRange: Story = {
 	},
 };
 
-/** Opened again on a range picked before: the range calendar shows it, the name has its dot (flow 7, step 05c). */
-export const DateRange: Story = {
-	loaders: site(undefined, "#/c/post?updatedAt=2026-10-05..2026-10-26"),
-	play: async ({ canvasElement }) => {
-		await openColumn(canvasElement, "수정일");
-		await userEvent.hover(body().getByRole("menuitem", { name: "기간 고르기" }));
-		await waitFor(() => expect(body().getByRole("grid")).toBeTruthy(), wait);
-	},
-};
-
-/** Opened again on a day picked before: "하루 고르기" is ticked and its calendar shows the day ("모든 날짜" lifts it, 2026-11-06). */
-export const DateOneDay: Story = {
-	loaders: site(undefined, "#/c/post?updatedAt=2026-10-26..2026-10-26"),
-	play: async ({ canvasElement }) => {
-		await openColumn(canvasElement, "수정일");
-		await userEvent.hover(body().getByRole("menuitem", { name: "하루 고르기" }));
-		await waitFor(() => expect(body().getByRole("button", { name: /10월 26일.*선택됨/ })).toBeTruthy(), wait);
-	},
-};
-
 /** A right click on one of two picked rows: the bulk bar's actions by the same names (flow 5, step 08). */
 export const RowsMenu: Story = {
 	loaders: site(),
@@ -534,19 +486,5 @@ export const RowsMenu: Story = {
 			}),
 		);
 		await waitFor(() => expect(body().getByText("2개 항목")).toBeTruthy(), wait);
-	},
-};
-
-/** The session ended while the list was open: the next read comes back without one, and the banner stands at the top of the page (doc 15). */
-export const SessionEnded: Story = {
-	loaders: site(),
-	play: async ({ canvasElement, loaded }) => {
-		const { site: made } = loaded as Loaded;
-		const page = within(canvasElement);
-		await page.findByText("발행 후 고친 글", {}, { timeout: 15000 });
-		await made.db.deleteFrom("monti_session").execute();
-		await userEvent.click(page.getByRole("button", { name: "메모" }));
-		await page.findByText("로그인이 풀렸어요", {}, { timeout: 15000 });
-		await expect(page.getByRole("button", { name: "다시 로그인" })).toBeVisible();
 	},
 };
