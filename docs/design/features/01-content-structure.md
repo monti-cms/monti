@@ -40,7 +40,7 @@ flowchart TD
 ```
 
 - **컬렉션의 종류**는 두 가지다. 문서(본문이 있고 초안과 발행이 있다: 게시글, 메모)와 항목(본문 없이 짧고, 저장하면 바로 사이트에 나간다: 카테고리, 태그). 발행 상태가 필요한 대상(소개 글이 있는 시리즈)은 문서로 만든다.
-- **모든 컬렉션은 `title`과 `slug`로 시작한다.** 둘은 지울 수 없고, 늘 필수다(흐름 4·03). 스키마 검사가 필수가 아닌 둘을 막고, 필드 시트에서는 필수 줄이 잠겨 있다(2026-11-05, 소유자). 공개 주소는 `/앞부분/:slug` 모양이다.
+- **Every collection starts with `title` and `slug`.** Both fields are fixed and required. A document always has a public `path` in the `/prefix/:slug` form. An item may omit `path`; its `slug` remains the stable item identifier used by relations and the admin.
 - **탭과 묶음**은 속성 패널의 배치다. 값의 모양에는 영향이 없다. 플러그인이 둔 탭(SEO)은 잠겨 있다.
 - **미디어**는 컬렉션 목록에 없는 내장 종류다(09번 문서).
 
@@ -57,7 +57,7 @@ flowchart LR
 
 | 값 | 어디 | 이유 |
 |---|---|---|
-| 컬렉션 식별자, 종류, 공개 주소 | 파일 | 사이트가 이 이름과 주소로 글을 읽는다 |
+| Collection identifier, kind, and optional public address | 파일 | Site code relies on the identifier and kind, and on the address when a public page is enabled |
 | 필드 이름, 종류, 필수, 최대 글자 수, 언어 방식 | 파일 | 사이트 코드가 이 모양을 읽는다 |
 | 관계의 대상, 여러 개 | 파일 | 값의 모양이 바뀐다 |
 | 고르기 선택지의 값 | 파일 | 사이트 코드가 값으로 나눠 그린다 |
@@ -115,7 +115,6 @@ export default defineSchema({
     },
     category: {
       kind: "item",
-      path: "/category/:slug",
       fields: {
         title: { kind: "text", required: true, locale: "perLocale" },
         slug: { kind: "slug", required: true, locale: "fromSource", from: "title" },

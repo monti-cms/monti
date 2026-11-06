@@ -45,9 +45,18 @@ export function BasicsTab({
 	const locked = data?.locked ?? true;
 	const kind = (draft.value(at.collection(c)) as { kind: "document" | "item" } | null)?.kind ?? "document";
 	const pathPlace = at.path(c);
-	const path = String(draft.value(pathPlace) ?? "/:slug");
+	const pathValue = draft.value(pathPlace);
+	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
+	const pathChanged =
+		model.changed.includes(pathPlace) && data?.schema.collections[c]
+			? {
+					label: t("settings.changed"),
+					undoLabel: t("settings.undo"),
+					onUndo: () => draft.revert(pathPlace),
+				}
+			: undefined;
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -70,34 +79,44 @@ export function BasicsTab({
 					/>
 				</FormField>
 				{locked ? (
-					<ReadValue label={t("settings.basics.path")}>
-						{path}
-						<LockMark label={t("settings.locked")} />
-					</ReadValue>
+					kind === "document" || path !== undefined ? (
+						<ReadValue label={t("settings.basics.path")}>
+							{path}
+							<LockMark label={t("settings.locked")} />
+						</ReadValue>
+					) : (
+						<ReadValue label={t("settings.basics.path")}>
+							{t("settings.basics.publicPageOff")}
+							<LockMark label={t("settings.locked")} />
+						</ReadValue>
+					)
 				) : (
 					<FormField>
 						<FormFieldLabel
-							htmlFor="collection-path"
-							changed={
-								model.changed.includes(pathPlace) && data?.schema.collections[c]
-									? {
-											label: t("settings.changed"),
-											undoLabel: t("settings.undo"),
-											onUndo: () => draft.revert(pathPlace),
-										}
-									: undefined
+							htmlFor={path !== undefined ? "collection-path" : undefined}
+							changed={pathChanged}
+							action={
+								kind === "item" ? (
+									<Switch
+										checked={path !== undefined}
+										aria-label={t("settings.basics.publicPage")}
+										onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+									/>
+								) : undefined
 							}
 						>
 							{t("settings.basics.path")}
 						</FormFieldLabel>
-						<Affix
-							id="collection-path"
-							prefix="/"
-							suffix="/:slug"
-							width="fit"
-							value={addressPart(path)}
-							onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
-						/>
+						{path !== undefined && (
+							<Affix
+								id="collection-path"
+								prefix="/"
+								suffix="/:slug"
+								width="fit"
+								value={addressPart(path)}
+								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
+							/>
+						)}
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}

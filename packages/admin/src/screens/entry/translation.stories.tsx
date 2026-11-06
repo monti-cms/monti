@@ -88,15 +88,31 @@ async function entries(monti: Monti, kind: Kind, current: Schema): Promise<Recor
 				slug: { label: "주소" },
 				summary: { label: "요약" },
 				subtitle: { label: "부제" },
+				cover: { label: "대표 이미지" },
+				category: { label: "카테고리" },
 			},
 		},
 	});
+	const hasEn = current.locales.list.some((l) => l.code === "en");
+	const devCat = (
+		await run<{ output: { group: string } }>(monti, "items.saveGroup", {
+			collection: "category",
+			locales: {
+				ko: { title: "개발", slug: "dev" },
+				...(hasEn ? { en: { title: "Development", slug: "dev" } } : {}),
+			},
+		})
+	).output;
 	const korean = (
 		await run(monti, "entries.create", {
 			collection: "post",
 			title: "첫 번째 글",
 			slug: "first-post",
-			values: { summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.", subtitle: "도구보다 글" },
+			values: {
+				summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
+				subtitle: "도구보다 글",
+				category: devCat.group,
+			},
 			doc: source(),
 		})
 	).output.id;

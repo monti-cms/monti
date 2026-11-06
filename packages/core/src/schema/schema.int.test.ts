@@ -52,7 +52,8 @@ const edited = withPostFields({
 const renames = [{ collection: "post", from: "summary", to: "excerpt" }];
 
 let root: string;
-const dev = (schema: Schema = base) => createMonti({ db, schema, files: schemaFilesAt(root) });
+const dev = (schema: Schema = base, now?: () => Date) =>
+	createMonti({ db, schema, files: schemaFilesAt(root), ...(now ? { now } : {}) });
 const live = (schema: Schema = base) => createMonti({ db, schema, files: null });
 const api = (monti: ReturnType<typeof createMonti>) => signedInApi(monti);
 const post = (name: string, input: unknown) =>
@@ -99,6 +100,24 @@ const reviewAnswers = {
 } as const;
 
 describe("one change file, two ways in, one way to apply", () => {
+	it("01-1 two schema saves at the same time get distinct immutable change files", async () => {
+		const now = () => new Date("2026-11-06T12:34:56.789Z");
+		const first = withPostFields({ ...base.collections.post.fields, cover: { kind: "media", accept: "image" } });
+		await dev(base, now).run("schema.apply", { draft: first, renames: [], answers: {} }, { actor: "admin" });
+		const second = {
+			...first,
+			collections: {
+				...first.collections,
+				post: { ...first.collections.post, fields: { ...first.collections.post.fields, kicker: { kind: "text" } } },
+			},
+		} satisfies Schema;
+		await dev(first, now).run("schema.apply", { draft: second, renames: [], answers: {} }, { actor: "admin" });
+
+		const changes = await readChangeFiles(path.join(root, "monti", "changes"));
+		expect(changes).toHaveLength(2);
+		expect(new Set(changes.map((change) => change.id)).size).toBe(2);
+	});
+
 	it("01-1 an admin save and a hand edit leave the same change steps, and the live database follows them to the same values", async () => {
 		const applied = (await dev().run(
 			"schema.apply",

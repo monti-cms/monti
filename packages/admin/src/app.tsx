@@ -2,7 +2,13 @@ import { Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { LeaveGuardProvider, useLeave } from "./draft/leave-guard";
 import { adminMessages } from "./messages";
-import { AdminProvider, type Language, type ScreenChannel, useAdmin } from "./operations/admin-context";
+import {
+	type AdminBlockDefinition,
+	AdminProvider,
+	type Language,
+	type ScreenChannel,
+	useAdmin,
+} from "./operations/admin-context";
 import type { Transport } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
@@ -180,6 +186,7 @@ export function MontiAdmin({
 	apiBase,
 	denied,
 	screen,
+	blocks,
 }: {
 	transport: Transport;
 	siteName: string;
@@ -189,9 +196,18 @@ export function MontiAdmin({
 	denied?: string;
 	/** The assistant's way to move the screen (`list.show`, `list.select`); the admin makes its own when left out. */
 	screen?: ScreenChannel;
+	/** The same site block definitions passed to core; their Editor (or Site fallback) renders custom blocks here. */
+	blocks?: AdminBlockDefinition[];
 }) {
 	return (
-		<AdminProvider transport={transport} siteName={siteName} language={language} apiBase={apiBase} screen={screen}>
+		<AdminProvider
+			transport={transport}
+			siteName={siteName}
+			language={language}
+			apiBase={apiBase}
+			screen={screen}
+			blocks={blocks}
+		>
 			<AdminUiLabels>
 				<TooltipProvider>
 					<LeaveGuardProvider>

@@ -133,6 +133,24 @@ describe("proposals on a screen", () => {
 		expect(item).toEqual({ state: "discarded", activity_id: null });
 	});
 
+	it("05-3 a screen cannot attach another record's proposal to its save", async () => {
+		const id = await newPost("Hello");
+		const other = await newPost("Other");
+		const itemId = await propose(other, "Other title");
+
+		await expect(
+			site().run(
+				"entries.save",
+				{ id, version: await version(id), title: "Mine" },
+				{ actor: "admin", accepted: [itemId] },
+			),
+		).rejects.toThrow("Check failed");
+		expect((await db.selectFrom("entries").select("title").where("id", "=", id).executeTakeFirstOrThrow()).title).toBe(
+			"Hello",
+		);
+		expect(await forEntry(other)).toEqual([expect.objectContaining({ id: itemId })]);
+	});
+
 	it("05-5 only a person discards a proposal: it is no tool of the assistant", () => {
 		expect(agentTools(site()).map((tool) => tool.name)).not.toContain("proposals.discard");
 	});

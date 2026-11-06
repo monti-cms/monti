@@ -89,7 +89,7 @@ export function flatten(read: SchemaRead, catalog: Catalog | null): Record<Path,
 	for (const [c, collection] of Object.entries(read.schema.collections)) {
 		const values = read.adminValues[c];
 		base[at.collection(c)] = { kind: collection.kind };
-		base[at.path(c)] = collection.path;
+		base[at.path(c)] = collection.path ?? null;
 		base[at.collectionValue(c, "label")] = values?.label;
 		base[at.collectionValue(c, "folders")] = values?.folders ?? false;
 		base[at.collectionValue(c, "layout")] = values?.layout;
@@ -160,7 +160,11 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 			if (read.schema.collections[c]?.fields[key] && field.name !== key)
 				renames.push({ collection: c, from: key, to: field.name });
 		}
-		schema.collections[c] = { kind: collection.kind, path: String(value(at.path(c)) ?? "/:slug"), fields };
+		const path = value(at.path(c));
+		schema.collections[c] =
+			collection.kind === "document"
+				? { kind: "document", path: typeof path === "string" ? path : "", fields }
+				: { kind: "item", ...(typeof path === "string" ? { path } : {}), fields };
 		adminValues[c] = collectionValues(read, c, collection.kind, keys, names, value, catalog);
 	}
 	return { schema, renames, adminValues };
@@ -292,7 +296,7 @@ export function proposalPaths(
 		const before = read.schema.collections[c];
 		if (!before) {
 			out[at.collection(c)] = { kind: collection.kind };
-			out[at.path(c)] = collection.path;
+			out[at.path(c)] = collection.path ?? null;
 			const label = input.adminValues?.[c]?.label;
 			if (label) out[at.collectionValue(c, "label")] = label;
 			for (const [name, def] of Object.entries(collection.fields)) {
@@ -301,7 +305,7 @@ export function proposalPaths(
 			}
 			continue;
 		}
-		if (before.path !== collection.path) out[at.path(c)] = collection.path;
+		if (before.path !== collection.path) out[at.path(c)] = collection.path ?? null;
 		const renamedTo = new Map(renames.filter((r) => r.collection === c).map((r) => [r.from, r.to]));
 		for (const [name, def] of Object.entries(before.fields)) {
 			const to = renamedTo.get(name);

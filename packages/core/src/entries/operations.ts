@@ -5,6 +5,7 @@ import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
+import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
 import { addedSourceBlocks, addSkips, isTranslation, rememberBlocks } from "../translations/source";
@@ -198,7 +199,13 @@ export const entryOperations = [
 		async run(input, ctx) {
 			const id = randomUUID();
 			const locale = ctx.site.schema().locales.source;
-			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, input);
+			const isItem = ctx.site.schema().collections[input.collection]?.kind === "item";
+			let values = input.values ? { ...input.values } : {};
+			values = await resolveInlineCreation(ctx, input.collection, values);
+			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
+			if (isItem && working.slug === "" && working.title !== "") {
+				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
+			}
 			if (input.template !== undefined) {
 				const template = await ctx.db
 					.selectFrom("templates")
@@ -211,21 +218,55 @@ export const entryOperations = [
 				working.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
 				await checkBodyOf(ctx, working.doc, working.doc);
 			}
+			const translationGroup = randomUUID();
+			const now = ctx.now();
+			const isItemLive = isItem && working.title !== "" && working.slug !== "";
+			const status = isItemLive ? "published" : "draft";
+			const hasUnpublishedChanges = false;
 			await ctx.db
 				.insertInto("entries")
 				.values({
 					id,
 					collection: input.collection,
-					translation_group: randomUUID(),
+					translation_group: translationGroup,
 					locale,
 					title: working.title,
 					slug: working.slug,
+					status,
+					has_unpublished_changes: hasUnpublishedChanges,
 					values: JSON.stringify(working.values),
 					doc: working.doc === null ? null : JSON.stringify(working.doc),
 				})
 				.execute();
+			if (isItemLive) {
+				await ctx.db
+					.insertInto("entry_published")
+					.values({
+						entry_id: id,
+						collection: input.collection,
+						locale,
+						title: working.title,
+						slug: working.slug,
+						values: JSON.stringify(working.values),
+						doc: null,
+						published_at: now,
+						from_version: 1,
+						block_hashes: JSON.stringify({}),
+					})
+					.execute();
+			}
+			await syncRelationsForEntry(ctx, { id, collection: input.collection, translationGroup, locale }, working.values);
 			ctx.created(ref(id));
 			ctx.emit({ type: "entry.saved", ids: [id], collection: input.collection, locale, version: 1 });
+			if (isItemLive) {
+				ctx.emit({
+					type: "entry.published",
+					ids: [id],
+					collection: input.collection,
+					locale,
+					paths: [working.slug],
+				});
+			}
 			return { id };
 		},
 		summary: (input) => ({ key: "entries.create", values: { title: input.title ?? "" } }),
@@ -238,6 +279,23 @@ export const entryOperations = [
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
+			const schema = ctx.site.schema();
+			const fields = schema.collections[entry.collection]?.fields ?? {};
+			for (const [fieldName, fieldDef] of Object.entries(fields)) {
+				if (fieldDef.kind === "relation" && fieldDef.via !== undefined) {
+					if (entry.values[fieldName] === undefined || entry.values[fieldName] === null) {
+						const viaLinks = await ctx.db
+							.selectFrom("entry_links")
+							.select("from_group")
+							.where("field", "=", fieldDef.via)
+							.where("to_group", "=", entry.translationGroup)
+							.orderBy("position", "asc")
+							.execute();
+						const groups = viaLinks.map((l) => l.from_group);
+						entry.values[fieldName] = fieldDef.many ? groups : (groups[0] ?? null);
+					}
+				}
+			}
 			const published = await ctx.db
 				.selectFrom("entry_published")
 				.select(["slug", "published_at", "from_version"])
@@ -264,7 +322,46 @@ export const entryOperations = [
 		description:
 			"Save changed places of an entry's working copy: title, slug, field values (null empties a field) and body. Give the version you read: if it was saved elsewhere since, the save is refused as a conflict. Archived entries cannot be changed; unarchive first. Saving does not change the site; publishing does.",
 		input: z.object({ id: z.string(), version: z.number().int(), ...Draft }),
-		touches: (input) => [ref(input.id)],
+		async touches(input, ctx) {
+			const [entry] = await loadEntries(ctx.db, [input.id]);
+			if (!entry) return [ref(input.id)];
+			const touchedIds = new Set<string>([entry.id]);
+			// Siblings for 'same' fields
+			const siblings = await ctx.db
+				.selectFrom("entries")
+				.select("id")
+				.where("translation_group", "=", entry.translationGroup)
+				.where("id", "<>", entry.id)
+				.where("trashed_at", "is", null)
+				.execute();
+			for (const s of siblings) touchedIds.add(s.id);
+
+			// Via relation targets
+			const colFields = ctx.site.schema().collections[entry.collection]?.fields ?? {};
+			for (const [fName, fDef] of Object.entries(colFields)) {
+				if (fDef.kind === "relation" && fDef.via !== undefined) {
+					const viaGroups = new Set<string>();
+					const curr = entry.values[fName];
+					if (typeof curr === "string" && curr) viaGroups.add(curr);
+					else if (Array.isArray(curr)) for (const g of curr) if (typeof g === "string") viaGroups.add(g);
+					const next = input.values?.[fName];
+					if (typeof next === "string" && next) viaGroups.add(next);
+					else if (Array.isArray(next)) for (const g of next) if (typeof g === "string") viaGroups.add(g);
+
+					if (viaGroups.size > 0) {
+						const targetRows = await ctx.db
+							.selectFrom("entries")
+							.select("id")
+							.where("collection", "=", fDef.to)
+							.where("translation_group", "in", [...viaGroups])
+							.where("trashed_at", "is", null)
+							.execute();
+						for (const tr of targetRows) touchedIds.add(tr.id);
+					}
+				}
+			}
+			return [...touchedIds].map(ref);
+		},
 		async check(input, ctx) {
 			const entry = await editableEntry(ctx, input.id, input.version);
 			const schema = ctx.site.schema();
@@ -280,13 +377,74 @@ export const entryOperations = [
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
-			const working = applyDraft(entry, input);
-			if (input.doc === undefined || working.doc === null) return saveWorking(ctx, entry, working);
-			// The links are the core's: the save keeps them, whatever the editor sent, but for a new block paired with a source block added since (doc 04).
-			const added = await addedSourceBlocks(ctx, entry);
-			const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {}, new Set(), added);
-			const saved = await saveWorking(ctx, entry, { ...working, doc });
-			await addSkips(ctx.db, entry, skipped);
+			const isItem = ctx.site.schema().collections[entry.collection]?.kind === "item";
+			let values = input.values ? { ...input.values } : undefined;
+			if (values) {
+				values = await resolveInlineCreation(ctx, entry.collection, values);
+			}
+			const working = applyDraft(entry, { ...input, values });
+			if (isItem && working.slug === "" && working.title !== "") {
+				working.slug = await generateUniqueSlug(
+					ctx.db,
+					entry.collection,
+					entry.locale,
+					working.title,
+					entry.id,
+					entry.id,
+				);
+			}
+			let saved: { id: string; version: number };
+			if (input.doc === undefined || working.doc === null) {
+				saved = await saveWorking(ctx, entry, working);
+			} else {
+				// The links are the core's: the save keeps them, whatever the editor sent, but for a new block paired with a source block added since (doc 04).
+				const added = await addedSourceBlocks(ctx, entry);
+				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {}, new Set(), added);
+				saved = await saveWorking(ctx, entry, { ...working, doc });
+				await addSkips(ctx.db, entry, skipped);
+			}
+			if (isItem && working.title !== "" && working.slug !== "") {
+				const now = ctx.now();
+				await ctx.db
+					.updateTable("entries")
+					.set({ status: "published", has_unpublished_changes: false, slug: working.slug })
+					.where("id", "=", entry.id)
+					.execute();
+				const publishedRow = {
+					collection: entry.collection,
+					locale: entry.locale,
+					title: working.title,
+					slug: working.slug,
+					values: JSON.stringify(working.values),
+					doc: null,
+					published_at: now,
+					from_version: saved.version,
+					block_hashes: JSON.stringify({}),
+				};
+				await ctx.db
+					.insertInto("entry_published")
+					.values({ entry_id: entry.id, ...publishedRow })
+					.onConflict((conflict) => conflict.column("entry_id").doUpdateSet(publishedRow))
+					.execute();
+				ctx.emit({
+					type: "entry.published",
+					ids: [entry.id],
+					collection: entry.collection,
+					locale: entry.locale,
+					paths: [working.slug],
+				});
+			}
+			await syncRelationsForEntry(
+				ctx,
+				{
+					id: entry.id,
+					collection: entry.collection,
+					translationGroup: entry.translationGroup,
+					locale: entry.locale,
+				},
+				working.values,
+				entry.values,
+			);
 			return saved;
 		},
 		summary: (input) => ({ key: "entries.save", values: { id: input.id } }),

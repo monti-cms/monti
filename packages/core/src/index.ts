@@ -42,7 +42,7 @@ export {
 } from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";
-export { createReader, type ReaderOptions, type SiteEntry } from "./entries/reader";
+export { createReader, type ReaderOptions, type ResolvedRelation, type SiteEntry } from "./entries/reader";
 export type { Entry } from "./entries/record";
 export type { PublishCheck, PublishTask } from "./entries/tasks";
 export { type AdminApiOptions, createAdminApi } from "./entry/api";
@@ -75,6 +75,15 @@ export {
 	recordKey,
 } from "./operation";
 export { defineRecordKind, type RecordKind, type RecordState } from "./records";
+export {
+	type MergeResult,
+	type RelationOption,
+	type RelationOptionsResult,
+	relationOperations,
+	type UsageItem,
+	type UsageResult,
+	unlinkTargetGroup,
+} from "./relations/operations";
 export type { AdminValues } from "./schema/admin-values";
 export { migrateContent } from "./schema/apply";
 export {

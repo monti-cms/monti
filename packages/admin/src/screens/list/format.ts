@@ -28,10 +28,27 @@ export function fieldCell(row: ListRow, column: ListColumn): string {
 }
 
 /**
- * Whether a name ends in a closed syllable (a Hangul syllable with a final consonant), which picks the subject particle the dictionary adds
- * ("memo" takes "ga", "post" takes "i" in Korean). A name that does not end in Hangul counts as closed.
+ * Whether a name ends in a closed syllable (a Hangul syllable with a final consonant, or a Latin/digit character read with a final consonant in
+ * Korean: l, m, n, r, 0, 1, 3, 6, 7, 8), which picks the particle the dictionary adds ("memo" takes "ga", "post" takes "i", "React" takes "reul").
  */
 export function endsClosed(name: string): boolean {
-	const last = name.charCodeAt(name.length - 1);
-	return last < 0xac00 || last > 0xd7a3 || (last - 0xac00) % 28 !== 0;
+	const trimmed = name.trim();
+	if (!trimmed) return false;
+	const last = trimmed.charCodeAt(trimmed.length - 1);
+	if (last >= 0xac00 && last <= 0xd7a3) return (last - 0xac00) % 28 !== 0;
+	return /[lmnrLMNR013678]$/.test(trimmed);
+}
+
+/**
+ * Whether a name takes the closed instrumental particle ("euro" vs "ro" in Korean): a closed syllable that does not end in rieul (jongseong 8, or 'l').
+ */
+export function endsDirectionClosed(name: string): boolean {
+	const trimmed = name.trim();
+	if (!trimmed) return false;
+	const last = trimmed.charCodeAt(trimmed.length - 1);
+	if (last >= 0xac00 && last <= 0xd7a3) {
+		const jong = (last - 0xac00) % 28;
+		return jong !== 0 && jong !== 8;
+	}
+	return /[mnrMNR036]$/.test(trimmed);
 }

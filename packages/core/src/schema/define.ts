@@ -27,19 +27,33 @@ export type RelationField = FieldBase & {
 	many?: boolean;
 	/** Typing a name that is not in the list creates it. */
 	createMissing?: boolean;
+	/** Preserve manual order of items in a many-value field (doc 08, T74). */
+	ordered?: boolean;
+	/** Edit a many: true relation field named `via` on target collection `to` from the pointing side (doc 08, T74). */
+	via?: string;
 };
 
 export type FieldDefinition = TextField | SlugField | SelectField | MediaField | RelationField;
 export type FieldKind = FieldDefinition["kind"];
 
-export type CollectionDefinition = {
-	/** `document`: a body, drafts and publishing (posts, memos). `item`: short, live on save (categories, tags). */
-	kind: "document" | "item";
-	/** The public address: a prefix and `/:slug`. */
-	path: string;
+type CollectionFields = {
 	/** In this order; `title` and `slug` come first in every collection. */
 	fields: Record<string, FieldDefinition>;
 };
+
+export type CollectionDefinition =
+	| (CollectionFields & {
+			/** A body, drafts, and publishing (posts, memos). */
+			kind: "document";
+			/** A document always has a public address. */
+			path: string;
+	  })
+	| (CollectionFields & {
+			/** Short and live on save (categories, tags). */
+			kind: "item";
+			/** An item may have a public page; its slug remains an internal identifier without one. */
+			path?: string;
+	  });
 
 /** One language of the site: its code (`ko`, `zh-Hant`) and its name in that language ("한국어", cms-allow-korean: a language's own name). */
 export type LocaleDefinition = { code: string; name: string };
@@ -101,7 +115,8 @@ export type SchemaProblem = {
 		| "duplicateOption"
 		| "unknownTarget"
 		| "badMax"
-		| "pathTaken";
+		| "pathTaken"
+		| "invalidVia";
 };
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
@@ -120,9 +135,13 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 	for (const [name, collection] of Object.entries(schema.collections)) {
 		if (!IDENTIFIER.test(name)) problems.push({ collection: name, code: "badIdentifier" });
 		if (RESERVED_COLLECTIONS.has(name)) problems.push({ collection: name, code: "reserved" });
-		if (!PATH.test(collection.path)) problems.push({ collection: name, code: "badPath" });
-		if (paths.has(collection.path)) problems.push({ collection: name, code: "pathTaken" });
-		paths.set(collection.path, name);
+		if (collection.path === undefined) {
+			if (collection.kind === "document") problems.push({ collection: name, code: "badPath" });
+		} else {
+			if (!PATH.test(collection.path)) problems.push({ collection: name, code: "badPath" });
+			if (paths.has(collection.path)) problems.push({ collection: name, code: "pathTaken" });
+			paths.set(collection.path, name);
+		}
 		if (collection.fields.title?.kind !== "text")
 			problems.push({ collection: name, field: "title", code: "missingTitle" });
 		if (collection.fields.slug?.kind !== "slug")
@@ -138,7 +157,16 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 				if (field.options.length === 0) problems.push({ ...at, code: "noOptions" });
 				if (new Set(field.options).size !== field.options.length) problems.push({ ...at, code: "duplicateOption" });
 			}
-			if (field.kind === "relation" && !schema.collections[field.to]) problems.push({ ...at, code: "unknownTarget" });
+			if (field.kind === "relation") {
+				if (!schema.collections[field.to]) {
+					problems.push({ ...at, code: "unknownTarget" });
+				} else if (field.via !== undefined) {
+					const targetField = schema.collections[field.to]?.fields[field.via];
+					if (!targetField || targetField.kind !== "relation" || targetField.to !== name || targetField.many !== true) {
+						problems.push({ ...at, code: "invalidVia" });
+					}
+				}
+			}
 			if (field.kind === "text" && field.max !== undefined && !(Number.isInteger(field.max) && field.max > 0))
 				problems.push({ ...at, code: "badMax" });
 		}

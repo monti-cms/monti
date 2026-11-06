@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -38,22 +38,24 @@ export function useLinkTargets({ open, text, href }: { open: boolean; text: stri
 	const [linked, setLinked] = useState<LinkTarget | null>(null);
 	const run = query.run;
 
-	const collections = Object.entries(schema.data?.schema.collections ?? {})
-		.filter(([, definition]) => definition.kind === "document")
-		.map(([name]) => ({ name, label: schema.data?.adminValues[name]?.label ?? name }));
-	const key = JSON.stringify(collections);
+	const collections = useMemo(
+		() =>
+			Object.entries(schema.data?.schema.collections ?? {})
+				.filter(([, definition]) => definition.kind === "document")
+				.map(([name]) => ({ name, label: schema.data?.adminValues[name]?.label ?? name })),
+		[schema.data],
+	);
 	const group = href.startsWith(ENTRY_LINK) ? href.slice(ENTRY_LINK.length) : null;
 	const search = addressOf(text) === null ? text.trim() : null;
 
 	useEffect(() => {
 		if (!open) return;
-		const list = JSON.parse(key) as { name: string; label: string }[];
-		if (list.length === 0) return;
+		if (collections.length === 0) return;
 		let current = true;
 		const read = async (input: (collection: string) => Record<string, unknown>) =>
 			(
 				await Promise.all(
-					list.map(async ({ name, label }) => {
+					collections.map(async ({ name, label }) => {
 						const answer = await run({ collection: name, ...input(name) });
 						return answer.ok
 							? answer.body.rows.map((row) => ({
@@ -94,7 +96,7 @@ export function useLinkTargets({ open, text, href }: { open: boolean; text: stri
 			current = false;
 			window.clearTimeout(timer);
 		};
-	}, [open, key, group, search, run, t]);
+	}, [open, collections, group, search, run, t]);
 
 	return { found, linked: group ? linked : null, recent: search === "" };
 }

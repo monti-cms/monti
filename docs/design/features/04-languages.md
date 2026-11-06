@@ -45,6 +45,8 @@ flowchart LR
 | 언어마다 (`perLocale`) | 번역의 값이다. 새 번역은 비어 있다 |
 | 원문 따름 (`fromSource`) | 번역의 값이 있으면 그것, 비어 있으면 원문의 값. 주소가 이렇다. 새 번역은 원문 주소를 복사해 시작한다 |
 
+In a translation property panel, a `same` field places the static “Edit in source” note at the far end of the field label line. It uses caption styling and is not a button or an action beside the value.
+
 ## 번역 블록
 
 ```ts

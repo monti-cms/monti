@@ -29,11 +29,52 @@ export type BrowserCopy = { version: number | string; savedAt: Date | null; mine
 
 const storageKey = (target: Target) => `monti.draft.${target.kind}:${target.id}`;
 
+const isMine = (value: unknown): value is [Path, unknown] =>
+	Array.isArray(value) && value.length === 2 && typeof value[0] === "string";
+
+export const acceptedAfterRevert = (
+	ids: string[],
+	items: ProposalItem[],
+	proposalValues: (item: ProposalItem) => Record<Path, unknown>,
+	path: Path,
+	mine: ReadonlyMap<Path, unknown>,
+) =>
+	ids.filter((id) => {
+		const item = items.find((each) => each.id === id);
+		if (!item) return true;
+		const paths = Object.keys(proposalValues(item));
+		return !paths.includes(path) || paths.some((itemPath) => mine.has(itemPath));
+	});
+
+export const parseStored = (value: unknown): Stored | null => {
+	if (value === null || typeof value !== "object") return null;
+	const candidate = value as Record<string, unknown>;
+	const { version, savedAt, mine, accepted, signedOut } = candidate;
+	if (typeof version !== "number" && typeof version !== "string") return null;
+	if (savedAt !== undefined && typeof savedAt !== "string") return null;
+	if (!Array.isArray(mine) || !mine.every(isMine)) return null;
+	if (!Array.isArray(accepted) || !accepted.every((id): id is string => typeof id === "string")) return null;
+	if (signedOut !== undefined && typeof signedOut !== "boolean") return null;
+	return {
+		version,
+		mine,
+		accepted,
+		...(savedAt === undefined ? {} : { savedAt }),
+		...(signedOut === undefined ? {} : { signedOut }),
+	};
+};
+
 const readStored = (target: Target): Stored | null => {
 	try {
 		const text = localStorage.getItem(storageKey(target));
-		return text ? (JSON.parse(text) as Stored) : null;
+		if (!text) return null;
+		const stored = parseStored(JSON.parse(text));
+		if (!stored) localStorage.removeItem(storageKey(target));
+		return stored;
 	} catch {
+		try {
+			localStorage.removeItem(storageKey(target));
+		} catch {}
 		return null;
 	}
 };
@@ -184,18 +225,20 @@ export function useDraft({
 		[put],
 	);
 
-	const revert = useCallback((path: Path) => {
-		setMine((current) => {
-			const copy = new Map(current);
-			copy.delete(path);
-			return copy;
-		});
-		setQuick((current) => {
-			const copy = new Set(current);
-			copy.delete(path);
-			return copy;
-		});
-	}, []);
+	const revert = useCallback(
+		(path: Path) => {
+			const nextMine = new Map(mine);
+			nextMine.delete(path);
+			setMine(nextMine);
+			setAccepted((ids) => acceptedAfterRevert(ids, proposals.items, proposalValues, path, nextMine));
+			setQuick((current) => {
+				const copy = new Set(current);
+				copy.delete(path);
+				return copy;
+			});
+		},
+		[mine, proposals.items, proposalValues],
+	);
 
 	const revertAll = useCallback(() => {
 		setMine(new Map());

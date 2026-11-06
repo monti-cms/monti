@@ -238,6 +238,53 @@ describe("versions", () => {
 		expect(response.status).toBe(409);
 		expect((await notes())[0].body).toBe("other tab");
 	});
+
+	it("00-4 concurrent writes that read the same version cannot both commit", async () => {
+		let entered!: () => void;
+		let release!: () => void;
+		const running = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const wait = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const slowEdit = defineOperation({
+			name: "notes.slowEdit",
+			kind: "write",
+			description: "Edit a note after the test releases it.",
+			input: z.object({ id: z.string(), body: z.string() }),
+			touches: (input) => [{ kind: "note", id: input.id }],
+			async run(input, ctx) {
+				entered();
+				await wait;
+				await (ctx.db as unknown as Kysely<NotesTables>)
+					.updateTable("note")
+					.set((eb) => ({ body: input.body, version: eb("version", "+", 1) }))
+					.where("id", "=", input.id)
+					.execute();
+			},
+			summary: () => ({ key: "notes.slowEdit" }),
+		});
+		const monti = site({ operations: [...noteOperations, slowEdit] });
+		const created = (await monti.run("notes.create", { id: "a", body: "one" }, { actor: "admin" })) as {
+			versions: Record<string, number>;
+		};
+		const first = monti.run(
+			"notes.slowEdit",
+			{ id: "a", body: "first" },
+			{ actor: "admin", versions: created.versions },
+		);
+		await running;
+		const second = monti.run(
+			"notes.slowEdit",
+			{ id: "a", body: "second" },
+			{ actor: "admin", versions: created.versions },
+		);
+		release();
+		await first;
+		await expect(second).rejects.toBeInstanceOf(ConflictError);
+		expect((await notes())[0].body).toBe("first");
+	});
 });
 
 describe("plugins", () => {

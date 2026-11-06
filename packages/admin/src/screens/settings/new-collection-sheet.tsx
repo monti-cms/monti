@@ -17,6 +17,7 @@ import {
 	SheetFooter,
 	SheetHeader,
 	SheetTitle,
+	Switch,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
@@ -62,6 +63,7 @@ function Body({
 	const [label, setLabel] = useState("");
 	const [id, setId] = useState("");
 	const [kind, setKind] = useState<"document" | "item">("document");
+	const [publicPage, setPublicPage] = useState(false);
 	const [path, setPath] = useState<string | null>(null);
 	const taken = model.collections.includes(id);
 	// Creating is never greyed out (README principle 7): pressed with a field empty, that field says so and takes the focus.
@@ -89,7 +91,7 @@ function Body({
 		}
 		const { draft } = model;
 		draft.set(at.collection(id), { kind });
-		draft.set(at.path(id), address);
+		if (kind === "document" || publicPage) draft.set(at.path(id), address);
 		draft.set(at.collectionValue(id, "label"), label.trim());
 		draft.set(at.field(id, "title"), { name: "title", def: { kind: "text", required: true } } satisfies DraftField);
 		draft.set(at.field(id, "slug"), {
@@ -153,15 +155,30 @@ function Body({
 					</RadioGroup>
 				</FormFieldSet>
 				<FormField>
-					<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
-					<Affix
-						id="collection-address"
-						prefix="/"
-						suffix="/:slug"
-						width="fit"
-						value={addressPart(address)}
-						onChange={(event) => setPath(addressOf(event.target.value))}
-					/>
+					<FormFieldLabel
+						htmlFor={kind === "document" || publicPage ? "collection-address" : undefined}
+						action={
+							kind === "item" ? (
+								<Switch
+									checked={publicPage}
+									aria-label={t("settings.basics.publicPage")}
+									onCheckedChange={setPublicPage}
+								/>
+							) : undefined
+						}
+					>
+						{t("settings.basics.path")}
+					</FormFieldLabel>
+					{(kind === "document" || publicPage) && (
+						<Affix
+							id="collection-address"
+							prefix="/"
+							suffix="/:slug"
+							width="fit"
+							value={addressPart(address)}
+							onChange={(event) => setPath(addressOf(event.target.value))}
+						/>
+					)}
 				</FormField>
 			</SheetBody>
 			<SheetFooter>

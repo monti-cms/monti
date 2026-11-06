@@ -11,6 +11,9 @@ import { Superscript } from "@tiptap/extension-superscript";
 import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
+import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
+import { createElement } from "react";
+import type { AdminBlockDefinition } from "../operations/admin-context";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
 import { tableExtensions } from "./table";
@@ -26,8 +29,13 @@ export const KEPT_MARK = "keptMark";
 
 /** The core marks whose editor name differs from their stored name. */
 export const MARK_NAMES: Record<string, string> = { sup: "superscript", sub: "subscript" };
-export const markName = (type: string) => MARK_NAMES[type] ?? type;
-export const markType = (name: string) => Object.entries(MARK_NAMES).find(([, editor]) => editor === name)?.[0] ?? name;
+const CORE_MARKS = new Set(["bold", "italic", "underline", "strike", "code", "link", "sup", "sub"]);
+export const markName = (type: string) =>
+	MARK_NAMES[type] ?? (CORE_MARKS.has(type) ? type : `monti_${type.replace(/[^A-Za-z0-9_]/g, "_")}`);
+export const markType = (name: string, kit?: Catalog) =>
+	kit?.marks.find((mark) => markName(mark.type) === name)?.type ??
+	Object.entries(MARK_NAMES).find(([, editor]) => editor === name)?.[0] ??
+	name;
 
 /** Every block node carries its block's id and its attrs. Neither is drawn into the page, so a copied block never brings its id along. */
 const blockAttributes = () => ({
@@ -136,7 +144,11 @@ function parse(block: CatalogBlock) {
  * The editor's schema, made from the site's blocks and marks (doc 03, principle 3): one node per block type, the core marks, and a keeper each
  * for blocks and marks the site no longer defines. A block that only another block holds (a list item) is not offered at the top.
  */
-export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, data: Data) => string): AnyExtension[] {
+export function bodyExtensions(
+	kit: Catalog,
+	boxLabel: (block: CatalogBlock, data: Data) => string,
+	definitions: ReadonlyMap<string, AdminBlockDefinition> = new Map(),
+): AnyExtension[] {
 	const heldOnly = new Set(
 		kit.blocks
 			.flatMap((block) => block.children ?? [])
@@ -145,8 +157,31 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 	// The table is Tiptap's own (its rows, cells, and column widths), tied to the stored block by `table.ts`.
 	const nodes = kit.blocks
 		.filter((block) => block.type !== "table")
-		.map((block) =>
-			Node.create({
+		.map((block) => {
+			const definition = definitions.get(block.type);
+			const Component = definition?.Editor ?? definition?.Site;
+			const addNodeView = Component
+				? () =>
+						ReactNodeViewRenderer(({ node }) =>
+							createElement(
+								NodeViewWrapper,
+								{ "data-block": block.type },
+								createElement(
+									Component,
+									{
+										block: {
+											id: String(node.attrs.blockId ?? ""),
+											type: block.type,
+											attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
+										},
+										attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
+									},
+									block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+								),
+							),
+						)
+				: undefined;
+			return Node.create({
 				name: nodeName(block.type),
 				group: heldOnly.has(block.type) ? "held" : "block",
 				content:
@@ -168,8 +203,9 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 				addAttributes: blockAttributes,
 				parseHTML: () => parse(block),
 				renderHTML: ({ node }) => draw(block, node.attrs.data as Data, boxLabel),
-			}),
-		);
+				...(addNodeView ? { addNodeView } : {}),
+			});
+		});
 	const unknown = Node.create({
 		name: UNKNOWN,
 		group: "block",
@@ -199,6 +235,34 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 		addAttributes: () => ({ mark: { default: null, rendered: false } }),
 		renderHTML: () => ["span", { "data-mark": "" }, 0],
 	});
+	const customMarks = kit.marks
+		.filter((mark) => !CORE_MARKS.has(mark.type))
+		.map((mark) => {
+			const attrs = Object.keys(
+				mark.attrs && typeof mark.attrs === "object" && "properties" in mark.attrs ? (mark.attrs.properties ?? {}) : {},
+			);
+			return Mark.create({
+				name: markName(mark.type),
+				addAttributes: () => Object.fromEntries(attrs.map((attr) => [attr, { default: null, rendered: false }])),
+				parseHTML: () => [
+					{
+						tag: `span[data-monti-mark="${mark.type}"]`,
+						getAttrs: (element: HTMLElement) => {
+							try {
+								return JSON.parse(element.getAttribute("data-monti-attrs") ?? "{}");
+							} catch {
+								return {};
+							}
+						},
+					},
+				],
+				renderHTML: ({ HTMLAttributes }) => [
+					"span",
+					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(HTMLAttributes) },
+					0,
+				],
+			});
+		});
 	return [
 		Document.extend({ content: "block+" }),
 		TranslationBlocks,
@@ -223,6 +287,7 @@ export function bodyExtensions(kit: Catalog, boxLabel: (block: CatalogBlock, dat
 		}),
 		Superscript,
 		Subscript,
+		...customMarks,
 		kept,
 	];
 }

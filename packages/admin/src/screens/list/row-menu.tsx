@@ -36,6 +36,7 @@ export function RowMenuItems({
 	context,
 	document,
 	toFolder,
+	relations,
 }: {
 	row: ListRow;
 	actions: RowActions;
@@ -44,6 +45,8 @@ export function RowMenuItems({
 	document: boolean;
 	/** The "to folder ▸" submenu, when the collection uses folders (doc 07). */
 	toFolder?: ReactNode;
+	/** Relation submenus for category, tags, etc. (doc 08, T55). */
+	relations?: ReactNode;
 }) {
 	const { t } = useAdmin();
 	const Item = context ? ContextMenuItem : DropdownMenuItem;
@@ -62,8 +65,9 @@ export function RowMenuItems({
 				<Copy aria-hidden />
 				{t("list.duplicate")}
 			</Item>
-			{toFolder && <Separator />}
+			{(toFolder || relations) && <Separator />}
 			{toFolder}
+			{relations}
 			{document && <Separator />}
 			{!document ? null : row.state === "archived" ? (
 				<Item onClick={() => actions.unarchive([row])}>
@@ -86,11 +90,14 @@ export function RowsMenuItems({
 	actions,
 	document,
 	toFolder,
+	relations,
 }: {
 	rows: ListRow[];
 	actions: RowActions;
 	document: boolean;
 	toFolder?: ReactNode;
+	/** Relation submenus for category, tags, etc. (doc 08, T55). */
+	relations?: ReactNode;
 }) {
 	const { t } = useAdmin();
 	return (
@@ -107,6 +114,7 @@ export function RowsMenuItems({
 				<ContextMenuItem onClick={() => actions.archive(rows)}>{t("list.archive")}</ContextMenuItem>
 			)}
 			{toFolder}
+			{relations}
 			{document && <ContextMenuSeparator />}
 			<ContextMenuItem onClick={() => actions.exportRows(rows)}>{t("list.export")}</ContextMenuItem>
 		</>

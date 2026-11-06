@@ -7,6 +7,18 @@ import { siteDoc, translatedFields } from "../translations/source";
 import { publicPath } from "./paths";
 import { readPreviewToken } from "./preview";
 
+/** A relation item as resolved on the site (doc 08). */
+export type ResolvedRelation = {
+	id: string;
+	group: string;
+	collection: string;
+	locale: string;
+	slug: string;
+	title: string;
+	values: Record<string, unknown>;
+	fallback?: boolean;
+};
+
 /** An entry as the site reads it: only the fields the schema has now (doc 01). */
 export type SiteEntry = {
 	id: string;
@@ -17,6 +29,7 @@ export type SiteEntry = {
 	values: Record<string, unknown>;
 	doc: unknown | null;
 	publishedAt: Date | null;
+	relations?: Record<string, ResolvedRelation | ResolvedRelation[] | null>;
 };
 
 export type ReaderOptions = {
@@ -43,30 +56,103 @@ export function createReader(options: ReaderOptions) {
 	 */
 	async function forSite(entry: SiteEntry): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
-		if (entry.locale === schema.locales.source) return { ...entry, doc: doc && siteDoc(doc, null) };
-		const source = await db
-			.selectFrom("entries as e")
-			.innerJoin("entries as s", (join) =>
-				join
-					.onRef("s.translation_group", "=", "e.translation_group")
-					.on("s.locale", "=", schema.locales.source)
-					.on("s.trashed_at", "is", null),
-			)
-			.innerJoin("entry_published as sp", "sp.entry_id", "s.id")
-			.select(["sp.title", "sp.slug", "sp.values", "sp.doc"])
-			.where("e.id", "=", entry.id)
-			.executeTakeFirst();
-		const fields = translatedFields(
-			schema,
-			entry.collection,
-			{ title: entry.title, slug: entry.slug, values: entry.values },
-			source ?? null,
-		);
+		let base: SiteEntry;
+		if (entry.locale === schema.locales.source) {
+			base = { ...entry, doc: doc && siteDoc(doc, null) };
+		} else {
+			const source = await db
+				.selectFrom("entries as e")
+				.innerJoin("entries as s", (join) =>
+					join
+						.onRef("s.translation_group", "=", "e.translation_group")
+						.on("s.locale", "=", schema.locales.source)
+						.on("s.trashed_at", "is", null),
+				)
+				.innerJoin("entry_published as sp", "sp.entry_id", "s.id")
+				.select(["sp.title", "sp.slug", "sp.values", "sp.doc"])
+				.where("e.id", "=", entry.id)
+				.executeTakeFirst();
+			const fields = translatedFields(
+				schema,
+				entry.collection,
+				{ title: entry.title, slug: entry.slug, values: entry.values },
+				source ?? null,
+			);
+			base = {
+				...entry,
+				title: fields.title,
+				values: onlySchemaFields(schema, entry.collection, fields.values),
+				doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
+			};
+		}
+
+		// Resolve relations
+		const colDef = schema.collections[base.collection];
+		const relationFields = Object.entries(colDef?.fields ?? {}).filter(([, f]) => f.kind === "relation");
+		if (relationFields.length === 0) return base;
+
+		const relations: Record<string, ResolvedRelation | ResolvedRelation[] | null> = {};
+		for (const [fieldName, fieldDef] of relationFields) {
+			if (fieldDef.kind !== "relation") continue;
+			const targetCol = fieldDef.to;
+			const val = base.values[fieldName];
+			const isMany = Boolean(fieldDef.many);
+
+			let targetGroups: string[] = [];
+			if (Array.isArray(val)) {
+				targetGroups = val.filter((v): v is string => typeof v === "string" && Boolean(v));
+			} else if (typeof val === "string" && val) {
+				targetGroups = [val];
+			}
+
+			if (targetGroups.length === 0) {
+				relations[fieldName] = isMany ? [] : null;
+				continue;
+			}
+
+			const candidates = await db
+				.selectFrom("entry_published as p")
+				.innerJoin("entries as e", "e.id", "p.entry_id")
+				.select(["e.id", "e.translation_group", "p.collection", "p.locale", "p.slug", "p.title", "p.values"])
+				.where("p.collection", "=", targetCol)
+				.where("e.translation_group", "in", targetGroups)
+				.where("e.trashed_at", "is", null)
+				.where("p.locale", "in", [base.locale, schema.locales.source])
+				.execute();
+
+			const resolveOne = (group: string): ResolvedRelation | null => {
+				const groupCandidates = candidates.filter((c) => c.translation_group === group);
+				const match =
+					groupCandidates.find((c) => c.locale === base.locale) ??
+					groupCandidates.find((c) => c.locale === schema.locales.source);
+				if (!match) return null;
+				return {
+					id: match.id,
+					group: match.translation_group,
+					collection: match.collection,
+					locale: match.locale,
+					slug: match.slug,
+					title: match.title,
+					values: match.values as Record<string, unknown>,
+					fallback: match.locale !== base.locale,
+				};
+			};
+
+			if (isMany) {
+				const list: ResolvedRelation[] = [];
+				for (const g of targetGroups) {
+					const r = resolveOne(g);
+					if (r) list.push(r);
+				}
+				relations[fieldName] = list;
+			} else {
+				relations[fieldName] = resolveOne(targetGroups[0]);
+			}
+		}
+
 		return {
-			...entry,
-			title: fields.title,
-			values: onlySchemaFields(schema, entry.collection, fields.values),
-			doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
+			...base,
+			relations,
 		};
 	}
 	return {
@@ -85,6 +171,7 @@ export function createReader(options: ReaderOptions) {
 					.selectAll()
 					.where("id", "=", previewId)
 					.where("collection", "=", where.collection)
+					.where("trashed_at", "is", null)
 					.executeTakeFirst();
 				if (row)
 					return {
@@ -101,11 +188,13 @@ export function createReader(options: ReaderOptions) {
 					};
 			}
 			const copy = await db
-				.selectFrom("entry_published")
-				.selectAll()
-				.where("collection", "=", where.collection)
-				.where("locale", "=", where.locale)
-				.where("slug", "=", where.slug)
+				.selectFrom("entry_published as p")
+				.innerJoin("entries as e", "e.id", "p.entry_id")
+				.selectAll("p")
+				.where("p.collection", "=", where.collection)
+				.where("p.locale", "=", where.locale)
+				.where("p.slug", "=", where.slug)
+				.where("e.trashed_at", "is", null)
 				.executeTakeFirst();
 			if (copy)
 				return {
@@ -123,10 +212,12 @@ export function createReader(options: ReaderOptions) {
 			const moved = await db
 				.selectFrom("old_paths")
 				.innerJoin("entry_published", "entry_published.entry_id", "old_paths.entry_id")
+				.innerJoin("entries", "entries.id", "entry_published.entry_id")
 				.select("entry_published.slug")
 				.where("old_paths.collection", "=", where.collection)
 				.where("old_paths.locale", "=", where.locale)
 				.where("old_paths.slug", "=", where.slug)
+				.where("entries.trashed_at", "is", null)
 				.executeTakeFirst();
 			const path = moved && publicPath(schema, where.collection, moved.slug, where.locale);
 			return path ? { redirect: path } : null;
@@ -153,13 +244,20 @@ export function createReader(options: ReaderOptions) {
 
 		/** The published entries of a collection and language, newest first. */
 		async entries(where: { collection: string; locale: string }): Promise<SiteEntry[]> {
-			const rows = await db
-				.selectFrom("entry_published")
-				.selectAll()
-				.where("collection", "=", where.collection)
-				.where("locale", "=", where.locale)
-				.orderBy("published_at", "desc")
-				.execute();
+			const isItem = schema.collections[where.collection]?.kind === "item";
+			let query = db
+				.selectFrom("entry_published as p")
+				.innerJoin("entries as e", "e.id", "p.entry_id")
+				.selectAll("p")
+				.where("p.collection", "=", where.collection)
+				.where("p.locale", "=", where.locale)
+				.where("e.trashed_at", "is", null);
+			if (isItem) {
+				query = query.orderBy("e.position", "asc").orderBy("p.published_at", "desc");
+			} else {
+				query = query.orderBy("p.published_at", "desc");
+			}
+			const rows = await query.execute();
 			return Promise.all(
 				rows.map((copy) =>
 					forSite({

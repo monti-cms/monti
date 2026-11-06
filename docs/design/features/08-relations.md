@@ -90,6 +90,8 @@ sequenceDiagram
 ## 고르는 칸
 
 - 관계 하나(카테고리, 시리즈)는 콤보박스, 여럿(태그)은 칩이다. 치면 거르고, 목록은 그 컬렉션의 항목을 이름순으로 보인다.
+- 여럿을 고르는 관계 필드에서 손 순서(`ordered: true`)를 켰으면 속성 패널에서 고른 대상을 `OrderedRow`로 위아래로 끌어 순서를 정하고, `entry_links.position`과 배열 순서가 그대로 유지된다.
+- 대상 컬렉션의 여럿 관계 필드를 가리키는 쪽에서 고치는 관계 필드(`via`: 예컨대 글의 `series`가 시리즈의 `posts`를 가리킴)는 글을 저장하거나 `relations.edit`으로 바꿀 때 대상 쪽 배열과 `entry_links`를 함께 고친다.
 - "목록에 없으면 새로 만들기"를 켰으면 목록 끝에 "새로 만들기: 프론트엔드"가 있다. 고르면 칩이 생기고, 글을 저장할 때 항목이 함께 만들어진다. 저장하지 않고 나가면 항목도 생기지 않는다.
 - 원문 언어로 만들어지고, 다른 언어의 이름은 비어 있다("영어 이름 없음").
 
@@ -102,9 +104,9 @@ sequenceDiagram
 | `relations.edit` | write | 여러 글의 관계 필드 하나에 값을 더하고 뺀다(일괄 막대의 "바꾸기") |
 | `relations.merge` | write · preview | 항목 여럿을 하나로 합친다 |
 | `items.saveGroup` | write | 항목 묶음의 언어별 이름 · 주소 · 설명을 한 번에 저장(옆 패널). 없는 언어는 새로 만든다 |
-| `items.reorder` | write | 항목의 손 순서(카테고리 목록의 손잡이) |
 
 - 글을 저장할 때 새로 만들 항목은 `entries.save`가 함께 받는다. 저장 하나가 항목을 만들고 관계를 잇는다.
+- Taxonomy lists use the same fixed-height table and column headers as document lists. Their order comes from a named sort (name or usage); taxonomy rows do not have a separate manual drag order.
 
 ## 에이전트
 
@@ -129,7 +131,7 @@ sequenceDiagram
 
 ## 끝 조건
 
-- 흐름 7의 04b, 06~10단계가 이 기능 목록과 06번 문서만으로 된다.
-- 한국어 글과 영어 글이 같은 카테고리를 가리키고, 각 언어의 사이트가 그 언어의 이름을 보인다.
-- "글 3", 관계 거르기, 합치기, 영구 삭제의 끊기가 모두 `entry_links` 하나에서 나온다.
-- 글을 저장하지 않으면 그 글에서 새로 만들려던 항목도 생기지 않는다.
+- **08-1** 흐름 7의 04b, 06~10단계가 이 기능 목록과 06번 문서만으로 된다.
+- **08-2** 한국어 글과 영어 글이 같은 카테고리를 가리키고, 각 언어의 사이트가 그 언어의 이름을 보인다.
+- **08-3** "글 3", 관계 거르기, 합치기, 영구 삭제의 끊기가 모두 `entry_links` 하나에서 나온다.
+- **08-4** 글을 저장하지 않으면 그 글에서 새로 만들려던 항목도 생기지 않는다.

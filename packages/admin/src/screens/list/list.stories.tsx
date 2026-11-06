@@ -21,7 +21,7 @@ const schema = defineSchema({
 		},
 		tag: {
 			kind: "item",
-			path: "/tags/:slug",
+			path: "/tag/:slug",
 			fields: { title: { kind: "text", required: true }, slug: { kind: "slug", required: true } },
 		},
 	},
@@ -37,9 +37,9 @@ const POSTS = [
 	["draft", "가을 사진 정리", "autumn-photos", "일상", [], [], "2026-10-22"],
 	["published", "첫 번째 글", "first-post", "개발", ["리액트"], ["en"], "2026-10-01"],
 	["published", "CMS elements: details", "cms-elements-details", "개발", [], ["en"], "2026-09-20"],
-	["published", "CMS elements", "cms-elements", "개발", ["Blocks"], [], "2026-09-14"],
+	["published", "CMS elements", "cms-elements", "개발", ["Blocks", "React"], [], "2026-09-14"],
 	["published", "서울의 밤", "seoul-night", "일상", [], [], "2026-09-02"],
-	["published", "타입스크립트 5.9 정리", "ts-59", "개발", [], [], "2026-08-28"],
+	["published", "타입스크립트 5.9 정리", "ts-59", "개발", ["리액트"], [], "2026-08-28"],
 	["published", "여름 휴가 메모", "summer-notes", "일상", [], [], "2026-08-11"],
 	[
 		"published",
@@ -55,8 +55,8 @@ const POSTS = [
 export const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
 	monti.run(name, input, admin) as Promise<Output>;
 
-async function create(monti: Monti, collection: string, title: string, slug: string) {
-	return (await run(monti, "entries.create", { collection, locale: "ko", title, slug })).output.id;
+async function create(monti: Monti, collection: string, title: string, slug: string, values?: Record<string, unknown>) {
+	return (await run(monti, "entries.create", { collection, locale: "ko", title, slug, values })).output.id;
 }
 
 /**
@@ -100,20 +100,73 @@ async function setup(monti: Monti, languages: readonly string[]) {
 	const groupOf = async (id: string) =>
 		(await monti.db.selectFrom("entries").select("translation_group").where("id", "=", id).executeTakeFirstOrThrow())
 			.translation_group;
-	for (const name of ["개발", "일상"]) groups.set(name, await groupOf(await create(monti, "category", name, "")));
-	for (const name of ["리액트", "성능", "Blocks", "마이그레이션", "회고", "타입스크립트"])
-		groups.set(name, await groupOf(await create(monti, "tag", name, "")));
+	for (const [name, slug] of [
+		["개발", "dev"],
+		["일상", "life"],
+		["회고", "retro"],
+	])
+		groups.set(name, await groupOf(await create(monti, "category", name, slug)));
+	for (const [name, slug] of [
+		["리액트", "react"],
+		["React", "react-en"],
+		["성능", "perf"],
+		["Blocks", "blocks"],
+		["마이그레이션", "migration"],
+		["회고", "tag-retro"],
+		["타입스크립트", "ts"],
+		["미사용태그", "unused"],
+	])
+		groups.set(name, await groupOf(await create(monti, "tag", name, slug)));
+	// Add descriptions and English translations for categories (matching Screens/Reference/Lists › Taxonomy)
+	const devGroup = groups.get("개발");
+	if (devGroup) {
+		await monti.db
+			.updateTable("entries")
+			.set({ values: JSON.stringify({ description: "코드와 도구 이야기" }) })
+			.where("translation_group", "=", devGroup)
+			.where("locale", "=", "ko")
+			.execute();
+		if (languages.includes("en")) {
+			await monti.db
+				.insertInto("entries")
+				.values({
+					id: "c_dev_en",
+					collection: "category",
+					translation_group: devGroup,
+					locale: "en",
+					slug: "dev",
+					title: "Development",
+					values: JSON.stringify({ description: "Code and tools" }),
+				})
+				.execute();
+		}
+	}
+	const lifeGroup = groups.get("일상");
+	if (lifeGroup && languages.includes("en")) {
+		await monti.db
+			.insertInto("entries")
+			.values({
+				id: "c_life_en",
+				collection: "category",
+				translation_group: lifeGroup,
+				locale: "en",
+				slug: "life",
+				title: "Life",
+				values: JSON.stringify({}),
+			})
+			.execute();
+	}
 	for (const [state, title, slug, category, tags, locales, date] of [...POSTS].reverse()) {
-		const id = await create(monti, "post", title, slug);
+		const categoryGroup = groups.get(category) ?? null;
+		const tagGroups = tags.map((tag) => groups.get(tag) ?? "").filter(Boolean);
+		const baseValues: Record<string, unknown> = {};
+		if (categoryGroup) baseValues.category = categoryGroup;
+		if (tagGroups.length > 0) baseValues.tags = tagGroups;
+		const id = await create(monti, "post", title, slug, baseValues);
 		const group = await groupOf(id);
 		if (state !== "draft") await run(monti, "entries.publish", { ids: [id] });
-		if (state === "changed") await run(monti, "entries.save", { id, version: 2, values: { summary: "고친 요약" } });
-		const links = [{ field: "category", to: category }, ...tags.map((tag) => ({ field: "tags", to: tag }))];
-		for (const [position, link] of links.entries())
-			await monti.db
-				.insertInto("entry_links")
-				.values({ from_group: group, field: link.field, to_group: groups.get(link.to) ?? "", position })
-				.execute();
+		if (state === "changed")
+			await run(monti, "entries.save", { id, version: 2, values: { ...baseValues, summary: "고친 요약" } });
 		for (const locale of locales.filter((code) => languages.includes(code)))
 			await monti.db
 				.insertInto("entries")
@@ -124,7 +177,7 @@ async function setup(monti: Monti, languages: readonly string[]) {
 					locale,
 					slug,
 					title,
-					values: "{}",
+					values: JSON.stringify(baseValues),
 				})
 				.execute();
 		await sql`update entries set updated_at = ${new Date(`${date}T09:00:00`)}, created_at = ${new Date(`${date}T08:00:00`)}
@@ -702,5 +755,93 @@ export const RowsMenu: Story = {
 			}),
 		);
 		await waitFor(() => expect(body().getByText("2개 항목")).toBeTruthy(), wait);
+	},
+};
+
+/** The bulk bar's "바꾸기 ▾" dropdown open on "태그": checked, mixed (1/2) and unchecked tags (flow 7, step 10). */
+export const ChangeRelationMenu: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		const page = within(canvasElement);
+		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "리액트 서버 컴포넌트 다시 보기 고르기" }));
+		await userEvent.click(page.getByRole("button", { name: "바꾸기" }));
+		const tagSub = await body().findByRole("menuitem", { name: /태그/ }, wait);
+		await userEvent.click(tagSub);
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /성능/ })).toBeTruthy(), wait);
+	},
+};
+
+/** Two-language blog (`ko` + `en`) matching `Screens/Reference/Lists` › `Taxonomy`. */
+const taxonomySchema = defineSchema({
+	...schema,
+	locales: {
+		...schema.locales,
+		list: schema.locales.list.filter((l) => l.code === "ko" || l.code === "en"),
+	},
+});
+
+/** Links 2 older posts to the duplicate "React" tag (`react-en`) so it has 3 posts total (flow 7, steps 06–09). */
+async function withDuplicateReactTag({ monti }: StorySite) {
+	const reactTag = await monti.db
+		.selectFrom("entries")
+		.select("translation_group")
+		.where("collection", "=", "tag")
+		.where("title", "=", "React")
+		.executeTakeFirst();
+	if (reactTag) {
+		await run(monti, "relations.edit", {
+			collection: "post",
+			entryIds: ["old-1", "old-2"],
+			field: "tags",
+			add: [reactTag.translation_group],
+		});
+	}
+}
+
+/** Tags in Taxonomy: usage counts and "쓰는 글 없음" (flow 7, step 06). */
+export const TaxonomyTags: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	play: async ({ canvasElement }) => {
+		await waitFor(() => expect(within(canvasElement).getByText("리액트")).toBeTruthy(), wait);
+		await waitFor(() => expect(within(canvasElement).getByText("쓰는 글 없음")).toBeTruthy(), wait);
+	},
+};
+
+/** Two tags picked in Taxonomy: bulk bar shows "합치기" button (flow 7, step 07). */
+export const TaxonomyTagsPicked: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await waitFor(() => expect(page.getByText("리액트")).toBeTruthy(), wait);
+		await userEvent.click(page.getByRole("checkbox", { name: "리액트 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "React 고르기" }));
+		await waitFor(() => expect(page.getByRole("button", { name: "합치기" })).toBeTruthy(), wait);
+	},
+};
+
+/** The merge dialog open in Taxonomy: radio options for surviving tag and preview description (flow 7, step 08). */
+export const TaxonomyMergeDialog: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await waitFor(() => expect(page.getByText("리액트")).toBeTruthy(), wait);
+		await userEvent.click(page.getByRole("checkbox", { name: "리액트 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "React 고르기" }));
+		await userEvent.click(page.getByRole("button", { name: "합치기" }));
+		await waitFor(() => expect(body().getByRole("dialog")).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByText(/어느 이름으로 합칠까요/)).toBeTruthy(), wait);
+	},
+};
+
+/** Category side panel open: multilingual tabs, name, slug, description (doc 08, T45). */
+export const TaxonomySidePanel: Story = {
+	loaders: site(undefined, "#/c/category", { schema: taxonomySchema }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await waitFor(() => expect(page.getByText("개발")).toBeTruthy(), wait);
+		await userEvent.click(page.getByRole("button", { name: "개발" }));
+		await waitFor(() => expect(page.getByRole("tab", { name: "한국어" })).toBeTruthy(), wait);
 	},
 };

@@ -1,6 +1,8 @@
 export { MontiAdmin } from "./app";
 export { adminMessages } from "./messages";
 export {
+	type AdminBlockComponent,
+	type AdminBlockDefinition,
 	AdminProvider,
 	createScreenChannel,
 	type Language,

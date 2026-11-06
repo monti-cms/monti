@@ -1,5 +1,6 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
+import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
@@ -31,6 +32,8 @@ const Field = z.discriminatedUnion("kind", [
 		to: z.string(),
 		many: z.boolean().optional(),
 		createMissing: z.boolean().optional(),
+		ordered: z.boolean().optional(),
+		via: z.string().optional(),
 	}),
 ]);
 export const LocalesInput = z.object({
@@ -42,7 +45,10 @@ const SchemaInput: z.ZodType<Schema> = z.object({
 	locales: LocalesInput,
 	collections: z.record(
 		z.string(),
-		z.object({ kind: z.enum(["document", "item"]), path: z.string(), fields: z.record(z.string(), Field) }),
+		z.discriminatedUnion("kind", [
+			z.object({ kind: z.literal("document"), path: z.string(), fields: z.record(z.string(), Field) }),
+			z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
+		]),
 	),
 });
 const Rename = z.object({ collection: z.string(), from: z.string(), to: z.string() });
@@ -81,10 +87,10 @@ export async function applySchema(
 	const state = await readSchemaState(ctx.db);
 	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
 	const { steps } = stepsFor(changes, answers);
-	const now = new Date();
+	const now = ctx.now();
 	const label = [...new Set(changes.map((change) => change.collection ?? "locales"))].join("-") || "schema";
 	const change: ChangeFile = {
-		id: changeId(now, label),
+		id: changeId(now, label, randomUUID()),
 		steps,
 		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
 	};
@@ -126,12 +132,13 @@ export const adminValuesRecord = defineRecordKind({
 			await db.deleteFrom("collection_admin_values").where("collection", "=", id).execute();
 			return;
 		}
+		const values = AdminValues.parse(data);
 		await db
 			.insertInto("collection_admin_values")
-			.values({ collection: id, values: JSON.stringify(data) })
+			.values({ collection: id, values: JSON.stringify(values) })
 			.onConflict((conflict) =>
 				conflict.column("collection").doUpdateSet((eb) => ({
-					values: JSON.stringify(data),
+					values: JSON.stringify(values),
 					version: eb("collection_admin_values.version", "+", 1),
 				})),
 			)
@@ -144,9 +151,9 @@ async function adminValuesOf(db: Db): Promise<Record<string, AdminValues & { ver
 	return Object.fromEntries(rows.map((row) => [row.collection, { ...row.values, version: row.version }]));
 }
 
-/** A change file id: when, then what (`2026-11-05-143207-post`). */
-const changeId = (now: Date, label: string) =>
-	`${now.toISOString().slice(0, 19).replace("T", "-").replace(/:/g, "")}-${label}`;
+/** A change file id: when, then what, then enough entropy for two saves in the same millisecond. */
+const changeId = (now: Date, label: string, id: string) =>
+	`${now.toISOString().replace("T", "-").replace(/[:.]/g, "").replace("Z", "")}-${label}-${id.slice(0, 8)}`;
 
 export const schemaOperations = [
 	defineOperation({

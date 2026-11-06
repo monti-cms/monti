@@ -117,7 +117,7 @@ function SheetSplit({
 		<div data-slot="sheet-split" className={cn("flex min-h-0 grow", className)} {...props}>
 			<div
 				data-slot="sheet-split-list"
-				className="flex shrink-0 basis-[150px] flex-col border-monti-muted border-r py-monti-16 pr-monti-16 pl-monti-24"
+				className="flex shrink-0 basis-[150px] flex-col border-monti-muted border-r px-monti-8 py-monti-16"
 			>
 				{list}
 			</div>

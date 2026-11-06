@@ -177,8 +177,7 @@ describe("folders in the sidebar", () => {
 		await Categories.run();
 		await expect.element(table().getByText("일상")).toBeVisible();
 		await expect.element(sidebarFolders()).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("button", { name: "더 만들기" }));
-		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "새 폴더" })).not.toBeInTheDocument();
 		await expect.element(page.getByRole("menuitem", { name: "새 폴더" })).not.toBeInTheDocument();
 	});
 });

@@ -20,7 +20,7 @@ export const slugify = (text: string) =>
  * language there (`always`, or `exceptSource` for a translation, doc 04).
  */
 export function publicPath(schema: Schema, collection: string, slug: string, locale = schema.locales.source) {
-	const path = schema.collections[collection]?.path.replace(":slug", slug);
+	const path = schema.collections[collection]?.path?.replace(":slug", slug);
 	if (path === undefined) return null;
 	const { prefix, source } = schema.locales;
 	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${path}` : path;

@@ -12,7 +12,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 제목 "카테고리" · "태그" | `PageHeader`(`title`, `meta`는 주소 규칙 "/category/:slug" · "/tag/:slug", mono) | |
+| 제목 "카테고리" · "태그" | `PageHeader`(`title`, optional `meta` for the public path) | Items without a public page omit the meta value. |
 | 검색 | `SearchToggle` → `SearchBox` | 그 자리에서 열린다. 보드는 돋보기만 있는 알약이지만 [field.md](../components/field.md)를 따라 돋보기와 "검색" 글자가 있는 `SearchToggle`이다. |
 | "+ 카테고리 추가" · "+ 태그 추가" | `Button variant="secondary"` | 새 항목을 옆 패널에 빈 채로 연다. |
 
@@ -23,8 +23,8 @@
 | 열 이름 행 | `ListHead`(열 "이름", "글 수"; 정렬된 열은 `sort`) | 정렬은 열 이름의 메뉴에서 한다. 카테고리 보드는 툴바에 탭 "전체 3"과 "이름순 ▾"를 그리지만, [page-header.md](../components/page-header.md)를 따라 컬렉션 목록의 툴바는 비우고 카테고리도 태그처럼 `ListHead`를 쓴다. 행을 고르면 같은 자리를 `BulkBar`가 대신한다. |
 | 표 | `Table`, `TableBody`, `TableRow`(옆 패널에 열린 행은 `selected`) | |
 | 체크 | `RowCheck` | 포인터가 행 위에 있거나 무엇이든 고른 동안 보인다. |
-| 이름 · 주소 | `RowTitle` + `RowLink` | 행 어디를 눌러도 옆 패널에 열린다. 카테고리는 아래에 설명 한 줄이 있다(`TableRow twoLine`, `Text variant="note"`). 영어 이름이 없으면 `Text variant="note" tone="warning"` "영어 이름 없음". |
-| "글 3" · "쓰는 글 없음" | `TextButton variant="underline"`(`href` 그 항목으로 거른 글 목록) | 쓰는 글이 없으면 흐린 글자(`Text tone="faint"`)만 있다. |
+| 이름 · 주소 | `RowTitle` + `RowLink` | Uses the same single-line row as the document list. The secondary value is always the bare slug (`react`), not the full public path. Descriptions are edited in the side panel and never change list-row height. A missing translated name remains an inline warning. |
+| "글 3" · "쓰는 글 없음" | `TextButton variant="underline"`(`href` 그 항목으로 거른 글 목록) | The usage column is right-aligned. An unused item is faint text. |
 | ⋯ | `RowActions` + `DropdownMenu` | 모든 행에 늘 보인다. 보드는 열린 행에만 그렸지만 [list.md](../components/list.md)를 따른다. |
 | 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `colSpan`) | 동작은 "합치기" · "휴지통으로"(`TextButton`) 둘이다. 합치기는 둘 이상 골랐을 때 보인다. |
 
@@ -34,7 +34,7 @@
 |---|---|---|
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "어느 이름으로 합칠까요?", `DialogFooter`) | 남길 이름을 고르고 결과를 한 줄로 보인다. 합쳐진 태그는 휴지통으로 가서 되돌릴 수 있으므로 알약은 primary다. |
 | 남길 이름 | `RadioGroup` + `RadioItem`(`label` 이름과 주소, `hint` "글 12") | 처음에는 글이 더 많은 쪽이 골라져 있다. |
-| 결과 한 줄 | `DialogDescription` | "React를 쓰던 글 3편이 리액트로 바뀌고, React는 휴지통으로 가요. 주소 /tag/react-en은 사라져요." |
+| Result summary | `DialogDescription`, followed by a faint address note only when public addresses exist | State the number of affected posts, the item that remains, and which items move to trash. Keep removed addresses out of the main sentence. |
 | "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨어요" + "되돌리기". |
 
 스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Patterns/List/BulkBar, Patterns/List/Table, Primitives/Text, Controls/Button/TextButton, Controls/Menu/DropdownMenu, Controls/Overlay/Dialog, Controls/Choice/Radio, Controls/Status/Toast, Controls/Overlay/SidePanel, Controls/Button/IconButton, Controls/Tabs/Tabs, Controls/Field/Field, Controls/Field/Input, Controls/Field/Textarea.

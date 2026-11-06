@@ -1,3 +1,4 @@
+import { defineSchema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
@@ -53,6 +54,20 @@ async function setup(monti: Monti) {
 
 /** The dev server: it has the schema files (a story writes none), so structure can change. */
 const devFiles = { write: async () => {}, readChanges: async () => [] };
+
+const relationFieldSchema = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post.fields,
+				relatedBy: { kind: "relation", to: "post", many: true },
+			},
+		},
+	},
+});
 
 export const site = (
 	options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void>; schema?: typeof schema } = {},
@@ -185,12 +200,15 @@ export const AddMediaField: Story = {
 
 /** SchemaAddField: the add-field sheet on a relation field. */
 export const AddRelationField: Story = {
-	loaders: site(),
+	loaders: site({ schema: relationFieldSchema }),
 	play: async ({ canvasElement }) => {
 		const screen = await settings(canvasElement);
 		await addField(screen, "관계");
 		fill(screen.body.getByLabelText("표시 이름"), "시리즈");
 		fill(screen.body.getByLabelText(/^식별자/), "series");
+		await expect(screen.body.getByText("가리키는 쪽 필드")).toBeInTheDocument();
+		await userEvent.click(screen.body.getByRole("switch", { name: "여러 개 고르기" }));
+		await expect(screen.body.getByRole("switch", { name: "순서 직접 정하기" })).toBeInTheDocument();
 	},
 };
 
@@ -302,6 +320,17 @@ export const NewCollection: Story = {
 		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
 		fill(await body.findByLabelText(/^이름/), "노트");
 		fill(body.getByLabelText(/^식별자/), "note");
+	},
+};
+
+/** Item collections start without a public page; enabling one reveals its address. */
+export const NewItemCollection: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(body.getByRole("radio", { name: /항목/ }));
+		await expect(body.queryByLabelText("공개 주소")).toBeNull();
 	},
 };
 

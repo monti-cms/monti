@@ -6,34 +6,41 @@ import {
 	ComboboxChipsInput,
 	ComboboxContent,
 	ComboboxEmpty,
+	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
+	DragHandle,
 	FormField,
-	FormFieldDescription,
 	FormFieldLabel,
 	IconButton,
 	Input,
+	List,
+	OrderedRow,
 	PropertyGroup,
 	PropertyPanel,
+	Sortable,
+	SortableList,
+	Stack,
 	Text,
 	Textarea,
 	useComboboxAnchor,
+	useSortableItem,
 } from "@monti-cms/ui";
-import { Renew } from "@monti-cms/ui/icons";
-import { useState } from "react";
+import { Close, Renew } from "@monti-cms/ui/icons";
+import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import type { EntryEditorModel } from "./use-entry-editor";
+import { useRelationField } from "./use-relation-field";
 
 /** The id of a field's input: a to-do row puts the cursor there. */
 export const fieldInputId = (field: string) => `monti-entry-${field}`;
 
 /**
- * The kinds of field the panel holds now. A relation is written by doc 08's operations and a media field picks from doc 09's library: until then they
- * are not in the panel (tracker T66, T67).
+ * The kinds of field the panel holds. A media field picks from doc 09's library: until then it is not in the panel (tracker T67).
  */
-const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select"]);
+const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation"]);
 
 /** The fields of a collection the panel shows, in the schema's order. The title is the editor's heading, not a property (flow 1). */
 export function panelFields(schema: SchemaRead | null, collection: string) {
@@ -111,6 +118,353 @@ function PickMany({
 	);
 }
 
+/** In a translation where the field is shared, resolves relation group IDs to titles. */
+function SharedRelationValue({
+	collection,
+	field,
+	locale,
+	value,
+	empty,
+}: {
+	collection: string;
+	field: string;
+	locale: string;
+	value: unknown;
+	empty: string;
+}) {
+	const rel = useRelationField({ collection, field, locale });
+	const raw = Array.isArray(value) ? value : value ? [value] : [];
+	const shown = raw
+		.map((item) => rel.labelOf(String(item)))
+		.filter(Boolean)
+		.join(", ");
+	return (
+		<Text variant="note" tone={shown ? undefined : "faint"}>
+			{shown || empty}
+		</Text>
+	);
+}
+
+function SortableOrderedRow({
+	id,
+	label,
+	onRemove,
+	removeLabel,
+	moveLabel,
+	disabled,
+}: {
+	id: string;
+	label: string;
+	onRemove: () => void;
+	removeLabel: string;
+	moveLabel: string;
+	disabled?: boolean;
+}) {
+	const item = useSortableItem(id, { disabled });
+	return (
+		<OrderedRow
+			ref={item.ref}
+			handle={<DragHandle {...item.handle} aria-label={moveLabel} />}
+			drag={{ ...item.motion, active: item.held }}
+			actions={
+				!disabled && (
+					<IconButton size="xs" variant="ghost" label={removeLabel} onClick={onRemove}>
+						<Close aria-hidden />
+					</IconButton>
+				)
+			}
+		>
+			<Text>{label}</Text>
+		</OrderedRow>
+	);
+}
+
+function RelationSingleInput({
+	id,
+	collection,
+	field,
+	locale,
+	entryGroup,
+	createMissing,
+	required,
+	value,
+	onChange,
+	placeholder,
+	disabled,
+}: {
+	id: string;
+	collection: string;
+	field: string;
+	locale?: string;
+	entryGroup?: string;
+	createMissing?: boolean;
+	required?: boolean;
+	value: string | null;
+	onChange: (value: string | null) => void;
+	placeholder: string;
+	disabled: boolean;
+}) {
+	const { t } = useAdmin();
+	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
+
+	const items = useMemo(() => {
+		const list = rel.options.map((o) => o.group);
+		if (rel.createToken) list.push(rel.createToken);
+		return list;
+	}, [rel.options, rel.createToken]);
+
+	return (
+		<Combobox
+			items={items}
+			value={value}
+			onValueChange={(next) => {
+				onChange(next ? String(next) : null);
+				rel.setSearch("");
+			}}
+			inputValue={rel.search}
+			onInputValueChange={rel.setSearch}
+			itemToStringLabel={(item) =>
+				item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
+			}
+			disabled={disabled}
+		>
+			<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={!required && Boolean(value)} />
+			<ComboboxContent>
+				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
+				<ComboboxList>
+					{(group: string) => {
+						const isCreate = group === rel.createToken;
+						if (isCreate) {
+							return (
+								<ComboboxItem key={group} value={group}>
+									{rel.createLabel}
+								</ComboboxItem>
+							);
+						}
+						const opt = rel.allOptions.find((o) => o.group === group);
+						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						return (
+							<ComboboxItem key={group} value={group}>
+								{rel.labelOf(group)}
+								{unpublished && (
+									<Text variant="micro" tone="subtle">
+										({t("relations.unpublished")})
+									</Text>
+								)}
+							</ComboboxItem>
+						);
+					}}
+				</ComboboxList>
+			</ComboboxContent>
+		</Combobox>
+	);
+}
+
+function RelationManyInput({
+	id,
+	collection,
+	field,
+	locale,
+	entryGroup,
+	createMissing,
+	value,
+	onChange,
+	placeholder,
+	disabled,
+}: {
+	id: string;
+	collection: string;
+	field: string;
+	locale?: string;
+	entryGroup?: string;
+	createMissing?: boolean;
+	value: string[];
+	onChange: (value: string[]) => void;
+	placeholder: string;
+	disabled: boolean;
+}) {
+	const { t } = useAdmin();
+	const anchor = useComboboxAnchor();
+	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
+
+	const items = useMemo(() => {
+		const list = rel.options.map((o) => o.group).filter((g) => !value.includes(g));
+		if (rel.createToken && !value.includes(rel.createToken)) list.push(rel.createToken);
+		return list;
+	}, [rel.options, rel.createToken, value]);
+
+	return (
+		<Combobox
+			items={items}
+			multiple
+			value={value}
+			onValueChange={(next) => {
+				onChange(next as string[]);
+				rel.setSearch("");
+			}}
+			inputValue={rel.search}
+			onInputValueChange={rel.setSearch}
+			itemToStringLabel={(item) =>
+				item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
+			}
+			disabled={disabled}
+		>
+			<ComboboxChips ref={anchor} size="md">
+				{value.map((item) => (
+					<ComboboxChip key={item}>{rel.labelOf(item)}</ComboboxChip>
+				))}
+				<ComboboxChipsInput id={id} placeholder={value.length === 0 ? placeholder : undefined} />
+			</ComboboxChips>
+			<ComboboxContent anchor={anchor}>
+				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
+				<ComboboxList>
+					{(group: string) => {
+						const isCreate = group === rel.createToken;
+						if (isCreate) {
+							return (
+								<ComboboxItem key={group} value={group}>
+									{rel.createLabel}
+								</ComboboxItem>
+							);
+						}
+						const opt = rel.allOptions.find((o) => o.group === group);
+						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						return (
+							<ComboboxItem key={group} value={group}>
+								{rel.labelOf(group)}
+								{unpublished && (
+									<Text variant="micro" tone="subtle">
+										({t("relations.unpublished")})
+									</Text>
+								)}
+							</ComboboxItem>
+						);
+					}}
+				</ComboboxList>
+			</ComboboxContent>
+		</Combobox>
+	);
+}
+
+function RelationOrderedManyInput({
+	id,
+	collection,
+	field,
+	locale,
+	entryGroup,
+	createMissing,
+	value,
+	onChange,
+	placeholder,
+	disabled,
+}: {
+	id: string;
+	collection: string;
+	field: string;
+	locale?: string;
+	entryGroup?: string;
+	createMissing?: boolean;
+	value: string[];
+	onChange: (value: string[]) => void;
+	placeholder: string;
+	disabled: boolean;
+}) {
+	const { t } = useAdmin();
+	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
+
+	const selectableOptions = useMemo(() => {
+		const list = rel.options.map((o) => o.group).filter((g) => !value.includes(g));
+		if (rel.createToken && !value.includes(rel.createToken)) list.push(rel.createToken);
+		return list;
+	}, [rel.options, rel.createToken, value]);
+
+	return (
+		<Stack gap={8}>
+			<Combobox
+				items={selectableOptions}
+				value={null}
+				onValueChange={(next) => {
+					if (next) {
+						onChange([...value, String(next)]);
+						rel.setSearch("");
+					}
+				}}
+				inputValue={rel.search}
+				onInputValueChange={rel.setSearch}
+				itemToStringLabel={(item) =>
+					item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
+				}
+				disabled={disabled}
+			>
+				<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} />
+				<ComboboxContent>
+					<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
+					<ComboboxList>
+						{(group: string) => {
+							const isCreate = group === rel.createToken;
+							if (isCreate) {
+								return (
+									<ComboboxItem key={group} value={group}>
+										{rel.createLabel}
+									</ComboboxItem>
+								);
+							}
+							const opt = rel.allOptions.find((o) => o.group === group);
+							const unpublished = rel.targetKind === "document" && opt && !opt.published;
+							return (
+								<ComboboxItem key={group} value={group}>
+									{rel.labelOf(group)}
+									{unpublished && (
+										<Text variant="micro" tone="subtle">
+											({t("relations.unpublished")})
+										</Text>
+									)}
+								</ComboboxItem>
+							);
+						}}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+			{value.length > 0 && (
+				<Sortable
+					nameOf={(item) => rel.labelOf(String(item))}
+					onDrop={({ active, over }) => {
+						if (!over) return;
+						const from = value.indexOf(String(active.id));
+						const to = value.indexOf(String(over.id));
+						if (from === -1 || to === -1 || from === to) return;
+						const next = [...value];
+						const [moved] = next.splice(from, 1);
+						if (moved) next.splice(to, 0, moved);
+						onChange(next);
+					}}
+					overlay={(active) => (
+						<OrderedRow drag={{ active: true }} handle={<DragHandle aria-hidden tabIndex={-1} />}>
+							<Text>{rel.labelOf(String(active.id))}</Text>
+						</OrderedRow>
+					)}
+				>
+					<SortableList id={id} items={value}>
+						<List marker="none">
+							{value.map((item) => (
+								<SortableOrderedRow
+									key={item}
+									id={item}
+									label={rel.labelOf(item)}
+									moveLabel={t("relations.move", { title: rel.labelOf(item) })}
+									removeLabel={t("relations.remove")}
+									onRemove={() => onChange(value.filter((g) => g !== item))}
+									disabled={disabled}
+								/>
+							))}
+						</List>
+					</SortableList>
+				</Sortable>
+			)}
+		</Stack>
+	);
+}
+
 /**
  * The entry's properties (editor.md, the property panel): the collection's fields in its tabs and groups, each an input from the start. The tab is the screen's,
  * so a to-do row can open the tab its field is in.
@@ -145,6 +499,9 @@ export function EntryProperties({
 	// An empty address always blocks publishing (doc 02), whatever the schema says.
 	const required = (key: string) => key === "slug" || Boolean(definitions[key]?.required);
 	const empty = t("entry.empty");
+	const entry = editor.loaded && "entry" in editor.loaded ? editor.loaded.entry : null;
+	const currentLocale = entry?.locale;
+	const entryGroup = entry?.translationGroup;
 
 	const row = (key: string) => {
 		const def = definitions[key];
@@ -162,6 +519,25 @@ export function EntryProperties({
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
 		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
 		if (shared && localeModeOf(key, def) === "same") {
+			const sourceNote = (
+				<Text variant="caption" tone="faint">
+					{t("translation.sharedField")}
+				</Text>
+			);
+			if (def.kind === "relation") {
+				return (
+					<FormField key={key}>
+						<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+						<SharedRelationValue
+							collection={collection}
+							field={key}
+							locale={currentLocale ?? ""}
+							value={shared[key]}
+							empty={empty}
+						/>
+					</FormField>
+				);
+			}
 			const sharedValue = shared[key];
 			const labels = values[key]?.optionLabels ?? {};
 			const shown = (Array.isArray(sharedValue) ? sharedValue : sharedValue === undefined ? [] : [sharedValue])
@@ -169,11 +545,10 @@ export function EntryProperties({
 				.join(", ");
 			return (
 				<FormField key={key}>
-					<FormFieldLabel>{values[key]?.label ?? key}</FormFieldLabel>
+					<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
 					<Text variant="note" tone={shown ? undefined : "faint"}>
 						{shown || empty}
 					</Text>
-					<FormFieldDescription>{t("translation.sharedField")}</FormFieldDescription>
 				</FormField>
 			);
 		}
@@ -238,6 +613,55 @@ export function EntryProperties({
 						id={id}
 						size="md"
 						items={items}
+						value={typeof value === "string" ? value : null}
+						onChange={(next) => editor.set(path, next)}
+						placeholder={empty}
+						disabled={readOnly}
+					/>
+				);
+			}
+			if (def.kind === "relation") {
+				if (def.many && def.ordered) {
+					return (
+						<RelationOrderedManyInput
+							id={id}
+							collection={collection}
+							field={key}
+							locale={currentLocale}
+							entryGroup={entryGroup}
+							createMissing={def.createMissing}
+							value={Array.isArray(value) ? (value as string[]) : []}
+							onChange={(next) => editor.set(path, next)}
+							placeholder={empty}
+							disabled={readOnly}
+						/>
+					);
+				}
+				if (def.many) {
+					return (
+						<RelationManyInput
+							id={id}
+							collection={collection}
+							field={key}
+							locale={currentLocale}
+							entryGroup={entryGroup}
+							createMissing={def.createMissing}
+							value={Array.isArray(value) ? (value as string[]) : []}
+							onChange={(next) => editor.set(path, next)}
+							placeholder={empty}
+							disabled={readOnly}
+						/>
+					);
+				}
+				return (
+					<RelationSingleInput
+						id={id}
+						collection={collection}
+						field={key}
+						locale={currentLocale}
+						entryGroup={entryGroup}
+						createMissing={def.createMissing}
+						required={def.required}
 						value={typeof value === "string" ? value : null}
 						onChange={(next) => editor.set(path, next)}
 						placeholder={empty}
