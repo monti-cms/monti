@@ -14,7 +14,7 @@ import type { Node as EditorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { CellSelection, TableMap } from "@tiptap/pm/tables";
 import { type Editor, useEditorState } from "@tiptap/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { ownShares, setShares, sharesAfter, sharesNow, tradeShares } from "./table";
 
@@ -65,7 +65,7 @@ function cellStart(table: EditorNode, tablePos: number, row: number, column: num
 /**
  * Editing a table in the body (editor-tools.md, the table; T62): with the caret in a cell, a grip on the top edge of its column and on the left edge
  * of its row opens that column's or row's menu, and picks it whole while the menu is open. While the pointer is over a table, a + strip on its right
- * edge adds a column and one on its bottom edge adds a row. `point` is told where the pointer is.
+ * edge adds a column and one on its bottom edge adds a row.
  */
 export function useTableTools(editor: Editor | null) {
 	const { t } = useAdmin();
@@ -110,9 +110,17 @@ export function useTableTools(editor: Editor | null) {
 			if ($pos.node(depth).type.name === "table") return setHovered($pos.before(depth));
 		setHovered(null);
 	};
-	const leave = () => setHovered(null);
+	// The pointer is watched over the whole window: the + strip on the right edge sits outside the body, so leaving the body must not take it away.
+	const latestPoint = useRef(point);
+	latestPoint.current = point;
+	useEffect(() => {
+		if (!editor) return;
+		const move = (event: MouseEvent) => latestPoint.current(event.target, event.clientX, event.clientY);
+		window.addEventListener("mousemove", move);
+		return () => window.removeEventListener("mousemove", move);
+	}, [editor]);
 
-	if (!editor || !editor.isEditable) return { point, leave, overlay: null };
+	if (!editor || !editor.isEditable) return { overlay: null };
 
 	/**
 	 * Runs a table command with the caret back in the cell it was in (the grip's menu took the focus). A column put in or taken out changes the
@@ -323,8 +331,6 @@ export function useTableTools(editor: Editor | null) {
 	})();
 
 	return {
-		point,
-		leave,
 		overlay: (
 			<>
 				{grips}
