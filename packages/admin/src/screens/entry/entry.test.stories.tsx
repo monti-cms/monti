@@ -334,3 +334,24 @@ export const SlashMidSentence: Story = {
 		await expect(line).toBe("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.");
 	},
 };
+
+/** The right + strip sits outside the body: the pointer leaves the body on its way there, and the strip stays to be pressed. */
+export const TableAddColumnFromEdge: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		const table = body.querySelector("table");
+		if (!table) throw new Error("no table");
+		const box = table.getBoundingClientRect();
+		const y = box.top + 40;
+		const outside = canvasElement.ownerDocument.body;
+		await userEvent.pointer([
+			{ target: table, coords: { clientX: box.right - 20, clientY: y } },
+			{ target: outside, coords: { clientX: box.right + 2, clientY: y } },
+		]);
+		const strip = await all.findByRole("button", { name: "열 더하기" }, wait);
+		await userEvent.pointer({ target: strip, coords: { clientX: box.right + 12, clientY: y } });
+		await userEvent.click(strip);
+		await waitFor(() => expect(cells(body)[0]).toHaveLength(4), wait);
+	},
+};
