@@ -1,4 +1,4 @@
-import { type FieldDefinition, slugify } from "@monti-cms/core";
+import { type FieldDefinition, localeModeOf, slugify } from "@monti-cms/core";
 import {
 	Combobox,
 	ComboboxChip,
@@ -9,6 +9,7 @@ import {
 	ComboboxItem,
 	ComboboxList,
 	FormField,
+	FormFieldDescription,
 	FormFieldLabel,
 	IconButton,
 	Input,
@@ -121,6 +122,7 @@ export function EntryProperties({
 	tab,
 	onTab,
 	readOnly,
+	shared,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -128,6 +130,8 @@ export function EntryProperties({
 	tab: number;
 	onTab: (tab: number) => void;
 	readOnly: boolean;
+	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
+	shared?: Record<string, unknown> | null;
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -156,6 +160,23 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
+		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
+		if (shared && localeModeOf(key, def) === "same") {
+			const sharedValue = shared[key];
+			const labels = values[key]?.optionLabels ?? {};
+			const shown = (Array.isArray(sharedValue) ? sharedValue : sharedValue === undefined ? [] : [sharedValue])
+				.map((each) => labels[String(each)] ?? String(each))
+				.join(", ");
+			return (
+				<FormField key={key}>
+					<FormFieldLabel>{values[key]?.label ?? key}</FormFieldLabel>
+					<Text variant="note" tone={shown ? undefined : "faint"}>
+						{shown || empty}
+					</Text>
+					<FormFieldDescription>{t("translation.sharedField")}</FormFieldDescription>
+				</FormField>
+			);
+		}
 		const input = () => {
 			if (def.kind === "slug")
 				return (

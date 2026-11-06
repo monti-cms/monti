@@ -1,6 +1,7 @@
 import { type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
+	Box,
 	Button,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -41,6 +42,7 @@ import { download } from "../../download";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
+import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -49,6 +51,19 @@ import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
+import {
+	decidedOnly,
+	LocaleTabs,
+	PairedView,
+	SourceChangedBanner,
+	SourceChangedCell,
+	SourcePane,
+	type SourceView,
+	SourceViewPicker,
+	TranslationMargin,
+	usePairedRows,
+	useTranslation,
+} from "./translation";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 
@@ -96,8 +111,10 @@ export function EntryEditor({
 	const [tab, setTab] = useState(0);
 	const [todoOpen, setTodoOpen] = useState(false);
 	const body = useRef<Editor | null>(null);
+	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
 	const keepEditor = useCallback((made: Editor | null) => {
 		body.current = made;
+		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
@@ -116,7 +133,56 @@ export function EntryEditor({
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
-	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug) : null;
+	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug, read?.entry.locale) : null;
+
+	// Languages (doc 04): the tabs over the title, and in a translation its source beside it, side by side, or not at all.
+	const translation = useTranslation(id, schema.data?.schema, editor);
+	const compared = translation.compared;
+	const [view, setView] = useState<SourceView>("side");
+	const showView = (next: SourceView) => {
+		setView(next);
+		// The source takes the place of the properties beside the text (translation.md, the head row).
+		if (next !== "off") setPanel(false);
+	};
+	const opensBeside = translation.isTranslation && view !== "off";
+	useEffect(() => {
+		if (opensBeside) setPanel(false);
+	}, [opensBeside]);
+	// The source block paired with the translation's block the cursor is in, marked beside it (translation.md, the source pane).
+	const [pair, setPair] = useState<string | null>(null);
+	useEffect(() => {
+		if (!bodyEditor || !translation.isTranslation) return;
+		const sync = () => setPair(bodyEditor.isFocused ? pairedSource(bodyEditor.state) : null);
+		const events = ["selectionUpdate", "focus", "blur"] as const;
+		for (const event of events) bodyEditor.on(event, sync);
+		return () => {
+			for (const event of events) bodyEditor.off(event, sync);
+		};
+	}, [bodyEditor, translation.isTranslation]);
+	const sourceName = (code: string) =>
+		schema.data?.schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
+	const beside =
+		compared && view === "side" ? (
+			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} current={pair} />
+		) : null;
+	const paired = Boolean(compared) && view === "paired";
+	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
+	const languages =
+		translation.multilingual && schema.data ? (
+			<Inline minHeight="control-md" justify="between" gap={12}>
+				<LocaleTabs
+					schema={schema.data.schema}
+					group={translation.group}
+					current={id}
+					onOpen={onOpen}
+					onCreate={async (code) => {
+						const made = await translation.create(code);
+						if (made) onOpen(made);
+					}}
+				/>
+				{translation.isTranslation ? <SourceViewPicker value={view} onChange={showView} /> : null}
+			</Inline>
+		) : null;
 
 	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
 	const [looking, setLooking] = useState(0);
@@ -189,6 +255,11 @@ export function EntryEditor({
 			if (task.block && node.attrs.blockId === task.block) at = pos;
 			return true;
 		});
+		// A source block new since the translation is named by its own id: its undecided block is the one paired with it.
+		if (at === null && task.block)
+			view.state.doc.forEach((node, pos) => {
+				if (at === null && (node.attrs.link as { from?: string } | null)?.from === task.block) at = pos;
+			});
 		if (at === null) return view.commands.focus();
 		const node = view.state.doc.nodeAt(at);
 		const inside = node?.isTextblock ? at + 1 : at;
@@ -237,6 +308,58 @@ export function EntryEditor({
 				: t("entry.todo.body");
 
 	const hasContent = editor.title.trim() !== "" || editor.doc.blocks.length > 0;
+
+	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
+	const titleField = (size: "display" | "inherit") => (
+		<FormField>
+			<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
+				{t("entry.title")}
+			</FormFieldLabel>
+			<Input
+				id={fieldInputId("title")}
+				value={editor.title}
+				placeholder={compared?.source.title || t("entry.title")}
+				size={size}
+				appearance="inline"
+				disabled={readOnly}
+				onChange={(event) => editor.set("title", event.target.value)}
+			/>
+		</FormField>
+	);
+	// A translation's body waits for its comparison: the source blocks new since it was translated go in as undecided blocks when the editor is made,
+	// and it is made again when they change (one is decided).
+	const addedKey = translation.added.map((each) => each.from).join(",");
+	const bodyField = (rows: PairedRows | null) =>
+		read && catalogs && (!translation.isTranslation || compared) ? (
+			<BodyEditor
+				key={`${editor.bodyKey}:${addedKey}`}
+				added={translation.added}
+				doc={editor.doc}
+				catalogs={catalogs}
+				onChange={(doc) => editor.set("doc", doc)}
+				editable={!readOnly}
+				templates
+				onEditor={keepEditor}
+				proposals={{
+					items: editor.bodyProposals,
+					current: walking?.id ?? null,
+					onTaken: editor.takeBody,
+				}}
+				translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
+				paired={rows}
+				margin={
+					translation.isTranslation && !rows
+						? (made) => (
+								<TranslationMargin
+									editor={made}
+									marks={compared?.marks ?? []}
+									onDecide={(decision) => void translation.decide([decision])}
+								/>
+							)
+						: undefined
+				}
+			/>
+		) : null;
 	const publishedAt = publish.publishedAt;
 
 	const head = readOnly ? (
@@ -349,6 +472,9 @@ export function EntryEditor({
 				</Banner>
 			) : null}
 			{trashed ? <Banner tone="neutral" title={t("entry.trashedBanner")} /> : null}
+			{compared && !readOnly ? (
+				<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
+			) : null}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -366,7 +492,16 @@ export function EntryEditor({
 					{head}
 					{/* The pill stands alone: the line sets it apart from the screen's tools (the panel, ⋯, ✦). */}
 					<Separator orientation="vertical" length="control" flush />
-					<IconButton label={t("entry.properties")} side="bottom" pressed={panel} onClick={() => setPanel(!panel)}>
+					<IconButton
+						label={t("entry.properties")}
+						side="bottom"
+						pressed={panel}
+						onClick={() => {
+							// The properties take the place of the source beside the text: one pane at a time.
+							if (!panel && translation.isTranslation) setView("off");
+							setPanel(!panel);
+						}}
+					>
 						<RightPanelOpen aria-hidden />
 					</IconButton>
 					{readOnly ? null : (
@@ -379,23 +514,28 @@ export function EntryEditor({
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem
-									onClick={async () => {
-										const copy = await duplicate.run({ id });
-										if (copy.ok) onOpen(copy.body.output.id);
-									}}
-								>
-									<Copy aria-hidden />
-									{t("entry.duplicate")}
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={async () => {
-										if ((await archive.run({ ids: [id] })).ok) await editor.reload();
-									}}
-								>
-									<Archive aria-hidden />
-									{t("entry.archive")}
-								</DropdownMenuItem>
+								{/* A translation is not copied (its source is) and has no rows of its own here (screens/translation.md, ⋯). */}
+								{translation.isTranslation ? null : (
+									<>
+										<DropdownMenuItem
+											onClick={async () => {
+												const copy = await duplicate.run({ id });
+												if (copy.ok) onOpen(copy.body.output.id);
+											}}
+										>
+											<Copy aria-hidden />
+											{t("entry.duplicate")}
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={async () => {
+												if ((await archive.run({ ids: [id] })).ok) await editor.reload();
+											}}
+										>
+											<Archive aria-hidden />
+											{t("entry.archive")}
+										</DropdownMenuItem>
+									</>
+								)}
 								<DropdownMenuItem
 									onClick={async () => {
 										const file = await exporter.run({ ids: [id] });
@@ -413,43 +553,30 @@ export function EntryEditor({
 					</IconButton>
 				</Inline>
 			</EditorHeader>
-			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">
+				{beside}
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
-					<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-						<Stack gap={0} paddingTop={16} paddingBottom={32}>
-							<FormField>
-								<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
-									{t("entry.title")}
-								</FormFieldLabel>
-								<Input
-									id={fieldInputId("title")}
-									value={editor.title}
-									placeholder={t("entry.title")}
-									size="display"
-									appearance="inline"
-									disabled={readOnly}
-									onChange={(event) => editor.set("title", event.target.value)}
-								/>
-							</FormField>
-							<EditorTitleRule />
+					{paired && compared ? (
+						<Stack gap={0} grow width="full" maxWidth="list" centered paddingBottom={48}>
+							<Box paddingBottom={16}>{languages}</Box>
+							<PairedView
+								compared={compared}
+								translationUpdatedAt={read?.entry.updatedAt ?? null}
+								title={titleField("inherit")}
+							>
+								{bodyField(pairedRows)}
+							</PairedView>
 						</Stack>
-						{read && catalogs ? (
-							<BodyEditor
-								key={editor.bodyKey}
-								doc={editor.doc}
-								catalogs={catalogs}
-								onChange={(doc) => editor.set("doc", doc)}
-								editable={!readOnly}
-								templates
-								onEditor={keepEditor}
-								proposals={{
-									items: editor.bodyProposals,
-									current: walking?.id ?? null,
-									onTaken: editor.takeBody,
-								}}
-							/>
-						) : null}
-					</Stack>
+					) : (
+						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
+							{languages}
+							<Stack gap={0} paddingTop={16} paddingBottom={32}>
+								{titleField("display")}
+								<EditorTitleRule />
+							</Stack>
+							{bodyField(null)}
+						</Stack>
+					)}
 					{walking ? (
 						<ProposalBubbleDock>
 							<ProposalBubble
@@ -476,6 +603,7 @@ export function EntryEditor({
 						tab={tab}
 						onTab={setTab}
 						readOnly={readOnly}
+						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
 					/>
 				) : null}
 			</Inline>
@@ -515,9 +643,20 @@ export function EntryEditor({
 							<TodoDone>{filled.join(" · ")}</TodoDone>
 						) : null}
 					</StatusBarList>
+					{compared && !readOnly ? (
+						<SourceChangedCell
+							compared={compared}
+							doc={editor.doc}
+							onGo={(block) =>
+								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
+							}
+							onConfirmAll={() => void translation.confirmAll()}
+							onDecide={(decision) => void translation.decide([decision])}
+						/>
+					) : null}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
-						{t("entry.chars", { count: docLength(editor.doc) })}
+						{t("entry.chars", { count: docLength(decidedOnly(editor.doc)) })}
 					</StatusBarCell>
 				</StatusBar>
 			) : null}

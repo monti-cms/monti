@@ -1,5 +1,7 @@
 import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";
+import type { Doc } from "../body/doc";
+import { blockHashes } from "../translations/links";
 import type { Database } from "./schema";
 
 /** The core's tables, step by step. A step that reached the base branch is never renamed or changed; a change is a new step. */
@@ -228,6 +230,37 @@ const MIGRATIONS: Record<string, Migration> = {
 				await sql`create index ${sql.id(`entries_${column}_trgm`)} on entries using gin (${sql.id(column)} ${sql.id(trgm, "gin_trgm_ops")})`.execute(
 					db,
 				);
+		},
+	},
+	"0007_translations": {
+		async up(db) {
+			// One entry per language in a group (doc 04); a trashed one makes room for a new one.
+			await sql`create unique index entries_group_locale on entries (translation_group, locale) where trashed_at is null`.execute(
+				db,
+			);
+			// Source blocks a translation chose to leave out, so they are not offered as new again.
+			await db.schema
+				.alterTable("entries")
+				.addColumn("translation_skips", "jsonb", (column) => column.notNull().defaultTo(sql`'[]'::jsonb`))
+				.execute();
+			// Each published top-level block's hash by id: what a translation's marks are counted against.
+			await db.schema
+				.alterTable("entry_published")
+				.addColumn("block_hashes", "jsonb", (column) => column.notNull().defaultTo(sql`'{}'::jsonb`))
+				.execute();
+			// A source block as it was when a translation saw it, by its hash: the "before" of a changed mark.
+			await db.schema
+				.createTable("source_blocks")
+				.addColumn("hash", "text", (column) => column.primaryKey())
+				.addColumn("block", "jsonb", (column) => column.notNull())
+				.execute();
+			const published = await sql<{
+				entry_id: string;
+				doc: Doc | null;
+			}>`select entry_id, doc from entry_published`.execute(db);
+			for (const row of published.rows)
+				await sql`update entry_published set block_hashes = ${JSON.stringify(blockHashes(row.doc))}::jsonb
+					where entry_id = ${row.entry_id}`.execute(db);
 		},
 	},
 };

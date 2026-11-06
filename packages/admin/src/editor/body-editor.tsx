@@ -1,13 +1,21 @@
 import type { Doc } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
-import { useEffect, useRef } from "react";
-import { useBlockHandle } from "./block-menu";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
+import {
+	type AddedBlock,
+	type PairedRows,
+	pendingAsPlaceholders,
+	restorePending,
+	showPaired,
+	showPlaceholders,
+} from "./translation";
 import { useBodyEditor } from "./use-body-editor";
 
 /**
@@ -22,6 +30,10 @@ export function BodyEditor({
 	templates = false,
 	onEditor,
 	proposals,
+	translation,
+	margin,
+	paired = null,
+	added,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -36,16 +48,29 @@ export function BodyEditor({
 	 * changed a block it touches, so it went in first).
 	 */
 	proposals?: { items: BodyProposal[]; current: string | null; onTaken: (id: string) => void };
+	/** A translation's block menu rows (doc 04). */
+	translation?: BlockTranslation;
+	/** What hangs in the text's left margin, drawn for the editor once it is made (a translation's marks). */
+	margin?: (editor: Editor) => ReactNode;
+	/** A translation side by side: the text as the rows beside its source (translation.md). */
+	paired?: PairedRows | null;
+	/** A translation's source blocks new since it was translated: each shows as one more undecided block where it goes (doc 04). */
+	added?: AddedBlock[];
 }) {
 	const editorRef = useRef<Editor | null>(null);
 	const latestProposals = useRef(proposals);
 	latestProposals.current = proposals;
 	const slash = useSlashMenu({ catalogs, templates, editorRef });
+	// A translation's undecided blocks go in empty, the source's words their placeholders, and come back in those words while nobody wrote in them;
+	// a source block new since the translation goes in the same way, and stays out of the body while nobody wrote in it.
+	// The editor is made once per mount, so the body it was mounted with is the one to read.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: once per mount, like the editor
+	const placeholders = useMemo(() => pendingAsPlaceholders(doc, catalogs.kit, added), []);
 	const editor = useBodyEditor({
-		doc,
+		doc: placeholders.doc,
 		catalogs,
 		editable,
-		onChange,
+		onChange: (next) => onChange(restorePending(next, placeholders.originals)),
 		keyDown: slash.keyDown,
 		onSelection: slash.sync,
 		onTakeProposal: (id) => {
@@ -56,10 +81,18 @@ export function BodyEditor({
 		},
 	});
 	editorRef.current = editor;
-	const handle = useBlockHandle(editor, catalogs);
+	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
+	useEffect(() => {
+		if (editor && !editor.isDestroyed && placeholders.texts.size > 0)
+			editor.view.dispatch(showPlaceholders(editor.state, placeholders.texts));
+	}, [editor, placeholders]);
+
+	useEffect(() => {
+		if (editor && !editor.isDestroyed) editor.view.dispatch(showPaired(editor.state, paired));
+	}, [editor, paired]);
 
 	const items = proposals?.items;
 	const current = proposals?.current ?? null;
@@ -73,15 +106,19 @@ export function BodyEditor({
 
 	return (
 		<EditorBody
+			paired={paired !== null}
 			// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
 			onClick={(event) => {
 				const target = event.target as Node;
+				// A mark in the margin opens its card; it is not a press under the text.
+				if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
 				// A press under the last block puts the cursor at the end of the text.
 				if (editor && event.currentTarget.contains(target) && !editor.view.dom.contains(target))
 					editor.chain().focus("end").run();
 			}}
 		>
 			<EditorContent editor={editor} />
+			{editor && margin ? margin(editor) : null}
 			{handle.overlay}
 			{tables.overlay}
 			{slash.menu}

@@ -1,5 +1,7 @@
 import { type Kysely, sql, type Transaction } from "kysely";
+import { type BlockKit, createBlockKit } from "../body/blocks";
 import type { Database } from "../db/schema";
+import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
@@ -45,7 +47,16 @@ async function followField(db: Db, collection: string, from: string, to: string 
 		.execute();
 }
 
-async function applyStep(db: Db, step: ChangeStep) {
+async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit) {
+	if (step.do === "removeLocale") {
+		// What the site shows and old paths go with the entries (cascade).
+		await db.deleteFrom("entries").where("locale", "=", step.locale).execute();
+		return;
+	}
+	if (step.do === "changeSource") {
+		await changeSource(db, step.from, step.to, schema, kit);
+		return;
+	}
 	// A field step changes the working copy and what the site shows alike (doc 02): the site's code changes with the schema.
 	const entries = async (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) => {
 		await sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
@@ -130,8 +141,8 @@ export async function readSchemaState(db: Db): Promise<SchemaState | null> {
  * Follows one change file: its steps, then the admin values it brings for what it created (a new collection's row, a new field of an existing one),
  * put in only where the database has none. What the database already has is never replaced: from then on the database owns those values.
  */
-async function followChange(db: Db, change: ChangeFile): Promise<void> {
-	for (const step of change.steps) await applyStep(db, step);
+async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
+	for (const step of change.steps) await applyStep(db, step, schema, kit);
 	for (const [collection, first] of Object.entries(change.firstAdminValues ?? {}))
 		await sql`insert into collection_admin_values (collection, values) values (${collection}, ${JSON.stringify(first)}::jsonb)
 			on conflict (collection) do update set
@@ -142,8 +153,8 @@ async function followChange(db: Db, change: ChangeFile): Promise<void> {
 }
 
 /** Applies one change file and records the schema it leaves. Run inside the write's transaction, so a failed step leaves the database as it was. */
-export async function applyChange(db: Db, change: ChangeFile, schema: Schema): Promise<void> {
-	await followChange(db, change);
+export async function applyChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
+	await followChange(db, change, schema, kit);
 	await setSchemaState(db, schema, null);
 }
 
@@ -173,10 +184,15 @@ export async function pendingChanges(db: Db, changes: ChangeFile[]): Promise<Cha
  * `monti db:migrate` (and `db:setup`): follows every pending change file, then records the schema the site's code runs with. All or nothing, in one
  * transaction.
  */
-export async function migrateContent(db: Kysely<Database>, schema: Schema, changes: ChangeFile[]): Promise<string[]> {
+export async function migrateContent(
+	db: Kysely<Database>,
+	schema: Schema,
+	changes: ChangeFile[],
+	kit: BlockKit = createBlockKit([], []),
+): Promise<string[]> {
 	return db.transaction().execute(async (trx) => {
 		const pending = await pendingChanges(trx, changes);
-		for (const change of pending) await followChange(trx, change);
+		for (const change of pending) await followChange(trx, change, schema, kit);
 		await setSchemaState(trx, schema, null);
 		return pending.map((change) => change.id);
 	});

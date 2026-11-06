@@ -9,7 +9,11 @@ export type ChangeStep =
 	| { do: "removeCollection"; collection: string }
 	| { do: "renameField"; collection: string; from: string; to: string; values: "move" | "empty" }
 	| { do: "removeField"; collection: string; field: string; values: "clear" | { move: string } }
-	| { do: "fillField"; collection: string; field: string; value: unknown };
+	| { do: "fillField"; collection: string; field: string; value: unknown }
+	/** A language left the site: its translations go with it (doc 04). */
+	| { do: "removeLocale"; locale: string }
+	/** The source language changed: every group gets an entry in it, which becomes its source, and the blocks are paired again (doc 04). */
+	| { do: "changeSource"; from: string; to: string };
 
 /**
  * `monti/changes/<id>.json`: every structure change leaves one, and a database follows them in id order, the dev database when the change is saved

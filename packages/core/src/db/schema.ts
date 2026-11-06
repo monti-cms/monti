@@ -84,6 +84,8 @@ export interface EntryTable {
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 	trashed_at: Date | null;
+	/** In a translation: source block ids it chose to leave out, so they are not marked as new (doc 04). */
+	translation_skips: ColumnType<string[], string | undefined, string>;
 	/** The body's text, made by the database from the blocks (search reads it). */
 	body_text: ColumnType<string | null, never, never>;
 }
@@ -103,6 +105,14 @@ export interface EntryPublishedTable {
 	published_at: Date;
 	/** The entry version it was copied from. */
 	from_version: number;
+	/** Each top-level block's hash by block id: a translation's marks are counted against these (doc 04). */
+	block_hashes: ColumnType<Record<string, string>, string | undefined, string>;
+}
+
+/** A source block as a translation saw it, by its hash: the "before" a changed mark shows (doc 04). */
+export interface SourceBlockTable {
+	hash: string;
+	block: Json<unknown>;
 }
 
 /** A slug an entry was published under before; the site sends it on to the entry's slug now. */
@@ -180,6 +190,7 @@ export interface SignInAttemptTable {
 export interface Database {
 	entries: EntryTable;
 	entry_published: EntryPublishedTable;
+	source_blocks: SourceBlockTable;
 	old_paths: OldPathTable;
 	templates: TemplateTable;
 	monti_admin: AdminTable;

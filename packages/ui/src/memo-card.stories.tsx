@@ -89,7 +89,7 @@ export const NewRequest: Story = {
 export const SourceChanged: Story = {
 	render: () => (
 		<MemoCard
-			where="원문 바뀜"
+			where="원문 변경"
 			discardLabel="확인"
 			onDiscard={noop}
 			acceptLabel="다시 번역"
@@ -110,6 +110,15 @@ export const SourceChanged: Story = {
 					</>
 				}
 			/>
+		</MemoCard>
+	),
+};
+
+/** A block new in the source: only its words, and bringing it in (it comes in dimmed) or leaving it out of this language. */
+export const SourceAdded: Story = {
+	render: () => (
+		<MemoCard where="새로" discardLabel="빼기" onDiscard={noop} acceptLabel="넣기" onAccept={noop}>
+			<MemoDiff afterLabel="원문" after="다음 글에서는 번역을 다룬다." />
 		</MemoCard>
 	),
 };
@@ -152,4 +161,13 @@ export const UnderText: Story = {
 			</Box>
 		);
 	},
+};
+
+/** A block gone from the source: its words before, and after it "지워짐" in the faint ink of nothing, so it never reads as the new words. */
+export const SourceRemoved: Story = {
+	render: () => (
+		<MemoCard where="원문에서 지워짐" discardLabel="확인" onDiscard={noop} acceptLabel="지우기" onAccept={noop}>
+			<MemoDiff beforeLabel="전" afterLabel="후" before="목록에는 제목과 주소, 상태만 남겼다." none="지워짐" />
+		</MemoCard>
+	),
 };

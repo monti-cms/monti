@@ -52,7 +52,7 @@ import { href, type Route } from "../../route";
 import { ColumnMenu, useLanguageName } from "./column-menu";
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
-import { filterColumn, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
+import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { type RowActions as Actions, allArchived, publishable, RowMenuItems, RowsMenuItems } from "./row-menu";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
@@ -229,8 +229,9 @@ export function ListScreen({
 	const hide = (column: ListColumn) => {
 		keep(allIds, [...hidden, column.id]);
 		// A hidden column keeps no filter: nothing on the screen would say it is on (components/list.md, filters by stored kind).
-		if (state.filters.some((filter) => filterColumn(filter) === column.id))
-			setState(withFilter(state, column.id, null));
+		// The language column has two: its languages and its translation filter.
+		const its = state.filters.filter((filter) => headOf(filter) === column.id);
+		if (its.length > 0) setState(its.reduce((next, filter) => withFilter(next, filterColumn(filter), null), state));
 	};
 
 	const run = {
@@ -370,7 +371,7 @@ export function ListScreen({
 		kindSize: kindSizeOf(column),
 		align: column.kind === "date" ? "end" : "start",
 		sort: state.sort.by === column.id ? state.sort.dir : undefined,
-		filtered: state.filters.some((filter) => filterColumn(filter) === column.id),
+		filtered: state.filters.some((filter) => headOf(filter) === column.id),
 		menu: (
 			<ColumnMenu
 				column={column}
@@ -397,6 +398,14 @@ export function ListScreen({
 		const named = column ? label(column) : filterColumn(filter);
 		const values = (list: string[]) => t("list.chipValues", { column: named, values: list.join(", ") });
 		switch (filter.on) {
+			// "Translation: Source changed", and the languages it asks about when the assistant named them: "Translation: Source changed (English)".
+			case "translation": {
+				const states = filter.any.map((is) => t(`list.translation.${is}`)).join(", ");
+				return t("list.chipValues", {
+					column: t("list.translation"),
+					values: filter.locales ? `${states} (${filter.locales.map(languageName).join(", ")})` : states,
+				});
+			}
 			case "empty":
 				return t("list.chipEmpty", { column: named });
 			case "status":

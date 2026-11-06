@@ -54,12 +54,14 @@ async function setup(monti: Monti) {
 /** The dev server: it has the schema files (a story writes none), so structure can change. */
 const devFiles = { write: async () => {}, readChanges: async () => [] };
 
-export const site = (options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void> } = {}) => [
+export const site = (
+	options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void>; schema?: typeof schema } = {},
+) => [
 	async () => {
 		// The draft keeps unsaved changes in this browser (doc 05); every story starts from the saved values, at the first screen.
 		startAt();
 		const made = await storySite({
-			schema,
+			schema: options.schema ?? schema,
 			auth: { password: true },
 			signedIn: true,
 			setup,

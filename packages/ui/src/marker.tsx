@@ -19,12 +19,14 @@ const markerVariants = cva(
 	{
 		variants: {
 			/**
-			 * `request` is a note left for the assistant (a count), `changed` a block whose source changed since it was translated (changed, new, removed),
-			 * `keep` a block that stays in the source language.
+			 * `request` is a note left for the assistant (a count); `changed`, `removed` and `added` a translated block whose source changed, is gone or is
+			 * new since (warning, danger and success, the colors the changes lists use for the same words); `keep` a block that stays in the source language.
 			 */
 			tone: {
 				request: "bg-monti-muted pr-[5px] pl-monti-4 text-monti-subtle",
 				changed: "bg-monti-warning-muted px-monti-6 text-monti-warning",
+				removed: "bg-monti-danger-muted px-monti-6 text-monti-danger",
+				added: "bg-monti-success-muted px-monti-6 text-monti-success",
 				keep: "px-monti-6 text-monti-subtle ring-1 ring-monti-default ring-inset",
 			},
 			/** Its card is open. */
@@ -41,14 +43,16 @@ const markerVariants = cva(
 		compoundVariants: [
 			{ tone: "request", active: true, className: "bg-monti-emphasis text-monti-on-emphasis" },
 			{ tone: "changed", active: true, className: "bg-(--monti-fg-warning) text-(color:--monti-bg-page)" },
+			{ tone: "removed", active: true, className: "bg-(--monti-fg-danger) text-(color:--monti-bg-page)" },
+			{ tone: "added", active: true, className: "bg-(--monti-fg-success) text-(color:--monti-bg-page)" },
 		],
 		defaultVariants: { tone: "request" },
 	},
 );
 
 /**
- * A small tag in the left margin of a block, 18px tall in mono 10px (the one text smaller than the micro role). `request` carries a count (or "…" while the assistant works) and opens the note's card; `changed` says a
- * translated block's source changed ("Changed", "New", "Removed"); `keep` says the block stays in the source language. Press it to open what it is about
+ * A small tag in the left margin of a block, 18px tall in mono 10px (the one text smaller than the micro role). `request` carries a count (or "…" while the assistant works) and opens the note's card; `changed`,
+ * `removed` and `added` say a translated block's source changed ("Changed"), is gone ("Removed") or is new ("New"); `keep` says the block stays in the source language. Press it to open what it is about
  * (give it `onClick`). The words are the app's.
  */
 function Marker({
@@ -61,7 +65,7 @@ function Marker({
 }: Omit<ComponentProps<"button">, "type"> & VariantProps<typeof markerVariants>) {
 	const content = (
 		<>
-			{tone === "changed" || tone === "keep" ? null : <Chat aria-hidden className="size-3" />}
+			{tone === "request" || tone === undefined || tone === null ? <Chat aria-hidden className="size-3" /> : null}
 			{children}
 		</>
 	);

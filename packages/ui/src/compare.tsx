@@ -115,6 +115,24 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 }
 
 /**
+ * A block of the source shown beside its translation (the source pane). `current` while the cursor is in the translation's block paired with it: it
+ * is on the block ground, a little wider than its words, so one sees which source block is being translated.
+ */
+function CompareBlock({ current = false, className, ...props }: React.ComponentProps<"div"> & { current?: boolean }) {
+	return (
+		<div
+			data-slot="compare-block"
+			data-current={current || undefined}
+			className={cn(
+				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-block",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/**
  * The source and its translation side by side, block by block: one `CompareRow` per block, so each block sits level with its translation. The first row
  * is the head (`head`): each side's last edit date in the small mono line, under the ink rule.
  */
@@ -124,7 +142,7 @@ function CompareRows({ className, ...props }: React.ComponentProps<"div">) {
 
 /**
  * One block in `CompareRows`: its kind in the narrow column on the left ("문단", "콜아웃"), with a note under it in the warning tone when the source (cms-allow-korean)
- * moved since the translation ("원문 바뀜", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
+ * moved since the translation ("원문 변경", "원문에 추가"); the source on the tool ground, quieter; the translation on the page. `current` is the block (cms-allow-korean)
  * being written: the translation side is on the block ground. Mark the words of the source that changed with `Highlight`. The row of the entry's
  * title is `title`: the two titles in `Heading variant="page"`, its name set lower to sit by them.
  */
@@ -141,7 +159,7 @@ function CompareRow({
 }: Omit<React.ComponentProps<"div">, "children" | "title"> & {
 	/** The kind of block ("문단"); empty on the head row. (cms-allow-korean: quotes the words) */
 	name?: React.ReactNode;
-	/** What happened to the source since it was translated ("원문 바뀜"), in the warning tone. (cms-allow-korean: quotes the words) */
+	/** What happened to the source since it was translated ("원문 변경"), in the warning tone. (cms-allow-korean: quotes the words) */
 	note?: React.ReactNode;
 	/** The head row: each side's last edit date in the small mono line. */
 	head?: boolean;
@@ -182,7 +200,8 @@ function CompareRow({
 			</div>
 			<div
 				className={cn(
-					"min-w-0 border-monti-default border-l px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0",
+					// 40px before the words: the block handle of the translation written here (24px, 4px off the words) stays inside the cell.
+					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40 **:data-[slot=compare-code]:mb-0",
 					current && "bg-monti-block",
 				)}
 			>
@@ -214,13 +233,47 @@ function CompareShared({
 	);
 }
 
-/** A run of the entry's text: the words that `changed` are on the highlight, the others are plain. */
-function CompareText({ changed = false, children }: { changed?: boolean; children: React.ReactNode }) {
-	return changed ? <Highlight>{children}</Highlight> : children;
+/** The underline of a source's words that changed since its translation: the warning color of "Changed", whatever ground it sits on. */
+const SOURCE_CHANGE = "underline decoration-[1.5px] decoration-monti-warning underline-offset-4";
+/** The words the source had before and no longer has (the "before" of a changed block): faint and struck through, as `Del` draws them. */
+const SOURCE_REMOVED = "line-through text-monti-faint";
+
+/**
+ * A run of the entry's text: the words that `changed` are marked, the others are plain. Two versions of one entry mark them on the highlight; a
+ * translation's source (`source`) marks the words that changed since it was translated with an underline in the warning color, which shows on the
+ * tool ground and on the block being written alike (2026-11-06 owner). `removed` is the source's words before the change: words it no longer has
+ * are faint and struck through instead, so "before" and "after" never mark the same way.
+ */
+function CompareText({
+	changed = false,
+	source = false,
+	removed = false,
+	children,
+}: {
+	changed?: boolean;
+	source?: boolean;
+	removed?: boolean;
+	children: React.ReactNode;
+}) {
+	if (!changed) return children;
+	if (!source) return <Highlight>{children}</Highlight>;
+	// The line runs under the words only: the spaces around a changed run stay outside it.
+	const [, before = "", words = children, after = ""] =
+		typeof children === "string" ? (/^(\s*)([\s\S]*?)(\s*)$/.exec(children) ?? []) : [];
+	return (
+		<>
+			{before}
+			<span data-slot="source-change" className={removed ? SOURCE_REMOVED : SOURCE_CHANGE}>
+				{words}
+			</span>
+			{after}
+		</>
+	);
 }
 
 export {
 	Compare,
+	CompareBlock,
 	CompareBody,
 	CompareCode,
 	CompareHeading,

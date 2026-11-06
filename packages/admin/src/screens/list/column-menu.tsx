@@ -2,7 +2,9 @@ import type { EntryState, Facet, ListColumn, ListFilter } from "@monti-cms/core"
 import {
 	Calendar,
 	DropdownMenuCheckboxItem,
+	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuScroll,
@@ -17,7 +19,7 @@ import {
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
-import { filterColumn, type ListState } from "./list-query";
+import { filterColumn, type ListState, TRANSLATION_STATES } from "./list-query";
 
 type Query = Record<string, unknown>;
 
@@ -109,11 +111,19 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
 	);
 }
 
+/**
+ * The language column: the languages the groups have, each with its count | "Translation": missing, source changed, up to date (components/list.md, column
+ * menu). The translation rows are checked like any column's values: several leave the groups of any of them.
+ */
 function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
+	const { t } = useAdmin();
 	const languageName = useLanguageName();
 	const facets = useFacets(query, "locale");
+	const translationFacets = useFacets(query, "translation");
 	const current = filterOf(state, "locale");
 	const chosen = current?.on === "locale" ? current.any : [];
+	const translation = filterOf(state, "translation");
+	const picked = translation?.on === "translation" ? translation.any : [];
 	const locales = [...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean);
 	return (
 		<>
@@ -129,6 +139,23 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 					}}
 				/>
 			))}
+			<DropdownMenuSeparator />
+			<DropdownMenuGroup>
+				<DropdownMenuLabel>{t("list.translation")}</DropdownMenuLabel>
+				{TRANSLATION_STATES.map((is) => (
+					<ValueRow
+						key={is}
+						label={t(`list.translation.${is}`)}
+						counted={count(translationFacets, is)}
+						checked={picked.includes(is)}
+						onToggle={() => {
+							// In the menu's order, so the same choice is always the same address.
+							const any = TRANSLATION_STATES.filter((each) => toggled(picked, is).includes(each));
+							setFilter("translation", any.length ? { on: "translation", any } : null);
+						}}
+					/>
+				))}
+			</DropdownMenuGroup>
 			<HideRow onHide={onHide} />
 		</>
 	);

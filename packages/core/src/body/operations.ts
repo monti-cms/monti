@@ -4,6 +4,8 @@ import { editableEntry, entryOf, saveWorking } from "../entries/operations";
 import { CheckError, ConflictError } from "../errors";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { defineRecordKind } from "../records";
+import { keepLinks } from "../translations/links";
+import { addSkips, followedHashes } from "../translations/source";
 import { blockOn, markOn } from "./blocks";
 import { assertDoc, editorOf } from "./check";
 import { asDoc, type Doc, DocShape, plainText, walk } from "./doc";
@@ -113,7 +115,18 @@ export const bodyOperations = [
 		},
 		async run(input, ctx) {
 			const { entry, next } = await editedBody(ctx, input);
-			return saveWorking(ctx, entry, { ...entry, doc: next });
+			// In a translation, an edit of a paired block's words is its translation against the source block as it is now (doc 04).
+			const edited = new Set(
+				input.ops.flatMap((op) => (op.op === "replaceText" || op.op === "setBlock" ? [op.block] : [])),
+			);
+			const retranslated = new Set(
+				next.blocks.filter((top) => [...walk([top])].some(({ block }) => edited.has(block.id))).map((top) => top.id),
+			);
+			const hashes = await followedHashes(ctx.db, ctx.site.schema(), entry);
+			const { doc, skipped } = keepLinks(asDoc(entry.doc), next, hashes, retranslated);
+			const saved = await saveWorking(ctx, entry, { ...entry, doc });
+			await addSkips(ctx.db, entry, skipped);
+			return saved;
 		},
 		summary: (input) => ({ key: "body.edit", values: { count: input.ops.length } }),
 	}),

@@ -15,9 +15,16 @@ export const slugify = (text: string) =>
 		.slice(0, 80)
 		.replace(/-+$/, "");
 
-/** The public path of a slug in a collection: its path with `:slug` filled in. */
-export const publicPath = (schema: Schema, collection: string, slug: string) =>
-	schema.collections[collection]?.path.replace(":slug", slug) ?? null;
+/**
+ * The public path of a slug in a collection and language: its path with `:slug` filled in, after `/<language>` when the site's prefix rule shows the
+ * language there (`always`, or `exceptSource` for a translation, doc 04).
+ */
+export function publicPath(schema: Schema, collection: string, slug: string, locale = schema.locales.source) {
+	const path = schema.collections[collection]?.path.replace(":slug", slug);
+	if (path === undefined) return null;
+	const { prefix, source } = schema.locales;
+	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${path}` : path;
+}
 
 /** Whether another entry of the same collection and language is published under `slug`. */
 export async function slugPublishedByOther(db: Db, entry: Entry, slug: string): Promise<boolean> {

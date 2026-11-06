@@ -31,13 +31,13 @@ const RULE =
 	"bg-[linear-gradient(var(--monti-border-default),var(--monti-border-default))] bg-size-[1px_14px] bg-no-repeat";
 
 const cellVariants = cva(
-	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not([data-slot=status-bar-cell]~*)]:pl-monti-24 rounded-monti-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 data-popup-open:bg-monti-selected [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
+	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not([data-slot=status-bar-cell]~*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
 	{
 		variants: {
 			/** `end` cells sit after the spacer: the rule is on their left, the last one has room at the right edge (the cells are counted, not their neighbors: an open list leaves focus guards beside its trigger), and they hide first on a narrow screen. */
 			end: {
-				false: cn(RULE, "min-w-0 bg-right-center"),
-				true: cn(RULE, "shrink-0 bg-left-center [&:not(:has(~[data-slot=status-bar-cell]))]:pr-monti-24 max-sm:hidden"),
+				false: cn(RULE, "min-w-0 bg-right"),
+				true: cn(RULE, "shrink-0 bg-left [&:not(:has(~[data-slot=status-bar-cell]))]:pr-monti-24 max-sm:hidden"),
 			},
 			/** Something needs attention: a 6px dot before the text, in the warning color, or red while it stops publishing. */
 			tone: {
@@ -52,7 +52,7 @@ const cellVariants = cva(
 
 /**
  * One cell of the status bar. It is as tall as the bar, so the whole height can be pressed, and the cell whose list is open takes the selected
- * background. A `<button>` by default (it opens a list: `render` it from the list's trigger); give it `render={<span />}` for a cell that only states
+ * background; a cell that can be pressed takes it too under the pointer, so it reads as pressable (two steps over the tool ground, as a list row's hover is over the page). A `<button>` by default (it opens a list: `render` it from the list's trigger); give it `render={<span />}` for a cell that only states
  * something, and an `href` (or the app's router link in `render`) for one that goes somewhere. `tone` colors the text of something to fix, and `dot` (on by default) puts the 6px dot before it: the dot marks what has to be dealt with before saving or publishing, so a cell that only counts findings turns it off.
  * `detail` is a second, quieter part after a "·" ("Requests 1 · Working 1"): what the first part does not count.
  */

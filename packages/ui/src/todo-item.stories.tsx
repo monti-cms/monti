@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, Marker, TodoDone, TodoItem } from "./index";
+import { Box, TodoDone, TodoItem } from "./index";
 
 const noop = () => {};
 
@@ -77,18 +77,34 @@ export const Current: Story = {
 	),
 };
 
-/** A translated block whose source changed: a marker instead of the ring. */
-export const WithMarker: Story = {
+/** Translated blocks whose source moved: the word in front instead of the ring, in the colors the changes lists use, the title cut to one line. */
+export const WithTag: Story = {
 	render: () => (
-		<TodoItem
-			title="원문이 바뀐 문단"
-			detail="본문 3"
-			marker={<Marker tone="changed">바뀜</Marker>}
-			onOpen={noop}
-			actionLabel="번역"
-			onAction={noop}
-			proposal
-		/>
+		<>
+			<TodoItem
+				title="I rebuilt the blog because fixing the tool took longer than writing."
+				tag="바뀜"
+				onOpen={noop}
+				actionLabel="확인"
+				onAction={noop}
+			/>
+			<TodoItem
+				title="The list keeps only the title, the address and the state."
+				tag="지워짐"
+				tagTone="danger"
+				onOpen={noop}
+				actionLabel="지우기"
+				onAction={noop}
+			/>
+			<TodoItem
+				title="다음 글에서는 번역을 다룬다."
+				tag="새로"
+				tagTone="success"
+				onOpen={noop}
+				actionLabel="빼기"
+				onAction={noop}
+			/>
+		</>
 	),
 };
 

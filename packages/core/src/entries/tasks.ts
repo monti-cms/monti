@@ -5,6 +5,8 @@ import type { Database } from "../db/schema";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
+import { marksOf } from "../translations/links";
+import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import type { Entry } from "./record";
 
 type Awaitable<T> = T | Promise<T>;
@@ -45,9 +47,12 @@ export async function publishTasks(
 	const schema = site.schema();
 	const fields: Record<string, FieldDefinition> = schema.collections[entry.collection]?.fields ?? {};
 	const tasks: PublishTask[] = [];
+	// A translation's `same` fields are its source's, and an empty `fromSource` one is the source's too (doc 04).
+	const source = isTranslation(schema, entry) ? await sourceEntryOf(db, schema, entry.translationGroup) : null;
+	const read = translatedFields(schema, entry.collection, entry, source);
 	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
 	for (const [field, definition] of Object.entries(fields))
-		if ((definition.required || field === "slug") && isEmpty(fieldValue(entry, field)))
+		if ((definition.required || field === "slug") && isEmpty(fieldValue(field === "slug" ? entry : read, field)))
 			tasks.push({
 				code: "required",
 				field,
@@ -61,6 +66,34 @@ export async function publishTasks(
 			blocking: true,
 			message: { key: "entries.task.slugTaken", values: { slug: entry.slug } },
 		});
+	// A block still in the source's words is not decided: the site would not draw it (doc 04, principle 4).
+	for (const block of asDoc(entry.doc).blocks)
+		if (block.link?.state === "pending")
+			tasks.push({
+				code: "pending",
+				field: "doc",
+				block: block.id,
+				blocking: true,
+				message: { key: "entries.task.pending" },
+			});
+	// A block new in the published source is not decided either: the translation is written, kept in the source's words or left without it first
+	// (doc 04, 2026-11-06 owner). `block` is the source block's id: the editor shows it as an undecided block paired with it.
+	if (source) {
+		const published = await db
+			.selectFrom("entry_published")
+			.select("doc")
+			.where("entry_id", "=", source.id)
+			.executeTakeFirst();
+		for (const mark of marksOf(asDoc(entry.doc), entry.translationSkips, published ? asDoc(published.doc) : null))
+			if (mark.kind === "added")
+				tasks.push({
+					code: "added",
+					field: "doc",
+					block: mark.from,
+					blocking: true,
+					message: { key: "entries.task.added" },
+				});
+	}
 	// A block's own check (`defineBlock`'s `check`) adds rows for that block.
 	for (const { block } of walk(asDoc(entry.doc).blocks))
 		for (const row of site.kit.blocks.get(block.type)?.check?.(block) ?? [])

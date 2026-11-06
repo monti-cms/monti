@@ -9,6 +9,17 @@ export type Inline =
 	| { type: "hardBreak" }
 	| { type: "footnoteRef"; id: string };
 
+/**
+ * In a translation, where a block came from (doc 04): the source block's id, the hash of that block when it was last translated or confirmed, and
+ * what was decided for it.
+ */
+export type TranslationLink = {
+	from: string;
+	seen: string;
+	/** `pending`: still the source's words, not decided; the site does not draw it and it blocks publishing. */
+	state: "pending" | "translated" | "keepSource" | "followSource";
+};
+
 /** One block of a body. Its id is set when it is first made and never changes (doc 03, principle 2). */
 export type Block = {
 	id: string;
@@ -18,6 +29,8 @@ export type Block = {
 	content?: Inline[];
 	/** For blocks that hold blocks (a quote, a list). */
 	children?: Block[];
+	/** Only on a translation's top-level blocks that are paired with a source block. */
+	link?: TranslationLink;
 };
 
 /** A body: the JSON document that is always what is stored. MDX and other syntaxes are a plugin's import and export (doc 03, principle 1). */
@@ -29,6 +42,11 @@ export const InlineShape = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("hardBreak") }),
 	z.object({ type: z.literal("footnoteRef"), id: z.string() }),
 ]);
+const LinkShape = z.object({
+	from: z.string().min(1),
+	seen: z.string(),
+	state: z.enum(["pending", "translated", "keepSource", "followSource"]),
+});
 export const BlockShape: z.ZodType<Block> = z.lazy(() =>
 	z.object({
 		id: z.string().min(1),
@@ -36,6 +54,7 @@ export const BlockShape: z.ZodType<Block> = z.lazy(() =>
 		attrs: z.record(z.string(), z.unknown()).optional(),
 		content: z.array(InlineShape).optional(),
 		children: z.array(BlockShape).optional(),
+		link: LinkShape.optional(),
 	}),
 );
 export const DocShape: z.ZodType<Doc> = z.object({ type: z.literal("doc"), blocks: z.array(BlockShape) });
@@ -61,8 +80,8 @@ export const withIds = ({ children, ...block }: NewBlock): Block => ({
 	...(children ? { children: children.map(withIds) } : {}),
 });
 
-/** A copy with every id new: a template put into an entry, a duplicated block (doc 03, decisions). */
-export const withNewIds = (block: Block): Block => ({
+/** A copy with every id new and no translation link: a template put into an entry, a duplicated block (doc 03, decisions). */
+export const withNewIds = ({ link: _link, ...block }: Block): Block => ({
 	...block,
 	id: newBlockId(),
 	...(block.children ? { children: block.children.map(withNewIds) } : {}),

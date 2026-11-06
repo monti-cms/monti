@@ -21,6 +21,8 @@ export type Entry = {
 	createdAt: Date;
 	updatedAt: Date;
 	trashedAt: Date | null;
+	/** In a translation: source block ids it left out (doc 04). */
+	translationSkips: string[];
 };
 
 export async function loadEntries(db: Db, ids: string[]): Promise<Entry[]> {
@@ -42,6 +44,7 @@ export async function loadEntries(db: Db, ids: string[]): Promise<Entry[]> {
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 		trashedAt: row.trashed_at,
+		translationSkips: row.translation_skips,
 	}));
 }
 
@@ -59,10 +62,11 @@ type Snapshot = {
 	oldPaths: Record<string, unknown>[];
 };
 
+const JSON_COLUMNS = new Set(["values", "doc", "translation_skips", "block_hashes"]);
 const jsonColumns = (row: Record<string, unknown>) =>
 	Object.fromEntries(
 		Object.entries(row).map(([key, value]) =>
-			key === "values" || key === "doc" ? [key, value === null ? null : JSON.stringify(value)] : [key, value],
+			JSON_COLUMNS.has(key) ? [key, value === null ? null : JSON.stringify(value)] : [key, value],
 		),
 	);
 

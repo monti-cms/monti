@@ -12,7 +12,16 @@ export {
 	defineMark,
 	type MarkDefinition,
 } from "./body/blocks";
-export { type Block, type Doc, type Inline, type Mark, type NewBlock, newBlockId, plainText } from "./body/doc";
+export {
+	type Block,
+	type Doc,
+	type Inline,
+	type Mark,
+	type NewBlock,
+	newBlockId,
+	plainText,
+	type TranslationLink,
+} from "./body/doc";
 export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
@@ -73,9 +82,13 @@ export {
 	defineSchema,
 	type FieldDefinition,
 	type FieldKind,
+	type LocaleDefinition,
 	type LocaleMode,
+	type LocalesDefinition,
+	localeModeOf,
 	type Schema,
 	type SchemaProblem,
+	translates,
 } from "./schema/define";
 export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, schemaFilesAt } from "./schema/files";
 export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";

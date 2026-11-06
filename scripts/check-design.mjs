@@ -14,7 +14,7 @@
  *   css-file            Admin styling lives in token utilities. The only stylesheets in `packages/ui` and `packages/admin` are `ui/styles/theme.css`,
  *                       `ui/styles/tokens.css` (generated), `ui/styles/admin.css` and `admin/styles/index.css` (`ui/.storybook` is exempt). A
  *                       `.ts`/`.tsx` that imports any other CSS file fails too.
- *   admin-css-rule      `ui/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the scrollbar).
+ *   admin-css-rule      `ui/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the selection, the scrollbar).
  *                       Any other selector moves to token utilities on the element.
  *   arbitrary-value     A class with a raw color in brackets (`bg-[#fff]`, `[color:red]`, `color-mix(... white)`) fails everywhere. Outside `packages/ui`
  *                       a raw length (`w-[34px]`, `p-[0.5rem]`, `calc(100%-2rem)`) fails too: the parts of `@monti-cms/ui` keep the design system's
@@ -91,6 +91,8 @@ const ADMIN_CSS_SELECTORS = new Map([
 	["html:has(.monti-admin) body", null],
 	[":where(html:has(.monti-admin)) *", "base"],
 	[".monti-admin", null],
+	// Text picked by dragging, on the whole document as popups are portaled to the body (tokens.md, `bg-selection`).
+	["html:has(.monti-admin) ::selection", null],
 	// The scrollbar, on the whole document: popups are portaled to the body and scroll too.
 	["html:has(.monti-admin) body *", null],
 	["html:has(.monti-admin) body ::-webkit-scrollbar", null],

@@ -109,7 +109,7 @@ export function TranslatePairedScreen() {
 						/>
 						<CompareRow
 							name="문단"
-							note="원문 바뀜"
+							note="원문 변경"
 							current
 							source={
 								<CompareBody>

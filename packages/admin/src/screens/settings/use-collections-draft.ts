@@ -4,6 +4,7 @@ import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { ofCollection } from "./review-sheet";
 import {
 	at,
 	build,
@@ -85,8 +86,8 @@ export function useCollectionsDraft() {
 		[data, changed, draft.value, catalog.data],
 	);
 	const structureChanged = Boolean(data && built && (built.renames.length > 0 || !sameJson(built.schema, data.schema)));
-	const check = useRead<SchemaProblem[]>("schema.check", { draft: built?.schema ?? { collections: {} } });
-	const problems = structureChanged ? (check.data ?? []) : [];
+	const check = useRead<SchemaProblem[]>("schema.check", { draft: built?.schema }, { skip: !built });
+	const problems = structureChanged ? (check.data ?? []).filter(ofCollection) : [];
 
 	const label = useCallback((c: string) => String(draft.value(at.collectionValue(c, "label")) ?? "") || c, [draft]);
 	const fieldName = useCallback(

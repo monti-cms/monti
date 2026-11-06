@@ -24,8 +24,11 @@ export type BlockDefinition<Component = unknown> = {
 	holds: "text" | "blocks" | "nothing";
 	/** For a block that holds blocks: the types it takes. All when left out. */
 	children?: string[];
-	/** Text in attrs that a translation rewrites (doc 04). */
-	translate?: { attrs: string[] };
+	/**
+	 * What a translation rewrites (doc 04): the block's text, unless `text` is false (code), and the attrs named here (a caption, a table's cells). A block
+	 * with nothing to rewrite follows the source block in a translation.
+	 */
+	translate?: { attrs?: string[]; text?: false };
 	Site?: Component;
 	/** The editor's view; the site's component with editable children when left out. */
 	Editor?: Component;
@@ -102,6 +105,7 @@ export const coreBlocks: AnyBlockDefinition[] = [
 	defineBlock({ type: "quote", label: label("quote"), description: "A quotation.", menu: "text", holds: "blocks" }),
 	text("codeBlock", "Code, kept as written, with its language.", {
 		attrs: z.object({ language: z.string().optional() }),
+		translate: { text: false },
 	}),
 	defineBlock({
 		type: "table",
@@ -115,6 +119,7 @@ export const coreBlocks: AnyBlockDefinition[] = [
 			widths: z.array(z.number().positive().max(100)).optional(),
 		}),
 		holds: "nothing",
+		translate: { attrs: ["rows"] },
 	}),
 	defineBlock({
 		type: "divider",

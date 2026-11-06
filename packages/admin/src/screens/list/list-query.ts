@@ -1,9 +1,10 @@
 import type { ListColumn, ListFilter } from "@monti-cms/core";
 
 /**
- * The list's query in its address (doc 06: filters, search and sort live in the address only). One key per filtered column, values comma-joined:
- * `?status=draft,changed&tags=<group>,~none&summary=empty&updatedAt=7d&sort=-updatedAt&q=text&in=title&page=2`. `ai` names the columns the
- * assistant filtered (`list.show`), drawn as blue chips until the admin touches them.
+ * The list's query in its address (doc 06: filters, search and sort live in the address only). One key per filter, values comma-joined:
+ * `?status=draft,changed&tags=<group>,~none&summary=empty&updatedAt=7d&locale=en&translation=sourceChanged&sort=-updatedAt&q=text&in=title&page=2`.
+ * The language column holds two: its languages (`locale`) and its translation filter (`translation`, with the languages it asks about after a colon
+ * when the assistant named them). `ai` names the filters the assistant set (`list.show`), drawn as blue chips until the admin touches them.
  */
 export type ListState = {
 	filters: ListFilter[];
@@ -20,17 +21,35 @@ type SearchIn = (typeof SEARCH_IN)[number];
 const SORTABLE = new Set(["title", "slug", "updatedAt", "publishedAt", "createdAt"]);
 const RANGE = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/;
 
+/** The language column's translation filters, in their menu's order (doc 06, columns). */
+export const TRANSLATION_STATES = ["missing", "sourceChanged", "upToDate"] as const;
+type TranslationState = (typeof TRANSLATION_STATES)[number];
+const TRANSLATION = /^((?:missing|sourceChanged|upToDate)(?:,(?:missing|sourceChanged|upToDate))*)(?::(.+))?$/;
+
 const values = (raw: string) => raw.split(",").filter(Boolean);
 const orNull = (value: string) => (value === NONE ? null : value);
 
-/** The column a filter is on: what its key in the address is, and whose head shows its dot. */
+/** A filter's key: its key in the address, and the one filter of that key a menu replaces. */
 export const filterColumn = (filter: ListFilter) =>
-	filter.on === "status" || filter.on === "locale" || filter.on === "group" ? filter.on : filter.field;
+	filter.on === "status" || filter.on === "locale" || filter.on === "group" || filter.on === "translation"
+		? filter.on
+		: filter.field;
+
+/** The column whose head shows a filter's dot and whose menu sets it: the translation filter is the language column's. */
+export const headOf = (filter: ListFilter) => (filter.on === "translation" ? "locale" : filterColumn(filter));
 
 /** Reads the address with the collection's columns: a key no column filters by is left out, so an old link never breaks the list. */
 export function readState(params: URLSearchParams, columns: readonly ListColumn[]): ListState {
 	const filters: ListFilter[] = [];
 	for (const column of columns) {
+		// The language column's translation filter has its own key; a site with one language has no such column, so it never reads one.
+		const translation = column.filter === "locale" ? TRANSLATION.exec(params.get("translation") ?? "") : null;
+		if (translation)
+			filters.push({
+				on: "translation",
+				any: values(translation[1] ?? "") as TranslationState[],
+				...(translation[2] ? { locales: values(translation[2]) } : {}),
+			});
 		const raw = params.get(column.id);
 		if (!raw || !column.filter) continue;
 		switch (column.filter) {
@@ -78,6 +97,8 @@ export function writeState(state: ListState): URLSearchParams {
 	for (const filter of state.filters) {
 		const key = filterColumn(filter);
 		if (filter.on === "empty") params.set(key, "empty");
+		else if (filter.on === "translation")
+			params.set(key, `${filter.any.join(",")}${filter.locales ? `:${filter.locales.join(",")}` : ""}`);
 		else if (filter.on === "date")
 			params.set(key, typeof filter.range === "string" ? filter.range : `${filter.range.from}..${filter.range.to}`);
 		else params.set(key, filter.any.map((value) => value ?? NONE).join(","));
@@ -90,10 +111,18 @@ export function writeState(state: ListState): URLSearchParams {
 	return params;
 }
 
-/** The query `entries.query` and `entries.facets` take for this state. */
+/**
+ * The query `entries.query` and `entries.facets` take for this state. A translation filter that names no languages asks about the ones the language
+ * filter picked, as the menu counts it (`entries.facets`), so a row's count is the rows it leaves.
+ */
 export const toQuery = (collection: string, state: ListState, pageSize: number) => ({
 	collection,
-	filters: state.filters,
+	filters: state.filters.map((filter) => {
+		const picked = state.filters.find((each) => each.on === "locale");
+		return filter.on === "translation" && !filter.locales && picked?.on === "locale"
+			? { ...filter, locales: picked.any }
+			: filter;
+	}),
 	...(state.search.text.trim() ? { search: state.search } : {}),
 	sort: state.sort,
 	page: state.page,

@@ -1,4 +1,4 @@
-import type { FieldDefinition, LocaleMode } from "@monti-cms/core";
+import { type FieldDefinition, type LocaleMode, localeModeOf, translates } from "@monti-cms/core";
 import {
 	Button,
 	DragHandle,
@@ -89,7 +89,8 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 		multiline: def.kind === "text" && Boolean(def.multiline),
 		max: def.kind === "text" && def.max ? String(def.max) : "",
 		required: Boolean(def.required),
-		locale: def.locale ?? "same",
+		// A field without a mode has its name's (doc 04): the title per language, the address from the source, the rest the same.
+		locale: localeModeOf(field.name, def),
 		options: def.kind === "select" ? def.options.map((value) => ({ value, label: labels[value] ?? "" })) : [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
 		accept: def.kind === "media" ? (def.accept ?? "image") : "image",
@@ -105,8 +106,8 @@ const clean = <T,>(value: T): T =>
 function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 	const common = {
 		required: form.required,
-		// "All the same" is what a field without a mode does; a mode it had stays written.
-		locale: form.locale === "same" && !was?.locale ? undefined : form.locale,
+		// The mode a field without one has is not written; a mode it had stays written.
+		locale: form.locale === localeModeOf(form.name, { kind: "text" }) && !was?.locale ? undefined : form.locale,
 	};
 	if (form.kind === "text")
 		return clean({
@@ -192,6 +193,7 @@ function FieldSheetBody({
 	const { draft, data } = model;
 	const c = open.collection;
 	const locked = data?.locked ?? true;
+	const languages = data ? translates(data.schema) : false;
 	const targets = model.collections
 		.filter((each) => draft.value(at.collection(each)))
 		.map((each) => ({ value: each, label: model.label(each) }));
@@ -290,7 +292,16 @@ function FieldSheetBody({
 		rule(
 			label,
 			structure ? (
-				<PickOne id={id} width="fit" size="md" items={items} value={value} onChange={onChange} />
+				<PickOne
+					id={id}
+					width="fit"
+					size="md"
+					items={items}
+					value={value}
+					onChange={onChange}
+					// The row's name is plain text beside it: it names the select for screen readers too.
+					label={typeof label === "string" ? label : undefined}
+				/>
 			) : (
 				<Text tone="subtle">{items.find((item) => item.value === value)?.label ?? value}</Text>
 			),
@@ -545,13 +556,16 @@ function FieldSheetBody({
 						)}
 					</>
 				) : null}
-				{pickRow(
-					t("settings.field.locale"),
-					"field-locale",
-					LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
-					form.locale,
-					(locale) => set({ locale: locale as LocaleMode }),
-				)}
+				{/* A site in one language has nothing for a language mode to do (T46). */}
+				{languages
+					? pickRow(
+							t("settings.field.locale"),
+							"field-locale",
+							LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
+							form.locale,
+							(locale) => set({ locale: locale as LocaleMode }),
+						)
+					: null}
 			</Stack>
 		</SheetSection>
 	);

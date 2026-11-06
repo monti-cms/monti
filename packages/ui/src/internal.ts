@@ -70,6 +70,7 @@ export {
 } from "./command";
 export {
 	Compare,
+	CompareBlock,
 	CompareBody,
 	CompareCode,
 	CompareHeading,
@@ -136,7 +137,7 @@ export {
 } from "./dropdown-menu";
 export { EditorBody } from "./editor-body";
 export { EditorHeader, EditorTitleRule } from "./editor-header";
-export { DropLine, EditorOverlay, HeldBlock } from "./editor-overlay";
+export { DropLine, EditorMargin, EditorOverlay, HeldBlock } from "./editor-overlay";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";

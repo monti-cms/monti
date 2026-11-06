@@ -3,8 +3,9 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
-import type { CollectionDefinition, FieldDefinition } from "../schema/define";
+import { type CollectionDefinition, type FieldDefinition, type LocalesDefinition, translates } from "../schema/define";
 import { adminValuesRecord } from "../schema/operations";
+import { translationSql } from "../translations/count";
 import type { EntryState } from "./operations";
 
 /** What a list column is, which decides its menu: how it sorts and what it filters by (doc 06, columns). */
@@ -28,6 +29,15 @@ const Filter = z.discriminatedUnion("on", [
 	z.object({ on: z.literal("empty"), field: z.string() }),
 	/** Entries by their translation group: what a body link (`monti:entry/<group>`) and a relation point at. */
 	z.object({ on: z.literal("group"), any: z.array(z.string()).min(1) }),
+	/**
+	 * Groups by their translations in `locales` (every language but the source when left out): one missing, one whose source changed since it was
+	 * translated, or all there and up to date (doc 04). Several leave the groups of any of them, as every filter's values do.
+	 */
+	z.object({
+		on: z.literal("translation"),
+		any: z.array(z.enum(["missing", "sourceChanged", "upToDate"])).min(1),
+		locales: z.array(z.string()).min(1).optional(),
+	}),
 ]);
 export type Filter = z.infer<typeof Filter>;
 
@@ -109,11 +119,11 @@ const fieldOf = (definition: CollectionDefinition, field: string, kinds: FieldDe
 	return found;
 };
 
-/** Each translation group's representative: its first entry (doc 06, principle 4; doc 04 makes it the source-language one). */
-const representatives = (collection: string) => sql`(
+/** Each translation group's representative: its source-language entry, or its first while it has none (doc 06, principle 4; doc 04). */
+const representatives = (collection: string, source: string) => sql`(
 	select distinct on (e.translation_group) e.* from entries e
 	where e.collection = ${collection} and e.trashed_at is null
-	order by e.translation_group, e.created_at, e.id
+	order by e.translation_group, e.locale = ${source} desc, e.created_at, e.id
 )`;
 
 const stateSql = sql`case when rep.status = 'published' and rep.has_unpublished_changes then 'changed' else rep.status end`;
@@ -126,12 +136,31 @@ const dateColumn = (field: (typeof DATE_COLUMNS)[number]) =>
 		? sql.ref("p.published_at")
 		: sql.ref(field === "createdAt" ? "rep.created_at" : "rep.updated_at");
 
-function filterSql(filter: Filter, query: ListQuery, definition: CollectionDefinition, now: Date): RawBuilder<unknown> {
+/** The languages a translation filter asks about: the translations among the ones given, or every language but the source. */
+function targetsOf(locales: LocalesDefinition, given?: string[]): string[] {
+	const picked = given?.filter((code) => code !== locales.source) ?? [];
+	return picked.length > 0
+		? picked
+		: locales.list.map((locale) => locale.code).filter((code) => code !== locales.source);
+}
+
+function filterSql(
+	filter: Filter,
+	query: ListQuery,
+	definition: CollectionDefinition,
+	now: Date,
+	locales: LocalesDefinition,
+): RawBuilder<unknown> {
 	switch (filter.on) {
 		case "status":
 			return sql`${stateSql} in (${list(filter.any)})`;
 		case "group":
 			return sql`rep.translation_group in (${list(filter.any)})`;
+		case "translation":
+			return sql`(${sql.join(
+				filter.any.map((is) => translationSql(is, targetsOf(locales, filter.locales), locales.source)),
+				sql` or `,
+			)})`;
 		case "locale":
 			return sql`exists (select 1 from entries x where x.translation_group = rep.translation_group and x.trashed_at is null
 				and x.locale in (${list(filter.any)}))`;
@@ -197,7 +226,7 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 	const kept = query.filters.filter((filter) => !skip?.(filter));
 	// Archived entries leave the list until the status menu asks for them (doc 02, archive).
 	if (!query.filters.some((filter) => filter.on === "status")) parts.push(sql`rep.status <> 'archived'`);
-	for (const filter of kept) parts.push(filterSql(filter, query, definition, now));
+	for (const filter of kept) parts.push(filterSql(filter, query, definition, now, ctx.site.schema().locales));
 	return sql.join(parts, sql` and `);
 }
 
@@ -248,7 +277,7 @@ async function groupTitles(ctx: OperationContext, groups: string[]) {
 	const { rows } = await sql<{ translation_group: string; title: string }>`
 		select distinct on (translation_group) translation_group, title from entries
 		where translation_group in (${list(groups)}) and trashed_at is null
-		order by translation_group, created_at, id`.execute(ctx.db);
+		order by translation_group, locale = ${ctx.site.schema().locales.source} desc, created_at, id`.execute(ctx.db);
 	return new Map(rows.map((row) => [row.translation_group, row.title]));
 }
 
@@ -263,7 +292,7 @@ export async function runListQuery(
 			rep.created_at, rep.updated_at, rep.values, p.published_at, count(*) over () as total,
 			array(select x.locale from entries x where x.translation_group = rep.translation_group and x.trashed_at is null
 				order by x.locale = rep.locale desc, x.locale) as locales
-		from ${representatives(query.collection)} rep
+		from ${representatives(query.collection, ctx.site.schema().locales.source)} rep
 		left join entry_published p on p.entry_id = rep.id
 		where ${whereSql(ctx, query)}
 		order by ${await sortSql(ctx, query)}
@@ -317,12 +346,14 @@ export async function runListQuery(
 
 /** The column a filter belongs to, so a column's counts leave out its own filter. */
 const columnOf = (filter: Filter) =>
-	filter.on === "status" || filter.on === "locale" || filter.on === "group" ? filter.on : filter.field;
+	filter.on === "status" || filter.on === "locale" || filter.on === "group" || filter.on === "translation"
+		? filter.on
+		: filter.field;
 
 /** For one column's menu: each value with how many rows have it, the other columns' filters still applied (doc 06, `entries.facets`). */
 export async function runFacets(ctx: OperationContext, query: ListQuery, column: string): Promise<Facet[]> {
 	const definition = collectionOf(ctx, query.collection);
-	const from = sql`${representatives(query.collection)} rep left join entry_published p on p.entry_id = rep.id`;
+	const from = sql`${representatives(query.collection, ctx.site.schema().locales.source)} rep left join entry_published p on p.entry_id = rep.id`;
 	if (column === "status") {
 		// The status menu offers archived entries too, so its counts do not hide them.
 		const every = { ...query, filters: [...query.filters, { on: "status" as const, any: [...STATES] }] };
@@ -335,11 +366,27 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		}));
 	}
 	const where = whereSql(ctx, query, (filter) => columnOf(filter) === column);
+	if (column === "translation") {
+		// The translation filters' menu rows: how many rows each would leave, for the languages the locale filter picked (or all).
+		const { locales } = ctx.site.schema();
+		const picked = query.filters.find((filter) => filter.on === "locale");
+		const targets = targetsOf(locales, picked?.on === "locale" ? picked.any : undefined);
+		return Promise.all(
+			(["missing", "sourceChanged", "upToDate"] as const).map(async (is) => {
+				const { rows } = await sql<{ count: string }>`select count(*) as count from ${from}
+					where ${where} and ${translationSql(is, targets, locales.source)}`.execute(ctx.db);
+				return { value: is, count: Number(rows[0]?.count ?? 0) };
+			}),
+		);
+	}
 	if (column === "locale") {
+		// The groups are picked first (materialized, so the planner keeps it so): joined to their entries before the filters, a translation filter
+		// would run once per entry and per group, which grows with the square of the list.
 		const { rows } = await sql<{ locale: string; count: string }>`
-			select x.locale, count(distinct rep.translation_group) as count from ${from}
-			join entries x on x.translation_group = rep.translation_group and x.trashed_at is null
-			where ${where} group by x.locale order by count(distinct rep.translation_group) desc, x.locale`.execute(ctx.db);
+			with picked as materialized (select rep.translation_group from ${from} where ${where})
+			select x.locale, count(distinct picked.translation_group) as count from picked
+			join entries x on x.translation_group = picked.translation_group and x.trashed_at is null
+			group by x.locale order by count(distinct picked.translation_group) desc, x.locale`.execute(ctx.db);
 		return rows.map((row) => ({ value: row.locale, count: Number(row.count) }));
 	}
 	const field = fieldOf(definition, column, ["relation", "select", "text", "media"]);
@@ -350,7 +397,7 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			where ${where} group by l.to_group`.execute(ctx.db);
 		const counts = new Map(rows.map((row) => [row.to_group, Number(row.count)]));
 		const { rows: targets } = await sql<{ translation_group: string; title: string }>`
-			select rep.translation_group, rep.title from ${representatives(field.to)} rep where rep.status <> 'archived'`.execute(
+			select rep.translation_group, rep.title from ${representatives(field.to, ctx.site.schema().locales.source)} rep where rep.status <> 'archived'`.execute(
 			ctx.db,
 		);
 		const facets = targets
@@ -400,7 +447,11 @@ const KIND_OF: Partial<Record<FieldDefinition["kind"], ColumnKind>> = {
 };
 
 /** Every column a collection's list can show, in the default order, with whether it shows before the admin changes it (doc 06, columns). */
-function schemaColumns(definition: CollectionDefinition, values: AdminValues): (ListColumn & { shown: boolean })[] {
+function schemaColumns(
+	definition: CollectionDefinition,
+	values: AdminValues,
+	multilingual: boolean,
+): (ListColumn & { shown: boolean })[] {
 	const fields = Object.entries(definition.fields).flatMap(([name, field]) => {
 		const kind = KIND_OF[field.kind];
 		if (!kind || name === "title" || name === "slug") return [];
@@ -440,7 +491,10 @@ function schemaColumns(definition: CollectionDefinition, values: AdminValues): (
 			: []),
 		{ id: "title", kind: "title", sortable: true, filter: null, hidden: false, shown: true },
 		...fields,
-		{ id: "locale", kind: "locale", sortable: false, filter: "locale", hidden: false, shown: true },
+		// The language column is there only when the site writes in more than one language (doc 04, T52).
+		...(multilingual
+			? [{ id: "locale", kind: "locale", sortable: false, filter: "locale", hidden: false, shown: true } as const]
+			: []),
 		date("updatedAt", true),
 		...(document ? [date("publishedAt", false)] : []),
 		date("createdAt", false),
@@ -454,8 +508,9 @@ function schemaColumns(definition: CollectionDefinition, values: AdminValues): (
 export function listColumns(
 	definition: CollectionDefinition,
 	values: AdminValues,
+	multilingual: boolean,
 ): { columns: ListColumn[]; pageSize: number } {
-	const all = schemaColumns(definition, values);
+	const all = schemaColumns(definition, values, multilingual);
 	const prefs = values.list ?? {};
 	const order = prefs.order ?? [];
 	const known = new Set(order);
@@ -503,7 +558,11 @@ export const listOperations = [
 			"The columns a collection's list can show, from its schema, in the admin's order with the hidden ones marked and the widths the admin dragged, and the page size the admin keeps.",
 		input: z.object({ collection: z.string() }),
 		async run(input, ctx) {
-			return listColumns(collectionOf(ctx, input.collection), await adminValues(ctx, input.collection));
+			return listColumns(
+				collectionOf(ctx, input.collection),
+				await adminValues(ctx, input.collection),
+				translates(ctx.site.schema()),
+			);
 		},
 	}),
 	defineOperation({
@@ -514,7 +573,11 @@ export const listOperations = [
 		input: z.object({ collection: z.string() }).extend(ListPrefs.shape),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		async check(input, ctx) {
-			const ids = new Set(listColumns(collectionOf(ctx, input.collection), {}).columns.map((column) => column.id));
+			const ids = new Set(
+				listColumns(collectionOf(ctx, input.collection), {}, translates(ctx.site.schema())).columns.map(
+					(column) => column.id,
+				),
+			);
 			const widths = Object.keys(input.widths ?? {});
 			for (const id of [...(input.order ?? []), ...(input.hidden ?? []), ...widths])
 				if (!ids.has(id)) throw new CheckError({ key: "list.unknownColumn", values: { column: id } });

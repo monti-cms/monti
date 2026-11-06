@@ -12,6 +12,7 @@ import { resetAdminPassword } from "./reset";
 const db = await testDatabase();
 
 const schema = defineSchema({
+	locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 	collections: {
 		post: {
 			kind: "document",
@@ -232,6 +233,7 @@ describe("the frame's counts", () => {
 		await me.call("auth.createFirstAdmin", first);
 		expect((await me.call("frame.counts")).body).toEqual({ collections: { post: 0 }, trash: 0, failedDeliveries: 0 });
 		const withNotes = defineSchema({
+			locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 			collections: { ...schema.collections, note: { ...schema.collections.post, path: "/notes/:slug" } },
 		});
 		const later = browser(site({ schema: withNotes }));

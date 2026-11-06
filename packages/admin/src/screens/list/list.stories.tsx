@@ -12,6 +12,7 @@ type Monti = StorySite["monti"];
 
 /** The stories' blog with the tags the reference list shows (a relation to many). */
 const schema = defineSchema({
+	...storySchema,
 	collections: {
 		...storySchema.collections,
 		post: {
@@ -59,10 +60,10 @@ async function create(monti: Monti, collection: string, title: string, slug: str
 }
 
 /**
- * The reference list's data, through operations where they exist. Relation values (doc 08), translations (doc 04) and dates in the past have no
- * operation yet, so they are written as those docs will store them; the older 138 posts fill the pages to 148 as the reference counts.
+ * The reference list's data, through operations where they exist. Relation values (doc 08), the reference's bare translations and dates in the past
+ * are written as those docs store them; the older 138 posts fill the pages to 148 as the reference counts. A language the site lacks is left out.
  */
-async function setup(monti: Monti) {
+async function setup(monti: Monti, languages: readonly string[]) {
 	for (const [collection, label] of [
 		["post", "게시글"],
 		["memo", "메모"],
@@ -111,7 +112,7 @@ async function setup(monti: Monti) {
 				.insertInto("entry_links")
 				.values({ from_group: group, field: link.field, to_group: groups.get(link.to) ?? "", position })
 				.execute();
-		for (const locale of locales)
+		for (const locale of locales.filter((code) => languages.includes(code)))
 			await monti.db
 				.insertInto("entries")
 				.values({
@@ -136,10 +137,57 @@ async function setup(monti: Monti) {
 		from generate_series(1, 138) n`.execute(monti.db);
 }
 
-export const site = (more?: (site: StorySite) => Promise<void>, hash = "#/c/post") => [
+/** The same blog written in Korean only: no language column, no translations (doc 04, T52). */
+export const oneLanguage = defineSchema({
+	...schema,
+	locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
+});
+
+const paragraph = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
+
+/** Posts written in full and translated into English and Japanese; `changed` ones were changed and published again after (doc 04, flow 3 step 08). */
+export const translatedPosts = [
+	{ title: "서울의 밤", changed: true },
+	{ title: "타입스크립트 5.9 정리", changed: false },
+	{ title: "여름 휴가 메모", changed: true },
+] as const;
+
+/** Gives the `translatedPosts` posts a body and their translations through the operations, and changes and republishes the source of the `changed` ones. */
+export async function translated({ monti, db }: StorySite) {
+	const versionOf = async (id: string) =>
+		(await db.selectFrom("entries").select("version").where("id", "=", id).executeTakeFirstOrThrow()).version;
+	for (const { title, changed } of translatedPosts) {
+		const { id } = await db
+			.selectFrom("entries")
+			.select("id")
+			.where("title", "=", title)
+			.where("locale", "=", "ko")
+			.executeTakeFirstOrThrow();
+		const doc = (second: string) => ({ type: "doc", blocks: [paragraph("b1", title), paragraph("b2", second)] });
+		await run(monti, "entries.save", { id, version: await versionOf(id), doc: doc("처음 쓴 문단") });
+		await run(monti, "entries.publish", { ids: [id] });
+		for (const locale of ["en", "ja"]) await run(monti, "translations.create", { source: id, locale });
+		if (!changed) continue;
+		await run(monti, "entries.save", { id, version: await versionOf(id), doc: doc("고쳐 쓴 문단") });
+		await run(monti, "entries.publish", { ids: [id] });
+	}
+}
+
+export const site = (
+	more?: (site: StorySite) => Promise<void>,
+	hash = "#/c/post",
+	options: { schema?: typeof schema } = {},
+) => [
 	async (): Promise<Loaded> => {
 		startAt(hash);
-		const made = await storySite({ schema, auth: { password: true }, signedIn: true, setup });
+		const chosen = options.schema ?? schema;
+		const languages = chosen.locales.list.map((locale) => locale.code);
+		const made = await storySite({
+			schema: chosen,
+			auth: { password: true },
+			signedIn: true,
+			setup: (monti) => setup(monti, languages),
+		});
 		await more?.(made);
 		return { site: made, screen: createScreenChannel() };
 	},
@@ -378,13 +426,32 @@ export const TagMenu: Story = {
 	},
 };
 
-/** The language's menu with English picked, its languages named in the admin's language: the groups that have an English entry (flow 7, step 04c; its translation group is T52). */
+/**
+ * The language's menu with English picked, its languages named in the admin's language: the groups that have an English entry, and under "번역" how
+ * many of them lack English, have an English translation behind its source, or are up to date (flow 7, step 04c).
+ */
 export const LanguageMenu: Story = {
-	loaders: site(undefined, "#/c/post?locale=en"),
+	loaders: site(translated, "#/c/post?locale=en"),
 	play: async ({ canvasElement }) => {
 		await openColumn(canvasElement, "언어");
-		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /영어/ })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 변경/ })).toBeTruthy(), wait);
 	},
+};
+
+/** "원문 변경" picked in the language's menu: the groups with a translation behind its source, the language column dotted (flow 3, step 12). */
+export const SourceChanged: Story = {
+	loaders: site(translated, "#/c/post?translation=sourceChanged"),
+	play: async ({ canvasElement }) => {
+		await waitFor(() => expect(within(canvasElement).getByText("여름 휴가 메모")).toBeTruthy(), wait);
+		await openColumn(canvasElement, "언어");
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /원문 변경/ })).toBeTruthy(), wait);
+	},
+};
+
+/** A site written in one language: the list has no language column (doc 04, T52). */
+export const OneLanguage: Story = {
+	loaders: site(undefined, "#/c/post", { schema: oneLanguage }),
+	play: ({ canvasElement }) => rowsShown(canvasElement),
 };
 
 /** The summary column turned on with + and filtered by "empty" (flow 7, step 04d). */
