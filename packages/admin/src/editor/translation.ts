@@ -1,4 +1,4 @@
-import { type Block, type Doc, plainText, type TranslationLink } from "@monti-cms/core";
+import { type Block, type Doc, newBlockId, plainText, type TranslationLink } from "@monti-cms/core";
 import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
@@ -14,12 +14,19 @@ export const linkOf = (node: EditorNode): TranslationLink | null => (node.attrs.
  * assistant translates them): `pendingAsPlaceholders` empties each text of the undecided blocks and remembers the blocks, `restorePending` puts back a
  * block nobody wrote in, so the save stores it as it was.
  */
-export type Placeholders = { doc: Doc; texts: Map<string, string>; originals: Map<string, Block> };
+/** A source block new since the translation (an "added" mark): it shows as an undecided block after `after` (`null`: first). */
+export type AddedBlock = { from: string; after: string | null; block: Block };
 
-export function pendingAsPlaceholders(doc: Doc, kit: Catalog): Placeholders {
+/**
+ * `originals` holds each undecided block as it came: a stored one (put back while nobody wrote in it), or `null` for one the editor made for a block
+ * new in the source (left out while nobody wrote in it: the core keeps it as a mark, not in the body, until it is decided).
+ */
+export type Placeholders = { doc: Doc; texts: Map<string, string>; originals: Map<string, Block | null> };
+
+export function pendingAsPlaceholders(doc: Doc, kit: Catalog, added: AddedBlock[] = []): Placeholders {
 	const byType = new Map(kit.blocks.map((block) => [block.type, block]));
 	const texts = new Map<string, string>();
-	const originals = new Map<string, Block>();
+	const originals = new Map<string, Block | null>();
 	/** The block with each of its texts emptied, the words kept as that text's placeholder. A block without text (an image, a table) stays as it is. */
 	const emptied = (block: Block): Block => {
 		const holds = byType.get(block.type)?.holds;
@@ -36,18 +43,38 @@ export function pendingAsPlaceholders(doc: Doc, kit: Catalog): Placeholders {
 		originals.set(block.id, block);
 		return emptied(block);
 	});
+	// A block new in the source comes in as one more undecided block, paired with it (a save that keeps it written pairs it in the core).
+	const made = (from: Block): Block => {
+		const { id: _id, link: _link, ...words } = from;
+		const block = emptied({ ...words, id: newBlockId(), link: { from: from.id, seen: "", state: "pending" } });
+		originals.set(block.id, null);
+		return block;
+	};
+	// One the body already pairs with (written in before the editor was made again, not saved yet) is not made twice.
+	const paired = new Set(doc.blocks.flatMap((block) => (block.link ? [block.link.from] : [])));
+	const fresh = added.filter((one) => !paired.has(one.from));
+	for (const each of fresh.filter((one) => one.after === null).reverse()) blocks.unshift(made(each.block));
+	for (const each of fresh.filter((one) => one.after !== null)) {
+		const at = blocks.findIndex((block) => block.id === each.after);
+		blocks.splice(at < 0 ? blocks.length : at + 1, 0, made(each.block));
+	}
 	return { doc: { ...doc, blocks }, texts, originals };
 }
 
-/** The body to store: each block still undecided (nobody wrote in it) back in the source's words it came with. */
-export const restorePending = (doc: Doc, originals: Map<string, Block>): Doc =>
+/**
+ * The body to store: each block still undecided (nobody wrote in it) back in the source's words it came with, and one made for a block new in the
+ * source left out.
+ */
+export const restorePending = (doc: Doc, originals: Map<string, Block | null>): Doc =>
 	originals.size === 0
 		? doc
 		: {
 				...doc,
-				blocks: doc.blocks.map((block) =>
-					block.link?.state === "pending" ? (originals.get(block.id) ?? block) : block,
-				),
+				blocks: doc.blocks.flatMap((block) => {
+					if (block.link?.state !== "pending" || !originals.has(block.id)) return [block];
+					const original = originals.get(block.id);
+					return original ? [original] : [];
+				}),
 			};
 
 /** A source block as a side-by-side row shows it: its look, and its words with the ones that changed since the translation marked. */
@@ -59,9 +86,10 @@ export type PairedSourceBlock = { look: "heading" | "code" | "text"; parts: { te
  */
 export type PairedRows = {
 	source: Map<string, PairedSourceBlock>;
+	/** The kind of a block by its editor node's name. */
 	kinds: Map<string, string>;
+	/** A block's note by its id ("Changed", "Removed"), or by its source block's id for a block new in the source ("New"). */
 	notes: Map<string, string>;
-	added: { key: string; after: string | null; kind: string; note: string; block: PairedSourceBlock }[];
 };
 
 const pairedKey = new PluginKey<PairedRows | null>("montiTranslationPaired");
@@ -71,7 +99,7 @@ export const showPaired = (state: EditorState, rows: PairedRows | null) =>
 	state.tr.setMeta(pairedKey, rows).setMeta("addToHistory", false);
 
 /** A cell of a side-by-side row the editor does not edit. */
-function cell(kind: "rule" | "kind" | "source" | "ghost", fill?: (element: HTMLElement) => void) {
+function cell(kind: "rule" | "kind" | "source", fill?: (element: HTMLElement) => void) {
 	const element = document.createElement("div");
 	element.setAttribute("data-pair", kind);
 	element.contentEditable = "false";
@@ -107,7 +135,7 @@ function kindCell(kind: string, note: string | undefined) {
 const wordsKey = (block: PairedSourceBlock | undefined) =>
 	block ? `${block.look}:${block.parts.map((part) => `${part.changed ? "+" : ""}${part.text}`).join("|")}` : "";
 
-/** The rows beside the blocks: before each block its rule, kind and source; after the block a new source block follows, its row with a faint line. */
+/** The rows beside the blocks: before each block its rule, kind and source. */
 const PairedRowsPlugin = new Plugin<PairedRows | null>({
 	key: pairedKey,
 	state: {
@@ -124,37 +152,20 @@ const PairedRowsPlugin = new Plugin<PairedRows | null>({
 			const shown: Decoration[] = [];
 			const widget = (at: number, side: number, key: string, make: () => HTMLElement) =>
 				shown.push(Decoration.widget(at, make, { side, key, ignoreSelection: true, stopEvent: () => true }));
-			const addedAfter = (after: string | null, at: number) =>
-				rows.added
-					.filter((row) => row.after === after)
-					.forEach((row, index) => {
-						const side = -1000 + index * 4;
-						const key = `${row.key}:${wordsKey(row.block)}`;
-						widget(at, side, `rule:${key}`, () => cell("rule"));
-						widget(at, side + 1, `kind:${key}`, () => kindCell(row.kind, row.note));
-						widget(at, side + 2, `source:${key}`, () => cell("source", (element) => sourceWords(element, row.block)));
-						widget(at, side + 3, `ghost:${key}`, () =>
-							cell("ghost", (element) => {
-								element.textContent = row.block.parts.map((part) => part.text).join("");
-							}),
-						);
-					});
-			addedAfter(null, 0);
 			const { $from } = state.selection;
 			const current = $from.depth >= 1 ? $from.before(1) : null;
 			state.doc.forEach((node, pos) => {
 				const id = String(node.attrs.blockId ?? "");
 				const from = linkOf(node)?.from;
 				const source = from ? rows.source.get(from) : undefined;
-				const kind = rows.kinds.get(id) ?? "";
-				const note = rows.notes.get(id);
+				const kind = rows.kinds.get(node.type.name) ?? "";
+				const note = rows.notes.get(id) ?? (from ? rows.notes.get(from) : undefined);
 				widget(pos, -3, `rule:${id}`, () => cell("rule"));
 				widget(pos, -2, `kind:${id}:${kind}:${note ?? ""}`, () => kindCell(kind, note));
 				widget(pos, -1, `source:${id}:${wordsKey(source)}`, () =>
 					cell("source", (element) => sourceWords(element, source)),
 				);
 				if (pos === current) shown.push(Decoration.node(pos, pos + node.nodeSize, { "data-pair-current": "" }));
-				addedAfter(id, pos + node.nodeSize);
 			});
 			return DecorationSet.create(state.doc, shown);
 		},
@@ -180,15 +191,6 @@ const pendingAt = (state: EditorState, pos: number) => {
 	const top = $pos.depth >= 1 ? $pos.node(1) : null;
 	return top ? linkOf(top)?.state === "pending" : false;
 };
-
-/** A source block new since the translation, shown where it would go: after a block (`null`: first), in the dimmed look. */
-export type Ghost = { key: string; after: string | null; text: string };
-
-const ghostsKey = new PluginKey<Ghost[]>("montiTranslationGhosts");
-
-/** Shows these new source blocks as dimmed lines, not part of the text (they come in only when the person brings them in). */
-export const showGhosts = (state: EditorState, ghosts: Ghost[]) =>
-	state.tr.setMeta(ghostsKey, ghosts).setMeta("addToHistory", false);
 
 export const TranslationBlocks = Extension.create({
 	name: "montiTranslationBlocks",
@@ -273,39 +275,6 @@ export const TranslationBlocks = Extension.create({
 							top.descendants((node, pos) => visit(node, at + 1 + pos));
 						});
 						return DecorationSet.create(state.doc, shown);
-					},
-				},
-			}),
-			new Plugin<Ghost[]>({
-				key: ghostsKey,
-				state: {
-					init: () => [],
-					apply: (tr, ghosts) => tr.getMeta(ghostsKey) ?? ghosts,
-				},
-				props: {
-					decorations(state) {
-						const ghosts = ghostsKey.getState(state) ?? [];
-						if (ghosts.length === 0) return null;
-						const ends = new Map<string, number>();
-						state.doc.forEach((node, pos) => {
-							if (node.attrs.blockId) ends.set(String(node.attrs.blockId), pos + node.nodeSize);
-						});
-						return DecorationSet.create(
-							state.doc,
-							ghosts.flatMap((ghost) => {
-								const at = ghost.after === null ? 0 : ends.get(ghost.after);
-								if (at === undefined) return [];
-								const line = () => {
-									const element = document.createElement("p");
-									element.setAttribute("data-untranslated", "");
-									element.setAttribute("data-ghost", ghost.key);
-									element.contentEditable = "false";
-									element.textContent = ghost.text;
-									return element;
-								};
-								return [Decoration.widget(at, line, { key: `ghost:${ghost.key}:${ghost.text}`, side: -1 })];
-							}),
-						);
 					},
 				},
 			}),

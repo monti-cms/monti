@@ -7,7 +7,7 @@ import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { localeModeOf, type Schema } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
-import { addSkips, isTranslation, rememberBlocks } from "../translations/source";
+import { addedSourceBlocks, addSkips, isTranslation, rememberBlocks } from "../translations/source";
 import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
@@ -282,8 +282,9 @@ export const entryOperations = [
 			const entry = await entryOf(ctx, input.id);
 			const working = applyDraft(entry, input);
 			if (input.doc === undefined || working.doc === null) return saveWorking(ctx, entry, working);
-			// The links are the core's: the save keeps them, whatever the editor sent (doc 04).
-			const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {});
+			// The links are the core's: the save keeps them, whatever the editor sent, but for a new block paired with a source block added since (doc 04).
+			const added = await addedSourceBlocks(ctx, entry);
+			const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {}, new Set(), added);
 			const saved = await saveWorking(ctx, entry, { ...working, doc });
 			await addSkips(ctx.db, entry, skipped);
 			return saved;

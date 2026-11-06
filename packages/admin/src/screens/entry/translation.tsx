@@ -42,7 +42,8 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import type { BlockTranslation } from "../../editor/block-menu";
 import type { BodyCatalogs } from "../../editor/catalog";
 import { findBlock } from "../../editor/proposal-marks";
-import { type PairedRows, type PairedSourceBlock, showGhosts } from "../../editor/translation";
+import { nodeName } from "../../editor/schema";
+import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type Part, shownBlocks, wordDiff } from "./compare-entries";
@@ -80,7 +81,8 @@ type Compared = {
 /** One decision of `translations.setBlocks`. */
 type Decision =
 	| { do: "keepSource" | "confirm" | "detach" | "remove"; block: string }
-	| { do: "add" | "skip"; from: string };
+	| { do: "add"; from: string; keep?: boolean }
+	| { do: "skip"; from: string };
 
 /** How the source shows beside a translation: not at all, in a pane beside it, or block by block in rows (translation.md, side by side). */
 export type SourceView = "off" | "side" | "paired";
@@ -111,6 +113,10 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 		if (fresh.ok && (await run(fresh.body.entry.version)).ok) await editor.loadLatest();
 	};
 	const decide = (blocks: Decision[]) => write((version) => setBlocks.run({ id, version, blocks }));
+	/** A block the editor made for a source block new since the translation: not in the stored body, paired with an added mark. */
+	const isNew = (block: string, from: string) =>
+		!(read?.entry.doc?.blocks ?? []).some((each) => each.id === block) &&
+		(compared.data?.marks ?? []).some((mark) => mark.kind === "added" && mark.from === from);
 	return {
 		multilingual,
 		isTranslation,
@@ -124,9 +130,20 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 		},
 		decide,
 		confirmAll: () => write((version) => confirmAll.run({ id, version })),
+		/** The source blocks new since the translation, each shown as an undecided block where it goes. */
+		added: (isTranslation ? (compared.data?.marks ?? []) : []).flatMap((mark) =>
+			mark.kind === "added" && mark.source ? [{ from: mark.from, after: mark.after, block: mark.source }] : [],
+		),
 		blockMenu: {
-			keep: (block) => void decide([{ do: "keepSource", block }]),
+			// A block made for a block new in the source is not in the body yet: it comes in kept, or is left out, in one decision.
+			keep: (block, from) =>
+				void decide(isNew(block, from) ? [{ do: "add", from, keep: true }] : [{ do: "keepSource", block }]),
 			detach: (block) => void decide([{ do: "detach", block }]),
+			remove: (block, from) => {
+				if (!isNew(block, from)) return false;
+				void decide([{ do: "skip", from }]);
+				return true;
+			},
 		} satisfies BlockTranslation,
 	};
 }
@@ -324,7 +341,7 @@ export function SourceChangedCell({
 }: {
 	compared: Compared;
 	doc: Doc;
-	/** To the block a mark is on, or the one a new block goes after. */
+	/** To the block a mark is on: its id, or for a block new in the source the source block's id (the editor's block paired with it). */
 	onGo: (block: string | null) => void;
 	onConfirmAll: () => void;
 	/** Removes a block whose source block was removed. */
@@ -380,17 +397,13 @@ export function SourceChangedCell({
 }
 
 /**
- * What the side-by-side rows show beside the translation's blocks (TranslatePaired): each source block with the words that changed marked, each
- * translation block's kind and its note, and the source blocks new since the translation.
+ * What the side-by-side rows show beside the translation's blocks (TranslatePaired): each source block with the words that changed marked, the
+ * blocks' kinds, and each block's note (a block new in the source is noted by its source block).
  */
-export function usePairedRows(compared: Compared | null, doc: Doc, catalogs: BodyCatalogs | null): PairedRows | null {
+export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs | null): PairedRows | null {
 	const { t } = useAdmin();
 	return useMemo(() => {
 		if (!compared) return null;
-		const kind = (block: Block) => {
-			const definition = catalogs?.kit.blocks.find((each) => each.type === block.type);
-			return definition ? t(definition.label) : block.type;
-		};
 		const changed = changedWords(compared);
 		const shown = (block: Block): PairedSourceBlock => {
 			const look = shownBlocks({ type: "doc", blocks: [block] })[0]?.look;
@@ -401,27 +414,16 @@ export function usePairedRows(compared: Compared | null, doc: Doc, catalogs: Bod
 		};
 		return {
 			source: new Map(compared.source.doc.blocks.map((block) => [block.id, shown(block)])),
-			kinds: new Map(doc.blocks.map((block) => [block.id, kind(block)])),
+			kinds: new Map((catalogs?.kit.blocks ?? []).map((block) => [nodeName(block.type), t(block.label)])),
 			notes: new Map(
-				compared.marks.flatMap((mark) =>
-					mark.kind === "added" ? [] : [[mark.block, t(`translation.mark.${mark.kind}`)] as const],
+				compared.marks.map((mark) =>
+					mark.kind === "added"
+						? ([mark.from, t("translation.mark.added")] as const)
+						: ([mark.block, t(`translation.mark.${mark.kind}`)] as const),
 				),
 			),
-			added: compared.marks.flatMap((mark) =>
-				mark.kind === "added" && mark.source
-					? [
-							{
-								key: `added:${mark.from}`,
-								after: mark.after,
-								kind: kind(mark.source),
-								note: t("translation.mark.added"),
-								block: shown(mark.source),
-							},
-						]
-					: [],
-			),
 		};
-	}, [compared, doc, catalogs, t]);
+	}, [compared, catalogs, t]);
 }
 
 /**
@@ -490,8 +492,8 @@ type Placed = { key: string; top: number; mark: TranslationMark | null; keep: bo
 
 /**
  * The marks in the text's left margin (translation.md): "Changed" · "New" · "Removed" where the source moved, "Source" by a block kept in the source's words or
- * following it. A mark opens its card: a changed block's source before and after with "Confirm"; a removed one's "Confirm"; a new one's "Bring in" (it comes in
- * as a dimmed block) and "Leave out" (left out of this language).
+ * following it. A mark opens its card: a changed block's source before and after with "Confirm"; a removed one's "Confirm" and "Remove"; a new one (an
+ * undecided block already, written like any other) its source with "Leave out" (left out of this language).
  */
 export function TranslationMargin({
 	editor,
@@ -505,6 +507,20 @@ export function TranslationMargin({
 	const { t } = useAdmin();
 	const [placed, setPlaced] = useState<Placed[]>([]);
 	const [open, setOpen] = useState<string | null>(null);
+
+	/** The block a mark is about: its block, or for a source block new since the translation the undecided block paired with it. */
+	const blockOf = useCallback(
+		(mark: TranslationMark): HTMLElement | null => {
+			if (editor.isDestroyed) return null;
+			let at: number | null = null;
+			editor.state.doc.forEach((node, pos) => {
+				if (at !== null) return;
+				if (mark.kind === "added" ? linkOf(node)?.from === mark.from : node.attrs.blockId === mark.block) at = pos;
+			});
+			return at === null ? null : (editor.view.nodeDOM(at) as HTMLElement | null);
+		},
+		[editor],
+	);
 
 	const measure = useCallback(() => {
 		if (editor.isDestroyed) return;
@@ -521,9 +537,8 @@ export function TranslationMargin({
 		const next: Placed[] = [];
 		for (const mark of marks) {
 			const key = mark.kind === "added" ? `added:${mark.from}` : mark.block;
-			const ghost = mark.kind === "added" ? editor.view.dom.querySelector(`[data-ghost="${CSS.escape(key)}"]`) : null;
-			const top =
-				mark.kind === "added" ? (ghost ? ghost.getBoundingClientRect().top - origin : null) : topOf(mark.block);
+			const element = blockOf(mark);
+			const top = element ? element.getBoundingClientRect().top - origin : null;
 			if (top !== null) next.push({ key, top, mark, keep: false });
 		}
 		editor.state.doc.forEach((node) => {
@@ -535,17 +550,9 @@ export function TranslationMargin({
 			}
 		});
 		setPlaced(next);
-	}, [editor, marks]);
+	}, [editor, marks, blockOf]);
 
-	// A block new in the source shows as a dimmed line where it would go, until it is brought in or left out.
-	useLayoutEffect(() => {
-		if (editor.isDestroyed) return;
-		const ghosts = marks.flatMap((mark) =>
-			mark.kind === "added" ? [{ key: `added:${mark.from}`, after: mark.after, text: textOf(mark.source) }] : [],
-		);
-		editor.view.dispatch(showGhosts(editor.state, ghosts));
-		measure();
-	}, [editor, marks, measure]);
+	useLayoutEffect(() => measure(), [measure]);
 	useEffect(() => {
 		// The text's width changes with the panes beside it, and its lines with it: measure again whenever its box does.
 		const resized = new ResizeObserver(() => measure());
@@ -557,14 +564,8 @@ export function TranslationMargin({
 		};
 	}, [editor, measure]);
 
-	/** A card hangs under the block of its mark (`MemoCardPopover`): the block, or the dimmed line of a new one. */
-	const anchorOf = (mark: TranslationMark) => () => {
-		if (editor.isDestroyed) return null;
-		if (mark.kind === "added")
-			return editor.view.dom.querySelector(`[data-ghost="${CSS.escape(`added:${mark.from}`)}"]`);
-		const found = findBlock(editor.state.doc, mark.block);
-		return found ? (editor.view.nodeDOM(found.pos) as Element | null) : null;
-	};
+	/** A card hangs under the block of its mark (`MemoCardPopover`). */
+	const anchorOf = (mark: TranslationMark) => () => blockOf(mark);
 	const card = (item: Placed) => {
 		const mark = item.mark;
 		if (!mark) return null;
@@ -585,8 +586,6 @@ export function TranslationMargin({
 					where={t("translation.mark.added")}
 					discardLabel={t("translation.skip")}
 					onDiscard={() => decide({ do: "skip", from: mark.from })}
-					acceptLabel={t("translation.bringIn")}
-					onAccept={() => decide({ do: "add", from: mark.from })}
 				>
 					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source)} />
 				</MemoCardPopover>

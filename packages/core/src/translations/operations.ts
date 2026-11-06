@@ -44,8 +44,8 @@ const BlockDecision = z.discriminatedUnion("do", [
 	/** A `followSource` block is changed in this language only. */
 	z.object({ do: z.literal("detach"), block: z.string() }),
 	z.object({ do: z.literal("remove"), block: z.string() }),
-	/** An added source block comes in as a pending block, after the block its mark names. */
-	z.object({ do: z.literal("add"), from: z.string() }),
+	/** An added source block comes in as a pending block, after the block its mark names; with `keep`, kept in the source's words at once. */
+	z.object({ do: z.literal("add"), from: z.string(), keep: z.boolean().optional() }),
 	/** An added source block is left out of this language for good. */
 	z.object({ do: z.literal("skip"), from: z.string() }),
 ]);
@@ -76,7 +76,10 @@ function decide(
 			if (decision.do === "skip") skipped.push(decision.from);
 			else {
 				const index = mark.after === null ? 0 : at(mark.after) + 1;
-				blocks.splice(index, 0, pairedCopy(source, newBlockId(), ctx.site.kit));
+				const copy = pairedCopy(source, newBlockId(), ctx.site.kit);
+				const kept =
+					decision.keep && copy.link ? { ...copy, link: { ...copy.link, state: "keepSource" as const } } : copy;
+				blocks.splice(index, 0, kept);
 			}
 			continue;
 		}

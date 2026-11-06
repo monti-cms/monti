@@ -29,7 +29,7 @@
 
 ### 코드
 
-`tone="changed"`인 `Marker`(번역한 뒤 원문이 바뀐 블록: "바뀜", "새로", "지워짐". 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. 편집기 안에서는 블록 위치를 재서 `EditorMargin`(`top`은 블록 위에서 잰 값, 글 왼쪽 40px 밖: 블록 손잡이(24px, 글에서 8px) 바깥에 8px 띄워, 블록에 포인터를 올려 나온 손잡이가 표시를 덮지 않는다. 2026-11-06 소유자)에 `Marker`를 건다. 본문과 함께 스크롤된다. 편집기 본문의 흐린 블록은 `EditorBody`의 `data-untranslated`다(`Untranslated`와 같은 `fg-faint`). 원문에 새로 생긴 블록은 들어올 자리에 흐린 줄로 보인다(본문에 들지 않는다). 그 카드의 본문은 `before` 없는 `MemoDiff`다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
+`tone="changed"`인 `Marker`(번역한 뒤 원문이 바뀐 블록: "바뀜", "새로", "지워짐". 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. 편집기 안에서는 블록 위치를 재서 `EditorMargin`(`top`은 블록 위에서 잰 값, 글 왼쪽 40px 밖: 블록 손잡이(24px, 글에서 8px) 바깥에 8px 띄워, 블록에 포인터를 올려 나온 손잡이가 표시를 덮지 않는다. 2026-11-06 소유자)에 `Marker`를 건다. 본문과 함께 스크롤된다. 편집기 본문의 흐린 블록은 `EditorBody`의 `data-untranslated`다(`Untranslated`와 같은 `fg-faint`). 원문에 새로 생긴 블록은 그 자리에 흐린 블록(자리 표시)으로 들어와 바로 쓴다. 아무도 쓰지 않은 동안은 저장되지 않는다. 그 카드의 본문은 `before` 없는 `MemoDiff`이고, 머리에 "빼기"만 있다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
 
 ## 짝 원문 표시
 
@@ -51,7 +51,7 @@
 
 ### 코드
 
-원문 보기 전환은 `Segmented`다(`size="sm"`, `inline`). 나란히 보기의 본문은 편집기 하나다: `EditorBody paired`가 편집기를 `CompareRows`와 같은 세 칸 격자(104px · 원문 · 번역)로 놓고, 편집기가 블록마다 그 앞에 고치지 않는 칸(행 선 `data-pair=rule`, 블록 종류와 메모 `data-pair=kind`, 원문 `data-pair=source`)을 넣는다. 원문에 새로 생긴 블록은 번역 칸이 흐린 줄(`data-pair=ghost`)인 행이다. 행 높이는 두 칸 중 높은 쪽을 따른다. 위의 머리 행과 제목 행만 `CompareRows`이고, 번역 제목은 그 행에서 `Input size="inherit"`로 고친다. 짝 보기는 `CompareRows` 안의 `CompareRow`다. 첫 행은 `head`(각 칸의 고친 날만. 어느 쪽이 원문이고 어느 언어인지는 탭과 바탕이 말한다), 블록마다 왼쪽 좁은 칸에 `name`(블록 종류, 그 아래 흐린 내용 설명 "제목 + 본문"), 원문이 움직였으면 그 아래 `note`(주황). 고치는 중이면 `current`, 그리고 `source`와 `translation`. 제목 행은 `title`이다(두 칸에 `Heading variant="page"`, 여백의 메모는 20px 아래에서 시작한다). 원문과 함께 쓰는 블록(코드)의 번역 칸은 `CompareShared`다. 원문 블록을 흐린 글자로 보이고, 그 아래 `action`에 `TextButton variant="underline"` "따로 고치기"를 둔다(사이 8px). 원문 칸의 코드 블록은 도구 바탕 위에서 `bg-selected`로 깔린다. 본문 블록은 블록 패키지가 편집기에 그리는 블록을 그대로 쓴다. 옆 창은 `ResizablePane` 안의 `Box background="tool"`이다. 비교 보기는 `Compare`다(상태 표시줄의 이웃 참고: `screens.md`의 글 비교 화면, EditorCompare).
+원문 보기 전환은 `Segmented`다(`size="sm"`, `inline`). 나란히 보기의 본문은 편집기 하나다: `EditorBody paired`가 편집기를 `CompareRows`와 같은 세 칸 격자(104px · 원문 · 번역)로 놓고, 편집기가 블록마다 그 앞에 고치지 않는 칸(행 선 `data-pair=rule`, 블록 종류와 메모 `data-pair=kind`, 원문 `data-pair=source`)을 넣는다. 원문에 새로 생긴 블록도 흐린 블록이라 다른 행과 같고, 메모가 "새로"다. 행 높이는 두 칸 중 높은 쪽을 따른다. 위의 머리 행과 제목 행만 `CompareRows`이고, 번역 제목은 그 행에서 `Input size="inherit"`로 고친다. 짝 보기는 `CompareRows` 안의 `CompareRow`다. 첫 행은 `head`(각 칸의 고친 날만. 어느 쪽이 원문이고 어느 언어인지는 탭과 바탕이 말한다), 블록마다 왼쪽 좁은 칸에 `name`(블록 종류, 그 아래 흐린 내용 설명 "제목 + 본문"), 원문이 움직였으면 그 아래 `note`(주황). 고치는 중이면 `current`, 그리고 `source`와 `translation`. 제목 행은 `title`이다(두 칸에 `Heading variant="page"`, 여백의 메모는 20px 아래에서 시작한다). 원문과 함께 쓰는 블록(코드)의 번역 칸은 `CompareShared`다. 원문 블록을 흐린 글자로 보이고, 그 아래 `action`에 `TextButton variant="underline"` "따로 고치기"를 둔다(사이 8px). 원문 칸의 코드 블록은 도구 바탕 위에서 `bg-selected`로 깔린다. 본문 블록은 블록 패키지가 편집기에 그리는 블록을 그대로 쓴다. 옆 창은 `ResizablePane` 안의 `Box background="tool"`이다. 비교 보기는 `Compare`다(상태 표시줄의 이웃 참고: `screens.md`의 글 비교 화면, EditorCompare).
 
 ## 원문과 같음 (`.mt-shared`)
 

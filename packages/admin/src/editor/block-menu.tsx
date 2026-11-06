@@ -78,7 +78,15 @@ const RING_OUT = 4;
  * the block; the grip opens the block menu, and dragging it moves the block. The menu hides what cannot be done (the first block's "move up").
  */
 /** What a translation's block menu does besides the usual (doc 04): keep a pending block in the source's words, or change a followed one here. */
-export type BlockTranslation = { keep: (blockId: string) => void; detach: (blockId: string) => void };
+/**
+ * A translation's block decisions (doc 04). `from` is the source block the block is paired with. `remove` returns whether it took care of the block
+ * itself (a block new in the source is left out in the core); otherwise the menu deletes the block in the text.
+ */
+export type BlockTranslation = {
+	keep: (blockId: string, from: string) => void;
+	detach: (blockId: string) => void;
+	remove: (blockId: string, from: string) => boolean;
+};
 
 export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, translation?: BlockTranslation) {
 	const { t } = useAdmin();
@@ -266,14 +274,15 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 						<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
 							<DropdownMenuGroup>
 								{name ? <DropdownMenuLabel>{name}</DropdownMenuLabel> : null}
-								<DropdownMenuItem onClick={() => decide(translation.keep)}>
+								<DropdownMenuItem onClick={() => decide((id) => translation.keep(id, link.from))}>
 									{t("translation.keepSource")}
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onClick={() => {
-									run(deleteBlock);
+									if (translation.remove(blockId, link.from)) changeOpen(false);
+									else run(deleteBlock);
 									setSpot(null);
 								}}
 							>

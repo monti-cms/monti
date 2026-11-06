@@ -8,7 +8,14 @@ import { FormatCard } from "./format-card";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
-import { type PairedRows, pendingAsPlaceholders, restorePending, showPaired, showPlaceholders } from "./translation";
+import {
+	type AddedBlock,
+	type PairedRows,
+	pendingAsPlaceholders,
+	restorePending,
+	showPaired,
+	showPlaceholders,
+} from "./translation";
 import { useBodyEditor } from "./use-body-editor";
 
 /**
@@ -26,6 +33,7 @@ export function BodyEditor({
 	translation,
 	margin,
 	paired = null,
+	added,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -46,15 +54,18 @@ export function BodyEditor({
 	margin?: (editor: Editor) => ReactNode;
 	/** A translation side by side: the text as the rows beside its source (translation.md). */
 	paired?: PairedRows | null;
+	/** A translation's source blocks new since it was translated: each shows as one more undecided block where it goes (doc 04). */
+	added?: AddedBlock[];
 }) {
 	const editorRef = useRef<Editor | null>(null);
 	const latestProposals = useRef(proposals);
 	latestProposals.current = proposals;
 	const slash = useSlashMenu({ catalogs, templates, editorRef });
-	// A translation's undecided blocks go in empty, the source's words their placeholders, and come back in those words while nobody wrote in them.
+	// A translation's undecided blocks go in empty, the source's words their placeholders, and come back in those words while nobody wrote in them;
+	// a source block new since the translation goes in the same way, and stays out of the body while nobody wrote in it.
 	// The editor is made once per mount, so the body it was mounted with is the one to read.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: once per mount, like the editor
-	const placeholders = useMemo(() => pendingAsPlaceholders(doc, catalogs.kit), []);
+	const placeholders = useMemo(() => pendingAsPlaceholders(doc, catalogs.kit, added), []);
 	const editor = useBodyEditor({
 		doc: placeholders.doc,
 		catalogs,

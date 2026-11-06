@@ -5,6 +5,7 @@ import type { Database } from "../db/schema";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
+import { marksOf } from "../translations/links";
 import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import type { Entry } from "./record";
 
@@ -75,6 +76,24 @@ export async function publishTasks(
 				blocking: true,
 				message: { key: "entries.task.pending" },
 			});
+	// A block new in the published source is not decided either: the translation is written, kept in the source's words or left without it first
+	// (doc 04, 2026-11-06 owner). `block` is the source block's id: the editor shows it as an undecided block paired with it.
+	if (source) {
+		const published = await db
+			.selectFrom("entry_published")
+			.select("doc")
+			.where("entry_id", "=", source.id)
+			.executeTakeFirst();
+		for (const mark of marksOf(asDoc(entry.doc), entry.translationSkips, published ? asDoc(published.doc) : null))
+			if (mark.kind === "added")
+				tasks.push({
+					code: "added",
+					field: "doc",
+					block: mark.from,
+					blocking: true,
+					message: { key: "entries.task.added" },
+				});
+	}
 	// A block's own check (`defineBlock`'s `check`) adds rows for that block.
 	for (const { block } of walk(asDoc(entry.doc).blocks))
 		for (const row of site.kit.blocks.get(block.type)?.check?.(block) ?? [])

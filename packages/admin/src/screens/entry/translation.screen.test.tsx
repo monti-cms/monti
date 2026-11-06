@@ -295,6 +295,46 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.poll(faint).toBe(4);
 	});
 
+	it("04-2 3.09 a block new in the source is an undecided block marked '새로', written into at once; its card offers only '빼기'", async () => {
+		await open(SourceChanged);
+		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();
+		const marked = mark("새로").element().getBoundingClientRect();
+		const block = (undecided("다음 글에서는 번역을 다룬다") as HTMLElement).getBoundingClientRect();
+		expect(Math.abs(marked.top - block.top)).toBeLessThan(block.height);
+		await userEvent.click(mark("새로"));
+		await expect.element(page.getByRole("button", { name: "빼기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
+		await userEvent.click(undecided("다음 글에서는 번역을 다룬다") as HTMLElement);
+		await userEvent.keyboard("Next comes translation.");
+		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("저장됨").first()).toBeVisible();
+		await expect.element(mark("새로")).not.toBeInTheDocument();
+		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
+	});
+
+	it("04-2 a block new in the source written in, then shown in another view before saving, is still the one block", async () => {
+		await open(SourceChanged);
+		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();
+		await userEvent.click(undecided("다음 글에서는 번역을 다룬다") as HTMLElement);
+		await userEvent.keyboard("Next comes translation.");
+		await userEvent.click(page.getByRole("button", { name: "나란히" }));
+		await userEvent.click(page.getByRole("button", { name: "끔" }));
+		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
+		expect(undecided("다음 글에서는 번역을 다룬다")).toBeNull();
+		expect(body().element().children).toHaveLength(6);
+	});
+
+	it("04-2 '빼기' leaves a block new in the source out of this language", async () => {
+		await open(SourceChanged);
+		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();
+		await userEvent.click(mark("새로"));
+		await userEvent.click(page.getByRole("button", { name: "빼기" }));
+		await expect.element(mark("새로")).not.toBeInTheDocument();
+		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).toBeNull();
+	});
+
 	it("04-1 3.05 the cursor in a translation block marks its source block in the pane beside", async () => {
 		await open(SourceChanged);
 		await userEvent.click(page.getByRole("button", { name: "옆 창" }));

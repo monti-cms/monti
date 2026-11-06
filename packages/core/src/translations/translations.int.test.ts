@@ -395,6 +395,62 @@ describe("when the source changes", () => {
 		expect(await marks(id)).toEqual([]);
 	});
 
+	it("04-2 a block added in the source must be decided before the translation is published again", async () => {
+		const { source, id } = await publishedPair();
+		await republish(source, body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷"), p("s5", "다섯")));
+		const { tasks } = await get(id);
+		expect(tasks.filter((task) => task.code === "added")).toEqual([
+			expect.objectContaining({ field: "doc", block: "s5", blocking: true }),
+		]);
+		await expect(write("entries.publish", { ids: [id] })).rejects.toMatchObject({
+			reason: { key: "entries.publishBlocked", values: { count: 1 } },
+		});
+		await setBlocks(id, [{ from: "s5", do: "skip" }]);
+		await write("entries.publish", { ids: [id] });
+		expect((await get(id)).state).toBe("published");
+	});
+
+	it("04-2 a new block saved with the link of an added source block is its translation; one already paired or left out is not", async () => {
+		const { source, id } = await publishedPair();
+		await republish(
+			source,
+			body(p("s0", "영"), p("s1", "하나"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷"), p("s5", "다섯")),
+		);
+		await setBlocks(id, [{ from: "s0", do: "skip" }]);
+		const { doc } = await get(id);
+		const link = (from: string) => ({ from, seen: "", state: "pending" as const });
+		await write("entries.save", {
+			id,
+			version: await version(id),
+			doc: {
+				...doc,
+				blocks: [
+					{ ...p("n0", "Zero"), link: link("s0") },
+					{ ...p("n1", "One again"), link: link("s1") },
+					...doc.blocks,
+					{ ...p("n5", "Five"), link: link("s5") },
+				],
+			},
+		});
+		const saved = (await get(id)).doc.blocks;
+		const byId = (block: string) => saved.find((each) => each.id === block)?.link;
+		// Left out for good, or already paired with another block: no pair.
+		expect(byId("n0")).toBeUndefined();
+		expect(byId("n1")).toBeUndefined();
+		expect(byId("n5")).toMatchObject({ from: "s5", state: "translated" });
+		expect(byId("n5")?.seen).not.toBe("");
+		expect(await marks(id)).toEqual([]);
+	});
+
+	it("04-2 an added source block can be kept in the source's words at once", async () => {
+		const { source, id } = await publishedPair();
+		await republish(source, body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷"), p("s5", "다섯")));
+		await setBlocks(id, [{ from: "s5", do: "add", keep: true }]);
+		const { doc } = await get(id);
+		expect(doc.blocks.at(-1)?.link).toMatchObject({ from: "s5", state: "keepSource" });
+		expect(texts(doc).at(-1)).toBe("다섯");
+	});
+
 	it("04-2 translations.confirmAll clears changed and removed marks, and leaves added blocks to be decided", async () => {
 		const { source, id } = await publishedPair();
 		await republish(source, body(p("s1", "하나!"), p("s2", "둘?"), code("s3", "npm i"), p("s5", "다섯")));

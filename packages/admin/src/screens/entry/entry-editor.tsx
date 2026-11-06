@@ -166,7 +166,7 @@ export function EntryEditor({
 			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} current={pair} />
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
-	const pairedRows = usePairedRows(paired ? compared : null, editor.doc, catalogs);
+	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
 	const languages =
 		translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
@@ -255,6 +255,11 @@ export function EntryEditor({
 			if (task.block && node.attrs.blockId === task.block) at = pos;
 			return true;
 		});
+		// A source block new since the translation is named by its own id: its undecided block is the one paired with it.
+		if (at === null && task.block)
+			view.state.doc.forEach((node, pos) => {
+				if (at === null && (node.attrs.link as { from?: string } | null)?.from === task.block) at = pos;
+			});
 		if (at === null) return view.commands.focus();
 		const node = view.state.doc.nodeAt(at);
 		const inside = node?.isTextblock ? at + 1 : at;
@@ -321,10 +326,14 @@ export function EntryEditor({
 			/>
 		</FormField>
 	);
+	// A translation's body waits for its comparison: the source blocks new since it was translated go in as undecided blocks when the editor is made,
+	// and it is made again when they change (one is decided).
+	const addedKey = translation.added.map((each) => each.from).join(",");
 	const bodyField = (rows: PairedRows | null) =>
-		read && catalogs ? (
+		read && catalogs && (!translation.isTranslation || compared) ? (
 			<BodyEditor
-				key={editor.bodyKey}
+				key={`${editor.bodyKey}:${addedKey}`}
+				added={translation.added}
 				doc={editor.doc}
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}

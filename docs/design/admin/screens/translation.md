@@ -32,7 +32,7 @@
 | 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
 | 번역 제안 (블록이 비었을 때 채운 것) | `Fill` | 바탕 없는 파란 글자. 받거나 버리기는 버블에서. |
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
-| 원문 바뀜 표시 | `EditorMargin` 안의 `Marker tone="changed"` "바뀜" · "새로" · "지워짐"(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "새로"는 들어올 자리에 흐린 줄로 보이고, 카드에서 "넣기"(흐린 블록으로 들어온다) · "빼기"(이 언어에서 뺀다)를 고른다. "지워짐" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
+| 원문 바뀜 표시 | `EditorMargin` 안의 `Marker tone="changed"` "바뀜" · "새로" · "지워짐"(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "새로"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "지워짐" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
 | 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 바뀜", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 `Highlight`. 바깥을 누르거나 Esc로 닫는다. |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 

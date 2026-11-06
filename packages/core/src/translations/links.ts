@@ -81,12 +81,23 @@ export function keepLinks(
 	next: Doc,
 	hashes: Record<string, string>,
 	retranslated: ReadonlySet<string> = new Set(),
+	added: ReadonlyMap<string, Block> = new Map(),
 ): { doc: Doc; skipped: string[] } {
 	const before = new Map((previous?.blocks ?? []).map((block) => [block.id, block]));
 	const used = new Set<string>();
-	const blocks = next.blocks.map(({ link: _sent, ...block }): Block => {
+	const blocks = next.blocks.map(({ link: sent, ...block }): Block => {
 		const old = before.get(block.id);
 		const link = old?.link;
+		// A new block the editor sent paired with a source block added since (doc 04, `added`, the undecided block it showed for it): it pairs with
+		// that block, seen as the source has it now, translated unless it is still the source's words. Any other link a save sends is dropped.
+		if (!old && sent && added.has(sent.from) && !used.has(sent.from)) {
+			used.add(sent.from);
+			const source = added.get(sent.from) as Block;
+			return {
+				...block,
+				link: { from: sent.from, seen: blockHash(source), state: sameBlock(source, block) ? "pending" : "translated" },
+			};
+		}
 		if (!link || used.has(link.from)) return block;
 		used.add(link.from);
 		let kept: TranslationLink = link;

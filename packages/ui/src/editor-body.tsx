@@ -67,8 +67,7 @@ const EDITOR_BODY = cn(
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
  * (`data-pair=kind`, the note `data-pair-note` in the warning tone) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, its code `data-pair-code`). A source block new since the translation is a row with a faint line where its translation would go
- * (`data-pair=ghost`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
+ * words `mark`, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
 	"[&_.ProseMirror]:grid [&_.ProseMirror]:grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] [&_.ProseMirror]:items-stretch",
@@ -79,7 +78,6 @@ const PAIRED = cn(
 	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	"[&_[data-pair=source]_mark]:rounded-monti-sm [&_[data-pair=source]_mark]:bg-monti-highlight [&_[data-pair=source]_mark]:px-px [&_[data-pair=source]_mark]:text-inherit",
 	"[&_[data-pair-heading]]:text-monti-heading [&_[data-pair-code]]:block [&_[data-pair-code]]:whitespace-pre-wrap [&_[data-pair-code]]:rounded-monti-lg [&_[data-pair-code]]:bg-monti-selected [&_[data-pair-code]]:px-monti-16 [&_[data-pair-code]]:py-monti-12 [&_[data-pair-code]]:font-mono [&_[data-pair-code]]:text-monti-code",
-	"[&_[data-pair=ghost]]:mr-monti-24 [&_[data-pair=ghost]]:ml-monti-40 [&_[data-pair=ghost]]:my-monti-16 [&_[data-pair=ghost]]:text-monti-faint",
 	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on the block
 	// ground on both sides: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),
 	// behind the block, so the block keeps its own looks (a code block's box) and nothing in it overflows.

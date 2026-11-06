@@ -3,7 +3,7 @@ import { asDoc, type Block, type Doc } from "../body/doc";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries } from "../entries/record";
 import { localeModeOf, type Schema } from "../schema/define";
-import { blockHash, blockHashes } from "./links";
+import { blockHash, blockHashes, marksOf } from "./links";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -45,6 +45,27 @@ export async function followedHashes(db: Db, schema: Schema, entry: Entry): Prom
 	if (!isTranslation(schema, entry)) return {};
 	const source = await sourceEntryOf(db, schema, entry.translationGroup);
 	return source ? blockHashes(await followedDoc(db, source)) : {};
+}
+
+/**
+ * The blocks of a translation's published source that it neither pairs nor leaves out (its "added" marks), by id: a new block a save sends paired with
+ * one of them becomes its translation (`keepLinks`). None for a source-language entry, or while the source is not on the site.
+ */
+export async function addedSourceBlocks(
+	ctx: { db: Db; site: { schema: () => Schema } },
+	entry: Entry,
+): Promise<Map<string, Block>> {
+	const schema = ctx.site.schema();
+	if (!isTranslation(schema, entry)) return new Map();
+	const source = await sourceEntryOf(ctx.db, schema, entry.translationGroup);
+	const published = source ? await publishedOf(ctx.db, source.id) : null;
+	if (!published) return new Map();
+	const blocks = new Map(published.doc.blocks.map((block) => [block.id, block]));
+	return new Map(
+		marksOf(asDoc(entry.doc), entry.translationSkips, published.doc).flatMap((mark) =>
+			mark.kind === "added" && blocks.has(mark.from) ? [[mark.from, blocks.get(mark.from) as Block] as const] : [],
+		),
+	);
 }
 
 /** Keeps source blocks by their hash, so a changed mark can show the block as the translation saw it. */
