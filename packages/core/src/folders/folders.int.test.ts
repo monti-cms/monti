@@ -290,3 +290,34 @@ describe("folders", () => {
 		expect((await entry(posts[0] ?? "")).folder_id).toBeNull();
 	});
 });
+
+describe("the list inside folders", () => {
+	type Page = { rows: { title: string }[] };
+	const titles = async (query: Record<string, unknown>) =>
+		(await read<Page>("entries.query", { collection: "post", ...query })).rows.map((row) => row.title).sort();
+
+	it("a folder lists only what sits right in it; a search or a filter in it looks through its subfolders too, and 'all' through the collection (T54)", async () => {
+		const series = await folder("시리즈 원고");
+		const inner = await folder("drafts", series);
+		const [top, inSeries, inInner] = [
+			await newPost("리액트 top"),
+			await newPost("리액트 1편"),
+			await newPost("리액트 2편"),
+		];
+		await move([inSeries], series);
+		await move([inInner], inner);
+		void top;
+
+		expect(await titles({ folder: null })).toEqual(["리액트 top"]);
+		expect(await titles({ folder: series })).toEqual(["리액트 1편"]);
+		const search = { text: "리액트", in: "all" };
+		expect(await titles({ folder: series, search })).toEqual(["리액트 1편", "리액트 2편"]);
+		expect(await titles({ folder: series, filters: [{ on: "status", any: ["draft"] }] })).toEqual([
+			"리액트 1편",
+			"리액트 2편",
+		]);
+		expect(await titles({ folder: series, scope: "all", search })).toEqual(["리액트 1편", "리액트 2편", "리액트 top"]);
+		// At the top level a search looks in every folder.
+		expect(await titles({ folder: null, search })).toEqual(["리액트 1편", "리액트 2편", "리액트 top"]);
+	});
+});

@@ -209,9 +209,19 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 	const definition = collectionOf(ctx, query.collection);
 	const now = ctx.now();
 	const parts: RawBuilder<unknown>[] = [sql`true`];
-	if (query.folder !== undefined && query.scope === "here")
-		parts.push(query.folder === null ? sql`rep.folder_id is null` : sql`rep.folder_id = ${query.folder}`);
 	const text = query.search?.text.trim();
+	// A folder lists what sits right in it; a search or a filter looks for entries, so inside a folder it goes through its subfolders, and at the top
+	// level through every folder (doc 07, inside a folder; T54).
+	const looking = Boolean(text) || query.filters.length > 0;
+	if (query.folder !== undefined && query.scope === "here") {
+		if (query.folder !== null && looking)
+			parts.push(sql`rep.folder_id in (with recursive tree as (
+				select id from folders where id = ${query.folder}
+				union all select f.id from folders f join tree on f.parent_id = tree.id where f.trashed_at is null
+			) select id from tree)`);
+		else if (query.folder !== null) parts.push(sql`rep.folder_id = ${query.folder}`);
+		else if (!looking) parts.push(sql`rep.folder_id is null`);
+	}
 	if (text) {
 		const pattern = like(text);
 		const where = query.search?.in ?? "all";
