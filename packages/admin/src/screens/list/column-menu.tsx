@@ -113,7 +113,7 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
 
 /**
  * The language column: the languages the groups have, each with its count | "Translation": missing, source changed, up to date (components/list.md, column
- * menu). A translation filter is one of the three: picking another replaces it, picking it again takes it off.
+ * menu). The translation rows are checked like any column's values: several leave the groups of any of them.
  */
 function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 	const { t } = useAdmin();
@@ -123,7 +123,7 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 	const current = filterOf(state, "locale");
 	const chosen = current?.on === "locale" ? current.any : [];
 	const translation = filterOf(state, "translation");
-	const picked = translation?.on === "translation" ? translation.is : null;
+	const picked = translation?.on === "translation" ? translation.any : [];
 	const locales = [...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean);
 	return (
 		<>
@@ -147,8 +147,12 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 						key={is}
 						label={t(`list.translation.${is}`)}
 						counted={count(translationFacets, is)}
-						checked={picked === is}
-						onToggle={() => setFilter("translation", picked === is ? null : { on: "translation", is })}
+						checked={picked.includes(is)}
+						onToggle={() => {
+							// In the menu's order, so the same choice is always the same address.
+							const any = TRANSLATION_STATES.filter((each) => toggled(picked, is).includes(each));
+							setFilter("translation", any.length ? { on: "translation", any } : null);
+						}}
 					/>
 				))}
 			</DropdownMenuGroup>

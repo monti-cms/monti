@@ -31,11 +31,11 @@ const Filter = z.discriminatedUnion("on", [
 	z.object({ on: z.literal("group"), any: z.array(z.string()).min(1) }),
 	/**
 	 * Groups by their translations in `locales` (every language but the source when left out): one missing, one whose source changed since it was
-	 * translated, or all there and up to date (doc 04).
+	 * translated, or all there and up to date (doc 04). Several leave the groups of any of them, as every filter's values do.
 	 */
 	z.object({
 		on: z.literal("translation"),
-		is: z.enum(["missing", "sourceChanged", "upToDate"]),
+		any: z.array(z.enum(["missing", "sourceChanged", "upToDate"])).min(1),
 		locales: z.array(z.string()).min(1).optional(),
 	}),
 ]);
@@ -157,7 +157,10 @@ function filterSql(
 		case "group":
 			return sql`rep.translation_group in (${list(filter.any)})`;
 		case "translation":
-			return translationSql(filter.is, targetsOf(locales, filter.locales), locales.source);
+			return sql`(${sql.join(
+				filter.any.map((is) => translationSql(is, targetsOf(locales, filter.locales), locales.source)),
+				sql` or `,
+			)})`;
 		case "locale":
 			return sql`exists (select 1 from entries x where x.translation_group = rep.translation_group and x.trashed_at is null
 				and x.locale in (${list(filter.any)}))`;

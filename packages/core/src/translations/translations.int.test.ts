@@ -521,12 +521,18 @@ describe("translation status", () => {
 			groups.find((group) => group.source === changed)?.locales.find((l) => l.id === changedEnglish)?.changes,
 		).toBe(4);
 
-		const query = (is: string) =>
-			read<{ rows: { id: string }[] }>("entries.query", {
-				collection: "post",
-				filters: [{ on: "translation", is, locales: ["en"] }],
-			});
-		for (const [is, ids] of Object.entries(byStatus)) expect((await query(is)).rows.map((row) => row.id)).toEqual(ids);
+		const query = async (...any: string[]) =>
+			(
+				await read<{ rows: { id: string }[] }>("entries.query", {
+					collection: "post",
+					filters: [{ on: "translation", any, locales: ["en"] }],
+				})
+			).rows
+				.map((row) => row.id)
+				.sort();
+		for (const [is, ids] of Object.entries(byStatus)) expect(await query(is)).toEqual(ids);
+		// Several at once leave the groups of any of them.
+		expect(await query("missing", "sourceChanged")).toEqual([alone, changed].sort());
 		const { values } = await read<{ values: { value: string; count: number }[] }>("entries.facets", {
 			collection: "post",
 			column: "translation",
@@ -541,7 +547,7 @@ describe("translation status", () => {
 		const languages = await read<{ values: { value: string; count: number }[] }>("entries.facets", {
 			collection: "post",
 			column: "locale",
-			filters: [{ on: "translation", is: "sourceChanged", locales: ["en"] }],
+			filters: [{ on: "translation", any: ["sourceChanged"], locales: ["en"] }],
 		});
 		expect(languages.values).toEqual([
 			{ value: "en", count: 1 },

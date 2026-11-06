@@ -24,7 +24,7 @@ const RANGE = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/;
 /** The language column's translation filters, in their menu's order (doc 06, columns). */
 export const TRANSLATION_STATES = ["missing", "sourceChanged", "upToDate"] as const;
 type TranslationState = (typeof TRANSLATION_STATES)[number];
-const TRANSLATION = /^(missing|sourceChanged|upToDate)(?::(.+))?$/;
+const TRANSLATION = /^((?:missing|sourceChanged|upToDate)(?:,(?:missing|sourceChanged|upToDate))*)(?::(.+))?$/;
 
 const values = (raw: string) => raw.split(",").filter(Boolean);
 const orNull = (value: string) => (value === NONE ? null : value);
@@ -47,7 +47,7 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 		if (translation)
 			filters.push({
 				on: "translation",
-				is: translation[1] as TranslationState,
+				any: values(translation[1] ?? "") as TranslationState[],
 				...(translation[2] ? { locales: values(translation[2]) } : {}),
 			});
 		const raw = params.get(column.id);
@@ -98,7 +98,7 @@ export function writeState(state: ListState): URLSearchParams {
 		const key = filterColumn(filter);
 		if (filter.on === "empty") params.set(key, "empty");
 		else if (filter.on === "translation")
-			params.set(key, filter.locales ? `${filter.is}:${filter.locales.join(",")}` : filter.is);
+			params.set(key, `${filter.any.join(",")}${filter.locales ? `:${filter.locales.join(",")}` : ""}`);
 		else if (filter.on === "date")
 			params.set(key, typeof filter.range === "string" ? filter.range : `${filter.range.from}..${filter.range.to}`);
 		else params.set(key, filter.any.map((value) => value ?? NONE).join(","));

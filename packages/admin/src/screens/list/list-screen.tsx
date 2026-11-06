@@ -399,13 +399,13 @@ export function ListScreen({
 		const values = (list: string[]) => t("list.chipValues", { column: named, values: list.join(", ") });
 		switch (filter.on) {
 			// "Translation: Source changed", and the languages it asks about when the assistant named them: "Translation: Source changed (English)".
-			case "translation":
+			case "translation": {
+				const states = filter.any.map((is) => t(`list.translation.${is}`)).join(", ");
 				return t("list.chipValues", {
 					column: t("list.translation"),
-					values: filter.locales
-						? `${t(`list.translation.${filter.is}`)} (${filter.locales.map(languageName).join(", ")})`
-						: t(`list.translation.${filter.is}`),
+					values: filter.locales ? `${states} (${filter.locales.map(languageName).join(", ")})` : states,
 				});
+			}
 			case "empty":
 				return t("list.chipEmpty", { column: named });
 			case "status":

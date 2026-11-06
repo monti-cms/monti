@@ -106,18 +106,22 @@ describe("the list's language column", () => {
 		// A person's filter is the dot and the check, never a chip (components/list.md).
 		await expect.element(page.getByText("번역: 원문 바뀜")).not.toBeInTheDocument();
 
-		// Picking another one replaces it; picking the checked one again takes the filter off.
-		await userEvent.click(menuRow(/^최신/));
-		await expect.poll(() => window.location.hash).toContain("translation=upToDate");
-		await expect.element(menuRow(/^원문 바뀜/)).toHaveAttribute("aria-checked", "false");
-		await userEvent.click(menuRow(/^최신/));
+		// Picking another one adds it, as in every column's menu: the rows of either are left. Picking each again takes it off.
+		await userEvent.click(menuRow(/^번역 없음/));
+		await expect.poll(() => window.location.hash).toContain("translation=missing%2CsourceChanged");
+		await expect.element(menuRow(/^원문 바뀜/)).toHaveAttribute("aria-checked", "true");
+		await expect.element(menuRow(/^번역 없음/)).toHaveAttribute("aria-checked", "true");
+		const both = countOf(/^원문 바뀜/) + countOf(/^번역 없음/);
+		await expect.element(page.getByText(`/ ${both}`, { exact: false })).toBeVisible();
+		await userEvent.click(menuRow(/^번역 없음/));
+		await userEvent.click(menuRow(/^원문 바뀜/));
 		await expect.poll(() => window.location.hash).not.toContain("translation=");
 		await expect.poll(dotted).toBe(false);
 		await userEvent.keyboard("{Escape}");
 
 		story
 			.loaded()
-			.screen.run("list.show", { collection: "post", filters: [{ on: "translation", is: "sourceChanged" }] });
+			.screen.run("list.show", { collection: "post", filters: [{ on: "translation", any: ["sourceChanged"] }] });
 		await expect.element(page.getByText("번역: 원문 바뀜")).toBeVisible();
 		for (const title of changed) await expect.element(page.getByRole("link", { name: title })).toBeVisible();
 	});
