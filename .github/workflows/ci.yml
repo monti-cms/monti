@@ -1,4 +1,5 @@
-# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, and the core tests on Postgres.
+# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, the core and admin tests on Postgres, and
+# the browser tests (L3 parts and L4 screens in Chromium).
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -46,7 +47,7 @@ jobs:
       - run: pnpm build
 
   test:
-    name: core tests
+    name: core and admin tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -67,3 +68,18 @@ jobs:
       - run: pnpm test
         env:
           CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
+
+  browser:
+    name: browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
+      - run: pnpm test:browser

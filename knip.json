@@ -2,7 +2,7 @@
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"workspaces": {
 		".": {
-			"entry": ["scripts/*.mjs"]
+			"entry": ["scripts/*.mjs", "testing/scenes.ts"]
 		},
 		"packages/core": {
 			"entry": ["src/**/*.test.ts", "src/__test__/**"]

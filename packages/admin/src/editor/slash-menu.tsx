@@ -17,7 +17,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import { BlockIcon } from "./block-icon";
-import { type BodyCatalogs, needsAttrs } from "./catalog";
+import { type BodyCatalogs, NOT_FROM_MENU, needsAttrs } from "./catalog";
 import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
 import { insertFootnote } from "./footnotes";
@@ -42,11 +42,6 @@ type Item = {
 };
 
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
-
-/**
- * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09).
- */
-const NOT_FROM_MENU = new Set(["image", "file"]);
 
 /** A new table: three columns, a head row and two rows under it, all empty. */
 const NEW_TABLE: Block = {
