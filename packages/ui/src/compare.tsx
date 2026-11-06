@@ -234,7 +234,7 @@ function CompareShared({
 }
 
 /** The underline of a source's words that changed since its translation: the warning color of "Changed", whatever ground it sits on. */
-const SOURCE_CHANGE = "underline decoration-1 decoration-monti-warning underline-offset-4";
+const SOURCE_CHANGE = "underline decoration-[1.5px] decoration-monti-warning underline-offset-4";
 /** The words the source had before and no longer has (the "before" of a changed block): faint and struck through, as `Del` draws them. */
 const SOURCE_REMOVED = "line-through text-monti-faint";
 

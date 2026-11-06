@@ -200,7 +200,7 @@ export const ChangedCard: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "바뀜" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "변경" }, wait));
 		await within(canvasElement.ownerDocument.body).findByText("원문 바뀜", undefined, wait);
 	},
 };

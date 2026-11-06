@@ -46,7 +46,7 @@ import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { type Part, shownBlocks, wordDiff } from "./compare-entries";
+import { type Part, readableWordDiff, shownBlocks } from "./compare-entries";
 import { day } from "./dates";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
@@ -238,7 +238,9 @@ const Words = ({ parts, removed = false }: { parts: Part[]; removed?: boolean })
 function changedWords(compared: Compared): Map<string, Part[]> {
 	return new Map(
 		compared.marks.flatMap((mark) =>
-			mark.kind === "changed" ? [[mark.from, wordDiff(textOf(mark.before), textOf(mark.after)).server] as const] : [],
+			mark.kind === "changed"
+				? [[mark.from, readableWordDiff(textOf(mark.before), textOf(mark.after)).server] as const]
+				: [],
 		),
 	);
 }
@@ -597,7 +599,7 @@ export function TranslationMargin({
 					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source)} />
 				</MemoCardPopover>
 			);
-		const diff = wordDiff(textOf(mark.before), textOf(mark.after));
+		const diff = readableWordDiff(textOf(mark.before), textOf(mark.after));
 		return (
 			<MemoCardPopover
 				{...shared}

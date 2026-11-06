@@ -29,7 +29,7 @@ const oneLanguage = defineSchema({
 });
 
 const body = () => page.getByRole("textbox", { name: "본문" });
-/** A mark in the text's left margin ("바뀜", "새로", "지워짐"). */
+/** A mark in the text's left margin ("변경", "추가", "삭제"). */
 const mark = (name: string) => page.getByRole("button", { name, exact: true });
 const tabs = () => page.getByRole("navigation", { name: "언어" });
 /** A language's tab: its name, and "원문이 바뀜" after it when it has a dot. */
@@ -201,28 +201,28 @@ describe("flow 3, a translation", () => {
 		await expect.element(page.getByText("원문이 바뀌었어요")).toBeVisible();
 		// The status bar counts them in a cell of its own, apart from the to-do list.
 		await expect.element(page.getByRole("button", { name: "원문 바뀜 3" })).toBeVisible();
-		await expect.element(mark("바뀜")).toBeVisible();
-		await expect.element(mark("새로")).toBeVisible();
-		await expect.element(mark("지워짐")).toBeVisible();
+		await expect.element(mark("변경")).toBeVisible();
+		await expect.element(mark("추가")).toBeVisible();
+		await expect.element(mark("삭제")).toBeVisible();
 		// Each mark is level with its block.
-		const changed = mark("바뀜").element().getBoundingClientRect();
+		const changed = mark("변경").element().getBoundingClientRect();
 		const block = body().getByText("I rebuilt the blog", { exact: false }).element().getBoundingClientRect();
 		expect(Math.abs(changed.top - block.top)).toBeLessThan(block.height);
 
 		await userEvent.click(page.getByRole("button", { name: "모두 확인" }));
-		await expect.element(mark("바뀜")).not.toBeInTheDocument();
-		await expect.element(mark("새로")).toBeVisible();
+		await expect.element(mark("변경")).not.toBeInTheDocument();
+		await expect.element(mark("추가")).toBeVisible();
 	});
 
 	it("04-1 3.10 a mark opens the source before and after, and '확인' clears that mark", async () => {
 		await open(SourceChanged);
-		await userEvent.click(mark("바뀜"));
-		const card = page.getByText("원문 바뀜", { exact: true });
+		await userEvent.click(mark("변경"));
+		const card = page.getByText("원문 변경", { exact: true });
 		await expect.element(card).toBeVisible();
 		await expect.element(page.getByText("글을 쓰는 시간보다 도구를 고치는 시간이", { exact: false })).toBeVisible();
 		await expect.element(page.getByText("도구를 고치는 시간이 글을 쓰는 시간보다", { exact: false })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
-		await expect.element(mark("바뀜")).not.toBeInTheDocument();
+		await expect.element(mark("변경")).not.toBeInTheDocument();
 		await expect.element(body().getByText("I rebuilt the blog", { exact: false })).toBeVisible();
 	});
 
@@ -238,17 +238,17 @@ describe("flow 3, a translation", () => {
 });
 
 describe("writing a translation (owner review, 2026-11-06)", () => {
-	it("[reach] the pointer comes from a changed block's words to its '바뀜' mark and presses it: the card opens, the block handle stands clear of the mark", async () => {
+	it("[reach] the pointer comes from a changed block's words to its '변경' mark and presses it: the card opens, the block handle stands clear of the mark", async () => {
 		await open(SourceChanged);
 		const words = body().getByText("I rebuilt the blog", { exact: false }).element().getBoundingClientRect();
-		const marked = mark("바뀜").element().getBoundingClientRect();
+		const marked = mark("변경").element().getBoundingClientRect();
 		const on = { x: marked.left + marked.width / 2, y: marked.top + marked.height / 2 };
 		await pointerPath([{ x: words.left + 40, y: words.top + 8 }, on]);
 		// The handle a pointer on the block shows is there, and what is under the pointer is still the mark.
 		await expect.element(page.getByRole("button", { name: "블록 메뉴" })).toBeVisible();
-		expect(document.elementFromPoint(on.x, on.y)?.closest("[data-slot=marker]")).toBe(mark("바뀜").element());
-		await userEvent.click(mark("바뀜"));
-		await expect.element(page.getByText("원문 바뀜", { exact: true })).toBeVisible();
+		expect(document.elementFromPoint(on.x, on.y)?.closest("[data-slot=marker]")).toBe(mark("변경").element());
+		await userEvent.click(mark("변경"));
+		await expect.element(page.getByText("원문 변경", { exact: true })).toBeVisible();
 	});
 	it("04-1 3.02 a new translation's undecided block is empty with the source as its placeholder: typing gives the block only the typed words", async () => {
 		await open(NewTranslation);
@@ -295,13 +295,13 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.poll(faint).toBe(4);
 	});
 
-	it("04-2 3.09 a block new in the source is an undecided block marked '새로', written into at once; its card offers only '빼기'", async () => {
+	it("04-2 3.09 a block new in the source is an undecided block marked '추가', written into at once; its card offers only '빼기'", async () => {
 		await open(SourceChanged);
 		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();
-		const marked = mark("새로").element().getBoundingClientRect();
+		const marked = mark("추가").element().getBoundingClientRect();
 		const block = (undecided("다음 글에서는 번역을 다룬다") as HTMLElement).getBoundingClientRect();
 		expect(Math.abs(marked.top - block.top)).toBeLessThan(block.height);
-		await userEvent.click(mark("새로"));
+		await userEvent.click(mark("추가"));
 		await expect.element(page.getByRole("button", { name: "빼기" })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
 		await userEvent.keyboard("{Escape}");
@@ -310,7 +310,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
 		await expect.element(page.getByText("저장됨").first()).toBeVisible();
-		await expect.element(mark("새로")).not.toBeInTheDocument();
+		await expect.element(mark("추가")).not.toBeInTheDocument();
 		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
 	});
 
@@ -335,18 +335,18 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		const rowOf = (word: string) =>
 			rows().find((row) => row.querySelector("[data-slot=todo-mark]")?.textContent === word);
 		const actionOf = (word: string) => [...(rowOf(word)?.querySelectorAll("button") ?? [])].at(-1)?.textContent;
-		expect([actionOf("바뀜"), actionOf("지워짐"), actionOf("새로")]).toEqual(["확인", "지우기", "빼기"]);
+		expect([actionOf("변경"), actionOf("삭제"), actionOf("추가")]).toEqual(["확인", "지우기", "빼기"]);
 		await userEvent.click(list.getByRole("button", { name: "확인", exact: true }));
 		await expect.element(page.getByRole("button", { name: "원문 바뀜 2" })).toBeVisible();
-		await expect.element(mark("바뀜")).not.toBeInTheDocument();
+		await expect.element(mark("변경")).not.toBeInTheDocument();
 	});
 
 	it("04-2 '빼기' leaves a block new in the source out of this language", async () => {
 		await open(SourceChanged);
 		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).not.toBeNull();
-		await userEvent.click(mark("새로"));
+		await userEvent.click(mark("추가"));
 		await userEvent.click(page.getByRole("button", { name: "빼기" }));
-		await expect.element(mark("새로")).not.toBeInTheDocument();
+		await expect.element(mark("추가")).not.toBeInTheDocument();
 		await expect.poll(() => undecided("다음 글에서는 번역을 다룬다")).toBeNull();
 	});
 
