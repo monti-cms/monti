@@ -6,8 +6,9 @@
  *
  * Rules (each finding names its rule id):
  *   undocumented    An operation defined in code (`defineOperation({ name: "…" })` in a package's src) is in no doc's "기능 목록" table.
- *   missing         A doc marked 끝 in docs/tracker.md has an operation in its table that no code defines.
+ *   missing         A doc marked 끝 or 통합 대기 has an operation in its table that no code defines.
  *   open-item       A doc marked 끝 still has an open item in the tracker's "남은 일" that is to be done with it.
+ *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc.
  *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor 출시 전.
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
  *
@@ -66,7 +67,7 @@ const rows = (title) =>
 				.map((cell) => cell.trim()),
 		);
 const status = new Map(rows("문서마다 상태").map((cells) => [cells[0], cells[2]]));
-const openItems = rows("남은 일").map(([id, , when]) => ({ id, when }));
+const openItems = rows("남은 일").map(([id, , when, from]) => ({ id, when, from }));
 
 const sources = readdirSync(path.join(root, "packages"), { withFileTypes: true })
 	.filter((entry) => entry.isDirectory())
@@ -98,7 +99,7 @@ for (const [name, where] of defined)
 	if (!documented.has(name))
 		findings.push(`${rel(where.file)}:${where.line}: [undocumented] \`${name}\` is in no feature doc's 기능 목록`);
 for (const doc of docs) {
-	if (status.get(doc.number) !== "끝") continue;
+	if (!new Set(["끝", "통합 대기"]).has(status.get(doc.number))) continue;
 	for (const name of doc.operations)
 		if (!defined.has(name))
 			findings.push(`${rel(doc.file)}: [missing] \`${name}\` is listed and the doc is 끝, but no code defines it`);
@@ -119,6 +120,9 @@ for (const item of openItems) {
 			`${rel(trackerFile)}: [open-item] doc ${item.when} is 끝, but ${item.id} is still to be done with it`,
 		);
 }
+for (const [number, state] of status)
+	if (state === "통합 대기" && !openItems.some((item) => new RegExp(`(^|\\D)${number}(\\D|$)`).test(item.from)))
+		findings.push(`${rel(trackerFile)}: [unblocked] doc ${number} is 통합 대기, but no open item's 나온 곳 names it`);
 for (const doc of docs)
 	if (!status.has(doc.number))
 		findings.push(`${rel(trackerFile)}: [bad-item] doc ${doc.number} has no row in 문서마다 상태`);

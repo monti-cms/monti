@@ -200,7 +200,9 @@ function Body({
 				return (
 					<ChangeGroup key={change.id} kind="new" tag={t("changes.new")} title={model.label(c)} identifier={c}>
 						<ChangeLines>
-							<ChangeLine what={t("settings.basics.path")} then={draftSchema?.collections[c]?.path ?? ""} />
+							{draftSchema?.collections[c]?.path && (
+								<ChangeLine what={t("settings.basics.path")} then={draftSchema.collections[c].path} />
+							)}
 							<ChangeLine what={t("settings.review.fields")} then={fields.join(", ")} />
 						</ChangeLines>
 						{unchanged}
@@ -226,7 +228,7 @@ function Body({
 							<ChangeLine what={t("settings.review.before")} then={change.from ?? ""} />
 							<ChangeLine what={t("settings.review.after")} then={change.to ?? ""} />
 						</ChangeLines>
-						<ChangeNote>{t("settings.review.oldAddresses")}</ChangeNote>
+						{change.from && <ChangeNote>{t("settings.review.oldAddresses")}</ChangeNote>}
 					</ChangeGroup>
 				);
 			case "renameField":

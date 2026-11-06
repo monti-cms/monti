@@ -1,9 +1,25 @@
-import { coreMessages, formatMessage, type Message, type MessageBundle } from "@monti-cms/core";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import {
+	type AnyBlockDefinition,
+	type Block,
+	coreMessages,
+	formatMessage,
+	type Message,
+	type MessageBundle,
+} from "@monti-cms/core";
+import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
 import type { Transport } from "./transport";
 
 export type Language = "ko" | "en";
+export type AdminBlockComponent = ComponentType<{
+	block: Block;
+	attrs: Record<string, unknown>;
+	children?: ReactNode;
+}>;
+export type AdminBlockDefinition = Omit<AnyBlockDefinition, "Site" | "Editor"> & {
+	Site?: AdminBlockComponent;
+	Editor?: AdminBlockComponent;
+};
 
 type ScreenHandler = (input: unknown) => void;
 
@@ -44,6 +60,8 @@ type AdminContext = {
 	wrote: () => void;
 	onWrite: (listener: () => void) => () => void;
 	screen: ScreenChannel;
+	/** Runtime block components from the same definitions the site gives core. */
+	blocks: ReadonlyMap<string, AdminBlockDefinition>;
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
 	t: (message: Message | string, values?: Message["values"]) => string;
 	/**
@@ -63,6 +81,7 @@ export function AdminProvider({
 	siteName,
 	apiBase = "/admin/api",
 	screen,
+	blocks = [],
 	children,
 }: {
 	transport: Transport;
@@ -71,6 +90,7 @@ export function AdminProvider({
 	apiBase?: string;
 	/** The assistant's way to the screen; one of its own by default. */
 	screen?: ScreenChannel;
+	blocks?: AdminBlockDefinition[];
 	children: ReactNode;
 }) {
 	const [ended, setEnded] = useState(false);
@@ -93,10 +113,11 @@ export function AdminProvider({
 			language,
 			siteName,
 			apiBase,
+			blocks: new Map(blocks.map((block) => [block.type, block])),
 			t: (message, values) =>
 				formatMessage(BUNDLES, language, typeof message === "string" ? { key: message, values } : message),
 		};
-	}, [transport, language, siteName, apiBase, screen]);
+	}, [transport, language, siteName, apiBase, screen, blocks]);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
 	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;

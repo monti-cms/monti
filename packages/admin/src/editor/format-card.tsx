@@ -17,6 +17,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	Separator,
+	type ShortcutKeys,
 	Text,
 } from "@monti-cms/ui";
 import { Document, Link, Unlink } from "@monti-cms/ui/icons";
@@ -31,7 +32,7 @@ import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-t
 import { markName, nodeName } from "./schema";
 
 /** The bar's two groups (editor-tools.md): the text formats, then the smaller ones and the link. */
-const GROUPS: { type: string; mark: FormatMark; keys?: string[] }[][] = [
+const GROUPS: { type: string; mark: FormatMark; keys?: ShortcutKeys }[][] = [
 	[
 		{ type: "bold", mark: "bold", keys: ["mod", "B"] },
 		{ type: "italic", mark: "italic", keys: ["mod", "I"] },
@@ -57,6 +58,7 @@ const GAP = 8;
 export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: BodyCatalogs }) {
 	const { t } = useAdmin();
 	const [linking, setLinking] = useState(false);
+	const [more, setMore] = useState(false);
 	const state = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -67,7 +69,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				!selection.empty &&
 				selection.$from.parent.type.name !== nodeName("codeBlock") &&
 				!inTableCell(selection.$from) &&
-				(current.isFocused || linking);
+				(current.isFocused || linking || more);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
 			const end = current.view.coordsAtPos(selection.to);
@@ -75,7 +77,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 			return {
 				top: Math.min(start.top, end.top) - GAP,
 				left: sameLine ? (start.left + end.right) / 2 : start.left,
-				active: Object.fromEntries(GROUPS.flat().map(({ type }) => [type, current.isActive(markName(type))])),
+				active: Object.fromEntries(catalogs.kit.marks.map(({ type }) => [type, current.isActive(markName(type))])),
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
@@ -85,6 +87,8 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 	if (!state) return null;
 	const offered = new Set(catalogs.offered.marks.map((mark) => mark.type));
 	const groups = GROUPS.map((group) => group.filter(({ type }) => offered.has(type))).filter((group) => group.length);
+	const builtIn = new Set(GROUPS.flat().map(({ type }) => type));
+	const custom = catalogs.offered.marks.filter((mark) => !builtIn.has(mark.type));
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);
 	// A footnote's own text has no footnote of its own.
 	const footnote = state.inFootnote ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
@@ -112,7 +116,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 									key={type}
 									mark={mark}
 									label={label(type)}
-									shortcut={keys as never}
+									shortcut={keys}
 									pressed={Boolean(state.active[type])}
 									onClick={() => toggle(type)}
 								/>
@@ -144,6 +148,33 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 						) : null}
 					</Inline>
 				))}
+				{custom.length > 0 ? (
+					<Popover open={more} onOpenChange={setMore}>
+						<FormatButton
+							mark="more"
+							label={t("format.more")}
+							trigger={(button) => <PopoverTrigger render={button} />}
+						/>
+						<PopoverContent side="bottom" align="end" padding="menu" width="sm">
+							<Command>
+								<CommandList aria-label={t("format.more")}>
+									<CommandGroup>
+										{custom.map((mark) => (
+											<CommandItem
+												key={mark.type}
+												value={mark.type}
+												checked={Boolean(state.active[mark.type])}
+												onSelect={() => toggle(mark.type)}
+											>
+												{label(mark.type)}
+											</CommandItem>
+										))}
+									</CommandGroup>
+								</CommandList>
+							</Command>
+						</PopoverContent>
+					</Popover>
+				) : null}
 			</FloatingBar>
 		</EditorOverlay>
 	);

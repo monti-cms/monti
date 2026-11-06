@@ -78,6 +78,7 @@ export interface EntryTable {
 	/** Published, and the working copy differs from what the site shows ("changed" in the list). */
 	has_unpublished_changes: Generated<boolean>;
 	version: Generated<number>;
+	position: Generated<number>;
 	folder_id: string | null;
 	values: ColumnType<Record<string, unknown>, string | undefined, string>;
 	doc: Json<unknown> | null;

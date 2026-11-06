@@ -281,6 +281,40 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.createIndex("entries_folder").on("entries").column("folder_id").execute();
 		},
 	},
+	"0009_relations": {
+		async up(db) {
+			await db.schema
+				.alterTable("entries")
+				.addColumn("position", "integer", (column) => column.notNull().defaultTo(0))
+				.execute();
+			await db.schema.createIndex("entries_position").on("entries").columns(["collection", "position"]).execute();
+		},
+	},
+	"0010_folder_names": {
+		async up(db) {
+			// Older databases could contain duplicate live sibling names. Keep the oldest and suffix the rest before adding the invariant.
+			const rows = await db
+				.selectFrom("folders")
+				.select(["id", "collection", "parent_id", "name"])
+				.where("trashed_at", "is", null)
+				.orderBy("created_at")
+				.orderBy("id")
+				.execute();
+			const names = new Map<string, Set<string>>();
+			for (const row of rows) {
+				const scope = `${row.collection ?? "\u0000"}\n${row.parent_id ?? "\u0000"}`;
+				const taken = names.get(scope) ?? new Set<string>();
+				let name = row.name;
+				for (let suffix = 2; taken.has(name); suffix++) name = `${row.name} ${suffix}`;
+				if (name !== row.name) await db.updateTable("folders").set({ name }).where("id", "=", row.id).execute();
+				taken.add(name);
+				names.set(scope, taken);
+			}
+			await sql`create unique index folders_live_sibling_name
+				on folders (coalesce(collection, ''), coalesce(parent_id, ''), name)
+				where trashed_at is null`.execute(db);
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

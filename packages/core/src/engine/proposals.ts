@@ -1,8 +1,8 @@
 import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database, ProposalItemState } from "../db/schema";
-import { ConflictError, isMontiError } from "../errors";
-import type { AnyOperation, Message, Preview } from "../operation";
+import { CheckError, ConflictError, isMontiError } from "../errors";
+import { type AnyOperation, type Message, type Preview, type RecordRef, recordKey } from "../operation";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 
 /**
@@ -217,25 +217,42 @@ export async function markApplied(
 	trx: Transaction<Database>,
 	itemIds: string[],
 	activityId: string,
+	records: RecordRef[],
 ): Promise<string | null> {
 	if (itemIds.length === 0) return null;
+	const accepted = [...new Set(itemIds)];
 	const items = await trx
 		.selectFrom("monti_proposal_item")
 		.innerJoin("monti_proposal", "monti_proposal.id", "monti_proposal_item.proposal_id")
-		.select(["monti_proposal_item.id", "monti_proposal_item.proposal_id", "monti_proposal.conversation_id"])
-		.where("monti_proposal_item.id", "in", itemIds)
-		.where("monti_proposal_item.state", "=", "pending")
+		.select([
+			"monti_proposal_item.id",
+			"monti_proposal_item.proposal_id",
+			"monti_proposal_item.base_versions",
+			"monti_proposal_item.state",
+			"monti_proposal.conversation_id",
+		])
+		.where("monti_proposal_item.id", "in", accepted)
 		.execute();
-	if (items.length === 0) return null;
+	if (items.length !== accepted.length) throw new CheckError({ key: "proposals.unknownAccepted" });
+	const targets = new Set(records.map(recordKey));
+	const pending = items.filter((item) => item.state === "pending");
+	if (
+		pending.some((item) => {
+			const proposed = Object.keys(item.base_versions);
+			return proposed.length === 0 || proposed.some((key) => !targets.has(key));
+		})
+	)
+		throw new CheckError({ key: "proposals.wrongTarget" });
+	if (pending.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
 		.set({ state: "applied", activity_id: activityId })
 		.where(
 			"id",
 			"in",
-			items.map((item) => item.id),
+			pending.map((item) => item.id),
 		)
 		.execute();
-	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
-	return items[0].conversation_id;
+	for (const proposalId of new Set(pending.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
+	return pending[0]?.conversation_id ?? null;
 }

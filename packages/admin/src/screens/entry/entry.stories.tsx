@@ -142,6 +142,19 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 		},
 		admin,
 	);
+	let devCategoryGroup = "";
+	for (const [name, slug] of [
+		["개발", "dev"],
+		["일상", "life"],
+		["회고", "retro"],
+	] as const) {
+		const cat = (await monti.run(
+			"items.saveGroup",
+			{ collection: "category", locales: { ko: { title: name, slug } } },
+			admin,
+		)) as { output: { group: string } };
+		if (name === "개발") devCategoryGroup = cat.output.group;
+	}
 	const made = (await monti.run(
 		"entries.create",
 		kind === "new"
@@ -151,7 +164,10 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					locale: "ko",
 					title: kind === "untitled" ? "" : "첫 번째 글",
 					...(kind === "untitled" ? {} : { slug: "first-post" }),
-					values: { summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." },
+					values: {
+						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
+						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
+					},
 					doc:
 						kind === "table"
 							? changelog()

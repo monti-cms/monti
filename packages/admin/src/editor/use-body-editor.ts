@@ -44,7 +44,7 @@ export function useBodyEditor({
 	/** The person started changing a block a body proposal touches: the proposal is taken first. */
 	onTakeProposal?: (id: string) => void;
 }) {
-	const { t } = useAdmin();
+	const { t, blocks } = useAdmin();
 	const { kit, offered } = catalogs;
 	const latest = useRef({ t, offered, onChange, keyDown, onSelection, onTakeProposal });
 	latest.current = { t, offered, onChange, keyDown, onSelection, onTakeProposal };
@@ -64,7 +64,7 @@ export function useBodyEditor({
 			return block.type !== "heading" || now.headings.includes(Number(node.attrs.data?.level ?? 2));
 		};
 		return [
-			...bodyExtensions(kit, boxLabel),
+			...bodyExtensions(kit, boxLabel, blocks),
 			BlockIds,
 			bodyStates({
 				labels: () => ({ placeholder: latest.current.t("editor.placeholder"), off: latest.current.t("editor.off") }),
@@ -77,7 +77,7 @@ export function useBodyEditor({
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,
 		];
-	}, [kit]);
+	}, [kit, blocks]);
 
 	const editor = useEditor(
 		{

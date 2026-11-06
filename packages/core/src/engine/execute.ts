@@ -1,4 +1,4 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
@@ -105,6 +105,12 @@ export async function loadRecords(
 
 const unique = (refs: RecordRef[]) => [...new Map(refs.map((ref) => [recordKey(ref), ref])).values()];
 
+/** Serializes writes that touch the same records. Sorted keys keep multi-record writes from deadlocking each other. */
+async function lockRecords(trx: Transaction<Database>, refs: RecordRef[]): Promise<void> {
+	for (const key of refs.map(recordKey).sort())
+		await sql`select pg_advisory_xact_lock(hashtext(${`monti:record:${key}`}))`.execute(trx);
+}
+
 /**
  * Runs a write the one way every caller does: check the input, then in one transaction compare versions, snapshot what it touches, run it, log it
  * and queue its events. The events go out only after the commit; a write that fails leaves no row, no snapshot and no event.
@@ -124,6 +130,7 @@ export async function runWrite<Output>(
 	return engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
+		await lockRecords(trx, touched);
 		const before = await loadRecords(engine, trx, touched);
 
 		const conflicts = touched.flatMap((ref) => {
@@ -172,7 +179,7 @@ export async function runWrite<Output>(
 				)
 				.execute();
 		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
-		const conversation = await markApplied(trx, options.accepted ?? [], activityId);
+		const conversation = await markApplied(trx, options.accepted ?? [], activityId, records);
 		if (conversation && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")

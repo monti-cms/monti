@@ -15,6 +15,7 @@ export type EntryRead = {
 		id: string;
 		collection: string;
 		locale: string;
+		translationGroup: string;
 		title: string;
 		slug: string;
 		values: Record<string, unknown>;

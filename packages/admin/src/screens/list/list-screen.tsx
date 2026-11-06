@@ -58,12 +58,14 @@ import { FolderMenuItems, FolderTargets, MoveToFolderMenu, useFolders, useRemove
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
+import { RelationSubmenu } from "./relations-menu";
 import { type RowActions as Actions, allArchived, publishable, RowMenuItems, RowsMenuItems } from "./row-menu";
+import { TaxonomyScreen } from "./taxonomy-screen";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
 type Page = { rows: ListRow[]; total: number };
 type SchemaRead = {
-	schema: { collections: Record<string, { path: string; kind: "document" | "item" }> };
+	schema: { collections: Record<string, { path?: string; kind: "document" | "item" }> };
 	adminValues: Record<string, { label?: string; folders?: boolean }>;
 };
 /** A picked row; `proposal` while the assistant picked it and the admin has not touched it (`list.select`). */
@@ -105,7 +107,21 @@ function useColumnLabel() {
  * A collection's list (doc 06): one query in the address drives the rows, the column menus' counts and the pages. Every collection is drawn by this
  * same code; only its columns, which come from its schema, differ (06-2).
  */
-export function ListScreen({
+export function ListScreen(props: {
+	collection: string;
+	params: URLSearchParams;
+	/** How many entries the collection has (the sidebar's count): none at all shows the empty list instead of a table. */
+	count: number | undefined;
+	go: (route: Route, options?: { replace?: boolean }) => void;
+}) {
+	const schema = useRead<SchemaRead>("schema.read");
+	if (schema.data?.schema.collections[props.collection]?.kind === "item") {
+		return <TaxonomyScreen collection={props.collection} params={props.params} go={props.go} />;
+	}
+	return <DocumentListScreen {...props} />;
+}
+
+function DocumentListScreen({
 	collection,
 	params,
 	count,
@@ -208,6 +224,7 @@ export function ListScreen({
 	const [dragWidths, setDragWidths] = useState<Record<string, number> | null>(null);
 	const shownIds = (preview ?? allIds).filter((id) => !hidden.includes(id));
 	const shown = shownIds.flatMap((id) => (columns ?? []).filter((column) => column.id === id));
+	const relationColumns = useMemo(() => (columns ?? []).filter((column) => column.kind === "relation"), [columns]);
 	/** A column's width now: the one being dragged or kept, or its kind's; the title takes the room left. */
 	const sizeOf = (column: ListColumn) => {
 		const kind = kindSizeOf(column);
@@ -600,6 +617,22 @@ export function ListScreen({
 				onPick={(folder) => void moveRows(list, folder)}
 			/>
 		) : null;
+
+	const relationsFor = (list: ListRow[], context: boolean, icon = true) =>
+		relationColumns.length > 0
+			? relationColumns.map((col) => (
+					<RelationSubmenu
+						key={col.id}
+						collection={collection}
+						column={col}
+						rows={list}
+						context={context}
+						icon={icon}
+						onDone={() => setPicked(new Map())}
+					/>
+				))
+			: null;
+
 	const rowsMenuFor = (row: ListRow) =>
 		picked.has(row.id) && pickedRows.length > 1 ? (
 			<RowsMenuItems
@@ -607,9 +640,17 @@ export function ListScreen({
 				actions={actions}
 				document={document}
 				toFolder={toFolder(pickedRows, true, false)}
+				relations={relationsFor(pickedRows, true, false)}
 			/>
 		) : (
-			<RowMenuItems row={row} actions={actions} context document={document} toFolder={toFolder([row], true)} />
+			<RowMenuItems
+				row={row}
+				actions={actions}
+				context
+				document={document}
+				toFolder={toFolder([row], true)}
+				relations={relationsFor([row], true)}
+			/>
 		);
 
 	// Folder rows lead the rows while nothing is searched or filtered: a search or a filter looks for entries (doc 07, inside a folder).
@@ -777,6 +818,26 @@ export function ListScreen({
 									</DropdownMenuContent>
 								</DropdownMenu>
 							)}
+							{relationColumns.length > 0 && (
+								<DropdownMenu>
+									<DropdownMenuTrigger render={<TextButton />}>
+										{t("list.changeRelation")}
+										<Caret />
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="start">
+										{relationColumns.map((col) => (
+											<RelationSubmenu
+												key={col.id}
+												collection={collection}
+												column={col}
+												rows={pickedRows}
+												context={false}
+												onDone={() => setPicked(new Map())}
+											/>
+										))}
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
 						</BulkBar>
 					) : (
 						<ListHead
@@ -839,6 +900,7 @@ export function ListScreen({
 														context={false}
 														document={document}
 														toFolder={toFolder([row], false)}
+														relations={relationsFor([row], false)}
 													/>
 												</DropdownMenuContent>
 											</DropdownMenu>

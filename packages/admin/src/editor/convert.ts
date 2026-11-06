@@ -6,39 +6,37 @@ import { tableFromEditor, tableToEditor } from "./table";
 
 type MarkJson = { type: string; attrs?: Record<string, unknown> };
 
-/** The marks the editor knows by their editor name. */
-const EDITOR_MARKS = new Set(["bold", "italic", "underline", "strike", "code", "link", "superscript", "subscript"]);
-
-const markToEditor = (mark: Mark): MarkJson => {
+const markToEditor = (mark: Mark, kit: Catalog): MarkJson => {
 	const { type, ...attrs } = mark;
 	const name = markName(type);
-	if (!EDITOR_MARKS.has(name)) return { type: KEPT_MARK, attrs: { mark } };
+	if (!kit.marks.some((definition) => definition.type === type)) return { type: KEPT_MARK, attrs: { mark } };
 	return Object.keys(attrs).length > 0 ? { type: name, attrs } : { type: name };
 };
 
-const markFromEditor = (mark: MarkJson): Mark => {
+const markFromEditor = (mark: MarkJson, kit: Catalog): Mark => {
 	if (mark.type === KEPT_MARK) return mark.attrs?.mark as Mark;
 	// A link keeps only its address; the editor's own attrs (target, rel, class) are not stored.
 	if (mark.type === "link") return { type: "link", href: String(mark.attrs?.href ?? "") };
-	return { type: markType(mark.type) };
+	const attrs = Object.fromEntries(Object.entries(mark.attrs ?? {}).filter(([, value]) => value !== null));
+	return { type: markType(mark.type, kit), ...attrs };
 };
 
-const inlineToEditor = (inline: Inline): JSONContent | null => {
+const inlineToEditor = (inline: Inline, kit: Catalog): JSONContent | null => {
 	if (inline.type === "hardBreak") return { type: "hardBreak" };
 	if (inline.type === "footnoteRef") return { type: "footnoteRef", attrs: { id: inline.id } };
 	if (inline.text === "") return null;
 	return {
 		type: "text",
 		text: inline.text,
-		...(inline.marks?.length ? { marks: inline.marks.map(markToEditor) } : {}),
+		...(inline.marks?.length ? { marks: inline.marks.map((mark) => markToEditor(mark, kit)) } : {}),
 	};
 };
 
-const inlineFromEditor = (node: JSONContent): Inline | null => {
+const inlineFromEditor = (node: JSONContent, kit: Catalog): Inline | null => {
 	if (node.type === "hardBreak") return { type: "hardBreak" };
 	if (node.type === "footnoteRef") return { type: "footnoteRef", id: String(node.attrs?.id ?? "") };
 	if (node.type !== "text" || !node.text) return null;
-	const marks = (node.marks ?? []).map((mark) => markFromEditor(mark as MarkJson));
+	const marks = (node.marks ?? []).map((mark) => markFromEditor(mark as MarkJson, kit));
 	return { type: "text", text: node.text, ...(marks.length ? { marks } : {}) };
 };
 
@@ -59,7 +57,9 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 			attrs: { blockId: id, data: block.attrs ?? null, link: fresh ? null : (block.link ?? null) },
 		};
 		if (definition.holds === "text") {
-			const content = (block.content ?? []).map(inlineToEditor).filter((each) => each !== null);
+			const content = (block.content ?? [])
+				.map((inline) => inlineToEditor(inline, kit))
+				.filter((each) => each !== null);
 			if (content.length) node.content = content;
 		} else if (definition.holds === "blocks") {
 			const children = (block.children ?? []).map(toEditor);
@@ -116,7 +116,9 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 		const link = node.attrs?.link as Block["link"] | null | undefined;
 		if (link) block.link = link;
 		if (definition?.holds === "text") {
-			const content = (node.content ?? []).map(inlineFromEditor).filter((each) => each !== null);
+			const content = (node.content ?? [])
+				.map((inline) => inlineFromEditor(inline, kit))
+				.filter((each) => each !== null);
 			if (content.length) block.content = content;
 		} else if (definition?.holds === "blocks") block.children = (node.content ?? []).map(fromEditor);
 		return block;

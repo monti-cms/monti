@@ -17,6 +17,7 @@ import {
 	SheetFooter,
 	SheetHeader,
 	SheetTitle,
+	Switch,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
@@ -62,6 +63,7 @@ function Body({
 	const [label, setLabel] = useState("");
 	const [id, setId] = useState("");
 	const [kind, setKind] = useState<"document" | "item">("document");
+	const [publicPage, setPublicPage] = useState(false);
 	const [path, setPath] = useState<string | null>(null);
 	const taken = model.collections.includes(id);
 	// Creating is never greyed out (README principle 7): pressed with a field empty, that field says so and takes the focus.
@@ -89,7 +91,7 @@ function Body({
 		}
 		const { draft } = model;
 		draft.set(at.collection(id), { kind });
-		draft.set(at.path(id), address);
+		if (kind === "document" || publicPage) draft.set(at.path(id), address);
 		draft.set(at.collectionValue(id, "label"), label.trim());
 		draft.set(at.field(id, "title"), { name: "title", def: { kind: "text", required: true } } satisfies DraftField);
 		draft.set(at.field(id, "slug"), {
@@ -153,15 +155,27 @@ function Body({
 					</RadioGroup>
 				</FormFieldSet>
 				<FormField>
-					<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
-					<Affix
-						id="collection-address"
-						prefix="/"
-						suffix="/:slug"
-						width="fit"
-						value={addressPart(address)}
-						onChange={(event) => setPath(addressOf(event.target.value))}
-					/>
+					<div className="flex min-h-monti-control-xs items-center gap-monti-8">
+						<FormFieldLabel htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}>
+							{t("settings.basics.path")}
+						</FormFieldLabel>
+						{kind === "item" ? (
+							<span className="ml-auto">
+								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
+							</span>
+						) : null}
+					</div>
+					{(kind === "document" || publicPage) && (
+						<Affix
+							id="collection-address"
+							aria-label={kind === "item" ? t("settings.basics.path") : undefined}
+							prefix="/"
+							suffix="/:slug"
+							width="fit"
+							value={addressPart(address)}
+							onChange={(event) => setPath(addressOf(event.target.value))}
+						/>
+					)}
 				</FormField>
 			</SheetBody>
 			<SheetFooter>

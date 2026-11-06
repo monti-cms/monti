@@ -44,13 +44,13 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 묶음 | `Stack gap={24} paddingY={24}` 하나 | 절 이름이 없다. 파일 설정인지 관리자 값인지는 사람이 하는 일이 아니라서 절로 나누지 않는다(원칙 9, 2026-11-05 소유자). 줄은 필드 시트와 같은 순서다: 식별자와 종류(한 줄에 둘, `Grid columns={2}`. 읽기만 하는 짧은 값이라 세로로 늘어놓으면 화면만 길어진다), 표시 이름, 공개 주소, 폴더 사용. |
+| 묶음 | `Stack gap={24} paddingY={24}` 하나 | One group in this order: identifier and kind, display name, public-page setting/address, and folders. |
 | 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
 | 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
 | 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. |
-| 공개 주소 | `FormField` 라벨(바뀌면 `FormFieldLabel changed`) + `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`, mono) | 모든 컬렉션에 공개 주소가 있다(01번 문서). 켜고 끄는 스위치는 없다. 운영 사이트에서는 `ReadValue` "/posts/:slug"와 그 줄의 `LockMark`("운영 사이트에서는 잠김"). |
+| Public address | A 36px body-text setting row matching “Use folders”, with the `Affix` directly below. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
 | 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). |
-| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + `DangerRow`(`name`, `action`에 `Button variant="outline-danger" size="sm"` "지우기") | 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
+| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
 #### 속성 패널 미리보기
 
@@ -74,7 +74,7 @@
 | 시트 | `Sheet`(`SheetTitle` "새 컬렉션"), 발은 "취소" · `Button` "만들기" | 오류가 있으면 "만들기"가 비활성. |
 | 이름 · 식별자 | `FormField` + `FormFieldLabel required` + `Input` / `Input mono`, 식별자 라벨 뒤 `LockMark` | 식별자는 만든 뒤 바꿀 수 없다. 이미 쓰는 식별자면 `aria-invalid`와 `FormFieldError` "이미 쓰는 이름이에요." |
 | 종류 | `FormFieldSet` + `FormFieldLegend variant="field"` "종류" + `RadioGroup`과 `RadioItem`(`description` "게시글, 노트처럼 본문이 있어요" · "카테고리, 태그처럼 짧아요") | 문서 · 항목 중 하나. |
-| 공개 주소 | `FormField` 라벨 + `Affix`(`prefix` "/", `suffix` "/:slug") | 스위치는 없다. |
+| Public address | The same 36px body-text setting row as the basic tab, with the `Affix` directly below. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | New item collections default to no public address. |
 
 #### 필드 시트
 
@@ -107,7 +107,7 @@
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않아요." · "옛 주소는 404가 돼요." · "값이 사라져요. 되돌릴 수 없어요." |
-| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 공개 주소의 전 / 후. 개수는 보이지 않는다(2026-11-05 바뀜: 개발 데이터의 숫자라 운영과 다르다). 컬렉션 삭제는 `ChangeNote` 한 줄이다. |
+| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | A path change shows before and after. The old-address warning appears only when a previous public path is being removed or changed. |
 | 영향받는 글 (빠짐, 2026-11-05) | | 개발 데이터의 글이라 운영에서 영향받는 글과 다르다. 개수와 같은 이유로 뺐다. |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
 
@@ -121,7 +121,7 @@
 | "새 컬렉션 오류" | 4.02 | 식별자 `aria-invalid`와 `FormFieldError`, "만들기" 비활성 | Controls/Field/Field |
 | "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 바뀐 곳 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
-| "새 컬렉션 검토" | 4.05 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `ChangeLines`(공개 주소, 필드), `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "새 컬렉션 검토" | 4.05 | Review `Sheet`: `ChangeGroup kind="new"` and `ChangeLines`; the public-address line is omitted for an item without a public page. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었어요"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 바뀐 곳 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |

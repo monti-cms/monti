@@ -152,6 +152,22 @@ describe("folders", () => {
 		]);
 	});
 
+	it("07-1 concurrent folder creation keeps live sibling names unique", async () => {
+		const made = await Promise.all([
+			write<{ name: string }>("folders.create", {
+				scope: { collection: "post" },
+				parentId: null,
+				name: "새 폴더",
+			}),
+			write<{ name: string }>("folders.create", {
+				scope: { collection: "post" },
+				parentId: null,
+				name: "새 폴더",
+			}),
+		]);
+		expect(made.map((result) => result.output.name).sort()).toEqual(["새 폴더", "새 폴더 2"]);
+	});
+
 	it("folders.rename refuses a name a sibling has", async () => {
 		await folder("2024");
 		const other = await folder("2025");

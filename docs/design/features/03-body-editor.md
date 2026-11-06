@@ -78,6 +78,10 @@ export const callout = defineBlock({
 });
 ```
 
+사이트가 관리자를 마운트할 때 같은 정의 배열을 `<MontiAdmin blocks={blocks}>`로 넘긴다. 관리자는 `Editor`를 Tiptap node view로 쓰고,
+없으면 `Site`를 editable children과 함께 쓴다. `blocks.catalog`는 직렬화 가능한 구조·설명·attrs만 맡고 컴포넌트 전달을 대신하지 않는다.
+사이트가 더한 mark는 catalog로 스키마를 만들고 서식 막대의 `⋯` 메뉴에서 켜고 끈다.
+
 ```mermaid
 flowchart LR
   DEF["defineBlock"] --> ED["편집기<br/>스키마 · 화면 · / 메뉴 · 바꾸기 메뉴"]

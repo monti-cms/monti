@@ -47,6 +47,18 @@ type Row = {
 	trashed_at: Date | null;
 };
 
+const DateShape = z.union([z.date(), z.iso.datetime().transform((value) => new Date(value))]);
+const RowShape: z.ZodType<Row> = z.object({
+	id: z.string(),
+	collection: z.string().nullable(),
+	parent_id: z.string().nullable(),
+	name: z.string(),
+	position: z.number(),
+	version: z.number().int(),
+	created_at: DateShape,
+	trashed_at: DateShape.nullable(),
+});
+
 /** A folder for the engine: its row, so undoing a removal or a rename puts it back. */
 export const folderRecord = defineRecordKind({
 	kind: "folder",
@@ -60,7 +72,7 @@ export const folderRecord = defineRecordKind({
 			await db.deleteFrom("folders").where("id", "=", id).execute();
 			return;
 		}
-		const row = data as Row;
+		const row = RowShape.parse(data);
 		const values = {
 			collection: row.collection,
 			parent_id: row.parent_id,
@@ -106,6 +118,13 @@ async function freeName(db: Db, collection: string | null, parentId: string | nu
 	for (let n = 2; ; n++) if (!taken.has(`${name} ${n}`)) return `${name} ${n}`;
 }
 
+/** Serializes name and position choices within one sibling list. */
+async function lockFolderScope(db: Db, collection: string | null, parentId: string | null): Promise<void> {
+	await sql`select pg_advisory_xact_lock(hashtext(${`monti:folders:${collection ?? "media"}:${parentId ?? "root"}`}))`.execute(
+		db,
+	);
+}
+
 function checkScope(ctx: OperationContext, scope: Scope) {
 	const collection = collectionOf(scope);
 	if (collection !== null && !ctx.site.schema().collections[collection])
@@ -149,14 +168,14 @@ async function removal(db: Db, id: string) {
 		? []
 		: db
 				.selectFrom("entry_published")
-				.select("entry_id")
+				.select(["entry_id", "slug"])
 				.where(
 					"entry_id",
 					"in",
 					entries.map((entry) => entry.id),
 				)
 				.execute());
-	return { folders, entries, published: new Set(published.map((row) => row.entry_id)) };
+	return { folders, entries, published: new Map(published.map((row) => [row.entry_id, row.slug])) };
 }
 
 export const folderOperations = [
@@ -225,6 +244,7 @@ export const folderOperations = [
 		async check(input, ctx) {
 			checkScope(ctx, input.scope);
 			await checkParent(ctx.db, collectionOf(input.scope), input.parentId);
+			await lockFolderScope(ctx.db, collectionOf(input.scope), input.parentId);
 		},
 		preview: (input) => ({ summary: { key: "folders.create", values: { name: input.name } }, changes: [] }),
 		async run(input, ctx) {
@@ -256,6 +276,7 @@ export const folderOperations = [
 		touches: (input) => [folderRef(input.id)],
 		async check(input, ctx) {
 			const folder = await folderOf(ctx.db, input.id);
+			await lockFolderScope(ctx.db, folder.collection, folder.parent_id);
 			if ((await freeName(ctx.db, folder.collection, folder.parent_id, input.name, folder.id)) !== input.name)
 				throw new CheckError({ key: "folders.nameTaken", values: { name: input.name } });
 		},
@@ -283,6 +304,7 @@ export const folderOperations = [
 		async check(input, ctx) {
 			const folder = await folderOf(ctx.db, input.id);
 			await checkParent(ctx.db, folder.collection, input.parentId);
+			await lockFolderScope(ctx.db, folder.collection, input.parentId);
 			if (input.parentId !== null && (await subtree(ctx.db, input.id)).includes(input.parentId))
 				throw new CheckError({ key: "folders.intoItself" });
 		},
@@ -340,36 +362,35 @@ export const folderOperations = [
 				.set((eb) => ({ trashed_at: now, version: eb("version", "+", 1) }))
 				.where("id", "in", folders)
 				.execute();
-			for (const entry of entries) {
-				const wasPublished = published.has(entry.id);
-				// A published entry goes off the site with its folder (07-3); it comes back from the trash as a draft (doc 11).
-				let slug: string | null = null;
-				if (wasPublished) {
-					const copy = await ctx.db
-						.selectFrom("entry_published")
-						.select("slug")
-						.where("entry_id", "=", entry.id)
-						.executeTakeFirst();
-					slug = copy?.slug ?? null;
-					await ctx.db.deleteFrom("entry_published").where("entry_id", "=", entry.id).execute();
-				}
+			const entryIds = entries.map((entry) => entry.id);
+			const publishedIds = [...published.keys()];
+			if (publishedIds.length > 0)
+				await ctx.db.deleteFrom("entry_published").where("entry_id", "in", publishedIds).execute();
+			if (entryIds.length > 0)
 				await ctx.db
 					.updateTable("entries")
 					.set((eb) => ({
 						trashed_at: now,
 						version: eb("version", "+", 1),
-						...(wasPublished ? { status: "draft" as const, has_unpublished_changes: false } : {}),
 					}))
-					.where("id", "=", entry.id)
+					.where("id", "in", entryIds)
 					.execute();
-				if (slug !== null)
-					ctx.emit({
-						type: "entry.unpublished",
-						ids: [entry.id],
-						collection: entry.collection,
-						locale: entry.locale,
-						paths: [publicPath(ctx.site.schema(), entry.collection, slug) ?? []].flat(),
-					});
+			if (publishedIds.length > 0)
+				await ctx.db
+					.updateTable("entries")
+					.set({ status: "draft", has_unpublished_changes: false })
+					.where("id", "in", publishedIds)
+					.execute();
+			for (const entry of entries) {
+				const slug = published.get(entry.id);
+				if (slug === undefined) continue;
+				ctx.emit({
+					type: "entry.unpublished",
+					ids: [entry.id],
+					collection: entry.collection,
+					locale: entry.locale,
+					paths: [publicPath(ctx.site.schema(), entry.collection, slug) ?? []].flat(),
+				});
 			}
 			return { id: folder.id, name: folder.name, entries: entries.length, unpublished: published.size };
 		},

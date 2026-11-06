@@ -23,6 +23,7 @@ import {
 	recordKey,
 } from "./operation";
 import type { RecordKind } from "./records";
+import { relationOperations } from "./relations/operations";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
@@ -223,6 +224,7 @@ export function createMonti(options: MontiOptions) {
 		...entryOperations,
 		...listOperations,
 		...translationOperations,
+		...relationOperations,
 		...folderOperations,
 		...bodyOperations,
 		...authOperations,

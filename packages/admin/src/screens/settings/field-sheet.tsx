@@ -56,6 +56,8 @@ type Form = {
 	locale: LocaleMode;
 	options: { value: string; label: string }[];
 	many: boolean;
+	ordered: boolean;
+	via: string;
 	accept: "image" | "any";
 	to: string;
 	createMissing: boolean;
@@ -72,6 +74,8 @@ const blank = (to: string): Form => ({
 	locale: "same",
 	options: [],
 	many: false,
+	ordered: false,
+	via: "",
 	accept: "image",
 	to,
 	createMissing: false,
@@ -93,6 +97,8 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 		locale: localeModeOf(field.name, def),
 		options: def.kind === "select" ? def.options.map((value) => ({ value, label: labels[value] ?? "" })) : [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
+		ordered: def.kind === "relation" && Boolean(def.ordered),
+		via: def.kind === "relation" && def.via ? def.via : "",
 		accept: def.kind === "media" ? (def.accept ?? "image") : "image",
 		to: def.kind === "relation" ? def.to : to,
 		createMissing: def.kind === "relation" && Boolean(def.createMissing),
@@ -121,7 +127,15 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 		return clean({ kind: "select", ...common, options: form.options.map((option) => option.value), many: form.many });
 	if (form.kind === "media")
 		return clean({ kind: "media", ...common, accept: form.accept === "any" ? "any" : undefined });
-	return clean({ kind: "relation", ...common, to: form.to, many: form.many, createMissing: form.createMissing });
+	return clean({
+		kind: "relation",
+		...common,
+		to: form.to,
+		many: form.many,
+		createMissing: form.createMissing,
+		ordered: form.many && !form.via ? form.ordered : false,
+		via: form.via || undefined,
+	});
 }
 
 const adminOf = (form: Form): Record<FieldValue, unknown> => {
@@ -492,12 +506,37 @@ function FieldSheetBody({
 		) : null;
 
 	// What a relation picks from: the collection it points at, how many, and whether a name not in the list makes a new entry.
+	const viaCandidates = model.fields(form.to).filter((key) => {
+		const field = model.shown(at.field(form.to, key)) as DraftField | null;
+		const def = field?.def;
+		return def?.kind === "relation" && def.to === open.collection && def.many;
+	});
+
 	const picks =
 		form.kind === "relation" ? (
 			<SheetSection title={t("settings.field.picks")}>
 				<Stack gap={4}>
 					{pickRow(t("settings.field.target"), "field-target", targets, form.to, (to) => set({ to }))}
-					{switchRow(t("settings.field.manyRelation"), form.many, (many) => set({ many }))}
+					{switchRow(t("settings.field.manyRelation"), form.many, (many) =>
+						set({ many, ordered: many && !form.via ? form.ordered : false }),
+					)}
+					{form.many &&
+						!form.via &&
+						switchRow(t("settings.field.ordered"), form.ordered, (ordered) => set({ ordered }))}
+					{(viaCandidates.length > 0 || Boolean(form.via)) &&
+						pickRow(
+							t("settings.field.via"),
+							"field-via",
+							[
+								{ value: "", label: t("settings.field.viaNone") },
+								...viaCandidates.map((candidateKey) => ({
+									value: model.fieldName(form.to, candidateKey),
+									label: model.fieldLabel(form.to, candidateKey),
+								})),
+							],
+							form.via,
+							(via) => set({ via, ordered: via ? false : form.ordered }),
+						)}
 					{switchRow(t("settings.field.createMissing"), form.createMissing, (createMissing) => set({ createMissing }))}
 				</Stack>
 			</SheetSection>

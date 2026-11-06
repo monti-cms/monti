@@ -1,8 +1,8 @@
 import {
 	Affix,
 	Button,
+	ChangeDot,
 	DangerBlock,
-	DangerRow,
 	FormField,
 	FormFieldLabel,
 	Grid,
@@ -12,6 +12,7 @@ import {
 	ReadValue,
 	Stack,
 	Switch,
+	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
@@ -45,9 +46,18 @@ export function BasicsTab({
 	const locked = data?.locked ?? true;
 	const kind = (draft.value(at.collection(c)) as { kind: "document" | "item" } | null)?.kind ?? "document";
 	const pathPlace = at.path(c);
-	const path = String(draft.value(pathPlace) ?? "/:slug");
+	const pathValue = draft.value(pathPlace);
+	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
+	const pathChanged =
+		model.changed.includes(pathPlace) && data?.schema.collections[c]
+			? {
+					label: t("settings.changed"),
+					undoLabel: t("settings.undo"),
+					onUndo: () => draft.revert(pathPlace),
+				}
+			: undefined;
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -70,34 +80,55 @@ export function BasicsTab({
 					/>
 				</FormField>
 				{locked ? (
-					<ReadValue label={t("settings.basics.path")}>
-						{path}
-						<LockMark label={t("settings.locked")} />
-					</ReadValue>
+					kind === "document" || path !== undefined ? (
+						<ReadValue label={t("settings.basics.path")}>
+							{path}
+							<LockMark label={t("settings.locked")} />
+						</ReadValue>
+					) : (
+						<ReadValue label={t("settings.basics.path")}>
+							{t("settings.basics.publicPageOff")}
+							<LockMark label={t("settings.locked")} />
+						</ReadValue>
+					)
 				) : (
 					<FormField>
-						<FormFieldLabel
-							htmlFor="collection-path"
-							changed={
-								model.changed.includes(pathPlace) && data?.schema.collections[c]
-									? {
-											label: t("settings.changed"),
-											undoLabel: t("settings.undo"),
-											onUndo: () => draft.revert(pathPlace),
-										}
-									: undefined
-							}
-						>
-							{t("settings.basics.path")}
-						</FormFieldLabel>
-						<Affix
-							id="collection-path"
-							prefix="/"
-							suffix="/:slug"
-							width="fit"
-							value={addressPart(path)}
-							onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
-						/>
+						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
+							<label
+								htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
+								className="cursor-pointer text-monti-body"
+							>
+								{t("settings.basics.path")}
+							</label>
+							{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+							{pathChanged?.onUndo || kind === "item" ? (
+								<div className="ml-auto flex items-center gap-monti-12">
+									{pathChanged?.onUndo ? (
+										<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
+											{pathChanged.undoLabel}
+										</TextButton>
+									) : null}
+									{kind === "item" ? (
+										<Switch
+											id="collection-public-page"
+											checked={path !== undefined}
+											onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+										/>
+									) : null}
+								</div>
+							) : null}
+						</div>
+						{path !== undefined && (
+							<Affix
+								id="collection-path"
+								aria-label={kind === "item" ? t("settings.basics.path") : undefined}
+								prefix="/"
+								suffix="/:slug"
+								width="fit"
+								value={addressPart(path)}
+								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
+							/>
+						)}
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
@@ -111,14 +142,11 @@ export function BasicsTab({
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
-					<DangerRow
-						name={model.label(c)}
-						action={
-							<Button variant="outline-danger" size="sm" onClick={onDelete}>
-								{t("settings.basics.deleteButton")}
-							</Button>
-						}
-					/>
+					<div className="flex justify-end">
+						<Button variant="outline-danger" size="sm" onClick={onDelete}>
+							{t("settings.basics.deleteButton")}
+						</Button>
+					</div>
 				</DangerBlock>
 			)}
 		</>

@@ -9,7 +9,6 @@ import {
 	CompareParagraph,
 	CompareRow,
 	CompareRows,
-	CompareShared,
 	CompareText,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -35,7 +34,6 @@ import {
 	Text,
 	TextButton,
 	TodoItem,
-	Untranslated,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";

@@ -13,6 +13,12 @@ import { applyOps, BodyOpShape } from "./edit";
 import { bodyText } from "./text";
 
 const templateRef = (id: string): RecordRef => ({ kind: "template", id });
+const TemplateSnapshot = z.object({
+	name: z.string(),
+	doc: z.unknown(),
+	version: z.number().int(),
+	created_at: z.union([z.date(), z.iso.datetime().transform((value) => new Date(value))]),
+});
 
 /** A template for the engine, so saving and removing one can be undone like any admin value. */
 export const templateRecord = defineRecordKind({
@@ -27,11 +33,11 @@ export const templateRecord = defineRecordKind({
 			await db.deleteFrom("templates").where("id", "=", id).execute();
 			return;
 		}
-		const row = data as { name: string; doc: unknown; version: number; created_at: string };
+		const row = TemplateSnapshot.parse(data);
 		const values = { name: row.name, doc: JSON.stringify(row.doc), updated_at: new Date() };
 		await db
 			.insertInto("templates")
-			.values({ id, ...values, created_at: new Date(row.created_at), version: row.version + 1 })
+			.values({ id, ...values, created_at: row.created_at, version: row.version + 1 })
 			.onConflict((conflict) =>
 				conflict.column("id").doUpdateSet((eb) => ({ ...values, version: eb("templates.version", "+", 1) })),
 			)
