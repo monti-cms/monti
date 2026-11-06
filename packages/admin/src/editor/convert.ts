@@ -2,6 +2,7 @@ import type { Block, Doc, Inline, Mark } from "@monti-cms/core";
 import type { JSONContent } from "@tiptap/core";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { KEPT_MARK, markName, markType, nodeName, UNKNOWN } from "./schema";
+import { tableFromEditor, tableToEditor } from "./table";
 
 type MarkJson = { type: string; attrs?: Record<string, unknown> };
 
@@ -51,6 +52,7 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		const id = fresh ? null : block.id;
 		const definition = byType.get(block.type);
 		if (!definition) return { type: UNKNOWN, attrs: { blockId: id, block } };
+		if (block.type === "table") return tableToEditor(block, id);
 		const node: JSONContent = { type: nodeName(block.type), attrs: { blockId: id, data: block.attrs ?? null } };
 		if (definition.holds === "text") {
 			const content = (block.content ?? []).map(inlineToEditor).filter((each) => each !== null);
@@ -61,8 +63,31 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		}
 		return node;
 	};
-	const blocks = doc.blocks.map(toEditor);
+	const blocks = footnotesLast(doc.blocks).map(toEditor);
 	return { type: "doc", content: blocks.length ? blocks : [{ type: "paragraph" }] };
+}
+
+/**
+ * The footnotes at the end, in the order their references come in the text, as the editor keeps them (`footnotes.ts`). A body written elsewhere (an
+ * assistant's edit, an import) may have them anywhere.
+ */
+function footnotesLast(blocks: Block[]): Block[] {
+	const order: string[] = [];
+	const visit = (list: Block[]) => {
+		for (const block of list) {
+			if (block.type === "footnote") continue;
+			for (const part of block.content ?? [])
+				if (part.type === "footnoteRef" && !order.includes(part.id)) order.push(part.id);
+			if (block.children) visit(block.children);
+		}
+	};
+	visit(blocks);
+	const rank = (block: Block) => {
+		const at = order.indexOf(String(block.attrs?.id));
+		return at === -1 ? Number.POSITIVE_INFINITY : at;
+	};
+	const notes = blocks.filter((block) => block.type === "footnote").sort((a, b) => rank(a) - rank(b));
+	return notes.length ? [...blocks.filter((block) => block.type !== "footnote"), ...notes] : blocks;
 }
 
 /** A block that holds blocks needs one: an empty item of the first kind it takes. */
@@ -79,6 +104,7 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 	const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
 	const fromEditor = (node: JSONContent): Block => {
 		if (node.type === UNKNOWN) return node.attrs?.block as Block;
+		if (node.type === "table") return tableFromEditor(node);
 		const definition = byName.get(node.type ?? "");
 		const data = node.attrs?.data as Record<string, unknown> | null | undefined;
 		const block: Block = { id: String(node.attrs?.blockId ?? ""), type: definition?.type ?? String(node.type) };

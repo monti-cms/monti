@@ -7,30 +7,33 @@ import { HELD } from "./sortable";
 
 /**
  * Something the editor floats at a point of the screen it measured: the block handle in a block's margin, the format bar over selected words. The
- * point is in viewport pixels; `place` says which corner or edge of the thing sits on it: `start` its top left, `above` the middle of its bottom edge.
- * It draws no surface of its own; what it holds does (`BlockHandle`, `FloatingBar`).
+ * point is in viewport pixels; `place` says which corner or edge of the thing sits on it: `start` its top left, `above` the middle of its bottom edge,
+ * `center` its middle (a table's grip on the table's edge). It draws no surface of its own; what it holds does (`BlockHandle`, `FloatingBar`).
  */
 function EditorOverlay({
 	top,
 	left,
 	width,
+	height,
 	place = "start",
 	children,
 }: {
 	top: number;
 	left: number;
-	/** As wide as what it stands for (a held block, a drop line). */
+	/** As wide as what it stands for (a held block, a drop line, a table's edge). */
 	width?: number;
-	place?: "start" | "above";
+	/** As tall as what it stands for (a table's right edge). */
+	height?: number;
+	place?: "start" | "above" | "center";
 	children: ReactNode;
 }) {
 	if (typeof document === "undefined") return null;
 	return createPortal(
 		<div
 			data-slot="editor-overlay"
-			className="pointer-events-auto fixed z-40 flex items-center data-[place=above]:-translate-x-1/2 data-[place=above]:-translate-y-full"
+			className="pointer-events-auto fixed z-40 flex items-center data-[place=above]:-translate-x-1/2 data-[place=center]:-translate-x-1/2 data-[place=above]:-translate-y-full data-[place=center]:-translate-y-1/2"
 			data-place={place}
-			style={{ top, left, width }}
+			style={{ top, left, width, height }}
 		>
 			{children}
 		</div>,

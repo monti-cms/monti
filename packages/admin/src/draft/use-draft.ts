@@ -241,6 +241,11 @@ export function useDraft({
 		},
 		discard: (id: string) => discard([id]),
 		discardAll: () => discard(pending.map(({ item }) => item.id)),
+		/**
+		 * Counts an item as taken whose change the screen put in itself (the body editor applies a body proposal's block operations to its own text).
+		 * The save sends it with the others.
+		 */
+		markTaken: (id: string) => setAccepted((current) => (current.includes(id) ? current : [...current, id])),
 		/** The items taken into this draft: the save sends them (`accepted`), and the server marks them applied with it. */
 		accepted,
 		/** Changes this browser kept from an earlier visit, waiting to be loaded or dropped (`restore: "ask"`). */

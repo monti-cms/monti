@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Block, BlockHandle, Stack, Text } from "./index";
 
-/** The + and the grip in the left margin of a block. While the block menu is open the grip stays pressed and the block takes the block background. */
+/** The grip in the left margin of a block. While the block menu is open the grip stays pressed and the block takes the block background. */
 const meta = {
 	title: "Monti/EditorTools/BlockHandle",
 	component: BlockHandle,
-	args: { addLabel: "아래에 블록 넣기", gripLabel: "블록 메뉴" },
+	args: { gripLabel: "블록 메뉴" },
 } satisfies Meta<typeof BlockHandle>;
 export default meta;
 type Story = StoryObj<typeof meta>;

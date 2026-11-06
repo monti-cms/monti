@@ -178,8 +178,11 @@ export const SlashMenu: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { text, body } = await editor(canvasElement);
-		pointAt(await within(text).findByText("한 줄 요약과 다음에 읽을 글."));
-		await userEvent.click(await body.findByRole("button", { name: "아래에 블록 넣기" }, wait));
+		// The caret at the end of a line, a new line, and "/" typed at its start.
+		await select(text, "한 줄 요약과 다음에 읽을 글.");
+		document.getSelection()?.collapseToEnd();
+		document.dispatchEvent(new Event("selectionchange"));
+		await userEvent.keyboard("{Enter}/");
 		await body.findByRole("listbox", { name: "블록" }, wait);
 	},
 };

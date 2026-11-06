@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import type { Block, Doc } from "@monti-cms/core";
 import {
 	Command,
 	CommandGroup,
@@ -13,14 +13,16 @@ import {
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import { BlockIcon } from "./block-icon";
 import { type BodyCatalogs, needsAttrs } from "./catalog";
-import { insertBlocks, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
+import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
+import { insertFootnote } from "./footnotes";
 import { nodeName } from "./schema";
+import { tableToEditor } from "./table";
 
 type Group = "text" | "insert" | "component" | "templates";
 const GROUPS: Group[] = ["text", "insert", "component", "templates"];
@@ -42,10 +44,29 @@ type Item = {
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
 
 /**
- * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09), a table needs its
- * cell tools, a footnote its reference in the text.
+ * Blocks that need their own feature before the menu can put them in: an image and a file come from the media library (doc 09).
  */
-const NOT_FROM_MENU = new Set(["image", "file", "table", "footnote"]);
+const NOT_FROM_MENU = new Set(["image", "file"]);
+
+/** A new table: three columns, a head row and two rows under it, all empty. */
+const NEW_TABLE: Block = {
+	id: "",
+	type: "table",
+	attrs: { header: true, rows: Array.from({ length: 3 }, () => ["", "", ""]) },
+};
+
+/** Puts a new table in the line's place and the caret in its first cell. */
+const placeTable = (editor: Editor) => (tr: Transaction) => {
+	placeBefore(editor.schema.nodeFromJSON(tableToEditor(NEW_TABLE, null)))(tr);
+	let cell: number | null = null;
+	tr.doc.descendants((node, pos) => {
+		if (cell !== null) return false;
+		// The table just put in is the one without an id yet.
+		if (node.type.name === "table" && !node.attrs.blockId) cell = pos + 3;
+		return node.type.name !== "table";
+	});
+	if (cell !== null) tr.setSelection(TextSelection.create(tr.doc, cell));
+};
 
 /** The line the "/" is on, made empty: a text kind turns it; anything else goes in its place, and that line stays under it for writing on. */
 function putIn(editor: Editor, open: Open, make: (tr: Transaction) => void) {
@@ -73,7 +94,7 @@ const placeBefore = (node: EditorNode) => (tr: Transaction) => {
 };
 
 /**
- * The "/" menu (doc 03, menu.md): one level, under the "/" typed at the start of a line, the focus kept in the text (arrows, Enter and Esc work from
+ * The "/" menu (doc 03, menu.md): one level, under a "/" typed anywhere in a line, the focus kept in the text (arrows, Enter and Esc work from
  * there). Its groups are the text blocks, the blocks to insert, the site's components and the templates; typing the word for templates leaves the templates only.
  * Only what the collection's editor offers is in it.
  */
@@ -116,7 +137,7 @@ export function useSlashMenu({
 				(block) =>
 					block.menu !== null &&
 					!NOT_FROM_MENU.has(block.type) &&
-					!needsAttrs(block) &&
+					(block.type === "table" || block.type === "footnote" || !needsAttrs(block)) &&
 					!["paragraph", "heading", "bulletList", "orderedList", "checklist", "quote", "codeBlock"].includes(
 						block.type,
 					),
@@ -130,6 +151,9 @@ export function useSlashMenu({
 				typed: block.type === "divider" ? "---" : undefined,
 				run: (editor) => {
 					if (!open) return;
+					if (block.type === "table") return putIn(editor, open, placeTable(editor));
+					// A footnote: its number where the "/" was, its text at the end of the body.
+					if (block.type === "footnote") return putIn(editor, open, (tr) => insertFootnote(tr, tr.selection.from));
 					const type = editor.schema.nodes[nodeName(block.type)];
 					if (!type) return;
 					const node = type.createAndFill() ?? type.create();
@@ -174,13 +198,19 @@ export function useSlashMenu({
 		const { $from } = selection;
 		const text = $from.parent.isTextblock ? $from.parent.textBetween(0, $from.parentOffset, "\n", "\0") : "";
 		const match =
-			selection.empty && $from.parent.type.name !== nodeName("codeBlock") ? /^\/([^\s/]*)$/.exec(text) : null;
+			selection.empty &&
+			$from.parent.type.name !== nodeName("codeBlock") &&
+			$from.parent.type.name !== nodeName("footnote") &&
+			!inTableCell($from)
+				? // A "/" anywhere in the line, with the words typed after it (2026-11-06 owner, as Notion): Esc closes it when a "/" is only a slash.
+					/\/([^\s/]*)$/.exec(text)
+				: null;
 		if (!match) {
 			dismissed.current = null;
 			setOpen(null);
 			return;
 		}
-		const from = $from.start();
+		const from = $from.pos - match[0].length;
 		if (dismissed.current === from) return;
 		const caret = editor.view.coordsAtPos($from.pos);
 		setOpen((current) => {
@@ -261,6 +291,16 @@ function SlashMenu({
 		() => ({ getBoundingClientRect: () => new DOMRect(caret.left, caret.top, 1, caret.bottom - caret.top) }),
 		[caret],
 	);
+	// The keys move the highlight from the text, not from the list: the list follows it, so the row stays in view.
+	const listLabel = t("slash.label");
+	useEffect(() => {
+		const frame = requestAnimationFrame(() =>
+			document
+				.querySelector(`[aria-label="${listLabel}"] [cmdk-item][data-value="${index}"]`)
+				?.scrollIntoView({ block: "nearest" }),
+		);
+		return () => cancelAnimationFrame(frame);
+	}, [index, listLabel]);
 	const titles: Record<Group, string> = {
 		text: t("slash.text"),
 		insert: t("slash.insert"),
@@ -282,7 +322,7 @@ function SlashMenu({
 			>
 				<Command shouldFilter={false} value={String(index)} onValueChange={(value) => onHighlight(Number(value))}>
 					<CommandInput value={query} readOnly placeholder={t("slash.find")} aria-label={t("slash.find")} />
-					<CommandList aria-label={t("slash.label")}>
+					<CommandList aria-label={listLabel}>
 						{GROUPS.map((group) => {
 							const rows = items.flatMap((item, at) => (item.group === group ? [{ item, at }] : []));
 							if (rows.length === 0) return null;

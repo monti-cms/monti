@@ -1754,7 +1754,7 @@ const still = () => {};
 /** One of the editor's tools, drawn open with the design system's parts. */
 function toolOf(tool: BodyTool) {
 	const items = tool.items;
-	if (tool.kind === "handle") return <BlockHandle addLabel="" gripLabel="" active={tool.on} />;
+	if (tool.kind === "handle") return <BlockHandle gripLabel="" active={tool.on} />;
 	if (tool.kind === "marker")
 		return (
 			<Marker active={tool.on} onClick={still}>

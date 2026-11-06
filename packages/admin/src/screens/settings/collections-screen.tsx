@@ -429,13 +429,13 @@ export function CollectionsScreen({
 									name={walking.item.request}
 									position={Math.min(position, proposed.length - 1) + 1}
 									total={proposed.length}
-									previousLabel={t("settings.bubble.previous")}
-									nextLabel={t("settings.bubble.next")}
+									previousLabel={t("bubble.previous")}
+									nextLabel={t("bubble.next")}
 									onPrevious={() => step(-1)}
 									onNext={() => step(1)}
-									discardAllLabel={t("settings.bubble.discardAll")}
+									discardAllLabel={t("bubble.discardAll")}
 									onDiscardAll={() => void draft.discardAll()}
-									acceptAllLabel={t("settings.bubble.acceptAll")}
+									acceptAllLabel={t("bubble.acceptAll")}
 									onAcceptAll={draft.acceptAll}
 								/>
 							</ProposalBubbleDock>

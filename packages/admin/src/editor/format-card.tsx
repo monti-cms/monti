@@ -25,7 +25,8 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
-import { clearFormats, hasClearableFormat } from "./commands";
+import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
+import { insertFootnote } from "./footnotes";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
 import { markName, nodeName } from "./schema";
 
@@ -50,7 +51,8 @@ const GAP = 8;
 
 /**
  * The format card (doc 03, editor-tools.md): over selected words, the formats the collection's editor offers, each pressed when the words have it. The
- * link opens a field for its address. Formats a site adds (the ⋯), footnotes and the assistant's request come with their own features.
+ * link opens a field for its address; the footnote button puts a footnote after the words. Formats a site adds (the ⋯) and the assistant's request
+ * come with their own features.
  */
 export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: BodyCatalogs }) {
 	const { t } = useAdmin();
@@ -64,6 +66,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				selection instanceof TextSelection &&
 				!selection.empty &&
 				selection.$from.parent.type.name !== nodeName("codeBlock") &&
+				!inTableCell(selection.$from) &&
 				(current.isFocused || linking);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
@@ -75,6 +78,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				active: Object.fromEntries(GROUPS.flat().map(({ type }) => [type, current.isActive(markName(type))])),
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
+				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
 			};
 		},
 	});
@@ -82,6 +86,8 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 	const offered = new Set(catalogs.offered.marks.map((mark) => mark.type));
 	const groups = GROUPS.map((group) => group.filter(({ type }) => offered.has(type))).filter((group) => group.length);
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);
+	// A footnote's own text has no footnote of its own.
+	const footnote = state.inFootnote ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
 	const toggle = (type: string) => editor.chain().focus().toggleMark(markName(type)).run();
 
 	return (
@@ -112,6 +118,18 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 								/>
 							),
 						)}
+						{/* After the link: a footnote for the picked words, its number after them and its text at the end of the body. */}
+						{group.some(({ type }) => type === "link") && footnote ? (
+							<FormatButton
+								mark="footnote"
+								label={t(footnote.label)}
+								onClick={() => {
+									const tr = editor.state.tr;
+									if (insertFootnote(tr, editor.state.selection.to)) editor.view.dispatch(tr);
+									editor.commands.focus();
+								}}
+							/>
+						) : null}
 						{/* After the text formats, and only while the words have one: takes them all off at once (a link stays). */}
 						{at === 0 && state.clearable ? (
 							<FormatButton

@@ -7,8 +7,10 @@ import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import type { BodyCatalogs, Catalog, CatalogBlock } from "./catalog";
 import { docFromEditor, docToEditor } from "./convert";
+import { Footnotes } from "./footnotes";
 import { bodyKeys } from "./keys";
 import { BlockIds, bodyStates } from "./plugins";
+import { ProposalMarks } from "./proposal-marks";
 import { bodyExtensions, nodeName } from "./schema";
 
 /** The site's blocks and the ones a collection's editor offers (`blocks.catalog`, doc 03). A template is written with every block the site has. */
@@ -31,6 +33,7 @@ export function useBodyEditor({
 	onChange,
 	keyDown,
 	onSelection,
+	onTakeProposal,
 }: {
 	doc: Doc;
 	catalogs: BodyCatalogs;
@@ -38,11 +41,13 @@ export function useBodyEditor({
 	onChange: (doc: Doc) => void;
 	keyDown?: (event: KeyboardEvent) => boolean;
 	onSelection?: (editor: Editor) => void;
+	/** The person started changing a block a body proposal touches: the proposal is taken first. */
+	onTakeProposal?: (id: string) => void;
 }) {
 	const { t } = useAdmin();
 	const { kit, offered } = catalogs;
-	const latest = useRef({ t, offered, onChange, keyDown, onSelection });
-	latest.current = { t, offered, onChange, keyDown, onSelection };
+	const latest = useRef({ t, offered, onChange, keyDown, onSelection, onTakeProposal });
+	latest.current = { t, offered, onChange, keyDown, onSelection, onTakeProposal };
 
 	const extensions = useMemo(() => {
 		const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
@@ -66,6 +71,8 @@ export function useBodyEditor({
 				offered: () => isOffered,
 			}),
 			bodyKeys(() => latest.current.offered),
+			...(kit.blocks.some((block) => block.type === "footnote") ? [Footnotes] : []),
+			ProposalMarks.configure({ take: (id) => latest.current.onTakeProposal?.(id) }),
 			UndoRedo,
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,
@@ -103,6 +110,10 @@ export function docLength(doc: Doc): number {
 	const walk = (blocks: Doc["blocks"]) => {
 		for (const block of blocks) {
 			for (const inline of block.content ?? []) if (inline.type === "text") count += [...inline.text].length;
+			// A table's text is in its cells.
+			if (block.type === "table")
+				for (const row of (block.attrs?.rows as string[][] | undefined) ?? [])
+					for (const cell of row) count += [...cell].length;
 			if (block.children) walk(block.children);
 		}
 	};

@@ -15,6 +15,8 @@ import {
 	IconButton,
 	Inline,
 	Input,
+	ProposalBubble,
+	ProposalBubbleDock,
 	Separator,
 	SplitButton,
 	Stack,
@@ -38,6 +40,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
+import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -114,6 +117,43 @@ export function EntryEditor({
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
 	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug) : null;
+
+	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
+	const [looking, setLooking] = useState(0);
+	const proposed = body.current ? drawable(body.current.state.doc, editor.bodyProposals) : editor.bodyProposals;
+	const walking = readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
+	const look = (direction: -1 | 1) => {
+		const next = (Math.min(looking, proposed.length - 1) + direction + proposed.length) % proposed.length;
+		setLooking(next);
+		const item = proposed[next];
+		if (item && body.current) scrollToProposal(body.current.view, item);
+	};
+	const take = (item: (typeof proposed)[number]) => {
+		if (!body.current || !catalogs) return;
+		takeInEditor(body.current, item, catalogs.kit);
+		editor.takeBody(item.id);
+	};
+	const takeAll = () => {
+		for (const item of proposed) take(item);
+	};
+	// ⌘↵ takes the proposal the bubble points at and ⌘⌫ discards it (components/proposal.md, the bubble).
+	const keyed = useRef({ walking, take, discard: editor.discardProposal });
+	keyed.current = { walking, take, discard: editor.discardProposal };
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			const { walking: item, take: takeIt, discard } = keyed.current;
+			if (!item || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
+			if (event.key === "Enter") {
+				event.preventDefault();
+				takeIt(item);
+			} else if (event.key === "Backspace") {
+				event.preventDefault();
+				void discard(item.id);
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, []);
 
 	const save = editor.save;
 	useEffect(() => {
@@ -402,9 +442,31 @@ export function EntryEditor({
 								editable={!readOnly}
 								templates
 								onEditor={keepEditor}
+								proposals={{
+									items: editor.bodyProposals,
+									current: walking?.id ?? null,
+									onTaken: editor.takeBody,
+								}}
 							/>
 						) : null}
 					</Stack>
+					{walking ? (
+						<ProposalBubbleDock>
+							<ProposalBubble
+								name={walking.request}
+								position={Math.min(looking, proposed.length - 1) + 1}
+								total={proposed.length}
+								previousLabel={t("bubble.previous")}
+								nextLabel={t("bubble.next")}
+								onPrevious={() => look(-1)}
+								onNext={() => look(1)}
+								discardAllLabel={t("bubble.discardAll")}
+								onDiscardAll={() => void editor.discardProposals()}
+								acceptAllLabel={t("bubble.acceptAll")}
+								onAcceptAll={takeAll}
+							/>
+						</ProposalBubbleDock>
+					) : null}
 				</Stack>
 				{panel ? (
 					<EntryProperties

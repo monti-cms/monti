@@ -33,9 +33,17 @@ const html: CreateElement<string> = (type, props, ...children) => {
 	if (typeof type === "function") return (type as Component)({ ...props, children: inner });
 	const attrs = Object.entries(props ?? {})
 		.filter(([name, value]) => name !== "key" && value !== undefined && value !== false)
-		.map(([name, value]) => (value === true ? ` ${name}` : ` ${name}="${value}"`))
+		.map(([name, value]) =>
+			value === true
+				? ` ${name}`
+				: name === "style" && typeof value === "object"
+					? ` style="${Object.entries(value as Record<string, string>)
+							.map(([key, each]) => `${key}:${each}`)
+							.join(";")}"`
+					: ` ${name}="${value}"`,
+		)
 		.join("");
-	return ["br", "hr", "img", "input"].includes(String(type))
+	return ["br", "col", "hr", "img", "input"].includes(String(type))
 		? `<${type}${attrs}/>`
 		: `<${type}${attrs}>${inner}</${type}>`;
 };
@@ -179,6 +187,44 @@ describe("one definition", () => {
 });
 
 describe("one check", () => {
+	it("03-1 a table keeps the column widths it was given as shares of the body, and the site draws them", () => {
+		const table = (attrs: Record<string, unknown>) =>
+			draw(
+				doc({
+					id: "b_1",
+					type: "table",
+					attrs: {
+						header: true,
+						rows: [
+							["a", "b"],
+							["1", "2"],
+						],
+						...attrs,
+					},
+				}),
+			);
+		expect(table({ widths: [30, 70] })).toBe(
+			'<table><colgroup><col style="width:30%"/><col style="width:70%"/></colgroup><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>',
+		);
+		expect(table({})).toBe(
+			"<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>",
+		);
+	});
+
+	it("03-1 footnotes are numbered as their references come in the text and drawn together at the end", () => {
+		const ref = (id: string) => ({ type: "footnoteRef" as const, id });
+		const body = doc(
+			{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "a" }, ref("n2")] },
+			{ id: "b_2", type: "footnote", attrs: { id: "n1" }, content: [{ type: "text", text: "first written" }] },
+			{ id: "b_3", type: "paragraph", content: [{ type: "text", text: "b" }, ref("n1"), ref("n2")] },
+			{ id: "b_4", type: "footnote", attrs: { id: "n2" }, content: [{ type: "text", text: "second written" }] },
+		);
+		expect(draw(body)).toBe(
+			'<p>a<sup><a href="#fn-n2" id="fnref-n2">1</a></sup></p><p>b<sup><a href="#fn-n1" id="fnref-n1">2</a></sup><sup><a href="#fn-n2">1</a></sup></p>' +
+				'<section data-footnotes=""><hr/><ol><li id="fn-n2">second written <a href="#fnref-n2">↩</a></li><li id="fn-n1">first written <a href="#fnref-n1">↩</a></li></ol></section>',
+		);
+	});
+
 	it("03-2 a person's save and the assistant's block edit refuse the same bodies", async () => {
 		const id = await newPost(doc(p("b_1", "Hello")));
 		const bad = [

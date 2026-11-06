@@ -1,6 +1,7 @@
 import {
 	BlockHandle,
 	DropdownMenu,
+	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
@@ -26,7 +27,6 @@ import { useAdmin } from "../operations/admin-context";
 import { BlockIcon } from "./block-icon";
 import { alignable, type BodyCatalogs } from "./catalog";
 import {
-	addBelow,
 	canMove,
 	deleteBlock,
 	duplicateBlock,
@@ -40,12 +40,15 @@ import {
 import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
 import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
+import { hasHeaderRow, toggleHeaderRow } from "./table";
 
-/** Where the handle floats: 64px left of the block (the + and the grip, 8 apart, then 8 to the text), centred on the block's first line. */
+/** Where the handle floats: 32px left of the block (the 24px grip, then 8 to the text), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
 
 const HANDLE = 24;
-const LEFT = 64;
+const LEFT = 32;
+/** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
+const REACH = 64;
 
 /** The handle's place beside a block's element. A list item's handle sits left of its list, so the bullet stays in view. */
 function spotOf(element: HTMLElement, pos: number): Spot {
@@ -95,6 +98,20 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 		},
 		[editor, open, held],
 	);
+
+	// The pointer is watched over the text and over the margin left of it where the handle sits (as Notion does): reaching for the handle from the
+	// side shows it too.
+	useEffect(() => {
+		if (!editor) return;
+		const move = (event: MouseEvent) => {
+			const body = editor.view.dom.getBoundingClientRect();
+			if (event.clientX < body.left - REACH || event.clientX > body.right) return;
+			if (event.clientY < body.top || event.clientY > body.bottom) return;
+			point(event.clientX, event.clientY);
+		};
+		window.addEventListener("mousemove", move);
+		return () => window.removeEventListener("mousemove", move);
+	}, [editor, point]);
 
 	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
 	useEffect(() => {
@@ -227,10 +244,8 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 			<EditorOverlay top={spot.top} left={spot.left}>
 				<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 					<BlockHandle
-						addLabel={t("editor.add")}
 						gripLabel={t("editor.blockMenu")}
 						active={open}
-						onAdd={() => run(addBelow)}
 						onPointerDown={pressGrip}
 						trigger={(grip) => <DropdownMenuTrigger render={grip} />}
 					/>
@@ -290,6 +305,14 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 									</DropdownMenuSubContent>
 								</DropdownMenuSub>
 							) : null}
+							{node.type.name === "table" ? (
+								<DropdownMenuCheckboxItem
+									checked={hasHeaderRow(node)}
+									onCheckedChange={() => run((tr, pos) => toggleHeaderRow(tr, pos))}
+								>
+									{t("table.headerRow")}
+								</DropdownMenuCheckboxItem>
+							) : null}
 						</DropdownMenuGroup>
 						{name || kind || align ? <DropdownMenuSeparator /> : null}
 						{canMove(doc, spot.pos, -1) ? (
@@ -327,5 +350,5 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs) {
 			</EditorOverlay>
 		);
 	};
-	return { point, overlay: overlay() };
+	return { overlay: overlay() };
 }

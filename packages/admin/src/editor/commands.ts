@@ -70,6 +70,8 @@ export function handleTarget($pos: ResolvedPos): number | null {
 	for (let depth = $pos.depth; depth >= 1; depth--) {
 		const node = $pos.node(depth);
 		const parent = $pos.node(depth - 1);
+		// A table's rows and cells are the table's, not blocks of their own: the handle is the table's.
+		if ("tableRole" in node.type.spec && depth > 1) continue;
 		if (depth === 1 || node.type.name === item || (!lists.has(parent.type.name) && parent.type.name !== item))
 			return $pos.before(depth);
 	}
@@ -184,17 +186,6 @@ export function deleteBlock(tr: Transaction, pos: number) {
 	return tr.delete(from, from + node.nodeSize);
 }
 
-/** The +: an empty line under the block with "/" typed in it, so the "/" menu opens there (editor-tools.md). A list item gets an item. */
-export function addBelow(tr: Transaction, pos: number) {
-	const node = tr.doc.nodeAt(pos);
-	if (!node) return tr;
-	const schema = tr.doc.type.schema;
-	const type = node.type.name === nodeName("listItem") ? node.type : named(schema, "paragraph");
-	const at = pos + node.nodeSize;
-	tr.insert(at, type.create(null, schema.text("/")));
-	return tr.setSelection(TextSelection.create(tr.doc, at + 2));
-}
-
 /** Puts blocks in at the cursor: in place of the empty line it is on, or after its block. */
 export function insertBlocks(tr: Transaction, blocks: EditorNode[]) {
 	const { $from } = tr.selection;
@@ -244,3 +235,6 @@ export function clearFormats(state: EditorState, dispatch?: (tr: Transaction) =>
 	dispatch?.(tr.scrollIntoView());
 	return true;
 }
+
+/** Whether a place is inside a table's cell: its text is plain, so neither the "/" menu nor the format card opens there (doc 03, the table). */
+export const inTableCell = ($pos: ResolvedPos) => "tableRole" in $pos.parent.type.spec;
