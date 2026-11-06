@@ -232,6 +232,9 @@ const MIGRATIONS: Record<string, Migration> = {
 	},
 };
 
+/** How many times a migration is tried when it only lost a race with another schema's table changes. */
+const RACE_TRIES = 30;
+
 /** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */
 export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
 	// Named, because the migrator otherwise looks for its tables in every schema and takes another schema's (a second site in the same database).
@@ -245,12 +248,17 @@ export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
 	});
 	// Before it runs a step, the migrator lists every table in the database and reads each one. When another site (another schema) drops or
 	// changes a table between the list and the read, Postgres answers "relation does not exist" (42P01) or "column does not exist" (42703) about
-	// that other schema's table. No step has run yet, so trying again is safe; a step of ours that fails is not retried.
+	// that other schema's table. No step has run yet, so trying again is safe; a step of ours that fails is not retried. The more tables the
+	// database holds, the longer the list takes and the likelier the race (CI's shared database lost five tries in a row), so the tries are many and
+	// spread out a little.
 	for (let attempt = 1; ; attempt++) {
 		const { error, results } = await migrator.migrateToLatest();
 		const failed = results?.find((result) => result.status === "Error");
 		if (!error && !failed) return;
-		if (!failed && attempt < 5 && racedWithAnotherSchema(error, rows[0].schema)) continue;
+		if (!failed && attempt < RACE_TRIES && racedWithAnotherSchema(error, rows[0].schema)) {
+			await new Promise((resume) => setTimeout(resume, Math.random() * 20 * attempt));
+			continue;
+		}
 		throw new Error(`Migration ${failed?.migrationName ?? ""} failed`, { cause: error });
 	}
 }
@@ -258,6 +266,11 @@ export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
 /** Whether the migrator's table listing lost a race with another schema's DDL (see `migrateToLatest`). */
 function racedWithAnotherSchema(error: unknown, schema: string): boolean {
 	const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
+	// A whole schema dropped between the list and the read (another site removed, or a test run cleaning up) is 3F000 about that schema.
+	if (code === "3F000") {
+		const gone = typeof message === "string" ? /schema "([^"]+)" does not exist/.exec(message) : null;
+		return gone !== null && gone[1] !== schema;
+	}
 	if (code !== "42P01" && code !== "42703") return false;
 	// A relation named with its schema is another site's; a bare name or ours could be a step of our own.
 	const named = typeof message === "string" ? /relation "([^".]+)\.[^"]+"/.exec(message) : null;
