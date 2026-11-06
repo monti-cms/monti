@@ -177,7 +177,9 @@ export function useSlashMenu({
 					},
 				}))
 			: [];
-		return [...text, ...others, ...shown];
+		// In the order the menu shows them, group by group: the arrow keys step through the index, so a row drawn in another group (the divider is
+		// a text row) must not sit elsewhere in it.
+		return [...text, ...others, ...shown].sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group));
 	}, [catalogs, templates, list.data, t, open, get]);
 
 	const shownItems = useMemo(() => {
