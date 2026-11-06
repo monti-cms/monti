@@ -93,30 +93,31 @@ export function BasicsTab({
 					)
 				) : (
 					<FormField>
-						{kind === "item" ? (
-							<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-								<label htmlFor="collection-public-page" className="cursor-pointer text-monti-body">
-									{t("settings.basics.path")}
-								</label>
-								{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
+							<label
+								htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
+								className="cursor-pointer text-monti-body"
+							>
+								{t("settings.basics.path")}
+							</label>
+							{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+							{pathChanged?.onUndo || kind === "item" ? (
 								<div className="ml-auto flex items-center gap-monti-12">
 									{pathChanged?.onUndo ? (
 										<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
 											{pathChanged.undoLabel}
 										</TextButton>
 									) : null}
-									<Switch
-										id="collection-public-page"
-										checked={path !== undefined}
-										onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
-									/>
+									{kind === "item" ? (
+										<Switch
+											id="collection-public-page"
+											checked={path !== undefined}
+											onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+										/>
+									) : null}
 								</div>
-							</div>
-						) : (
-							<FormFieldLabel htmlFor="collection-path" changed={pathChanged}>
-								{t("settings.basics.path")}
-							</FormFieldLabel>
-						)}
+							) : null}
+						</div>
 						{path !== undefined && (
 							<Affix
 								id="collection-path"

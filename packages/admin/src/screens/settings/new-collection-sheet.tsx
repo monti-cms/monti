@@ -155,18 +155,14 @@ function Body({
 					</RadioGroup>
 				</FormFieldSet>
 				<FormField>
-					{kind === "item" ? (
-						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-							<label htmlFor="collection-public-page" className="cursor-pointer text-monti-body">
-								{t("settings.basics.path")}
-							</label>
+					<div className="flex min-h-monti-control-xs items-center gap-monti-8">
+						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
+						{kind === "item" ? (
 							<span className="ml-auto">
 								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
 							</span>
-						</div>
-					) : (
-						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
-					)}
+						) : null}
+					</div>
 					{(kind === "document" || publicPage) && (
 						<Affix
 							id="collection-address"
