@@ -22,6 +22,8 @@ export type FolderNode = {
 	name: string;
 	depth: number;
 	count: number;
+	/** How many of them are on the site: removing the folder takes them off it, so the screen asks first (flow 5·05). */
+	published: number;
 	version: number;
 };
 
@@ -170,22 +172,27 @@ export const folderOperations = [
 			query = collection === null ? query.where("collection", "is", null) : query.where("collection", "=", collection);
 			const rows = await query.orderBy("position").orderBy("name").execute();
 			// Entries count by translation group: the list shows one row per group (doc 06).
-			const own = new Map<string, number>();
+			const own = new Map<string, { count: number; published: number }>();
 			if (collection !== null)
 				for (const row of await ctx.db
 					.selectFrom("entries")
-					.select(["folder_id", (eb) => eb.fn.count<number>(eb.fn("distinct", ["translation_group"])).as("count")])
-					.where("collection", "=", collection)
-					.where("trashed_at", "is", null)
-					.where("folder_id", "is not", null)
-					.groupBy("folder_id")
+					.leftJoin("entry_published", "entry_published.entry_id", "entries.id")
+					.select((eb) => [
+						"entries.folder_id",
+						eb.fn.count<number>(eb.fn("distinct", ["entries.translation_group"])).as("count"),
+						eb.fn.count<number>("entry_published.entry_id").as("published"),
+					])
+					.where("entries.collection", "=", collection)
+					.where("entries.trashed_at", "is", null)
+					.where("entries.folder_id", "is not", null)
+					.groupBy("entries.folder_id")
 					.execute())
-					if (row.folder_id) own.set(row.folder_id, Number(row.count));
+					if (row.folder_id) own.set(row.folder_id, { count: Number(row.count), published: Number(row.published) });
 			const children = new Map<string | null, Row[]>();
 			for (const row of rows) children.set(row.parent_id, [...(children.get(row.parent_id) ?? []), row]);
 			const folders: FolderNode[] = [];
-			const walk = (parentId: string | null, depth: number): number => {
-				let total = 0;
+			const walk = (parentId: string | null, depth: number) => {
+				const total = { count: 0, published: 0 };
 				for (const row of children.get(parentId) ?? []) {
 					const node: FolderNode = {
 						id: row.id,
@@ -193,11 +200,15 @@ export const folderOperations = [
 						name: row.name,
 						depth,
 						count: 0,
+						published: 0,
 						version: row.version,
 					};
 					folders.push(node);
-					node.count = (own.get(row.id) ?? 0) + walk(row.id, depth + 1);
-					total += node.count;
+					const inside = walk(row.id, depth + 1);
+					node.count = (own.get(row.id)?.count ?? 0) + inside.count;
+					node.published = (own.get(row.id)?.published ?? 0) + inside.published;
+					total.count += node.count;
+					total.published += node.published;
 				}
 				return total;
 			};

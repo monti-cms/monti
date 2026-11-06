@@ -30,7 +30,7 @@ type Written<Output> = { output: Output; activityId: string };
 const write = async <Output = { id: string }>(name: string, input: unknown) =>
 	(await site().run(name, input, { actor: "admin" })) as Written<Output>;
 const read = <Output>(name: string, input: unknown) => site().run(name, input, { actor: "admin" }) as Promise<Output>;
-type Node = { id: string; parentId: string | null; name: string; depth: number; count: number };
+type Node = { id: string; parentId: string | null; name: string; depth: number; count: number; published: number };
 const tree = async (scope: unknown = { collection: "post" }) =>
 	(await read<{ folders: Node[] }>("folders.tree", { scope })).folders;
 const folder = async (name: string, parentId: string | null = null, scope: unknown = { collection: "post" }) =>
@@ -94,7 +94,7 @@ describe("folders", () => {
 		}
 	});
 
-	it("folders.tree gives a scope's folders as a tree, each counting its own entries and its subfolders', trash left out", async () => {
+	it("folders.tree gives a scope's folders as a tree, each counting its own entries and its subfolders' (and how many are published), trash left out", async () => {
 		const assets = await folder("Blog Assets");
 		const covers = await folder("covers", assets);
 		await folder("diagrams", assets);
@@ -105,16 +105,17 @@ describe("folders", () => {
 		await move([a], assets);
 		await move([b, c], covers);
 		await move([await newPost("Memo", "memo")], memos);
+		await write("entries.publish", { ids: [b] });
 		// A trashed folder and what is in it are not counted.
 		const gone = await folder("Gone", assets);
 		await move([await newPost("D")], gone);
 		await write("folders.remove", { id: gone });
 
-		expect((await tree()).map(({ name, depth, count }) => ({ name, depth, count }))).toEqual([
-			{ name: "Blog Assets", depth: 0, count: 3 },
-			{ name: "covers", depth: 1, count: 2 },
-			{ name: "diagrams", depth: 1, count: 0 },
-			{ name: "Wallpapers", depth: 0, count: 0 },
+		expect((await tree()).map(({ name, depth, count, published }) => ({ name, depth, count, published }))).toEqual([
+			{ name: "Blog Assets", depth: 0, count: 3, published: 1 },
+			{ name: "covers", depth: 1, count: 2, published: 1 },
+			{ name: "diagrams", depth: 1, count: 0, published: 0 },
+			{ name: "Wallpapers", depth: 0, count: 0, published: 0 },
 		]);
 		expect((await tree()).find((node) => node.id === loose)?.parentId).toBeNull();
 	});
