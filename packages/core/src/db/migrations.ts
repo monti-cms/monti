@@ -263,6 +263,24 @@ const MIGRATIONS: Record<string, Migration> = {
 					where entry_id = ${row.entry_id}`.execute(db);
 		},
 	},
+	"0008_folders": {
+		async up(db) {
+			// Boxes for sorting entries and media in the admin (doc 07): one tree per collection, and one for media (`collection` null).
+			await db.schema
+				.createTable("folders")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("collection", "text")
+				.addColumn("parent_id", "text")
+				.addColumn("name", "text", (column) => column.notNull())
+				.addColumn("position", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addColumn("trashed_at", "timestamptz")
+				.execute();
+			await db.schema.createIndex("folders_parent").on("folders").columns(["collection", "parent_id"]).execute();
+			await db.schema.createIndex("entries_folder").on("entries").column("folder_id").execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
