@@ -80,6 +80,20 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # Chromium and the system fonts it falls back to (Japanese, Chinese, …) come from a cache per Playwright version: the fonts' packages are
+      # fetched from the Ubuntu mirror, which can take minutes (8 on 2026-11-06), and the browser from Playwright's server.
+      - id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: |
+          if ls ~/.cache/playwright-apt/*.deb >/dev/null 2>&1; then sudo cp ~/.cache/playwright-apt/*.deb /var/cache/apt/archives/; fi
+          pnpm exec playwright install --with-deps chromium
+          mkdir -p ~/.cache/playwright-apt
+          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
       - run: pnpm test:browser
