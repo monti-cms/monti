@@ -310,6 +310,12 @@ function ListHead({
 							aria-label={index === 0 && selectAll ? column.label : undefined}
 							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
+							// A right click on a name opens its menu, as a right click on a row opens the row's.
+							onContextMenu={(event) => {
+								if (!column.menu) return;
+								event.preventDefault();
+								openFor(column, event.currentTarget.querySelector("button"));
+							}}
 							onPointerDown={(event) => {
 								if (event.button !== 0 || !onPlace) return;
 								// The handle's press resizes; it never moves the column.
