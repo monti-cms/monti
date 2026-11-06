@@ -67,23 +67,24 @@ const EDITOR_BODY = cn(
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
  * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
+ * words `mark`, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the selected ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
 	"[&_.ProseMirror]:grid [&_.ProseMirror]:grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] [&_.ProseMirror]:items-stretch",
-	// The translation cell is `CompareRow`'s: 40px before the words, so the block handle (24px, 8px off them) stays inside it.
+	// The translation cell is `CompareRow`'s: 40px before the words, so the block handle (24px, 4px off them) stays inside it.
 	"[&_.ProseMirror>:not([data-pair])]:mr-monti-24 [&_.ProseMirror>:not([data-pair])]:ml-monti-40 [&_.ProseMirror>:not([data-pair])]:my-monti-16 [&_.ProseMirror>:not([data-pair])]:min-w-0",
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
 	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:font-mono [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
 	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	"[&_[data-pair=source]_mark]:rounded-monti-sm [&_[data-pair=source]_mark]:bg-monti-highlight [&_[data-pair=source]_mark]:px-px [&_[data-pair=source]_mark]:text-inherit",
 	"[&_[data-pair-heading]]:text-monti-heading [&_[data-pair-code]]:block [&_[data-pair-code]]:whitespace-pre-wrap [&_[data-pair-code]]:rounded-monti-lg [&_[data-pair-code]]:bg-monti-selected [&_[data-pair-code]]:px-monti-16 [&_[data-pair-code]]:py-monti-12 [&_[data-pair-code]]:font-mono [&_[data-pair-code]]:text-monti-code",
-	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on the block
-	// ground on both sides: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),
+	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on a gray
+	// ground on both sides, two steps over each side's own (the source cell `selected` over the tool, the translation `muted` over the page), so words
+	// picked in it, on the beige highlight, still show: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),
 	// behind the block, so the block keeps its own looks (a code block's box) and nothing in it overflows.
 	"[&_.ProseMirror]:isolate [&_[data-pair=source]]:relative",
-	"[&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:bg-monti-block",
-	"[&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:absolute [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:top-0 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:left-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:-z-10 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:h-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:w-[calc(100%+1px)] [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:bg-monti-block [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:content-['']",
+	"[&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:bg-monti-selected",
+	"[&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:absolute [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:top-0 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:left-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:-z-10 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:h-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:w-[calc(100%+1px)] [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:bg-monti-muted [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:content-['']",
 );
 
 /**

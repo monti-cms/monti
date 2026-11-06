@@ -39,6 +39,15 @@ html:has(.monti-admin) body {
 }
 
 /*
+ * Text picked by dragging takes the highlight ground, never the browser's blue: the same ground as the words that differ between two versions. On the
+ * whole document, as popups are portaled to the body. Not `bg-block`: that is the ground of the block being written, which a picked word sits on.
+ */
+html:has(.monti-admin) ::selection {
+	background-color: var(--monti-bg-highlight);
+	color: inherit;
+}
+
+/*
  * Thin scrollbar, shown whenever the box scrolls (not only under the pointer: it is how the person knows there is more). On the whole document
  * that holds the admin, not only its root: popups (menus, the "/" menu, popovers, dialogs) are portaled to the body and scroll too.
  */

@@ -8,7 +8,8 @@ import { Spark } from "./spark";
  * One thing to fix, in the list a status bar cell opens: a ring, the title, one short line under it, and the one action that goes to it at the
  * right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `tag` replaces the ring with a word in its
  * `tagTone` ("Changed", "Removed", "New": a translated block whose source moved, as the changes lists write them), and the title is cut to one line. `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and
- * makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place.
+ * makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place, and the
+ * row takes the selected ground under the pointer like a menu row; the action underlines under the pointer.
  */
 function TodoItem({
 	title,
@@ -53,6 +54,8 @@ function TodoItem({
 			data-current={current || undefined}
 			className={cn(
 				"relative flex items-center gap-monti-10 rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default data-current:bg-monti-selected",
+				// A row that goes somewhere takes the selected ground under the pointer, as a menu's row does (the changes lists).
+				onOpen && "hover:bg-monti-selected",
 				className,
 			)}
 			{...props}

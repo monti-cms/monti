@@ -43,11 +43,11 @@ import { nodeName } from "./schema";
 import { hasHeaderRow, toggleHeaderRow } from "./table";
 import { linkOf } from "./translation";
 
-/** Where the handle floats: 32px left of the block (the 24px grip, then 8 to the text), centred on the block's first line. */
+/** Where the handle floats: 28px left of the block (the 24px grip, then 4 to the text: its glyph sits mid-grip, so it reads about 11px off), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
 
 const HANDLE = 24;
-const LEFT = 32;
+const LEFT = 28;
 /** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
 const REACH = 64;
 

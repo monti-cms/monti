@@ -116,8 +116,8 @@ function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 
 /**
  * A block of the source shown beside its translation (the source pane). `current` while the cursor is in the translation's block paired with it: it
- * is on the block ground, the ground the editor gives the block it is about, a little wider than its words, so one sees which source block is being
- * translated.
+ * is on the selected ground, a little wider than its words, so one sees which source block is being translated (gray, not the beige block
+ * ground: words picked in it take the beige highlight).
  */
 function CompareBlock({ current = false, className, ...props }: React.ComponentProps<"div"> & { current?: boolean }) {
 	return (
@@ -125,7 +125,7 @@ function CompareBlock({ current = false, className, ...props }: React.ComponentP
 			data-slot="compare-block"
 			data-current={current || undefined}
 			className={cn(
-				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-block",
+				"relative isolate data-current:before:absolute data-current:before:-inset-x-monti-8 data-current:before:-inset-y-monti-4 data-current:before:-z-10 data-current:before:rounded-monti-md data-current:before:bg-monti-selected",
 				className,
 			)}
 			{...props}
@@ -201,7 +201,7 @@ function CompareRow({
 			</div>
 			<div
 				className={cn(
-					// 40px before the words: the block handle of the translation written here (24px, 8px off the words) stays inside the cell.
+					// 40px before the words: the block handle of the translation written here (24px, 4px off the words) stays inside the cell.
 					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40 **:data-[slot=compare-code]:mb-0",
 					current && "bg-monti-block",
 				)}
