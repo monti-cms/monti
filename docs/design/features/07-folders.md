@@ -94,7 +94,7 @@ flowchart TD
 | `folders.remove` | write · preview | 폴더와 안의 것을 휴지통으로. 미리 보기는 안의 수와 내려갈 글 수 |
 | `entries.moveToFolder` | write | 글(묶음)들을 폴더로 |
 
-파일들을 폴더로 옮기는 `media.moveToFolder`는 09번 문서의 기능 목록에 있다(T92).
+파일들을 폴더로 옮기는 `media.moveToFolder`는 09번 문서의 기능 목록에 있다(T99).
 
 ## 에이전트
 
