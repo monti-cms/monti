@@ -74,6 +74,7 @@ async function setup(monti: Monti, languages: readonly string[]) {
 			collection === "post"
 				? {
 						label,
+						folders: true,
 						fields: {
 							category: { label: "카테고리" },
 							tags: { label: "태그" },
@@ -135,6 +136,15 @@ async function setup(monti: Monti, languages: readonly string[]) {
 		select 'old-' || n, 'post', 'old-group-' || n, 'ko', 'old-post-' || n, '지난 글 ' || n, 'published', '{}',
 			timestamp '2026-07-30 09:00' - n * interval '1 day', timestamp '2026-07-30 09:00' - n * interval '1 day'
 		from generate_series(1, 138) n`.execute(monti.db);
+	// The reference's folder (doc 07): "시리즈 원고", holding two posts.
+	const series = (
+		await run<{ output: { id: string } }>(monti, "folders.create", {
+			scope: { collection: "post" },
+			parentId: null,
+			name: "시리즈 원고",
+		})
+	).output.id;
+	await run(monti, "entries.moveToFolder", { ids: ["old-1", "old-2"], folder: series });
 }
 
 /** The same blog written in Korean only: no language column, no translations (doc 04, T52). */
@@ -305,6 +315,89 @@ export const NoMatch: Story = {
 	loaders: site(undefined, "#/c/post?q=없는말"),
 	play: ({ canvasElement }) =>
 		waitFor(() => expect(within(canvasElement).getByText("맞는 글이 없어요.")).toBeTruthy(), wait),
+};
+
+/** Opens the list inside "시리즈 원고" (doc 07): its id is made with the site, so the address is set once it is known. */
+const inSeries =
+	(query = "", more?: (site: StorySite, folder: string) => Promise<void>) =>
+	async (made: StorySite) => {
+		const { id } = await made.db
+			.selectFrom("folders")
+			.select("id")
+			.where("name", "=", "시리즈 원고")
+			.executeTakeFirstOrThrow();
+		await more?.(made, id);
+		startAt(`#/c/post?folder=${id}${query}`);
+	};
+
+/** Right-clicks a row over its title, as a person does: its menu opens at the cursor. */
+async function rightClick(canvas: HTMLElement, title: string) {
+	const table = await within(canvas).findByRole("table", {}, wait);
+	const row = (await within(table).findByRole("link", { name: title }, wait)).closest("tr") as HTMLElement;
+	const box = row.getBoundingClientRect();
+	row.dispatchEvent(
+		new MouseEvent("contextmenu", {
+			bubbles: true,
+			cancelable: true,
+			clientX: box.left + 320,
+			clientY: box.top + box.height / 2,
+		}),
+	);
+	await waitFor(() => expect(body().getByRole("menu")).toBeTruthy(), wait);
+}
+
+/** "새 폴더" from the pill's menu: a folder row on top, its name picked to type over (flow 5, step 01). */
+export const NewFolder: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rowsShown(canvasElement);
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "더 만들기" }));
+		await userEvent.click(await body().findByRole("menuitem", { name: "새 폴더" }, wait));
+		await waitFor(() => expect(within(canvasElement).getByRole("textbox", { name: "폴더 이름" })).toBeTruthy(), wait);
+	},
+};
+
+/** Inside a folder: its name for the title, the way back above it, "상위 폴더로" first (flow 5, step 02). */
+export const InFolder: Story = {
+	loaders: site(inSeries()),
+	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("상위 폴더로")).toBeTruthy(), wait),
+};
+
+/** A search inside a folder: "찾는 곳 시리즈 원고 | 모든 폴더" over the rows (flow 5, step 03). */
+export const InFolderSearch: Story = {
+	loaders: site(inSeries("&q=지난 글")),
+	play: ({ canvasElement }) =>
+		waitFor(() => expect(within(canvasElement).getByRole("button", { name: "모든 폴더" })).toBeTruthy(), wait),
+};
+
+/** A folder row right-clicked: open, rename, move ▸, delete (flow 5, step 04). */
+export const FolderMenu: Story = {
+	loaders: site(),
+	play: ({ canvasElement }) => rightClick(canvasElement, "시리즈 원고"),
+};
+
+/** Deleting a folder that holds a published post asks first (flow 5, step 05). */
+export const FolderRemoveConfirm: Story = {
+	loaders: site(async (made) => {
+		const [first] = await made.db.selectFrom("entries").select("id").where("title", "=", "첫 번째 글").execute();
+		const { id } = await made.db.selectFrom("folders").select("id").executeTakeFirstOrThrow();
+		await run(made.monti, "entries.moveToFolder", { ids: [first?.id ?? ""], folder: id });
+	}),
+	play: async ({ canvasElement }) => {
+		await rightClick(canvasElement, "시리즈 원고");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }, wait));
+		await waitFor(() => expect(body().getByRole("alertdialog")).toBeTruthy(), wait);
+	},
+};
+
+/** A post row's menu with "폴더로 ▸" open: the top level and the folders, its place ticked (flow 5, step 07). */
+export const RowMenuToFolder: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rightClick(canvasElement, "리액트 서버 컴포넌트 다시 보기");
+		await userEvent.click(body().getByRole("menuitem", { name: "폴더로" }));
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
+	},
 };
 
 /** The categories, drawn by the same code: only the columns its schema gives differ (06-2). */

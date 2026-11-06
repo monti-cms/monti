@@ -1,4 +1,6 @@
 import {
+	Count,
+	folderTree,
 	IconButton,
 	Inline,
 	Sidebar,
@@ -13,6 +15,8 @@ import {
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
@@ -23,6 +27,8 @@ import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@m
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { href } from "../../route";
+import { useFolders } from "../list/folders";
 import { SchemaBanner } from "./schema-banner";
 import { SessionEndedBanner } from "./session-ended";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
@@ -32,7 +38,7 @@ export type Place = { collection: string } | "media" | "trash" | "tools" | "sett
 
 type SchemaRead = {
 	schema: { collections: Record<string, { kind: "document" | "item" }> };
-	adminValues: Record<string, { label?: string }>;
+	adminValues: Record<string, { label?: string; folders?: boolean }>;
 };
 export type FrameCounts = { collections: Record<string, number>; trash: number; failedDeliveries: number };
 
@@ -59,6 +65,7 @@ function Row({
 	count,
 	tone,
 	onOpen,
+	children,
 }: {
 	place: Place;
 	open: Place | null;
@@ -68,6 +75,8 @@ function Row({
 	count?: number;
 	tone?: "warning";
 	onOpen: (place: Place) => void;
+	/** Under the row while it is open: its folders (doc 07). */
+	children?: ReactNode;
 }) {
 	const active = same(open, place);
 	const shown = count && count > 0 ? String(count) : undefined;
@@ -83,7 +92,37 @@ function Row({
 				<span>{name}</span>
 				{shown ? <SidebarMenuBadge tone={tone}>{shown}</SidebarMenuBadge> : null}
 			</SidebarMenuButton>
+			{active ? children : null}
 		</SidebarMenuItem>
+	);
+}
+
+/**
+ * The open collection's folders under its row (doc 07, sidebar.md): a row opens its folder, the open one is picked. Deeper than four levels is drawn
+ * at the fourth.
+ */
+function FolderTree({ collection, open, on }: { collection: string; open: string | null; on: boolean }) {
+	const { t } = useAdmin();
+	const folders = useFolders(collection, on);
+	if (folders.list.length === 0) return null;
+	const tree = folderTree(folders.list.map((folder) => Math.min(folder.depth, 3)));
+	return (
+		<SidebarMenuSub aria-label={t("folders.tree")}>
+			{folders.list.map((folder, index) => (
+				<li key={folder.id}>
+					<SidebarMenuSubButton
+						href={href({ screen: "list", collection, params: new URLSearchParams({ folder: folder.id }) })}
+						isActive={folder.id === open}
+						aria-current={folder.id === open ? "page" : undefined}
+						depth={Math.min(folder.depth, 3) as 0 | 1 | 2 | 3}
+						tree={tree[index]}
+					>
+						<span>{folder.name}</span>
+						{folder.count > 0 ? <Count>{folder.count}</Count> : null}
+					</SidebarMenuSubButton>
+				</li>
+			))}
+		</SidebarMenuSub>
 	);
 }
 
@@ -96,9 +135,12 @@ export function AdminFrame({
 	onOpen,
 	onReview,
 	counts,
+	folder = null,
 	children,
 }: {
 	open: Place | null;
+	/** The folder open in the list, picked in its collection's tree. */
+	folder?: string | null;
 	onOpen: (place: Place) => void;
 	/** Opens the review of a schema file edited by hand (the banner's review button, T16). */
 	onReview?: () => void;
@@ -138,7 +180,9 @@ export function AdminFrame({
 											name={state?.adminValues[name]?.label ?? name}
 											count={counts?.collections[name]}
 											onOpen={onOpen}
-										/>
+										>
+											<FolderTree collection={name} open={folder} on={state?.adminValues[name]?.folders === true} />
+										</Row>
 									))}
 									<Row place="media" open={open} icon={<Image />} name={t("frame.media")} onOpen={onOpen} />
 								</SidebarMenu>

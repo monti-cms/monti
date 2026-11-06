@@ -248,6 +248,7 @@ function RowTitle({
 	title,
 	address,
 	folder = false,
+	editing = false,
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
@@ -256,12 +257,14 @@ function RowTitle({
 	address?: React.ReactNode;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
+	/** The title is a `RenameField` being typed in: it is not cut to the line, so the field's underline shows. */
+	editing?: boolean;
 }) {
 	return (
 		<span data-slot="row-title" className={cn("flex min-w-0 items-baseline gap-monti-12", className)} {...props}>
 			<span className="flex min-w-0 items-baseline gap-monti-8">
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
-				<span className="min-w-0 truncate text-monti-body text-monti-default">{title}</span>
+				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
 			</span>
 			{address && (
 				<span className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta">{address}</span>

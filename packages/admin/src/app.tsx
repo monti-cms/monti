@@ -89,6 +89,8 @@ function Signed() {
 						sort: shown.sort ?? { by: "updatedAt", dir: "desc" },
 						page: 1,
 						ai: filters.map(filterColumn),
+						folder: null,
+						everywhere: false,
 					}),
 				});
 			}),
@@ -122,6 +124,7 @@ function Signed() {
 	return (
 		<AdminFrame
 			open={placeOf(route)}
+			folder={route.screen === "list" ? route.params.get("folder") : null}
 			onOpen={open}
 			onReview={() =>
 				leave(() => {

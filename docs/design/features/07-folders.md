@@ -93,7 +93,8 @@ flowchart TD
 | `folders.move` | write · preview | 다른 부모로. 자기 안으로는 옮길 수 없다 |
 | `folders.remove` | write · preview | 폴더와 안의 것을 휴지통으로. 미리 보기는 안의 수와 내려갈 글 수 |
 | `entries.moveToFolder` | write | 글(묶음)들을 폴더로 |
-| `media.moveToFolder` | write | 파일들을 폴더로 |
+
+파일들을 폴더로 옮기는 `media.moveToFolder`는 09번 문서의 기능 목록에 있다(T92).
 
 ## 에이전트
 

@@ -12,6 +12,9 @@ export type ListState = {
 	sort: { by: "title" | "slug" | "updatedAt" | "publishedAt" | "createdAt"; dir: "asc" | "desc" };
 	page: number;
 	ai: string[];
+	/** The open folder (`null`: the top level), and whether a search in it looks through the whole collection (doc 07; `?folder=<id>&scope=all`). */
+	folder: string | null;
+	everywhere: boolean;
 };
 
 export const NONE = "~none";
@@ -87,11 +90,15 @@ export function readState(params: URLSearchParams, columns: readonly ListColumn[
 			: { by: "updatedAt", dir: "desc" },
 		page: Number.isInteger(page) && page > 0 ? page : 1,
 		ai: values(params.get("ai") ?? ""),
+		folder: params.get("folder"),
+		everywhere: params.get("scope") === "all",
 	};
 }
 
 export function writeState(state: ListState): URLSearchParams {
 	const params = new URLSearchParams();
+	if (state.folder) params.set("folder", state.folder);
+	if (state.folder && state.everywhere) params.set("scope", "all");
 	if (state.search.text) params.set("q", state.search.text);
 	if (state.search.in !== "all") params.set("in", state.search.in);
 	for (const filter of state.filters) {
@@ -112,11 +119,13 @@ export function writeState(state: ListState): URLSearchParams {
 }
 
 /**
- * The query `entries.query` and `entries.facets` take for this state. A translation filter that names no languages asks about the ones the language
- * filter picked, as the menu counts it (`entries.facets`), so a row's count is the rows it leaves.
+ * The query `entries.query` and `entries.facets` take for this state. A collection with folders lists one folder at a time (doc 07). A translation
+ * filter that names no languages asks about the ones the language filter picked, as the menu counts it (`entries.facets`), so a row's count is the
+ * rows it leaves.
  */
-export const toQuery = (collection: string, state: ListState, pageSize: number) => ({
+export const toQuery = (collection: string, state: ListState, pageSize: number, folders = false) => ({
 	collection,
+	...(folders ? { folder: state.folder, scope: state.everywhere ? ("all" as const) : ("here" as const) } : {}),
 	filters: state.filters.map((filter) => {
 		const picked = state.filters.find((each) => each.on === "locale");
 		return filter.on === "translation" && !filter.locales && picked?.on === "locale"
