@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../__test__/database";
-import { CheckError, ForbiddenError } from "../errors";
+import { CheckError, ForbiddenError, InputError } from "../errors";
 import type { FolderRemoval } from "../folders/operations";
 import { createMonti, definePlugin } from "../monti";
 import { defineSchema } from "../schema/define";
@@ -120,6 +120,50 @@ describe("uploading", () => {
 		const key = await bytes();
 		await write("media.upload", { name: "a.jpg", original: { key } });
 		await refused(write("media.upload", { name: "b.jpg", original: { key } }), "media.keyTaken");
+	});
+
+	it("09-1 one key cannot be both sizes, and two uploads at once cannot take each other's keys", async () => {
+		const key = await bytes();
+		await refused(
+			write("media.upload", { name: "a.jpg", original: { key }, web: { key, width: 100, height: 100 } }),
+			"media.keyTaken",
+		);
+		const [first, second] = [await bytes(), await bytes()];
+		const answers = await Promise.allSettled([
+			write("media.upload", { name: "a.jpg", original: { key: first }, web: { key: second, width: 100, height: 100 } }),
+			write("media.upload", { name: "b.jpg", original: { key: second }, web: { key: first, width: 100, height: 100 } }),
+		]);
+		expect(answers.filter((answer) => answer.status === "fulfilled")).toHaveLength(1);
+	});
+
+	it("09-1 a web size is a picture no larger than the web size, and only a picture has one", async () => {
+		const original = await bytes();
+		const pdfKey = await bytes("application/pdf", ".pdf");
+		await refused(
+			write("media.upload", {
+				name: "a.jpg",
+				original: { key: original },
+				web: { key: pdfKey, width: 100, height: 100 },
+			}),
+			"media.badWeb",
+		);
+		const web = await bytes();
+		await expect(
+			write("media.upload", {
+				name: "a.jpg",
+				original: { key: original },
+				web: { key: web, width: 9999, height: 100 },
+			}),
+		).rejects.toBeInstanceOf(InputError);
+		const pdfOriginal = await bytes("application/pdf", ".pdf");
+		await refused(
+			write("media.upload", {
+				name: "a.pdf",
+				original: { key: pdfOriginal },
+				web: { key: web, width: 100, height: 100 },
+			}),
+			"media.badWeb",
+		);
 	});
 
 	it("09-1 a site with no storage says so and takes no file", async () => {

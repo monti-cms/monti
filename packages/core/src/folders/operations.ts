@@ -6,7 +6,7 @@ import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import { usedOf } from "../media/uses";
 import { defineOperation, type Message, type OperationContext, type Preview, type RecordRef } from "../operation";
-import { defineRecordKind } from "../records";
+import { defineRecordKind, lockRecords } from "../records";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -435,7 +435,9 @@ export const folderOperations = [
 			const folder = await folderOf(ctx.db, input.id);
 			const now = ctx.now();
 			if (folder.collection === null) {
-				// The engine has locked these files: a save that starts using one is either seen here or waits and brings it back (09-4).
+				// A file moved in since the engine took its locks is one of them now, before anyone reads who uses it: a save that starts using one is either seen here or
+				// waits and brings it back (09-4).
+				await lockRecords(ctx.db, (await mediaRemoval(ctx.db, input.id)).files.map(mediaRef));
 				const { gone, moved, used } = await mediaRemoval(ctx.db, input.id);
 				if (gone.length > 0)
 					await ctx.db

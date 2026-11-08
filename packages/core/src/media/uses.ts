@@ -42,18 +42,23 @@ export async function usedOf(db: Db, ids: string[]): Promise<Map<string, number>
 	return new Map(rows.map((row) => [row.media_id, Number(row.uses)]));
 }
 
-/** A field that takes images takes no other file. A file the library does not have is the save's to keep: its use is simply not written. */
-export async function checkMediaKinds(
+/**
+ * What every write of a field's value checks of a media field: it holds a file and what it says of it, and a field that takes images takes no other file. A file the
+ * library does not have is the save's to keep: its use is simply not written. `null` clears the field.
+ */
+export async function checkMediaValues(
 	db: Db,
 	schema: Schema,
 	collection: string,
 	values: Record<string, unknown> | undefined,
 ): Promise<void> {
 	const fields = schema.collections[collection]?.fields ?? {};
-	for (const [field, definition] of Object.entries(fields)) {
-		if (definition.kind !== "media" || definition.accept === "any") continue;
-		const value = mediaValueOf(values?.[field]);
-		if (!value) continue;
+	for (const [field, given] of Object.entries(values ?? {})) {
+		const definition = fields[field];
+		if (definition?.kind !== "media" || given === null) continue;
+		const value = mediaValueOf(given);
+		if (!value) throw new CheckError({ key: "entries.badMedia", values: { field } });
+		if (definition.accept === "any") continue;
 		const file = await db.selectFrom("media").select("kind").where("id", "=", value.media).executeTakeFirst();
 		if (file?.kind === "file") throw new CheckError({ key: "entries.badMediaKind", values: { field } });
 	}
@@ -122,16 +127,37 @@ export async function rewriteUses(db: Db, schema: Schema, refs: RecordRef[]): Pr
 	await bringBack(db, [...existing]);
 }
 
-/** A file in the trash that is used again (an undo, a proposal written before it was trashed) comes back out, to the top level if its folder is gone. */
+/** A file in the trash that is used again (an undo, a proposal written before it was trashed) comes back out. */
 async function bringBack(db: Db, ids: string[]): Promise<void> {
-	await sql`update media set
-			trashed_at = null,
-			version = version + 1,
-			folder_id = case
-				when folder_id in (select id from folders where trashed_at is not null) then null
-				else folder_id
-			end
-		where id in (${sql.join(ids)}) and trashed_at is not null`.execute(db);
+	await db
+		.updateTable("media")
+		.set((eb) => ({ trashed_at: null, version: eb("version", "+", 1) }))
+		.where("id", "in", ids)
+		.where("trashed_at", "is not", null)
+		.execute();
+	await leaveNoFileInAGoneFolder(db, ids);
+}
+
+/** A file that is out of the trash can be seen only in a folder that is: otherwise it waits at the top level. For whatever puts files back (an undo, `bringBack`). */
+export async function leaveNoFileInAGoneFolder(db: Db, ids: string[]): Promise<void> {
+	if (ids.length === 0) return;
+	await db
+		.updateTable("media")
+		.set((eb) => ({ folder_id: null, version: eb("version", "+", 1) }))
+		.where("id", "in", ids)
+		.where("trashed_at", "is", null)
+		.where("folder_id", "is not", null)
+		.where(({ exists, not, selectFrom }) =>
+			not(
+				exists(
+					selectFrom("folders")
+						.select("folders.id")
+						.whereRef("folders.id", "=", "media.folder_id")
+						.where("folders.trashed_at", "is", null),
+				),
+			),
+		)
+		.execute();
 }
 
 /** Every entry's and template's uses again, after a schema change moved or dropped what they hold. */

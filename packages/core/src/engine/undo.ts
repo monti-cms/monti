@@ -1,7 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { ForbiddenError } from "../errors";
-import { rewriteUses } from "../media/uses";
+import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
 import { type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
 
@@ -60,6 +60,11 @@ export async function undo(
 		trx,
 		engine.site.schema(),
 		snapshots.map(({ ref }) => ref),
+	);
+	// After everything is back: a folder and its files come back together, in no particular order.
+	await leaveNoFileInAGoneFolder(
+		trx,
+		snapshots.filter(({ ref }) => ref.kind === "media").map(({ ref }) => ref.id),
 	);
 	await trx.updateTable("monti_activity").set({ undone_at: engine.now() }).where("id", "=", activityId).execute();
 	return plan;

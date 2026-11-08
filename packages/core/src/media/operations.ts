@@ -6,6 +6,7 @@ import { loadEntries } from "../entries/record";
 import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
+import { lockRecords } from "../records";
 import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import { isMediaKey, type MediaKind, splitName } from "./accept";
 import { altGaps } from "./alt";
@@ -15,6 +16,7 @@ import { type MediaPlace, placeOf } from "./value";
 type Db = Kysely<Database> | Transaction<Database>;
 
 const mediaRef = (id: string): RecordRef => ({ kind: "media", id });
+const folderRef = (id: string): RecordRef => ({ kind: "folder", id });
 
 const moveMessage = (count: number, name: string | null): Message =>
 	name === null
@@ -85,9 +87,12 @@ export type MissingAlt = {
 /** What `media.trash` did: files in use stay. */
 export type MediaTrashResult = { moved: string[]; kept: string[] };
 
+/** The longest side of an image's web size (doc 09). */
+const WEB_LONGEST_SIDE = 2400;
+
 const Size = z.number().int().positive();
 const Original = z.object({ key: z.string(), width: Size.optional(), height: Size.optional() });
-const Web = z.object({ key: z.string(), width: Size, height: Size });
+const Web = z.object({ key: z.string(), width: Size.max(WEB_LONGEST_SIDE), height: Size.max(WEB_LONGEST_SIDE) });
 type Original = z.infer<typeof Original>;
 type Web = z.infer<typeof Web>;
 
@@ -183,7 +188,7 @@ function storageOf(ctx: OperationContext) {
 }
 
 /** A key must be one the byte route gave, with a file behind it, and no other file's. */
-async function checkKey(ctx: OperationContext, key: string, self?: string) {
+async function statOfKey(ctx: OperationContext, key: string, self?: string) {
 	const stat = isMediaKey(key) ? await storageOf(ctx).stat(key) : null;
 	if (!stat) throw new CheckError({ key: "media.unknownKey", values: { key } });
 	let taken = ctx.db
@@ -195,9 +200,22 @@ async function checkKey(ctx: OperationContext, key: string, self?: string) {
 	return stat;
 }
 
-async function checkKeys(ctx: OperationContext, original: Original, web: Web | undefined, self?: string) {
-	const stat = await checkKey(ctx, original.key, self);
-	if (web) await checkKey(ctx, web.key, self);
+/**
+ * The file behind an upload's keys, after everything a key must be. The keys are locked first: two uploads at once naming each other's keys would each find them free,
+ * and a key is unique only within its own column.
+ */
+async function statOfKeys(ctx: OperationContext, original: Original, web: Web | undefined, self?: string) {
+	await lockRecords(
+		ctx.db,
+		[original.key, ...(web ? [web.key] : [])].map((id) => ({ kind: "mediaKey", id })),
+	);
+	if (web?.key === original.key) throw new CheckError({ key: "media.keyTaken", values: { key: web.key } });
+	const stat = await statOfKey(ctx, original.key, self);
+	if (web) {
+		const webStat = await statOfKey(ctx, web.key, self);
+		if (kindOf(stat.mime) !== "image" || kindOf(webStat.mime) !== "image")
+			throw new CheckError({ key: "media.badWeb" });
+	}
 	return stat;
 }
 
@@ -362,13 +380,11 @@ export const mediaOperations = [
 			original: Original,
 			web: Web.optional(),
 		}),
-		async check(input, ctx) {
+		touches: (input) => (input.folderId ? [folderRef(input.folderId)] : []),
+		async run(input, ctx): Promise<MediaItem> {
 			storageOf(ctx);
 			if (input.folderId) await checkMediaFolder(ctx.db, input.folderId);
-			await checkKeys(ctx, input.original, input.web);
-		},
-		async run(input, ctx): Promise<MediaItem> {
-			const stat = await checkKeys(ctx, input.original, input.web);
+			const stat = await statOfKeys(ctx, input.original, input.web);
 			const id = randomUUID();
 			await ctx.db
 				.insertInto("media")
@@ -439,14 +455,10 @@ export const mediaOperations = [
 				changes: [mediaRef(input.id)],
 			};
 		},
-		async check(input, ctx) {
-			const row = await liveRowOf(ctx.db, input.id);
-			const stat = await checkKeys(ctx, input.original, input.web, input.id);
-			if (kindOf(stat.mime) !== row.kind) throw new CheckError({ key: "media.kindChanged" });
-		},
 		async run(input, ctx): Promise<MediaItem> {
 			const row = await liveRowOf(ctx.db, input.id);
-			const stat = await checkKeys(ctx, input.original, input.web, input.id);
+			const stat = await statOfKeys(ctx, input.original, input.web, input.id);
+			if (kindOf(stat.mime) !== row.kind) throw new CheckError({ key: "media.kindChanged" });
 			const { stem } = splitName(row.name);
 			await ctx.db
 				.updateTable("media")
@@ -474,7 +486,8 @@ export const mediaOperations = [
 		kind: "write",
 		description: "Move files of the media library into a folder, or to the top level with null.",
 		input: z.object({ ids: z.array(z.string()).min(1), folder: z.string().nullable() }),
-		touches: (input) => input.ids.map(mediaRef),
+		// The target folder's lock too, in the order every write takes locks: a folder being removed either sees the files come in, or refuses them here (09-4).
+		touches: (input) => [...(input.folder === null ? [] : [folderRef(input.folder)]), ...input.ids.map(mediaRef)],
 		async preview(input, ctx) {
 			const name = input.folder === null ? null : (await checkMediaFolder(ctx.db, input.folder)).name;
 			return {

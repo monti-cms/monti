@@ -4,6 +4,7 @@
 
 - 설계: [09-media.md](../design/features/09-media.md), [흐름 6](../design/admin/flows/06-media.md), [화면 지도](../design/admin/screens/media.md)
 - 브랜치와 PR: `feat/media-09`, `feat(core): media library, uploads and images in the editor (doc 09)`
+- PR 대상: `overhaul`. 다시 만들기는 이 브랜치에 쌓인다(#456도 여기로 병합됐다). `main`은 옛 코드다.
 - 함께 끝내는 남은 일: T33, T59, T25, T67, T99
 - 하는 쪽: 한 세션이 단계 순서대로 만든다(관리자 화면은 가장 강한 모델, admin-ui 스킬 규칙). GPT-6.1 Terra는 사용성 시험, GPT-6.1 Sol과 별도의 Opus 에이전트는 코드 리뷰만 맡고 코드를 고치지 않는다(3부).
 
@@ -295,7 +296,7 @@ delegate_task:
 
 ### 단계 11. Sol 전체 리뷰
 
-- **리뷰 2 (Sol):** 3부의 요청을 `main...HEAD` 전체에 돌리고 결과를 처리한다.
+- **리뷰 2 (Sol):** 3부의 요청을 `origin/overhaul...HEAD` 전체에 돌리고 결과를 처리한다.
 
 ### 단계 12. 디자인 관문
 
@@ -335,8 +336,8 @@ pnpm lint && pnpm check:korean && pnpm check:design && pnpm gen:tokens --check \
 | 차례 | 언제 | 누가 | 범위 |
 |---|---|---|---|
 | 리뷰 1 | 단계 4 끝 | GPT-6.1 Sol | core 쪽 변경 |
-| 리뷰 2 | 단계 11 | GPT-6.1 Sol | `main...HEAD` 전체 |
-| 리뷰 3 | 단계 14, PR 직전 | 별도의 Opus 에이전트 | `main...HEAD` 전체 |
+| 리뷰 2 | 단계 11 | GPT-6.1 Sol | `origin/overhaul...HEAD` 전체 |
+| 리뷰 3 | 단계 14, PR 직전 | 별도의 Opus 에이전트 | `origin/overhaul...HEAD` 전체 |
 
 ```
 리뷰 1, 2: delegate_task
@@ -370,7 +371,7 @@ pnpm lint && pnpm check:korean && pnpm check:design && pnpm gen:tokens --check \
 **기계 검사.** 요청과 함께 준다.
 
 ```
-git diff main...HEAD -- 'packages/**' 'testing/**' \
+git diff origin/overhaul...HEAD -- 'packages/**' 'testing/**' \
   | grep -nE '^\+.*(\bas (any|never|unknown)\b|: any\b|<any>|[a-zA-Z)\]]!(\.|\)|,|;)|@ts-|biome-ignore)'
 pnpm typecheck && pnpm knip
 ```

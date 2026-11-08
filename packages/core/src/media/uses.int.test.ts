@@ -335,6 +335,77 @@ describe("a file in use stays out of the trash", () => {
 		}
 	});
 
+	it("09-4 a move into a folder, a save and the folder's removal at the same moment: the file in use is not in the trash", async () => {
+		for (let round = 0; round < 12; round++) {
+			const box = (await write("folders.create", { scope: "media", parentId: null, name: `상자 ${round}` })).output.id;
+			const cover = await file();
+			const { output } = await post();
+			const version = await versionOf(output.id);
+			await Promise.all([
+				write("media.moveToFolder", { ids: [cover], folder: box }),
+				write("entries.save", { id: output.id, version, values: { cover: { media: cover, alt: "표지" } } }),
+				write("folders.remove", { id: box }),
+			]);
+			expect(await trashed(cover)).toBe(false);
+			// Moved in time or not, it does not end up in a folder that is gone.
+			const row = await db.selectFrom("media").select("folder_id").where("id", "=", cover).executeTakeFirstOrThrow();
+			if (row.folder_id) {
+				const holder = await db
+					.selectFrom("folders")
+					.select("trashed_at")
+					.where("id", "=", row.folder_id)
+					.executeTakeFirstOrThrow();
+				expect(holder.trashed_at).toBeNull();
+			}
+		}
+	});
+
+	it("09-1 undoing a move into a folder that has gone since leaves the file at the top level, where it can be seen", async () => {
+		const box = (await write("folders.create", { scope: "media", parentId: null, name: "상자" })).output.id;
+		const photo = await file();
+		await write("media.moveToFolder", { ids: [photo], folder: box });
+		const out = await write("media.moveToFolder", { ids: [photo], folder: null });
+		await write("folders.remove", { id: box });
+		await write("activity.undo", { id: out.activityId });
+		const row = await db
+			.selectFrom("media")
+			.select(["folder_id", "trashed_at"])
+			.where("id", "=", photo)
+			.executeTakeFirstOrThrow();
+		expect(row).toEqual({ folder_id: null, trashed_at: null });
+	});
+
+	it("09-1 undoing a folder's removal puts its files back in it", async () => {
+		const box = (await write("folders.create", { scope: "media", parentId: null, name: "상자" })).output.id;
+		const photo = await file();
+		await write("media.moveToFolder", { ids: [photo], folder: box });
+		const removed = await write("folders.remove", { id: box });
+		await write("activity.undo", { id: removed.activityId });
+		const row = await db
+			.selectFrom("media")
+			.select(["folder_id", "trashed_at"])
+			.where("id", "=", photo)
+			.executeTakeFirstOrThrow();
+		expect(row).toEqual({ folder_id: box, trashed_at: null });
+	});
+
+	it("09-4 items.saveGroup checks a media field as a save does", async () => {
+		const key = `00000000-0000-4000-8000-${String(++keys).padStart(12, "0")}.pdf`;
+		await storage.put(key, new Uint8Array(10), { mime: "application/pdf" });
+		const pdf = (await write<MediaItem>("media.upload", { name: "a.pdf", original: { key } })).output.id;
+		const saving = (photo: unknown) =>
+			write("items.saveGroup", {
+				collection: "author",
+				locales: { ko: { title: "글쓴이", slug: `w-${++slugs}`, values: { photo } } },
+			});
+		const kind = await saving({ media: pdf, alt: "얼굴" }).catch((caught: unknown) => caught);
+		expect(kind).toBeInstanceOf(CheckError);
+		expect((kind as CheckError).reason.key).toBe("entries.badMediaKind");
+		const shape = await saving("not a value").catch((caught: unknown) => caught);
+		expect(shape).toBeInstanceOf(CheckError);
+		expect((shape as CheckError).reason.key).toBe("entries.badMedia");
+	});
+
 	it("09-4 a field that takes images refuses a file", async () => {
 		const key = `00000000-0000-4000-8000-${String(++keys).padStart(12, "0")}.pdf`;
 		await storage.put(key, new Uint8Array(10), { mime: "application/pdf" });
