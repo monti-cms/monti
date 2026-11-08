@@ -1,6 +1,8 @@
 import { HeadingIcon } from "@monti-cms/ui";
 import {
 	Code,
+	Document,
+	Image,
 	ListBulleted,
 	ListChecked,
 	ListNumbered,
@@ -38,6 +40,10 @@ export function BlockIcon({ type, level }: { type: string; level?: number }) {
 			return <Table aria-hidden />;
 		case "footnote":
 			return <TextFootnote aria-hidden />;
+		case "image":
+			return <Image aria-hidden />;
+		case "file":
+			return <Document aria-hidden />;
 		case "template":
 			return <Template aria-hidden />;
 	}

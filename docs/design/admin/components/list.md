@@ -152,7 +152,7 @@
 
 ### 코드
 
-`DropArea`는 파일을 놓을 수 있는 것을 감싼다. `over`는 파일이 영역 위에 있고 그 안의 폴더 위에는 없다는 뜻이다. 파일이 올라간 폴더는 `FolderTile dropTarget`을 받고, 영역의 테두리는 꺼진다. 안내는 `toast.dropHint`다.
+`DropArea`는 파일을 놓을 수 있는 것을 감싼다. `over`는 파일이 영역 위에 있고 그 안의 폴더 위에는 없다는 뜻이다. `fill`은 단의 남은 높이를 채워, 파일이 적은 페이지도 아래까지 놓을 수 있게 한다. 파일이 올라간 폴더는 `FolderTile dropTarget`을 받고, 영역의 테두리는 꺼진다. 안내는 `toast.dropHint`다.
 
 ## 빈 상태
 

@@ -76,6 +76,9 @@ const Context = createContext<AdminContext | null>(null);
 
 const BUNDLES: MessageBundle[] = [adminMessages, coreMessages];
 
+/** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
+const NO_BLOCKS: AdminBlockDefinition[] = [];
+
 export function AdminProvider({
 	transport,
 	uploader,
@@ -83,7 +86,7 @@ export function AdminProvider({
 	siteName,
 	apiBase = "/admin/api",
 	screen,
-	blocks = [],
+	blocks = NO_BLOCKS,
 	children,
 }: {
 	transport: Transport;

@@ -4,6 +4,7 @@ import { type Editor, EditorContent } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../draft/leave-guard";
 import { MediaPickerDialog } from "../media/media-picker-dialog";
+import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
 import { useRead } from "../operations/use-operation";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
@@ -73,6 +74,7 @@ export function BodyEditor({
 	const latestProposals = useRef(proposals);
 	latestProposals.current = proposals;
 	const storage = useRead<MediaQueryResult>("media.query", { ids: [] }).data?.storage ?? false;
+	useKeepFilesInPage();
 	const [library, setLibrary] = useState<"image" | "file" | null>(null);
 	const slash = useSlashMenu({ catalogs, templates, editorRef, onLibrary: storage ? setLibrary : undefined });
 	// A file on its way up waits in its block; when the library has it, the block has it too, wherever it has moved since.

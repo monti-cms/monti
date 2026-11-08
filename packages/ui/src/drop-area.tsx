@@ -10,15 +10,23 @@ import { cn } from "./cn";
  */
 function DropArea({
 	over = false,
+	fill = false,
 	className,
 	children,
 	...props
 }: React.ComponentProps<"div"> & {
 	/** Files are being dragged over the area, and not over a folder in it. */
 	over?: boolean;
+	/** It takes the rest of its column, so a page with few files can be dropped on all the way down. */
+	fill?: boolean;
 }) {
 	return (
-		<div data-slot="drop-area" data-over={over || undefined} className={cn("relative", className)} {...props}>
+		<div
+			data-slot="drop-area"
+			data-over={over || undefined}
+			className={cn("relative", fill && "flex-1", className)}
+			{...props}
+		>
 			{children}
 			{over && (
 				<span

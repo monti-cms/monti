@@ -62,7 +62,7 @@ import { useEffect, useMemo, useState } from "react";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import type { Upload } from "../../media/upload-queue";
-import { MEDIA_DRAG, useFileDrop, useFolderDrop } from "../../media/use-file-drop";
+import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
 import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
@@ -321,6 +321,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	};
 	const addFiles = (files: File[], folder = state.folder) => void upload.add(files, folder);
 	const areaDrop = useFileDrop((files) => addFiles(files));
+	useKeepFilesInPage();
 
 	// The hint at the bottom says where files would land: the folder they are over, or this place (flow 6·01, 6·02).
 	useEffect(() => {
@@ -795,7 +796,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				<ContextMenu>
 					<ContextMenuTrigger
 						render={
-							<DropArea over={areaDrop.over && !folderTarget} {...areaDrop.handlers}>
+							<DropArea fill over={areaDrop.over && !folderTarget} {...areaDrop.handlers}>
 								{state.view === "list" ? table : grid}
 							</DropArea>
 						}

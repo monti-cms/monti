@@ -28,5 +28,12 @@ export default defineConfig({
 			reuseExistingServer: false,
 			env: { E2E_SCHEMA: "monti_e2e", VITE_CONFIG_NATIVE_IGNORE_WARNING: "true" },
 		},
+		{
+			command: "pnpm exec vite --config testing/e2e/vite.config.ts --port 4174 --strictPort",
+			cwd: root,
+			url: "http://localhost:4174/",
+			reuseExistingServer: false,
+			env: { E2E_SCHEMA: "monti_e2e_bare", E2E_STORAGE: "off", VITE_CONFIG_NATIVE_IGNORE_WARNING: "true" },
+		},
 	],
 });

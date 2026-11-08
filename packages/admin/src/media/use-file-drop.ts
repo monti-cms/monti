@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** What dragging a tile carries: the ids of the files it moves. */
 export const MEDIA_DRAG = "application/x-monti-media";
@@ -14,6 +14,24 @@ export function draggedIds(event: React.DragEvent): string[] {
 	} catch {
 		return [];
 	}
+}
+
+/**
+ * While a page takes files, a file let go anywhere else on it stays out of the browser's hands: its own way is to leave the page and open the file, and whatever was being
+ * written goes with it.
+ */
+export function useKeepFilesInPage() {
+	useEffect(() => {
+		const hold = (event: DragEvent) => {
+			if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+		};
+		window.addEventListener("dragover", hold);
+		window.addEventListener("drop", hold);
+		return () => {
+			window.removeEventListener("dragover", hold);
+			window.removeEventListener("drop", hold);
+		};
+	}, []);
 }
 
 /**

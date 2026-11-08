@@ -1,9 +1,14 @@
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
 	createAdminApi,
 	createMonti,
 	createReader,
 	type Database,
 	type Doc,
+	definePlugin,
+	localFolderStorage,
 	migrateContent,
 	migrateToLatest,
 } from "@monti-cms/core";
@@ -50,10 +55,20 @@ async function emptyDatabase(name: string): Promise<Kysely<Database>> {
  */
 export async function startSite() {
 	const db = await emptyDatabase(process.env.E2E_SCHEMA ?? E2E_SCHEMA_DEFAULT);
-	const monti = createMonti({ db, schema, files: null, auth: { password: true }, secret: SECRET });
+	// Files on real disk in a folder of this run; `E2E_STORAGE=off` is a site with no storage (flow 6·31).
+	const plugins =
+		process.env.E2E_STORAGE === "off"
+			? []
+			: [
+					definePlugin({
+						name: "e2e-files",
+						storage: localFolderStorage({ dir: await mkdtemp(path.join(tmpdir(), "monti-e2e-")) }),
+					}),
+				];
+	const monti = createMonti({ db, schema, files: null, auth: { password: true }, secret: SECRET, plugins });
 	await monti.run("auth.createFirstAdmin", { ...ADMIN, confirm: ADMIN.password }, { actor: "admin" });
 	const api = createAdminApi(monti, { adminPath: "/" });
-	const reader = createReader({ db, schema, secret: SECRET });
+	const reader = createReader({ db, schema, secret: SECRET, storage: monti.site.storage });
 
 	async function sitePage(collection: string, slug: string): Promise<Response> {
 		const found = await reader.entry({ collection, slug, locale: schema.locales.source });
@@ -62,7 +77,11 @@ export async function startSite() {
 			"main",
 			null,
 			h("h1", null, found.entry.title),
-			...renderDocument((found.entry.doc ?? { type: "doc", blocks: [] }) as Doc, { createElement: h }),
+			...renderDocument((found.entry.doc ?? { type: "doc", blocks: [] }) as Doc, {
+				createElement: h,
+				mediaUrl: (id) => found.entry.media?.[id]?.url ?? id,
+				mediaSize: (id) => found.entry.media?.[id],
+			}),
 		);
 		return new Response(`<!doctype html>${renderToStaticMarkup(page)}`, {
 			headers: { "content-type": "text/html; charset=utf-8" },

@@ -25,7 +25,6 @@ export function httpUploader(base: string): Uploader {
 		new Promise((resolve) => {
 			const request = new XMLHttpRequest();
 			request.open("PUT", `${base}/media/bytes?name=${encodeURIComponent(name)}`);
-			request.withCredentials = true;
 			request.upload.onprogress = (event) => {
 				if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
 			};
