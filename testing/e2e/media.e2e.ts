@@ -30,6 +30,22 @@ async function writing(page: Page, more: Record<string, unknown> = {}) {
 	return { id: made.output.id, slug };
 }
 
+/** The id of a file once the library has it: a tile with its name shows from the moment it starts going up. */
+async function uploadedId(page: Page, name: string) {
+	let id = "";
+	await expect
+		.poll(async () => {
+			const answer = await page.request.post("/admin/api/operations/media.query", {
+				data: { input: { search: name } },
+			});
+			const { items } = (await answer.json()) as { items: { id: string }[] };
+			id = items[0]?.id ?? "";
+			return id;
+		})
+		.not.toBe("");
+	return id;
+}
+
 const saveKeys = async (page: Page) => {
 	await page.keyboard.press("ControlOrMeta+S");
 	await expect(page.getByRole("button", { name: "저장 전 변경사항" })).toBeHidden();
@@ -67,10 +83,7 @@ test.describe("the library", () => {
 		await dropFromDisk(admin, [freeFile, usedFile], main(admin));
 		await expect(tile(admin, freeName)).toBeVisible();
 		await expect(tile(admin, usedName)).toBeVisible();
-		const { items } = (await (
-			await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: usedName } } })
-		).json()) as { items: { id: string }[] };
-		const used = items[0]?.id;
+		const used = await uploadedId(admin, usedName);
 		const post = await writing(admin, { values: { cover: { media: used, alt: "표지" } } });
 		await admin.goto("/#/media");
 		await admin.getByRole("checkbox", { name: `${freeName} 고르기` }).check({ force: true });
@@ -92,10 +105,7 @@ test.describe("the library", () => {
 		await admin.goto("/#/media");
 		await dropFromDisk(admin, [first], main(admin));
 		await expect(tile(admin, name)).toBeVisible();
-		const { items } = (await (
-			await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: name } } })
-		).json()) as { items: { id: string }[] };
-		const id = items[0]?.id ?? "";
+		const id = await uploadedId(admin, name);
 		const post = await writing(admin, {
 			values: { cover: { media: id, alt: "표지" } },
 			doc: { type: "doc", blocks: [{ id: "i1", type: "image", attrs: { media: id, alt: "그대로 남을 말" } }] },
@@ -171,7 +181,9 @@ test.describe("the editor", () => {
 		await body(admin).getByText("글의 첫 문단이에요.").click();
 		await pastePicture(admin, file);
 		const caption = body(admin).getByRole("textbox", { name: "캡션" });
-		await expect(caption).toBeVisible({ timeout: 20_000 });
+		await expect(caption).toBeVisible();
+		// The caption is there from the start; the picture is in the body once the library has it.
+		await expect(body(admin).getByRole("progressbar")).toBeHidden({ timeout: 20_000 });
 		await saveKeys(admin);
 
 		// The library says the body uses it, after a reload of the entry too.
@@ -203,7 +215,8 @@ test.describe("the editor", () => {
 		const post = await writing(admin);
 		await body(admin).getByText("글의 첫 문단이에요.").click();
 		await pastePicture(admin, file);
-		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeVisible({ timeout: 20_000 });
+		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeVisible();
+		await expect(body(admin).getByRole("progressbar")).toBeHidden({ timeout: 20_000 });
 		await saveKeys(admin);
 		const { items } = (await (
 			await admin.request.post("/admin/api/operations/media.query", {
@@ -376,10 +389,7 @@ test.describe("while a file is on its way", () => {
 		await admin.goto("/#/media");
 		await dropFromDisk(admin, [first], main(admin));
 		await expect(tile(admin, name)).toBeVisible();
-		const { items } = (await (
-			await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: name } } })
-		).json()) as { items: { id: string }[] };
-		const id = items[0]?.id ?? "";
+		const id = await uploadedId(admin, name);
 		await admin.goto(`/#/media?file=${id}`);
 		const panel = admin.getByRole("complementary");
 		await panel.getByRole("textbox", { name: "파일 이름" }).fill("mine");

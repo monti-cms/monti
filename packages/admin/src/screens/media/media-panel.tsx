@@ -49,6 +49,7 @@ import { putFile } from "../../media/put-file";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
 import { shortDate } from "../list/format";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -209,6 +210,8 @@ export function MediaPanel({
 		}
 		return {};
 	}, []);
+	// Docked at the page's edge, it stands where the frame's ✦ is: its × must not lie under it (screens/media.md).
+	useCoverCorner(true);
 	const draft = useDraft({ target, base, version: item?.version ?? null, proposalValues });
 	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll });
 	// The version these changes were made on, whatever was read since: saving over someone else's rename is a conflict, not a success.
@@ -248,7 +251,6 @@ export function MediaPanel({
 		<SidePanel
 			width="side"
 			title={item.name}
-			closable
 			onClose={onClose}
 			actions={
 				<DropdownMenu>
