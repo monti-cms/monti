@@ -94,7 +94,7 @@ flowchart TD
 
 - "줄여서 다시"는 브라우저에서 긴 변을 줄여 한도 아래로 만든 뒤 다시 올린다.
 - 올리기는 사람만 한다. 에이전트에게는 올릴 파일이 없다.
-- 받는 종류는 JPEG, PNG, WebP, GIF, AVIF, PDF, ZIP, txt, md, csv다. HEIC, SVG, HTML은 받지 않는다. 브라우저가 먼저 거르고 서버가 앞 바이트로 다시 판별한다.
+- 받는 종류는 JPEG, PNG, WebP, GIF, AVIF, PDF, ZIP, txt, md, csv다. HEIC, SVG, HTML은 받지 않는다. 브라우저가 먼저 거르고 서버가 앞 바이트로 다시 판별한다. HEIC는 아이폰이 찍는 사진이라 "이미지만"으로는 이유가 되지 않으므로 JPEG나 PNG로 바꾸라고 따로 말한다.
 
 ### 올리는 길
 

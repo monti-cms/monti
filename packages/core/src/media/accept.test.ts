@@ -35,13 +35,21 @@ describe("what the library takes", () => {
 		expect(accept(name, head)).toMatchObject({ ok: true, mime, kind });
 	});
 
+	it.each([
+		["photo.heic", ftyp("heic", "mif1")],
+		["photo.heif", ftyp("mif1", "heic")],
+		["photo.avif", ftyp("heic", "mif1")],
+		["photo.jpg", ftyp("hevc")],
+		["photo.HEIC", text("not what its name says")],
+	])("09-1 %s is a photo in a format the library does not take: its own reason, not 'images only'", (name, head) => {
+		expect(accept(name, head)).toEqual({ ok: false, reason: "heic" });
+	});
+
 	it("09-1 a pasted picture with no extension gets the one its bytes say", () => {
 		expect(accept("image", PNG)).toMatchObject({ ok: true, mime: "image/png", extension: ".png" });
 	});
 
 	it.each([
-		["photo.heic", ftyp("heic", "mif1")],
-		["photo.avif", ftyp("heic", "mif1")],
 		["logo.svg", text('<svg xmlns="http://www.w3.org/2000/svg"></svg>')],
 		["page.html", text("<!doctype html><script>alert(1)</script>")],
 		["setup.exe", bytes(0x4d, 0x5a, 0x90, 0)],

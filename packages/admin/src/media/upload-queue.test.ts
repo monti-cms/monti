@@ -52,10 +52,10 @@ describe("the queue of files going up", () => {
 	});
 
 	it("09-1 only what is still on its way holds a person back from leaving", () => {
-		expect(stillGoing([upload("a")])).toBe(true);
-		expect(stillGoing([upload("a", { status: "uploading" })])).toBe(true);
-		expect(stillGoing([upload("a", { status: "failed" }), upload("b", { status: "interrupted" })])).toBe(false);
-		expect(stillGoing([])).toBe(false);
+		expect(stillGoing([upload("a")])).toHaveLength(1);
+		expect(stillGoing([upload("a", { status: "uploading" })])).toHaveLength(1);
+		expect(stillGoing([upload("a", { status: "failed" }), upload("b", { status: "interrupted" })])).toHaveLength(0);
+		expect(stillGoing([])).toHaveLength(0);
 	});
 
 	it("09-1 the library's refusal is the file's problem", () => {

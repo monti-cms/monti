@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import path from "node:path";
 import { chromium } from "playwright";
-import { typeKoreanInto } from "./ime";
+import { typeKoreanInto } from "./ime.ts";
 
 /**
  * The usability test's hands (docs/plans/09-media.md, 1.4): one real Chromium window, held open, that takes commands over a small local server. Everything it does to the

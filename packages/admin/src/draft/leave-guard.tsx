@@ -11,8 +11,9 @@ import {
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 
-/** A screen's unsaved changes: how many, and how to drop them when the person leaves without saving. */
-type Guard = { count: () => number; drop: () => void };
+/** What a screen would lose: unsaved changes and files still going up, how many of each, and how to drop them when the person leaves anyway. */
+type Guard = { changes: () => number; uploads: () => number; drop: () => void };
+type Held = { changes: number; uploads: number };
 
 const Context = createContext<{ add: (guard: Guard) => () => void; leave: (go: () => void) => void } | null>(null);
 
@@ -23,16 +24,23 @@ const Context = createContext<{ add: (guard: Guard) => () => void; leave: (go: (
 export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 	const { t } = useAdmin();
 	const guards = useRef(new Set<Guard>());
-	const [asking, setAsking] = useState<{ go: () => void; count: number } | null>(null);
-	const count = useCallback(() => [...guards.current].reduce((sum, guard) => sum + guard.count(), 0), []);
+	const [asking, setAsking] = useState<({ go: () => void } & Held) | null>(null);
+	const held = useCallback(
+		(): Held => ({
+			changes: [...guards.current].reduce((sum, guard) => sum + guard.changes(), 0),
+			uploads: [...guards.current].reduce((sum, guard) => sum + guard.uploads(), 0),
+		}),
+		[],
+	);
 
 	useEffect(() => {
 		const warn = (event: BeforeUnloadEvent) => {
-			if (count() > 0) event.preventDefault();
+			const { changes, uploads } = held();
+			if (changes + uploads > 0) event.preventDefault();
 		};
 		window.addEventListener("beforeunload", warn);
 		return () => window.removeEventListener("beforeunload", warn);
-	}, [count]);
+	}, [held]);
 
 	const value = useMemo(
 		() => ({
@@ -43,21 +51,30 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 				};
 			},
 			leave: (go: () => void) => {
-				const changed = count();
-				if (changed === 0) go();
-				else setAsking({ go, count: changed });
+				const now = held();
+				if (now.changes + now.uploads === 0) go();
+				else setAsking({ go, ...now });
 			},
 		}),
-		[count],
+		[held],
 	);
+	// Files only: saying "unsaved changes" of them leaves the person guessing what the number is (usability, U10).
+	const onlyFiles = asking !== null && asking.changes === 0;
 	return (
 		<Context.Provider value={value}>
 			{children}
 			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>{t("leave.title")}</AlertDialogTitle>
-						<AlertDialogDescription>{t("leave.description", { count: asking?.count ?? 0 })}</AlertDialogDescription>
+						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{[
+								asking?.changes ? t("leave.description", { count: asking.changes }) : null,
+								asking?.uploads ? t("leave.uploads.description", { count: asking.uploads }) : null,
+							]
+								.filter(Boolean)
+								.join(" ")}
+						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel
@@ -68,9 +85,11 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 								setAsking(null);
 							}}
 						>
-							{t("leave.discard")}
+							{t(onlyFiles ? "leave.uploads.discard" : "leave.discard")}
 						</AlertDialogCancel>
-						<AlertDialogAction onClick={() => setAsking(null)}>{t("leave.stay")}</AlertDialogAction>
+						<AlertDialogAction onClick={() => setAsking(null)}>
+							{t(onlyFiles ? "leave.uploads.stay" : "leave.stay")}
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -84,13 +103,18 @@ export function useLeave() {
 	return useCallback((go: () => void) => (context ? context.leave(go) : go()), [context]);
 }
 
-/** Keeps the person from leaving this screen's unsaved changes by mistake. */
-export function useLeaveGuard(draft: { changes: unknown[]; revertAll: () => void }) {
+/** Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. */
+export function useLeaveGuard(draft: { changes?: unknown[]; uploads?: unknown[]; revertAll: () => void }) {
 	const context = useContext(Context);
 	const latest = useRef(draft);
 	latest.current = draft;
 	useEffect(
-		() => context?.add({ count: () => latest.current.changes.length, drop: () => latest.current.revertAll() }),
+		() =>
+			context?.add({
+				changes: () => latest.current.changes?.length ?? 0,
+				uploads: () => latest.current.uploads?.length ?? 0,
+				drop: () => latest.current.revertAll(),
+			}),
 		[context],
 	);
 }

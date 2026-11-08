@@ -13,6 +13,7 @@ export function useProblemText() {
 			case "tooBig":
 				return t("library.failed.tooBig", { size: formatBytes(upload.size) });
 			case "type":
+			case "heic":
 			case "unreadable":
 			case "failed":
 				return t(`library.failed.${upload.problem}`);

@@ -15,6 +15,8 @@ export type Acceptance =
 	| ({ ok: true } & Identified)
 	/** Not a kind the library takes. */
 	| { ok: false; reason: "type" }
+	/** A photo in HEIC, what an iPhone takes: a picture all the same, so it needs its own reason. */
+	| { ok: false; reason: "heic" }
 	/** A kind it takes, over the limit. The kind says whether shrinking can help. */
 	| ({ ok: false; reason: "size" } & Identified);
 
@@ -40,14 +42,22 @@ const asciiAt = (head: Uint8Array, at: number, length: number) =>
 	String.fromCharCode(...head.subarray(at, at + length));
 
 /** An ISO media file's brands, from its `ftyp` box: AVIF and the HEIC the library does not take look alike but for these. */
-function isAvif(head: Uint8Array): boolean {
-	if (!starts(head, ascii("ftyp"), 4)) return false;
+function brandsOf(head: Uint8Array): string[] {
+	if (!starts(head, ascii("ftyp"), 4)) return [];
 	const size = ((head[0] ?? 0) << 24) | ((head[1] ?? 0) << 16) | ((head[2] ?? 0) << 8) | (head[3] ?? 0);
 	const end = Math.min(size, head.length);
 	const brands = [asciiAt(head, 8, 4)];
 	for (let at = 16; at + 4 <= end; at += 4) brands.push(asciiAt(head, at, 4));
-	return brands.includes("avif") || brands.includes("avis");
+	return brands;
 }
+
+const isAvif = (head: Uint8Array) => brandsOf(head).some((brand) => brand === "avif" || brand === "avis");
+
+const HEIC_BRANDS = new Set(["heic", "heix", "heim", "heis", "hevc", "hevx", "hevm", "hevs", "mif1", "msf1"]);
+
+/** A refused file that is a HEIC photo, by its bytes or by its name. */
+const isHeic = (name: string, head: Uint8Array) =>
+	[".heic", ".heif"].includes(splitName(name).extension) || brandsOf(head).some((brand) => HEIC_BRANDS.has(brand));
 
 function imageMime(head: Uint8Array): string | null {
 	if (starts(head, [0xff, 0xd8, 0xff])) return "image/jpeg";
@@ -96,7 +106,7 @@ function identify(name: string, head: Uint8Array): Identified | null {
 /** Whether the library takes a file: by its first bytes and its name, then its size. `head` is the file's start, at least `HEAD_BYTES` when it has them. */
 export function acceptFile(file: { name: string; size: number; head: Uint8Array }): Acceptance {
 	const found = identify(file.name, file.head);
-	if (!found) return { ok: false, reason: "type" };
+	if (!found) return { ok: false, reason: isHeic(file.name, file.head) ? "heic" : "type" };
 	return file.size > MAX_UPLOAD_BYTES ? { ok: false, reason: "size", ...found } : { ok: true, ...found };
 }
 

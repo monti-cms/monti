@@ -63,6 +63,7 @@ export function MediaPickerDialog({
 			foldersLabel={t("folders.tree")}
 			search={search}
 			onSearchChange={(next) => {
+				setPicked(null);
 				setShown(PAGE);
 				setSearch(next);
 			}}

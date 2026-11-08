@@ -1,5 +1,6 @@
 {
 	"extends": "../../packages/admin/tsconfig.json",
-	"compilerOptions": { "types": ["node", "vite/client"] },
-	"include": [".", "../usability", "../fonts.d.ts"]
+	"compilerOptions": { "types": ["node", "vite/client"], "allowImportingTsExtensions": true },
+	"include": [".", "../usability", "../fonts.d.ts"],
+	"exclude": []
 }

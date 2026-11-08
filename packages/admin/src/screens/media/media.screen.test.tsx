@@ -201,6 +201,20 @@ describe("uploading", () => {
 		await expect.element(main().getByRole("button", { name: "줄여서 다시" })).toBeVisible();
 	});
 
+	it("09-1 [flow 6·03] an iPhone's HEIC photo says what to do with it, whole, where a tile is narrowest", async () => {
+		await Top.run();
+		dropFiles(main().getByText("top-level-photo.jpg").element(), [
+			named("photo.heic", [0, 0, 0, 24, ...new TextEncoder().encode("ftypheic"), 0, 0, 0, 0]),
+		]);
+		const reason = main().getByText("JPEG나 PNG로 바꿔 주세요", { exact: false });
+		await expect.element(reason).toBeVisible();
+		await expect.element(main().getByText("이미지 · PDF · ZIP · 텍스트만")).not.toBeInTheDocument();
+		const line = reason.element();
+		expect(line.scrollWidth).toBeLessThanOrEqual(line.clientWidth);
+		await userEvent.click(main().getByRole("button", { name: "빼기" }));
+		await expect.element(reason).not.toBeInTheDocument();
+	});
+
 	it("09-1 [flow 6·34] a PDF goes up with no picture, its type on the tile", async () => {
 		await openAssets();
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
@@ -347,6 +361,26 @@ describe("the trash", () => {
 		tile("seoul-night.jpg").element().focus();
 		await userEvent.keyboard("{Delete}");
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
+	});
+
+	it("09-4 Delete with a tile's check focused: picked is picked, so the same trash", async () => {
+		await openAssets();
+		const check = page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" });
+		await userEvent.click(check);
+		await expect.element(check).toHaveFocus();
+		await userEvent.keyboard("{Delete}");
+		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
+	});
+
+	it("09-4 Delete in a tile's own menu is not a tile's Delete: the menu stays, and so does the file", async () => {
+		await openAssets();
+		await userEvent.hover(tile("seoul-night.jpg"));
+		await userEvent.click(page.getByRole("button", { name: "더 보기" }).first());
+		const menu = page.getByRole("menu");
+		await expect.element(menu).toBeVisible();
+		await userEvent.keyboard("{ArrowDown}{Delete}");
+		await expect.element(menu).toBeVisible();
+		await expect.element(tile("seoul-night.jpg")).toBeVisible();
 	});
 
 	it("09-4 [flow 6·11] a folder nobody's files are used from goes with no question, and the toast takes it back", async () => {

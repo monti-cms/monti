@@ -4,7 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { pointerPath, typeKorean } from "../../../../testing/input";
 import * as media from "../screens/entry/media.stories";
 
-const { Draft, WithImage, NoStorage } = composeStories(media);
+const { Draft, WithImage, NoStorage, LibraryWindow } = composeStories(media);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const paragraph = (text: string) => body().getByText(text);
@@ -20,10 +20,10 @@ async function slash(word = "") {
 	await userEvent.keyboard(`/${word}`);
 }
 
-/** A picture pasted into the focused text, as the browser hands it over (a real ⌘V is L5's). */
-async function paste(file: File) {
+/** Pictures pasted into the focused text, as the browser hands them over (a real ⌘V is L5's). */
+async function paste(...files: File[]) {
 	const clipboardData = new DataTransfer();
-	clipboardData.items.add(file);
+	for (const file of files) clipboardData.items.add(file);
 	const target = body().element();
 	target.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
 }
@@ -53,6 +53,16 @@ describe("from the library", () => {
 		await userEvent.click(dialog.getByRole("button", { name: "넣기" }));
 		await expect.element(dialog).not.toBeInTheDocument();
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+	});
+
+	it("09-3 searching drops what was picked: what goes in is always a file in sight", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
+		await expect.element(dialog.getByRole("button", { name: "넣기" })).toBeVisible();
+		await userEvent.fill(dialog.getByRole("textbox", { name: "파일 이름 검색" }), "없는 파일");
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		await expect.element(dialog.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
 	});
 
 	it("09-3 [mid-sentence] '/' between words: the file goes next to the sentence, which stays whole", async () => {
@@ -130,6 +140,69 @@ describe("pasting", () => {
 		await userEvent.fill(caption, "붙여 넣은 그림");
 		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
 		await expect.element(caption).toHaveValue("붙여 넣은 그림");
+	});
+
+	it("09-3 [write-on] writing on after a pasted picture: the words go after it, and the picture stays", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(await canvasFile("pasted.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		await userEvent.keyboard("이어 쓴 글");
+		await expect.element(paragraph("이어 쓴 글")).toBeVisible();
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		const blocks = [...body().element().children].map((block) => block.textContent ?? "");
+		const image = [...body().element().children].findIndex((block) => block.querySelector("[data-slot='image'], img"));
+		expect(blocks.findIndex((text) => text.includes("이어 쓴 글"))).toBeGreaterThan(image);
+	});
+
+	it("09-3 [write-on] a picture pasted at the very end leaves a line to write on", async () => {
+		await Draft.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("{Control>}{End}{/Control}{Meta>}{ArrowDown}{/Meta}");
+		await paste(await canvasFile("last.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		await userEvent.keyboard("마지막 줄");
+		await expect.element(paragraph("마지막 줄")).toBeVisible();
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+	});
+
+	it("09-3 [several-at-once] two pictures pasted at once both go in", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(await canvasFile("one.png"), await canvasFile("two.png"));
+		await expect.poll(() => body().getByRole("textbox", { name: "캡션" }).elements().length).toBe(2);
+	});
+
+	it("09-3 a picture pasted while another is selected goes after it", async () => {
+		await WithImage.run();
+		const first = body().getByRole("img").first();
+		await userEvent.click(first);
+		await expect.element(body().getByRole("toolbar")).toBeVisible();
+		await paste(await canvasFile("second.png"));
+		await expect.poll(() => body().getByRole("textbox", { name: "캡션" }).elements().length).toBe(2);
+	});
+
+	it("09-3 [in-block] a picture pasted in a list item goes right after that item, and the list goes on after it", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await userEvent.keyboard("{Enter}- 첫째{Enter}둘째{Enter}셋째");
+		await caretAfter("첫째");
+		await paste(await canvasFile("in-list.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		const lists = body().getByRole("list").elements();
+		expect(lists.map((list) => list.textContent)).toEqual(["첫째", "둘째셋째"]);
+	});
+
+	it("09-3 [in-block] in a numbered list the count goes on after the picture", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await userEvent.keyboard("{Enter}1. 하나{Enter}둘{Enter}셋");
+		await caretAfter("하나");
+		await paste(await canvasFile("in-steps.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		const lists = body().getByRole("list").elements();
+		expect(lists.map((list) => list.textContent)).toEqual(["하나", "둘셋"]);
+		expect(lists[1]?.getAttribute("start")).toBe("2");
 	});
 
 	it("09-1 a file that will not go up says why in its place, and can be taken out", async () => {

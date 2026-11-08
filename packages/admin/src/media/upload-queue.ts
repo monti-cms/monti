@@ -6,7 +6,7 @@ import type { Acceptance, MediaKind } from "@monti-cms/core";
  * - `tooBig`: over the limit; an image can be shrunk and tried again.
  * - `failed`: the network or the server; it can be tried again as it is.
  */
-export type UploadProblem = "type" | "unreadable" | "tooBig" | "failed";
+export type UploadProblem = "type" | "heic" | "unreadable" | "tooBig" | "failed";
 
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {
@@ -36,6 +36,7 @@ export const AT_ONCE = 3;
 
 const STATUS_OF: Record<UploadProblem, "failed" | "interrupted"> = {
 	type: "failed",
+	heic: "failed",
 	unreadable: "failed",
 	tooBig: "interrupted",
 	failed: "interrupted",
@@ -81,8 +82,8 @@ export function nextToStart(queue: Upload[]): Upload[] {
 
 /** What the library's answer about a file means for its place in the queue. */
 export const problemOf = (answer: Acceptance): UploadProblem | null =>
-	answer.ok ? null : answer.reason === "size" ? "tooBig" : "type";
+	answer.ok ? null : answer.reason === "size" ? "tooBig" : answer.reason;
 
-/** Whether anything is still on its way: leaving now would lose it. */
+/** The files still on their way: leaving now would lose them. */
 export const stillGoing = (queue: Upload[]) =>
-	queue.some((upload) => upload.status === "waiting" || upload.status === "uploading");
+	queue.filter((upload) => upload.status === "waiting" || upload.status === "uploading");

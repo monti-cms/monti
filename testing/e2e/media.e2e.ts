@@ -287,8 +287,75 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 	await context.close();
 });
 
+test.describe("a translation's cover", () => {
+	test("09-3 it follows what the source has on the site: alt text alone, a file of its own, and back to following", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cover")}.jpg`);
+		const name = file.split("/").at(-1) ?? "";
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [file], main(admin));
+		await uploadedId(admin, name);
+
+		const post = await writing(admin);
+		await operation(admin, "entries.publish", { ids: [post.id] });
+		await admin.reload();
+		const cover = admin.getByRole("button", { name: "cover", exact: true });
+		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		// Each language's page opens with its own panel state.
+		const panel = () =>
+			expect(async () => {
+				const button = admin.getByRole("button", { name: "속성" });
+				if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
+				await expect(cover).toBeVisible({ timeout: 500 });
+			}).toPass();
+		await panel();
+		await cover.click();
+		const dialog = admin.getByRole("dialog");
+		await dialog.getByRole("textbox", { name: "파일 이름 검색" }).fill(name);
+		await dialog.getByRole("button", { name: new RegExp(name) }).click();
+		await dialog.getByRole("button", { name: "고르기" }).click();
+		await alt.fill("봄 표지");
+		await saveKeys(admin);
+
+		// On the site with no cover, and the cover only saved: a translation follows what the site shows (doc 04, principle 5).
+		await admin.getByRole("button", { name: "+ 언어" }).click();
+		await admin.getByRole("menuitem", { name: /English/ }).click();
+		await expect(admin).toHaveURL(/#\/c\/post\//);
+		await expect(admin.getByRole("button", { name: "English" })).toBeVisible();
+		await panel();
+		await expect(cover).toHaveText(/비어 있음/);
+
+		// Published: the file and its alt text show, as the source's.
+		await admin.getByRole("button", { name: "한국어" }).click();
+		await panel();
+		await expect(cover).toHaveText(new RegExp(name));
+		await admin.getByRole("button", { name: "발행하기" }).click();
+		await expect(admin.getByRole("button", { name: "발행됨" })).toBeVisible();
+		await admin.getByRole("button", { name: "English" }).click();
+		await panel();
+		await expect(cover).toHaveText(new RegExp(name));
+		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
+		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeHidden();
+
+		// Alt text alone makes it this language's, and × goes back to following.
+		await alt.fill("spring cover");
+		await saveKeys(admin);
+		await admin.reload();
+		await panel();
+		await expect(alt).toHaveValue("spring cover");
+		await expect(cover).toHaveText(new RegExp(name));
+		await admin.getByRole("button", { name: "cover 빼기" }).click();
+		await expect(cover).toHaveText(new RegExp(name));
+		await expect(alt).toHaveValue("");
+		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
+		await saveKeys(admin);
+	});
+});
+
 test.describe("while a file is on its way", () => {
-	test("09-1 leaving the library asks first; staying keeps the file going", async ({ admin }, info) => {
+	test("09-1 leaving the library says the file stops; staying keeps it going", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("held")}.jpg`);
 		await admin.goto("/#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
@@ -305,10 +372,39 @@ test.describe("while a file is on its way", () => {
 		await admin.getByRole("button", { name: "memo", exact: true }).click();
 		const asked = admin.getByRole("alertdialog");
 		await expect(asked).toBeVisible();
-		await asked.getByRole("button", { name: "계속 고치기" }).click();
+		await expect(asked.getByText("파일을 올리는 중이에요")).toBeVisible();
+		await expect(asked.getByText(/올라가지 않은 파일 1개/)).toBeVisible();
+		await asked.getByRole("button", { name: "계속 올리기" }).click();
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		release();
 		await expect(tile(admin, file.split("/").at(-1) ?? "")).toBeVisible();
+	});
+
+	test("09-1 leaving anyway stops the file: the library never gets it", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("stopped")}.jpg`);
+		const name = file.split("/").at(-1) ?? "";
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		let release = () => {};
+		const released = new Promise<void>((done) => {
+			release = done;
+		});
+		await admin.route("**/media/bytes*", async (route) => {
+			await released;
+			await route.continue().catch(() => {});
+		});
+		await dropFromDisk(admin, [file], main(admin));
+		await expect(main(admin).getByText(/올리는 중/)).toBeVisible();
+		await admin.getByRole("button", { name: "memo", exact: true }).click();
+		await admin.getByRole("alertdialog").getByRole("button", { name: "그만 올리고 나가기" }).click();
+		await expect(admin.getByRole("alertdialog")).toBeHidden();
+		await expect(main(admin).getByRole("heading", { level: 1, name: "memo" })).toBeVisible();
+		release();
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await expect(main(admin).getByText(name)).toBeHidden();
+		const answer = await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: name } } });
+		expect(((await answer.json()) as { total: number }).total).toBe(0);
 	});
 
 	test("09-1 a request that never gets an answer stays to try again, and takes no place in the queue", async ({

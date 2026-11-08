@@ -4,7 +4,7 @@ import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import { createContext } from "react";
 import type { Upload } from "../media/upload-queue";
-import { insertBlocks, inTableCell } from "./commands";
+import { caretPast, insertBlocks, inTableCell } from "./commands";
 import { nodeName } from "./schema";
 
 /** What a body's image and file blocks need from the editor around them: the files on their way up, and which image's settings card is open. */
@@ -28,11 +28,7 @@ export const EditorMedia = createContext<EditorMediaValue | null>(null);
 export const fileBlock = (item: Pick<MediaItem, "id" | "kind" | "name">) =>
 	item.kind === "image" ? { media: item.id } : { media: item.id, name: item.name };
 
-const put = (tr: Transaction, node: EditorNode) => {
-	const { $from } = tr.selection;
-	if ($from.depth > 0 && $from.parent.content.size === 0) tr.replaceWith($from.before(), $from.after(), node);
-	else insertBlocks(tr, [node]);
-};
+const put = (tr: Transaction, nodes: EditorNode[]) => caretPast(insertBlocks(tr, nodes));
 
 /** Files pasted or dropped: each is a block at once, where the caret or the drop is, and goes up in its place with no window (doc 09, principle 4). A table's cell holds text only, so it is not a place for one. */
 export function placeFiles(
@@ -45,11 +41,11 @@ export function placeFiles(
 	const tr = state.tr;
 	if (at !== null) tr.setSelection(NodeSelection.near(tr.doc.resolve(at)));
 	if (inTableCell(tr.selection.$from)) return false;
-	const nodes = add(files).map((upload, index) => {
+	const nodes = add(files).flatMap((upload, index) => {
 		const type = files[index]?.type.startsWith("image/") ? "image" : "file";
-		return state.schema.nodes[nodeName(type)]?.create({ upload: upload.id, data: { media: "" } });
+		return state.schema.nodes[nodeName(type)]?.create({ upload: upload.id, data: { media: "" } }) ?? [];
 	});
-	for (const node of nodes) if (node) put(tr, node);
+	put(tr, nodes);
 	view.dispatch(tr.scrollIntoView());
 	editor.commands.focus();
 	return true;
@@ -61,7 +57,7 @@ export function placeLibraryFile(editor: Editor, item: Pick<MediaItem, "id" | "k
 	const type = state.schema.nodes[nodeName(item.kind)];
 	if (!type) return;
 	const tr = state.tr;
-	put(tr, type.create({ data: fileBlock(item) }));
+	put(tr, [type.create({ data: fileBlock(item) })]);
 	view.dispatch(tr.scrollIntoView());
 	editor.commands.focus();
 }

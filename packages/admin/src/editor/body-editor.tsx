@@ -2,7 +2,6 @@ import type { Doc, MediaItem, MediaQueryResult } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { useLeaveGuard } from "../draft/leave-guard";
 import { MediaPickerDialog } from "../media/media-picker-dialog";
 import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
@@ -98,12 +97,6 @@ export function BodyEditor({
 				);
 				return false;
 			});
-		},
-	});
-	useLeaveGuard({
-		changes: upload.uploads.filter((each) => each.status === "waiting" || each.status === "uploading"),
-		revertAll: () => {
-			for (const each of upload.uploads) upload.remove(each);
 		},
 	});
 	// A translation's undecided blocks go in empty, the source's words their placeholders, and come back in those words while nobody wrote in them;

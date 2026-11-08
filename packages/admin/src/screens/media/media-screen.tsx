@@ -59,7 +59,6 @@ import {
 } from "@monti-cms/ui";
 import { Document, Folder, FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useLeaveGuard } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { useProblemActions, useProblemText } from "../../media/upload-problem";
@@ -336,13 +335,6 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const read = useRead<MediaQueryResult>("media.query", queryOf(state), { afterWrites: true });
 	const folders = useFolders("media", true);
 	const upload = useUpload();
-	// Files on their way would stop if the screen went: leaving asks, as unsaved changes do (doc 05).
-	useLeaveGuard({
-		changes: upload.uploads.filter((each) => each.status === "waiting" || each.status === "uploading"),
-		revertAll: () => {
-			for (const each of upload.uploads) upload.remove(each);
-		},
-	});
 	const move = useMoveMedia();
 	const moveFolder = useOperation("folders.move");
 	const openFile = (id: string) => setState({ ...state, file: id });

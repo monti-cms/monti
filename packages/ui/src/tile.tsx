@@ -34,9 +34,10 @@ function Tile({
 	actions,
 	action,
 	dimmed = false,
+	onKeyDown,
 	className,
 	...props
-}: Omit<React.ComponentProps<"button">, "title"> & {
+}: Omit<React.ComponentProps<"button">, "title" | "onKeyDown"> & {
 	preview: React.ReactNode;
 	title: React.ReactNode;
 	/** The mono line under the name: size, usage, a path. */
@@ -60,6 +61,8 @@ function Tile({
 	/** The ⋯ at the top right (a button that opens the tile's menu). */
 	action?: React.ReactNode;
 	dimmed?: boolean;
+	/** A key pressed anywhere on the tile, on its check too. A menu it opens is drawn elsewhere, and its keys are the menu's. */
+	onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
 }) {
 	const failed = status === "failed";
 	const interrupted = status === "interrupted";
@@ -67,11 +70,15 @@ function Tile({
 	// Both name what went wrong in red under a quiet name, and offer `actions`.
 	const problem = failed || interrupted;
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: it only hears the keys that come up from the tile's own button and check
 		<div
 			data-slot="tile"
 			data-selected={selected || undefined}
 			data-status={status}
 			className={cn("group/tile relative flex min-w-0 flex-col gap-monti-8", dimmed && "opacity-60", className)}
+			onKeyDown={(event) => {
+				if (event.currentTarget.contains(event.target as Node)) onKeyDown?.(event);
+			}}
 		>
 			<button
 				type="button"
@@ -117,8 +124,12 @@ function Tile({
 						</span>
 					) : (
 						detail && (
+							// A reason cut off is no reason: a problem's line wraps, a size or a use is cut.
 							<span
-								className={cn("truncate font-mono text-monti-meta text-monti-subtle", problem && "text-monti-danger")}
+								className={cn(
+									"font-mono text-monti-meta",
+									problem ? "text-monti-danger" : "truncate text-monti-subtle",
+								)}
 							>
 								{detail}
 							</span>

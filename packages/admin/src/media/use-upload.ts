@@ -1,5 +1,6 @@
 import type { MediaItem } from "@monti-cms/core";
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useLeaveGuard } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { shrunk } from "./images";
@@ -125,5 +126,13 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	/** Whether this is still a file of this page: on its way, or stopped with its reason. */
 	const holds = useCallback((id: string) => files.current.has(id), []);
 
-	return { uploads, add, remove, retry, shrink, holds, going: stillGoing(uploads) };
+	// Files on their way would stop if the page went: leaving asks, as unsaved changes do (doc 05), and says it is files.
+	useLeaveGuard({
+		uploads: stillGoing(uploads),
+		revertAll: () => {
+			for (const each of uploads) remove(each);
+		},
+	});
+
+	return { uploads, add, remove, retry, shrink, holds };
 }

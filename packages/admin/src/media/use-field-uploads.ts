@@ -1,6 +1,5 @@
 import type { MediaItem } from "@monti-cms/core";
 import { useCallback, useRef } from "react";
-import { useLeaveGuard } from "../draft/leave-guard";
 import type { Upload } from "./upload-queue";
 import { useUpload } from "./use-upload";
 
@@ -15,13 +14,6 @@ export function useFieldUploads(onUploaded: (field: string, item: MediaItem, alt
 			const owner = owners.current.get(done.id);
 			owners.current.delete(done.id);
 			if (owner) onUploaded(owner.field, item, owner.alt);
-		},
-	});
-	const going = upload.uploads.filter((each) => each.status === "waiting" || each.status === "uploading");
-	useLeaveGuard({
-		changes: going,
-		revertAll: () => {
-			for (const each of upload.uploads) upload.remove(each);
 		},
 	});
 	const { uploads, remove, add: addUpload } = upload;
