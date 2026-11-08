@@ -8,7 +8,7 @@ import { movePointer, typeKorean } from "./commands";
 const FONTS = "virtual:monti-fonts";
 
 /** The admin's `@font-face` rules (as Storybook adds them), served straight from the font packages: text is measured in the fonts a person sees. */
-function fonts(): Plugin {
+export function fonts(): Plugin {
 	return {
 		name: "monti-fonts",
 		resolveId: (id) => (id === FONTS ? `\0${FONTS}` : null),
