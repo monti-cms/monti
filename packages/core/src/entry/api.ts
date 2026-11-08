@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { randomToken } from "../auth/secrets";
 import { findSession, startSession } from "../auth/session";
+import { randomUUID } from "../bytes";
+import { acceptFile, HEAD_BYTES, isMediaKey, MAX_UPLOAD_BYTES } from "../media/accept";
 import type { Monti } from "../monti";
 import { describeError } from "./errors";
 
@@ -149,13 +151,84 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		return done(adminPath, sessionCookie(request, started.token, started.expiresAt));
 	}
 
+	/**
+	 * A file's bytes on their way to the library (doc 09, the way up): this is the one route a screen reaches the server by that is not an operation, because an
+	 * operation is JSON in one transaction. The browser asked `acceptFile` already; here the file's own bytes answer, and the key is the server's. `media.upload`
+	 * makes the item from it.
+	 */
+	async function upload(
+		bytes: Uint8Array,
+		name: string,
+		token: string | null | undefined,
+	): Promise<{ status: number; body: unknown }> {
+		if (!(await findSession(monti.db, token, monti.now()))) return { status: 401, body: { error: "unauthenticated" } };
+		const storage = monti.site.storage;
+		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
+		const accepted = acceptFile({ name, size: bytes.length, head: bytes.subarray(0, HEAD_BYTES) });
+		if (!accepted.ok)
+			return accepted.reason === "size"
+				? { status: 413, body: { error: "media-refused", reason: { key: "media.tooBig" } } }
+				: { status: 415, body: { error: "media-refused", reason: { key: "media.badType" } } };
+		const key = `${randomUUID()}${accepted.extension}`;
+		await storage.put(key, bytes, { mime: accepted.mime });
+		return { status: 200, body: { key, mime: accepted.mime, size: bytes.length } };
+	}
+
+	/** The request's body, or `null` past the largest file the library takes: it stops reading there, whatever the request said it holds. */
+	async function bodyBytes(request: Request): Promise<Uint8Array | null> {
+		if (Number(request.headers.get("content-length") ?? 0) > MAX_UPLOAD_BYTES) return null;
+		const chunks: Uint8Array[] = [];
+		let size = 0;
+		for await (const chunk of request.body ?? []) {
+			size += chunk.length;
+			if (size > MAX_UPLOAD_BYTES) return null;
+			chunks.push(chunk);
+		}
+		const bytes = new Uint8Array(size);
+		let at = 0;
+		for (const chunk of chunks) {
+			bytes.set(chunk, at);
+			at += chunk.length;
+		}
+		return bytes;
+	}
+
+	/**
+	 * A file as it leaves: under its own type, never read as anything else, unable to run anything on this address. Only images show in place. A key is unguessable and
+	 * written once, so what the site publishes needs no session, and a cache may keep it for good.
+	 */
+	async function mediaFile(key: string): Promise<Response> {
+		const found = isMediaKey(key) ? await monti.site.storage?.read(key) : null;
+		if (!found) return json(404, { error: "not-found" });
+		const headers = new Headers({
+			"content-type": found.mime,
+			"content-length": String(found.bytes.length),
+			"x-content-type-options": "nosniff",
+			"content-security-policy": "sandbox",
+			"cache-control": "public, max-age=31536000, immutable",
+		});
+		if (!found.mime.startsWith("image/")) {
+			const row = await monti.db.selectFrom("media").select("name").where("original_key", "=", key).executeTakeFirst();
+			headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(row?.name ?? key)}`);
+		}
+		return new Response(new Blob([found.bytes.slice().buffer]), { headers });
+	}
+
 	const handle = async (request: Request): Promise<Response> => {
-		const { pathname } = new URL(request.url);
+		const { pathname, searchParams } = new URL(request.url);
 		const name = pathname.match(/\/operations\/([\w.]+)$/)?.[1];
 		if (name && request.method === "POST") return operation(request, name);
+		if (pathname.endsWith("/media/bytes") && request.method === "PUT") {
+			const bytes = await bodyBytes(request);
+			if (!bytes) return json(413, { error: "media-refused", reason: { key: "media.tooBig" } });
+			const answer = await upload(bytes, searchParams.get("name") ?? "", cookies(request)[SESSION_COOKIE]);
+			return json(answer.status, answer.body);
+		}
+		const file = pathname.match(/\/media\/files\/([^/]+)$/)?.[1];
+		if (file && request.method === "GET") return mediaFile(file);
 		const githubRoute = pathname.match(/\/auth\/github(\/callback)?$/);
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
-	return Object.assign(handle, { call });
+	return Object.assign(handle, { call, upload });
 }

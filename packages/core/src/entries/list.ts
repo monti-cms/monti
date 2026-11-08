@@ -1,6 +1,7 @@
 import { type RawBuilder, sql } from "kysely";
 import { z } from "zod";
 import { CheckError } from "../errors";
+import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import { type CollectionDefinition, type FieldDefinition, type LocalesDefinition, translates } from "../schema/define";
@@ -9,7 +10,7 @@ import { translationSql } from "../translations/count";
 import type { EntryState } from "./operations";
 
 /** What a list column is, which decides its menu: how it sorts and what it filters by (doc 06, columns). */
-export type ColumnKind = "status" | "title" | "locale" | "date" | "relation" | "select" | "text";
+export type ColumnKind = "status" | "title" | "locale" | "date" | "relation" | "media" | "select" | "text";
 
 const STATES = ["published", "changed", "draft", "archived"] as const satisfies readonly EntryState[];
 const DATE_COLUMNS = ["updatedAt", "publishedAt", "createdAt"] as const;
@@ -102,6 +103,8 @@ export type ListRow = {
 	values: Record<string, unknown>;
 	/** Relation fields' values: the target groups, named by their representative's title. */
 	relations: Record<string, { id: string; title: string }[]>;
+	/** Media fields' values, by field: the file's name and the picture to show for it (none for a file that is no image, or is not in the library). */
+	media: Record<string, { name: string; thumbnail: string | null }>;
 };
 
 export type Facet = { value: string | null; label?: string; count: number };
@@ -323,6 +326,24 @@ export async function runListQuery(
 					.execute()
 			: [];
 	const titles = await groupTitles(ctx, [...new Set(links.map((link) => link.to_group))]);
+	const mediaFields = Object.entries(definition.fields)
+		.filter(([, field]) => field.kind === "media")
+		.map(([name]) => name);
+	const fileIds = rows.flatMap((row) =>
+		mediaFields.flatMap((field) => {
+			const value = mediaValueOf(row.values[field]);
+			return value ? [value.media] : [];
+		}),
+	);
+	const files =
+		fileIds.length > 0
+			? await ctx.db
+					.selectFrom("media")
+					.select(["id", "name", "kind", "web_key", "original_key"])
+					.where("id", "in", fileIds)
+					.execute()
+			: [];
+	const fileOf = new Map(files.map((file) => [file.id, file]));
 	let total = rows.length ? Number(rows[0].total) : 0;
 	// A page past the end still says how many there are.
 	if (!rows.length && query.page > 1) total = (await runListQuery(ctx, { ...query, page: 1, pageSize: 1 })).total;
@@ -349,6 +370,16 @@ export async function runListQuery(
 						.filter((link) => link.from_group === row.translation_group && link.field === field)
 						.map((link) => ({ id: link.to_group, title: titles.get(link.to_group) ?? "" })),
 				]),
+			),
+			media: Object.fromEntries(
+				mediaFields.flatMap((field) => {
+					const value = mediaValueOf(row.values[field]);
+					const file = value ? fileOf.get(value.media) : undefined;
+					if (!file) return [];
+					const thumbnail =
+						file.kind === "image" ? (ctx.site.storage?.url(file.web_key ?? file.original_key) ?? null) : null;
+					return [[field, { name: file.name, thumbnail }]];
+				}),
 			),
 		})),
 	};
@@ -449,8 +480,9 @@ async function adminValues(ctx: OperationContext, collection: string): Promise<A
 	return (record?.data as AdminValues | undefined) ?? {};
 }
 
-/** Media fields get their column with the media library (doc 09, T59): a cell shows the picture. */
+/** A column for every kind of field but the address, which has its own place in the title. A media field's cell shows the picture (doc 09, T59). */
 const KIND_OF: Partial<Record<FieldDefinition["kind"], ColumnKind>> = {
+	media: "media",
 	relation: "relation",
 	select: "select",
 	text: "text",

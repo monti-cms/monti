@@ -287,6 +287,7 @@ describe("columns", () => {
 			"format?",
 			"category",
 			"tags",
+			"cover?",
 			"locale",
 			"updatedAt",
 			"publishedAt?",

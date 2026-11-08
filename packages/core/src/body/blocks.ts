@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sameJson } from "../json";
+import { ImageCropShape, ImageRotateShape } from "../media/frame";
 import type { Message } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
@@ -144,16 +145,9 @@ export const coreBlocks: AnyBlockDefinition[] = [
 			decorative: z.boolean().optional(),
 			width: z.number().positive().nullable().optional(),
 			align: z.enum(["left", "center", "right"]).optional(),
-			/** What of the picture shows, as parts of it. The original is never changed. */
-			crop: z
-				.object({
-					x: z.number().min(0).max(1),
-					y: z.number().min(0).max(1),
-					width: z.number().positive().max(1),
-					height: z.number().positive().max(1),
-				})
-				.optional(),
-			rotate: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
+			/** What of the picture shows, and how it is turned. The original is never changed. */
+			crop: ImageCropShape.optional(),
+			rotate: ImageRotateShape.optional(),
 		}),
 		holds: "nothing",
 		translate: { attrs: ["alt", "caption"] },

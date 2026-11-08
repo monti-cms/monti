@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import { altGaps } from "../media/alt";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
@@ -59,6 +60,16 @@ export async function publishTasks(
 				blocking: true,
 				message: { key: "entries.task.required", values: { field } },
 			});
+	// Images with nothing to say for them block the publish (doc 02, flow 1·10): one row, going to the first of them. `entries.missingAlt` lists them all.
+	const gaps = await altGaps(db, fields, read.values, entry.doc);
+	const [firstGap] = gaps;
+	if (firstGap)
+		tasks.push({
+			code: "missingAlt",
+			...("field" in firstGap.place ? { field: firstGap.place.field } : { field: "doc", block: firstGap.place.block }),
+			blocking: true,
+			message: { key: "entries.task.missingAlt", values: { count: gaps.length } },
+		});
 	if (slugTaken)
 		tasks.push({
 			code: "slugTaken",

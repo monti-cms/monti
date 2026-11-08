@@ -42,7 +42,13 @@ export {
 } from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";
-export { createReader, type ReaderOptions, type ResolvedRelation, type SiteEntry } from "./entries/reader";
+export {
+	createReader,
+	type ReaderOptions,
+	type ResolvedRelation,
+	type SiteEntry,
+	type SiteMedia,
+} from "./entries/reader";
 export type { Entry } from "./entries/record";
 export type { PublishCheck, PublishTask } from "./entries/tasks";
 export { type AdminApiOptions, createAdminApi } from "./entry/api";
@@ -66,6 +72,7 @@ export {
 	type MediaKind,
 	splitName,
 } from "./media/accept";
+export { type ImageCrop, type ImageFrame, type ImageRotate, imageFrame } from "./media/frame";
 export { localFolderStorage } from "./media/local-storage";
 export type {
 	MediaDetail,
@@ -74,6 +81,7 @@ export type {
 	MediaQueryResult,
 	MediaTrashResult,
 	MediaUseRow,
+	MissingAlt,
 } from "./media/operations";
 export { memoryStorage, type Storage } from "./media/storage";
 export { type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";

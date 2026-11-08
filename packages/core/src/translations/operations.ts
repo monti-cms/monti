@@ -151,12 +151,15 @@ export const translationOperations = [
 				type: "doc",
 				blocks: followed.blocks.map((block) => pairedCopy(block, newBlockId(), ctx.site.kit)),
 			};
-			// Per language: empty; from the source: the source's to start with; the same: never stored on a translation.
+			// Per language: empty; from the source: the source's to start with; the same: never stored on a translation. A media field starts empty too: an empty one
+			// follows the source (doc 09), and a copy would stop following it.
 			const fields = schema.collections[source.collection]?.fields ?? {};
 			const values = Object.fromEntries(
 				Object.entries(source.values).filter(([name]) => {
 					const definition = fields[name];
-					return definition !== undefined && localeModeOf(name, definition) === "fromSource";
+					return (
+						definition !== undefined && definition.kind !== "media" && localeModeOf(name, definition) === "fromSource"
+					);
 				}),
 			);
 			const id = randomUUID();

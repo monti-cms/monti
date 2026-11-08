@@ -2,10 +2,13 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
+import { loadEntries } from "../entries/record";
 import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
+import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import { isMediaKey, type MediaKind, splitName } from "./accept";
+import { altGaps } from "./alt";
 import { usedOf } from "./uses";
 import { type MediaPlace, placeOf } from "./value";
 
@@ -67,6 +70,17 @@ export type MediaUseRow =
 	| { owner: "template"; id: string; name: string; place: MediaPlace };
 
 export type MediaDetail = MediaItem & { useRows: MediaUseRow[]; trashedAt: string | null };
+
+/** An image with no alt text, and where. */
+export type MissingAlt = {
+	id: string;
+	collection: string;
+	locale: string;
+	title: string;
+	media: string;
+	name?: string | null;
+	place: MediaPlace;
+};
 
 /** What `media.trash` did: files in use stay. */
 export type MediaTrashResult = { moved: string[]; kept: string[] };
@@ -523,6 +537,56 @@ export const mediaOperations = [
 			key: "media.trash",
 			values: { moved: output.moved.length, kept: output.kept.length },
 		}),
+	}),
+	defineOperation({
+		name: "entries.missingAlt",
+		kind: "read",
+		description:
+			"The images with no alt text, entry by entry: where each sits (a field or a body block) and which file it shows. Read it before filling alt text; the alt text goes on the image in the entry, never in the library. Give ids, a collection, or neither for the whole site.",
+		input: z.object({ ids: z.array(z.string()).optional(), collection: z.string().optional() }),
+		async run(input, ctx): Promise<MissingAlt[]> {
+			const schema = ctx.site.schema();
+			let found = ctx.db.selectFrom("entries").select("id").where("trashed_at", "is", null);
+			if (input.ids)
+				found = input.ids.length > 0 ? found.where("id", "in", input.ids) : found.where(sql<boolean>`false`);
+			if (input.collection) found = found.where("collection", "=", input.collection);
+			const entries = await loadEntries(
+				ctx.db,
+				(await found.execute()).map((row) => row.id),
+			);
+			const missing: MissingAlt[] = [];
+			for (const entry of entries) {
+				const source = isTranslation(schema, entry)
+					? await sourceEntryOf(ctx.db, schema, entry.translationGroup)
+					: null;
+				const { values } = translatedFields(schema, entry.collection, entry, source);
+				const fields = schema.collections[entry.collection]?.fields ?? {};
+				for (const gap of await altGaps(ctx.db, fields, values, entry.doc))
+					missing.push({
+						id: entry.id,
+						collection: entry.collection,
+						locale: entry.locale,
+						title: entry.title,
+						...gap,
+					});
+			}
+			const names = new Map(
+				missing.length === 0
+					? []
+					: (
+							await ctx.db
+								.selectFrom("media")
+								.select(["id", "name"])
+								.where(
+									"id",
+									"in",
+									missing.map((gap) => gap.media),
+								)
+								.execute()
+						).map((row) => [row.id, row.name]),
+			);
+			return missing.map((gap) => ({ ...gap, name: names.get(gap.media) ?? null }));
+		},
 	}),
 ];
 
