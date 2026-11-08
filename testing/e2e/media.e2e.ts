@@ -273,3 +273,121 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 	await expect(page.getByRole("option", { name: /^이미지/ })).toBeHidden();
 	await context.close();
 });
+
+test.describe("while a file is on its way", () => {
+	test("09-1 leaving the library asks first; staying keeps the file going", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("held")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		let release = () => {};
+		const released = new Promise<void>((done) => {
+			release = done;
+		});
+		await admin.route("**/media/bytes*", async (route) => {
+			await released;
+			await route.continue();
+		});
+		await dropFromDisk(admin, [file], main(admin));
+		await expect(main(admin).getByText(/올리는 중/)).toBeVisible();
+		await admin.getByRole("button", { name: "memo", exact: true }).click();
+		const asked = admin.getByRole("alertdialog");
+		await expect(asked).toBeVisible();
+		await asked.getByRole("button", { name: "계속 고치기" }).click();
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		release();
+		await expect(tile(admin, file.split("/").at(-1) ?? "")).toBeVisible();
+	});
+
+	test("09-1 a request that never gets an answer stays to try again, and takes no place in the queue", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cut")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await dropFromDisk(admin, [file], main(admin));
+		await expect(main(admin).getByText("올리지 못했어요")).toBeVisible();
+		await admin.unroute("**/operations/media.upload");
+		await main(admin).getByRole("button", { name: "다시 올리기" }).click();
+		await expect(tile(admin, file.split("/").at(-1) ?? "")).toBeVisible();
+	});
+
+	test("09-3 undone while it goes and redone after it landed, the picture is there, and is saved", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("redo")}.png`);
+		const post = await writing(admin);
+		let release = () => {};
+		const released = new Promise<void>((done) => {
+			release = done;
+		});
+		await admin.route("**/operations/media.upload", async (route) => {
+			await released;
+			await route.continue();
+		});
+		await body(admin).getByText("글의 첫 문단이에요.").click();
+		await pastePicture(admin, file);
+		await expect(body(admin).getByRole("progressbar")).toBeVisible();
+		await admin.keyboard.press("ControlOrMeta+Z");
+		await expect(body(admin).getByRole("progressbar")).toBeHidden();
+		release();
+		const finished = admin.waitForResponse("**/operations/media.upload");
+		await finished;
+		await admin.keyboard.press("ControlOrMeta+Shift+Z");
+		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeVisible();
+		await saveKeys(admin);
+		const saved = (await (
+			await admin.request.post("/admin/api/operations/entries.get", { data: { input: { id: post.id } } })
+		).json()) as {
+			entry: { doc: { blocks: { type: string }[] } };
+		};
+		expect(saved.entry.doc.blocks.map((block) => block.type)).toContain("image");
+	});
+
+	test("09-3 a cover going up when the property panel closes still lands in its field", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cover")}.jpg`);
+		const name = file.split("/").at(-1) ?? "";
+		await writing(admin);
+		let release = () => {};
+		const released = new Promise<void>((done) => {
+			release = done;
+		});
+		await admin.route("**/media/bytes*", async (route) => {
+			await released;
+			await route.continue();
+		});
+		await admin.getByRole("button", { name: "cover", exact: true }).click();
+		const chooser = admin.waitForEvent("filechooser");
+		await admin.getByRole("dialog").getByRole("button", { name: "올리기" }).click();
+		await (await chooser).setFiles(file);
+		const properties = admin.getByRole("button", { name: "속성" });
+		await properties.click();
+		release();
+		await admin.waitForResponse("**/operations/media.upload");
+		await properties.click();
+		await expect(admin.getByRole("button", { name: "cover", exact: true })).toContainText(name);
+	});
+
+	test("09-1 a panel's changes made before someone else's rename are a conflict, not an overwrite", async ({
+		admin,
+	}, info) => {
+		const first = await picture(admin, info.outputDir, `${unique("mine")}.jpg`);
+		const name = first.split("/").at(-1) ?? "";
+		await admin.goto("/#/media");
+		await dropFromDisk(admin, [first], main(admin));
+		await expect(tile(admin, name)).toBeVisible();
+		const { items } = (await (
+			await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: name } } })
+		).json()) as { items: { id: string }[] };
+		const id = items[0]?.id ?? "";
+		await admin.goto(`/#/media?file=${id}`);
+		const panel = admin.getByRole("complementary");
+		await panel.getByRole("textbox", { name: "파일 이름" }).fill("mine");
+		await operation(admin, "media.update", { id, name: "theirs" });
+		// Any write of this page reads the file again.
+		await dropFromDisk(admin, [await picture(admin, info.outputDir, `${unique("other")}.jpg`)], main(admin));
+		await panel.getByRole("button", { name: "저장" }).click();
+		await expect(panel.getByText("다른 곳에서 먼저 바꿨어요")).toBeVisible();
+		await expect(panel.getByRole("textbox", { name: "파일 이름" })).toHaveValue("theirs");
+	});
+});

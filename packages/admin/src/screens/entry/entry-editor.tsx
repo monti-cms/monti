@@ -45,6 +45,7 @@ import { openImageCard } from "../../editor/media-context";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
+import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { SessionEndedBanner } from "../frame/session-ended";
@@ -118,6 +119,9 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
+	const fieldUploads = useFieldUploads((field, item, alt) =>
+		editor.set(`values.${field}`, { media: item.id, ...(alt ? { alt } : {}) }),
+	);
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
 	const archive = useOperation("entries.archive");
@@ -607,6 +611,7 @@ export function EntryEditor({
 						onTab={setTab}
 						readOnly={readOnly}
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
+						uploads={fieldUploads}
 					/>
 				) : null}
 			</Inline>

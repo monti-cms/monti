@@ -24,6 +24,8 @@ import {
 	IconButton,
 	Image,
 	Inline,
+	ProposalBubble,
+	ProposalBubbleDock,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -37,7 +39,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
@@ -193,8 +195,7 @@ export function MediaPanel({
 	const { t } = useAdmin();
 	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true });
 	const item = read.data;
-	const rename = useOperation<{ versions: Record<string, number | null> }>("media.update");
-	const move = useOperation("media.moveToFolder");
+	const update = useOperation("media.update");
 	const [replacing, setReplacing] = useState<File | null>(null);
 	const [refused, setRefused] = useState<string | null>(null);
 	const uses = useUseRows(item?.useRows ?? []);
@@ -210,28 +211,33 @@ export function MediaPanel({
 	}, []);
 	const draft = useDraft({ target, base, version: item?.version ?? null, proposalValues });
 	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll });
+	// The version these changes were made on, whatever was read since: saving over someone else's rename is a conflict, not a success.
+	const madeOn = useRef<number | null>(null);
+	if (!draft.dirty) madeOn.current = item?.version ?? null;
+	const [proposalAt, setProposalAt] = useState(0);
 	if (!item) return null;
 
 	const name = String(draft.value("name") ?? "");
 	const folder = String(draft.value("folder") ?? TOP);
 	const save = async () => {
 		setRefused(null);
-		let version = item.version;
-		const stem = splitName(item.name).stem;
-		if (name !== stem) {
-			const done = await rename.run({ id, name }, { versions: { [`media:${id}`]: version }, accepted: draft.accepted });
-			if (!done.ok) return setRefused(t(done.refusal.reason ?? "errors.unexpected"));
-			version = done.body.versions[`media:${id}`] ?? version;
+		const done = await update.run(
+			{
+				id,
+				...(name === splitName(item.name).stem ? {} : { name }),
+				...(folder === (item.folderId ?? TOP) ? {} : { folder: folder === TOP ? null : folder }),
+			},
+			{ versions: { [`media:${id}`]: madeOn.current ?? item.version }, accepted: draft.accepted },
+		);
+		if (done.ok) return draft.saved();
+		if (done.refusal.status === 409) {
+			draft.revertAll();
+			void read.reload();
+			return setRefused(t("library.conflict"));
 		}
-		if (folder !== (item.folderId ?? TOP)) {
-			const done = await move.run(
-				{ ids: [id], folder: folder === TOP ? null : folder },
-				{ versions: { [`media:${id}`]: version } },
-			);
-			if (!done.ok) return setRefused(t(done.refusal.reason ?? "errors.unexpected"));
-		}
-		draft.saved();
+		setRefused(t(done.refusal.reason ?? "errors.unexpected"));
 	};
+	const proposal = draft.proposals[Math.min(proposalAt, Math.max(0, draft.proposals.length - 1))];
 	const copy = async (text: string) => {
 		await navigator.clipboard.writeText(text);
 		toast(t("library.copied"));
@@ -293,6 +299,7 @@ export function MediaPanel({
 					id="monti-media-name"
 					size="md"
 					suffix={extension}
+					proposal={draft.cell("name").kind === "proposed"}
 					value={name}
 					onChange={(event) => draft.set("name", event.target.value)}
 				/>
@@ -366,6 +373,23 @@ export function MediaPanel({
 				)}
 			</FormField>
 			{replacing && <ReplaceDialog item={item} file={replacing} onClose={() => setReplacing(null)} />}
+			{proposal && (
+				<ProposalBubbleDock>
+					<ProposalBubble
+						name={proposal.item.request}
+						position={proposalAt + 1}
+						total={draft.proposals.length}
+						previousLabel={t("bubble.previous")}
+						nextLabel={t("bubble.next")}
+						onPrevious={() => setProposalAt((at) => (at - 1 + draft.proposals.length) % draft.proposals.length)}
+						onNext={() => setProposalAt((at) => (at + 1) % draft.proposals.length)}
+						discardAllLabel={t("bubble.discardAll")}
+						acceptAllLabel={t("bubble.acceptAll")}
+						onDiscardAll={() => void draft.discardAll()}
+						onAcceptAll={() => draft.acceptAll()}
+					/>
+				</ProposalBubbleDock>
+			)}
 		</SidePanel>
 	);
 }

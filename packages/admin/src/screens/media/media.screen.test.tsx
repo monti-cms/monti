@@ -93,6 +93,21 @@ describe("browsing", () => {
 		await expect.element(row).toHaveTextContent("2400×1600");
 	});
 
+	it("09-1 [flow 6·09, 6·10] the list view names a new folder and renames one in place", async () => {
+		await ListView.run();
+		await expect.element(main().getByRole("link", { name: "Blog Assets" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "더 만들기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "새 폴더" }));
+		await expect.element(page.getByRole("textbox", { name: "폴더 이름" })).toHaveValue("새 폴더");
+		await userEvent.keyboard("표지{Enter}");
+		await expect.element(main().getByRole("link", { name: "표지" })).toBeVisible();
+		await userEvent.click(main().getByRole("link", { name: "표지" }), { button: "right" });
+		await userEvent.click(page.getByRole("menuitem", { name: "이름 바꾸기" }));
+		await userEvent.fill(page.getByRole("textbox", { name: "폴더 이름" }), "대표");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(main().getByRole("link", { name: "대표" })).toBeVisible();
+	});
+
 	it("09-1 [flow 6·15] [korean] a search reaches the subfolders and can widen to every folder, each result saying where it is", async () => {
 		await openAssets();
 		await userEvent.click(main().getByRole("button", { name: "검색" }));

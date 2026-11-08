@@ -28,6 +28,7 @@ import {
 } from "@monti-cms/ui";
 import { Close, Renew } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
+import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
@@ -479,6 +480,7 @@ export function EntryProperties({
 	onTab,
 	readOnly,
 	shared,
+	uploads,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -488,6 +490,8 @@ export function EntryProperties({
 	readOnly: boolean;
 	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
 	shared?: Record<string, unknown> | null;
+	/** The files going up for the media fields: the editor's, so they outlive this panel. */
+	uploads: FieldUploads;
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -566,6 +570,8 @@ export function EntryProperties({
 				<MediaField
 					key={key}
 					id={id}
+					field={key}
+					uploads={uploads}
 					label={values[key]?.label ?? key}
 					required={marksRequired && required(key)}
 					accept={def.accept}

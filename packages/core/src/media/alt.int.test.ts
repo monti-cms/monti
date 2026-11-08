@@ -161,6 +161,21 @@ describe("a media field in a translation", () => {
 		expect((await siteEntry("en", slug)).values.cover).toEqual({ media: second.id, alt: "책상" });
 	});
 
+	it("04-5 the editor shows what the site shows: the source's published picture, not a save that is not out yet", async () => {
+		const [first, second] = [await upload("first.jpg"), await upload("second.jpg")];
+		const { source, translation, slug } = await translated(first.id);
+		await write("entries.save", {
+			id: source,
+			version: await versionOf(source),
+			values: { cover: { media: second.id, alt: "책상" } },
+		});
+		const compared = await read<{ source: { values: { cover: unknown } } }>("translations.compare", {
+			id: translation,
+		});
+		expect(compared.source.values.cover).toEqual({ media: first.id, alt: "책상" });
+		expect((await siteEntry("en", slug)).values.cover).toEqual({ media: first.id, alt: "책상" });
+	});
+
 	it("04-5 a translation's own picture or words are its own, and clearing them follows the source again", async () => {
 		const [first, own] = [await upload("first.jpg"), await upload("own.jpg")];
 		const { translation, slug } = await translated(first.id);
@@ -215,6 +230,20 @@ describe("in the entry list", () => {
 		expect(rows.find((row) => row.title === "표지 없음")?.media).toEqual({});
 		const empty = await list({ filters: [{ on: "empty", field: "cover" }] });
 		expect(empty.map((row) => row.title)).toEqual(["표지 없음"]);
+	});
+});
+
+describe("a crop", () => {
+	it("09-1 stays inside the picture", async () => {
+		const file = await upload("a.jpg");
+		const outside = post({
+			doc: doc(image("b1", file.id, { alt: "책상", crop: { x: 0.9, y: 0.9, width: 1, height: 1 } })),
+		});
+		await expect(outside).rejects.toThrow();
+		const inside = await post({
+			doc: doc(image("b1", file.id, { alt: "책상", crop: { x: 0.25, y: 0.25, width: 0.75, height: 0.75 } })),
+		});
+		expect(inside.id).toBeTypeOf("string");
 	});
 });
 

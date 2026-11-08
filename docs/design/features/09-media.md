@@ -176,7 +176,7 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 | `media.upload` | write · 사람만 | 파일을 올려 항목을 만든다 |
 | `media.query` | read | 폴더, 찾기(이름), 종류, 사용 여부, 정렬(최근 올린순, 이름, 크기) |
 | `media.get` | read | 항목 하나와 쓰는 곳 |
-| `media.update` | write | 이름 |
+| `media.update` | write | 이름과 폴더. 옆 패널의 저장 한 번이 쓰기 하나다 |
 | `entries.missingAlt` | read | 대체 텍스트가 빈 이미지를 글마다(자리, 파일) 찾는다 |
 | `media.replace` | write · 사람만 | 파일을 바꾼다. 쓰는 곳 수를 미리 보인다 |
 | `media.moveToFolder` | write | 여러 파일을 폴더로(07) |

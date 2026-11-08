@@ -12,7 +12,7 @@ import { AnswersInput, applySchema, checkApply, LocalesInput } from "../schema/o
 import { type Answers, planSchema } from "../schema/plan";
 import { changesSql, pendingSql, sourceJoin } from "./count";
 import { blockHash, marksOf, pairedCopy, type TranslationMark } from "./links";
-import { addSkips, followedDoc, isTranslation, rememberBlocks, sourceEntryOf } from "./source";
+import { addSkips, followedDoc, isTranslation, publishedOf, rememberBlocks, sourceEntryOf } from "./source";
 
 const ref = (id: string): RecordRef => ({ kind: "entry", id });
 
@@ -262,7 +262,8 @@ export const translationOperations = [
 					locale: source.locale,
 					title: source.title,
 					slug: source.slug,
-					values: source.values,
+					// What a translation's `same` and empty `fromSource` fields show: what the site shows (04-5).
+					values: (await publishedOf(ctx.db, source.id))?.values ?? source.values,
 					doc: followed,
 					publishedAt: published?.published_at ?? null,
 					updatedAt: source.updatedAt,

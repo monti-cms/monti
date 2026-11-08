@@ -236,6 +236,45 @@ describe("an image in the text", () => {
 		await expect.poll(() => Math.round(image().element().getBoundingClientRect().width)).toBe(Math.round(before - 16));
 	});
 
+	it("[keys-move] the crop is made and moved with the keyboard alone", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 돌리기" }));
+		await userEvent.click(page.getByRole("button", { name: "자를 곳 잡기" }));
+		const box = page.getByRole("button", { name: "자를 곳: 화살표로 옮기기" });
+		box.element().focus();
+		await userEvent.keyboard("{Shift>}{ArrowRight}{ArrowRight}{/Shift}");
+		const corner = page.getByRole("button", { name: "오른쪽 아래 모서리" });
+		corner.element().focus();
+		await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
+		await userEvent.click(page.getByRole("button", { name: "적용" }));
+		await expect.element(page.getByRole("heading", { name: "자르기와 돌리기" })).not.toBeInTheDocument();
+		// 80% wide of a 3:2 picture, 65% high.
+		await expect
+			.poll(() => {
+				const frame = image().element().parentElement?.getBoundingClientRect();
+				return frame ? Math.round((frame.width / frame.height) * 100) : 0;
+			})
+			.toBe(Math.round(((2400 * 0.8) / (1600 * 0.65)) * 100));
+	});
+
+	it("09-1 a crop dragged past the picture stays inside it, and the entry still saves", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 돌리기" }));
+		const sheet = page.getByRole("dialog");
+		await userEvent.click(sheet.getByRole("button", { name: "자를 곳 잡기" }));
+		const corner = sheet.getByRole("button", { name: "오른쪽 아래 모서리" }).element();
+		const box = corner.getBoundingClientRect();
+		corner.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: box.left, clientY: box.top }));
+		window.dispatchEvent(new PointerEvent("pointermove", { clientX: box.left + 2000, clientY: box.top + 2000 }));
+		window.dispatchEvent(new PointerEvent("pointerup", { clientX: box.left + 2000, clientY: box.top + 2000 }));
+		await userEvent.click(sheet.getByRole("button", { name: "적용" }));
+		await expect.element(sheet).not.toBeInTheDocument();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+	});
+
 	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());

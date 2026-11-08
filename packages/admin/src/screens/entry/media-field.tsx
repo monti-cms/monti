@@ -1,9 +1,10 @@
-import { type MediaDetail, type MediaItem, mediaValueOf } from "@monti-cms/core";
+import { type MediaDetail, mediaValueOf } from "@monti-cms/core";
 import { FormField, FormFieldError, FormFieldLabel, Input, MediaInput, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
-import { useUpload } from "../../media/use-upload";
+import { UploadProblem } from "../../media/upload-problem";
+import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 
@@ -17,15 +18,18 @@ const shownFile = (file: MediaDetail | null) =>
  */
 export function MediaField({
 	id,
+	field,
 	label,
 	required,
 	accept,
 	value,
 	source,
 	readOnly,
+	uploads,
 	onChange,
 }: {
 	id: string;
+	field: string;
 	label: string;
 	required: boolean;
 	accept?: "image" | "any";
@@ -33,6 +37,7 @@ export function MediaField({
 	/** What it follows while empty. */
 	source?: unknown;
 	readOnly: boolean;
+	uploads: FieldUploads;
 	onChange: (next: { media: string; alt?: string } | null) => void;
 }) {
 	const { t } = useAdmin();
@@ -42,10 +47,7 @@ export function MediaField({
 	const shown = own ?? followed;
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
 	const file = read.data?.id === shown?.media ? read.data : null;
-	const upload = useUpload({
-		onUploaded: (item: MediaItem) => onChange({ media: item.id, alt: own?.alt }),
-	});
-	const [going] = upload.uploads;
+	const going = uploads.of(field);
 	const isImage = file?.kind === "image";
 	const altMissing = isImage && !shown?.decorative && !shown?.alt?.trim();
 	return (
@@ -57,7 +59,7 @@ export function MediaField({
 				<MediaInput
 					id={id}
 					size="md"
-					following={followed !== null}
+					following={followed !== null && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
 					onOpen={readOnly ? undefined : () => setPicking(true)}
@@ -65,9 +67,7 @@ export function MediaField({
 					clearLabel={t("library.field.clear", { label })}
 				/>
 				{going?.problem && (
-					<FormFieldError>
-						{going.problem === "tooBig" ? t("library.failed.failed") : t(`library.failed.${going.problem}`)}
-					</FormFieldError>
+					<UploadProblem upload={going} onRemove={uploads.remove} onRetry={uploads.retry} onShrink={uploads.shrink} />
 				)}
 			</FormField>
 			{isImage && (
@@ -92,11 +92,12 @@ export function MediaField({
 					onClose={() => setPicking(false)}
 					onPick={(item) => {
 						setPicking(false);
+						uploads.clear(field);
 						onChange({ media: item.id, alt: own?.alt });
 					}}
-					onFiles={(files) => {
+					onFiles={([chosen]) => {
 						setPicking(false);
-						upload.add(files.slice(0, 1));
+						if (chosen) uploads.add(field, chosen, own?.alt);
 					}}
 				/>
 			)}

@@ -360,7 +360,8 @@ export const folderOperations = [
 		description:
 			"Move a folder, with everything in it, to the top level (`parentId` null) or into another folder of the same collection. Not into itself or its own subfolders. The entries' addresses do not change.",
 		input: z.object({ id: z.string(), parentId: z.string().nullable() }),
-		touches: (input) => [folderRef(input.id)],
+		// The new parent's lock too: a folder being removed either sees this one come in, or refuses it.
+		touches: (input) => [folderRef(input.id), ...(input.parentId ? [folderRef(input.parentId)] : [])],
 		async check(input, ctx) {
 			const folder = await folderOf(ctx.db, input.id);
 			await checkParent(ctx.db, folder.collection, input.parentId);
@@ -392,6 +393,8 @@ export const folderOperations = [
 		input: z.object({ id: z.string() }),
 		async touches(input, ctx) {
 			if (await isMediaFolder(ctx.db, input.id)) {
+				// The folders first: whatever moves in waits, so the files listed here, and snapshotted for the undo, are all there are (09-4).
+				await lockRecords(ctx.db, (await subtree(ctx.db, input.id)).map(folderRef));
 				const { folders, files } = await mediaRemoval(ctx.db, input.id);
 				return [...folders.map(folderRef), ...files.map(mediaRef)];
 			}
@@ -435,9 +438,7 @@ export const folderOperations = [
 			const folder = await folderOf(ctx.db, input.id);
 			const now = ctx.now();
 			if (folder.collection === null) {
-				// A file moved in since the engine took its locks is one of them now, before anyone reads who uses it: a save that starts using one is either seen here or
-				// waits and brings it back (09-4).
-				await lockRecords(ctx.db, (await mediaRemoval(ctx.db, input.id)).files.map(mediaRef));
+				// The engine has locked these files: a save that starts using one is either seen here or waits and brings it back (09-4).
 				const { gone, moved, used } = await mediaRemoval(ctx.db, input.id);
 				if (gone.length > 0)
 					await ctx.db

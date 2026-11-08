@@ -7,7 +7,7 @@ import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
-import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import { isMediaKey, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
 import { usedOf } from "./uses";
@@ -237,6 +237,8 @@ const Query = z.object({
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
 	page: z.number().int().positive().default(1),
+	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
+	pageSize: z.number().int().min(1).max(1000).default(MEDIA_PAGE_SIZE),
 	/** These files, wherever they are: what a screen asks when a body or a field names them. */
 	ids: z.array(z.string()).optional(),
 });
@@ -280,8 +282,8 @@ export const mediaOperations = [
 				.select(COLUMNS)
 				.select(usesCount.as("uses"))
 				.orderBy("id")
-				.limit(MEDIA_PAGE_SIZE)
-				.offset((input.page - 1) * MEDIA_PAGE_SIZE)
+				.limit(input.pageSize)
+				.offset((input.page - 1) * input.pageSize)
 				.execute();
 			const own =
 				input.folder === undefined || input.folder === null
@@ -301,7 +303,7 @@ export const mediaOperations = [
 				items: rows.map((row) => itemOf(row, ctx, pathOf)),
 				total: Number(total),
 				page: input.page,
-				pageSize: MEDIA_PAGE_SIZE,
+				pageSize: input.pageSize,
 				counts: {
 					image: Number(counted.image),
 					file: Number(counted.file),
@@ -412,23 +414,25 @@ export const mediaOperations = [
 		name: "media.update",
 		kind: "write",
 		description:
-			"Rename a file in the media library. Its extension stays. Alt text and captions are not here: they belong to the entries that use it.",
-		input: z.object({ id: z.string(), name: z.string().min(1) }),
-		touches: (input) => [mediaRef(input.id)],
+			"Rename a file in the media library, or put it in a folder (null is the top level), or both at once. Its extension stays. Alt text and captions are not here: they belong to the entries that use it.",
+		input: z.object({ id: z.string(), name: z.string().min(1).optional(), folder: z.string().nullable().optional() }),
+		touches: (input) => [...(input.folder ? [folderRef(input.folder)] : []), mediaRef(input.id)],
 		preview: (input) => ({
-			summary: { key: "media.update", values: { name: input.name } },
+			summary: { key: "media.update", values: { name: input.name ?? "" } },
 			changes: [mediaRef(input.id)],
 		}),
 		async check(input, ctx) {
 			const row = await liveRowOf(ctx.db, input.id);
-			cleanName(input.name, splitName(row.name).extension);
+			if (input.name !== undefined) cleanName(input.name, splitName(row.name).extension);
+			if (input.folder) await checkMediaFolder(ctx.db, input.folder);
 		},
 		async run(input, ctx): Promise<MediaItem> {
 			const row = await liveRowOf(ctx.db, input.id);
 			await ctx.db
 				.updateTable("media")
 				.set((eb) => ({
-					name: cleanName(input.name, splitName(row.name).extension),
+					...(input.name === undefined ? {} : { name: cleanName(input.name, splitName(row.name).extension) }),
+					...(input.folder === undefined ? {} : { folder_id: input.folder }),
 					version: eb("version", "+", 1),
 				}))
 				.where("id", "=", input.id)
@@ -567,7 +571,7 @@ export const mediaOperations = [
 			const missing: MissingAlt[] = [];
 			for (const entry of entries) {
 				const source = isTranslation(schema, entry)
-					? await sourceEntryOf(ctx.db, schema, entry.translationGroup)
+					? await followedFields(ctx.db, await sourceEntryOf(ctx.db, schema, entry.translationGroup))
 					: null;
 				const { values } = translatedFields(schema, entry.collection, entry, source);
 				const fields = schema.collections[entry.collection]?.fields ?? {};

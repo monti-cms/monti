@@ -22,6 +22,16 @@ export async function sourceEntryOf(db: Db, schema: Schema, group: string): Prom
 	return row ? ((await loadEntries(db, [row.id]))[0] ?? null) : null;
 }
 
+/**
+ * The source's fields as a translation follows them: what the site shows of it while it is on the site, its working copy until then. The editor, the to-do list and the
+ * site then say the same (doc 04, 04-5).
+ */
+export async function followedFields(db: Db, source: Entry | null): Promise<Fields | null> {
+	if (!source) return null;
+	const published = await publishedOf(db, source.id);
+	return published ? { title: published.title, slug: published.slug, values: published.values } : source;
+}
+
 /** What the site shows of an entry: its body and fields, or `null` when it is not on the site. */
 export async function publishedOf(
 	db: Db,

@@ -13,6 +13,10 @@ export type EditorMediaValue = {
 	remove: (upload: Upload) => void;
 	retry: (upload: Upload) => void;
 	shrink: (upload: Upload) => unknown;
+	/** Whether this file is still this page's, going up or stopped with its reason. */
+	holds: (id: string) => boolean;
+	/** What a finished upload became, for a block that comes back after it ended (undo, then redo). */
+	finished: (id: string) => MediaItem | undefined;
 	/** The block whose settings card is open. */
 	card: string | null;
 	setCard: (blockId: string | null) => void;

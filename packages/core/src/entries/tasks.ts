@@ -7,7 +7,7 @@ import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
 import { marksOf } from "../translations/links";
-import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import type { Entry } from "./record";
 
 type Awaitable<T> = T | Promise<T>;
@@ -50,7 +50,7 @@ export async function publishTasks(
 	const tasks: PublishTask[] = [];
 	// A translation's `same` fields are its source's, and an empty `fromSource` one is the source's too (doc 04).
 	const source = isTranslation(schema, entry) ? await sourceEntryOf(db, schema, entry.translationGroup) : null;
-	const read = translatedFields(schema, entry.collection, entry, source);
+	const read = translatedFields(schema, entry.collection, entry, await followedFields(db, source));
 	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
 	for (const [field, definition] of Object.entries(fields))
 		if ((definition.required || field === "slug") && isEmpty(fieldValue(field === "slug" ? entry : read, field)))

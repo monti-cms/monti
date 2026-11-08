@@ -59,8 +59,10 @@ import {
 } from "@monti-cms/ui";
 import { FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useState } from "react";
+import { useLeaveGuard } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
+import { useProblemActions, useProblemText } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
@@ -123,51 +125,29 @@ function UploadTile({
 	onShrink,
 }: {
 	upload: Upload;
-	onRemove: () => void;
-	onRetry: () => void;
-	onShrink: () => void;
+	onRemove: (upload: Upload) => void;
+	onRetry: (upload: Upload) => void;
+	onShrink: (upload: Upload) => unknown;
 }) {
 	const { t } = useAdmin();
-	const preview = upload.preview ? (
-		<Image src={upload.preview} alt="" ratio="photo" radius="none" />
-	) : (
-		<FilePreview ext={extensionLabel(upload.name)} />
-	);
-	const takeOut = { label: t("library.takeOut"), onClick: onRemove };
+	const problemText = useProblemText();
+	const actions = useProblemActions({ onRemove, onRetry, onShrink })(upload);
+	const noPicture = <FilePreview ext={extensionLabel(upload.name)} />;
+	const preview = upload.preview ? <Image src={upload.preview} alt="" ratio="photo" radius="none" /> : noPicture;
 	if (upload.status === "failed")
 		return (
 			<Tile
 				status="failed"
 				title={upload.name}
-				detail={t(upload.problem === "unreadable" ? "library.failed.unreadable" : "library.failed.type")}
-				preview={
-					upload.preview && upload.problem !== "unreadable" ? (
-						preview
-					) : (
-						<FilePreview ext={extensionLabel(upload.name)} />
-					)
-				}
-				actions={[takeOut]}
+				detail={problemText(upload)}
+				preview={upload.problem === "unreadable" ? noPicture : preview}
+				actions={actions}
 			/>
 		);
-	if (upload.status === "interrupted") {
-		const tooBig = upload.problem === "tooBig";
-		// Only a picture gets smaller: a file that is too big can only be taken out (doc 09, the way up).
-		const again = tooBig
-			? upload.kind === "image"
-				? [{ label: t("library.shrink"), onClick: onShrink, primary: true }]
-				: []
-			: [{ label: t("library.retry"), onClick: onRetry, primary: true }];
+	if (upload.status === "interrupted")
 		return (
-			<Tile
-				status="interrupted"
-				title={upload.name}
-				detail={tooBig ? t("library.failed.tooBig", { size: formatBytes(upload.size) }) : t("library.failed.failed")}
-				preview={preview}
-				actions={[...again, takeOut]}
-			/>
+			<Tile status="interrupted" title={upload.name} detail={problemText(upload)} preview={preview} actions={actions} />
 		);
-	}
 	return (
 		<Tile
 			status="uploading"
@@ -294,6 +274,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const read = useRead<MediaQueryResult>("media.query", queryOf(state), { afterWrites: true });
 	const folders = useFolders("media", true);
 	const upload = useUpload();
+	// Files on their way would stop if the screen went: leaving asks, as unsaved changes do (doc 05).
+	useLeaveGuard({
+		changes: upload.uploads.filter((each) => each.status === "waiting" || each.status === "uploading"),
+		revertAll: () => {
+			for (const each of upload.uploads) upload.remove(each);
+		},
+	});
 	const move = useMoveMedia();
 	const moveFolder = useOperation("folders.move");
 	const openFile = (id: string) => setState({ ...state, file: id });
@@ -609,9 +596,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						<UploadTile
 							key={each.id}
 							upload={each}
-							onRemove={() => upload.remove(each)}
-							onRetry={() => upload.retry(each)}
-							onShrink={() => void upload.shrink(each)}
+							onRemove={upload.remove}
+							onRetry={upload.retry}
+							onShrink={upload.shrink}
 						/>
 					))}
 					{items.map((item) => (
@@ -675,6 +662,16 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		<Stack gap={8} paddingTop={12} paddingX={12}>
 			<Table container="none">
 				<TableBody>
+					{naming.naming?.id === null && (
+						<TableRow>
+							<TableCell>
+								<RowThumb />
+							</TableCell>
+							<TableCell>
+								<RowTitle folder editing title={namingField} />
+							</TableCell>
+						</TableRow>
+					)}
 					{childFolders.map((folder) => (
 						<ContextMenu key={folder.id}>
 							<ContextMenuTrigger
@@ -684,15 +681,19 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 											<RowThumb />
 										</TableCell>
 										<TableCell>
-											<RowTitle
-												folder
-												title={
-													<RowLink href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}>
-														{folder.name}
-													</RowLink>
-												}
-												address={<Count>{folder.count}</Count>}
-											/>
+											{naming.naming?.id === folder.id ? (
+												<RowTitle folder editing title={namingField} />
+											) : (
+												<RowTitle
+													folder
+													title={
+														<RowLink href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}>
+															{folder.name}
+														</RowLink>
+													}
+													address={<Count>{folder.count}</Count>}
+												/>
+											)}
 										</TableCell>
 									</TableRow>
 								}
@@ -759,9 +760,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						<UploadTile
 							key={each.id}
 							upload={each}
-							onRemove={() => upload.remove(each)}
-							onRetry={() => upload.retry(each)}
-							onShrink={() => void upload.shrink(each)}
+							onRemove={upload.remove}
+							onRetry={upload.retry}
+							onShrink={upload.shrink}
 						/>
 					))}
 				</Grid>

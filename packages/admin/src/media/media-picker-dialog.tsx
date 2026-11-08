@@ -1,11 +1,14 @@
 import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
-import { FilePreview, Image, MediaPicker, Text, Tile } from "@monti-cms/ui";
+import { FilePreview, Image, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "./file-text";
+
+/** How many more files the window loads at a time. */
+const PAGE = 100;
 
 /**
  * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. An image's place shows images, a file's place files. Picking a tile and
@@ -30,10 +33,11 @@ export function MediaPickerDialog({
 	const [folder, setFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
 	const [picked, setPicked] = useState<MediaItem | null>(null);
+	const [shown, setShown] = useState(PAGE);
 	const folders = useFolders("media", true);
 	const read = useRead<MediaQueryResult>(
 		"media.query",
-		{ ...(folder === null ? {} : { folder }), search, kinds: kind === "any" ? [] : [kind] },
+		{ ...(folder === null ? {} : { folder }), search, kinds: kind === "any" ? [] : [kind], pageSize: shown },
 		{ afterWrites: true },
 	);
 	const items = read.data?.items ?? [];
@@ -50,11 +54,15 @@ export function MediaPickerDialog({
 			folder={folder}
 			onFolderChange={(next) => {
 				setPicked(null);
+				setShown(PAGE);
 				setFolder(next);
 			}}
 			foldersLabel={t("folders.tree")}
 			search={search}
-			onSearchChange={setSearch}
+			onSearchChange={(next) => {
+				setShown(PAGE);
+				setSearch(next);
+			}}
 			searchLabel={t("library.picker.search")}
 			uploadLabel={t("library.upload")}
 			onUpload={() =>
@@ -91,6 +99,9 @@ export function MediaPickerDialog({
 					}
 				/>
 			))}
+			{read.data && read.data.total > items.length && (
+				<TextButton onClick={() => setShown(shown + PAGE)}>{t("library.picker.more")}</TextButton>
+			)}
 		</MediaPicker>
 	);
 }

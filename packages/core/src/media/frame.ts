@@ -1,12 +1,15 @@
 import { z } from "zod";
 
 /** What of a picture shows, as parts of it after it is turned. An image block's `crop`. */
-export const ImageCropShape = z.object({
-	x: z.number().min(0).max(1),
-	y: z.number().min(0).max(1),
-	width: z.number().positive().max(1),
-	height: z.number().positive().max(1),
-});
+export const ImageCropShape = z
+	.object({
+		x: z.number().min(0).max(1),
+		y: z.number().min(0).max(1),
+		width: z.number().positive().max(1),
+		height: z.number().positive().max(1),
+	})
+	// Inside the picture, give or take what sums of fractions lose.
+	.refine((crop) => crop.x + crop.width <= 1.000001 && crop.y + crop.height <= 1.000001);
 export type ImageCrop = z.infer<typeof ImageCropShape>;
 
 /** An image block's `rotate`. */

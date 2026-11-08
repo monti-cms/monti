@@ -78,8 +78,10 @@ export function BodyEditor({
 	const [library, setLibrary] = useState<"image" | "file" | null>(null);
 	const slash = useSlashMenu({ catalogs, templates, editorRef, onLibrary: storage ? setLibrary : undefined });
 	// A file on its way up waits in its block; when the library has it, the block has it too, wherever it has moved since.
+	const finished = useRef(new Map<string, MediaItem>());
 	const upload = useUpload({
 		onUploaded: (item: MediaItem, done) => {
+			finished.current.set(done.id, item);
 			const view = editorRef.current;
 			if (!view || view.isDestroyed) return;
 			view.state.doc.descendants((node, pos) => {
@@ -130,10 +132,12 @@ export function BodyEditor({
 			remove: upload.remove,
 			retry: upload.retry,
 			shrink: upload.shrink,
+			holds: upload.holds,
+			finished: (id) => finished.current.get(id),
 			card,
 			setCard,
 		}),
-		[upload.uploads, upload.remove, upload.retry, upload.shrink, card],
+		[upload.uploads, upload.remove, upload.retry, upload.shrink, upload.holds, card],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);

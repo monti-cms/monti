@@ -46,13 +46,16 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 				dispatch({ type: "problem", id: upload.id, problem: put.problem, kind: put.kind });
 				return;
 			}
-			const made = await makeItem.run({
-				name: file.name,
-				folderId: upload.folder,
-				original: put.original,
-				...(put.web ? { web: put.web } : {}),
-			});
-			if (!made.ok) {
+			// A request that never got an answer throws: it is the same "try again" as one that was refused, and must not hold its place in the queue.
+			const made = await makeItem
+				.run({
+					name: file.name,
+					folderId: upload.folder,
+					original: put.original,
+					...(put.web ? { web: put.web } : {}),
+				})
+				.catch(() => null);
+			if (!made?.ok) {
 				dispatch({ type: "problem", id: upload.id, problem: "failed", kind: put.kind });
 				return;
 			}
@@ -119,5 +122,8 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 		dispatch({ type: "retry", id: upload.id, size: smaller.size, name: smaller.name });
 	}, []);
 
-	return { uploads, add, remove, retry, shrink, going: stillGoing(uploads) };
+	/** Whether this is still a file of this page: on its way, or stopped with its reason. */
+	const holds = useCallback((id: string) => files.current.has(id), []);
+
+	return { uploads, add, remove, retry, shrink, holds, going: stillGoing(uploads) };
 }

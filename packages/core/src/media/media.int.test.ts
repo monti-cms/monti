@@ -272,6 +272,27 @@ describe("changing", () => {
 		expect((await read<MediaDetail>("media.get", { id: file.id })).name).toBe("a-b.png.jpg");
 	});
 
+	it("09-1 a new name and a new folder go together in one write, or neither does", async () => {
+		const assets = await folder("Blog Assets");
+		const file = await upload("desk.jpg");
+		const { output, activityId } = await write<MediaItem>("media.update", {
+			id: file.id,
+			name: "morning",
+			folder: assets,
+		});
+		expect(output).toMatchObject({ name: "morning.jpg", folderId: assets });
+		await refused(write("media.update", { id: file.id, name: "noon", folder: "no-such-folder" }), "folders.unknown");
+		expect((await read<MediaDetail>("media.get", { id: file.id })).name).toBe("morning.jpg");
+		await write("activity.undo", { id: activityId });
+		expect(await read<MediaDetail>("media.get", { id: file.id })).toMatchObject({ name: "desk.jpg", folderId: null });
+	});
+
+	it("09-1 a window can ask for more than a page", async () => {
+		await upload("one.jpg");
+		await upload("two.jpg");
+		expect(await query({ pageSize: 1 })).toMatchObject({ pageSize: 1, total: 2, items: [expect.anything()] });
+	});
+
 	it("09-1 files move into a folder and back to the top, with the folder's count following; undo moves them back", async () => {
 		const assets = await folder("Blog Assets");
 		const one = await upload("one.jpg");

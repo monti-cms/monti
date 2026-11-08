@@ -1,4 +1,4 @@
-import { type ImageCrop, type ImageRotate, imageFrame, type MediaDetail } from "@monti-cms/core";
+import { type ImageCrop, type ImageRotate, imageFrame, type MediaDetail, type MediaItem } from "@monti-cms/core";
 import {
 	Button,
 	type CropGrip,
@@ -35,9 +35,10 @@ import { Crop, Reset, Settings, TextAlignCenter, TextAlignLeft, TextAlignRight }
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
+import { UploadProblem } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { EditorMedia, nextBlankImage, openImageCard } from "./media-context";
+import { EditorMedia, fileBlock, nextBlankImage, openImageCard } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
 type ImageData = {
@@ -60,17 +61,34 @@ const ALIGNS = [
 ] as const;
 const MIN_WIDTH = 80;
 
-/** A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. */
-function UploadInPlace({ id, onGone, isImage }: { id: string; onGone: () => void; isImage: boolean }) {
+/**
+ * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
+ * redo): it takes what the upload became, or goes if the file was taken out.
+ */
+function UploadInPlace({
+	id,
+	isImage,
+	onDone,
+	onGone,
+}: {
+	id: string;
+	isImage: boolean;
+	onDone: (item: MediaItem) => void;
+	onGone: () => void;
+}) {
 	const { t } = useAdmin();
 	const media = useContext(EditorMedia);
 	const upload = media?.uploads.find((each) => each.id === id);
+	const latest = useRef({ onDone, onGone });
+	latest.current = { onDone, onGone };
+	useEffect(() => {
+		if (!media || upload || media.holds(id)) return;
+		const item = media.finished(id);
+		if (item) latest.current.onDone(item);
+		else latest.current.onGone();
+	}, [media, upload, id]);
 	if (!media || !upload) return null;
-	const problem = upload.problem;
-	const takeOut = () => {
-		media.remove(upload);
-		onGone();
-	};
+	const { problem } = upload;
 	return (
 		<Stack gap={8}>
 			{isImage && (
@@ -88,18 +106,15 @@ function UploadInPlace({ id, onGone, isImage }: { id: string; onGone: () => void
 				/>
 			)}
 			{problem && (
-				<Inline gap={12}>
-					<Text variant="note" tone="danger">
-						{problem === "tooBig"
-							? t("library.failed.tooBig", { size: formatBytes(upload.size) })
-							: t(`library.failed.${problem}`)}
-					</Text>
-					{problem === "tooBig" && isImage && (
-						<TextButton onClick={() => void media.shrink(upload)}>{t("library.shrink")}</TextButton>
-					)}
-					{problem === "failed" && <TextButton onClick={() => media.retry(upload)}>{t("library.retry")}</TextButton>}
-					<TextButton onClick={takeOut}>{t("library.takeOut")}</TextButton>
-				</Inline>
+				<UploadProblem
+					upload={upload}
+					onRemove={(each) => {
+						media.remove(each);
+						onGone();
+					}}
+					onRetry={media.retry}
+					onShrink={media.shrink}
+				/>
 			)}
 		</Stack>
 	);
@@ -144,6 +159,25 @@ function movedCrop(start: CropRect, grip: CropGrip, dx: number, dy: number): Cro
 		grip === "sw" || grip === "se" ? clamp(start.y + start.height + dy, top + 5, 100) : start.y + start.height;
 	return { x: left, y: top, width: right - left, height: bottom - top };
 }
+
+/** A new crop drawn from one point to another, in %: never smaller than a handle can hold, and always inside the picture wherever the pointer went. */
+function drawnCrop(from: { x: number; y: number }, to: { x: number; y: number }): CropRect {
+	const x = clamp(Math.min(from.x, to.x), 0, 95);
+	const y = clamp(Math.min(from.y, to.y), 0, 95);
+	return {
+		x,
+		y,
+		width: clamp(Math.max(from.x, to.x) - x, 5, 100 - x),
+		height: clamp(Math.max(from.y, to.y) - y, 5, 100 - y),
+	};
+}
+
+const KEY_MOVES: Partial<Record<string, readonly [number, number]>> = {
+	ArrowLeft: [-1, 0],
+	ArrowRight: [1, 0],
+	ArrowUp: [0, -1],
+	ArrowDown: [0, 1],
+};
 
 /** "Crop and turn" (screens/editor.md): a sheet, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
 function CropSheet({
@@ -196,16 +230,7 @@ function CropSheet({
 				: (part ?? { x: 0, y: 0, width: 100, height: 100 });
 		const move = (next: PointerEvent) => {
 			const to = at(next.clientX, next.clientY);
-			setPart(
-				grip === "stage"
-					? {
-							x: clamp(Math.min(from.x, to.x), 0, 100),
-							y: clamp(Math.min(from.y, to.y), 0, 100),
-							width: Math.max(5, Math.abs(to.x - from.x)),
-							height: Math.max(5, Math.abs(to.y - from.y)),
-						}
-					: movedCrop(begun, grip, to.x - from.x, to.y - from.y),
-			);
+			setPart(grip === "stage" ? drawnCrop(from, to) : movedCrop(begun, grip, to.x - from.x, to.y - from.y));
 		};
 		const up = () => {
 			window.removeEventListener("pointermove", move);
@@ -213,6 +238,13 @@ function CropSheet({
 		};
 		window.addEventListener("pointermove", move);
 		window.addEventListener("pointerup", up);
+	};
+	const pressedKey = (event: React.KeyboardEvent, grip: CropGrip) => {
+		const move = KEY_MOVES[event.key];
+		if (!move || !part || grip === "stage") return;
+		event.preventDefault();
+		const step = event.shiftKey ? 5 : 1;
+		setPart(movedCrop(part, grip, move[0] * step, move[1] * step));
 	};
 	const turnBy = (quarter: 90 | -90) => {
 		setPart(undefined);
@@ -231,6 +263,8 @@ function CropSheet({
 						crop={part}
 						stageRef={stage}
 						onGrip={pressed}
+						onGripKey={pressedKey}
+						moveLabel={t("editor.crop.move")}
 						cornerLabels={{
 							nw: t("editor.crop.nw"),
 							ne: t("editor.crop.ne"),
@@ -241,10 +275,17 @@ function CropSheet({
 					<Inline gap={12}>
 						<TextButton onClick={() => turnBy(-90)}>{t("editor.crop.turnLeft")}</TextButton>
 						<TextButton onClick={() => turnBy(90)}>{t("editor.crop.turnRight")}</TextButton>
-						<TextButton onClick={() => setPart(undefined)}>
-							<Reset aria-hidden />
-							{t("editor.crop.whole")}
-						</TextButton>
+						{part ? (
+							<TextButton onClick={() => setPart(undefined)}>
+								<Reset aria-hidden />
+								{t("editor.crop.whole")}
+							</TextButton>
+						) : (
+							// The way into a crop without a pointer: then the box and its corners move with the arrows.
+							<TextButton onClick={() => setPart({ x: 10, y: 10, width: 80, height: 80 })}>
+								{t("editor.crop.start")}
+							</TextButton>
+						)}
 					</Inline>
 				</SheetBody>
 				<SheetFooter>
@@ -290,7 +331,12 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	if (uploading)
 		return (
 			<NodeViewWrapper data-block="image">
-				<UploadInPlace id={uploading} isImage onGone={deleteNode} />
+				<UploadInPlace
+					id={uploading}
+					isImage
+					onGone={deleteNode}
+					onDone={(done) => updateAttributes({ upload: null, data: fileBlock(done) })}
+				/>
 			</NodeViewWrapper>
 		);
 
@@ -494,7 +540,12 @@ function FileBlockView({ node, updateAttributes, deleteNode, editor }: NodeViewP
 	if (uploading)
 		return (
 			<NodeViewWrapper data-block="file">
-				<UploadInPlace id={uploading} isImage={false} onGone={deleteNode} />
+				<UploadInPlace
+					id={uploading}
+					isImage={false}
+					onGone={deleteNode}
+					onDone={(done) => updateAttributes({ upload: null, data: fileBlock(done) })}
+				/>
 			</NodeViewWrapper>
 		);
 	const item = file.data;

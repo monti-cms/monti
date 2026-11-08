@@ -360,6 +360,19 @@ describe("a file in use stays out of the trash", () => {
 		}
 	});
 
+	it("09-1 a move and a folder's removal at the same moment: whichever comes first, undoing the removal brings every file back", async () => {
+		for (let round = 0; round < 12; round++) {
+			const box = (await write("folders.create", { scope: "media", parentId: null, name: `통 ${round}` })).output.id;
+			const photo = await file();
+			const [, removed] = await Promise.all([
+				write("media.moveToFolder", { ids: [photo], folder: box }).catch(() => null),
+				write("folders.remove", { id: box }),
+			]);
+			await write("activity.undo", { id: removed.activityId });
+			expect(await trashed(photo)).toBe(false);
+		}
+	});
+
 	it("09-1 undoing a move into a folder that has gone since leaves the file at the top level, where it can be seen", async () => {
 		const box = (await write("folders.create", { scope: "media", parentId: null, name: "상자" })).output.id;
 		const photo = await file();
