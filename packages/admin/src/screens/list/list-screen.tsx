@@ -54,7 +54,14 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { ColumnMenu, useLanguageName } from "./column-menu";
-import { FolderMenuItems, FolderTargets, MoveToFolderMenu, useFolders, useRemoveFolder } from "./folders";
+import {
+	FolderMenuItems,
+	FolderTargets,
+	MoveToFolderMenu,
+	useFolderNaming,
+	useFolders,
+	useRemoveFolder,
+} from "./folders";
 import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -143,7 +150,7 @@ function DocumentListScreen({
 	const state = useMemo(() => readState(params, columns ?? []), [params, columns]);
 	// Folders (doc 07): on when the collection uses them (its admin value); the list then shows one folder at a time.
 	const foldersOn = schema.data?.adminValues[collection]?.folders === true;
-	const folders = useFolders(collection, foldersOn);
+	const folders = useFolders({ collection }, foldersOn);
 	const openFolder = foldersOn && state.folder ? (folders.byId.get(state.folder) ?? null) : null;
 	const query = useMemo(
 		() => toQuery(collection, state, pageSize, foldersOn),
@@ -271,13 +278,11 @@ function DocumentListScreen({
 		publish: useOperation<{ output: { published: string[]; blocked: string[] } }>("entries.publish"),
 		exportRows: useOperation<unknown>("entries.export"),
 		moveToFolder: useOperation("entries.moveToFolder"),
-		createFolder: useOperation<{ output: { id: string } }>("folders.create"),
-		renameFolder: useOperation("folders.rename"),
 		moveFolder: useOperation("folders.move"),
 	};
 	const removeFolder = useRemoveFolder();
-	/** A folder being named: a new one on top of the rows (`id` null) or one being renamed (flow 5·01, 5·04). */
-	const [naming, setNaming] = useState<{ id: string | null; name: string } | null>(null);
+	const folderName = useFolderNaming({ collection }, state.folder);
+	const { naming } = folderName;
 	const goFolder = (folder: string | null) =>
 		setState({
 			...state,
@@ -293,22 +298,11 @@ function DocumentListScreen({
 		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
 		setPicked(new Map());
 	};
-	const keepName = async (value: string) => {
-		const name = value.trim();
-		const target = naming;
-		setNaming(null);
-		if (!target || !name) return;
-		const result =
-			target.id === null
-				? await run.createFolder.run({ scope: { collection }, parentId: state.folder, name })
-				: await run.renameFolder.run({ id: target.id, name });
-		if (!result.ok) toast.error(t(result.refusal.reason ?? "errors.unexpected"));
-	};
 	const startNewFolder = () => {
 		// A new folder goes where the person is looking: a search or filter is cleared first (screens/list.md, new folder).
 		if (state.search.text || state.filters.length > 0)
 			setState({ ...state, page: 1, search: { ...state.search, text: "" }, filters: [], ai: [] });
-		setNaming({ id: null, name: t("folders.new") });
+		folderName.start();
 	};
 	const entryRoute = (row: ListRow): Route => ({ screen: "entry", collection, id: row.id });
 	const ids = (list: ListRow[]) => ({ ids: list.map((row) => row.id) });
@@ -689,9 +683,9 @@ function DocumentListScreen({
 	const namingField = (
 		<RenameField
 			value={naming?.name ?? ""}
-			onValueChange={(value) => setNaming((current) => (current ? { ...current, name: value } : current))}
-			onCommit={(value) => void keepName(value)}
-			onCancel={() => setNaming(null)}
+			onValueChange={folderName.type}
+			onCommit={(value) => void folderName.keep(value)}
+			onCancel={folderName.cancel}
 			label={t("folders.name")}
 		/>
 	);
@@ -710,7 +704,7 @@ function DocumentListScreen({
 					folder={folder}
 					folders={folders}
 					onOpen={() => goFolder(folder.id)}
-					onRename={() => setNaming({ id: folder.id, name: folder.name })}
+					onRename={() => folderName.start(folder)}
 					onMove={(parent) => void run.moveFolder.run({ id: folder.id, parentId: parent })}
 					onRemove={() => removeFolder.start(folder)}
 				/>

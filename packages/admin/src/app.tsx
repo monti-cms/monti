@@ -9,7 +9,7 @@ import {
 	type ScreenChannel,
 	useAdmin,
 } from "./operations/admin-context";
-import type { Transport } from "./operations/transport";
+import type { Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
 import { EntryEditor } from "./screens/entry/entry-editor";
@@ -17,6 +17,7 @@ import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
+import { MediaScreen } from "./screens/media/media-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
@@ -45,6 +46,8 @@ function placeOf(route: Route): Place | null {
 			return { collection: route.collection };
 		case "settings":
 			return "settings";
+		case "media":
+			return "media";
 		case "place":
 			return route.place;
 		// The entry and template editors are pages of their own, outside the frame: no row of the sidebar is theirs (doc 15).
@@ -61,7 +64,9 @@ const routeOf = (place: Place): Route =>
 			{ screen: "list", collection: place.collection, params: new URLSearchParams() }
 		: place === "settings"
 			? { screen: "settings" }
-			: { screen: "place", place };
+			: place === "media"
+				? { screen: "media", params: new URLSearchParams() }
+				: { screen: "place", place };
 
 function Signed() {
 	const { screen } = useAdmin();
@@ -130,7 +135,7 @@ function Signed() {
 	return (
 		<AdminFrame
 			open={placeOf(route)}
-			folder={route.screen === "list" ? route.params.get("folder") : null}
+			folder={route.screen === "list" || route.screen === "media" ? route.params.get("folder") : null}
 			onOpen={open}
 			onReview={() =>
 				leave(() => {
@@ -144,6 +149,8 @@ function Signed() {
 				<CollectionsScreen onOpen={open} review={review} />
 			) : route.screen === "place" && route.place === "tools" ? (
 				<TemplatesScreen onOpen={(id) => go({ screen: "template", id })} />
+			) : route.screen === "media" ? (
+				<MediaScreen params={route.params} go={go} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}
@@ -181,6 +188,7 @@ function Gate({ denied }: { denied?: string }) {
  */
 export function MontiAdmin({
 	transport,
+	uploader,
 	siteName,
 	language = "ko",
 	apiBase,
@@ -189,6 +197,8 @@ export function MontiAdmin({
 	blocks,
 }: {
 	transport: Transport;
+	/** How file bytes go up (doc 09); over HTTP at `apiBase` when left out. */
+	uploader?: Uploader;
 	siteName: string;
 	language?: Language;
 	apiBase?: string;
@@ -202,6 +212,7 @@ export function MontiAdmin({
 	return (
 		<AdminProvider
 			transport={transport}
+			uploader={uploader}
 			siteName={siteName}
 			language={language}
 			apiBase={apiBase}

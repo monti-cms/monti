@@ -9,6 +9,13 @@ export {
 	type ScreenChannel,
 	useAdmin,
 } from "./operations/admin-context";
-export { type Answer, type CallOptions, httpTransport, type Transport } from "./operations/transport";
+export {
+	type Answer,
+	type CallOptions,
+	httpTransport,
+	httpUploader,
+	type Transport,
+	type Uploader,
+} from "./operations/transport";
 export { type Refusal, useOperation, useRead } from "./operations/use-operation";
 export { type AuthState, useSession } from "./session";

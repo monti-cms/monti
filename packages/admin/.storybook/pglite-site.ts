@@ -6,12 +6,14 @@ import {
 	type Database,
 	type Monti,
 	type MontiOptions,
+	memoryStorage,
 	migrateContent,
 	migrateToLatest,
 	type Schema,
+	type Storage,
 } from "@monti-cms/core";
 import { Kysely, PostgresDialect } from "kysely";
-import type { Transport } from "../src/operations/transport";
+import type { Transport, Uploader } from "../src/operations/transport";
 
 /** Kysely on PGlite: one connection, so a query waits for the one before it (a transaction holds it until it ends). */
 function pgliteDialect(pg: PGlite) {
@@ -42,7 +44,14 @@ function pgliteDialect(pg: PGlite) {
 	});
 }
 
-export type StorySite = { monti: Monti; transport: Transport; db: Kysely<Database> };
+export type StorySite = {
+	monti: Monti;
+	transport: Transport;
+	uploader: Uploader;
+	db: Kysely<Database>;
+	/** Where its files are: in memory, with addresses the page can load. `null` for a site with no storage. */
+	storage: Storage | null;
+};
 
 /**
  * A whole site in the browser for a story (build.md rule 6): Postgres on PGlite, the core's real operations and the real admin API, so a story runs
@@ -52,23 +61,39 @@ export async function storySite({
 	schema,
 	setup,
 	signedIn = false,
+	storage = memoryStorage(),
+	plugins = [],
 	...options
 }: Partial<MontiOptions> & {
 	schema: Schema;
-	setup?: (monti: Monti) => Promise<void>;
+	setup?: (monti: Monti, storage: Storage | null) => Promise<void>;
 	signedIn?: boolean;
+	storage?: Storage | null;
 }): Promise<StorySite> {
 	// Search uses trigram indexes (doc 06), as on the live site's Postgres.
 	const db = new Kysely<Database>({ dialect: pgliteDialect(new PGlite({ extensions: { pg_trgm } })) });
 	await migrateToLatest(db);
 	await migrateContent(db, schema, []);
-	const monti = createMonti({ db, schema, files: null, ...options });
-	await setup?.(monti);
+	const monti = createMonti({
+		db,
+		schema,
+		files: null,
+		plugins: storage ? [...plugins, { name: "story-files", storage }] : plugins,
+		...options,
+	});
+	await setup?.(monti, storage);
 	const api = createAdminApi(monti);
 	let token: string | null = null;
 	const transport: Transport = async (name, input, options = {}) => {
 		const answer = await api.call(name, { input, ...options }, token);
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
+		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
+	};
+	// The byte route with the session this page holds. A story's bar moves as a real upload's does.
+	const uploader: Uploader = async (file, { name, onProgress }) => {
+		onProgress?.(50);
+		const answer = await api.upload(new Uint8Array(await file.arrayBuffer()), name, token);
+		onProgress?.(100);
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
 	if (signedIn) {
@@ -79,7 +104,7 @@ export async function storySite({
 		});
 		if (made.status !== 200) await transport("auth.signIn", { email: "me@example.dev", password: "story password" });
 	}
-	return { monti, transport, db };
+	return { monti, transport, uploader, db, storage };
 }
 
 /**

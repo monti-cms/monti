@@ -8,7 +8,7 @@ import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
-import { isMediaKey, type MediaKind, splitName } from "./accept";
+import { isMediaKey, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
 import { usedOf } from "./uses";
 import { type MediaPlace, placeOf } from "./value";
@@ -86,9 +86,6 @@ export type MissingAlt = {
 
 /** What `media.trash` did: files in use stay. */
 export type MediaTrashResult = { moved: string[]; kept: string[] };
-
-/** The longest side of an image's web size (doc 09). */
-const WEB_LONGEST_SIDE = 2400;
 
 const Size = z.number().int().positive();
 const Original = z.object({ key: z.string(), width: Size.optional(), height: Size.optional() });

@@ -1,4 +1,4 @@
-import type { FolderNode } from "@monti-cms/core";
+import type { FolderNode, FolderRemoval } from "@monti-cms/core";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,7 +26,10 @@ import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 
-/** A collection's folders (doc 07): the tree in order, and the ways to read it. */
+/** Whose folders (doc 07, principle 2: one shape for both): a collection's entries, or the media library's files. */
+export type FolderScope = { collection: string } | "media";
+
+/** A collection's or the library's folders (doc 07): the tree in order, and the ways to read it. */
 export type Folders = {
 	list: FolderNode[];
 	byId: Map<string, FolderNode>;
@@ -36,13 +39,9 @@ export type Folders = {
 	children: (id: string | null) => FolderNode[];
 };
 
-/** The folders of a collection, read again after every write (a move changes the counts). Off when the collection does not use folders. */
-export function useFolders(collection: string, on: boolean): Folders {
-	const read = useRead<{ folders: FolderNode[] }>(
-		"folders.tree",
-		{ scope: { collection } },
-		{ afterWrites: true, skip: !on },
-	);
+/** The folders of a scope, read again after every write (a move changes the counts). Off when a collection does not use folders. */
+export function useFolders(scope: FolderScope, on: boolean): Folders {
+	const read = useRead<{ folders: FolderNode[] }>("folders.tree", { scope }, { afterWrites: true, skip: !on });
 	return useMemo(() => {
 		const list = on ? (read.data?.folders ?? []) : [];
 		const byId = new Map(list.map((folder) => [folder.id, folder]));
@@ -53,6 +52,34 @@ export function useFolders(collection: string, on: boolean): Folders {
 		};
 		return { list, byId, path, children: (id) => list.filter((folder) => folder.parentId === id) };
 	}, [on, read.data]);
+}
+
+/**
+ * A folder being named (flow 5·01, 5·04, 6·09): a new one where the person is (`id` null), or one being renamed. Enter or leaving keeps the name, Esc drops it, and the
+ * server says if the name is taken.
+ */
+export function useFolderNaming(scope: FolderScope, parentId: string | null) {
+	const { t } = useAdmin();
+	const create = useOperation<{ output: { id: string } }>("folders.create");
+	const rename = useOperation("folders.rename");
+	const [naming, setNaming] = useState<{ id: string | null; name: string } | null>(null);
+	const keep = async (value: string) => {
+		const name = value.trim();
+		const target = naming;
+		setNaming(null);
+		if (!target || !name) return;
+		const result =
+			target.id === null ? await create.run({ scope, parentId, name }) : await rename.run({ id: target.id, name });
+		if (!result.ok) toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+	};
+	return {
+		naming,
+		start: (folder?: { id: string; name: string }) =>
+			setNaming(folder ? { id: folder.id, name: folder.name } : { id: null, name: t("folders.new") }),
+		type: (name: string) => setNaming((current) => (current ? { ...current, name } : current)),
+		keep,
+		cancel: () => setNaming(null),
+	};
 }
 
 /** A folder's name with the folders above it, for a menu where nested names would read alike: "Series / drafts". */
@@ -172,18 +199,22 @@ export function FolderMenuItems({
 
 /**
  * Removing a folder (doc 07, flow 5·05–06): a folder with published entries asks first, saying how many go off the site; a folder of drafts goes
- * at once. Either way the toast takes it back.
+ * at once. Either way the toast takes it back. A media folder never asks (flow 6·11), and files in use stay with it: then the toast shows it (`onKept`, flow 6·12).
  */
-export function useRemoveFolder() {
+export function useRemoveFolder({ onKept }: { onKept?: (folder: FolderNode) => void } = {}) {
 	const { t } = useAdmin();
-	const remove = useOperation<{ activityId: string }>("folders.remove");
+	const remove = useOperation<{ activityId: string; output: FolderRemoval }>("folders.remove");
 	const undo = useOperation("activity.undo");
 	const [asking, setAsking] = useState<FolderNode | null>(null);
 	const run = async (folder: FolderNode) => {
 		setAsking(null);
 		const result = await remove.run({ id: folder.id });
 		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
-		const { activityId } = result.body;
+		const { activityId, output } = result.body;
+		if (output.kept > 0)
+			return void toast(t("library.keptFolder", { moved: output.moved, kept: output.kept }), {
+				action: { label: t("library.show"), onClick: () => onKept?.(folder) },
+			});
 		toast(t("folders.removed", { name: folder.name }), {
 			action: { label: t("settings.undo"), onClick: () => void undo.run({ id: activityId }) },
 		});

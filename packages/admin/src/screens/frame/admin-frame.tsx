@@ -1,3 +1,4 @@
+import type { FolderNode } from "@monti-cms/core";
 import {
 	Count,
 	folderTree,
@@ -25,10 +26,12 @@ import {
 } from "@monti-cms/ui";
 import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { useFolderDrop } from "../../media/use-file-drop";
+import { useMoveMedia } from "../../media/use-media-actions";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href } from "../../route";
-import { useFolders } from "../list/folders";
+import { type FolderScope, useFolders } from "../list/folders";
 import { SchemaBanner } from "./schema-banner";
 import { SessionEndedBanner } from "./session-ended";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
@@ -101,28 +104,52 @@ function Row({
  * The open collection's folders under its row (doc 07, sidebar.md): a row opens its folder, the open one is picked. Deeper than four levels is drawn
  * at the fourth.
  */
-function FolderTree({ collection, open, on }: { collection: string; open: string | null; on: boolean }) {
+function FolderTree({ scope, open, on }: { scope: FolderScope; open: string | null; on: boolean }) {
 	const { t } = useAdmin();
-	const folders = useFolders(collection, on);
+	const folders = useFolders(scope, on);
 	if (folders.list.length === 0) return null;
 	const tree = folderTree(folders.list.map((folder) => Math.min(folder.depth, 3)));
 	return (
 		<SidebarMenuSub aria-label={t("folders.tree")}>
 			{folders.list.map((folder, index) => (
-				<li key={folder.id}>
-					<SidebarMenuSubButton
-						href={href({ screen: "list", collection, params: new URLSearchParams({ folder: folder.id }) })}
-						isActive={folder.id === open}
-						aria-current={folder.id === open ? "page" : undefined}
-						depth={Math.min(folder.depth, 3) as 0 | 1 | 2 | 3}
-						tree={tree[index]}
-					>
-						<span>{folder.name}</span>
-						{folder.count > 0 ? <Count>{folder.count}</Count> : null}
-					</SidebarMenuSubButton>
-				</li>
+				<FolderTreeRow key={folder.id} folder={folder} scope={scope} open={folder.id === open} tree={tree[index]} />
 			))}
 		</SidebarMenuSub>
+	);
+}
+
+/** One folder of the tree. In the media library's it is also a place to drop files on, as a folder tile is (flow 6, doc 07). */
+function FolderTreeRow({
+	folder,
+	scope,
+	open,
+	tree,
+}: {
+	folder: FolderNode;
+	scope: FolderScope;
+	open: boolean;
+	tree: ReturnType<typeof folderTree>[number] | undefined;
+}) {
+	const move = useMoveMedia();
+	const drop = useFolderDrop({ onMove: (ids) => void move(ids, folder.id) });
+	const params = new URLSearchParams({ folder: folder.id });
+	return (
+		<li>
+			<SidebarMenuSubButton
+				href={href(
+					scope === "media" ? { screen: "media", params } : { screen: "list", collection: scope.collection, params },
+				)}
+				isActive={open}
+				aria-current={open ? "page" : undefined}
+				depth={Math.min(folder.depth, 3) as 0 | 1 | 2 | 3}
+				tree={tree}
+				dropTarget={scope === "media" && drop.target}
+				{...(scope === "media" ? drop.handlers : {})}
+			>
+				<span>{folder.name}</span>
+				{folder.count > 0 ? <Count>{folder.count}</Count> : null}
+			</SidebarMenuSubButton>
+		</li>
 	);
 }
 
@@ -181,10 +208,16 @@ export function AdminFrame({
 											count={counts?.collections[name]}
 											onOpen={onOpen}
 										>
-											<FolderTree collection={name} open={folder} on={state?.adminValues[name]?.folders === true} />
+											<FolderTree
+												scope={{ collection: name }}
+												open={folder}
+												on={state?.adminValues[name]?.folders === true}
+											/>
 										</Row>
 									))}
-									<Row place="media" open={open} icon={<Image />} name={t("frame.media")} onOpen={onOpen} />
+									<Row place="media" open={open} icon={<Image />} name={t("frame.media")} onOpen={onOpen}>
+										<FolderTree scope="media" open={folder} on />
+									</Row>
 								</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>

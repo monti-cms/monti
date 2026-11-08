@@ -3,6 +3,9 @@
 /** The largest file the library takes. */
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+/** The longest side of an image's web size (doc 09). */
+export const WEB_LONGEST_SIDE = 2400;
+
 export type MediaKind = "image" | "file";
 
 /** What a file is, by its bytes and name. */
@@ -14,6 +17,9 @@ export type Acceptance =
 	| { ok: false; reason: "type" }
 	/** A kind it takes, over the limit. The kind says whether shrinking can help. */
 	| ({ ok: false; reason: "size" } & Identified);
+
+/** What a file chooser offers. It is a hint: what the library takes is `acceptFile`'s to say, and a file it refuses stays on the page with the reason (flow 6·04). */
+export const FILE_CHOOSER_ACCEPT = "image/*,.pdf,.zip,.txt,.md,.csv";
 
 /** How much of a file the check needs from its start. */
 export const HEAD_BYTES = 4096;

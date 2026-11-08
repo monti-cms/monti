@@ -62,15 +62,17 @@ export {
 	type MontiError,
 	UnknownOperationError,
 } from "./errors";
-export type { FolderNode } from "./folders/operations";
+export type { FolderNode, FolderRemoval } from "./folders/operations";
 export { canonical, sameJson } from "./json";
 export {
 	type Acceptance,
 	acceptFile,
+	FILE_CHOOSER_ACCEPT,
 	HEAD_BYTES,
 	MAX_UPLOAD_BYTES,
 	type MediaKind,
 	splitName,
+	WEB_LONGEST_SIDE,
 } from "./media/accept";
 export { type ImageCrop, type ImageFrame, type ImageRotate, imageFrame } from "./media/frame";
 export { localFolderStorage } from "./media/local-storage";
