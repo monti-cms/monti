@@ -560,7 +560,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			)}
 			<PageToolbarEnd>
 				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton filled />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
+					<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuRadioGroup
 							value={state.sort}
@@ -696,7 +696,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				<TableBody>
 					{naming.naming?.id === null && (
 						<TableRow>
-							<TableCell>
+							<TableCell width="xs">
 								<RowThumb>
 									<Folder aria-hidden size={16} />
 								</RowThumb>
@@ -711,7 +711,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuTrigger
 								render={
 									<TableRow>
-										<TableCell>
+										<TableCell width="xs">
 											<RowThumb>
 												<Folder aria-hidden size={16} />
 											</RowThumb>
@@ -741,7 +741,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuTrigger
 								render={
 									<TableRow data-state={state.file === item.id ? "selected" : undefined}>
-										<TableCell>
+										<TableCell width="xs">
 											<RowThumb>
 												<Image
 													src={item.kind === "image" ? previewUrl(item) : null}
@@ -815,7 +815,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const pages = data ? Math.ceil(data.total / data.pageSize) : 1;
 
 	return (
-		<>
+		<Inline align="stretch" gap={0} grow minHeight={0}>
 			<PageColumn width="list">
 				<PageHeader
 					title={here?.name ?? t("frame.media")}
@@ -868,6 +868,6 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					}}
 				/>
 			)}
-		</>
+		</Inline>
 	);
 }

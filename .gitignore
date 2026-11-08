@@ -13,6 +13,11 @@ next-env.d.ts
 
 # Tests
 coverage
+# The usability test: its files, and the shots and videos of a run (the report stays)
+testing/usability/files
+.usability/**/*.png
+.usability/**/*.webm
+.usability/*/input.log
 # Browser tests (L3, L4): the screenshot of a failed test and its attachments
 **/__screenshots__
 **/.vitest-attachments

@@ -248,6 +248,7 @@ export function MediaPanel({
 		<SidePanel
 			width="side"
 			title={item.name}
+			closable
 			onClose={onClose}
 			actions={
 				<DropdownMenu>

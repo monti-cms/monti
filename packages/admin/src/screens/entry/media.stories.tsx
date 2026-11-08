@@ -70,22 +70,27 @@ export const WithImage: Story = {
 	}),
 };
 
-/** Flow 6·06: the picture picked, its tools and settings card open. */
-export const ImageTools: Story = {
-	...WithImage,
-	play: async () => {
-		const page = within(document.body);
-		await userEvent.click(await page.findByRole("img", { name: "아침 책상" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
-	},
+/** Goes to the body's image the way a to-do row does: it is picked, with its settings card open. */
+const toTheImage = async () => {
+	const page = within(document.body);
+	await userEvent.click(await page.findByRole("button", { name: /할 일/ }, wait));
+	await userEvent.click(await page.findByRole("button", { name: /대체 텍스트 넣기/ }, wait));
+	await page.findByRole("toolbar", {}, wait);
 };
+const blankImage = entry({
+	body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk } }],
+});
+
+/** Flow 6·06, 1·12: the picture picked, its tools and settings card open. */
+export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
 /** The crop sheet, a part chosen. */
 export const CropSheet: Story = {
-	...WithImage,
+	loaders: blankImage,
 	play: async () => {
+		await toTheImage();
 		const page = within(document.body);
-		await userEvent.click(await page.findByRole("img", { name: "아침 책상" }, wait));
+		await userEvent.keyboard("{Escape}");
 		await userEvent.click(await page.findByRole("button", { name: "자르기와 회전" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "자를 곳 잡기" }, wait));
 	},

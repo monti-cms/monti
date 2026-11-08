@@ -18,7 +18,10 @@
 		"check:operations": "node scripts/check-operations.mjs",
 		"test": "pnpm --filter @monti-cms/core --filter @monti-cms/admin test",
 		"test:browser": "pnpm --filter @monti-cms/ui test:browser && pnpm --filter @monti-cms/admin test:screen",
-		"test:e2e": "playwright test --config testing/e2e/playwright.config.ts"
+		"test:e2e": "playwright test --config testing/e2e/playwright.config.ts",
+		"usability:server": "E2E_SEED=1 E2E_SCHEMA=monti_usability vite --config testing/e2e/vite.config.ts --port 4173 --strictPort",
+		"usability:files": "node testing/usability/files.ts",
+		"usability:driver": "node testing/usability/driver.ts http://localhost:4173"
 	},
 	"lint-staged": {
 		"*": [

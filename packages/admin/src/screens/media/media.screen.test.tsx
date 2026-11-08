@@ -223,6 +223,19 @@ describe("a file", () => {
 		await expect.element(panel.getByText(/대체 텍스트|캡션/)).not.toBeInTheDocument();
 	});
 
+	it("[overflow-after-add] the panel stands beside the grid, all of it inside the window, and the grid makes room", async () => {
+		await openAssets();
+		await userEvent.click(tile("cybersecurity-code.jpg"));
+		const panel = page.getByRole("complementary").element().getBoundingClientRect();
+		const picked = tile("cybersecurity-code.jpg").element().getBoundingClientRect();
+		expect(panel.left).toBeGreaterThanOrEqual(picked.right);
+		expect(panel.top).toBeLessThan(picked.bottom);
+		expect(panel.right).toBeLessThanOrEqual(window.innerWidth);
+		expect(scrollsSideways(main().element())).toEqual([]);
+		await userEvent.click(page.getByRole("complementary").getByRole("button", { name: "닫기" }));
+		await expect.element(page.getByRole("complementary")).not.toBeInTheDocument();
+	});
+
 	it("09-1 a new name is saved with the extension kept, and only after pressing save", async () => {
 		await openAssets();
 		await userEvent.click(tile("seoul-night.jpg"));

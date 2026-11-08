@@ -49,6 +49,52 @@ async function emptyDatabase(name: string): Promise<Kysely<Database>> {
 	return db;
 }
 
+/** A little to start from, for the usability test: names as a person would have them, a folder, and entries to put pictures in. It goes through the same operations. */
+async function seed(monti: ReturnType<typeof createMonti>) {
+	const admin = { actor: "admin" } as const;
+	await monti.run(
+		"collections.updateAdminValues",
+		{
+			collection: "post",
+			values: { label: "게시글", fields: { cover: { label: "대표 이미지" }, summary: { label: "요약" } } },
+		},
+		admin,
+	);
+	await monti.run("collections.updateAdminValues", { collection: "memo", values: { label: "메모" } }, admin);
+	await monti.run("collections.updateAdminValues", { collection: "category", values: { label: "카테고리" } }, admin);
+	await monti.run("folders.create", { scope: "media", parentId: null, name: "covers" }, admin);
+	await monti.run("folders.create", { scope: "media", parentId: null, name: "Blog Assets" }, admin);
+	const paragraph = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
+	const made = (await monti.run(
+		"entries.create",
+		{
+			collection: "post",
+			locale: "ko",
+			title: "아침의 책상",
+			slug: "morning-desk",
+			doc: {
+				type: "doc",
+				blocks: [
+					paragraph("p1", "블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다."),
+					{
+						id: "l1",
+						type: "bulletList",
+						children: [{ id: "li1", type: "listItem", content: [{ type: "text", text: "덜어낸 것" }] }],
+					},
+					paragraph("p2", "편집기도 같은 원칙으로 정리했다."),
+				],
+			},
+		},
+		admin,
+	)) as { output: { id: string } };
+	await monti.run("entries.publish", { ids: [made.output.id] }, admin);
+	await monti.run(
+		"entries.create",
+		{ collection: "post", locale: "ko", title: "두 번째 글", slug: "second-post" },
+		admin,
+	);
+}
+
 /**
  * The small server the e2e tests and the usability driver run on, until a site can be mounted for real (T13): the real admin API on real Postgres.
  * `handle` answers what is the server's and returns `null` for what Vite serves (the admin's page).
@@ -67,6 +113,7 @@ export async function startSite() {
 				];
 	const monti = createMonti({ db, schema, files: null, auth: { password: true }, secret: SECRET, plugins });
 	await monti.run("auth.createFirstAdmin", { ...ADMIN, confirm: ADMIN.password }, { actor: "admin" });
+	if (process.env.E2E_SEED === "1") await seed(monti);
 	const api = createAdminApi(monti, { adminPath: "/" });
 	const reader = createReader({ db, schema, secret: SECRET, storage: monti.site.storage });
 
