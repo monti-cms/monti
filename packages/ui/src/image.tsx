@@ -51,6 +51,7 @@ function Image({
 	className,
 	loading = "lazy",
 	onLoad,
+	frame,
 }: VariantProps<typeof frameVariants> & {
 	src?: string | null;
 	alt: string;
@@ -59,6 +60,14 @@ function Image({
 	loading?: "lazy" | "eager";
 	/** The picture has loaded (its natural size is on `event.currentTarget`). */
 	onLoad?: React.ReactEventHandler<HTMLImageElement>;
+	/**
+	 * A cropped or turned picture (the core's `imageFrame`): the frame takes the crop's shape and the picture is placed in it, larger than the frame and in % of it.
+	 * The site draws from the same sum.
+	 */
+	frame?: {
+		aspectRatio: number;
+		image: { left: number; top: number; width: number; height: number; rotate: number };
+	} | null;
 	className?: string;
 }) {
 	const [failed, setFailed] = useState(false);
@@ -68,6 +77,7 @@ function Image({
 		<span
 			data-slot="image"
 			className={cn(frameVariants({ ratio: thumb ? "square" : ratio, size, radius, border }), className)}
+			style={frame ? { aspectRatio: frame.aspectRatio } : undefined}
 		>
 			{show ? (
 				<img
@@ -76,7 +86,20 @@ function Image({
 					loading={loading}
 					onError={() => setFailed(true)}
 					onLoad={onLoad}
-					className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain")}
+					className={
+						frame ? "absolute max-w-none" : cn("size-full", fit === "cover" ? "object-cover" : "object-contain")
+					}
+					style={
+						frame
+							? {
+									left: `${frame.image.left}%`,
+									top: `${frame.image.top}%`,
+									width: `${frame.image.width}%`,
+									height: `${frame.image.height}%`,
+									transform: `translate(-50%, -50%) rotate(${frame.image.rotate}deg)`,
+								}
+							: undefined
+					}
 				/>
 			) : (
 				Fallback && <Fallback aria-hidden className={thumb ? "size-monti-icon-md" : "size-monti-icon-lg"} />

@@ -18,6 +18,7 @@ import {
 	Empty,
 	EmptyStep,
 	EntryStatus,
+	Image,
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
@@ -33,6 +34,7 @@ import {
 	RowCheck,
 	RowLink,
 	RowMore,
+	RowThumb,
 	RowTitle,
 	SearchToggle,
 	Segmented,
@@ -584,6 +586,22 @@ function DocumentListScreen({
 						</Text>
 					</TableCell>
 				);
+			case "media": {
+				// The picture, or a file's name; an empty cell for an empty field (T59).
+				const file = row.media[column.id];
+				return (
+					<TableCell key={column.id} tone="subtle" truncate title={file?.name}>
+						{check}
+						{file?.thumbnail ? (
+							<RowThumb>
+								<Image src={file.thumbnail} alt="" size="row" ratio="photo" radius="sm" />
+							</RowThumb>
+						) : (
+							file?.name
+						)}
+					</TableCell>
+				);
+			}
 			default: {
 				const text = fieldCell(row, column);
 				return (

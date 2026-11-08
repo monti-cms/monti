@@ -31,16 +31,18 @@ import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
+import { MediaField, SharedMediaValue } from "./media-field";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
 /** The id of a field's input: a to-do row puts the cursor there. */
 export const fieldInputId = (field: string) => `monti-entry-${field}`;
 
-/**
- * The kinds of field the panel holds. A media field picks from doc 09's library: until then it is not in the panel (tracker T67).
- */
-const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation"]);
+/** The id of a media field's alt text: its to-do row puts the cursor there. */
+export const altInputId = (field: string) => `${fieldInputId(field)}-alt`;
+
+/** The kinds of field the panel holds. */
+const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media"]);
 
 /** The fields of a collection the panel shows, in the schema's order. The title is the editor's heading, not a property (flow 1). */
 export function panelFields(schema: SchemaRead | null, collection: string) {
@@ -524,6 +526,13 @@ export function EntryProperties({
 					{t("translation.sharedField")}
 				</Text>
 			);
+			if (def.kind === "media")
+				return (
+					<FormField key={key}>
+						<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+						<SharedMediaValue value={shared[key]} empty={empty} />
+					</FormField>
+				);
 			if (def.kind === "relation") {
 				return (
 					<FormField key={key}>
@@ -552,6 +561,21 @@ export function EntryProperties({
 				</FormField>
 			);
 		}
+		if (def.kind === "media")
+			return (
+				<MediaField
+					key={key}
+					id={id}
+					label={values[key]?.label ?? key}
+					required={marksRequired && required(key)}
+					accept={def.accept}
+					value={value}
+					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
+					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
+					readOnly={readOnly}
+					onChange={(next) => editor.set(path, next)}
+				/>
+			);
 		const input = () => {
 			if (def.kind === "slug")
 				return (

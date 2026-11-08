@@ -23,6 +23,7 @@ function MediaInput({
 	onClear,
 	clearLabel,
 	proposal = false,
+	following = false,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -38,6 +39,8 @@ function MediaInput({
 	clearLabel?: string;
 	/** The assistant chose this file and nobody has touched it yet. */
 	proposal?: boolean;
+	/** The file is another value's, shown here because this one follows it (a translation following its source): it reads faint, and there is nothing to take out. */
+	following?: boolean;
 }) {
 	const description = useProposalDescription(proposal);
 	return (
@@ -62,7 +65,7 @@ function MediaInput({
 				className={cn(
 					"flex h-full min-w-0 grow cursor-pointer items-center gap-monti-8 border-0 bg-transparent p-0 text-left outline-none",
 					size === "sm" ? "text-monti-note" : "text-monti-body",
-					value ? (proposal ? "text-monti-proposal" : "text-monti-default") : "text-monti-faint",
+					value && !following ? (proposal ? "text-monti-proposal" : "text-monti-default") : "text-monti-faint",
 				)}
 			>
 				{value ? (

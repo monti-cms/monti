@@ -707,7 +707,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 										<TableCell>
 											<RowThumb>
 												{item.kind === "image" ? (
-													<Image src={previewUrl(item)} alt="" size="thumb" radius="sm" />
+													<Image src={previewUrl(item)} alt="" size="row" ratio="photo" radius="sm" />
 												) : (
 													<FilePreview ext={extensionLabel(item.name)} framed />
 												)}

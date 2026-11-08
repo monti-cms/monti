@@ -53,6 +53,7 @@ export const SecretInput = close(open.SecretInput);
 export const ListSection = close(open.ListSection);
 export const ListSectionRow = close(open.ListSectionRow);
 export const CropStage = close(open.CropStage);
+export type { CropGrip, CropRect } from "./crop-stage";
 export const Spinner = close(open.Spinner);
 export const Shortcut = close(open.Shortcut);
 export const FilterButton = close(open.FilterButton);

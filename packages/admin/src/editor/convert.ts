@@ -103,6 +103,9 @@ const emptyChild = (block: CatalogBlock, byType: Map<string, CatalogBlock>): JSO
 		: { type: nodeName(type) };
 };
 
+/** What is stored of the editor's blocks: a file still on its way up is not in the body until the library has it (doc 09). */
+const stored = (nodes: JSONContent[]) => nodes.filter((node) => !node.attrs?.upload);
+
 /** The editor's body as it is stored. A body that is one empty paragraph is an empty body. */
 export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 	const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
@@ -120,10 +123,10 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 				.map((inline) => inlineFromEditor(inline, kit))
 				.filter((each) => each !== null);
 			if (content.length) block.content = content;
-		} else if (definition?.holds === "blocks") block.children = (node.content ?? []).map(fromEditor);
+		} else if (definition?.holds === "blocks") block.children = stored(node.content ?? []).map(fromEditor);
 		return block;
 	};
-	const blocks = (json.content ?? []).map(fromEditor);
+	const blocks = stored(json.content ?? []).map(fromEditor);
 	const only = blocks[0];
 	if (blocks.length === 1 && only?.type === "paragraph" && !only.content && !only.attrs)
 		return { type: "doc", blocks: [] };

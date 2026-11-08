@@ -41,6 +41,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
+import { openImageCard } from "../../editor/media-context";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
@@ -50,7 +51,7 @@ import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
-import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
+import { altInputId, EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
 	LocaleTabs,
@@ -243,12 +244,14 @@ export function EntryEditor({
 				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(task.field ?? "")),
 			);
 			if (index >= 0) setTab(index);
-			const field = task.field;
-			requestAnimationFrame(() => document.getElementById(fieldInputId(field))?.focus());
+			const field = task.code === "missingAlt" ? altInputId(task.field) : fieldInputId(task.field);
+			requestAnimationFrame(() => document.getElementById(field)?.focus());
 			return;
 		}
 		const view = body.current;
 		if (!view) return;
+		// An image's words are written in its settings card, not in the text (flow 1·12).
+		if (task.code === "missingAlt" && task.block && openImageCard(view, task.block)) return;
 		let at: number | null = null;
 		view.state.doc.descendants((node, pos) => {
 			if (at !== null) return false;

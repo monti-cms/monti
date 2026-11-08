@@ -1,10 +1,22 @@
-import type { Doc } from "@monti-cms/core";
+import type { Doc, MediaItem, MediaQueryResult } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useLeaveGuard } from "../draft/leave-guard";
+import { MediaPickerDialog } from "../media/media-picker-dialog";
+import { useUpload } from "../media/use-upload";
+import { useRead } from "../operations/use-operation";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
+import {
+	EditorMedia,
+	type EditorMediaValue,
+	fileBlock,
+	onImageCard,
+	placeFiles,
+	placeLibraryFile,
+} from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
@@ -60,7 +72,31 @@ export function BodyEditor({
 	const editorRef = useRef<Editor | null>(null);
 	const latestProposals = useRef(proposals);
 	latestProposals.current = proposals;
-	const slash = useSlashMenu({ catalogs, templates, editorRef });
+	const storage = useRead<MediaQueryResult>("media.query", { ids: [] }).data?.storage ?? false;
+	const [library, setLibrary] = useState<"image" | "file" | null>(null);
+	const slash = useSlashMenu({ catalogs, templates, editorRef, onLibrary: storage ? setLibrary : undefined });
+	// A file on its way up waits in its block; when the library has it, the block has it too, wherever it has moved since.
+	const upload = useUpload({
+		onUploaded: (item: MediaItem, done) => {
+			const view = editorRef.current;
+			if (!view || view.isDestroyed) return;
+			view.state.doc.descendants((node, pos) => {
+				if (node.attrs.upload !== done.id) return true;
+				view.view.dispatch(
+					view.state.tr
+						.setNodeMarkup(pos, undefined, { ...node.attrs, upload: null, data: fileBlock(item) })
+						.setMeta("addToHistory", false),
+				);
+				return false;
+			});
+		},
+	});
+	useLeaveGuard({
+		changes: upload.uploads.filter((each) => each.status === "waiting" || each.status === "uploading"),
+		revertAll: () => {
+			for (const each of upload.uploads) upload.remove(each);
+		},
+	});
 	// A translation's undecided blocks go in empty, the source's words their placeholders, and come back in those words while nobody wrote in them;
 	// a source block new since the translation goes in the same way, and stays out of the body while nobody wrote in it.
 	// The editor is made once per mount, so the body it was mounted with is the one to read.
@@ -73,6 +109,7 @@ export function BodyEditor({
 		onChange: (next) => onChange(restorePending(next, placeholders.originals)),
 		keyDown: slash.keyDown,
 		onSelection: slash.sync,
+		onFiles: (files, at, view) => (storage ? placeFiles(view, files, at, upload.add) : false),
 		onTakeProposal: (id) => {
 			const item = latestProposals.current?.items.find((each) => each.id === id);
 			if (!item || !editorRef.current) return;
@@ -83,6 +120,19 @@ export function BodyEditor({
 	editorRef.current = editor;
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
+	const [card, setCard] = useState<string | null>(null);
+	useEffect(() => (editor ? onImageCard(editor, setCard) : undefined), [editor]);
+	const media = useMemo<EditorMediaValue>(
+		() => ({
+			uploads: upload.uploads,
+			remove: upload.remove,
+			retry: upload.retry,
+			shrink: upload.shrink,
+			card,
+			setCard,
+		}),
+		[upload.uploads, upload.remove, upload.retry, upload.shrink, card],
+	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
 	useEffect(() => {
@@ -105,24 +155,43 @@ export function BodyEditor({
 	}, [editor, editable]);
 
 	return (
-		<EditorBody
-			paired={paired !== null}
-			// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
-			onClick={(event) => {
-				const target = event.target as Node;
-				// A mark in the margin opens its card; it is not a press under the text.
-				if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
-				// A press under the last block puts the cursor at the end of the text.
-				if (editor && event.currentTarget.contains(target) && !editor.view.dom.contains(target))
-					editor.chain().focus("end").run();
-			}}
-		>
-			<EditorContent editor={editor} />
-			{editor && margin ? margin(editor) : null}
-			{handle.overlay}
-			{tables.overlay}
-			{slash.menu}
-			{editor ? <FormatCard editor={editor} catalogs={catalogs} /> : null}
-		</EditorBody>
+		<EditorMedia.Provider value={media}>
+			<EditorBody
+				paired={paired !== null}
+				// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
+				onClick={(event) => {
+					const target = event.target as Node;
+					// A mark in the margin opens its card; it is not a press under the text.
+					if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
+					// A press under the last block puts the cursor at the end of the text.
+					if (editor && event.currentTarget.contains(target) && !editor.view.dom.contains(target))
+						editor.chain().focus("end").run();
+				}}
+			>
+				<EditorContent editor={editor} />
+				{editor && margin ? margin(editor) : null}
+				{handle.overlay}
+				{tables.overlay}
+				{slash.menu}
+				{editor ? <FormatCard editor={editor} catalogs={catalogs} /> : null}
+				{library && (
+					<MediaPickerDialog
+						kind={library}
+						onClose={() => {
+							setLibrary(null);
+							editor?.commands.focus();
+						}}
+						onPick={(item) => {
+							setLibrary(null);
+							if (editor) placeLibraryFile(editor, item);
+						}}
+						onFiles={(files) => {
+							setLibrary(null);
+							if (editor) placeFiles(editor, files, null, upload.add);
+						}}
+					/>
+				)}
+			</EditorBody>
+		</EditorMedia.Provider>
 	);
 }

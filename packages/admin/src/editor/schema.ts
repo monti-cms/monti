@@ -11,8 +11,8 @@ import { Superscript } from "@tiptap/extension-superscript";
 import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
-import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
-import { createElement } from "react";
+import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
+import { type ComponentType, createElement } from "react";
 import type { AdminBlockDefinition } from "../operations/admin-context";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
@@ -43,6 +43,8 @@ const blockAttributes = () => ({
 	data: { default: null, rendered: false },
 	/** In a translation, the source block it is paired with and what was decided for it (doc 04). A split-off half is a new block, unpaired. */
 	link: { default: null, keepOnSplit: false, rendered: false },
+	/** A file on its way up: the `useUpload` id of the file this block is waiting for. Such a block is not stored (`docFromEditor`). */
+	upload: { default: null, keepOnSplit: false, rendered: false },
 });
 
 type Data = Record<string, unknown> | null;
@@ -148,6 +150,8 @@ export function bodyExtensions(
 	kit: Catalog,
 	boxLabel: (block: CatalogBlock, data: Data) => string,
 	definitions: ReadonlyMap<string, AdminBlockDefinition> = new Map(),
+	/** How the core's own blocks that hold no text draw in the editor (an image, a file). */
+	views: ReadonlyMap<string, ComponentType<ReactNodeViewProps>> = new Map(),
 ): AnyExtension[] {
 	const heldOnly = new Set(
 		kit.blocks
@@ -160,27 +164,30 @@ export function bodyExtensions(
 		.map((block) => {
 			const definition = definitions.get(block.type);
 			const Component = definition?.Editor ?? definition?.Site;
-			const addNodeView = Component
-				? () =>
-						ReactNodeViewRenderer(({ node }) =>
-							createElement(
-								NodeViewWrapper,
-								{ "data-block": block.type },
+			const View = views.get(block.type);
+			const addNodeView = View
+				? () => ReactNodeViewRenderer(View)
+				: Component
+					? () =>
+							ReactNodeViewRenderer(({ node }) =>
 								createElement(
-									Component,
-									{
-										block: {
-											id: String(node.attrs.blockId ?? ""),
-											type: block.type,
+									NodeViewWrapper,
+									{ "data-block": block.type },
+									createElement(
+										Component,
+										{
+											block: {
+												id: String(node.attrs.blockId ?? ""),
+												type: block.type,
+												attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
+											},
 											attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
 										},
-										attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-									},
-									block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+										block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+									),
 								),
-							),
-						)
-				: undefined;
+							)
+					: undefined;
 			return Node.create({
 				name: nodeName(block.type),
 				group: heldOnly.has(block.type) ? "held" : "block",
