@@ -40,7 +40,9 @@ type Media = {
 
 type MediaUse = {
   mediaId: string;
-  entryId: string;
+  // whose: an entry, or a template (2026-11-09, owner: a template's image is a use too)
+  entryId: string | null;
+  templateId: string | null;
   place: { field: string } | { block: string };  // "cover" field, or body block b_5
 };
 ```
@@ -49,6 +51,7 @@ type MediaUse = {
 erDiagram
   media ||--o{ media_uses : "쓰는 곳"
   entries ||--o{ media_uses : "쓴다"
+  templates ||--o{ media_uses : "쓴다"
   folders ||--o{ media : "담는다"
   media {
     text id PK
@@ -59,11 +62,14 @@ erDiagram
   media_uses {
     text media_id FK
     text entry_id FK
+    text template_id FK
     text place
   }
 ```
 
-- `media_uses`는 글을 저장할 때마다 그 글의 줄을 지우고 다시 적는다. 고치는 본과 발행본 어느 쪽이든 쓰면 "쓰인다"로 센다.
+- `media_uses`는 글이나 템플릿을 쓸 때마다 그 줄을 지우고 다시 적는다. 고치는 본과 발행본 어느 쪽이든 쓰면 "쓰인다"로 센다.
+- 다시 적는 곳은 엔진 하나다. 어떤 쓰기든 건드리거나 만든 글과 템플릿을 쓰기가 끝날 때 다시 적고, 되돌리기와 스키마 적용 뒤에도 다시 적는다. 글을 고치는 기능마다 적지 않는다.
+- 없는 파일을 가리키는 값은 줄을 만들지 않는다. 휴지통의 파일을 다시 쓰게 되면(되돌리기) 그 파일은 휴지통에서 나온다.
 - 휴지통에 든 글이 쓰는 것도 쓰는 것으로 센다. 그 글이 영구히 지워질 때 줄이 빠진다.
 
 ## 올리기
@@ -88,6 +94,47 @@ flowchart TD
 
 - "줄여서 다시"는 브라우저에서 긴 변을 줄여 한도 아래로 만든 뒤 다시 올린다.
 - 올리기는 사람만 한다. 에이전트에게는 올릴 파일이 없다.
+- 받는 종류는 JPEG, PNG, WebP, GIF, AVIF, PDF, ZIP, txt, md, csv다. HEIC, SVG, HTML은 받지 않는다. 브라우저가 먼저 거르고 서버가 앞 바이트로 다시 판별한다.
+
+### 올리는 길
+
+파일 바이트와 기능은 따로 간다. 기능은 JSON 한 가지 길이고, 막대에는 올린 비율이 있어야 하고, 쓰기 트랜잭션이 파일을 올리는 동안 잡혀 있으면 안 되기 때문이다.
+
+```mermaid
+sequenceDiagram
+  participant B as 브라우저
+  participant A as 관리자 API
+  participant S as 저장소
+  B->>B: 받는 종류 · 크기 확인, 이미지면 치수 읽기와 웹용 크기
+  B->>A: PUT …/media/bytes (원본, 비율이 막대로)
+  A->>A: 세션 · 크기 · 앞 바이트 판별
+  A->>S: put(key)
+  A-->>B: key, mime, size
+  B->>A: PUT …/media/bytes (웹용 크기가 있으면)
+  B->>A: 기능 media.upload (key, 치수, 폴더, 이름)
+  A->>S: stat(key)
+  A-->>B: 항목
+```
+
+- 웹용 크기와 치수는 브라우저가 만든다(`createImageBitmap`과 캔버스). 긴 변이 2400 이하면 웹용을 따로 두지 않고 사이트는 원본을 쓴다. GIF는 움직임을 지키려고 웹용을 만들지 않는다.
+- `key`는 서버가 정한다. 한 번 쓴 `key`는 다시 쓰지 않고, 파일을 바꾸면 새 `key`를 받는다. 그래서 캐시가 옛 그림을 내놓지 않는다.
+- `media.upload`와 `media.replace`는 없는 `key`와 다른 항목이 쓰는 `key`를 거절한다.
+- 파일을 내보낼 때 `X-Content-Type-Options: nosniff`와 `Content-Security-Policy: sandbox`를 붙이고, 이미지가 아니면 내려받기로 준다.
+
+### 저장소 접점
+
+```ts
+type Storage = {
+  put(key: string, bytes: Uint8Array, meta: { mime: string }): Promise<void>;
+  stat(key: string): Promise<{ size: number; mime: string } | null>;
+  read(key: string): Promise<{ bytes: Uint8Array; mime: string } | null>;
+  remove(key: string): Promise<void>;
+  url(key: string): string;
+};
+```
+
+- 저장소는 플러그인이 건넨다(`definePlugin({ name, storage })`). 둘 이상이면 시작할 때 오류다. 없으면 미디어 화면이 "저장소 없음"을 말하고 올리기 기능이 거절한다.
+- 개발용 로컬 폴더 어댑터(`localFolderStorage`)는 core에 있다. S3 호환 어댑터는 T102다.
 
 ## 지우기
 
@@ -109,7 +156,7 @@ flowchart TD
 
 ```ts
 // an image block in a post's doc (03)
-{ id: "b_5", type: "image", attrs: { media: "m_desk", alt: "아침 책상 위 노트북과 커피", caption: "", width: null, align: "center", decorative: false } }
+{ id: "b_5", type: "image", attrs: { media: "m_desk", alt: "아침 책상 위 노트북과 커피", caption: "", width: null, align: "center", decorative: false, crop: { x: 0, y: 0.1, width: 1, height: 0.8 }, rotate: 0 } }
 
 // a media field value in a post's values (01)
 values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피" } }
@@ -118,7 +165,9 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 - 대체 텍스트는 이미지 블록의 설정 카드와 캡션 줄, 미디어 필드(대표 이미지) 칸에서 쓴다. 칸마다 "✦ 채우기"가 있다(바로 넣기).
 - "장식 이미지"를 켜면 대체 텍스트가 비어도 된다. 사이트는 빈 대체 텍스트로 그린다.
 - 발행 검사(02)는 이 값을 본다. 장식이 아닌데 대체 텍스트가 빈 이미지가 "대체 텍스트 없는 이미지 n개"다.
-- 번역(04)에서는 같은 파일을 쓰고 대체 텍스트와 캡션만 번역한다.
+- 번역(04)에서 본문 이미지는 같은 파일을 쓰고 대체 텍스트와 캡션만 번역한다.
+- 번역에서 미디어 필드는 그대로 쓸 수도, 바꿀 수도 있다. 기본 언어 방식이 "원문 따름"(`fromSource`)이다. 번역의 값이 비어 있으면 원문의 파일과 대체 텍스트를 따른다. 파일을 고르거나 대체 텍스트를 쓰면 그 번역의 값이 되고, 지우면 다시 따른다. 새 번역은 값을 복사하지 않고 비어서 시작한다.
+- 자르기와 돌리기는 원본을 건드리지 않고 블록의 `crop`(비율)과 `rotate`에 둔다. 편집기와 사이트가 같은 값으로 그린다.
 
 ## 기능 목록
 
@@ -148,6 +197,11 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 
 ## 결정 기록
 
+- 2026-11-09, 소유자: 템플릿이 쓰는 이미지도 쓰는 곳이다. 안 세면 템플릿이 쓰는 파일이 휴지통에 들어간다.
+- 2026-11-09, 소유자: 자르기와 돌리기 표시는 09에서 만든다. 저장한 자르기가 사이트에 안 보이면 거짓 화면이다(T81에서 옮김).
+- 2026-11-09, 소유자: 번역에서 미디어 필드는 그대로 쓸 수도, 바꿀 수도 있다. 새 방식을 만들지 않고 "원문 따름"을 기본값으로 한다. 본문 이미지는 04대로 같은 파일이다.
+- 2026-11-09, 소유자: "휴지통으로"를 09에 넣는다. 흐름 6의 단계이고, 지워지지는 않으며, 휴지통 화면은 11에서 곧 온다. 글의 "휴지통으로"(T72)는 그대로 11이다.
+- 2026-11-09: 파일 바이트는 기능이 아닌 경로로 올린다(올리는 길). 저장소는 플러그인이 건넨다. 웹용 크기는 브라우저가 만든다. `media.trash`는 11에서 `trash.move` 아래로 들어간다(T101).
 - 2026-11-05, 소유자: 대체 텍스트와 캡션은 글(이미지 블록, 미디어 필드 값)에서만 쓴다. 미디어 라이브러리는 파일 그 자체만 다룬다. 라이브러리의 대체 텍스트 칸, 대체 텍스트 거르기, 라이브러리에서 여러 장 채우기(흐름 6의 16단계 일부와 22~26단계, 흐름 2·19)는 빠진다. 여러 장 채우기는 글 쪽의 일이 된다.
 
 - 2026-11-05: 쓰는 곳은 글을 저장할 때 다시 적는다. 휴지통에 든 글도 쓰는 곳이다.
@@ -157,8 +211,8 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 
 ## 끝 조건
 
-- 흐름 6의 단계(22~26단계는 빠짐)가 이 기능 목록과 03, 07, 11번 문서만으로 된다.
-- 라이브러리 어디에도 대체 텍스트가 없고, 글의 대체 텍스트는 그 글에만 있다.
-- 라이브러리, 편집기, 미디어 필드가 같은 올리기와 같은 라이브러리 창을 쓴다.
-- 어떤 길로도 쓰이는 파일이 휴지통에 들어가지 않는다.
-- 파일을 바꿔도 쓰는 곳의 대체 텍스트와 캡션이 그대로다.
+- **09-1** 흐름 6의 단계(22~26단계는 빠짐)가 이 기능 목록과 03, 07, 11번 문서만으로 된다.
+- **09-2** 라이브러리 어디에도 대체 텍스트가 없고, 글의 대체 텍스트는 그 글에만 있다.
+- **09-3** 라이브러리, 편집기, 미디어 필드가 같은 올리기와 같은 라이브러리 창을 쓴다.
+- **09-4** 어떤 길로도 쓰이는 파일이 휴지통에 들어가지 않는다.
+- **09-5** 파일을 바꿔도 쓰는 곳의 대체 텍스트와 캡션이 그대로다.

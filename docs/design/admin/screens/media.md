@@ -71,6 +71,12 @@
 | 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 
+#### 쪽 나누기
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 쪽 | `Pagination`(목록 화면의 `ListPages`와 같다) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. |
+
 #### 오른쪽 클릭과 확인
 
 | 자리 | 부품 | 이렇게 쓴다 |
@@ -97,7 +103,7 @@
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
 | 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
 | (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
-| 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
+| (빠짐, 2026-11-05) 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `Stack`, 행마다 `TextButton`(`href` 그 글) + `Text variant="micro" tone="subtle"`(자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). |
 | 저장 | `SidePanel footer`의 `Button variant="primary"` | 이미지와 파일이 같다. "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |
