@@ -211,7 +211,8 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			const row = await monti.db.selectFrom("media").select("name").where("original_key", "=", key).executeTakeFirst();
 			headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(row?.name ?? key)}`);
 		}
-		return new Response(new Blob([found.bytes.slice().buffer]), { headers });
+		// A copy of just these bytes: a storage may hand back a view of a larger pool (a Node `Buffer`), and its `slice` is no copy.
+		return new Response(new Blob([new Uint8Array(found.bytes).buffer]), { headers });
 	}
 
 	const handle = async (request: Request): Promise<Response> => {
@@ -219,6 +220,9 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const name = pathname.match(/\/operations\/([\w.]+)$/)?.[1];
 		if (name && request.method === "POST") return operation(request, name);
 		if (pathname.endsWith("/media/bytes") && request.method === "PUT") {
+			// Before the body: nobody without a session makes the server hold a file.
+			if (!(await findSession(monti.db, cookies(request)[SESSION_COOKIE], monti.now())))
+				return json(401, { error: "unauthenticated" });
 			const bytes = await bodyBytes(request);
 			if (!bytes) return json(413, { error: "media-refused", reason: { key: "media.tooBig" } });
 			const answer = await upload(bytes, searchParams.get("name") ?? "", cookies(request)[SESSION_COOKIE]);

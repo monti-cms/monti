@@ -59,6 +59,7 @@ import {
 } from "@monti-cms/ui";
 import { Document, Folder, FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { useProblemActions, useProblemText } from "../../media/upload-problem";
@@ -79,7 +80,7 @@ import {
 } from "../list/folders";
 import { shortDate } from "../list/format";
 import { ListPages } from "../list/list-pages";
-import { MediaPanel, usesOfFile } from "./media-panel";
+import { MediaPanel, useFileUses } from "./media-panel";
 import {
 	isLooking,
 	KINDS,
@@ -254,7 +255,7 @@ function FileMenuItems({
 
 /** "Where it is used ▸": each entry or template, with the place in it at the end (flow 6·17). */
 function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: Go }) {
-	const uses = usesOfFile(id);
+	const uses = useFileUses(id);
 	const Item = context ? ContextMenuItem : DropdownMenuItem;
 	return (
 		<>
@@ -327,6 +328,9 @@ function FilterMenu<Value extends string>({
  * sits in the address.
  */
 export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go }) {
+	const leave = useLeave();
+	// A move out of the library: files on their way would stop, so it asks. Moves inside it go on `go` itself.
+	const goAway: Go = (route, options) => leave(() => go(route, options));
 	const { t } = useAdmin();
 	const state = useMemo(() => readMediaState(params), [params]);
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
@@ -462,10 +466,10 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			folders={folders}
 			onOpen={() => openFile(item.id)}
 			onMove={(folder) => void move([item.id], folder)}
-			go={go}
+			go={goAway}
 		/>
 	);
-	const idsOfDrag = (item: MediaItem) => (picked.has(item.id) ? [...picked] : [item.id]);
+	const idsOfDrag = (item: MediaItem) => (picked.has(item.id) ? pickedItems.map((each) => each.id) : [item.id]);
 	const selectAll: SelectAll = {
 		state: pickedItems.length === 0 ? "none" : pickedItems.length === items.length ? "all" : "some",
 		onChange: (on) => setPicked(new Set(on ? items.map((item) => item.id) : [])),
@@ -854,6 +858,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					id={state.file}
 					folders={folders}
 					onClose={() => setState({ ...state, file: null })}
+					go={goAway}
 					onTrash={(id) => {
 						void trash([id]);
 						setState({ ...state, file: null });

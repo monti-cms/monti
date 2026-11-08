@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Page } from "@playwright/test";
 import { test as raw } from "@playwright/test";
 import { ADMIN } from "./account";
@@ -122,6 +123,7 @@ test.describe("the library", () => {
 		const chooser = admin.waitForEvent("filechooser");
 		await admin.getByRole("menuitem", { name: "파일 바꾸기" }).click();
 		await (await chooser).setFiles(second);
+		await expect(admin.getByRole("alertdialog")).not.toContainText("\\n");
 		await admin.getByRole("alertdialog").getByRole("button", { name: "바꾸기" }).click();
 		await expect(admin.getByRole("alertdialog")).toBeHidden();
 
@@ -287,6 +289,68 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 	await context.close();
 });
 
+test.describe("a cover and what goes up for it", () => {
+	const hold = async (page: Page) => {
+		let release = () => {};
+		const released = new Promise<void>((done) => {
+			release = done;
+		});
+		await page.route("**/media/bytes*", async (route) => {
+			await released;
+			await route.continue().catch(() => {});
+		});
+		return release;
+	};
+	const cover = (page: Page) => page.getByRole("button", { name: "cover", exact: true });
+	const chooseUpload = async (page: Page, file: string) => {
+		await cover(page).click();
+		const chooser = page.waitForEvent("filechooser");
+		await page.getByRole("dialog").getByRole("button", { name: "올리기" }).click();
+		await (await chooser).setFiles(file);
+	};
+
+	test("09-3 a PDF chosen for a field of images says why, stays out of the library, and the entry still saves", async ({
+		admin,
+	}, info) => {
+		const pdf = path.join(info.outputDir, `${unique("price")}.pdf`);
+		await mkdir(info.outputDir, { recursive: true });
+		await writeFile(pdf, "%PDF-1.7\n");
+		await writing(admin);
+		await chooseUpload(admin, pdf);
+		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeVisible();
+		await admin.getByRole("textbox", { name: "제목" }).pressSequentially(" 고침");
+		await saveKeys(admin);
+		const answer = await admin.request.post("/admin/api/operations/media.query", {
+			data: { input: { search: path.basename(pdf) } },
+		});
+		expect(((await answer.json()) as { total: number }).total).toBe(0);
+	});
+
+	test("09-3 a file picked while another goes up is the one that stays", async ({ admin }, info) => {
+		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [kept], main(admin));
+		const name = path.basename(kept);
+		await uploadedId(admin, name);
+		const late = await picture(admin, info.outputDir, `${unique("late")}.jpg`);
+
+		await writing(admin);
+		const release = await hold(admin);
+		await chooseUpload(admin, late);
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(late)));
+		await cover(admin).click();
+		const dialog = admin.getByRole("dialog");
+		await dialog.getByRole("textbox", { name: "파일 이름 검색" }).fill(name);
+		await dialog.getByRole("button", { name: new RegExp(name) }).click();
+		await dialog.getByRole("button", { name: "고르기" }).click();
+		await expect(cover(admin)).toHaveText(new RegExp(name));
+		release();
+		await admin.waitForTimeout(800);
+		await expect(cover(admin)).toHaveText(new RegExp(name));
+	});
+});
+
 test.describe("a translation's cover", () => {
 	test("09-3 it follows what the source has on the site: alt text alone, a file of its own, and back to following", async ({
 		admin,
@@ -382,6 +446,55 @@ test.describe("while a file is on its way", () => {
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		release();
 		await expect(tile(admin, file.split("/").at(-1) ?? "")).toBeVisible();
+	});
+
+	test("09-1 a file's use row leaves the screen too, so it asks first", async ({ admin }, info) => {
+		const used = await picture(admin, info.outputDir, `${unique("used")}.jpg`);
+		const held = await picture(admin, info.outputDir, `${unique("held")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [used], main(admin));
+		const id = await uploadedId(admin, path.basename(used));
+		await operation(admin, "entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: `쓰는 글 ${unique("use")}`,
+			slug: unique("use"),
+			doc: { type: "doc", blocks: [{ id: "i1", type: "image", attrs: { media: id, alt: "그림" } }] },
+		});
+		await admin.goto(`/#/media?file=${id}`);
+		const panel = admin.getByRole("complementary");
+		await expect(panel.getByRole("link", { name: /쓰는 글/ })).toBeVisible();
+		await admin.route("**/media/bytes*", () => {});
+		await dropFromDisk(admin, [held], main(admin));
+		await expect(main(admin).getByText(/올리는 중/)).toBeVisible();
+		await panel.getByRole("link", { name: /쓰는 글/ }).click();
+		await expect(admin.getByRole("alertdialog")).toBeVisible();
+		await admin.getByRole("alertdialog").getByRole("button", { name: "계속 올리기" }).click();
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+	});
+
+	test("09-1 a picture going up stops if the translation's view changes, so it asks first; the words typed stay either way", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("paired")}.png`);
+		const post = await writing(admin);
+		await operation(admin, "entries.publish", { ids: [post.id] });
+		const made = await operation<{ id: string }>(admin, "translations.create", { source: post.id, locale: "en" });
+		await admin.goto(`/#/c/post/${made.output.id}`);
+		await expect(body(admin)).toBeVisible();
+		await admin.getByRole("textbox", { name: "제목" }).fill("A post");
+		await admin.route("**/media/bytes*", () => {});
+		await body(admin).click();
+		await pastePicture(admin, file);
+		await expect(body(admin).getByRole("progressbar")).toBeVisible();
+		await admin.getByRole("button", { name: "나란히" }).click();
+		const asked = admin.getByRole("alertdialog");
+		await expect(asked.getByText("파일을 올리는 중이에요")).toBeVisible();
+		await asked.getByRole("button", { name: "그만 올리고 나가기" }).click();
+		await expect(asked).toBeHidden();
+		await expect(admin.getByRole("button", { name: "나란히" })).toHaveAttribute("aria-pressed", "true");
+		await expect(admin.getByRole("textbox", { name: "제목" })).toHaveValue("A post");
 	});
 
 	test("09-1 leaving anyway stops the file: the library never gets it", async ({ admin }, info) => {

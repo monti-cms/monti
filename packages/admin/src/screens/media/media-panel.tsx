@@ -97,13 +97,13 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 }
 
 /** Where a file is used, for the menus of a tile: read when its sub-menu opens. */
-export function usesOfFile(id: string) {
+export function useFileUses(id: string) {
 	return useUseRows(useRead<MediaDetail>("media.get", { id }).data?.useRows ?? []);
 }
 
 /** "Replace this file?" (flow 6·19): the file now and the one chosen, what stays, and what the server said if it refused. */
 function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File; onClose: () => void }) {
-	const { t, uploader } = useAdmin();
+	const { t, uploader, session } = useAdmin();
 	const replace = useOperation<{ output: MediaItem }>("media.replace");
 	const [going, setGoing] = useState(false);
 	const [refused, setRefused] = useState<string | null>(null);
@@ -113,6 +113,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 		setRefused(null);
 		const put = await putFile(file, uploader);
 		if (!put.ok) {
+			if (put.unauthenticated) session.end();
 			setGoing(false);
 			setRefused(t(`library.failed.${put.problem}`, { size: formatBytes(file.size) }));
 			return;
@@ -129,7 +130,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 		<AlertDialog open onOpenChange={(open) => !open && !going && onClose()}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>{t("library.replace.title")}</AlertDialogTitle>\n{" "}
+					<AlertDialogTitle>{t("library.replace.title")}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<Grid columns="compare">
 					<Tile
@@ -187,11 +188,14 @@ export function MediaPanel({
 	folders,
 	onClose,
 	onTrash,
+	go,
 }: {
 	id: string;
 	folders: Folders;
 	onClose: () => void;
 	onTrash: (id: string) => void;
+	/** A move out of the library, to a place that uses the file: it asks first while files go up. */
+	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
 	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true });
@@ -369,7 +373,17 @@ export function MediaPanel({
 					<Stack gap={4}>
 						{uses.map((use) => (
 							<Inline key={use.key} gap={8} justify="between">
-								<TextButton href={href(use.route)}>{use.title}</TextButton>
+								<TextButton
+									href={href(use.route)}
+									onClick={(event: React.MouseEvent) => {
+										// A new tab leaves nothing behind. A move in this one goes through the question.
+										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+										event.preventDefault();
+										go(use.route);
+									}}
+								>
+									{use.title}
+								</TextButton>
 								<Text variant="micro" tone="subtle">
 									{use.places}
 								</Text>

@@ -1,5 +1,5 @@
-import { type MediaDetail, mediaValueOf } from "@monti-cms/core";
-import { FormField, FormFieldError, FormFieldLabel, Input, MediaInput, Text } from "@monti-cms/ui";
+import { altIsMissing, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
+import { FormField, FormFieldError, FormFieldLabel, Input, MediaInput, Option, Switch, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
@@ -41,7 +41,7 @@ export function MediaField({
 	whose?: { following: string; own: string; clear: string };
 	readOnly: boolean;
 	uploads: FieldUploads;
-	onChange: (next: { media: string; alt?: string } | null) => void;
+	onChange: (next: MediaValue | null) => void;
 }) {
 	const { t } = useAdmin();
 	const problemText = useProblemText();
@@ -53,7 +53,7 @@ export function MediaField({
 	const file = read.data?.id === shown?.media ? read.data : null;
 	const going = uploads.of(field);
 	const isImage = file?.kind === "image";
-	const altMissing = isImage && !shown?.decorative && !shown?.alt?.trim();
+	const altMissing = isImage && shown && altIsMissing(shown);
 	return (
 		<>
 			<FormField>
@@ -77,7 +77,14 @@ export function MediaField({
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
 					onOpen={readOnly ? undefined : () => setPicking(true)}
-					onClear={readOnly || !own ? undefined : () => onChange(null)}
+					onClear={
+						readOnly || (!own && !going)
+							? undefined
+							: () => {
+									uploads.clear(field);
+									onChange(null);
+								}
+					}
 					clearLabel={whose?.clear ?? t("library.field.clear", { label })}
 				/>
 				{going?.problem && (
@@ -93,12 +100,20 @@ export function MediaField({
 					<Input
 						id={`${id}-alt`}
 						size="md"
-						disabled={readOnly}
+						disabled={readOnly || shown?.decorative === true}
 						value={own?.alt ?? ""}
 						placeholder={followed?.alt || t("entry.empty")}
 						onChange={(event) => shown && onChange({ ...own, media: shown.media, alt: event.target.value })}
 					/>
 					{altMissing && !readOnly && <FormFieldError>{t("library.field.altMissing")}</FormFieldError>}
+					<Option spread>
+						{t("editor.image.decorative")}
+						<Switch
+							checked={shown?.decorative === true}
+							disabled={readOnly}
+							onCheckedChange={(on) => shown && onChange({ ...own, media: shown.media, decorative: on })}
+						/>
+					</Option>
 				</FormField>
 			)}
 			{picking && (
@@ -114,7 +129,7 @@ export function MediaField({
 					}}
 					onFiles={([chosen]) => {
 						setPicking(false);
-						if (chosen) uploads.add(field, chosen, own?.alt);
+						if (chosen) uploads.add(field, chosen, accept === "any" ? undefined : "image");
 					}}
 				/>
 			)}

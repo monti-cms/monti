@@ -7,8 +7,8 @@ import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
-import { followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
-import { isMediaKey, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
+import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { isMediaKey, kindOf, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
 import { usedOf } from "./uses";
 import { type MediaPlace, placeOf } from "./value";
@@ -216,8 +216,6 @@ async function statOfKeys(ctx: OperationContext, original: Original, web: Web | 
 	return stat;
 }
 
-const kindOf = (mime: string): MediaKind => (mime.startsWith("image/") ? "image" : "file");
-
 /** A name a person gave: the file's extension stays (doc 09: it says what the file is), slashes do not make paths. */
 function cleanName(name: string, extension: string) {
 	const given = name.trim().replaceAll("/", "-");
@@ -239,7 +237,7 @@ const Query = z.object({
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
 	pageSize: z.number().int().min(1).max(1000).default(MEDIA_PAGE_SIZE),
-	/** These files, wherever they are: what a screen asks when a body or a field names them. */
+	/** These files, wherever they are. An empty list asks for no file: it is how a body learns `storage`, whether the site can take uploads. */
 	ids: z.array(z.string()).optional(),
 });
 
@@ -416,12 +414,16 @@ export const mediaOperations = [
 		kind: "write",
 		description:
 			"Rename a file in the media library, or put it in a folder (null is the top level), or both at once. Its extension stays. Alt text and captions are not here: they belong to the entries that use it.",
-		input: z.object({ id: z.string(), name: z.string().min(1).optional(), folder: z.string().nullable().optional() }),
+		input: z.object({ id: z.string(), name: z.string().optional(), folder: z.string().nullable().optional() }),
 		touches: (input) => [...(input.folder ? [folderRef(input.folder)] : []), mediaRef(input.id)],
-		preview: (input) => ({
-			summary: { key: "media.update", values: { name: input.name ?? "" } },
-			changes: [mediaRef(input.id)],
-		}),
+		async preview(input, ctx) {
+			const folder = input.folder ? (await checkMediaFolder(ctx.db, input.folder)).name : null;
+			return {
+				summary:
+					input.name === undefined ? moveMessage(1, folder) : { key: "media.update", values: { name: input.name } },
+				changes: [mediaRef(input.id)],
+			};
+		},
 		async check(input, ctx) {
 			const row = await liveRowOf(ctx.db, input.id);
 			if (input.name !== undefined) cleanName(input.name, splitName(row.name).extension);
@@ -440,7 +442,10 @@ export const mediaOperations = [
 				.execute();
 			return liveItem(ctx, input.id);
 		},
-		summary: (_input, output) => ({ key: "media.update", values: { name: output.name } }),
+		summary: (input, output) =>
+			input.name === undefined
+				? moveMessage(1, output.folderId === null ? null : (output.path.at(-1) ?? null))
+				: { key: "media.update", values: { name: output.name } },
 	}),
 	defineOperation({
 		name: "media.replace",
@@ -572,11 +577,11 @@ export const mediaOperations = [
 			const missing: MissingAlt[] = [];
 			for (const entry of entries) {
 				const source = isTranslation(schema, entry)
-					? await followedFields(ctx.db, await sourceEntryOf(ctx.db, schema, entry.translationGroup))
+					? await sourceEntryOf(ctx.db, schema, entry.translationGroup)
 					: null;
-				const { values } = translatedFields(schema, entry.collection, entry, source);
+				const { values } = translatedFields(schema, entry.collection, entry, await followedFields(ctx.db, source));
 				const fields = schema.collections[entry.collection]?.fields ?? {};
-				for (const gap of await altGaps(ctx.db, fields, values, entry.doc))
+				for (const gap of await altGaps(ctx.db, fields, values, await bodyAsRead(ctx.db, source, entry.doc)))
 					missing.push({
 						id: entry.id,
 						collection: entry.collection,

@@ -38,6 +38,21 @@ pnpm --filter @monti-cms/ui storybook                             # the design s
 On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as
 `type(scope): subject` (for example `feat(core): add thing`); the scopes are in `commitlint.config.mjs`.
 
+## Media storage
+
+The media library keeps its files in a storage that a plugin brings. A site with none still runs: the library says how to connect one, and nothing can be uploaded.
+
+```ts
+import { createMonti, definePlugin, localFolderStorage } from "@monti-cms/core";
+
+const monti = createMonti({
+	// ...the rest of the site
+	plugins: [definePlugin({ name: "media", storage: localFolderStorage({ dir: "./media" }) })],
+});
+```
+
+`localFolderStorage` is for a development server: it keeps files in a folder on disk, served by the admin API. Any other place takes a plugin that implements `Storage`. An S3-compatible adapter is planned.
+
 ## License
 
 [MIT](LICENSE)

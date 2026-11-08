@@ -1,6 +1,6 @@
 import { Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { LeaveGuardProvider, useLeave } from "./draft/leave-guard";
+import { LeaveGuardProvider, useLeave, useLeaveFiles } from "./draft/leave-guard";
 import { adminMessages } from "./messages";
 import {
 	type AdminBlockDefinition,
@@ -75,6 +75,7 @@ function Signed() {
 	const [review, setReview] = useState(0);
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
+	const leaveFiles = useLeaveFiles();
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	// A first visit with no last screen opens the first collection.
 	useEffect(() => {
@@ -118,7 +119,9 @@ function Signed() {
 				onBack={() => leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))}
 				// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
 				onCompare={(compare) =>
-					go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) })
+					leaveFiles(() =>
+						go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) }),
+					)
 				}
 				onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
 			/>

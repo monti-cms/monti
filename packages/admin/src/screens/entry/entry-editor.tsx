@@ -1,4 +1,4 @@
-import { type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
+import { type EntryState, mediaValueOf, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -39,7 +39,7 @@ import { Archive, ChevronLeft, Copy, Export, OverflowMenuHorizontal, RightPanelO
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
-import { useLeaveGuard } from "../../draft/leave-guard";
+import { useLeaveFiles, useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { openImageCard } from "../../editor/media-context";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
@@ -119,9 +119,11 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
-	const fieldUploads = useFieldUploads((field, item, alt) =>
-		editor.set(`values.${field}`, { media: item.id, ...(alt ? { alt } : {}) }),
-	);
+	const fieldUploads = useFieldUploads((field, item) => {
+		// What the field says now, not when the file set off: its alt text may have been written since.
+		const alt = mediaValueOf(editor.value(`values.${field}`))?.alt;
+		editor.set(`values.${field}`, { media: item.id, ...(alt ? { alt } : {}) });
+	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
 	const archive = useOperation("entries.archive");
@@ -144,10 +146,16 @@ export function EntryEditor({
 	const translation = useTranslation(id, schema.data?.schema, editor);
 	const compared = translation.compared;
 	const [view, setView] = useState<SourceView>("side");
+	const leaveFiles = useLeaveFiles();
 	const showView = (next: SourceView) => {
-		setView(next);
-		// The source takes the place of the properties beside the text (translation.md, the head row).
-		if (next !== "off") setPanel(false);
+		const change = () => {
+			setView(next);
+			// The source takes the place of the properties beside the text (translation.md, the head row).
+			if (next !== "off") setPanel(false);
+		};
+		// Side by side the body is drawn elsewhere: it starts again, and a picture going up in it stops.
+		if ((next === "paired") !== (view === "paired")) leaveFiles(change);
+		else change();
 	};
 	const opensBeside = translation.isTranslation && view !== "off";
 	useEffect(() => {

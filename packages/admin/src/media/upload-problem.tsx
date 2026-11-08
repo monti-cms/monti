@@ -14,6 +14,8 @@ export function useProblemText() {
 				return t("library.failed.tooBig", { size: formatBytes(upload.size) });
 			case "type":
 			case "heic":
+			case "notImage":
+			case "cannotRead":
 			case "unreadable":
 			case "failed":
 				return t(`library.failed.${upload.problem}`);

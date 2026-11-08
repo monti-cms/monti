@@ -26,11 +26,18 @@ const keyOf = (answer: Answer) =>
 export async function putFile(
 	file: File,
 	uploader: Uploader,
-	options: { onProgress?: (percent: number) => void; signal?: AbortSignal } = {},
+	options: { onProgress?: (percent: number) => void; signal?: AbortSignal; only?: "image" } = {},
 ): Promise<PutResult> {
-	const head = new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());
+	// A folder dropped from the OS arrives as a file that cannot be read.
+	const head = await file
+		.slice(0, HEAD_BYTES)
+		.arrayBuffer()
+		.then((bytes) => new Uint8Array(bytes))
+		.catch(() => null);
+	if (!head) return { ok: false, problem: "cannotRead", kind: null };
 	const accepted = acceptFile({ name: file.name, size: file.size, head });
 	const kind = accepted.ok || accepted.reason === "size" ? accepted.kind : null;
+	if (options.only === "image" && kind === "file") return { ok: false, problem: "notImage", kind };
 	const problem = problemOf(accepted);
 	if (!accepted.ok && problem) return { ok: false, problem, kind };
 

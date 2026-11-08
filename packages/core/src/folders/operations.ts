@@ -162,7 +162,6 @@ async function entriesIn(db: Db, folderIds: string[]) {
 		.execute();
 }
 
-/** What removing a folder takes with it. */
 /**
  * What removing a media folder does (doc 09): files nobody uses go, files in use stay, and so do the folders holding them, up to the removed one. It asks nothing:
  * a media folder takes nothing off the site.

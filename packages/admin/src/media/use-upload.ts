@@ -38,6 +38,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			stops.current.set(upload.id, stop);
 			const put = await putFile(file, uploader, {
 				signal: stop.signal,
+				only: upload.only,
 				onProgress: (percent) => dispatch({ type: "progress", id: upload.id, percent }),
 			});
 			// Taken out while it was going: nobody is waiting for it any more.
@@ -56,6 +57,8 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 					...(put.web ? { web: put.web } : {}),
 				})
 				.catch(() => null);
+			// Taken out while the library made it: it stays in the library, and takes no place here.
+			if (stop.signal.aborted) return;
 			if (!made?.ok) {
 				dispatch({ type: "problem", id: upload.id, problem: "failed", kind: put.kind });
 				return;
@@ -84,7 +87,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 		[forget],
 	);
 
-	const add = useCallback((given: readonly File[], folder: string | null = null): Upload[] => {
+	const add = useCallback((given: readonly File[], folder: string | null = null, only?: "image"): Upload[] => {
 		const added = given.map((file): Upload => {
 			const id = crypto.randomUUID();
 			files.current.set(id, file);
@@ -94,6 +97,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 				size: file.size,
 				kind: null,
 				folder,
+				...(only ? { only } : {}),
 				preview: previewOf(file),
 				status: "waiting",
 				progress: 0,

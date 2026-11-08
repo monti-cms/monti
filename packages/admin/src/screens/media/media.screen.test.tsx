@@ -376,6 +376,19 @@ describe("the trash", () => {
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 	});
 
+	it("09-4 Delete takes what is picked and still there: a pick already gone does not refuse the rest", async () => {
+		await openAssets();
+		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "notes-scan.pdf 고르기" }));
+		await userEvent.click(tile("notes-scan.pdf"));
+		await userEvent.click(page.getByRole("complementary").getByRole("button", { name: "더 보기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "휴지통으로" }));
+		await expect.element(tile("notes-scan.pdf")).not.toBeInTheDocument();
+		tile("seoul-night.jpg").element().focus();
+		await userEvent.keyboard("{Delete}");
+		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
+	});
+
 	it("09-4 Delete with a tile's check focused: picked is picked, so the same trash", async () => {
 		await openAssets();
 		const check = page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" });

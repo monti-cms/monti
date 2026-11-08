@@ -8,6 +8,10 @@ export const MediaValueShape = z.object({
 });
 export type MediaValue = z.infer<typeof MediaValueShape>;
 
+/** The one rule for a picture with nothing to say for it (doc 09): not decorative, and alt text that is empty or only spaces. */
+export const altIsMissing = (value: { alt?: unknown; decorative?: unknown }) =>
+	value.decorative !== true && (typeof value.alt !== "string" || value.alt.trim() === "");
+
 /** A stored value read back: `null` for anything that is not a media value (a field that changed kind, an empty value). */
 export function mediaValueOf(value: unknown): MediaValue | null {
 	const parsed = MediaValueShape.safeParse(value);

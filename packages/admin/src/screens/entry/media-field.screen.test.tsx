@@ -83,6 +83,16 @@ describe("in a translation", () => {
 		await expect.element(alt()).toHaveValue("");
 	});
 
+	it("09-1 a cover can be decorative: then nothing asks for its alt text", async () => {
+		await WithCover.run();
+		await properties();
+		await userEvent.fill(alt(), "");
+		await expect.element(page.getByText("이 그림이 말하는 것을 쓰세요")).toBeVisible();
+		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
+		await expect.element(page.getByText("이 그림이 말하는 것을 쓰세요")).not.toBeInTheDocument();
+		await expect.element(alt()).toBeDisabled();
+	});
+
 	it("04-5 a following cover says whose it is, and stops saying so once it is the translation's own", async () => {
 		await TranslationCover.run();
 		await properties();

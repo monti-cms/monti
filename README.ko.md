@@ -38,6 +38,21 @@ pnpm --filter @monti-cms/ui storybook                             # 디자인 �
 커밋하면 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 저절로 돕니다. 커밋 메시지는 영어로 `type(scope): subject`처럼 씁니다
 (예: `feat(core): add thing`). scope 목록은 `commitlint.config.mjs`에 있습니다.
 
+## 미디어 저장소
+
+미디어 라이브러리는 플러그인이 가져오는 저장소에 파일을 둡니다. 저장소가 없는 사이트도 돌아갑니다. 라이브러리가 연결하는 법을 알려 주고, 올리기만 안 됩니다.
+
+```ts
+import { createMonti, definePlugin, localFolderStorage } from "@monti-cms/core";
+
+const monti = createMonti({
+	// ...사이트의 나머지
+	plugins: [definePlugin({ name: "media", storage: localFolderStorage({ dir: "./media" }) })],
+});
+```
+
+`localFolderStorage`는 개발 서버용입니다. 파일을 디스크의 폴더에 두고 관리자 API로 내줍니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다. S3 호환 어댑터는 만들 예정입니다.
+
 ## 라이선스
 
 [MIT](LICENSE)

@@ -61,11 +61,15 @@ export async function undo(
 		engine.site.schema(),
 		snapshots.map(({ ref }) => ref),
 	);
-	// After everything is back: a folder and its files come back together, in no particular order.
-	await leaveNoFileInAGoneFolder(
-		trx,
-		snapshots.filter(({ ref }) => ref.kind === "media").map(({ ref }) => ref.id),
-	);
+	// After everything is back: a folder and its files come back together, in no particular order. A folder the undo removed may hold
+	// files moved in since, which are in no snapshot.
+	const folders = snapshots.filter(({ ref }) => ref.kind === "folder").map(({ ref }) => ref.id);
+	const moved =
+		folders.length === 0 ? [] : await trx.selectFrom("media").select("id").where("folder_id", "in", folders).execute();
+	await leaveNoFileInAGoneFolder(trx, [
+		...snapshots.filter(({ ref }) => ref.kind === "media").map(({ ref }) => ref.id),
+		...moved.map(({ id }) => id),
+	]);
 	await trx.updateTable("monti_activity").set({ undone_at: engine.now() }).where("id", "=", activityId).execute();
 	return plan;
 }

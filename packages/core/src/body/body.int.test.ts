@@ -182,7 +182,7 @@ describe("one definition", () => {
 			{ id: "b_6", type: "removedPluginBlock" },
 		);
 		expect(draw(body, { mediaUrl: (id) => `/media/${id}` })).toBe(
-			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure><img src="/media/m1" alt="A cat"/></figure>',
+			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat"/></figure>',
 		);
 	});
 });

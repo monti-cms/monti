@@ -128,6 +128,7 @@ export async function startSite() {
 				createElement: h,
 				mediaUrl: (id) => found.entry.media?.[id]?.url ?? id,
 				mediaSize: (id) => found.entry.media?.[id],
+				mediaName: (id) => found.entry.media?.[id]?.name,
 			}),
 		);
 		return new Response(`<!doctype html>${renderToStaticMarkup(page)}`, {

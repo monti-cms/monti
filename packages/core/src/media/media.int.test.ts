@@ -278,6 +278,7 @@ describe("changing", () => {
 		expect((await write<MediaItem>("media.update", { id: file.id, name: "noon.jpg" })).output.name).toBe("noon.jpg");
 		expect((await write<MediaItem>("media.update", { id: file.id, name: "a/b.png" })).output.name).toBe("a-b.png.jpg");
 		await refused(write("media.update", { id: file.id, name: "   " }), "media.badName");
+		await refused(write("media.update", { id: file.id, name: "" }), "media.badName");
 		await write("activity.undo", { id: renamed.activityId });
 		// The newer renames changed the record, so that undo skips it: only an undo of the last one takes it back.
 		expect((await read<MediaDetail>("media.get", { id: file.id })).name).toBe("a-b.png.jpg");
@@ -313,6 +314,26 @@ describe("changing", () => {
 		expect((await names({ folder: assets })).sort()).toEqual(["one.jpg", "two.jpg"]);
 		await write("activity.undo", { id: moved.activityId });
 		expect((await names({ folder: null })).sort()).toEqual(["one.jpg", "two.jpg"]);
+	});
+
+	it("09-1 undoing a folder's creation leaves no file in a folder that is gone: it waits at the top level", async () => {
+		const made = await write<{ id: string }>("folders.create", { scope: "media", parentId: null, name: "Blog Assets" });
+		const one = await upload("one.jpg");
+		await write("media.moveToFolder", { ids: [one.id], folder: made.output.id });
+		await write("activity.undo", { id: made.activityId });
+		expect(await names({ folder: null })).toEqual(["one.jpg"]);
+	});
+
+	it("09-1 a move by media.update is logged as a move, not as a rename", async () => {
+		const assets = await folder("Blog Assets");
+		const one = await upload("one.jpg");
+		const moved = await write("media.update", { id: one.id, folder: assets });
+		const row = await db
+			.selectFrom("monti_activity")
+			.select("summary")
+			.where("id", "=", moved.activityId)
+			.executeTakeFirstOrThrow();
+		expect(row.summary.key).toBe("media.moveToFolder");
 	});
 
 	it("09-1 the folder tree counts files, with its subfolders", async () => {

@@ -2,22 +2,20 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
 import type { Database } from "../db/schema";
 import type { FieldDefinition } from "../schema/define";
-import { type MediaPlace, mediaValueOf } from "./value";
+import { altIsMissing, type MediaPlace, mediaValueOf } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
 /** An image with nothing to say for it: not decorative, and no alt text. */
 export type AltGap = { media: string; place: MediaPlace };
 
-const blank = (alt: unknown) => typeof alt !== "string" || alt.trim() === "";
-
-/** The images of a body with no alt text, in order. A block still in the source's words is not decided yet: the to-do list has its own row for that. */
+/** The images of a body with no alt text, in order. A translation's body comes here as the site draws it (`bodyAsRead`): a block still pending is not on the site yet, and one following its source has the source's words. */
 function gapsInDoc(doc: unknown): AltGap[] {
 	const gaps: AltGap[] = [];
 	for (const { block } of walk(asDoc(doc).blocks)) {
 		const attrs = block.attrs ?? {};
-		if (block.type !== "image" || block.link?.state === "pending" || attrs.decorative === true) continue;
-		if (typeof attrs.media === "string" && attrs.media !== "" && blank(attrs.alt))
+		if (block.type !== "image") continue;
+		if (typeof attrs.media === "string" && attrs.media !== "" && altIsMissing(attrs))
 			gaps.push({ media: attrs.media, place: { block: block.id } });
 	}
 	return gaps;
@@ -36,7 +34,7 @@ export async function altGaps(
 	const held = Object.entries(fields).flatMap(([field, definition]) => {
 		if (definition.kind !== "media") return [];
 		const value = mediaValueOf(values[field]);
-		return value && value.decorative !== true && blank(value.alt) ? [{ field, definition, media: value.media }] : [];
+		return value && altIsMissing(value) ? [{ field, definition, media: value.media }] : [];
 	});
 	const askAbout = held.filter(({ definition }) => definition.accept === "any").map(({ media }) => media);
 	const images = new Set(

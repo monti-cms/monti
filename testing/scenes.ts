@@ -69,12 +69,12 @@ export const SCENES = {
 	"write-on": {
 		axis: "after",
 		does: "Put a block in from the text, then keep typing: the words go after it and it stays. At the very end there is a line to go on in.",
-		caught: ["#doc-09: the next letter typed after a pasted picture replaced the picture"],
+		caught: ["#457: the next letter typed after a pasted picture replaced the picture"],
 	},
 	"several-at-once": {
 		axis: "amount",
 		does: "Paste or drop two files at once: both go in, in order.",
-		caught: ["#doc-09: two files dropped on the body threw, and neither went in"],
+		caught: ["#457: two files dropped on the body threw, and neither went in"],
 	},
 	korean: {
 		axis: "input",

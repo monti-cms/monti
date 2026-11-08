@@ -1,4 +1,12 @@
-import { type ImageCrop, type ImageRotate, imageFrame, type MediaDetail, type MediaItem } from "@monti-cms/core";
+import {
+	altIsMissing,
+	type ImageCrop,
+	type ImageRotate,
+	imageAlignOf,
+	imageFrame,
+	type MediaDetail,
+	type MediaItem,
+} from "@monti-cms/core";
 import {
 	BlockBarPlace,
 	BlockBox,
@@ -165,13 +173,13 @@ function movedCrop(start: CropRect, grip: CropGrip, dx: number, dy: number): Cro
 	return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/** A new crop drawn from one point to another, in %: never smaller than a handle can hold, and always inside the picture wherever the pointer went. */
 /** A crop after its picture turned a quarter: the same part of the picture. Its sides are shares of the picture's, so they swap with no sum. */
 const turnedCrop = (part: CropRect, quarter: 90 | -90): CropRect =>
 	quarter === 90
 		? { x: 100 - part.y - part.height, y: part.x, width: part.height, height: part.width }
 		: { x: part.y, y: 100 - part.x - part.width, width: part.height, height: part.width };
 
+/** A new crop drawn from one point to another, in %: never smaller than a handle can hold, and always inside the picture wherever the pointer went. */
 function drawnCrop(from: { x: number; y: number }, to: { x: number; y: number }): CropRect {
 	const x = clamp(Math.min(from.x, to.x), 0, 95);
 	const y = clamp(Math.min(from.y, to.y), 0, 95);
@@ -376,8 +384,8 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const size = item ? (item.web ?? item.original) : null;
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
 	const width = dragged ?? data.width ?? null;
-	const blank = !data.decorative && !(data.alt ?? "").trim();
-	const align = data.align ?? "center";
+	const blank = altIsMissing(data);
+	const align = imageAlignOf(data.align);
 	const next = () => {
 		const after = nextBlankImage(editor, blockId);
 		if (after) openImageCard(editor, after);

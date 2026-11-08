@@ -7,7 +7,7 @@ import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
 import { marksOf } from "../translations/links";
-import { followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import type { Entry } from "./record";
 
 type Awaitable<T> = T | Promise<T>;
@@ -61,7 +61,7 @@ export async function publishTasks(
 				message: { key: "entries.task.required", values: { field } },
 			});
 	// Images with nothing to say for them block the publish (doc 02, flow 1·10): one row, going to the first of them. `entries.missingAlt` lists them all.
-	const gaps = await altGaps(db, fields, read.values, entry.doc);
+	const gaps = await altGaps(db, fields, read.values, await bodyAsRead(db, source, entry.doc));
 	const [firstGap] = gaps;
 	if (firstGap)
 		tasks.push({

@@ -8,6 +8,9 @@ export const WEB_LONGEST_SIDE = 2400;
 
 export type MediaKind = "image" | "file";
 
+/** The one rule for what kind a type is. */
+export const kindOf = (mime: string): MediaKind => (mime.startsWith("image/") ? "image" : "file");
+
 /** What a file is, by its bytes and name. */
 type Identified = { mime: string; kind: MediaKind; extension: string };
 

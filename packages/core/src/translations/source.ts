@@ -129,6 +129,11 @@ export function translatedFields(schema: Schema, collection: string, own: Fields
 	};
 }
 
+/** A body as the publish check reads it: what the site will draw, so a translation's block that follows its source answers with the source's words. */
+export async function bodyAsRead(db: Db, source: Entry | null, doc: unknown): Promise<Doc> {
+	return source ? siteDoc(asDoc(doc), await followedDoc(db, source)) : asDoc(doc);
+}
+
 /**
  * A translation's body as the site draws it (doc 04): pending blocks left out, a `followSource` block replaced by its source block as published.
  * Links are the admin's; the site gets none.

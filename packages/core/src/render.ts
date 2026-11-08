@@ -1,7 +1,7 @@
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Block, Doc, Inline, Mark } from "./body/doc";
 import { linkedGroup } from "./body/links";
-import { ImageCropShape, ImageRotateShape, imageFrame } from "./media/frame";
+import { ImageCropShape, ImageRotateShape, imageAlignOf, imageFrame } from "./media/frame";
 
 /**
  * The site's element factory: React's `createElement`, or any function of that shape. The core knows no framework, so the site hands it in (doc
@@ -27,6 +27,8 @@ export type RenderOptions<Node> = {
 	mediaUrl?: (id: string) => string;
 	/** A media file's size (the reader's `media`): without it a cropped or turned picture is drawn whole. */
 	mediaSize?: (id: string) => { width: number | null; height: number | null } | undefined;
+	/** A media file's name in the library (the reader's `media`): what a file's link says when the entry gave it no words. */
+	mediaName?: (id: string) => string | undefined;
 	/**
 	 * The path of a linked entry (`monti:entry/<group>`), from the reader's `linkPaths`. A link to an entry with no path (not published) is drawn as
 	 * its text alone.
@@ -193,12 +195,24 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 							}),
 						)
 					: h("img", { src: media(attrs.media), alt, width: attrs.width ?? undefined });
+				// In the column where the editor drew it: the middle unless it says otherwise (doc 09).
+				const place = {
+					style: {
+						display: "flex",
+						flexDirection: "column",
+						alignItems: { left: "flex-start", center: "center", right: "flex-end" }[imageAlignOf(attrs.align)],
+					},
+				};
 				return attrs.caption
-					? h("figure", { key }, image, h("figcaption", null, text(attrs.caption)))
-					: h("figure", { key }, image);
+					? h("figure", { key, ...place }, image, h("figcaption", null, text(attrs.caption)))
+					: h("figure", { key, ...place }, image);
 			}
 			case "file":
-				return h("a", { key, href: media(attrs.media), download: true }, text(attrs.name) ?? String(attrs.media));
+				return h(
+					"a",
+					{ key, href: media(attrs.media), download: true },
+					text(attrs.name)?.trim() || options.mediaName?.(String(attrs.media)) || String(attrs.media),
+				);
 		}
 		return undefined;
 	};

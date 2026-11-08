@@ -74,7 +74,7 @@ export {
 	splitName,
 	WEB_LONGEST_SIDE,
 } from "./media/accept";
-export { type ImageCrop, type ImageFrame, type ImageRotate, imageFrame } from "./media/frame";
+export { type ImageCrop, type ImageFrame, type ImageRotate, imageAlignOf, imageFrame } from "./media/frame";
 export { localFolderStorage } from "./media/local-storage";
 export type {
 	MediaDetail,
@@ -86,7 +86,7 @@ export type {
 	MissingAlt,
 } from "./media/operations";
 export { memoryStorage, type Storage } from "./media/storage";
-export { type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
+export { altIsMissing, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {

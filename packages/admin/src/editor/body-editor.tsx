@@ -18,6 +18,7 @@ import {
 	placeLibraryFile,
 } from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
+import { nodeName } from "./schema";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
 import {
@@ -88,7 +89,8 @@ export function BodyEditor({
 				view.view.dispatch(
 					view.state.tr
 						// What was written while it went up stays: the caption is there from the start (flow 6·05).
-						.setNodeMarkup(pos, undefined, {
+						// A file whose type said nothing was taken for a file: the library knows what it is now.
+						.setNodeMarkup(pos, view.schema.nodes[nodeName(item.kind)], {
 							...node.attrs,
 							upload: null,
 							data: { ...node.attrs.data, ...fileBlock(item) },

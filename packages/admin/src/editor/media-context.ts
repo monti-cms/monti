@@ -1,4 +1,5 @@
 import type { MediaItem } from "@monti-cms/core";
+import { altIsMissing } from "@monti-cms/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
@@ -94,8 +95,7 @@ export function nextBlankImage(editor: Editor, after: string): string | null {
 	editor.state.doc.descendants((node) => {
 		if (node.type.name !== nodeName("image")) return true;
 		const data = (node.attrs.data ?? {}) as { alt?: unknown; decorative?: unknown; media?: unknown };
-		const said = typeof data.alt === "string" && data.alt.trim() !== "";
-		if (!said && data.decorative !== true && data.media) blanks.push(String(node.attrs.blockId));
+		if (altIsMissing(data) && data.media) blanks.push(String(node.attrs.blockId));
 		return false;
 	});
 	const others = blanks.filter((id) => id !== after);

@@ -22,6 +22,10 @@ export type ImageFrame = {
 	image: { left: number; top: number; width: number; height: number; rotate: ImageRotate };
 };
 
+/** Where a picture sits in the column: the middle unless it says otherwise (doc 09). The editor and the site read it here. */
+export const imageAlignOf = (align: unknown): "left" | "center" | "right" =>
+	align === "left" || align === "right" ? align : "center";
+
 /**
  * The one sum for a cropped or turned picture, so the editor and the site draw the same (doc 09). The original is never changed. `null` when there is nothing to
  * do, or the picture's size is not known.

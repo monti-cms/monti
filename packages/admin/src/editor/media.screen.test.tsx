@@ -228,6 +228,15 @@ describe("pasting", () => {
 		expect(lists[1]?.getAttribute("start")).toBe("2");
 	});
 
+	it("09-3 a picture with no type or extension is an image block once the library knows it", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		const picture = await canvasFile("x.png");
+		await paste(new File([picture], "screenshot"));
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+	});
+
 	it("09-1 a file that will not go up says why in its place, and can be taken out", async () => {
 		await Draft.run();
 		await caretAfter("글의 첫 문단");
@@ -432,6 +441,23 @@ describe("an image in the text", () => {
 		await expect.element(body()).toHaveFocus();
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.poll(upright).toBe(false);
+	});
+
+	it("09-1 the block menu and the tools agree where a picture is: the middle unless it says otherwise", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await expect.element(bar().getByRole("button", { name: "가운데 정렬" })).toHaveAttribute("aria-pressed", "true");
+		const box = image().element().getBoundingClientRect();
+		await pointerPath([
+			{ x: box.left + 40, y: box.top + 40 },
+			{ x: box.left - 20, y: box.top + 8 },
+		]);
+		await userEvent.click(page.getByRole("button", { name: "블록 메뉴" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "정렬" }));
+		await expect.element(page.getByRole("menuitemradio", { name: "가운데" })).toHaveAttribute("aria-checked", "true");
+		await userEvent.click(page.getByRole("menuitemradio", { name: "왼쪽" }));
+		await userEvent.click(image());
+		await expect.element(bar().getByRole("button", { name: "왼쪽 정렬" })).toHaveAttribute("aria-pressed", "true");
 	});
 
 	it("09-1 a selected picture keeps its colors: the ground of a text selection is not painted over it", async () => {

@@ -56,6 +56,18 @@ describe("bytes on their way up", () => {
 		expect(await answer.json()).toEqual({ error: "unauthenticated" });
 	});
 
+	it("09-1 without a session the body is not even read: a file over the limit gets the same answer", async () => {
+		const answer = await put("a.png", new Uint8Array(MAX_UPLOAD_BYTES + 1), createAdminApi(monti));
+		expect(answer.status).toBe(401);
+	});
+
+	it("09-1 a storage that hands back a pooled Buffer serves its bytes and no others", async () => {
+		const key = "00000000-0000-4000-8000-00000000abcd.txt";
+		await storage.put(key, Buffer.from("hello"), { mime: "text/plain" });
+		const answer = await get(key);
+		expect(new TextDecoder().decode(await answer.arrayBuffer())).toBe("hello");
+	});
+
 	it("09-1 a file the library does not take is refused, whatever its name says", async () => {
 		for (const [name, body] of [
 			["setup.png", new Uint8Array([0x4d, 0x5a, 0x90, 0])],

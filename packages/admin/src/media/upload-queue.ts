@@ -6,7 +6,7 @@ import type { Acceptance, MediaKind } from "@monti-cms/core";
  * - `tooBig`: over the limit; an image can be shrunk and tried again.
  * - `failed`: the network or the server; it can be tried again as it is.
  */
-export type UploadProblem = "type" | "heic" | "unreadable" | "tooBig" | "failed";
+export type UploadProblem = "type" | "heic" | "notImage" | "cannotRead" | "unreadable" | "tooBig" | "failed";
 
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {
@@ -16,6 +16,8 @@ export type Upload = {
 	kind: MediaKind | null;
 	/** The folder it goes to: `null` is the top level. */
 	folder: string | null;
+	/** A place that takes only images: another file stays with its reason, and out of the library. */
+	only?: "image";
 	/** The file's own picture, for what shows while it goes up. */
 	preview: string | null;
 	status: "waiting" | "uploading" | "failed" | "interrupted";
@@ -37,6 +39,8 @@ export const AT_ONCE = 3;
 const STATUS_OF: Record<UploadProblem, "failed" | "interrupted"> = {
 	type: "failed",
 	heic: "failed",
+	notImage: "failed",
+	cannotRead: "failed",
 	unreadable: "failed",
 	tooBig: "interrupted",
 	failed: "interrupted",

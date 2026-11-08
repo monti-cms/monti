@@ -15,7 +15,11 @@ import { useAdmin } from "../operations/admin-context";
 type Guard = { changes: () => number; uploads: () => number; drop: () => void };
 type Held = { changes: number; uploads: number };
 
-const Context = createContext<{ add: (guard: Guard) => () => void; leave: (go: () => void) => void } | null>(null);
+const Context = createContext<{
+	add: (guard: Guard) => () => void;
+	/** `filesOnly`: a step that keeps the draft but ends what goes up. It asks only about the files, and drops only them. */
+	leave: (go: () => void, filesOnly?: boolean) => void;
+} | null>(null);
 
 /**
  * Asks before leaving a screen with unsaved changes (doc 05, flow 11 step 04): keep editing or leave without saving. Proposals are on the server, so
@@ -24,7 +28,7 @@ const Context = createContext<{ add: (guard: Guard) => () => void; leave: (go: (
 export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 	const { t } = useAdmin();
 	const guards = useRef(new Set<Guard>());
-	const [asking, setAsking] = useState<({ go: () => void } & Held) | null>(null);
+	const [asking, setAsking] = useState<({ go: () => void; filesOnly: boolean } & Held) | null>(null);
 	const held = useCallback(
 		(): Held => ({
 			changes: [...guards.current].reduce((sum, guard) => sum + guard.changes(), 0),
@@ -50,10 +54,11 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 					guards.current.delete(guard);
 				};
 			},
-			leave: (go: () => void) => {
+			leave: (go: () => void, filesOnly = false) => {
 				const now = held();
-				if (now.changes + now.uploads === 0) go();
-				else setAsking({ go, ...now });
+				const changes = filesOnly ? 0 : now.changes;
+				if (changes + now.uploads === 0) go();
+				else setAsking({ go, filesOnly, changes, uploads: now.uploads });
 			},
 		}),
 		[held],
@@ -80,7 +85,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 						<AlertDialogCancel
 							variant="danger"
 							onClick={() => {
-								for (const guard of guards.current) guard.drop();
+								for (const guard of guards.current) if (!asking?.filesOnly || guard.uploads() > 0) guard.drop();
 								asking?.go();
 								setAsking(null);
 							}}
@@ -101,6 +106,12 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 export function useLeave() {
 	const context = useContext(Context);
 	return useCallback((go: () => void) => (context ? context.leave(go) : go()), [context]);
+}
+
+/** Like `useLeave`, for a step inside a screen that keeps the draft but ends what goes up: a change of view, the comparison. */
+export function useLeaveFiles() {
+	const context = useContext(Context);
+	return useCallback((go: () => void) => (context ? context.leave(go, true) : go()), [context]);
 }
 
 /** Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. */

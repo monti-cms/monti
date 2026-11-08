@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../__test__/database";
+import { asDoc } from "../body/doc";
 import { createReader } from "../entries/reader";
 import { createMonti, definePlugin } from "../monti";
 import { renderDocument } from "../render";
@@ -194,6 +195,31 @@ describe("a media field in a translation", () => {
 		expect((await siteEntry("en", slug)).values.cover).toEqual({ media: first.id, alt: "책상" });
 	});
 
+	it("04-5 a body image that follows its source reads the source's alt text: writing it there frees the translation's publish", async () => {
+		const file = await upload("desk.jpg");
+		const source = await post({ doc: doc(image("b1", file.id)) });
+		const made = await write("translations.create", { source: source.id, locale: "en" });
+		const row = await db.selectFrom("entries").select("doc").where("id", "=", made.id).executeTakeFirstOrThrow();
+		const [block] = asDoc(row.doc).blocks;
+		if (!block) throw new Error("no block");
+		await write("entries.save", {
+			id: made.id,
+			version: await versionOf(made.id),
+			title: "A post",
+			slug: `en-${++slugs}`,
+			doc: doc({ ...image(block.id, file.id), link: { ...block.link, state: "followSource" } }),
+		});
+		expect(await gapTask(made.id)).toMatchObject({ block: block.id });
+		await write("entries.save", {
+			id: source.id,
+			version: await versionOf(source.id),
+			doc: doc(image("b1", file.id, { alt: "책상" })),
+		});
+		await write("entries.publish", { ids: [source.id] });
+		expect(await gapTask(made.id)).toBeUndefined();
+		expect(await read<MissingAlt[]>("entries.missingAlt", { collection: "post" })).toEqual([]);
+	});
+
 	it("04-5 a translation that follows asks no alt text of its own, one with its own picture does", async () => {
 		const [first, own] = [await upload("first.jpg"), await upload("own.jpg")];
 		const { translation } = await translated(first.id);
@@ -271,7 +297,7 @@ describe("on the site", () => {
 		if (!found || !("entry" in found)) throw new Error("not on the site");
 		const { media, doc: body } = found.entry;
 		expect(media?.[file.id]).toMatchObject({ url: storage.url(webKey), width: 2400, height: 1200, kind: "image" });
-		const [figure] = renderDocument(body as never, {
+		const [figure] = renderDocument(asDoc(body), {
 			createElement: h,
 			mediaUrl: (id) => media?.[id]?.url ?? id,
 			mediaSize: (id) => media?.[id],
@@ -286,6 +312,29 @@ describe("on the site", () => {
 		expect(box?.type).toBe("span");
 		expect(box?.props.style.aspectRatio).toBe(1);
 		expect(box?.children[0]?.props).toMatchObject({ src: storage.url(webKey), alt: "책상" });
+	});
+
+	it("09-1 a picture sits where the editor drew it: the middle unless it says otherwise", () => {
+		const draw = (attrs: Record<string, unknown>) =>
+			renderDocument(asDoc(doc(image("b1", "m1", attrs))), { createElement: h, mediaUrl: (id) => id }) as {
+				props: { style?: { alignItems?: string } };
+			}[];
+		expect(draw({})[0]?.props.style?.alignItems).toBe("center");
+		expect(draw({ align: "center" })[0]?.props.style?.alignItems).toBe("center");
+		expect(draw({ align: "left" })[0]?.props.style?.alignItems).toBe("flex-start");
+		expect(draw({ align: "right" })[0]?.props.style?.alignItems).toBe("flex-end");
+	});
+
+	it("09-1 a file with no words of its own for its link says its name in the library", () => {
+		const draw = (attrs: Record<string, unknown>) =>
+			renderDocument(asDoc(doc({ id: "f1", type: "file", attrs: { media: "m1", ...attrs } })), {
+				createElement: h,
+				mediaUrl: (id) => id,
+				mediaName: () => "가격표.pdf",
+			}) as { children: unknown[] }[];
+		expect(draw({ name: "   " })[0]?.children).toEqual(["가격표.pdf"]);
+		expect(draw({})[0]?.children).toEqual(["가격표.pdf"]);
+		expect(draw({ name: "올해 가격" })[0]?.children).toEqual(["올해 가격"]);
 	});
 
 	it("09-1 a decorative picture has an empty alt on the site, whatever it once said", () => {

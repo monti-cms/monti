@@ -9,6 +9,8 @@ import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "./file-text"
 
 /** How many more files the window loads at a time. */
 const PAGE = 100;
+/** The most `media.query` gives at a time: past it, a search finds the file. */
+const MOST = 1000;
 
 /**
  * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. An image's place shows images, a file's place files. Picking a tile and
@@ -107,9 +109,14 @@ export function MediaPickerDialog({
 					}
 				/>
 			))}
-			{read.data && read.data.total > items.length && (
+			{read.data && read.data.total > items.length && shown < MOST ? (
 				<TextButton onClick={() => setShown(shown + PAGE)}>{t("library.picker.more")}</TextButton>
-			)}
+			) : null}
+			{read.data && read.data.total > items.length && shown >= MOST ? (
+				<Text variant="note" tone="subtle">
+					{t("library.picker.narrow")}
+				</Text>
+			) : null}
 		</MediaPicker>
 	);
 }
