@@ -36,7 +36,6 @@ export const OverFolder: Story = { render: () => <DropArea>{grid(true)}</DropAre
 export const Fill: Story = {
 	tags: ["visual"],
 	render: () => (
-		// design-allow: a column of some height, for the area to fill
 		<div style={{ display: "flex", flexDirection: "column", height: 480 }}>
 			<DropArea fill over>
 				{grid()}

@@ -53,8 +53,8 @@
 | 새 폴더 · 이름 바꾸기 | `FolderTile` 안 `RenameField fill` | "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 이름을 지키고, Esc는 버린다. |
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
-| 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". 목록 보기의 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. 이때 나가려 하면 파일을 올리는 중이라고 묻는다(`useLeaveGuard`의 `uploads`). 파일을 "바뀐 곳"이라 부르지 않는다. |
-| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 받는 종류를 말한다("이미지 · PDF · ZIP · 텍스트만"). |
+| 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". 이때 나가려 하면 파일을 올리는 중이라고 묻는다(`useLeaveGuard`의 `uploads`). 파일을 "바뀐 곳"이라 부르지 않는다. |
+| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 말한다. 받지 않는 형식은 받는 종류("이미지 · PDF · ZIP · 텍스트만"), HEIC는 "HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요", 이미지만 받는 칸의 다른 파일은 "이 칸에는 이미지만 넣을 수 있어요", 읽히지 않는 것(OS의 폴더)은 "이 파일은 읽을 수 없어요"다. |
 | 너무 큰 파일 | `Tile status="interrupted"`(`actions` "줄여서 다시" · "빼기") | 그림은 흐리게 남고 테는 없다. 세부 줄 "14 MB · 10 MB까지". |
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
@@ -67,7 +67,7 @@
 |---|---|---|
 | 표 | `Table`, `TableBody`, `TableRow`, `TableCell` | 열 이름 행은 없다. 조건과 순서는 위 도구 행에 있다. |
 | 그림 열 | `RowThumb` | 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
-| 이름 | `RowTitle` | 행 어디를 눌러도 열린다(`TableRow`가 연다). 폴더 행은 이름 뒤에 개수. |
+| 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
 | 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 
@@ -84,7 +84,7 @@
 |---|---|---|
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · "옮기기"(`ContextMenuSub`) │ "폴더 지우기"(`variant="danger"`) | 열린 동안 그 타일은 선택 바탕을 유지한다. 폴더 지우기는 곧바로 옮기고 `toast`에 "되돌리기", 쓰는 곳이 있는 파일이 남으면 "보기". |
 | 빈 곳 오른쪽 클릭 | `ContextMenu`: "올리기" · "새 폴더" | |
-| 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. Del 키는 타일의 버튼이나 체크에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
+| 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. Del 키는 타일의 버튼, 체크, ⋯에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
 | 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/Separator, Controls/Choice/Segmented, Patterns/List/BulkBar, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBar, Patterns/List/Table, Controls/Status/Count, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
@@ -173,7 +173,7 @@
 | 폴더 목록 | `MediaPicker`의 `folders`(`depth`, `count`), `allLabel` "모든 이미지" · "모든 파일", `folder` | 고른 폴더는 현재 바탕이다. 하위 폴더는 들여 쓴다. |
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
-| "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). |
+| "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있어요. 검색으로 찾아 주세요."가 대신한다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 글자 버튼이다. 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 

@@ -70,7 +70,7 @@ export const LongReason: Story = {
 		<Grid columns="tiles">
 			<TileWith
 				title="iphone-photo.heic"
-				detail="HEIC는 받지 않아요. JPEG나 PNG로 바꿔 주세요"
+				detail="HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요"
 				status="failed"
 				noPreview
 				actions={[{ label: "빼기", onClick: () => {} }]}

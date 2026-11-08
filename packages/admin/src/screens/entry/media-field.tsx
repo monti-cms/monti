@@ -61,8 +61,8 @@ export function MediaField({
 					htmlFor={id}
 					required={required}
 					action={
-						whose ? (
-							<Text variant="caption" tone="faint">
+						whose && !going ? (
+							<Text variant="caption" tone="subtle">
 								{own ? whose.own : whose.following}
 							</Text>
 						) : undefined
@@ -95,17 +95,19 @@ export function MediaField({
 				)}
 			</FormField>
 			{isImage && (
-				<FormField>
-					<FormFieldLabel htmlFor={`${id}-alt`}>{t("library.field.alt")}</FormFieldLabel>
-					<Input
-						id={`${id}-alt`}
-						size="md"
-						disabled={readOnly || shown?.decorative === true}
-						value={own?.alt ?? ""}
-						placeholder={followed?.alt || t("entry.empty")}
-						onChange={(event) => shown && onChange({ ...own, media: shown.media, alt: event.target.value })}
-					/>
-					{altMissing && !readOnly && <FormFieldError>{t("library.field.altMissing")}</FormFieldError>}
+				<>
+					<FormField>
+						<FormFieldLabel htmlFor={`${id}-alt`}>{t("library.field.alt")}</FormFieldLabel>
+						<Input
+							id={`${id}-alt`}
+							size="md"
+							disabled={readOnly || shown?.decorative === true}
+							value={own?.alt ?? ""}
+							placeholder={followed?.alt || t("entry.empty")}
+							onChange={(event) => shown && onChange({ ...own, media: shown.media, alt: event.target.value })}
+						/>
+						{altMissing && !readOnly && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
+					</FormField>
 					<Option spread>
 						{t("editor.image.decorative")}
 						<Switch
@@ -114,7 +116,7 @@ export function MediaField({
 							onCheckedChange={(on) => shown && onChange({ ...own, media: shown.media, decorative: on })}
 						/>
 					</Option>
-				</FormField>
+				</>
 			)}
 			{picking && (
 				<MediaPickerDialog

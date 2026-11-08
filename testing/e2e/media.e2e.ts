@@ -491,7 +491,7 @@ test.describe("while a file is on its way", () => {
 		await admin.getByRole("button", { name: "나란히" }).click();
 		const asked = admin.getByRole("alertdialog");
 		await expect(asked.getByText("파일을 올리는 중이에요")).toBeVisible();
-		await asked.getByRole("button", { name: "그만 올리고 나가기" }).click();
+		await asked.getByRole("button", { name: "그만 올리기" }).click();
 		await expect(asked).toBeHidden();
 		await expect(admin.getByRole("button", { name: "나란히" })).toHaveAttribute("aria-pressed", "true");
 		await expect(admin.getByRole("textbox", { name: "제목" })).toHaveValue("A post");

@@ -4,7 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { pointerPath, typeKorean } from "../../../../testing/input";
 import * as media from "../screens/entry/media.stories";
 
-const { Draft, WithImage, NoStorage, LibraryWindow } = composeStories(media);
+const { Draft, WithImage, NoStorage, LibraryWindow, FileInBody } = composeStories(media);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const paragraph = (text: string) => body().getByText(text);
@@ -465,6 +465,18 @@ describe("an image in the text", () => {
 		await userEvent.click(image());
 		await expect.element(bar()).toBeVisible();
 		expect(getComputedStyle(image().element(), "::selection").backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		const caption = body().getByRole("textbox", { name: "캡션" });
+		await userEvent.click(caption);
+		expect(getComputedStyle(caption.element(), "::selection").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+	});
+
+	it("09-1 a selected file block keeps the ground that says it is selected", async () => {
+		await FileInBody.run();
+		await expect.poll(() => body().element().querySelector("[data-block=file]")).not.toBeNull();
+		const block = body().element().querySelector("[data-block=file]");
+		if (!block) throw new Error("no file block");
+		await userEvent.click(page.elementLocator(block), { position: { x: 4, y: 4 } });
+		expect(getComputedStyle(block, "::selection").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 	});
 
 	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {

@@ -122,6 +122,12 @@ describe("browsing", () => {
 		await userEvent.fill(page.getByRole("textbox", { name: "폴더 이름" }), "대표");
 		await userEvent.keyboard("{Enter}");
 		await expect.element(main().getByRole("link", { name: "대표" })).toBeVisible();
+		await userEvent.click(main().getByRole("link", { name: "대표" }), { button: "right" });
+		await userEvent.click(page.getByRole("menuitem", { name: "이름 바꾸기" }));
+		await userEvent.fill(page.getByRole("textbox", { name: "폴더 이름" }), "아주 긴 폴더 이름 ".repeat(20).trim());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(main().getByRole("link", { name: /아주 긴 폴더 이름/ })).toBeVisible();
+		expect(scrollsSideways(main().element())).toEqual([]);
 	});
 
 	it("09-1 [flow 6·15] [korean] a search reaches the subfolders and can widen to every folder, each result saying where it is", async () => {

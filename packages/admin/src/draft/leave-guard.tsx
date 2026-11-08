@@ -90,7 +90,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 								setAsking(null);
 							}}
 						>
-							{t(onlyFiles ? "leave.uploads.discard" : "leave.discard")}
+							{t(asking?.filesOnly ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard")}
 						</AlertDialogCancel>
 						<AlertDialogAction onClick={() => setAsking(null)}>
 							{t(onlyFiles ? "leave.uploads.stay" : "leave.stay")}

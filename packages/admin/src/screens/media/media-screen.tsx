@@ -712,7 +712,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 												<Folder aria-hidden size={16} />
 											</RowThumb>
 										</TableCell>
-										<TableCell colSpan={7}>
+										<TableCell colSpan={7} truncate={naming.naming?.id !== folder.id}>
 											{naming.naming?.id === folder.id ? (
 												<RowTitle editing title={namingField} />
 											) : (

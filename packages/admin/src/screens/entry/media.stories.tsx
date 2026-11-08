@@ -138,6 +138,12 @@ export const TranslationCover: Story = {
 		values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }),
 		translate: "en",
 	}),
+	// A translation opens with its source beside it and the panel closed.
+	play: async () => {
+		const page = within(document.body);
+		const properties = await page.findByRole("button", { name: "속성" }, wait);
+		if (properties.getAttribute("aria-pressed") !== "true") await userEvent.click(properties);
+	},
 };
 
 /** A site with no storage (flow 6·31). */
