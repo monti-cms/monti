@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { ForbiddenError } from "../errors";
+import { rewriteUses } from "../media/uses";
 import { type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
 
@@ -55,6 +56,11 @@ export async function undo(
 ): Promise<UndoPlan> {
 	const { snapshots, ...plan } = await planUndo(engine, trx, activityId);
 	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore(trx, ref.id, before);
+	await rewriteUses(
+		trx,
+		engine.site.schema(),
+		snapshots.map(({ ref }) => ref),
+	);
 	await trx.updateTable("monti_activity").set({ undone_at: engine.now() }).where("id", "=", activityId).execute();
 	return plan;
 }

@@ -1,6 +1,7 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { type BlockKit, createBlockKit } from "../body/blocks";
 import type { Database } from "../db/schema";
+import { rewriteAllUses } from "../media/uses";
 import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
@@ -143,6 +144,8 @@ export async function readSchemaState(db: Db): Promise<SchemaState | null> {
  */
 async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
 	for (const step of change.steps) await applyStep(db, step, schema, kit);
+	// A field renamed or removed moved what entries hold, with no entry as the write's record (doc 09).
+	await rewriteAllUses(db, schema);
 	for (const [collection, first] of Object.entries(change.firstAdminValues ?? {}))
 		await sql`insert into collection_admin_values (collection, values) values (${collection}, ${JSON.stringify(first)}::jsonb)
 			on conflict (collection) do update set

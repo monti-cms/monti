@@ -1,6 +1,7 @@
 import type { AuthSettings } from "./auth/operations";
 import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
+import type { Storage } from "./media/storage";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 
@@ -20,12 +21,20 @@ export type Site = {
 	kit: BlockKit;
 	/** The ways to sign in (doc 15). */
 	auth: AuthSettings;
+	/** Where media files are, from a plugin (doc 09). Without one the library says there is no storage and takes no file. */
+	storage: Storage | null;
 };
 
 export function createSite(
 	schema: Schema,
 	files: SchemaFiles | null,
-	extra: { publishChecks?: readonly PublishCheck[]; secret?: string | null; kit?: BlockKit; auth?: AuthSettings } = {},
+	extra: {
+		publishChecks?: readonly PublishCheck[];
+		secret?: string | null;
+		kit?: BlockKit;
+		auth?: AuthSettings;
+		storage?: Storage | null;
+	} = {},
 ): Site {
 	let current = schema;
 	return {
@@ -38,5 +47,6 @@ export function createSite(
 		secret: extra.secret ?? null,
 		kit: extra.kit ?? createBlockKit([], []),
 		auth: extra.auth ?? { password: false, github: null },
+		storage: extra.storage ?? null,
 	};
 }

@@ -4,7 +4,8 @@ import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
-import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
+import { usedOf } from "../media/uses";
+import { defineOperation, type Message, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { defineRecordKind } from "../records";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -35,6 +36,7 @@ const moveMessage = (count: number, name: string | null): Message =>
 
 const folderRef = (id: string): RecordRef => ({ kind: "folder", id });
 const entryRef = (id: string): RecordRef => ({ kind: "entry", id });
+const mediaRef = (id: string): RecordRef => ({ kind: "media", id });
 
 type Row = {
 	id: string;
@@ -90,14 +92,14 @@ export const folderRecord = defineRecordKind({
 	},
 });
 
-async function folderOf(db: Db, id: string): Promise<Row> {
+export async function folderOf(db: Db, id: string): Promise<Row> {
 	const row = await db.selectFrom("folders").selectAll().where("id", "=", id).executeTakeFirst();
 	if (!row || row.trashed_at) throw new CheckError({ key: "folders.unknown", values: { id } });
 	return row;
 }
 
 /** The folder and every folder under it, not in the trash. */
-async function subtree(db: Db, id: string): Promise<string[]> {
+export async function subtree(db: Db, id: string): Promise<string[]> {
 	const { rows } = await sql<{ id: string }>`
 		with recursive tree as (
 			select id from folders where id = ${id} and trashed_at is null
@@ -161,6 +163,54 @@ async function entriesIn(db: Db, folderIds: string[]) {
 }
 
 /** What removing a folder takes with it. */
+/**
+ * What removing a media folder does (doc 09): files nobody uses go, files in use stay, and so do the folders holding them, up to the removed one. It asks nothing:
+ * a media folder takes nothing off the site.
+ */
+async function mediaRemoval(db: Db, id: string) {
+	const folders = await subtree(db, id);
+	const files = await db
+		.selectFrom("media")
+		.select(["id", "folder_id"])
+		.where("folder_id", "in", folders)
+		.where("trashed_at", "is", null)
+		.execute();
+	const used = await usedOf(
+		db,
+		files.map((file) => file.id),
+	);
+	const rows = await db.selectFrom("folders").select(["id", "parent_id"]).where("id", "in", folders).execute();
+	const parentOf = new Map(rows.map((row) => [row.id, row.parent_id]));
+	const staying = new Set<string>();
+	for (const file of files) {
+		if (!used.has(file.id)) continue;
+		for (let at = file.folder_id; at && parentOf.has(at); at = parentOf.get(at) ?? null) staying.add(at);
+	}
+	return {
+		folders,
+		files: files.map((file) => file.id),
+		moved: files.filter((file) => !used.has(file.id)).map((file) => file.id),
+		used,
+		gone: folders.filter((folder) => !staying.has(folder)),
+	};
+}
+
+/** Whether a folder holds media: `undefined` for a folder that is not there, which the write's check refuses. */
+const isMediaFolder = async (db: Db, id: string) =>
+	(await db.selectFrom("folders").select("collection").where("id", "=", id).executeTakeFirst())?.collection === null;
+
+/** What a folder's removal did: entries in a collection's folder, files in a media one (`media`). */
+export type FolderRemoval = {
+	id: string;
+	name: string;
+	media: boolean;
+	entries: number;
+	unpublished: number;
+	/** Files that went to the trash, and files that stayed because something uses them, with their folders. */
+	moved: number;
+	kept: number;
+};
+
 async function removal(db: Db, id: string) {
 	const folders = await subtree(db, id);
 	const entries = await entriesIn(db, folders);
@@ -190,9 +240,18 @@ export const folderOperations = [
 			let query = ctx.db.selectFrom("folders").selectAll().where("trashed_at", "is", null);
 			query = collection === null ? query.where("collection", "is", null) : query.where("collection", "=", collection);
 			const rows = await query.orderBy("position").orderBy("name").execute();
-			// Entries count by translation group: the list shows one row per group (doc 06).
+			// Entries count by translation group: the list shows one row per group (doc 06). Media counts its files.
 			const own = new Map<string, { count: number; published: number }>();
-			if (collection !== null)
+			if (collection === null) {
+				for (const row of await ctx.db
+					.selectFrom("media")
+					.select(["folder_id", sql<number>`count(*)::int`.as("count")])
+					.where("trashed_at", "is", null)
+					.where("folder_id", "is not", null)
+					.groupBy("folder_id")
+					.execute())
+					if (row.folder_id) own.set(row.folder_id, { count: Number(row.count), published: 0 });
+			} else {
 				for (const row of await ctx.db
 					.selectFrom("entries")
 					.leftJoin("entry_published", "entry_published.entry_id", "entries.id")
@@ -207,6 +266,7 @@ export const folderOperations = [
 					.groupBy("entries.folder_id")
 					.execute())
 					if (row.folder_id) own.set(row.folder_id, { count: Number(row.count), published: Number(row.published) });
+			}
 			const children = new Map<string | null, Row[]>();
 			for (const row of rows) children.set(row.parent_id, [...(children.get(row.parent_id) ?? []), row]);
 			const folders: FolderNode[] = [];
@@ -331,14 +391,32 @@ export const folderOperations = [
 			"Put a folder in the trash with its subfolders and everything in them. Read the preview first: it counts the entries, subfolders and published entries; the published ones go off the site. The trash can restore them for 30 days.",
 		input: z.object({ id: z.string() }),
 		async touches(input, ctx) {
+			if (await isMediaFolder(ctx.db, input.id)) {
+				const { folders, files } = await mediaRemoval(ctx.db, input.id);
+				return [...folders.map(folderRef), ...files.map(mediaRef)];
+			}
 			const { folders, entries } = await removal(ctx.db, input.id);
 			return [...folders.map(folderRef), ...entries.map((entry) => entryRef(entry.id))];
 		},
 		async check(input, ctx) {
 			await folderOf(ctx.db, input.id);
 		},
-		async preview(input, ctx) {
+		async preview(input, ctx): Promise<Preview> {
 			const folder = await folderOf(ctx.db, input.id);
+			if (folder.collection === null) {
+				const { gone, moved, used } = await mediaRemoval(ctx.db, input.id);
+				return {
+					summary: {
+						key: "folders.removeMediaPreview",
+						values: { name: folder.name, moved: moved.length, kept: used.size },
+					},
+					changes: [...gone.map(folderRef), ...moved.map(mediaRef)],
+					blocked: [...used].map(([id, uses]) => ({
+						ref: mediaRef(id),
+						reason: { key: "media.inUse", values: { uses } },
+					})),
+				};
+			}
 			const { folders, entries, published } = await removal(ctx.db, input.id);
 			return {
 				summary: {
@@ -353,10 +431,37 @@ export const folderOperations = [
 				changes: [...folders.map(folderRef), ...entries.map((entry) => entryRef(entry.id))],
 			};
 		},
-		async run(input, ctx) {
+		async run(input, ctx): Promise<FolderRemoval> {
 			const folder = await folderOf(ctx.db, input.id);
-			const { folders, entries, published } = await removal(ctx.db, input.id);
 			const now = ctx.now();
+			if (folder.collection === null) {
+				// The engine has locked these files: a save that starts using one is either seen here or waits and brings it back (09-4).
+				const { gone, moved, used } = await mediaRemoval(ctx.db, input.id);
+				if (gone.length > 0)
+					await ctx.db
+						.updateTable("folders")
+						.set((eb) => ({ trashed_at: now, version: eb("version", "+", 1) }))
+						.where("id", "in", gone)
+						.execute();
+				if (moved.length > 0) {
+					await ctx.db
+						.updateTable("media")
+						.set((eb) => ({ trashed_at: now, version: eb("version", "+", 1) }))
+						.where("id", "in", moved)
+						.execute();
+					ctx.emit({ type: "media.trashed", ids: moved });
+				}
+				return {
+					id: folder.id,
+					name: folder.name,
+					media: true,
+					entries: 0,
+					unpublished: 0,
+					moved: moved.length,
+					kept: used.size,
+				};
+			}
+			const { folders, entries, published } = await removal(ctx.db, input.id);
 			await ctx.db
 				.updateTable("folders")
 				.set((eb) => ({ trashed_at: now, version: eb("version", "+", 1) }))
@@ -392,12 +497,20 @@ export const folderOperations = [
 					paths: [publicPath(ctx.site.schema(), entry.collection, slug) ?? []].flat(),
 				});
 			}
-			return { id: folder.id, name: folder.name, entries: entries.length, unpublished: published.size };
+			return {
+				id: folder.id,
+				name: folder.name,
+				media: false,
+				entries: entries.length,
+				unpublished: published.size,
+				moved: 0,
+				kept: 0,
+			};
 		},
-		summary: (_input, output) => ({
-			key: "folders.remove",
-			values: { name: output.name, entries: output.entries },
-		}),
+		summary: (_input, output): Message =>
+			output.media
+				? { key: "folders.removeMedia", values: { name: output.name, moved: output.moved, kept: output.kept } }
+				: { key: "folders.remove", values: { name: output.name, entries: output.entries } },
 	}),
 	defineOperation({
 		name: "entries.moveToFolder",

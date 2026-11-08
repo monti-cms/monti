@@ -58,6 +58,25 @@ export {
 } from "./errors";
 export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
+export {
+	type Acceptance,
+	acceptFile,
+	HEAD_BYTES,
+	MAX_UPLOAD_BYTES,
+	type MediaKind,
+	splitName,
+} from "./media/accept";
+export { localFolderStorage } from "./media/local-storage";
+export type {
+	MediaDetail,
+	MediaFile,
+	MediaItem,
+	MediaQueryResult,
+	MediaTrashResult,
+	MediaUseRow,
+} from "./media/operations";
+export { memoryStorage, type Storage } from "./media/storage";
+export { type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {

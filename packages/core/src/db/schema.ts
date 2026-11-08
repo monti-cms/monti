@@ -202,9 +202,41 @@ export interface FolderTable {
 	trashed_at: Date | null;
 }
 
+/** A file in the media library (doc 09): the bytes are in the storage under its keys. */
+export interface MediaTable {
+	id: string;
+	/** `null` is the top level of the library. */
+	folder_id: string | null;
+	name: string;
+	kind: "image" | "file";
+	mime: string;
+	size: number;
+	original_key: string;
+	original_width: number | null;
+	original_height: number | null;
+	/** The web size, for an image whose original is larger; the site and the model read it. */
+	web_key: string | null;
+	web_width: number | null;
+	web_height: number | null;
+	uploaded_at: Generated<Date>;
+	version: Generated<number>;
+	trashed_at: Date | null;
+}
+
+/** One place a file is used: one field or one body block of an entry or a template. Written again whenever its owner changes (doc 09). */
+export interface MediaUseTable {
+	media_id: string;
+	entry_id: string | null;
+	template_id: string | null;
+	/** `field:<name>` or `block:<id>`. */
+	place: string;
+}
+
 export interface Database {
 	entries: EntryTable;
 	folders: FolderTable;
+	media: MediaTable;
+	media_uses: MediaUseTable;
 	entry_published: EntryPublishedTable;
 	source_blocks: SourceBlockTable;
 	old_paths: OldPathTable;

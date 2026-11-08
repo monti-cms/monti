@@ -140,8 +140,20 @@ export const coreBlocks: AnyBlockDefinition[] = [
 			media: z.string(),
 			alt: z.string().optional(),
 			caption: z.string().optional(),
-			width: z.number().positive().optional(),
+			/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
+			decorative: z.boolean().optional(),
+			width: z.number().positive().nullable().optional(),
 			align: z.enum(["left", "center", "right"]).optional(),
+			/** What of the picture shows, as parts of it. The original is never changed. */
+			crop: z
+				.object({
+					x: z.number().min(0).max(1),
+					y: z.number().min(0).max(1),
+					width: z.number().positive().max(1),
+					height: z.number().positive().max(1),
+				})
+				.optional(),
+			rotate: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
 		}),
 		holds: "nothing",
 		translate: { attrs: ["alt", "caption"] },
