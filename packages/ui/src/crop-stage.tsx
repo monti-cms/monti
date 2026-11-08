@@ -88,7 +88,7 @@ function CropStage({
 							onKeyDown={(event) => {
 								if (event.target === event.currentTarget) onGripKey?.(event, "move");
 							}}
-							className="absolute cursor-move border-2 border-monti-contrast"
+							className="absolute cursor-move border-2 border-monti-contrast outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast focus-visible:ring-offset-2"
 							style={{ left: `${crop.x}%`, top: `${crop.y}%`, width: `${crop.width}%`, height: `${crop.height}%` }}
 						>
 							{CORNERS.map(({ grip, place }) => (
@@ -102,7 +102,7 @@ function CropStage({
 										onGrip?.(event, grip);
 									}}
 									onKeyDown={(event) => onGripKey?.(event, grip)}
-									className={`absolute size-3.5 rounded-monti-sm border border-monti-default bg-monti-emphasis p-0 ${place}`}
+									className={`absolute size-3.5 rounded-monti-sm border border-monti-default bg-monti-emphasis p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast focus-visible:ring-offset-2 ${place}`}
 								/>
 							))}
 						</div>

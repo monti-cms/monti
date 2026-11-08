@@ -21,7 +21,7 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Banner } from "./banner";
-export { ResizeCorner } from "./block-bar";
+export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";

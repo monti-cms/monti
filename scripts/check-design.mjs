@@ -676,20 +676,20 @@ function sourcesUnder(dir, skip = ["__test__", "node_modules", "dist", "test"]) 
 const linesMatching = (source, pattern) =>
 	source.split("\n").flatMap((text, index) => (pattern.test(text) ? [index + 1] : []));
 
-/** The packages whose classes the admin stylesheet compiles (its `@source` lines): the admin UI. */
-const ADMIN_STYLES_INDEX = path.join(root, "packages/admin/styles/index.css");
-const ADMIN_UI_PACKAGES = existsSync(ADMIN_STYLES_INDEX)
-	? [...readFileSync(ADMIN_STYLES_INDEX, "utf8").matchAll(/^@source "(?:\.\.\/\.\.\/)?([\w-]+|\.\.)\/src";/gm)].map(
-			(match) => (match[1] === ".." ? "admin" : match[1]),
-		)
-	: ["ui"];
+/** The packages that draw the admin UI: the design system and the screens. */
+const ADMIN_UI_PACKAGES = ["ui", "admin"];
 
 /**
  * Files of a screen package that draw something the components cannot say (positions over the document, drag transforms, measured layouts, chart
  * geometry, an imitation of another site), with the reason. Only these set `className` or `style`, import the open entry or the class helpers.
  * Adding a file here is a design decision, made in review.
  */
-const DRAWING = new Map([]);
+const DRAWING = new Map([
+	// Raw layout written while this check silently skipped the admin (T105).
+	["admin/src/screens/frame/admin-frame.tsx", "the assistant corner's icon size (T105)"],
+	["admin/src/screens/settings/basics-tab.tsx", "the public address row (T105)"],
+	["admin/src/screens/settings/new-collection-sheet.tsx", "the public address row (T105)"],
+]);
 
 /**
  * Screens are built from `@monti-cms/ui` components and their options only: no `className`, no `style`, no import of the open entry

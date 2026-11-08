@@ -211,6 +211,17 @@ describe("browsing", () => {
 		expect(everywhere.items.find((item) => item.name === "cover-deep.jpg")?.path).toEqual(["Blog Assets", "covers"]);
 	});
 
+	it("09-1 kind and use narrow the open folder's own files; only a search looks through folders", async () => {
+		const assets = await folder("Blog Assets");
+		const covers = await folder("covers", assets);
+		await upload("here.jpg", { folderId: assets });
+		await upload("deep.jpg", { folderId: covers });
+		await upload("top.jpg");
+		expect(await names({ folder: assets, kinds: ["image"] })).toEqual(["here.jpg"]);
+		expect(await names({ folder: null, kinds: ["image"] })).toEqual(["top.jpg"]);
+		expect(await names({ folder: assets, used: ["unused"] })).toEqual(["here.jpg"]);
+	});
+
 	it("09-1 a percent sign in a search is a percent sign", async () => {
 		await upload("100%-done.jpg");
 		await upload("other.jpg");

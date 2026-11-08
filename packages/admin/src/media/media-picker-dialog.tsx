@@ -41,16 +41,19 @@ export function MediaPickerDialog({
 		{ afterWrites: true },
 	);
 	const items = read.data?.items ?? [];
-	const choose = (item: MediaItem) => {
-		onPick(item);
-	};
 	return (
 		<MediaPicker
 			open
 			onOpenChange={(open) => !open && onClose()}
 			title={title ?? t(kind === "file" ? "library.picker.file" : "library.picker.image")}
 			allLabel={t(kind === "image" ? "library.picker.allImages" : "library.picker.allFiles")}
-			folders={folders.list.map((each) => ({ id: each.id, name: each.name, depth: each.depth, count: each.count }))}
+			// A folder's count is of all its files, so it shows only where images are what is listed (components/list.md).
+			folders={folders.list.map((each) => ({
+				id: each.id,
+				name: each.name,
+				depth: each.depth,
+				...(kind === "image" ? { count: each.count } : {}),
+			}))}
 			folder={folder}
 			onFolderChange={(next) => {
 				setPicked(null);
@@ -73,7 +76,7 @@ export function MediaPickerDialog({
 			}
 			confirmLabel={confirmLabel ?? t("library.picker.insert")}
 			confirmHidden={picked === null}
-			onConfirm={() => picked && choose(picked)}
+			onConfirm={() => picked && onPick(picked)}
 			notice={
 				read.data && items.length === 0 ? (
 					<Text variant="note" tone="subtle">
@@ -86,10 +89,14 @@ export function MediaPickerDialog({
 				<Tile
 					key={item.id}
 					title={item.name}
-					detail={item.kind === "image" ? sizeLabel(item) : formatBytes(item.size)}
+					detail={[
+						item.kind === "image" ? sizeLabel(item) : formatBytes(item.size),
+						item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed"),
+					]
+						.filter(Boolean)
+						.join(" · ")}
 					selected={picked?.id === item.id}
 					onClick={() => setPicked(picked?.id === item.id ? null : item)}
-					onDoubleClick={() => choose(item)}
 					preview={
 						item.kind === "image" ? (
 							<Image src={previewUrl(item)} alt="" ratio="photo" radius="none" />

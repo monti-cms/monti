@@ -66,5 +66,8 @@ export const queryOf = (state: MediaState) => ({
 	page: state.page,
 });
 
-/** Whether the screen is looking for files rather than sitting in a folder: folders hide, and the "search in" choice shows (doc 07). */
-export const isLooking = (state: MediaState) => state.search !== "" || state.kinds.length > 0 || state.used.length > 0;
+/**
+ * Whether the screen is searching rather than sitting in a folder: folders hide, and the "search in" choice shows. Kind and use only narrow the open folder's own files, and
+ * its folders stay to browse (components/list.md).
+ */
+export const isLooking = (state: MediaState) => state.search !== "";

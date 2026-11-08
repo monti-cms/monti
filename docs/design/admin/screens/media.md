@@ -76,6 +76,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 쪽 | `Pagination`(목록 화면의 `ListPages`와 같다) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. |
+| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄 | "아직 파일이 없어요.", 거른 결과가 없으면 "맞는 파일이 없어요." 상자도 안내도 없다. |
 
 #### 오른쪽 클릭과 확인
 
@@ -105,8 +106,9 @@
 | (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
 | (빠짐, 2026-11-05) 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
+| 어시스턴트의 이름 제안 | 파일 이름 `Affix`의 `proposal`, 패널 안 `ProposalBubbleDock` + `ProposalBubble` | 분류 패널과 같다. 받거나 버린다. |
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `Stack`, 행마다 `TextButton`(`href` 그 글) + `Text variant="micro" tone="subtle"`(자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). |
-| 저장 | `SidePanel footer`의 `Button variant="primary"` | 이미지와 파일이 같다. "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |
+| 저장 | `SidePanel footer`의 `Button variant="primary"` | 바뀐 것이 있을 때만 있다(원칙 7). 이미지와 파일이 같다. "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |
 
 ### 흐름 2 · 어시스턴트
 
@@ -171,6 +173,7 @@
 | 폴더 목록 | `MediaPicker`의 `folders`(`depth`, `count`), `allLabel` "모든 이미지" · "모든 파일", `folder` | 고른 폴더는 현재 바탕이다. 하위 폴더는 들여 쓴다. |
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
+| "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 글자 버튼이다. 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 

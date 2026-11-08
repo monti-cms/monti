@@ -32,8 +32,9 @@
 | 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 행 앞에 블록 아이콘: 제목은 `HeadingIcon`. 행 끝에 마크다운 단축 `MenuShortcut typed`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. |
 | 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드, 서식이 있을 때 `clear` / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. 서식 지우기(⌘\)는 고른 범위 안의 서식을 링크만 남기고 모두 뺀다(editor-tools.md). |
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿", `CommandItem`(행 앞에 블록 아이콘, 제목은 `HeadingIcon`, 행 끝에 마크다운 단축 `MenuShortcut typed`), `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
-| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. |
-| 이미지 도구 행 | `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
+| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. 캡션 칸은 그때부터 있다. |
+| 올리지 못한 파일 | `FileBlock tone="danger"`(세부에 이유), 아래 `Inline`에 `TextButton`("줄여서 다시" · "다시 올리기" · "빼기") | 제자리에 남는다. 이미지도 파일도 같다(2026-11-09). 속성 패널에서는 `FormFieldError`에 이유, 아래에 같은 버튼이다. |
+| 이미지 도구 행 | `BlockBarPlace` 안 `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 시트(`Sheet` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
 | 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Input`(플레이스홀더 "본문 맞춤"), "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
 | 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `TextButton tone="proposal" size="micro"` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`(`onNameChange`로 보이는 이름을 그 자리에서 고친다) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |

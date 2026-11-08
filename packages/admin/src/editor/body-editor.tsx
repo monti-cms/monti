@@ -88,7 +88,12 @@ export function BodyEditor({
 				if (node.attrs.upload !== done.id) return true;
 				view.view.dispatch(
 					view.state.tr
-						.setNodeMarkup(pos, undefined, { ...node.attrs, upload: null, data: fileBlock(item) })
+						// What was written while it went up stays: the caption is there from the start (flow 6·05).
+						.setNodeMarkup(pos, undefined, {
+							...node.attrs,
+							upload: null,
+							data: { ...node.attrs.data, ...fileBlock(item) },
+						})
 						.setMeta("addToHistory", false),
 				);
 				return false;

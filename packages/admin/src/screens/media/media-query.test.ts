@@ -24,6 +24,7 @@ describe("the library's address", () => {
 		const search = "folder=f1&q=cover&in=all&kind=file&used=unused&sort=size&view=list&page=2&file=m1";
 		expect(writeMediaState(read(search)).toString()).toBe(search);
 		expect(isLooking(read(search))).toBe(true);
+		expect(isLooking(read("kind=file&used=unused"))).toBe(false);
 	});
 
 	it("09-1 what an old link says that nothing knows is left out", () => {

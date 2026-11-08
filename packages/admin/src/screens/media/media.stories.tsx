@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
 type Loaded = { site: StorySite };
+const wait = { timeout: 15000 };
 type Monti = StorySite["monti"];
 
 const admin = { actor: "admin" } as const;
@@ -95,7 +97,7 @@ export async function fillLibrary(monti: Monti, storage: StorySite["storage"]) {
 		height: 2000,
 		folderId: assets,
 	});
-	await addDocument(site, {
+	const notes = await addDocument(site, {
 		name: "notes-scan.pdf",
 		size: 2_200_000,
 		mime: "application/pdf",
@@ -127,7 +129,7 @@ export async function fillLibrary(monti: Monti, storage: StorySite["storage"]) {
 		slug: "morning-desk",
 		values: { cover: { media: desk, alt: "책상" } },
 	});
-	return { assets, covers, code, desk };
+	return { assets, covers, code, desk, notes };
 }
 
 /** Starts at an address with the library filled, signed in. */
@@ -159,6 +161,41 @@ type Story = StoryObj<typeof meta>;
 
 /** Flow 6·07: the top of the library, its folders and the files in no folder. */
 export const Top: Story = { loaders: library() };
+
+/** Flow 6·08: inside a folder, its subfolders and files under its path. */
+export const InFolder: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^Blog Assets/ }, wait));
+	},
+};
+
+/** Flow 6·16: a file open beside the grid, with where it is used. */
+export const FilePanel: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /^Blog Assets/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: /cybersecurity-code/ }, wait));
+	},
+};
+
+/** Flow 6·20: files picked, the bar in place of the tools. */
+export const Picked: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /^Blog Assets/ }, wait));
+		await userEvent.click(await page.findByRole("checkbox", { name: "seoul-night.jpg 고르기" }, wait));
+		await userEvent.click(page.getByRole("checkbox", { name: "notes-scan.pdf 고르기" }));
+	},
+};
+
+/** Flow 6·15: a search reaching through the folders. */
+export const Searching: Story = { loaders: library("#/media?q=cafe") };
+
+/** Flow 6·33: a kind chosen, its chip in the filter's place. */
+export const KindChosen: Story = { loaders: library("#/media?kind=image") };
 
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };

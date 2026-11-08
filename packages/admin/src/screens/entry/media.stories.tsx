@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { fillLibrary } from "../media/media.stories";
@@ -6,6 +7,7 @@ import { schema } from "../story-schema";
 
 type Loaded = { site: StorySite };
 type Library = Awaited<ReturnType<typeof fillLibrary>>;
+const wait = { timeout: 15000 };
 
 const paragraph = { id: "p_1", type: "paragraph", content: [{ type: "text", text: "글의 첫 문단이에요." }] };
 
@@ -66,6 +68,47 @@ export const WithImage: Story = {
 	loaders: entry({
 		body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } }],
 	}),
+};
+
+/** Flow 6·06: the picture picked, its tools and settings card open. */
+export const ImageTools: Story = {
+	...WithImage,
+	play: async () => {
+		const page = within(document.body);
+		await userEvent.click(await page.findByRole("img", { name: "아침 책상" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+	},
+};
+
+/** The crop sheet, a part chosen. */
+export const CropSheet: Story = {
+	...WithImage,
+	play: async () => {
+		const page = within(document.body);
+		await userEvent.click(await page.findByRole("img", { name: "아침 책상" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "자르기와 회전" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "자를 곳 잡기" }, wait));
+	},
+};
+
+/** Flow 6·38: a file in the body. */
+export const FileInBody: Story = {
+	loaders: entry({
+		body: ({ notes }) => [{ id: "f_1", type: "file", attrs: { media: notes } }],
+	}),
+};
+
+/** Flow 6·29: the library's window open from the "/" menu. */
+export const LibraryWindow: Story = {
+	...Draft,
+	play: async () => {
+		const page = within(document.body);
+		const body = await page.findByRole("textbox", { name: "본문" }, wait);
+		await userEvent.click(body);
+		await userEvent.keyboard("/이미지");
+		await userEvent.keyboard("{Enter}");
+		await page.findByRole("dialog", {}, wait);
+	},
 };
 
 /** A cover in the property panel, with what the entry says of it (T67). */

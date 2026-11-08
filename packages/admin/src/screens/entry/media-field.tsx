@@ -3,7 +3,7 @@ import { FormField, FormFieldError, FormFieldLabel, Input, MediaInput, Text } fr
 import { useState } from "react";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
-import { UploadProblem } from "../../media/upload-problem";
+import { UploadActions, useProblemText } from "../../media/upload-problem";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
@@ -41,6 +41,7 @@ export function MediaField({
 	onChange: (next: { media: string; alt?: string } | null) => void;
 }) {
 	const { t } = useAdmin();
+	const problemText = useProblemText();
 	const [picking, setPicking] = useState(false);
 	const own = mediaValueOf(value);
 	const followed = own ? null : mediaValueOf(source);
@@ -67,7 +68,10 @@ export function MediaField({
 					clearLabel={t("library.field.clear", { label })}
 				/>
 				{going?.problem && (
-					<UploadProblem upload={going} onRemove={uploads.remove} onRetry={uploads.retry} onShrink={uploads.shrink} />
+					<>
+						<FormFieldError>{problemText(going)}</FormFieldError>
+						<UploadActions upload={going} onRemove={uploads.remove} onRetry={uploads.retry} onShrink={uploads.shrink} />
+					</>
 				)}
 			</FormField>
 			{isImage && (

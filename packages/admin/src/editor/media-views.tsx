@@ -1,5 +1,7 @@
 import { type ImageCrop, type ImageRotate, imageFrame, type MediaDetail, type MediaItem } from "@monti-cms/core";
 import {
+	BlockBarPlace,
+	BlockBox,
 	Button,
 	type CropGrip,
 	type CropRect,
@@ -31,11 +33,19 @@ import {
 	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
-import { Crop, Reset, Settings, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@monti-cms/ui/icons";
+import {
+	Crop,
+	Image as ImageIcon,
+	Reset,
+	Settings,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+} from "@monti-cms/ui/icons";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
-import { UploadProblem } from "../media/upload-problem";
+import { UploadActions, useProblemText } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { EditorMedia, fileBlock, nextBlankImage, openImageCard } from "./media-context";
@@ -60,6 +70,8 @@ const ALIGNS = [
 	{ value: "right", icon: TextAlignRight, label: "editor.image.right" },
 ] as const;
 const MIN_WIDTH = 80;
+/** How long alt text runs (flow 1·12). */
+const ALT_MAX = 80;
 
 /**
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
@@ -79,6 +91,7 @@ function UploadInPlace({
 	const { t } = useAdmin();
 	const media = useContext(EditorMedia);
 	const upload = media?.uploads.find((each) => each.id === id);
+	const problemText = useProblemText();
 	const latest = useRef({ onDone, onGone });
 	latest.current = { onDone, onGone };
 	useEffect(() => {
@@ -89,24 +102,12 @@ function UploadInPlace({
 	}, [media, upload, id]);
 	if (!media || !upload) return null;
 	const { problem } = upload;
-	return (
-		<Stack gap={8}>
-			{isImage && (
-				<UploadingImage
-					src={problem === "type" || problem === "unreadable" ? null : upload.preview}
-					progress={upload.progress}
-					label={t("editor.image.uploading")}
-				/>
-			)}
-			{!isImage && (
-				<FileBlock
-					name={upload.name}
-					meta={problem ? "" : t("library.uploading", { percent: upload.progress })}
-					tone={problem ? "danger" : "default"}
-				/>
-			)}
-			{problem && (
-				<UploadProblem
+	// A file that stopped says so in the box that stands for a file, with what can be done under it (screens/editor.md).
+	if (problem)
+		return (
+			<Stack gap={8}>
+				<FileBlock name={upload.name} meta={problemText(upload)} tone="danger" />
+				<UploadActions
 					upload={upload}
 					onRemove={(each) => {
 						media.remove(each);
@@ -115,8 +116,12 @@ function UploadInPlace({
 					onRetry={media.retry}
 					onShrink={media.shrink}
 				/>
-			)}
-		</Stack>
+			</Stack>
+		);
+	return isImage ? (
+		<UploadingImage src={upload.preview} progress={upload.progress} label={t("editor.image.uploading")} />
+	) : (
+		<FileBlock name={upload.name} meta={t("library.uploading", { percent: upload.progress })} />
 	);
 }
 
@@ -328,15 +333,32 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const editable = editor.isEditable;
 	const open = media?.card === blockId;
 
+	const captionField = (editable || data.caption) && (
+		<Input
+			appearance="inline"
+			size="sm"
+			align="center"
+			aria-label={t("editor.image.caption")}
+			placeholder={t("editor.image.caption")}
+			readOnly={!editable}
+			value={caption.value}
+			onChange={(event) => caption.change(event.target.value)}
+			{...caption.composition}
+		/>
+	);
+
 	if (uploading)
 		return (
 			<NodeViewWrapper data-block="image">
-				<UploadInPlace
-					id={uploading}
-					isImage
-					onGone={deleteNode}
-					onDone={(done) => updateAttributes({ upload: null, data: fileBlock(done) })}
-				/>
+				<Stack gap={8}>
+					<UploadInPlace
+						id={uploading}
+						isImage
+						onGone={deleteNode}
+						onDone={(done) => updateAttributes({ upload: null, data: { ...data, ...fileBlock(done) } })}
+					/>
+					{captionField}
+				</Stack>
 			</NodeViewWrapper>
 		);
 
@@ -391,8 +413,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 		<NodeViewWrapper data-block="image">
 			<Stack gap={8}>
 				<Inline justify={JUSTIFY[align]}>
-					{/* design-allow: a width the writer dragged; the tool row and the corners hang off this box */}
-					<div ref={box} className="relative w-full" style={width ? { width, maxWidth: "100%" } : undefined}>
+					<BlockBox ref={box} width={width}>
 						{url ? (
 							<Image
 								src={url}
@@ -402,15 +423,18 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 								loading="eager"
 								frame={frame}
 							/>
-						) : file.refusal ? (
-							<Text variant="note" tone="danger">
-								{t("editor.image.notFound")}
-							</Text>
-						) : null}
+						) : (
+							// While it loads, and for a file the library does not have: the frame with nothing in it (editor-tools.md).
+							<Image
+								src={null}
+								alt={file.refusal ? t("editor.image.notFound") : ""}
+								fallback={ImageIcon}
+								ratio="wide"
+							/>
+						)}
 						{selected && editable && url && (
 							<>
-								{/* design-allow: the tool row floats over the block's top left, where the editor's overlays stand */}
-								<div className="absolute z-1" style={{ top: -42, left: 0 }} contentEditable={false}>
+								<BlockBarPlace>
 									<FloatingBar>
 										{ALIGNS.map(({ value, icon: Icon, label }) => (
 											<FloatingBarButton
@@ -448,12 +472,22 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 														/>
 													</FormField>
 													<FormField>
-														<FormFieldLabel htmlFor={altId}>{t("editor.image.alt")}</FormFieldLabel>
+														<FormFieldLabel
+															htmlFor={altId}
+															action={
+																<Text variant="micro" tone="subtle">
+																	{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
+																</Text>
+															}
+														>
+															{t("editor.image.alt")}
+														</FormFieldLabel>
 														<Input
 															id={altId}
 															size="md"
 															autoFocus
 															disabled={data.decorative === true}
+															maxLength={ALT_MAX}
 															value={alt.value}
 															onChange={(event) => alt.change(event.target.value)}
 															{...alt.composition}
@@ -483,7 +517,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 											<Crop aria-hidden />
 										</FloatingBarButton>
 									</FloatingBar>
-								</div>
+								</BlockBarPlace>
 								<ResizeCorner
 									side="left"
 									label={t("editor.image.resizeLeft")}
@@ -498,21 +532,9 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 								/>
 							</>
 						)}
-					</div>
+					</BlockBox>
 				</Inline>
-				{(editable || data.caption) && (
-					<Input
-						appearance="inline"
-						size="sm"
-						align={align === "left" ? "start" : align === "right" ? "end" : "center"}
-						aria-label={t("editor.image.caption")}
-						placeholder={t("editor.image.caption")}
-						readOnly={!editable}
-						value={caption.value}
-						onChange={(event) => caption.change(event.target.value)}
-						{...caption.composition}
-					/>
-				)}
+				{captionField}
 			</Stack>
 			{cropping && url && (
 				<CropSheet

@@ -252,7 +252,8 @@ export const mediaOperations = [
 		input: Query,
 		async run(input, ctx): Promise<MediaQueryResult> {
 			const search = input.search.trim();
-			const looking = search !== "" || input.kinds.length > 0 || input.used.length > 0;
+			// Only a search looks through folders. Kind and use narrow the open folder's own files, and its folders stay to browse (components/list.md).
+			const looking = search !== "";
 			const live = ctx.db.selectFrom("media").where("trashed_at", "is", null);
 			let filtered = live;
 			if (input.ids)

@@ -128,8 +128,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 		<AlertDialog open onOpenChange={(open) => !open && !going && onClose()}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>{t("library.replace.title")}</AlertDialogTitle>
-					<AlertDialogDescription>{t("library.replace.text", { count: item.useRows.length })}</AlertDialogDescription>
+					<AlertDialogTitle>{t("library.replace.title")}</AlertDialogTitle>\n{" "}
 				</AlertDialogHeader>
 				<Grid columns="compare">
 					<Tile
@@ -158,6 +157,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 						}
 					/>
 				</Grid>
+				<AlertDialogDescription>{t("library.replace.text", { count: item.uses })}</AlertDialogDescription>
 				{refused && <FormFieldError>{refused}</FormFieldError>}
 				<AlertDialogFooter>
 					<AlertDialogCancel disabled={going}>{t("settings.cancel")}</AlertDialogCancel>
@@ -274,10 +274,13 @@ export function MediaPanel({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			}
+			// Nothing to save, no pill: a dimmed one would not say why (principle 7).
 			footer={
-				<Button variant="primary" size="md" disabled={!draft.dirty} onClick={() => void save()}>
-					{t("settings.save")}
-				</Button>
+				draft.dirty ? (
+					<Button variant="primary" size="md" onClick={() => void save()}>
+						{t("settings.save")}
+					</Button>
+				) : undefined
 			}
 		>
 			{item.kind === "image" ? (

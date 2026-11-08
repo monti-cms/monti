@@ -47,7 +47,7 @@ describe("browsing", () => {
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
 		await expect.element(main().getByText("2400×1600 · 글 1")).toBeVisible();
 		await expect.element(main().getByText("2.1 MB · 사용 안 함")).toBeVisible();
-		await userEvent.click(main().getByRole("button", { name: "미디어 /" }));
+		await userEvent.click(main().getByRole("navigation", { name: "경로" }).getByRole("button", { name: "미디어" }));
 		await expect.element(folder("Blog Assets")).toBeVisible();
 	});
 
@@ -79,8 +79,11 @@ describe("browsing", () => {
 	it("09-1 [flow 6·13] a right click on empty ground offers uploading and a new folder", async () => {
 		await Top.run();
 		await expect.element(folder("Blog Assets")).toBeVisible();
-		await userEvent.click(main().getByText("top-level-photo.jpg"), { button: "right" });
-		await expect.element(page.getByRole("menu")).toBeVisible();
+		const { width, height } = main().element().getBoundingClientRect();
+		await userEvent.click(main(), { button: "right", position: { x: width / 2, y: height - 60 } });
+		await expect.element(page.getByRole("menuitem", { name: "올리기" })).toBeVisible();
+		await userEvent.click(page.getByRole("menuitem", { name: "새 폴더" }));
+		await expect.element(page.getByRole("textbox", { name: "폴더 이름" })).toHaveValue("새 폴더");
 		await userEvent.keyboard("{Escape}");
 	});
 
@@ -113,7 +116,8 @@ describe("browsing", () => {
 		await userEvent.click(main().getByRole("button", { name: "검색" }));
 		await userEvent.keyboard("cafe");
 		await expect.element(tile("cafe-window.jpg")).toBeVisible();
-		await expect.element(main().getByText(/Blog Assets \/ covers/)).toBeVisible();
+		// The path under the open folder; a file right in it keeps its usual line (components/list.md).
+		await expect.element(main().getByText(/^covers · 2000×1333/)).toBeVisible();
 		await expect.element(folder("covers")).not.toBeInTheDocument();
 		await userEvent.fill(main().getByRole("searchbox"), "top-level");
 		await expect.element(tile("top-level-photo.jpg")).not.toBeInTheDocument();
@@ -121,16 +125,26 @@ describe("browsing", () => {
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·32, 6·33] the kind menu counts, and a chosen kind becomes a chip that takes it off", async () => {
+	it("09-1 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind is a chip in its place, folders stay to browse, and × takes it off", async () => {
 		await openAssets();
 		await userEvent.click(main().getByRole("button", { name: "종류" }));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("3");
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
+		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toBeVisible();
 		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("notes-scan.pdf")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
+		await expect.element(folder("covers")).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
 		await userEvent.click(main().getByRole("button", { name: "필터 지우기" }));
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
+	});
+
+	it("09-1 a sort is a menu with one mark of its own", async () => {
+		await openAssets();
+		await userEvent.click(main().getByRole("button", { name: "최근 올린순" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
+		await expect.element(main().getByRole("button", { name: "크기순" })).toBeVisible();
 	});
 
 	it("09-1 [flow 6·31] with no storage it says so, with the way to connect one and no way to upload", async () => {
@@ -233,7 +247,7 @@ describe("a file", () => {
 		await expect.element(folder("covers")).toHaveTextContent("2");
 	});
 
-	it("09-5 [flow 6·18, 6·19] replacing asks with both files and what stays; the uses are kept", async () => {
+	it("09-5 [flow 6·18] the panel's menu has replacing and the trash (the file chooser itself is L5's)", async () => {
 		await openAssets();
 		await userEvent.click(tile("cybersecurity-code.jpg"));
 		const panel = page.getByRole("complementary");

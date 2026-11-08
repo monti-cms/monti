@@ -1,4 +1,4 @@
-import { Inline, Text, TextButton } from "@monti-cms/ui";
+import { Inline, TextButton } from "@monti-cms/ui";
 import { useAdmin } from "../operations/admin-context";
 import { formatBytes } from "./file-text";
 import type { Upload } from "./upload-queue";
@@ -42,8 +42,8 @@ export function useProblemActions({
 	];
 }
 
-/** The reason and what can be done, on one line under a file that stays in its place in the text or in a field. */
-export function UploadProblem({
+/** What can be done, on one line under a file that stays in its place in the text or in a field. The reason is said by the part it sits under. */
+export function UploadActions({
 	upload,
 	onRemove,
 	onRetry,
@@ -54,13 +54,9 @@ export function UploadProblem({
 	onRetry: (upload: Upload) => void;
 	onShrink: (upload: Upload) => unknown;
 }) {
-	const text = useProblemText();
 	const actions = useProblemActions({ onRemove, onRetry, onShrink })(upload);
 	return (
-		<Inline gap={12} wrap>
-			<Text variant="note" tone="danger">
-				{text(upload)}
-			</Text>
+		<Inline gap={12}>
 			{actions.map((action) => (
 				<TextButton key={action.label} onClick={action.onClick}>
 					{action.label}

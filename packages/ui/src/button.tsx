@@ -79,10 +79,17 @@ function Button({
 	pendingLabel,
 	width,
 	disabled,
+	href,
+	target,
+	rel,
 	children,
 	...props
 }: ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
+		/** It goes to an address: an `<a>` that looks like the button ("How to connect"). */
+		href?: string;
+		target?: string;
+		rel?: string;
 		/**
 		 * The button sends its form by a plain post (no script handles it): from the moment the form is sent until the next page comes it is
 		 * `loading` and says this instead of its words ("Signing in…"). Coming back to the page (the browser's back) wakes it.
@@ -117,6 +124,14 @@ function Button({
 			aria-busy={busy || undefined}
 			disabled={disabled || busy}
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
+			{...(href === undefined
+				? {}
+				: {
+						nativeButton: false,
+						role: "link",
+						// biome-ignore lint/a11y/useAnchorContent: the button's children go in the link.
+						render: <a href={href} target={target} rel={rel} />,
+					})}
 			{...props}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}

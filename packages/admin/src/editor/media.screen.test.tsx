@@ -120,13 +120,29 @@ describe("from the library", () => {
 });
 
 describe("pasting", () => {
-	it("09-3 [flow 6·05] a pasted picture goes in at once with no window, and comes up as a block when the library has it", async () => {
+	it("09-3 [flow 6·05] a pasted picture goes in at once with no window, its caption there from the start and kept when it lands", async () => {
 		await Draft.run();
 		await caretAfter("글의 첫 문단");
 		await paste(await canvasFile("pasted.png"));
 		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 		const caption = body().getByRole("textbox", { name: "캡션" });
 		await expect.element(caption).toBeVisible();
+		await userEvent.fill(caption, "붙여 넣은 그림");
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		await expect.element(caption).toHaveValue("붙여 넣은 그림");
+	});
+
+	it("09-1 a file that will not go up says why in its place, and can be taken out", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(
+			new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0])], "broken.png", {
+				type: "image/png",
+			}),
+		);
+		await expect.element(body().getByText("읽을 수 없는 그림")).toBeVisible();
+		await userEvent.click(body().getByRole("button", { name: "빼기" }));
+		await expect.element(body().getByText("broken.png")).not.toBeInTheDocument();
 	});
 
 	it("09-4 a pasted picture is in the library, used by the entry once saved", async () => {
@@ -175,6 +191,13 @@ describe("an image in the text", () => {
 		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요.")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
 		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요.")).not.toBeInTheDocument();
+	});
+
+	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "설정" }));
+		await expect.element(page.getByText("5 / 80")).toBeVisible();
 	});
 
 	it("[korean] alt text in the settings card is composed whole, too", async () => {
@@ -239,7 +262,7 @@ describe("an image in the text", () => {
 	it("[keys-move] the crop is made and moved with the keyboard alone", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기와 돌리기" }));
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
 		await userEvent.click(page.getByRole("button", { name: "자를 곳 잡기" }));
 		const box = page.getByRole("button", { name: "자를 곳: 화살표로 옮기기" });
 		box.element().focus();
@@ -248,7 +271,7 @@ describe("an image in the text", () => {
 		corner.element().focus();
 		await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
-		await expect.element(page.getByRole("heading", { name: "자르기와 돌리기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "자르기와 회전" })).not.toBeInTheDocument();
 		// 80% wide of a 3:2 picture, 65% high.
 		await expect
 			.poll(() => {
@@ -261,7 +284,7 @@ describe("an image in the text", () => {
 	it("09-1 a crop dragged past the picture stays inside it, and the entry still saves", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기와 돌리기" }));
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
 		const sheet = page.getByRole("dialog");
 		await userEvent.click(sheet.getByRole("button", { name: "자를 곳 잡기" }));
 		const corner = sheet.getByRole("button", { name: "오른쪽 아래 모서리" }).element();
@@ -278,11 +301,11 @@ describe("an image in the text", () => {
 	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기와 돌리기" }));
-		await expect.element(page.getByRole("heading", { name: "자르기와 돌리기" })).toBeVisible();
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
+		await expect.element(page.getByRole("heading", { name: "자르기와 회전" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
-		await expect.element(page.getByRole("heading", { name: "자르기와 돌리기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "자르기와 회전" })).not.toBeInTheDocument();
 		await expect
 			.poll(() => {
 				const { width, height } = image().element().getBoundingClientRect();

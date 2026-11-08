@@ -57,8 +57,8 @@ import {
 	Tile,
 	toast,
 } from "@monti-cms/ui";
-import { FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
-import { useEffect, useMemo, useState } from "react";
+import { Document, Folder, FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
@@ -97,11 +97,15 @@ const CONNECT_DOCS = "https://github.com/monti-cms/monti#media-storage";
 
 type Go = (route: Route, options?: { replace?: boolean }) => void;
 
-/** What a tile's mono line says: where it is when a search reaches through folders, then its size or kind and how much it is used. */
-function useFileDetail(showPath: boolean) {
+/**
+ * What a tile's mono line says: its size or kind and how much it is used, and in a search, where it sits under the open folder. A file right in the open folder keeps its
+ * usual line (components/list.md).
+ */
+function useFileDetail(searching: boolean, open: readonly string[]) {
 	const { t } = useAdmin();
 	return (item: MediaItem) => {
-		const place = showPath && item.path.length > 0 ? `${item.path.join(" / ")} · ` : "";
+		const under = searching ? item.path.slice(open.length) : [];
+		const place = under.length > 0 ? `${under.join(" / ")} · ` : "";
 		const measure = item.kind === "image" ? sizeLabel(item) : formatBytes(item.size);
 		const use = item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed");
 		return `${place}${measure ? `${measure} · ` : ""}${use}`;
@@ -132,15 +136,19 @@ function UploadTile({
 	const { t } = useAdmin();
 	const problemText = useProblemText();
 	const actions = useProblemActions({ onRemove, onRetry, onShrink })(upload);
-	const noPicture = <FilePreview ext={extensionLabel(upload.name)} />;
-	const preview = upload.preview ? <Image src={upload.preview} alt="" ratio="photo" radius="none" /> : noPicture;
+	const preview = upload.preview ? (
+		<Image src={upload.preview} alt="" ratio="photo" radius="none" />
+	) : (
+		<FilePreview ext={extensionLabel(upload.name)} />
+	);
 	if (upload.status === "failed")
 		return (
 			<Tile
 				status="failed"
 				title={upload.name}
 				detail={problemText(upload)}
-				preview={upload.problem === "unreadable" ? noPicture : preview}
+				// A picture that cannot be shown leaves an empty place with its red line: no icon, no extension (components/list.md).
+				preview={upload.preview ? null : preview}
 				actions={actions}
 			/>
 		);
@@ -262,6 +270,60 @@ function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: G
 }
 
 /**
+ * A filter of the library (screens/media.md): a button, and once something is chosen the chip in its place. It is one menu either way, so it stays open while its values are
+ * ticked, and the chip opens it again.
+ */
+function FilterMenu<Value extends string>({
+	label,
+	values,
+	chosen,
+	chip,
+	onChange,
+}: {
+	label: string;
+	values: readonly { value: Value; label: string; count: number }[];
+	chosen: readonly Value[];
+	chip: (value: string) => string;
+	onChange: (chosen: Value[]) => void;
+}) {
+	const { t } = useAdmin();
+	const names = values.filter((each) => chosen.includes(each.value)).map((each) => each.label);
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					chosen.length === 0 ? (
+						<FilterButton />
+					) : (
+						<Chip removeLabel={t("list.removeFilter")} onRemove={() => onChange([])} />
+					)
+				}
+			>
+				{chosen.length === 0 ? label : chip(names.join(", "))}
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="start">
+				{values.map((each) => (
+					<DropdownMenuCheckboxItem
+						box
+						key={each.value}
+						checked={chosen.includes(each.value)}
+						closeOnClick={false}
+						onCheckedChange={() =>
+							onChange(
+								chosen.includes(each.value) ? chosen.filter((value) => value !== each.value) : [...chosen, each.value],
+							)
+						}
+					>
+						{each.label}
+						<MenuShortcut>{each.count}</MenuShortcut>
+					</DropdownMenuCheckboxItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/**
  * The media library (doc 09, flow 6, screens/media.md): its folders and files, what goes up, what is picked, and the file open beside it. Everything about where it is
  * sits in the address.
  */
@@ -300,7 +362,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const childFolders = looking ? [] : folders.children(state.folder);
 	const pickedItems = items.filter((item) => picked.has(item.id));
 	const picking = pickedItems.length > 0;
-	const detail = useFileDetail(looking && (state.everywhere || state.folder !== null));
+	const openPath = useMemo(
+		() => (here && !state.everywhere ? folders.path(here.id).map((up) => up.name) : []),
+		[here, state.everywhere, folders],
+	);
+	const detail = useFileDetail(looking, openPath);
+	const canNewFolder = !looking && !picking;
+	const dense = state.file !== null;
 
 	const goFolder = (folder: string | null) => {
 		setPicked(new Set());
@@ -327,16 +395,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	}, [folderTarget, areaDrop.over, t]);
 	useEffect(() => () => void toast.dismiss(DROP_HINT), []);
 
-	const toggleFilter = <Value extends string>(key: "kinds" | "used", list: readonly Value[], value: Value) => {
-		const next = list.includes(value) ? list.filter((each) => each !== value) : [...list, value];
-		setState({ ...state, [key]: next, page: 1 });
-	};
 	const uploadButton = (
 		<SplitButton
 			onClick={() => chooseFiles({ onFiles: (files) => addFiles(files) })}
 			menuLabel={t("list.moreNew")}
 			menu={
-				!looking && (
+				canNewFolder && (
 					<DropdownMenuItem onClick={() => naming.start()}>
 						<FolderAdd aria-hidden />
 						{t("folders.new")}
@@ -349,11 +413,14 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</SplitButton>
 	);
 	const trail = here ? (
-		<Inline gap={4}>
+		<Inline as="nav" gap={6} aria-label={t("library.path")}>
 			{[{ id: null, name: t("frame.media") }, ...folders.path(here.id).slice(0, -1)].map((up) => (
-				<TextButton key={up.id ?? "top"} variant="underline" onClick={() => goFolder(up.id)}>
-					{`${up.name} /`}
-				</TextButton>
+				<Fragment key={up.id ?? "top"}>
+					<TextButton variant="underline" onClick={() => goFolder(up.id)}>
+						{up.name}
+					</TextButton>
+					<span aria-hidden="true">/</span>
+				</Fragment>
 			))}
 		</Inline>
 	) : undefined;
@@ -362,15 +429,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		return (
 			<PageColumn width="list">
 				<PageHeader title={t("frame.media")}>
-					<Button
-						variant="primary"
-						nativeButton={false}
-						role="link"
-						render={
-							// biome-ignore lint/a11y/useAnchorContent: the part puts its label in the link.
-							<a href={CONNECT_DOCS} target="_blank" rel="noreferrer" />
-						}
-					>
+					<Button variant="primary" href={CONNECT_DOCS} target="_blank" rel="noreferrer">
 						{t("library.connect")}
 					</Button>
 				</PageHeader>
@@ -461,52 +520,28 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</BulkBar>
 	) : (
 		<PageToolbar inset>
-			{state.kinds.length === 0 ? (
-				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton />}>{t("library.kind")}</DropdownMenuTrigger>
-					<DropdownMenuContent align="start">
-						{KINDS.map((kind: MediaKind) => (
-							<DropdownMenuCheckboxItem
-								box
-								key={kind}
-								checked={false}
-								closeOnClick={false}
-								onCheckedChange={() => toggleFilter("kinds", state.kinds, kind)}
-							>
-								{t(`library.kind.${kind}`)}
-								<MenuShortcut>{data?.counts[kind] ?? 0}</MenuShortcut>
-							</DropdownMenuCheckboxItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			) : (
-				<Chip removeLabel={t("list.removeFilter")} onRemove={() => setState({ ...state, kinds: [], page: 1 })}>
-					{t("library.kindChip", { value: state.kinds.map((kind) => t(`library.kind.${kind}`)).join(", ") })}
-				</Chip>
-			)}
-			{state.used.length === 0 ? (
-				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton />}>{t("library.used")}</DropdownMenuTrigger>
-					<DropdownMenuContent align="start">
-						{USES.map((use) => (
-							<DropdownMenuCheckboxItem
-								box
-								key={use}
-								checked={false}
-								closeOnClick={false}
-								onCheckedChange={() => toggleFilter("used", state.used, use)}
-							>
-								{t(`library.used.${use}`)}
-								<MenuShortcut>{data?.counts[use] ?? 0}</MenuShortcut>
-							</DropdownMenuCheckboxItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			) : (
-				<Chip removeLabel={t("list.removeFilter")} onRemove={() => setState({ ...state, used: [], page: 1 })}>
-					{t("library.usedChip", { value: state.used.map((use) => t(`library.used.${use}`)).join(", ") })}
-				</Chip>
-			)}
+			<FilterMenu
+				label={t("library.kind")}
+				values={KINDS.map((kind: MediaKind) => ({
+					value: kind,
+					label: t(`library.kind.${kind}`),
+					count: data?.counts[kind] ?? 0,
+				}))}
+				chosen={state.kinds}
+				chip={(value) => t("library.kindChip", { value })}
+				onChange={(kinds) => setState({ ...state, kinds, page: 1 })}
+			/>
+			<FilterMenu
+				label={t("library.used")}
+				values={USES.map((use) => ({
+					value: use,
+					label: t(`library.used.${use}`),
+					count: data?.counts[use] ?? 0,
+				}))}
+				chosen={state.used}
+				chip={(value) => t("library.usedChip", { value })}
+				onChange={(used) => setState({ ...state, used, page: 1 })}
+			/>
 			{looking && state.folder && here && (
 				<>
 					<Separator orientation="vertical" length="control" flush />
@@ -525,10 +560,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			)}
 			<PageToolbarEnd>
 				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton filled />}>
-						{t(`library.sort.${state.sort}`)}
-						<Caret />
-					</DropdownMenuTrigger>
+					<DropdownMenuTrigger render={<FilterButton filled />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuRadioGroup
 							value={state.sort}
@@ -566,7 +598,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const grid = (
 		<Stack gap={24} paddingTop={24} paddingX={12}>
 			{(childFolders.length > 0 || naming.naming?.id === null) && (
-				<Grid columns="folders">
+				<Grid columns="folders" dense={dense}>
 					{childFolders.map((folder) => (
 						<ContextMenu key={folder.id}>
 							{naming.naming?.id === folder.id ? (
@@ -591,7 +623,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				</Grid>
 			)}
 			{(items.length > 0 || uploadsHere.length > 0) && (
-				<Grid columns="tiles">
+				<Grid columns="tiles" dense={dense}>
 					{uploadsHere.map((each) => (
 						<UploadTile
 							key={each.id}
@@ -665,10 +697,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					{naming.naming?.id === null && (
 						<TableRow>
 							<TableCell>
-								<RowThumb />
+								<RowThumb>
+									<Folder aria-hidden size={16} />
+								</RowThumb>
 							</TableCell>
-							<TableCell>
-								<RowTitle folder editing title={namingField} />
+							<TableCell colSpan={7}>
+								<RowTitle editing title={namingField} />
 							</TableCell>
 						</TableRow>
 					)}
@@ -678,14 +712,15 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 								render={
 									<TableRow>
 										<TableCell>
-											<RowThumb />
+											<RowThumb>
+												<Folder aria-hidden size={16} />
+											</RowThumb>
 										</TableCell>
-										<TableCell>
+										<TableCell colSpan={7}>
 											{naming.naming?.id === folder.id ? (
-												<RowTitle folder editing title={namingField} />
+												<RowTitle editing title={namingField} />
 											) : (
 												<RowTitle
-													folder
 													title={
 														<RowLink href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}>
 															{folder.name}
@@ -708,11 +743,14 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 									<TableRow data-state={state.file === item.id ? "selected" : undefined}>
 										<TableCell>
 											<RowThumb>
-												{item.kind === "image" ? (
-													<Image src={previewUrl(item)} alt="" size="row" ratio="photo" radius="sm" />
-												) : (
-													<FilePreview ext={extensionLabel(item.name)} framed />
-												)}
+												<Image
+													src={item.kind === "image" ? previewUrl(item) : null}
+													fallback={Document}
+													alt=""
+													size="row"
+													ratio="photo"
+													radius="sm"
+												/>
 											</RowThumb>
 										</TableCell>
 										<TableCell>
@@ -807,10 +845,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<UploadIcon aria-hidden />
 							{t("library.upload")}
 						</ContextMenuItem>
-						<ContextMenuItem onClick={() => naming.start()}>
-							<FolderAdd aria-hidden />
-							{t("folders.new")}
-						</ContextMenuItem>
+						{canNewFolder && (
+							<ContextMenuItem onClick={() => naming.start()}>
+								<FolderAdd aria-hidden />
+								{t("folders.new")}
+							</ContextMenuItem>
+						)}
 					</ContextMenuContent>
 				</ContextMenu>
 				<ListPages page={state.page} pages={pages} hrefOf={(page) => hrefOf({ ...state, page })} />
