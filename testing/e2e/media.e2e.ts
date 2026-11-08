@@ -326,6 +326,7 @@ test.describe("a translation's cover", () => {
 		await expect(admin.getByRole("button", { name: "English" })).toBeVisible();
 		await panel();
 		await expect(cover).toHaveText(/비어 있음/);
+		await expect(admin.getByText("원문의 발행본을 따라요")).toBeVisible();
 
 		// Published: the file and its alt text show, as the source's.
 		await admin.getByRole("button", { name: "한국어" }).click();
@@ -338,6 +339,7 @@ test.describe("a translation's cover", () => {
 		await expect(cover).toHaveText(new RegExp(name));
 		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
 		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeHidden();
+		await expect(admin.getByText("원문의 발행본을 따라요")).toBeVisible();
 
 		// Alt text alone makes it this language's, and × goes back to following.
 		await alt.fill("spring cover");
@@ -346,6 +348,7 @@ test.describe("a translation's cover", () => {
 		await panel();
 		await expect(alt).toHaveValue("spring cover");
 		await expect(cover).toHaveText(new RegExp(name));
+		await expect(admin.getByText("원문의 발행본을 따라요")).toBeHidden();
 		await admin.getByRole("button", { name: "cover 빼기" }).click();
 		await expect(cover).toHaveText(new RegExp(name));
 		await expect(alt).toHaveValue("");

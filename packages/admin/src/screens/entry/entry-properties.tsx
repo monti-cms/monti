@@ -480,6 +480,7 @@ export function EntryProperties({
 	onTab,
 	readOnly,
 	shared,
+	sourcePublished,
 	uploads,
 }: {
 	editor: EntryEditorModel;
@@ -490,6 +491,8 @@ export function EntryProperties({
 	readOnly: boolean;
 	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
 	shared?: Record<string, unknown> | null;
+	/** Whether those values are what the source has on the site (doc 04, principle 5), or its working copy, not being on the site. */
+	sourcePublished?: boolean;
 	/** The files going up for the media fields: the editor's, so they outlive this panel. */
 	uploads: FieldUploads;
 }) {
@@ -578,6 +581,11 @@ export function EntryProperties({
 					value={value}
 					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
 					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
+					followNote={
+						shared && localeModeOf(key, def) === "fromSource"
+							? t(sourcePublished ? "translation.followsPublished" : "translation.followsSource")
+							: undefined
+					}
 					readOnly={readOnly}
 					onChange={(next) => editor.set(path, next)}
 				/>

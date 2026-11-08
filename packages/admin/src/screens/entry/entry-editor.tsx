@@ -611,6 +611,7 @@ export function EntryEditor({
 						onTab={setTab}
 						readOnly={readOnly}
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
+						sourcePublished={Boolean(compared?.source.publishedAt)}
 						uploads={fieldUploads}
 					/>
 				) : null}

@@ -193,6 +193,29 @@ describe("pasting", () => {
 		expect(lists.map((list) => list.textContent)).toEqual(["첫째", "둘째셋째"]);
 	});
 
+	it("09-3 [in-block] [write-on] in a list's last item the picture goes after the list, and the words after it stay out of the list", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await userEvent.keyboard("{Enter}- 첫째{Enter}둘째");
+		await caretAfter("둘째");
+		await paste(await canvasFile("after-list.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		await userEvent.keyboard("목록 밖의 글");
+		await expect.element(paragraph("목록 밖의 글")).toBeVisible();
+		const lists = body().getByRole("list").elements();
+		expect(lists.map((list) => list.textContent)).toEqual(["첫째둘째"]);
+	});
+
+	it("09-3 [in-block] an empty list item gives its place to the picture", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await userEvent.keyboard("{Enter}- 첫째{Enter}");
+		await paste(await canvasFile("empty-item.png"));
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		const lists = body().getByRole("list").elements();
+		expect(lists.map((list) => list.textContent)).toEqual(["첫째"]);
+	});
+
 	it("09-3 [in-block] in a numbered list the count goes on after the picture", async () => {
 		await Draft.run();
 		await caretAfter("글의 첫 문단");
@@ -369,6 +392,25 @@ describe("an image in the text", () => {
 		await expect.element(sheet).not.toBeInTheDocument();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+	});
+
+	it("09-1 when the crop sheet closes the keys are the text's again, even from the caption: ⌘Z takes the turn back at once", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		const caption = body().getByRole("textbox", { name: "캡션" });
+		await userEvent.click(caption);
+		await userEvent.keyboard("캡션");
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
+		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
+		await userEvent.click(page.getByRole("button", { name: "적용" }));
+		const upright = () => {
+			const { width, height } = image().element().getBoundingClientRect();
+			return width < height;
+		};
+		await expect.poll(upright).toBe(true);
+		await expect.element(body()).toHaveFocus();
+		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
+		await expect.poll(upright).toBe(false);
 	});
 
 	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {

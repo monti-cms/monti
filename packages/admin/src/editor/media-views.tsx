@@ -191,12 +191,15 @@ function CropSheet({
 	rotate,
 	onApply,
 	onClose,
+	returnTo,
 }: {
 	src: string;
 	crop?: ImageCrop;
 	rotate: ImageRotate;
 	onApply: (crop: ImageCrop | undefined, rotate: ImageRotate) => void;
 	onClose: () => void;
+	/** Where the focus goes when it closes: the text, not a caption field it was opened from, so ⌘Z takes back what it did. */
+	returnTo: () => HTMLElement;
 }) {
 	const { t } = useAdmin();
 	const [turn, setTurn] = useState<ImageRotate>(rotate);
@@ -257,7 +260,7 @@ function CropSheet({
 	};
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent>
+			<SheetContent finalFocus={returnTo}>
 				<SheetHeader>
 					<SheetTitle>{t("editor.crop.title")}</SheetTitle>
 				</SheetHeader>
@@ -541,6 +544,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 					src={url}
 					crop={data.crop}
 					rotate={data.rotate ?? 0}
+					returnTo={() => editor.view.dom}
 					onClose={() => setCropping(false)}
 					onApply={(crop, rotate) => {
 						setCropping(false);

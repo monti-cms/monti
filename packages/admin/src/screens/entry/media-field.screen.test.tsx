@@ -83,6 +83,17 @@ describe("in a translation", () => {
 		await expect.element(alt()).toHaveValue("");
 	});
 
+	it("04-5 a following cover says whose it is, and stops saying so once it is the translation's own", async () => {
+		await TranslationCover.run();
+		await properties();
+		const note = page.getByText(/원문(의 발행본)?을 따라요/);
+		await expect.element(note).toBeVisible();
+		await userEvent.fill(alt(), "A desk in the morning");
+		await expect.element(note).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
+		await expect.element(note).toBeVisible();
+	});
+
 	it("04-5 words of its own keep the file and make it its own; × follows the source again", async () => {
 		await TranslationCover.run();
 		await properties();

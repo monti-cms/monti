@@ -160,8 +160,8 @@ const commands: Record<string, (args: Args) => Promise<unknown>> = {
 createServer(async (request, response) => {
 	let body = "";
 	for await (const chunk of request) body += chunk;
-	const { command, args } = JSON.parse(body) as { command: string; args: string[] };
 	try {
+		const { command, args } = JSON.parse(body) as { command: string; args: string[] };
 		const run = commands[command];
 		if (!run) throw new Error(`unknown command "${command}": ${Object.keys(commands).join(", ")}`);
 		log.push(`${new Date().toISOString()} ${command} ${args.join(" ")}`);

@@ -96,6 +96,19 @@ describe("browsing", () => {
 		await expect.element(row).toHaveTextContent("2400×1600");
 	});
 
+	it("09-1 a very long name ends in … in the list view: the row's other columns stay on the page", async () => {
+		await ListView.run();
+		const name = `${"아주 긴 한글 파일 이름 ".repeat(20)}.txt`;
+		dropFiles(main().getByText("top-level-photo.jpg").element(), [
+			named(name, [...new TextEncoder().encode("긴 이름")], "text/plain"),
+		]);
+		const row = main().getByRole("row").filter({ hasText: "아주 긴 한글" });
+		await expect.element(row).toHaveTextContent("TXT");
+		expect(scrollsSideways(main().element())).toEqual([]);
+		const type = row.getByText("TXT", { exact: true }).element().getBoundingClientRect();
+		expect(type.right).toBeLessThanOrEqual(main().element().getBoundingClientRect().right);
+	});
+
 	it("09-1 [flow 6·09, 6·10] the list view names a new folder and renames one in place", async () => {
 		await ListView.run();
 		await expect.element(main().getByRole("link", { name: "Blog Assets" })).toBeVisible();

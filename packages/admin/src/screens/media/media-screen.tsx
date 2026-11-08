@@ -745,7 +745,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 												/>
 											</RowThumb>
 										</TableCell>
-										<TableCell>
+										<TableCell truncate>
 											<RowTitle title={<RowLink href={hrefOf({ ...state, file: item.id })}>{item.name}</RowLink>} />
 										</TableCell>
 										<TableCell>

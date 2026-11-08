@@ -188,25 +188,53 @@ export function deleteBlock(tr: Transaction, pos: number) {
 
 /**
  * Puts blocks in at the cursor: in place of the empty line it is on, after a selected block, or after its block. A list item holds only words (doc 03),
- * so what goes in after one splits the list there, and a numbered list counts on after it.
+ * so what goes in from one leaves the list, splitting it there, and a numbered list counts on after it.
  */
 export function insertBlocks(tr: Transaction, blocks: EditorNode[]) {
 	if (blocks.length === 0) return tr;
 	const { selection } = tr;
 	const { $from } = selection;
+	const fragment = Fragment.from(blocks);
 	const onLine = !(selection instanceof NodeSelection) && $from.depth > 0;
-	const after = onLine ? $from.after() : selection.to;
-	const list = onLine && $from.depth > 1 ? $from.node(-1) : null;
-	const counted = list?.type === named(tr.doc.type.schema, "orderedList") ? list : null;
-	const counting = counted ? Number(counted.attrs.data?.start ?? 1) + $from.index(-1) + 1 : null;
-	if (onLine && $from.parent.isTextblock && $from.parent.content.size === 0)
-		tr.replaceWith($from.before(), after, blocks);
-	else tr.insert(after, blocks);
-	const $end = tr.doc.resolve(Math.min(tr.mapping.map(after), tr.doc.content.size));
-	// The rest of a split list starts right where the insert ended.
-	if (counted && counting !== null && $end.parent.type === counted.type && $end.parentOffset === 0)
-		tr.setNodeAttribute($end.before(), "data", { ...$end.parent.attrs.data, start: counting });
-	return tr.setSelection(TextSelection.near(tr.doc.resolve($end.pos), -1));
+	const empty = onLine && $from.parent.isTextblock && $from.parent.content.size === 0;
+	const orderedList = named(tr.doc.type.schema, "orderedList");
+	const list = onLine && $from.depth > 1 && $from.node(-1).type === orderedList ? $from.node(-1) : null;
+	const counting = list ? Number(list.attrs.data?.start ?? 1) + $from.index(-1) + (empty ? 0 : 1) : null;
+	const landAfter = (end: number) => tr.setSelection(TextSelection.near(tr.doc.resolve(end), -1));
+
+	let at = onLine ? $from.after() : selection.to;
+	if (empty) {
+		const holder = $from.node(-1);
+		const index = $from.index(-1);
+		if (holder.canReplace(index, index + 1, fragment)) {
+			tr.replaceWith($from.before(), $from.after(), blocks);
+			return landAfter($from.before() + fragment.size);
+		}
+		if (holder.childCount === 1) {
+			tr.replaceWith($from.before(-1), $from.after(-1), blocks);
+			return landAfter($from.before(-1) + fragment.size);
+		}
+		tr.delete($from.before(), $from.after());
+		at = $from.before();
+	}
+	let $at = tr.doc.resolve(at);
+	let split = false;
+	while ($at.depth > 0 && !$at.parent.canReplace($at.index(), $at.index(), fragment)) {
+		if ($at.nodeBefore === null) {
+			$at = tr.doc.resolve($at.pos - 1);
+			continue;
+		}
+		if ($at.nodeAfter) {
+			tr.split($at.pos);
+			split = true;
+		}
+		$at = tr.doc.resolve($at.pos + 1);
+	}
+	tr.insert($at.pos, blocks);
+	const end = $at.pos + fragment.size;
+	const rest = split ? tr.doc.nodeAt(end) : null;
+	if (rest && counting !== null) tr.setNodeAttribute(end, "data", { ...rest.attrs.data, start: counting });
+	return landAfter(end);
 }
 
 /**
@@ -214,6 +242,7 @@ export function insertBlocks(tr: Transaction, blocks: EditorNode[]) {
  * words follow (the end of the body, a table, another picture), a new line takes the caret.
  */
 export function caretPast(tr: Transaction) {
+	if (!(tr.selection instanceof NodeSelection)) return tr;
 	const end = tr.selection.to;
 	const $end = tr.doc.resolve(end);
 	const next = $end.nodeAfter;

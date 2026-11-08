@@ -24,6 +24,7 @@ export function MediaField({
 	accept,
 	value,
 	source,
+	followNote,
 	readOnly,
 	uploads,
 	onChange,
@@ -36,6 +37,8 @@ export function MediaField({
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
+	/** Says whose value this is while it has none of its own: a translation following its source. */
+	followNote?: string;
 	readOnly: boolean;
 	uploads: FieldUploads;
 	onChange: (next: { media: string; alt?: string } | null) => void;
@@ -54,7 +57,17 @@ export function MediaField({
 	return (
 		<>
 			<FormField>
-				<FormFieldLabel htmlFor={id} required={required}>
+				<FormFieldLabel
+					htmlFor={id}
+					required={required}
+					action={
+						followNote && !own ? (
+							<Text variant="caption" tone="faint">
+								{followNote}
+							</Text>
+						) : undefined
+					}
+				>
 					{label}
 				</FormFieldLabel>
 				<MediaInput
