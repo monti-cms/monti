@@ -57,6 +57,8 @@ const EDITOR_BODY = cn(
 	"[&_[data-empty]]:before:pointer-events-none [&_[data-empty]]:before:float-left [&_[data-empty]]:before:h-0 [&_[data-empty]]:before:text-monti-faint [&_[data-empty]]:before:content-[attr(data-placeholder)]",
 	"[&_[data-menu-open]]:relative [&_[data-menu-open]]:isolate [&_[data-menu-open]]:before:pointer-events-none [&_[data-menu-open]]:before:absolute [&_[data-menu-open]]:before:-left-monti-8 [&_[data-menu-open]]:before:-right-monti-8 [&_[data-menu-open]]:before:inset-y-0 [&_[data-menu-open]]:before:-z-10 [&_[data-menu-open]]:before:rounded-monti-md [&_[data-menu-open]]:before:bg-monti-block [&_li[data-menu-open]]:before:-left-monti-24",
 	// A list item's ground covers its marker too, as `Block active` does in the reference.
+	// A selected block shows it with its own tools: the selection's ground painted over it would recolor its picture and its empty caption.
+	"[&_.ProseMirror-selectednode]:selection:bg-transparent!",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",

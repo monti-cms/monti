@@ -78,7 +78,7 @@ describe("in a translation", () => {
 		await TranslationCover.run();
 		await properties();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).not.toBeInTheDocument();
 		await expect.element(alt()).toHaveAttribute("placeholder", "아침 책상");
 		await expect.element(alt()).toHaveValue("");
 	});
@@ -87,20 +87,24 @@ describe("in a translation", () => {
 		await TranslationCover.run();
 		await properties();
 		const note = page.getByText(/원문(의 발행본)?을 따라요/);
+		const own = page.getByText("이 언어의 값이에요");
 		await expect.element(note).toBeVisible();
+		await expect.element(own).not.toBeInTheDocument();
 		await userEvent.fill(alt(), "A desk in the morning");
 		await expect.element(note).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
+		await expect.element(own).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
 		await expect.element(note).toBeVisible();
+		await expect.element(own).not.toBeInTheDocument();
 	});
 
 	it("04-5 words of its own keep the file and make it its own; × follows the source again", async () => {
 		await TranslationCover.run();
 		await properties();
 		await userEvent.fill(alt(), "A desk");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).toBeVisible();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await expect.element(alt()).toHaveValue("");
 	});

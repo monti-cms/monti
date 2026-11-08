@@ -10,7 +10,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Empty, chosen and proposed, beside an input of the same size so the lines read as one form. */
+/** Empty, chosen, proposed and following another value's file, beside an input of the same size so the lines read as one form. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={16} width="panel">
@@ -25,6 +25,10 @@ export const States: Story = {
 			<FormField>
 				<FormFieldLabel htmlFor="cover">대표 이미지</FormFieldLabel>
 				<MediaInput id="cover" size="sm" value={{ name: "cover-react.png" }} onClear={() => {}} clearLabel="빼기" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="cover-following">번역의 대표 이미지</FormFieldLabel>
+				<MediaInput id="cover-following" size="sm" value={{ name: "cover-react.png" }} following />
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="cover-ai">공유 이미지</FormFieldLabel>

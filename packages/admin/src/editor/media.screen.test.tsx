@@ -355,6 +355,27 @@ describe("an image in the text", () => {
 		await expect.poll(() => Math.round(image().element().getBoundingClientRect().width)).toBe(Math.round(before - 16));
 	});
 
+	it("09-1 a crop already drawn turns with the picture: the same part of it stays kept", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
+		await userEvent.click(page.getByRole("button", { name: "자를 곳 잡기" }));
+		const corner = page.getByRole("button", { name: "오른쪽 아래 모서리" });
+		corner.element().focus();
+		await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
+		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
+		await expect.element(page.getByRole("button", { name: "자를 곳: 화살표로 옮기기" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "적용" }));
+		await expect.element(page.getByRole("heading", { name: "자르기와 회전" })).not.toBeInTheDocument();
+		// 80% wide and 65% high of a 3:2 picture, turned a quarter: 65% wide and 80% high of a 2:3 one.
+		await expect
+			.poll(() => {
+				const { width, height } = image().element().parentElement?.getBoundingClientRect() ?? { width: 0, height: 1 };
+				return Math.round((width / height) * 100);
+			})
+			.toBe(Math.round(((2 * 0.65) / (3 * 0.8)) * 100));
+	});
+
 	it("[keys-move] the crop is made and moved with the keyboard alone", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
@@ -411,6 +432,13 @@ describe("an image in the text", () => {
 		await expect.element(body()).toHaveFocus();
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.poll(upright).toBe(false);
+	});
+
+	it("09-1 a selected picture keeps its colors: the ground of a text selection is not painted over it", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await expect.element(bar()).toBeVisible();
+		expect(getComputedStyle(image().element(), "::selection").backgroundColor).toBe("rgba(0, 0, 0, 0)");
 	});
 
 	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {

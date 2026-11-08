@@ -581,9 +581,13 @@ export function EntryProperties({
 					value={value}
 					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
 					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
-					followNote={
+					whose={
 						shared && localeModeOf(key, def) === "fromSource"
-							? t(sourcePublished ? "translation.followsPublished" : "translation.followsSource")
+							? {
+									following: t(sourcePublished ? "translation.followsPublished" : "translation.followsSource"),
+									own: t("translation.ownValue"),
+									clear: t("translation.backToSource", { label: values[key]?.label ?? key }),
+								}
 							: undefined
 					}
 					readOnly={readOnly}

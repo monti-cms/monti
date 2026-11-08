@@ -31,3 +31,16 @@ export const Over: Story = { render: () => <DropArea over>{grid()}</DropArea> };
 
 /** Files over a folder in it: the folder is marked, the area is not. */
 export const OverFolder: Story = { render: () => <DropArea>{grid(true)}</DropArea> };
+
+/** `fill`: the area takes the column's remaining height, so a page with few files can be dropped on to its end. */
+export const Fill: Story = {
+	tags: ["visual"],
+	render: () => (
+		// design-allow: a column of some height, for the area to fill
+		<div style={{ display: "flex", flexDirection: "column", height: 480 }}>
+			<DropArea fill over>
+				{grid()}
+			</DropArea>
+		</div>
+	),
+};

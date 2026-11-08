@@ -63,6 +63,23 @@ export const Upload: Story = {
 	),
 };
 
+/** A problem's reason wraps rather than being cut: a reason cut off is no reason. A size or a use is cut. */
+export const LongReason: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Grid columns="tiles">
+			<TileWith
+				title="iphone-photo.heic"
+				detail="HEIC는 받지 않아요. JPEG나 PNG로 바꿔 주세요"
+				status="failed"
+				noPreview
+				actions={[{ label: "빼기", onClick: () => {} }]}
+			/>
+			<TileWith title="spring-desk.jpg" detail="2400×1600 · 글 2 · 라이브러리에서 아주 오래전에 올린 파일" />
+		</Grid>
+	),
+};
+
 /** The assistant's suggestion in the place of the detail line; a picked tile that has one is ringed in blue. */
 export const Proposal: Story = {
 	render: () => (

@@ -24,7 +24,7 @@ export function MediaField({
 	accept,
 	value,
 	source,
-	followNote,
+	whose,
 	readOnly,
 	uploads,
 	onChange,
@@ -37,8 +37,8 @@ export function MediaField({
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
-	/** Says whose value this is while it has none of its own: a translation following its source. */
-	followNote?: string;
+	/** In a translation following its source: says whose value shows, and what × does. */
+	whose?: { following: string; own: string; clear: string };
 	readOnly: boolean;
 	uploads: FieldUploads;
 	onChange: (next: { media: string; alt?: string } | null) => void;
@@ -61,9 +61,9 @@ export function MediaField({
 					htmlFor={id}
 					required={required}
 					action={
-						followNote && !own ? (
+						whose ? (
 							<Text variant="caption" tone="faint">
-								{followNote}
+								{own ? whose.own : whose.following}
 							</Text>
 						) : undefined
 					}
@@ -78,7 +78,7 @@ export function MediaField({
 					placeholder={t("entry.empty")}
 					onOpen={readOnly ? undefined : () => setPicking(true)}
 					onClear={readOnly || !own ? undefined : () => onChange(null)}
-					clearLabel={t("library.field.clear", { label })}
+					clearLabel={whose?.clear ?? t("library.field.clear", { label })}
 				/>
 				{going?.problem && (
 					<>
