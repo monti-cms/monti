@@ -392,7 +392,8 @@ describe("when the source's fields change", () => {
 	it("04-2 T111 writing in a marked field takes its mark away: it is written against the source as it is now", async () => {
 		const { source, id } = await pair();
 		await republishFields(source, { title: "새 제목" });
-		await write("entries.save", { id, version: await version(id), summary: "Another summary" });
+		await write("entries.save", { id, version: await version(id), values: { summary: "Another summary" } });
+		expect((await get(id)).entry.values.summary).toBe("Another summary");
 		expect(await fieldMarks(id)).toHaveLength(1);
 		await write("entries.save", { id, version: await version(id), title: "A new title" });
 		expect(await fieldMarks(id)).toEqual([]);
@@ -666,6 +667,35 @@ describe("when the source changes", () => {
 		};
 		await write("entries.save", { id, version: await version(id), doc: edited });
 		expect((await compare(id)).marks.map((mark) => mark.block)).toEqual([second]);
+	});
+
+	it("04-2 a save that only drops a marked block's empty parts (as the editor does) keeps its mark", async () => {
+		const { source, id } = await publishedPair();
+		await republish(source, body(p("s1", "하나!"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷!")));
+		const doc = (await get(id)).doc as Doc;
+		const before = (await compare(id)).marks.map((mark) => mark.block);
+		const padded: Doc = { ...doc, blocks: doc.blocks.map((block) => ({ ...block, attrs: {}, marks: [] }) as Block) };
+		await write("entries.save", { id, version: await version(id), doc: padded });
+		expect((await compare(id)).marks.map((mark) => mark.block)).toEqual(before);
+	});
+
+	it("04-2 rewriting a block whose source block is gone takes its mark away: the block stays, on its own", async () => {
+		const { source, id } = await publishedPair();
+		await republish(source, body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i")));
+		const [mark] = (await compare(id)).marks;
+		expect(mark?.kind).toBe("removed");
+		const doc = (await get(id)).doc as Doc;
+		const edited: Doc = {
+			...doc,
+			blocks: doc.blocks.map((block) =>
+				block.id === mark?.block ? { ...block, content: [{ type: "text", text: "Four, rewritten" }] } : block,
+			),
+		};
+		await write("entries.save", { id, version: await version(id), doc: edited });
+		expect(await marks(id)).toEqual([]);
+		const kept = ((await get(id)).doc as Doc).blocks.find((block) => block.id === mark?.block);
+		expect(kept?.link).toBeUndefined();
+		expect(texts((await get(id)).doc)).toContain("Four, rewritten");
 	});
 
 	it("04-2 a body.edit re-translation of a changed block clears its mark", async () => {

@@ -103,11 +103,11 @@ describe("from the library", () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
 		const search = dialog.getByRole("searchbox", { name: "파일 이름 검색" });
-		const chip = dialog.getByRole("button", { name: /찾는 곳$/ });
+		const chip = dialog.getByRole("button", { name: /찾을 곳$/ });
 		await expect.element(chip).not.toBeInTheDocument();
 		await openAssets(dialog);
 		// In a folder the search box's chip says where a search looks: this folder first.
-		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾는 곳");
+		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾을 곳");
 
 		await userEvent.fill(search, "cafe");
 		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toHaveTextContent("covers ·");
@@ -122,7 +122,7 @@ describe("from the library", () => {
 		// The × empties the box: back to the folder as it was, its own files and folders, the chip back on this folder.
 		await userEvent.click(dialog.getByRole("button", { name: "지우기" }));
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
-		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾는 곳");
+		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾을 곳");
 		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
 	});
 

@@ -10,7 +10,7 @@ const ITEMS: ChangesItem[] = [
 ];
 
 /**
- * The save group in a settings title row while there are changes: "바뀐 곳 N ▾" opens the list with an undo per change, then "모두 되돌리기" and the one pill.
+ * The save group in a settings title row while there are changes: "변경 사항 N ▾" opens the list with an undo per change, then "모두 되돌리기" and the one pill.
  * It does not appear when nothing changed.
  */
 const meta = {

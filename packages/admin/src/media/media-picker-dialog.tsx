@@ -95,7 +95,7 @@ export function MediaPickerDialog({
 				startOver();
 				setEverywhere(next === "all");
 			}}
-			scopeLabel={t("folders.searchIn")}
+			scopeLabel={t("list.searchIn")}
 			uploadLabel={t("library.upload")}
 			onUpload={() =>
 				chooseFiles({

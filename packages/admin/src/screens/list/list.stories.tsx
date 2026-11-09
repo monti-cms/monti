@@ -417,7 +417,7 @@ export const InFolder: Story = {
 	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("상위 폴더로")).toBeTruthy(), wait),
 };
 
-/** A search inside a folder: "찾는 곳 시리즈 원고 | 모든 폴더" over the rows (flow 5, step 03). */
+/** A search inside a folder: the chip in the search box names the folder, its menu widens it to every folder (flow 5, step 03). */
 export const InFolderSearch: Story = {
 	loaders: site(inSeries("&q=지난 글")),
 	play: ({ canvasElement }) =>

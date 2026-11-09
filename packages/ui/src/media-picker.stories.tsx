@@ -62,7 +62,7 @@ function Picker({ files = false, searching = false }: { files?: boolean; searchi
 			}
 			scope="here"
 			onScopeChange={() => {}}
-			scopeLabel="찾는 곳"
+			scopeLabel="찾을 곳"
 			subfolders={
 				searching ? undefined : (
 					<>

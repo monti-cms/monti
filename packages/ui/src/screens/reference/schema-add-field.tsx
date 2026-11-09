@@ -53,7 +53,7 @@ export function SchemaAddFieldScreen() {
 							<SheetSection title="입력 규칙">
 								<Stack gap={4}>
 									<SwitchRule label={REQUIRED} />
-									<PickRule label="언어" value="모두 같음" />
+									<PickRule label="언어" value="언어 공통" />
 								</Stack>
 							</SheetSection>
 						</SheetBody>

@@ -676,7 +676,7 @@ export function EntryEditor({
 					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={
-							<StatusBarCell tone={publish.blocking > 0 || sourceCount > 0 ? "warning" : undefined}>
+							<StatusBarCell tone={publish.blocking > 0 ? "warning" : undefined}>
 								{publish.tasks.length + sourceCount > 0
 									? t("entry.todo.count", { count: publish.tasks.length + sourceCount })
 									: t("entry.todo.none")}

@@ -55,7 +55,7 @@ export function MediaField({
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
-	/** In a translation following its source: the mark while the source's value shows (its own needs none), and what × does. */
+	/** In a translation following its source: the mark while it follows (empty, or showing the source's file; its own value needs none), and what × does. */
 	whose?: { following: string; clear: string };
 	readOnly: boolean;
 	uploads: FieldUploads;
@@ -86,7 +86,7 @@ export function MediaField({
 					action={
 						change && !going ? (
 							change
-						) : whose && followed && !going ? (
+						) : whose && !own && !going ? (
 							<Text variant="micro" tone="faint">
 								{whose.following}
 							</Text>

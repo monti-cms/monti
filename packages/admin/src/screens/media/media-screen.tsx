@@ -699,7 +699,19 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		id: "name",
 		label: t("library.column.name"),
 		sort: state.sort === "name" ? "asc" : undefined,
-		menu: sortRows("name"),
+		// With a file open beside the list its other columns step aside: the name's menu keeps their filters and every order within reach.
+		filtered: dense && (state.kinds.length > 0 || state.used.length > 0),
+		menu: dense ? (
+			<>
+				<FilterRows {...kindFilter} />
+				<DropdownMenuSeparator />
+				<FilterRows {...usedFilter} />
+				<DropdownMenuSeparator />
+				{sortRows()}
+			</>
+		) : (
+			sortRows("name")
+		),
 	};
 	const dateColumn: ListHeadColumn = {
 		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", "date")),
@@ -922,7 +934,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						scopes={here ? searchScopes(here.name, t) : undefined}
 						scope={state.everywhere ? "all" : "here"}
 						onScopeChange={(scope) => setState({ ...state, everywhere: scope === "all", page: 1 })}
-						targetLabel={t("folders.searchIn")}
+						targetLabel={t("list.searchIn")}
 					/>
 					{uploadButton}
 				</PageHeader>

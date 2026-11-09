@@ -16,8 +16,24 @@ export const blockHash = (block: Block) => fingerprint(JSON.stringify(canonical(
 export const blockHashes = (doc: Doc | null): Record<string, string> =>
 	Object.fromEntries((doc?.blocks ?? []).map((block) => [block.id, blockHash(block)]));
 
-/** Whether two blocks hold the same words and attrs, whatever their ids and links. */
-export const sameBlock = (a: Block, b: Block) => sameJson(bare(a), bare(b));
+/** A value without its empty parts (`attrs: {}`, `marks: []`): the editor drops them on its way through, and they say nothing. */
+const trimmed = (value: unknown): unknown => {
+	if (Array.isArray(value)) return value.map(trimmed);
+	if (value === null || typeof value !== "object") return value;
+	return Object.fromEntries(
+		Object.entries(value).flatMap(([key, each]) => {
+			const kept = trimmed(each);
+			const empty =
+				kept === undefined ||
+				(Array.isArray(kept) && kept.length === 0) ||
+				(kept !== null && typeof kept === "object" && !Array.isArray(kept) && Object.keys(kept).length === 0);
+			return empty ? [] : [[key, kept]];
+		}),
+	);
+};
+
+/** Whether two blocks hold the same words and attrs, whatever their ids, links and empty parts. */
+export const sameBlock = (a: Block, b: Block) => sameJson(trimmed(bare(a)), trimmed(bare(b)));
 
 const hasText = (value: unknown): boolean =>
 	typeof value === "string" ? value.trim() !== "" : Array.isArray(value) ? value.some(hasText) : false;
@@ -100,6 +116,8 @@ export function keepLinks(
 		}
 		if (!link || used.has(link.from)) return block;
 		used.add(link.from);
+		// A block whose source block is gone (a "removed" mark), its words rewritten: it stays, on its own, as leaving it as it is does.
+		if (Object.keys(hashes).length > 0 && !(link.from in hashes) && !sameBlock(old, block)) return block;
 		let kept: TranslationLink = link;
 		// A block whose words change is translated against the source block as it is now: what changed there is taken in, and its mark goes
 		// (2026-11-10, owner). Kept as it was, a block keeps what it saw until someone says to leave it.

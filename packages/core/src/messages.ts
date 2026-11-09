@@ -278,7 +278,7 @@ export const coreMessages = defineMessages({
 			"entries.save": "글 저장",
 			"entries.task.required": "{field} 채우기",
 			"entries.task.pending": "흐린 블록",
-			"entries.task.added": "원문에 새로 생긴 블록",
+			"entries.task.added": "원문 추가 블록",
 			"entries.notSourceLocale": "새 글은 {source}로 씁니다. {locale} 글은 번역으로 만듭니다.",
 			"entries.sameField": "{field}은 모든 언어에서 같습니다. 원문에서 고쳐 주세요.",
 			"entries.duplicateTranslation": "번역은 복제하지 않습니다. 원문을 복제해 주세요.",

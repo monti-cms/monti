@@ -96,7 +96,7 @@ function StatusBarListGroup({
 	children: React.ReactNode;
 }) {
 	return (
-		<div role="group" aria-label={label} data-slot="status-bar-list-group">
+		<div role="group" aria-label={count > 0 ? `${label} ${count}` : label} data-slot="status-bar-list-group">
 			<div aria-hidden className={MENU_SEPARATOR} />
 			<div data-slot="status-bar-list-head" aria-hidden className={MENU_LABEL}>
 				<span>{label}</span>

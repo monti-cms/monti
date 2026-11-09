@@ -52,7 +52,7 @@
 | 이름 | `FormField` + `FormFieldLabel` + `Input size="md"` | 늘 입력 칸이다. 사이드 패널의 기본 높이 `md`(32px, 원칙 10). |
 | 주소 | `FormField` + `Input mono size="md"` | 늘 입력 칸이다. |
 | 설명 | `FormField` + `Textarea size="md"` | 늘 입력 칸이다. |
-| 발 | `SidePanel footer`: `Text variant="note" tone="subtle"`("바뀐 곳 1") + `Button variant="primary" size="md"` "저장" | 바뀐 곳이 생겨야 나타난다. 바뀐 것이 없으면 발 자체가 없다(설정 › 컬렉션의 저장 묶음과 같다, 2026-11-05 소유자). 쓰는 글 수와 그 목록으로 가는 길은 목록 행의 "글 3"이 이미 준다(원칙 8). |
+| 발 | `SidePanel footer`: `Text variant="note" tone="subtle"`("변경 사항 1") + `Button variant="primary" size="md"` "저장" | 바뀐 곳이 생겨야 나타난다. 바뀐 것이 없으면 발 자체가 없다(설정 › 컬렉션의 저장 묶음과 같다, 2026-11-05 소유자). 쓰는 글 수와 그 목록으로 가는 길은 목록 행의 "글 3"이 이미 준다(원칙 8). |
 
 ### 흐름 7 · 목록 정리
 

@@ -421,11 +421,18 @@ function DocumentListScreen({
 						{ value: "body", label: t("list.searchBody") },
 					]}
 					target={state.search.in}
-					onTargetChange={(target) => setState({ ...state, page: 1, search: { text: words, in: target } })}
+					onTargetChange={(target) => {
+						// The words still waiting to be applied go with the choice, so the wait cannot undo it.
+						if (typing.current) clearTimeout(typing.current);
+						setState({ ...state, page: 1, search: { text: words, in: target } });
+					}}
 					// Inside a folder the same chip says which folders it looks in (2026-11-10, owner: no row of its own).
 					scopes={openFolder ? searchScopes(openFolder.name, t) : undefined}
 					scope={state.everywhere ? "all" : "here"}
-					onScopeChange={(scope) => setState({ ...state, page: 1, everywhere: scope === "all" })}
+					onScopeChange={(scope) => {
+						if (typing.current) clearTimeout(typing.current);
+						setState({ ...state, page: 1, search: { ...state.search, text: words }, everywhere: scope === "all" });
+					}}
 					targetLabel={t("list.searchIn")}
 				/>
 			)}

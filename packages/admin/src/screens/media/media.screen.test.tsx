@@ -267,7 +267,7 @@ describe("browsing", () => {
 		await userEvent.fill(main().getByRole("searchbox"), "top-level");
 		await expect.element(tile("top-level-photo.jpg")).not.toBeInTheDocument();
 		// The chip in the search box says where it looks (2026-11-10, owner: no row of its own).
-		await userEvent.click(main().getByRole("button", { name: "Blog Assets, 찾는 곳" }));
+		await userEvent.click(main().getByRole("button", { name: "Blog Assets, 찾을 곳" }));
 		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 	});
@@ -297,9 +297,9 @@ describe("browsing", () => {
 
 	it("07-2 the stories of looking inside a folder: a search's chip says where it looks; a filter has none", async () => {
 		await SearchingInFolder.run();
-		await expect.element(main().getByRole("button", { name: "Blog Assets, 찾는 곳" })).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "Blog Assets, 찾을 곳" })).toBeVisible();
 		await KindChosenInFolder.run();
-		await expect.element(main().getByRole("button", { name: /찾는 곳$/ })).not.toBeInTheDocument();
+		await expect.element(main().getByRole("button", { name: /찾을 곳$/ })).not.toBeInTheDocument();
 	});
 
 	it("09-1 a sort is a menu with one mark of its own", async () => {
