@@ -151,8 +151,8 @@ describe("in a translation", () => {
 	it("04-5 a following cover says whose it is, and stops saying so once it is the translation's own", async () => {
 		await TranslationCover.run();
 		await properties();
-		const note = page.getByText(/원문(의 발행본)?을 따라요/);
-		const own = page.getByText("이 언어의 값이에요");
+		const note = page.getByText(/원문( 발행본)? 따름/);
+		const own = page.getByText("이 언어 값");
 		await expect.element(note).toBeVisible();
 		await expect.element(own).not.toBeInTheDocument();
 		await openCard();
