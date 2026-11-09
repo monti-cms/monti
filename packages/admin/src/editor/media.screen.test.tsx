@@ -255,6 +255,8 @@ describe("pasting", () => {
 		await caretAfter("글의 첫 문단");
 		await paste(await canvasFile("pasted-saved.png"));
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
+		// A picture on its way is not stored: the caption shows from the start, so wait for the file, not for that.
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect.element(page.getByRole("button", { name: /할 일/ })).toHaveTextContent("1");
 	});
