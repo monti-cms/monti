@@ -513,8 +513,8 @@ test.describe("a cover and what goes up for it", () => {
 	test("09-3 T118 a new file starts not decorative, and stays so if it was switched on while it went up", async ({
 		admin,
 	}, info) => {
-		const [first, second, third] = await Promise.all(
-			["first", "second", "third"].map((name) => picture(admin, info.outputDir, `${unique(name)}.jpg`)),
+		const [first, second, third, fourth] = await Promise.all(
+			["first", "second", "third", "fourth"].map((name) => picture(admin, info.outputDir, `${unique(name)}.jpg`)),
 		);
 		const decorative = admin.getByRole("switch", { name: "장식 이미지" });
 		const arrived = async (file: string) => {
@@ -547,6 +547,19 @@ test.describe("a cover and what goes up for it", () => {
 		await uploadedId(admin, path.basename(third as string));
 		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
 		await expect(decorative).toBeChecked();
+		await admin.keyboard.press("Escape");
+
+		// Off and on again while the next one goes up is said of that one too, though it ends as it began.
+		const release2 = await hold(admin);
+		await chooseUpload(admin, fourth as string);
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(fourth as string)));
+		await coverSettings(admin).click();
+		await decorative.click();
+		await decorative.click();
+		release2();
+		await uploadedId(admin, path.basename(fourth as string));
+		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
+		await expect(decorative).toBeChecked();
 	});
 
 	test("09-3 T117 a file uploaded from the window goes to the folder open in it", async ({ admin }, info) => {
@@ -561,6 +574,30 @@ test.describe("a cover and what goes up for it", () => {
 		await dialog.getByRole("button", { name: "올리기" }).click();
 		await (await chooser).setFiles(file);
 		await expect(cover(admin)).toHaveText(new RegExp(path.basename(file)));
+		await uploadedId(admin, path.basename(file));
+		const answer = await admin.request.post("/admin/api/operations/media.query", {
+			data: { input: { search: path.basename(file) } },
+		});
+		expect(((await answer.json()) as { items: { folderId: string | null }[] }).items[0]?.folderId).toBe(
+			folder.output.id,
+		);
+	});
+
+	test("09-3 T117 a file uploaded from the body's window goes to the folder open in it", async ({ admin }, info) => {
+		const name = unique("folder");
+		const folder = await operation<{ id: string }>(admin, "folders.create", { scope: "media", parentId: null, name });
+		const file = await picture(admin, info.outputDir, `${unique("in-body")}.jpg`);
+		await writing(admin);
+		await body(admin).getByText("글의 첫 문단이에요.").click();
+		await admin.keyboard.press("End");
+		await admin.keyboard.press("Enter");
+		await admin.keyboard.type("/이미지");
+		await admin.keyboard.press("Enter");
+		const dialog = admin.getByRole("dialog");
+		await dialog.getByRole("navigation").getByRole("button", { name }).click();
+		const chooser = admin.waitForEvent("filechooser");
+		await dialog.getByRole("button", { name: "올리기" }).click();
+		await (await chooser).setFiles(file);
 		await uploadedId(admin, path.basename(file));
 		const answer = await admin.request.post("/admin/api/operations/media.query", {
 			data: { input: { search: path.basename(file) } },

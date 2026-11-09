@@ -15,11 +15,13 @@ export function fieldValue(fields: Fields, field: string): unknown {
 
 /**
  * The fields a translation holds a value of its own in, so that the source moving on is news to it (T111): per language, or following the source with a value written here. A
- * field the same in every language has none. The address has one, but it is the translation's own: a source's new address makes nothing in the translation wrong.
+ * field the same in every language has none. The address has one, but it is the translation's own: a source's new address makes nothing in the translation wrong. An item's
+ * languages are written together in one panel, which has no marks: none are kept for it (T119).
  */
 export function trackedFields(schema: Schema, collection: string): string[] {
-	const fields = schema.collections[collection]?.fields ?? {};
-	return Object.entries(fields)
+	const definition = schema.collections[collection];
+	if (definition?.kind !== "document") return [];
+	return Object.entries(definition.fields)
 		.filter(([name, definition]) => definition.kind !== "slug" && localeModeOf(name, definition) !== "same")
 		.map(([name]) => name);
 }

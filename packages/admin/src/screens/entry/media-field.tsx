@@ -125,8 +125,14 @@ export function MediaField({
 											decorative={shown.decorative === true}
 											readOnly={readOnly}
 											placeholder={followed?.alt || t("entry.empty")}
-											onChange={(alt) => onChange({ ...own, media: shown.media, alt })}
-											onDecorative={(decorative) => onChange({ ...own, media: shown.media, decorative })}
+											onChange={(alt) => {
+												uploads.said(field, "alt");
+												onChange({ ...own, media: shown.media, alt });
+											}}
+											onDecorative={(decorative) => {
+												uploads.said(field, "decorative");
+												onChange({ ...own, media: shown.media, decorative });
+											}}
 											onEnter={() => onCard(false)}
 										/>
 									</Stack>
@@ -158,7 +164,7 @@ export function MediaField({
 						const only = accept === "any" ? undefined : "image";
 						// One the library refuses leaves the field as it was.
 						void acceptFiles([chosen], only).then(([taken]) => {
-							if (taken) uploads.add(field, taken, own, folder, only);
+							if (taken) uploads.add(field, taken, folder, only);
 						});
 					}}
 				/>

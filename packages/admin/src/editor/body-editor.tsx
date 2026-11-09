@@ -191,9 +191,9 @@ export function BodyEditor({
 							setLibrary(null);
 							if (editor) placeLibraryFile(editor, item);
 						}}
-						onFiles={(files) => {
+						onFiles={(files, folder) => {
 							setLibrary(null);
-							if (editor) placeFiles(editor, files, null, accept, upload.add);
+							if (editor) placeFiles(editor, files, null, accept, (taken) => upload.add(taken, folder));
 						}}
 					/>
 				)}

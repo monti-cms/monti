@@ -122,13 +122,13 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
-	const fieldUploads = useFieldUploads((field, item, then) => {
-		// What was said when the file set off was for the old picture (2026-11-09, owner). Only what was said since is for this one.
+	const fieldUploads = useFieldUploads((field, item, said) => {
+		// What was there when the file set off was for the old picture (2026-11-09, owner). Only what was said since is for this one.
 		const now = mediaValueOf(editor.value(`values.${field}`));
 		editor.set(`values.${field}`, {
 			media: item.id,
-			...(now?.alt && now.alt !== then?.alt ? { alt: now.alt } : {}),
-			...(now?.decorative && !then?.decorative ? { decorative: true } : {}),
+			...(said.alt && now?.alt ? { alt: now.alt } : {}),
+			...(said.decorative && now?.decorative ? { decorative: true } : {}),
 		});
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");

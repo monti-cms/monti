@@ -101,6 +101,8 @@ const marks = async (id: string) =>
 	(await compare(id)).marks.map((mark) => `${mark.kind}:${mark.from}`).sort((a, b) => a.localeCompare(b));
 const fieldMarks = async (id: string) =>
 	(await read<{ fields: { field: string; before: unknown; after: unknown }[] }>("translations.compare", { id })).fields;
+const fieldMarks2 = async (monti: ReturnType<typeof site>, id: string) =>
+	((await monti.run("translations.compare", { id }, { actor: "admin" })) as { fields: unknown[] }).fields;
 const changes = async (id: string) => {
 	const { groups } = await read<{ groups: { locales: { id: string; changes: number }[] }[] }>("translations.status", {
 		ids: [id],
@@ -304,6 +306,17 @@ describe("pending blocks", () => {
 	});
 });
 
+const withItems: Schema = {
+	...schema,
+	collections: {
+		...schema.collections,
+		tag: {
+			kind: "item",
+			fields: { title: { kind: "text", required: true }, slug: { kind: "slug", required: true } },
+		},
+	},
+};
+
 describe("when the source's fields change", () => {
 	/** A published source and its published translation, with a title and values of its own. */
 	async function pair(values: Record<string, unknown> = { summary: "Summary" }) {
@@ -417,6 +430,110 @@ describe("when the source's fields change", () => {
 		await republishFields(source, { values: { summary: null, subtitle: "부제", format: "memo" } });
 		expect(await fieldMarks(id)).toEqual([{ field: "summary", before: "새 요약", after: null }]);
 		expect(await changes(id)).toBe(1);
+	});
+
+	it("04-2 T111 through the settings' apply: a removed field takes its mark with it, a renamed one keeps it under the new name", async () => {
+		root = await mkdtemp(path.join(tmpdir(), "monti-seen-"));
+		const { source, id } = await pair({ summary: "Summary", subtitle: "Subtitle" });
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "새 부제", format: "memo" } });
+		expect(await changes(id)).toBe(2);
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const { subtitle: _gone, summary: _renamed, ...kept } = post.fields;
+		const after: Schema = {
+			...schema,
+			collections: {
+				...schema.collections,
+				post: { ...post, fields: { ...kept, excerpt: { kind: "text", locale: "perLocale" } } },
+			},
+		};
+		await write("schema.apply", {
+			draft: after,
+			renames: [{ collection: "post", from: "summary", to: "excerpt" }],
+			answers: {
+				"renameField:post.summary": { do: "renameField", values: "move" },
+				"removeField:post.subtitle": { do: "removeField", values: "clear" },
+			},
+		});
+		expect(await fieldMarks(id)).toEqual([{ field: "excerpt", before: "요약", after: "새 요약" }]);
+		expect(await changes(id)).toBe(1);
+	});
+
+	it("04-2 T111 a field renamed to start empty has seen nothing under its new name", async () => {
+		root = await mkdtemp(path.join(tmpdir(), "monti-seen-"));
+		const { id } = await pair();
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const { summary: _renamed, ...kept } = post.fields;
+		const after: Schema = {
+			...schema,
+			collections: {
+				...schema.collections,
+				post: { ...post, fields: { ...kept, excerpt: { kind: "text", locale: "perLocale" } } },
+			},
+		};
+		await write("schema.apply", {
+			draft: after,
+			renames: [{ collection: "post", from: "summary", to: "excerpt" }],
+			answers: { "renameField:post.summary": { do: "renameField", values: "empty" } },
+		});
+		expect(await fieldMarks(id)).toEqual([]);
+		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 an undo from before a field became the same in every language cannot bring its mark back", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "부제", format: "memo" } });
+		const confirmed = (await site().run(
+			"translations.setBlocks",
+			{ id, version: await version(id), blocks: [{ do: "confirmField", field: "summary" }] },
+			{ actor: "admin" },
+		)) as { activityId: string };
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const after: Schema = {
+			...schema,
+			collections: {
+				...schema.collections,
+				post: { ...post, fields: { ...post.fields, summary: { kind: "text", locale: "same" } } },
+			},
+		};
+		await migrateContent(db, after, []);
+		await site(after)
+			.run("activity.undo", { id: confirmed.activityId }, { actor: "admin" })
+			.catch(() => null);
+		expect(await fieldMarks(id)).toEqual([]);
+		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 T119 an item's languages are written together in one panel: nothing is kept to mark", async () => {
+		const made = await write<{ group: string; locales: Record<string, { id: string }> }>(
+			"items.saveGroup",
+			{
+				collection: "tag",
+				locales: { ko: { title: "개발" }, en: { title: "Development" } },
+			},
+			site(withItems),
+		);
+		const english = made.locales.en?.id as string;
+		await write(
+			"items.saveGroup",
+			{ collection: "tag", group: made.group, locales: { ko: { title: "개발 이야기" } } },
+			site(withItems),
+		);
+		const saved = await db
+			.selectFrom("entries")
+			.select("translation_seen")
+			.where("id", "=", english)
+			.executeTakeFirst();
+		expect(saved?.translation_seen).toEqual({});
+		await write("entries.save", { id: english, version: await version(english), title: "Dev" }, site(withItems));
+		const again = await db
+			.selectFrom("entries")
+			.select("translation_seen")
+			.where("id", "=", english)
+			.executeTakeFirst();
+		expect(again?.translation_seen).toEqual({});
 	});
 
 	it("04-2 T111 a field gone from the schema, or now the same in every language, leaves no mark", async () => {
@@ -866,6 +983,30 @@ describe("the site's languages", () => {
 			site({ ...schema, locales: locales({ source: "en" }) }),
 		);
 		expect(groups[0]?.source).toBe(english);
+	});
+
+	it("04-6 T111 after a new source language, what a translation holds is measured from the new source", async () => {
+		await onDevServer();
+		const korean = await publishedSource();
+		const english = await translate(korean);
+		await write("entries.save", {
+			id: english,
+			version: await version(english),
+			title: "First post",
+			values: { summary: "Summary" },
+		});
+		await decideAll(english);
+		await write("entries.publish", { ids: [english] });
+		const next = locales({ source: "en" });
+		await apply(next);
+		const after: Schema = { ...schema, locales: next };
+		const monti = site(after);
+		expect(await fieldMarks2(monti, korean)).toEqual([]);
+		await write("entries.save", { id: english, version: await version(english), title: "A better title" }, monti);
+		await write("entries.publish", { ids: [english] }, monti);
+		expect(await fieldMarks2(monti, korean)).toEqual([
+			{ field: "title", before: "First post", after: "A better title" },
+		]);
 	});
 
 	it("04-6 a new source language without an entry in a group gets a draft of pending blocks copied from the old source", async () => {
