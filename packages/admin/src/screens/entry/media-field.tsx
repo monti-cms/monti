@@ -127,11 +127,15 @@ export function MediaField({
 					onPick={(item) => {
 						setPicking(false);
 						uploads.clear(field);
-						onChange({ media: item.id, alt: own?.alt });
+						// Alt text says what a picture shows, so another file starts with none (2026-11-09, owner). The same file keeps it.
+						onChange(item.id === own?.media ? own : { media: item.id });
 					}}
 					onFiles={([chosen]) => {
 						setPicking(false);
-						if (chosen) uploads.add(field, chosen, accept === "any" ? undefined : "image");
+						if (!chosen) return;
+						// What is written from here on is for the new file: the field keeps it when the file lands.
+						if (own) onChange({ media: own.media });
+						uploads.add(field, chosen, accept === "any" ? undefined : "image");
 					}}
 				/>
 			)}

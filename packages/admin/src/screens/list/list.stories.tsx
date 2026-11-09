@@ -482,7 +482,7 @@ export const RowsMenuToFolder: Story = {
 		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
 		await rightClick(canvasElement, "가을 사진 정리");
 		await userEvent.click(body().getByRole("menuitem", { name: "폴더로" }));
-		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "최상위" })).toBeTruthy(), wait);
 	},
 };
 
@@ -495,7 +495,7 @@ export const BulkToFolder: Story = {
 		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
 		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
 		await userEvent.click(page.getByRole("button", { name: "폴더로" }));
-		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "최상위" })).toBeTruthy(), wait);
 	},
 };
 
@@ -505,7 +505,7 @@ export const RowMenuToFolder: Story = {
 	play: async ({ canvasElement }) => {
 		await rightClick(canvasElement, "리액트 서버 컴포넌트 다시 보기");
 		await userEvent.click(body().getByRole("menuitem", { name: "폴더로" }));
-		await waitFor(() => expect(body().getByRole("menuitem", { name: "맨 위" })).toBeTruthy(), wait);
+		await waitFor(() => expect(body().getByRole("menuitem", { name: "최상위" })).toBeTruthy(), wait);
 	},
 };
 

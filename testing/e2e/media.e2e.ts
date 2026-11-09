@@ -90,7 +90,7 @@ test.describe("the library", () => {
 		await admin.getByRole("checkbox", { name: `${freeName} 고르기` }).check({ force: true });
 		await admin.getByRole("checkbox", { name: `${usedName} 고르기` }).check({ force: true });
 		await main(admin).getByRole("button", { name: "휴지통으로" }).click();
-		const said = admin.getByText("1개를 옮겼고 1개는 쓰이고 있어 남겼어요");
+		const said = admin.getByText("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼어요");
 		await expect(said).toBeVisible();
 		await expect(tile(admin, freeName)).toBeHidden();
 		await expect(tile(admin, usedName)).toBeVisible();

@@ -54,7 +54,7 @@
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
 | 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". 이때 나가려 하면 파일을 올리는 중이라고 묻는다(`useLeaveGuard`의 `uploads`). 파일을 "바뀐 곳"이라 부르지 않는다. |
-| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 말한다. 받지 않는 형식은 받는 종류("이미지 · PDF · ZIP · 텍스트만"), HEIC는 "HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요", 이미지만 받는 칸의 다른 파일은 "이 칸에는 이미지만 넣을 수 있어요", 읽히지 않는 것(OS의 폴더)은 "이 파일은 읽을 수 없어요"다. |
+| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 말한다. 받지 않는 형식은 받는 종류("이미지 · PDF · ZIP · 텍스트만"), HEIC는 "HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요", 이미지만 받는 칸의 다른 파일은 "이 칸에는 이미지만 넣을 수 있어요", 읽히지 않는 것(OS의 폴더)은 "이 파일은 읽을 수 없어요", 받는 형식인데 깨진 그림은 "이 그림은 읽을 수 없어요 · 파일이 손상됐을 수 있어요"다. |
 | 너무 큰 파일 | `Tile status="interrupted"`(`actions` "줄여서 다시" · "빼기") | 그림은 흐리게 남고 테는 없다. 세부 줄 "14 MB · 10 MB까지". |
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
@@ -174,7 +174,7 @@
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있어요. 검색으로 찾아 주세요."가 대신한다. |
-| "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 글자 버튼이다. 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
+| "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 
 스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview.
@@ -186,5 +186,5 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `stage` "라이브러리" | 6.29 | 제목 "라이브러리", "모든 이미지", 이미지 `Tile`, 알약 "넣기" | Patterns/List/Tile |
-| `stage` "대표 이미지" | 6.30 | 제목 "대표 이미지", 폴더 "covers"가 골라짐, 알약 "고르기" |  |
+| `stage` "대표 이미지" | 6.30 | 제목 "대표 이미지", "모든 이미지"에서 시작, 알약 "고르기" |  |
 | `stage` "파일" | 6.37 | 제목 "파일", "모든 파일", 파일 `Tile`(`FilePreview`), 알약 "넣기" | Patterns/List/Tile, Patterns/List/FilePreview |

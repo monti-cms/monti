@@ -83,6 +83,25 @@ describe("in a translation", () => {
 		await expect.element(alt()).toHaveValue("");
 	});
 
+	it("09-1 another file starts with no alt text, so the old words cannot go out with it; the same file keeps them", async () => {
+		await WithCover.run();
+		await properties();
+		await expect.element(alt()).toHaveValue("아침 책상");
+		const pick = async (name: RegExp) => {
+			await userEvent.click(cover());
+			const dialog = page.getByRole("dialog");
+			await userEvent.click(dialog.getByRole("button", { name }));
+			await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
+			await expect.element(dialog).not.toBeInTheDocument();
+		};
+		await pick(/desk-morning/);
+		await expect.element(alt()).toHaveValue("아침 책상");
+		await pick(/seoul-night/);
+		await expect.element(cover()).toHaveTextContent("seoul-night");
+		await expect.element(alt()).toHaveValue("");
+		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요")).toBeVisible();
+	});
+
 	it("09-1 a cover can be decorative: then nothing asks for its alt text", async () => {
 		await WithCover.run();
 		await properties();

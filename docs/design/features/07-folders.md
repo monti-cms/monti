@@ -24,12 +24,12 @@
 ```mermaid
 flowchart TD
   subgraph POST["게시글 폴더"]
-    P0["맨 위"] --> P1["시리즈 원고 · 2"]
+    P0["최상위"] --> P1["시리즈 원고 · 2"]
     P0 --> P2["2024 · 11"]
     P2 --> P3["회고 · 3"]
   end
   subgraph MEDIA["미디어 폴더"]
-    M0["맨 위"] --> M1["Blog Assets · 14"]
+    M0["최상위"] --> M1["Blog Assets · 14"]
     M1 --> M2["covers · 6"]
     M1 --> M3["diagrams · 3"]
     M0 --> M4["Wallpapers · 7"]

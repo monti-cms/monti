@@ -245,7 +245,7 @@ describe("pasting", () => {
 				type: "image/png",
 			}),
 		);
-		await expect.element(body().getByText("읽을 수 없는 그림")).toBeVisible();
+		await expect.element(body().getByText("이 그림은 읽을 수 없어요", { exact: false })).toBeVisible();
 		await userEvent.click(body().getByRole("button", { name: "빼기" }));
 		await expect.element(body().getByText("broken.png")).not.toBeInTheDocument();
 	});

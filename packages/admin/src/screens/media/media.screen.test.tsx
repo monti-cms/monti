@@ -205,7 +205,7 @@ describe("uploading", () => {
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			named("broken.png", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]),
 		]);
-		await expect.element(main().getByText("읽을 수 없는 그림")).toBeVisible();
+		await expect.element(main().getByText("이 그림은 읽을 수 없어요", { exact: false })).toBeVisible();
 	});
 
 	it("09-1 [flow 6·04] a file over the limit says how big and offers shrinking only for a picture", async () => {
@@ -312,9 +312,7 @@ describe("many files at once", () => {
 		await expect.element(main().getByText("2개 선택")).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "종류" })).not.toBeInTheDocument();
 		await userEvent.click(main().getByRole("button", { name: "폴더로" }));
-		await expect
-			.element(page.getByRole("menuitem", { name: "최상위" }).or(page.getByRole("menuitem", { name: "맨 위" })))
-			.toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "최상위" })).toBeVisible();
 		await userEvent.click(page.getByRole("menuitem", { name: "Blog Assets / covers" }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(folder("covers")).toHaveTextContent("3");
@@ -367,7 +365,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(page.getByRole("checkbox", { name: "desk-morning.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
-		const said = toast("1개를 옮겼고 1개는 쓰이고 있어 남겼어요");
+		const said = toast("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼어요");
 		await expect.element(said).toBeVisible();
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();

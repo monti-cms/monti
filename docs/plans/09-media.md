@@ -61,7 +61,7 @@
 | L3 부품 | `@monti-cms/ui`에서 바꾼 부품 | `*.browser.test.tsx` | `pnpm test:browser` |
 | L4 화면 | 화면이 부품을 잇는 방식, 흐름 단계, 장면 (PGlite) | `*.screen.test.tsx` | `pnpm test:browser` |
 | L5 e2e | HTTP, 쿠키, 디스크, 실제 그림 해독까지 합쳐야 깨지는 곳 | `testing/e2e/*.e2e.ts` | `pnpm test:e2e` (새로 만듦) |
-| 사용성 | 테스트가 물을 줄 모르는 것: 막힘, 헷갈림, 어색함 | `.usability/feat-media-09.md` | 1.4 |
+| 사용성 | 테스트가 물을 줄 모르는 것: 막힘, 헷갈림, 어색함 | `docs/usability/feat-media-09.md` | 1.4 |
 
 끝 조건 번호(단계 0에서 문서에 단다): **09-1** 흐름 6, **09-2** 라이브러리에 대체 텍스트 없음, **09-3** 같은 올리기와 같은 창, **09-4** 쓰이는 파일은 휴지통에 안 들어감, **09-5** 파일을 바꿔도 쓰는 곳 그대로.
 
@@ -160,7 +160,7 @@ delegate_task:
   title: "Usability test of doc 09 media"
   role: test
   target: { providerInstanceId: codex, model: gpt-6.1-terra, options: { reasoningEffort: high } }
-  task: docs/plans/09-media.md 1.4의 시나리오를 드라이버로 해 보고 .usability/feat-media-09.md에 적는다.
+  task: docs/plans/09-media.md 1.4의 시나리오를 드라이버로 해 보고 docs/usability/feat-media-09.md에 적는다.
         소스를 고치지 않는다. 흐름 6과 기준 화면은 판정 근거로만 읽고, 시나리오를 시작하기 전에는 테스트 파일을 읽지 않는다.
 ```
 

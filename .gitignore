@@ -13,7 +13,7 @@ next-env.d.ts
 
 # Tests
 coverage
-# The usability test: its files, and the shots and videos of a run (the report stays)
+# The usability test: its files, and the shots and videos of a run. The reports are in docs/usability.
 testing/usability/files
 .usability/**/*.png
 .usability/**/*.webm
