@@ -1,5 +1,4 @@
 import {
-	BAR_CARD_GAP,
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -24,7 +23,7 @@ import {
 import { Document, Link, Unlink } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
 import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
@@ -60,6 +59,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 	const { t } = useAdmin();
 	const [linking, setLinking] = useState(false);
 	const [more, setMore] = useState(false);
+	const bar = useRef<HTMLDivElement>(null);
 	const state = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -97,7 +97,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 
 	return (
 		<EditorOverlay top={state.top} left={state.left} place="above">
-			<FloatingBar aria-label={t("format.label")}>
+			<FloatingBar ref={bar} aria-label={t("format.label")}>
 				{groups.map((group, at) => (
 					<Inline key={group[0]?.type} gap={2}>
 						{at > 0 ? <Separator orientation="vertical" length="bar" /> : null}
@@ -156,7 +156,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 							label={t("format.more")}
 							trigger={(button) => <PopoverTrigger render={button} />}
 						/>
-						<PopoverContent side="bottom" align="end" sideOffset={BAR_CARD_GAP} padding="menu" width="sm">
+						<PopoverContent anchor={bar} side="bottom" align="end" padding="menu" width="sm">
 							<Command>
 								<CommandList aria-label={t("format.more")}>
 									<CommandGroup>

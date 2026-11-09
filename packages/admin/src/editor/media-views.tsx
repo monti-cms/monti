@@ -8,7 +8,6 @@ import {
 	type MediaItem,
 } from "@monti-cms/core";
 import {
-	BAR_CARD_GAP,
 	BlockBarPlace,
 	BlockBox,
 	Button,
@@ -16,6 +15,7 @@ import {
 	type CropRect,
 	CropStage,
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
@@ -23,20 +23,16 @@ import {
 	FloatingBar,
 	FloatingBarButton,
 	FormField,
-	FormFieldError,
 	FormFieldLabel,
 	Image,
 	Inline,
 	Input,
-	Option,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
 	Separator,
 	Stack,
-	Switch,
-	Text,
 	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
@@ -55,6 +51,7 @@ import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { UploadActions, useProblemText } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
+import { AltFields } from "./alt-fields";
 import { EditorMedia, fileBlock, nextBlankImage, openImageCard } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
@@ -79,8 +76,6 @@ const ALIGNS = [
 /** The caption stands where its picture stands. */
 const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
 const MIN_WIDTH = 80;
-/** How long alt text runs (flow 1·12). */
-const ALT_MAX = 80;
 
 /**
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
@@ -310,6 +305,7 @@ function CropDialog({
 					</Inline>
 				</Stack>
 				<DialogFooter>
+					<DialogClose render={<Button variant="ghost" />}>{t("settings.cancel")}</DialogClose>
 					<Button
 						onClick={() =>
 							onApply(
@@ -342,11 +338,11 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));
-	const alt = useComposedValue(data.alt ?? "", (value) => set({ alt: value }));
 	const [cropping, setCropping] = useState(false);
 	const [dragged, setDragged] = useState<number | null>(null);
 	const box = useRef<HTMLDivElement>(null);
-	const altId = useId();
+	const bar = useRef<HTMLDivElement>(null);
+	const widthId = useId();
 	const editable = editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
@@ -452,7 +448,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 						{selected && editable && url && (
 							<>
 								<BlockBarPlace>
-									<FloatingBar>
+									<FloatingBar ref={bar}>
 										{ALIGNS.map(({ value, icon: Icon, label }) => (
 											<FloatingBarButton
 												key={value}
@@ -472,12 +468,12 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 											>
 												<Settings aria-hidden />
 											</FloatingBarButton>
-											<PopoverContent align="start" sideOffset={BAR_CARD_GAP}>
+											<PopoverContent anchor={bar} align="start">
 												<Stack gap={12}>
 													<FormField>
-														<FormFieldLabel htmlFor={`${altId}-width`}>{t("editor.image.width")}</FormFieldLabel>
+														<FormFieldLabel htmlFor={widthId}>{t("editor.image.width")}</FormFieldLabel>
 														<Input
-															id={`${altId}-width`}
+															id={widthId}
 															size="md"
 															inputMode="numeric"
 															placeholder={t("editor.image.fitBody")}
@@ -488,42 +484,14 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 															}}
 														/>
 													</FormField>
-													<FormField>
-														<FormFieldLabel
-															htmlFor={altId}
-															action={
-																<Text variant="micro" tone="subtle">
-																	{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
-																</Text>
-															}
-														>
-															{t("editor.image.alt")}
-														</FormFieldLabel>
-														<Input
-															id={altId}
-															size="md"
-															autoFocus
-															disabled={data.decorative === true}
-															maxLength={ALT_MAX}
-															value={alt.value}
-															onChange={(event) => alt.change(event.target.value)}
-															{...alt.composition}
-															onKeyDown={(event) => {
-																if (event.key === "Enter") {
-																	event.preventDefault();
-																	next();
-																}
-															}}
-														/>
-														{blank && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
-													</FormField>
-													<Option spread>
-														{t("editor.image.decorative")}
-														<Switch
-															checked={data.decorative === true}
-															onCheckedChange={(on) => set({ decorative: on })}
-														/>
-													</Option>
+													<AltFields
+														value={data.alt ?? ""}
+														decorative={data.decorative === true}
+														missing={blank}
+														onChange={(value) => set({ alt: value })}
+														onDecorative={(on) => set({ decorative: on })}
+														onEnter={next}
+													/>
 													{nextBlankImage(editor, blockId) && (
 														<TextButton onClick={next}>{t("editor.image.next")}</TextButton>
 													)}
@@ -578,6 +546,7 @@ function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }:
 	const blockId = String(node.attrs.blockId ?? "");
 	const open = media?.card === blockId;
 	const nameId = useId();
+	const bar = useRef<HTMLDivElement>(null);
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
 	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
 	const shownName = useComposedValue(data.name ?? "", (name) => updateAttributes({ data: { ...data, name } }));
@@ -598,7 +567,7 @@ function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }:
 			<BlockBox>
 				{selected && editor.isEditable && (
 					<BlockBarPlace>
-						<FloatingBar>
+						<FloatingBar ref={bar}>
 							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 								<FloatingBarButton
 									label={t("editor.image.settings")}
@@ -607,7 +576,7 @@ function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }:
 								>
 									<Settings aria-hidden />
 								</FloatingBarButton>
-								<PopoverContent align="start" sideOffset={BAR_CARD_GAP}>
+								<PopoverContent anchor={bar} align="start">
 									<FormField>
 										<FormFieldLabel htmlFor={nameId}>{t("editor.file.name")}</FormFieldLabel>
 										<Input

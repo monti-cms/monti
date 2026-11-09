@@ -39,9 +39,6 @@ import { useRelationField } from "./use-relation-field";
 /** The id of a field's input: a to-do row puts the cursor there. */
 export const fieldInputId = (field: string) => `monti-entry-${field}`;
 
-/** The id of a media field's alt text: its to-do row puts the cursor there. */
-export const altInputId = (field: string) => `${fieldInputId(field)}-alt`;
-
 /** The kinds of field the panel holds. */
 const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media"]);
 
@@ -482,6 +479,8 @@ export function EntryProperties({
 	shared,
 	sourcePublished,
 	uploads,
+	altCard,
+	onAltCard,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -495,6 +494,9 @@ export function EntryProperties({
 	sourcePublished?: boolean;
 	/** The files going up for the media fields: the editor's, so they outlive this panel. */
 	uploads: FieldUploads;
+	/** The media field whose picture settings are open: a to-do row opens them. */
+	altCard: string | null;
+	onAltCard: (field: string | null) => void;
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -575,6 +577,8 @@ export function EntryProperties({
 					id={id}
 					field={key}
 					uploads={uploads}
+					card={altCard === key}
+					onCard={(open) => onAltCard(open ? key : null)}
 					label={values[key]?.label ?? key}
 					required={marksRequired && required(key)}
 					accept={def.accept}

@@ -133,14 +133,26 @@ export async function fillLibrary(monti: Monti, storage: StorySite["storage"]) {
 }
 
 /** Starts at an address with the library filled, signed in. */
-export const library = (hash = "#/media", options: { storage?: null } = {}) => [
+export const library = (
+	hash = "#/media",
+	{
+		also,
+		...options
+	}: { storage?: null; also?: (monti: Monti, ids: Awaited<ReturnType<typeof fillLibrary>>) => Promise<void> } = {},
+) => [
 	async (): Promise<Loaded> => {
 		startAt(hash);
 		const made = await storySite({
 			schema,
 			auth: { password: true },
 			signedIn: true,
-			setup: options.storage === null ? undefined : (monti, storage) => fillLibrary(monti, storage).then(() => {}),
+			setup:
+				options.storage === null
+					? undefined
+					: async (monti, storage) => {
+							const ids = await fillLibrary(monti, storage);
+							await also?.(monti, ids);
+						},
 			...options,
 		});
 		return { site: made };
@@ -178,6 +190,34 @@ export const FilePanel: Story = {
 		await userEvent.click(await page.findByRole("button", { name: /^Blog Assets/ }, wait));
 		await userEvent.click(await page.findByRole("button", { name: /cybersecurity-code/ }, wait));
 	},
+};
+
+/** Flow 6·16: a file used in many places. The list grows with them, and a long title is cut before its places. */
+export const FilePanelManyUses: Story = {
+	loaders: library("#/media", {
+		also: async (monti, { code }) => {
+			const posts = [
+				["봄맞이 블로그 개편 회고: 무엇을 바꾸고 무엇을 남겼는지에 대하여", "spring-redesign"],
+				["개발자의 책상", "dev-desk"],
+				["비밀번호를 지키는 다섯 가지 습관", "five-habits"],
+				["2026년 상반기 보안 사고 정리", "incidents-2026"],
+				["새벽 코딩", "dawn-coding"],
+			];
+			for (const [title, slug] of posts)
+				await run(monti, "entries.create", {
+					collection: "post",
+					locale: "ko",
+					title,
+					slug,
+					values: slug === "dev-desk" ? undefined : { cover: { media: code, alt: "코드" } },
+					doc:
+						slug === "five-habits"
+							? undefined
+							: { type: "doc", blocks: [{ id: "b_1", type: "image", attrs: { media: code, alt: "코드" } }] },
+				});
+		},
+	}),
+	play: FilePanel.play,
 };
 
 /** Flow 6·20: files picked, the bar in place of the tools. */

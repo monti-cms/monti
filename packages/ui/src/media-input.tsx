@@ -3,7 +3,7 @@
 import type * as React from "react";
 import { cn } from "./cn";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
-import { IconButton } from "./icon-button";
+import { IconButton, IconButtonContext } from "./icon-button";
 import { Close, Image as ImageIcon } from "./icons";
 import { useProposalDescription } from "./proposal-cue";
 
@@ -24,6 +24,7 @@ function MediaInput({
 	clearLabel,
 	proposal = false,
 	following = false,
+	action,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -41,8 +42,11 @@ function MediaInput({
 	proposal?: boolean;
 	/** The file is another value's, shown here because this one follows it (a translation following its source): it reads faint, and there is nothing to take out. */
 	following?: boolean;
+	/** A control of the file's own before the × (a picture's settings). Its icon buttons take the × 's size. */
+	action?: React.ReactNode;
 }) {
 	const description = useProposalDescription(proposal);
+	const actionSize = FIELD_ACTION_BUTTON[size === "default" ? "lg" : size];
 	return (
 		<div
 			data-slot="media-input"
@@ -85,16 +89,13 @@ function MediaInput({
 					<span className="truncate">{placeholder}</span>
 				)}
 			</button>
-			<span className={FIELD_ACTION}>
+			<span className={cn(FIELD_ACTION, "flex items-center")}>
+				{action && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
 				{value && onClear ? (
-					<IconButton
-						{...FIELD_ACTION_BUTTON[size === "default" ? "lg" : size]}
-						label={clearLabel ?? ""}
-						onClick={onClear}
-					>
+					<IconButton {...actionSize} label={clearLabel ?? ""} onClick={onClear}>
 						<Close />
 					</IconButton>
-				) : (
+				) : action ? null : (
 					<ImageIcon aria-hidden className="mr-monti-6 size-4 text-monti-faint" />
 				)}
 			</span>

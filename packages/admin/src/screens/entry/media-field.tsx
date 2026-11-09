@@ -1,6 +1,19 @@
 import { altIsMissing, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
-import { FormField, FormFieldError, FormFieldLabel, Input, MediaInput, Option, Switch, Text } from "@monti-cms/ui";
+import {
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	IconButton,
+	MediaInput,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
+import { Settings } from "@monti-cms/ui/icons";
 import { useState } from "react";
+import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
 import { UploadActions, useProblemText } from "../../media/upload-problem";
@@ -13,8 +26,8 @@ const shownFile = (file: MediaDetail | null) =>
 	file ? { name: file.name, thumbnail: file.kind === "image" ? previewUrl(file) : null } : null;
 
 /**
- * A media field in the property panel (doc 09, screens/editor.md): the file on one line, opening the library's window, and under it what this entry says of the picture. In
- * a translation, an empty field follows the source's file (2026-11-09, owner): choosing or writing makes it this translation's own, and taking it out follows again.
+ * A media field in the property panel (doc 09, screens/editor.md): the file on one line, opening the library's window, and what this entry says of the picture in the settings
+ * card at the end of that line, as a body's image has it (2026-11-09, owner). In a translation, an empty field follows the source's file (2026-11-09, owner): choosing or writing makes it this translation's own, and taking it out follows again.
  */
 export function MediaField({
 	id,
@@ -27,6 +40,8 @@ export function MediaField({
 	whose,
 	readOnly,
 	uploads,
+	card,
+	onCard,
 	onChange,
 }: {
 	id: string;
@@ -41,6 +56,9 @@ export function MediaField({
 	whose?: { following: string; own: string; clear: string };
 	readOnly: boolean;
 	uploads: FieldUploads;
+	/** Whether the picture's settings card is open: the editor's, so a to-do row can open it. */
+	card: boolean;
+	onCard: (open: boolean) => void;
 	onChange: (next: MediaValue | null) => void;
 }) {
 	const { t } = useAdmin();
@@ -80,7 +98,34 @@ export function MediaField({
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
+					action={
+						isImage && shown ? (
+							<Popover open={card} onOpenChange={onCard}>
+								<IconButton
+									label={t("library.field.settings", { label })}
+									pressed={card}
+									trigger={(button) => <PopoverTrigger render={button} />}
+								>
+									<Settings aria-hidden />
+								</IconButton>
+								<PopoverContent align="end">
+									<Stack gap={12}>
+										<AltFields
+											value={own?.alt ?? ""}
+											decorative={shown.decorative === true}
+											readOnly={readOnly}
+											placeholder={followed?.alt || t("entry.empty")}
+											onChange={(alt) => onChange({ ...own, media: shown.media, alt })}
+											onDecorative={(decorative) => onChange({ ...own, media: shown.media, decorative })}
+											onEnter={() => onCard(false)}
+										/>
+									</Stack>
+								</PopoverContent>
+							</Popover>
+						) : undefined
+					}
 				/>
+				{altMissing && !readOnly && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
 				{going?.problem && (
 					<>
 						<FormFieldError>{problemText(going)}</FormFieldError>
@@ -88,30 +133,6 @@ export function MediaField({
 					</>
 				)}
 			</FormField>
-			{isImage && (
-				<>
-					<FormField>
-						<FormFieldLabel htmlFor={`${id}-alt`}>{t("library.field.alt")}</FormFieldLabel>
-						<Input
-							id={`${id}-alt`}
-							size="md"
-							disabled={readOnly || shown?.decorative === true}
-							value={own?.alt ?? ""}
-							placeholder={followed?.alt || t("entry.empty")}
-							onChange={(event) => shown && onChange({ ...own, media: shown.media, alt: event.target.value })}
-						/>
-						{altMissing && !readOnly && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
-					</FormField>
-					<Option spread>
-						{t("editor.image.decorative")}
-						<Switch
-							checked={shown?.decorative === true}
-							disabled={readOnly}
-							onCheckedChange={(on) => shown && onChange({ ...own, media: shown.media, decorative: on })}
-						/>
-					</Option>
-				</>
-			)}
 			{picking && (
 				<MediaPickerDialog
 					kind={accept === "any" ? "any" : "image"}

@@ -165,6 +165,7 @@ export const DropdownMenuTrigger = close(open.DropdownMenuTrigger);
 export const DropArea = close(open.DropArea);
 export const Empty = close(open.Empty);
 export const EmptyStep = close(open.EmptyStep);
+export const FileUseRow = close(open.FileUseRow);
 export const FolderTile = close(open.FolderTile);
 export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
@@ -410,7 +411,6 @@ export type {
 } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
-	BAR_CARD_GAP,
 	Calendar,
 	Combobox,
 	cn,

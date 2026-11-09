@@ -10,9 +10,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 export const BAR =
 	"inline-flex items-center gap-monti-2 rounded-monti-lg border border-monti-emphasis bg-monti-page p-[3px] shadow-monti-floating";
 
-/** How far under its button a bar's card or menu opens: clear of the bar itself. */
-export const BAR_CARD_GAP = 12;
-
 /** A 28px button of a bar; the width is the bar's part to set. */
 export const BAR_BUTTON =
 	"inline-flex h-monti-control-sm cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg:not([class*='size-'])]:size-4";

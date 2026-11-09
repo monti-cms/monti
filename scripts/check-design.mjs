@@ -986,10 +986,6 @@ const OFF_SCALE_SPACE = new Map([
 		"ui/src/sidebar.tsx",
 		"pill sides from the height rule (32→14); the tree's folder indents step 22px from the parent's icon",
 	],
-	[
-		"ui/src/media-picker.tsx",
-		"the folder tree's indents, as the sidebar's, stepping 16px in the window's narrower column",
-	],
 	["ui/src/split-button.tsx", "the split pill's sides and the loading ring's optical sides and gap, as Button"],
 	["ui/src/status-bar-list.tsx", "a menu's rows: 9px sides as menu-parts"],
 	["ui/src/suggest.tsx", "pill sides from the height rule (32→14) and the leading icon's 2px pull"],
@@ -1226,7 +1222,6 @@ const SIX_PX = new Map([
 	["ui/src/conversation-list.tsx", "a conversation row is two lines tall, a block"],
 	["ui/src/tile.tsx", "a media or folder tile is a card"],
 	["ui/src/todo-item.tsx", "a to-do is a two-line block"],
-	["ui/src/media-picker.tsx", "a picked file is a card"],
 	[
 		"ui/src/floating-bar.tsx",
 		"the editor's tool row is a rounded box, and its buttons follow its corners (2026-11-09, owner)",

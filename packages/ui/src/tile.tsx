@@ -153,7 +153,7 @@ function Tile({
 						onCheckedChange={(next) => onSelectedChange(next === true)}
 						aria-label={selectLabel}
 						proposal={Boolean(proposal)}
-						className="bg-monti-page"
+						className="bg-monti-page hover:not-data-disabled:shadow-none"
 					/>
 				</span>
 			)}

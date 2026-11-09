@@ -52,7 +52,7 @@ import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
-import { altInputId, EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
+import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
 	LocaleTabs,
@@ -112,6 +112,7 @@ export function EntryEditor({
 	const [panel, setPanel] = useState(true);
 	const [tab, setTab] = useState(0);
 	const [todoOpen, setTodoOpen] = useState(false);
+	const [altCard, setAltCard] = useState<string | null>(null);
 	const body = useRef<Editor | null>(null);
 	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
 	const keepEditor = useCallback((made: Editor | null) => {
@@ -256,8 +257,12 @@ export function EntryEditor({
 				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(task.field ?? "")),
 			);
 			if (index >= 0) setTab(index);
-			const field = task.code === "missingAlt" ? altInputId(task.field) : fieldInputId(task.field);
-			requestAnimationFrame(() => document.getElementById(field)?.focus());
+			// A picture's words are written in its settings card, as a body's image has them (flow 1·12).
+			if (task.code === "missingAlt") setAltCard(task.field);
+			else {
+				const field = fieldInputId(task.field);
+				requestAnimationFrame(() => document.getElementById(field)?.focus());
+			}
 			return;
 		}
 		const view = body.current;
@@ -621,6 +626,8 @@ export function EntryEditor({
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
 						sourcePublished={Boolean(compared?.source.publishedAt)}
 						uploads={fieldUploads}
+						altCard={altCard}
+						onAltCard={setAltCard}
 					/>
 				) : null}
 			</Inline>

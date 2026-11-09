@@ -389,6 +389,18 @@ describe("an image in the text", () => {
 		await expect.poll(() => Math.round(image().element().getBoundingClientRect().width)).toBe(Math.round(before - 16));
 	});
 
+	it("09-1 the crop window can be left with nothing changed", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		const height = () => Math.round(image().element().getBoundingClientRect().height);
+		const before = height();
+		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));
+		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
+		await userEvent.click(page.getByRole("button", { name: "취소" }));
+		await expect.element(page.getByRole("heading", { name: "자르기와 회전" })).not.toBeInTheDocument();
+		expect(height()).toBe(before);
+	});
+
 	it("09-1 a crop already drawn turns with the picture: the same part of it stays kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());

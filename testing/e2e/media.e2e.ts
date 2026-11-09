@@ -47,6 +47,9 @@ async function uploadedId(page: Page, name: string) {
 	return id;
 }
 
+/** A picture's words are in its settings card, at the end of the cover's line. */
+const coverSettings = (page: Page) => page.getByRole("button", { name: "cover 설정" });
+
 const saveKeys = async (page: Page) => {
 	await page.keyboard.press("ControlOrMeta+S");
 	await expect(page.getByRole("button", { name: "저장 전 변경사항" })).toBeHidden();
@@ -345,7 +348,9 @@ test.describe("a cover and what goes up for it", () => {
 		await dialog.getByRole("button", { name: new RegExp(name) }).click();
 		await dialog.getByRole("button", { name: "고르기" }).click();
 		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		await coverSettings(admin).click();
 		await alt.fill("봄 표지");
+		await admin.keyboard.press("Escape");
 
 		await chooseUpload(admin, pdf);
 		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeVisible();
@@ -353,6 +358,7 @@ test.describe("a cover and what goes up for it", () => {
 		await admin.getByRole("button", { name: "cover 빼기" }).click();
 		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeHidden();
 		await expect(cover(admin)).toHaveText(new RegExp(name));
+		await coverSettings(admin).click();
 		await expect(alt).toHaveValue("봄 표지");
 	});
 
@@ -375,17 +381,22 @@ test.describe("a cover and what goes up for it", () => {
 		await dialog.getByRole("button", { name: new RegExp(name) }).click();
 		await dialog.getByRole("button", { name: "고르기" }).click();
 		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		await coverSettings(admin).click();
 		await alt.fill("봄 표지");
+		await admin.keyboard.press("Escape");
 
 		await chooseUpload(admin, first);
 		await uploadedId(admin, path.basename(first));
 		await expect(cover(admin)).toHaveText(new RegExp(path.basename(first)));
+		await coverSettings(admin).click();
 		await expect(alt).toHaveValue("");
 
 		await alt.fill("첫 설명");
+		await admin.keyboard.press("Escape");
 		const release = await hold(admin);
 		await chooseUpload(admin, second);
 		await expect(cover(admin)).toHaveText(new RegExp(path.basename(second)));
+		await coverSettings(admin).click();
 		await alt.fill("새 설명");
 		release();
 		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
@@ -448,14 +459,23 @@ test.describe("a translation's cover", () => {
 				if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
 				await expect(cover).toBeVisible({ timeout: 500 });
 			}).toPass();
+		// A translation's source pane closes the panel once it has loaded, so this looks again until the card stays.
+		const card = () =>
+			expect(async () => {
+				await panel();
+				if (!(await alt.isVisible())) await coverSettings(admin).click({ timeout: 500 });
+				await expect(alt).toBeVisible({ timeout: 500 });
+			}).toPass();
 		await panel();
 		await cover.click();
 		const dialog = admin.getByRole("dialog");
 		await dialog.getByRole("textbox", { name: "파일 이름 검색" }).fill(name);
 		await dialog.getByRole("button", { name: new RegExp(name) }).click();
 		await dialog.getByRole("button", { name: "고르기" }).click();
+		await coverSettings(admin).click();
 		await alt.fill("봄 표지");
 		await saveKeys(admin);
+		await admin.keyboard.press("Escape");
 
 		// On the site with no cover, and the cover only saved: a translation follows what the site shows (doc 04, principle 5).
 		await admin.getByRole("button", { name: "+ 언어" }).click();
@@ -475,6 +495,7 @@ test.describe("a translation's cover", () => {
 		await admin.getByRole("button", { name: "English" }).click();
 		await panel();
 		await expect(cover).toHaveText(new RegExp(name));
+		await card();
 		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
 		await expect(admin.getByRole("button", { name: "cover 원문으로 되돌리기" })).toBeHidden();
 		await expect(admin.getByText("원문의 발행본을 따라요")).toBeVisible();
@@ -483,13 +504,15 @@ test.describe("a translation's cover", () => {
 		await alt.fill("spring cover");
 		await saveKeys(admin);
 		await admin.reload();
-		await panel();
+		await card();
 		await expect(alt).toHaveValue("spring cover");
+		await admin.keyboard.press("Escape");
 		await expect(cover).toHaveText(new RegExp(name));
 		await expect(admin.getByText("원문의 발행본을 따라요")).toBeHidden();
 		await expect(admin.getByText("이 언어의 값이에요")).toBeVisible();
 		await admin.getByRole("button", { name: "cover 원문으로 되돌리기" }).click();
 		await expect(cover).toHaveText(new RegExp(name));
+		await card();
 		await expect(alt).toHaveValue("");
 		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
 		await saveKeys(admin);

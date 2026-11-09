@@ -49,7 +49,7 @@
 
 ### 코드
 
-`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지).
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정. 안의 `IconButton`은 ×와 같은 크기가 된다).
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 

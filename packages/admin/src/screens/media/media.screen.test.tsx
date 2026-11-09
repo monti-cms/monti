@@ -5,7 +5,8 @@ import { scrollsSideways } from "../../../../../testing/input";
 import * as media from "./media.stories";
 import { samplePhoto } from "./media.stories";
 
-const { Top, NoStorage, ListView, FilePanel, SearchingInFolder, KindChosenInFolder } = composeStories(media);
+const { Top, NoStorage, ListView, FilePanel, FilePanelManyUses, SearchingInFolder, KindChosenInFolder } =
+	composeStories(media);
 
 const main = () => page.getByRole("main");
 const heading = () => main().getByRole("heading", { level: 1 });
@@ -118,6 +119,19 @@ describe("browsing", () => {
 		const label = panel.getByText("파일 이름", { exact: true }).element().getBoundingClientRect();
 		expect(name.left).toBe(folderField.left);
 		expect(name.left).toBe(label.left);
+	});
+
+	it("09-1 [flow 6·16] a file used in many places: a long title is cut and its row stays one line, its places whole", async () => {
+		await FilePanelManyUses.run();
+		const panel = page.getByRole("complementary");
+		const rowOf = (name: RegExp) => panel.getByRole("link", { name }).element().parentElement as HTMLElement;
+		await expect.element(panel.getByRole("link", { name: /봄맞이/ })).toBeVisible();
+		const long = rowOf(/봄맞이/);
+		expect(long.offsetHeight).toBe(rowOf(/새벽 코딩/).offsetHeight);
+		expect(long.scrollWidth).toBeLessThanOrEqual(long.clientWidth);
+		const places = long.lastElementChild?.getBoundingClientRect();
+		expect(places?.right).toBeLessThanOrEqual(panel.element().getBoundingClientRect().right);
+		expect(long.lastElementChild?.textContent).toContain("본문");
 	});
 
 	it("09-1 [flow 6·16] a file's address is in the panel's ⋯, not beside its picture", async () => {

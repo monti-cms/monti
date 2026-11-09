@@ -17,13 +17,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	FilePreview,
+	FileUseRow,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
 	Grid,
 	IconButton,
 	Image,
-	Inline,
 	ProposalBubble,
 	ProposalBubbleDock,
 	Select,
@@ -34,7 +34,6 @@ import {
 	SidePanel,
 	Stack,
 	Text,
-	TextButton,
 	Tile,
 	toast,
 } from "@monti-cms/ui";
@@ -374,22 +373,18 @@ export function MediaPanel({
 					) : (
 						<Stack gap={4}>
 							{uses.map((use) => (
-								<Inline key={use.key} gap={8} justify="between">
-									<TextButton
-										href={href(use.route)}
-										onClick={(event: React.MouseEvent) => {
-											// A new tab leaves nothing behind. A move in this one goes through the question.
-											if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-											event.preventDefault();
-											go(use.route);
-										}}
-									>
-										{use.title}
-									</TextButton>
-									<Text variant="micro" tone="subtle">
-										{use.places}
-									</Text>
-								</Inline>
+								<FileUseRow
+									key={use.key}
+									title={use.title}
+									places={use.places}
+									href={href(use.route)}
+									onClick={(event) => {
+										// A new tab leaves nothing behind. A move in this one goes through the question.
+										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+										event.preventDefault();
+										go(use.route);
+									}}
+								/>
 							))}
 						</Stack>
 					)}
