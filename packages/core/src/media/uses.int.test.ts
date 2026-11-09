@@ -342,7 +342,10 @@ describe("a file in use stays out of the trash", () => {
 			const { output } = await post();
 			const version = await versionOf(output.id);
 			await Promise.all([
-				write("media.moveToFolder", { ids: [cover], folder: box }),
+				// When the removal goes first the folder is gone, and the move is refused for that and nothing else.
+				write("media.moveToFolder", { ids: [cover], folder: box }).catch((error: unknown) => {
+					if (!(error instanceof CheckError) || error.reason.key !== "folders.unknown") throw error;
+				}),
 				write("entries.save", { id: output.id, version, values: { cover: { media: cover, alt: "표지" } } }),
 				write("folders.remove", { id: box }),
 			]);
