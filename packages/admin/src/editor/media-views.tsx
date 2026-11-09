@@ -45,6 +45,7 @@ import {
 	TextAlignLeft,
 	TextAlignRight,
 } from "@monti-cms/ui/icons";
+import type { Transaction } from "@tiptap/pm/state";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
@@ -81,6 +82,22 @@ const MIN_WIDTH = 80;
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
  * redo): it takes what the upload became, or goes if the file was taken out.
  */
+/**
+ * What a file's end does to its block. It is no step of the writer's, so it stays out of undo: undone, the block would come back waiting for a file that has ended, end again at once
+ * and clear what could be redone, and undo could never get past it.
+ */
+function uploadEnd({ editor, getPos, node }: Pick<NodeViewProps, "editor" | "getPos" | "node">) {
+	const change = (apply: (at: number) => Transaction) => {
+		const at = getPos();
+		if (typeof at === "number") editor.view.dispatch(apply(at).setMeta("addToHistory", false));
+	};
+	return {
+		gone: () => change((at) => editor.state.tr.delete(at, at + node.nodeSize)),
+		done: (data: unknown) =>
+			change((at) => editor.state.tr.setNodeMarkup(at, undefined, { ...node.attrs, upload: null, data })),
+	};
+}
+
 function UploadInPlace({
 	id,
 	isImage,
@@ -124,7 +141,7 @@ function UploadInPlace({
 	);
 }
 
-/** A picture turned by whole quarters, as the crop sheet shows it: crops are parts of the turned picture (the core's `imageFrame`). */
+/** A picture turned by whole quarters, as the crop dialog shows it: crops are parts of the turned picture (the core's `imageFrame`). */
 async function turnedPicture(url: string, rotate: ImageRotate): Promise<string> {
 	if (rotate === 0) return url;
 	const element = new window.Image();
@@ -189,7 +206,7 @@ const KEY_MOVES: Partial<Record<string, readonly [number, number]>> = {
 	ArrowDown: [0, 1],
 };
 
-/** "Crop and turn" (screens/editor.md): a sheet, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
+/** "Crop and turn" (screens/editor.md): a dialog, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
 function CropDialog({
 	src,
 	crop,
@@ -219,7 +236,7 @@ function CropDialog({
 			.then((url) => {
 				if (on) setShown(url);
 			})
-			// A picture on another address that does not allow reading it: the sheet shows it as it is, and the turn still applies.
+			// A picture on another address that does not allow reading it: the dialog shows it as it is, and the turn still applies.
 			.catch(() => {
 				if (on) setShown(src);
 			});
@@ -323,7 +340,7 @@ function CropDialog({
 }
 
 /** An image in the body (doc 09, screens/editor.md): the picture, its tool row while it is picked, its settings card and the caption under it. */
-function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }: NodeViewProps) {
+function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: NodeViewProps) {
 	const { t } = useAdmin();
 	const media = useContext(EditorMedia);
 	const data = (node.attrs.data ?? {}) as ImageData;
@@ -364,8 +381,8 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 						id={uploading}
 						isImage
 						selected={selected}
-						onGone={deleteNode}
-						onDone={(done) => updateAttributes({ upload: null, data: { ...data, ...fileBlock(done) } })}
+						onGone={uploadEnd({ editor, getPos, node }).gone}
+						onDone={(done) => uploadEnd({ editor, getPos, node }).done({ ...data, ...fileBlock(done) })}
 					/>
 					{!stopped && captionField}
 				</Stack>
@@ -535,7 +552,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 }
 
 /** A file in the body (flow 6·38): its icon, the name shown (this entry's to change), its type and size. */
-function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }: NodeViewProps) {
+function FileBlockView({ node, updateAttributes, getPos, selected, editor }: NodeViewProps) {
 	const { t } = useAdmin();
 	const media = useContext(EditorMedia);
 	const data = (node.attrs.data ?? {}) as FileData;
@@ -553,8 +570,8 @@ function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }:
 					id={uploading}
 					isImage={false}
 					selected={selected}
-					onGone={deleteNode}
-					onDone={(done) => updateAttributes({ upload: null, data: fileBlock(done) })}
+					onGone={uploadEnd({ editor, getPos, node }).gone}
+					onDone={(done) => uploadEnd({ editor, getPos, node }).done(fileBlock(done))}
 				/>
 			</NodeViewWrapper>
 		);

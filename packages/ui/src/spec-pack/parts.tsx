@@ -45,7 +45,7 @@ import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } 
 import { FormatBarRequest, FormatButton, type FormatMark } from "../format-bar";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
-import { FolderParent, type IconName, iconsByName, Renew } from "../icons";
+import { FolderParent, type IconName, iconsByName, Renew, TrashCan } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
@@ -1370,7 +1370,7 @@ function MediaGrid({ folders, children }: { folders?: boolean; children?: React.
 
 /**
  * One file of a grid: its `name`, the `detail` line, its picture (`picture`, a file's address, read from the data) or, for a file with none, its
- * extension (`ext`). `status` for a file going up or one that cannot be taken, with `progress`; `retry` names the button over the picture of one that was cut off.
+ * extension (`ext`). `status` for a file going up or one the network cut off, with `progress`; `retry` and `remove` name that file's two buttons.
  */
 function MediaTile({
 	name,
@@ -1380,6 +1380,7 @@ function MediaTile({
 	status,
 	progress,
 	retry,
+	remove,
 	selected,
 	picking,
 }: {
@@ -1390,6 +1391,7 @@ function MediaTile({
 	status?: "ready" | "uploading" | "failed";
 	progress?: number;
 	retry?: string;
+	remove?: string;
 	selected?: boolean;
 	picking?: boolean;
 }) {
@@ -1400,7 +1402,7 @@ function MediaTile({
 			title={name}
 			detail={detail}
 			preview={
-				ext ? (
+				ext && status !== "failed" ? (
 					<FilePreview ext={ext} />
 				) : address ? (
 					<ImagePart src={address} alt="" ratio="photo" radius="none" />
@@ -1414,6 +1416,13 @@ function MediaTile({
 				retry ? (
 					<IconButton label={retry}>
 						<Renew aria-hidden />
+					</IconButton>
+				) : undefined
+			}
+			action={
+				remove ? (
+					<IconButton label={remove} size="xs" tone="danger">
+						<TrashCan aria-hidden />
 					</IconButton>
 				) : undefined
 			}
@@ -3122,6 +3131,7 @@ export const CATALOG = {
 			status: "variant",
 			progress: "state",
 			retry: "text",
+			remove: "text",
 			selected: "flag",
 			picking: "flag",
 		},

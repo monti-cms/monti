@@ -59,6 +59,7 @@ const DARK = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 /** Going up, and cut off by the network: a picture, a dark picture and a file with none. All are as tall as a ready file. A file the library refuses never gets here: a toast says so at once. */
 export const Upload: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Grid columns="tiles">
 			<Tile preview={picture} title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />

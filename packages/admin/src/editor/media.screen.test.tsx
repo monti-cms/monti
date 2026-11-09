@@ -321,9 +321,9 @@ describe("an image in the text", () => {
 		await userEvent.click(bar().getByRole("button", { name: "설정" }));
 		const alt = page.getByRole("textbox", { name: "대체 텍스트" });
 		await userEvent.clear(alt);
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).not.toBeInTheDocument();
+		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
 	});
 
 	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {

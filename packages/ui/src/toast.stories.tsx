@@ -21,6 +21,18 @@ const Show = ({ fire }: { fire: () => void }) => {
 	return <Toaster duration={Number.POSITIVE_INFINITY} />;
 };
 
+/** Two at once, one over the other: both can be read. */
+export const Stacked: Story = {
+	render: () => (
+		<Show
+			fire={() => {
+				toast.error("setup.exe · 지원하지 않는 형식");
+				toast.error("panorama.png · 10 MB 초과");
+			}}
+		/>
+	),
+};
+
 /** A message with one action. */
 export const Undo: Story = {
 	render: () => (

@@ -58,7 +58,7 @@ export function AltFields({
 					onChange={(event) => alt.change(event.target.value)}
 					{...alt.composition}
 					onKeyDown={(event) => {
-						if (event.key === "Enter") {
+						if (event.key === "Enter" && !event.nativeEvent.isComposing) {
 							event.preventDefault();
 							onEnter();
 						}

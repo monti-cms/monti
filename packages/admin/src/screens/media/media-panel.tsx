@@ -118,11 +118,15 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 			setRefused(t(put.problem === "failed" ? "library.failed" : `library.refused.${put.problem}`));
 			return;
 		}
-		const done = await replace.run(
-			{ id: item.id, original: put.original, ...(put.web ? { web: put.web } : {}) },
-			{ versions: { [`media:${item.id}`]: item.version } },
-		);
+		// A request that never got an answer throws: the dialog must not stay locked behind it.
+		const done = await replace
+			.run(
+				{ id: item.id, original: put.original, ...(put.web ? { web: put.web } : {}) },
+				{ versions: { [`media:${item.id}`]: item.version } },
+			)
+			.catch(() => null);
 		setGoing(false);
+		if (!done) return setRefused(t("library.failed"));
 		if (!done.ok) return setRefused(t(done.refusal.reason ?? "errors.unexpected"));
 		onClose();
 	};

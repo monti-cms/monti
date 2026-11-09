@@ -101,7 +101,7 @@ jobs:
           while sleep 10; do
             echo "[machine] $(date +%T) available $(free -m | awk '/^Mem:/ {print $7 " of " $2}') MB, swap used $(free -m | awk '/^Swap:/ {print $3}') MB, disk free $(df -m / | awk 'NR==2 {print $4}') MB, $(ps -eo rss=,comm= | awk '{sum[$2] += $1} END {for (name in sum) if (sum[name] > 300000) printf "%s %d MB  ", name, sum[name] / 1024}')"
           done &
-          trap 'kill %1' EXIT
+          trap 'kill %1 || true' EXIT
           pnpm test:browser
 
   e2e:

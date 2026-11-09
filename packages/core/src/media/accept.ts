@@ -21,7 +21,7 @@ export type Acceptance =
 	/** A kind it takes, over the limit. The kind says whether it would fit a place that takes only images. */
 	| ({ ok: false; reason: "size" } & Identified);
 
-/** What a file chooser offers. It is a hint: what the library takes is `acceptFile`'s to say, and a file it refuses stays on the page with the reason (flow 6·04). */
+/** What a file chooser offers. It is a hint: what the library takes is `acceptFile`'s to say, and a file it refuses is stopped at once, with the reason in a toast (flow 6·04). */
 export const FILE_CHOOSER_ACCEPT = "image/*,.pdf,.zip,.txt,.md,.csv";
 
 /** How much of a file the check needs from its start. */

@@ -3,7 +3,7 @@ import { Document } from "./icons";
 
 /**
  * What a `Tile` shows for a file that has no picture to show (PDF, CSV, ZIP, text): a 20px file icon in the middle and the extension under it in mono
- * 11. It takes the tile's ground and goes fainter when the tile failed or was interrupted. Use it as the tile's `preview`.
+ * 11. It takes the tile's ground and goes fainter when the tile failed. Use it as the tile's `preview`.
  */
 function FilePreview({
 	ext,

@@ -49,6 +49,7 @@ export function placeFiles(
 		const tr = state.tr;
 		// The text may have changed while the files were looked at.
 		if (at !== null) tr.setSelection(NodeSelection.near(tr.doc.resolve(Math.min(at, tr.doc.content.size))));
+		if (inTableCell(tr.selection.$from)) return;
 		const nodes = add(taken).flatMap((upload, index) => {
 			const type = taken[index]?.type.startsWith("image/") ? "image" : "file";
 			return state.schema.nodes[nodeName(type)]?.create({ upload: upload.id, data: { media: "" } }) ?? [];

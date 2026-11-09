@@ -101,6 +101,28 @@ test.describe("the library", () => {
 		await expect(admin.getByRole("complementary").getByRole("link", { name: post.slug })).toBeVisible();
 	});
 
+	test("09-5 replacing a file that gets no answer says so, and the dialog can still be left", async ({
+		admin,
+	}, info) => {
+		const first = await picture(admin, info.outputDir, `${unique("first")}.jpg`, { width: 300, height: 200 });
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [first], main(admin));
+		const id = await uploadedId(admin, path.basename(first));
+		const second = await picture(admin, info.outputDir, `${unique("second")}.jpg`, { width: 500, height: 400 });
+		await admin.goto(`/#/media?file=${id}`);
+		await admin.getByRole("complementary").getByRole("button", { name: "더 보기" }).click();
+		const chooser = admin.waitForEvent("filechooser");
+		await admin.getByRole("menuitem", { name: "파일 바꾸기" }).click();
+		await (await chooser).setFiles(second);
+		await admin.route("**/operations/media.replace", (route) => route.abort());
+		const dialog = admin.getByRole("alertdialog");
+		await dialog.getByRole("button", { name: "바꾸기" }).click();
+		await expect(dialog.getByText("올리기 실패")).toBeVisible();
+		await dialog.getByRole("button", { name: "취소" }).click();
+		await expect(dialog).toBeHidden();
+	});
+
 	test("09-5 replacing a file: the site shows the new picture, and the entry keeps its words", async ({
 		admin,
 	}, info) => {
@@ -189,6 +211,33 @@ test.describe("the editor", () => {
 		await body(admin).getByRole("button", { name: "다시 올리기" }).click();
 		await expect(body(admin).getByText("올리기 실패")).toBeHidden();
 		await expect.poll(() => decoded(body(admin).locator("img"))).toBeGreaterThan(0);
+	});
+
+	test("09-1 a picture refused only once it was sent leaves its block, and undo still gets past it", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("late")}.png`, { width: 800, height: 600 });
+		await writing(admin);
+		// A proxy's own limit: it shows only after the file set off, later than undo groups steps together.
+		await admin.route("**/media/bytes*", async (route) => {
+			await new Promise((done) => setTimeout(done, 700));
+			await route.fulfill({ status: 413, body: "{}" });
+		});
+		const paragraph = body(admin).getByText("글의 첫 문단이에요.");
+		await paragraph.click();
+		await admin.keyboard.press("End");
+		await admin.keyboard.type(" 덧붙임");
+		await expect(paragraph).toContainText("덧붙임");
+		await pastePicture(admin, file);
+		await expect(admin.getByText("10 MB 초과")).toBeVisible();
+		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeHidden();
+		await paragraph.click();
+		// The paste, then the words: each press takes a step back, and the block does not come back in the way.
+		await expect(async () => {
+			await admin.keyboard.press("ControlOrMeta+Z");
+			await expect(body(admin)).not.toContainText("덧붙임", { timeout: 500 });
+		}).toPass({ timeout: 8_000 });
+		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeHidden();
 	});
 
 	test("09-1 a picture in the body cut off on its way up goes as any block goes", async ({ admin }, info) => {

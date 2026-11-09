@@ -28,7 +28,7 @@ describe("a cover in the property panel", () => {
 		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await expect.element(alt()).not.toBeInTheDocument();
 		await openCard();
 		await expect.element(alt()).toHaveValue("");
@@ -47,6 +47,17 @@ describe("a cover in the property panel", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(alt()).not.toBeInTheDocument();
 		await expect.element(settings()).toHaveFocus();
+	});
+
+	it("09-2 Enter that ends a Korean syllable leaves the card open", async () => {
+		await WithCover.run();
+		await properties();
+		await openCard();
+		await expect.element(alt()).toHaveFocus();
+		alt()
+			.element()
+			.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
+		await expect.element(alt()).toBeVisible();
 	});
 
 	it("09-1 the settings card opens right under the field's line, as wide as it", async () => {
@@ -132,7 +143,7 @@ describe("in a translation", () => {
 		await closeCard();
 		await pick(/seoul-night/);
 		await expect.element(cover()).toHaveTextContent("seoul-night");
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await openCard();
 		await expect.element(alt()).toHaveValue("");
 	});
@@ -142,9 +153,9 @@ describe("in a translation", () => {
 		await properties();
 		await openCard();
 		await userEvent.fill(alt(), "");
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
-		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).not.toBeInTheDocument();
+		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
 		await expect.element(alt()).toBeDisabled();
 	});
 

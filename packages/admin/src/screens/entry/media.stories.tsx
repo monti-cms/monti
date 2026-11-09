@@ -84,7 +84,7 @@ const blankImage = entry({
 /** Flow 6·06, 1·12: the picture picked, its tools and settings card open. */
 export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
-/** The crop sheet, a part chosen. */
+/** The crop dialog, a part chosen. */
 export const CropDialog: Story = {
 	loaders: blankImage,
 	play: async () => {
@@ -119,6 +119,17 @@ export const LibraryWindow: Story = {
 /** A cover in the property panel, with what the entry says of it (T67). */
 export const WithCover: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
+};
+
+/** A cover's settings card open, under its line and as wide as it. */
+export const CoverCard: Story = {
+	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		const open = await page.findByRole("button", { name: "속성" }, wait);
+		if (open.getAttribute("aria-pressed") !== "true") await userEvent.click(open);
+		await userEvent.click(await page.findByRole("button", { name: "대표 이미지 설정" }, wait));
+	},
 };
 
 /** An image and a cover with nothing to say for them: the to-do row goes to each (flow 1·10, 1·12). */

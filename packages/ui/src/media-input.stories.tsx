@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Settings } from "./icons";
-import { FormField, FormFieldLabel, IconButton, Input, MediaInput, Stack } from "./index";
+import { Renew, Settings } from "./icons";
+import { FormField, FormFieldError, FormFieldLabel, IconButton, Input, MediaInput, Stack } from "./index";
 
 /** A media field: the same underline as an input, the file's name after a small thumbnail, or the faint placeholder while empty. */
 const meta = {
@@ -26,6 +26,22 @@ export const States: Story = {
 			<FormField>
 				<FormFieldLabel htmlFor="cover">대표 이미지</FormFieldLabel>
 				<MediaInput id="cover" size="sm" value={{ name: "cover-react.png" }} onClear={() => {}} clearLabel="빼기" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="cover-cut">끊긴 파일</FormFieldLabel>
+				<MediaInput
+					id="cover-cut"
+					size="sm"
+					value={{ name: "cover-react.png" }}
+					onClear={() => {}}
+					clearLabel="빼기"
+					action={
+						<IconButton label="다시 올리기">
+							<Renew aria-hidden />
+						</IconButton>
+					}
+				/>
+				<FormFieldError>올리기 실패</FormFieldError>
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="cover-settings">설정이 있는 이미지</FormFieldLabel>

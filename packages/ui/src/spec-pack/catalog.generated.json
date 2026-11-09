@@ -993,6 +993,10 @@
 				"progress": {
 					"kind": "state"
 				},
+				"remove": {
+					"kind": "text",
+					"type": "string"
+				},
 				"retry": {
 					"kind": "text",
 					"type": "string"

@@ -21,7 +21,7 @@ const CORNERS = [
 ] as const;
 
 /**
- * The picture of the crop sheet in its frame: the tool ground with an edge and 4px inside, at most 380px high, the picture centered in it at most 360px
+ * The picture of the crop dialog in its frame: the tool ground with an edge and 4px inside, at most 380px high, the picture centered in it at most 360px
  * high. With a `crop`, the picture outside it lies under the backdrop and the crop is a 2px ink box with a square handle on each corner. Every press
  * reports what was pressed (`onGrip`); the stage is as large as the picture, so the screen measures the press against it (`stageRef`).
  */
