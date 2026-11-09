@@ -41,8 +41,8 @@ describe("what the library takes", () => {
 		["photo.avif", ftyp("heic", "mif1")],
 		["photo.jpg", ftyp("hevc")],
 		["photo.HEIC", text("not what its name says")],
-	])("09-1 %s is a photo in a format the library does not take: its own reason, not 'images only'", (name, head) => {
-		expect(accept(name, head)).toEqual({ ok: false, reason: "heic" });
+	])("09-1 %s is a photo in a format the library does not take, said as any other format is", (name, head) => {
+		expect(accept(name, head)).toEqual({ ok: false, reason: "type" });
 	});
 
 	it("09-1 a pasted picture with no extension gets the one its bytes say", () => {

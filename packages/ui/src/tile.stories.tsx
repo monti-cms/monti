@@ -57,12 +57,12 @@ export const Upload: Story = {
 	render: () => (
 		<Grid columns="tiles">
 			<Tile preview={picture} title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
-			<Tile preview={null} title="clip.mov" detail="받지 않는 형식이에요" status="failed" action={takeOut} />
-			<Tile preview={picture} title="panorama.png" detail="10 MB보다 커요" status="interrupted" action={takeOut} />
+			<Tile preview={null} title="clip.mov" detail="지원하지 않는 형식" status="failed" action={takeOut} />
+			<Tile preview={picture} title="panorama.png" detail="10 MB 초과" status="interrupted" action={takeOut} />
 			<Tile
 				preview={picture}
 				title="spring-desk.jpg"
-				detail="올리지 못했어요"
+				detail="올리기 실패"
 				status="interrupted"
 				action={takeOut}
 				retry={retry}
@@ -70,7 +70,7 @@ export const Upload: Story = {
 			<Tile
 				preview={null}
 				title="annual-report.pdf"
-				detail="올리지 못했어요"
+				detail="올리기 실패"
 				status="interrupted"
 				action={takeOut}
 				retry={retry}

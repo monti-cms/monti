@@ -153,8 +153,8 @@ test.describe("the library", () => {
 		});
 		expect((await readFile(big)).length).toBeGreaterThan(10 * 1024 * 1024);
 		await dropFromDisk(admin, [exe, big], main(admin));
-		await expect(main(admin).getByText("받지 않는 형식이에요")).toBeVisible();
-		await expect(main(admin).getByText("10 MB보다 커요")).toBeVisible();
+		await expect(main(admin).getByText("지원하지 않는 형식")).toBeVisible();
+		await expect(main(admin).getByText("10 MB 초과")).toBeVisible();
 		const refused = await admin.request.put("/admin/api/media/bytes?name=photo.png", {
 			data: Buffer.from([0x4d, 0x5a, 0x90, 0]),
 		});
@@ -182,10 +182,10 @@ test.describe("the editor", () => {
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await body(admin).getByText("글의 첫 문단이에요.").click();
 		await pastePicture(admin, file);
-		await expect(body(admin).getByText("올리지 못했어요")).toBeVisible();
+		await expect(body(admin).getByText("올리기 실패")).toBeVisible();
 		await admin.unroute("**/operations/media.upload");
 		await body(admin).getByRole("button", { name: "다시 올리기" }).click();
-		await expect(body(admin).getByText("올리지 못했어요")).toBeHidden();
+		await expect(body(admin).getByText("올리기 실패")).toBeHidden();
 		await expect.poll(() => decoded(body(admin).locator("img"))).toBeGreaterThan(0);
 	});
 
@@ -264,7 +264,7 @@ raw.describe("a session that ends", () => {
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await admin.context().clearCookies();
 		await dropFromDisk(admin, [file], main(admin));
-		await expect(main(admin).getByText("올리지 못했어요")).toBeVisible();
+		await expect(main(admin).getByText("올리기 실패")).toBeVisible();
 		await expect(admin.getByText("로그인이 풀렸어요")).toBeVisible();
 		// Signing in again comes back to the same screen. The file itself was only ever in that page, so it is dropped again.
 		await admin.getByRole("button", { name: "다시 로그인" }).click();
@@ -331,7 +331,7 @@ test.describe("a cover and what goes up for it", () => {
 		await writeFile(pdf, "%PDF-1.7\n");
 		await writing(admin);
 		await chooseUpload(admin, pdf);
-		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeVisible();
+		await expect(admin.getByText("이미지만 가능")).toBeVisible();
 		await admin.getByRole("textbox", { name: "제목" }).pressSequentially(" 고침");
 		await saveKeys(admin);
 		const answer = await admin.request.post("/admin/api/operations/media.query", {
@@ -345,12 +345,12 @@ test.describe("a cover and what goes up for it", () => {
 		await writing(admin);
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await chooseUpload(admin, file);
-		await expect(admin.getByText("올리지 못했어요")).toBeVisible();
+		await expect(admin.getByText("올리기 실패")).toBeVisible();
 		// The line is the file that stopped: it has no words to write yet.
 		await expect(coverSettings(admin)).toBeHidden();
 		await admin.unroute("**/operations/media.upload");
 		await admin.getByRole("button", { name: "다시 올리기" }).click();
-		await expect(admin.getByText("올리지 못했어요")).toBeHidden();
+		await expect(admin.getByText("올리기 실패")).toBeHidden();
 		await expect(cover(admin)).toContainText(path.basename(file));
 		await expect(coverSettings(admin)).toBeVisible();
 	});
@@ -379,10 +379,10 @@ test.describe("a cover and what goes up for it", () => {
 		await admin.keyboard.press("Escape");
 
 		await chooseUpload(admin, pdf);
-		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeVisible();
+		await expect(admin.getByText("이미지만 가능")).toBeVisible();
 		await expect(admin.getByRole("button", { name: "빼기", exact: true })).toBeHidden();
 		await admin.getByRole("button", { name: "cover 빼기" }).click();
-		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeHidden();
+		await expect(admin.getByText("이미지만 가능")).toBeHidden();
 		await expect(cover(admin)).toHaveText(new RegExp(name));
 		await coverSettings(admin).click();
 		await expect(alt).toHaveValue("봄 표지");
@@ -658,7 +658,7 @@ test.describe("while a file is on its way", () => {
 		await uploadedId(admin, path.basename(ready));
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await dropFromDisk(admin, [file], main(admin));
-		await expect(main(admin).getByText("올리지 못했어요")).toBeVisible();
+		await expect(main(admin).getByText("올리기 실패")).toBeVisible();
 		const retry = main(admin).getByRole("button", { name: "다시 올리기" });
 		// The button is on the picture: the tile is as tall as the file beside it, and the grid does not move.
 		const tall = (name: string) => main(admin).locator("[data-slot=tile]").filter({ hasText: name }).boundingBox();
@@ -671,7 +671,7 @@ test.describe("while a file is on its way", () => {
 		expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThan((cut?.y ?? 0) + (cut?.width ?? 0) * 0.75);
 		await admin.unroute("**/operations/media.upload");
 		await retry.click();
-		await expect(main(admin).getByText("올리지 못했어요")).toBeHidden();
+		await expect(main(admin).getByText("올리기 실패")).toBeHidden();
 		await expect(tile(admin, path.basename(file))).toBeVisible();
 	});
 

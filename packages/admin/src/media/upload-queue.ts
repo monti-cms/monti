@@ -2,11 +2,11 @@ import type { Acceptance } from "@monti-cms/core";
 
 /**
  * Why a file did not go up.
- * - `type`: not a kind the library takes. `unreadable`: it says it is a picture, and no picture comes out of it. Those two can only be taken out.
+ * - `type`: not a kind the library takes. `unreadable`: nothing comes out of it (a folder from the OS, a broken picture). Those two can only be taken out.
  * - `tooBig`: over the limit. It can only be taken out too: a smaller file is another upload.
  * - `failed`: the network or the server; it can be tried again as it is.
  */
-export type UploadProblem = "type" | "heic" | "notImage" | "cannotRead" | "unreadable" | "tooBig" | "failed";
+export type UploadProblem = "type" | "notImage" | "unreadable" | "tooBig" | "failed";
 
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {
@@ -36,9 +36,7 @@ export const AT_ONCE = 3;
 
 const STATUS_OF: Record<UploadProblem, "failed" | "interrupted"> = {
 	type: "failed",
-	heic: "failed",
 	notImage: "failed",
-	cannotRead: "failed",
 	unreadable: "failed",
 	tooBig: "interrupted",
 	failed: "interrupted",

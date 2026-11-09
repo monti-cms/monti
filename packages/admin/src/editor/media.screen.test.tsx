@@ -263,7 +263,7 @@ describe("pasting", () => {
 				type: "image/png",
 			}),
 		);
-		await expect.element(body().getByText("이 그림은 읽을 수 없어요")).toBeVisible();
+		await expect.element(body().getByText("읽을 수 없는 파일")).toBeVisible();
 		// A file that stopped has nothing to caption.
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).not.toBeInTheDocument();
 		await userEvent.click(body().getByText("broken.png"));

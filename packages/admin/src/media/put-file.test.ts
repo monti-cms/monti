@@ -12,7 +12,7 @@ describe("putting a file", () => {
 			blob.arrayBuffer = () => Promise.reject(new DOMException("A requested file could not be found", "NotFoundError"));
 			return blob;
 		};
-		expect(await putFile(folder, uploader)).toEqual({ ok: false, problem: "cannotRead" });
+		expect(await putFile(folder, uploader)).toEqual({ ok: false, problem: "unreadable" });
 		expect(uploader).not.toHaveBeenCalled();
 	});
 

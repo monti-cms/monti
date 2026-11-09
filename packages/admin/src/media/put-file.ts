@@ -32,7 +32,7 @@ export async function putFile(
 		.arrayBuffer()
 		.then((bytes) => new Uint8Array(bytes))
 		.catch(() => null);
-	if (!head) return { ok: false, problem: "cannotRead" };
+	if (!head) return { ok: false, problem: "unreadable" };
 	const accepted = acceptFile({ name: file.name, size: file.size, head });
 	const kind = accepted.ok || accepted.reason === "size" ? accepted.kind : null;
 	if (options.only === "image" && kind === "file") return { ok: false, problem: "notImage" };

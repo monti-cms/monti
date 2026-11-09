@@ -28,7 +28,7 @@ export const Missing: Story = { args: { name: "old-brochure.pdf", meta: "찾을 
 export const Retry: Story = {
 	args: {
 		name: "spring-desk.jpg",
-		meta: "올리지 못했어요",
+		meta: "올리기 실패",
 		tone: "danger",
 		action: (
 			<IconButton label="다시 올리기">
