@@ -29,7 +29,7 @@ export function useProblemActions({
 	onRetry,
 	onShrink,
 }: {
-	onRemove: (upload: Upload) => void;
+	onRemove?: (upload: Upload) => void;
 	onRetry: (upload: Upload) => void;
 	onShrink: (upload: Upload) => unknown;
 }) {
@@ -41,7 +41,7 @@ export function useProblemActions({
 		...(upload.problem === "failed"
 			? [{ label: t("library.retry"), onClick: () => onRetry(upload), primary: true }]
 			: []),
-		{ label: t("library.takeOut"), onClick: () => onRemove(upload) },
+		...(onRemove ? [{ label: t("library.takeOut"), onClick: () => onRemove(upload) }] : []),
 	];
 }
 
@@ -53,15 +53,16 @@ export function UploadActions({
 	onShrink,
 }: {
 	upload: Upload;
-	onRemove: (upload: Upload) => void;
+	onRemove?: (upload: Upload) => void;
 	onRetry: (upload: Upload) => void;
 	onShrink: (upload: Upload) => unknown;
 }) {
 	const actions = useProblemActions({ onRemove, onRetry, onShrink })(upload);
+	if (actions.length === 0) return null;
 	return (
 		<Inline gap={12}>
 			{actions.map((action) => (
-				<TextButton key={action.label} onClick={action.onClick}>
+				<TextButton key={action.label} size="note" onClick={action.onClick}>
 					{action.label}
 				</TextButton>
 			))}

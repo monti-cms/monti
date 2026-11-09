@@ -119,10 +119,10 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
-	const fieldUploads = useFieldUploads((field, item) => {
-		// What the field says now, not when the file set off: its alt text may have been written since.
+	const fieldUploads = useFieldUploads((field, item, altThen) => {
+		// The words there when the file set off were for the old picture (2026-11-09, owner). Only what was written since is for this one.
 		const alt = mediaValueOf(editor.value(`values.${field}`))?.alt;
-		editor.set(`values.${field}`, { media: item.id, ...(alt ? { alt } : {}) });
+		editor.set(`values.${field}`, { media: item.id, ...(alt && alt !== altThen ? { alt } : {}) });
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");

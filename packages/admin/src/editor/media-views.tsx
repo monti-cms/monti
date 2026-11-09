@@ -339,6 +339,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const data = (node.attrs.data ?? {}) as ImageData;
 	const blockId = String(node.attrs.blockId ?? "");
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
+	const stopped = uploading ? media?.uploads.find((each) => each.id === uploading)?.problem : null;
 	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));
@@ -374,7 +375,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 						onGone={deleteNode}
 						onDone={(done) => updateAttributes({ upload: null, data: { ...data, ...fileBlock(done) } })}
 					/>
-					{captionField}
+					{!stopped && captionField}
 				</Stack>
 			</NodeViewWrapper>
 		);

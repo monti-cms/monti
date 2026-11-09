@@ -77,20 +77,14 @@ export function MediaField({
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
 					onOpen={readOnly ? undefined : () => setPicking(true)}
-					onClear={
-						readOnly || (!own && !going)
-							? undefined
-							: () => {
-									uploads.clear(field);
-									onChange(null);
-								}
-					}
-					clearLabel={whose?.clear ?? t("library.field.clear", { label })}
+					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
+					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
+					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
 				/>
 				{going?.problem && (
 					<>
 						<FormFieldError>{problemText(going)}</FormFieldError>
-						<UploadActions upload={going} onRemove={uploads.remove} onRetry={uploads.retry} onShrink={uploads.shrink} />
+						<UploadActions upload={going} onRetry={uploads.retry} onShrink={uploads.shrink} />
 					</>
 				)}
 			</FormField>
@@ -132,10 +126,7 @@ export function MediaField({
 					}}
 					onFiles={([chosen]) => {
 						setPicking(false);
-						if (!chosen) return;
-						// What is written from here on is for the new file: the field keeps it when the file lands.
-						if (own) onChange({ media: own.media });
-						uploads.add(field, chosen, accept === "any" ? undefined : "image");
+						if (chosen) uploads.add(field, chosen, own?.alt, accept === "any" ? undefined : "image");
 					}}
 				/>
 			)}

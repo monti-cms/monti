@@ -326,6 +326,80 @@ test.describe("a cover and what goes up for it", () => {
 		expect(((await answer.json()) as { total: number }).total).toBe(0);
 	});
 
+	test("09-3 a cover's × takes out a file that did not go up; the cover and its alt text are as they were", async ({
+		admin,
+	}, info) => {
+		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [kept], main(admin));
+		const name = path.basename(kept);
+		await uploadedId(admin, name);
+		const pdf = path.join(info.outputDir, `${unique("price")}.pdf`);
+		await writeFile(pdf, "%PDF-1.7\n");
+
+		await writing(admin);
+		await cover(admin).click();
+		const dialog = admin.getByRole("dialog");
+		await dialog.getByRole("textbox", { name: "파일 이름 검색" }).fill(name);
+		await dialog.getByRole("button", { name: new RegExp(name) }).click();
+		await dialog.getByRole("button", { name: "고르기" }).click();
+		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		await alt.fill("봄 표지");
+
+		await chooseUpload(admin, pdf);
+		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeVisible();
+		await expect(admin.getByRole("button", { name: "빼기", exact: true })).toBeHidden();
+		await admin.getByRole("button", { name: "cover 빼기" }).click();
+		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeHidden();
+		await expect(cover(admin)).toHaveText(new RegExp(name));
+		await expect(alt).toHaveValue("봄 표지");
+	});
+
+	test("09-3 a new file starts with no alt text, and keeps what was written for it while it went up", async ({
+		admin,
+	}, info) => {
+		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [kept], main(admin));
+		const name = path.basename(kept);
+		await uploadedId(admin, name);
+		const first = await picture(admin, info.outputDir, `${unique("first")}.jpg`);
+		const second = await picture(admin, info.outputDir, `${unique("second")}.jpg`);
+
+		await writing(admin);
+		await cover(admin).click();
+		const dialog = admin.getByRole("dialog");
+		await dialog.getByRole("textbox", { name: "파일 이름 검색" }).fill(name);
+		await dialog.getByRole("button", { name: new RegExp(name) }).click();
+		await dialog.getByRole("button", { name: "고르기" }).click();
+		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		await alt.fill("봄 표지");
+
+		await chooseUpload(admin, first);
+		await uploadedId(admin, path.basename(first));
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(first)));
+		await expect(alt).toHaveValue("");
+
+		await alt.fill("첫 설명");
+		const release = await hold(admin);
+		await chooseUpload(admin, second);
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(second)));
+		await alt.fill("새 설명");
+		release();
+		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
+		await expect
+			.poll(async () => {
+				const answer = await admin.request.post("/admin/api/operations/media.query", {
+					data: { input: { search: path.basename(second) } },
+				});
+				return ((await answer.json()) as { total: number }).total;
+			})
+			.toBe(1);
+		await expect(alt).toHaveValue("새 설명");
+	});
+
 	test("09-3 a file picked while another goes up is the one that stays", async ({ admin }, info) => {
 		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
 		await admin.goto("/#/media");

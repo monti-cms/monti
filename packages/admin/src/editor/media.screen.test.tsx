@@ -246,7 +246,12 @@ describe("pasting", () => {
 			}),
 		);
 		await expect.element(body().getByText("이 그림은 읽을 수 없어요", { exact: false })).toBeVisible();
-		await userEvent.click(body().getByRole("button", { name: "빼기" }));
+		// A file that stopped has nothing to caption, and what can be done about it is not body text.
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).not.toBeInTheDocument();
+		const takeOut = body().getByRole("button", { name: "빼기" });
+		const size = (element: Element) => Number.parseFloat(getComputedStyle(element).fontSize);
+		expect(size(takeOut.element())).toBeLessThan(size(body().element()));
+		await userEvent.click(takeOut);
 		await expect.element(body().getByText("broken.png")).not.toBeInTheDocument();
 	});
 
