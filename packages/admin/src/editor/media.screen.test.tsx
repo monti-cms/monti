@@ -552,6 +552,32 @@ describe("an image in the text", () => {
 			.toBe(100);
 	});
 
+	it("09-1 a kept square answers an arrow on either side, stays square, and turns with the picture as the same part", async () => {
+		toast.dismiss();
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		const dialog = page.getByRole("dialog");
+		await userEvent.click(dialog.getByRole("button", { name: "1:1" }));
+		const box = () =>
+			dialog.getByRole("button", { name: "자를 곳: 화살표로 옮기기" }).element().getBoundingClientRect();
+		const square = () => Math.abs(box().width - box().height) <= 2;
+		await expect.poll(square).toBe(true);
+		const before = box().width;
+		const corner = dialog.getByRole("button", { name: "오른쪽 아래 모서리" });
+		corner.element().focus();
+		await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowUp}{/Shift}");
+		await expect.poll(() => box().width).toBeLessThan(before);
+		expect(square()).toBe(true);
+		// Turned, the picture is fitted to the frame again (taller now), so its square is drawn smaller: still a square.
+		const frame = () =>
+			(dialog.element().querySelector("[data-slot=crop-stage] img") as HTMLElement).getBoundingClientRect();
+		await userEvent.click(dialog.getByRole("button", { name: "오른쪽으로 돌리기" }));
+		await expect.poll(() => frame().height > frame().width).toBe(true);
+		await expect.poll(square).toBe(true);
+		await expect.element(dialog.getByRole("button", { name: "1:1" })).toHaveAttribute("aria-pressed", "true");
+	});
+
 	it("09-1 a crop dragged past the picture stays inside it, and the entry still saves", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
@@ -664,7 +690,7 @@ describe("an image in the text", () => {
 		expect(getComputedStyle(block).marginBottom).toBe("20px");
 	});
 
-	it("09-1 a press under a file that ends the body opens a paragraph there, and an untouched one is not kept", async () => {
+	it("09-1 a press under a file that ends the body opens a paragraph there, the cursor in it", async () => {
 		await FileInBody.run();
 		await expect.poll(() => body().element().querySelector("[data-block=file]")).not.toBeNull();
 		const file = body().element().querySelector("[data-block=file]")?.getBoundingClientRect();

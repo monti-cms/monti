@@ -235,21 +235,20 @@ function centeredCrop(share: number): CropRect {
 	return { x: (100 - width) / 2, y: (100 - height) / 2, width, height };
 }
 
-/** A crop pulled by a corner, kept to a ratio (in shares): the opposite corner stays, and the crop never leaves the picture. */
-function keptCrop(part: CropRect, grip: "nw" | "ne" | "sw" | "se", share: number): CropRect {
+/**
+ * A crop pulled by a corner, kept to a ratio (in shares): the opposite corner stays. The pull counts on whichever side it moved more (an arrow up moves the
+ * height), and the picture's edges win over the smallest size, so the crop never leaves the picture.
+ */
+function keptCrop(start: CropRect, pulled: CropRect, grip: "nw" | "ne" | "sw" | "se", share: number): CropRect {
 	const west = grip === "nw" || grip === "sw";
 	const north = grip === "nw" || grip === "ne";
-	const anchorX = west ? part.x + part.width : part.x;
-	const anchorY = north ? part.y + part.height : part.y;
-	let width = Math.min(part.width, west ? anchorX : 100 - anchorX);
-	let height = width / share;
-	const room = north ? anchorY : 100 - anchorY;
-	if (height > room) {
-		height = room;
-		width = height * share;
-	}
-	width = Math.max(width, 5);
-	height = width / share;
+	const anchorX = west ? start.x + start.width : start.x;
+	const anchorY = north ? start.y + start.height : start.y;
+	const byWidth = Math.abs(pulled.width - start.width) >= Math.abs(pulled.height - start.height) * share;
+	const most = Math.min(west ? anchorX : 100 - anchorX, (north ? anchorY : 100 - anchorY) * share);
+	const least = Math.min(Math.max(5, 5 * share), most);
+	const width = Math.min(Math.max(byWidth ? pulled.width : pulled.height * share, least), most);
+	const height = width / share;
 	return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height };
 }
 
@@ -326,12 +325,14 @@ function CropDialog({
 			const to = at(next.clientX, next.clientY);
 			if (grip === "stage") {
 				const drawn = drawnCrop(from, to);
+				// Drawn from the pressed point: that point is the corner that stays.
 				const corner = `${to.y < from.y ? "n" : "s"}${to.x < from.x ? "w" : "e"}` as "nw" | "ne" | "sw" | "se";
-				setPart(share ? keptCrop(drawn, corner, share) : drawn);
+				const begun = { x: from.x, y: from.y, width: 0, height: 0 };
+				setPart(share ? keptCrop(begun, drawn, corner, share) : drawn);
 				return;
 			}
 			const moved = movedCrop(part, grip, to.x - from.x, to.y - from.y);
-			setPart(share && grip !== "move" ? keptCrop(moved, grip, share) : moved);
+			setPart(share && grip !== "move" ? keptCrop(part, moved, grip, share) : moved);
 		};
 		const up = () => {
 			window.removeEventListener("pointermove", move);
@@ -347,12 +348,13 @@ function CropDialog({
 		const step = event.shiftKey ? 5 : 1;
 		const moved = movedCrop(part, grip, move[0] * step, move[1] * step);
 		const share = shareRatio(ratio, size());
-		setPart(share && grip !== "move" ? keptCrop(moved, grip, share) : moved);
+		setPart(share && grip !== "move" ? keptCrop(part, moved, grip, share) : moved);
 	};
 	const turnBy = (quarter: 90 | -90) => {
-		// A kept shape stays the shape on screen: the picture's sides swap, so the crop is the largest of that shape again.
-		const share = shareRatio(ratio, size(((turn + quarter + 360) % 360) as ImageRotate));
-		setPart((current) => (share && ratio !== "original" ? centeredCrop(share) : turnedCrop(current, quarter)));
+		// The chosen part turns with the picture: the same part of it. A square, or the picture's own shape, is still that shape; 16:9 turned is 9:16, no
+		// longer the shape picked, so the crop is free from then on.
+		setPart((current) => turnedCrop(current, quarter));
+		if (ratio === "16:9" || ratio === "4:3") setRatio("free");
 		setTurn((current) => ((current + quarter + 360) % 360) as ImageRotate);
 	};
 	const pick = (next: Ratio) => {
