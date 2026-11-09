@@ -6,7 +6,7 @@ import { pointerPath, scrollsSideways, typeKorean } from "../../../../../testing
 import { schema } from "../story-schema";
 import * as stories from "./translation.stories";
 
-const { LanguageMenu, NewTranslation, SourceChanged, SideBySide } = composeStories(stories);
+const { LanguageMenu, NewTranslation, SourceChanged, FieldsChanged, SideBySide } = composeStories(stories);
 
 /** The editor opened on a site made another way, with nothing done to it. */
 const siteOf = (loaders: unknown) =>
@@ -324,6 +324,56 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(body().getByText("Next comes translation.")).toBeVisible();
 		expect(undecided("다음 글에서는 번역을 다룬다")).toBeNull();
 		expect(body().element().children).toHaveLength(6);
+	});
+
+	it("04-2 T111 the source's new title and summary mark the translation: the tab's dot, the count, the banner, and a mark on each", async () => {
+		await FieldsChanged.run();
+		await expect.element(tab("English").getByLabelText("원문 변경")).toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
+		const title = page.getByRole("textbox", { name: "제목" });
+		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
+		const mark = document.querySelector("[data-field-mark=title]")?.getBoundingClientRect();
+		const box = title.element().getBoundingClientRect();
+		// In the margin, level with the title: as a block's mark is level with its block.
+		expect(mark?.right).toBeLessThan(box.left);
+		expect(mark?.top).toBeGreaterThanOrEqual(box.top);
+		expect(mark?.bottom).toBeLessThanOrEqual(box.bottom);
+		expect(document.querySelector("[data-field-mark=summary]")).not.toBeNull();
+		// The address, and what the translation has as its own words, stay as they are.
+		await expect.element(title).toHaveValue("The first post");
+	});
+
+	it("04-2 T111 a title's mark opens its card: before and after, and confirming clears it and keeps the words", async () => {
+		await FieldsChanged.run();
+		const title = page.getByRole("textbox", { name: "제목" });
+		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "변경", exact: true }).first());
+		await expect.element(page.getByText("원문 변경", { exact: true }).last()).toBeVisible();
+		await expect.element(page.getByText("고치며")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
+		await expect.element(page.getByRole("button", { name: "원문 변경 1" })).toBeVisible();
+		await expect.element(title).toHaveValue("The first post");
+		expect(document.querySelector("[data-field-mark=title]")).toBeNull();
+	});
+
+	it("04-2 T111 the status bar lists the fields by name; a field's row opens the panel at its field, and '모두 확인' clears them", async () => {
+		await FieldsChanged.run();
+		await userEvent.click(page.getByRole("button", { name: "원문 변경 2" }));
+		const row = page.getByRole("button", { name: /요약/ }).first();
+		await expect.element(row).toBeVisible();
+		await userEvent.click(row);
+		await expect.element(page.getByRole("textbox", { name: "요약" })).toHaveFocus();
+		await userEvent.click(page.getByRole("button", { name: "원문 변경 2" }));
+		await userEvent.click(page.getByRole("button", { name: "모두 확인" }).last());
+		await expect.element(page.getByRole("button", { name: /원문 변경 \d/ })).not.toBeInTheDocument();
+		await expect.element(tab("English").getByLabelText("원문 변경")).not.toBeInTheDocument();
+	});
+
+	it("04-2 T111 side by side the title's mark stands in its row", async () => {
+		await FieldsChanged.run();
+		await userEvent.click(page.getByRole("button", { name: "나란히" }));
+		await expect.element(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
 	});
 
 	it("04-2 the status bar's '원문 변경' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {

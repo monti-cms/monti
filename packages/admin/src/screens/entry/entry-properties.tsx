@@ -33,6 +33,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import { MediaField, SharedMediaValue } from "./media-field";
+import { FieldChange, type FieldChangeMark } from "./translation";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
@@ -481,6 +482,7 @@ export function EntryProperties({
 	uploads,
 	altCard,
 	onAltCard,
+	changes,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -497,6 +499,8 @@ export function EntryProperties({
 	/** The media field whose picture settings are open: a to-do row opens them. */
 	altCard: string | null;
 	onAltCard: (field: string | null) => void;
+	/** In a translation: the fields whose source moved on (T111), and confirming one. */
+	changes?: { marks: readonly FieldChangeMark[]; onConfirm: (field: string) => void };
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -528,6 +532,31 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
+		const changeMark = changes?.marks.find((mark) => mark.field === key);
+		const optionLabels = values[key]?.optionLabels ?? {};
+		const shownInCard = (shownValue: unknown) =>
+			def.kind === "media" ? (
+				<SharedMediaValue value={shownValue} empty={empty} withAlt />
+			) : def.kind === "relation" ? (
+				<SharedRelationValue
+					collection={collection}
+					field={key}
+					locale={currentLocale ?? ""}
+					value={shownValue}
+					empty={empty}
+				/>
+			) : (
+				(Array.isArray(shownValue) ? shownValue : [shownValue])
+					.map((each) => optionLabels[String(each)] ?? String(each))
+					.join(", ")
+			);
+		const change = changeMark ? (
+			<FieldChange
+				mark={changeMark}
+				shown={def.kind === "text" ? undefined : shownInCard}
+				onConfirm={() => changes?.onConfirm(key)}
+			/>
+		) : undefined;
 		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
 		if (shared && localeModeOf(key, def) === "same") {
 			const sourceNote = (
@@ -582,6 +611,7 @@ export function EntryProperties({
 					label={values[key]?.label ?? key}
 					required={marksRequired && required(key)}
 					accept={def.accept}
+					change={change}
 					value={value}
 					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
 					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
@@ -719,7 +749,7 @@ export function EntryProperties({
 		};
 		return (
 			<FormField key={key}>
-				<FormFieldLabel htmlFor={id} required={marksRequired && required(key)} action={count}>
+				<FormFieldLabel htmlFor={id} required={marksRequired && required(key)} action={change ?? count}>
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}

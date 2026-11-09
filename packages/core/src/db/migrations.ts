@@ -352,6 +352,15 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.createIndex("media_uses_template").on("media_uses").column("template_id").execute();
 		},
 	},
+	"0012_translation_seen": {
+		async up(db) {
+			// What a translation has seen of its source's fields (T111). It fills in at a translation's next save: a mark needs a value it saw.
+			await db.schema
+				.alterTable("entries")
+				.addColumn("translation_seen", "jsonb", (column) => column.notNull().defaultTo(sql`'{}'::jsonb`))
+				.execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

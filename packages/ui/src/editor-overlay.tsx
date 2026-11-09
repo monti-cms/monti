@@ -60,6 +60,23 @@ function EditorMargin({ top, children }: { top: number; children: ReactNode }) {
 	);
 }
 
+/** A line above the text with something hung in the same left margin as a block's marks: the title and the source's change to it (T111). */
+function EditorMarginLine({ margin, children }: { margin?: ReactNode; children: ReactNode }) {
+	return (
+		<div data-slot="editor-margin-line" className="relative">
+			{margin ? (
+				<div
+					data-slot="editor-margin"
+					className="absolute top-1/2 right-[calc(100%+32px)] flex -translate-y-1/2 items-center"
+				>
+					{margin}
+				</div>
+			) : null}
+			{children}
+		</div>
+	);
+}
+
 /**
  * A block of the text in hand while it is dragged: a small card (at most 280px wide) with the block's kind and the start of its text, beside the
  * pointer, never the block at full width over the text it is moving through. Its surface is the lifted look of every dragged thing (`HELD`: the page
@@ -94,4 +111,4 @@ function DropLine() {
 	);
 }
 
-export { DropLine, EditorMargin, EditorOverlay, HeldBlock };
+export { DropLine, EditorMargin, EditorMarginLine, EditorOverlay, HeldBlock };

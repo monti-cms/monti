@@ -99,6 +99,14 @@ const compare = (id: string) =>
 	read<{ marks: Marks; pending: number; source: { id: string; doc: Doc } }>("translations.compare", { id });
 const marks = async (id: string) =>
 	(await compare(id)).marks.map((mark) => `${mark.kind}:${mark.from}`).sort((a, b) => a.localeCompare(b));
+const fieldMarks = async (id: string) =>
+	(await read<{ fields: { field: string; before: unknown; after: unknown }[] }>("translations.compare", { id })).fields;
+const changes = async (id: string) => {
+	const { groups } = await read<{ groups: { locales: { id: string; changes: number }[] }[] }>("translations.status", {
+		ids: [id],
+	});
+	return groups[0]?.locales.find((locale) => locale.id === id)?.changes;
+};
 const setBlocks = async (id: string, blocks: unknown[]) =>
 	write("translations.setBlocks", { id, version: await version(id), blocks });
 
@@ -293,6 +301,141 @@ describe("pending blocks", () => {
 		const { token } = await read<{ token: string }>("entries.previewLink", { id });
 		const found = await reader().entry({ collection: "post", locale: "en", slug: "first-post", preview: token });
 		expect(found && "entry" in found && texts(found.entry.doc as Doc)).toEqual(["One", "npm i"]);
+	});
+});
+
+describe("when the source's fields change", () => {
+	/** A published source and its published translation, with a title and values of its own. */
+	async function pair(values: Record<string, unknown> = { summary: "Summary" }) {
+		const source = await publishedSource();
+		const id = await translate(source);
+		await write("entries.save", { id, version: await version(id), title: "First post", values });
+		await decideAll(id);
+		await write("entries.publish", { ids: [id] });
+		return { source, id };
+	}
+	/** Saves the source's fields and publishes it again. */
+	async function republishFields(source: string, change: Record<string, unknown>) {
+		await write("entries.save", { id: source, version: await version(source), ...change });
+		await write("entries.publish", { ids: [source] });
+	}
+
+	it("04-2 T111 a changed title marks the translation, in compare, the counts and the list's filter alike, and shows it before and after", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { title: "두 번째 이름" });
+		expect(await fieldMarks(id)).toEqual([{ field: "title", before: "첫 번째 글", after: "두 번째 이름" }]);
+		expect(await changes(id)).toBe(1);
+		// The source and its translation are one row of the list, behind in English now.
+		const behind = await read<{ total: number }>("entries.query", {
+			collection: "post",
+			filters: [{ on: "translation", any: ["sourceChanged"] }],
+		});
+		expect(behind.total).toBe(1);
+		expect(await get(id)).toMatchObject({ entry: { title: "First post" } });
+	});
+
+	it("04-2 T111 a field per language, and one from the source holding its own value, are marked; one the same in every language and the address are not", async () => {
+		const { source, id } = await pair({ summary: "Summary", subtitle: "Subtitle" });
+		await republishFields(source, {
+			slug: "another-address",
+			values: { summary: "새 요약", subtitle: "새 부제", format: "essay" },
+		});
+		expect((await fieldMarks(id)).sort((a, b) => a.field.localeCompare(b.field))).toEqual([
+			{ field: "subtitle", before: "부제", after: "새 부제" },
+			{ field: "summary", before: "요약", after: "새 요약" },
+		]);
+		expect(await changes(id)).toBe(2);
+	});
+
+	it("04-2 T111 a field left empty has nothing to fall behind", async () => {
+		const source = await publishedSource();
+		const id = await translate(source);
+		await write("entries.save", { id, version: await version(id), title: "First post", values: { subtitle: null } });
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "새 부제", format: "memo" } });
+		expect(await fieldMarks(id)).toEqual([]);
+	});
+
+	it("04-2 T111 a field that becomes the translation's own has seen the source as it is then", async () => {
+		const source = await publishedSource();
+		const id = await translate(source);
+		await republishFields(source, { title: "그 사이 고친 제목" });
+		await write("entries.save", { id, version: await version(id), title: "First post" });
+		expect(await fieldMarks(id)).toEqual([]);
+		await republishFields(source, { title: "또 고친 제목" });
+		expect(await fieldMarks(id)).toEqual([{ field: "title", before: "그 사이 고친 제목", after: "또 고친 제목" }]);
+	});
+
+	it("04-2 T111 saving the source without publishing it marks nothing; publishing it back marks nothing either", async () => {
+		const { source, id } = await pair();
+		await write("entries.save", { id: source, version: await version(source), title: "저장만 한 제목" });
+		expect(await fieldMarks(id)).toEqual([]);
+		await write("entries.publish", { ids: [source] });
+		expect(await fieldMarks(id)).toHaveLength(1);
+		await republishFields(source, { title: "첫 번째 글" });
+		expect(await fieldMarks(id)).toEqual([]);
+		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 writing in a marked field leaves the mark; confirming clears it and keeps the words", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { title: "새 제목" });
+		await write("entries.save", { id, version: await version(id), title: "A new title" });
+		expect(await fieldMarks(id)).toHaveLength(1);
+		await setBlocks(id, [{ do: "confirmField", field: "title" }]);
+		expect(await fieldMarks(id)).toEqual([]);
+		expect((await get(id)).entry.title).toBe("A new title");
+		await republishFields(source, { title: "또 새 제목" });
+		expect(await fieldMarks(id)).toEqual([{ field: "title", before: "새 제목", after: "또 새 제목" }]);
+	});
+
+	it("04-2 T111 confirming a field with no mark is refused", async () => {
+		const { id } = await pair();
+		await expect(setBlocks(id, [{ do: "confirmField", field: "title" }])).rejects.toMatchObject({
+			reason: { key: "translations.notMarked" },
+		});
+	});
+
+	it("04-2 T111 confirm all takes the fields' marks with the blocks'", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, {
+			title: "새 제목",
+			doc: body(p("s1", "하나 고침"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷")),
+		});
+		expect(await changes(id)).toBe(2);
+		const confirmed = await write<{ confirmed: number }>("translations.confirmAll", { id, version: await version(id) });
+		expect(confirmed.confirmed).toBe(2);
+		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 emptying a field in the translation takes its mark away, and emptying one in the source is a change", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "부제", format: "memo" } });
+		expect(await fieldMarks(id)).toHaveLength(1);
+		await write("entries.save", { id, version: await version(id), values: { summary: null } });
+		expect(await fieldMarks(id)).toEqual([]);
+		await write("entries.save", { id, version: await version(id), values: { summary: "Mine" } });
+		await republishFields(source, { values: { summary: null, subtitle: "부제", format: "memo" } });
+		expect(await fieldMarks(id)).toEqual([{ field: "summary", before: "새 요약", after: null }]);
+		expect(await changes(id)).toBe(1);
+	});
+
+	it("04-2 T111 a field gone from the schema, or now the same in every language, leaves no mark", async () => {
+		const { source, id } = await pair({ summary: "Summary", subtitle: "Subtitle" });
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "새 부제", format: "memo" } });
+		expect(await changes(id)).toBe(2);
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const { subtitle: _gone, summary: _same, ...kept } = post.fields;
+		const after: Schema = {
+			...schema,
+			collections: {
+				...schema.collections,
+				post: { ...post, fields: { ...kept, summary: { kind: "text", locale: "same" } } },
+			},
+		};
+		await migrateContent(db, after, []);
+		expect(await fieldMarks(id)).toEqual([]);
+		expect(await changes(id)).toBe(0);
 	});
 });
 

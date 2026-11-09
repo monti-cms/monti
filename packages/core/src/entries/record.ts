@@ -32,6 +32,8 @@ export type Entry = {
 	trashedAt: Date | null;
 	/** In a translation: source block ids it left out (doc 04). */
 	translationSkips: string[];
+	/** In a translation: the source's value of each field holding its own, as it saw it (doc 04). */
+	translationSeen: Record<string, unknown>;
 };
 
 export async function loadEntries(db: Db, ids: string[]): Promise<Entry[]> {
@@ -60,6 +62,7 @@ export async function loadEntries(db: Db, ids: string[]): Promise<Entry[]> {
 				updatedAt: row.updated_at,
 				trashedAt: row.trashed_at,
 				translationSkips: row.translation_skips,
+				translationSeen: row.translation_seen,
 			},
 		];
 	});
@@ -99,6 +102,7 @@ const EntryRowShape: z.ZodType<Selectable<EntryTable>> = z.object({
 	updated_at: DateShape,
 	trashed_at: DateShape.nullable(),
 	translation_skips: z.array(z.string()),
+	translation_seen: z.record(z.string(), z.unknown()).default({}),
 	body_text: z.string().nullable(),
 });
 const PublishedRowShape: z.ZodType<Selectable<EntryPublishedTable>> = z.object({
@@ -200,6 +204,7 @@ export const entryRecord = defineRecordKind({
 			updated_at: row.updated_at,
 			trashed_at: row.trashed_at,
 			translation_skips: JSON.stringify(row.translation_skips),
+			translation_seen: JSON.stringify(row.translation_seen),
 		};
 		const { id: _id, version: _version, ...updated } = values;
 		await db

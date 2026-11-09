@@ -29,7 +29,7 @@
 
 ### 코드
 
-`Marker`의 `tone`이 번역한 뒤 원문이 움직인 블록을 말한다: `changed` "변경"(주황), `removed` "삭제"(빨강), `added` "추가"(초록). 설정의 "바뀐 곳" 목록이 같은 낱말에 쓰는 색과 같다(2026-11-06 소유자). 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. 편집기 안에서는 블록 위치를 재서 `EditorMargin`(`top`은 블록 위에서 잰 값, 글 왼쪽 32px 밖: 블록 손잡이(24px, 글에서 4px) 바깥에 4px 띄워, 블록에 포인터를 올려 나온 손잡이가 표시를 덮지 않는다. 2026-11-06 소유자)에 `Marker`를 건다. 본문과 함께 스크롤된다. 편집기 본문의 흐린 블록은 `EditorBody`의 `data-untranslated`다(`Untranslated`와 같은 `fg-faint`). 원문에 새로 생긴 블록은 그 자리에 흐린 블록(자리 표시)으로 들어와 바로 쓴다. 아무도 쓰지 않은 동안은 저장되지 않는다. 그 카드의 본문은 `before` 없는 `MemoDiff`이고, 머리에 "빼기"만 있다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
+번역이 자기 값을 가진 필드에도 같은 `Marker tone="changed"`가 라벨 줄 끝에 붙는다. 제목은 `EditorMarginLine`의 여백이다. `Marker`의 `tone`이 번역한 뒤 원문이 움직인 블록을 말한다: `changed` "변경"(주황), `removed` "삭제"(빨강), `added` "추가"(초록). 설정의 "바뀐 곳" 목록이 같은 낱말에 쓰는 색과 같다(2026-11-06 소유자). 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. 편집기 안에서는 블록 위치를 재서 `EditorMargin`(`top`은 블록 위에서 잰 값, 글 왼쪽 32px 밖: 블록 손잡이(24px, 글에서 4px) 바깥에 4px 띄워, 블록에 포인터를 올려 나온 손잡이가 표시를 덮지 않는다. 2026-11-06 소유자)에 `Marker`를 건다. 본문과 함께 스크롤된다. 편집기 본문의 흐린 블록은 `EditorBody`의 `data-untranslated`다(`Untranslated`와 같은 `fg-faint`). 원문에 새로 생긴 블록은 그 자리에 흐린 블록(자리 표시)으로 들어와 바로 쓴다. 아무도 쓰지 않은 동안은 저장되지 않는다. 그 카드의 본문은 `before` 없는 `MemoDiff`이고, 머리에 "빼기"만 있다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
 
 ## 짝 원문 표시
 

@@ -34,6 +34,8 @@
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
 | 원문 변경 표시 | `EditorMargin` 안의 `Marker` "변경"(`changed`, 주황) · "삭제"(`removed`, 빨강) · "추가"(`added`, 초록)(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "추가"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "삭제" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
 | 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 변경", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 주황 밑줄(`CompareText source`). 바깥을 누르거나 Esc로 닫는다. |
+| 제목의 원문 변경 | `EditorMarginLine`의 `margin`에 `Marker tone="changed"` "변경"(나란히 보기에서는 `CompareRow`의 `note`) | 제목 줄 왼쪽 여백에, 블록의 표시와 같은 세로선에 붙는다. 카드는 바뀜 카드와 같고 머리에 "확인"만 있다. |
+| 필드의 원문 변경 | `FormFieldLabel`의 `action`에 `Marker tone="changed"` "변경" | 번역이 자기 값을 가진 필드의 라벨 줄 끝이다. 미디어 필드에서는 "이 언어 값" 자리에 온다. 카드에 전과 후를 보이고 머리에 "확인"이 있다. 글자 필드는 바뀐 말에 주황 밑줄, 미디어는 "파일 이름 · 대체 텍스트", 고르기와 관계는 이름. 빈 쪽은 "없음". |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 
 #### 상태 표시줄
@@ -41,7 +43,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem blocking` "흐린 블록 1" + 끝 동작 "✦ 번역"은 `proposal`, 아래 `TodoDone` "제목 · 주소 · 원문 유지 1") | 흐린 블록이 발행을 막는 할 일이다. 행을 누르면 그 블록으로 간다. 제안이 도착한 동안 칸은 "제안 6". |
-| "원문 변경 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 바뀜 "확인", 지워짐 "지우기", 새로 "빼기"(설정의 "바뀐 곳" 목록과 같은 모양, 2026-11-06 소유자). 줄을 누르면 그 블록으로 간다. `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
+| "원문 변경 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 필드는 이름, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 바뀜 "확인", 지워짐 "지우기", 새로 "빼기"(설정의 "바뀐 곳" 목록과 같은 모양, 2026-11-06 소유자). 줄을 누르면 그 블록으로 간다. `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
 스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner, Patterns/Frame/ResizablePane, Primitives/Box.

@@ -158,4 +158,49 @@ export const TranslationCover: Story = {
 };
 
 /** A site with no storage (flow 6·31). */
+/** A translation's own cover, its source's since changed: the mark in the place of whose value it is (T111). */
+export const TranslationCoverChanged: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			startAt("#/");
+			let id = "";
+			const made = await storySite({
+				schema,
+				auth: { password: true },
+				signedIn: true,
+				setup: async (monti, storage) => {
+					const ids = await fillLibrary(monti, storage);
+					const run = async <Output = { id: string; version: number }>(name: string, input: unknown) =>
+						((await monti.run(name, input, { actor: "admin" })) as { output: Output }).output;
+					const source = await run("entries.create", {
+						collection: "post",
+						locale: "ko",
+						title: "쓰는 중인 글",
+						slug: "writing",
+						values: { cover: { media: ids.desk, alt: "아침 책상" } },
+						doc: { type: "doc", blocks: [paragraph] },
+					});
+					await run("entries.publish", { ids: [source.id] });
+					const translation = await run("translations.create", { source: source.id, locale: "en" });
+					await run("entries.save", {
+						id: translation.id,
+						version: 1,
+						title: "Writing",
+						values: { cover: { media: ids.desk, alt: "A desk in the morning" } },
+					});
+					await run("entries.save", {
+						id: source.id,
+						version: 2,
+						values: { cover: { media: ids.code, alt: "화면에 뜬 코드" } },
+					});
+					await run("entries.publish", { ids: [source.id] });
+					id = translation.id;
+				},
+			});
+			window.location.hash = `#/c/post/${id}`;
+			return { site: made };
+		},
+	],
+};
+
 export const NoStorage: Story = { loaders: entry({ storage: null }) };

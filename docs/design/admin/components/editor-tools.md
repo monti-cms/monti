@@ -112,3 +112,5 @@
 - `data-untranslated`: 번역에서 아직 원문 글자 그대로인 블록(흐린 블록, `fg-faint`). 사이트에 그려지지 않고 발행을 막는다(translation.md).
 
 `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.
+
+`EditorMarginLine`은 본문 위의 한 줄(제목)을 담고, `margin`을 블록의 표시와 같은 왼쪽 여백에 건다(`EditorMargin`과 같은 세로선, 줄의 가운데).

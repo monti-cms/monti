@@ -12,7 +12,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
@@ -35,6 +35,7 @@ export function MediaField({
 	label,
 	required,
 	accept,
+	change,
 	value,
 	source,
 	whose,
@@ -49,6 +50,8 @@ export function MediaField({
 	label: string;
 	required: boolean;
 	accept?: "image" | "any";
+	/** The mark on a translation's own value when the source's moved on: in the place of whose value it is. */
+	change?: ReactNode;
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
@@ -80,7 +83,9 @@ export function MediaField({
 					htmlFor={id}
 					required={required}
 					action={
-						whose && !going ? (
+						change && !going ? (
+							change
+						) : whose && !going ? (
 							<Text variant="micro" tone="faint">
 								{own ? whose.own : whose.following}
 							</Text>
@@ -163,13 +168,22 @@ export function MediaField({
 }
 
 /** A media field that is the same in every language, in a translation: the source's file, read only (doc 04). */
-export function SharedMediaValue({ value, empty }: { value: unknown; empty: string }) {
+export function SharedMediaValue({
+	value,
+	empty,
+	withAlt = false,
+}: {
+	value: unknown;
+	empty: string;
+	/** Says its alt text too: a change card, where the words may be all that changed. */
+	withAlt?: boolean;
+}) {
 	const shown = mediaValueOf(value);
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
 	const name = read.data?.id === shown?.media ? read.data?.name : undefined;
 	return (
 		<Text variant="note" tone={name ? undefined : "faint"}>
-			{name ?? empty}
+			{name && withAlt && shown?.alt ? `${name} · ${shown.alt}` : (name ?? empty)}
 		</Text>
 	);
 }

@@ -71,6 +71,7 @@ async function rewrite(db: Db, entry: Entry, change: (doc: Doc) => Doc) {
 		.set((eb) => ({
 			doc: JSON.stringify(change(asDoc(entry.doc))),
 			translation_skips: JSON.stringify([]),
+			translation_seen: JSON.stringify({}),
 			version: eb("version", "+", 1),
 		}))
 		.where("id", "=", entry.id)
@@ -107,6 +108,7 @@ async function promote(db: Db, entry: Entry, old: Entry, schema: Schema): Promis
 		.set((eb) => ({
 			values: JSON.stringify(values),
 			translation_skips: JSON.stringify([]),
+			translation_seen: JSON.stringify({}),
 			version: eb("version", "+", 1),
 		}))
 		.where("id", "=", entry.id)

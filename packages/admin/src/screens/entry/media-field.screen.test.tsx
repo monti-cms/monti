@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as media from "./media.stories";
 
-const { Draft, WithCover, MissingAlt, TranslationCover } = composeStories(media);
+const { Draft, WithCover, MissingAlt, TranslationCover, TranslationCoverChanged } = composeStories(media);
 
 const cover = () => page.getByRole("button", { name: "대표 이미지", exact: true });
 const alt = () => page.getByRole("textbox", { name: "대체 텍스트" });
@@ -197,6 +197,21 @@ describe("in a translation", () => {
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await openCard();
 		await expect.element(alt()).toHaveValue("");
+	});
+
+	it("09-1 T111 a translation's own cover keeps its picture when the source's changes, says so, and shows it before and after", async () => {
+		await TranslationCoverChanged.run();
+		await properties();
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+		await expect.element(page.getByText("이 언어 값")).not.toBeInTheDocument();
+		const mark = page.getByRole("button", { name: "변경", exact: true });
+		await userEvent.click(mark);
+		await expect.element(page.getByText("desk-morning.jpg · 아침 책상")).toBeVisible();
+		await expect.element(page.getByText("cybersecurity-code.jpg · 화면에 뜬 코드")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
+		await expect.element(mark).not.toBeInTheDocument();
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+		await expect.element(page.getByText("이 언어 값")).toBeVisible();
 	});
 
 	it("04-5 another picture is this translation's own", async () => {

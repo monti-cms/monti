@@ -61,6 +61,9 @@ export type TranslationMark =
 	| { kind: "changed" | "removed"; block: string; from: string; before: Block | null; after: Block | null }
 	| { kind: "added"; from: string; after: string | null; source: Block | null };
 
+/** A mark on a field: the source's value moved on from the one the translation saw (T111). */
+export type FieldChangeMark = { field: string; before: unknown; after: unknown };
+
 type Compared = {
 	source: {
 		id: string;
@@ -73,6 +76,7 @@ type Compared = {
 	};
 	translation: { id: string; locale: string; doc: Doc };
 	marks: TranslationMark[];
+	fields: FieldChangeMark[];
 	pending: number;
 };
 
@@ -80,7 +84,8 @@ type Compared = {
 type Decision =
 	| { do: "keepSource" | "confirm" | "detach" | "remove"; block: string }
 	| { do: "add"; from: string; keep?: boolean }
-	| { do: "skip"; from: string };
+	| { do: "skip"; from: string }
+	| { do: "confirmField"; field: string };
 
 /** How the source shows beside a translation: not at all, in a pane beside it, or block by block in rows (translation.md, side by side). */
 export type SourceView = "off" | "side" | "paired";
@@ -341,21 +346,28 @@ const MARKER_TONE = { changed: "changed", removed: "removed", added: "added" } a
 export function SourceChangedCell({
 	compared,
 	doc,
+	fieldLabel,
 	onGo,
+	onGoField,
 	onConfirmAll,
 	onDecide,
 }: {
 	compared: Compared;
 	doc: Doc;
+	/** The name a field shows under. */
+	fieldLabel: (field: string) => string;
 	/** To the block a mark is on: its id, or for a block new in the source the source block's id (the editor's block paired with it). */
 	onGo: (block: string) => void;
+	/** To the field a mark is on. */
+	onGoField: (field: string) => void;
 	onConfirmAll: () => void;
 	onDecide: (decision: Decision) => void;
 }) {
 	const { t } = useAdmin();
 	const [open, setOpen] = useState(false);
-	const { marks } = compared;
-	if (marks.length === 0) return null;
+	const { marks, fields } = compared;
+	const count = marks.length + fields.length;
+	if (count === 0) return null;
 	const blocks = new Map(doc.blocks.map((block) => [block.id, block]));
 	const decisionOf = (mark: TranslationMark): { label: string; decision: Decision } =>
 		mark.kind === "changed"
@@ -365,13 +377,13 @@ export function SourceChangedCell({
 				: { label: t("translation.skip"), decision: { do: "skip", from: mark.from } };
 	return (
 		<StatusBarList
-			trigger={<StatusBarCell tone="warning">{t("translation.changedCount", { count: marks.length })}</StatusBarCell>}
+			trigger={<StatusBarCell tone="warning">{t("translation.changedCount", { count })}</StatusBarCell>}
 			label={t("translation.changedTitle")}
-			count={marks.length}
+			count={count}
 			open={open}
 			onOpenChange={setOpen}
 			footer={
-				marks.some((mark) => mark.kind !== "added") ? (
+				fields.length > 0 || marks.some((mark) => mark.kind !== "added") ? (
 					<TextButton
 						onClick={() => {
 							setOpen(false);
@@ -383,6 +395,20 @@ export function SourceChangedCell({
 				) : undefined
 			}
 		>
+			{fields.map((mark) => (
+				<TodoItem
+					key={`field:${mark.field}`}
+					title={fieldLabel(mark.field)}
+					tag={t("translation.mark.changed")}
+					tagTone={MARK_TONE.changed}
+					actionLabel={t("translation.confirm")}
+					onAction={() => onDecide({ do: "confirmField", field: mark.field })}
+					onOpen={() => {
+						setOpen(false);
+						onGoField(mark.field);
+					}}
+				/>
+			))}
 			{marks.map((mark) => {
 				const { label, decision } = decisionOf(mark);
 				return (
@@ -441,12 +467,15 @@ export function PairedView({
 	compared,
 	translationUpdatedAt,
 	title,
+	titleChange,
 	children,
 }: {
 	compared: Compared;
 	translationUpdatedAt: string | null;
 	/** The translation's title field. */
 	title: ReactNode;
+	/** The mark on the title, when the source's moved on. */
+	titleChange?: ReactNode;
 	children: ReactNode;
 }) {
 	const { language } = useAdmin();
@@ -457,6 +486,7 @@ export function PairedView({
 				<CompareRow head source={updated(compared.source.updatedAt)} translation={updated(translationUpdatedAt)} />
 				<CompareRow
 					title
+					note={titleChange}
 					source={
 						<Heading as="h2" variant="page">
 							{compared.source.title}
@@ -483,15 +513,61 @@ export const decidedOnly = (doc: Doc): Doc => ({
 /** "The source changed · Oct 26 · 3 places" with "Confirm all" (translation.md, the banner). */
 export function SourceChangedBanner({ compared, onConfirmAll }: { compared: Compared; onConfirmAll: () => void }) {
 	const { t, language } = useAdmin();
-	const count = compared.marks.length;
+	const count = compared.marks.length + compared.fields.length;
 	if (count === 0) return null;
 	const at = compared.source.publishedAt ? day(new Date(compared.source.publishedAt), language) : "";
 	return (
 		<Banner title={t("translation.changedTitle")} meta={t("translation.changedMeta", { date: at, count })}>
-			{compared.marks.some((mark) => mark.kind !== "added") ? (
+			{compared.fields.length > 0 || compared.marks.some((mark) => mark.kind !== "added") ? (
 				<TextButton onClick={onConfirmAll}>{t("translation.confirmAll")}</TextButton>
 			) : null}
 		</Banner>
+	);
+}
+
+/**
+ * "변경" (cms-allow-korean: the mark's word) by a field whose source moved on, with the card a changed block has: its value before and after, and "Confirm". Words show what changed in them; `shown` draws any other
+ * value (a picture, a pick). The translation's own value stays until someone changes it.
+ */
+export function FieldChange({
+	mark,
+	shown,
+	onConfirm,
+}: {
+	mark: FieldChangeMark;
+	shown?: (value: unknown) => ReactNode;
+	onConfirm: () => void;
+}) {
+	const { t } = useAdmin();
+	const [open, setOpen] = useState(false);
+	const place = useRef<HTMLSpanElement>(null);
+	const diff = readableWordDiff(String(mark.before ?? ""), String(mark.after ?? ""));
+	const side = (value: unknown, words: ReactNode) =>
+		value === null ? <Text tone="faint">{t("entry.empty")}</Text> : shown ? shown(value) : words;
+	return (
+		<span ref={place} data-field-mark={mark.field}>
+			<Marker tone="changed" active={open} onClick={() => setOpen(!open)}>
+				{t("translation.mark.changed")}
+			</Marker>
+			<MemoCardPopover
+				anchor={() => place.current}
+				open={open}
+				onOpenChange={(next) => !next && setOpen(false)}
+				where={t("translation.mark.changedWhere")}
+				discardLabel={t("translation.confirm")}
+				onDiscard={() => {
+					setOpen(false);
+					onConfirm();
+				}}
+			>
+				<MemoDiff
+					beforeLabel={t("translation.before")}
+					afterLabel={t("translation.after")}
+					before={side(mark.before, <Words parts={diff.mine} removed />)}
+					after={side(mark.after, <Words parts={diff.server} />)}
+				/>
+			</MemoCardPopover>
+		</span>
 	);
 }
 

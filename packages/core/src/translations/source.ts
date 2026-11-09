@@ -3,6 +3,7 @@ import { asDoc, type Block, type Doc } from "../body/doc";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries } from "../entries/record";
 import { localeModeOf, type Schema } from "../schema/define";
+import { seenAfter, trackedFields } from "./fields";
 import { blockHash, blockHashes, marksOf } from "./links";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -30,6 +31,23 @@ export async function followedFields(db: Db, source: Entry | null): Promise<Fiel
 	if (!source) return null;
 	const published = await publishedOf(db, source.id);
 	return published ? { title: published.title, slug: published.slug, values: published.values } : source;
+}
+
+/** What a translation has seen of its source's fields once these are its fields; a source-language entry has seen nothing (doc 04, T111). */
+export async function seenOf(
+	db: Db,
+	schema: Schema,
+	entry: Entry,
+	working: Pick<Entry, "title" | "values">,
+): Promise<Record<string, unknown>> {
+	if (!isTranslation(schema, entry)) return {};
+	const source = await sourceEntryOf(db, schema, entry.translationGroup);
+	return seenAfter(
+		trackedFields(schema, entry.collection),
+		entry.translationSeen,
+		working,
+		await followedFields(db, source),
+	);
 }
 
 /** What the site shows of an entry: its body and fields, or `null` when it is not on the site. */

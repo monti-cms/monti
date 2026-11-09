@@ -48,9 +48,10 @@ const ENGLISH = [
  * - `alone`: the Korean post, published, with no translation.
  * - `new`: an English translation just made: every block still in the Korean words.
  * - `changed`: the English translation after the source was published again.
+ * - `fieldsChanged`: the same, its title and summary the only things changed (T111).
  * - `all`: the Korean post with a translation in every other language.
  */
-type Kind = "alone" | "new" | "changed" | "all";
+type Kind = "alone" | "new" | "changed" | "fieldsChanged" | "all";
 
 async function run<Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) {
 	return (await monti.run(name, input, admin)) as Output;
@@ -126,7 +127,16 @@ async function entries(monti: Monti, kind: Kind, current: Schema): Promise<Recor
 			await run(monti, "translations.create", { source: korean, locale });
 		return { korean, english };
 	}
-	await run(monti, "entries.save", { id: korean, version: (await version(monti, korean)).version, doc: sourceLater() });
+	await run(monti, "entries.save", {
+		id: korean,
+		version: (await version(monti, korean)).version,
+		...(kind === "fieldsChanged"
+			? {
+					title: "첫 번째 글을 고치며",
+					values: { summary: "도구를 덜어낸 까닭.", subtitle: "도구보다 글", category: devCat.group },
+				}
+			: { doc: sourceLater() }),
+	});
 	await run(monti, "entries.publish", { ids: [korean] });
 	return { korean, english };
 }
@@ -212,6 +222,18 @@ export const SourceChanged: Story = {
 		const { page } = await opened(canvasElement);
 		await page.findByText("원문이 변경됐어요", undefined, wait);
 		await userEvent.click(page.getByRole("button", { name: "끔" }));
+	},
+};
+
+/** The source's title and summary changed: the mark in the title's margin, and on the summary's label row (T111). */
+export const FieldsChanged: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		const panel = await page.findByRole("button", { name: "속성" }, wait);
+		if (panel.getAttribute("aria-pressed") !== "true") await userEvent.click(panel);
+		await page.findByRole("textbox", { name: "요약" }, wait);
 	},
 };
 

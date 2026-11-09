@@ -8,6 +8,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	EditorHeader,
+	EditorMarginLine,
 	EditorTitleRule,
 	EntryStatus,
 	type EntryStatusKind,
@@ -55,6 +56,7 @@ import { clock, day, dayTime } from "./dates";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
+	FieldChange,
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
@@ -333,6 +335,9 @@ export function EntryEditor({
 
 	const hasContent = editor.title.trim() !== "" || editor.doc.blocks.length > 0;
 
+	const confirmField = (field: string) => void translation.decide([{ do: "confirmField", field }]);
+	const titleMark = readOnly ? undefined : compared?.fields.find((mark) => mark.field === "title");
+	const titleChange = titleMark ? <FieldChange mark={titleMark} onConfirm={() => confirmField("title")} /> : undefined;
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
 	const titleField = (size: "display" | "inherit") => (
 		<FormField>
@@ -587,6 +592,7 @@ export function EntryEditor({
 								compared={compared}
 								translationUpdatedAt={read?.entry.updatedAt ?? null}
 								title={titleField("inherit")}
+								titleChange={titleChange}
 							>
 								{bodyField(pairedRows)}
 							</PairedView>
@@ -595,7 +601,7 @@ export function EntryEditor({
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 							{languages}
 							<Stack gap={0} paddingTop={16} paddingBottom={32}>
-								{titleField("display")}
+								<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
 								<EditorTitleRule />
 							</Stack>
 							{bodyField(null)}
@@ -632,6 +638,7 @@ export function EntryEditor({
 						uploads={fieldUploads}
 						altCard={altCard}
 						onAltCard={setAltCard}
+						changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
 					/>
 				) : null}
 			</Inline>
@@ -675,8 +682,14 @@ export function EntryEditor({
 						<SourceChangedCell
 							compared={compared}
 							doc={editor.doc}
+							fieldLabel={(field) => (field === "title" ? t("entry.title") : fieldLabel(field))}
 							onGo={(block) =>
 								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
+							}
+							onGoField={(field) =>
+								field === "title"
+									? document.getElementById(fieldInputId("title"))?.focus()
+									: goTo({ code: "mark", field, blocking: false, message: { key: "" } })
 							}
 							onConfirmAll={() => void translation.confirmAll()}
 							onDecide={(decision) => void translation.decide([decision])}
