@@ -410,6 +410,7 @@ export type {
 } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
+	BAR_CARD_GAP,
 	Calendar,
 	Combobox,
 	cn,

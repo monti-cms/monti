@@ -61,7 +61,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** An entry with no file yet, on a filled library: "/" and pasting. */
-export const Draft: Story = { loaders: entry() };
+export const Draft: Story = { loaders: entry(), tags: ["!dev"] };
 
 /** An image in the body, with its alt text. */
 export const WithImage: Story = {
@@ -85,7 +85,7 @@ const blankImage = entry({
 export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
 /** The crop sheet, a part chosen. */
-export const CropSheet: Story = {
+export const CropDialog: Story = {
 	loaders: blankImage,
 	play: async () => {
 		await toTheImage();
@@ -105,7 +105,7 @@ export const FileInBody: Story = {
 
 /** Flow 6·29: the library's window open from the "/" menu. */
 export const LibraryWindow: Story = {
-	...Draft,
+	loaders: entry(),
 	play: async () => {
 		const page = within(document.body);
 		const body = await page.findByRole("textbox", { name: "본문" }, wait);

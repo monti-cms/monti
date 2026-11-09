@@ -25,7 +25,7 @@ describe("a cover in the property panel", () => {
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await expect.element(alt()).toHaveValue("");
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요.")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).toBeVisible();
 	});
 
 	it("09-2 T67 the alt text is this entry's: written here, saved with it", async () => {
@@ -99,16 +99,16 @@ describe("in a translation", () => {
 		await pick(/seoul-night/);
 		await expect.element(cover()).toHaveTextContent("seoul-night");
 		await expect.element(alt()).toHaveValue("");
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).toBeVisible();
 	});
 
 	it("09-1 a cover can be decorative: then nothing asks for its alt text", async () => {
 		await WithCover.run();
 		await properties();
 		await userEvent.fill(alt(), "");
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요")).not.toBeInTheDocument();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요")).not.toBeInTheDocument();
 		await expect.element(alt()).toBeDisabled();
 	});
 

@@ -55,6 +55,24 @@ describe("from the library", () => {
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
 	});
 
+	it("09-3 the window keeps its height from folder to folder, and its folders read as the tree they are", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		// The laid-out height: the window scales as it opens.
+		const height = () => (dialog.element() as HTMLElement).offsetHeight;
+		const all = height();
+		const left = (name: string) => {
+			const row = dialog.getByRole("button", { name: new RegExp(`^${name}`) }).element();
+			return row.querySelector("span:not([aria-hidden])")?.getBoundingClientRect().left ?? 0;
+		};
+		expect(left("모든 이미지")).toBeLessThan(left("Blog Assets"));
+		expect(left("Blog Assets")).toBeLessThan(left("covers"));
+		await userEvent.click(dialog.getByRole("button", { name: /^diagrams/ }));
+		await expect.element(dialog.getByText("여기에는 파일이 없어요.")).toBeVisible();
+		expect(height()).toBe(all);
+	});
+
 	it("09-3 searching drops what was picked: what goes in is always a file in sight", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
@@ -300,9 +318,9 @@ describe("an image in the text", () => {
 		await userEvent.click(bar().getByRole("button", { name: "설정" }));
 		const alt = page.getByRole("textbox", { name: "대체 텍스트" });
 		await userEvent.clear(alt);
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요.")).toBeVisible();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
-		await expect.element(page.getByText("이 그림이 말하는 것을 쓰거나 장식 이미지로 두세요.")).not.toBeInTheDocument();
+		await expect.element(page.getByText("대체 텍스트가 비어 있어요.")).not.toBeInTheDocument();
 	});
 
 	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {
@@ -431,7 +449,7 @@ describe("an image in the text", () => {
 		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
 	});
 
-	it("09-1 when the crop sheet closes the keys are the text's again, even from the caption: ⌘Z takes the turn back at once", async () => {
+	it("09-1 when the crop dialog closes the keys are the text's again, even from the caption: ⌘Z takes the turn back at once", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
 		const caption = body().getByRole("textbox", { name: "캡션" });
@@ -477,6 +495,44 @@ describe("an image in the text", () => {
 		expect(getComputedStyle(caption.element(), "::selection").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 	});
 
+	it("09-1 a caption stands where its picture stands", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		const caption = body().getByRole("textbox", { name: "캡션" });
+		const side = () => getComputedStyle(caption.element()).textAlign;
+		await userEvent.click(bar().getByRole("button", { name: "왼쪽 정렬" }));
+		await expect.poll(side).toBe("start");
+		await userEvent.click(bar().getByRole("button", { name: "오른쪽 정렬" }));
+		await expect.poll(side).toBe("right");
+		await userEvent.click(bar().getByRole("button", { name: "가운데 정렬" }));
+		await expect.poll(side).toBe("center");
+	});
+
+	it("09-1 [flow 6·38] a file block is one thing: a press selects it, nothing in it takes a caret, and Backspace takes it out", async () => {
+		await FileInBody.run();
+		await expect.poll(() => body().element().querySelector("[data-block=file]")).not.toBeNull();
+		const block = body().element().querySelector("[data-block=file]");
+		if (!block) throw new Error("no file block");
+		expect(block.querySelector("input")).toBeNull();
+		await userEvent.click(page.elementLocator(block));
+		await expect.element(bar()).toBeVisible();
+		await expect.element(body()).toHaveFocus();
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => body().element().querySelector("[data-block=file]")).toBeNull();
+	});
+
+	it("09-1 the name a file shows is written in its settings, not in the text", async () => {
+		await FileInBody.run();
+		await expect.poll(() => body().element().querySelector("[data-block=file]")).not.toBeNull();
+		const block = body().element().querySelector("[data-block=file]");
+		if (!block) throw new Error("no file block");
+		await userEvent.click(page.elementLocator(block));
+		await userEvent.click(bar().getByRole("button", { name: "설정" }));
+		await userEvent.fill(page.getByRole("textbox", { name: "보이는 이름" }), "올해 가격표");
+		await userEvent.keyboard("{Escape}");
+		await expect.element(body().getByText("올해 가격표")).toBeVisible();
+	});
+
 	it("09-1 a selected file block keeps the ground that says it is selected", async () => {
 		await FileInBody.run();
 		await expect.poll(() => body().element().querySelector("[data-block=file]")).not.toBeNull();
@@ -486,7 +542,7 @@ describe("an image in the text", () => {
 		expect(getComputedStyle(block, "::selection").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 	});
 
-	it("09-1 the crop sheet turns and crops, and the body shows what is kept", async () => {
+	it("09-1 the crop dialog turns and crops, and the body shows what is kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
 		await userEvent.click(bar().getByRole("button", { name: "자르기와 회전" }));

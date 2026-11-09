@@ -8,12 +8,17 @@ import {
 	type MediaItem,
 } from "@monti-cms/core";
 import {
+	BAR_CARD_GAP,
 	BlockBarPlace,
 	BlockBox,
 	Button,
 	type CropGrip,
 	type CropRect,
 	CropStage,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
 	FileBlock,
 	FloatingBar,
 	FloatingBarButton,
@@ -29,12 +34,6 @@ import {
 	PopoverTrigger,
 	ResizeCorner,
 	Separator,
-	Sheet,
-	SheetBody,
-	SheetContent,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
 	Stack,
 	Switch,
 	Text,
@@ -77,6 +76,8 @@ const ALIGNS = [
 	{ value: "center", icon: TextAlignCenter, label: "editor.image.center" },
 	{ value: "right", icon: TextAlignRight, label: "editor.image.right" },
 ] as const;
+/** The caption stands where its picture stands. */
+const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
 const MIN_WIDTH = 80;
 /** How long alt text runs (flow 1·12). */
 const ALT_MAX = 80;
@@ -199,7 +200,7 @@ const KEY_MOVES: Partial<Record<string, readonly [number, number]>> = {
 };
 
 /** "Crop and turn" (screens/editor.md): a sheet, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
-function CropSheet({
+function CropDialog({
 	src,
 	crop,
 	rotate,
@@ -273,12 +274,10 @@ function CropSheet({
 		setTurn((current) => ((current + quarter + 360) % 360) as ImageRotate);
 	};
 	return (
-		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent finalFocus={returnTo}>
-				<SheetHeader>
-					<SheetTitle>{t("editor.crop.title")}</SheetTitle>
-				</SheetHeader>
-				<SheetBody>
+		<Dialog open onOpenChange={(open) => !open && onClose()}>
+			<DialogContent size="lg" finalFocus={returnTo}>
+				<DialogTitle>{t("editor.crop.title")}</DialogTitle>
+				<Stack gap={12}>
 					<CropStage
 						src={shown}
 						alt=""
@@ -309,8 +308,8 @@ function CropSheet({
 							</TextButton>
 						)}
 					</Inline>
-				</SheetBody>
-				<SheetFooter>
+				</Stack>
+				<DialogFooter>
 					<Button
 						onClick={() =>
 							onApply(
@@ -326,9 +325,9 @@ function CropSheet({
 					>
 						{t("editor.crop.apply")}
 					</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
@@ -350,12 +349,13 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const altId = useId();
 	const editable = editor.isEditable;
 	const open = media?.card === blockId;
+	const align = imageAlignOf(data.align);
 
 	const captionField = (editable || data.caption) && (
 		<Input
 			appearance="inline"
 			size="sm"
-			align="center"
+			align={CAPTION_ALIGN[align]}
 			aria-label={t("editor.image.caption")}
 			placeholder={t("editor.image.caption")}
 			readOnly={!editable}
@@ -386,7 +386,6 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
 	const width = dragged ?? data.width ?? null;
 	const blank = altIsMissing(data);
-	const align = imageAlignOf(data.align);
 	const next = () => {
 		const after = nextBlankImage(editor, blockId);
 		if (after) openImageCard(editor, after);
@@ -473,7 +472,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 											>
 												<Settings aria-hidden />
 											</FloatingBarButton>
-											<PopoverContent align="start">
+											<PopoverContent align="start" sideOffset={BAR_CARD_GAP}>
 												<Stack gap={12}>
 													<FormField>
 														<FormFieldLabel htmlFor={`${altId}-width`}>{t("editor.image.width")}</FormFieldLabel>
@@ -555,7 +554,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 				{captionField}
 			</Stack>
 			{cropping && url && (
-				<CropSheet
+				<CropDialog
 					src={url}
 					crop={data.crop}
 					rotate={data.rotate ?? 0}
@@ -572,9 +571,13 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 }
 
 /** A file in the body (flow 6·38): its icon, the name shown (this entry's to change), its type and size. */
-function FileBlockView({ node, updateAttributes, deleteNode, editor }: NodeViewProps) {
+function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }: NodeViewProps) {
 	const { t } = useAdmin();
+	const media = useContext(EditorMedia);
 	const data = (node.attrs.data ?? {}) as FileData;
+	const blockId = String(node.attrs.blockId ?? "");
+	const open = media?.card === blockId;
+	const nameId = useId();
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
 	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
 	const shownName = useComposedValue(data.name ?? "", (name) => updateAttributes({ data: { ...data, name } }));
@@ -592,21 +595,48 @@ function FileBlockView({ node, updateAttributes, deleteNode, editor }: NodeViewP
 	const item = file.data;
 	return (
 		<NodeViewWrapper data-block="file">
-			<FileBlock
-				name={shownName.value}
-				placeholder={item?.name}
-				nameLabel={t("editor.file.name")}
-				onNameChange={editor.isEditable ? shownName.change : undefined}
-				{...shownName.composition}
-				tone={file.refusal ? "danger" : "default"}
-				meta={
-					file.refusal
-						? t("editor.image.notFound")
-						: item
-							? `${extensionLabel(item.name)} · ${formatBytes(item.size)}`
-							: ""
-				}
-			/>
+			<BlockBox>
+				{selected && editor.isEditable && (
+					<BlockBarPlace>
+						<FloatingBar>
+							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
+								<FloatingBarButton
+									label={t("editor.image.settings")}
+									pressed={open}
+									trigger={(button) => <PopoverTrigger render={button} />}
+								>
+									<Settings aria-hidden />
+								</FloatingBarButton>
+								<PopoverContent align="start" sideOffset={BAR_CARD_GAP}>
+									<FormField>
+										<FormFieldLabel htmlFor={nameId}>{t("editor.file.name")}</FormFieldLabel>
+										<Input
+											id={nameId}
+											size="md"
+											value={shownName.value}
+											placeholder={item?.name}
+											onChange={(event) => shownName.change(event.target.value)}
+											{...shownName.composition}
+										/>
+									</FormField>
+								</PopoverContent>
+							</Popover>
+						</FloatingBar>
+					</BlockBarPlace>
+				)}
+				<FileBlock
+					name={shownName.value || item?.name || ""}
+					selected={selected}
+					tone={file.refusal ? "danger" : "default"}
+					meta={
+						file.refusal
+							? t("editor.image.notFound")
+							: item
+								? `${extensionLabel(item.name)} · ${formatBytes(item.size)}`
+								: ""
+					}
+				/>
+			</BlockBox>
 		</NodeViewWrapper>
 	);
 }

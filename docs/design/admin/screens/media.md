@@ -97,7 +97,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. 패널의 필드는 모두 `md`(32px, 원칙 10). |
+| 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. 패널의 필드는 모두 `md`(32px, 원칙 10). 그림 · 이름과 폴더 · 정보 · 쓰는 곳은 구분선 없이 32px로 떨어진다(입력칸의 밑줄이 이미 나누는 선이다, 2026-11-09 소유자). |
 | ⋯ | `IconButton` + `DropdownMenu`("새 탭에서 열기" · "주소 복사" · "파일 바꾸기" · "ID 복사" · "휴지통으로" `variant="danger"`) | 이미지와 파일(PDF) 모두 같은 ⋯다. 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
 | 미리보기 | `Image`(이미지), `FilePreview framed`(파일) | |
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
@@ -168,8 +168,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 창 | `MediaPicker`(`open`, `title` "라이브러리" · "대표 이미지" · "파일") | 760px 모달 하나가 전부다. 편집기의 "/ 이미지" · "/ 파일"과 대표 이미지 필드가 연다. 탭 없이 라이브러리 한 화면이다. |
-| 폴더 목록 | `MediaPicker`의 `folders`(`depth`, `count`), `allLabel` "모든 이미지" · "모든 파일", `folder` | 고른 폴더는 현재 바탕이다. 하위 폴더는 들여 쓴다. |
+| 창 | `MediaPicker`(`open`, `title` "라이브러리" · "대표 이미지" · "파일") | 760px 모달 하나가 전부다. 폴더를 바꿔도 높이가 그대로이고, 폴더 목록과 타일이 각각 안에서 스크롤한다(2026-11-09 소유자). 편집기의 "/ 이미지" · "/ 파일"과 대표 이미지 필드가 연다. 탭 없이 라이브러리 한 화면이다. |
+| 폴더 목록 | `MediaPicker`의 `folders`(`depth`, `count`), `allLabel` "모든 이미지" · "모든 파일", `folder` | 고른 폴더는 현재 바탕이다. 사이드바 트리처럼 "모든 이미지" 아래에 깊이대로 들여 쓰고 선으로 잇는다. |
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있어요. 검색으로 찾아 주세요."가 대신한다. |

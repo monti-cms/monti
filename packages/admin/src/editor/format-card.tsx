@@ -1,4 +1,5 @@
 import {
+	BAR_CARD_GAP,
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -155,7 +156,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 							label={t("format.more")}
 							trigger={(button) => <PopoverTrigger render={button} />}
 						/>
-						<PopoverContent side="bottom" align="end" padding="menu" width="sm">
+						<PopoverContent side="bottom" align="end" sideOffset={BAR_CARD_GAP} padding="menu" width="sm">
 							<Command>
 								<CommandList aria-label={t("format.more")}>
 									<CommandGroup>

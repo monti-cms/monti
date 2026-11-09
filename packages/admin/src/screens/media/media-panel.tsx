@@ -296,100 +296,105 @@ export function MediaPanel({
 				) : undefined
 			}
 		>
-			{item.kind === "image" ? (
-				<Image src={url} alt={item.name} ratio="photo" />
-			) : (
-				<FilePreview ext={extensionLabel(item.name)} framed />
-			)}
-			<FormField>
-				<FormFieldLabel htmlFor="monti-media-name">{t("library.name")}</FormFieldLabel>
-				<Affix
-					id="monti-media-name"
-					size="md"
-					suffix={extension}
-					proposal={draft.cell("name").kind === "proposed"}
-					value={name}
-					onChange={(event) => draft.set("name", event.target.value)}
-				/>
-				{refused && <FormFieldError>{refused}</FormFieldError>}
-			</FormField>
-			<FormField>
-				<FormFieldLabel htmlFor="monti-media-folder">{t("library.folder")}</FormFieldLabel>
-				<Select
-					items={[
-						{ value: TOP, label: t("folders.top") },
-						...folders.list.map((each) => ({
-							value: each.id,
-							label: folders
-								.path(each.id)
-								.map((up) => up.name)
-								.join(" / "),
-						})),
-					]}
-					value={folder}
-					onValueChange={(value) => draft.set("folder", String(value))}
-				>
-					<SelectTrigger id="monti-media-folder" size="md" width="full">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value={TOP}>{t("folders.top")}</SelectItem>
-						{folders.list.map((each) => (
-							<SelectItem key={each.id} value={each.id}>
-								{folders
-									.path(each.id)
-									.map((up) => up.name)
-									.join(" / ")}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</FormField>
-			<DescriptionList>
-				<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
-				<DescriptionItem label={t("library.size")}>
-					<Stack gap={2}>
-						{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
-						<span>
-							{item.web
-								? t("library.sizeOriginal", {
-										size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
-									})
-								: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
-						</span>
-					</Stack>
-				</DescriptionItem>
-				<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
-			</DescriptionList>
-			<FormField>
-				<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
-				{uses.length === 0 ? (
-					<Text variant="note" tone="faint">
-						{t("library.usesNone")}
-					</Text>
+			{/* Each thing the panel is for stands apart: what the file is, what can be changed, what it is, where it is used. */}
+			<Stack gap={32}>
+				{item.kind === "image" ? (
+					<Image src={url} alt={item.name} ratio="photo" />
 				) : (
-					<Stack gap={4}>
-						{uses.map((use) => (
-							<Inline key={use.key} gap={8} justify="between">
-								<TextButton
-									href={href(use.route)}
-									onClick={(event: React.MouseEvent) => {
-										// A new tab leaves nothing behind. A move in this one goes through the question.
-										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-										event.preventDefault();
-										go(use.route);
-									}}
-								>
-									{use.title}
-								</TextButton>
-								<Text variant="micro" tone="subtle">
-									{use.places}
-								</Text>
-							</Inline>
-						))}
-					</Stack>
+					<FilePreview ext={extensionLabel(item.name)} framed />
 				)}
-			</FormField>
+				<Stack gap={20}>
+					<FormField>
+						<FormFieldLabel htmlFor="monti-media-name">{t("library.name")}</FormFieldLabel>
+						<Affix
+							id="monti-media-name"
+							size="md"
+							suffix={extension}
+							proposal={draft.cell("name").kind === "proposed"}
+							value={name}
+							onChange={(event) => draft.set("name", event.target.value)}
+						/>
+						{refused && <FormFieldError>{refused}</FormFieldError>}
+					</FormField>
+					<FormField>
+						<FormFieldLabel htmlFor="monti-media-folder">{t("library.folder")}</FormFieldLabel>
+						<Select
+							items={[
+								{ value: TOP, label: t("folders.top") },
+								...folders.list.map((each) => ({
+									value: each.id,
+									label: folders
+										.path(each.id)
+										.map((up) => up.name)
+										.join(" / "),
+								})),
+							]}
+							value={folder}
+							onValueChange={(value) => draft.set("folder", String(value))}
+						>
+							<SelectTrigger id="monti-media-folder" size="md" width="full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value={TOP}>{t("folders.top")}</SelectItem>
+								{folders.list.map((each) => (
+									<SelectItem key={each.id} value={each.id}>
+										{folders
+											.path(each.id)
+											.map((up) => up.name)
+											.join(" / ")}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</FormField>
+				</Stack>
+				<DescriptionList>
+					<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
+					<DescriptionItem label={t("library.size")}>
+						<Stack gap={2}>
+							{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
+							<span>
+								{item.web
+									? t("library.sizeOriginal", {
+											size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
+										})
+									: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
+							</span>
+						</Stack>
+					</DescriptionItem>
+					<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
+				</DescriptionList>
+				<FormField>
+					<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
+					{uses.length === 0 ? (
+						<Text variant="note" tone="faint">
+							{t("library.usesNone")}
+						</Text>
+					) : (
+						<Stack gap={4}>
+							{uses.map((use) => (
+								<Inline key={use.key} gap={8} justify="between">
+									<TextButton
+										href={href(use.route)}
+										onClick={(event: React.MouseEvent) => {
+											// A new tab leaves nothing behind. A move in this one goes through the question.
+											if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+											event.preventDefault();
+											go(use.route);
+										}}
+									>
+										{use.title}
+									</TextButton>
+									<Text variant="micro" tone="subtle">
+										{use.places}
+									</Text>
+								</Inline>
+							))}
+						</Stack>
+					)}
+				</FormField>
+			</Stack>
 			{replacing && <ReplaceDialog item={item} file={replacing} onClose={() => setReplacing(null)} />}
 			{proposal && (
 				<ProposalBubbleDock>

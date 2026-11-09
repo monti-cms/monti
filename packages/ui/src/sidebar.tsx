@@ -604,7 +604,7 @@ export function folderTree(depths: readonly number[]) {
 	});
 }
 
-const SUB_LINE =
+export const SUB_LINE =
 	"relative before:pointer-events-none before:absolute before:-top-[2px] before:-bottom-[2px] before:border-monti-strong before:border-l before:content-['']";
 
 /**

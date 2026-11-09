@@ -8,6 +8,7 @@ import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from 
 import { Upload } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
+import { folderTree, SUB_LINE } from "./sidebar";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
 interface MediaPickerFolder {
@@ -72,25 +73,32 @@ function MediaPicker({
 	children?: React.ReactNode;
 }) {
 	const labels = useUiLabels();
+	const tree = folderTree(folders.map((item) => Math.min(item.depth ?? 0, PICK_DEPTH.length - 1)));
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="gap-monti-20 pb-monti-20 sm:max-w-[760px]">
 				<DialogTitle>{title}</DialogTitle>
-				<div className="grid grid-cols-[168px_minmax(0,1fr)] gap-monti-20">
-					<nav aria-label={foldersLabel} className="flex flex-col gap-monti-2 self-start">
+				{/* One height, whatever a folder holds: both columns scroll inside it. */}
+				<div className="grid h-[min(27rem,60vh)] grid-cols-[168px_minmax(0,1fr)] gap-monti-20">
+					{/* 4px of room around the rows so a focus ring is not cut by the scrolling area. */}
+					<nav
+						aria-label={foldersLabel}
+						className="-m-monti-4 flex min-h-0 flex-col gap-monti-2 overflow-y-auto p-monti-4"
+					>
 						<PickerFolder label={allLabel} on={folder === null} onClick={() => onFolderChange(null)} />
-						{folders.map((item) => (
+						{folders.map((item, index) => (
 							<PickerFolder
 								key={item.id}
 								label={item.name}
 								count={item.count}
 								depth={item.depth}
+								tree={tree[index]}
 								on={folder === item.id}
 								onClick={() => onFolderChange(item.id)}
 							/>
 						))}
 					</nav>
-					<div className="flex min-w-0 flex-col gap-monti-12">
+					<div className="flex min-h-0 min-w-0 flex-col gap-monti-12">
 						<Input
 							aria-label={searchLabel}
 							placeholder={searchLabel}
@@ -98,7 +106,7 @@ function MediaPicker({
 							onChange={(event) => onSearchChange(event.target.value)}
 						/>
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
-						<div className="-m-monti-4 grid max-h-[min(24rem,50vh)] grid-cols-3 content-start gap-x-monti-12 gap-y-monti-16 overflow-y-auto p-monti-4">
+						<div className="-m-monti-4 grid min-h-0 flex-1 grid-cols-3 content-start gap-x-monti-12 gap-y-monti-16 overflow-y-auto p-monti-4">
 							{notice ? <div className="col-span-3">{notice}</div> : children}
 						</div>
 					</div>
@@ -120,31 +128,49 @@ function MediaPicker({
 	);
 }
 
+/** Where a folder row's words start and its rule runs, by depth: as in the sidebar's tree, under "all images" as its parent, in the window's narrower column. */
+const PICK_DEPTH = ["pl-[28px]", "pl-[44px]", "pl-[60px]", "pl-[76px]"] as const;
+const PICK_LINE_X = ["before:left-[14px]", "before:left-[30px]", "before:left-[46px]", "before:left-[62px]"] as const;
+const PICK_LINE_LEFT = [14, 30, 46, 62] as const;
+
 function PickerFolder({
 	label,
 	count,
-	depth = 0,
+	depth,
+	tree,
 	on,
 	onClick,
 }: {
 	label: string;
 	count?: number;
+	/** With a depth the row stands in the tree under "all images"; without one it is that row. */
 	depth?: number;
+	tree?: ReturnType<typeof folderTree>[number];
 	on: boolean;
 	onClick: () => void;
 }) {
+	const level = Math.min(depth ?? 0, PICK_DEPTH.length - 1) as 0 | 1 | 2 | 3;
+	const through = (tree?.through ?? []).flatMap((running, at) => (running ? [PICK_LINE_LEFT[at]] : []));
 	return (
 		<button
 			type="button"
 			aria-current={on ? "true" : undefined}
 			onClick={onClick}
 			className={cn(
-				// A sub-folder is indented one step (24 instead of the row's 10).
-				depth > 0 && "pl-monti-24",
-				"flex h-monti-control-md w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				"flex h-monti-control-md w-full min-w-0 shrink-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				on ? "bg-monti-current font-semibold text-monti-default" : "text-monti-muted",
+				tree && cn(SUB_LINE, PICK_DEPTH[level], PICK_LINE_X[level]),
+				tree?.last && "before:bottom-monti-4",
 			)}
 		>
+			{through.map((left) => (
+				<span
+					key={left}
+					aria-hidden
+					className="pointer-events-none absolute -top-[2px] -bottom-[2px] w-px bg-(--monti-border-strong)"
+					style={{ left }} // design-allow: the rule of an ancestor that runs on past this row, from PICK_LINE_LEFT
+				/>
+			))}
 			<span className="min-w-0 grow truncate">{label}</span>
 			{count !== undefined && <Count className="shrink-0 font-normal">{count}</Count>}
 		</button>
