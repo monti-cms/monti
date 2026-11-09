@@ -101,7 +101,10 @@ export function keepLinks(
 		if (!link || used.has(link.from)) return block;
 		used.add(link.from);
 		let kept: TranslationLink = link;
-		if (retranslated.has(block.id)) kept = { ...link, state: "translated", seen: hashes[link.from] ?? link.seen };
+		// A block whose words change is translated against the source block as it is now: what changed there is taken in, and its mark goes
+		// (2026-11-10, owner). Kept as it was, a block keeps what it saw until someone says to leave it.
+		if (retranslated.has(block.id) || (link.from in hashes && !sameBlock(old, block)))
+			kept = { ...link, state: "translated", seen: hashes[link.from] ?? link.seen };
 		else if ((link.state === "pending" || link.state === "followSource") && !sameBlock(old, block))
 			kept = { ...link, state: "translated" };
 		return { ...block, link: kept };

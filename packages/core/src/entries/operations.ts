@@ -10,7 +10,14 @@ import { defineOperation, type OperationContext, type Preview, type RecordRef } 
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
-import { addedSourceBlocks, addSkips, isTranslation, rememberBlocks, seenOf } from "../translations/source";
+import {
+	addedSourceBlocks,
+	addSkips,
+	followedHashes,
+	isTranslation,
+	rememberBlocks,
+	seenOf,
+} from "../translations/source";
 import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
@@ -419,7 +426,9 @@ export const entryOperations = [
 			} else {
 				// The links are the core's: the save keeps them, whatever the editor sent, but for a new block paired with a source block added since (doc 04).
 				const added = await addedSourceBlocks(ctx, entry);
-				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {}, new Set(), added);
+				// A block whose words change takes in what its source block says now (2026-11-10, owner).
+				const hashes = await followedHashes(ctx.db, ctx.site.schema(), entry);
+				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, hashes, new Set(), added);
 				saved = await saveWorking(ctx, entry, { ...working, doc, translationSeen });
 				await addSkips(ctx.db, entry, skipped);
 			}

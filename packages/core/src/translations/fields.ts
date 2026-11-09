@@ -29,19 +29,22 @@ export function trackedFields(schema: Schema, collection: string): string[] {
 }
 
 /**
- * What a translation has seen of its source after a save. A field that becomes its own has seen the source as it follows it now, and keeps that until the change is confirmed,
- * whatever is written in it since (as a block's `seen`). An empty field has seen nothing: there is nothing in it for the source to leave behind.
+ * What a translation has seen of its source after a save. A field that becomes its own has seen the source as it follows it now. One whose value this save changes from `before`
+ * is written against the source as it is now too, so its mark goes (2026-11-10, owner); one left as it was keeps what it saw until someone says to leave it (as a block's
+ * `seen`). An empty field has seen nothing: there is nothing in it for the source to leave behind.
  */
 export function seenAfter(
 	tracked: readonly string[],
 	seen: Record<string, unknown>,
 	working: Fields,
 	followed: Fields | null,
+	before?: Fields,
 ): Record<string, unknown> {
 	return Object.fromEntries(
 		tracked.flatMap((field) => {
 			if (writtenValue(working, field) === null) return [];
-			if (field in seen) return [[field, seen[field]]];
+			const changed = before !== undefined && !sameJson(writtenValue(before, field), writtenValue(working, field));
+			if (field in seen && !(changed && followed)) return [[field, seen[field]]];
 			return followed ? [[field, writtenValue(followed, field)]] : [];
 		}),
 	);

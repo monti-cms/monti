@@ -389,16 +389,25 @@ describe("when the source's fields change", () => {
 		expect(await changes(id)).toBe(0);
 	});
 
-	it("04-2 T111 writing in a marked field leaves the mark; confirming clears it and keeps the words", async () => {
+	it("04-2 T111 writing in a marked field takes its mark away: it is written against the source as it is now", async () => {
 		const { source, id } = await pair();
 		await republishFields(source, { title: "새 제목" });
+		await write("entries.save", { id, version: await version(id), summary: "Another summary" });
+		expect(await fieldMarks(id)).toHaveLength(1);
 		await write("entries.save", { id, version: await version(id), title: "A new title" });
+		expect(await fieldMarks(id)).toEqual([]);
+		await republishFields(source, { title: "또 새 제목" });
+		expect(await fieldMarks(id)).toEqual([{ field: "title", before: "새 제목", after: "또 새 제목" }]);
+	});
+
+	it("04-2 T111 leaving a marked field as it is clears the mark and keeps the words", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { title: "새 제목" });
+		await write("entries.save", { id, version: await version(id), title: "First post" });
 		expect(await fieldMarks(id)).toHaveLength(1);
 		await setBlocks(id, [{ do: "confirmField", field: "title" }]);
 		expect(await fieldMarks(id)).toEqual([]);
-		expect((await get(id)).entry.title).toBe("A new title");
-		await republishFields(source, { title: "또 새 제목" });
-		expect(await fieldMarks(id)).toEqual([{ field: "title", before: "새 제목", after: "또 새 제목" }]);
+		expect((await get(id)).entry.title).toBe("First post");
 	});
 
 	it("04-2 T111 confirming a field with no mark is refused", async () => {
@@ -642,6 +651,21 @@ describe("when the source changes", () => {
 		await setBlocks(id, [{ block, do: "confirm" }]);
 		expect(await marks(id)).toEqual([]);
 		expect(texts((await get(id)).doc)[0]).toBe("하나");
+	});
+
+	it("04-2 a save that changes a marked block's words clears its mark; one that leaves them keeps it", async () => {
+		const { source, id } = await publishedPair();
+		await republish(source, body(p("s1", "하나!"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷!")));
+		const doc = (await get(id)).doc as Doc;
+		const [first, second] = (await compare(id)).marks.map((mark) => mark.block);
+		const edited: Doc = {
+			...doc,
+			blocks: doc.blocks.map((block) =>
+				block.id === first ? { ...block, content: [{ type: "text", text: "One!" }] } : block,
+			),
+		};
+		await write("entries.save", { id, version: await version(id), doc: edited });
+		expect((await compare(id)).marks.map((mark) => mark.block)).toEqual([second]);
 	});
 
 	it("04-2 a body.edit re-translation of a changed block clears its mark", async () => {

@@ -34,7 +34,7 @@ export async function followedFields(db: Db, source: Entry | null): Promise<Fiel
 	return published ? { title: published.title, slug: published.slug, values: published.values } : source;
 }
 
-/** What a translation has seen of its source's fields once these are its fields; a source-language entry has seen nothing (doc 04, T111). */
+/** What a translation has seen of its source's fields once `working` are its fields, the entry's being what they were; a source-language entry has seen nothing (doc 04, T111). */
 export async function seenOf(
 	db: Db,
 	schema: Schema,
@@ -48,6 +48,7 @@ export async function seenOf(
 		entry.translationSeen,
 		working,
 		await followedFields(db, source),
+		entry,
 	);
 }
 
