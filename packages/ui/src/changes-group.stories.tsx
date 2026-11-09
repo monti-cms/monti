@@ -4,9 +4,9 @@ import { ChangesGroup, type ChangesItem } from "./index";
 const noop = () => {};
 
 const ITEMS: ChangesItem[] = [
-	{ id: "title", name: "사이트 이름", tag: "바뀜", tone: "warning", onUndo: noop },
+	{ id: "title", name: "사이트 이름", tag: "변경", tone: "warning", onUndo: noop },
 	{ id: "ko", name: "언어 · 일본어", tag: "추가", tone: "success", onUndo: noop },
-	{ id: "notes", name: "메모", tag: "컬렉션 지움", tone: "danger", onUndo: noop },
+	{ id: "notes", name: "메모", tag: "컬렉션 삭제", tone: "danger", onUndo: noop },
 ];
 
 /**
@@ -17,9 +17,9 @@ const meta = {
 	title: "Monti/Change/ChangesGroup",
 	component: ChangesGroup,
 	args: {
-		label: "바뀐 곳",
-		listLabel: "바뀐 곳 목록",
-		countLabel: "바뀐 곳 3개",
+		label: "변경 사항",
+		listLabel: "변경 사항 목록",
+		countLabel: "변경 사항 3개",
 		items: ITEMS,
 		undoLabel: "되돌리기",
 		discardLabel: "모두 되돌리기",

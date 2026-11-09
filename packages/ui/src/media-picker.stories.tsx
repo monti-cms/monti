@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { FilePreview, FolderTile, Image, MediaPicker, Segmented, Tile } from "./index";
+import { FilePreview, FolderTile, Image, MediaPicker, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
 const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -8,8 +8,8 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /**
- * The library as a picker and a file browser: a 760px modal, the folders at the left (the top entry for the top level, sub-folders indented), a search box, the open folder's
- * folders and its files as three columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
+ * The library as a picker and a file browser: a 1040px modal, the search on the title's line, the folders at the left (the top entry for the top level, sub-folders indented),
+ * the open folder's folders and its files as four columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
  */
 const meta = {
 	title: "Patterns/Sheet/MediaPicker",
@@ -52,21 +52,17 @@ function Picker({ files = false, searching = false }: { files?: boolean; searchi
 			search={searching ? "2026" : ""}
 			onSearchChange={() => {}}
 			searchLabel="파일 이름 검색"
-			searchIn={
-				searching ? (
-					<Segmented
-						aria-label="찾는 곳"
-						size="sm"
-						inline
-						value="here"
-						onValueChange={() => {}}
-						options={[
+			scopes={
+				searching
+					? [
 							{ value: "here", label: "trips" },
 							{ value: "all", label: "모든 폴더" },
-						]}
-					/>
-				) : undefined
+						]
+					: undefined
 			}
+			scope="here"
+			onScopeChange={() => {}}
+			scopeLabel="찾는 곳"
 			subfolders={
 				searching ? undefined : (
 					<>
@@ -103,5 +99,5 @@ export const Images: Story = { render: () => <Picker /> };
 /** Files: tiles with a file preview. */
 export const Files: Story = { render: () => <Picker files /> };
 
-/** A search inside a folder: its folders hide, each file says where it is under this folder, and the search can widen to all folders. */
+/** A search inside a folder: its folders hide, each file says where it is under this folder, and the chip in the search box can widen it to all folders. */
 export const Searching: Story = { render: () => <Picker searching /> };

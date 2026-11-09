@@ -314,7 +314,7 @@ export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
-export { StatusBarList } from "./status-bar-list";
+export { StatusBarList, StatusBarListGroup } from "./status-bar-list";
 export { Suggest, SuggestLabel, SuggestList } from "./suggest";
 export { Switch } from "./switch";
 export {

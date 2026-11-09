@@ -24,7 +24,7 @@ export function SchemaReviewScreen() {
 			<SchemaPage
 				fields={CHANGED_FIELDS}
 				changed
-				head={<ChangesBar label="바뀐 곳" count={3} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />}
+				head={<ChangesBar label="변경 사항" count={3} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />}
 			/>
 			<Sheet open>
 				<SheetContent>
@@ -33,7 +33,7 @@ export function SchemaReviewScreen() {
 							of={
 								<>
 									{"· "}
-									{"게시글 · 바뀐 곳 3"}
+									{"게시글 · 변경 사항 3"}
 								</>
 							}
 						>
@@ -43,13 +43,13 @@ export function SchemaReviewScreen() {
 					<SheetBody>
 						<Stack gap={12}>
 							<Stack gap={0}>
-								<ChangeGroup kind="edit" tag="이름" title="요약" identifier="summary → excerpt">
+								<ChangeGroup kind="edit" tag="이름 변경" title="요약" identifier="summary → excerpt">
 									<RadioGroup aria-label="요약 값" value="move" height="md">
 										<RadioItem value="move" label="값 옮기기" hint="148편" />
 										<RadioItem value="empty" label="빈 칸으로 시작" />
 									</RadioGroup>
 								</ChangeGroup>
-								<ChangeGroup kind="drop" tag="지움" title="부제" identifier="subtitle">
+								<ChangeGroup kind="drop" tag="삭제" title="부제" identifier="subtitle">
 									{/* Keeping the values comes first; the choice that loses them says so under the group. */}
 									<RadioGroup aria-label="부제 값" value="drop" height="md">
 										<RadioItem

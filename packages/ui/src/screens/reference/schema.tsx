@@ -52,8 +52,8 @@ export const SAVED_FIELDS: Field[] = [...START, SUMMARY, ...END];
 export const CHANGED_FIELDS: Field[] = [
 	...START,
 	{ name: "excerpt", label: "요약", note: "← summary", kind: "text · 120", tone: "warning" },
-	{ name: "subtitle", label: "부제", note: "지움", kind: "text", tone: "faint" },
-	{ name: "format !", label: "글 종류", note: "새로", kind: "select", tone: "success" },
+	{ name: "subtitle", label: "부제", note: "삭제", kind: "text", tone: "faint" },
+	{ name: "format !", label: "글 종류", note: "추가", kind: "select", tone: "success" },
 	...END,
 ];
 

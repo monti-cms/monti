@@ -182,7 +182,7 @@ export const Changed: Story = {
 			<FormField>
 				<FormFieldLabel
 					htmlFor="c-name"
-					changed={{ label: "바뀜", undoLabel: "되돌리기", undoName: "사이트 이름 되돌리기", onUndo: () => {} }}
+					changed={{ label: "변경", undoLabel: "되돌리기", undoName: "사이트 이름 되돌리기", onUndo: () => {} }}
 				>
 					사이트 이름
 				</FormFieldLabel>
@@ -193,7 +193,7 @@ export const Changed: Story = {
 				<Input id="c-name-saved" defaultValue="example.dev" />
 			</FormField>
 			<FormField>
-				<FormFieldLabel htmlFor="c-dot" changed={{ label: "바뀜", undoLabel: "되돌리기" }}>
+				<FormFieldLabel htmlFor="c-dot" changed={{ label: "변경", undoLabel: "되돌리기" }}>
 					점만 있는 줄
 				</FormFieldLabel>
 				<Input id="c-dot" mono defaultValue="/preview" />

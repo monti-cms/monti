@@ -11,6 +11,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { Close, Search } from "./icons";
@@ -19,10 +20,11 @@ import { useUiLabels } from "./labels";
 type SearchTarget<T extends string> = { value: T; label: string };
 
 /**
- * The pill that opens in place of the page's "Search" button. In front, an optional picker for where to look (everything, title, address,
- * body); then the magnifier, the words, and a × that clears them. While it is open the filter row does not repeat the words as a chip.
+ * The pill that opens in place of the page's "Search" button. In front, an optional picker: which folders to look in (`scopes`: the open folder, or all of
+ * them) and which part of an entry (`targets`: everything, title, address, body), one menu for both, the chip naming what is picked (2026-11-10, owner: no
+ * row of its own under the search). Then the magnifier, the words, and a × that clears them. While it is open the filter row does not repeat the words as a chip.
  */
-function SearchBox<T extends string = string>({
+function SearchBox<T extends string = string, S extends string = string>({
 	value,
 	onValueChange,
 	placeholder,
@@ -30,6 +32,9 @@ function SearchBox<T extends string = string>({
 	targets,
 	target,
 	onTargetChange,
+	scopes,
+	scope,
+	onScopeChange,
 	targetLabel,
 	autoFocus,
 	className,
@@ -43,6 +48,10 @@ function SearchBox<T extends string = string>({
 	targets?: readonly SearchTarget<T>[];
 	target?: T;
 	onTargetChange?: (target: T) => void;
+	/** The folders to look in, the first being where the search starts. Without them the picker has no such group. */
+	scopes?: readonly SearchTarget<S>[];
+	scope?: S;
+	onScopeChange?: (scope: S) => void;
 	/** The name of the picker, for screen readers. */
 	targetLabel?: string;
 	autoFocus?: boolean;
@@ -51,33 +60,51 @@ function SearchBox<T extends string = string>({
 	const labels = useUiLabels();
 	const field = useRef<HTMLInputElement>(null);
 	const current = targets?.find((item) => item.value === target) ?? targets?.[0];
+	const place = scopes?.find((item) => item.value === scope) ?? scopes?.[0];
+	// The chip names the folder when there is one to pick, and the part of an entry once it is not the first ("everything").
+	const named = [place?.label, current && (!place || current !== targets?.[0]) ? current.label : undefined].filter(
+		Boolean,
+	);
+	const picker = named.length > 0;
 	return (
 		<div
 			data-slot="search-box"
 			className={cn(
 				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/50",
-				targets && current ? "pl-monti-4" : "pl-monti-12",
+				picker ? "pl-monti-4" : "pl-monti-12",
 				className,
 			)}
 		>
-			{targets && current && (
+			{picker && (
 				<DropdownMenu>
 					<DropdownMenuTrigger
-						// The name starts with the visible text (the place now picked), then says what the picker is.
-						aria-label={targetLabel ? `${current.label}, ${targetLabel}` : undefined}
-						className="inline-flex h-monti-control-sm shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
+						// The name starts with the visible text (what is now picked), then says what the picker is.
+						aria-label={targetLabel ? `${named.join(" · ")}, ${targetLabel}` : undefined}
+						className="inline-flex h-monti-control-sm min-w-0 max-w-40 shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
 					>
-						{current.label}
+						<span className="min-w-0 truncate">{named.join(" · ")}</span>
 						<Caret />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start">
-						<DropdownMenuRadioGroup value={current.value} onValueChange={(next) => onTargetChange?.(next as T)}>
-							{targets.map((item) => (
-								<DropdownMenuRadioItem key={item.value} value={item.value}>
-									{item.label}
-								</DropdownMenuRadioItem>
-							))}
-						</DropdownMenuRadioGroup>
+						{scopes && place && (
+							<DropdownMenuRadioGroup value={place.value} onValueChange={(next) => onScopeChange?.(next as S)}>
+								{scopes.map((item) => (
+									<DropdownMenuRadioItem key={item.value} value={item.value}>
+										{item.label}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						)}
+						{scopes && place && targets && current && <DropdownMenuSeparator />}
+						{targets && current && (
+							<DropdownMenuRadioGroup value={current.value} onValueChange={(next) => onTargetChange?.(next as T)}>
+								{targets.map((item) => (
+									<DropdownMenuRadioItem key={item.value} value={item.value}>
+										{item.label}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			)}
@@ -115,10 +142,10 @@ function SearchBox<T extends string = string>({
  * stays while it holds words or has the focus (the × empties it and leaves it open); emptied and left, or emptied and Escape, it is the button again. A
  * press in the box's own picker does not count as leaving.
  */
-function SearchToggle<T extends string = string>({
+function SearchToggle<T extends string = string, S extends string = string>({
 	label,
 	...box
-}: Parameters<typeof SearchBox<T>>[0] & {
+}: Parameters<typeof SearchBox<T, S>>[0] & {
 	/** The button's text ("Search"). */
 	label: string;
 }) {

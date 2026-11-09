@@ -269,6 +269,7 @@ export const SidebarRailToggle = close(open.SidebarRailToggle);
 export const SidebarScreenMode = close(open.SidebarScreenMode);
 export const SidebarTrigger = close(open.SidebarTrigger);
 export const StatusBarList = close(open.StatusBarList);
+export const StatusBarListGroup = close(open.StatusBarListGroup);
 export const TodoDone = close(open.TodoDone);
 export const TodoItem = close(open.TodoItem);
 export const TrashRowDate = close(open.TrashRowDate);

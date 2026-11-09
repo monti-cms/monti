@@ -83,7 +83,7 @@ export const WithTag: Story = {
 		<>
 			<TodoItem
 				title="I rebuilt the blog because fixing the tool took longer than writing."
-				tag="바뀜"
+				tag="변경"
 				onOpen={noop}
 				actionLabel="확인"
 				onAction={noop}
@@ -98,7 +98,7 @@ export const WithTag: Story = {
 			/>
 			<TodoItem
 				title="다음 글에서는 번역을 다룬다."
-				tag="새로"
+				tag="추가"
 				tagTone="success"
 				onOpen={noop}
 				actionLabel="빼기"

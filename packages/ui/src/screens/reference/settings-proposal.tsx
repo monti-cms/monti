@@ -14,14 +14,14 @@ import {
 import { AdminFrame } from "./frame";
 import { SettingsTabs, ShownSelect, SiteUrl, SwitchOption } from "./settings";
 
-/** Settings, Site tab, with the assistant's two proposals waiting beside one change of the admin's: "바뀐 곳 1 · 제안 2", counted apart. */
+/** Settings, Site tab, with the assistant's two proposals waiting beside one change of the admin's: "변경 사항 1 · 제안 2", counted apart. */
 export function SettingsProposalScreen() {
 	return (
 		<AdminFrame open="settings">
 			<PageColumn>
 				<PageHeader title="설정">
 					<ChangesBar
-						label="바뀐 곳"
+						label="변경 사항"
 						count={1}
 						proposalsLabel="제안"
 						proposalsCount={2}

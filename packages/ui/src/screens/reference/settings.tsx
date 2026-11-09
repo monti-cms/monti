@@ -119,7 +119,7 @@ export function SettingsScreen() {
 		<AdminFrame open="settings">
 			<PageColumn>
 				<PageHeader title="설정">
-					<ChangesBar label="바뀐 곳" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
+					<ChangesBar label="변경 사항" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
 				</PageHeader>
 				<PageToolbar>
 					<SettingsTabs open="site" />

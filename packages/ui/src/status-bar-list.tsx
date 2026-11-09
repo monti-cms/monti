@@ -80,4 +80,31 @@ function StatusBarList({
 	);
 }
 
-export { StatusBarList };
+/**
+ * A second group in a `StatusBarList`, under a rule: its own name and count in a head like the list's, then its rows. The editor's to-do list keeps what
+ * stops publishing first and what changed in the source after it (translation.md, 2026-11-10 owner): one list of what is left in the entry.
+ */
+function StatusBarListGroup({
+	label,
+	count,
+	countTone = "warning",
+	children,
+}: {
+	label: string;
+	count: number;
+	countTone?: "warning" | "danger";
+	children: React.ReactNode;
+}) {
+	return (
+		<div role="group" aria-label={label} data-slot="status-bar-list-group">
+			<div aria-hidden className={MENU_SEPARATOR} />
+			<div data-slot="status-bar-list-head" aria-hidden className={MENU_LABEL}>
+				<span>{label}</span>
+				{count > 0 && <Count tone={countTone}>{count}</Count>}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+export { StatusBarList, StatusBarListGroup };

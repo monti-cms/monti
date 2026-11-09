@@ -7,7 +7,7 @@ import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from 
 import { Upload } from "./icons";
 import { useUiLabels } from "./labels";
 import { NAV_ROW } from "./nav-link";
-import { SearchBox } from "./search-box";
+import { SearchBox, type SearchTarget } from "./search-box";
 import { folderTree, SidebarMenuSub, SidebarMenuSubButton } from "./sidebar";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
@@ -21,11 +21,12 @@ interface MediaPickerFolder {
 const DEEPEST = 3;
 
 /**
- * The library as a picker (images to insert, a cover image, files to attach), and a file browser: a 760px modal with the folders at the left, and at the right a search box over
- * what the open place holds, its `subfolders` (a `FolderTile` each) over its files as three columns of tiles (`children`: a `Tile` each, `FilePreview` for a file). "Upload" is at
- * the bottom left, Cancel and the one pill at the bottom right. Choosing and then pressing the pill puts the file in at once; there is no step after it. Until a file is picked the
- * pill is not there (`confirmHidden`). The folder list is `folders` under the top entry `topLabel`, drawn with the sidebar's own rows (no icon: the window is the library already);
- * `folder` is the open one, `null` for the top. While a search looks inside a folder, `searchIn` says where it looks.
+ * The library as a picker (images to insert, a cover image, files to attach), and a file browser: a 1040px modal (2026-11-10, owner: room for four columns, as the library's own
+ * grid) with the search at the right of the title's line, as the library screen has it, the folders in a 176px column at the left, and at the right what the open place holds:
+ * its `subfolders` (a `FolderTile` each) over its files as four columns of tiles (`children`: a `Tile` each, `FilePreview` for a file). "Upload" is at the bottom left, Cancel and
+ * the one pill at the bottom right. Choosing and then pressing the pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there
+ * (`confirmHidden`). The folder list is `folders` under the top entry `topLabel`, drawn with the sidebar's own rows (no icon: the window is the library already); `folder` is the
+ * open one, `null` for the top. While a search looks inside a folder, `scopes` is the chip in the search box that says where it looks (this folder, or all of them).
  */
 function MediaPicker({
 	open,
@@ -39,7 +40,10 @@ function MediaPicker({
 	search,
 	onSearchChange,
 	searchLabel,
-	searchIn,
+	scopes,
+	scope,
+	onScopeChange,
+	scopeLabel,
 	uploadLabel,
 	onUpload,
 	uploadDisabled,
@@ -64,8 +68,12 @@ function MediaPicker({
 	onSearchChange: (search: string) => void;
 	/** The name and the placeholder of the search box. */
 	searchLabel: string;
-	/** Under the search box, while a search looks inside a folder: where it looks. */
-	searchIn?: React.ReactNode;
+	/** While a search looks inside a folder: where it may look, the open folder first. */
+	scopes?: readonly SearchTarget<"here" | "all">[];
+	scope?: "here" | "all";
+	onScopeChange?: (scope: "here" | "all") => void;
+	/** The name of the scope's chip, for screen readers. */
+	scopeLabel?: string;
 	uploadLabel: string;
 	/** Opens the place where a file is chosen to upload. */
 	onUpload: () => void;
@@ -95,10 +103,24 @@ function MediaPicker({
 	}, [folder]);
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="gap-monti-20 pb-monti-20 sm:max-w-[760px]">
-				<DialogTitle>{title}</DialogTitle>
+			<DialogContent className="gap-monti-20 pb-monti-20 sm:max-w-[1040px]">
+				{/* The search sits on the title's line, as on the library's page: no line of its own over the tiles. */}
+				<div className="flex items-center gap-monti-16 border-monti-contrast border-b pb-monti-12">
+					<DialogTitle className="min-w-0 flex-1 truncate border-0 pb-0">{title}</DialogTitle>
+					<SearchBox
+						aria-label={searchLabel}
+						placeholder={searchLabel}
+						value={search}
+						onValueChange={onSearchChange}
+						scopes={scopes}
+						scope={scope}
+						onScopeChange={onScopeChange}
+						targetLabel={scopeLabel}
+						className="shrink-0"
+					/>
+				</div>
 				{/* One height, whatever a folder holds: both columns scroll inside it. */}
-				<div className="grid h-[min(27rem,60vh)] grid-cols-[216px_minmax(0,1fr)] gap-monti-20">
+				<div className="grid h-[min(36rem,70vh)] grid-cols-[176px_minmax(0,1fr)] gap-monti-20">
 					<nav ref={list} aria-label={foldersLabel} className="flex min-h-0 scroll-py-monti-8 flex-col overflow-y-auto">
 						<button
 							type="button"
@@ -125,19 +147,11 @@ function MediaPicker({
 							))}
 						</SidebarMenuSub>
 					</nav>
-					<div className="flex min-h-0 min-w-0 flex-col gap-monti-12">
-						<SearchBox
-							aria-label={searchLabel}
-							placeholder={searchLabel}
-							value={search}
-							onValueChange={onSearchChange}
-							className="w-full shrink-0"
-						/>
-						{searchIn ? <div className="flex shrink-0">{searchIn}</div> : null}
+					<div className="flex min-h-0 min-w-0 flex-col">
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
 						<div className="-m-monti-4 flex min-h-0 flex-1 scroll-py-monti-8 flex-col gap-monti-24 overflow-y-auto p-monti-4">
-							{subfolders ? <div className="grid shrink-0 grid-cols-3 gap-monti-12">{subfolders}</div> : null}
-							{notice ?? <div className="grid grid-cols-3 gap-x-monti-12 gap-y-monti-16">{children}</div>}
+							{subfolders ? <div className="grid shrink-0 grid-cols-4 gap-monti-12">{subfolders}</div> : null}
+							{notice ?? <div className="grid grid-cols-4 gap-x-monti-12 gap-y-monti-16">{children}</div>}
 						</div>
 					</div>
 				</div>
