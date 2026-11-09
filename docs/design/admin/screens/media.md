@@ -22,7 +22,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "종류 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "이미지" · "파일", 끝에 개수 `MenuShortcut`) | 값을 골라도 메뉴는 열린 채로 있다. 고르면 그 자리의 버튼이 `Chip`("종류: 파일 ×", `onRemove`)이 된다. 개수는 고르면 나올 수다(지금 폴더와 그 하위, 모든 폴더면 전체). |
+| "종류 ▾" | `FilterButton`(`dot`) + `DropdownMenu`(`DropdownMenuCheckboxItem` "이미지" · "파일", 끝에 개수 `MenuShortcut`) | 값을 골라도 메뉴는 열린 채로 있다. 고르면 버튼은 그 자리에 남고 이름이 잉크가 되며 뒤에 점이 붙는다(칩이 아니다, 2026-11-09 소유자). 메뉴에서 체크를 풀면 필터가 빠진다. 개수는 고르면 나올 수다(지금 폴더와 그 하위, 모든 폴더면 전체). 격자와 목록이 같은 자리다. 글 목록처럼 열 이름에 두지 않는 것은 소유자가 승인한 예외다. |
 | "사용 여부 ▾" | `FilterButton` + `DropdownMenu` | 종류와 같다. |
 | (빠짐, 2026-11-05) "대체 텍스트 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "없음" · "있음", 개수) | 고르면 `Chip`("대체 텍스트: 없음 ×")이 된다. 종류가 "파일"이면 이 버튼은 없다(파일에는 대체 텍스트가 없다). |
 | 찾는 곳 "Blog Assets │ 모든 폴더" | `Separator orientation="vertical" length="control" flush` 뒤 `Segmented size="sm" inline` | 검색어나 필터가 걸린 동안, 폴더 안에서만 보인다. 그동안 폴더 타일은 없다. 기본은 지금 폴더와 그 하위다(2026-11-09 소유자). |
@@ -65,18 +65,21 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 표 | `Table`, `TableBody`, `TableRow`, `TableCell` | 열 이름 행은 없다. 조건과 순서는 위 도구 행에 있다. |
-| 그림 열 | `RowThumb` | 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
+| 표 | `ListScroll`, `Table container="none" layout="fixed"`, `TableBody`, `TableRow`, `TableCell` | 글 목록의 표와 같다. 도구 행 바로 아래에 붙고, 좌우 여백 없이 위 선과 폭이 같다(2026-11-09 소유자). |
+| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`) | "이름" · "쓰임" · "형식" · "크기" · "치수" · "올린 날". 이름은 글자이고 메뉴도 옮기기도 없다. 조건과 순서는 위 도구 행에 있다. 정렬한 열은 잉크에 ↓ · ↑. 열 사이를 끌어 너비를 바꾼다. 너비는 이 브라우저에 남는다. |
+| 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 도구 행은 그대로 있고 열 이름 행이 막대가 된다. |
+| 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
 | 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
-| 쓰임 · 형식 · 크기 · 치수 · 날짜 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
+| 쓰임 · 형식 · 크기 · 치수 · 올린 날 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
+| 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 
 #### 쪽 나누기
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 쪽 | `Pagination`(목록 화면의 `ListPages`와 같다) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. |
-| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄 | "아직 파일이 없어요.", 거른 결과가 없으면 "맞는 파일이 없어요." 상자도 안내도 없다. |
+| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄(목록에서는 표의 한 행) | "아직 파일이 없어요.", 거른 결과가 없으면 "맞는 파일이 없어요." 상자도 안내도 없다. |
 
 #### 오른쪽 클릭과 확인
 
@@ -135,7 +138,7 @@
 | `mode` "폴더 일부 남김" | 6.12 | `toast` "…4개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
 | `mode` "빈 곳 우클릭" | 6.13 | 빈 곳 `ContextMenu` | Controls/Menu/ContextMenu |
 | `mode` "파일 메뉴" | 6.17 | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` | Controls/Menu/ContextMenu |
-| `mode` "목록 보기" | 6.14 | 격자 대신 `Table`, 보기 `Segmented`가 "목록" | Patterns/List/Table, Controls/Choice/Segmented |
+| `mode` "목록 보기" | 6.14 | 격자 대신 `ListHead`가 붙은 `Table`, 보기 `Segmented`가 "목록" | Patterns/List/Table, Patterns/List/ListHead, Controls/Choice/Segmented |
 | `mode` "끌어 놓기" | 6.01 | `DropArea over`, `toast.dropHint` "여기에 올려요" | Patterns/List/DropArea, Controls/Status/Toast |
 | `mode` "폴더 위로 끌기" | 6.02 | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올려요" | Patterns/List/Tile, Controls/Status/Toast |
 | `mode` "올리는 중" | 6.03 | `Tile status="uploading"`과 대기 타일 | Patterns/List/Tile |
@@ -154,7 +157,7 @@
 | `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
 | `mode` "저장소 없음" | 6.31 | 저장소 없음의 두 줄, 머리의 알약 "연결 방법", 도구 행 없음, "올리기 ▾" 없음 | Primitives/Text, Controls/Button/Button |
 | `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
-| `mode` "종류 파일" | 6.33 | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
+| `mode` "종류 파일" | 6.33 | `FilterButton dot` "종류", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
 | `mode` "PDF 올리는 중" | 6.34 | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 | Patterns/List/FilePreview, Patterns/List/Tile |
 | `mode` "받지 않는 형식" | 6.35 | 타일 없음. `toast.error` "setup.exe · 지원하지 않는 형식" | Controls/Status/Toast |
 | `mode` "PDF 열기" | 6.36 | 파일용 옆 패널(대체 텍스트와 캡션 없음, "파일 바꾸기" · "휴지통으로"는 이미지처럼 ⋯ 안) |  |

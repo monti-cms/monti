@@ -3,7 +3,6 @@ import {
 	BulkBar,
 	Button,
 	Caret,
-	Chip,
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
@@ -31,6 +30,10 @@ import {
 	IconButton,
 	Image,
 	Inline,
+	LIST_COLUMN_SIZE,
+	ListHead,
+	type ListHeadColumn,
+	ListScroll,
 	MenuShortcut,
 	PageColumn,
 	PageHeader,
@@ -38,6 +41,7 @@ import {
 	PageToolbarEnd,
 	RenameField,
 	RowActions,
+	RowCheck,
 	RowLink,
 	RowMore,
 	RowThumb,
@@ -73,6 +77,7 @@ import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
+import { useColumnWidths } from "../../media/use-column-widths";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
 import { useUpload } from "../../media/use-upload";
@@ -144,6 +149,62 @@ function UploadTile({
 			}
 			preview={picture ?? <FilePreview ext={extensionLabel(upload.name)} />}
 		/>
+	);
+}
+
+/** The same file as a row of the list view: where it is going, or what to do with one the network cut off (T113). */
+function UploadRow({
+	upload,
+	columns,
+	onRemove,
+	onRetry,
+}: {
+	upload: Upload;
+	/** How many columns lie between the name and the end. */
+	columns: number;
+	onRemove: (upload: Upload) => void;
+	onRetry: (upload: Upload) => void;
+}) {
+	const { t } = useAdmin();
+	const failed = upload.status === "failed";
+	return (
+		<TableRow>
+			<TableCell truncate>
+				<RowTitle
+					thumb={
+						<RowThumb>
+							<Image src={upload.preview ?? null} fallback={Document} alt="" size="row" ratio="photo" radius="sm" />
+						</RowThumb>
+					}
+					title={upload.name}
+				/>
+			</TableCell>
+			<TableCell colSpan={columns}>
+				<Inline gap={8}>
+					<Text variant="note" tone={failed ? "danger" : "subtle"}>
+						{failed
+							? t("library.failed")
+							: upload.status === "uploading"
+								? t("library.uploading", { percent: upload.progress })
+								: t("library.waiting")}
+					</Text>
+					{failed && (
+						<RowActions>
+							<RetryButton size="xs" onRetry={() => onRetry(upload)} />
+						</RowActions>
+					)}
+				</Inline>
+			</TableCell>
+			<TableCell>
+				{failed && (
+					<RowActions>
+						<IconButton label={t("library.takeOut")} size="xs" tone="danger" onClick={() => onRemove(upload)}>
+							<TrashCan aria-hidden />
+						</IconButton>
+					</RowActions>
+				)}
+			</TableCell>
+		</TableRow>
 	);
 }
 
@@ -248,37 +309,22 @@ function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: G
 }
 
 /**
- * A filter of the library (screens/media.md): a button, and once something is chosen the chip in its place. It is one menu either way, so it stays open while its values are
- * ticked, and the chip opens it again.
+ * A filter of the library (screens/media.md): a button that stays where it is, with a dot after its name while something is chosen. The menu stays open as values are ticked.
  */
 function FilterMenu<Value extends string>({
 	label,
 	values,
 	chosen,
-	chip,
 	onChange,
 }: {
 	label: string;
 	values: readonly { value: Value; label: string; count: number }[];
 	chosen: readonly Value[];
-	chip: (value: string) => string;
 	onChange: (chosen: Value[]) => void;
 }) {
-	const { t } = useAdmin();
-	const names = values.filter((each) => chosen.includes(each.value)).map((each) => each.label);
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					chosen.length === 0 ? (
-						<FilterButton />
-					) : (
-						<Chip removeLabel={t("list.removeFilter")} onRemove={() => onChange([])} />
-					)
-				}
-			>
-				{chosen.length === 0 ? label : chip(names.join(", "))}
-			</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<FilterButton dot={chosen.length > 0} />}>{label}</DropdownMenuTrigger>
 			<DropdownMenuContent align="start">
 				{values.map((each) => (
 					<DropdownMenuCheckboxItem
@@ -326,6 +372,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		onKept: (folder) => setState({ ...state, folder: folder.id, file: null, page: 1 }),
 	});
 	const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+	const pick = (id: string, on: boolean) => {
+		const next = new Set(picked);
+		if (on) next.add(id);
+		else next.delete(id);
+		setPicked(next);
+	};
+	const { widths, resize } = useColumnWidths();
 	const [folderTarget, setFolderTarget] = useState<string | null>(null);
 
 	const data = read.data;
@@ -457,8 +510,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	};
 	const inOneFolder = pickedItems.every((item) => item.folderId === pickedItems[0]?.folderId);
 
-	const toolbar = picking ? (
+	const bulkBar = (colSpan?: number) => (
 		<BulkBar
+			colSpan={colSpan}
 			label={t("list.selected", { count: pickedItems.length })}
 			selectAll={selectAll}
 			clearLabel={t("list.clearSelection")}
@@ -494,79 +548,82 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				{t("library.toTrash")}
 			</TextButton>
 		</BulkBar>
-	) : (
-		<PageToolbar inset>
-			<FilterMenu
-				label={t("library.kind")}
-				values={KINDS.map((kind: MediaKind) => ({
-					value: kind,
-					label: t(`library.kind.${kind}`),
-					count: data?.counts[kind] ?? 0,
-				}))}
-				chosen={state.kinds}
-				chip={(value) => t("library.kindChip", { value })}
-				onChange={(kinds) => setState({ ...state, kinds, page: 1 })}
-			/>
-			<FilterMenu
-				label={t("library.used")}
-				values={USES.map((use) => ({
-					value: use,
-					label: t(`library.used.${use}`),
-					count: data?.counts[use] ?? 0,
-				}))}
-				chosen={state.used}
-				chip={(value) => t("library.usedChip", { value })}
-				onChange={(used) => setState({ ...state, used, page: 1 })}
-			/>
-			{looking && state.folder && here && (
-				<>
-					<Separator orientation="vertical" length="control" flush />
+	);
+	const listed = state.view === "list";
+	const toolbar =
+		picking && !listed ? (
+			bulkBar()
+		) : (
+			<PageToolbar inset>
+				<FilterMenu
+					label={t("library.kind")}
+					values={KINDS.map((kind: MediaKind) => ({
+						value: kind,
+						label: t(`library.kind.${kind}`),
+						count: data?.counts[kind] ?? 0,
+					}))}
+					chosen={state.kinds}
+					onChange={(kinds) => setState({ ...state, kinds, page: 1 })}
+				/>
+				<FilterMenu
+					label={t("library.used")}
+					values={USES.map((use) => ({
+						value: use,
+						label: t(`library.used.${use}`),
+						count: data?.counts[use] ?? 0,
+					}))}
+					chosen={state.used}
+					onChange={(used) => setState({ ...state, used, page: 1 })}
+				/>
+				{looking && state.folder && here && (
+					<>
+						<Separator orientation="vertical" length="control" flush />
+						<Segmented
+							aria-label={t("folders.searchIn")}
+							size="sm"
+							inline
+							value={state.everywhere ? "all" : "here"}
+							onValueChange={(where) => setState({ ...state, everywhere: where === "all", page: 1 })}
+							options={[
+								{ value: "here", label: here.name },
+								{ value: "all", label: t("folders.everywhere") },
+							]}
+						/>
+					</>
+				)}
+				<PageToolbarEnd>
+					<DropdownMenu>
+						<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuRadioGroup
+								value={state.sort}
+								onValueChange={(sort) => {
+									const found = SORTS.find((known) => known === sort);
+									if (found) setState({ ...state, sort: found, page: 1 });
+								}}
+							>
+								{SORTS.map((sort) => (
+									<DropdownMenuRadioItem key={sort} value={sort}>
+										{t(`library.sort.${sort}`)}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						</DropdownMenuContent>
+					</DropdownMenu>
 					<Segmented
-						aria-label={t("folders.searchIn")}
+						aria-label={t("library.view")}
 						size="sm"
 						inline
-						value={state.everywhere ? "all" : "here"}
-						onValueChange={(where) => setState({ ...state, everywhere: where === "all", page: 1 })}
+						value={state.view}
+						onValueChange={(view) => setState({ ...state, view: view === "list" ? "list" : "grid" })}
 						options={[
-							{ value: "here", label: here.name },
-							{ value: "all", label: t("folders.everywhere") },
+							{ value: "grid", label: t("library.view.grid") },
+							{ value: "list", label: t("library.view.list") },
 						]}
 					/>
-				</>
-			)}
-			<PageToolbarEnd>
-				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuRadioGroup
-							value={state.sort}
-							onValueChange={(sort) => {
-								const found = SORTS.find((known) => known === sort);
-								if (found) setState({ ...state, sort: found, page: 1 });
-							}}
-						>
-							{SORTS.map((sort) => (
-								<DropdownMenuRadioItem key={sort} value={sort}>
-									{t(`library.sort.${sort}`)}
-								</DropdownMenuRadioItem>
-							))}
-						</DropdownMenuRadioGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
-				<Segmented
-					aria-label={t("library.view")}
-					size="sm"
-					inline
-					value={state.view}
-					onValueChange={(view) => setState({ ...state, view: view === "list" ? "list" : "grid" })}
-					options={[
-						{ value: "grid", label: t("library.view.grid") },
-						{ value: "list", label: t("library.view.list") },
-					]}
-				/>
-			</PageToolbarEnd>
-		</PageToolbar>
-	);
+				</PageToolbarEnd>
+			</PageToolbar>
+		);
 
 	const uploadsHere = upload.uploads.filter((each) => each.folder === state.folder);
 	const nothing =
@@ -615,12 +672,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 										selected={picked.has(item.id)}
 										picking={picking}
 										selectLabel={t("list.pick", { title: item.name })}
-										onSelectedChange={(on) => {
-											const next = new Set(picked);
-											if (on) next.add(item.id);
-											else next.delete(item.id);
-											setPicked(next);
-										}}
+										onSelectedChange={(on) => pick(item.id, on)}
 										action={
 											<DropdownMenu>
 												<IconButton
@@ -660,19 +712,43 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			)}
 		</Stack>
 	);
+	const sized = (id: string, kind: keyof typeof LIST_COLUMN_SIZE) => ({
+		id,
+		size: widths[id] ?? LIST_COLUMN_SIZE[kind],
+		kindSize: LIST_COLUMN_SIZE[kind],
+	});
+	const head: ListHeadColumn[] = [
+		{ id: "name", label: t("library.column.name"), sort: state.sort === "name" ? "asc" : undefined },
+		{ ...sized("uses", "one"), label: t("library.column.uses") },
+		{ ...sized("type", "locale"), label: t("library.column.type") },
+		{ ...sized("size", "status"), label: t("library.column.size"), sort: state.sort === "size" ? "desc" : undefined },
+		{ ...sized("measure", "measure"), label: t("library.column.measure") },
+		{ ...sized("date", "date"), label: t("library.column.date"), sort: state.sort === "uploaded" ? "desc" : undefined },
+	];
+	const folderThumb = (
+		<RowThumb>
+			<Folder aria-hidden size={16} />
+		</RowThumb>
+	);
 	const table = (
-		<Stack gap={8} paddingTop={12} paddingX={12}>
-			<Table container="none">
+		<ListScroll>
+			<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
+				{picking ? (
+					bulkBar(head.length + 1)
+				) : (
+					<ListHead
+						columns={head}
+						end={LIST_COLUMN_SIZE.end}
+						selectAll={items.length > 0 ? selectAll : undefined}
+						onResize={resize}
+						resizeLabel={(column) => t("list.resizeColumn", { column })}
+					/>
+				)}
 				<TableBody>
 					{naming.naming?.id === null && (
 						<TableRow>
-							<TableCell width="xs">
-								<RowThumb>
-									<Folder aria-hidden size={16} />
-								</RowThumb>
-							</TableCell>
-							<TableCell colSpan={7}>
-								<RowTitle editing title={namingField} />
+							<TableCell colSpan={head.length + 1}>
+								<RowTitle editing thumb={folderThumb} title={namingField} />
 							</TableCell>
 						</TableRow>
 					)}
@@ -681,16 +757,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuTrigger
 								render={
 									<TableRow>
-										<TableCell width="xs">
-											<RowThumb>
-												<Folder aria-hidden size={16} />
-											</RowThumb>
-										</TableCell>
-										<TableCell colSpan={7} truncate={naming.naming?.id !== folder.id}>
+										<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
 											{naming.naming?.id === folder.id ? (
-												<RowTitle editing title={namingField} />
+												<RowTitle editing thumb={folderThumb} title={namingField} />
 											) : (
 												<RowTitle
+													thumb={folderThumb}
 													title={
 														<RowLink href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}>
 															{folder.name}
@@ -706,25 +778,41 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuContent>{folderItems(true, folder)}</ContextMenuContent>
 						</ContextMenu>
 					))}
+					{uploadsHere.map((each) => (
+						<UploadRow
+							key={each.id}
+							upload={each}
+							columns={head.length - 1}
+							onRemove={upload.remove}
+							onRetry={upload.retry}
+						/>
+					))}
 					{items.map((item) => (
 						<ContextMenu key={item.id}>
 							<ContextMenuTrigger
 								render={
-									<TableRow data-state={state.file === item.id ? "selected" : undefined}>
-										<TableCell width="xs">
-											<RowThumb>
-												<Image
-													src={item.kind === "image" ? previewUrl(item) : null}
-													fallback={Document}
-													alt=""
-													size="row"
-													ratio="photo"
-													radius="sm"
-												/>
-											</RowThumb>
-										</TableCell>
+									<TableRow selected={state.file === item.id || picked.has(item.id)}>
 										<TableCell truncate>
-											<RowTitle title={<RowLink href={hrefOf({ ...state, file: item.id })}>{item.name}</RowLink>} />
+											<RowCheck
+												checked={picked.has(item.id)}
+												onCheckedChange={(on) => pick(item.id, on)}
+												label={t("list.pick", { title: item.name })}
+											/>
+											<RowTitle
+												thumb={
+													<RowThumb>
+														<Image
+															src={item.kind === "image" ? previewUrl(item) : null}
+															fallback={Document}
+															alt=""
+															size="row"
+															ratio="photo"
+															radius="sm"
+														/>
+													</RowThumb>
+												}
+												title={<RowLink href={hrefOf({ ...state, file: item.id })}>{item.name}</RowLink>}
+											/>
 										</TableCell>
 										<TableCell>
 											<Text variant="note">
@@ -760,21 +848,18 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuContent>{fileItems(true, item)}</ContextMenuContent>
 						</ContextMenu>
 					))}
+					{nothing && (
+						<TableRow>
+							<TableCell colSpan={head.length + 1}>
+								<Text variant="note" tone="subtle">
+									{looking ? t("library.nothingFound") : t("library.empty")}
+								</Text>
+							</TableCell>
+						</TableRow>
+					)}
 				</TableBody>
 			</Table>
-			{uploadsHere.length > 0 && (
-				<Grid columns="tiles">
-					{uploadsHere.map((each) => (
-						<UploadTile key={each.id} upload={each} onRemove={upload.remove} onRetry={upload.retry} />
-					))}
-				</Grid>
-			)}
-			{nothing && (
-				<Text variant="note" tone="subtle">
-					{looking ? t("library.nothingFound") : t("library.empty")}
-				</Text>
-			)}
-		</Stack>
+		</ListScroll>
 	);
 	const pages = data ? Math.ceil(data.total / data.pageSize) : 1;
 

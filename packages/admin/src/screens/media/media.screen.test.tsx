@@ -97,6 +97,55 @@ describe("browsing", () => {
 		await expect.element(row).toHaveTextContent("2400×1600");
 	});
 
+	it("09-1 T113 [flow 6·14] the list view is the post table: its column names stand right under the toolbar, as wide as its line, and say what it is sorted by", async () => {
+		await ListView.run();
+		const table = main().getByRole("table");
+		for (const name of ["이름", "쓰임", "형식", "크기", "치수", "올린 날"])
+			await expect.element(table.getByRole("columnheader", { name })).toBeVisible();
+		await expect
+			.element(table.getByRole("columnheader", { name: "올린 날" }))
+			.toHaveAttribute("aria-sort", "descending");
+		const line = main().element().querySelector("[data-slot=page-toolbar]")?.getBoundingClientRect();
+		const box = table.element().getBoundingClientRect();
+		expect(box.top).toBe(line?.bottom);
+		expect(box.left).toBe(line?.left);
+		expect(box.right).toBe(line?.right);
+	});
+
+	it("09-1 T113 [keys-move] a column's edge moves width between its two columns, and the width is still there next time", async () => {
+		localStorage.removeItem("monti:media-columns");
+		await ListView.run();
+		const head = (name: string) => main().getByRole("table").getByRole("columnheader", { name });
+		const width = (name: string) => head(name).element().getBoundingClientRect().width;
+		await expect.element(head("크기")).toBeVisible();
+		const [size, measure] = [width("크기"), width("치수")];
+		(page.getByRole("separator", { name: "크기 열 너비 조절" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.poll(() => width("크기")).toBeGreaterThan(size);
+		const widened = width("크기");
+		expect(widened + width("치수")).toBe(size + measure);
+		await ListView.run();
+		await expect.element(head("크기")).toBeVisible();
+		expect(width("크기")).toBe(widened);
+		localStorage.removeItem("monti:media-columns");
+	});
+
+	it("09-1 T113 [reach] a row's check shows under the pointer; picking puts the bulk bar in the head's place, and the filters stay above", async () => {
+		await ListView.run();
+		const row = main().getByRole("row").filter({ hasText: "top-level-photo.jpg" });
+		const check = row.getByRole("checkbox");
+		await userEvent.hover(row);
+		await expect.element(check).toBeVisible();
+		await userEvent.click(check);
+		const bar = main().getByRole("toolbar", { name: "1개 선택" });
+		await expect.element(bar).toBeVisible();
+		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "쓰임" })).not.toBeInTheDocument();
+		await expect.element(main().getByRole("button", { name: "종류" })).toBeVisible();
+		await expect.element(row).toHaveAttribute("aria-selected", "true");
+		await userEvent.click(bar.getByRole("button", { name: "선택 해제" }));
+		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "쓰임" })).toBeVisible();
+	});
+
 	it("09-1 a very long name ends in … in the list view: the row's other columns stay on the page", async () => {
 		await ListView.run();
 		const name = `${"아주 긴 한글 파일 이름 ".repeat(20)}.txt`;
@@ -179,9 +228,10 @@ describe("browsing", () => {
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind is a chip in its place, folders give way to where to look, and × takes it off", async () => {
+	it("09-1 T113 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind leaves a dot on its button, folders give way to where to look, and unticking takes it off", async () => {
 		await openAssets();
-		await userEvent.click(main().getByRole("button", { name: "종류" }));
+		const kind = main().getByRole("button", { name: "종류" });
+		await userEvent.click(kind);
 		// What picking it would find: three here and one in the folder under it.
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("4");
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
@@ -189,11 +239,15 @@ describe("browsing", () => {
 		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("notes-scan.pdf")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
+		expect(kind.element().querySelector("[data-slot=filter-dot]")).not.toBeNull();
 		// A filter looks for files as a search does: no folders, and where to look is a choice.
 		await expect.element(folder("covers")).not.toBeInTheDocument();
 		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
-		await userEvent.click(main().getByRole("button", { name: "필터 지우기" }));
+		await userEvent.click(kind);
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
+		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
+		expect(kind.element().querySelector("[data-slot=filter-dot]")).toBeNull();
 		await expect.element(folder("covers")).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
 	});

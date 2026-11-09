@@ -41,10 +41,10 @@ export function useAcceptFiles() {
 }
 
 /** Tries a file the network cut off again, as it is: an icon in every place, so it takes no line of its own and a tile's row in the grid does not move (2026-11-09, owner). */
-export function RetryButton({ onRetry }: { onRetry: () => void }) {
+export function RetryButton({ onRetry, size }: { onRetry: () => void; size?: "xs" }) {
 	const { t } = useAdmin();
 	return (
-		<IconButton label={t("library.retry")} onClick={onRetry}>
+		<IconButton label={t("library.retry")} size={size} onClick={onRetry}>
 			<Renew aria-hidden />
 		</IconButton>
 	);

@@ -242,12 +242,14 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 
 /**
  * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns (cms-allow-korean)
- * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title.
+ * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title; a media row its
+ * {@link RowThumb}, in the same column as the title so a head's name stands over both.
  */
 function RowTitle({
 	title,
 	address,
 	folder = false,
+	thumb,
 	editing = false,
 	className,
 	...props
@@ -257,6 +259,8 @@ function RowTitle({
 	address?: React.ReactNode;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
+	/** A {@link RowThumb} leading the line. */
+	thumb?: React.ReactNode;
 	/** The title is a `RenameField` being typed in: it is not cut to the line, so the field's underline shows. */
 	editing?: boolean;
 }) {
@@ -264,6 +268,7 @@ function RowTitle({
 		<span data-slot="row-title" className={cn("flex min-w-0 items-baseline gap-monti-12", className)} {...props}>
 			<span className="flex min-w-0 items-baseline gap-monti-8">
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
+				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
 				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
 			</span>
 			{address && (

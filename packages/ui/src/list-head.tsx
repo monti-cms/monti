@@ -28,10 +28,10 @@ type ListHeadColumn = {
 
 /**
  * The width a list's column starts at by what it shows, in px (doc 06: the kind's width is where a column starts; the admin can drag the edges between
- * columns). The title has none: it takes the room the others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary). `end`
- * is the cell over the rows' ⋯.
+ * columns). The title has none: it takes the room the others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary), `measure`
+ * a picture's size in mono ("3000×2000"). `end` is the cell over the rows' ⋯.
  */
-const LIST_COLUMN_SIZE = { status: 76, one: 84, many: 152, locale: 60, date: 84, end: 38 } as const;
+const LIST_COLUMN_SIZE = { status: 76, one: 84, many: 152, locale: 60, measure: 104, date: 84, end: 38 } as const;
 type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
 /** How narrow and how wide a column can be dragged (core's `list.savePrefs` keeps no more); the title, which takes the room left, keeps `TITLE_MIN`. */
 const LIST_COLUMN_MIN = 60;
@@ -99,7 +99,7 @@ const MENU_REACH = 15;
 
 /**
  * The head row of a list: the name of each column, and at the end a + over the rows' ⋯. A name is a button: pressing it (without dragging) opens the
- * column's `menu` under the name; a name with no `menu` is plain. The column the list is sorted by shows its name in ink with ↓ or ↑, the column whose menu
+ * column's `menu` under the name; a name with no `menu` that cannot move either is plain text. The column the list is sorted by shows its name in ink with ↓ or ↑, the column whose menu
  * is open is in ink too, and a filtered column has a dot after its name. The + lists `add.columns` (the columns that are off) and calls `add.onAdd`.
  *
  * Any name can be dragged sideways: it lifts and follows the pointer while the other columns make room, and letting go calls `onPlace(from, to)` with
@@ -301,6 +301,7 @@ function ListHead({
 					return (
 						<TableHead
 							key={column.id}
+							scope="col"
 							data-column={column.id}
 							data-held={held ? "" : undefined}
 							size={column.size}
@@ -374,7 +375,7 @@ function ListHead({
 										{column.menu}
 									</DropdownMenuContent>
 								</DropdownMenu>
-							) : (
+							) : onPlace || onStep ? (
 								<button
 									type="button"
 									aria-description={onPlace ? moveLabel : undefined}
@@ -383,6 +384,8 @@ function ListHead({
 								>
 									{name}
 								</button>
+							) : (
+								<span className={buttonClass}>{name}</span>
 							)}
 							{onResize && next && !drag && (
 								<ResizeHandle

@@ -808,6 +808,37 @@ test.describe("while a file is on its way", () => {
 		await expect(tile(admin, path.basename(file))).toBeVisible();
 	});
 
+	test("09-1 T113 in the list view a file on its way is a row: one cut off is tried again or deleted from it", async ({
+		admin,
+	}, info) => {
+		const [again, gone] = await Promise.all(
+			["again", "gone"].map((name) => picture(admin, info.outputDir, `${unique(name)}.jpg`)),
+		);
+		await admin.goto("/#/media?view=list");
+		await expect(main(admin).getByRole("table")).toBeVisible();
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await dropFromDisk(admin, [again as string, gone as string], main(admin));
+		const row = (file: string) =>
+			main(admin)
+				.getByRole("row")
+				.filter({ hasText: path.basename(file) });
+		await expect(row(again as string)).toContainText("올리기 실패");
+		await expect(row(gone as string)).toContainText("올리기 실패");
+		await expect(main(admin).locator("[data-slot=tile]")).toHaveCount(0);
+
+		await admin.unroute("**/operations/media.upload");
+		await row(again as string)
+			.getByRole("button", { name: "다시 올리기" })
+			.click();
+		await expect(row(again as string)).not.toContainText("올리기 실패");
+		await expect(row(again as string)).toContainText("JPG");
+
+		await row(gone as string)
+			.getByRole("button", { name: "지우기" })
+			.click();
+		await expect(row(gone as string)).toBeHidden();
+	});
+
 	test("09-1 a file cut off can be deleted from its tile, and the library never had it", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("gone")}.jpg`);
 		await admin.goto("/#/media");

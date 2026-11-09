@@ -21,6 +21,7 @@ export const Row: Story = {
 			<FilterButton>언어</FilterButton>
 			<FilterButton>최근 수정순</FilterButton>
 			<FilterButton disabled>비활성</FilterButton>
+			<FilterButton dot>종류</FilterButton>
 		</Stack>
 	),
 };
