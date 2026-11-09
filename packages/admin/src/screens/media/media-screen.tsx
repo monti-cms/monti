@@ -926,7 +926,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						// Emptied, the box starts over on the open folder.
 						onValueChange={(search) =>
 							setState(
-								{ ...state, search, everywhere: search === "" ? false : state.everywhere, page: 1 },
+								{ ...state, search, everywhere: search.trim() === "" ? false : state.everywhere, page: 1 },
 								{ replace: true },
 							)
 						}

@@ -205,13 +205,13 @@ export const PendingMenu: Story = {
 	},
 };
 
-/** The status bar's "원문 변경 3" open: each mark's block, and "모두 확인" (flow 3, step 09). */
+/** The to-do list open: what stops publishing, then the "원문 변경" group with each mark's block and its decision (flow 3, step 09). */
 export const ChangesList: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "원문 변경 3" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: /^할 일/ }, wait));
 	},
 };
 
@@ -237,7 +237,7 @@ export const FieldsChanged: Story = {
 	},
 };
 
-/** The title's card: the source's title before and after, and "확인" (T111). */
+/** The title's card: the source's title before and after, and "그대로 두기" (T111). */
 export const TitleCard: Story = {
 	loaders: site("fieldsChanged", "english"),
 	play: async (context) => {
@@ -253,17 +253,17 @@ export const TitleCard: Story = {
 	},
 };
 
-/** The status bar's list, the fields by name (T111). */
+/** The to-do list with only the source's changes: the fields by name (T111). */
 export const FieldsInTheList: Story = {
 	loaders: site("fieldsChanged", "english"),
 	play: async (context) => {
 		await FieldsChanged.play?.(context);
 		const { page } = await opened(context.canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: /원문 변경 2/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: /^할 일/ }, wait));
 	},
 };
 
-/** A changed block's card: the source before and after, and "확인" (flow 3, step 10). */
+/** A changed block's card: the source before and after, and "그대로 두기" (flow 3, step 10). */
 export const ChangedCard: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {

@@ -11,7 +11,9 @@ export interface CropRect {
 }
 
 /** What is pressed: the stage (a new crop), the box (move it) or a corner (resize from it). */
-export type CropGrip = "stage" | "move" | "nw" | "ne" | "sw" | "se";
+export type CropGrip = "stage" | "move" | CropCorner;
+/** A corner of the crop, by the compass. */
+export type CropCorner = "nw" | "ne" | "sw" | "se";
 
 const CORNERS = [
 	{ grip: "nw", place: "-top-1.5 -left-1.5 cursor-nwse-resize" },
@@ -50,7 +52,7 @@ function CropStage({
 	/** The name of the box, for screen readers. */
 	moveLabel?: string;
 	/** The names of the four corner handles, for screen readers. */
-	cornerLabels: Record<"nw" | "ne" | "sw" | "se", string>;
+	cornerLabels: Record<CropCorner, string>;
 }) {
 	// The picture's shape, once it is in: the picture then fills the frame whatever its size, a small one drawn larger (2026-11-10, owner).
 	const [shape, setShape] = React.useState<number | null>(null);

@@ -169,7 +169,7 @@ export function BodyEditor({
 					const target = event.target as Node;
 					// A mark in the margin opens its card; it is not a press under the text.
 					if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
-					// A press under the last block puts the cursor at the end of the text. Under a block with no text of its own (a picture, a file, code), a new
+					// A press under the last block puts the cursor at the end of the text. Under a block with no text of its own (a picture, a file), a new
 					// paragraph opens there, as Notion does: no need to know that Enter on the picked block makes one (2026-11-10, owner).
 					if (!editor || !event.currentTarget.contains(target) || editor.view.dom.contains(target)) return;
 					const last = editor.state.doc.lastChild;

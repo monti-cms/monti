@@ -47,7 +47,7 @@ export function MediaPickerDialog({
 		"media.query",
 		{
 			folder,
-			scope: everywhere && looking ? "all" : "here",
+			scope: everywhere && search.trim() !== "" ? "all" : "here",
 			search,
 			...(kind === "any" ? {} : { only: kind }),
 			pageSize: shown,
@@ -85,7 +85,7 @@ export function MediaPickerDialog({
 				startOver();
 				setSearch(next);
 				// Emptied, the box starts over on the open folder.
-				if (next === "") setEverywhere(false);
+				if (next.trim() === "") setEverywhere(false);
 			}}
 			searchLabel={t("library.picker.search")}
 			// Inside a folder the search box's chip says where a search looks, as on the library's page.

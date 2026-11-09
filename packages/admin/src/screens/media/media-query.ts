@@ -59,7 +59,7 @@ export function writeMediaState(state: MediaState): URLSearchParams {
 export const queryOf = (state: MediaState) => ({
 	folder: state.folder,
 	// "All folders" is the search box's choice: with no words looked for, a folder lists itself, filtered or not (2026-11-10, owner).
-	scope: state.everywhere && state.search !== "" ? ("all" as const) : ("here" as const),
+	scope: state.everywhere && state.search.trim() !== "" ? ("all" as const) : ("here" as const),
 	search: state.search,
 	kinds: state.kinds,
 	used: state.used,

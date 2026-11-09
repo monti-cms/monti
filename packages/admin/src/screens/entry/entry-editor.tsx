@@ -319,7 +319,9 @@ export function EntryEditor({
 		)
 		.map(([field]) => (field === "title" ? t("entry.title") : fieldLabel(field)));
 	// What changed in the source since the translation saw it: rows of the to-do list, after what stops publishing.
-	const sourceCount = compared && !readOnly ? compared.marks.length + compared.fields.length : 0;
+	// A block new in the source is already a to-do (it stops publishing until decided): the group leaves it out, so it is listed and counted once.
+	const sourceCount =
+		compared && !readOnly ? compared.marks.filter((mark) => mark.kind !== "added").length + compared.fields.length : 0;
 	const sourceOnly = sourceCount > 0 && publish.tasks.length === 0;
 	const sourceRows =
 		compared && sourceCount > 0 ? (

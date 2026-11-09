@@ -44,7 +44,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem blocking` "흐린 블록 1" + 끝 동작 "✦ 번역"은 `proposal`, 아래 `TodoDone` "제목 · 주소 · 원문 따름 1"), 그 아래 `StatusBarListGroup` "원문 변경 N" | 흐린 블록이 발행을 막는 할 일이다. 행을 누르면 그 블록으로 간다. 제안이 도착한 동안 칸은 "제안 6". 칸의 수는 할 일과 원문 변경을 더한 것이다(2026-11-10 소유자: 글에 남은 일은 창 하나에서 본다). |
-| "원문 변경" 묶음 | `StatusBarListGroup`(발행 전에 고칠 것이 없으면 목록 머리가 곧 "원문 변경") 안에 `TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 필드는 이름, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 변경 "그대로 두기", 삭제 "지우기", 추가 "빼기"(설정의 "변경 사항" 목록과 같은 모양, 2026-11-06 소유자) | 발행을 막지 않아서 할 일 아래 따로 묶는다. 줄을 누르면 그 블록이나 필드로 간다. "모두 그대로 두기"는 알림 띠에만 있다. |
+| "원문 변경" 묶음 | `StatusBarListGroup`(발행 전에 고칠 것이 없으면 목록 머리가 곧 "원문 변경") 안에 `TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 필드는 이름, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 변경 "그대로 두기", 삭제 "지우기"(설정의 "변경 사항" 목록과 같은 모양, 2026-11-06 소유자). 원문에 새로 생긴 블록은 이 묶음에 없다. 발행을 막는 할 일("원문 추가 블록")로 위에 한 번만 있고, "빼기"는 그 블록의 카드에 있다 | 발행을 막지 않아서 할 일 아래 따로 묶는다. 줄을 누르면 그 블록이나 필드로 간다. "모두 그대로 두기"는 알림 띠에만 있다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
 스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner, Patterns/Frame/ResizablePane, Primitives/Box.
@@ -101,7 +101,7 @@
 | 머리 행 (10. 26 수정 / 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 고친 날만 잉크 선 아래 mono 작은 줄로. 어느 쪽이 원문이고 어느 언어인지는 탭과 원문 칸의 도구 바탕이 이미 말한다(2026-11-05 소유자, 원칙 8). |
 | 블록 한 행 | `EditorBody paired`: 편집기 하나가 행으로 놓이고, 블록마다 앞에 블록 종류와 원문 칸이 붙는다 | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기 그대로라 그 자리에서 쓴다. 커서가 있는 행은 원문 칸과 번역 칸이 함께 블록 바탕(`bg-block`)이다. 드래그로 고른 글자는 한 단계 진한 `bg-selection`이다. 원문 칸은 글로만 보인다. |
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
-| 여백의 상태 "원문 변경" · "원문에 추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 바뀜 주황, 지워짐 빨강, 새로 초록. 원문 쪽 바뀐 말은 주황 밑줄. |
+| 여백의 상태 "변경" · "삭제" · "추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 변경 주황, 삭제 빨강, 추가 초록(여백 표시와 같은 낱말과 색). 원문 쪽 바뀐 말은 주황 밑줄. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "번역 전") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |

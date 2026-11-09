@@ -11,6 +11,7 @@ import {
 	BlockBarPlace,
 	BlockBox,
 	Button,
+	type CropCorner,
 	type CropGrip,
 	type CropRect,
 	CropStage,
@@ -217,6 +218,7 @@ const isWhole = (part: CropRect) => part.x <= 0.01 && part.y <= 0.01 && part.wid
 /** The shapes a crop can keep, width to height; "free" keeps none and "original" the picture's own. */
 const RATIOS = { free: null, original: null, "1:1": 1, "16:9": 16 / 9, "4:3": 4 / 3 } as const;
 type Ratio = keyof typeof RATIOS;
+const RATIO_ORDER: readonly Ratio[] = ["free", "original", "1:1", "16:9", "4:3"];
 
 /**
  * A ratio as the crop's sides in % of the picture: width % over height %. The picture's own shape is 1 there; a pixel ratio is scaled by the picture's
@@ -239,7 +241,7 @@ function centeredCrop(share: number): CropRect {
  * A crop pulled by a corner, kept to a ratio (in shares): the opposite corner stays. The pull counts on whichever side it moved more (an arrow up moves the
  * height), and the picture's edges win over the smallest size, so the crop never leaves the picture.
  */
-function keptCrop(start: CropRect, pulled: CropRect, grip: "nw" | "ne" | "sw" | "se", share: number): CropRect {
+function keptCrop(start: CropRect, pulled: CropRect, grip: CropCorner, share: number): CropRect {
 	const west = grip === "nw" || grip === "sw";
 	const north = grip === "nw" || grip === "ne";
 	const anchorX = west ? start.x + start.width : start.x;
@@ -319,14 +321,16 @@ function CropDialog({
 			x: ((x - box.left) / box.width) * 100,
 			y: ((y - box.top) / box.height) * 100,
 		});
-		const from = at(event.clientX, event.clientY);
 		const share = shareRatio(ratio, size());
+		const pressedAt = at(event.clientX, event.clientY);
+		// A kept shape drawn from a point by the edge has no room to grow outward: the point stays at least the smallest crop inside.
+		const from = share ? { x: clamp(pressedAt.x, 5, 95), y: clamp(pressedAt.y, 5, 95) } : pressedAt;
 		const move = (next: PointerEvent) => {
 			const to = at(next.clientX, next.clientY);
 			if (grip === "stage") {
 				const drawn = drawnCrop(from, to);
 				// Drawn from the pressed point: that point is the corner that stays.
-				const corner = `${to.y < from.y ? "n" : "s"}${to.x < from.x ? "w" : "e"}` as "nw" | "ne" | "sw" | "se";
+				const corner: CropCorner = `${to.y < from.y ? "n" : "s"}${to.x < from.x ? "w" : "e"}` as const;
 				const begun = { x: from.x, y: from.y, width: 0, height: 0 };
 				setPart(share ? keptCrop(begun, drawn, corner, share) : drawn);
 				return;
@@ -396,7 +400,7 @@ function CropDialog({
 							inline
 							value={ratio}
 							onValueChange={pick}
-							options={(Object.keys(RATIOS) as Ratio[]).map((value) => ({
+							options={RATIO_ORDER.map((value) => ({
 								value,
 								label: value === "free" || value === "original" ? t(`editor.crop.${value}`) : value,
 							}))}

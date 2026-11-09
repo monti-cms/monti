@@ -335,8 +335,8 @@ const MARKER_TONE = { changed: "changed", removed: "removed", added: "added" } a
 
 /**
  * What changed in the source, as rows of the editor's to-do list (translation.md, 2026-11-10 owner): a group of its own under what stops publishing, since none
- * of it does. A row per mark, its word in front, the field's name or the block's words on one line, and the one decision at the end ("Leave as is" a changed
- * one, "Remove" a removed block, "Leave out" a new one); pressing the row goes there. Writing in a marked place takes its mark away on its own, so the decision
+ * of it does. A row per changed or removed mark, its word in front, the field's name or the block's words on one line, and the one decision at the end
+ * ("Leave as is" a changed one, "Remove" a removed block); pressing the row goes there. A block new in the source is not here: it is a to-do above. Writing in a marked place takes its mark away on its own, so the decision
  * is only for what needs no change. "Leave all as is" is the banner's.
  */
 export function SourceChangeRows({
@@ -360,12 +360,8 @@ export function SourceChangeRows({
 	const { t } = useAdmin();
 	const { marks, fields } = compared;
 	const blocks = new Map(doc.blocks.map((block) => [block.id, block]));
-	const decisionOf = (mark: TranslationMark): { label: string; decision: Decision } =>
-		mark.kind === "changed"
-			? { label: t("translation.confirm"), decision: { do: "confirm", block: mark.block } }
-			: mark.kind === "removed"
-				? { label: t("translation.remove"), decision: { do: "remove", block: mark.block } }
-				: { label: t("translation.skip"), decision: { do: "skip", from: mark.from } };
+	// A block new in the source is the to-do list's own row above (it stops publishing until decided): its "leave out" is on its card.
+	const moved = marks.filter((mark) => mark.kind !== "added");
 	return (
 		<>
 			{fields.map((mark) => (
@@ -379,20 +375,17 @@ export function SourceChangeRows({
 					onOpen={() => onGoField(mark.field)}
 				/>
 			))}
-			{marks.map((mark) => {
-				const { label, decision } = decisionOf(mark);
-				return (
-					<TodoItem
-						key={mark.kind === "added" ? `added:${mark.from}` : mark.block}
-						title={textOf(mark.kind === "added" ? mark.source : (blocks.get(mark.block) ?? mark.before))}
-						tag={t(`translation.mark.${mark.kind}`)}
-						tagTone={MARK_TONE[mark.kind]}
-						actionLabel={label}
-						onAction={() => onDecide(decision)}
-						onOpen={() => onGo(mark.kind === "added" ? mark.from : mark.block)}
-					/>
-				);
-			})}
+			{moved.map((mark) => (
+				<TodoItem
+					key={mark.block}
+					title={textOf(blocks.get(mark.block) ?? mark.before)}
+					tag={t(`translation.mark.${mark.kind}`)}
+					tagTone={MARK_TONE[mark.kind]}
+					actionLabel={t(mark.kind === "changed" ? "translation.confirm" : "translation.remove")}
+					onAction={() => onDecide({ do: mark.kind === "changed" ? "confirm" : "remove", block: mark.block })}
+					onOpen={() => onGo(mark.block)}
+				/>
+			))}
 		</>
 	);
 }

@@ -669,7 +669,7 @@ describe("when the source changes", () => {
 		expect((await compare(id)).marks.map((mark) => mark.block)).toEqual([second]);
 	});
 
-	it("04-2 a save that only drops a marked block's empty parts (as the editor does) keeps its mark", async () => {
+	it("04-2 a save that differs from the stored block only in empty parts (which the editor drops) keeps its mark", async () => {
 		const { source, id } = await publishedPair();
 		await republish(source, body(p("s1", "하나!"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷!")));
 		const doc = (await get(id)).doc as Doc;

@@ -176,7 +176,12 @@ function DocumentListScreen({
 			// Emptied, the box starts over on the open folder.
 			() =>
 				setState(
-					{ ...state, page: 1, search: { ...state.search, text }, everywhere: text === "" ? false : state.everywhere },
+					{
+						...state,
+						page: 1,
+						search: { ...state.search, text },
+						everywhere: text.trim() === "" ? false : state.everywhere,
+					},
 					{ replace: true },
 				),
 			250,

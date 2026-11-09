@@ -402,13 +402,15 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await userEvent.click(todo());
 		const list = page.getByRole("group", { name: "원문 변경" });
 		const rows = () => [...list.element().querySelectorAll("[data-slot=todo-item]")];
-		await expect.poll(() => rows().length).toBe(3);
+		// A block new in the source is a to-do above, not a row here: listed once.
+		await expect.poll(() => rows().length).toBe(2);
 		const rowOf = (word: string) =>
 			rows().find((row) => row.querySelector("[data-slot=todo-mark]")?.textContent === word);
 		const actionOf = (word: string) => [...(rowOf(word)?.querySelectorAll("button") ?? [])].at(-1)?.textContent;
-		expect([actionOf("변경"), actionOf("삭제"), actionOf("추가")]).toEqual(["그대로 두기", "지우기", "빼기"]);
+		expect([actionOf("변경"), actionOf("삭제")]).toEqual(["그대로 두기", "지우기"]);
+		expect(rowOf("추가")).toBeUndefined();
 		await userEvent.click(list.getByRole("button", { name: "그대로 두기", exact: true }));
-		await expect.poll(() => rows().length).toBe(2);
+		await expect.poll(() => rows().length).toBe(1);
 		await expect.element(mark("변경")).not.toBeInTheDocument();
 	});
 

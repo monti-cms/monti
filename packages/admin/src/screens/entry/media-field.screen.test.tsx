@@ -128,7 +128,7 @@ describe("in a translation", () => {
 		await TranslationCover.run();
 		await properties();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).not.toBeInTheDocument();
 		await openCard();
 		await expect.element(alt()).toHaveAttribute("placeholder", "아침 책상");
 		await expect.element(alt()).toHaveValue("");

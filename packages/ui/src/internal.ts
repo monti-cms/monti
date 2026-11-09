@@ -97,7 +97,7 @@ export {
 } from "./context-menu";
 export { ConversationGroupLabel, ConversationList, ConversationRow, ConversationRowMore } from "./conversation-list";
 export { Count } from "./count";
-export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
+export { type CropCorner, type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
 export { CountRow, DescriptionItem, DescriptionList } from "./description-list";
 export {
