@@ -138,7 +138,7 @@ test.describe("the library", () => {
 		await site.close();
 	});
 
-	test("09-1 a type the library does not take stays with its reason; so does one too big; a disguised file is refused at the server", async ({
+	test("09-1 a type the library does not take is refused at once, as is one too big, and neither takes a place; a disguised file is refused at the server", async ({
 		admin,
 	}, info) => {
 		await admin.goto("/#/media");
@@ -153,8 +153,10 @@ test.describe("the library", () => {
 		});
 		expect((await readFile(big)).length).toBeGreaterThan(10 * 1024 * 1024);
 		await dropFromDisk(admin, [exe, big], main(admin));
-		await expect(main(admin).getByText("지원하지 않는 형식")).toBeVisible();
-		await expect(main(admin).getByText("10 MB 초과")).toBeVisible();
+		await expect(admin.getByText("setup.exe · 지원하지 않는 형식")).toBeVisible();
+		await expect(admin.getByText(`${path.basename(big)} · 10 MB 초과`)).toBeVisible();
+		await expect(main(admin).getByText("setup.exe")).toBeHidden();
+		await expect(main(admin).getByText(path.basename(big))).toBeHidden();
 		const refused = await admin.request.put("/admin/api/media/bytes?name=photo.png", {
 			data: Buffer.from([0x4d, 0x5a, 0x90, 0]),
 		});
@@ -187,6 +189,21 @@ test.describe("the editor", () => {
 		await body(admin).getByRole("button", { name: "다시 올리기" }).click();
 		await expect(body(admin).getByText("올리기 실패")).toBeHidden();
 		await expect.poll(() => decoded(body(admin).locator("img"))).toBeGreaterThan(0);
+	});
+
+	test("09-1 a picture in the body cut off on its way up goes as any block goes", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cut")}.png`, { width: 800, height: 600 });
+		await writing(admin);
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await body(admin).getByText("글의 첫 문단이에요.").click();
+		await pastePicture(admin, file);
+		const stopped = body(admin).getByText("올리기 실패");
+		await expect(stopped).toBeVisible();
+		// A file that stopped has nothing to caption.
+		await expect(body(admin).getByRole("textbox", { name: "캡션" })).toBeHidden();
+		await stopped.click();
+		await admin.keyboard.press("Backspace");
+		await expect(stopped).toBeHidden();
 	});
 
 	test("09-3 09-1 a picture pasted mid-text with a real ⌘V: it goes in, blocks the publish for its alt text, and shows on the site once written", async ({
@@ -355,7 +372,7 @@ test.describe("a cover and what goes up for it", () => {
 		await expect(coverSettings(admin)).toBeVisible();
 	});
 
-	test("09-3 a cover's × takes out a file that did not go up; the cover and its alt text are as they were", async ({
+	test("09-3 a cover's × takes out a file cut off on its way up, and a refused one never touches it: the cover and its alt text are as they were", async ({
 		admin,
 	}, info) => {
 		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
@@ -378,11 +395,18 @@ test.describe("a cover and what goes up for it", () => {
 		await alt.fill("봄 표지");
 		await admin.keyboard.press("Escape");
 
+		// Refused: the field never had it.
 		await chooseUpload(admin, pdf);
 		await expect(admin.getByText("이미지만 가능")).toBeVisible();
-		await expect(admin.getByRole("button", { name: "빼기", exact: true })).toBeHidden();
+		await expect(cover(admin)).toHaveText(new RegExp(name));
+
+		const cut = await picture(admin, info.outputDir, `${unique("cut")}.jpg`);
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await chooseUpload(admin, cut);
+		await expect(admin.getByText("올리기 실패")).toBeVisible();
+		await admin.unroute("**/operations/media.upload");
 		await admin.getByRole("button", { name: "cover 빼기" }).click();
-		await expect(admin.getByText("이미지만 가능")).toBeHidden();
+		await expect(admin.getByText("올리기 실패")).toBeHidden();
 		await expect(cover(admin)).toHaveText(new RegExp(name));
 		await coverSettings(admin).click();
 		await expect(alt).toHaveValue("봄 표지");
@@ -673,6 +697,19 @@ test.describe("while a file is on its way", () => {
 		await retry.click();
 		await expect(main(admin).getByText("올리기 실패")).toBeHidden();
 		await expect(tile(admin, path.basename(file))).toBeVisible();
+	});
+
+	test("09-1 a file cut off can be deleted from its tile, and the library never had it", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("gone")}.jpg`);
+		await admin.goto("/#/media");
+		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await dropFromDisk(admin, [file], main(admin));
+		const stopped = main(admin).getByText("올리기 실패");
+		await expect(stopped).toBeVisible();
+		await main(admin).getByRole("button", { name: "지우기" }).click();
+		await expect(stopped).toBeHidden();
+		await expect(main(admin).getByText(path.basename(file))).toBeHidden();
 	});
 
 	test("09-3 undone while it goes and redone after it landed, the picture is there, and is saved", async ({

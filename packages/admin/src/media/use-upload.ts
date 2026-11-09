@@ -4,13 +4,15 @@ import { useLeaveGuard } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { putFile } from "./put-file";
+import { useSayRefused } from "./upload-problem";
 import { nextToStart, stillGoing, type Upload, uploadQueue } from "./upload-queue";
 
 const previewOf = (file: File) => (file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
 
 /**
  * Files going up from a place on a page (doc 09's `useUpload`, 09-3): the library, the editor and a media field all use this one. `add` takes files where they were
- * dropped or chosen; each stays in `uploads` with its bar, and a failed one stays with its reason. A file that made it leaves the list and comes to `onUploaded`.
+ * dropped or chosen; each stays in `uploads` with its bar, and one the network cut off stays to try again. A file that made it leaves the list and comes to `onUploaded`.
+ * One the library refuses leaves too, and a toast says why: `useAcceptFiles` keeps most of them from coming here at all, and this is for what shows only later (a broken picture, the server's own limit).
  */
 export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Upload) => void } = {}) {
 	const { uploader, session } = useAdmin();
@@ -21,6 +23,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	const stops = useRef(new Map<string, AbortController>());
 	const onUploaded = useRef(options.onUploaded);
 	onUploaded.current = options.onUploaded;
+	const sayRefused = useSayRefused();
 
 	const forget = useCallback((upload: Upload) => {
 		files.current.delete(upload.id);
@@ -44,7 +47,13 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			if (stop.signal.aborted) return;
 			if (!put.ok) {
 				if (put.unauthenticated) session.end();
-				dispatch({ type: "problem", id: upload.id, problem: put.problem });
+				if (put.problem === "failed") {
+					dispatch({ type: "failed", id: upload.id });
+					return;
+				}
+				sayRefused([{ name: upload.name, refusal: put.problem }]);
+				forget(upload);
+				dispatch({ type: "remove", id: upload.id });
 				return;
 			}
 			// A request that never got an answer throws: it is the same "try again" as one that was refused, and must not hold its place in the queue.
@@ -59,14 +68,14 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
 			if (!made?.ok) {
-				dispatch({ type: "problem", id: upload.id, problem: "failed" });
+				dispatch({ type: "failed", id: upload.id });
 				return;
 			}
 			onUploaded.current?.(made.body.output, upload);
 			forget(upload);
 			dispatch({ type: "remove", id: upload.id });
 		},
-		[uploader, session.end, makeItem.run, forget],
+		[uploader, session.end, makeItem.run, forget, sayRefused],
 	);
 
 	useEffect(() => {
@@ -98,7 +107,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 				preview: previewOf(file),
 				status: "waiting",
 				progress: 0,
-				problem: null,
 			};
 		});
 		if (added.length > 0) dispatch({ type: "add", uploads: added });
@@ -115,7 +123,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 
 	const retry = useCallback((upload: Upload) => dispatch({ type: "retry", id: upload.id }), []);
 
-	/** Whether this is still a file of this page: on its way, or stopped with its reason. */
+	/** Whether this is still a file of this page: on its way, or cut off. */
 	const holds = useCallback((id: string) => files.current.has(id), []);
 
 	// Files on their way would stop if the page went: leaving asks, as unsaved changes do (doc 05), and says it is files.

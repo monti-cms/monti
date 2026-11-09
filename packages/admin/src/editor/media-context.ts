@@ -12,7 +12,7 @@ import { nodeName } from "./schema";
 export type EditorMediaValue = {
 	uploads: readonly Upload[];
 	retry: (upload: Upload) => void;
-	/** Whether this file is still this page's, going up or stopped with its reason. */
+	/** Whether this file is still this page's, going up or cut off. */
 	holds: (id: string) => boolean;
 	/** What a finished upload became, for a block that comes back after it ended (undo, then redo). */
 	finished: (id: string) => MediaItem | undefined;
@@ -29,24 +29,34 @@ export const fileBlock = (item: Pick<MediaItem, "id" | "kind" | "name">) =>
 
 const put = (tr: Transaction, nodes: EditorNode[]) => caretPast(insertBlocks(tr, nodes));
 
-/** Files pasted or dropped: each is a block at once, where the caret or the drop is, and goes up in its place with no window (doc 09, principle 4). A table's cell holds text only, so it is not a place for one. */
+/**
+ * Files pasted or dropped: each one the library takes is a block at once, where the caret or the drop is, and goes up in its place with no window (doc 09, principle 4). One it
+ * refuses never becomes a block. A table's cell holds text only, so it is not a place for one.
+ */
 export function placeFiles(
 	editor: Editor,
 	files: readonly File[],
 	at: number | null,
+	accept: (files: readonly File[]) => Promise<File[]>,
 	add: (files: readonly File[]) => Upload[],
 ): boolean {
-	const { state, view } = editor;
-	const tr = state.tr;
-	if (at !== null) tr.setSelection(NodeSelection.near(tr.doc.resolve(at)));
-	if (inTableCell(tr.selection.$from)) return false;
-	const nodes = add(files).flatMap((upload, index) => {
-		const type = files[index]?.type.startsWith("image/") ? "image" : "file";
-		return state.schema.nodes[nodeName(type)]?.create({ upload: upload.id, data: { media: "" } }) ?? [];
+	const where = editor.state.tr;
+	if (at !== null) where.setSelection(NodeSelection.near(where.doc.resolve(at)));
+	if (inTableCell(where.selection.$from)) return false;
+	void accept(files).then((taken) => {
+		if (taken.length === 0 || editor.isDestroyed) return;
+		const { state, view } = editor;
+		const tr = state.tr;
+		// The text may have changed while the files were looked at.
+		if (at !== null) tr.setSelection(NodeSelection.near(tr.doc.resolve(Math.min(at, tr.doc.content.size))));
+		const nodes = add(taken).flatMap((upload, index) => {
+			const type = taken[index]?.type.startsWith("image/") ? "image" : "file";
+			return state.schema.nodes[nodeName(type)]?.create({ upload: upload.id, data: { media: "" } }) ?? [];
+		});
+		put(tr, nodes);
+		view.dispatch(tr.scrollIntoView());
+		editor.commands.focus();
 	});
-	put(tr, nodes);
-	view.dispatch(tr.scrollIntoView());
-	editor.commands.focus();
 	return true;
 }
 

@@ -238,47 +238,43 @@ describe("uploading", () => {
 		await expect.element(tile("into-covers.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·04, 6·35] a file the library does not take stays in place with the reason, and can be taken out", async () => {
+	it("09-1 [flow 6·04, 6·35] a file the library does not take is refused at once: a toast says why, and it takes no place", async () => {
 		await openAssets();
 		dropFiles(main().getByText("desk-morning.jpg").element(), [named("setup.exe", [0x4d, 0x5a])]);
-		await expect.element(main().getByText("지원하지 않는 형식")).toBeVisible();
-		await userEvent.click(main().getByRole("button", { name: "빼기" }));
+		await expect.element(page.getByText("setup.exe · 지원하지 않는 형식")).toBeVisible();
 		await expect.element(main().getByText("setup.exe")).not.toBeInTheDocument();
 	});
 
-	it("09-1 [flow 6·04] a picture that will not read says so", async () => {
+	it("09-1 [flow 6·04] a picture that will not read shows only once it is read, and then leaves the grid", async () => {
 		await openAssets();
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			named("broken.png", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]),
 		]);
-		await expect.element(main().getByText("읽을 수 없는 파일")).toBeVisible();
+		await expect.element(page.getByText("broken.png · 읽을 수 없는 파일")).toBeVisible();
+		await expect.element(main().getByText("broken.png")).not.toBeInTheDocument();
 	});
 
-	it("09-1 [flow 6·04] a file over the limit says so, and stays until it is taken out: a smaller one is another upload", async () => {
+	it("09-1 [flow 6·04] a file over the limit is refused, and what came with it still goes up", async () => {
 		await openAssets();
 		const big = new Uint8Array(11 * 1024 * 1024);
 		big.set(await samplePhoto("#000000", "#ffffff"));
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			new File([big.buffer], "huge.jpg", { type: "image/jpeg" }),
+			await jpeg("fits.jpg"),
 		]);
-		const reason = main().getByText("10 MB 초과");
-		await expect.element(reason).toBeVisible();
-		expect(main().getByRole("button", { name: "다시 올리기" }).elements()).toHaveLength(0);
-		await userEvent.click(main().getByRole("button", { name: "빼기" }));
-		await expect.element(reason).not.toBeInTheDocument();
+		await expect.element(page.getByText("huge.jpg · 10 MB 초과")).toBeVisible();
+		await expect.element(main().getByText("huge.jpg")).not.toBeInTheDocument();
+		await expect.element(tile("fits.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·03] an iPhone's HEIC photo is a format like any other, and says so whole where a tile is narrowest", async () => {
-		await Top.run();
-		dropFiles(main().getByText("top-level-photo.jpg").element(), [
+	it("09-1 [flow 6·03] files refused for one reason are one toast, an iPhone's HEIC photo among them", async () => {
+		await openAssets();
+		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			named("photo.heic", [0, 0, 0, 24, ...new TextEncoder().encode("ftypheic"), 0, 0, 0, 0]),
+			named("setup.exe", [0x4d, 0x5a]),
+			named("clip.mov", [0, 0, 0, 0]),
 		]);
-		const reason = main().getByText("지원하지 않는 형식");
-		await expect.element(reason).toBeVisible();
-		const line = reason.element();
-		expect(line.scrollWidth).toBeLessThanOrEqual(line.clientWidth);
-		await userEvent.click(main().getByRole("button", { name: "빼기" }));
-		await expect.element(reason).not.toBeInTheDocument();
+		await expect.element(page.getByText("photo.heic 외 2개 · 지원하지 않는 형식")).toBeVisible();
 	});
 
 	it("09-1 [flow 6·34] a PDF goes up with no picture, its type on the tile", async () => {

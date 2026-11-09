@@ -45,6 +45,7 @@ import type { ProposalItem } from "../../draft/use-proposals";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { putFile } from "../../media/put-file";
+import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -114,7 +115,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 		if (!put.ok) {
 			if (put.unauthenticated) session.end();
 			setGoing(false);
-			setRefused(t(`library.failed.${put.problem}`, { size: formatBytes(file.size) }));
+			setRefused(t(put.problem === "failed" ? "library.failed" : `library.refused.${put.problem}`));
 			return;
 		}
 		const done = await replace.run(
@@ -201,6 +202,7 @@ export function MediaPanel({
 	const item = read.data;
 	const update = useOperation("media.update");
 	const [replacing, setReplacing] = useState<File | null>(null);
+	const acceptFiles = useAcceptFiles();
 	const [refused, setRefused] = useState<string | null>(null);
 	const uses = useUseRows(item?.useRows ?? []);
 	const extension = item ? splitName(item.name).extension : "";
@@ -272,7 +274,11 @@ export function MediaPanel({
 								chooseFiles({
 									multiple: false,
 									accept: item.kind === "image" ? "image/*" : undefined,
-									onFiles: ([file]) => file && setReplacing(file),
+									// One the library refuses says so at once: there is nothing to compare.
+									onFiles: (files) =>
+										void acceptFiles(files.slice(0, 1)).then(([taken]) => {
+											if (taken) setReplacing(taken);
+										}),
 								})
 							}
 						>

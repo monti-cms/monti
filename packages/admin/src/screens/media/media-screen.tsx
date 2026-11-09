@@ -58,19 +58,19 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import {
-	Close,
 	Document,
 	Folder,
 	FolderAdd,
 	Launch,
 	OverflowMenuHorizontal,
+	TrashCan,
 	Upload as UploadIcon,
 } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
-import { useProblemText, useRetryButton } from "../../media/upload-problem";
+import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
@@ -129,7 +129,7 @@ function FileThumb({ item }: { item: Pick<MediaItem, "kind" | "name" | "web" | "
 	);
 }
 
-/** A file on its way up, in its place in the grid: its bar and turn, or why it stays (flow 6·03, 6·04, 6·34, 6·35). */
+/** A file on its way up, in its place in the grid: its bar and turn, or the buttons of one the network cut off (flow 6·03, 6·04, 6·34). */
 function UploadTile({
 	upload,
 	onRemove,
@@ -140,40 +140,21 @@ function UploadTile({
 	onRetry: (upload: Upload) => void;
 }) {
 	const { t } = useAdmin();
-	const problemText = useProblemText();
-	const retry = useRetryButton(onRetry)(upload);
-	// Where a file's ⋯ stands: a file that did not go up has this one thing to do with it.
-	const takeOut = (
-		<IconButton label={t("library.takeOut")} size="xs" onClick={() => onRemove(upload)}>
-			<Close aria-hidden />
-		</IconButton>
-	);
-	const preview = upload.preview ? (
-		<Image src={upload.preview} alt="" ratio="photo" radius="none" />
-	) : (
-		<FilePreview ext={extensionLabel(upload.name)} />
-	);
+	const picture = upload.preview ? <Image src={upload.preview} alt="" ratio="photo" radius="none" /> : null;
 	if (upload.status === "failed")
 		return (
 			<Tile
 				status="failed"
 				title={upload.name}
-				detail={problemText(upload)}
-				// A picture that cannot be shown leaves an empty place with its red line: no icon, no extension (components/list.md).
-				preview={upload.preview ? null : preview}
-				action={takeOut}
-			/>
-		);
-	if (upload.status === "interrupted")
-		return (
-			<Tile
-				status="interrupted"
-				title={upload.name}
-				detail={problemText(upload)}
-				// The button stands where a file's icon and extension would: the name says what it is.
-				preview={retry && !upload.preview ? null : preview}
-				retry={retry}
-				action={takeOut}
+				detail={t("library.failed")}
+				// With no picture the button stands alone: the name says what the file is.
+				preview={picture}
+				retry={<RetryButton onRetry={() => onRetry(upload)} />}
+				action={
+					<IconButton label={t("library.takeOut")} size="xs" tone="danger" onClick={() => onRemove(upload)}>
+						<TrashCan aria-hidden />
+					</IconButton>
+				}
 			/>
 		);
 	return (
@@ -184,7 +165,7 @@ function UploadTile({
 			detail={
 				upload.status === "uploading" ? t("library.uploading", { percent: upload.progress }) : t("library.waiting")
 			}
-			preview={preview}
+			preview={picture ?? <FilePreview ext={extensionLabel(upload.name)} />}
 		/>
 	);
 }
@@ -390,7 +371,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		setPicked(new Set());
 		setState({ ...state, folder, search: "", everywhere: false, kinds: [], used: [], page: 1, file: null });
 	};
-	const addFiles = (files: File[], folder = state.folder) => void upload.add(files, folder);
+	const acceptFiles = useAcceptFiles();
+	const addFiles = (files: File[], folder = state.folder) =>
+		void acceptFiles(files).then((taken) => upload.add(taken, folder));
 	const areaDrop = useFileDrop((files) => addFiles(files));
 	useKeepFilesInPage();
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AT_ONCE, nextToStart, problemOf, stillGoing, type Upload, uploadQueue } from "./upload-queue";
+import { AT_ONCE, nextToStart, stillGoing, type Upload, uploadQueue } from "./upload-queue";
 
 const upload = (id: string, more: Partial<Upload> = {}): Upload => ({
 	id,
@@ -8,7 +8,6 @@ const upload = (id: string, more: Partial<Upload> = {}): Upload => ({
 	preview: null,
 	status: "waiting",
 	progress: 0,
-	problem: null,
 	...more,
 });
 
@@ -28,39 +27,22 @@ describe("the queue of files going up", () => {
 		let queue = uploadQueue([upload("a")], { type: "start", id: "a" });
 		queue = uploadQueue(queue, { type: "progress", id: "a", percent: 64 });
 		expect(queue[0]?.progress).toBe(64);
-		queue = uploadQueue(queue, { type: "problem", id: "a", problem: "failed" });
+		queue = uploadQueue(queue, { type: "failed", id: "a" });
 		queue = uploadQueue(queue, { type: "progress", id: "a", percent: 90 });
-		expect(queue[0]).toMatchObject({ status: "interrupted", progress: 64 });
-	});
-
-	it("09-1 a type the library does not take cannot be retried; one too big or cut off can", () => {
-		const statusAfter = (problem: "type" | "unreadable" | "tooBig" | "failed") =>
-			uploadQueue([upload("a")], { type: "problem", id: "a", problem })[0]?.status;
-		expect(statusAfter("type")).toBe("failed");
-		expect(statusAfter("unreadable")).toBe("failed");
-		expect(statusAfter("tooBig")).toBe("interrupted");
-		expect(statusAfter("failed")).toBe("interrupted");
+		expect(queue[0]).toMatchObject({ status: "failed", progress: 64 });
 	});
 
 	it("09-1 trying again puts the file back in line", () => {
-		const failed = uploadQueue([upload("a")], { type: "problem", id: "a", problem: "failed" });
+		const failed = uploadQueue([upload("a")], { type: "failed", id: "a" });
 		const again = uploadQueue(failed, { type: "retry", id: "a" });
-		expect(again[0]).toMatchObject({ status: "waiting", problem: null });
+		expect(again[0]).toMatchObject({ status: "waiting" });
 		expect(nextToStart(again).map((each) => each.id)).toEqual(["a"]);
 	});
 
 	it("09-1 only what is still on its way holds a person back from leaving", () => {
 		expect(stillGoing([upload("a")])).toHaveLength(1);
 		expect(stillGoing([upload("a", { status: "uploading" })])).toHaveLength(1);
-		expect(stillGoing([upload("a", { status: "failed" }), upload("b", { status: "interrupted" })])).toHaveLength(0);
+		expect(stillGoing([upload("a", { status: "failed" }), upload("b", { status: "failed" })])).toHaveLength(0);
 		expect(stillGoing([])).toHaveLength(0);
-	});
-
-	it("09-1 the library's refusal is the file's problem", () => {
-		expect(problemOf({ ok: false, reason: "type" })).toBe("type");
-		expect(problemOf({ ok: false, reason: "size", mime: "image/png", kind: "image", extension: ".png" })).toBe(
-			"tooBig",
-		);
-		expect(problemOf({ ok: true, mime: "image/png", kind: "image", extension: ".png" })).toBeNull();
 	});
 });

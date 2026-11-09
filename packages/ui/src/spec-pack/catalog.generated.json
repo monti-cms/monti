@@ -1003,7 +1003,7 @@
 				},
 				"status": {
 					"kind": "variant",
-					"enum": ["failed", "interrupted", "ready", "uploading"]
+					"enum": ["failed", "ready", "uploading"]
 				}
 			},
 			"events": []

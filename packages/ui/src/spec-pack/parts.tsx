@@ -1387,7 +1387,7 @@ function MediaTile({
 	detail?: string;
 	picture?: string;
 	ext?: string;
-	status?: "ready" | "uploading" | "failed" | "interrupted";
+	status?: "ready" | "uploading" | "failed";
 	progress?: number;
 	retry?: string;
 	selected?: boolean;

@@ -16,7 +16,7 @@ import { useRef, useState } from "react";
 import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
-import { useProblemText, useRetryButton } from "../../media/upload-problem";
+import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
@@ -62,8 +62,7 @@ export function MediaField({
 	onChange: (next: MediaValue | null) => void;
 }) {
 	const { t } = useAdmin();
-	const problemText = useProblemText();
-	const retry = useRetryButton(uploads.retry);
+	const acceptFiles = useAcceptFiles();
 	const line = useRef<HTMLDivElement>(null);
 	const [picking, setPicking] = useState(false);
 	const own = mediaValueOf(value);
@@ -102,8 +101,8 @@ export function MediaField({
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
 					action={
-						going?.problem ? (
-							retry(going)
+						going?.status === "failed" ? (
+							<RetryButton onRetry={() => uploads.retry(going)} />
 						) : isImage && shown ? (
 							<Popover open={card} onOpenChange={onCard}>
 								<IconButton
@@ -131,8 +130,10 @@ export function MediaField({
 						) : undefined
 					}
 				/>
-				{altMissing && !readOnly && !going?.problem && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
-				{going?.problem && <FormFieldError>{problemText(going)}</FormFieldError>}
+				{altMissing && !readOnly && going?.status !== "failed" && (
+					<FormFieldError>{t("editor.image.altMissing")}</FormFieldError>
+				)}
+				{going?.status === "failed" && <FormFieldError>{t("library.failed")}</FormFieldError>}
 			</FormField>
 			{picking && (
 				<MediaPickerDialog
@@ -148,7 +149,12 @@ export function MediaField({
 					}}
 					onFiles={([chosen]) => {
 						setPicking(false);
-						if (chosen) uploads.add(field, chosen, own?.alt, accept === "any" ? undefined : "image");
+						if (!chosen) return;
+						const only = accept === "any" ? undefined : "image";
+						// One the library refuses leaves the field as it was.
+						void acceptFiles([chosen], only).then(([taken]) => {
+							if (taken) uploads.add(field, taken, own?.alt, only);
+						});
 					}}
 				/>
 			)}

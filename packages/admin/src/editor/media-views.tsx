@@ -48,7 +48,7 @@ import {
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
-import { useProblemText, useRetryButton } from "../media/upload-problem";
+import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { AltFields } from "./alt-fields";
@@ -97,8 +97,6 @@ function UploadInPlace({
 	const { t } = useAdmin();
 	const media = useContext(EditorMedia);
 	const upload = media?.uploads.find((each) => each.id === id);
-	const problemText = useProblemText();
-	const retry = useRetryButton((each) => media?.retry(each));
 	const latest = useRef({ onDone, onGone });
 	latest.current = { onDone, onGone };
 	useEffect(() => {
@@ -108,16 +106,15 @@ function UploadInPlace({
 		else latest.current.onGone();
 	}, [media, upload, id]);
 	if (!media || !upload) return null;
-	const { problem } = upload;
-	// A file that stopped says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
-	if (problem)
+	// A file cut off says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
+	if (upload.status === "failed")
 		return (
 			<FileBlock
 				name={upload.name}
-				meta={problemText(upload)}
+				meta={t("library.failed")}
 				tone="danger"
 				selected={selected}
-				action={retry(upload)}
+				action={<RetryButton onRetry={() => media.retry(upload)} />}
 			/>
 		);
 	return isImage ? (
@@ -332,7 +329,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 	const data = (node.attrs.data ?? {}) as ImageData;
 	const blockId = String(node.attrs.blockId ?? "");
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
-	const stopped = uploading ? media?.uploads.find((each) => each.id === uploading)?.problem : null;
+	const stopped = uploading ? media?.uploads.find((each) => each.id === uploading)?.status === "failed" : false;
 	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));

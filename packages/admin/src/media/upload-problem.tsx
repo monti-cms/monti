@@ -1,24 +1,51 @@
-import { IconButton } from "@monti-cms/ui";
+import { IconButton, toast } from "@monti-cms/ui";
 import { Renew } from "@monti-cms/ui/icons";
+import { useCallback } from "react";
 import { useAdmin } from "../operations/admin-context";
-import type { Upload } from "./upload-queue";
-
-/** Why a file did not go up, in the words every place shows it in. */
-export function useProblemText() {
-	const { t } = useAdmin();
-	return (upload: Upload) => (upload.problem ? t(`library.failed.${upload.problem}`) : "");
-}
+import { refusalOf } from "./put-file";
+import type { Refusal } from "./upload-queue";
 
 /**
- * The button a place sets on a file that did not go up: what was cut off can be tried again, as it is. One the library will not take has none: it is taken out, and
- * another goes up (2026-11-09, owner). It is an icon in every place, so that it takes no line of its own: a line would push a tile's row in the grid (2026-11-09, owner).
+ * Says which files the library will not take, one toast for each reason: the first file's name and how many more. Nothing stays on the page, as nothing happened: this is the
+ * one failure said only in a toast (status.md, 2026-11-09, owner).
  */
-export function useRetryButton(onRetry: (upload: Upload) => void) {
+export function useSayRefused() {
 	const { t } = useAdmin();
-	return (upload: Upload) =>
-		upload.problem === "failed" ? (
-			<IconButton label={t("library.retry")} onClick={() => onRetry(upload)}>
-				<Renew aria-hidden />
-			</IconButton>
-		) : undefined;
+	return useCallback(
+		(refused: readonly { name: string; refusal: Refusal }[]) => {
+			for (const refusal of new Set(refused.map((each) => each.refusal))) {
+				const [name = "", ...more] = refused.filter((each) => each.refusal === refusal).map((each) => each.name);
+				const reason = t(`library.refused.${refusal}`);
+				toast.error(
+					more.length > 0
+						? t("library.refused.many", { name, count: more.length, reason })
+						: t("library.refused.one", { name, reason }),
+				);
+			}
+		},
+		[t],
+	);
+}
+
+/** The files the library would take, of those given. The rest are refused here, as soon as they are dropped or chosen, and go nowhere. */
+export function useAcceptFiles() {
+	const sayRefused = useSayRefused();
+	return useCallback(
+		async (files: readonly File[], only?: "image") => {
+			const looked = await Promise.all(files.map(async (file) => ({ file, refusal: await refusalOf(file, only) })));
+			sayRefused(looked.flatMap(({ file, refusal }) => (refusal ? [{ name: file.name, refusal }] : [])));
+			return looked.flatMap(({ file, refusal }) => (refusal ? [] : [file]));
+		},
+		[sayRefused],
+	);
+}
+
+/** Tries a file the network cut off again, as it is: an icon in every place, so it takes no line of its own and a tile's row in the grid does not move (2026-11-09, owner). */
+export function RetryButton({ onRetry }: { onRetry: () => void }) {
+	const { t } = useAdmin();
+	return (
+		<IconButton label={t("library.retry")} onClick={onRetry}>
+			<Renew aria-hidden />
+		</IconButton>
+	);
 }

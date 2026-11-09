@@ -255,7 +255,7 @@ describe("pasting", () => {
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
 	});
 
-	it("09-1 a file that will not go up says why in its place, and goes as any block goes", async () => {
+	it("09-1 a picture that will not read leaves the body, and a toast says why", async () => {
 		await Draft.run();
 		await caretAfter("글의 첫 문단");
 		await paste(
@@ -263,12 +263,17 @@ describe("pasting", () => {
 				type: "image/png",
 			}),
 		);
-		await expect.element(body().getByText("읽을 수 없는 파일")).toBeVisible();
-		// A file that stopped has nothing to caption.
-		await expect.element(body().getByRole("textbox", { name: "캡션" })).not.toBeInTheDocument();
-		await userEvent.click(body().getByText("broken.png"));
-		await userEvent.keyboard("{Backspace}");
+		await expect.element(page.getByText("broken.png · 읽을 수 없는 파일")).toBeVisible();
 		await expect.element(body().getByText("broken.png")).not.toBeInTheDocument();
+		await expect.element(body().getByRole("textbox", { name: "캡션" })).not.toBeInTheDocument();
+	});
+
+	it("09-1 a file the library does not take never becomes a block", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(new File([new Uint8Array([0x4d, 0x5a])], "setup.exe"));
+		await expect.element(page.getByText("setup.exe · 지원하지 않는 형식")).toBeVisible();
+		await expect.element(body().getByText("setup.exe")).not.toBeInTheDocument();
 	});
 
 	it("09-4 a pasted picture is in the library, used by the entry once saved", async () => {

@@ -1,12 +1,8 @@
-import type { Acceptance } from "@monti-cms/core";
-
 /**
- * Why a file did not go up.
- * - `type`: not a kind the library takes. `unreadable`: nothing comes out of it (a folder from the OS, a broken picture). Those two can only be taken out.
- * - `tooBig`: over the limit. It can only be taken out too: a smaller file is another upload.
- * - `failed`: the network or the server; it can be tried again as it is.
+ * Why the library will not take a file: not a kind it takes, not a picture where only pictures go, nothing comes out of it (a folder from the OS, a broken picture), or over
+ * the limit. Trying again would change nothing, so such a file takes no place on the page: a toast says so, at once (2026-11-09, owner).
  */
-export type UploadProblem = "type" | "notImage" | "unreadable" | "tooBig" | "failed";
+export type Refusal = "type" | "notImage" | "unreadable" | "tooBig";
 
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {
@@ -14,49 +10,37 @@ export type Upload = {
 	name: string;
 	/** The folder it goes to: `null` is the top level. */
 	folder: string | null;
-	/** A place that takes only images: another file stays with its reason, and out of the library. */
+	/** A place that takes only images: another file is refused, and stays out of the library. */
 	only?: "image";
 	/** The file's own picture, for what shows while it goes up. */
 	preview: string | null;
-	status: "waiting" | "uploading" | "failed" | "interrupted";
+	/** `failed`: cut off by the network or the server. It stays where it was, to try again as it is. */
+	status: "waiting" | "uploading" | "failed";
 	progress: number;
-	problem: UploadProblem | null;
 };
 
 export type QueueAction =
 	| { type: "add"; uploads: Upload[] }
 	| { type: "start"; id: string }
 	| { type: "progress"; id: string; percent: number }
-	| { type: "problem"; id: string; problem: UploadProblem }
+	| { type: "failed"; id: string }
 	| { type: "retry"; id: string }
 	| { type: "remove"; id: string };
 
 /** Files going up at once; the rest wait their turn. */
 export const AT_ONCE = 3;
 
-const STATUS_OF: Record<UploadProblem, "failed" | "interrupted"> = {
-	type: "failed",
-	notImage: "failed",
-	unreadable: "failed",
-	tooBig: "interrupted",
-	failed: "interrupted",
-};
-
 /** One file after an action that names it. */
 function changed(upload: Upload, action: Exclude<QueueAction, { type: "add" | "remove" }>): Upload {
 	switch (action.type) {
 		case "start":
-			return { ...upload, status: "uploading", progress: 0, problem: null };
+			return { ...upload, status: "uploading", progress: 0 };
 		case "progress":
 			return upload.status === "uploading" ? { ...upload, progress: action.percent } : upload;
-		case "problem":
-			return {
-				...upload,
-				status: STATUS_OF[action.problem],
-				problem: action.problem,
-			};
+		case "failed":
+			return { ...upload, status: "failed" };
 		case "retry":
-			return { ...upload, status: "waiting", progress: 0, problem: null };
+			return { ...upload, status: "waiting", progress: 0 };
 	}
 }
 
@@ -71,10 +55,6 @@ export function nextToStart(queue: Upload[]): Upload[] {
 	const going = queue.filter((upload) => upload.status === "uploading").length;
 	return queue.filter((upload) => upload.status === "waiting").slice(0, Math.max(0, AT_ONCE - going));
 }
-
-/** What the library's answer about a file means for its place in the queue. */
-export const problemOf = (answer: Acceptance): UploadProblem | null =>
-	answer.ok ? null : answer.reason === "size" ? "tooBig" : answer.reason;
 
 /** The files still on their way: leaving now would lose them. */
 export const stillGoing = (queue: Upload[]) =>

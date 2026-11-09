@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Close, OverflowMenuHorizontal, Renew } from "./icons";
+import { OverflowMenuHorizontal, Renew, TrashCan } from "./icons";
 import { FilePreview, FolderTile, Grid, IconButton, Image, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
@@ -9,7 +9,7 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 /**
  * A file in a grid: a 4:3 preview, the name over a mono detail line. Flat: no card, no border. Picked: a 2px ink ring and the check on; the file open in
- * a panel has the ring without the check. Uploading, failed and interrupted files say so in the detail line.
+ * a panel has the ring without the check. Files going up and files the network cut off say so in the detail line.
  */
 const meta = {
 	title: "Patterns/List/Tile",
@@ -38,10 +38,10 @@ export const States: Story = {
 	),
 };
 
-/** What stays after an upload is taken out with the × at the top right, shown with the pointer. */
+/** What takes a file the network cut off out of the grid. */
 const takeOut = (
-	<IconButton label="빼기" size="xs">
-		<Close aria-hidden />
+	<IconButton label="지우기" size="xs" tone="danger">
+		<TrashCan aria-hidden />
 	</IconButton>
 );
 
@@ -52,18 +52,29 @@ const retry = (
 	</IconButton>
 );
 
-/** Going up, refused (a type the site does not take), too large, and cut off by the network: only that one can be tried again as it is, a picture or a file. All are as tall as a ready file. */
+/** A dark picture: the two buttons have no ground, and still show on it. */
+const DARK = `data:image/svg+xml;utf8,${encodeURIComponent(
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#17233a"/><circle cx="1150" cy="300" r="120" fill="#46536e"/><path d="M0 700 L400 480 L800 700 L1200 520 L1600 700 V900 H0 Z" fill="#0a101c"/></svg>',
+)}`;
+
+/** Going up, and cut off by the network: a picture, a dark picture and a file with none. All are as tall as a ready file. A file the library refuses never gets here: a toast says so at once. */
 export const Upload: Story = {
 	render: () => (
 		<Grid columns="tiles">
 			<Tile preview={picture} title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
-			<Tile preview={null} title="clip.mov" detail="지원하지 않는 형식" status="failed" action={takeOut} />
-			<Tile preview={picture} title="panorama.png" detail="10 MB 초과" status="interrupted" action={takeOut} />
 			<Tile
 				preview={picture}
 				title="spring-desk.jpg"
 				detail="올리기 실패"
-				status="interrupted"
+				status="failed"
+				action={takeOut}
+				retry={retry}
+			/>
+			<Tile
+				preview={<Image src={DARK} alt="" ratio="photo" />}
+				title="night-city.jpg"
+				detail="올리기 실패"
+				status="failed"
 				action={takeOut}
 				retry={retry}
 			/>
@@ -71,7 +82,7 @@ export const Upload: Story = {
 				preview={null}
 				title="annual-report.pdf"
 				detail="올리기 실패"
-				status="interrupted"
+				status="failed"
 				action={takeOut}
 				retry={retry}
 			/>

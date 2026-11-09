@@ -54,8 +54,8 @@
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
 | 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". 이때 나가려 하면 파일을 올리는 중이라고 묻는다(`useLeaveGuard`의 `uploads`). 파일을 "바뀐 곳"이라 부르지 않는다. |
-| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`action`에 × "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 짧게 말한다: "지원하지 않는 형식"(HEIC도 같다), "이미지만 가능"(이미지만 받는 칸), "읽을 수 없는 파일"(OS의 폴더, 깨진 그림). 고치는 법까지 늘어놓지 않는다(2026-11-09 소유자). ×는 ⋯ 자리에서 포인터가 오면 보인다. |
-| 너무 큰 파일 | `Tile status="interrupted"`(`action`에 ×) | 그림은 흐리게 남고 테는 없다. 세부 줄 "10 MB 초과". 줄인 파일은 새로 올린다(2026-11-09 소유자). |
+| 받지 않는 파일 | `toast.error` | 형식, 크기, 이미지만 받는 칸은 올리려는 즉시 막힌다. 타일이 생기지 않고 토스트가 이름과 이유를 말한다: "지원하지 않는 형식"(HEIC도 같다), "10 MB 초과", "이미지만 가능", "읽을 수 없는 파일"(OS의 폴더). 깨진 그림과 서버의 거절은 알게 된 때 타일이 사라지고 같은 토스트가 뜬다(2026-11-09 소유자). |
+| 끊긴 파일 | `Tile status="failed"`(`retry`에 `IconButton` `Renew` "다시 올리기", `action`에 `IconButton` `TrashCan` "지우기" `size="xs"` `tone="danger"`) | 그림은 흐리게 남고 빨간 테를 두른다. 세부 줄 "올리기 실패". 두 버튼은 늘 보이고 바탕이 없다(2026-11-09 소유자). 그림이 없는 파일은 아이콘과 확장자 없이 버튼만 있다. |
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
 | (빠짐, 2026-11-05) 제안 메모 카드 | `MemoCardPopover`(`where` "대체 텍스트 · desk-morning.jpg", `onDiscard`, `onAccept`, `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage` | 제안 표시를 누르면 그 타일에 열린다. 받기와 버리기는 머리에 있고 그 파일만 다룬다. |
@@ -156,7 +156,7 @@
 | `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "종류 파일" | 6.33 | `Chip` "종류: 파일 ×", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
 | `mode` "PDF 올리는 중" | 6.34 | `FilePreview`가 든 `Tile status="uploading"`과 대기 타일 | Patterns/List/FilePreview, Patterns/List/Tile |
-| `mode` "받지 않는 형식" | 6.35 | `FilePreview`가 든 `Tile status="failed"`(빼기) | Patterns/List/FilePreview, Patterns/List/Tile |
+| `mode` "받지 않는 형식" | 6.35 | 타일 없음. `toast.error` "setup.exe · 지원하지 않는 형식" | Controls/Status/Toast |
 | `mode` "PDF 열기" | 6.36 | 파일용 옆 패널(대체 텍스트와 캡션 없음, "파일 바꾸기" · "휴지통으로"는 이미지처럼 ⋯ 안) |  |
 
 ## 이미지 넣기 (ImageInsert)

@@ -3,6 +3,7 @@ import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { MediaPickerDialog } from "../media/media-picker-dialog";
+import { useAcceptFiles } from "../media/upload-problem";
 import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
 import { useRead } from "../operations/use-operation";
@@ -79,6 +80,7 @@ export function BodyEditor({
 	const slash = useSlashMenu({ catalogs, templates, editorRef, onLibrary: storage ? setLibrary : undefined });
 	// A file on its way up waits in its block; when the library has it, the block has it too, wherever it has moved since.
 	const finished = useRef(new Map<string, MediaItem>());
+	const accept = useAcceptFiles();
 	const upload = useUpload({
 		onUploaded: (item: MediaItem, done) => {
 			finished.current.set(done.id, item);
@@ -113,7 +115,7 @@ export function BodyEditor({
 		onChange: (next) => onChange(restorePending(next, placeholders.originals)),
 		keyDown: slash.keyDown,
 		onSelection: slash.sync,
-		onFiles: (files, at, view) => (storage ? placeFiles(view, files, at, upload.add) : false),
+		onFiles: (files, at, view) => (storage ? placeFiles(view, files, at, accept, upload.add) : false),
 		onTakeProposal: (id) => {
 			const item = latestProposals.current?.items.find((each) => each.id === id);
 			if (!item || !editorRef.current) return;
@@ -191,7 +193,7 @@ export function BodyEditor({
 						}}
 						onFiles={(files) => {
 							setLibrary(null);
-							if (editor) placeFiles(editor, files, null, upload.add);
+							if (editor) placeFiles(editor, files, null, accept, upload.add);
 						}}
 					/>
 				)}
