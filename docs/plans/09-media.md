@@ -139,6 +139,8 @@
 
 ### 1.4 GPT-6.1 Terra 사용성 시험
 
+이 절은 09에서 한 일의 기록이다. 2026-11-09 소유자 결정으로 다음 문서부터는 필수 절차가 아니다(`docs/testing.md`, 사용성 확인).
+
 **도구.** `testing/usability/driver.ts`를 새로 만든다. 창을 띄운 Chromium 하나를 잡고 있는 작은 서버이고, 명령은 `node testing/usability/do.ts <명령>`이다. 포인터 위치와 입력 기록이 호출 사이에 남는다. 영상(`recordVideo`)도 남긴다.
 
 | 명령 | 입력 |
