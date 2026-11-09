@@ -15,6 +15,9 @@ import {
 import { Kysely, PostgresDialect } from "kysely";
 import type { Transport, Uploader } from "../src/operations/transport";
 
+/** The Postgres of the story on the page. */
+let open: PGlite | null = null;
+
 /** Kysely on PGlite: one connection, so a query waits for the one before it (a transaction holds it until it ends). */
 function pgliteDialect(pg: PGlite) {
 	let queue = Promise.resolve();
@@ -29,7 +32,11 @@ function pgliteDialect(pg: PGlite) {
 				await previous;
 				return {
 					query: async (sql: string, parameters: readonly unknown[]) => {
-						const result = await pg.query(sql, parameters as unknown[]);
+						// A story that has ended can still have a file on its way: nobody waits for that answer, and it never comes.
+						const result = await pg.query(sql, parameters as unknown[]).catch((error: unknown) => {
+							if (pg !== open) return new Promise<never>(() => {});
+							throw error;
+						});
 						return {
 							rows: result.rows,
 							rowCount: result.affectedRows ?? result.rows.length,
@@ -53,9 +60,6 @@ export type StorySite = {
 	storage: Storage | null;
 };
 
-/** The Postgres of the story on the page. */
-let open: PGlite | null = null;
-
 /**
  * A whole site in the browser for a story (build.md rule 6): Postgres on PGlite, the core's real operations and the real admin API, so a story runs
  * what the admin runs. `setup` puts the story's data in through operations; `signedIn` starts the story with the admin's session.
@@ -74,7 +78,9 @@ export async function storySite({
 	storage?: Storage | null;
 }): Promise<StorySite> {
 	// One story shows at a time, and a Postgres left open holds its memory until the page goes: the last story's goes first (T116).
-	await open?.close().catch(() => {});
+	const last = open;
+	open = null;
+	await last?.close().catch(() => {});
 	// Search uses trigram indexes (doc 06), as on the live site's Postgres.
 	open = new PGlite({ extensions: { pg_trgm } });
 	const db = new Kysely<Database>({ dialect: pgliteDialect(open) });
