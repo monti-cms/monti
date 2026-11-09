@@ -125,7 +125,7 @@
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
 | 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `before`, `after`) |  |
 | 긴 묶음 | `ReviewMore`(`moreLabel` "6편 더 보기", `lessLabel` "접기") | 다섯 줄이 넘을 때. |
-| 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 유지 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
+| 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 따름 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
 | 결과 뒤의 체크 | `ReviewItem readOnly` | 회색 체크, 바꿀 수 없다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Button/Button, Primitives/Text, Controls/Status/Count, Controls/Status/Progress, Monti/Proposal/Review, Primitives/Separator, Controls/Tabs/Tabs, Monti/Proposal/Marks, Patterns/Frame/Collapsible, Controls/Field/Caret, Monti/Translation/Marks.

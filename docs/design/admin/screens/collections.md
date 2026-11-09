@@ -13,7 +13,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움" · "주소" · 그 밖의 고침은 "바뀜"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 고칠 곳이 있어도 막지 않는다. 누르면 검토가 열리고 거기서 알린다. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
+| 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 변경 사항이 있을 때만 보인다. "변경 사항 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름 변경" · "삭제" · "추가" · "컬렉션 삭제" · "주소 변경" · 그 밖의 고침은 "변경", 2026-11-10 소유자: 번역 표시와 같은 낱말), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 고칠 곳이 있어도 막지 않는다. 누르면 검토가 열리고 거기서 알린다. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
 | 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용됩니다") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
 | 데이터베이스 적용 실패 (빠짐, 2026-11-05) | 틀의 알림 띠(`SchemaBanner`)가 맡는다 | 모든 화면 맨 위의 띠와 같은 말을 두 번 보이지 않는다. |
 
@@ -50,7 +50,7 @@
 | 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. |
 | Public address | A 36px body-text setting row matching “Use folders”, with the `Affix` directly below. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
 | 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). |
-| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 바뀐 곳 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
+| 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 변경 사항 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
 #### 속성 패널 미리보기
 
@@ -87,7 +87,7 @@
 | 파일 (미디어, 절 "파일") | 입력 규칙과 같은 줄: "파일 종류"(`Select size="md"`: 이미지 · 모든 파일) | 받을 파일의 종류는 값의 모양이라 규칙이 아니다. "선택지" · "고를 대상"과 같은 자리(입력 규칙 위)에 온다(2026-11-05, 소유자). |
 | 고를 대상 (관계, 절 "고를 대상") | 입력 규칙과 같은 줄: 가리킬 컬렉션(`Select size="md"`), 여러 개 고르기 · 목록에 없으면 새로 만들기(`Switch`) | 무엇을 몇 개 고르는지는 규칙이 아니라 값의 모양이라 따로 된 절이다. "선택지"와 같은 자리(입력 규칙 위)에 온다(2026-11-05, 소유자). |
 | 고르기의 선택지 (절 "선택지") | `OptionTable`(머리 없음, 값 · 라벨은 입력의 플레이스홀더) + 줄마다 `OptionRow`(`handle`에 `DragHandle`, `value`에 `Input appearance="inline" mono`, `label`에 `Input appearance="inline"`, `action`에 빼기 ×) | 값과 라벨은 처음부터 입력 칸이고 쉴 때 글처럼 읽힌다. 손잡이로 순서를 바꾼다(끌기와 키보드, [list.md](../components/list.md) "끌어서 옮기기"). 구조를 바꿀 수 없는 운영 사이트에서는 손잡이가 없다. 아래 `TextButton` "+ 선택지"가 줄을 더한다. 기본값은 없다(01번 문서의 고르기 설정은 선택지와 여러 개뿐). 선택지는 규칙이 아니라 필드의 값이라 위 묶음과 "입력 규칙" 사이의 따로 된 절이다. 선택지가 없으면 표 머리 없이 "+ 선택지"만 있다(2026-11-05, 소유자). "여러 개 고르기" 줄은 이 절의 끝, "+ 선택지" 아래에 있다. |
-| 언어 | 입력 규칙의 한 줄, `Select size="md"`("모두 같음" · "언어마다" · "원문 따름") | 설명 없이 이름만(2026-11-05, 소유자). 사이트 언어가 하나면 없다(T46). |
+| 언어 | 입력 규칙의 한 줄, `Select size="md"`("언어 공통" · "언어마다" · "원문 따름") | 설명 없이 이름만(2026-11-05, 소유자). 사이트 언어가 하나면 없다(T46). |
 | 요약 줄 (빠짐, 2026-11-05) | | 이름 칸과 종류 목록이 이미 보이는 말을 되풀이해서 뺐다. |
 
 #### 필드 시트 · 읽기 전용
@@ -101,10 +101,10 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 바뀐 곳 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 "다시 불러오기". 발에는 "취소"와 알약 하나만 있다. |
+| 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 변경 사항 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 "다시 불러오기". 발에는 "취소"와 알약 하나만 있다. |
 | 고칠 곳 | 변경 블록과 같은 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 필드 이름, `identifier`) + `ChangeNote danger` 무엇이 문제인지 + `TextButton` "열기" | 검토의 맨 위, 다른 변경 블록과 같은 모양이다. 저장을 누른 그때 알린다. "열기"는 검토를 닫고 그 필드 시트를 연다. 고칠 곳이 남아 있는 동안 발에는 "취소"만 있다(2026-11-05, 소유자). |
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었습니다", 회색 한 줄) | 시트 맨 위, 위로 변경 블록과 같은 16px. 이때 발의 알약은 "다시 불러오기"다. 할 수 있는 일이 그것뿐이라 비활성 "적용" 대신 그 자리에 둔다(2026-11-05, 소유자). |
-| 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "새로" · "이름" · "지움" · "필수" · "주소", `title`, `identifier` "summary → excerpt") | |
+| 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "추가" · "이름 변경" · "삭제" · "필수" · "주소 변경", `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않습니다." · "옛 주소는 404가 됩니다." · "값이 사라집니다. 되돌릴 수 없습니다." |
 | 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | A path change shows before and after. The old-address warning appears only when a previous public path is being removed or changed. |
@@ -119,20 +119,20 @@
 |---|---|---|---|
 | "새 컬렉션" | 4.01 | 새 컬렉션 `Sheet` | Controls/Overlay/Sheet |
 | "새 컬렉션 오류" | 4.02 | 식별자 `aria-invalid`와 `FormFieldError`, "만들기" 비활성 | Controls/Field/Field |
-| "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 바뀐 곳 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
+| "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 변경 사항 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
 | "새 컬렉션 검토" | 4.05 | Review `Sheet`: `ChangeGroup kind="new"` and `ChangeLines`; the public-address line is omitted for an item without a public page. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었습니다"와 "보기" | Controls/Status/Toast |
-| "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 바뀐 곳 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
+| "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 변경 사항 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
 | "고칠 곳" | 4.09 | 해당 `FieldRow tone="danger"`. 저장을 누르면 검토 맨 위에 "고칠 곳" 변경 블록과 "열기", 발에 알약 없음 | Monti/Change/ChangeGroup, Patterns/List/FieldTree |
-| "바뀐 곳 목록" | 4.10 | `ChangesGroup`의 목록 열림(요약 · 부제 · 글 종류, 각각 되돌리기) | Monti/Change/ChangesGroup |
+| "변경 사항 목록" | 4.10 | `ChangesGroup`의 목록 열림(요약 · 부제 · 글 종류, 각각 되돌리기) | Monti/Change/ChangesGroup |
 | "필드 검토" | 4.11 | 검토 `Sheet`: 이름 · 지움 · 필수 `ChangeGroup` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "값 지우기" | 4.12 | 지움 블록에서 "값 지우기"를 고름, `ChangeNote danger`, 알약 `Button variant="danger"` "지우고 적용" | Monti/Change/ChangeGroup, Controls/Button/Button |
-| "주소 바꿈" | 4.13 | 기본 탭, `Affix` 값 "blog", 공개 주소 `ChangeDot`, 바뀐 곳 1 | Controls/Field/Affix, Controls/Status/ChangeDot |
+| "주소 바꿈" | 4.13 | 기본 탭, `Affix` 값 "blog", 공개 주소 `ChangeDot`, 변경 사항 1 | Controls/Field/Affix, Controls/Status/ChangeDot |
 | "주소 검토" | 4.14 | 검토 `Sheet`: 주소 `ChangeGroup kind="edit"`, 전 / 후 / 발행된 글 `ChangeLines`, `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지우기 전" | 4.15 | 메모의 기본 탭과 `DangerBlock` | Patterns/Frame/DangerBlock |
-| "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 바뀐 곳 목록 열림("메모 · 컬렉션 지움 · 되돌리기"), `toast` "메모를 지웠습니다"와 "되돌리기" | Controls/Status/Toast |
+| "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 변경 사항 목록 열림("메모 · 컬렉션 삭제 · 되돌리기"), `toast` "메모를 지웠습니다"와 "되돌리기" | Controls/Status/Toast |
 | "지우기 검토" | 4.17 | 검토 `Sheet`: `ChangeGroup kind="drop"`, `ChangeNote` "이 컬렉션의 글이 모두 지워집니다.", 알약 "지우고 적용"(2026-11-05 바뀜: 받아 두기와 개수는 빠짐) | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지운 뒤" | 4.18 | 메모가 목록에 없음, `toast` "적용했습니다" | Controls/Status/Toast |
 | `tab` "필드" · "기본" | 4.01, 4.02, 4.03, 4.04, 4.05, 4.06, 4.07, 4.08, 4.09, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
@@ -146,7 +146,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "운영 고침" (빠짐, 2026-11-05) | 11.10 | 새 `FieldRow`(readingTime, `success`, "새로"), 알약 "PR 만들기" | Patterns/List/FieldTree |
+| "운영 고침" (빠짐, 2026-11-05) | 11.10 | 새 `FieldRow`(readingTime, `success`, "추가"), 알약 "PR 만들기" | Patterns/List/FieldTree |
 | "운영 제안" (빠짐, 2026-11-05) | 11.11 | 새 `FieldRow`(note "✦ 제안", 파란 이름), 알약 "PR 만들기" | Patterns/List/FieldTree |
 | "운영 검토" (빠짐, 2026-11-05) | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
 | "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었습니다"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
@@ -170,7 +170,7 @@
 |---|---|---|
 | 묶음 "블록" · "서식" · "제목 단계" | `Section stacked`(제목은 묶음 이름) | 이 컬렉션의 편집기가 쓸 수 있는 것을 묶음마다 고른다. 처음에는 모두 켜져 있다. |
 | "모두 허용" | 블록 묶음 제목 뒤 `TextButton variant="quiet"` | 누르면 그 묶음을 모두 켠다. |
-| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 바뀐 곳이 된다. |
+| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 변경 사항이 된다. |
 | 바뀐 항목 | 이름 뒤 `Text variant="meta" tone="warning"` "· 바뀜" | 저장한 값과 다를 때만. |
 
 스토리: Patterns/Frame/Section, Controls/Button/TextButton, Primitives/Grid, Controls/Choice/Option, Controls/Choice/Checkbox, Primitives/Text.

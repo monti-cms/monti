@@ -126,7 +126,7 @@
 |---|---|---|---|
 | "언어 찾기" | 11.05 | "+ 언어 추가"의 `Command` 팝오버, 검색어 "zh" | Controls/Menu/Command |
 | "직접 입력" | 11.06b | 직접 입력 `Dialog` | Controls/Overlay/Dialog |
-| "언어 추가됨" | 11.06 | 日本語 행이 `dot`("새로")과 함께 생김, 탭 `dot`, 저장 묶음 |  |
+| "언어 추가됨" | 11.06 | 日本語 행이 `dot`("추가")과 함께 생김, 탭 `dot`, 저장 묶음 |  |
 | "원문 메뉴" | 11.07 | "바꾸기"의 `DropdownMenu`(지금 원문 ✓) | Controls/Menu/DropdownMenu |
 | "원문 바꿈" | 11.07b | English가 맨 위의 원문, 두 행에 `dot`("원문 변경"), 옛 원문 행에 손잡이와 × |  |
 | "빼기 검토" | 11.08 | English 행 `gone`, 빼기 검토 `Sheet`, ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet |

@@ -60,7 +60,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 한 번 공개된 주소는 남겨 둔다고 적는다. |
-| 영구 삭제가 막힘 | `AlertDialogContent size="wide"` 안에 `ChangeGroup kind="drop"`(`tag` "지움", `title` "임시", `identifier` "태그"), `ChangeLines`의 `ChangeLine`(`what` "가리키는 글 4편 · …", `then`에 `TextButton variant="inherit"` "연결 끊기" / "같이 삭제", `tone="warning"`), `ChangeNote` | 막는 것을 그 줄의 버튼으로 풀기 전까지 `AlertDialogAction`은 `disabled`. 글 링크는 `TextButton variant="underline"`. |
+| 영구 삭제가 막힘 | `AlertDialogContent size="wide"` 안에 `ChangeGroup kind="drop"`(`tag` "삭제", `title` "임시", `identifier` "태그"), `ChangeLines`의 `ChangeLine`(`what` "가리키는 글 4편 · …", `then`에 `TextButton variant="inherit"` "연결 끊기" / "같이 삭제", `tone="warning"`), `ChangeNote` | 막는 것을 그 줄의 버튼으로 풀기 전까지 `AlertDialogAction`은 `disabled`. 글 링크는 `TextButton variant="underline"`. |
 | 휴지통 비우기 확인 | `AlertDialog`(`AlertDialogTitle` "휴지통을 비울까요?"), `AlertDialogAction variant="danger"` "비우기" | 다른 글이 가리키는 것은 남기고 이유를 보인다고 적는다. |
 
 ## 흐름 5 · 휴지통
