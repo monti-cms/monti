@@ -73,7 +73,7 @@ describe("from the library", () => {
 		expect(left(/^미디어/)).toBeLessThan(left(/^Blog Assets/));
 		expect(left(/^Blog Assets/)).toBeLessThan(left(/^covers/));
 		await userEvent.click(folderRow(dialog, /^diagrams/));
-		await expect.element(dialog.getByText("여기에는 파일이 없어요.")).toBeVisible();
+		await expect.element(dialog.getByText("여기에는 파일이 없습니다.")).toBeVisible();
 		expect(height()).toBe(all);
 	});
 
@@ -111,7 +111,7 @@ describe("from the library", () => {
 		expect(folderCards(dialog)).toEqual([]);
 
 		await userEvent.fill(search, "top-level");
-		await expect.element(dialog.getByText("맞는 파일이 없어요.")).toBeVisible();
+		await expect.element(dialog.getByText("맞는 파일이 없습니다.")).toBeVisible();
 		await userEvent.click(dialog.getByRole("button", { name: "모든 폴더" }));
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 

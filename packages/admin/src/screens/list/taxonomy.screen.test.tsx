@@ -93,7 +93,7 @@ describe("taxonomy screen (doc 08)", () => {
 		const mergeButton = dialog().getByRole("button", { name: "합치기" });
 		await userEvent.click(mergeButton);
 		// Toast appears with exact interpolated message and undo button
-		await expect.element(page.getByText("글 3편의 태그를 리액트로 바꿨어요")).toBeVisible();
+		await expect.element(page.getByText("글 3편의 태그를 리액트로 바꿨습니다")).toBeVisible();
 		const toastUndo = page.getByRole("button", { name: "되돌리기" });
 		await expect.element(toastUndo).toBeVisible();
 		await userEvent.click(toastUndo);

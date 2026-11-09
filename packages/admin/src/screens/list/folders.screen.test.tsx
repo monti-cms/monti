@@ -50,9 +50,9 @@ describe("folders in the list", () => {
 
 	it("[line-start] '새 폴더' in a collection with no posts yet still makes a folder row to name", async () => {
 		await Empty.run();
-		await expect.element(main().getByText("아직 메모가 없어요.")).toBeVisible();
+		await expect.element(main().getByText("아직 메모가 없습니다.")).toBeVisible();
 		await newFolder("아이디어");
-		await expect.element(main().getByText("아직 메모가 없어요.")).not.toBeInTheDocument();
+		await expect.element(main().getByText("아직 메모가 없습니다.")).not.toBeInTheDocument();
 	});
 
 	it("[flow 5·01] Esc in the new folder's name drops the folder", async () => {
@@ -133,7 +133,7 @@ describe("folders in the list", () => {
 		await userEvent.click(menu.getByRole("menuitem", { name: "폴더 지우기" }));
 		const dialog = page.getByRole("alertdialog");
 		await expect.element(dialog).toHaveTextContent("글 3편");
-		await expect.element(dialog).toHaveTextContent("1편은 사이트에서 내려가요");
+		await expect.element(dialog).toHaveTextContent("1편은 사이트에서 내려갑니다");
 		await userEvent.click(dialog.getByRole("button", { name: "휴지통으로" }));
 		await expect.element(folderLink("시리즈 원고")).not.toBeInTheDocument();
 		await expect.element(sidebarFolders()).not.toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("folders in the list", () => {
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folderLink("임시")).not.toBeInTheDocument();
 		// This removal's toast (an earlier test's toast may still be on the page).
-		const toast = page.getByRole("listitem").filter({ hasText: "임시 폴더를 휴지통으로 옮겼어요" });
+		const toast = page.getByRole("listitem").filter({ hasText: "임시 폴더를 휴지통으로 옮겼습니다" });
 		await userEvent.click(toast.getByRole("button", { name: "되돌리기" }));
 		await expect.element(folderLink("임시")).toBeVisible();
 		await userEvent.click(folderLink("임시"));

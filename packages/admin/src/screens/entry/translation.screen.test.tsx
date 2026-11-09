@@ -32,6 +32,9 @@ const body = () => page.getByRole("textbox", { name: "본문" });
 /** A mark in the text's left margin ("변경", "추가", "삭제"). */
 const mark = (name: string) => page.getByRole("button", { name, exact: true });
 const tabs = () => page.getByRole("navigation", { name: "언어" });
+/** The card a mark opens says what it is about, as the banner over the text does. */
+const memoCard = () => page.getByText("원문 변경", { exact: true }).last();
+
 /** A language's tab: its name, and "원문 변경" after it when it has a dot. */
 const tab = (name: string) => tabs().getByRole("button").filter({ hasText: name });
 const addLanguage = () => tabs().getByRole("button", { name: "+ 언어" });
@@ -198,7 +201,7 @@ describe("flow 3, a translation", () => {
 	it("04-1 3.09 the translation shows a margin mark on each changed, added and removed block, and a banner with '모두 확인'", async () => {
 		await open(SourceChanged);
 		await expect.element(page.getByRole("button", { name: "끔" })).toHaveAttribute("aria-pressed", "true");
-		await expect.element(page.getByText("원문이 변경됐어요")).toBeVisible();
+		await expect.element(page.getByText("원문 변경", { exact: true })).toBeVisible();
 		// The status bar counts them in a cell of its own, apart from the to-do list.
 		await expect.element(page.getByRole("button", { name: "원문 변경 3" })).toBeVisible();
 		await expect.element(mark("변경")).toBeVisible();
@@ -217,8 +220,7 @@ describe("flow 3, a translation", () => {
 	it("04-1 3.10 a mark opens the source before and after, and '확인' clears that mark", async () => {
 		await open(SourceChanged);
 		await userEvent.click(mark("변경"));
-		const card = page.getByText("원문 변경", { exact: true });
-		await expect.element(card).toBeVisible();
+		await expect.element(memoCard()).toBeVisible();
 		await expect.element(page.getByText("글을 쓰는 시간보다 도구를 고치는 시간이", { exact: false })).toBeVisible();
 		await expect.element(page.getByText("도구를 고치는 시간이 글을 쓰는 시간보다", { exact: false })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
@@ -248,7 +250,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(page.getByRole("button", { name: "블록 메뉴" })).toBeVisible();
 		expect(document.elementFromPoint(on.x, on.y)?.closest("[data-slot=marker]")).toBe(mark("변경").element());
 		await userEvent.click(mark("변경"));
-		await expect.element(page.getByText("원문 변경", { exact: true })).toBeVisible();
+		await expect.element(memoCard()).toBeVisible();
 	});
 	it("04-1 3.02 a new translation's undecided block is empty with the source as its placeholder: typing gives the block only the typed words", async () => {
 		await open(NewTranslation);
@@ -348,7 +350,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		const title = page.getByRole("textbox", { name: "제목" });
 		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "변경", exact: true }).first());
-		await expect.element(page.getByText("원문 변경", { exact: true }).last()).toBeVisible();
+		await expect.element(memoCard()).toBeVisible();
 		await expect.element(page.getByText("고치며")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
 		await expect.element(page.getByRole("button", { name: "원문 변경 1" })).toBeVisible();

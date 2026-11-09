@@ -77,7 +77,7 @@ export const SessionEnded: Story = {
 		await page.findByText("발행 후 고친 글", {}, { timeout: 15000 });
 		await made.db.deleteFrom("monti_session").execute();
 		await userEvent.click(page.getByRole("button", { name: "메모" }));
-		await page.findByText("로그인이 풀렸어요", {}, { timeout: 15000 });
+		await page.findByText("로그인이 풀렸습니다", {}, { timeout: 15000 });
 		await expect(page.getByRole("button", { name: "다시 로그인" })).toBeVisible();
 	},
 };

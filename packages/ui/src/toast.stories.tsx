@@ -42,7 +42,7 @@ export const Undo: Story = {
 
 /** A message alone. */
 export const Message: Story = {
-	render: () => <Show fire={() => toast("저장했어요")} />,
+	render: () => <Show fire={() => toast("저장했습니다")} />,
 };
 
 /** A failure. */

@@ -19,7 +19,7 @@ const actions = (
 
 /** `warning` (the default): something to know about the whole page, with a small mono detail. */
 export const Warning: Story = {
-	args: { title: "한국어 원문이 변경됐어요", meta: "10. 26 · 블록 2개", children: actions },
+	args: { title: "한국어 원문 변경", meta: "10. 26 · 블록 2개", children: actions },
 };
 
 /** `danger`: something failed. */
@@ -36,7 +36,7 @@ export const Danger: Story = {
 export const Neutral: Story = {
 	args: {
 		tone: "neutral",
-		title: "휴지통에 있는 글이에요",
+		title: "휴지통에 있는 글입니다",
 		meta: "복원하면 초안으로 돌아와요",
 		children: <TextButton variant="underline">복원</TextButton>,
 	},
@@ -44,7 +44,7 @@ export const Neutral: Story = {
 
 /** `plainMeta` makes the detail a sentence on any tone. */
 export const PlainMeta: Story = {
-	args: { title: "이 글은 저장할 수 없어요", meta: "필수 필드 2개가 비어 있어요", plainMeta: true },
+	args: { title: "이 글은 저장할 수 없습니다", meta: "필수 필드 2개가 비어 있어요", plainMeta: true },
 };
 
 /** `lines`: several sentences, one per line, each with its dot (the warnings of one block). */

@@ -220,7 +220,7 @@ export const SourceChanged: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
-		await page.findByText("원문이 변경됐어요", undefined, wait);
+		await page.findByText("원문 변경", undefined, wait);
 		await userEvent.click(page.getByRole("button", { name: "끔" }));
 	},
 };

@@ -48,8 +48,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 놓을 곳 | `DropArea`(`over`) | 파일을 끌어 오면 지금 폴더 영역 둘레에 잉크 선이 생긴다. 아래 가운데에 `toast.dropHint` "여기에 올려요". |
-| 폴더 타일 행 | `Grid columns="folders"`, 칸마다 `FolderTile`(`name`, `count`) | 누르면 그 폴더로 들어간다. 파일을 그 위로 끌면 그 타일이 `dropTarget`이 되고 영역 선은 꺼지며, 알림이 "**covers**에 올려요"가 된다. |
+| 놓을 곳 | `DropArea`(`over`) | 파일을 끌어 오면 지금 폴더 영역 둘레에 잉크 선이 생긴다. 아래 가운데에 `toast.dropHint` "여기에 올리기". |
+| 폴더 타일 행 | `Grid columns="folders"`, 칸마다 `FolderTile`(`name`, `count`) | 누르면 그 폴더로 들어간다. 파일을 그 위로 끌면 그 타일이 `dropTarget`이 되고 영역 선은 꺼지며, 알림이 "**covers**에 올리기"가 된다. |
 | 새 폴더 · 이름 바꾸기 | `FolderTile` 안 `RenameField fill` | "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 이름을 지키고, Esc는 버린다. |
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
@@ -59,7 +59,7 @@
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
 | (빠짐, 2026-11-05) 제안 메모 카드 | `MemoCardPopover`(`where` "대체 텍스트 · desk-morning.jpg", `onDiscard`, `onAccept`, `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage` | 제안 표시를 누르면 그 타일에 열린다. 받기와 버리기는 머리에 있고 그 파일만 다룬다. |
-| 저장소 없음 | `Text weight="semibold"` "미디어 저장소가 없어요", 그 아래 `Text variant="note" tone="subtle"` 한 줄, 머리의 `Button variant="primary"` "연결 방법"(`href`) | 상자도 빈 상태 부품도 없이 두 줄이다. 할 수 있는 일이 연결 하나뿐이라 그 일이 알약이 되고, "올리기 ▾"는 없다(2026-11-05 소유자, 원칙 7). |
+| 저장소 없음 | `Text weight="semibold"` "미디어 저장소가 없습니다", 그 아래 `Text variant="note" tone="subtle"` 한 줄, 머리의 `Button variant="primary"` "연결 방법"(`href`) | 상자도 빈 상태 부품도 없이 두 줄이다. 할 수 있는 일이 연결 하나뿐이라 그 일이 알약이 되고, "올리기 ▾"는 없다(2026-11-05 소유자, 원칙 7). |
 
 #### 목록 보기
 
@@ -79,7 +79,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 쪽 | `Pagination`(목록 화면의 `ListPages`와 같다) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. |
-| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄(목록에서는 표의 한 행) | "아직 파일이 없어요.", 거른 결과가 없으면 "맞는 파일이 없어요." 상자도 안내도 없다. |
+| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄(목록에서는 표의 한 행) | "아직 파일이 없습니다.", 거른 결과가 없으면 "맞는 파일이 없습니다." 상자도 안내도 없다. |
 
 #### 오른쪽 클릭과 확인
 
@@ -139,8 +139,8 @@
 | `mode` "빈 곳 우클릭" | 6.13 | 빈 곳 `ContextMenu` | Controls/Menu/ContextMenu |
 | `mode` "파일 메뉴" | 6.17 | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` | Controls/Menu/ContextMenu |
 | `mode` "목록 보기" | 6.14 | 격자 대신 `ListHead`가 붙은 `Table`, 보기 `Segmented`가 "목록" | Patterns/List/Table, Patterns/List/ListHead, Controls/Choice/Segmented |
-| `mode` "끌어 놓기" | 6.01 | `DropArea over`, `toast.dropHint` "여기에 올려요" | Patterns/List/DropArea, Controls/Status/Toast |
-| `mode` "폴더 위로 끌기" | 6.02 | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올려요" | Patterns/List/Tile, Controls/Status/Toast |
+| `mode` "끌어 놓기" | 6.01 | `DropArea over`, `toast.dropHint` "여기에 올리기" | Patterns/List/DropArea, Controls/Status/Toast |
+| `mode` "폴더 위로 끌기" | 6.02 | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올리기" | Patterns/List/Tile, Controls/Status/Toast |
 | `mode` "올리는 중" | 6.03 | `Tile status="uploading"`과 대기 타일 | Patterns/List/Tile |
 | `mode` "올리기 실패" | 6.04 | `Tile status="failed"`(`retry`에 다시 올리기, `action`에 `TrashCan` 지우기) | Patterns/List/Tile |
 | `mode` "파일 열기" | 6.16 | 옆 패널 `SidePanel`, 그 타일 `current` | Controls/Overlay/SidePanel |
@@ -177,7 +177,7 @@
 | 찾는 곳 "Blog Assets │ 모든 폴더" | `MediaPicker`의 `searchIn`에 `Segmented size="sm" inline` | 폴더 안에서 찾는 동안 검색 칸 아래에 있다. |
 | 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 세 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
-| "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있어요. 검색으로 찾아 주세요."가 대신한다. |
+| "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있습니다. 검색으로 찾아 주세요."가 대신한다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘기고, 연 폴더로 올라간다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 

@@ -167,7 +167,7 @@ export const AddTextField: Story = {
 		await addField(screen, "글자");
 		// The add button is never greyed out: pressed with no identifier, the identifier says so and takes the focus (README principle 7).
 		await userEvent.click(screen.body.getByRole("button", { name: "필드 추가" }));
-		await screen.body.findByText("이 칸을 채워요.");
+		await screen.body.findByText("이 칸을 채워 주세요.");
 		await expect(screen.body.getByLabelText(/^식별자/)).toHaveFocus();
 		await expect(screen.body.getByLabelText(/^식별자/)).toHaveAttribute("aria-invalid", "true");
 		fill(screen.body.getByLabelText("표시 이름"), "읽는 시간");
@@ -276,7 +276,7 @@ export const FixFirst: Story = {
 		const review = within(await screen.body.findByRole("dialog", {}, wait));
 		await review.findByText("고칠 곳", {}, wait);
 		await expect(review.queryByRole("button", { name: "적용" })).toBeNull();
-		await review.findByText("선택지가 없어요");
+		await review.findByText("선택지가 없습니다");
 	},
 };
 
@@ -298,7 +298,7 @@ export const AddressReview: Story = {
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
 		fill(await page.findByLabelText("공개 주소"), "blog");
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
-		await body.findByText("옛 주소는 404가 돼요.", {}, wait);
+		await body.findByText("옛 주소는 404가 됩니다.", {}, wait);
 	},
 };
 
@@ -342,11 +342,11 @@ export const NewCollectionTaken: Story = {
 		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
 		// The create button is never greyed out: pressed with both empty, each says so and the first takes the focus (README principle 7).
 		await userEvent.click(await body.findByRole("button", { name: "만들기" }));
-		await expect(await body.findAllByText("이 칸을 채워요.")).toHaveLength(2);
+		await expect(await body.findAllByText("이 칸을 채워 주세요.")).toHaveLength(2);
 		await expect(body.getByLabelText(/^이름/)).toHaveFocus();
 		fill(body.getByLabelText(/^이름/), "글");
 		fill(body.getByLabelText(/^식별자/), "post");
-		await body.findByText("이미 쓰는 이름이에요.");
+		await body.findByText("이미 쓰는 이름입니다.");
 	},
 };
 
@@ -362,7 +362,7 @@ export const NewCollectionReview: Story = {
 		await page.findByRole("button", { name: "title 열기" });
 		await sheetGone(body);
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
-		await body.findByText("저장된 데이터는 바뀌지 않아요.", {}, wait);
+		await body.findByText("저장된 데이터는 바뀌지 않습니다.", {}, wait);
 	},
 };
 
@@ -388,7 +388,7 @@ export const DeleteReview: Story = {
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
 		await userEvent.click(await page.findByRole("button", { name: "지우기" }));
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
-		await body.findByText("이 컬렉션의 글이 모두 지워져요.", {}, wait);
+		await body.findByText("이 컬렉션의 글이 모두 지워집니다.", {}, wait);
 	},
 };
 
@@ -399,7 +399,7 @@ export const Made: Story = {
 		await NewCollectionReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "적용" }));
-		await body.findByText("노트 컬렉션을 만들었어요", {}, wait);
+		await body.findByText("노트 컬렉션을 만들었습니다", {}, wait);
 	},
 };
 
@@ -426,7 +426,7 @@ export const ApplyRefused: Story = {
 		await NewCollectionReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "적용" }));
-		await body.findByText("저장하지 못했어요. 다시 해 보세요.", {}, wait);
+		await body.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
 		await expect(body.getByRole("button", { name: "적용" })).toBeInTheDocument();
 	},
 };
@@ -446,9 +446,9 @@ export const HandEditReview: Story = {
 	play: async ({ canvasElement }) => {
 		const page = within(canvasElement);
 		const body = within(canvasElement.ownerDocument.body);
-		await page.findByText("스키마 파일을 직접 고쳤어요", {}, wait);
+		await page.findByText("스키마 파일을 직접 고쳤습니다", {}, wait);
 		await userEvent.click(page.getByRole("button", { name: "검토" }));
-		await body.findByText("옛 주소는 404가 돼요.", {}, wait);
+		await body.findByText("옛 주소는 404가 됩니다.", {}, wait);
 	},
 };
 
@@ -491,7 +491,7 @@ export const Conflict: Story = {
 		(other.collections.memo as { path: string }).path = "/memos/:slug";
 		await monti.run("schema.apply", { draft: other, renames: [], answers: {} }, admin);
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
-		await body.findByText("파일이 바뀌었어요", {}, wait);
+		await body.findByText("파일이 바뀌었습니다", {}, wait);
 	},
 };
 

@@ -39,7 +39,7 @@ type Story = StoryObj<typeof meta>;
 export const New: Story = {
 	render: () => (
 		<ChangeGroup kind="new" tag="추가" title="요약" identifier="excerpt">
-			<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
+			<ChangeNote>저장된 데이터는 바뀌지 않습니다.</ChangeNote>
 		</ChangeGroup>
 	),
 };
@@ -71,7 +71,7 @@ export const Drop: Story = {
 				<Checkbox defaultChecked />
 				컬렉션 내보내기
 			</Option>
-			<ChangeNote danger>되돌릴 수 없어요.</ChangeNote>
+			<ChangeNote danger>되돌릴 수 없습니다.</ChangeNote>
 			<ChangeActions>
 				<Button variant="ghost" size="sm">
 					연결 보기
@@ -90,7 +90,7 @@ export const Address: Story = {
 				<ChangeLine what="후" then="/blog/:slug" />
 				<ChangeLine what="발행된 글" then="148편 주소 바뀜" tone="warning" />
 			</ChangeLines>
-			<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
+			<ChangeNote>옛 주소는 404가 됩니다.</ChangeNote>
 		</ChangeGroup>
 	),
 };
@@ -150,7 +150,7 @@ export const Run: Story = {
 				</RadioGroup>
 			</ChangeGroup>
 			<ChangeGroup kind="new" tag="추가" title="읽는 시간" identifier="readingTime">
-				<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
+				<ChangeNote>저장된 데이터는 바뀌지 않습니다.</ChangeNote>
 			</ChangeGroup>
 		</Stack>
 	),

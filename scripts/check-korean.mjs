@@ -34,13 +34,14 @@ const isTest = (file) => /\.(test|stories)\.tsx?$/.test(file);
 const isSample = (dir) => dir.endsWith(`${path.sep}screens${path.sep}reference`);
 
 const files = [];
+const dictionaries = [];
 const walk = (dir) => {
 	for (const name of readdirSync(dir)) {
 		const full = path.join(dir, name);
 		if (statSync(full).isDirectory()) {
 			if (!SKIP_DIRS.has(name) && !isSample(full)) walk(full);
-		} else if (/\.tsx?$/.test(name) && !name.endsWith(".d.ts") && !isTest(name) && !isMessages(full)) {
-			files.push(full);
+		} else if (/\.tsx?$/.test(name) && !name.endsWith(".d.ts") && !isTest(name)) {
+			(isMessages(full) ? dictionaries : files).push(full);
 		}
 	}
 };
@@ -155,6 +156,28 @@ for (const file of files) {
 	}
 }
 
+/**
+ * The dictionaries' tone (docs/design/admin/README.md, principle 6, 2026-11-09 owner): sentences end in the formal "-seumnida", a small label as a noun; a request ends in "-seyo"
+ * and a question in "-kkayo". Words that merely end in the same syllable ("need", "main") are not endings.
+ */
+const POLITE = /([가-힣])요(?![가-힣])/g; // cms-allow-korean: the syllable the rule is about
+const NOT_POLITE = new Set(["세", "까", "필", "중", "주", "개"]); // cms-allow-korean: requests, questions, and words ending in it
+const polite = [];
+for (const file of dictionaries) {
+	readFileSync(file, "utf8")
+		.split("\n")
+		.forEach((line, index) => {
+			const ends = [...line.matchAll(POLITE)].filter((match) => !NOT_POLITE.has(match[1]));
+			if (ends.length > 0) polite.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
+		});
+}
+if (polite.length > 0) {
+	console.error(
+		`${polite.length} message(s) end in the polite "-eoyo" form. A sentence ends in "-seumnida", a small label as a noun (docs/design/admin/README.md, principle 6).\n`,
+	);
+	console.error(polite.join("\n"));
+	process.exit(1);
+}
 if (foundComments.length > 0) {
 	console.error(
 		`${foundComments.length} comment line(s) contain Korean. Write comments in English (name a UI label in English).\n`,

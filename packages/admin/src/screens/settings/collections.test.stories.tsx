@@ -49,9 +49,9 @@ export const Deleted: Story = {
 		await DeleteReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "지우고 적용" }));
-		await body.findByText("적용됐어요", {}, wait);
+		await body.findByText("적용했습니다", {}, wait);
 		// The removal's undo toast goes with the save: there is nothing left for it to undo.
-		await waitFor(() => expect(body.queryByText("메모 컬렉션을 지웠어요")).toBeNull(), wait);
+		await waitFor(() => expect(body.queryByText("메모 컬렉션을 지웠습니다")).toBeNull(), wait);
 	},
 };
 

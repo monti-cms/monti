@@ -93,11 +93,11 @@ test.describe("the library", () => {
 		await admin.getByRole("checkbox", { name: `${freeName} 고르기` }).check({ force: true });
 		await admin.getByRole("checkbox", { name: `${usedName} 고르기` }).check({ force: true });
 		await main(admin).getByRole("button", { name: "휴지통으로" }).click();
-		const said = admin.getByText("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼어요");
+		const said = admin.getByText("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼습니다");
 		await expect(said).toBeVisible();
 		await expect(tile(admin, freeName)).toBeHidden();
 		await expect(tile(admin, usedName)).toBeVisible();
-		await admin.getByRole("listitem").filter({ hasText: "남겼어요" }).getByRole("button", { name: "보기" }).click();
+		await admin.getByRole("listitem").filter({ hasText: "남겼습니다" }).getByRole("button", { name: "보기" }).click();
 		await expect(admin.getByRole("complementary").getByRole("link", { name: post.slug })).toBeVisible();
 	});
 
@@ -331,7 +331,7 @@ raw.describe("a session that ends", () => {
 		await admin.context().clearCookies();
 		await dropFromDisk(admin, [file], main(admin));
 		await expect(main(admin).getByText("올리기 실패")).toBeVisible();
-		await expect(admin.getByText("로그인이 풀렸어요")).toBeVisible();
+		await expect(admin.getByText("로그인이 풀렸습니다")).toBeVisible();
 		// Signing in again comes back to the same screen. The file itself was only ever in that page, so it is dropped again.
 		await admin.getByRole("button", { name: "다시 로그인" }).click();
 		await admin.getByLabel("이메일").fill(ADMIN.email);
@@ -356,7 +356,7 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 	});
 	expect(signedIn.status()).toBe(200);
 	await page.goto("/#/media");
-	await expect(main(page).getByText("미디어 저장소가 없어요")).toBeVisible();
+	await expect(main(page).getByText("미디어 저장소가 없습니다")).toBeVisible();
 	await expect(main(page).getByRole("link", { name: "연결 방법" })).toBeVisible();
 	await expect(main(page).getByRole("button", { name: "올리기" })).toBeHidden();
 	const post = await writing(page);
@@ -696,7 +696,7 @@ test.describe("while a file is on its way", () => {
 		await admin.getByRole("button", { name: "memo", exact: true }).click();
 		const asked = admin.getByRole("alertdialog");
 		await expect(asked).toBeVisible();
-		await expect(asked.getByText("파일을 올리는 중이에요")).toBeVisible();
+		await expect(asked.getByText("파일을 올리는 중입니다")).toBeVisible();
 		await expect(asked.getByText(/올라가지 않은 파일 1개/)).toBeVisible();
 		await asked.getByRole("button", { name: "계속 올리기" }).click();
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
@@ -746,7 +746,7 @@ test.describe("while a file is on its way", () => {
 		await expect(body(admin).getByRole("progressbar")).toBeVisible();
 		await admin.getByRole("button", { name: "나란히" }).click();
 		const asked = admin.getByRole("alertdialog");
-		await expect(asked.getByText("파일을 올리는 중이에요")).toBeVisible();
+		await expect(asked.getByText("파일을 올리는 중입니다")).toBeVisible();
 		await asked.getByRole("button", { name: "그만 올리기" }).click();
 		await expect(asked).toBeHidden();
 		await expect(admin.getByRole("button", { name: "나란히" })).toHaveAttribute("aria-pressed", "true");
@@ -924,7 +924,7 @@ test.describe("while a file is on its way", () => {
 		// Any write of this page reads the file again.
 		await dropFromDisk(admin, [await picture(admin, info.outputDir, `${unique("other")}.jpg`)], main(admin));
 		await panel.getByRole("button", { name: "저장" }).click();
-		await expect(panel.getByText("다른 곳에서 먼저 바꿨어요")).toBeVisible();
+		await expect(panel.getByText("다른 곳에서 먼저 바꿨습니다")).toBeVisible();
 		await expect(panel.getByRole("textbox", { name: "파일 이름" })).toHaveValue("theirs");
 	});
 });

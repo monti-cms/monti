@@ -268,7 +268,7 @@ describe("browsing", () => {
 
 	it("09-1 [flow 6·31] with no storage it says so, with the way to connect one and no way to upload", async () => {
 		await NoStorage.run();
-		await expect.element(main().getByText("미디어 저장소가 없어요")).toBeVisible();
+		await expect.element(main().getByText("미디어 저장소가 없습니다")).toBeVisible();
 		await expect.element(main().getByRole("link", { name: "연결 방법" })).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "올리기" })).not.toBeInTheDocument();
 	});
@@ -424,7 +424,7 @@ describe("many files at once", () => {
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
 		for (const type of ["dragenter", "dragover"])
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
-		await expect.element(toast("covers에 올려요")).toBeVisible();
+		await expect.element(toast("covers에 올리기")).toBeVisible();
 		target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(folder("covers")).toHaveTextContent("2");
@@ -453,7 +453,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
-		await userEvent.click(toast("1개를 휴지통으로 옮겼어요").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("1개를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(tile("seoul-night.jpg")).toBeVisible();
 	});
 
@@ -462,7 +462,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(page.getByRole("checkbox", { name: "desk-morning.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
-		const said = toast("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼어요");
+		const said = toast("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼습니다");
 		await expect.element(said).toBeVisible();
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
@@ -516,7 +516,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folder("Wallpapers")).not.toBeInTheDocument();
-		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼어요").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(folder("Wallpapers")).toBeVisible();
 	});
 
@@ -524,7 +524,7 @@ describe("the trash", () => {
 		await Top.run();
 		await userEvent.click(folder("Blog Assets"), { button: "right" });
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
-		const said = toast("쓰는 곳이 있어 폴더와 함께 남겼어요");
+		const said = toast("쓰는 곳이 있어 폴더와 함께 남겼습니다");
 		await expect.element(said).toBeVisible();
 		await userEvent.click(said.getByRole("button", { name: "보기" }));
 		await expect.element(heading()).toHaveTextContent("Blog Assets");

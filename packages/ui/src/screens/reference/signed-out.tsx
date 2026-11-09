@@ -17,7 +17,7 @@ import { MainScreen } from "./main";
  */
 function SignedOutBanner() {
 	return (
-		<Banner tone="danger" title="로그인이 풀렸어요" meta="저장하지 않은 입력은 이 브라우저에 남아 있어요" plainMeta>
+		<Banner tone="danger" title="로그인이 풀렸습니다" meta="저장하지 않은 입력은 이 브라우저에 남아 있습니다" plainMeta>
 			<TextButton variant="underline">다시 로그인</TextButton>
 		</Banner>
 	);
@@ -43,7 +43,7 @@ export function SignedOutEditorScreen() {
 			side={<EntryProperties />}
 			statusBar={
 				<StatusBar>
-					<StatusBarCell tone="danger">로그인이 풀렸어요</StatusBarCell>
+					<StatusBarCell tone="danger">로그인이 풀렸습니다</StatusBarCell>
 					<StatusBarCell render={<span />}>할 일 없음</StatusBarCell>
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>

@@ -26,7 +26,7 @@
 | 이름 · 제목들 | 이름 `RowLink`(템플릿 편집기로), 아래 `Text variant="note" tone="subtle" truncate`("서론 · 본론 · 결론") | 아래 줄은 템플릿의 제목들을 한 줄로 늘어놓는다. 행 어디를 눌러도 편집기가 열린다. |
 | 고친 날 "10. 20 고침" | `Count` | |
 | ⋯ | `RowActions` 안 `RowMore`(`label` "더 보기") + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 늘 보인다. 보드는 포인터가 있는 행에만 글자 버튼으로 그렸지만 [list.md](../components/list.md)와 [button.md](../components/button.md)를 따른다. |
-| 빈 목록 | `Empty`(`title` "아직 템플릿이 없어요.") | 시작은 머리의 "+ 템플릿 추가"다. |
+| 빈 목록 | `Empty`(`title` "아직 템플릿이 없습니다.") | 시작은 머리의 "+ 템플릿 추가"다. |
 
 스토리: Controls/Button/Button, Patterns/List/Table, Primitives/Text, Controls/Status/Count, Controls/Button/IconButton, Controls/Menu/DropdownMenu.
 
@@ -56,9 +56,9 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했어요", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 화면 맨 위(머리 줄보다 위). 저장이 거절됐을 때만. |
-| 저장하지 않은 편집 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요"), 끝에 `TextButton` "불러오기" · `TextButton variant="quiet"` "버리기" | 화면 맨 위(머리 줄보다 위). 저장하지 않고 닫은 편집이 이 브라우저에 남아 있을 때만. 글 편집기와 같은 임시 저장(`useEntryEditor`)이다. 템플릿에는 비교 화면이 없다. |
-| 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했어요", `plainMeta`), 끝에 `TextButton` "다시 시도" | 화면 맨 위(머리 줄보다 위). 템플릿을 읽지 못했을 때만. |
+| 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했습니다", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 화면 맨 위(머리 줄보다 위). 저장이 거절됐을 때만. |
+| 저장하지 않은 편집 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다"), 끝에 `TextButton` "불러오기" · `TextButton variant="quiet"` "버리기" | 화면 맨 위(머리 줄보다 위). 저장하지 않고 닫은 편집이 이 브라우저에 남아 있을 때만. 글 편집기와 같은 임시 저장(`useEntryEditor`)이다. 템플릿에는 비교 화면이 없다. |
+| 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했습니다", `plainMeta`), 끝에 `TextButton` "다시 시도" | 화면 맨 위(머리 줄보다 위). 템플릿을 읽지 못했을 때만. |
 
 ## 데이터 (Data)
 
@@ -111,7 +111,7 @@
 |---|---|---|---|
 | `stage` "기본" | 9.01 | "백업" 절 하나 |  |
 | "백업 중" | 9.02 | "백업 받기" `Button loading` "만드는 중 64%" | Controls/Button/Button |
-| "백업 받음" | 9.03 | `toast` "백업을 저장했어요", 마지막 백업 "오늘 09:12" | Controls/Status/Toast |
+| "백업 받음" | 9.03 | `toast` "백업을 저장했습니다", 마지막 백업 "오늘 09:12" | Controls/Status/Toast |
 | "가져오기" | 9.06 | 시트: 요약, "들어갈 곳", "필드 맞추기" |  |
 | "가져오기 아래" | 9.07 | 시트 아래쪽: "발행", "이미지", "알아 두세요" |  |
 | "가져오는 중" | 9.08 | 시트 `SheetHeader closable={false}`, 알약 `loading` "가져오는 중 12/21" |  |
@@ -156,7 +156,7 @@
 | "이름" | `FormField` + `FormFieldLabel required` + `Input` | 서비스 이름으로 채워진다. 같은 이름이 있으면 "Anthropic 2"로 채우고 아래 `FormFieldDescription` "이름이 Anthropic인 키가 이미 있어요." |
 | "키" (새 값) | `FormField` + `FormFieldLabel`(호환 주소와 편집이 아니면 `required`) + `SecretInput` | 눈 버튼으로 보이고 가린다. 거절되면 `aria-invalid`와 `FormFieldError` "맞지 않는 키예요." 호환 주소는 플레이스홀더 "없음". 값을 지우려면 필드를 비운다. |
 | "키" (저장된 값, 편집) | `SavedValue`(`··· a1b2`, `action` "바꾸기") | "바꾸기"를 누르면 그 자리가 `SecretInput keep`(끝에 "그대로")이 된다. 높이가 같아 아래가 움직이지 않는다. 읽을 수 없는 키는 처음부터 `SecretInput`이고 아래 `FormFieldDescription` "키를 다시 넣어 주세요." |
-| 지우기 확인 | `AlertDialog`(`AlertDialogTitle` "Anthropic 개인을 지울까요?", `AlertDialogDescription` "되돌릴 수 없어요. …"), 쓰는 곳은 `DescriptionList` + `DescriptionItem`(모델 `mono`), `AlertDialogCancel` "취소", `AlertDialogAction` `Button variant="danger"` "지우기" | 쓰는 곳이 없으면 목록 없이 "되돌릴 수 없어요." 한 줄. |
+| 지우기 확인 | `AlertDialog`(`AlertDialogTitle` "Anthropic 개인을 지울까요?", `AlertDialogDescription` "되돌릴 수 없습니다. …"), 쓰는 곳은 `DescriptionList` + `DescriptionItem`(모델 `mono`), `AlertDialogCancel` "취소", `AlertDialogAction` `Button variant="danger"` "지우기" | 쓰는 곳이 없으면 목록 없이 "되돌릴 수 없습니다." 한 줄. |
 
 ### 흐름 10 · API 키
 
@@ -174,7 +174,7 @@
 | "편집" | 10.07 | 편집 창: 서비스는 글, 키는 `SavedValue` | Controls/Field/SecretInput |
 | "편집 키 열기" | 10.08 | 키 자리가 `SecretInput keep`("그대로") | Controls/Field/SecretInput |
 | "편집 확인 중" | 10.09 | `SecretInput keep`, `DialogFormFooter busy` | Controls/Field/SecretInput, Controls/Overlay/DialogFormFooter |
-| "편집 저장됨" | 10.10 | 행의 끝 네 글자 "7c0e", `toast` "저장했어요" | Controls/Status/Toast |
+| "편집 저장됨" | 10.10 | 행의 끝 네 글자 "7c0e", `toast` "저장했습니다" | Controls/Status/Toast |
 | "지우기 확인" | 10.11 | `AlertDialog`와 쓰는 곳 `DescriptionList` | Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList |
 | "쓰는 곳 없이 지우기" | 10.11b | `AlertDialog`, 목록 없음 | Controls/Overlay/AlertDialog |
 | "키 넣기" | 10.12 | 플러그인 자리의 "키 넣기"를 눌러 서비스가 정해진 키 창(서비스는 글) | Controls/Overlay/Dialog, Controls/Field/SecretInput |

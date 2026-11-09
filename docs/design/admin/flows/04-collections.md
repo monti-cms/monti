@@ -22,7 +22,7 @@
 - 보드: `Flow4Step02.dc.html`
 - 화면: `Schema` (stage "새 컬렉션 오류")
 - 테스트: `packages/admin/src/screens/schema/__test__/collections-flows.dom.test.tsx`
-- 오류: 식별자를 이미 쓰고 있다. 식별자 필드에 "이미 쓰는 이름이에요."가 보이고 폼은 열려 있다.
+- 오류: 식별자를 이미 쓰고 있다. 식별자 필드에 "이미 쓰는 이름입니다."가 보이고 폼은 열려 있다.
 
 ### 단계 03: "새 컬렉션 · title · slug 두 필드로 시작 · 아직 저장 전"
 
@@ -43,7 +43,7 @@
 - 보드: `Flow4Step05.dc.html`
 - 화면: `Schema` (stage "새 컬렉션 검토")
 - 테스트: `packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx`
-- 사용자가 "저장하고 적용"을 누른다. 검토가 변경(새 컬렉션, 공개 주소 /notes/:slug, 필드 title과 slug)을 나열하고 "저장된 데이터는 바뀌지 않아요."라고 말한다. 사용자가 "적용"을 누른다.
+- 사용자가 "저장하고 적용"을 누른다. 검토가 변경(새 컬렉션, 공개 주소 /notes/:slug, 필드 title과 slug)을 나열하고 "저장된 데이터는 바뀌지 않습니다."라고 말한다. 사용자가 "적용"을 누른다.
 
 ### 단계 06: "새 컬렉션 · 적용 → 사이드바에 노트"
 
@@ -74,7 +74,7 @@
 - 보드: `Flow4Step09.dc.html`
 - 화면: `Schema` (stage "미리보기 오류")
 - 테스트: `packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx`
-- 필드에 문제가 있으면(선택 필드에 선택지가 없다), 미리보기 대신 고칠 곳 목록이 보인다("고칠 곳이 있어 미리볼 수 없어요", "선택지가 없어요"). 저장하고 적용은 막힌다.
+- 필드에 문제가 있으면(선택 필드에 선택지가 없다), 미리보기 대신 고칠 곳 목록이 보인다("고칠 곳이 있어 미리볼 수 없어요", "선택지가 없습니다"). 저장하고 적용은 막힌다.
 
 ### 단계 10: "필드 고치기 · 바뀐 곳 ▾ → 하나씩 되돌리기"
 
@@ -148,4 +148,4 @@
 - 보드: `Flow4Step19.dc.html`
 - 화면: `Schema` (stage "지운 뒤")
 - 테스트: `packages/admin/src/screens/schema/__test__/collections-flows.dom.test.tsx`
-- 저장한 뒤 알림은 "적용됐어요"라고 말한다. 모든 저장이 끝에 보이는 같은 한 줄이다(무엇이 바뀌는지는 검토가 이미 보였다). 컬렉션은 설정 목록에서 사라졌다.
+- 저장한 뒤 알림은 "적용했습니다"라고 말한다. 모든 저장이 끝에 보이는 같은 한 줄이다(무엇이 바뀌는지는 검토가 이미 보였다). 컬렉션은 설정 목록에서 사라졌다.

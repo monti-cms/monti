@@ -72,7 +72,7 @@ export const States: Story = {
 export const ReservedError: Story = {
 	render: () => (
 		<Stack gap={32}>
-			{[undefined, "10자 이상이어야 해요."].map((error) => (
+			{[undefined, "10자 이상이어야 합니다."].map((error) => (
 				<Stack key={error ?? "empty"} gap={12}>
 					<FormField data-invalid={error ? "true" : undefined}>
 						<FormFieldLabel htmlFor={`r-${error ? "bad" : "ok"}`}>비밀번호</FormFieldLabel>

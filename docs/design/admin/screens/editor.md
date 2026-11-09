@@ -96,10 +96,10 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸어요", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있어요" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸어요"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
-| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
-| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
-| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸습니다", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있습니다" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸습니다"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
+| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했습니다", `meta` "이 글은 저장할 수 없습니다" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
+| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
+| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글입니다", 남은 날) | 읽기 전용 화면의 상태. |
 
 ### 링크 칸 (서식 카드의 링크 버튼 아래)
 
@@ -109,7 +109,7 @@
 |---|---|---|
 | 칸 | `Popover`(링크 `FormatButton`이 트리거, `padding="menu"`, `width="md"`) 안 `Command`: `CommandInput`(플레이스홀더 "주소를 붙여 넣거나 글 찾기", 이름 "링크 주소") | `/` 메뉴와 같은 모양이다. 화살표와 Enter로 행을 고른다. |
 | 막 열었을 때 | `CommandGroup` "최근에 고친 글": `CommandItem`(앞 `Document` 아이콘, 글 제목, 끝 `MenuValue` 컬렉션 이름) | 문서 컬렉션마다 가장 최근에 고친 글을 모아 다섯 줄. |
-| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글이 없어요" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
+| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글 없음" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
 | 주소를 쳤을 때 | `CommandGroup` "주소": `CommandItem`(앞 `Link` 아이콘, 주소, 끝 `MenuShortcut` "↵") | `https://` · `mailto:` · `/` · `#`로 시작하거나 `react.dev` 같은 도메인이면 주소다(도메인에는 `https://`를 붙인다). Enter로 바깥 링크를 건다. |
 | 이미 링크가 걸린 글자 | 글 링크면 칸에 그 글 제목, `CommandGroup` "지금 링크"에 그 글(`checked`). 바깥 링크면 칸에 그 주소 | 아래에 `CommandSeparator`와 "링크 떼기"(`Unlink` 아이콘) 행. |
 
@@ -131,7 +131,7 @@
 | `pluginOpen` | 1.06 | 플러그인 칸의 `StatusBarList` | Patterns/Frame/StatusBarList |
 | `panel` · `panelTab` | 1.08 | `PropertyPanel`과 고른 탭 | Monti/Proposal/PropertyPanel |
 | `seriesPending` | 1.07 | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") | Controls/Button/TextButton |
-| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
 
 ## 흐름 2 · 어시스턴트
 
@@ -149,7 +149,7 @@
 |---|---|---|---|
 | `langMenu` "열림" · "언어 하나뿐" | 3.01, 3.14 | "+ 언어" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
-| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
 
 ## 흐름 5 · 휴지통
 

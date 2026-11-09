@@ -59,7 +59,7 @@ export function SchemaReviewScreen() {
 										/>
 										<RadioItem value="drop" label="값 지우기" hint="132편" />
 									</RadioGroup>
-									<ChangeNote danger>값이 사라져요. 되돌릴 수 없어요.</ChangeNote>
+									<ChangeNote danger>값이 사라집니다. 되돌릴 수 없습니다.</ChangeNote>
 								</ChangeGroup>
 								<ChangeGroup kind="new" tag="필수" title="글 종류" identifier="format · select">
 									<RadioGroup aria-label="빈 글" value="fill" height="md">

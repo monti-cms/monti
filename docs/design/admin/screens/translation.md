@@ -56,7 +56,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 원문 변경 | `Banner`(`title` "원문이 변경됐어요", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 확인"이 바뀜 표시를 한 번에 모두 확인한다. 바뀐 블록은 블록마다 "변경" 표시의 카드로 본다. |
+| 원문 변경 | `Banner`(`title` "원문 변경", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 확인"이 바뀜 표시를 한 번에 모두 확인한다. 바뀐 블록은 블록마다 "변경" 표시의 카드로 본다. |
 
 #### 원문 옆 창
 
@@ -75,7 +75,7 @@
 | `stage` "번역 제안" | 3.03 | 블록이 `Fill`, `ProposalBubble`("번역", 1 / 6), 할 일 칸 "제안 6" | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble |
 | `stage` "블록 고르기" | 3.04 | 흐린 블록 둘, 그중 하나에 `BlockHandle`과 흐린 블록 메뉴 | Monti/EditorTools/BlockHandle |
 | `stage` "발행 막힘" | 3.06 | 흐린 블록 하나, 할 일 `StatusBarList` 열림, `toast.error`와 "이동" | Patterns/Frame/StatusBarList, Controls/Status/Toast |
-| `stage` "발행됨" | 3.07 | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었어요"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
+| `stage` "발행됨" | 3.07 | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었습니다"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
 | `stage` "원문 변경" | 3.09 | 원문 변경 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 주황 밑줄(`CompareText source`), 블록마다 `Marker`(`changed` · `removed` · `added`), "원문 변경" `StatusBarList` 열림 | Patterns/Frame/Banner, Controls/Status/ChangeDot, Monti/Proposal/Marks, Monti/Translation/Marks, Patterns/Frame/StatusBarList |
 | `stage` "바뀜 카드" | 3.10 | "변경" `Marker active`와 `MemoCard` + `MemoDiff` | Monti/Translation/Marks, Monti/Proposal/MemoCard |
 | `stage` "다시 번역" | 3.11 | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble, Controls/Status/EntryStatus |

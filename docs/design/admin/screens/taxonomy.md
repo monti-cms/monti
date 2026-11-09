@@ -35,7 +35,7 @@
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "어느 이름으로 합칠까요?", `DialogFooter`) | 남길 이름을 고르고 결과를 한 줄로 보인다. 합쳐진 태그는 휴지통으로 가서 되돌릴 수 있으므로 알약은 primary다. |
 | 남길 이름 | `RadioGroup` + `RadioItem`(`label` 이름과 주소, `hint` "글 12") | 처음에는 글이 더 많은 쪽이 골라져 있다. |
 | Result summary | `DialogDescription`, followed by a faint address note only when public addresses exist | State the number of affected posts, the item that remains, and which items move to trash. Keep removed addresses out of the main sentence. |
-| "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨어요" + "되돌리기". |
+| "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨습니다" + "되돌리기". |
 
 스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Patterns/List/BulkBar, Patterns/List/Table, Primitives/Text, Controls/Button/TextButton, Controls/Menu/DropdownMenu, Controls/Overlay/Dialog, Controls/Choice/Radio, Controls/Status/Toast, Controls/Overlay/SidePanel, Controls/Button/IconButton, Controls/Tabs/Tabs, Controls/Field/Field, Controls/Field/Input, Controls/Field/Textarea.
 

@@ -56,7 +56,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있어요", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
+| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있습니다", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
 | 운영 검토 (빠짐, 2026-11-05) | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
 
 ### 흐름 2 · 어시스턴트
