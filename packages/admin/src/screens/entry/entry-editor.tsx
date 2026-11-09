@@ -1,4 +1,4 @@
-import { type EntryState, mediaValueOf, type PublishTask, publicPath } from "@monti-cms/core";
+import { cleanMediaValue, type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -122,14 +122,9 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
+	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
-		// What was there when the file set off was for the old picture (2026-11-09, owner). Only what was said since is for this one.
-		const now = mediaValueOf(editor.value(`values.${field}`));
-		editor.set(`values.${field}`, {
-			media: item.id,
-			...(said.alt && now?.alt ? { alt: now.alt } : {}),
-			...(said.decorative && now?.decorative ? { decorative: true } : {}),
-		});
+		editor.set(`values.${field}`, cleanMediaValue({ media: item.id, ...said }));
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");

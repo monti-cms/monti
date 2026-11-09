@@ -90,7 +90,7 @@
 
 ### 코드
 
-`ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
+`RowLink`로 폴더에 들어가면 고른 것은 풀린다. `ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
 
 ## 일괄 막대 (`.mt-bulk`)
 

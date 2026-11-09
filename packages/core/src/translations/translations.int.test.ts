@@ -101,7 +101,7 @@ const marks = async (id: string) =>
 	(await compare(id)).marks.map((mark) => `${mark.kind}:${mark.from}`).sort((a, b) => a.localeCompare(b));
 const fieldMarks = async (id: string) =>
 	(await read<{ fields: { field: string; before: unknown; after: unknown }[] }>("translations.compare", { id })).fields;
-const fieldMarks2 = async (monti: ReturnType<typeof site>, id: string) =>
+const fieldMarksOn = async (monti: ReturnType<typeof site>, id: string) =>
 	((await monti.run("translations.compare", { id }, { actor: "admin" })) as { fields: unknown[] }).fields;
 const changes = async (id: string) => {
 	const { groups } = await read<{ groups: { locales: { id: string; changes: number }[] }[] }>("translations.status", {
@@ -499,11 +499,48 @@ describe("when the source's fields change", () => {
 			},
 		};
 		await migrateContent(db, after, []);
-		await site(after)
-			.run("activity.undo", { id: confirmed.activityId }, { actor: "admin" })
-			.catch(() => null);
+		const undone = (await site(after).run("activity.undo", { id: confirmed.activityId }, { actor: "admin" })) as {
+			output: { skip: unknown[] };
+		};
+		expect(undone.output.skip).toEqual([{ kind: "entry", id }]);
 		expect(await fieldMarks(id)).toEqual([]);
 		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 an undo that goes through still leaves nothing on a field that is the same in every language now", async () => {
+		const { source, id } = await pair();
+		await republishFields(source, { values: { summary: "새 요약", subtitle: "부제", format: "memo" } });
+		const emptied = (await site().run(
+			"entries.save",
+			{ id, version: await version(id), values: { summary: null } },
+			{ actor: "admin" },
+		)) as { activityId: string };
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const after: Schema = {
+			...schema,
+			collections: {
+				...schema.collections,
+				post: { ...post, fields: { ...post.fields, summary: { kind: "text", locale: "same" } } },
+			},
+		};
+		await migrateContent(db, after, []);
+		await site(after).run("activity.undo", { id: emptied.activityId }, { actor: "admin" });
+		expect(await fieldMarks(id)).toEqual([]);
+		expect(await changes(id)).toBe(0);
+	});
+
+	it("04-2 T111 a new translation copies the source as it follows it, so it starts with nothing to mark", async () => {
+		const source = await publishedSource();
+		await write("entries.save", {
+			id: source,
+			version: await version(source),
+			values: { summary: "요약", subtitle: "저장만 한 부제", format: "memo" },
+		});
+		const id = await translate(source);
+		expect((await get(id)).entry.values.subtitle).toBe("부제");
+		await write("entries.publish", { ids: [source] });
+		expect(await fieldMarks(id)).toEqual([{ field: "subtitle", before: "부제", after: "저장만 한 부제" }]);
 	});
 
 	it("04-2 T111 T119 an item's languages are written together in one panel: nothing is kept to mark", async () => {
@@ -1001,10 +1038,10 @@ describe("the site's languages", () => {
 		await apply(next);
 		const after: Schema = { ...schema, locales: next };
 		const monti = site(after);
-		expect(await fieldMarks2(monti, korean)).toEqual([]);
+		expect(await fieldMarksOn(monti, korean)).toEqual([]);
 		await write("entries.save", { id: english, version: await version(english), title: "A better title" }, monti);
 		await write("entries.publish", { ids: [english] }, monti);
-		expect(await fieldMarks2(monti, korean)).toEqual([
+		expect(await fieldMarksOn(monti, korean)).toEqual([
 			{ field: "title", before: "First post", after: "A better title" },
 		]);
 	});

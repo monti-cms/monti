@@ -1,4 +1,4 @@
-import { type FieldDefinition, localeModeOf, slugify } from "@monti-cms/core";
+import { type FieldDefinition, type FieldMark, localeModeOf, slugify } from "@monti-cms/core";
 import {
 	Combobox,
 	ComboboxChip,
@@ -34,7 +34,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import { MediaField, SharedMediaValue } from "./media-field";
-import { FieldChange, type FieldChangeMark } from "./translation";
+import { FieldChange } from "./translation";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
@@ -118,6 +118,13 @@ function PickMany({
 			</ComboboxContent>
 		</Combobox>
 	);
+}
+
+/** What a pick shows as: its option's name, a comma between several. */
+function pickNames(value: unknown, labels: Record<string, string> = {}) {
+	return (Array.isArray(value) ? value : value === undefined ? [] : [value])
+		.map((each) => labels[String(each)] ?? String(each))
+		.join(", ");
 }
 
 /** In a translation where the field is shared, resolves relation group IDs to titles. */
@@ -501,7 +508,7 @@ export function EntryProperties({
 	altCard: string | null;
 	onAltCard: (field: string | null) => void;
 	/** In a translation: the fields whose source moved on (T111), and confirming one. */
-	changes?: { marks: readonly FieldChangeMark[]; onConfirm: (field: string) => void };
+	changes?: { marks: readonly FieldMark[]; onConfirm: (field: string) => void };
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -534,22 +541,11 @@ export function EntryProperties({
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
 		const changeMark = changes?.marks.find((mark) => mark.field === key);
-		const optionLabels = values[key]?.optionLabels ?? {};
 		const shownInCard = (shownValue: unknown) =>
 			def.kind === "media" ? (
 				<SharedMediaValue value={shownValue} empty={empty} withAlt />
-			) : def.kind === "relation" ? (
-				<SharedRelationValue
-					collection={collection}
-					field={key}
-					locale={currentLocale ?? ""}
-					value={shownValue}
-					empty={empty}
-				/>
 			) : (
-				(Array.isArray(shownValue) ? shownValue : [shownValue])
-					.map((each) => optionLabels[String(each)] ?? String(each))
-					.join(", ")
+				pickNames(shownValue, values[key]?.optionLabels)
 			);
 		const change = changeMark ? (
 			<FieldChange
@@ -586,11 +582,7 @@ export function EntryProperties({
 					</FormField>
 				);
 			}
-			const sharedValue = shared[key];
-			const labels = values[key]?.optionLabels ?? {};
-			const shown = (Array.isArray(sharedValue) ? sharedValue : sharedValue === undefined ? [] : [sharedValue])
-				.map((each) => labels[String(each)] ?? String(each))
-				.join(", ");
+			const shown = pickNames(shared[key], values[key]?.optionLabels);
 			return (
 				<FormField key={key}>
 					<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>

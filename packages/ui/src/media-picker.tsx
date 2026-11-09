@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from "./dialog";
@@ -83,13 +83,23 @@ function MediaPicker({
 	const labels = useUiLabels();
 	const depths = folders.map((item) => Math.min(item.depth, DEEPEST) as 0 | 1 | 2 | 3);
 	const tree = folderTree(depths);
+	// A folder's card goes with the place it was in: the keyboard goes on from the open row, not from the window's first.
+	const list = React.useRef<HTMLElement>(null);
+	const lastFolder = React.useRef(folder);
+	React.useEffect(() => {
+		if (lastFolder.current === folder) return;
+		lastFolder.current = folder;
+		const active = list.current?.ownerDocument.activeElement;
+		if (!active || active === list.current?.ownerDocument.body || active.matches("[role=dialog]"))
+			list.current?.querySelector<HTMLElement>("[aria-current=page]")?.focus();
+	}, [folder]);
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="gap-monti-20 pb-monti-20 sm:max-w-[760px]">
 				<DialogTitle>{title}</DialogTitle>
 				{/* One height, whatever a folder holds: both columns scroll inside it. */}
 				<div className="grid h-[min(27rem,60vh)] grid-cols-[216px_minmax(0,1fr)] gap-monti-20">
-					<nav aria-label={foldersLabel} className="flex min-h-0 scroll-py-monti-8 flex-col overflow-y-auto">
+					<nav ref={list} aria-label={foldersLabel} className="flex min-h-0 scroll-py-monti-8 flex-col overflow-y-auto">
 						<button
 							type="button"
 							aria-current={folder === null ? "page" : undefined}

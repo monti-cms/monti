@@ -65,7 +65,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 표 | `ListScroll`, `Table container="none" layout="fixed"`, `TableBody`, `TableRow`, `TableCell` | 글 목록의 표와 같다. 도구 행 바로 아래에 붙고, 좌우 여백 없이 위 선과 폭이 같다(2026-11-09 소유자). |
+| 표 | `ListScroll`, `Table container="none" layout="fixed"`, `TableBody`, `TableRow`, `TableCell` | 글 목록의 표와 같다. 도구 행 바로 아래에 붙고, 좌우 여백 없이 위 선과 폭이 같다(2026-11-09 소유자). 옆 패널에 파일이 열린 동안은 이름과 올린 날만 있다. 나머지는 패널이 말하고, 좁은 폭에서 이름 칸이 없어지지 않는다. |
 | 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`) | "이름" · "쓰임" · "형식" · "크기" · "치수" · "올린 날". 이름은 글자이고 메뉴도 옮기기도 없다. 조건과 순서는 위 도구 행에 있다. 정렬한 열은 잉크에 ↓ · ↑. 열 사이를 끌어 너비를 바꾼다. 너비는 이 브라우저에 남는다. |
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 도구 행은 그대로 있고 열 이름 행이 막대가 된다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |

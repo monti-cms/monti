@@ -37,7 +37,6 @@ import {
 	RowThumb,
 	RowTitle,
 	SearchToggle,
-	Segmented,
 	type SelectAll,
 	Separator,
 	SplitButton,
@@ -60,11 +59,12 @@ import {
 	FolderMenuItems,
 	FolderTargets,
 	MoveToFolderMenu,
+	SearchIn,
 	useFolderNaming,
 	useFolders,
 	useRemoveFolder,
 } from "./folders";
-import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
+import { endsClosed, fieldCell, localeCell, shortDate, widthsAfter } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { RelationSubmenu } from "./relations-menu";
@@ -244,12 +244,8 @@ function DocumentListScreen({
 		void savePrefs.run({ collection, order, hidden: nextHidden, widths: nextWidths });
 	};
 	const resize = (changes: Record<string, number | null>, commit: boolean) => {
-		const next = Object.fromEntries(
-			// Onto the drag in progress: a width it pinned on its first move (the title) is not sent again.
-			Object.entries({ ...(dragWidths ?? widths), ...changes }).filter(
-				(entry): entry is [string, number] => entry[1] !== null,
-			),
-		);
+		// Onto the drag in progress: a width it pinned on its first move (the title) is not sent again.
+		const next = widthsAfter(dragWidths ?? widths, changes);
 		if (!commit) return setDragWidths(next);
 		setDragWidths(null);
 		if (JSON.stringify(next) !== JSON.stringify(widths)) keep(allIds, hidden, next);
@@ -762,16 +758,10 @@ function DocumentListScreen({
 				<PageToolbar inset>
 					{openFolder && looking && (
 						<>
-							<Segmented
-								size="sm"
-								inline
-								aria-label={t("folders.searchIn")}
-								value={state.everywhere ? "all" : "here"}
-								onValueChange={(value) => setState({ ...state, page: 1, everywhere: value === "all" })}
-								options={[
-									{ value: "here", label: openFolder.name },
-									{ value: "all", label: t("folders.everywhere") },
-								]}
+							<SearchIn
+								folder={openFolder.name}
+								everywhere={state.everywhere}
+								onChange={(everywhere) => setState({ ...state, page: 1, everywhere })}
 							/>
 							{aiChips.length > 0 && <Separator orientation="vertical" length="control" />}
 						</>

@@ -210,9 +210,9 @@ export async function migrateContent(
 
 /**
  * A field gone from the schema, or now the same in every language, has nothing for a translation to fall behind on: no mark can stay on it (doc 04, T111). The entry moves on a
- * version with it, as with any other field step, so an undo made before this cannot bring the old value back.
+ * version with it, as with any other field step, so an undo made before this cannot bring the old value back. An undo of an entry not changed here runs this too.
  */
-async function keepSeenTracked(db: Db, schema: Schema) {
+export async function keepSeenTracked(db: Db, schema: Schema) {
 	for (const collection of Object.keys(schema.collections)) {
 		const tracked = trackedFields(schema, collection);
 		const kept = tracked.length > 0 ? sql<boolean>`key in (${sql.join(tracked)})` : sql<boolean>`false`;

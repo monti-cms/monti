@@ -101,7 +101,7 @@
 | 블록 한 행 | `EditorBody paired`: 편집기 하나가 행으로 놓이고, 블록마다 앞에 블록 종류와 원문 칸이 붙는다 | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기 그대로라 그 자리에서 쓴다. 커서가 있는 행은 원문 칸과 번역 칸이 함께 블록 바탕(`bg-block`)이다. 드래그로 고른 글자는 한 단계 진한 `bg-selection`이다. 원문 칸은 글로만 보인다. |
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
 | 여백의 상태 "원문 변경" · "원문에 추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 바뀜 주황, 지워짐 빨강, 새로 초록. 원문 쪽 바뀐 말은 주황 밑줄. |
-| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았습니다") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
+| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "번역 전") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |

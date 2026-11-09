@@ -341,7 +341,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(mark?.top).toBeGreaterThanOrEqual(box.top);
 		expect(mark?.bottom).toBeLessThanOrEqual(box.bottom);
 		expect(document.querySelector("[data-field-mark=summary]")).not.toBeNull();
-		// The address, and what the translation has as its own words, stay as they are.
+		// Its own words stay as they are.
 		await expect.element(title).toHaveValue("The first post");
 	});
 
@@ -376,6 +376,9 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await userEvent.click(page.getByRole("button", { name: "나란히" }));
 		await expect.element(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
 		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
+		// In the row of the titles, in the column where a block's note is.
+		const row = document.querySelector("[data-field-mark=title]")?.closest("[data-slot=compare-row]");
+		expect(row?.textContent).toContain("첫 번째 글을 고치며");
 	});
 
 	it("04-2 the status bar's '원문 변경' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {

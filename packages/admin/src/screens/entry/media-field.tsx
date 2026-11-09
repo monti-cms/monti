@@ -1,4 +1,4 @@
-import { altIsMissing, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
+import { altIsMissing, cleanMediaValue, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
 import {
 	FormField,
 	FormFieldError,
@@ -75,7 +75,8 @@ export function MediaField({
 	const file = read.data?.id === shown?.media ? read.data : null;
 	const going = uploads.of(field);
 	const isImage = file?.kind === "image";
-	const altMissing = isImage && shown && altIsMissing(shown);
+	const said = uploads.saidOf(field);
+	const altMissing = going ? going.preview !== null && altIsMissing(said) : isImage && shown && altIsMissing(shown);
 	return (
 		<>
 			<FormField>
@@ -121,18 +122,21 @@ export function MediaField({
 								<PopoverContent anchor={line} align="start" width="anchor">
 									<Stack gap={12}>
 										<AltFields
-											value={own?.alt ?? ""}
-											decorative={shown.decorative === true}
+											// While a new file goes up, these are about it, and wait with it.
+											value={(going ? said.alt : own?.alt) ?? ""}
+											decorative={(going ? said.decorative : shown.decorative) === true}
 											readOnly={readOnly}
-											placeholder={followed?.alt || t("entry.empty")}
-											onChange={(alt) => {
-												uploads.said(field, "alt");
-												onChange({ ...own, media: shown.media, alt });
-											}}
-											onDecorative={(decorative) => {
-												uploads.said(field, "decorative");
-												onChange({ ...own, media: shown.media, decorative });
-											}}
+											placeholder={(!going && followed?.alt) || t("entry.empty")}
+											onChange={(alt) =>
+												going
+													? uploads.say(field, { alt })
+													: onChange(cleanMediaValue({ ...own, media: shown.media, alt }))
+											}
+											onDecorative={(decorative) =>
+												going
+													? uploads.say(field, { decorative })
+													: onChange(cleanMediaValue({ ...own, media: shown.media, decorative }))
+											}
 											onEnter={() => onCard(false)}
 										/>
 									</Stack>
@@ -181,15 +185,17 @@ export function SharedMediaValue({
 }: {
 	value: unknown;
 	empty: string;
-	/** Says its alt text too: a change card, where the words may be all that changed. */
+	/** Says what the entry says of it too: a change card, where that may be all that changed. */
 	withAlt?: boolean;
 }) {
+	const { t } = useAdmin();
 	const shown = mediaValueOf(value);
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
 	const name = read.data?.id === shown?.media ? read.data?.name : undefined;
+	const words = shown?.decorative ? t("editor.image.decorative") : shown?.alt;
 	return (
 		<Text variant="note" tone={name ? undefined : "faint"}>
-			{name && withAlt && shown?.alt ? `${name} · ${shown.alt}` : (name ?? empty)}
+			{name && withAlt && words ? `${name} · ${words}` : (name ?? empty)}
 		</Text>
 	);
 }

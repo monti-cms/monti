@@ -52,3 +52,9 @@ export function endsDirectionClosed(name: string): boolean {
 	}
 	return /[mnrMNR036]$/.test(trimmed);
 }
+
+/** A list's column widths after `ListHead` changes some; `null` takes one back to its kind's. */
+export const widthsAfter = (current: Record<string, number>, changes: Record<string, number | null>) =>
+	Object.fromEntries(
+		Object.entries({ ...current, ...changes }).filter((entry): entry is [string, number] => entry[1] !== null),
+	);

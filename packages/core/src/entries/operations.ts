@@ -5,6 +5,7 @@ import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
+import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
@@ -65,6 +66,17 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
 		values,
 		doc: draft.doc === undefined ? entry.doc : draft.doc,
 	};
+}
+
+/** The media fields of these values as they are kept (`cleanMediaValue`). */
+function cleanMediaFields(schema: Schema, collection: string, values: Record<string, unknown>) {
+	const fields = schema.collections[collection]?.fields ?? {};
+	return Object.fromEntries(
+		Object.entries(values).map(([name, value]) => {
+			const media = fields[name]?.kind === "media" ? mediaValueOf(value) : null;
+			return [name, media ? cleanMediaValue(media) : value];
+		}),
+	);
 }
 
 /** Checks the body a draft brings against the body the entry had: a person's save and the assistant's block edits pass the same check (doc 03). */
@@ -206,6 +218,7 @@ export const entryOperations = [
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
 			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
+			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
 			}
@@ -387,6 +400,7 @@ export const entryOperations = [
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
 			const working = applyDraft(entry, { ...input, values });
+			working.values = cleanMediaFields(ctx.site.schema(), entry.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(
 					ctx.db,

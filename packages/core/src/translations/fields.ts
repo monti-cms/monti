@@ -1,4 +1,4 @@
-import { sameJson } from "../json";
+import { isEmptyValue, sameJson } from "../json";
 import { localeModeOf, type Schema } from "../schema/define";
 
 type Fields = { title: string; values: Record<string, unknown> };
@@ -7,22 +7,24 @@ type Fields = { title: string; values: Record<string, unknown> };
 export type FieldMark = { field: string; before: unknown; after: unknown };
 
 /** A field's value in an entry, `null` when nothing is written. The title is a column of its own. */
-export function fieldValue(fields: Fields, field: string): unknown {
+export function writtenValue(fields: Fields, field: string): unknown {
 	const value = field === "title" ? fields.title : fields.values[field];
-	const nothing = value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
-	return nothing ? null : value;
+	return isEmptyValue(value) ? null : value;
 }
 
 /**
  * The fields a translation holds a value of its own in, so that the source moving on is news to it (T111): per language, or following the source with a value written here. A
  * field the same in every language has none. The address has one, but it is the translation's own: a source's new address makes nothing in the translation wrong. An item's
- * languages are written together in one panel, which has no marks: none are kept for it (T119).
+ * languages are written together in one panel, which has no marks, and a relation's value is rewritten by merges and bulk edits that are no one's translation: none are kept for
+ * either (T119).
  */
 export function trackedFields(schema: Schema, collection: string): string[] {
 	const definition = schema.collections[collection];
 	if (definition?.kind !== "document") return [];
 	return Object.entries(definition.fields)
-		.filter(([name, definition]) => definition.kind !== "slug" && localeModeOf(name, definition) !== "same")
+		.filter(
+			([name, field]) => field.kind !== "slug" && field.kind !== "relation" && localeModeOf(name, field) !== "same",
+		)
 		.map(([name]) => name);
 }
 
@@ -38,9 +40,9 @@ export function seenAfter(
 ): Record<string, unknown> {
 	return Object.fromEntries(
 		tracked.flatMap((field) => {
-			if (fieldValue(working, field) === null) return [];
+			if (writtenValue(working, field) === null) return [];
 			if (field in seen) return [[field, seen[field]]];
-			return followed ? [[field, fieldValue(followed, field)]] : [];
+			return followed ? [[field, writtenValue(followed, field)]] : [];
 		}),
 	);
 }
@@ -49,7 +51,7 @@ export function seenAfter(
 export function fieldMarksOf(seen: Record<string, unknown>, source: Fields | null): FieldMark[] {
 	if (!source) return [];
 	return Object.entries(seen).flatMap(([field, before]) => {
-		const after = fieldValue(source, field);
+		const after = writtenValue(source, field);
 		return sameJson(before, after) ? [] : [{ field, before, after }];
 	});
 }

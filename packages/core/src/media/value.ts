@@ -8,6 +8,11 @@ export const MediaValueShape = z.object({
 });
 export type MediaValue = z.infer<typeof MediaValueShape>;
 
+/** A media value as it is kept: no empty alt text and no switch that is off, so two values that say the same thing are the same value (a translation's marks compare them). */
+export function cleanMediaValue({ alt, decorative, ...rest }: MediaValue): MediaValue {
+	return { ...rest, ...(alt ? { alt } : {}), ...(decorative ? { decorative } : {}) };
+}
+
 /** The one rule for a picture with nothing to say for it (doc 09): not decorative, and alt text that is empty or only spaces. */
 export const altIsMissing = (value: { alt?: unknown; decorative?: unknown }) =>
 	value.decorative !== true && (typeof value.alt !== "string" || value.alt.trim() === "");

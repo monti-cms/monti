@@ -88,6 +88,7 @@ import {
 	FolderMenuItems,
 	FolderTargets,
 	MoveToFolderMenu,
+	SearchIn,
 	useFolderNaming,
 	useFolders,
 	useRemoveFolder,
@@ -578,16 +579,10 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				{looking && state.folder && here && (
 					<>
 						<Separator orientation="vertical" length="control" flush />
-						<Segmented
-							aria-label={t("folders.searchIn")}
-							size="sm"
-							inline
-							value={state.everywhere ? "all" : "here"}
-							onValueChange={(where) => setState({ ...state, everywhere: where === "all", page: 1 })}
-							options={[
-								{ value: "here", label: here.name },
-								{ value: "all", label: t("folders.everywhere") },
-							]}
+						<SearchIn
+							folder={here.name}
+							everywhere={state.everywhere}
+							onChange={(everywhere) => setState({ ...state, everywhere, page: 1 })}
 						/>
 					</>
 				)}
@@ -717,19 +712,32 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		size: widths[id] ?? LIST_COLUMN_SIZE[kind],
 		kindSize: LIST_COLUMN_SIZE[kind],
 	});
-	const head: ListHeadColumn[] = [
-		{ id: "name", label: t("library.column.name"), sort: state.sort === "name" ? "asc" : undefined },
-		{ ...sized("uses", "one"), label: t("library.column.uses") },
-		{ ...sized("type", "locale"), label: t("library.column.type") },
-		{ ...sized("size", "status"), label: t("library.column.size"), sort: state.sort === "size" ? "desc" : undefined },
-		{ ...sized("measure", "measure"), label: t("library.column.measure") },
-		{
-			...sized("date", "date"),
-			label: t("library.column.date"),
-			align: "end",
-			sort: state.sort === "uploaded" ? "desc" : undefined,
-		},
-	];
+	// With a file open beside the list there is room for its name and when: the panel says the rest of the open file.
+	const nameColumn: ListHeadColumn = {
+		id: "name",
+		label: t("library.column.name"),
+		sort: state.sort === "name" ? "asc" : undefined,
+	};
+	const dateColumn: ListHeadColumn = {
+		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", "date")),
+		label: t("library.column.date"),
+		align: "end",
+		sort: state.sort === "uploaded" ? "desc" : undefined,
+	};
+	const head: ListHeadColumn[] = dense
+		? [nameColumn, dateColumn]
+		: [
+				nameColumn,
+				{ ...sized("uses", "one"), label: t("library.column.uses") },
+				{ ...sized("type", "locale"), label: t("library.column.type") },
+				{
+					...sized("size", "status"),
+					label: t("library.column.size"),
+					sort: state.sort === "size" ? "desc" : undefined,
+				},
+				{ ...sized("measure", "measure"), label: t("library.column.measure") },
+				dateColumn,
+			];
 	const folderThumb = (
 		<RowThumb>
 			<Folder aria-hidden size={16} />
@@ -769,7 +777,10 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 												<RowTitle
 													thumb={folderThumb}
 													title={
-														<RowLink href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}>
+														<RowLink
+															href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}
+															onClick={() => setPicked(new Set())}
+														>
 															{folder.name}
 														</RowLink>
 													}
@@ -819,26 +830,30 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 												title={<RowLink href={hrefOf({ ...state, file: item.id })}>{item.name}</RowLink>}
 											/>
 										</TableCell>
-										<TableCell>
-											<Text variant="note" tone="subtle">
-												{item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed")}
-											</Text>
-										</TableCell>
-										<TableCell>
-											<Text variant="meta" tone="subtle">
-												{extensionLabel(item.name)}
-											</Text>
-										</TableCell>
-										<TableCell>
-											<Text variant="meta" tone="subtle">
-												{formatBytes(item.size)}
-											</Text>
-										</TableCell>
-										<TableCell>
-											<Text variant="meta" tone="subtle">
-												{sizeLabel(item)}
-											</Text>
-										</TableCell>
+										{!dense && (
+											<>
+												<TableCell>
+													<Text variant="note" tone="subtle">
+														{item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed")}
+													</Text>
+												</TableCell>
+												<TableCell>
+													<Text variant="meta" tone="subtle">
+														{extensionLabel(item.name)}
+													</Text>
+												</TableCell>
+												<TableCell>
+													<Text variant="meta" tone="subtle">
+														{formatBytes(item.size)}
+													</Text>
+												</TableCell>
+												<TableCell>
+													<Text variant="meta" tone="subtle">
+														{sizeLabel(item)}
+													</Text>
+												</TableCell>
+											</>
+										)}
 										<TableCell align="end">
 											<Text mono variant="meta" tone="muted">
 												{shortDate(item.uploadedAt)}

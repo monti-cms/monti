@@ -1,4 +1,4 @@
-import { type Block, type Doc, type EntryState, type Schema, translates } from "@monti-cms/core";
+import { type Block, type Doc, type EntryState, type FieldMark, type Schema, translates } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -61,9 +61,6 @@ export type TranslationMark =
 	| { kind: "changed" | "removed"; block: string; from: string; before: Block | null; after: Block | null }
 	| { kind: "added"; from: string; after: string | null; source: Block | null };
 
-/** A mark on a field: the source's value moved on from the one the translation saw (T111). */
-export type FieldChangeMark = { field: string; before: unknown; after: unknown };
-
 type Compared = {
 	source: {
 		id: string;
@@ -76,7 +73,7 @@ type Compared = {
 	};
 	translation: { id: string; locale: string; doc: Doc };
 	marks: TranslationMark[];
-	fields: FieldChangeMark[];
+	fields: FieldMark[];
 	pending: number;
 };
 
@@ -535,7 +532,7 @@ export function FieldChange({
 	anchor,
 	onConfirm,
 }: {
-	mark: FieldChangeMark;
+	mark: FieldMark;
 	shown?: (value: unknown) => ReactNode;
 	/** What the card hangs under; the mark itself when left out. */
 	anchor?: () => Element | null;

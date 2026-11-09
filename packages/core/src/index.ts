@@ -86,7 +86,7 @@ export type {
 	MissingAlt,
 } from "./media/operations";
 export { memoryStorage, type Storage } from "./media/storage";
-export { altIsMissing, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
+export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {
@@ -133,3 +133,4 @@ export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, sc
 export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
 export type { Site } from "./site";
+export type { FieldMark } from "./translations/fields";

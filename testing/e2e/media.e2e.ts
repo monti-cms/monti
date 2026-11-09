@@ -549,17 +549,48 @@ test.describe("a cover and what goes up for it", () => {
 		await expect(decorative).toBeChecked();
 		await admin.keyboard.press("Escape");
 
-		// Off and on again while the next one goes up is said of that one too, though it ends as it began.
+		// The switch while the next one goes up is about that one: it starts off, whatever the old picture said, and what it ends on is what counts.
 		const release2 = await hold(admin);
 		await chooseUpload(admin, fourth as string);
 		await expect(cover(admin)).toHaveText(new RegExp(path.basename(fourth as string)));
 		await coverSettings(admin).click();
+		await expect(decorative).not.toBeChecked();
+		await decorative.click();
 		await decorative.click();
 		await decorative.click();
 		release2();
 		await uploadedId(admin, path.basename(fourth as string));
 		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
 		await expect(decorative).toBeChecked();
+	});
+
+	test("09-3 T118 what is written while a file goes up waits with it: taking the file out leaves the old picture's words", async ({
+		admin,
+	}, info) => {
+		const [first, second] = await Promise.all(
+			["first", "second"].map((name) => picture(admin, info.outputDir, `${unique(name)}.jpg`)),
+		);
+		const alt = admin.getByRole("textbox", { name: "대체 텍스트" });
+		await writing(admin);
+		await chooseUpload(admin, first as string);
+		await uploadedId(admin, path.basename(first as string));
+		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeVisible();
+		await coverSettings(admin).click();
+		await alt.fill("첫 그림");
+		await admin.keyboard.press("Escape");
+
+		await hold(admin);
+		await chooseUpload(admin, second as string);
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(second as string)));
+		await coverSettings(admin).click();
+		await expect(alt).toHaveValue("");
+		await alt.fill("둘째 그림");
+		await admin.keyboard.press("Escape");
+		await admin.getByRole("button", { name: "cover 빼기" }).click();
+
+		await expect(cover(admin)).toHaveText(new RegExp(path.basename(first as string)));
+		await coverSettings(admin).click();
+		await expect(alt).toHaveValue("첫 그림");
 	});
 
 	test("09-3 T117 a file uploaded from the window goes to the folder open in it", async ({ admin }, info) => {

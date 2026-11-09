@@ -1,9 +1,9 @@
 import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
-import { FolderTile, MediaPicker, Segmented, Text, TextButton, Tile } from "@monti-cms/ui";
+import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { useFolders } from "../screens/list/folders";
+import { SearchIn, useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
 import { FileThumb, useFileDetail } from "./file-shown";
 
@@ -37,7 +37,7 @@ export function MediaPickerDialog({
 	const [folder, setFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
 	const [everywhere, setEverywhere] = useState(false);
-	const [picked, setPicked] = useState<MediaItem | null>(null);
+	const [pickedId, setPicked] = useState<string | null>(null);
 	const [shown, setShown] = useState(PAGE);
 	const folders = useFolders("media", true);
 	const here = folder === null ? undefined : folders.byId.get(folder);
@@ -54,6 +54,8 @@ export function MediaPickerDialog({
 		{ afterWrites: true },
 	);
 	const items = read.data?.items ?? [];
+	// What goes in is always a file in sight, whichever list a press landed on.
+	const picked = items.find((item) => item.id === pickedId) ?? null;
 	const subfolders = looking ? [] : folders.children(folder);
 	const detail = useFileDetail(looking, here && !everywhere ? folders.path(here.id).map((up) => up.name) : []);
 	/** What is in sight changes: what was picked goes with it, and the list starts over. */
@@ -85,19 +87,13 @@ export function MediaPickerDialog({
 			searchLabel={t("library.picker.search")}
 			searchIn={
 				looking && here ? (
-					<Segmented
-						aria-label={t("folders.searchIn")}
-						size="sm"
-						inline
-						value={everywhere ? "all" : "here"}
-						onValueChange={(where) => {
+					<SearchIn
+						folder={here.name}
+						everywhere={everywhere}
+						onChange={(next) => {
 							startOver();
-							setEverywhere(where === "all");
+							setEverywhere(next);
 						}}
-						options={[
-							{ value: "here", label: here.name },
-							{ value: "all", label: t("folders.everywhere") },
-						]}
 					/>
 				) : undefined
 			}
@@ -130,7 +126,7 @@ export function MediaPickerDialog({
 					title={item.name}
 					detail={detail(item)}
 					selected={picked?.id === item.id}
-					onClick={() => setPicked(picked?.id === item.id ? null : item)}
+					onClick={() => setPicked(picked?.id === item.id ? null : item.id)}
 					preview={<FileThumb item={item} />}
 				/>
 			))}

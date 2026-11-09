@@ -89,6 +89,26 @@ describe("images with nothing to say for them", () => {
 		expect(await gapTask(id)).toMatchObject({ field: "doc", block: "b1" });
 	});
 
+	it("09-1 T111 an emptied alt text and a switch turned off are kept as nothing, so the value says what it said", async () => {
+		const { id: media } = await upload("desk.jpg");
+		const made = await write<{ id: string; version: number }>("entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "글",
+			slug: "cleaned",
+			values: { cover: { media, alt: "", decorative: false } },
+		});
+		const values = async () =>
+			(await read<{ entry: { values: Record<string, unknown> } }>("entries.get", { id: made.id })).entry.values;
+		expect((await values()).cover).toEqual({ media });
+		await write("entries.save", {
+			id: made.id,
+			version: 1,
+			values: { cover: { media, alt: "책상", decorative: false } },
+		});
+		expect((await values()).cover).toEqual({ media, alt: "책상" });
+	});
+
 	it("09-1 T25 decorative pictures, blank-free alt text and other files ask for nothing", async () => {
 		const [picture, pdf] = [await upload("a.jpg"), await upload("b.pdf", "application/pdf", ".pdf")];
 		const { id } = await post({

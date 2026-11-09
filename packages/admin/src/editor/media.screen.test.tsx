@@ -122,6 +122,16 @@ describe("from the library", () => {
 		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
 	});
 
+	it("09-3 T117 [keys-move] Enter on a folder's card goes in, and the keyboard goes on from its row in the list", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
+		(folderCards(dialog)[0] as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		await expect.element(folderRow(dialog, /^Blog Assets/)).toHaveFocus();
+	});
+
 	it("09-3 T117 going to another folder ends the search", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");

@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, type Block, type Doc } from "../body/doc";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries } from "../entries/record";
+import { isEmptyValue } from "../json";
 import { localeModeOf, type Schema } from "../schema/define";
 import { seenAfter, trackedFields } from "./fields";
 import { blockHash, blockHashes, marksOf } from "./links";
@@ -118,8 +119,6 @@ export async function addSkips(db: Db, entry: Pick<Entry, "id" | "translationSki
 }
 
 type Fields = { title: string; slug: string; values: Record<string, unknown> };
-const empty = (value: unknown) =>
-	value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
 /**
  * A translation's fields as the site and the publish check read them (doc 04, field values): `same` is the source's value, `fromSource` its own or
@@ -132,7 +131,7 @@ export function translatedFields(schema: Schema, collection: string, own: Fields
 		const definition = fields[name];
 		if (!definition) return mine;
 		const mode = localeModeOf(name, definition);
-		return mode === "same" ? theirs : mode === "fromSource" && empty(mine) ? theirs : mine;
+		return mode === "same" ? theirs : mode === "fromSource" && isEmptyValue(mine) ? theirs : mine;
 	};
 	const values: Record<string, unknown> = {};
 	for (const name of Object.keys(fields)) {

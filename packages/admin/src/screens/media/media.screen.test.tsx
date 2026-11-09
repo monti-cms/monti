@@ -146,6 +146,28 @@ describe("browsing", () => {
 		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "쓰임" })).toBeVisible();
 	});
 
+	it("09-1 T113 with a file open beside it the list keeps a name that can be read: name and date, the panel saying the rest", async () => {
+		await ListView.run();
+		await userEvent.click(main().getByRole("link", { name: "top-level-photo.jpg" }));
+		await expect.element(page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		const table = main().getByRole("table");
+		await expect.element(table.getByRole("columnheader", { name: "쓰임" })).not.toBeInTheDocument();
+		const name = table.getByRole("columnheader", { name: "이름" }).element().getBoundingClientRect();
+		expect(name.width).toBeGreaterThan(120);
+		expect(scrollsSideways(main().element())).toEqual([]);
+	});
+
+	it("09-1 T113 going into a folder from its row lets go of what was picked", async () => {
+		await ListView.run();
+		const row = main().getByRole("row").filter({ hasText: "top-level-photo.jpg" });
+		await userEvent.hover(row);
+		await userEvent.click(row.getByRole("checkbox"));
+		await expect.element(main().getByRole("toolbar", { name: "1개 선택" })).toBeVisible();
+		await userEvent.click(main().getByRole("link", { name: "Blog Assets" }));
+		await expect.element(main().getByText("desk-morning.jpg")).toBeVisible();
+		await expect.element(main().getByRole("toolbar", { name: "1개 선택" })).not.toBeInTheDocument();
+	});
+
 	it("09-1 a very long name ends in … in the list view: the row's other columns stay on the page", async () => {
 		await ListView.run();
 		const name = `${"아주 긴 한글 파일 이름 ".repeat(20)}.txt`;

@@ -19,6 +19,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	MenuTick,
+	Segmented,
 	toast,
 } from "@monti-cms/ui";
 import { Edit, Folder, Launch, TrashCan } from "@monti-cms/ui/icons";
@@ -52,6 +53,33 @@ export function useFolders(scope: FolderScope, on: boolean): Folders {
 		};
 		return { list, byId, path, children: (id) => list.filter((folder) => folder.parentId === id) };
 	}, [on, read.data]);
+}
+
+/** Where a search or a filter inside a folder looks: that folder and those under it, or all of them (components/list.md). */
+export function SearchIn({
+	folder,
+	everywhere,
+	onChange,
+}: {
+	/** The open folder's name. */
+	folder: string;
+	everywhere: boolean;
+	onChange: (everywhere: boolean) => void;
+}) {
+	const { t } = useAdmin();
+	return (
+		<Segmented
+			aria-label={t("folders.searchIn")}
+			size="sm"
+			inline
+			value={everywhere ? "all" : "here"}
+			onValueChange={(where) => onChange(where === "all")}
+			options={[
+				{ value: "here", label: folder },
+				{ value: "all", label: t("folders.everywhere") },
+			]}
+		/>
+	);
 }
 
 /**

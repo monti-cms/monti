@@ -11,7 +11,7 @@ import { checkSchema, localeModeOf, type Schema } from "../schema/define";
 import { AnswersInput, applySchema, checkApply, LocalesInput } from "../schema/operations";
 import { type Answers, planSchema } from "../schema/plan";
 import { changesSql, pendingSql, sourceJoin } from "./count";
-import { type FieldMark, fieldMarksOf, fieldValue, seenAfter, trackedFields } from "./fields";
+import { type FieldMark, fieldMarksOf, seenAfter, trackedFields, writtenValue } from "./fields";
 import { blockHash, marksOf, pairedCopy, type TranslationMark } from "./links";
 import {
 	addSkips,
@@ -55,7 +55,7 @@ async function seenConfirmed(ctx: OperationContext, entry: Entry, source: Entry,
 	const published = await publishedOf(ctx.db, source.id);
 	return {
 		...entry.translationSeen,
-		...Object.fromEntries(published ? fields.map((field) => [field, fieldValue(published, field)]) : []),
+		...Object.fromEntries(published ? fields.map((field) => [field, writtenValue(published, field)]) : []),
 	};
 }
 
@@ -186,20 +186,17 @@ export const translationOperations = [
 			// Per language: empty; from the source: the source's to start with; the same: never stored on a translation. A media field starts empty too: an empty one
 			// follows the source (doc 09), and a copy would stop following it.
 			const fields = schema.collections[source.collection]?.fields ?? {};
+			// The source as a translation follows it: what it copies and what it has seen are the same thing.
+			const following = (await followedFields(ctx.db, source)) ?? source;
 			const values = Object.fromEntries(
-				Object.entries(source.values).filter(([name]) => {
+				Object.entries(following.values).filter(([name]) => {
 					const definition = fields[name];
 					return (
 						definition !== undefined && definition.kind !== "media" && localeModeOf(name, definition) === "fromSource"
 					);
 				}),
 			);
-			const seen = seenAfter(
-				trackedFields(schema, source.collection),
-				{},
-				{ title: "", values },
-				await followedFields(ctx.db, source),
-			);
+			const seen = seenAfter(trackedFields(schema, source.collection), {}, { title: "", values }, following);
 			const id = randomUUID();
 			await ctx.db
 				.insertInto("entries")
