@@ -24,6 +24,7 @@ import {
 	FloatingBarButton,
 	FormField,
 	FormFieldLabel,
+	IconButton,
 	Image,
 	Inline,
 	Input,
@@ -31,6 +32,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
+	Segmented,
 	Separator,
 	Stack,
 	TextButton,
@@ -40,6 +42,8 @@ import {
 	Crop,
 	Image as ImageIcon,
 	Reset,
+	RotateClockwise,
+	RotateCounterclockwise,
 	Settings,
 	TextAlignCenter,
 	TextAlignLeft,
@@ -206,9 +210,57 @@ const KEY_MOVES: Partial<Record<string, readonly [number, number]>> = {
 	ArrowDown: [0, 1],
 };
 
-/** "Crop and turn" (screens/editor.md): a dialog, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
+/** The whole picture, as a crop: what the dialog starts from when nothing is cut away. */
+const WHOLE: CropRect = { x: 0, y: 0, width: 100, height: 100 };
+const isWhole = (part: CropRect) => part.x <= 0.01 && part.y <= 0.01 && part.width >= 99.99 && part.height >= 99.99;
+
+/** The shapes a crop can keep, width to height; "free" keeps none and "original" the picture's own. */
+const RATIOS = { free: null, original: null, "1:1": 1, "16:9": 16 / 9, "4:3": 4 / 3 } as const;
+type Ratio = keyof typeof RATIOS;
+
+/**
+ * A ratio as the crop's sides in % of the picture: width % over height %. The picture's own shape is 1 there; a pixel ratio is scaled by the picture's
+ * height over its width. `null` keeps none.
+ */
+function shareRatio(ratio: Ratio, picture: { width: number; height: number } | null): number | null {
+	if (ratio === "original") return 1;
+	const pixels = RATIOS[ratio];
+	return pixels === null || !picture ? null : (pixels * picture.height) / picture.width;
+}
+
+/** The largest crop of a ratio (in shares), in the middle of the picture. */
+function centeredCrop(share: number): CropRect {
+	const width = share >= 1 ? 100 : 100 * share;
+	const height = share >= 1 ? 100 / share : 100;
+	return { x: (100 - width) / 2, y: (100 - height) / 2, width, height };
+}
+
+/** A crop pulled by a corner, kept to a ratio (in shares): the opposite corner stays, and the crop never leaves the picture. */
+function keptCrop(part: CropRect, grip: "nw" | "ne" | "sw" | "se", share: number): CropRect {
+	const west = grip === "nw" || grip === "sw";
+	const north = grip === "nw" || grip === "ne";
+	const anchorX = west ? part.x + part.width : part.x;
+	const anchorY = north ? part.y + part.height : part.y;
+	let width = Math.min(part.width, west ? anchorX : 100 - anchorX);
+	let height = width / share;
+	const room = north ? anchorY : 100 - anchorY;
+	if (height > room) {
+		height = room;
+		width = height * share;
+	}
+	width = Math.max(width, 5);
+	height = width / share;
+	return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height };
+}
+
+/**
+ * "Crop" (screens/editor.md): a dialog, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. The picture fills
+ * most of it; one line under it turns it a quarter (icons, their names on hover), keeps a shape, starts over, and cancels or applies (2026-11-10, owner:
+ * a rotation reads as its arrow everywhere, so it needs no words). The crop starts as the whole picture, its corners there to take.
+ */
 function CropDialog({
 	src,
+	size: known,
 	crop,
 	rotate,
 	onApply,
@@ -216,6 +268,8 @@ function CropDialog({
 	returnTo,
 }: {
 	src: string;
+	/** The picture's size as the body frames it (`imageFrame`): a kept shape is measured on it, so the body shows that shape. */
+	size: { width: number; height: number } | null;
 	crop?: ImageCrop;
 	rotate: ImageRotate;
 	onApply: (crop: ImageCrop | undefined, rotate: ImageRotate) => void;
@@ -225,11 +279,24 @@ function CropDialog({
 }) {
 	const { t } = useAdmin();
 	const [turn, setTurn] = useState<ImageRotate>(rotate);
-	const [part, setPart] = useState<CropRect | undefined>(
-		crop && { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 },
+	const [part, setPart] = useState<CropRect>(
+		crop ? { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 } : WHOLE,
 	);
+	const [ratio, setRatio] = useState<Ratio>("free");
 	const [shown, setShown] = useState(src);
 	const stage = useRef<HTMLDivElement>(null);
+	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
+	const [read, setRead] = useState<{ width: number; height: number } | null>(null);
+	useEffect(() => {
+		if (known) return;
+		const image = new window.Image();
+		image.onload = () => setRead({ width: image.naturalWidth, height: image.naturalHeight });
+		image.src = src;
+	}, [src, known]);
+	const upright = known ?? read;
+	/** The picture's size as it stands turned `at`: sideways, its sides swap. */
+	const size = (at: ImageRotate = turn) =>
+		upright && (at === 90 || at === 270 ? { width: upright.height, height: upright.width } : upright);
 	useEffect(() => {
 		let on = true;
 		void turnedPicture(src, turn)
@@ -254,13 +321,17 @@ function CropDialog({
 			y: ((y - box.top) / box.height) * 100,
 		});
 		const from = at(event.clientX, event.clientY);
-		const begun: CropRect =
-			grip === "stage"
-				? { x: from.x, y: from.y, width: 0, height: 0 }
-				: (part ?? { x: 0, y: 0, width: 100, height: 100 });
+		const share = shareRatio(ratio, size());
 		const move = (next: PointerEvent) => {
 			const to = at(next.clientX, next.clientY);
-			setPart(grip === "stage" ? drawnCrop(from, to) : movedCrop(begun, grip, to.x - from.x, to.y - from.y));
+			if (grip === "stage") {
+				const drawn = drawnCrop(from, to);
+				const corner = `${to.y < from.y ? "n" : "s"}${to.x < from.x ? "w" : "e"}` as "nw" | "ne" | "sw" | "se";
+				setPart(share ? keptCrop(drawn, corner, share) : drawn);
+				return;
+			}
+			const moved = movedCrop(part, grip, to.x - from.x, to.y - from.y);
+			setPart(share && grip !== "move" ? keptCrop(moved, grip, share) : moved);
 		};
 		const up = () => {
 			window.removeEventListener("pointermove", move);
@@ -271,62 +342,83 @@ function CropDialog({
 	};
 	const pressedKey = (event: React.KeyboardEvent, grip: CropGrip) => {
 		const move = KEY_MOVES[event.key];
-		if (!move || !part || grip === "stage") return;
+		if (!move || grip === "stage") return;
 		event.preventDefault();
 		const step = event.shiftKey ? 5 : 1;
-		setPart(movedCrop(part, grip, move[0] * step, move[1] * step));
+		const moved = movedCrop(part, grip, move[0] * step, move[1] * step);
+		const share = shareRatio(ratio, size());
+		setPart(share && grip !== "move" ? keptCrop(moved, grip, share) : moved);
 	};
 	const turnBy = (quarter: 90 | -90) => {
-		setPart((current) => current && turnedCrop(current, quarter));
+		// A kept shape stays the shape on screen: the picture's sides swap, so the crop is the largest of that shape again.
+		const share = shareRatio(ratio, size(((turn + quarter + 360) % 360) as ImageRotate));
+		setPart((current) => (share && ratio !== "original" ? centeredCrop(share) : turnedCrop(current, quarter)));
 		setTurn((current) => ((current + quarter + 360) % 360) as ImageRotate);
 	};
+	const pick = (next: Ratio) => {
+		setRatio(next);
+		const share = shareRatio(next, size());
+		if (share) setPart(centeredCrop(share));
+	};
+	const changed = !isWhole(part) || turn !== 0;
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="lg" finalFocus={returnTo}>
+			<DialogContent size="xl" finalFocus={returnTo}>
 				<DialogTitle>{t("editor.crop.title")}</DialogTitle>
-				<Stack gap={12}>
-					<CropStage
-						src={shown}
-						alt=""
-						crop={part}
-						stageRef={stage}
-						onGrip={pressed}
-						onGripKey={pressedKey}
-						moveLabel={t("editor.crop.move")}
-						cornerLabels={{
-							nw: t("editor.crop.nw"),
-							ne: t("editor.crop.ne"),
-							sw: t("editor.crop.sw"),
-							se: t("editor.crop.se"),
-						}}
-					/>
-					<Inline gap={12}>
-						<TextButton onClick={() => turnBy(-90)}>{t("editor.crop.turnLeft")}</TextButton>
-						<TextButton onClick={() => turnBy(90)}>{t("editor.crop.turnRight")}</TextButton>
-						{part ? (
-							<TextButton onClick={() => setPart(undefined)}>
+				<CropStage
+					src={shown}
+					alt=""
+					crop={part}
+					stageRef={stage}
+					onGrip={pressed}
+					onGripKey={pressedKey}
+					moveLabel={t("editor.crop.move")}
+					cornerLabels={{
+						nw: t("editor.crop.nw"),
+						ne: t("editor.crop.ne"),
+						sw: t("editor.crop.sw"),
+						se: t("editor.crop.se"),
+					}}
+				/>
+				<DialogFooter>
+					<Inline gap={8} grow>
+						<IconButton label={t("editor.crop.turnLeft")} onClick={() => turnBy(-90)}>
+							<RotateCounterclockwise aria-hidden />
+						</IconButton>
+						<IconButton label={t("editor.crop.turnRight")} onClick={() => turnBy(90)}>
+							<RotateClockwise aria-hidden />
+						</IconButton>
+						<Segmented
+							aria-label={t("editor.crop.ratio")}
+							size="sm"
+							inline
+							value={ratio}
+							onValueChange={pick}
+							options={(Object.keys(RATIOS) as Ratio[]).map((value) => ({
+								value,
+								label: value === "free" || value === "original" ? t(`editor.crop.${value}`) : value,
+							}))}
+						/>
+						{changed && (
+							<TextButton
+								onClick={() => {
+									setTurn(0);
+									setPart(WHOLE);
+									setRatio("free");
+								}}
+							>
 								<Reset aria-hidden />
-								{t("editor.crop.whole")}
-							</TextButton>
-						) : (
-							// The way into a crop without a pointer: then the box and its corners move with the arrows.
-							<TextButton onClick={() => setPart({ x: 10, y: 10, width: 80, height: 80 })}>
-								{t("editor.crop.start")}
+								{t("editor.crop.reset")}
 							</TextButton>
 						)}
 					</Inline>
-				</Stack>
-				<DialogFooter>
 					<DialogClose render={<Button variant="ghost" />}>{t("settings.cancel")}</DialogClose>
 					<Button
 						onClick={() =>
 							onApply(
-								part && {
-									x: part.x / 100,
-									y: part.y / 100,
-									width: part.width / 100,
-									height: part.height / 100,
-								},
+								isWhole(part)
+									? undefined
+									: { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 },
 								turn,
 							)
 						}
@@ -537,6 +629,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			{cropping && url && (
 				<CropDialog
 					src={url}
+					size={size?.width && size.height ? { width: size.width, height: size.height } : null}
 					crop={data.crop}
 					rotate={data.rotate ?? 0}
 					returnTo={() => editor.view.dom}

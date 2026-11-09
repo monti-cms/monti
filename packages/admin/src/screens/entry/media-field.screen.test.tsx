@@ -178,7 +178,7 @@ describe("in a translation", () => {
 		await openCard();
 		await userEvent.fill(alt(), "A desk in the morning");
 		await expect.element(note).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문 따르기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
 		await expect.element(note).toBeVisible();
 	});
 
@@ -187,9 +187,9 @@ describe("in a translation", () => {
 		await properties();
 		await openCard();
 		await userEvent.fill(alt(), "A desk");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 원문 따르기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).toBeVisible();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문 따르기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await openCard();
 		await expect.element(alt()).toHaveValue("");

@@ -38,7 +38,7 @@ export function MediaField({
 	change,
 	value,
 	source,
-	whose,
+	following,
 	readOnly,
 	uploads,
 	card,
@@ -55,8 +55,8 @@ export function MediaField({
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
-	/** In a translation following its source: the mark while it follows (empty, or showing the source's file; its own value needs none), and what × does. */
-	whose?: { following: string; clear: string };
+	/** In a translation following its source: the mark while it follows (empty, or showing the source's file); its own value needs none. */
+	following?: string;
 	readOnly: boolean;
 	uploads: FieldUploads;
 	/** Whether the picture's settings card is open: the editor's, so a to-do row can open it. */
@@ -86,9 +86,9 @@ export function MediaField({
 					action={
 						change && !going ? (
 							change
-						) : whose && !own && !going ? (
+						) : following && !own && !going ? (
 							<Text variant="micro" tone="faint">
-								{whose.following}
+								{following}
 							</Text>
 						) : undefined
 					}
@@ -105,7 +105,7 @@ export function MediaField({
 					onOpen={readOnly ? undefined : () => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
-					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
+					clearLabel={t("library.field.clear", { label })}
 					action={
 						going?.status === "failed" ? (
 							<RetryButton onRetry={() => uploads.retry(going)} />

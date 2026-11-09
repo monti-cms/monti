@@ -24,7 +24,7 @@ export const Default: Story = {
 			<FloatingBarButton label="설정">
 				<SettingsAdjust aria-hidden />
 			</FloatingBarButton>
-			<FloatingBarButton label="자르기와 회전">
+			<FloatingBarButton label="자르기">
 				<Crop aria-hidden />
 			</FloatingBarButton>
 		</FloatingBar>
@@ -53,7 +53,7 @@ export const Disabled: Story = {
 			<FloatingBarButton label="설정">
 				<SettingsAdjust aria-hidden />
 			</FloatingBarButton>
-			<FloatingBarButton label="자르기와 회전" disabled>
+			<FloatingBarButton label="자르기" disabled>
 				<Crop aria-hidden />
 			</FloatingBarButton>
 		</FloatingBar>

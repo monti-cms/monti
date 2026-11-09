@@ -58,7 +58,11 @@ const EDITOR_BODY = cn(
 	"[&_[data-menu-open]]:relative [&_[data-menu-open]]:isolate [&_[data-menu-open]]:before:pointer-events-none [&_[data-menu-open]]:before:absolute [&_[data-menu-open]]:before:-left-monti-8 [&_[data-menu-open]]:before:-right-monti-8 [&_[data-menu-open]]:before:inset-y-0 [&_[data-menu-open]]:before:-z-10 [&_[data-menu-open]]:before:rounded-monti-md [&_[data-menu-open]]:before:bg-monti-block [&_li[data-menu-open]]:before:-left-monti-24",
 	// A list item's ground covers its marker too, as `Block active` does in the reference.
 	// A selected picture shows it with its tools: the selection's ground painted over it would recolor it. Its caption, once focused, has a selection of its own.
+	// A picked picture or file is drawn by its own ring: the browser's text highlight over its name says nothing (2026-11-10, owner).
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=image]]:selection:bg-transparent!",
+	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=file]]:selection:bg-transparent!",
+	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
+	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",

@@ -12,16 +12,21 @@ const admin = { actor: "admin" } as const;
 const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
 	monti.run(name, input, admin) as Promise<Output>;
 
-/** A sample photo as the reference paints it: a slanted gradient between two colours, small and real, so it loads like any picture. */
-export async function samplePhoto(from: string, to: string): Promise<Uint8Array> {
-	const canvas = new OffscreenCanvas(320, 180);
+/**
+ * A sample photo as the reference paints it: a slanted gradient between two colours, small and real, so it loads like any picture. It has the shape of the
+ * size it is said to have (16:9 unless told), so a crop drawn on it is the crop the body shows.
+ */
+export async function samplePhoto(from: string, to: string, shape = { width: 16, height: 9 }): Promise<Uint8Array> {
+	const width = 320;
+	const height = Math.round((width * shape.height) / shape.width);
+	const canvas = new OffscreenCanvas(width, height);
 	const context = canvas.getContext("2d");
 	if (!context) throw new Error("No 2d context for the sample photo.");
-	const gradient = context.createLinearGradient(0, 0, 320, 180);
+	const gradient = context.createLinearGradient(0, 0, width, height);
 	gradient.addColorStop(0, from);
 	gradient.addColorStop(1, to);
 	context.fillStyle = gradient;
-	context.fillRect(0, 0, 320, 180);
+	context.fillRect(0, 0, width, height);
 	return new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg" })).arrayBuffer());
 }
 
@@ -34,7 +39,7 @@ async function addFile(
 	file: { name: string; from: string; to: string; width: number; height: number; folderId?: string | null },
 ) {
 	const key = nextKey(".jpg");
-	await site.storage?.put(key, await samplePhoto(file.from, file.to), { mime: "image/jpeg" });
+	await site.storage?.put(key, await samplePhoto(file.from, file.to, file), { mime: "image/jpeg" });
 	const { output } = await run(site.monti, "media.upload", {
 		name: file.name,
 		folderId: file.folderId ?? null,

@@ -127,6 +127,19 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 		return block;
 	};
 	const blocks = stored(json.content ?? []).map(fromEditor);
+	// An empty paragraph at the end is only where the cursor was put under a picture or a file (body-editor): nothing to keep (2026-11-10, owner).
+	while (blocks.length > 1) {
+		const last = blocks[blocks.length - 1];
+		if (
+			last?.type !== "paragraph" ||
+			last.content ||
+			last.attrs ||
+			last.link ||
+			blocks[blocks.length - 2]?.type === "paragraph"
+		)
+			break;
+		blocks.pop();
+	}
 	const only = blocks[0];
 	if (blocks.length === 1 && only?.type === "paragraph" && !only.content && !only.attrs)
 		return { type: "doc", blocks: [] };
