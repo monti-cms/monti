@@ -90,6 +90,26 @@ describe("folders in the list", () => {
 		await expect.element(row("지난 글 10")).toBeVisible();
 	});
 
+	it("07-2 a filter in a folder looks in it first too; '모든 폴더' widens it, and with the filter off the folder is its own again", async () => {
+		await Main.run();
+		await userEvent.click(folderLink("시리즈 원고"));
+		const everywhere = main().getByRole("button", { name: "모든 폴더" });
+		await expect.element(everywhere).not.toBeInTheDocument();
+		const published = async () => {
+			await userEvent.click(main().getByRole("button", { name: "상태" }));
+			await userEvent.click(page.getByRole("menuitemcheckbox", { name: /발행됨/ }));
+			await userEvent.keyboard("{Escape}");
+		};
+		await published();
+		await expect.element(row("지난 글 1")).toBeVisible();
+		await expect.element(row("지난 글 10")).not.toBeInTheDocument();
+		await userEvent.click(everywhere);
+		await expect.element(row("지난 글 10")).toBeVisible();
+		await published();
+		await expect.element(everywhere).not.toBeInTheDocument();
+		await expect.element(row("지난 글 10")).not.toBeInTheDocument();
+	});
+
 	it("07-2 [flow 5·04] a folder row's right-click menu renames it in place and moves it into another folder", async () => {
 		await Main.run();
 		await newFolder("연재");

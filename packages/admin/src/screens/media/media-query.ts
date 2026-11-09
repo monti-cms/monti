@@ -58,7 +58,8 @@ export function writeMediaState(state: MediaState): URLSearchParams {
 /** What `media.query` is asked for this state. */
 export const queryOf = (state: MediaState) => ({
 	folder: state.folder,
-	scope: state.everywhere ? ("all" as const) : ("here" as const),
+	// "All folders" is a choice about what is looked for: with nothing looked for, a folder lists itself.
+	scope: state.everywhere && isLooking(state) ? ("all" as const) : ("here" as const),
 	search: state.search,
 	kinds: state.kinds,
 	used: state.used,
@@ -67,7 +68,7 @@ export const queryOf = (state: MediaState) => ({
 });
 
 /**
- * Whether the screen is searching rather than sitting in a folder: folders hide, and the "search in" choice shows. Kind and use only narrow the open folder's own files, and
- * its folders stay to browse (components/list.md).
+ * Whether the screen is looking for files rather than sitting in a folder: by a search or a filter. Folders hide, and the "search in" choice shows inside a
+ * folder (components/list.md, 2026-11-09 owner).
  */
-export const isLooking = (state: MediaState) => state.search !== "";
+export const isLooking = (state: MediaState) => state.search !== "" || state.kinds.length > 0 || state.used.length > 0;

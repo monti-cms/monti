@@ -24,7 +24,14 @@ describe("the library's address", () => {
 		const search = "folder=f1&q=cover&in=all&kind=file&used=unused&sort=size&view=list&page=2&file=m1";
 		expect(writeMediaState(read(search)).toString()).toBe(search);
 		expect(isLooking(read(search))).toBe(true);
-		expect(isLooking(read("kind=file&used=unused"))).toBe(false);
+		expect(isLooking(read("kind=file&used=unused"))).toBe(true);
+		expect(isLooking(read("folder=f1&sort=size"))).toBe(false);
+	});
+
+	it("09-1 'all folders' holds only while something is looked for: with nothing left to look for, the folder is its own", () => {
+		expect(queryOf(read("folder=f1&q=cover&in=all")).scope).toBe("all");
+		expect(queryOf(read("folder=f1&kind=file&in=all")).scope).toBe("all");
+		expect(queryOf(read("folder=f1&in=all")).scope).toBe("here");
 	});
 
 	it("09-1 what an old link says that nothing knows is left out", () => {

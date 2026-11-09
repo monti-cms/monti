@@ -67,11 +67,11 @@
 
 흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
 
-#### 찾는 곳 행 (폴더 안 검색, 어시스턴트가 건 필터)
+#### 찾는 곳 행 (폴더 안의 검색과 필터, 어시스턴트가 건 필터)
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 행 | `PageToolbar inset` | 폴더 안에서 검색할 때와 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터는 열 이름 뒤의 점으로만 보인다. |
+| 행 | `PageToolbar inset` | 폴더 안에서 찾거나 거를 때와 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터 자체는 열 이름 뒤의 점으로 보인다(2026-11-09 소유자). |
 | "시리즈 원고 · 모든 폴더" | `Segmented size="sm" inline`(이름 "찾는 곳"), 뒤에 `Separator orientation="vertical" length="control"` | 폴더 안에서만 있다. "모든 폴더"는 주소에 `scope=all`. |
 | AI가 건 필터 "✦ 요약 비어 있음 ×" | `Chip proposal`(`onRemove`, `removeLabel` "필터 지우기") | ✦와 파랑은 `Chip`이 그린다. 바꾸거나 지우면 AI 표시가 끝난다. |
 
@@ -141,7 +141,7 @@
 |---|---|---|---|
 | "바꾸기 메뉴" | 7.10 | "바꾸기 ▾" `DropdownMenu`와 태그 `DropdownMenuSub`(검색, 세 상태 체크) | Controls/Menu/DropdownMenu |
 | "상태 메뉴" | 7.04 | 상태 열 메뉴(`DropdownMenuCheckboxItem` 넷과 개수, "열 숨기기"), 상태 열 `filtered` | Controls/Menu/DropdownMenu |
-| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 `filtered`. 찾는 곳 행은 없다 |  |
+| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 `filtered`. 폴더 밖이라 찾는 곳 행은 없다 |  |
 | "태그 메뉴" | 7.04b | 태그 열 메뉴(`DropdownMenuSearch`, "없음", `DropdownMenuScroll`) | Controls/Menu/DropdownMenu |
 | "언어 메뉴" | 7.04c | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 `filtered` | Controls/Menu/DropdownMenu |
 | "수정일 메뉴" | 7.05 | 수정일 열 메뉴(정렬과 기간 `DropdownMenuRadioItem`), `filtered` | Controls/Menu/DropdownMenu |

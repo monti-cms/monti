@@ -211,15 +211,26 @@ describe("browsing", () => {
 		expect(everywhere.items.find((item) => item.name === "cover-deep.jpg")?.path).toEqual(["Blog Assets", "covers"]);
 	});
 
-	it("09-1 kind and use narrow the open folder's own files; only a search looks through folders", async () => {
+	it("09-1 kind and use look through folders as a search does: the open folder and those under it, all of them on request, everything from the top", async () => {
 		const assets = await folder("Blog Assets");
 		const covers = await folder("covers", assets);
 		await upload("here.jpg", { folderId: assets });
 		await upload("deep.jpg", { folderId: covers });
 		await upload("top.jpg");
-		expect(await names({ folder: assets, kinds: ["image"] })).toEqual(["here.jpg"]);
-		expect(await names({ folder: null, kinds: ["image"] })).toEqual(["top.jpg"]);
-		expect(await names({ folder: assets, used: ["unused"] })).toEqual(["here.jpg"]);
+		const sorted = { sort: "name" };
+		expect(await names({ folder: assets, ...sorted })).toEqual(["here.jpg"]);
+		expect(await names({ folder: assets, kinds: ["image"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
+		expect(await names({ folder: assets, used: ["unused"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
+		expect(await names({ folder: assets, scope: "all", kinds: ["image"], ...sorted })).toEqual([
+			"deep.jpg",
+			"here.jpg",
+			"top.jpg",
+		]);
+		expect(await names({ folder: null, kinds: ["image"], ...sorted })).toEqual(["deep.jpg", "here.jpg", "top.jpg"]);
+		// A menu's count is what picking it would find.
+		expect((await query({ folder: assets })).counts).toMatchObject({ image: 2, unused: 2 });
+		expect((await query({ folder: assets, scope: "all" })).counts).toMatchObject({ image: 3, unused: 3 });
+		expect((await query({ folder: null })).counts).toMatchObject({ image: 3, unused: 3 });
 	});
 
 	it("09-1 a percent sign in a search is a percent sign", async () => {

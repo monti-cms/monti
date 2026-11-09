@@ -144,19 +144,23 @@ describe("browsing", () => {
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind is a chip in its place, folders stay to browse, and × takes it off", async () => {
+	it("09-1 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind is a chip in its place, folders give way to where to look, and × takes it off", async () => {
 		await openAssets();
 		await userEvent.click(main().getByRole("button", { name: "종류" }));
-		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("3");
+		// What picking it would find: three here and one in the folder under it.
+		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("4");
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toBeVisible();
 		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("notes-scan.pdf")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
-		await expect.element(folder("covers")).toBeVisible();
-		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+		// A filter looks for files as a search does: no folders, and where to look is a choice.
+		await expect.element(folder("covers")).not.toBeInTheDocument();
+		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
 		await userEvent.click(main().getByRole("button", { name: "필터 지우기" }));
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
+		await expect.element(folder("covers")).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
 	});
 
 	it("09-1 a sort is a menu with one mark of its own", async () => {

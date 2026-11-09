@@ -22,10 +22,10 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "종류 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "이미지" · "파일", 끝에 개수 `MenuShortcut`) | 값을 골라도 메뉴는 열린 채로 있다. 고르면 그 자리의 버튼이 `Chip`("종류: 파일 ×", `onRemove`)이 된다. 개수는 연 폴더 자체 파일의 것이다. |
+| "종류 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "이미지" · "파일", 끝에 개수 `MenuShortcut`) | 값을 골라도 메뉴는 열린 채로 있다. 고르면 그 자리의 버튼이 `Chip`("종류: 파일 ×", `onRemove`)이 된다. 개수는 고르면 나올 수다(지금 폴더와 그 하위, 모든 폴더면 전체). |
 | "사용 여부 ▾" | `FilterButton` + `DropdownMenu` | 종류와 같다. |
 | (빠짐, 2026-11-05) "대체 텍스트 ▾" | `FilterButton` + `DropdownMenu`(`DropdownMenuCheckboxItem` "없음" · "있음", 개수) | 고르면 `Chip`("대체 텍스트: 없음 ×")이 된다. 종류가 "파일"이면 이 버튼은 없다(파일에는 대체 텍스트가 없다). |
-| 찾는 곳 "Blog Assets │ 모든 폴더" | `Separator orientation="vertical" length="control" flush` 뒤 `Segmented size="sm" inline` | 검색어나 대체 텍스트 조건이 걸린 동안, 폴더 안에서만 보인다. |
+| 찾는 곳 "Blog Assets │ 모든 폴더" | `Separator orientation="vertical" length="control" flush` 뒤 `Segmented size="sm" inline` | 검색어나 필터가 걸린 동안, 폴더 안에서만 보인다. 그동안 폴더 타일은 없다. 기본은 지금 폴더와 그 하위다(2026-11-09 소유자). |
 | 정렬 "최근 올린순 ▾" | `PageToolbarEnd` 안 `FilterButton` + `DropdownMenu`(`DropdownMenuRadioGroup`) | 고르면 적용하고 닫힌다. |
 | 보기 "격자 │ 목록" | `Segmented size="sm" inline` | 격자와 목록을 바꾼다. |
 

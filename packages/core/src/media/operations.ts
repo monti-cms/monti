@@ -250,8 +250,8 @@ export const mediaOperations = [
 		input: Query,
 		async run(input, ctx): Promise<MediaQueryResult> {
 			const search = input.search.trim();
-			// Only a search looks through folders. Kind and use narrow the open folder's own files, and its folders stay to browse (components/list.md).
-			const looking = search !== "";
+			// A search or a filter looks for files, so it goes through folders; a folder on its own lists what sits right in it (2026-11-09, owner).
+			const looking = search !== "" || input.kinds.length > 0 || input.used.length > 0;
 			const live = ctx.db.selectFrom("media").where("trashed_at", "is", null);
 			let filtered = live;
 			if (input.ids)
@@ -284,11 +284,12 @@ export const mediaOperations = [
 				.limit(input.pageSize)
 				.offset((input.page - 1) * input.pageSize)
 				.execute();
-			const own =
-				input.folder === undefined || input.folder === null
-					? live.where("folder_id", "is", null)
-					: live.where("folder_id", "=", input.folder);
-			const counted = await own
+			// A menu's count is what picking it would find from here: the open folder and those under it, or everything.
+			const reach =
+				input.scope === "here" && input.folder
+					? live.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))])
+					: live;
+			const counted = await reach
 				.select([
 					sql<number>`count(*) filter (where kind = 'image')::int`.as("image"),
 					sql<number>`count(*) filter (where kind = 'file')::int`.as("file"),

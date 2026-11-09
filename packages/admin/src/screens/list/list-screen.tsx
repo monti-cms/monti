@@ -758,9 +758,9 @@ function DocumentListScreen({
 		<PageColumn width="list">
 			{removeFolder.dialog}
 			{header}
-			{(aiChips.length > 0 || (openFolder && searching)) && (
+			{(aiChips.length > 0 || (openFolder && looking)) && (
 				<PageToolbar inset>
-					{openFolder && searching && (
+					{openFolder && looking && (
 						<>
 							<Segmented
 								size="sm"
