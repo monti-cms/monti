@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Close, OverflowMenuHorizontal } from "./icons";
+import { Close, OverflowMenuHorizontal, Renew } from "./icons";
 import { FilePreview, FolderTile, Grid, IconButton, Image, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
@@ -45,20 +45,37 @@ const takeOut = (
 	</IconButton>
 );
 
-/** Going up, refused (a type the site does not take), too large, and cut off by the network: only that one can be tried again as it is. */
+/** The button over the picture that tries again. */
+const retry = (
+	<IconButton label="다시 올리기">
+		<Renew aria-hidden />
+	</IconButton>
+);
+
+/** Going up, refused (a type the site does not take), too large, and cut off by the network: only that one can be tried again as it is, a picture or a file. All are as tall as a ready file. */
 export const Upload: Story = {
 	render: () => (
 		<Grid columns="tiles">
-			<TileWith title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
-			<TileWith title="clip.mov" detail="받지 않는 형식이에요" status="failed" noPreview action={takeOut} />
-			<TileWith title="panorama.png" detail="10 MB보다 커요" status="interrupted" action={takeOut} />
-			<TileWith
+			<Tile preview={picture} title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
+			<Tile preview={null} title="clip.mov" detail="받지 않는 형식이에요" status="failed" action={takeOut} />
+			<Tile preview={picture} title="panorama.png" detail="10 MB보다 커요" status="interrupted" action={takeOut} />
+			<Tile
+				preview={picture}
 				title="spring-desk.jpg"
 				detail="올리지 못했어요"
 				status="interrupted"
 				action={takeOut}
-				actions={[{ label: "다시 올리기", onClick: () => {}, primary: true }]}
+				retry={retry}
 			/>
+			<Tile
+				preview={null}
+				title="annual-report.pdf"
+				detail="올리지 못했어요"
+				status="interrupted"
+				action={takeOut}
+				retry={retry}
+			/>
+			<Tile preview={picture} title="cover-2026.png" detail="1600×900 · 글 1" />
 		</Grid>
 	),
 };
@@ -94,11 +111,8 @@ export const Folders: Story = {
 	),
 };
 
-function TileWith({
-	noPreview,
-	...props
-}: Omit<React.ComponentProps<typeof Tile>, "preview" | "onSelectedChange"> & { noPreview?: boolean }) {
-	return <Tile preview={noPreview ? null : picture} {...pick} {...props} />;
+function TileWith(props: Omit<React.ComponentProps<typeof Tile>, "preview" | "onSelectedChange">) {
+	return <Tile preview={picture} {...pick} {...props} />;
 }
 
 function FileTile() {

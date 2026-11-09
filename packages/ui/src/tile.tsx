@@ -3,7 +3,6 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { Folder } from "./icons";
-import { TextButton } from "./text-button";
 
 /**
  * A file in a grid (the media library, an image to insert): a 4:3 preview, the name over a mono detail line. Flat: no card, no border.
@@ -15,7 +14,7 @@ import { TextButton } from "./text-button";
  * - `status="failed"`: the file cannot be taken (a type the site does not accept). A 1px red ring is drawn over the preview's edge, the detail line is red
  *   and the name is quiet. A failed file stays in its place until it is taken out; give it no preview if it has no picture to show.
  * - `status="interrupted"`: the file is fine but did not go up (too large, the network). Its picture stays, faded as while it goes up, with no ring; the
- *   detail line is red and the name is quiet; `actions` are what can be done ("Upload again", after the network).
+ *   detail line is red and the name is quiet. `retry` is the button over the middle of the picture, after the network: on the picture, so the tile is as tall as its neighbours.
  * - A file that did not go up is taken out with the × its screen gives as `action`, in the place of a file's ⋯.
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
  *   is ringed and checked in blue; one whose card is open (`current`) is ringed in blue without the check.
@@ -32,7 +31,7 @@ function Tile({
 	status = "ready",
 	progress,
 	proposal,
-	actions,
+	retry,
 	action,
 	dimmed = false,
 	onKeyDown,
@@ -57,8 +56,8 @@ function Tile({
 	progress?: number;
 	/** The suggestion sentence. */
 	proposal?: React.ReactNode;
-	/** For a failed tile: what can be done, as text buttons under the name. `primary` is set in ink. */
-	actions?: readonly { label: string; onClick: () => void; primary?: boolean }[];
+	/** The button that tries again, shown over the middle of the picture (an `IconButton`). */
+	retry?: React.ReactNode;
 	/** The ⋯ at the top right (a button that opens the tile's menu), or the × of a file that did not go up. */
 	action?: React.ReactNode;
 	dimmed?: boolean;
@@ -68,7 +67,7 @@ function Tile({
 	const failed = status === "failed";
 	const interrupted = status === "interrupted";
 	const uploading = status === "uploading";
-	// Both name what went wrong in red under a quiet name, and offer `actions`.
+	// Both name what went wrong in red under a quiet name.
 	const problem = failed || interrupted;
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: it only hears the keys that come up from the tile's own button and check
@@ -158,22 +157,15 @@ function Tile({
 					/>
 				</span>
 			)}
+			{retry && (
+				// As large as the preview, with no ground: only the button takes the pointer.
+				<span className="pointer-events-none absolute inset-x-0 top-0 flex aspect-[4/3] items-center justify-center">
+					<span className="pointer-events-auto flex rounded-monti-full bg-monti-page">{retry}</span>
+				</span>
+			)}
 			{action && (
 				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page in-data-popup-open:opacity-100 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100">
 					{action}
-				</span>
-			)}
-			{problem && actions && actions.length > 0 && (
-				<span className="flex gap-monti-12 text-monti-note">
-					{actions.map((item) => (
-						<TextButton
-							key={item.label}
-							onClick={item.onClick}
-							className={item.primary ? "text-monti-default" : undefined}
-						>
-							{item.label}
-						</TextButton>
-					))}
 				</span>
 			)}
 		</div>

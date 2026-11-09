@@ -49,6 +49,23 @@ describe("a cover in the property panel", () => {
 		await expect.element(settings()).toHaveFocus();
 	});
 
+	it("09-1 the settings card opens right under the field's line, as wide as it", async () => {
+		await WithCover.run();
+		await properties();
+		await openCard();
+		await expect.element(alt()).toBeVisible();
+		const line = cover().element().closest("[data-slot=media-input]");
+		const card = alt().element().closest("[data-slot=popover-content]");
+		if (!line || !card) throw new Error("no line or card");
+		// Measured once it stops moving: it grows in as it opens.
+		await expect
+			.poll(() => Math.round(card.getBoundingClientRect().width))
+			.toBe(Math.round(line.getBoundingClientRect().width));
+		const [under, box] = [line.getBoundingClientRect(), card.getBoundingClientRect()];
+		expect(Math.round(box.left)).toBe(Math.round(under.left));
+		expect(Math.round(box.top - under.bottom)).toBe(4);
+	});
+
 	it("09-1 T67 × takes the file out", async () => {
 		await WithCover.run();
 		await properties();

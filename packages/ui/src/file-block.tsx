@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
+import { IconButtonContext } from "./icon-button";
 import { Document } from "./icons";
 
 /**
@@ -14,6 +15,7 @@ function FileBlock({
 	icon,
 	selected = false,
 	tone = "default",
+	action,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children" | "title"> & {
@@ -24,8 +26,10 @@ function FileBlock({
 	icon?: React.ReactNode;
 	/** The block is selected in the text: it is one thing, chosen whole. */
 	selected?: boolean;
-	/** `danger` when the file cannot be found. */
+	/** `danger` when the file cannot be found or did not go up. */
 	tone?: "default" | "danger";
+	/** A control of the file's own at the end (trying again): 24px, and it does not make the box taller. */
+	action?: React.ReactNode;
 }) {
 	return (
 		<div
@@ -48,6 +52,11 @@ function FileBlock({
 			>
 				{meta}
 			</span>
+			{action && (
+				<span className="-my-monti-4 -mr-monti-4 flex flex-none">
+					<IconButtonContext value={{ size: "xs" }}>{action}</IconButtonContext>
+				</span>
+			)}
 		</div>
 	);
 }

@@ -174,6 +174,21 @@ test.describe("the library", () => {
 });
 
 test.describe("the editor", () => {
+	test("09-1 a picture in the body cut off on its way up is tried again from its box, and goes in", async ({
+		admin,
+	}, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cut")}.png`, { width: 800, height: 600 });
+		await writing(admin);
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await body(admin).getByText("글의 첫 문단이에요.").click();
+		await pastePicture(admin, file);
+		await expect(body(admin).getByText("올리지 못했어요")).toBeVisible();
+		await admin.unroute("**/operations/media.upload");
+		await body(admin).getByRole("button", { name: "다시 올리기" }).click();
+		await expect(body(admin).getByText("올리지 못했어요")).toBeHidden();
+		await expect.poll(() => decoded(body(admin).locator("img"))).toBeGreaterThan(0);
+	});
+
 	test("09-3 09-1 a picture pasted mid-text with a real ⌘V: it goes in, blocks the publish for its alt text, and shows on the site once written", async ({
 		admin,
 	}, info) => {
@@ -323,6 +338,21 @@ test.describe("a cover and what goes up for it", () => {
 			data: { input: { search: path.basename(pdf) } },
 		});
 		expect(((await answer.json()) as { total: number }).total).toBe(0);
+	});
+
+	test("09-1 a cover cut off on its way up is tried again from its own line, and goes in", async ({ admin }, info) => {
+		const file = await picture(admin, info.outputDir, `${unique("cut")}.jpg`);
+		await writing(admin);
+		await admin.route("**/operations/media.upload", (route) => route.abort());
+		await chooseUpload(admin, file);
+		await expect(admin.getByText("올리지 못했어요")).toBeVisible();
+		// The line is the file that stopped: it has no words to write yet.
+		await expect(coverSettings(admin)).toBeHidden();
+		await admin.unroute("**/operations/media.upload");
+		await admin.getByRole("button", { name: "다시 올리기" }).click();
+		await expect(admin.getByText("올리지 못했어요")).toBeHidden();
+		await expect(cover(admin)).toContainText(path.basename(file));
+		await expect(coverSettings(admin)).toBeVisible();
 	});
 
 	test("09-3 a cover's × takes out a file that did not go up; the cover and its alt text are as they were", async ({
@@ -621,14 +651,28 @@ test.describe("while a file is on its way", () => {
 		admin,
 	}, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("cut")}.jpg`);
+		const ready = await picture(admin, info.outputDir, `${unique("ready")}.jpg`);
 		await admin.goto("/#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
+		await dropFromDisk(admin, [ready], main(admin));
+		await uploadedId(admin, path.basename(ready));
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await dropFromDisk(admin, [file], main(admin));
 		await expect(main(admin).getByText("올리지 못했어요")).toBeVisible();
+		const retry = main(admin).getByRole("button", { name: "다시 올리기" });
+		// The button is on the picture: the tile is as tall as the file beside it, and the grid does not move.
+		const tall = (name: string) => main(admin).locator("[data-slot=tile]").filter({ hasText: name }).boundingBox();
+		const [cut, done, button] = await Promise.all([
+			tall(path.basename(file)),
+			tall(path.basename(ready)),
+			retry.boundingBox(),
+		]);
+		expect(cut?.height).toBe(done?.height);
+		expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThan((cut?.y ?? 0) + (cut?.width ?? 0) * 0.75);
 		await admin.unroute("**/operations/media.upload");
-		await main(admin).getByRole("button", { name: "다시 올리기" }).click();
-		await expect(tile(admin, file.split("/").at(-1) ?? "")).toBeVisible();
+		await retry.click();
+		await expect(main(admin).getByText("올리지 못했어요")).toBeHidden();
+		await expect(tile(admin, path.basename(file))).toBeVisible();
 	});
 
 	test("09-3 undone while it goes and redone after it landed, the picture is there, and is saved", async ({

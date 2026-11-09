@@ -48,7 +48,7 @@ import {
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
-import { UploadActions, useProblemText } from "../media/upload-problem";
+import { useProblemText, useRetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { AltFields } from "./alt-fields";
@@ -98,6 +98,7 @@ function UploadInPlace({
 	const media = useContext(EditorMedia);
 	const upload = media?.uploads.find((each) => each.id === id);
 	const problemText = useProblemText();
+	const retry = useRetryButton((each) => media?.retry(each));
 	const latest = useRef({ onDone, onGone });
 	latest.current = { onDone, onGone };
 	useEffect(() => {
@@ -111,10 +112,13 @@ function UploadInPlace({
 	// A file that stopped says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
 	if (problem)
 		return (
-			<Stack gap={8}>
-				<FileBlock name={upload.name} meta={problemText(upload)} tone="danger" selected={selected} />
-				<UploadActions upload={upload} onRetry={media.retry} />
-			</Stack>
+			<FileBlock
+				name={upload.name}
+				meta={problemText(upload)}
+				tone="danger"
+				selected={selected}
+				action={retry(upload)}
+			/>
 		);
 	return isImage ? (
 		<UploadingImage src={upload.preview} progress={upload.progress} label={t("editor.image.uploading")} />

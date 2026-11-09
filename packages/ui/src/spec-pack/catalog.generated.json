@@ -971,10 +971,6 @@
 			"children": false,
 			"slots": [],
 			"props": {
-				"actions": {
-					"kind": "data",
-					"fields": ["label"]
-				},
 				"detail": {
 					"kind": "text",
 					"type": "string"
@@ -996,6 +992,10 @@
 				},
 				"progress": {
 					"kind": "state"
+				},
+				"retry": {
+					"kind": "text",
+					"type": "string"
 				},
 				"selected": {
 					"kind": "flag",

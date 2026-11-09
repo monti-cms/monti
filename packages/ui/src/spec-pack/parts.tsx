@@ -45,7 +45,7 @@ import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } 
 import { FormatBarRequest, FormatButton, type FormatMark } from "../format-bar";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
-import { FolderParent, type IconName, iconsByName } from "../icons";
+import { FolderParent, type IconName, iconsByName, Renew } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
@@ -1370,7 +1370,7 @@ function MediaGrid({ folders, children }: { folders?: boolean; children?: React.
 
 /**
  * One file of a grid: its `name`, the `detail` line, its picture (`picture`, a file's address, read from the data) or, for a file with none, its
- * extension (`ext`). `status` for a file going up or one that cannot be taken, with `progress`; `actions` are what can be done with a failed one.
+ * extension (`ext`). `status` for a file going up or one that cannot be taken, with `progress`; `retry` names the button over the picture of one that was cut off.
  */
 function MediaTile({
 	name,
@@ -1379,7 +1379,7 @@ function MediaTile({
 	ext,
 	status,
 	progress,
-	actions,
+	retry,
 	selected,
 	picking,
 }: {
@@ -1389,7 +1389,7 @@ function MediaTile({
 	ext?: string;
 	status?: "ready" | "uploading" | "failed" | "interrupted";
 	progress?: number;
-	actions?: readonly { label: string }[];
+	retry?: string;
 	selected?: boolean;
 	picking?: boolean;
 }) {
@@ -1410,7 +1410,13 @@ function MediaTile({
 			}
 			status={status}
 			progress={progress}
-			actions={actions?.map((action) => ({ label: action.label, onClick: () => {} }))}
+			retry={
+				retry ? (
+					<IconButton label={retry}>
+						<Renew aria-hidden />
+					</IconButton>
+				) : undefined
+			}
 			selected={selected}
 			picking={picking}
 		/>
@@ -3115,7 +3121,7 @@ export const CATALOG = {
 			ext: "text",
 			status: "variant",
 			progress: "state",
-			actions: "data:label",
+			retry: "text",
 			selected: "flag",
 			picking: "flag",
 		},

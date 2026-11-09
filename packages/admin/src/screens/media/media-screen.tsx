@@ -70,7 +70,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
-import { useProblemActions, useProblemText } from "../../media/upload-problem";
+import { useProblemText, useRetryButton } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
@@ -141,7 +141,7 @@ function UploadTile({
 }) {
 	const { t } = useAdmin();
 	const problemText = useProblemText();
-	const actions = useProblemActions(onRetry)(upload);
+	const retry = useRetryButton(onRetry)(upload);
 	// Where a file's ⋯ stands: a file that did not go up has this one thing to do with it.
 	const takeOut = (
 		<IconButton label={t("library.takeOut")} size="xs" onClick={() => onRemove(upload)}>
@@ -161,7 +161,6 @@ function UploadTile({
 				detail={problemText(upload)}
 				// A picture that cannot be shown leaves an empty place with its red line: no icon, no extension (components/list.md).
 				preview={upload.preview ? null : preview}
-				actions={actions}
 				action={takeOut}
 			/>
 		);
@@ -171,8 +170,9 @@ function UploadTile({
 				status="interrupted"
 				title={upload.name}
 				detail={problemText(upload)}
-				preview={preview}
-				actions={actions}
+				// The button stands where a file's icon and extension would: the name says what it is.
+				preview={retry && !upload.preview ? null : preview}
+				retry={retry}
 				action={takeOut}
 			/>
 		);

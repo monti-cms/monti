@@ -12,11 +12,11 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
-import { UploadActions, useProblemText } from "../../media/upload-problem";
+import { useProblemText, useRetryButton } from "../../media/upload-problem";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
@@ -63,6 +63,8 @@ export function MediaField({
 }) {
 	const { t } = useAdmin();
 	const problemText = useProblemText();
+	const retry = useRetryButton(uploads.retry);
+	const line = useRef<HTMLDivElement>(null);
 	const [picking, setPicking] = useState(false);
 	const own = mediaValueOf(value);
 	const followed = own ? null : mediaValueOf(source);
@@ -89,6 +91,7 @@ export function MediaField({
 					{label}
 				</FormFieldLabel>
 				<MediaInput
+					ref={line}
 					id={id}
 					size="md"
 					following={followed !== null && !going}
@@ -99,7 +102,9 @@ export function MediaField({
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
 					action={
-						isImage && shown ? (
+						going?.problem ? (
+							retry(going)
+						) : isImage && shown ? (
 							<Popover open={card} onOpenChange={onCard}>
 								<IconButton
 									label={t("library.field.settings", { label })}
@@ -108,7 +113,8 @@ export function MediaField({
 								>
 									<Settings aria-hidden />
 								</IconButton>
-								<PopoverContent align="end">
+								{/* As wide as the line it belongs to, right under it (2026-11-09, owner). */}
+								<PopoverContent anchor={line} align="start" width="anchor">
 									<Stack gap={12}>
 										<AltFields
 											value={own?.alt ?? ""}
@@ -125,13 +131,8 @@ export function MediaField({
 						) : undefined
 					}
 				/>
-				{altMissing && !readOnly && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
-				{going?.problem && (
-					<>
-						<FormFieldError>{problemText(going)}</FormFieldError>
-						<UploadActions upload={going} onRetry={uploads.retry} />
-					</>
-				)}
+				{altMissing && !readOnly && !going?.problem && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
+				{going?.problem && <FormFieldError>{problemText(going)}</FormFieldError>}
 			</FormField>
 			{picking && (
 				<MediaPickerDialog

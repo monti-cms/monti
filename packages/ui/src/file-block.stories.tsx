@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FileBlock, Stack } from "./index";
+import { Renew } from "./icons";
+import { FileBlock, IconButton, Stack } from "./index";
 
 /** A file in the body of an entry: a one-line box with the file icon, the name, and the kind and size in mono at the end. */
 const meta = {
@@ -22,3 +23,17 @@ export const Selected: Story = { args: { name: "2026 연간 보고서", meta: "P
 
 /** A file that cannot be found. */
 export const Missing: Story = { args: { name: "old-brochure.pdf", meta: "찾을 수 없어요", tone: "danger" } };
+
+/** Cut off on its way up: the button at the end tries again, and the box stays as tall as any other. */
+export const Retry: Story = {
+	args: {
+		name: "spring-desk.jpg",
+		meta: "올리지 못했어요",
+		tone: "danger",
+		action: (
+			<IconButton label="다시 올리기">
+				<Renew aria-hidden />
+			</IconButton>
+		),
+	},
+};
