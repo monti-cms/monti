@@ -57,7 +57,15 @@ import {
 	Tile,
 	toast,
 } from "@monti-cms/ui";
-import { Document, Folder, FolderAdd, Launch, OverflowMenuHorizontal, Upload as UploadIcon } from "@monti-cms/ui/icons";
+import {
+	Close,
+	Document,
+	Folder,
+	FolderAdd,
+	Launch,
+	OverflowMenuHorizontal,
+	Upload as UploadIcon,
+} from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
@@ -126,16 +134,20 @@ function UploadTile({
 	upload,
 	onRemove,
 	onRetry,
-	onShrink,
 }: {
 	upload: Upload;
 	onRemove: (upload: Upload) => void;
 	onRetry: (upload: Upload) => void;
-	onShrink: (upload: Upload) => unknown;
 }) {
 	const { t } = useAdmin();
 	const problemText = useProblemText();
-	const actions = useProblemActions({ onRemove, onRetry, onShrink })(upload);
+	const actions = useProblemActions(onRetry)(upload);
+	// Where a file's ⋯ stands: a file that did not go up has this one thing to do with it.
+	const takeOut = (
+		<IconButton label={t("library.takeOut")} size="xs" onClick={() => onRemove(upload)}>
+			<Close aria-hidden />
+		</IconButton>
+	);
 	const preview = upload.preview ? (
 		<Image src={upload.preview} alt="" ratio="photo" radius="none" />
 	) : (
@@ -150,11 +162,19 @@ function UploadTile({
 				// A picture that cannot be shown leaves an empty place with its red line: no icon, no extension (components/list.md).
 				preview={upload.preview ? null : preview}
 				actions={actions}
+				action={takeOut}
 			/>
 		);
 	if (upload.status === "interrupted")
 		return (
-			<Tile status="interrupted" title={upload.name} detail={problemText(upload)} preview={preview} actions={actions} />
+			<Tile
+				status="interrupted"
+				title={upload.name}
+				detail={problemText(upload)}
+				preview={preview}
+				actions={actions}
+				action={takeOut}
+			/>
 		);
 	return (
 		<Tile
@@ -592,7 +612,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const nothing =
 		data !== null && items.length === 0 && childFolders.length === 0 && uploadsHere.length === 0 && !naming.naming;
 	const grid = (
-		<Stack gap={24} paddingTop={24} paddingX={12}>
+		<Stack gap={24}>
 			{(childFolders.length > 0 || naming.naming?.id === null) && (
 				<Grid columns="folders" dense={dense}>
 					{childFolders.map((folder) => (
@@ -621,13 +641,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			{(items.length > 0 || uploadsHere.length > 0) && (
 				<Grid columns="tiles" dense={dense}>
 					{uploadsHere.map((each) => (
-						<UploadTile
-							key={each.id}
-							upload={each}
-							onRemove={upload.remove}
-							onRetry={upload.retry}
-							onShrink={upload.shrink}
-						/>
+						<UploadTile key={each.id} upload={each} onRemove={upload.remove} onRetry={upload.retry} />
 					))}
 					{items.map((item) => (
 						<ContextMenu key={item.id}>
@@ -791,13 +805,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			{uploadsHere.length > 0 && (
 				<Grid columns="tiles">
 					{uploadsHere.map((each) => (
-						<UploadTile
-							key={each.id}
-							upload={each}
-							onRemove={upload.remove}
-							onRetry={upload.retry}
-							onShrink={upload.shrink}
-						/>
+						<UploadTile key={each.id} upload={each} onRemove={upload.remove} onRetry={upload.retry} />
 					))}
 				</Grid>
 			)}
@@ -831,7 +839,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				<ContextMenu>
 					<ContextMenuTrigger
 						render={
-							<DropArea fill over={areaDrop.over && !folderTarget} {...areaDrop.handlers}>
+							<DropArea fill flush={state.view === "list"} over={areaDrop.over && !folderTarget} {...areaDrop.handlers}>
 								{state.view === "list" ? table : grid}
 							</DropArea>
 						}

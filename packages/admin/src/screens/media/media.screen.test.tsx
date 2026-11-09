@@ -241,7 +241,7 @@ describe("uploading", () => {
 	it("09-1 [flow 6·04, 6·35] a file the library does not take stays in place with the reason, and can be taken out", async () => {
 		await openAssets();
 		dropFiles(main().getByText("desk-morning.jpg").element(), [named("setup.exe", [0x4d, 0x5a])]);
-		await expect.element(main().getByText("이미지 · PDF · ZIP · 텍스트만")).toBeVisible();
+		await expect.element(main().getByText("받지 않는 형식이에요")).toBeVisible();
 		await userEvent.click(main().getByRole("button", { name: "빼기" }));
 		await expect.element(main().getByText("setup.exe")).not.toBeInTheDocument();
 	});
@@ -251,29 +251,31 @@ describe("uploading", () => {
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			named("broken.png", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]),
 		]);
-		await expect.element(main().getByText("이 그림은 읽을 수 없어요", { exact: false })).toBeVisible();
+		await expect.element(main().getByText("이 그림은 읽을 수 없어요")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·04] a file over the limit says how big and offers shrinking only for a picture", async () => {
+	it("09-1 [flow 6·04] a file over the limit says so, and stays until it is taken out: a smaller one is another upload", async () => {
 		await openAssets();
 		const big = new Uint8Array(11 * 1024 * 1024);
 		big.set(await samplePhoto("#000000", "#ffffff"));
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
 			new File([big.buffer], "huge.jpg", { type: "image/jpeg" }),
-			new File([big.slice().fill(0x25, 0, 1).buffer], "huge.pdf"),
 		]);
-		await expect.element(main().getByText("11 MB · 10 MB까지")).toBeVisible();
-		await expect.element(main().getByRole("button", { name: "줄여서 다시" })).toBeVisible();
+		const reason = main().getByText("10 MB보다 커요");
+		await expect.element(reason).toBeVisible();
+		expect(main().getByRole("button", { name: "다시 올리기" }).elements()).toHaveLength(0);
+		await userEvent.click(main().getByRole("button", { name: "빼기" }));
+		await expect.element(reason).not.toBeInTheDocument();
 	});
 
-	it("09-1 [flow 6·03] an iPhone's HEIC photo says what to do with it, whole, where a tile is narrowest", async () => {
+	it("09-1 [flow 6·03] an iPhone's HEIC photo says so, whole, where a tile is narrowest", async () => {
 		await Top.run();
 		dropFiles(main().getByText("top-level-photo.jpg").element(), [
 			named("photo.heic", [0, 0, 0, 24, ...new TextEncoder().encode("ftypheic"), 0, 0, 0, 0]),
 		]);
-		const reason = main().getByText("JPEG나 PNG로 바꿔 주세요", { exact: false });
+		const reason = main().getByText("HEIC는 받지 않아요");
 		await expect.element(reason).toBeVisible();
-		await expect.element(main().getByText("이미지 · PDF · ZIP · 텍스트만")).not.toBeInTheDocument();
+		await expect.element(main().getByText("받지 않는 형식이에요")).not.toBeInTheDocument();
 		const line = reason.element();
 		expect(line.scrollWidth).toBeLessThanOrEqual(line.clientWidth);
 		await userEvent.click(main().getByRole("button", { name: "빼기" }));

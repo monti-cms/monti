@@ -255,7 +255,7 @@ describe("pasting", () => {
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
 	});
 
-	it("09-1 a file that will not go up says why in its place, and can be taken out", async () => {
+	it("09-1 a file that will not go up says why in its place, and goes as any block goes", async () => {
 		await Draft.run();
 		await caretAfter("글의 첫 문단");
 		await paste(
@@ -263,13 +263,11 @@ describe("pasting", () => {
 				type: "image/png",
 			}),
 		);
-		await expect.element(body().getByText("이 그림은 읽을 수 없어요", { exact: false })).toBeVisible();
-		// A file that stopped has nothing to caption, and what can be done about it is not body text.
+		await expect.element(body().getByText("이 그림은 읽을 수 없어요")).toBeVisible();
+		// A file that stopped has nothing to caption.
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).not.toBeInTheDocument();
-		const takeOut = body().getByRole("button", { name: "빼기" });
-		const size = (element: Element) => Number.parseFloat(getComputedStyle(element).fontSize);
-		expect(size(takeOut.element())).toBeLessThan(size(body().element()));
-		await userEvent.click(takeOut);
+		await userEvent.click(body().getByText("broken.png"));
+		await userEvent.keyboard("{Backspace}");
 		await expect.element(body().getByText("broken.png")).not.toBeInTheDocument();
 	});
 

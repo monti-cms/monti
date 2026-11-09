@@ -3,7 +3,6 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useLeaveGuard } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
-import { shrunk } from "./images";
 import { putFile } from "./put-file";
 import { nextToStart, stillGoing, type Upload, uploadQueue } from "./upload-queue";
 
@@ -45,7 +44,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			if (stop.signal.aborted) return;
 			if (!put.ok) {
 				if (put.unauthenticated) session.end();
-				dispatch({ type: "problem", id: upload.id, problem: put.problem, kind: put.kind });
+				dispatch({ type: "problem", id: upload.id, problem: put.problem });
 				return;
 			}
 			// A request that never got an answer throws: it is the same "try again" as one that was refused, and must not hold its place in the queue.
@@ -60,7 +59,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
 			if (!made?.ok) {
-				dispatch({ type: "problem", id: upload.id, problem: "failed", kind: put.kind });
+				dispatch({ type: "problem", id: upload.id, problem: "failed" });
 				return;
 			}
 			onUploaded.current?.(made.body.output, upload);
@@ -94,8 +93,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			return {
 				id,
 				name: file.name,
-				size: file.size,
-				kind: null,
 				folder,
 				...(only ? { only } : {}),
 				preview: previewOf(file),
@@ -118,15 +115,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 
 	const retry = useCallback((upload: Upload) => dispatch({ type: "retry", id: upload.id }), []);
 
-	/** "Shrink and retry": the same picture under the limit, in the same place. */
-	const shrink = useCallback(async (upload: Upload) => {
-		const file = files.current.get(upload.id);
-		const smaller = file ? await shrunk(file) : null;
-		if (!smaller) return dispatch({ type: "problem", id: upload.id, problem: "unreadable" });
-		files.current.set(upload.id, smaller);
-		dispatch({ type: "retry", id: upload.id, size: smaller.size, name: smaller.name });
-	}, []);
-
 	/** Whether this is still a file of this page: on its way, or stopped with its reason. */
 	const holds = useCallback((id: string) => files.current.has(id), []);
 
@@ -138,5 +126,5 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 		},
 	});
 
-	return { uploads, add, remove, retry, shrink, holds };
+	return { uploads, add, remove, retry, holds };
 }

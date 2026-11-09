@@ -1,9 +1,9 @@
-import type { Acceptance, MediaKind } from "@monti-cms/core";
+import type { Acceptance } from "@monti-cms/core";
 
 /**
  * Why a file did not go up.
  * - `type`: not a kind the library takes. `unreadable`: it says it is a picture, and no picture comes out of it. Those two can only be taken out.
- * - `tooBig`: over the limit; an image can be shrunk and tried again.
+ * - `tooBig`: over the limit. It can only be taken out too: a smaller file is another upload.
  * - `failed`: the network or the server; it can be tried again as it is.
  */
 export type UploadProblem = "type" | "heic" | "notImage" | "cannotRead" | "unreadable" | "tooBig" | "failed";
@@ -12,8 +12,6 @@ export type UploadProblem = "type" | "heic" | "notImage" | "cannotRead" | "unrea
 export type Upload = {
 	id: string;
 	name: string;
-	size: number;
-	kind: MediaKind | null;
 	/** The folder it goes to: `null` is the top level. */
 	folder: string | null;
 	/** A place that takes only images: another file stays with its reason, and out of the library. */
@@ -29,8 +27,8 @@ export type QueueAction =
 	| { type: "add"; uploads: Upload[] }
 	| { type: "start"; id: string }
 	| { type: "progress"; id: string; percent: number }
-	| { type: "problem"; id: string; problem: UploadProblem; kind?: MediaKind | null }
-	| { type: "retry"; id: string; size?: number; name?: string }
+	| { type: "problem"; id: string; problem: UploadProblem }
+	| { type: "retry"; id: string }
 	| { type: "remove"; id: string };
 
 /** Files going up at once; the rest wait their turn. */
@@ -58,17 +56,9 @@ function changed(upload: Upload, action: Exclude<QueueAction, { type: "add" | "r
 				...upload,
 				status: STATUS_OF[action.problem],
 				problem: action.problem,
-				kind: action.kind === undefined ? upload.kind : action.kind,
 			};
 		case "retry":
-			return {
-				...upload,
-				status: "waiting",
-				progress: 0,
-				problem: null,
-				name: action.name ?? upload.name,
-				size: action.size ?? upload.size,
-			};
+			return { ...upload, status: "waiting", progress: 0, problem: null };
 	}
 }
 

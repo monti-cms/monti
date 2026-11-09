@@ -129,7 +129,7 @@ export function MediaField({
 				{going?.problem && (
 					<>
 						<FormFieldError>{problemText(going)}</FormFieldError>
-						<UploadActions upload={going} onRetry={uploads.retry} onShrink={uploads.shrink} />
+						<UploadActions upload={going} onRetry={uploads.retry} />
 					</>
 				)}
 			</FormField>

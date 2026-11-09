@@ -12,14 +12,14 @@ describe("putting a file", () => {
 			blob.arrayBuffer = () => Promise.reject(new DOMException("A requested file could not be found", "NotFoundError"));
 			return blob;
 		};
-		expect(await putFile(folder, uploader)).toEqual({ ok: false, problem: "cannotRead", kind: null });
+		expect(await putFile(folder, uploader)).toEqual({ ok: false, problem: "cannotRead" });
 		expect(uploader).not.toHaveBeenCalled();
 	});
 
 	it("09-3 a place that takes only images refuses another file before it goes up", async () => {
 		const uploader = vi.fn();
 		const pdf = new File([PDF], "price.pdf", { type: "application/pdf" });
-		expect(await putFile(pdf, uploader, { only: "image" })).toEqual({ ok: false, problem: "notImage", kind: "file" });
+		expect(await putFile(pdf, uploader, { only: "image" })).toEqual({ ok: false, problem: "notImage" });
 		expect(uploader).not.toHaveBeenCalled();
 	});
 });

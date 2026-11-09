@@ -84,11 +84,13 @@ const MIN_WIDTH = 80;
 function UploadInPlace({
 	id,
 	isImage,
+	selected,
 	onDone,
 	onGone,
 }: {
 	id: string;
 	isImage: boolean;
+	selected: boolean;
 	onDone: (item: MediaItem) => void;
 	onGone: () => void;
 }) {
@@ -106,20 +108,12 @@ function UploadInPlace({
 	}, [media, upload, id]);
 	if (!media || !upload) return null;
 	const { problem } = upload;
-	// A file that stopped says so in the box that stands for a file, with what can be done under it (screens/editor.md).
+	// A file that stopped says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
 	if (problem)
 		return (
 			<Stack gap={8}>
-				<FileBlock name={upload.name} meta={problemText(upload)} tone="danger" />
-				<UploadActions
-					upload={upload}
-					onRemove={(each) => {
-						media.remove(each);
-						onGone();
-					}}
-					onRetry={media.retry}
-					onShrink={media.shrink}
-				/>
+				<FileBlock name={upload.name} meta={problemText(upload)} tone="danger" selected={selected} />
+				<UploadActions upload={upload} onRetry={media.retry} />
 			</Stack>
 		);
 	return isImage ? (
@@ -368,6 +362,7 @@ function ImageBlockView({ node, updateAttributes, deleteNode, selected, editor }
 					<UploadInPlace
 						id={uploading}
 						isImage
+						selected={selected}
 						onGone={deleteNode}
 						onDone={(done) => updateAttributes({ upload: null, data: { ...data, ...fileBlock(done) } })}
 					/>
@@ -556,6 +551,7 @@ function FileBlockView({ node, updateAttributes, deleteNode, selected, editor }:
 				<UploadInPlace
 					id={uploading}
 					isImage={false}
+					selected={selected}
 					onGone={deleteNode}
 					onDone={(done) => updateAttributes({ upload: null, data: fileBlock(done) })}
 				/>

@@ -1352,7 +1352,11 @@ function ChangeRow({ what, result }: { what?: string; result?: string }) {
 
 /** Where files can be dropped (the folders and the file grid); `over` while files are dragged over it. */
 function DropZone({ over, children }: { over?: boolean; children?: React.ReactNode }) {
-	return <DropArea over={over}>{children}</DropArea>;
+	return (
+		<DropArea flush over={over}>
+			{children}
+		</DropArea>
+	);
 }
 
 /** The grid of a library's files (`MediaTile`s), or of its folders (`folders`), set in from the column as the design system's tiles are. */

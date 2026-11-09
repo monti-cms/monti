@@ -39,7 +39,7 @@ export function useFieldUploads(onUploaded: (field: string, item: MediaItem, alt
 		},
 		[addUpload, clear],
 	);
-	return { of, add, clear, remove, retry: upload.retry, shrink: upload.shrink };
+	return { of, add, clear, remove, retry: upload.retry };
 }
 
 export type FieldUploads = ReturnType<typeof useFieldUploads>;

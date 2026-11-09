@@ -1,5 +1,5 @@
-import { MAX_UPLOAD_BYTES, splitName, WEB_LONGEST_SIDE } from "@monti-cms/core";
-import { firstShrink, fitLongSide } from "./fit";
+import { WEB_LONGEST_SIDE } from "@monti-cms/core";
+import { fitLongSide } from "./fit";
 
 /** A picture as the browser reads it, turned the way its EXIF says, or `null` when no picture comes out of the file. */
 export async function readPicture(file: Blob): Promise<ImageBitmap | null> {
@@ -35,24 +35,4 @@ export async function webSize(picture: ImageBitmap, mime: string) {
 	const size = fitLongSide(picture.width, picture.height, WEB_LONGEST_SIDE);
 	const blob = await draw(picture, size.width, size.height, mime);
 	return blob ? { blob, ...size, name: `web${extensionOf(blob.type)}` } : null;
-}
-
-/** "Shrink and retry" (flow 6·04): the same picture, its sides reduced step by step until it is under the limit. `null` when it cannot be read or will not come under. */
-export async function shrunk(file: File): Promise<File | null> {
-	const picture = await readPicture(file);
-	if (!picture) return null;
-	let scale = firstShrink(file.size, MAX_UPLOAD_BYTES);
-	for (let tries = 0; tries < 6; tries++) {
-		const blob = await draw(
-			picture,
-			Math.max(1, Math.round(picture.width * scale)),
-			Math.max(1, Math.round(picture.height * scale)),
-			file.type,
-		);
-		if (!blob) return null;
-		if (blob.size <= MAX_UPLOAD_BYTES)
-			return new File([blob], `${splitName(file.name).stem}${extensionOf(blob.type)}`, { type: blob.type });
-		scale *= 0.85;
-	}
-	return null;
 }

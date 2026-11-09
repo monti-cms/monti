@@ -11,9 +11,7 @@ import { nodeName } from "./schema";
 /** What a body's image and file blocks need from the editor around them: the files on their way up, and which image's settings card is open. */
 export type EditorMediaValue = {
 	uploads: readonly Upload[];
-	remove: (upload: Upload) => void;
 	retry: (upload: Upload) => void;
-	shrink: (upload: Upload) => unknown;
 	/** Whether this file is still this page's, going up or stopped with its reason. */
 	holds: (id: string) => boolean;
 	/** What a finished upload became, for a block that comes back after it ended (undo, then redo). */

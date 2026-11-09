@@ -54,8 +54,8 @@
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
 | 올리는 중 | `Tile status="uploading"`(`progress`) | 세부 줄은 "올리는 중 · 64%" 또는 "대기". 이때 나가려 하면 파일을 올리는 중이라고 묻는다(`useLeaveGuard`의 `uploads`). 파일을 "바뀐 곳"이라 부르지 않는다. |
-| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`actions` "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 말한다. 받지 않는 형식은 받는 종류("이미지 · PDF · ZIP · 텍스트만"), HEIC는 "HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요", 이미지만 받는 칸의 다른 파일은 "이 칸에는 이미지만 넣을 수 있어요", 읽히지 않는 것(OS의 폴더)은 "이 파일은 읽을 수 없어요", 받는 형식인데 깨진 그림은 "이 그림은 읽을 수 없어요 · 파일이 손상됐을 수 있어요"다. |
-| 너무 큰 파일 | `Tile status="interrupted"`(`actions` "줄여서 다시" · "빼기") | 그림은 흐리게 남고 테는 없다. 세부 줄 "14 MB · 10 MB까지". |
+| 받지 않는 형식 · 읽을 수 없는 그림 | `Tile status="failed"`(`action`에 × "빼기") | 빨간 테를 두르고 제자리에 남는다. 세부 줄이 이유를 짧게 말한다: "받지 않는 형식이에요", "HEIC는 받지 않아요", "이미지만 넣을 수 있어요"(이미지만 받는 칸), "이 파일은 읽을 수 없어요"(OS의 폴더), "이 그림은 읽을 수 없어요"(깨진 그림). 고치는 법까지 늘어놓지 않는다(2026-11-09 소유자). ×는 ⋯ 자리에서 포인터가 오면 보인다. |
+| 너무 큰 파일 | `Tile status="interrupted"`(`action`에 ×) | 그림은 흐리게 남고 테는 없다. 세부 줄 "10 MB보다 커요". 줄인 파일은 새로 올린다(2026-11-09 소유자). |
 | 이미지가 아닌 파일 | `Tile`의 `preview`에 `FilePreview`(`ext` "PDF") | 아이콘과 확장자. 세부 줄은 크기와 쓰임만("2.1 MB · 사용 안 함"). 형식은 미리보기가 이미 말한다(원칙 8). |
 | (빠짐, 2026-11-05) 대체 텍스트 제안 | `Tile`의 `proposal`(세부 줄 자리) | 제안 글은 파란 연필(`Ins`)이다. 제안이 있는 고른 타일은 파랗게 두르고 체크한다. |
 | (빠짐, 2026-11-05) 제안 메모 카드 | `MemoCardPopover`(`where` "대체 텍스트 · desk-morning.jpg", `onDiscard`, `onAccept`, `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage` | 제안 표시를 누르면 그 타일에 열린다. 받기와 버리기는 머리에 있고 그 파일만 다룬다. |
@@ -139,7 +139,7 @@
 | `mode` "끌어 놓기" | 6.01 | `DropArea over`, `toast.dropHint` "여기에 올려요" | Patterns/List/DropArea, Controls/Status/Toast |
 | `mode` "폴더 위로 끌기" | 6.02 | 그 `FolderTile dropTarget`, `toast.dropHint` "covers에 올려요" | Patterns/List/Tile, Controls/Status/Toast |
 | `mode` "올리는 중" | 6.03 | `Tile status="uploading"`과 대기 타일 | Patterns/List/Tile |
-| `mode` "올리기 실패" | 6.04 | `Tile status="failed"`(빼기), `Tile status="interrupted"`(줄여서 다시 · 빼기) | Patterns/List/Tile |
+| `mode` "올리기 실패" | 6.04 | `Tile status="failed"`, `Tile status="interrupted"`, 둘 다 `action`에 × | Patterns/List/Tile |
 | `mode` "파일 열기" | 6.16 | 옆 패널 `SidePanel`, 그 타일 `current` | Controls/Overlay/SidePanel |
 | `mode` "바꾸기 메뉴" | 6.18 | 패널 ⋯ `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "파일 바꾸기" | 6.19 | `AlertDialog`(옛 파일 → 새 파일) | Controls/Overlay/AlertDialog |

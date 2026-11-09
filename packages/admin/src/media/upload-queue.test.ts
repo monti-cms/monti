@@ -4,8 +4,6 @@ import { AT_ONCE, nextToStart, problemOf, stillGoing, type Upload, uploadQueue }
 const upload = (id: string, more: Partial<Upload> = {}): Upload => ({
 	id,
 	name: `${id}.jpg`,
-	size: 100,
-	kind: "image",
 	folder: null,
 	preview: null,
 	status: "waiting",
@@ -44,10 +42,10 @@ describe("the queue of files going up", () => {
 		expect(statusAfter("failed")).toBe("interrupted");
 	});
 
-	it("09-1 trying again puts the file back in line, under the shrunk file's name and size", () => {
-		const failed = uploadQueue([upload("a", { size: 14 })], { type: "problem", id: "a", problem: "tooBig" });
-		const again = uploadQueue(failed, { type: "retry", id: "a", size: 9, name: "a.webp" });
-		expect(again[0]).toMatchObject({ status: "waiting", problem: null, size: 9, name: "a.webp" });
+	it("09-1 trying again puts the file back in line", () => {
+		const failed = uploadQueue([upload("a")], { type: "problem", id: "a", problem: "failed" });
+		const again = uploadQueue(failed, { type: "retry", id: "a" });
+		expect(again[0]).toMatchObject({ status: "waiting", problem: null });
 		expect(nextToStart(again).map((each) => each.id)).toEqual(["a"]);
 	});
 

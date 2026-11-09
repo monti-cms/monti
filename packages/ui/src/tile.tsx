@@ -13,9 +13,10 @@ import { TextButton } from "./text-button";
  * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known. The detail line says how
  *   far ("Uploading · 64%"). The name is quiet.
  * - `status="failed"`: the file cannot be taken (a type the site does not accept). A 1px red ring is drawn over the preview's edge, the detail line is red
- *   and the name is quiet; `actions` are what can be done ("Remove"). A failed file stays in its place; give it no preview if it has no picture to show.
+ *   and the name is quiet. A failed file stays in its place until it is taken out; give it no preview if it has no picture to show.
  * - `status="interrupted"`: the file is fine but did not go up (too large, the network). Its picture stays, faded as while it goes up, with no ring; the
- *   detail line is red, the name is quiet, and `actions` are what can be done ("Shrink and retry", "Remove").
+ *   detail line is red and the name is quiet; `actions` are what can be done ("Upload again", after the network).
+ * - A file that did not go up is taken out with the × its screen gives as `action`, in the place of a file's ⋯.
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
  *   is ringed and checked in blue; one whose card is open (`current`) is ringed in blue without the check.
  */
@@ -58,7 +59,7 @@ function Tile({
 	proposal?: React.ReactNode;
 	/** For a failed tile: what can be done, as text buttons under the name. `primary` is set in ink. */
 	actions?: readonly { label: string; onClick: () => void; primary?: boolean }[];
-	/** The ⋯ at the top right (a button that opens the tile's menu). */
+	/** The ⋯ at the top right (a button that opens the tile's menu), or the × of a file that did not go up. */
 	action?: React.ReactNode;
 	dimmed?: boolean;
 	/** A key pressed anywhere on the tile, on its check too. A menu it opens is drawn elsewhere, and its keys are the menu's. */

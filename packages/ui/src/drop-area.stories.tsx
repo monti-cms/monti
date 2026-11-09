@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DropArea, FolderTile, Grid, Image, Tile } from "./index";
+import { DropArea, FolderTile, Grid, Image, Stack, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
 const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -7,8 +7,8 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /**
- * What files can be dropped on. While files are over it (`over`), an ink line runs around it and a 7% ink tint lies over the whole area; a folder the
- * files are over takes `FolderTile dropTarget` instead, and the area's frame goes out.
+ * What files can be dropped on. While files are over it (`over`), an ink line runs along its edge, 12px clear of what it holds, and a 7% ink tint lies over
+ * the whole area; a folder the files are over takes `FolderTile dropTarget` instead, and the area's frame goes out.
  */
 const meta = {
 	title: "Patterns/List/DropArea",
@@ -31,6 +31,15 @@ export const Over: Story = { render: () => <DropArea over>{grid()}</DropArea> };
 
 /** Files over a folder in it: the folder is marked, the area is not. */
 export const OverFolder: Story = { render: () => <DropArea>{grid(true)}</DropArea> };
+
+/** `flush`: what it holds brings its own room, as a table does. The area adds none, and the line runs on its edge. */
+export const Flush: Story = {
+	render: () => (
+		<DropArea over flush>
+			<Stack padding={12}>{grid()}</Stack>
+		</DropArea>
+	),
+};
 
 /** `fill`: the area takes the column's remaining height, so a page with few files can be dropped on to its end. */
 export const Fill: Story = {

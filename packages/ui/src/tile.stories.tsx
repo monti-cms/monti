@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { OverflowMenuHorizontal } from "./icons";
+import { Close, OverflowMenuHorizontal } from "./icons";
 import { FilePreview, FolderTile, Grid, IconButton, Image, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
@@ -38,43 +38,36 @@ export const States: Story = {
 	),
 };
 
-/** Going up, refused (a type the site does not take), and interrupted (too large), with what can be done. */
+/** What stays after an upload is taken out with the × at the top right, shown with the pointer. */
+const takeOut = (
+	<IconButton label="빼기" size="xs">
+		<Close aria-hidden />
+	</IconButton>
+);
+
+/** Going up, refused (a type the site does not take), too large, and cut off by the network: only that one can be tried again as it is. */
 export const Upload: Story = {
 	render: () => (
 		<Grid columns="tiles">
 			<TileWith title="trip-01.jpg" detail="올리는 중 · 64%" status="uploading" progress={64} />
+			<TileWith title="clip.mov" detail="받지 않는 형식이에요" status="failed" noPreview action={takeOut} />
+			<TileWith title="panorama.png" detail="10 MB보다 커요" status="interrupted" action={takeOut} />
 			<TileWith
-				title="clip.mov"
-				detail="받지 않는 형식이에요"
-				status="failed"
-				noPreview
-				actions={[{ label: "빼기", onClick: () => {} }]}
-			/>
-			<TileWith
-				title="panorama.png"
-				detail="20MB보다 커요"
+				title="spring-desk.jpg"
+				detail="올리지 못했어요"
 				status="interrupted"
-				actions={[
-					{ label: "줄여서 다시", onClick: () => {}, primary: true },
-					{ label: "빼기", onClick: () => {} },
-				]}
+				action={takeOut}
+				actions={[{ label: "다시 올리기", onClick: () => {}, primary: true }]}
 			/>
 		</Grid>
 	),
 };
 
-/** A problem's reason wraps rather than being cut: a reason cut off is no reason. A size or a use is cut. */
-export const LongReason: Story = {
+/** A size or a use too long for the tile is cut. */
+export const LongDetail: Story = {
 	tags: ["visual"],
 	render: () => (
 		<Grid columns="tiles">
-			<TileWith
-				title="iphone-photo.heic"
-				detail="HEIC는 받지 않아요 · JPEG나 PNG로 바꿔 주세요"
-				status="failed"
-				noPreview
-				actions={[{ label: "빼기", onClick: () => {} }]}
-			/>
 			<TileWith title="spring-desk.jpg" detail="2400×1600 · 글 2 · 라이브러리에서 아주 오래전에 올린 파일" />
 		</Grid>
 	),

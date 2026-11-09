@@ -1,4 +1,4 @@
-import { acceptFile, HEAD_BYTES, type MediaKind } from "@monti-cms/core";
+import { acceptFile, HEAD_BYTES } from "@monti-cms/core";
 import type { Answer, Uploader } from "../operations/transport";
 import { readPicture, webSize } from "./images";
 import type { UploadProblem } from "./upload-queue";
@@ -10,9 +10,7 @@ export type PutFile = {
 	web?: { key: string; width: number; height: number };
 };
 
-export type PutResult =
-	| ({ ok: true; kind: MediaKind } & PutFile)
-	| { ok: false; problem: UploadProblem; kind: MediaKind | null; unauthenticated?: boolean };
+export type PutResult = ({ ok: true } & PutFile) | { ok: false; problem: UploadProblem; unauthenticated?: boolean };
 
 const keyOf = (answer: Answer) =>
 	answer.status === 200 && typeof (answer.body as { key?: unknown } | null)?.key === "string"
@@ -34,20 +32,19 @@ export async function putFile(
 		.arrayBuffer()
 		.then((bytes) => new Uint8Array(bytes))
 		.catch(() => null);
-	if (!head) return { ok: false, problem: "cannotRead", kind: null };
+	if (!head) return { ok: false, problem: "cannotRead" };
 	const accepted = acceptFile({ name: file.name, size: file.size, head });
 	const kind = accepted.ok || accepted.reason === "size" ? accepted.kind : null;
-	if (options.only === "image" && kind === "file") return { ok: false, problem: "notImage", kind };
+	if (options.only === "image" && kind === "file") return { ok: false, problem: "notImage" };
 	const problem = problemOf(accepted);
-	if (!accepted.ok && problem) return { ok: false, problem, kind };
+	if (!accepted.ok && problem) return { ok: false, problem };
 
 	const picture = kind === "image" ? await readPicture(file) : null;
-	if (kind === "image" && !picture) return { ok: false, problem: "unreadable", kind };
+	if (kind === "image" && !picture) return { ok: false, problem: "unreadable" };
 
 	const refused = (answer: Answer): PutResult => ({
 		ok: false,
 		problem: answer.status === 413 ? "tooBig" : answer.status === 415 ? "type" : "failed",
-		kind,
 		unauthenticated: answer.status === 401,
 	});
 
@@ -57,10 +54,10 @@ export async function putFile(
 	const original = { key, ...(picture ? { width: picture.width, height: picture.height } : {}) };
 	const copy = picture && accepted.ok ? await webSize(picture, accepted.mime) : null;
 	picture?.close();
-	if (!copy) return { ok: true, kind: kind ?? "file", original };
+	if (!copy) return { ok: true, original };
 
 	const webUp = await uploader(copy.blob, { name: copy.name, signal: options.signal });
 	const webKey = keyOf(webUp);
 	if (!webKey) return refused(webUp);
-	return { ok: true, kind: kind ?? "file", original, web: { key: webKey, width: copy.width, height: copy.height } };
+	return { ok: true, original, web: { key: webKey, width: copy.width, height: copy.height } };
 }

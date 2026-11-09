@@ -20,7 +20,7 @@ export type Acceptance =
 	| { ok: false; reason: "type" }
 	/** A photo in HEIC, what an iPhone takes: a picture all the same, so it needs its own reason. */
 	| { ok: false; reason: "heic" }
-	/** A kind it takes, over the limit. The kind says whether shrinking can help. */
+	/** A kind it takes, over the limit. The kind says whether it would fit a place that takes only images. */
 	| ({ ok: false; reason: "size" } & Identified);
 
 /** What a file chooser offers. It is a hint: what the library takes is `acceptFile`'s to say, and a file it refuses stays on the page with the reason (flow 6·04). */

@@ -88,7 +88,7 @@ export function MediaScreen() {
 					</PageToolbarEnd>
 				</PageToolbar>
 				<DropArea>
-					<Stack gap={24} paddingTop={24} paddingX={12}>
+					<Stack gap={24}>
 						<Grid columns="folders">
 							<FolderTile name="covers" count={6} />
 							<FolderTile name="diagrams" count={3} />

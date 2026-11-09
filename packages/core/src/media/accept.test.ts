@@ -70,7 +70,7 @@ describe("what the library takes", () => {
 		expect(accept("notes.txt", cut)).toMatchObject({ ok: true });
 	});
 
-	it("09-1 10 MB is the last size it takes, and past it the answer keeps the kind so an image can offer shrinking", () => {
+	it("09-1 10 MB is the last size it takes, and past it the answer keeps the kind so a place that takes only images can say so", () => {
 		expect(accept("desk.png", PNG, MAX_UPLOAD_BYTES)).toMatchObject({ ok: true });
 		expect(accept("desk.png", PNG, MAX_UPLOAD_BYTES + 1)).toMatchObject({ ok: false, reason: "size", kind: "image" });
 		expect(accept("price.pdf", PDF, MAX_UPLOAD_BYTES + 1)).toMatchObject({ ok: false, reason: "size", kind: "file" });

@@ -129,15 +129,13 @@ export function BodyEditor({
 	const media = useMemo<EditorMediaValue>(
 		() => ({
 			uploads: upload.uploads,
-			remove: upload.remove,
 			retry: upload.retry,
-			shrink: upload.shrink,
 			holds: upload.holds,
 			finished: (id) => finished.current.get(id),
 			card,
 			setCard,
 		}),
-		[upload.uploads, upload.remove, upload.retry, upload.shrink, upload.holds, card],
+		[upload.uploads, upload.retry, upload.holds, card],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);

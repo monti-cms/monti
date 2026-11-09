@@ -138,7 +138,7 @@ test.describe("the library", () => {
 		await site.close();
 	});
 
-	test("09-1 a type the library does not take stays with its reason; one too big shrinks and goes up; a disguised file is refused at the server", async ({
+	test("09-1 a type the library does not take stays with its reason; so does one too big; a disguised file is refused at the server", async ({
 		admin,
 	}, info) => {
 		await admin.goto("/#/media");
@@ -153,12 +153,8 @@ test.describe("the library", () => {
 		});
 		expect((await readFile(big)).length).toBeGreaterThan(10 * 1024 * 1024);
 		await dropFromDisk(admin, [exe, big], main(admin));
-		await expect(main(admin).getByText("이미지 · PDF · ZIP · 텍스트만")).toBeVisible();
-		await expect(main(admin).getByText(/MB · 10 MB까지/)).toBeVisible();
-		await main(admin).getByRole("button", { name: "줄여서 다시" }).click();
-		const smaller = big.split("/").at(-1)?.replace(".png", "") ?? "";
-		await expect(main(admin).getByText(/MB · 10 MB까지/)).toBeHidden({ timeout: 30_000 });
-		await expect(tile(admin, smaller)).toBeVisible();
+		await expect(main(admin).getByText("받지 않는 형식이에요")).toBeVisible();
+		await expect(main(admin).getByText("10 MB보다 커요")).toBeVisible();
 		const refused = await admin.request.put("/admin/api/media/bytes?name=photo.png", {
 			data: Buffer.from([0x4d, 0x5a, 0x90, 0]),
 		});
@@ -320,7 +316,7 @@ test.describe("a cover and what goes up for it", () => {
 		await writeFile(pdf, "%PDF-1.7\n");
 		await writing(admin);
 		await chooseUpload(admin, pdf);
-		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeVisible();
+		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeVisible();
 		await admin.getByRole("textbox", { name: "제목" }).pressSequentially(" 고침");
 		await saveKeys(admin);
 		const answer = await admin.request.post("/admin/api/operations/media.query", {
@@ -353,10 +349,10 @@ test.describe("a cover and what goes up for it", () => {
 		await admin.keyboard.press("Escape");
 
 		await chooseUpload(admin, pdf);
-		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeVisible();
+		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeVisible();
 		await expect(admin.getByRole("button", { name: "빼기", exact: true })).toBeHidden();
 		await admin.getByRole("button", { name: "cover 빼기" }).click();
-		await expect(admin.getByText("이 칸에는 이미지만 넣을 수 있어요")).toBeHidden();
+		await expect(admin.getByText("이미지만 넣을 수 있어요")).toBeHidden();
 		await expect(cover(admin)).toHaveText(new RegExp(name));
 		await coverSettings(admin).click();
 		await expect(alt).toHaveValue("봄 표지");
