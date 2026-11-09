@@ -53,6 +53,9 @@ export type StorySite = {
 	storage: Storage | null;
 };
 
+/** The Postgres of the story on the page. */
+let open: PGlite | null = null;
+
 /**
  * A whole site in the browser for a story (build.md rule 6): Postgres on PGlite, the core's real operations and the real admin API, so a story runs
  * what the admin runs. `setup` puts the story's data in through operations; `signedIn` starts the story with the admin's session.
@@ -70,8 +73,11 @@ export async function storySite({
 	signedIn?: boolean;
 	storage?: Storage | null;
 }): Promise<StorySite> {
+	// One story shows at a time, and a Postgres left open holds its memory until the page goes: the last story's goes first (T116).
+	await open?.close().catch(() => {});
 	// Search uses trigram indexes (doc 06), as on the live site's Postgres.
-	const db = new Kysely<Database>({ dialect: pgliteDialect(new PGlite({ extensions: { pg_trgm } })) });
+	open = new PGlite({ extensions: { pg_trgm } });
+	const db = new Kysely<Database>({ dialect: pgliteDialect(open) });
 	await migrateToLatest(db);
 	await migrateContent(db, schema, []);
 	const monti = createMonti({
