@@ -125,7 +125,7 @@ function MediaPicker({
 						/>
 						{searchIn ? <div className="flex shrink-0">{searchIn}</div> : null}
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
-						<div className="-m-monti-4 flex min-h-0 flex-1 flex-col gap-monti-12 overflow-y-auto p-monti-4">
+						<div className="-m-monti-4 flex min-h-0 flex-1 scroll-py-monti-8 flex-col gap-monti-24 overflow-y-auto p-monti-4">
 							{subfolders ? <div className="grid shrink-0 grid-cols-3 gap-monti-12">{subfolders}</div> : null}
 							{notice ?? <div className="grid grid-cols-3 gap-x-monti-12 gap-y-monti-16">{children}</div>}
 						</div>

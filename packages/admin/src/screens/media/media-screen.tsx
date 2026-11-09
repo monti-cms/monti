@@ -471,9 +471,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			</PageColumn>
 		);
 
-	const namingField = (
+	const namingField = (fill: boolean) => (
 		<RenameField
-			fill
+			fill={fill}
 			value={naming.naming?.name ?? ""}
 			onValueChange={naming.type}
 			onCommit={(value) => void naming.keep(value)}
@@ -635,7 +635,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					{childFolders.map((folder) => (
 						<ContextMenu key={folder.id}>
 							{naming.naming?.id === folder.id ? (
-								<FolderTile>{namingField}</FolderTile>
+								<FolderTile>{namingField(true)}</FolderTile>
 							) : (
 								<ContextMenuTrigger
 									render={
@@ -652,7 +652,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuContent>{folderItems(true, folder)}</ContextMenuContent>
 						</ContextMenu>
 					))}
-					{naming.naming?.id === null && <FolderTile>{namingField}</FolderTile>}
+					{naming.naming?.id === null && <FolderTile>{namingField(true)}</FolderTile>}
 				</Grid>
 			)}
 			{(items.length > 0 || uploadsHere.length > 0) && (
@@ -723,7 +723,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		{ ...sized("type", "locale"), label: t("library.column.type") },
 		{ ...sized("size", "status"), label: t("library.column.size"), sort: state.sort === "size" ? "desc" : undefined },
 		{ ...sized("measure", "measure"), label: t("library.column.measure") },
-		{ ...sized("date", "date"), label: t("library.column.date"), sort: state.sort === "uploaded" ? "desc" : undefined },
+		{
+			...sized("date", "date"),
+			label: t("library.column.date"),
+			align: "end",
+			sort: state.sort === "uploaded" ? "desc" : undefined,
+		},
 	];
 	const folderThumb = (
 		<RowThumb>
@@ -748,7 +753,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					{naming.naming?.id === null && (
 						<TableRow>
 							<TableCell colSpan={head.length + 1}>
-								<RowTitle editing thumb={folderThumb} title={namingField} />
+								<RowTitle editing thumb={folderThumb} title={namingField(false)} />
 							</TableCell>
 						</TableRow>
 					)}
@@ -759,7 +764,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 									<TableRow>
 										<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
 											{naming.naming?.id === folder.id ? (
-												<RowTitle editing thumb={folderThumb} title={namingField} />
+												<RowTitle editing thumb={folderThumb} title={namingField(false)} />
 											) : (
 												<RowTitle
 													thumb={folderThumb}
@@ -815,21 +820,29 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 											/>
 										</TableCell>
 										<TableCell>
-											<Text variant="note">
+											<Text variant="note" tone="subtle">
 												{item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed")}
 											</Text>
 										</TableCell>
 										<TableCell>
-											<Text variant="meta">{extensionLabel(item.name)}</Text>
+											<Text variant="meta" tone="subtle">
+												{extensionLabel(item.name)}
+											</Text>
 										</TableCell>
 										<TableCell>
-											<Text variant="meta">{formatBytes(item.size)}</Text>
+											<Text variant="meta" tone="subtle">
+												{formatBytes(item.size)}
+											</Text>
 										</TableCell>
 										<TableCell>
-											<Text variant="meta">{sizeLabel(item)}</Text>
+											<Text variant="meta" tone="subtle">
+												{sizeLabel(item)}
+											</Text>
 										</TableCell>
-										<TableCell>
-											<Count>{shortDate(item.uploadedAt)}</Count>
+										<TableCell align="end">
+											<Text mono variant="meta" tone="muted">
+												{shortDate(item.uploadedAt)}
+											</Text>
 										</TableCell>
 										<TableCell>
 											<RowActions>

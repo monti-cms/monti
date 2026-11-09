@@ -13,6 +13,7 @@ import {
 	FormField,
 	FormFieldLabel,
 	IconButton,
+	Inline,
 	Input,
 	List,
 	OrderedRow,
@@ -749,7 +750,20 @@ export function EntryProperties({
 		};
 		return (
 			<FormField key={key}>
-				<FormFieldLabel htmlFor={id} required={marksRequired && required(key)} action={change ?? count}>
+				<FormFieldLabel
+					htmlFor={id}
+					required={marksRequired && required(key)}
+					action={
+						change && count ? (
+							<Inline gap={8}>
+								{count}
+								{change}
+							</Inline>
+						) : (
+							(change ?? count)
+						)
+					}
+				>
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}

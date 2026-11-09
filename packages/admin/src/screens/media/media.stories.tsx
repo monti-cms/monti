@@ -263,5 +263,17 @@ export const KindChosenInFolder: Story = {
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };
 
+/** The list view inside a folder, a row picked: the bulk bar takes the head's place, and the filters stay above (T113). */
+export const ListViewPicked: Story = {
+	loaders: library("#/media?view=list"),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("link", { name: "Blog Assets" }, { timeout: 15000 }));
+		const name = await page.findByText("desk-morning.jpg", {}, { timeout: 15000 });
+		const row = name.closest("tr");
+		if (row) await userEvent.click(within(row).getByRole("checkbox"));
+	},
+};
+
 /** Flow 6·31: a site with no storage. */
 export const NoStorage: Story = { loaders: library("#/media", { storage: null }) };

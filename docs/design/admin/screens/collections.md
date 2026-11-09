@@ -14,7 +14,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 저장 묶음 | `ChangesGroup`(`PageHeader`의 `children`) | 바뀐 곳이 있을 때만 보인다. "바뀐 곳 N ▾"의 목록은 항목마다 이름, 종류(`tag`: "이름" · "지움" · "새로" · "컬렉션 지움" · "주소" · 그 밖의 고침은 "바뀜"), 되돌리기. 알약 라벨: 개발 서버 "저장하고 적용", 운영 환경 "PR 만들기", PR이 열려 있으면 "PR에 더하기". 고칠 곳이 있어도 막지 않는다. 누르면 검토가 열리고 거기서 알린다. 지울 컬렉션은 목록에서 바로 빠지고, 이 목록에서 되돌린다. |
-| 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용돼요") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
+| 열린 PR 줄 (빠짐, 2026-11-05) | `Banner tone="neutral"`(`title` "PR #12", `meta` "읽는 시간 필드 추가 · 합치고 배포하면 적용됩니다") + `TextButton` "보기" | PR이 열려 있는 동안 계속 보인다. |
 | 데이터베이스 적용 실패 (빠짐, 2026-11-05) | 틀의 알림 띠(`SchemaBanner`)가 맡는다 | 모든 화면 맨 위의 띠와 같은 말을 두 번 보이지 않는다. |
 
 | 제안 따라가기 | `ProposalBubbleDock` + `ProposalBubble`(`name` 요청의 말, ↑ n / N ↓, "모두 버리기" · "모두 받기") | 대기 중인 제안이 있을 때만. 단의 맨 아래 가운데에 뜬다. 이전 / 다음은 제안이 있는 컬렉션의 필드 탭을 연다. 제안 하나를 받거나 버리는 카드는 T41. |
@@ -122,7 +122,7 @@
 | "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 바뀐 곳 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
 | "새 컬렉션 검토" | 4.05 | Review `Sheet`: `ChangeGroup kind="new"` and `ChangeLines`; the public-address line is omitted for an item without a public page. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
-| "만듦" | 4.06 | `toast` "노트를 만들었어요"와 "보기" | Controls/Status/Toast |
+| "만듦" | 4.06 | `toast` "노트를 만들었습니다"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 바뀐 곳 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
 | "고칠 곳" | 4.09 | 해당 `FieldRow tone="danger"`. 저장을 누르면 검토 맨 위에 "고칠 곳" 변경 블록과 "열기", 발에 알약 없음 | Monti/Change/ChangeGroup, Patterns/List/FieldTree |
@@ -132,7 +132,7 @@
 | "주소 바꿈" | 4.13 | 기본 탭, `Affix` 값 "blog", 공개 주소 `ChangeDot`, 바뀐 곳 1 | Controls/Field/Affix, Controls/Status/ChangeDot |
 | "주소 검토" | 4.14 | 검토 `Sheet`: 주소 `ChangeGroup kind="edit"`, 전 / 후 / 발행된 글 `ChangeLines`, `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지우기 전" | 4.15 | 메모의 기본 탭과 `DangerBlock` | Patterns/Frame/DangerBlock |
-| "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 바뀐 곳 목록 열림("메모 · 컬렉션 지움 · 되돌리기"), `toast` "메모를 지웠어요"와 "되돌리기" | Controls/Status/Toast |
+| "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 바뀐 곳 목록 열림("메모 · 컬렉션 지움 · 되돌리기"), `toast` "메모를 지웠습니다"와 "되돌리기" | Controls/Status/Toast |
 | "지우기 검토" | 4.17 | 검토 `Sheet`: `ChangeGroup kind="drop"`, `ChangeNote` "이 컬렉션의 글이 모두 지워집니다.", 알약 "지우고 적용"(2026-11-05 바뀜: 받아 두기와 개수는 빠짐) | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "지운 뒤" | 4.18 | 메모가 목록에 없음, `toast` "적용했습니다" | Controls/Status/Toast |
 | `tab` "필드" · "기본" | 4.01, 4.02, 4.03, 4.04, 4.05, 4.06, 4.07, 4.08, 4.09, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
@@ -149,7 +149,7 @@
 | "운영 고침" (빠짐, 2026-11-05) | 11.10 | 새 `FieldRow`(readingTime, `success`, "새로"), 알약 "PR 만들기" | Patterns/List/FieldTree |
 | "운영 제안" (빠짐, 2026-11-05) | 11.11 | 새 `FieldRow`(note "✦ 제안", 파란 이름), 알약 "PR 만들기" | Patterns/List/FieldTree |
 | "운영 검토" (빠짐, 2026-11-05) | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
-| "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었어요"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
+| "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었습니다"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
 | "PR에 더하기" (빠짐, 2026-11-05) | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
 | "읽기 전용" | 11.17, 11.17c | 공개 주소 줄의 `LockMark`, 식별자 · 종류 · 공개 주소는 글, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |

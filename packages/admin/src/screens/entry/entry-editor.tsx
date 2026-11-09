@@ -337,7 +337,14 @@ export function EntryEditor({
 
 	const confirmField = (field: string) => void translation.decide([{ do: "confirmField", field }]);
 	const titleMark = readOnly ? undefined : compared?.fields.find((mark) => mark.field === "title");
-	const titleChange = titleMark ? <FieldChange mark={titleMark} onConfirm={() => confirmField("title")} /> : undefined;
+	const titleChange = titleMark ? (
+		<FieldChange
+			mark={titleMark}
+			// Under the title, where a changed block's card opens under its block.
+			anchor={() => document.getElementById(fieldInputId("title"))}
+			onConfirm={() => confirmField("title")}
+		/>
+	) : undefined;
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
 	const titleField = (size: "display" | "inherit") => (
 		<FormField>

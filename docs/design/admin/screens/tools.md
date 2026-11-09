@@ -92,15 +92,15 @@
 |---|---|---|
 | 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`) | 일하는 동안(가져오는 중, 복원 중) `SheetHeader closable={false}`. |
 | 제목 | `SheetTitle of`(파일 이름, `ofMono`) | "가져오기 · blog-export.zip", "있던 그대로 복원 · monti-backup-1020.zip". |
-| 찾은 것 요약 | `Text`("글 24편을 찾았어요"), 그 아래 `Text variant="note" tone="subtle"` | 건너뛰기와 -2 규칙을 한 줄로. |
+| 찾은 것 요약 | `Text`("글 24편을 찾았습니다"), 그 아래 `Text variant="note" tone="subtle"` | 건너뛰기와 -2 규칙을 한 줄로. |
 | "들어갈 곳" | `FormField` + `FormFieldLabel`, 행은 `MapRow`(`name` "posts/", `example` "24편", 자식 `Select`) | 폴더마다 어느 컬렉션으로 갈지. |
 | "필드 맞추기 · 게시글" | `FormField` + `MapRow` 여럿(`name` 파일의 키, `example` 예시 값, `warning` "새 태그 4개가 생겨요", 가져오지 않는 키는 `off`, 자식 `Select`) | 어시스턴트가 맞춘 선택은 `Select`의 `proposal`(파랑). 고르면 보통 색. |
 | "발행" | `FormField` + `Segmented size="sm" inline`("모두 초안" · "원래대로") |  |
 | "이미지" | `FormField`, 문장 `Text`, "바깥 이미지 6개도 옮기기" `Option spread` + `Switch` |  |
 | "알아 두세요" | `FormField`, 문장 `Text`(컴포넌트 이름은 `mono`) |  |
-| 가져온 뒤 | `Text variant="heading"` "21편을 가져왔어요.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
+| 가져온 뒤 | `Text variant="heading"` "21편을 가져왔습니다.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
 | (빠짐, 2026-11-05) 복원 요약 | `DescriptionList variant="summary"` + `DescriptionItem`: "글" · "폴더" · "미디어" · "주소" · "템플릿" | 이름 칸 120px, 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). |
-| (빠짐, 2026-11-05) 복원 막힘 문제 목록 | 문장 하나 `Text` "문제가 2개 있어서 복원하지 않아요.", 그 아래 문제마다 `IssueRow`(`name` "이 사이트에 없는 필드", `code` "series", `warning` "글 14편이 이 값을 가지고 있어요") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 고르기는 없다. 고치는 곳은 가져오기 흐름이다(발의 "가져오기로 열기"). 그 길을 설명하는 문장은 두지 않는다. |
+| (빠짐, 2026-11-05) 복원 막힘 문제 목록 | 문장 하나 `Text` "문제가 2개 있어서 복원하지 않습니다.", 그 아래 문제마다 `IssueRow`(`name` "이 사이트에 없는 필드", `code` "series", `warning` "글 14편이 이 값을 가지고 있습니다") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 고르기는 없다. 고치는 곳은 가져오기 흐름이다(발의 "가져오기로 열기"). 그 길을 설명하는 문장은 두지 않는다. |
 | 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…"). 복원이 막히면 알약은 "가져오기로 열기"이고 누를 수 있다. 같은 파일을 가져오기 흐름으로 연다(없는 필드는 필드 메뉴로 맞추고, 겹치는 주소에는 "-2"가 붙는다). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
 
 ### 흐름 9 · 데이터
@@ -119,7 +119,7 @@
 | (빠짐, 2026-11-05) "복원" | 9.12 | 시트 "있던 그대로 복원": 백업 요약, 알약 "복원". 사이드바 `fresh`(빈 사이트) |  |
 | (빠짐, 2026-11-05) "복원 막힘" | 9.13 | 시트: 문장과 문제 목록(`IssueRow`), 알약 "가져오기로 열기" | Patterns/List/MapRow |
 | (빠짐, 2026-11-05) "복원 중" | 9.14 | 시트 `SheetHeader closable={false}`, 알약 `loading` "복원하는 중…" |  |
-| (빠짐, 2026-11-05) "복원함" | 9.15 | `toast` "글 148편을 복원했어요"와 `action` "목록 보기" | Controls/Status/Toast |
+| (빠짐, 2026-11-05) "복원함" | 9.15 | `toast` "글 148편을 복원했습니다"와 `action` "목록 보기" | Controls/Status/Toast |
 
 ## API 키 (ApiKeys)
 
@@ -133,9 +133,9 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 숨는다. 키를 저장할 수 없는 이유는 알림 띠 하나가 말한다(원칙 7). |
-| 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없어요" 또는 "키를 저장할 수 없어요", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
+| 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없습니다" 또는 "키를 저장할 수 없습니다", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
 | 표 묶음 "AI 키" · "모델" · "플러그인 키" | `ListSection`(`title`, 개수 없음) | "AI 키"는 AI 서비스 키(모델 목록이 여기서 나온다), "모델"은 빠른 작업 모델 한 줄, "플러그인 키"는 플러그인이 둔 키 자리마다 한 줄이다(2026-11-05 소유자: 한 표에 고르기, 입력 칸, 글자 버튼이 섞이지 않게 고르는 줄과 키 줄을 나눈다). 행이 다 보이므로 개수를 붙이지 않는다. 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
-| AI 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없어요"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
+| AI 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없음"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
 | "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"`이고, 누르면 "키 추가" 창(서비스 고르기)이 열린다. 서버 비밀값이 없으면 행이 숨는다. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
 | 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", 키가 있으면 `titleCount` "··· 4410", `meta` 플러그인 코드 `metaTone="subtle"`), `actions`는 키가 있으면 AI 키 줄과 같은 "편집" · "지우기", 없으면 "키 넣기" 하나 | 키 줄은 모두 같은 모양, 같은 방법이다. "키 넣기"와 "편집"은 같은 키 창을 열고, 플러그인 자리의 창은 서비스가 정해져 있다(서비스는 글). 자리 하나는 한 서비스의 것이라 저장된 키를 고르지 않는다(2026-11-05 소유자). 키가 없어도 행을 흐리게 하지 않는다. "키 넣기"가 말한다. 서버 비밀값이 없으면 자리들이 숨는다. |
 
@@ -154,7 +154,7 @@
 | "서비스" | 추가 창은 `FormField` + `Select`, 편집 창과 플러그인 자리의 창은 `FormField`에 글로만 `Text` |  |
 | "주소" (OpenAI 호환) | `FormField` + `FormFieldLabel required` + `Input mono` |  |
 | "이름" | `FormField` + `FormFieldLabel required` + `Input` | 서비스 이름으로 채워진다. 같은 이름이 있으면 "Anthropic 2"로 채우고 아래 `FormFieldDescription` "이름이 Anthropic인 키가 이미 있어요." |
-| "키" (새 값) | `FormField` + `FormFieldLabel`(호환 주소와 편집이 아니면 `required`) + `SecretInput` | 눈 버튼으로 보이고 가린다. 거절되면 `aria-invalid`와 `FormFieldError` "맞지 않는 키예요." 호환 주소는 플레이스홀더 "없음". 값을 지우려면 필드를 비운다. |
+| "키" (새 값) | `FormField` + `FormFieldLabel`(호환 주소와 편집이 아니면 `required`) + `SecretInput` | 눈 버튼으로 보이고 가린다. 거절되면 `aria-invalid`와 `FormFieldError` "맞지 않는 키입니다." 호환 주소는 플레이스홀더 "없음". 값을 지우려면 필드를 비운다. |
 | "키" (저장된 값, 편집) | `SavedValue`(`··· a1b2`, `action` "바꾸기") | "바꾸기"를 누르면 그 자리가 `SecretInput keep`(끝에 "그대로")이 된다. 높이가 같아 아래가 움직이지 않는다. 읽을 수 없는 키는 처음부터 `SecretInput`이고 아래 `FormFieldDescription` "키를 다시 넣어 주세요." |
 | 지우기 확인 | `AlertDialog`(`AlertDialogTitle` "Anthropic 개인을 지울까요?", `AlertDialogDescription` "되돌릴 수 없습니다. …"), 쓰는 곳은 `DescriptionList` + `DescriptionItem`(모델 `mono`), `AlertDialogCancel` "취소", `AlertDialogAction` `Button variant="danger"` "지우기" | 쓰는 곳이 없으면 목록 없이 "되돌릴 수 없습니다." 한 줄. |
 
@@ -170,7 +170,7 @@
 | "확인하는 중" | 10.03 | `DialogFormFooter busy` "확인하는 중…" | Controls/Overlay/DialogFormFooter |
 | "키 거절" | 10.04 | 키 `aria-invalid`와 `FormFieldError`, 창은 열린 채 | Controls/Field/Field |
 | "이름 겹침" | 10.05 | 이름 "Anthropic 2"와 `FormFieldDescription` | Controls/Field/Field |
-| "추가됨" | 10.06 | 새 `ListSectionRow`, `toast` "키를 추가했어요" | Patterns/List/ListSection, Controls/Status/Toast |
+| "추가됨" | 10.06 | 새 `ListSectionRow`, `toast` "키를 추가했습니다" | Patterns/List/ListSection, Controls/Status/Toast |
 | "편집" | 10.07 | 편집 창: 서비스는 글, 키는 `SavedValue` | Controls/Field/SecretInput |
 | "편집 키 열기" | 10.08 | 키 자리가 `SecretInput keep`("그대로") | Controls/Field/SecretInput |
 | "편집 확인 중" | 10.09 | `SecretInput keep`, `DialogFormFooter busy` | Controls/Field/SecretInput, Controls/Overlay/DialogFormFooter |
@@ -178,12 +178,12 @@
 | "지우기 확인" | 10.11 | `AlertDialog`와 쓰는 곳 `DescriptionList` | Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList |
 | "쓰는 곳 없이 지우기" | 10.11b | `AlertDialog`, 목록 없음 | Controls/Overlay/AlertDialog |
 | "키 넣기" | 10.12 | 플러그인 자리의 "키 넣기"를 눌러 서비스가 정해진 키 창(서비스는 글) | Controls/Overlay/Dialog, Controls/Field/SecretInput |
-| "키 넣음" | 10.12b | 플러그인 자리 이름 뒤 "··· 4410"과 "편집" · "지우기", `toast` "바른 맞춤법에 키를 넣었어요". "AI 키" 표는 그대로 | Controls/Status/Toast |
+| "키 넣음" | 10.12b | 플러그인 자리 이름 뒤 "··· 4410"과 "편집" · "지우기", `toast` "바른 맞춤법에 키를 넣었습니다". "AI 키" 표는 그대로 | Controls/Status/Toast |
 | "모델 고르기" | 10.13 | `ModelMenu layout="field"`가 열림 | Controls/Menu/ModelMenu |
-| "모델 바뀜" | 10.13b | 빠른 작업 값 "gpt-5-mini · OpenAI 회사", `toast` "빠른 작업 모델을 바꿨어요" | Controls/Status/Toast |
-| "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없어요", 행마다 `metaTone="danger"` "읽을 수 없어요" | Patterns/Frame/Banner |
+| "모델 바뀜" | 10.13b | 빠른 작업 값 "gpt-5-mini · OpenAI 회사", `toast` "빠른 작업 모델을 바꿨습니다" | Controls/Status/Toast |
+| "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없습니다", 행마다 `metaTone="danger"` "읽을 수 없음" | Patterns/Frame/Banner |
 | "다시 넣기" | 10.14b | 편집 창: 키가 처음부터 `SecretInput`(포커스, `required`), `FormFieldDescription` "키를 다시 넣어 주세요." | Controls/Field/SecretInput, Controls/Field/Field |
-| "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없어요" 하나가 이유를 말한다. "+ 키 추가", 빠른 작업 행, 플러그인 키 표는 숨고, "AI 키"는 "없음" | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
+| "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없습니다" 하나가 이유를 말한다. "+ 키 추가", 빠른 작업 행, 플러그인 키 표는 숨고, "AI 키"는 "없음" | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
 
 ## 활동 기록 (Events)
 
@@ -204,7 +204,7 @@
 | 시각 | `TableCell` 안 `Count` |  |
 | 무엇 · 어디 | `Text`(잉크) 두 줄: 무엇 "“더 짧게 다듬어 줘…”", 아래 `Text variant="meta" tone="subtle" truncate` 어디서 "첫 번째 글 · 본문 5곳". AI 제안은 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}` | 아래 줄은 일이 일어난 곳만 말한다. ✦가 말하는 "어시스턴트 제안", 제목이 말하는 "글 발행" · "글 저장"은 되풀이하지 않는다(원칙 8). |
 | 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: 빨간 상태 하나 `EntryStatus status="failed"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
-| 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없어요", "아직 기록이 없어요"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
+| 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없습니다", "아직 기록이 없습니다"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
 
 스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
 
@@ -249,18 +249,18 @@
 |---|---|---|---|
 | "실패만" | 12.01b | `Chip` "전송: 실패", 실패한 행만 |  |
 | "다시 보내는 중" | 12.02 | 그 행의 "다시 보내기"가 "보내는 중…"(다시 누를 수 없음) |  |
-| "다시 보냄" | 12.02b | 빈 목록 "실패한 전송이 없어요" + "필터 끄기", `toast` "보냈어요", 알림 없음 | Controls/Status/Toast |
+| "다시 보냄" | 12.02b | 빈 목록 "실패한 전송이 없습니다" + "필터 끄기", `toast` "보냈습니다", 알림 없음 | Controls/Status/Toast |
 | "자세히" | 12.03 | 자세히 `SidePanel`(이벤트 · 항목 · 전송 · 2), 그 행 `selected`, ✦ 가려짐 | Controls/Overlay/SidePanel |
 | "취소 확인" | 12.04 | 자세히 패널 위 `AlertDialog` | Controls/Overlay/AlertDialog |
-| "취소됨" | 12.04b | 그 행의 결과 "취소됨"(흐림), `toast` "전송을 취소했어요" | Controls/Status/Toast |
+| "취소됨" | 12.04b | 그 행의 결과 "취소됨"(흐림), `toast` "전송을 취소했습니다" | Controls/Status/Toast |
 | "실패 알림" | 12.01 | 실패한 행 하나: `EntryStatus` "3번 실패"와 "다시 보내기". 띠는 없다(실패가 하나라서) |  |
 | "실패 3건" | 12.05 | 실패한 행 셋(각 "N번 실패"), `Banner` "전송 실패 3건", 탭 개수 3 | Patterns/Frame/Banner |
 | "모두 보내는 중" | 12.06 | `Banner`의 "모두 다시 보내기"와 실패한 행들이 "보내는 중…" | Patterns/Frame/Banner |
-| "모두 보냄" | 12.07 | 알림 없음, `toast` "3건 보냈어요" | Controls/Status/Toast |
-| "일부 실패" | 12.08 | 남은 실패 행 하나 "1번 실패"(띠는 사라진다), `toast` "2건 보냈어요 · 1건 실패" | Controls/Status/Toast |
+| "모두 보냄" | 12.07 | 알림 없음, `toast` "3건 보냈습니다" | Controls/Status/Toast |
+| "일부 실패" | 12.08 | 남은 실패 행 하나 "1번 실패"(띠는 사라진다), `toast` "2건 보냈습니다 · 1건 실패" | Controls/Status/Toast |
 | "필터 메뉴" | 12.09 | "종류" `DropdownMenu`와 "전송" `DropdownMenuSub`가 열림 | Controls/Menu/DropdownMenu |
 | "필터 걸림" | 12.09b | `Chip` "전송: 대기", 기다리는 행만 |  |
 | "구독자 없음" | 12.10 | 전송 열이 없는 행들(기록만), 알림 없음 |  |
-| "비어 있음" | 12.11 | 빈 목록 "아직 기록이 없어요" |  |
+| "비어 있음" | 12.11 | 빈 목록 "아직 기록이 없습니다" |  |
 | `filter` "전체" · "전송 실패" · "글 하나" | 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05, 12.06, 12.07, 12.08, 12.09, 12.09b, 12.10, 12.11 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
 

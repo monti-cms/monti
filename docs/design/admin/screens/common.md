@@ -31,7 +31,7 @@
 
 ### 고른 글 내보내기 (Dialogs)
 
-- 보드: `Dialogs.dc.html`의 왼쪽 창. 상태: [screens.md › Dialogs](../screens.md#dialogs). 같은 보드의 "휴지통으로 옮길까요?"와 "저장하지 않은 변경이 있어요"는 위 확인 질문이다.
+- 보드: `Dialogs.dc.html`의 왼쪽 창. 상태: [screens.md › Dialogs](../screens.md#dialogs). 같은 보드의 "휴지통으로 옮길까요?"와 "저장하지 않은 변경이 있습니다"는 위 확인 질문이다.
 - 목록의 일괄 막대 ⋯ "내보내기"가 연다([list.md](list.md)).
 
 | 자리 | 부품 | 이렇게 쓴다 |

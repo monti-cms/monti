@@ -532,25 +532,28 @@ export function SourceChangedBanner({ compared, onConfirmAll }: { compared: Comp
 export function FieldChange({
 	mark,
 	shown,
+	anchor,
 	onConfirm,
 }: {
 	mark: FieldChangeMark;
 	shown?: (value: unknown) => ReactNode;
+	/** What the card hangs under; the mark itself when left out. */
+	anchor?: () => Element | null;
 	onConfirm: () => void;
 }) {
 	const { t } = useAdmin();
 	const [open, setOpen] = useState(false);
-	const place = useRef<HTMLSpanElement>(null);
+	const place = useRef<HTMLButtonElement>(null);
 	const diff = readableWordDiff(String(mark.before ?? ""), String(mark.after ?? ""));
 	const side = (value: unknown, words: ReactNode) =>
 		value === null ? <Text tone="faint">{t("entry.empty")}</Text> : shown ? shown(value) : words;
 	return (
-		<span ref={place} data-field-mark={mark.field}>
-			<Marker tone="changed" active={open} onClick={() => setOpen(!open)}>
+		<>
+			<Marker ref={place} data-field-mark={mark.field} tone="changed" active={open} onClick={() => setOpen(!open)}>
 				{t("translation.mark.changed")}
 			</Marker>
 			<MemoCardPopover
-				anchor={() => place.current}
+				anchor={anchor ?? (() => place.current)}
 				open={open}
 				onOpenChange={(next) => !next && setOpen(false)}
 				where={t("translation.mark.changedWhere")}
@@ -567,7 +570,7 @@ export function FieldChange({
 					after={side(mark.after, <Words parts={diff.server} />)}
 				/>
 			</MemoCardPopover>
-		</span>
+		</>
 	);
 }
 

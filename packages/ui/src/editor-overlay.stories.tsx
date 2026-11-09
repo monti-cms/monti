@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DropLine, HeldBlock } from "./index";
+import { DropLine, EditorMarginLine, HeldBlock, Marker } from "./index";
 
 /** A block in hand while it is dragged, and the line where it would land. */
 const meta = {
@@ -27,6 +27,23 @@ export const ListItemAndLine: Story = {
 		<div className="flex max-w-monti-reading flex-col gap-monti-24">
 			<HeldBlock {...args} />
 			<DropLine />
+		</div>
+	),
+};
+
+/** The title's line, with what the source's change to it says hung in the left margin, on the line of a block's marks. */
+export const TitleMargin: Story = {
+	render: () => (
+		<div className="max-w-monti-reading pl-monti-64">
+			<EditorMarginLine
+				margin={
+					<Marker tone="changed" onClick={() => {}}>
+						변경
+					</Marker>
+				}
+			>
+				<h1 className="text-monti-display">The first post</h1>
+			</EditorMarginLine>
 		</div>
 	),
 };

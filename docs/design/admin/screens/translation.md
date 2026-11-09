@@ -34,8 +34,8 @@
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
 | 원문 변경 표시 | `EditorMargin` 안의 `Marker` "변경"(`changed`, 주황) · "삭제"(`removed`, 빨강) · "추가"(`added`, 초록)(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "추가"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "삭제" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
 | 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 변경", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 주황 밑줄(`CompareText source`). 바깥을 누르거나 Esc로 닫는다. |
-| 제목의 원문 변경 | `EditorMarginLine`의 `margin`에 `Marker tone="changed"` "변경"(나란히 보기에서는 `CompareRow`의 `note`) | 제목 줄 왼쪽 여백에, 블록의 표시와 같은 세로선에 붙는다. 카드는 바뀜 카드와 같고 머리에 "확인"만 있다. |
-| 필드의 원문 변경 | `FormFieldLabel`의 `action`에 `Marker tone="changed"` "변경" | 번역이 자기 값을 가진 필드의 라벨 줄 끝이다. 미디어 필드에서는 "이 언어 값" 자리에 온다. 카드에 전과 후를 보이고 머리에 "확인"이 있다. 글자 필드는 바뀐 말에 주황 밑줄, 미디어는 "파일 이름 · 대체 텍스트", 고르기와 관계는 이름. 빈 쪽은 "없음". |
+| 제목의 원문 변경 | `EditorMarginLine`의 `margin`에 `Marker tone="changed"` "변경"(나란히 보기에서는 `CompareRow`의 `note`) | 제목 줄 왼쪽 여백에, 블록의 표시와 같은 세로선에 붙는다. 카드는 바뀜 카드와 같고 제목 아래에 열리며 머리에 "확인"만 있다. |
+| 필드의 원문 변경 | `FormFieldLabel`의 `action`에 `Marker tone="changed"` "변경" | 번역이 자기 값을 가진 필드의 라벨 줄 끝이다. 미디어 필드에서는 "이 언어 값" 자리에 온다. 카드에 전과 후를 보이고 머리에 "확인"이 있다. 글자 필드는 바뀐 말에 주황 밑줄, 미디어는 "파일 이름 · 대체 텍스트", 고르기와 관계는 이름. 빈 쪽은 "비어 있음". 포커스한 글자 필드는 표시 앞에 글자 수가 있다. 표시는 라벨 줄의 높이를 바꾸지 않는다. |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 
 #### 상태 표시줄
@@ -101,7 +101,7 @@
 | 블록 한 행 | `EditorBody paired`: 편집기 하나가 행으로 놓이고, 블록마다 앞에 블록 종류와 원문 칸이 붙는다 | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기 그대로라 그 자리에서 쓴다. 커서가 있는 행은 원문 칸과 번역 칸이 함께 블록 바탕(`bg-block`)이다. 드래그로 고른 글자는 한 단계 진한 `bg-selection`이다. 원문 칸은 글로만 보인다. |
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
 | 여백의 상태 "원문 변경" · "원문에 추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 바뀜 주황, 지워짐 빨강, 새로 초록. 원문 쪽 바뀐 말은 주황 밑줄. |
-| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
+| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았습니다") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |

@@ -237,6 +237,32 @@ export const FieldsChanged: Story = {
 	},
 };
 
+/** The title's card: the source's title before and after, and "확인" (T111). */
+export const TitleCard: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async (context) => {
+		await FieldsChanged.play?.(context);
+		const { page } = await opened(context.canvasElement);
+		const mark = await waitFor(() => {
+			const found = context.canvasElement.querySelector<HTMLElement>("[data-field-mark=title]");
+			if (!found) throw new Error("no mark yet");
+			return found;
+		}, wait);
+		await userEvent.click(mark);
+		await page.findByRole("textbox", { name: "제목" }, wait);
+	},
+};
+
+/** The status bar's list, the fields by name (T111). */
+export const FieldsInTheList: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async (context) => {
+		await FieldsChanged.play?.(context);
+		const { page } = await opened(context.canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /원문 변경 2/ }, wait));
+	},
+};
+
 /** A changed block's card: the source before and after, and "확인" (flow 3, step 10). */
 export const ChangedCard: Story = {
 	loaders: site("changed", "english"),

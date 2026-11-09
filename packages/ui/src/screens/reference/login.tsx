@@ -109,7 +109,7 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 				</FormFieldError>
 			) : null}
 			{/* "GitHub로 로그인" opens GitHub's account picker now, so the line needs no button of its own. */}
-			{denied ? <FormFieldError>{denied}는 관리자가 아니에요.</FormFieldError> : null}
+			{denied ? <FormFieldError>{denied}는 관리자가 아닙니다.</FormFieldError> : null}
 		</Stack>
 	);
 }

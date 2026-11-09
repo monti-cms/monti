@@ -2,12 +2,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
 	Box,
 	EntryStatus,
+	Image,
 	ListScroll,
 	RenameField,
 	RowActions,
 	RowCheck,
 	RowLink,
 	RowMore,
+	RowThumb,
 	RowTitle,
 	Table,
 	TableBody,
@@ -122,6 +124,33 @@ export const Folder: Story = {
 				</TableCell>
 			</TableRow>
 			{rows(() => ({}))}
+		</Frame>
+	),
+};
+
+/** A media row: the picture before the name, in the name's column, the words at its middle. */
+export const MediaRow: Story = {
+	render: () => (
+		<Frame>
+			<TableRow>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle
+						thumb={
+							<RowThumb>
+								<Image src={null} alt="" size="row" ratio="photo" radius="sm" />
+							</RowThumb>
+						}
+						title={<RowLink href="#">desk-morning.jpg</RowLink>}
+					/>
+				</TableCell>
+				<TableCell />
+				<TableCell>
+					<RowActions>
+						<RowMore label="더 보기" />
+					</RowActions>
+				</TableCell>
+			</TableRow>
 		</Frame>
 	),
 };

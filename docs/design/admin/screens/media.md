@@ -69,8 +69,8 @@
 | 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`) | "이름" · "쓰임" · "형식" · "크기" · "치수" · "올린 날". 이름은 글자이고 메뉴도 옮기기도 없다. 조건과 순서는 위 도구 행에 있다. 정렬한 열은 잉크에 ↓ · ↑. 열 사이를 끌어 너비를 바꾼다. 너비는 이 브라우저에 남는다. |
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 도구 행은 그대로 있고 열 이름 행이 막대가 된다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
-| 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
-| 쓰임 · 형식 · 크기 · 치수 · 올린 날 | `TableCell` 안에: 쓰임 `Text variant="note"`, 형식 · 크기 · 치수 `Text variant="meta"`, 날짜 `Count` | 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
+| 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
+| 쓰임 · 형식 · 크기 · 치수 · 올린 날 | `TableCell` 안에: 쓰임 `Text variant="note" tone="subtle"`, 형식 · 크기 · 치수 `Text variant="meta" tone="subtle"`, 날짜 `align="end"`의 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 | 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 
@@ -134,8 +134,8 @@
 | (빠짐, 2026-11-05) `mode` "필터 열기" | 6.22 | "대체 텍스트 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "새 폴더" | 6.09 | 폴더 행 끝 `FolderTile` + `RenameField` | Patterns/List/Tile, Patterns/List/RenameField |
 | `mode` "폴더 우클릭" | 6.10 | 폴더 `ContextMenu` | Controls/Menu/ContextMenu |
-| `mode` "폴더 지움" | 6.11 | 폴더가 빠지고 `toast` "…휴지통으로 옮겼어요" + "되돌리기" | Controls/Status/Toast |
-| `mode` "폴더 일부 남김" | 6.12 | `toast` "…4개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
+| `mode` "폴더 지움" | 6.11 | 폴더가 빠지고 `toast` "…휴지통으로 옮겼습니다" + "되돌리기" | Controls/Status/Toast |
+| `mode` "폴더 일부 남김" | 6.12 | `toast` "…4개는 쓰는 곳이 있어 남겼습니다" + "보기" | Controls/Status/Toast |
 | `mode` "빈 곳 우클릭" | 6.13 | 빈 곳 `ContextMenu` | Controls/Menu/ContextMenu |
 | `mode` "파일 메뉴" | 6.17 | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` | Controls/Menu/ContextMenu |
 | `mode` "목록 보기" | 6.14 | 격자 대신 `ListHead`가 붙은 `Table`, 보기 `Segmented`가 "목록" | Patterns/List/Table, Patterns/List/ListHead, Controls/Choice/Segmented |
@@ -154,7 +154,7 @@
 | (빠짐, 2026-11-05) `mode` "대체 텍스트 제안" | 6.25 | `ProposalBar`, `Tile proposal` 셋 | Monti/Proposal/ProposalBar, Patterns/List/Tile |
 | (빠짐, 2026-11-05) `mode` "대체 텍스트 메모" | 6.26 | `MemoCardPopover`가 한 타일에 열림 | Monti/Proposal/MemoCard |
 | `mode` "휴지통으로 옮김" | 6.27 | 그 타일이 빠지고 `toast` + "되돌리기" | Controls/Status/Toast |
-| `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼어요" + "보기" | Controls/Status/Toast |
+| `mode` "일부 남김" | 6.28 | `toast` "…1개는 쓰는 곳이 있어 남겼습니다" + "보기" | Controls/Status/Toast |
 | `mode` "저장소 없음" | 6.31 | 저장소 없음의 두 줄, 머리의 알약 "연결 방법", 도구 행 없음, "올리기 ▾" 없음 | Primitives/Text, Controls/Button/Button |
 | `mode` "종류 열기" | 6.32 | "종류 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "종류 파일" | 6.33 | `FilterButton dot` "종류", 파일 `Tile`만, "대체 텍스트 ▾" 없음 | Patterns/List/Tile |
@@ -176,12 +176,13 @@
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색"(`SearchBox`) | 늘 입력 칸이다. 라이브러리 화면과 같게 찾는다: 최상위에서는 전부, 폴더 안에서는 그 폴더와 하위. 끝의 ×로 비우면 연 곳으로 돌아간다. 폴더를 옮기면 검색이 끝난다. |
 | 찾는 곳 "Blog Assets │ 모든 폴더" | `MediaPicker`의 `searchIn`에 `Segmented size="sm" inline` | 폴더 안에서 찾는 동안 검색 칸 아래에 있다. |
 | 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 세 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
+| 빈 곳 | `MediaPicker`의 `notice`에 `Text variant="note" tone="subtle"` | 폴더도 파일도 없으면 "여기에는 파일이 없습니다.", 찾은 것이 없으면 "맞는 파일이 없습니다." |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있습니다. 검색으로 찾아 주세요."가 대신한다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘기고, 연 폴더로 올라간다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 
-스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview, Patterns/List/FolderTile, Controls/Field/SearchBox, Controls/Choice/Segmented.
+스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview, Controls/Field/SearchBox, Controls/Choice/Segmented, Screens/EditorMedia(LibraryInFolder, LibrarySearching).
 
 ### 흐름 6 · 미디어
 

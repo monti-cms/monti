@@ -22,12 +22,12 @@
 |---|---|---|
 | 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow twoLine`, `TableCell`) | 모든 행이 두 줄 높이다. 고른 행과 패널에 열린 행은 `TableRow selected`. |
 | 행 체크 | `RowCheck` | 포인터가 행 위에 있을 때와 고른 행에만 보인다. |
-| 제목 칸 | `TrashRowTitle`(`title`, `address`, `folder`, `meta`, `metaTone`) | 첫 줄은 조용한 잉크의 제목과 mono 주소, 둘째 줄은 담은 것("KO · EN", "글 2", "이미지 · 2.4 MB · Blog Assets"). 할 말이 없어도 빈 줄을 지킨다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 되돌아오지 못하게 막는 것이 있으면 `metaTone="warning"`("원문이 휴지통에 있어요 · …"). 검색 결과의 폴더 안 항목은 `meta` 앞에 "시리즈 원고 폴더 안". |
+| 제목 칸 | `TrashRowTitle`(`title`, `address`, `folder`, `meta`, `metaTone`) | 첫 줄은 조용한 잉크의 제목과 mono 주소, 둘째 줄은 담은 것("KO · EN", "글 2", "이미지 · 2.4 MB · Blog Assets"). 할 말이 없어도 빈 줄을 지킨다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 되돌아오지 못하게 막는 것이 있으면 `metaTone="warning"`("원문이 휴지통에 있습니다 · …"). 검색 결과의 폴더 안 항목은 `meta` 앞에 "시리즈 원고 폴더 안". |
 | 종류 칸 | `Text variant="note" tone="subtle"` | "게시글", "메모", "태그", "미디어". |
 | 남은 날 칸 | `TrashRowDate`(`left`, `urgent`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 사흘 이하면 `urgent`로 경고 색. 폴더 안의 행은 비운다. |
 | 행 동작 | `RowActions` 안의 `TextButton` "복원"(알약이 아니다)과 `IconButton`(`label` "더보기") + `DropdownMenu`("영구 삭제", `variant="danger"`) | 원문이 휴지통에 있는 번역은 "원문 복원"(`TextButton variant="ink"`)이 된다. 다른 글이 가리켜 남은 행(비운 뒤)은 "영구 삭제"(`TextButton variant="danger"`)가 된다. ⋯는 보드에서 글자 버튼이지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
-| 빈 휴지통 | `Text variant="note" tone="subtle"` "휴지통이 비었어요." | 열 이름 행과 표 대신 이 한 줄. |
+| 빈 휴지통 | `Text variant="note" tone="subtle"` "휴지통이 비었습니다." | 열 이름 행과 표 대신 이 한 줄. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Overlay/AlertDialog, Patterns/List/Table, Patterns/List/TrashRow, Primitives/Text, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/ListHead, Patterns/List/BulkBar, Controls/Overlay/SidePanel, Patterns/Panel/DotNote, Patterns/Frame/Image, Patterns/List/FilePreview, Patterns/Frame/DescriptionList, Primitives/Label, Controls/Button/Button, Monti/Change/ChangeGroup.
 
@@ -75,14 +75,14 @@
 | "미디어" | 5.17 | "종류" 열 `filtered`, 미디어 행만. 칩 줄은 없다 |  |
 | "항목 열기" | 5.19 | 태그 행 `selected`와 항목 `SidePanel`("가리키는 글 · 4") | Controls/Overlay/SidePanel |
 | "미디어 열기" | 5.20 | 파일 행 `selected`와 미디어 `SidePanel`(미리보기, "쓰는 곳" 없음) | Controls/Overlay/SidePanel |
-| "복원함" | 5.21 | 복원한 행이 빠지고 `toast` "초안으로 복원했어요"와 `action` "열기" | Controls/Status/Toast |
+| "복원함" | 5.21 | 복원한 행이 빠지고 `toast` "초안으로 복원했습니다"와 `action` "열기" | Controls/Status/Toast |
 | "번역 막힘" | 5.22 | 번역 행 `TrashRowTitle metaTone="warning"`, 행 동작 "원문 복원" | Patterns/List/TrashRow |
 | "삭제 확인" | 5.23 | 영구 삭제 `AlertDialog` | Controls/Overlay/AlertDialog |
 | "삭제 막힘" | 5.24 | `AlertDialogContent size="wide"`와 `ChangeGroup kind="drop"`, 알약 `disabled` | Controls/Overlay/AlertDialog, Monti/Change/ChangeGroup |
 | "선택" | 5.25 | `BulkBar`(`selectAll` 일부), 두 행 `selected` | Patterns/List/BulkBar |
 | "비우기 확인" | 5.26 | 비우기 `AlertDialog` | Controls/Overlay/AlertDialog |
-| "비운 뒤" | 5.27 | 막힌 행 하나만 남음(`metaTone="warning"` "가리키는 글 4편", 행 동작 "영구 삭제"), `toast` "6개를 지웠어요 · 1개는 남겼어요" | Controls/Status/Toast |
+| "비운 뒤" | 5.27 | 막힌 행 하나만 남음(`metaTone="warning"` "가리키는 글 4편", 행 동작 "영구 삭제"), `toast` "6개를 지웠습니다 · 1개는 남겼습니다" | Controls/Status/Toast |
 | "빔" | 5.28 | 빈 휴지통 한 줄, 머리 동작 없음, 사이드바 개수 없음 |  |
 | "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `meta`, "폴더 복원" · "영구 삭제", 남은 날 칸이 빈 안쪽 행 | Patterns/Frame/PageHeader |
-| "폴더에서 하나 복원" | 5.13 | 남은 안쪽 행, `toast` "시리즈 원고 폴더를 다시 만들고 초안으로 복원했어요"와 "열기" | Controls/Status/Toast |
+| "폴더에서 하나 복원" | 5.13 | 남은 안쪽 행, `toast` "시리즈 원고 폴더를 다시 만들고 초안으로 복원했습니다"와 "열기" | Controls/Status/Toast |
 | "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 `meta` 앞에 폴더 경로 | Controls/Field/SearchBox |

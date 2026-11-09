@@ -14,6 +14,7 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 const meta = {
 	title: "Patterns/Sheet/MediaPicker",
 	parameters: { bleed: true },
+	tags: ["visual"],
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;

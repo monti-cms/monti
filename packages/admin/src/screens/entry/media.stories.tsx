@@ -116,6 +116,30 @@ export const LibraryWindow: Story = {
 	},
 };
 
+/** The window inside a folder: its folders over its own files (T117). */
+export const LibraryInFolder: Story = {
+	loaders: entry(),
+	play: async (context) => {
+		await LibraryWindow.play?.(context);
+		const dialog = within(within(document.body).getByRole("dialog"));
+		await userEvent.click(
+			await within(dialog.getByRole("navigation")).findByRole("button", { name: /^Blog Assets/ }, wait),
+		);
+		await dialog.findByRole("button", { name: /desk-morning/ }, wait);
+	},
+};
+
+/** A search inside a folder: its folders give way, each file says where it is, and the search can widen (T117). */
+export const LibrarySearching: Story = {
+	loaders: entry(),
+	play: async (context) => {
+		await LibraryInFolder.play?.(context);
+		const dialog = within(within(document.body).getByRole("dialog"));
+		await userEvent.type(dialog.getByRole("searchbox", { name: "파일 이름 검색" }), "cafe");
+		await dialog.findByRole("button", { name: /cafe-window/ }, wait);
+	},
+};
+
 /** A cover in the property panel, with what the entry says of it (T67). */
 export const WithCover: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
@@ -157,7 +181,6 @@ export const TranslationCover: Story = {
 	},
 };
 
-/** A site with no storage (flow 6·31). */
 /** A translation's own cover, its source's since changed: the mark in the place of whose value it is (T111). */
 export const TranslationCoverChanged: Story = {
 	loaders: [
@@ -203,4 +226,5 @@ export const TranslationCoverChanged: Story = {
 	],
 };
 
+/** A site with no storage (flow 6·31). */
 export const NoStorage: Story = { loaders: entry({ storage: null }) };

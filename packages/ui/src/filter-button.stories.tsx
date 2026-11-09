@@ -7,6 +7,7 @@ import { Stack } from "./stack";
 const meta = {
 	title: "Patterns/List/FilterButton",
 	component: FilterButton,
+	tags: ["visual"],
 	args: { children: "태그" },
 } satisfies Meta<typeof FilterButton>;
 export default meta;
