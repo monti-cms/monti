@@ -265,8 +265,13 @@ function RowTitle({
 	editing?: boolean;
 }) {
 	return (
-		<span data-slot="row-title" className={cn("flex min-w-0 items-baseline gap-monti-12", className)} {...props}>
-			<span className="flex min-w-0 items-baseline gap-monti-8">
+		<span
+			data-slot="row-title"
+			className={cn("flex min-w-0 gap-monti-12", thumb ? "items-center" : "items-baseline", className)}
+			{...props}
+		>
+			{/* Beside a picture the words stand at its middle, as the row's other cells do. */}
+			<span className={cn("flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline")}>
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
 				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
 				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
