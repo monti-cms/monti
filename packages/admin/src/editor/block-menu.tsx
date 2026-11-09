@@ -1,3 +1,4 @@
+import { imageAlignOf } from "@monti-cms/core";
 import {
 	BlockHandle,
 	DropdownMenu,
@@ -250,7 +251,12 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		const kind = kindOf(node, $pos.parent);
 		const kinds = offeredKinds(catalogs.offered);
 		const name = kind?.type === "heading" ? t("editor.heading", { level: kind.level }) : block ? t(block.label) : null;
-		const align = alignable(block) ? String(node.attrs.data?.align ?? "left") : null;
+		const isImage = block?.type === "image";
+		const align = alignable(block)
+			? isImage
+				? imageAlignOf(node.attrs.data?.align)
+				: String(node.attrs.data?.align ?? "left")
+			: null;
 		// A translation's top-level block carries its link (doc 04).
 		const link = translation && $pos.depth === 0 ? linkOf(node) : null;
 		const blockId = String(node.attrs.blockId ?? "");
@@ -352,7 +358,8 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 											onValueChange={(value) =>
 												run((tr, pos) => {
 													const { align: _old, ...rest } = (node.attrs.data ?? {}) as Record<string, unknown>;
-													const data = value === "left" ? rest : { ...rest, align: value };
+													// The setting is dropped at the default, which is the middle for a picture and the left for words.
+													const data = value === (isImage ? "center" : "left") ? rest : { ...rest, align: value };
 													tr.setNodeAttribute(pos, "data", Object.keys(data).length ? data : null);
 												})
 											}

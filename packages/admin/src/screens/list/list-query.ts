@@ -12,7 +12,7 @@ export type ListState = {
 	sort: { by: "title" | "slug" | "updatedAt" | "publishedAt" | "createdAt"; dir: "asc" | "desc" };
 	page: number;
 	ai: string[];
-	/** The open folder (`null`: the top level), and whether a search in it looks through the whole collection (doc 07; `?folder=<id>&scope=all`). */
+	/** The open folder (`null`: the top level), and whether a search or a filter in it looks through the whole collection (doc 07; `?folder=<id>&scope=all`). */
 	folder: string | null;
 	everywhere: boolean;
 };
@@ -125,7 +125,16 @@ export function writeState(state: ListState): URLSearchParams {
  */
 export const toQuery = (collection: string, state: ListState, pageSize: number, folders = false) => ({
 	collection,
-	...(folders ? { folder: state.folder, scope: state.everywhere ? ("all" as const) : ("here" as const) } : {}),
+	// "All folders" is a choice about what is looked for: with nothing looked for, a folder lists itself.
+	...(folders
+		? {
+				folder: state.folder,
+				scope:
+					state.everywhere && (state.search.text.trim() !== "" || state.filters.length > 0)
+						? ("all" as const)
+						: ("here" as const),
+			}
+		: {}),
 	filters: state.filters.map((filter) => {
 		const picked = state.filters.find((each) => each.on === "locale");
 		return filter.on === "translation" && !filter.locales && picked?.on === "locale"

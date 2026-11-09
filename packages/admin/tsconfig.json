@@ -13,5 +13,6 @@
 		"jsx": "react-jsx",
 		"types": ["node"]
 	},
-	"include": ["src", ".storybook", "test", "vitest.config.ts", "../../testing"]
+	"include": ["src", ".storybook", "test", "vitest.config.ts", "../../testing"],
+	"exclude": ["../../testing/usability"]
 }

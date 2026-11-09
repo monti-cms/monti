@@ -971,10 +971,6 @@
 			"children": false,
 			"slots": [],
 			"props": {
-				"actions": {
-					"kind": "data",
-					"fields": ["label"]
-				},
 				"detail": {
 					"kind": "text",
 					"type": "string"
@@ -997,13 +993,21 @@
 				"progress": {
 					"kind": "state"
 				},
+				"remove": {
+					"kind": "text",
+					"type": "string"
+				},
+				"retry": {
+					"kind": "text",
+					"type": "string"
+				},
 				"selected": {
 					"kind": "flag",
 					"type": "boolean"
 				},
 				"status": {
 					"kind": "variant",
-					"enum": ["failed", "interrupted", "ready", "uploading"]
+					"enum": ["failed", "ready", "uploading"]
 				}
 			},
 			"events": []

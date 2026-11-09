@@ -1,5 +1,6 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "./db/schema";
+import { type RecordRef, recordKey } from "./operation";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -23,4 +24,10 @@ export type RecordKind = {
 
 export function defineRecordKind(kind: RecordKind): RecordKind {
 	return kind;
+}
+
+/** Serializes writes that touch the same records until their transaction ends. Sorted keys keep multi-record writes from deadlocking each other. */
+export async function lockRecords(trx: Db, refs: RecordRef[]): Promise<void> {
+	for (const key of refs.map(recordKey).sort())
+		await sql`select pg_advisory_xact_lock(hashtext(${`monti:record:${key}`}))`.execute(trx);
 }

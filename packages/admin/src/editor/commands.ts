@@ -186,17 +186,70 @@ export function deleteBlock(tr: Transaction, pos: number) {
 	return tr.delete(from, from + node.nodeSize);
 }
 
-/** Puts blocks in at the cursor: in place of the empty line it is on, or after its block. */
+/**
+ * Puts blocks in at the cursor: in place of the empty line it is on, after a selected block, or after its block. A list item holds only words (doc 03),
+ * so what goes in from one leaves the list, splitting it there, and a numbered list counts on after it.
+ */
 export function insertBlocks(tr: Transaction, blocks: EditorNode[]) {
-	const { $from } = tr.selection;
-	const depth = Math.max(1, $from.depth);
-	const block = $from.node(depth);
-	const at = $from.before(depth);
 	if (blocks.length === 0) return tr;
-	if (block.isTextblock && block.content.size === 0) tr.replaceWith(at, at + block.nodeSize, blocks);
-	else tr.insert(at + block.nodeSize, blocks);
-	const end = tr.mapping.map(at + block.nodeSize);
-	return tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(end, tr.doc.content.size)), -1));
+	const { selection } = tr;
+	const { $from } = selection;
+	const fragment = Fragment.from(blocks);
+	const onLine = !(selection instanceof NodeSelection) && $from.depth > 0;
+	const empty = onLine && $from.parent.isTextblock && $from.parent.content.size === 0;
+	const orderedList = named(tr.doc.type.schema, "orderedList");
+	const list = onLine && $from.depth > 1 && $from.node(-1).type === orderedList ? $from.node(-1) : null;
+	const counting = list ? Number(list.attrs.data?.start ?? 1) + $from.index(-1) + (empty ? 0 : 1) : null;
+	const landAfter = (end: number) => tr.setSelection(TextSelection.near(tr.doc.resolve(end), -1));
+
+	let at = onLine ? $from.after() : selection.to;
+	if (empty) {
+		const holder = $from.node(-1);
+		const index = $from.index(-1);
+		if (holder.canReplace(index, index + 1, fragment)) {
+			tr.replaceWith($from.before(), $from.after(), blocks);
+			return landAfter($from.before() + fragment.size);
+		}
+		if (holder.childCount === 1) {
+			tr.replaceWith($from.before(-1), $from.after(-1), blocks);
+			return landAfter($from.before(-1) + fragment.size);
+		}
+		tr.delete($from.before(), $from.after());
+		at = $from.before();
+	}
+	let $at = tr.doc.resolve(at);
+	let split = false;
+	while ($at.depth > 0 && !$at.parent.canReplace($at.index(), $at.index(), fragment)) {
+		if ($at.nodeBefore === null) {
+			$at = tr.doc.resolve($at.pos - 1);
+			continue;
+		}
+		if ($at.nodeAfter) {
+			tr.split($at.pos);
+			split = true;
+		}
+		$at = tr.doc.resolve($at.pos + 1);
+	}
+	tr.insert($at.pos, blocks);
+	const end = $at.pos + fragment.size;
+	const rest = split ? tr.doc.nodeAt(end) : null;
+	if (rest && counting !== null) tr.setNodeAttribute(end, "data", { ...rest.attrs.data, start: counting });
+	return landAfter(end);
+}
+
+/**
+ * Takes the caret from a block just put in to the words after it: with the block itself still selected, the next letter typed would replace it. Where no
+ * words follow (the end of the body, a table, another picture), a new line takes the caret.
+ */
+export function caretPast(tr: Transaction) {
+	if (!(tr.selection instanceof NodeSelection)) return tr;
+	const end = tr.selection.to;
+	const $end = tr.doc.resolve(end);
+	const next = $end.nodeAfter;
+	const words = next?.isTextblock || next?.firstChild?.isTextblock ? TextSelection.findFrom($end, 1, true) : null;
+	if (words) return tr.setSelection(words);
+	tr.insert(end, named(tr.doc.type.schema, "paragraph").create());
+	return tr.setSelection(TextSelection.create(tr.doc, end + 1));
 }
 
 /** The formats "clear formatting" takes off: every mark but a link (where the words go, taken off in the link card) and a kept one (doc 03: kept as it is). */

@@ -1,8 +1,9 @@
-import { type Kysely, sql, type Transaction } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
+import { rewriteUses } from "../media/uses";
 import {
 	type Actor,
 	type AnyOperation,
@@ -11,7 +12,7 @@ import {
 	type RecordRef,
 	recordKey,
 } from "../operation";
-import type { RecordKind, RecordState } from "../records";
+import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
 import { markApplied } from "./proposals";
@@ -105,12 +106,6 @@ export async function loadRecords(
 
 const unique = (refs: RecordRef[]) => [...new Map(refs.map((ref) => [recordKey(ref), ref])).values()];
 
-/** Serializes writes that touch the same records. Sorted keys keep multi-record writes from deadlocking each other. */
-async function lockRecords(trx: Transaction<Database>, refs: RecordRef[]): Promise<void> {
-	for (const key of refs.map(recordKey).sort())
-		await sql`select pg_advisory_xact_lock(hashtext(${`monti:record:${key}`}))`.execute(trx);
-}
-
 /**
  * Runs a write the one way every caller does: check the input, then in one transaction compare versions, snapshot what it touches, run it, log it
  * and queue its events. The events go out only after the commit; a write that fails leaves no row, no snapshot and no event.
@@ -144,6 +139,8 @@ export async function runWrite<Output>(
 		const output = (await operation.run(input, ctx)) as Output;
 
 		const records = unique([...touched, ...created]);
+		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
+		await rewriteUses(trx, engine.site.schema(), records);
 		const after = await loadRecords(engine, trx, records);
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();

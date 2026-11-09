@@ -45,6 +45,7 @@
 | 행 ⋯ | `RowActions` 안의 `IconButton`(`label` "행 메뉴") + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. |
 | 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로" | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |
+| 미디어 필드 칸 (대표 이미지) | `RowThumb` 안 `Image size="row" ratio="photo"`, 그림이 아닌 파일은 이름 | 빈 필드는 비어 있다. 열 메뉴는 글자 필드처럼 "비어 있음"이다(T59). |
 | 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `address` "글 2"), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · `ContextMenuSub` "옮기기" │ "폴더 지우기"(`variant="danger"`) | |
 | 새 폴더 · 이름 바꾸기 | `RenameField`(`value`, `onValueChange`, `onCommit`, `onCancel`, `label` "폴더 이름") | 행 안에서 "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 지키고 Esc는 버린다. 행 높이가 변하지 않는다. |
@@ -66,11 +67,11 @@
 
 흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
 
-#### 찾는 곳 행 (폴더 안 검색, 어시스턴트가 건 필터)
+#### 찾는 곳 행 (폴더 안의 검색과 필터, 어시스턴트가 건 필터)
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 행 | `PageToolbar inset` | 폴더 안에서 검색할 때와 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터는 열 이름 뒤의 점으로만 보인다. |
+| 행 | `PageToolbar inset` | 폴더 안에서 찾거나 거를 때와 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터 자체는 열 이름 뒤의 점으로 보인다(2026-11-09 소유자). |
 | "시리즈 원고 · 모든 폴더" | `Segmented size="sm" inline`(이름 "찾는 곳"), 뒤에 `Separator orientation="vertical" length="control"` | 폴더 안에서만 있다. "모든 폴더"는 주소에 `scope=all`. |
 | AI가 건 필터 "✦ 요약 비어 있음 ×" | `Chip proposal`(`onRemove`, `removeLabel` "필터 지우기") | ✦와 파랑은 `Chip`이 그린다. 바꾸거나 지우면 AI 표시가 끝난다. |
 
@@ -140,7 +141,7 @@
 |---|---|---|---|
 | "바꾸기 메뉴" | 7.10 | "바꾸기 ▾" `DropdownMenu`와 태그 `DropdownMenuSub`(검색, 세 상태 체크) | Controls/Menu/DropdownMenu |
 | "상태 메뉴" | 7.04 | 상태 열 메뉴(`DropdownMenuCheckboxItem` 넷과 개수, "열 숨기기"), 상태 열 `filtered` | Controls/Menu/DropdownMenu |
-| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 `filtered`. 찾는 곳 행은 없다 |  |
+| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 `filtered`. 폴더 밖이라 찾는 곳 행은 없다 |  |
 | "태그 메뉴" | 7.04b | 태그 열 메뉴(`DropdownMenuSearch`, "없음", `DropdownMenuScroll`) | Controls/Menu/DropdownMenu |
 | "언어 메뉴" | 7.04c | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 `filtered` | Controls/Menu/DropdownMenu |
 | "수정일 메뉴" | 7.05 | 수정일 열 메뉴(정렬과 기간 `DropdownMenuRadioItem`), `filtered` | Controls/Menu/DropdownMenu |

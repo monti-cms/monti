@@ -16,6 +16,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** `frame`, from the core's `imageFrame`: the middle half of a 16:9 picture, and the whole of it turned a quarter. The frame takes the new shape. */
+export const Framed: Story = {
+	tags: ["visual"],
+	render: (args) => (
+		<Inline gap={16} align="start">
+			<Stack width="panel">
+				<Image
+					{...args}
+					frame={{ aspectRatio: 8 / 9, image: { left: 50, top: 50, width: 200, height: 100, rotate: 0 } }}
+				/>
+			</Stack>
+			<Stack width="panel">
+				<Image
+					{...args}
+					frame={{ aspectRatio: 9 / 16, image: { left: 50, top: 50, width: 16000 / 90, height: 56.25, rotate: 90 } }}
+				/>
+			</Stack>
+		</Inline>
+	),
+};
+
 /** The ratios: square, photo (4:3), wide (16:9), share (1.91:1), banner (3:1). */
 export const Ratios: Story = {
 	render: (args) => (

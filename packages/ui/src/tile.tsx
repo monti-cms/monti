@@ -3,7 +3,6 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { Folder } from "./icons";
-import { TextButton } from "./text-button";
 
 /**
  * A file in a grid (the media library, an image to insert): a 4:3 preview, the name over a mono detail line. Flat: no card, no border.
@@ -12,10 +11,8 @@ import { TextButton } from "./text-button";
  *   on every tile (faint) while any are picked (`picking`). `action` is the ⋯ at the top right, shown with the pointer.
  * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known. The detail line says how
  *   far ("Uploading · 64%"). The name is quiet.
- * - `status="failed"`: the file cannot be taken (a type the site does not accept). A 1px red ring is drawn over the preview's edge, the detail line is red
- *   and the name is quiet; `actions` are what can be done ("Remove"). A failed file stays in its place; give it no preview if it has no picture to show.
- * - `status="interrupted"`: the file is fine but did not go up (too large, the network). Its picture stays, faded as while it goes up, with no ring; the
- *   detail line is red, the name is quiet, and `actions` are what can be done ("Shrink and retry", "Remove").
+ * - `status="failed"`: the network cut it off. Its picture stays, fainter than while it goes up, inside a 1px red ring; the detail line is red and the name is quiet. `retry` is the
+ *   button over the middle of the picture: on the picture, so the tile is as tall as its neighbours. `action` is shown all the time, as what is left to do with it. Neither has a ground: the faint picture leaves them readable, on a dark photo too.
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
  *   is ringed and checked in blue; one whose card is open (`current`) is ringed in blue without the check.
  */
@@ -31,12 +28,13 @@ function Tile({
 	status = "ready",
 	progress,
 	proposal,
-	actions,
+	retry,
 	action,
 	dimmed = false,
+	onKeyDown,
 	className,
 	...props
-}: Omit<React.ComponentProps<"button">, "title"> & {
+}: Omit<React.ComponentProps<"button">, "title" | "onKeyDown"> & {
 	preview: React.ReactNode;
 	title: React.ReactNode;
 	/** The mono line under the name: size, usage, a path. */
@@ -50,28 +48,31 @@ function Tile({
 	onSelectedChange?: (selected: boolean) => void;
 	/** The name of the check, for screen readers. */
 	selectLabel?: string;
-	status?: "ready" | "uploading" | "failed" | "interrupted";
+	status?: "ready" | "uploading" | "failed";
 	/** How far an upload is, 0–100. */
 	progress?: number;
 	/** The suggestion sentence. */
 	proposal?: React.ReactNode;
-	/** For a failed tile: what can be done, as text buttons under the name. `primary` is set in ink. */
-	actions?: readonly { label: string; onClick: () => void; primary?: boolean }[];
-	/** The ⋯ at the top right (a button that opens the tile's menu). */
+	/** The button that tries again, shown over the middle of the picture (an `IconButton`). */
+	retry?: React.ReactNode;
+	/** The ⋯ at the top right (a button that opens the tile's menu), or what takes out a file that did not go up. */
 	action?: React.ReactNode;
 	dimmed?: boolean;
+	/** A key pressed anywhere on the tile, on its check too. A menu it opens is drawn elsewhere, and its keys are the menu's. */
+	onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
 }) {
 	const failed = status === "failed";
-	const interrupted = status === "interrupted";
 	const uploading = status === "uploading";
-	// Both name what went wrong in red under a quiet name, and offer `actions`.
-	const problem = failed || interrupted;
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: it only hears the keys that come up from the tile's own button and check
 		<div
 			data-slot="tile"
 			data-selected={selected || undefined}
 			data-status={status}
 			className={cn("group/tile relative flex min-w-0 flex-col gap-monti-8", dimmed && "opacity-60", className)}
+			onKeyDown={(event) => {
+				if (event.currentTarget.contains(event.target as Node)) onKeyDown?.(event);
+			}}
 		>
 			<button
 				type="button"
@@ -92,7 +93,7 @@ function Tile({
 						current && !selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
 					)}
 				>
-					<span className={cn("block size-full", (uploading || interrupted) && "opacity-45")}>{preview}</span>
+					<span className={cn("block size-full", uploading && "opacity-45", failed && "opacity-30")}>{preview}</span>
 					{failed && (
 						// Above the picture: a ring on the box itself would be painted under it.
 						<span
@@ -108,7 +109,7 @@ function Tile({
 					)}
 				</span>
 				<span className="flex min-w-0 flex-col gap-monti-2">
-					<span className={cn("truncate text-monti-body", (uploading || problem) && "text-monti-subtle")}>{title}</span>
+					<span className={cn("truncate text-monti-body", (uploading || failed) && "text-monti-subtle")}>{title}</span>
 					{proposal ? (
 						<span className="truncate text-monti-body">
 							<span className="rounded-monti-sm bg-monti-proposal-muted px-[2px] py-px text-monti-proposal">
@@ -118,7 +119,7 @@ function Tile({
 					) : (
 						detail && (
 							<span
-								className={cn("truncate font-mono text-monti-meta text-monti-subtle", problem && "text-monti-danger")}
+								className={cn("truncate font-mono text-monti-meta", failed ? "text-monti-danger" : "text-monti-subtle")}
 							>
 								{detail}
 							</span>
@@ -142,26 +143,26 @@ function Tile({
 						onCheckedChange={(next) => onSelectedChange(next === true)}
 						aria-label={selectLabel}
 						proposal={Boolean(proposal)}
-						className="bg-monti-page"
+						className="bg-monti-page hover:not-data-disabled:shadow-none"
 					/>
 				</span>
 			)}
-			{action && (
-				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page in-data-popup-open:opacity-100 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100">
-					{action}
+			{retry && (
+				// As large as the preview, with no ground: only the button takes the pointer.
+				<span className="pointer-events-none absolute inset-x-0 top-0 flex aspect-[4/3] items-center justify-center">
+					<span className="pointer-events-auto flex">{retry}</span>
 				</span>
 			)}
-			{problem && actions && actions.length > 0 && (
-				<span className="flex gap-monti-12 text-monti-note">
-					{actions.map((item) => (
-						<TextButton
-							key={item.label}
-							onClick={item.onClick}
-							className={item.primary ? "text-monti-default" : undefined}
-						>
-							{item.label}
-						</TextButton>
-					))}
+			{action && (
+				<span
+					className={cn(
+						"absolute top-monti-6 right-monti-8 flex",
+						// Over a picture as it is, the ⋯ needs a ground to be seen.
+						!failed &&
+							"rounded-monti-full bg-monti-page in-data-popup-open:opacity-100 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100",
+					)}
+				>
+					{action}
 				</span>
 			)}
 		</div>

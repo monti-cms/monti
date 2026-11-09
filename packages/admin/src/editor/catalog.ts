@@ -29,5 +29,5 @@ export const needsAttrs = (block: CatalogBlock) => (block.attrs?.required?.lengt
 /** Whether the block's definition has an `align` attr: only then does its block menu have "align" (editor-tools.md). */
 export const alignable = (block: CatalogBlock | undefined) => Boolean(block?.attrs?.properties?.align);
 
-/** Blocks that need their own feature before the "/" menu can put them in: an image and a file come from the media library (doc 09, T33). */
-export const NOT_FROM_MENU: ReadonlySet<string> = new Set(["image", "file"]);
+/** The blocks whose file comes from the media library: the "/" menu opens the library's window to fill them (doc 09). */
+export const FROM_LIBRARY: Readonly<Record<string, "image" | "file">> = { image: "image", file: "file" };

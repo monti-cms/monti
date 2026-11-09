@@ -21,7 +21,7 @@ const CORNERS = [
 ] as const;
 
 /**
- * The picture of the crop sheet in its frame: the tool ground with an edge and 4px inside, at most 380px high, the picture centered in it at most 360px
+ * The picture of the crop dialog in its frame: the tool ground with an edge and 4px inside, at most 380px high, the picture centered in it at most 360px
  * high. With a `crop`, the picture outside it lies under the backdrop and the crop is a 2px ink box with a square handle on each corner. Every press
  * reports what was pressed (`onGrip`); the stage is as large as the picture, so the screen measures the press against it (`stageRef`).
  */
@@ -32,6 +32,8 @@ function CropStage({
 	stageRef,
 	imageRef,
 	onGrip,
+	onGripKey,
+	moveLabel,
 	cornerLabels,
 }: {
 	src: string;
@@ -42,6 +44,10 @@ function CropStage({
 	stageRef?: React.Ref<HTMLDivElement>;
 	imageRef?: React.Ref<HTMLImageElement>;
 	onGrip?: (event: React.PointerEvent, grip: CropGrip) => void;
+	/** A key on the box or a corner: the same moves as the pointer, for a person with a keyboard. */
+	onGripKey?: (event: React.KeyboardEvent, grip: CropGrip) => void;
+	/** The name of the box, for screen readers. */
+	moveLabel?: string;
 	/** The names of the four corner handles, for screen readers. */
 	cornerLabels: Record<"nw" | "ne" | "sw" | "se", string>;
 }) {
@@ -72,11 +78,17 @@ function CropStage({
 						/>
 						<div
 							data-slot="crop-box"
+							role="button"
+							tabIndex={0}
+							aria-label={moveLabel}
 							onPointerDown={(event) => {
 								event.stopPropagation();
 								onGrip?.(event, "move");
 							}}
-							className="absolute cursor-move border-2 border-monti-contrast"
+							onKeyDown={(event) => {
+								if (event.target === event.currentTarget) onGripKey?.(event, "move");
+							}}
+							className="absolute cursor-move border-2 border-monti-contrast outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast focus-visible:ring-offset-2"
 							style={{ left: `${crop.x}%`, top: `${crop.y}%`, width: `${crop.width}%`, height: `${crop.height}%` }}
 						>
 							{CORNERS.map(({ grip, place }) => (
@@ -89,7 +101,8 @@ function CropStage({
 										event.stopPropagation();
 										onGrip?.(event, grip);
 									}}
-									className={`absolute size-3.5 rounded-monti-sm border border-monti-default bg-monti-emphasis p-0 ${place}`}
+									onKeyDown={(event) => onGripKey?.(event, grip)}
+									className={`absolute size-3.5 rounded-monti-sm border border-monti-default bg-monti-emphasis p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast focus-visible:ring-offset-2 ${place}`}
 								/>
 							))}
 						</div>

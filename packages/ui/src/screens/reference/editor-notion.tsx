@@ -8,6 +8,7 @@ import {
 	Renew,
 	Repeat,
 	RightPanelOpen,
+	Settings,
 	Spark,
 	TextAlignLeft,
 	TrashCan,
@@ -278,7 +279,18 @@ export function EntryProperties({
 				</FormField>
 				<FormField>
 					<FormFieldLabel htmlFor="cover">대표 이미지</FormFieldLabel>
-					<MediaInput id="cover" size="md" value={{ name: "cover-react.png" }} onClear={() => {}} clearLabel="빼기" />
+					<MediaInput
+						id="cover"
+						size="md"
+						value={{ name: "cover-react.png" }}
+						onClear={() => {}}
+						clearLabel="빼기"
+						action={
+							<IconButton label="대표 이미지 설정">
+								<Settings aria-hidden />
+							</IconButton>
+						}
+					/>
 				</FormField>
 				{summary ?? (
 					<FormField>

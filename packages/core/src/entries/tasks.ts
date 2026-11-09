@@ -2,11 +2,12 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import { altGaps } from "../media/alt";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
 import type { Site } from "../site";
 import { marksOf } from "../translations/links";
-import { isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import type { Entry } from "./record";
 
 type Awaitable<T> = T | Promise<T>;
@@ -49,7 +50,7 @@ export async function publishTasks(
 	const tasks: PublishTask[] = [];
 	// A translation's `same` fields are its source's, and an empty `fromSource` one is the source's too (doc 04).
 	const source = isTranslation(schema, entry) ? await sourceEntryOf(db, schema, entry.translationGroup) : null;
-	const read = translatedFields(schema, entry.collection, entry, source);
+	const read = translatedFields(schema, entry.collection, entry, await followedFields(db, source));
 	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
 	for (const [field, definition] of Object.entries(fields))
 		if ((definition.required || field === "slug") && isEmpty(fieldValue(field === "slug" ? entry : read, field)))
@@ -59,6 +60,16 @@ export async function publishTasks(
 				blocking: true,
 				message: { key: "entries.task.required", values: { field } },
 			});
+	// Images with nothing to say for them block the publish (doc 02, flow 1·10): one row, going to the first of them. `entries.missingAlt` lists them all.
+	const gaps = await altGaps(db, fields, read.values, await bodyAsRead(db, source, entry.doc));
+	const [firstGap] = gaps;
+	if (firstGap)
+		tasks.push({
+			code: "missingAlt",
+			...("field" in firstGap.place ? { field: firstGap.place.field } : { field: "doc", block: firstGap.place.block }),
+			blocking: true,
+			message: { key: "entries.task.missingAlt", values: { count: gaps.length } },
+		});
 	if (slugTaken)
 		tasks.push({
 			code: "slugTaken",

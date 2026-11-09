@@ -113,7 +113,7 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 	const common = {
 		required: form.required,
 		// The mode a field without one has is not written; a mode it had stays written.
-		locale: form.locale === localeModeOf(form.name, { kind: "text" }) && !was?.locale ? undefined : form.locale,
+		locale: form.locale === localeModeOf(form.name, { kind: form.kind }) && !was?.locale ? undefined : form.locale,
 	};
 	if (form.kind === "text")
 		return clean({

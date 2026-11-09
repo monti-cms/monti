@@ -121,7 +121,7 @@ beforeEach(async () => {
 		paragraph("서버 컴포넌트 이야기"),
 	);
 	const rsc = await create("post", "리액트 서버 컴포넌트 다시 보기", { format: "memo" });
-	const photos = await create("post", "가을 사진 정리", { cover: "media-1" });
+	const photos = await create("post", "가을 사진 정리", { cover: { media: "media-1", alt: "사진" } });
 	const old = await create("post", "보관한 글");
 	await run("entries.publish", { ids: [first] });
 	await run("entries.save", { id: first, version: 2, values: { summary: "고침" } });
@@ -287,6 +287,7 @@ describe("columns", () => {
 			"format?",
 			"category",
 			"tags",
+			"cover?",
 			"locale",
 			"updatedAt",
 			"publishedAt?",

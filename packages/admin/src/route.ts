@@ -9,13 +9,15 @@ export type Route =
 	/** An entry in the editor; `compare` shows the comparison over it (`?compare=conflict` or `?compare=draft`, screens.md EditorCompare). */
 	| { screen: "entry"; collection: string; id: string; compare?: "conflict" | "draft" }
 	| { screen: "settings" }
-	/** Media, trash and tools: their screens come with docs 09, 11 and 13. */
-	| { screen: "place"; place: "media" | "trash" | "tools" }
+	/** The media library (doc 09): its folder, filters and the open file are in the address. */
+	| { screen: "media"; params: URLSearchParams }
+	/** Trash and tools: their screens come with docs 11 and 13. */
+	| { screen: "place"; place: "trash" | "tools" }
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
 	| { screen: "template"; id: string | null }
 	| { screen: "home" };
 
-const PLACES = new Set(["media", "trash", "tools"]);
+const PLACES = new Set(["trash", "tools"]);
 
 const LAST = "monti.lastScreen";
 
@@ -36,7 +38,8 @@ export function parseRoute(hash: string): Route {
 	}
 	if (parts[0] === "settings") return { screen: "settings" };
 	if (parts[0] === "templates" && parts[1]) return { screen: "template", id: parts[1] === "new" ? null : parts[1] };
-	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: parts[0] as "media" | "trash" | "tools" };
+	if (parts[0] === "media") return { screen: "media", params: new URLSearchParams(search) };
+	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: parts[0] as "trash" | "tools" };
 	return { screen: "home" };
 }
 
@@ -51,6 +54,10 @@ export function href(route: Route): string {
 			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}${route.compare ? `?compare=${route.compare}` : ""}`;
 		case "settings":
 			return "#/settings/collections";
+		case "media": {
+			const search = route.params.toString();
+			return `#/media${search ? `?${search}` : ""}`;
+		}
 		case "place":
 			return `#/${route.place}`;
 		case "template":

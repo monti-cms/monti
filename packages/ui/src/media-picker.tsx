@@ -8,6 +8,8 @@ import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from 
 import { Upload } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
+import { NAV_ROW } from "./nav-link";
+import { folderTree, SidebarMenuSub, SidebarMenuSubButton } from "./sidebar";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
 interface MediaPickerFolder {
@@ -18,11 +20,14 @@ interface MediaPickerFolder {
 	count?: number;
 }
 
+/** The deepest a folder is drawn, as in the sidebar's tree. */
+const DEEPEST = 3;
+
 /**
  * The library as a picker (images to insert, a cover image, files to attach): a 760px modal with the folders at the left, a search box and the files as
  * three columns of tiles at the right, "Upload" at the bottom left, and Cancel and the one pill at the bottom right. Choosing and then pressing the
  * pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there (`confirmHidden`). The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
- * `folders` under the top entry `allLabel`; `folder` is the picked one, `null` for all.
+ * `folders` under the top entry `allLabel`, drawn with the sidebar's own rows (no icon: the window is the library already); `folder` is the picked one, `null` for all.
  */
 function MediaPicker({
 	open,
@@ -72,25 +77,42 @@ function MediaPicker({
 	children?: React.ReactNode;
 }) {
 	const labels = useUiLabels();
+	const depths = folders.map((item) => Math.min(item.depth, DEEPEST) as 0 | 1 | 2 | 3);
+	const tree = folderTree(depths);
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="gap-monti-20 pb-monti-20 sm:max-w-[760px]">
 				<DialogTitle>{title}</DialogTitle>
-				<div className="grid grid-cols-[168px_minmax(0,1fr)] gap-monti-20">
-					<nav aria-label={foldersLabel} className="flex flex-col gap-monti-2 self-start">
-						<PickerFolder label={allLabel} on={folder === null} onClick={() => onFolderChange(null)} />
-						{folders.map((item) => (
-							<PickerFolder
-								key={item.id}
-								label={item.name}
-								count={item.count}
-								depth={item.depth}
-								on={folder === item.id}
-								onClick={() => onFolderChange(item.id)}
-							/>
-						))}
+				{/* One height, whatever a folder holds: both columns scroll inside it. */}
+				<div className="grid h-[min(27rem,60vh)] grid-cols-[216px_minmax(0,1fr)] gap-monti-20">
+					<nav aria-label={foldersLabel} className="flex min-h-0 scroll-py-monti-8 flex-col overflow-y-auto">
+						<button
+							type="button"
+							aria-current={folder === null ? "page" : undefined}
+							onClick={() => onFolderChange(null)}
+							className={cn(NAV_ROW, "shrink-0 cursor-pointer text-monti-default")}
+						>
+							<span className="min-w-0 truncate">{allLabel}</span>
+						</button>
+						<SidebarMenuSub>
+							{folders.map((item, index) => (
+								<li key={item.id}>
+									<SidebarMenuSubButton
+										render={<button type="button" />}
+										isActive={folder === item.id}
+										aria-current={folder === item.id ? "page" : undefined}
+										depth={depths[index]}
+										tree={tree[index]}
+										onClick={() => onFolderChange(item.id)}
+									>
+										<span>{item.name}</span>
+										{item.count ? <Count>{item.count}</Count> : null}
+									</SidebarMenuSubButton>
+								</li>
+							))}
+						</SidebarMenuSub>
 					</nav>
-					<div className="flex min-w-0 flex-col gap-monti-12">
+					<div className="flex min-h-0 min-w-0 flex-col gap-monti-12">
 						<Input
 							aria-label={searchLabel}
 							placeholder={searchLabel}
@@ -98,7 +120,7 @@ function MediaPicker({
 							onChange={(event) => onSearchChange(event.target.value)}
 						/>
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
-						<div className="-m-monti-4 grid max-h-[min(24rem,50vh)] grid-cols-3 content-start gap-x-monti-12 gap-y-monti-16 overflow-y-auto p-monti-4">
+						<div className="-m-monti-4 grid min-h-0 flex-1 grid-cols-3 content-start gap-x-monti-12 gap-y-monti-16 overflow-y-auto p-monti-4">
 							{notice ? <div className="col-span-3">{notice}</div> : children}
 						</div>
 					</div>
@@ -117,37 +139,6 @@ function MediaPicker({
 				</div>
 			</DialogContent>
 		</Dialog>
-	);
-}
-
-function PickerFolder({
-	label,
-	count,
-	depth = 0,
-	on,
-	onClick,
-}: {
-	label: string;
-	count?: number;
-	depth?: number;
-	on: boolean;
-	onClick: () => void;
-}) {
-	return (
-		<button
-			type="button"
-			aria-current={on ? "true" : undefined}
-			onClick={onClick}
-			className={cn(
-				// A sub-folder is indented one step (24 instead of the row's 10).
-				depth > 0 && "pl-monti-24",
-				"flex h-monti-control-md w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
-				on ? "bg-monti-current font-semibold text-monti-default" : "text-monti-muted",
-			)}
-		>
-			<span className="min-w-0 grow truncate">{label}</span>
-			{count !== undefined && <Count className="shrink-0 font-normal">{count}</Count>}
-		</button>
 	);
 }
 

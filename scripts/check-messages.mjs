@@ -90,6 +90,8 @@ const PACKAGES = {
 const packages = Object.keys(PACKAGES).filter((name) => only.length === 0 || only.includes(name));
 
 const server = await createServer({
+	// Only the dictionaries are loaded, one by one: nothing to scan for dependencies (the e2e server's page is not this script's).
+	optimizeDeps: { noDiscovery: true },
 	configFile: false,
 	root,
 	logLevel: "error",

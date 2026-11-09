@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sameJson } from "../json";
+import { ImageCropShape, ImageRotateShape } from "../media/frame";
 import type { Message } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
@@ -140,8 +141,13 @@ export const coreBlocks: AnyBlockDefinition[] = [
 			media: z.string(),
 			alt: z.string().optional(),
 			caption: z.string().optional(),
-			width: z.number().positive().optional(),
+			/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
+			decorative: z.boolean().optional(),
+			width: z.number().positive().nullable().optional(),
 			align: z.enum(["left", "center", "right"]).optional(),
+			/** What of the picture shows, and how it is turned. The original is never changed. */
+			crop: ImageCropShape.optional(),
+			rotate: ImageRotateShape.optional(),
 		}),
 		holds: "nothing",
 		translate: { attrs: ["alt", "caption"] },

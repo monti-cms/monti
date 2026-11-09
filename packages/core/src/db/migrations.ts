@@ -315,6 +315,43 @@ const MIGRATIONS: Record<string, Migration> = {
 				where trashed_at is null`.execute(db);
 		},
 	},
+	"0011_media": {
+		async up(db) {
+			// The media library (doc 09). A key is written once and belongs to one file.
+			await db.schema
+				.createTable("media")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("folder_id", "text")
+				.addColumn("name", "text", (column) => column.notNull())
+				.addColumn("kind", "text", (column) => column.notNull())
+				.addColumn("mime", "text", (column) => column.notNull())
+				.addColumn("size", "integer", (column) => column.notNull())
+				.addColumn("original_key", "text", (column) => column.notNull().unique())
+				.addColumn("original_width", "integer")
+				.addColumn("original_height", "integer")
+				.addColumn("web_key", "text", (column) => column.unique())
+				.addColumn("web_width", "integer")
+				.addColumn("web_height", "integer")
+				.addColumn("uploaded_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.addColumn("trashed_at", "timestamptz")
+				.execute();
+			await db.schema.createIndex("media_folder").on("media").column("folder_id").execute();
+			// Who uses a file: one owner, an entry or a template, gone with its owner (a purge, a removed collection).
+			await db.schema
+				.createTable("media_uses")
+				.addColumn("media_id", "text", (column) => column.notNull().references("media.id").onDelete("cascade"))
+				.addColumn("entry_id", "text", (column) => column.references("entries.id").onDelete("cascade"))
+				.addColumn("template_id", "text", (column) => column.references("templates.id").onDelete("cascade"))
+				.addColumn("place", "text", (column) => column.notNull())
+				.addCheckConstraint("media_uses_one_owner", sql`(entry_id is null) <> (template_id is null)`)
+				.execute();
+			await sql`create unique index media_uses_place
+				on media_uses (media_id, coalesce(entry_id, ''), coalesce(template_id, ''), place)`.execute(db);
+			await db.schema.createIndex("media_uses_entry").on("media_uses").column("entry_id").execute();
+			await db.schema.createIndex("media_uses_template").on("media_uses").column("template_id").execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

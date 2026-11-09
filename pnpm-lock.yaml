@@ -21,6 +21,15 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^21.2.3
         version: 21.2.3
+      '@monti-cms/admin':
+        specifier: workspace:*
+        version: link:packages/admin
+      '@monti-cms/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@playwright/test':
+        specifier: 1.64.1
+        version: 1.64.1
       '@tailwindcss/node':
         specifier: ^4.3.3
         version: 4.3.3
@@ -36,6 +45,15 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.3.0(@types/react@19.3.0)
       '@vitest/browser-playwright':
         specifier: 4.1.12
         version: 4.1.12(playwright@1.64.1)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.12)
@@ -45,12 +63,18 @@ importers:
       knip:
         specifier: ^6.41.0
         version: 6.41.0
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.8
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
       lint-staged:
         specifier: ^17.6.0
         version: 17.6.0
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.1
       playwright:
         specifier: 1.64.1
         version: 1.64.1
@@ -60,6 +84,12 @@ importers:
       postcss:
         specifier: ^8.5.28
         version: 8.5.28
+      react:
+        specifier: ^19
+        version: 19.2.3
+      react-dom:
+        specifier: ^19
+        version: 19.2.3(react@19.2.3)
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -1253,6 +1283,11 @@ packages:
     resolution: {integrity: sha512-UqGPmo56KDfLlfXFAFIrNflHT8tFxWGEivWg3Zeyp4Uy2NlKN1FGPr6/BxcLGG3+kZ6Wp14g5Uj+n71boqZfiw==}
     cpu: [x64]
     os: [win32]
+
+  '@playwright/test@1.64.1':
+    resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -4066,6 +4101,10 @@ snapshots:
 
   '@oxc-resolver/binding-win32-x64-msvc@11.24.2':
     optional: true
+
+  '@playwright/test@1.64.1':
+    dependencies:
+      playwright: 1.64.1
 
   '@polka/url@1.0.0-next.29': {}
 

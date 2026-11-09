@@ -22,5 +22,6 @@
 		".storybook",
 		"test",
 		"../../testing"
-	]
+	],
+	"exclude": ["../../testing/usability"]
 }

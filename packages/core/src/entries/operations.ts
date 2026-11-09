@@ -4,6 +4,7 @@ import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
+import { checkMediaValues } from "../media/uses";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
@@ -192,6 +193,7 @@ export const entryOperations = [
 			if (input.locale !== undefined && input.locale !== source)
 				throw new CheckError({ key: "entries.notSourceLocale", values: { locale: input.locale, source } });
 			checkDraft(ctx.site.schema(), input.collection, input);
+			await checkMediaValues(ctx.db, ctx.site.schema(), input.collection, input.values);
 			if (input.template !== undefined && input.doc !== undefined)
 				throw new CheckError({ key: "entries.docAndTemplate" });
 			await checkBodyOf(ctx, input.doc, null);
@@ -366,6 +368,7 @@ export const entryOperations = [
 			const entry = await editableEntry(ctx, input.id, input.version);
 			const schema = ctx.site.schema();
 			checkDraft(schema, entry.collection, input);
+			await checkMediaValues(ctx.db, schema, entry.collection, input.values);
 			// A translation's `same` fields are the source's: they are changed there (doc 04, field values).
 			if (isTranslation(schema, entry))
 				for (const field of Object.keys(input.values ?? {})) {

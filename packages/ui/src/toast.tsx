@@ -114,6 +114,8 @@ export function Toaster({ duration }: { duration?: number }) {
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
 			toastOptions={{ classNames: { toast: "flex! w-full justify-center" } }}
 			visibleToasts={3}
+			// One over the other, each readable: a toast behind another would say nothing until pointed at.
+			expand
 			// Important: the engine's own stylesheet sets the width of the stack (`width: var(--width)`) and is not in a layer.
 			className="w-[min(560px,calc(100vw-32px))]!"
 		/>

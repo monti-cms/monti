@@ -8,7 +8,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
-import type { Transport } from "./transport";
+import { httpUploader, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
 export type AdminBlockComponent = ComponentType<{
@@ -51,6 +51,7 @@ export function createScreenChannel(): ScreenChannel {
 
 type AdminContext = {
 	transport: Transport;
+	uploader: Uploader;
 	language: Language;
 	/** The site's name over the sidebar and the login form. */
 	siteName: string;
@@ -75,16 +76,22 @@ const Context = createContext<AdminContext | null>(null);
 
 const BUNDLES: MessageBundle[] = [adminMessages, coreMessages];
 
+/** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
+const NO_BLOCKS: AdminBlockDefinition[] = [];
+
 export function AdminProvider({
 	transport,
+	uploader,
 	language = "ko",
 	siteName,
 	apiBase = "/admin/api",
 	screen,
-	blocks = [],
+	blocks = NO_BLOCKS,
 	children,
 }: {
 	transport: Transport;
+	/** How file bytes go up; over HTTP at `apiBase` when left out. Storybook hands in one of its own. */
+	uploader?: Uploader;
 	language?: Language;
 	siteName: string;
 	apiBase?: string;
@@ -110,6 +117,7 @@ export function AdminProvider({
 				return () => listeners.delete(listener);
 			},
 			transport,
+			uploader: uploader ?? httpUploader(apiBase),
 			language,
 			siteName,
 			apiBase,
@@ -117,7 +125,7 @@ export function AdminProvider({
 			t: (message, values) =>
 				formatMessage(BUNDLES, language, typeof message === "string" ? { key: message, values } : message),
 		};
-	}, [transport, language, siteName, apiBase, screen, blocks]);
+	}, [transport, uploader, language, siteName, apiBase, screen, blocks]);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
 	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;

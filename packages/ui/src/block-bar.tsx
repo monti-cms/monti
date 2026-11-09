@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode, Ref } from "react";
 import { cn } from "./cn";
 
 /**
@@ -31,4 +31,29 @@ function ResizeCorner({
 	);
 }
 
-export { ResizeCorner };
+/** The box of a block with a size of its own (an image): its corners and tool row hang off it. With no `width` it fills the column. */
+function BlockBox({ width, ref, children }: { width?: number | null; ref?: Ref<HTMLDivElement>; children: ReactNode }) {
+	return (
+		<div
+			ref={ref}
+			data-slot="block-box"
+			className="relative w-full"
+			style={width ? { width, maxWidth: "100%" } : undefined}
+		>
+			{children}
+		</div>
+	);
+}
+
+/**
+ * Where a selected block's tool row stands: over the block's top left, outside it, where it covers no text. Its parent is the block's picture box (position relative).
+ */
+function BlockBarPlace({ children }: { children: ReactNode }) {
+	return (
+		<div data-slot="block-bar-place" contentEditable={false} className="absolute bottom-full left-0 z-1 mb-monti-8">
+			{children}
+		</div>
+	);
+}
+
+export { BlockBarPlace, BlockBox, ResizeCorner };

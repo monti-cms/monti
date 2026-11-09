@@ -363,6 +363,7 @@ export function ColumnMenu(props: MenuProps) {
 		case "select":
 			return <ValuesMenu {...props} />;
 		case "text":
+		case "media":
 			return <EmptyMenu {...props} />;
 	}
 }

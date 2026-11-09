@@ -17,7 +17,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import { BlockIcon } from "./block-icon";
-import { type BodyCatalogs, NOT_FROM_MENU, needsAttrs } from "./catalog";
+import { type BodyCatalogs, FROM_LIBRARY, needsAttrs } from "./catalog";
 import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
 import { docToEditor } from "./convert";
 import { insertFootnote } from "./footnotes";
@@ -97,11 +97,14 @@ export function useSlashMenu({
 	catalogs,
 	templates,
 	editorRef,
+	onLibrary,
 }: {
 	catalogs: BodyCatalogs;
 	/** The templates group; off where a template itself is written. */
 	templates: boolean;
 	editorRef: { current: Editor | null };
+	/** Opens the library's window for an image or a file, to go where the "/" was (doc 09). Without it (a site with no storage) the menu has no such rows. */
+	onLibrary?: (kind: "image" | "file") => void;
 }) {
 	const { t } = useAdmin();
 	const [open, setOpen] = useState<Open | null>(null);
@@ -131,8 +134,8 @@ export function useSlashMenu({
 			.filter(
 				(block) =>
 					block.menu !== null &&
-					!NOT_FROM_MENU.has(block.type) &&
-					(block.type === "table" || block.type === "footnote" || !needsAttrs(block)) &&
+					(FROM_LIBRARY[block.type] ? onLibrary !== undefined : true) &&
+					(block.type === "table" || block.type === "footnote" || FROM_LIBRARY[block.type] || !needsAttrs(block)) &&
 					!["paragraph", "heading", "bulletList", "orderedList", "checklist", "quote", "codeBlock"].includes(
 						block.type,
 					),
@@ -149,6 +152,9 @@ export function useSlashMenu({
 					if (block.type === "table") return putIn(editor, open, placeTable(editor));
 					// A footnote: its number where the "/" was, its text at the end of the body.
 					if (block.type === "footnote") return putIn(editor, open, (tr) => insertFootnote(tr, tr.selection.from));
+					// The "/" goes now, and the file goes in its place when one is chosen.
+					const library = FROM_LIBRARY[block.type];
+					if (library) return putIn(editor, open, () => onLibrary?.(library));
 					const type = editor.schema.nodes[nodeName(block.type)];
 					if (!type) return;
 					const node = type.createAndFill() ?? type.create();
@@ -175,7 +181,7 @@ export function useSlashMenu({
 		// In the order the menu shows them, group by group: the arrow keys step through the index, so a row drawn in another group (the divider is
 		// a text row) must not sit elsewhere in it.
 		return [...text, ...others, ...shown].sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group));
-	}, [catalogs, templates, list.data, t, open, get]);
+	}, [catalogs, templates, list.data, t, open, get, onLibrary]);
 
 	const shownItems = useMemo(() => {
 		if (!open) return [];

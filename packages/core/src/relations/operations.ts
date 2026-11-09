@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
+import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
 import {
 	generateUniqueSlug,
@@ -786,6 +787,8 @@ export const relationOperations = [
 			if (!colDef) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 			if (colDef.kind !== "item")
 				throw new CheckError({ key: "items.notItem", values: { collection: input.collection } });
+			for (const locale of Object.values(input.locales))
+				await checkMediaValues(ctx.db, schema, input.collection, locale.values);
 		},
 		async run(input, ctx) {
 			const group = input.group ?? randomUUID();

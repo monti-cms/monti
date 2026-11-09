@@ -14,7 +14,7 @@
 
 ## 테스트의 두 종류
 
-- **동작**: 코드가 하는 일. 아래의 L1~L4 층이다. 이 페이지는 이것을 다룬다.
+- **동작**: 코드가 하는 일. 아래의 L1~L5 층이다. 이 페이지는 이것을 다룬다.
 - **모양**: 관리자 화면이 어떻게 보이는지. Storybook 스토리, 시각 비교, 감사다(`packages/ui/visual`, `packages/ui` README 참고).
   동작 테스트는 모양을 검사하지 않는다. 클래스 이름, 페이지 위 요소의 순서, 폭을 보지 않는다.
 
@@ -26,23 +26,20 @@
 |---|---|---|---|---|
 | L1 로직 | 코드뿐 | `foo.test.ts`, JSX가 필요하면 `foo.test.tsx`(서버에서 HTML로 렌더하기 등) | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
 | L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.int.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
-| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`(JSX가 없으면 `foo.dom.test.ts`); 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx`(JSX가 없으면 `foo.browser.test.ts`) | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
-| L4 흐름 | 묶은 패키지로 설치한 예제 앱, 그 데이터베이스, 브라우저 | `flows/<flow>.flow.ts` | Playwright (`pnpm flows`) | 글을 쓰고, 발행하고, 사이트에서 보기 |
+| L3 부품 | `@monti-cms/ui`의 부품 하나 | `foo.browser.test.tsx` | Vitest 브라우저 모드 | 메뉴의 키보드, 끌기 |
+| L4 화면 | PGlite 위의 사이트와 관리자 화면 전체, 스토리 장면 위의 실제 입력 | `foo.screen.test.tsx` | Vitest 브라우저 모드 (`pnpm test:browser`) | 흐름의 단계, `testing/scenes.ts`의 장면 |
+| L5 흐름 | 시험용 서버(`testing/e2e`), 진짜 Postgres, HTTP, 디스크, 브라우저 | `testing/e2e/<flow>.e2e.ts` | Playwright (`pnpm test:e2e`) | 파일을 올리고, 글에 넣고, 발행하고, 사이트에서 보기 |
 
 **동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
 데이터베이스, HTTP 라우트, 화면을 거쳐 다시 테스트하지 않는다. 높은 층은 층들이 이어지는지(라우트가 서비스를 부르고, 화면이 요청을 보낸다)를
-검사하고, 모든 경우를 다시 검사하지 않는다. L4는 관리자 화면 디자인(`docs/design/admin`)의 🔴 흐름([기능의 중요도](testing/features.md))마다 테스트
-하나를 두고, 그 밖에는 없다. 흐름마다 지키는 이음매와 끊어 보는 법은 [흐름 테스트가 지키는 이음매](testing/flows.md)에 있다. L4는 PR마다 돌고
-재시도하지 않는다. 실패하면 그 테스트나 앱을 고친다.
-`pnpm flows`는 시험용 데이터베이스의 스키마 `cms_e2e_flows`를 매번 비우고 표를 만든 뒤 흐름을 돌린다. 처음 한 번과 패키지를 고친 뒤에는
-`pnpm flows --prepare`로 패키지를 묶어 예제 앱에 설치한다.
-흐름은 예제 앱의 복사본(`flows/.app`)에서 돈다. 스키마 화면이 `monti.schema.ts`를 고쳐 쓰기 때문이다. 복사본은 미디어를 디스크에
-저장하고(`flows/overlay`), 처음 설치 흐름만 비밀번호 로그인을 쓰는 두 번째 복사본(`flows/.app-login`)에서 돈다.
+검사하고, 모든 경우를 다시 검사하지 않는다. L5는 조각을 다 합쳐야만 깨지는 이음매만 본다(HTTP와 쿠키, 디스크의 파일, 브라우저가 그림을 해독하는지, 사이트에 그린 결과).
+흐름마다 지키는 이음매와 끊어 보는 법은 [흐름 테스트가 지키는 이음매](testing/flows.md)에 있다. L5는 PR마다 돌고 재시도하지 않는다. 실패하면 그 테스트나 앱을 고친다.
+`pnpm test:e2e`는 시험용 데이터베이스의 스키마 `monti_e2e`를 매번 비우고 표를 만든 뒤 흐름을 돌린다. 사이트에 붙이는 길(T13)이 생기기 전이라 `testing/e2e`의 작은 서버가 관리자 API와 관리자 화면을 띄운다.
 
 **jsdom이냐 실제 브라우저냐.** jsdom은 아무것도 그리지 않는다. 모든 상자는 0 × 0이고, 캐럿에는 위치가 없으며, 포커스와 타이머는 브라우저처럼 움직이지 않는다.
 동작이 그중 어느 것에도 기대지 않는 컴포넌트(메뉴의 항목, 폼의 검증)에는 괜찮다. 위치, 크기, 포커스 이동, 편집기가 필요한 테스트는
 `*.browser.test.tsx`로 간다. jsdom을 넘기려고 크기를 지어내거나 브라우저 API를 스텁하는 테스트도 그쪽에 속한다.
-브라우저 테스트는 Vitest 브라우저 모드로 Chromium에서 돈다(Playwright, 1440 × 900, UTC). 처음 한 번 `pnpm exec playwright install chromium`으로
+L3, L4의 브라우저 테스트는 Vitest 브라우저 모드로 Chromium에서 돈다(Playwright, 1440 × 900, UTC). 처음 한 번 `pnpm exec playwright install chromium`으로
 브라우저를 받고, admin은 `pnpm --filter @monti-cms/admin test:browser`, ui는 `pnpm --filter @monti-cms/ui test:browser`로 돌린다. 브라우저에서는 Node 모듈을 읽을 수 없으므로, 브라우저 테스트가 쓰는
 도우미는 서버 코드를 끌어오지 않는다(`@monti-cms/core/testing` 대신 그 모듈을 직접 가져온다). 서버 코드가 꼭 필요한 검사(가짜 API의 경로가
 코어에 있는지)는 Node에서 도는 브라우저 명령(`commands`)으로 테스트가 끝난 뒤 한다. 단축키는 `userEvent.keyboard`(`vitest/browser`)로
@@ -210,3 +207,12 @@ core 전체의 변이 점수는 재지 않는다. 한 번 재는 데 두 시간�
 - 다른 패키지의 CI 관문(core는 `pnpm check:tests`로 막는다).
 
 각각은 그것이 필요한 패키지를 이 규칙으로 옮길 때 더한다.
+
+## 사용성 확인
+
+2026-11-09, 소유자: 문서 09에서 해 본 결과로 정했다.
+
+- **GPT-6.1 Terra 시험은 필수 절차가 아니다.** 큰 화면이 새로 생겨 소유자가 부탁할 때만 돌린다. 드라이버(`testing/usability`)는 그때를 위해 남긴다. 4회 시험에서 문구와 상태 변화의 헷갈림은 찾았지만, 가장 큰 결함은 시키지 않은 행동에 있어 찾지 못했다.
+- **겹침 자동 검사는 넣지 않는다.** 호버 때 나오는 버튼까지 도는 검사를 임시로 만들어 보니 일부러 만든 겹침은 잡았지만, 실제 화면에서는 쓰는 데 지장 없는 툴팁 하나만 나왔다. 같은 겹침이 되풀이되면 그때 다시 본다.
+- **결함이 나오면 그 흐름을 L4나 L5 테스트로 더한다.** 파일 여러 개 놓기, 붙인 뒤 이어 쓰기가 그렇게 들어갔다.
+- **보기에 어색한 것과 문구는 쓰면서 고친다.**

@@ -24,7 +24,7 @@
 |---|---|---|
 | 언어 탭 | `TabLinks` + `TabLink`, 원문이 바뀐 언어는 `ChangeDot` | [editor.md](editor.md)와 같다. "+ 언어"도 같다. |
 | "✦ 번역" (탭 줄 오른쪽) | `TextButton tone="proposal"`(`Spark`) 뒤에 `Separator orientation="vertical" length="control"` | 흐린 블록이 남아 있을 때만 보인다. 남은 흐린 블록을 모두 번역한다. |
-| 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. |
+| 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. 파일이 올라가는 동안에는 먼저 묻는다(editor.md, "올리는 중에 묻기"). |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
 | 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`와 `data-source-placeholder`) | 아직 정하지 않은 블록. 비어 있고 원문은 자리 표시 글로만 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 자리 표시가 사라지고 친 글만 남는다. |
 | 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 유지" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |

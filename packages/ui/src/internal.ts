@@ -21,7 +21,7 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Banner } from "./banner";
-export { ResizeCorner } from "./block-bar";
+export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
@@ -156,6 +156,7 @@ export {
 export { FieldGroup, FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
+export { FileUseRow } from "./file-use-row";
 export { FilterButton } from "./filter-button";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export {

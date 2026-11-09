@@ -45,7 +45,7 @@ import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } 
 import { FormatBarRequest, FormatButton, type FormatMark } from "../format-bar";
 import { Grid } from "../grid";
 import { IconButton } from "../icon-button";
-import { FolderParent, type IconName, iconsByName } from "../icons";
+import { FolderParent, type IconName, iconsByName, Renew, TrashCan } from "../icons";
 import { Image as ImagePart } from "../image";
 import { Input as InputPart } from "../input";
 import { LanguageRow, LanguageSource } from "../language-row";
@@ -1352,7 +1352,11 @@ function ChangeRow({ what, result }: { what?: string; result?: string }) {
 
 /** Where files can be dropped (the folders and the file grid); `over` while files are dragged over it. */
 function DropZone({ over, children }: { over?: boolean; children?: React.ReactNode }) {
-	return <DropArea over={over}>{children}</DropArea>;
+	return (
+		<DropArea flush over={over}>
+			{children}
+		</DropArea>
+	);
 }
 
 /** The grid of a library's files (`MediaTile`s), or of its folders (`folders`), set in from the column as the design system's tiles are. */
@@ -1366,7 +1370,7 @@ function MediaGrid({ folders, children }: { folders?: boolean; children?: React.
 
 /**
  * One file of a grid: its `name`, the `detail` line, its picture (`picture`, a file's address, read from the data) or, for a file with none, its
- * extension (`ext`). `status` for a file going up or one that cannot be taken, with `progress`; `actions` are what can be done with a failed one.
+ * extension (`ext`). `status` for a file going up or one the network cut off, with `progress`; `retry` and `remove` name that file's two buttons.
  */
 function MediaTile({
 	name,
@@ -1375,7 +1379,8 @@ function MediaTile({
 	ext,
 	status,
 	progress,
-	actions,
+	retry,
+	remove,
 	selected,
 	picking,
 }: {
@@ -1383,9 +1388,10 @@ function MediaTile({
 	detail?: string;
 	picture?: string;
 	ext?: string;
-	status?: "ready" | "uploading" | "failed" | "interrupted";
+	status?: "ready" | "uploading" | "failed";
 	progress?: number;
-	actions?: readonly { label: string }[];
+	retry?: string;
+	remove?: string;
 	selected?: boolean;
 	picking?: boolean;
 }) {
@@ -1396,7 +1402,7 @@ function MediaTile({
 			title={name}
 			detail={detail}
 			preview={
-				ext ? (
+				ext && status !== "failed" ? (
 					<FilePreview ext={ext} />
 				) : address ? (
 					<ImagePart src={address} alt="" ratio="photo" radius="none" />
@@ -1406,7 +1412,20 @@ function MediaTile({
 			}
 			status={status}
 			progress={progress}
-			actions={actions?.map((action) => ({ label: action.label, onClick: () => {} }))}
+			retry={
+				retry ? (
+					<IconButton label={retry}>
+						<Renew aria-hidden />
+					</IconButton>
+				) : undefined
+			}
+			action={
+				remove ? (
+					<IconButton label={remove} size="xs" tone="danger">
+						<TrashCan aria-hidden />
+					</IconButton>
+				) : undefined
+			}
 			selected={selected}
 			picking={picking}
 		/>
@@ -3111,7 +3130,8 @@ export const CATALOG = {
 			ext: "text",
 			status: "variant",
 			progress: "state",
-			actions: "data:label",
+			retry: "text",
+			remove: "text",
 			selected: "flag",
 			picking: "flag",
 		},

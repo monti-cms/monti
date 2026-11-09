@@ -56,8 +56,10 @@ function Affix({
 			onClick={focusInput}
 			className={cn(
 				cn(
-					"group/affix flex cursor-text items-center pl-monti-8 font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
+					"group/affix flex cursor-text items-center font-mono text-monti-body has-[:disabled]:cursor-default has-[:disabled]:opacity-45",
 				),
+				// The fixed text before the input has the field's inset; with none, the input's own is the only one, as in any other field.
+				prefix && "pl-monti-8",
 				size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
 				bare &&
 					"border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",

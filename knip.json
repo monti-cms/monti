@@ -2,7 +2,15 @@
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"workspaces": {
 		".": {
-			"entry": ["scripts/*.mjs", "testing/scenes.ts"]
+			"entry": [
+				"scripts/*.mjs",
+				"testing/scenes.ts",
+				"testing/e2e/*.e2e.ts",
+				"testing/e2e/playwright.config.ts",
+				"testing/e2e/vite.config.ts",
+				"testing/e2e/main.tsx",
+				"testing/usability/do.ts"
+			]
 		},
 		"packages/core": {
 			"entry": ["src/**/*.test.ts", "src/__test__/**"]

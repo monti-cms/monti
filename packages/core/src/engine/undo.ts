@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { ForbiddenError } from "../errors";
+import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
 import { type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
 
@@ -55,6 +56,20 @@ export async function undo(
 ): Promise<UndoPlan> {
 	const { snapshots, ...plan } = await planUndo(engine, trx, activityId);
 	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore(trx, ref.id, before);
+	await rewriteUses(
+		trx,
+		engine.site.schema(),
+		snapshots.map(({ ref }) => ref),
+	);
+	// After everything is back: a folder and its files come back together, in no particular order. A folder the undo removed may hold
+	// files moved in since, which are in no snapshot.
+	const folders = snapshots.filter(({ ref }) => ref.kind === "folder").map(({ ref }) => ref.id);
+	const moved =
+		folders.length === 0 ? [] : await trx.selectFrom("media").select("id").where("folder_id", "in", folders).execute();
+	await leaveNoFileInAGoneFolder(trx, [
+		...snapshots.filter(({ ref }) => ref.kind === "media").map(({ ref }) => ref.id),
+		...moved.map(({ id }) => id),
+	]);
 	await trx.updateTable("monti_activity").set({ undone_at: engine.now() }).where("id", "=", activityId).execute();
 	return plan;
 }

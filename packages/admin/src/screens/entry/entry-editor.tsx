@@ -1,4 +1,4 @@
-import { type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
+import { type EntryState, mediaValueOf, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -39,11 +39,13 @@ import { Archive, ChevronLeft, Copy, Export, OverflowMenuHorizontal, RightPanelO
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
-import { useLeaveGuard } from "../../draft/leave-guard";
+import { useLeaveFiles, useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
+import { openImageCard } from "../../editor/media-context";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
+import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { SessionEndedBanner } from "../frame/session-ended";
@@ -110,6 +112,7 @@ export function EntryEditor({
 	const [panel, setPanel] = useState(true);
 	const [tab, setTab] = useState(0);
 	const [todoOpen, setTodoOpen] = useState(false);
+	const [altCard, setAltCard] = useState<string | null>(null);
 	const body = useRef<Editor | null>(null);
 	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
 	const keepEditor = useCallback((made: Editor | null) => {
@@ -117,6 +120,11 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
+	const fieldUploads = useFieldUploads((field, item, altThen) => {
+		// The words there when the file set off were for the old picture (2026-11-09, owner). Only what was written since is for this one.
+		const alt = mediaValueOf(editor.value(`values.${field}`))?.alt;
+		editor.set(`values.${field}`, { media: item.id, ...(alt && alt !== altThen ? { alt } : {}) });
+	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
 	const archive = useOperation("entries.archive");
@@ -139,10 +147,16 @@ export function EntryEditor({
 	const translation = useTranslation(id, schema.data?.schema, editor);
 	const compared = translation.compared;
 	const [view, setView] = useState<SourceView>("side");
+	const leaveFiles = useLeaveFiles();
 	const showView = (next: SourceView) => {
-		setView(next);
-		// The source takes the place of the properties beside the text (translation.md, the head row).
-		if (next !== "off") setPanel(false);
+		const change = () => {
+			setView(next);
+			// The source takes the place of the properties beside the text (translation.md, the head row).
+			if (next !== "off") setPanel(false);
+		};
+		// Side by side the body is drawn elsewhere: it starts again, and a picture going up in it stops.
+		if ((next === "paired") !== (view === "paired")) leaveFiles(change);
+		else change();
 	};
 	const opensBeside = translation.isTranslation && view !== "off";
 	useEffect(() => {
@@ -243,12 +257,18 @@ export function EntryEditor({
 				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(task.field ?? "")),
 			);
 			if (index >= 0) setTab(index);
-			const field = task.field;
-			requestAnimationFrame(() => document.getElementById(fieldInputId(field))?.focus());
+			// A picture's words are written in its settings card, as a body's image has them (flow 1·12).
+			if (task.code === "missingAlt") setAltCard(task.field);
+			else {
+				const field = fieldInputId(task.field);
+				requestAnimationFrame(() => document.getElementById(field)?.focus());
+			}
 			return;
 		}
 		const view = body.current;
 		if (!view) return;
+		// An image's words are written in its settings card, not in the text (flow 1·12).
+		if (task.code === "missingAlt" && task.block && openImageCard(view, task.block)) return;
 		let at: number | null = null;
 		view.state.doc.descendants((node, pos) => {
 			if (at !== null) return false;
@@ -604,6 +624,10 @@ export function EntryEditor({
 						onTab={setTab}
 						readOnly={readOnly}
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
+						sourcePublished={Boolean(compared?.source.publishedAt)}
+						uploads={fieldUploads}
+						altCard={altCard}
+						onAltCard={setAltCard}
 					/>
 				) : null}
 			</Inline>

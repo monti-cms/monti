@@ -28,19 +28,19 @@ import {
 } from "@monti-cms/ui";
 import { Close, Renew } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
+import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
+import { MediaField, SharedMediaValue } from "./media-field";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
 /** The id of a field's input: a to-do row puts the cursor there. */
 export const fieldInputId = (field: string) => `monti-entry-${field}`;
 
-/**
- * The kinds of field the panel holds. A media field picks from doc 09's library: until then it is not in the panel (tracker T67).
- */
-const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation"]);
+/** The kinds of field the panel holds. */
+const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media"]);
 
 /** The fields of a collection the panel shows, in the schema's order. The title is the editor's heading, not a property (flow 1). */
 export function panelFields(schema: SchemaRead | null, collection: string) {
@@ -477,6 +477,10 @@ export function EntryProperties({
 	onTab,
 	readOnly,
 	shared,
+	sourcePublished,
+	uploads,
+	altCard,
+	onAltCard,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -486,6 +490,13 @@ export function EntryProperties({
 	readOnly: boolean;
 	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
 	shared?: Record<string, unknown> | null;
+	/** Whether those values are what the source has on the site (doc 04, principle 5), or its working copy, not being on the site. */
+	sourcePublished?: boolean;
+	/** The files going up for the media fields: the editor's, so they outlive this panel. */
+	uploads: FieldUploads;
+	/** The media field whose picture settings are open: a to-do row opens them. */
+	altCard: string | null;
+	onAltCard: (field: string | null) => void;
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -520,10 +531,17 @@ export function EntryProperties({
 		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
 		if (shared && localeModeOf(key, def) === "same") {
 			const sourceNote = (
-				<Text variant="caption" tone="faint">
+				<Text variant="micro" tone="faint">
 					{t("translation.sharedField")}
 				</Text>
 			);
+			if (def.kind === "media")
+				return (
+					<FormField key={key}>
+						<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+						<SharedMediaValue value={shared[key]} empty={empty} />
+					</FormField>
+				);
 			if (def.kind === "relation") {
 				return (
 					<FormField key={key}>
@@ -552,6 +570,34 @@ export function EntryProperties({
 				</FormField>
 			);
 		}
+		if (def.kind === "media")
+			return (
+				<MediaField
+					key={key}
+					id={id}
+					field={key}
+					uploads={uploads}
+					card={altCard === key}
+					onCard={(open) => onAltCard(open ? key : null)}
+					label={values[key]?.label ?? key}
+					required={marksRequired && required(key)}
+					accept={def.accept}
+					value={value}
+					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
+					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
+					whose={
+						shared && localeModeOf(key, def) === "fromSource"
+							? {
+									following: t(sourcePublished ? "translation.followsPublished" : "translation.followsSource"),
+									own: t("translation.ownValue"),
+									clear: t("translation.backToSource", { label: values[key]?.label ?? key }),
+								}
+							: undefined
+					}
+					readOnly={readOnly}
+					onChange={(next) => editor.set(path, next)}
+				/>
+			);
 		const input = () => {
 			if (def.kind === "slug")
 				return (

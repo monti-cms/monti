@@ -9,6 +9,7 @@ import type { BodyCatalogs, Catalog, CatalogBlock } from "./catalog";
 import { docFromEditor, docToEditor } from "./convert";
 import { Footnotes } from "./footnotes";
 import { bodyKeys } from "./keys";
+import { MEDIA_VIEWS } from "./media-views";
 import { BlockIds, bodyStates } from "./plugins";
 import { ProposalMarks } from "./proposal-marks";
 import { bodyExtensions, nodeName } from "./schema";
@@ -33,6 +34,7 @@ export function useBodyEditor({
 	onChange,
 	keyDown,
 	onSelection,
+	onFiles,
 	onTakeProposal,
 }: {
 	doc: Doc;
@@ -41,13 +43,16 @@ export function useBodyEditor({
 	onChange: (doc: Doc) => void;
 	keyDown?: (event: KeyboardEvent) => boolean;
 	onSelection?: (editor: Editor) => void;
+	/** Files pasted or dropped in the text, and where (doc 09): `true` when they were taken. */
+	onFiles?: (files: File[], at: number | null, editor: Editor) => boolean;
 	/** The person started changing a block a body proposal touches: the proposal is taken first. */
 	onTakeProposal?: (id: string) => void;
 }) {
 	const { t, blocks } = useAdmin();
 	const { kit, offered } = catalogs;
-	const latest = useRef({ t, offered, onChange, keyDown, onSelection, onTakeProposal });
-	latest.current = { t, offered, onChange, keyDown, onSelection, onTakeProposal };
+	const latest = useRef({ t, offered, onChange, keyDown, onSelection, onTakeProposal, onFiles });
+	latest.current = { t, offered, onChange, keyDown, onSelection, onTakeProposal, onFiles };
+	const made = useRef<Editor | null>(null);
 
 	const extensions = useMemo(() => {
 		const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
@@ -64,7 +69,7 @@ export function useBodyEditor({
 			return block.type !== "heading" || now.headings.includes(Number(node.attrs.data?.level ?? 2));
 		};
 		return [
-			...bodyExtensions(kit, boxLabel, blocks),
+			...bodyExtensions(kit, boxLabel, blocks, MEDIA_VIEWS),
 			BlockIds,
 			bodyStates({
 				labels: () => ({ placeholder: latest.current.t("editor.placeholder"), off: latest.current.t("editor.off") }),
@@ -92,6 +97,18 @@ export function useBodyEditor({
 					if (view.composing || event.isComposing || event.keyCode === 229) return false;
 					return latest.current.keyDown?.(event) ?? false;
 				},
+				handlePaste: (_view, event) => {
+					const files = [...(event.clipboardData?.files ?? [])];
+					return files.length > 0 && made.current
+						? (latest.current.onFiles?.(files, null, made.current) ?? false)
+						: false;
+				},
+				handleDrop: (view, event) => {
+					const files = [...(event.dataTransfer?.files ?? [])];
+					if (files.length === 0 || !made.current) return false;
+					const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? null;
+					return latest.current.onFiles?.(files, at, made.current) ?? false;
+				},
 			},
 			onUpdate: ({ editor: current }) => {
 				latest.current.onChange(docFromEditor(current.getJSON(), kit));
@@ -101,6 +118,7 @@ export function useBodyEditor({
 		},
 		[extensions],
 	);
+	made.current = editor;
 	return editor;
 }
 

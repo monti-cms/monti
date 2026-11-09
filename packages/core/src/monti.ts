@@ -14,6 +14,9 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
+import { mediaOperations } from "./media/operations";
+import { mediaRecord } from "./media/record";
+import type { Storage } from "./media/storage";
 import {
 	type Actor,
 	type AnyOperation,
@@ -47,6 +50,8 @@ export type Plugin = {
 	/** Body blocks and marks it brings (doc 03). */
 	blocks?: AnyBlockDefinition[];
 	marks?: MarkDefinition[];
+	/** Where the site's media files go (doc 09). A site has one. */
+	storage?: Storage;
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -194,6 +199,7 @@ export function createMonti(options: MontiOptions) {
 		entryRecord,
 		templateRecord,
 		folderRecord,
+		mediaRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -201,10 +207,16 @@ export function createMonti(options: MontiOptions) {
 		recordKinds.set(kind.kind, kind);
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
+	const storages = plugins.filter((plugin) => plugin.storage);
+	if (storages.length > 1)
+		throw new Error(
+			`Two plugins bring a media storage: ${storages.map((plugin) => plugin.name).join(", ")}. A site has one.`,
+		);
 	const now = options.now ?? (() => new Date());
 	const site = createSite(options.schema ?? EMPTY_SCHEMA, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
+		storage: storages[0]?.storage ?? null,
 		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
@@ -226,6 +238,7 @@ export function createMonti(options: MontiOptions) {
 		...translationOperations,
 		...relationOperations,
 		...folderOperations,
+		...mediaOperations,
 		...bodyOperations,
 		...authOperations,
 	])

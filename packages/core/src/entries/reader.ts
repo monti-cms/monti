@@ -2,6 +2,8 @@ import type { Kysely } from "kysely";
 import { asDoc, type Doc } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import type { Storage } from "../media/storage";
+import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
 import { siteDoc, translatedFields } from "../translations/source";
 import { publicPath } from "./paths";
@@ -19,6 +21,18 @@ export type ResolvedRelation = {
 	fallback?: boolean;
 };
 
+/** A media file as the site uses it: the web size when there is one, the original when it is small enough already (doc 09). */
+export type SiteMedia = {
+	id: string;
+	name: string;
+	kind: "image" | "file";
+	mime: string;
+	size: number;
+	url: string;
+	width: number | null;
+	height: number | null;
+};
+
 /** An entry as the site reads it: only the fields the schema has now (doc 01). */
 export type SiteEntry = {
 	id: string;
@@ -30,6 +44,8 @@ export type SiteEntry = {
 	doc: unknown | null;
 	publishedAt: Date | null;
 	relations?: Record<string, ResolvedRelation | ResolvedRelation[] | null>;
+	/** The media files its fields and body use, by id. There only when the site has a storage and the entry uses a file. */
+	media?: Record<string, SiteMedia>;
 };
 
 export type ReaderOptions = {
@@ -38,6 +54,8 @@ export type ReaderOptions = {
 	/** `MONTI_SECRET`, to open preview links. Without it the reader never shows a working copy. */
 	secret?: string | null;
 	now?: () => Date;
+	/** Where media files are (`monti.site.storage`). Without it an entry's files have no addresses to give. */
+	storage?: Storage | null;
 };
 
 const onlySchemaFields = (schema: Schema, collection: string, values: Record<string, unknown>) =>
@@ -50,6 +68,36 @@ const onlySchemaFields = (schema: Schema, collection: string, values: Record<str
 export function createReader(options: ReaderOptions) {
 	const { db, schema } = options;
 	const now = options.now ?? (() => new Date());
+
+	/** Adds the files an entry uses, so the site can draw them (`renderDocument`'s `mediaUrl` and `mediaSize`). */
+	async function withMedia(entry: SiteEntry): Promise<SiteEntry> {
+		const { storage } = options;
+		if (!storage) return entry;
+		const fields = schema.collections[entry.collection]?.fields ?? {};
+		const ids = [...new Set([...usesInValues(fields, entry.values), ...usesInDoc(entry.doc)].map((use) => use.media))];
+		if (ids.length === 0) return entry;
+		const rows = await db.selectFrom("media").selectAll().where("id", "in", ids).execute();
+		if (rows.length === 0) return entry;
+		return {
+			...entry,
+			media: Object.fromEntries(
+				rows.map((row) => [
+					row.id,
+					{
+						id: row.id,
+						name: row.name,
+						kind: row.kind,
+						mime: row.mime,
+						size: row.size,
+						url: storage.url(row.web_key ?? row.original_key),
+						width: row.web_key ? row.web_width : row.original_width,
+						height: row.web_key ? row.web_height : row.original_height,
+					},
+				]),
+			),
+		};
+	}
+
 	/**
 	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
 	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
@@ -89,7 +137,7 @@ export function createReader(options: ReaderOptions) {
 		// Resolve relations
 		const colDef = schema.collections[base.collection];
 		const relationFields = Object.entries(colDef?.fields ?? {}).filter(([, f]) => f.kind === "relation");
-		if (relationFields.length === 0) return base;
+		if (relationFields.length === 0) return withMedia(base);
 
 		const relations: Record<string, ResolvedRelation | ResolvedRelation[] | null> = {};
 		for (const [fieldName, fieldDef] of relationFields) {
@@ -150,10 +198,7 @@ export function createReader(options: ReaderOptions) {
 			}
 		}
 
-		return {
-			...base,
-			relations,
-		};
+		return withMedia({ ...base, relations });
 	}
 	return {
 		async entry(where: {

@@ -75,8 +75,11 @@ export type Schema = { locales: LocalesDefinition; collections: Record<string, C
  * How a field's value relates to the language when the schema names no mode: the title is written per language, the address starts from the source's,
  * and every other field is one value for all languages (doc 04).
  */
-export function localeModeOf(name: string, field: FieldDefinition): LocaleMode {
-	return field.locale ?? (name === "title" ? "perLocale" : name === "slug" ? "fromSource" : "same");
+export function localeModeOf(name: string, field: Pick<FieldDefinition, "kind" | "locale">): LocaleMode {
+	if (field.locale) return field.locale;
+	// A translation may use the source's picture or its own (doc 09, 2026-11-09).
+	if (field.kind === "media") return "fromSource";
+	return name === "title" ? "perLocale" : name === "slug" ? "fromSource" : "same";
 }
 
 /** Whether the site writes in more than one language: then the admin shows language tabs, "+ Language" and the list's language column (doc 04). */
