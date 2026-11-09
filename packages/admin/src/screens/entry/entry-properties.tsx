@@ -531,7 +531,7 @@ export function EntryProperties({
 		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
 		if (shared && localeModeOf(key, def) === "same") {
 			const sourceNote = (
-				<Text variant="caption" tone="subtle">
+				<Text variant="micro" tone="subtle">
 					{t("translation.sharedField")}
 				</Text>
 			);

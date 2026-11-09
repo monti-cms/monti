@@ -81,7 +81,7 @@ export function MediaField({
 					required={required}
 					action={
 						whose && !going ? (
-							<Text variant="caption" tone="subtle">
+							<Text variant="micro" tone="subtle">
 								{own ? whose.own : whose.following}
 							</Text>
 						) : undefined
