@@ -69,6 +69,7 @@ import {
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
+import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
@@ -104,30 +105,6 @@ const DROP_HINT = "media-drop";
 const CONNECT_DOCS = "https://github.com/monti-cms/monti#media-storage";
 
 type Go = (route: Route, options?: { replace?: boolean }) => void;
-
-/**
- * What a tile's mono line says: its size or kind and how much it is used, and in a search, where it sits under the open folder. A file right in the open folder keeps its
- * usual line (components/list.md).
- */
-function useFileDetail(searching: boolean, open: readonly string[]) {
-	const { t } = useAdmin();
-	return (item: MediaItem) => {
-		const under = searching ? item.path.slice(open.length) : [];
-		const place = under.length > 0 ? `${under.join(" / ")} · ` : "";
-		const measure = item.kind === "image" ? sizeLabel(item) : formatBytes(item.size);
-		const use = item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed");
-		return `${place}${measure ? `${measure} · ` : ""}${use}`;
-	};
-}
-
-/** What a tile shows of a file: its picture, or for a file with none its icon and type (flow 6·34). */
-function FileThumb({ item }: { item: Pick<MediaItem, "kind" | "name" | "web" | "original"> }) {
-	return item.kind === "image" ? (
-		<Image src={previewUrl(item)} alt="" ratio="photo" radius="none" />
-	) : (
-		<FilePreview ext={extensionLabel(item.name)} />
-	);
-}
 
 /** A file on its way up, in its place in the grid: its bar and turn, or the buttons of one the network cut off (flow 6·03, 6·04, 6·34). */
 function UploadTile({

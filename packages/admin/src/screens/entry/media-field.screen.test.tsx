@@ -12,6 +12,14 @@ const settings = () => page.getByRole("button", { name: "대표 이미지 설정
 const openCard = () => userEvent.click(settings());
 const closeCard = () => userEvent.keyboard("{Escape}");
 const body = () => page.getByRole("textbox", { name: "본문" });
+/** The window opens at the top of the library: the story's files are in a folder. */
+const openAssets = () =>
+	userEvent.click(
+		page
+			.getByRole("dialog")
+			.getByRole("navigation")
+			.getByRole("button", { name: /^Blog Assets/ }),
+	);
 const properties = async () => {
 	const open = page.getByRole("button", { name: "속성" });
 	if (open.elements().length > 0 && open.element().getAttribute("aria-pressed") !== "true") await userEvent.click(open);
@@ -24,6 +32,8 @@ describe("a cover in the property panel", () => {
 		await userEvent.click(cover());
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("heading", { name: "대표 이미지" })).toBeVisible();
+		await openAssets();
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
 		await expect.element(dialog.getByRole("button", { name: /notes-scan/ })).not.toBeInTheDocument();
 		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
@@ -133,6 +143,7 @@ describe("in a translation", () => {
 		const pick = async (name: RegExp) => {
 			await userEvent.click(cover());
 			const dialog = page.getByRole("dialog");
+			await openAssets();
 			await userEvent.click(dialog.getByRole("button", { name }));
 			await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 			await expect.element(dialog).not.toBeInTheDocument();
@@ -193,6 +204,7 @@ describe("in a translation", () => {
 		await properties();
 		await userEvent.click(cover());
 		const dialog = page.getByRole("dialog");
+		await openAssets();
 		await userEvent.click(dialog.getByRole("button", { name: /seoul-night/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 		await expect.element(cover()).toHaveTextContent("seoul-night.jpg");

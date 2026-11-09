@@ -1,4 +1,4 @@
-import { Image, MediaPicker, StatusBar, StatusBarCell, StatusBarSpacer, Tile } from "../../index";
+import { FolderTile, Image, MediaPicker, StatusBar, StatusBarCell, StatusBarSpacer, Tile } from "../../index";
 import {
 	BodyBlock,
 	BodyHeading,
@@ -59,12 +59,12 @@ export function ImageInsertScreen() {
 				open
 				onOpenChange={still}
 				title="라이브러리"
-				allLabel="모든 이미지"
+				topLabel="미디어"
 				folders={[
-					{ id: "Blog Assets", name: "Blog Assets", depth: 0, count: 14 },
-					{ id: "covers", name: "covers", depth: 1, count: 6 },
-					{ id: "diagrams", name: "diagrams", depth: 1, count: 3 },
-					{ id: "Wallpapers", name: "Wallpapers", depth: 0, count: 8 },
+					{ id: "Blog Assets", name: "Blog Assets", depth: 0 },
+					{ id: "covers", name: "covers", depth: 1 },
+					{ id: "diagrams", name: "diagrams", depth: 1 },
+					{ id: "Wallpapers", name: "Wallpapers", depth: 0 },
 				]}
 				folder="Blog Assets"
 				onFolderChange={still}
@@ -77,6 +77,12 @@ export function ImageInsertScreen() {
 				confirmLabel="넣기"
 				onConfirm={still}
 				confirmHidden
+				subfolders={
+					<>
+						<FolderTile name="covers" />
+						<FolderTile name="diagrams" />
+					</>
+				}
 			>
 				{FILES.map((file) => (
 					<Tile

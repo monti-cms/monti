@@ -147,13 +147,13 @@ export function MediaField({
 						// Alt text says what a picture shows, so another file starts with none (2026-11-09, owner). The same file keeps it.
 						onChange(item.id === own?.media ? own : { media: item.id });
 					}}
-					onFiles={([chosen]) => {
+					onFiles={([chosen], folder) => {
 						setPicking(false);
 						if (!chosen) return;
 						const only = accept === "any" ? undefined : "image";
 						// One the library refuses leaves the field as it was.
 						void acceptFiles([chosen], only).then(([taken]) => {
-							if (taken) uploads.add(field, taken, own?.alt, only);
+							if (taken) uploads.add(field, taken, own, folder, only);
 						});
 					}}
 				/>

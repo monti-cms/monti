@@ -47,11 +47,12 @@ async function bytes(mime = "image/jpeg", extension = ".jpg") {
 }
 const upload = async (name: string, more: Record<string, unknown> = {}) =>
 	(await write<MediaItem>("media.upload", { name, original: { key: await bytes() }, ...more })).output;
-const pdf = async (name: string) =>
+const pdf = async (name: string, more: Record<string, unknown> = {}) =>
 	(
 		await write<MediaItem>("media.upload", {
 			name,
 			original: { key: await bytes("application/pdf", ".pdf") },
+			...more,
 		})
 	).output;
 const folder = async (name: string, parentId: string | null = null) =>
@@ -209,6 +210,20 @@ describe("browsing", () => {
 			"cover-top.jpg",
 		]);
 		expect(everywhere.items.find((item) => item.name === "cover-deep.jpg")?.path).toEqual(["Blog Assets", "covers"]);
+	});
+
+	it("09-3 T117 what a window can take narrows every listing and looks for nothing: a folder still lists what sits right in it", async () => {
+		const assets = await folder("Blog Assets");
+		const covers = await folder("covers", assets);
+		await upload("here.jpg", { folderId: assets });
+		await upload("deep.jpg", { folderId: covers });
+		await upload("top.jpg");
+		await pdf("notes.pdf", { folderId: assets });
+		expect(await names({ folder: assets, only: "image" })).toEqual(["here.jpg"]);
+		expect(await names({ folder: covers, only: "image" })).toEqual(["deep.jpg"]);
+		expect(await names({ folder: null, only: "image" })).toEqual(["top.jpg"]);
+		expect(await names({ folder: assets, only: "file" })).toEqual(["notes.pdf"]);
+		expect((await names({ folder: assets, only: "image", search: "e" })).sort()).toEqual(["deep.jpg", "here.jpg"]);
 	});
 
 	it("09-1 kind and use look through folders as a search does: the open folder and those under it, all of them on request, everything from the top", async () => {

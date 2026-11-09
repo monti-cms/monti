@@ -3,12 +3,11 @@
 import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
-import { Count } from "./count";
 import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from "./dialog";
 import { Upload } from "./icons";
-import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { NAV_ROW } from "./nav-link";
+import { SearchBox } from "./search-box";
 import { folderTree, SidebarMenuSub, SidebarMenuSubButton } from "./sidebar";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
@@ -16,24 +15,23 @@ interface MediaPickerFolder {
 	id: string;
 	name: string;
 	depth: number;
-	/** How many files it holds; left out where the number would not match what the picker shows. */
-	count?: number;
 }
 
 /** The deepest a folder is drawn, as in the sidebar's tree. */
 const DEEPEST = 3;
 
 /**
- * The library as a picker (images to insert, a cover image, files to attach): a 760px modal with the folders at the left, a search box and the files as
- * three columns of tiles at the right, "Upload" at the bottom left, and Cancel and the one pill at the bottom right. Choosing and then pressing the
- * pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there (`confirmHidden`). The tiles are `children` (a `Tile` each, `FilePreview` for a file). The folder list is
- * `folders` under the top entry `allLabel`, drawn with the sidebar's own rows (no icon: the window is the library already); `folder` is the picked one, `null` for all.
+ * The library as a picker (images to insert, a cover image, files to attach), and a file browser: a 760px modal with the folders at the left, and at the right a search box over
+ * what the open place holds, its `subfolders` (a `FolderTile` each) over its files as three columns of tiles (`children`: a `Tile` each, `FilePreview` for a file). "Upload" is at
+ * the bottom left, Cancel and the one pill at the bottom right. Choosing and then pressing the pill puts the file in at once; there is no step after it. Until a file is picked the
+ * pill is not there (`confirmHidden`). The folder list is `folders` under the top entry `topLabel`, drawn with the sidebar's own rows (no icon: the window is the library already);
+ * `folder` is the open one, `null` for the top. While a search looks inside a folder, `searchIn` says where it looks.
  */
 function MediaPicker({
 	open,
 	onOpenChange,
 	title,
-	allLabel,
+	topLabel,
 	folders,
 	folder,
 	onFolderChange,
@@ -41,6 +39,7 @@ function MediaPicker({
 	search,
 	onSearchChange,
 	searchLabel,
+	searchIn,
 	uploadLabel,
 	onUpload,
 	uploadDisabled,
@@ -48,13 +47,14 @@ function MediaPicker({
 	onConfirm,
 	confirmHidden,
 	notice,
+	subfolders,
 	children,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	title: string;
-	/** The top entry of the folder list: everything, whatever folder it is in. */
-	allLabel: string;
+	/** The top entry of the folder list: what is in no folder, and the folders at the top. */
+	topLabel: string;
 	folders: readonly MediaPickerFolder[];
 	folder: string | null;
 	onFolderChange: (id: string | null) => void;
@@ -64,6 +64,8 @@ function MediaPicker({
 	onSearchChange: (search: string) => void;
 	/** The name and the placeholder of the search box. */
 	searchLabel: string;
+	/** Under the search box, while a search looks inside a folder: where it looks. */
+	searchIn?: React.ReactNode;
 	uploadLabel: string;
 	/** Opens the place where a file is chosen to upload. */
 	onUpload: () => void;
@@ -74,6 +76,8 @@ function MediaPicker({
 	confirmHidden?: boolean;
 	/** Shown in place of the tiles when there is something to say instead (the list could not be loaded, nothing is there). */
 	notice?: React.ReactNode;
+	/** The folders the open place holds, over its files: a `FolderTile` each. */
+	subfolders?: React.ReactNode;
 	children?: React.ReactNode;
 }) {
 	const labels = useUiLabels();
@@ -92,7 +96,7 @@ function MediaPicker({
 							onClick={() => onFolderChange(null)}
 							className={cn(NAV_ROW, "shrink-0 cursor-pointer text-monti-default")}
 						>
-							<span className="min-w-0 truncate">{allLabel}</span>
+							<span className="min-w-0 truncate">{topLabel}</span>
 						</button>
 						<SidebarMenuSub>
 							{folders.map((item, index) => (
@@ -106,22 +110,24 @@ function MediaPicker({
 										onClick={() => onFolderChange(item.id)}
 									>
 										<span>{item.name}</span>
-										{item.count ? <Count>{item.count}</Count> : null}
 									</SidebarMenuSubButton>
 								</li>
 							))}
 						</SidebarMenuSub>
 					</nav>
 					<div className="flex min-h-0 min-w-0 flex-col gap-monti-12">
-						<Input
+						<SearchBox
 							aria-label={searchLabel}
 							placeholder={searchLabel}
 							value={search}
-							onChange={(event) => onSearchChange(event.target.value)}
+							onValueChange={onSearchChange}
+							className="w-full shrink-0"
 						/>
+						{searchIn ? <div className="flex shrink-0">{searchIn}</div> : null}
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
-						<div className="-m-monti-4 grid min-h-0 flex-1 grid-cols-3 content-start gap-x-monti-12 gap-y-monti-16 overflow-y-auto p-monti-4">
-							{notice ? <div className="col-span-3">{notice}</div> : children}
+						<div className="-m-monti-4 flex min-h-0 flex-1 flex-col gap-monti-12 overflow-y-auto p-monti-4">
+							{subfolders ? <div className="grid shrink-0 grid-cols-3 gap-monti-12">{subfolders}</div> : null}
+							{notice ?? <div className="grid grid-cols-3 gap-x-monti-12 gap-y-monti-16">{children}</div>}
 						</div>
 					</div>
 				</div>

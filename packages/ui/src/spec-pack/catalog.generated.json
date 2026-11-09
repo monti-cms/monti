@@ -382,10 +382,6 @@
 			"children": true,
 			"slots": [],
 			"props": {
-				"allLabel": {
-					"kind": "text",
-					"type": "string"
-				},
 				"confirmLabel": {
 					"kind": "text",
 					"type": "string"
@@ -395,7 +391,7 @@
 				},
 				"folders": {
 					"kind": "data",
-					"fields": ["id", "name", "depth", "count"]
+					"fields": ["id", "name", "depth"]
 				},
 				"foldersLabel": {
 					"kind": "text",
@@ -406,6 +402,10 @@
 					"type": "string"
 				},
 				"title": {
+					"kind": "text",
+					"type": "string"
+				},
+				"topLabel": {
 					"kind": "text",
 					"type": "string"
 				},

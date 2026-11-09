@@ -1,11 +1,11 @@
 import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
-import { FilePreview, Image, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
+import { FolderTile, MediaPicker, Segmented, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "./file-text";
+import { FileThumb, useFileDetail } from "./file-shown";
 
 /** How many more files the window loads at a time. */
 const PAGE = 100;
@@ -13,8 +13,9 @@ const PAGE = 100;
 const MOST = 1000;
 
 /**
- * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. An image's place shows images, a file's place files. Picking a tile and
- * pressing the pill puts it in; uploading hands the files back to the page, where they go up in place as if pasted (screens/media.md).
+ * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. It is a file browser (2026-11-09, owner): the top or a folder shows its folders
+ * and its own files, and an image's place shows images, a file's place files. A search looks as the library's screen does, through the folder's subfolders or all of them. Picking
+ * a tile and pressing the pill puts it in; uploading hands the files back to the page with the open folder, and they go up in place as if pasted (screens/media.md).
  */
 export function MediaPickerDialog({
 	kind,
@@ -29,61 +30,96 @@ export function MediaPickerDialog({
 	confirmLabel?: string;
 	onClose: () => void;
 	onPick: (item: MediaItem) => void;
-	onFiles: (files: File[]) => void;
+	/** The files chosen to upload, and the folder open when they were. */
+	onFiles: (files: File[], folder: string | null) => void;
 }) {
 	const { t } = useAdmin();
 	const [folder, setFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
+	const [everywhere, setEverywhere] = useState(false);
 	const [picked, setPicked] = useState<MediaItem | null>(null);
 	const [shown, setShown] = useState(PAGE);
 	const folders = useFolders("media", true);
+	const here = folder === null ? undefined : folders.byId.get(folder);
+	const looking = search !== "";
 	const read = useRead<MediaQueryResult>(
 		"media.query",
-		{ ...(folder === null ? {} : { folder }), search, kinds: kind === "any" ? [] : [kind], pageSize: shown },
+		{
+			folder,
+			scope: everywhere && looking ? "all" : "here",
+			search,
+			...(kind === "any" ? {} : { only: kind }),
+			pageSize: shown,
+		},
 		{ afterWrites: true },
 	);
 	const items = read.data?.items ?? [];
+	const subfolders = looking ? [] : folders.children(folder);
+	const detail = useFileDetail(looking, here && !everywhere ? folders.path(here.id).map((up) => up.name) : []);
+	/** What is in sight changes: what was picked goes with it, and the list starts over. */
+	const startOver = () => {
+		setPicked(null);
+		setShown(PAGE);
+	};
+	const go = (next: string | null) => {
+		startOver();
+		setFolder(next);
+		setSearch("");
+		setEverywhere(false);
+	};
 	return (
 		<MediaPicker
 			open
 			onOpenChange={(open) => !open && onClose()}
 			title={title ?? t(kind === "file" ? "library.picker.file" : "library.picker.image")}
-			allLabel={t(kind === "image" ? "library.picker.allImages" : "library.picker.allFiles")}
-			// A folder's count is of all its files, so it shows only where images are what is listed (components/list.md).
-			folders={folders.list.map((each) => ({
-				id: each.id,
-				name: each.name,
-				depth: each.depth,
-				...(kind === "image" ? { count: each.count } : {}),
-			}))}
+			topLabel={t("frame.media")}
+			folders={folders.list.map((each) => ({ id: each.id, name: each.name, depth: each.depth }))}
 			folder={folder}
-			onFolderChange={(next) => {
-				setPicked(null);
-				setShown(PAGE);
-				setFolder(next);
-			}}
+			onFolderChange={go}
 			foldersLabel={t("folders.tree")}
 			search={search}
 			onSearchChange={(next) => {
-				setPicked(null);
-				setShown(PAGE);
+				startOver();
 				setSearch(next);
 			}}
 			searchLabel={t("library.picker.search")}
+			searchIn={
+				looking && here ? (
+					<Segmented
+						aria-label={t("folders.searchIn")}
+						size="sm"
+						inline
+						value={everywhere ? "all" : "here"}
+						onValueChange={(where) => {
+							startOver();
+							setEverywhere(where === "all");
+						}}
+						options={[
+							{ value: "here", label: here.name },
+							{ value: "all", label: t("folders.everywhere") },
+						]}
+					/>
+				) : undefined
+			}
 			uploadLabel={t("library.upload")}
 			onUpload={() =>
 				chooseFiles({
 					accept: kind === "image" ? "image/*" : undefined,
-					onFiles,
+					onFiles: (files) => onFiles(files, folder),
 				})
 			}
 			confirmLabel={confirmLabel ?? t("library.picker.insert")}
 			confirmHidden={picked === null}
 			onConfirm={() => picked && onPick(picked)}
+			subfolders={
+				subfolders.length > 0
+					? subfolders.map((each) => <FolderTile key={each.id} name={each.name} onClick={() => go(each.id)} />)
+					: undefined
+			}
 			notice={
-				read.data && items.length === 0 ? (
+				read.data && items.length === 0 && subfolders.length === 0 ? (
 					<Text variant="note" tone="subtle">
-						{t("library.picker.none")}
+						{t(looking ? "library.nothingFound" : "library.picker.none")}
 					</Text>
 				) : undefined
 			}
@@ -92,21 +128,10 @@ export function MediaPickerDialog({
 				<Tile
 					key={item.id}
 					title={item.name}
-					detail={[
-						item.kind === "image" ? sizeLabel(item) : formatBytes(item.size),
-						item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed"),
-					]
-						.filter(Boolean)
-						.join(" · ")}
+					detail={detail(item)}
 					selected={picked?.id === item.id}
 					onClick={() => setPicked(picked?.id === item.id ? null : item)}
-					preview={
-						item.kind === "image" ? (
-							<Image src={previewUrl(item)} alt="" ratio="photo" radius="none" />
-						) : (
-							<FilePreview ext={extensionLabel(item.name)} />
-						)
-					}
+					preview={<FileThumb item={item} />}
 				/>
 			))}
 			{read.data && read.data.total > items.length && shown < MOST ? (

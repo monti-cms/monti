@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { FilePreview, Image, MediaPicker, Tile } from "./index";
+import { FilePreview, FolderTile, Image, MediaPicker, Segmented, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
 const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -8,8 +8,8 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /**
- * The library as a picker: a 760px modal, the folders at the left (the top entry for all, sub-folders indented, counts in mono), a search box and three
- * columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
+ * The library as a picker and a file browser: a 760px modal, the folders at the left (the top entry for the top level, sub-folders indented), a search box, the open folder's
+ * folders and its files as three columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
  */
 const meta = {
 	title: "Patterns/Sheet/MediaPicker",
@@ -19,21 +19,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const FOLDERS = [
-	{ id: "covers", name: "covers", depth: 0, count: 12 },
-	{ id: "trips", name: "trips", depth: 0, count: 48 },
-	{ id: "trips-jeju", name: "jeju", depth: 1, count: 9 },
+	{ id: "covers", name: "covers", depth: 0 },
+	{ id: "trips", name: "trips", depth: 0 },
+	{ id: "trips-jeju", name: "jeju", depth: 1 },
 ];
 
-function Picker({ files = false }: { files?: boolean }) {
+function Picker({ files = false, searching = false }: { files?: boolean; searching?: boolean }) {
 	const [picked, setPicked] = useState<string | null>("b");
-	const [folder, setFolder] = useState<string | null>(null);
+	const [folder, setFolder] = useState<string | null>(searching ? "trips" : null);
 	const items = files
 		? [
 				{ id: "a", title: "annual-report.pdf", detail: "PDF · 1.2MB", ext: "PDF" },
 				{ id: "b", title: "price-list.csv", detail: "CSV · 18KB", ext: "CSV" },
 			]
 		: [
-				{ id: "a", title: "cover-2026.png", detail: "1600×900" },
+				{ id: "a", title: "cover-2026.png", detail: searching ? "jeju · 1600×900" : "1600×900" },
 				{ id: "b", title: "spring-desk.jpg", detail: "2400×1600" },
 				{ id: "c", title: "hero.png", detail: "1920×1080" },
 				{ id: "d", title: "trip-01.jpg", detail: "4032×3024" },
@@ -43,14 +43,37 @@ function Picker({ files = false }: { files?: boolean }) {
 			open
 			onOpenChange={() => {}}
 			title={files ? "파일 넣기" : "이미지 넣기"}
-			allLabel={files ? "모든 파일" : "모든 이미지"}
+			topLabel="미디어"
 			folders={FOLDERS}
 			folder={folder}
 			onFolderChange={setFolder}
 			foldersLabel="폴더"
-			search=""
+			search={searching ? "2026" : ""}
 			onSearchChange={() => {}}
-			searchLabel="찾기"
+			searchLabel="파일 이름 검색"
+			searchIn={
+				searching ? (
+					<Segmented
+						aria-label="찾는 곳"
+						size="sm"
+						inline
+						value="here"
+						onValueChange={() => {}}
+						options={[
+							{ value: "here", label: "trips" },
+							{ value: "all", label: "모든 폴더" },
+						]}
+					/>
+				) : undefined
+			}
+			subfolders={
+				searching ? undefined : (
+					<>
+						<FolderTile name="covers" onClick={() => setFolder("covers")} />
+						<FolderTile name="trips" onClick={() => setFolder("trips")} />
+					</>
+				)
+			}
 			uploadLabel="올리기"
 			onUpload={() => {}}
 			confirmLabel="넣기"
@@ -78,3 +101,6 @@ export const Images: Story = { render: () => <Picker /> };
 
 /** Files: tiles with a file preview. */
 export const Files: Story = { render: () => <Picker files /> };
+
+/** A search inside a folder: its folders hide, each file says where it is under this folder, and the search can widen to all folders. */
+export const Searching: Story = { render: () => <Picker searching /> };

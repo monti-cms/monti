@@ -232,6 +232,8 @@ const Query = z.object({
 	scope: z.enum(["here", "all"]).default("here"),
 	search: z.string().default(""),
 	kinds: z.array(z.enum(["image", "file"])).default([]),
+	/** What the asker can take at all (a library window for a picture). Unlike `kinds`, which someone looks for, it leaves a folder listing what sits right in it. */
+	only: z.enum(["image", "file"]).optional(),
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
 	page: z.number().int().positive().default(1),
@@ -266,6 +268,7 @@ export const mediaOperations = [
 			if (search !== "")
 				filtered = filtered.where("name", "ilike", `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
 			if (input.kinds.length > 0) filtered = filtered.where("kind", "in", input.kinds);
+			if (input.only) filtered = filtered.where("kind", "=", input.only);
 			if (input.used.length === 1)
 				filtered = filtered.where(
 					input.used[0] === "used" ? sql<boolean>`${usesCount} > 0` : sql<boolean>`${usesCount} = 0`,

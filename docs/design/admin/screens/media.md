@@ -168,15 +168,17 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 창 | `MediaPicker`(`open`, `title` "라이브러리" · "대표 이미지" · "파일") | 760px 모달 하나가 전부다. 폴더를 바꿔도 높이가 그대로이고, 폴더 목록과 타일이 각각 안에서 스크롤한다(2026-11-09 소유자). 편집기의 "/ 이미지" · "/ 파일"과 대표 이미지 필드가 연다. 탭 없이 라이브러리 한 화면이다. |
-| 폴더 목록 | `MediaPicker`의 `folders`(`depth`, `count`), `allLabel` "모든 이미지" · "모든 파일", `folder` | 사이드바의 트리를 그대로 쓴다(2026-11-09 소유자): 맨 위 행은 `NAV_ROW`(아이콘 없음. 창 자체가 라이브러리다), 그 아래는 `SidebarMenuSub`와 `SidebarMenuSubButton`이다. 깊이, 선, 개수, 고른 폴더의 모양(잉크와 굵은 글자, 바탕 없음)이 사이드바와 같다. 열 너비는 216px이다. |
-| 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색" | 늘 입력 칸이다. |
-| 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
+| 창 | `MediaPicker`(`open`, `title` "라이브러리" · "대표 이미지" · "파일") | 760px 모달 하나가 전부다. 파일 탐색기처럼 연 곳의 폴더와 파일을 보인다(2026-11-09 소유자). 폴더를 바꿔도 높이가 그대로이고, 폴더 목록과 오른쪽이 각각 안에서 스크롤한다(2026-11-09 소유자). 편집기의 "/ 이미지" · "/ 파일"과 대표 이미지 필드가 연다. 탭 없이 라이브러리 한 화면이다. |
+| 폴더 목록 | `MediaPicker`의 `folders`(`depth`), `topLabel` "미디어", `folder` | 사이드바의 트리를 그대로 쓴다(2026-11-09 소유자): 맨 위 행은 `NAV_ROW`(아이콘 없음. 창 자체가 라이브러리다), 그 아래는 `SidebarMenuSub`와 `SidebarMenuSubButton`이다. 깊이, 선, 고른 폴더의 모양(잉크와 굵은 글자, 바탕 없음)이 사이드바와 같다. 개수는 없다. 폴더가 세는 파일과 창이 보이는 파일이 다르기 때문이다. 열 너비는 216px이다. "미디어"는 최상위이고 창은 여기서 열린다. |
+| 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색"(`SearchBox`) | 늘 입력 칸이다. 라이브러리 화면과 같게 찾는다: 최상위에서는 전부, 폴더 안에서는 그 폴더와 하위. 끝의 ×로 비우면 연 곳으로 돌아간다. 폴더를 옮기면 검색이 끝난다. |
+| 찾는 곳 "Blog Assets │ 모든 폴더" | `MediaPicker`의 `searchIn`에 `Segmented size="sm" inline` | 폴더 안에서 찾는 동안 검색 칸 아래에 있다. |
+| 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 세 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
+| 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있어요. 검색으로 찾아 주세요."가 대신한다. |
-| "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘긴다. |
+| "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘기고, 연 폴더로 올라간다. |
 | "취소" · "넣기"/"고르기" | `MediaPicker`의 `confirmLabel`("넣기", 대표 이미지는 "고르기"), `onConfirm` | 아무것도 고르지 않았으면 알약이 없다(`confirmHidden`). 타일을 고르면 나타난다(원칙 7, 2026-11-05 소유자). |
 
-스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview.
+스토리: Patterns/Sheet/MediaPicker, Patterns/List/Tile, Patterns/List/FilePreview, Patterns/List/FolderTile, Controls/Field/SearchBox, Controls/Choice/Segmented.
 
 ### 흐름 6 · 미디어
 
@@ -184,6 +186,6 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `stage` "라이브러리" | 6.29 | 제목 "라이브러리", "모든 이미지", 이미지 `Tile`, 알약 "넣기" | Patterns/List/Tile |
-| `stage` "대표 이미지" | 6.30 | 제목 "대표 이미지", "모든 이미지"에서 시작, 알약 "고르기" |  |
-| `stage` "파일" | 6.37 | 제목 "파일", "모든 파일", 파일 `Tile`(`FilePreview`), 알약 "넣기" | Patterns/List/Tile, Patterns/List/FilePreview |
+| `stage` "라이브러리" | 6.29 | 제목 "라이브러리", "미디어"에서 시작, 이미지 `Tile`, 알약 "넣기" | Patterns/List/Tile |
+| `stage` "대표 이미지" | 6.30 | 제목 "대표 이미지", "미디어"에서 시작, 알약 "고르기" |  |
+| `stage` "파일" | 6.37 | 제목 "파일", "미디어"에서 시작, 파일 `Tile`(`FilePreview`), 알약 "넣기" | Patterns/List/Tile, Patterns/List/FilePreview |

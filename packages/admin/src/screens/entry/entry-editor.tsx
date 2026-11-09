@@ -120,10 +120,14 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
-	const fieldUploads = useFieldUploads((field, item, altThen) => {
-		// The words there when the file set off were for the old picture (2026-11-09, owner). Only what was written since is for this one.
-		const alt = mediaValueOf(editor.value(`values.${field}`))?.alt;
-		editor.set(`values.${field}`, { media: item.id, ...(alt && alt !== altThen ? { alt } : {}) });
+	const fieldUploads = useFieldUploads((field, item, then) => {
+		// What was said when the file set off was for the old picture (2026-11-09, owner). Only what was said since is for this one.
+		const now = mediaValueOf(editor.value(`values.${field}`));
+		editor.set(`values.${field}`, {
+			media: item.id,
+			...(now?.alt && now.alt !== then?.alt ? { alt: now.alt } : {}),
+			...(now?.decorative && !then?.decorative ? { decorative: true } : {}),
+		});
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");

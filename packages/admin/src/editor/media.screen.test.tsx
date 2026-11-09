@@ -1,6 +1,6 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { type Locator, page, userEvent } from "vitest/browser";
 import { pointerPath, typeKorean } from "../../../../testing/input";
 import * as media from "../screens/entry/media.stories";
 
@@ -38,6 +38,11 @@ const canvasFile = async (name: string) => {
 	return new File([await canvas.convertToBlob({ type: "image/png" })], name, { type: "image/png" });
 };
 
+/** The window's folder list, and the folders it shows beside the files. */
+const folderRow = (dialog: Locator, name: RegExp) => dialog.getByRole("navigation").getByRole("button", { name });
+const folderCards = (dialog: Locator) => [...dialog.element().querySelectorAll("button[data-slot=folder-tile]")];
+const openAssets = (dialog: Locator) => userEvent.click(folderRow(dialog, /^Blog Assets/));
+
 describe("from the library", () => {
 	it("09-3 [flow 6·29] [line-start] '/ 이미지' on an empty line opens the library's images, and the pick goes in", async () => {
 		await Draft.run();
@@ -47,8 +52,9 @@ describe("from the library", () => {
 		await userEvent.keyboard("{Enter}");
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("heading", { name: "라이브러리" })).toBeVisible();
-		await expect.element(dialog.getByText("모든 이미지")).toBeVisible();
+		await expect.element(folderRow(dialog, /^미디어/)).toHaveAttribute("aria-current", "page");
 		await expect.element(dialog.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
+		await openAssets(dialog);
 		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "넣기" }));
 		await expect.element(dialog).not.toBeInTheDocument();
@@ -58,28 +64,82 @@ describe("from the library", () => {
 	it("09-3 the window keeps its height from folder to folder, and its folders read as the tree they are", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
-		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 		// The laid-out height: the window scales as it opens.
 		const height = () => (dialog.element() as HTMLElement).offsetHeight;
 		const all = height();
-		const left = (name: string) => {
-			const row = dialog.getByRole("button", { name: new RegExp(`^${name}`) }).element();
-			return row.querySelector("span:not([aria-hidden])")?.getBoundingClientRect().left ?? 0;
-		};
-		expect(left("모든 이미지")).toBeLessThan(left("Blog Assets"));
-		expect(left("Blog Assets")).toBeLessThan(left("covers"));
-		await userEvent.click(dialog.getByRole("button", { name: /^diagrams/ }));
+		const left = (name: RegExp) =>
+			folderRow(dialog, name).element().querySelector("span:not([aria-hidden])")?.getBoundingClientRect().left ?? 0;
+		expect(left(/^미디어/)).toBeLessThan(left(/^Blog Assets/));
+		expect(left(/^Blog Assets/)).toBeLessThan(left(/^covers/));
+		await userEvent.click(folderRow(dialog, /^diagrams/));
 		await expect.element(dialog.getByText("여기에는 파일이 없어요.")).toBeVisible();
 		expect(height()).toBe(all);
+	});
+
+	it("09-3 T117 the window is a file browser: the top shows its folders and the files in no folder, a folder its folders and its own files", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		expect(folderCards(dialog).map((card) => card.textContent)).toEqual(["Blog Assets", "Wallpapers"]);
+
+		const card = (name: string) => folderCards(dialog).find((each) => each.textContent === name) as HTMLElement;
+		await userEvent.click(card("Blog Assets"));
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).not.toBeInTheDocument();
+		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).not.toBeInTheDocument();
+		// An image's place shows images: the PDF beside them is not one.
+		await expect.element(dialog.getByRole("button", { name: /notes-scan/ })).not.toBeInTheDocument();
+		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
+
+		await userEvent.click(card("covers"));
+		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toBeVisible();
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		await expect.element(folderRow(dialog, /^covers/)).toHaveAttribute("aria-current", "page");
+	});
+
+	it("09-3 T117 a search looks as the library's does: through the folder's subfolders, saying where each file is, and through all of them on request", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		const search = dialog.getByRole("searchbox", { name: "파일 이름 검색" });
+		await openAssets(dialog);
+		await expect.element(dialog.getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+
+		await userEvent.fill(search, "cafe");
+		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toHaveTextContent("covers ·");
+		expect(folderCards(dialog)).toEqual([]);
+
+		await userEvent.fill(search, "top-level");
+		await expect.element(dialog.getByText("맞는 파일이 없어요.")).toBeVisible();
+		await userEvent.click(dialog.getByRole("button", { name: "모든 폴더" }));
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
+
+		// The × empties the box: back to the folder as it was, with nothing to choose.
+		await userEvent.click(dialog.getByRole("button", { name: "지우기" }));
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		await expect.element(dialog.getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
+	});
+
+	it("09-3 T117 going to another folder ends the search", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		const search = dialog.getByRole("searchbox", { name: "파일 이름 검색" });
+		await userEvent.fill(search, "desk");
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
+		await userEvent.click(folderRow(dialog, /^covers/));
+		await expect.element(search).toHaveValue("");
+		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toBeVisible();
 	});
 
 	it("09-3 searching drops what was picked: what goes in is always a file in sight", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
-		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
+		await userEvent.click(dialog.getByRole("button", { name: /top-level-photo/ }));
 		await expect.element(dialog.getByRole("button", { name: "넣기" })).toBeVisible();
-		await userEvent.fill(dialog.getByRole("textbox", { name: "파일 이름 검색" }), "없는 파일");
-		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		await userEvent.fill(dialog.getByRole("searchbox", { name: "파일 이름 검색" }), "없는 파일");
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).not.toBeInTheDocument();
 		await expect.element(dialog.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
 	});
 
@@ -89,7 +149,7 @@ describe("from the library", () => {
 		await slash("이미지");
 		await userEvent.keyboard("{Enter}");
 		const dialog = page.getByRole("dialog");
-		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
+		await userEvent.click(dialog.getByRole("button", { name: /top-level-photo/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "넣기" }));
 		await expect.element(paragraph("글의 첫 문단")).toBeVisible();
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
@@ -103,7 +163,8 @@ describe("from the library", () => {
 		await expect.element(slashRow(/파일/)).toBeVisible();
 		await userEvent.keyboard("{Enter}");
 		const dialog = page.getByRole("dialog");
-		await expect.element(dialog.getByText("모든 파일")).toBeVisible();
+		await openAssets(dialog);
+		await expect.element(dialog.getByRole("button", { name: /notes-scan/ })).toBeVisible();
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
 		await userEvent.click(dialog.getByRole("button", { name: /notes-scan/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "넣기" }));
@@ -130,7 +191,7 @@ describe("from the library", () => {
 		await slash("이미지");
 		await userEvent.keyboard("{Enter}");
 		const dialog = page.getByRole("dialog");
-		await userEvent.fill(dialog.getByRole("textbox", { name: "파일 이름 검색" }), "desk");
+		await userEvent.fill(dialog.getByRole("searchbox", { name: "파일 이름 검색" }), "desk");
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
 		await expect.element(dialog.getByRole("button", { name: /seoul-night/ })).not.toBeInTheDocument();
 	});

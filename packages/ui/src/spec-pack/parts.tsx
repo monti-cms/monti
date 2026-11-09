@@ -2402,12 +2402,12 @@ function ProposalDock({
 }
 
 /**
- * The library as a picker, open over the screen (an image to insert): its `title`, the folders at the left (from the data: each one's `id`, `name`,
- * `depth` and `count`; `folder` the picked one), the search box, the files (`MediaTile`s) and the buttons.
+ * The library as a picker, open over the screen (an image to insert): its `title`, the folders at the left (from the data: each one's `id`, `name` and
+ * `depth`; `folder` the open one), the search box, the files (`MediaTile`s) and the buttons.
  */
 function PickerDialog({
 	title,
-	allLabel,
+	topLabel,
 	folders,
 	folder,
 	foldersLabel,
@@ -2417,8 +2417,8 @@ function PickerDialog({
 	children,
 }: {
 	title?: string;
-	allLabel?: string;
-	folders?: readonly { id: string; name: string; depth: number; count?: number }[];
+	topLabel?: string;
+	folders?: readonly { id: string; name: string; depth: number }[];
 	folder?: string;
 	foldersLabel?: string;
 	searchLabel?: string;
@@ -2432,7 +2432,7 @@ function PickerDialog({
 			open
 			onOpenChange={none}
 			title={title ?? ""}
-			allLabel={allLabel ?? ""}
+			topLabel={topLabel ?? ""}
 			folders={folders ?? []}
 			folder={folder ?? null}
 			onFolderChange={none}
@@ -3017,8 +3017,8 @@ export const CATALOG = {
 		kind: "overlay",
 		props: {
 			title: "text",
-			allLabel: "text",
-			folders: "data:id,name,depth,count",
+			topLabel: "text",
+			folders: "data:id,name,depth",
 			folder: "state",
 			foldersLabel: "text",
 			searchLabel: "text",
