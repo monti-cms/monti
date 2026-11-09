@@ -5,7 +5,7 @@ import { scrollsSideways } from "../../../../../testing/input";
 import * as media from "./media.stories";
 import { samplePhoto } from "./media.stories";
 
-const { Top, NoStorage, ListView } = composeStories(media);
+const { Top, NoStorage, ListView, FilePanel, SearchingInFolder, KindChosenInFolder } = composeStories(media);
 
 const main = () => page.getByRole("main");
 const heading = () => main().getByRole("heading", { level: 1 });
@@ -109,6 +109,27 @@ describe("browsing", () => {
 		expect(type.right).toBeLessThanOrEqual(main().element().getBoundingClientRect().right);
 	});
 
+	it("09-1 [flow 6·16] the panel's fields start on one line: a file's name is not set further in than its folder", async () => {
+		await FilePanel.run();
+		const panel = page.getByRole("complementary");
+		await expect.element(panel.getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		const name = panel.getByRole("textbox", { name: "파일 이름" }).element().getBoundingClientRect();
+		const folderField = panel.getByRole("combobox", { name: "폴더" }).element().getBoundingClientRect();
+		const label = panel.getByText("파일 이름", { exact: true }).element().getBoundingClientRect();
+		expect(name.left).toBe(folderField.left);
+		expect(name.left).toBe(label.left);
+	});
+
+	it("09-1 [flow 6·16] a file's address is in the panel's ⋯, not beside its picture", async () => {
+		await FilePanel.run();
+		const panel = page.getByRole("complementary");
+		await expect.element(panel.getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		expect(panel.getByRole("button", { name: "주소 복사" }).elements()).toHaveLength(0);
+		await userEvent.click(panel.getByRole("button", { name: "더 보기" }));
+		await expect.element(page.getByRole("menuitem", { name: "주소 복사" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "새 탭에서 열기" })).toBeVisible();
+	});
+
 	it("09-1 [flow 6·09, 6·10] the list view names a new folder and renames one in place", async () => {
 		await ListView.run();
 		await expect.element(main().getByRole("link", { name: "Blog Assets" })).toBeVisible();
@@ -161,6 +182,13 @@ describe("browsing", () => {
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
 		await expect.element(folder("covers")).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+	});
+
+	it("07-2 the stories of looking inside a folder show where to look; at the top there is nothing to choose", async () => {
+		await SearchingInFolder.run();
+		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
+		await KindChosenInFolder.run();
+		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
 	});
 
 	it("09-1 a sort is a menu with one mark of its own", async () => {

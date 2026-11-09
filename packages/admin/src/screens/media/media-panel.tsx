@@ -262,6 +262,12 @@ export function MediaPanel({
 						<OverflowMenuHorizontal aria-hidden />
 					</IconButton>
 					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={() => window.open(url, "_blank", "noopener")}>
+							{t("library.openTab")}
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => void copy(new URL(url, window.location.href).href)}>
+							{t("library.copyUrl")}
+						</DropdownMenuItem>
 						<DropdownMenuItem
 							onClick={() =>
 								chooseFiles({
@@ -295,14 +301,6 @@ export function MediaPanel({
 			) : (
 				<FilePreview ext={extensionLabel(item.name)} framed />
 			)}
-			<Inline gap={12}>
-				<TextButton variant="underline" onClick={() => void copy(new URL(url, window.location.href).href)}>
-					{t("library.copyUrl")}
-				</TextButton>
-				<TextButton variant="underline" href={url} target="_blank" rel="noreferrer">
-					{t("library.openTab")}
-				</TextButton>
-			</Inline>
 			<FormField>
 				<FormFieldLabel htmlFor="monti-media-name">{t("library.name")}</FormFieldLabel>
 				<Affix

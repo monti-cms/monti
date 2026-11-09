@@ -197,6 +197,29 @@ export const Searching: Story = { loaders: library("#/media?q=cafe") };
 /** Flow 6·33: a kind chosen, its chip in the filter's place. */
 export const KindChosen: Story = { loaders: library("#/media?kind=image") };
 
+/** A search inside a folder: where to look is a choice, this folder or all of them. At the top (`Searching`) there is nothing to choose. */
+export const SearchingInFolder: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /^Blog Assets/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "검색" }, wait));
+		await userEvent.keyboard("cafe");
+	},
+};
+
+/** A filter inside a folder: the folders give way, and where to look is a choice, as in a search. */
+export const KindChosenInFolder: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /^Blog Assets/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "종류" }, wait));
+		await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: /이미지/ }, wait));
+		await userEvent.keyboard("{Escape}");
+	},
+};
+
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };
 
