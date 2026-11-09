@@ -49,7 +49,6 @@ import {
 	SearchToggle,
 	Segmented,
 	type SelectAll,
-	Separator,
 	SplitButton,
 	Stack,
 	Table,
@@ -88,7 +87,7 @@ import {
 	FolderMenuItems,
 	FolderTargets,
 	MoveToFolderMenu,
-	SearchIn,
+	searchScopes,
 	useFolderNaming,
 	useFolders,
 	useRemoveFolder,
@@ -309,42 +308,48 @@ function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: G
 	);
 }
 
-/**
- * A filter of the library (screens/media.md): a button that stays where it is, with a dot after its name while something is chosen. The menu stays open as values are ticked.
- */
-function FilterMenu<Value extends string>({
-	label,
-	values,
-	chosen,
-	onChange,
-}: {
-	label: string;
+type FilterProps<Value extends string> = {
 	values: readonly { value: Value; label: string; count: number }[];
 	chosen: readonly Value[];
 	onChange: (chosen: Value[]) => void;
-}) {
+};
+
+/**
+ * A filter of the library (screens/media.md): in the grid, a button over the tiles with a dot after its name while something is chosen; in the list, the menu of its
+ * column, as the entries' list has it. The menu stays open as values are ticked.
+ */
+function FilterMenu<Value extends string>({ label, ...filter }: FilterProps<Value> & { label: string }) {
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger render={<FilterButton dot={chosen.length > 0} />}>{label}</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<FilterButton dot={filter.chosen.length > 0} />}>{label}</DropdownMenuTrigger>
 			<DropdownMenuContent align="start">
-				{values.map((each) => (
-					<DropdownMenuCheckboxItem
-						box
-						key={each.value}
-						checked={chosen.includes(each.value)}
-						closeOnClick={false}
-						onCheckedChange={() =>
-							onChange(
-								chosen.includes(each.value) ? chosen.filter((value) => value !== each.value) : [...chosen, each.value],
-							)
-						}
-					>
-						{each.label}
-						<MenuShortcut>{each.count}</MenuShortcut>
-					</DropdownMenuCheckboxItem>
-				))}
+				<FilterRows {...filter} />
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+
+/** A filter's values, each ticked or not, with how many files it holds. */
+function FilterRows<Value extends string>({ values, chosen, onChange }: FilterProps<Value>) {
+	return (
+		<>
+			{values.map((each) => (
+				<DropdownMenuCheckboxItem
+					box
+					key={each.value}
+					checked={chosen.includes(each.value)}
+					closeOnClick={false}
+					onCheckedChange={() =>
+						onChange(
+							chosen.includes(each.value) ? chosen.filter((value) => value !== each.value) : [...chosen, each.value],
+						)
+					}
+				>
+					{each.label}
+					<MenuShortcut>{each.count}</MenuShortcut>
+				</DropdownMenuCheckboxItem>
+			))}
+		</>
 	);
 }
 
@@ -551,74 +556,51 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</BulkBar>
 	);
 	const listed = state.view === "list";
-	const toolbar =
-		picking && !listed ? (
-			bulkBar()
-		) : (
-			<PageToolbar inset>
-				<FilterMenu
-					label={t("library.kind")}
-					values={KINDS.map((kind: MediaKind) => ({
-						value: kind,
-						label: t(`library.kind.${kind}`),
-						count: data?.counts[kind] ?? 0,
-					}))}
-					chosen={state.kinds}
-					onChange={(kinds) => setState({ ...state, kinds, page: 1 })}
-				/>
-				<FilterMenu
-					label={t("library.used")}
-					values={USES.map((use) => ({
-						value: use,
-						label: t(`library.used.${use}`),
-						count: data?.counts[use] ?? 0,
-					}))}
-					chosen={state.used}
-					onChange={(used) => setState({ ...state, used, page: 1 })}
-				/>
-				{looking && state.folder && here && (
-					<>
-						<Separator orientation="vertical" length="control" flush />
-						<SearchIn
-							folder={here.name}
-							everywhere={state.everywhere}
-							onChange={(everywhere) => setState({ ...state, everywhere, page: 1 })}
-						/>
-					</>
-				)}
-				<PageToolbarEnd>
-					<DropdownMenu>
-						<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuRadioGroup
-								value={state.sort}
-								onValueChange={(sort) => {
-									const found = SORTS.find((known) => known === sort);
-									if (found) setState({ ...state, sort: found, page: 1 });
-								}}
-							>
-								{SORTS.map((sort) => (
-									<DropdownMenuRadioItem key={sort} value={sort}>
-										{t(`library.sort.${sort}`)}
-									</DropdownMenuRadioItem>
-								))}
-							</DropdownMenuRadioGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
-					<Segmented
-						aria-label={t("library.view")}
-						size="sm"
-						inline
-						value={state.view}
-						onValueChange={(view) => setState({ ...state, view: view === "list" ? "list" : "grid" })}
-						options={[
-							{ value: "grid", label: t("library.view.grid") },
-							{ value: "list", label: t("library.view.list") },
-						]}
-					/>
-				</PageToolbarEnd>
-			</PageToolbar>
-		);
+	const kindFilter: FilterProps<MediaKind> = {
+		values: KINDS.map((kind: MediaKind) => ({
+			value: kind,
+			label: t(`library.kind.${kind}`),
+			count: data?.counts[kind] ?? 0,
+		})),
+		chosen: state.kinds,
+		onChange: (kinds) => setState({ ...state, kinds, page: 1 }),
+	};
+	const usedFilter: FilterProps<(typeof USES)[number]> = {
+		values: USES.map((use) => ({ value: use, label: t(`library.used.${use}`), count: data?.counts[use] ?? 0 })),
+		chosen: state.used,
+		onChange: (used) => setState({ ...state, used, page: 1 }),
+	};
+	const sortRows = (only?: (typeof SORTS)[number]) => (
+		<DropdownMenuRadioGroup
+			value={state.sort}
+			onValueChange={(sort) => {
+				const found = SORTS.find((known) => known === sort);
+				if (found) setState({ ...state, sort: found, page: 1 });
+			}}
+		>
+			{(only ? [only] : SORTS).map((sort) => (
+				<DropdownMenuRadioItem key={sort} value={sort}>
+					{t(`library.sort.${sort}`)}
+				</DropdownMenuRadioItem>
+			))}
+		</DropdownMenuRadioGroup>
+	);
+	// One row under the title, as the entries' list has it (2026-11-10, owner): in the grid the filters and the order, the picks taking their place; in the list the
+	// columns' names, their menus holding the filters and the order.
+	const toolbar = listed ? null : picking ? (
+		bulkBar()
+	) : (
+		<PageToolbar inset>
+			<FilterMenu label={t("library.kind")} {...kindFilter} />
+			<FilterMenu label={t("library.used")} {...usedFilter} />
+			<PageToolbarEnd>
+				<DropdownMenu>
+					<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">{sortRows()}</DropdownMenuContent>
+				</DropdownMenu>
+			</PageToolbarEnd>
+		</PageToolbar>
+	);
 
 	const uploadsHere = upload.uploads.filter((each) => each.folder === state.folder);
 	const nothing =
@@ -717,23 +699,36 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		id: "name",
 		label: t("library.column.name"),
 		sort: state.sort === "name" ? "asc" : undefined,
+		menu: sortRows("name"),
 	};
 	const dateColumn: ListHeadColumn = {
 		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", "date")),
 		label: t("library.column.date"),
 		align: "end",
 		sort: state.sort === "uploaded" ? "desc" : undefined,
+		menu: sortRows("uploaded"),
 	};
 	const head: ListHeadColumn[] = dense
 		? [nameColumn, dateColumn]
 		: [
 				nameColumn,
-				{ ...sized("uses", "one"), label: t("library.column.uses") },
-				{ ...sized("type", "locale"), label: t("library.column.type") },
+				{
+					...sized("uses", "one"),
+					label: t("library.column.uses"),
+					filtered: state.used.length > 0,
+					menu: <FilterRows {...usedFilter} />,
+				},
+				{
+					...sized("type", "locale"),
+					label: t("library.column.type"),
+					filtered: state.kinds.length > 0,
+					menu: <FilterRows {...kindFilter} />,
+				},
 				{
 					...sized("size", "status"),
 					label: t("library.column.size"),
 					sort: state.sort === "size" ? "desc" : undefined,
+					menu: sortRows("size"),
 				},
 				{ ...sized("measure", "measure"), label: t("library.column.measure") },
 				dateColumn,
@@ -899,12 +894,35 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					meta={data ? t("library.count", { count: data.total }) : undefined}
 					trail={trail}
 				>
+					{/* How the library shows is no filter: it sits with the page's controls (2026-11-10, owner). */}
+					<Segmented
+						aria-label={t("library.view")}
+						size="sm"
+						inline
+						value={state.view}
+						onValueChange={(view) => setState({ ...state, view: view === "list" ? "list" : "grid" })}
+						options={[
+							{ value: "grid", label: t("library.view.grid") },
+							{ value: "list", label: t("library.view.list") },
+						]}
+					/>
 					<SearchToggle
 						label={t("list.search")}
 						aria-label={t("list.search")}
 						placeholder={t("list.search")}
 						value={state.search}
-						onValueChange={(search) => setState({ ...state, search, page: 1 }, { replace: true })}
+						// Emptied, the box starts over on the open folder.
+						onValueChange={(search) =>
+							setState(
+								{ ...state, search, everywhere: search === "" ? false : state.everywhere, page: 1 },
+								{ replace: true },
+							)
+						}
+						// Inside a folder, the chip in the box says which folders it looks in (2026-11-10, owner: no row of its own).
+						scopes={here ? searchScopes(here.name, t) : undefined}
+						scope={state.everywhere ? "all" : "here"}
+						onScopeChange={(scope) => setState({ ...state, everywhere: scope === "all", page: 1 })}
+						targetLabel={t("folders.searchIn")}
 					/>
 					{uploadButton}
 				</PageHeader>

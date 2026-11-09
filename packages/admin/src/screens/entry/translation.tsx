@@ -27,8 +27,6 @@ import {
 	ResizablePane,
 	Segmented,
 	Stack,
-	StatusBarCell,
-	StatusBarList,
 	TabLink,
 	TabLinks,
 	Text,
@@ -336,17 +334,17 @@ export const MARK_TONE = { changed: "warning", removed: "danger", added: "succes
 const MARKER_TONE = { changed: "changed", removed: "removed", added: "added" } as const;
 
 /**
- * "Source changed 3" in the status bar (translation.md): a note, not a to-do, so a cell of its own. Its list is drawn as the changes lists are: a row
- * per mark, its word in front, the block's words on one line, and the one decision at the end ("Confirm" a changed block, "Remove" a removed one,
- * "Leave out" a new one); pressing the row goes to the block. "Confirm all" under it confirms the changed and removed ones.
+ * What changed in the source, as rows of the editor's to-do list (translation.md, 2026-11-10 owner): a group of its own under what stops publishing, since none
+ * of it does. A row per mark, its word in front, the field's name or the block's words on one line, and the one decision at the end ("Leave as is" a changed
+ * one, "Remove" a removed block, "Leave out" a new one); pressing the row goes there. Writing in a marked place takes its mark away on its own, so the decision
+ * is only for what needs no change. "Leave all as is" is the banner's.
  */
-export function SourceChangedCell({
+export function SourceChangeRows({
 	compared,
 	doc,
 	fieldLabel,
 	onGo,
 	onGoField,
-	onConfirmAll,
 	onDecide,
 }: {
 	compared: Compared;
@@ -357,14 +355,10 @@ export function SourceChangedCell({
 	onGo: (block: string) => void;
 	/** To the field a mark is on. */
 	onGoField: (field: string) => void;
-	onConfirmAll: () => void;
 	onDecide: (decision: Decision) => void;
 }) {
 	const { t } = useAdmin();
-	const [open, setOpen] = useState(false);
 	const { marks, fields } = compared;
-	const count = marks.length + fields.length;
-	if (count === 0) return null;
 	const blocks = new Map(doc.blocks.map((block) => [block.id, block]));
 	const decisionOf = (mark: TranslationMark): { label: string; decision: Decision } =>
 		mark.kind === "changed"
@@ -373,25 +367,7 @@ export function SourceChangedCell({
 				? { label: t("translation.remove"), decision: { do: "remove", block: mark.block } }
 				: { label: t("translation.skip"), decision: { do: "skip", from: mark.from } };
 	return (
-		<StatusBarList
-			trigger={<StatusBarCell tone="warning">{t("translation.changedCount", { count })}</StatusBarCell>}
-			label={t("translation.changedTitle")}
-			count={count}
-			open={open}
-			onOpenChange={setOpen}
-			footer={
-				fields.length > 0 || marks.some((mark) => mark.kind !== "added") ? (
-					<TextButton
-						onClick={() => {
-							setOpen(false);
-							onConfirmAll();
-						}}
-					>
-						{t("translation.confirmAll")}
-					</TextButton>
-				) : undefined
-			}
-		>
+		<>
 			{fields.map((mark) => (
 				<TodoItem
 					key={`field:${mark.field}`}
@@ -400,10 +376,7 @@ export function SourceChangedCell({
 					tagTone={MARK_TONE.changed}
 					actionLabel={t("translation.confirm")}
 					onAction={() => onDecide({ do: "confirmField", field: mark.field })}
-					onOpen={() => {
-						setOpen(false);
-						onGoField(mark.field);
-					}}
+					onOpen={() => onGoField(mark.field)}
 				/>
 			))}
 			{marks.map((mark) => {
@@ -416,14 +389,11 @@ export function SourceChangedCell({
 						tagTone={MARK_TONE[mark.kind]}
 						actionLabel={label}
 						onAction={() => onDecide(decision)}
-						onOpen={() => {
-							setOpen(false);
-							onGo(mark.kind === "added" ? mark.from : mark.block);
-						}}
+						onOpen={() => onGo(mark.kind === "added" ? mark.from : mark.block)}
 					/>
 				);
 			})}
-		</StatusBarList>
+		</>
 	);
 }
 
@@ -666,7 +636,7 @@ export function TranslationMargin({
 			return (
 				<MemoCardPopover
 					{...shared}
-					where={t("translation.mark.added")}
+					where={t("translation.mark.addedWhere")}
 					discardLabel={t("translation.skip")}
 					onDiscard={() => decide({ do: "skip", from: mark.from })}
 				>

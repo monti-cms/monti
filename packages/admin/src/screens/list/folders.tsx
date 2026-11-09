@@ -19,7 +19,6 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	MenuTick,
-	Segmented,
 	toast,
 } from "@monti-cms/ui";
 import { Edit, Folder, Launch, TrashCan } from "@monti-cms/ui/icons";
@@ -55,32 +54,15 @@ export function useFolders(scope: FolderScope, on: boolean): Folders {
 	}, [on, read.data]);
 }
 
-/** Where a search or a filter inside a folder looks: that folder and those under it, or all of them (components/list.md). */
-export function SearchIn({
-	folder,
-	everywhere,
-	onChange,
-}: {
-	/** The open folder's name. */
-	folder: string;
-	everywhere: boolean;
-	onChange: (everywhere: boolean) => void;
-}) {
-	const { t } = useAdmin();
-	return (
-		<Segmented
-			aria-label={t("folders.searchIn")}
-			size="sm"
-			inline
-			value={everywhere ? "all" : "here"}
-			onValueChange={(where) => onChange(where === "all")}
-			options={[
-				{ value: "here", label: folder },
-				{ value: "all", label: t("folders.everywhere") },
-			]}
-		/>
-	);
-}
+/**
+ * Where a search inside a folder looks, as the chip in the search box offers it (components/list.md, 2026-11-10 owner): that folder and those under it, or all of them.
+ * Filters with no words look in the open folder; all folders are the top's.
+ */
+export const searchScopes = (folder: string, t: (key: "folders.everywhere") => string) =>
+	[
+		{ value: "here", label: folder },
+		{ value: "all", label: t("folders.everywhere") },
+	] as const;
 
 /**
  * A folder being named (flow 5·01, 5·04, 6·09): a new one where the person is (`id` null), or one being renamed. Enter or leaving keeps the name, Esc drops it, and the

@@ -234,10 +234,10 @@ export const Picked: Story = {
 /** Flow 6·15: a search reaching through the folders. */
 export const Searching: Story = { loaders: library("#/media?q=cafe") };
 
-/** Flow 6·33: a kind chosen, its chip in the filter's place. */
+/** Flow 6·33: a kind chosen, a dot after the filter's name. */
 export const KindChosen: Story = { loaders: library("#/media?kind=image") };
 
-/** A search inside a folder: where to look is a choice, this folder or all of them. At the top (`Searching`) there is nothing to choose. */
+/** A search inside a folder: the chip in the search box says where it looks, this folder or all of them. At the top (`Searching`) there is no chip. */
 export const SearchingInFolder: Story = {
 	loaders: library(),
 	play: async ({ canvasElement }) => {
@@ -248,7 +248,7 @@ export const SearchingInFolder: Story = {
 	},
 };
 
-/** A filter inside a folder: the folders give way, and where to look is a choice, as in a search. */
+/** A filter inside a folder: the folders give way, and it looks in this folder (every folder is the search box's choice). */
 export const KindChosenInFolder: Story = {
 	loaders: library(),
 	play: async ({ canvasElement }) => {

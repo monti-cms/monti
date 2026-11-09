@@ -34,6 +34,8 @@ const mark = (name: string) => page.getByRole("button", { name, exact: true });
 const tabs = () => page.getByRole("navigation", { name: "언어" });
 /** The card a mark opens says what it is about, as the banner over the text does. */
 const memoCard = () => page.getByText("원문 변경", { exact: true }).last();
+/** The status bar's to-do cell, whatever it counts. */
+const todo = () => page.getByRole("button", { name: /^할 일/ });
 
 /** A language's tab: its name, and "원문 변경" after it when it has a dot. */
 const tab = (name: string) => tabs().getByRole("button").filter({ hasText: name });
@@ -127,9 +129,9 @@ describe("flow 3, a translation", () => {
 		await open(NewTranslation);
 		await expect.poll(faint).toBe(4);
 		await blockMenu("무엇을 덜어냈나");
-		await userEvent.click(page.getByRole("menuitem", { name: "원문 유지" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "원문 따르기" }));
 		await expect.poll(faint).toBe(3);
-		await expect.poll(() => document.querySelector("[data-slot=editor-margin]")?.textContent).toBe("원문");
+		await expect.poll(() => document.querySelector("[data-slot=editor-margin]")?.textContent).toBe("원문 따름");
 
 		await blockMenu("목록에는 제목과 주소");
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
@@ -181,8 +183,8 @@ describe("flow 3, a translation", () => {
 			"편집기도 같은 원칙으로",
 		]) {
 			await blockMenu(words);
-			await userEvent.click(page.getByRole("menuitem", { name: "원문 유지" }));
-			await expect.element(page.getByRole("menuitem", { name: "원문 유지" })).not.toBeInTheDocument();
+			await userEvent.click(page.getByRole("menuitem", { name: "원문 따르기" }));
+			await expect.element(page.getByRole("menuitem", { name: "원문 따르기" })).not.toBeInTheDocument();
 		}
 		await userEvent.click(page.getByRole("textbox", { name: "제목" }));
 		await userEvent.keyboard("The first post");
@@ -198,12 +200,14 @@ describe("flow 3, a translation", () => {
 		await expect.element(tab("한국어").getByLabelText("원문 변경")).not.toBeInTheDocument();
 	});
 
-	it("04-1 3.09 the translation shows a margin mark on each changed, added and removed block, and a banner with '모두 확인'", async () => {
+	it("04-1 3.09 the translation shows a margin mark on each changed, added and removed block, and a banner with '모두 그대로 두기'", async () => {
 		await open(SourceChanged);
 		await expect.element(page.getByRole("button", { name: "끔" })).toHaveAttribute("aria-pressed", "true");
 		await expect.element(page.getByText("원문 변경", { exact: true })).toBeVisible();
-		// The status bar counts them in a cell of its own, apart from the to-do list.
-		await expect.element(page.getByRole("button", { name: "원문 변경 3" })).toBeVisible();
+		// The to-do list holds them as a group of their own, after what stops publishing (2026-11-10, owner).
+		await userEvent.click(todo());
+		await expect.element(page.getByRole("group", { name: "원문 변경" })).toBeVisible();
+		await userEvent.keyboard("{Escape}");
 		await expect.element(mark("변경")).toBeVisible();
 		await expect.element(mark("추가")).toBeVisible();
 		await expect.element(mark("삭제")).toBeVisible();
@@ -212,18 +216,18 @@ describe("flow 3, a translation", () => {
 		const block = body().getByText("I rebuilt the blog", { exact: false }).element().getBoundingClientRect();
 		expect(Math.abs(changed.top - block.top)).toBeLessThan(block.height);
 
-		await userEvent.click(page.getByRole("button", { name: "모두 확인" }));
+		await userEvent.click(page.getByRole("button", { name: "모두 그대로 두기" }));
 		await expect.element(mark("변경")).not.toBeInTheDocument();
 		await expect.element(mark("추가")).toBeVisible();
 	});
 
-	it("04-1 3.10 a mark opens the source before and after, and '확인' clears that mark", async () => {
+	it("04-1 3.10 a mark opens the source before and after, and '그대로 두기' clears that mark", async () => {
 		await open(SourceChanged);
 		await userEvent.click(mark("변경"));
 		await expect.element(memoCard()).toBeVisible();
 		await expect.element(page.getByText("글을 쓰는 시간보다 도구를 고치는 시간이", { exact: false })).toBeVisible();
 		await expect.element(page.getByText("도구를 고치는 시간이 글을 쓰는 시간보다", { exact: false })).toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
+		await userEvent.click(page.getByRole("button", { name: "그대로 두기", exact: true }));
 		await expect.element(mark("변경")).not.toBeInTheDocument();
 		await expect.element(body().getByText("I rebuilt the blog", { exact: false })).toBeVisible();
 	});
@@ -331,7 +335,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 	it("04-2 T111 the source's new title and summary mark the translation: the tab's dot, the count, the banner, and a mark on each", async () => {
 		await FieldsChanged.run();
 		await expect.element(tab("English").getByLabelText("원문 변경")).toBeInTheDocument();
-		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "할 일 2" })).toBeVisible();
 		const title = page.getByRole("textbox", { name: "제목" });
 		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
 		const mark = document.querySelector("[data-field-mark=title]")?.getBoundingClientRect();
@@ -345,29 +349,41 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(title).toHaveValue("The first post");
 	});
 
-	it("04-2 T111 a title's mark opens its card: before and after, and confirming clears it and keeps the words", async () => {
+	it("04-2 T111 a title's mark opens its card: before and after, and '그대로 두기' clears it and keeps the words", async () => {
 		await FieldsChanged.run();
 		const title = page.getByRole("textbox", { name: "제목" });
-		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "할 일 2" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "변경", exact: true }).first());
 		await expect.element(memoCard()).toBeVisible();
 		await expect.element(page.getByText("고치며")).toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "확인", exact: true }));
-		await expect.element(page.getByRole("button", { name: "원문 변경 1" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "그대로 두기", exact: true }));
+		await expect.element(page.getByRole("button", { name: "할 일 1" })).toBeVisible();
 		await expect.element(title).toHaveValue("The first post");
 		expect(document.querySelector("[data-field-mark=title]")).toBeNull();
 	});
 
-	it("04-2 T111 the status bar lists the fields by name; a field's row opens the panel at its field, and '모두 확인' clears them", async () => {
+	it("04-2 T111 writing in a marked title takes its mark away once it is saved: no '그대로 두기' needed", async () => {
 		await FieldsChanged.run();
-		await userEvent.click(page.getByRole("button", { name: "원문 변경 2" }));
+		const title = page.getByRole("textbox", { name: "제목" });
+		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
+		await userEvent.fill(title, "Fixing the first post");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.poll(() => document.querySelector("[data-field-mark=title]")).toBeNull();
+		await expect.element(page.getByRole("button", { name: "할 일 1" })).toBeVisible();
+		expect(document.querySelector("[data-field-mark=summary]")).not.toBeNull();
+	});
+
+	it("04-2 T111 the to-do list names the fields; a field's row opens the panel at its field, and the banner's '모두 그대로 두기' clears them", async () => {
+		await FieldsChanged.run();
+		await userEvent.click(page.getByRole("button", { name: "할 일 2" }));
+		// Nothing stops publishing, so the list is the source's changes alone.
+		await expect.element(page.getByRole("dialog").getByText("원문 변경", { exact: true })).toBeVisible();
 		const row = page.getByRole("button", { name: /요약/ }).first();
 		await expect.element(row).toBeVisible();
 		await userEvent.click(row);
 		await expect.element(page.getByRole("textbox", { name: "요약" })).toHaveFocus();
-		await userEvent.click(page.getByRole("button", { name: "원문 변경 2" }));
-		await userEvent.click(page.getByRole("button", { name: "모두 확인" }).last());
-		await expect.element(page.getByRole("button", { name: /원문 변경 \d/ })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "모두 그대로 두기" }));
+		await expect.element(page.getByRole("button", { name: "할 일 없음" })).toBeVisible();
 		await expect.element(tab("English").getByLabelText("원문 변경")).not.toBeInTheDocument();
 	});
 
@@ -381,18 +397,18 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(row?.textContent).toContain("첫 번째 글을 고치며");
 	});
 
-	it("04-2 the status bar's '원문 변경' list has each mark's word in front and its one decision at the end; deciding one clears it", async () => {
+	it("04-2 the to-do list's '원문 변경' group has each mark's word in front and its one decision at the end; deciding one clears it", async () => {
 		await open(SourceChanged);
-		await userEvent.click(page.getByRole("button", { name: "원문 변경 3" }));
-		const list = page.getByRole("dialog");
+		await userEvent.click(todo());
+		const list = page.getByRole("group", { name: "원문 변경" });
 		const rows = () => [...list.element().querySelectorAll("[data-slot=todo-item]")];
 		await expect.poll(() => rows().length).toBe(3);
 		const rowOf = (word: string) =>
 			rows().find((row) => row.querySelector("[data-slot=todo-mark]")?.textContent === word);
 		const actionOf = (word: string) => [...(rowOf(word)?.querySelectorAll("button") ?? [])].at(-1)?.textContent;
-		expect([actionOf("변경"), actionOf("삭제"), actionOf("추가")]).toEqual(["확인", "지우기", "빼기"]);
-		await userEvent.click(list.getByRole("button", { name: "확인", exact: true }));
-		await expect.element(page.getByRole("button", { name: "원문 변경 2" })).toBeVisible();
+		expect([actionOf("변경"), actionOf("삭제"), actionOf("추가")]).toEqual(["그대로 두기", "지우기", "빼기"]);
+		await userEvent.click(list.getByRole("button", { name: "그대로 두기", exact: true }));
+		await expect.poll(() => rows().length).toBe(2);
 		await expect.element(mark("변경")).not.toBeInTheDocument();
 	});
 

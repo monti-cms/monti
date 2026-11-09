@@ -3,7 +3,7 @@ import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { SearchIn, useFolders } from "../screens/list/folders";
+import { searchScopes, useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
 import { FileThumb, useFileDetail } from "./file-shown";
 
@@ -14,7 +14,8 @@ const MOST = 1000;
 
 /**
  * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. It is a file browser (2026-11-09, owner): the top or a folder shows its folders
- * and its own files, and an image's place shows images, a file's place files. A search looks as the library's screen does, through the folder's subfolders or all of them. Picking
+ * and its own files, and an image's place shows images, a file's place files. A search looks as the library's screen does, through the folder's subfolders or, by the chip in
+ * the search box, all of them. Picking
  * a tile and pressing the pill puts it in; uploading hands the files back to the page with the open folder, and they go up in place as if pasted (screens/media.md).
  */
 export function MediaPickerDialog({
@@ -83,20 +84,18 @@ export function MediaPickerDialog({
 			onSearchChange={(next) => {
 				startOver();
 				setSearch(next);
+				// Emptied, the box starts over on the open folder.
+				if (next === "") setEverywhere(false);
 			}}
 			searchLabel={t("library.picker.search")}
-			searchIn={
-				looking && here ? (
-					<SearchIn
-						folder={here.name}
-						everywhere={everywhere}
-						onChange={(next) => {
-							startOver();
-							setEverywhere(next);
-						}}
-					/>
-				) : undefined
-			}
+			// Inside a folder the search box's chip says where a search looks, as on the library's page.
+			scopes={here ? searchScopes(here.name, t) : undefined}
+			scope={everywhere ? "all" : "here"}
+			onScopeChange={(next) => {
+				startOver();
+				setEverywhere(next === "all");
+			}}
+			scopeLabel={t("folders.searchIn")}
 			uploadLabel={t("library.upload")}
 			onUpload={() =>
 				chooseFiles({

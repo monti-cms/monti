@@ -26,6 +26,7 @@ import {
 	StatusBarAnnouncer,
 	StatusBarCell,
 	StatusBarList,
+	StatusBarListGroup,
 	StatusBarSpacer,
 	Text,
 	TextButton,
@@ -60,7 +61,7 @@ import {
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
-	SourceChangedCell,
+	SourceChangeRows,
 	SourcePane,
 	type SourceView,
 	SourceViewPicker,
@@ -317,6 +318,27 @@ export function EntryEditor({
 				(field === "title" ? editor.title : editor.value(field === "slug" ? "slug" : `values.${field}`)),
 		)
 		.map(([field]) => (field === "title" ? t("entry.title") : fieldLabel(field)));
+	// What changed in the source since the translation saw it: rows of the to-do list, after what stops publishing.
+	const sourceCount = compared && !readOnly ? compared.marks.length + compared.fields.length : 0;
+	const sourceOnly = sourceCount > 0 && publish.tasks.length === 0;
+	const sourceRows =
+		compared && sourceCount > 0 ? (
+			<SourceChangeRows
+				compared={compared}
+				doc={editor.doc}
+				fieldLabel={(field) => (field === "title" ? t("entry.title") : fieldLabel(field))}
+				onGo={(block) => {
+					setTodoOpen(false);
+					goTo({ code: "mark", field: "doc", block, blocking: false, message: { key: "" } });
+				}}
+				onGoField={(field) => {
+					setTodoOpen(false);
+					if (field === "title") document.getElementById(fieldInputId("title"))?.focus();
+					else goTo({ code: "mark", field, blocking: false, message: { key: "" } });
+				}}
+				onDecide={(decision) => void translation.decide([decision])}
+			/>
+		) : null;
 	const taskTitle = (task: PublishTask) =>
 		task.code === "required" && task.field
 			? t("entry.todo.fill", { field: task.field === "title" ? t("entry.title") : fieldLabel(task.field) })
@@ -636,7 +658,6 @@ export function EntryEditor({
 						onTab={setTab}
 						readOnly={readOnly}
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
-						sourcePublished={Boolean(compared?.source.publishedAt)}
 						uploads={fieldUploads}
 						altCard={altCard}
 						onAltCard={setAltCard}
@@ -652,51 +673,45 @@ export function EntryEditor({
 						</StatusBarCell>
 					)}
 					<StatusBarAnnouncer>{cell.text}</StatusBarAnnouncer>
+					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={
-							<StatusBarCell tone={publish.blocking > 0 ? "warning" : undefined}>
-								{publish.tasks.length > 0
-									? t("entry.todo.count", { count: publish.tasks.length })
+							<StatusBarCell tone={publish.blocking > 0 || sourceCount > 0 ? "warning" : undefined}>
+								{publish.tasks.length + sourceCount > 0
+									? t("entry.todo.count", { count: publish.tasks.length + sourceCount })
 									: t("entry.todo.none")}
 							</StatusBarCell>
 						}
-						label={t("entry.todo.label")}
-						count={publish.tasks.length}
+						label={t(sourceOnly ? "translation.changedTitle" : "entry.todo.label")}
+						count={sourceOnly ? sourceCount : publish.tasks.length}
 						open={todoOpen}
 						onOpenChange={setTodoOpen}
 					>
-						{publish.tasks.map((task, index) => (
-							<TodoItem
-								key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
-								title={taskTitle(task)}
-								detail={taskDetail(task)}
-								blocking={task.blocking}
-								onOpen={() => goTo(task)}
-							/>
-						))}
-						{publish.tasks.length === 0 ? (
-							<TodoDone>{t("entry.todo.none")}</TodoDone>
-						) : filled.length > 0 ? (
-							<TodoDone>{filled.join(" · ")}</TodoDone>
+						{sourceOnly ? null : (
+							<>
+								{publish.tasks.map((task, index) => (
+									<TodoItem
+										key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
+										title={taskTitle(task)}
+										detail={taskDetail(task)}
+										blocking={task.blocking}
+										onOpen={() => goTo(task)}
+									/>
+								))}
+								{publish.tasks.length === 0 ? (
+									<TodoDone>{t("entry.todo.none")}</TodoDone>
+								) : filled.length > 0 ? (
+									<TodoDone>{filled.join(" · ")}</TodoDone>
+								) : null}
+							</>
+						)}
+						{sourceRows && sourceOnly ? sourceRows : null}
+						{sourceRows && !sourceOnly ? (
+							<StatusBarListGroup label={t("translation.changedTitle")} count={sourceCount}>
+								{sourceRows}
+							</StatusBarListGroup>
 						) : null}
 					</StatusBarList>
-					{compared && !readOnly ? (
-						<SourceChangedCell
-							compared={compared}
-							doc={editor.doc}
-							fieldLabel={(field) => (field === "title" ? t("entry.title") : fieldLabel(field))}
-							onGo={(block) =>
-								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
-							}
-							onGoField={(field) =>
-								field === "title"
-									? document.getElementById(fieldInputId("title"))?.focus()
-									: goTo({ code: "mark", field, blocking: false, message: { key: "" } })
-							}
-							onConfirmAll={() => void translation.confirmAll()}
-							onDecide={(decision) => void translation.decide([decision])}
-						/>
-					) : null}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						{t("entry.chars", { count: docLength(decidedOnly(editor.doc)) })}

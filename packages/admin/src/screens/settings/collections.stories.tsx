@@ -98,9 +98,9 @@ const sheetGone = (body: ReturnType<typeof within>) =>
 const collectionLink = (page: ReturnType<typeof within>, name: RegExp) =>
 	within(page.getByRole("navigation", { name: "컬렉션" })).getByRole("button", { name });
 
-/** Opens "바뀐 곳 ▾" once its group has settled (it appears with the first change, and a second press would close the list). */
+/** Opens "변경 사항 ▾" once its group has settled (it appears with the first change, and a second press would close the list). */
 export async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typeof within>) {
-	const trigger = await page.findByRole("button", { name: "바뀐 곳" });
+	const trigger = await page.findByRole("button", { name: "변경 사항" });
 	await new Promise((done) => setTimeout(done, 300));
 	await userEvent.click(trigger);
 	await body.findByRole("menu", {}, wait);
@@ -222,12 +222,12 @@ export const EditField: Story = {
 	},
 };
 
-/** Flow 4, step 07: three changed fields, the posts marked changed, "바뀐 곳 3". */
+/** Flow 4, step 07: three changed fields, the posts marked changed, "변경 사항 3". */
 export const ChangedFields: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page } = await changeFields(canvasElement);
-		await expect(page.getByRole("button", { name: "바뀐 곳" })).toBeInTheDocument();
+		await expect(page.getByRole("button", { name: "변경 사항" })).toBeInTheDocument();
 	},
 };
 
@@ -375,7 +375,7 @@ export const DeleteCollection: Story = {
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
 		await userEvent.click(await page.findByRole("button", { name: "지우기" }));
 		await openChanges(page, body);
-		await body.findByText("컬렉션 지움");
+		await body.findByText("컬렉션 삭제");
 	},
 };
 

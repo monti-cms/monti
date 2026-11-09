@@ -55,8 +55,8 @@ export function MediaField({
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
-	/** In a translation following its source: says whose value shows, and what × does. */
-	whose?: { following: string; own: string; clear: string };
+	/** In a translation following its source: the mark while the source's value shows (its own needs none), and what × does. */
+	whose?: { following: string; clear: string };
 	readOnly: boolean;
 	uploads: FieldUploads;
 	/** Whether the picture's settings card is open: the editor's, so a to-do row can open it. */
@@ -86,9 +86,9 @@ export function MediaField({
 					action={
 						change && !going ? (
 							change
-						) : whose && !going ? (
+						) : whose && followed && !going ? (
 							<Text variant="micro" tone="faint">
-								{own ? whose.own : whose.following}
+								{whose.following}
 							</Text>
 						) : undefined
 					}

@@ -486,7 +486,6 @@ export function EntryProperties({
 	onTab,
 	readOnly,
 	shared,
-	sourcePublished,
 	uploads,
 	altCard,
 	onAltCard,
@@ -500,8 +499,6 @@ export function EntryProperties({
 	readOnly: boolean;
 	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
 	shared?: Record<string, unknown> | null;
-	/** Whether those values are what the source has on the site (doc 04, principle 5), or its working copy, not being on the site. */
-	sourcePublished?: boolean;
 	/** The files going up for the media fields: the editor's, so they outlive this panel. */
 	uploads: FieldUploads;
 	/** The media field whose picture settings are open: a to-do row opens them. */
@@ -611,8 +608,7 @@ export function EntryProperties({
 					whose={
 						shared && localeModeOf(key, def) === "fromSource"
 							? {
-									following: t(sourcePublished ? "translation.followsPublished" : "translation.followsSource"),
-									own: t("translation.ownValue"),
+									following: t("translation.followsSource"),
 									clear: t("translation.backToSource", { label: values[key]?.label ?? key }),
 								}
 							: undefined

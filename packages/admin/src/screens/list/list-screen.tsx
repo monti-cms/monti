@@ -38,7 +38,6 @@ import {
 	RowTitle,
 	SearchToggle,
 	type SelectAll,
-	Separator,
 	SplitButton,
 	Table,
 	TableBody,
@@ -59,7 +58,7 @@ import {
 	FolderMenuItems,
 	FolderTargets,
 	MoveToFolderMenu,
-	SearchIn,
+	searchScopes,
 	useFolderNaming,
 	useFolders,
 	useRemoveFolder,
@@ -174,7 +173,12 @@ function DocumentListScreen({
 		setWords(text);
 		if (typing.current) clearTimeout(typing.current);
 		typing.current = setTimeout(
-			() => setState({ ...state, page: 1, search: { ...state.search, text } }, { replace: true }),
+			// Emptied, the box starts over on the open folder.
+			() =>
+				setState(
+					{ ...state, page: 1, search: { ...state.search, text }, everywhere: text === "" ? false : state.everywhere },
+					{ replace: true },
+				),
 			250,
 		);
 	};
@@ -418,6 +422,10 @@ function DocumentListScreen({
 					]}
 					target={state.search.in}
 					onTargetChange={(target) => setState({ ...state, page: 1, search: { text: words, in: target } })}
+					// Inside a folder the same chip says which folders it looks in (2026-11-10, owner: no row of its own).
+					scopes={openFolder ? searchScopes(openFolder.name, t) : undefined}
+					scope={state.everywhere ? "all" : "here"}
+					onScopeChange={(scope) => setState({ ...state, page: 1, everywhere: scope === "all" })}
 					targetLabel={t("list.searchIn")}
 				/>
 			)}
@@ -754,18 +762,8 @@ function DocumentListScreen({
 		<PageColumn width="list">
 			{removeFolder.dialog}
 			{header}
-			{(aiChips.length > 0 || (openFolder && looking)) && (
+			{aiChips.length > 0 && (
 				<PageToolbar inset>
-					{openFolder && looking && (
-						<>
-							<SearchIn
-								folder={openFolder.name}
-								everywhere={state.everywhere}
-								onChange={(everywhere) => setState({ ...state, page: 1, everywhere })}
-							/>
-							{aiChips.length > 0 && <Separator orientation="vertical" length="control" />}
-						</>
-					)}
 					{aiChips.map((filter) => (
 						<Chip
 							key={filterColumn(filter)}

@@ -103,8 +103,11 @@ describe("from the library", () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
 		const search = dialog.getByRole("searchbox", { name: "파일 이름 검색" });
+		const chip = dialog.getByRole("button", { name: /찾는 곳$/ });
+		await expect.element(chip).not.toBeInTheDocument();
 		await openAssets(dialog);
-		await expect.element(dialog.getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+		// In a folder the search box's chip says where a search looks: this folder first.
+		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾는 곳");
 
 		await userEvent.fill(search, "cafe");
 		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toHaveTextContent("covers ·");
@@ -112,13 +115,14 @@ describe("from the library", () => {
 
 		await userEvent.fill(search, "top-level");
 		await expect.element(dialog.getByText("맞는 파일이 없습니다.")).toBeVisible();
-		await userEvent.click(dialog.getByRole("button", { name: "모든 폴더" }));
+		await userEvent.click(chip);
+		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 
-		// The × empties the box: back to the folder as it was, with nothing to choose.
+		// The × empties the box: back to the folder as it was, its own files and folders, the chip back on this folder.
 		await userEvent.click(dialog.getByRole("button", { name: "지우기" }));
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
-		await expect.element(dialog.getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
+		await expect.element(chip).toHaveAccessibleName("Blog Assets, 찾는 곳");
 		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
 	});
 

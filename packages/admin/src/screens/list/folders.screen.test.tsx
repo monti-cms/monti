@@ -79,35 +79,33 @@ describe("folders in the list", () => {
 		await expect.element(folderLink("시리즈 원고")).toBeVisible();
 	});
 
-	it("07-2 [flow 5·03] a search in a folder looks in it first; '모든 폴더' widens it to the collection", async () => {
+	it("07-2 [flow 5·03] a search in a folder looks in it first; the chip in the search box widens it to every folder", async () => {
 		await Main.run();
 		await userEvent.click(folderLink("시리즈 원고"));
 		await userEvent.click(main().getByRole("button", { name: "검색" }));
 		await userEvent.keyboard("지난 글 1");
 		await expect.element(row("지난 글 1")).toBeVisible();
 		await expect.element(row("지난 글 10")).not.toBeInTheDocument();
-		await userEvent.click(main().getByRole("button", { name: "모든 폴더" }));
+		// One chip says which folder and which part of an entry it looks in (2026-11-10, owner).
+		const chip = main().getByRole("button", { name: "시리즈 원고, 찾을 곳" });
+		await userEvent.click(chip);
+		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(row("지난 글 10")).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "모든 폴더, 찾을 곳" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "모든 폴더, 찾을 곳" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "제목" }));
+		await expect.element(main().getByRole("button", { name: "모든 폴더 · 제목, 찾을 곳" })).toBeVisible();
 	});
 
-	it("07-2 a filter in a folder looks in it first too; '모든 폴더' widens it, and with the filter off the folder is its own again", async () => {
+	it("07-2 a filter in a folder looks in that folder: no row of its own offers every folder (the top does)", async () => {
 		await Main.run();
 		await userEvent.click(folderLink("시리즈 원고"));
-		const everywhere = main().getByRole("button", { name: "모든 폴더" });
-		await expect.element(everywhere).not.toBeInTheDocument();
-		const published = async () => {
-			await userEvent.click(main().getByRole("button", { name: "상태" }));
-			await userEvent.click(page.getByRole("menuitemcheckbox", { name: /발행됨/ }));
-			await userEvent.keyboard("{Escape}");
-		};
-		await published();
+		await userEvent.click(main().getByRole("button", { name: "상태" }));
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /발행됨/ }));
+		await userEvent.keyboard("{Escape}");
 		await expect.element(row("지난 글 1")).toBeVisible();
 		await expect.element(row("지난 글 10")).not.toBeInTheDocument();
-		await userEvent.click(everywhere);
-		await expect.element(row("지난 글 10")).toBeVisible();
-		await published();
-		await expect.element(everywhere).not.toBeInTheDocument();
-		await expect.element(row("지난 글 10")).not.toBeInTheDocument();
+		await expect.element(main().getByText("모든 폴더")).not.toBeInTheDocument();
 	});
 
 	it("07-2 [flow 5·04] a folder row's right-click menu renames it in place and moves it into another folder", async () => {
