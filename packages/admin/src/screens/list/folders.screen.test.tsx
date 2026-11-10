@@ -131,7 +131,7 @@ describe("folders in the list", () => {
 		await userEvent.click(menu.getByRole("menuitem", { name: "폴더 지우기" }));
 		const dialog = page.getByRole("alertdialog");
 		await expect.element(dialog).toHaveTextContent("글 3편");
-		await expect.element(dialog).toHaveTextContent("1편은 사이트에서 내려갑니다");
+		await expect.element(dialog).toHaveTextContent("발행된 글 1편의 공개가 끝납니다");
 		await userEvent.click(dialog.getByRole("button", { name: "휴지통으로" }));
 		await expect.element(folderLink("시리즈 원고")).not.toBeInTheDocument();
 		await expect.element(sidebarFolders()).not.toBeInTheDocument();
