@@ -31,6 +31,8 @@ export type RelationOption = {
 
 export type RelationOptionsResult = {
 	options: RelationOption[];
+	/** Targets in the trash, by group: a field that still points at one names it and says where it is (doc 08). They are no choices. */
+	trashed: { group: string; title: string }[];
 	canCreate: boolean;
 	exactMatch: boolean;
 	targetCollection: string;
@@ -153,11 +155,30 @@ export const relationOperations = [
 
 			options.sort((a, b) => a.title.localeCompare(b.title, targetLocale));
 
+			const gone = await ctx.db
+				.selectFrom("entries")
+				.select(["translation_group", "locale", "title"])
+				.where("collection", "=", targetCol)
+				.where("trashed_at", "is not", null)
+				.execute();
+			const trashed = new Map<string, { group: string; title: string; locale: string }>();
+			for (const row of gone) {
+				const seen = trashed.get(row.translation_group);
+				// The requested language's name, else the source language's, else any.
+				const better =
+					!seen ||
+					row.locale === targetLocale ||
+					(row.locale === schema.locales.source && seen.locale !== targetLocale);
+				if (better && !groupsMap.has(row.translation_group))
+					trashed.set(row.translation_group, { group: row.translation_group, title: row.title, locale: row.locale });
+			}
+
 			const exactMatch = Boolean(searchLower && options.some((opt) => opt.title.toLowerCase() === searchLower));
 			const canCreate = Boolean(fieldDef.createMissing && searchLower && !exactMatch);
 
 			return {
 				options,
+				trashed: [...trashed.values()].map(({ group, title }) => ({ group, title })),
 				canCreate,
 				exactMatch,
 				targetCollection: targetCol,

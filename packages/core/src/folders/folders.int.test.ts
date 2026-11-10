@@ -97,7 +97,7 @@ describe("folders", () => {
 				["Blog Assets", 0],
 				["diagrams", 1],
 			]);
-			await write("folders.remove", { id: top });
+			await write("trash.move", { rows: [{ kind: "folder", id: top }] });
 			expect(await tree(scope)).toEqual([]);
 		}
 	});
@@ -117,7 +117,7 @@ describe("folders", () => {
 		// A trashed folder and what is in it are not counted.
 		const gone = await folder("Gone", assets);
 		await move([await newPost("D")], gone);
-		await write("folders.remove", { id: gone });
+		await write("trash.move", { rows: [{ kind: "folder", id: gone }] });
 
 		expect((await tree()).map(({ name, depth, count, published }) => ({ name, depth, count, published }))).toEqual([
 			{ name: "Blog Assets", depth: 0, count: 3, published: 1 },
@@ -219,7 +219,7 @@ describe("folders", () => {
 		expect(await fromSite("hello")).toMatchObject({ entry: { title: "Hello" } });
 	});
 
-	it("folders.remove previews how many entries, subfolders and published entries go with the folder", async () => {
+	it("trash.move previews how many entries, subfolders and published entries go with the folder", async () => {
 		const series = await folder("시리즈 원고");
 		const inner = await folder("drafts", series);
 		const [a, b, c] = [await newPost("A"), await newPost("B"), await newPost("C")];
@@ -228,16 +228,13 @@ describe("folders", () => {
 		await write("entries.publish", { ids: [a] });
 		// The preview is what the assistant reads before proposing, and what the card shows.
 		const monti = site();
-		const { preview } = await monti.proposals.add(
-			await monti.proposals.create("c-remove", "remove it"),
-			"folders.remove",
-			{
-				id: series,
-			},
-		);
+		const { preview } = await monti.proposals.add(await monti.proposals.create("c-remove", "remove it"), "trash.move", {
+			rows: [{ kind: "folder", id: series }],
+		});
+		// Three entries and two folders go; one published entry leaves the site.
 		expect(preview?.summary).toEqual({
-			key: "folders.removePreview",
-			values: { name: "시리즈 원고", entries: 3, folders: 1, published: 1 },
+			key: "trash.movePreview",
+			values: { count: 5, unpublished: 1, kept: 0 },
 		});
 	});
 
@@ -254,7 +251,7 @@ describe("folders", () => {
 		await move([nested], inner);
 		await write("entries.publish", { ids: [published, outside] });
 
-		await write("folders.remove", { id: series });
+		await write("trash.move", { rows: [{ kind: "folder", id: series }] });
 
 		const trashed = async (id: string) => (await entry(id)).trashed_at !== null;
 		expect(await Promise.all([published, draft, nested, outside].map(trashed))).toEqual([true, true, true, false]);
@@ -273,7 +270,7 @@ describe("folders", () => {
 		await move([nested], inner);
 		await write("entries.publish", { ids: [published] });
 
-		const removed = await write("folders.remove", { id: series });
+		const removed = await write("trash.move", { rows: [{ kind: "folder", id: series }] });
 		await write("activity.undo", { id: removed.activityId });
 
 		expect((await tree()).map(({ name, count }) => [name, count])).toEqual([

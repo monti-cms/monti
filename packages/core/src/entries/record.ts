@@ -101,6 +101,8 @@ const EntryRowShape: z.ZodType<Selectable<EntryTable>> = z.object({
 	created_at: DateShape,
 	updated_at: DateShape,
 	trashed_at: DateShape.nullable(),
+	trashed_with: z.string().nullable(),
+	trashed_by: z.enum(["admin", "assistant", "cli", "plugin"]).nullable(),
 	translation_skips: z.array(z.string()),
 	translation_seen: z.record(z.string(), z.unknown()).default({}),
 	body_text: z.string().nullable(),
@@ -203,6 +205,8 @@ export const entryRecord = defineRecordKind({
 			created_at: row.created_at,
 			updated_at: row.updated_at,
 			trashed_at: row.trashed_at,
+			trashed_with: row.trashed_with,
+			trashed_by: row.trashed_by,
 			translation_skips: JSON.stringify(row.translation_skips),
 			translation_seen: JSON.stringify(row.translation_seen),
 		};

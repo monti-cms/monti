@@ -61,7 +61,7 @@ export {
 	type MontiError,
 	UnknownOperationError,
 } from "./errors";
-export type { FolderNode, FolderRemoval } from "./folders/operations";
+export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
 export {
 	type Acceptance,
@@ -89,7 +89,6 @@ export type {
 	MediaFile,
 	MediaItem,
 	MediaQueryResult,
-	MediaTrashResult,
 	MediaUseRow,
 	MissingAlt,
 } from "./media/operations";
@@ -144,3 +143,6 @@ export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
 export type { Site } from "./site";
 export type { FieldMark } from "./translations/fields";
+export { daysLeft, MEDIA_KIND, type TrashedEntry, type TrashList, type TrashQuery, type TrashRow } from "./trash/list";
+export type { TrashEffects, TrashMoved, TrashRestored } from "./trash/operations";
+export { TRASH_DAYS, type TrashRef } from "./trash/purge";

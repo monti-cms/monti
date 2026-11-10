@@ -321,12 +321,15 @@ export async function syncRelationsForEntry(
 	}
 }
 
-/** Unlinks target group on permanent delete (doc 08-3). */
+/**
+ * Unlinks target group on permanent delete (doc 08-3). Entries in the trash lose it too, so a restored one names nothing that is gone; each entry's version
+ * rises, so a screen that read it before saves no stale value over it.
+ */
 export async function unlinkTargetGroup(
 	db: Db,
 	schema: Schema,
 	targetGroup: string,
-	_ctx?: OperationContext,
+	now: Date,
 ): Promise<{ unlinkedCount: number }> {
 	const links = await db.selectFrom("entry_links").selectAll().where("to_group", "=", targetGroup).execute();
 
@@ -340,7 +343,6 @@ export async function unlinkTargetGroup(
 			.selectFrom("entries")
 			.selectAll()
 			.where("translation_group", "=", fromGroup)
-			.where("trashed_at", "is", null)
 			.execute();
 
 		for (const pe of pointingEntries) {
@@ -358,7 +360,7 @@ export async function unlinkTargetGroup(
 			}
 			await db
 				.updateTable("entries")
-				.set({ values: JSON.stringify(values), updated_at: new Date() })
+				.set((eb) => ({ values: JSON.stringify(values), updated_at: now, version: eb("version", "+", 1) }))
 				.where("id", "=", pe.id)
 				.execute();
 			await db

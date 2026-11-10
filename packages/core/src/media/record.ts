@@ -21,6 +21,7 @@ const SnapshotShape = z.object({
 	uploaded_at: DateShape,
 	version: z.number().int(),
 	trashed_at: DateShape.nullable(),
+	trashed_by: z.enum(["admin", "assistant", "cli", "plugin"]).nullable(),
 });
 
 export const mediaRecord = defineRecordKind({

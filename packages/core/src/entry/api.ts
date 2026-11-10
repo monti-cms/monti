@@ -4,6 +4,7 @@ import { findSession, startSession } from "../auth/session";
 import { randomUUID } from "../bytes";
 import { acceptFile, HEAD_BYTES, isMediaKey, MAX_UPLOAD_BYTES } from "../media/accept";
 import type { Monti } from "../monti";
+import { loosen, looseUntil } from "../trash/purge";
 import { describeError } from "./errors";
 
 export type AdminApiOptions = {
@@ -21,6 +22,8 @@ const Body = z.object({
 });
 
 export const SESSION_COOKIE = "monti_session";
+/** How often an open admin cleans the trash. */
+const CLEAN_EVERY = 3_600_000;
 const STATE_COOKIE = "monti_github_state";
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -51,6 +54,7 @@ const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin"]);
 export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 	const adminPath = options.adminPath ?? "/admin";
 	const github = monti.site.auth.github;
+	let cleanedAt = Number.NEGATIVE_INFINITY;
 	const sessionCookie = (request: Request, token: string, expiresAt: Date) =>
 		cookie(request, SESSION_COOKIE, token, Math.round((expiresAt.getTime() - monti.now().getTime()) / 1000));
 
@@ -66,6 +70,11 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const session = await findSession(monti.db, token, monti.now());
 		const found = monti.operations.get(name);
 		if (!found?.open && !session) return { status: 401, body: { error: "unauthenticated" } };
+		// The admin's frame asks this when it opens: the trash is cleaned before it is counted, an hour apart at most (doc 11).
+		if (name === "frame.counts" && monti.now().getTime() - cleanedAt >= CLEAN_EVERY) {
+			cleanedAt = monti.now().getTime();
+			await monti.trash.purgeDue();
+		}
 		const body = Body.safeParse(rawBody);
 		if (!body.success) return { status: 400, body: { error: "invalid-body" } };
 		try {
@@ -171,6 +180,8 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 				: { status: 415, body: { error: "media-refused", reason: { key: "media.badType" } } };
 		const key = `${randomUUID()}${accepted.extension}`;
 		await storage.put(key, bytes, { mime: accepted.mime });
+		// Until `media.upload` makes it a file's: an upload that stops here is removed by the clean-up (doc 11).
+		await loosen(monti.db, [key], looseUntil(monti.now()));
 		return { status: 200, body: { key, mime: accepted.mime, size: bytes.length } };
 	}
 
