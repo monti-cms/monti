@@ -42,7 +42,7 @@ describe("bytes on their way up", () => {
 		expect(await storage.stat(key)).toEqual({ size: PNG.length, mime: "image/png" });
 		const made = (await monti.run(
 			"media.upload",
-			{ name: "책상 사진.png", original: { key } },
+			{ name: "책상 사진.png", original: { key, width: 1, height: 1 } },
 			{ actor: "admin" },
 		)) as {
 			output: MediaItem;

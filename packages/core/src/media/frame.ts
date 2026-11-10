@@ -20,26 +20,29 @@ export type ImageRotate = z.infer<typeof ImageRotateShape>;
  * An image block's attrs (doc 09). The picture's size is a width in px (`width`) or a share of the body (`widthPercent`), never both; with neither it is its
  * own size. Either way a body narrower than it shrinks it, and its height follows its shape.
  */
-export const ImageAttrsShape = z
-	.object({
-		media: z.string(),
-		alt: z.string().optional(),
-		caption: z.string().optional(),
-		/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
-		decorative: z.boolean().optional(),
-		/** Its width in px. Never wider than what shows of the picture: a wider one is drawn at the picture's own. */
-		width: z.number().int().positive().optional(),
-		/** Its width in % of the body, for a picture that follows the body's width. */
-		widthPercent: z.number().int().min(1).max(100).optional(),
-		align: z.enum(["left", "center", "right"]).optional(),
-		/** What of the picture shows, and how it is turned. The original is never changed. */
-		crop: ImageCropShape.optional(),
-		rotate: ImageRotateShape.optional(),
-	})
-	.refine((attrs) => attrs.width === undefined || attrs.widthPercent === undefined, {
-		message: "An image's width is in px or in percent, not both.",
-	});
-export type ImageAttrs = z.infer<typeof ImageAttrsShape>;
+const ImageUseShape = z.object({
+	media: z.string(),
+	alt: z.string().optional(),
+	caption: z.string().optional(),
+	/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
+	decorative: z.boolean().optional(),
+	align: z.enum(["left", "center", "right"]).optional(),
+	/** What of the picture shows, and how it is turned. The original is never changed. */
+	crop: ImageCropShape.optional(),
+	rotate: ImageRotateShape.optional(),
+});
+export const ImageAttrsShape = ImageUseShape.extend({
+	/** Its width in px. Never wider than what shows of the picture: a wider one is drawn at the picture's own. */
+	width: z.number().int().positive().optional(),
+	/** Its width in % of the body, for a picture that follows the body's width. */
+	widthPercent: z.number().int().min(1).max(100).optional(),
+	// One flat object, so the catalog's JSON schema lists its attrs (the block menu reads `align` there); the check keeps the two widths apart.
+}).refine((attrs) => attrs.width === undefined || attrs.widthPercent === undefined, {
+	message: "An image's width is in px or in percent, not both.",
+});
+/** An image block's attrs as code holds them: at most one of the two widths, as the shape's check keeps it. */
+export type ImageAttrs = z.infer<typeof ImageUseShape> &
+	({ width?: number; widthPercent?: undefined } | { widthPercent: number; width?: undefined });
 
 /**
  * The size a picture is drawn at before a narrower body shrinks it, in px (doc 09): what shows of it (its crop, turned), at the width the block gives, never

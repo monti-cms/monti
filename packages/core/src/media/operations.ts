@@ -97,7 +97,9 @@ const Web = z.object({ key: z.string(), width: Size.max(WEB_LONGEST_SIDE), heigh
 const Placeholder = z
 	.string()
 	.max(4096)
-	.regex(/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/);
+	.regex(
+		/^data:image\/(webp|png|jpeg);base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$/,
+	);
 type Original = z.infer<typeof Original>;
 type Web = z.infer<typeof Web>;
 
@@ -216,6 +218,9 @@ async function statOfKeys(ctx: OperationContext, original: Original, web: Web | 
 	);
 	if (web?.key === original.key) throw new CheckError({ key: "media.keyTaken", values: { key: web.key } });
 	const stat = await statOfKey(ctx, original.key, self);
+	// A picture is drawn at its own size (doc 09): one with no size could not be drawn on the site.
+	if (kindOf(stat.mime) === "image" && !(original.width && original.height))
+		throw new CheckError({ key: "media.imageSize" });
 	if (web) {
 		const webStat = await statOfKey(ctx, web.key, self);
 		if (kindOf(stat.mime) !== "image" || kindOf(webStat.mime) !== "image")

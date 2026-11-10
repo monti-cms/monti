@@ -175,7 +175,7 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 - 번역에서 미디어 필드는 그대로 쓸 수도, 바꿀 수도 있다. 기본 언어 방식이 "원문 따름"(`fromSource`)이다. 번역의 값이 비어 있으면 원문의 파일과 대체 텍스트를 따른다. 파일을 고르거나 대체 텍스트를 쓰면 그 번역의 값이 되고, 지우면 다시 따른다. 새 번역은 값을 복사하지 않고 비어서 시작한다.
 - 자르기와 돌리기는 원본을 건드리지 않고 블록의 `crop`(비율)과 `rotate`에 둔다. 크기는 `width`(px)나 `widthPercent`(본문 폭의 %) 중 하나이고, 둘 다 없으면 그림 자기 크기(자른 부분, 돌린 뒤)다. 어느 쪽이든 본문이 더 좁으면 본문 폭까지 줄고, 높이는 그림의 비율이 정한다. px는 그림 자기 크기보다 크게 할 수 없다. 편집기와 사이트가 같은 값으로 그린다.
 - 편집의 비율은 원본 · 1:1 · 4:3 · 16:9 · 자유다. "자유"가 아니면 비율이 고정되어 가로를 쓰면 세로가, 세로를 쓰면 가로가 따라온다. "자유"에서 가로와 세로를 쓰면 자를 상자가 그 비율로 맞춰진다(80×80을 40×30으로). 크기만 바꾸면 잘리지 않는다. 그림을 늘이거나 찌그러뜨리는 맞춤은 없다.
-- 사이트는 그림마다 바로 그릴 값 한 묶음을 받는다(`siteImage`). `src`, 그려질 px인 `width`와 `height`, `widthPercent`, `alt`(장식이면 빈 값), `placeholder`, `frame`(자르거나 돌린 그림을 틀 안에 놓는 값, `imageFrameStyle`), `original`이다. `renderDocument`는 이것을 이미지 블록의 `Site` 컴포넌트에 `image`로 넘기고, 미디어 필드의 그림은 `siteImage(entry.values.cover, entry.media)`로 같은 모양을 받는다. 기본 HTML은 `<img width height>`에 `max-width: 100%; height: auto`라 그림이 오기 전에도 자리가 잡힌다. 사이트가 가진 파일이 아니면 그리지 않는다.
+- 사이트는 그림마다 바로 그릴 값 한 묶음을 받는다(`siteImage`). `src`, 그려질 px인 `width`와 `height`, `widthPercent`, `alt`(장식이면 빈 값), `placeholder`, `frame`(자르거나 돌린 그림을 틀 안에 놓는 값, `imageFrameStyle`), `original`이다. `renderDocument`는 이것을 이미지 블록의 `Site` 컴포넌트에 `image`로 넘기고, 미디어 필드의 그림은 `siteImage(entry.values.cover, entry.media)`로 같은 모양을 받는다. 기본 HTML은 `<img width height>`에 `max-width: 100%; height: auto`라 그림이 오기 전에도 자리가 잡힌다. 잘랐거나 돌린 그림은 그 모양의 상자(`aspect-ratio`)가 자리를 잡는다. 이미지는 가로와 세로를 갖고 올라온다. 없으면 `media.upload`와 `media.replace`가 거절한다. 사이트가 가진 파일이 아니면 그리지 않는다.
 
 ## 기능 목록
 

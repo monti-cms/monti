@@ -512,6 +512,29 @@ describe("an image in the text", () => {
 		await userEvent.keyboard("{ArrowLeft}");
 		const region = () => body().element().querySelector("[data-slot=block-box][data-selected] [aria-live]");
 		await expect.poll(() => region()?.textContent).toBe("45%");
+		// A share stops where the picture would be under 24px, as a width in px does.
+		for (let press = 0; press < 10; press++) await userEvent.keyboard("{ArrowLeft}");
+		await expect.poll(() => region()?.textContent).toBe(`${Math.ceil((24 / column) * 100)}%`);
+	});
+
+	it("09-1 a free shape given the height it already has keeps its crop", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
+		const dialog = page.getByRole("dialog");
+		await userEvent.click(dialog.getByRole("button", { name: "자유" }));
+		const corner = dialog.getByRole("button", { name: "오른쪽 아래 모서리" });
+		corner.element().focus();
+		await userEvent.keyboard(
+			"{Shift>}{ArrowLeft}{ArrowLeft}{ArrowLeft}{ArrowLeft}{ArrowUp}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}",
+		);
+		const box = () =>
+			dialog.getByRole("button", { name: "자를 곳: 화살표로 옮기기" }).element().getBoundingClientRect().width;
+		const before = box();
+		const height = dialog.getByRole("textbox", { name: "세로" });
+		await userEvent.fill(height, height.element().getAttribute("placeholder") ?? "");
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => Math.abs(box() - before)).toBeLessThan(2);
 	});
 
 	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {

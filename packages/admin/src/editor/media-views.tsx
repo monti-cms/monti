@@ -89,10 +89,13 @@ const sizedOf = (data: ImageData): Sized =>
 		: data.width !== undefined
 			? { unit: "px", value: data.width }
 			: null;
-const attrsOf = (sized: Sized): Pick<ImageData, "width" | "widthPercent"> => ({
-	width: sized?.unit === "px" ? sized.value : undefined,
-	widthPercent: sized?.unit === "%" ? sized.value : undefined,
-});
+/** A size as the block's attrs: one of the two widths, the other cleared. */
+const attrsOf = (
+	sized: Sized,
+): { width?: number; widthPercent?: undefined } | { widthPercent: number; width?: undefined } =>
+	sized?.unit === "%"
+		? { widthPercent: sized.value, width: undefined }
+		: { width: sized?.value, widthPercent: undefined };
 const sameSized = (a: Sized, b: Sized) => a?.unit === b?.unit && a?.value === b?.value;
 
 /**
@@ -258,14 +261,17 @@ function centeredCrop(share: number): CropRect {
 	return { x: (100 - width) / 2, y: (100 - height) / 2, width, height };
 }
 
-/** The largest crop of a new ratio (in shares), around the middle of the one before, inside the picture. */
+/** A crop of a new ratio (in shares) as wide as the one before, around its middle, inside the picture: a ratio it has already leaves it as it is. */
 function reshapedCrop(before: CropRect, share: number): CropRect {
-	const largest = centeredCrop(share);
+	const tall = before.width / share > 100;
+	const width = tall ? 100 * share : before.width;
+	const height = tall ? 100 : before.width / share;
 	const middle = { x: before.x + before.width / 2, y: before.y + before.height / 2 };
 	return {
-		...largest,
-		x: clamp(middle.x - largest.width / 2, 0, 100 - largest.width),
-		y: clamp(middle.y - largest.height / 2, 0, 100 - largest.height),
+		width,
+		height,
+		x: clamp(middle.x - width / 2, 0, 100 - width),
+		y: clamp(middle.y - height / 2, 0, 100 - height),
 	};
 }
 
