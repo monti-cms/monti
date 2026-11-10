@@ -142,12 +142,12 @@ import { createElement } from "react";
 import { renderDocument } from "@monti-cms/core/render";
 import { blocks } from "@/monti/blocks"; // the same definitions the admin uses
 
-export function PostBody({ doc }: { doc: Doc }) {
-  return renderDocument(doc, { createElement, blocks });
+export function PostBody({ entry }: { entry: SiteEntry }) {
+  return renderDocument(entry.doc, { createElement, blocks, media: entry.media });
 }
 ```
 
-- 사이트는 읽기 API로 발행본의 `Doc`을 받아 `renderDocument`로 그린다. 블록 정의의 `Site` 컴포넌트를 쓴다.
+- 사이트는 읽기 API로 발행본의 `Doc`을 받아 `renderDocument`로 그린다. 블록 정의의 `Site` 컴포넌트를 쓴다. 그림과 파일 블록은 읽기 API가 주는 그 글의 파일(`media`)로 그린다. 이미지 블록의 `Site` 컴포넌트는 바로 그릴 그림(`image`)도 받는다(09).
 - 사이트에 정의가 없는 블록(지운 플러그인의 블록)은 그리지 않고, 개발 서버에서만 경고를 낸다.
 
 ## 에이전트

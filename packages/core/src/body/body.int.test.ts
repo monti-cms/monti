@@ -4,7 +4,7 @@ import { z } from "zod";
 import { testDatabase } from "../__test__/database";
 import { createReader } from "../entries/reader";
 import { createMonti, definePlugin } from "../monti";
-import { type CreateElement, renderDocument } from "../render";
+import { type CreateElement, renderDocument, type SiteMedia, siteImage } from "../render";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import { coreBlocks, defineBlock } from "./blocks";
@@ -48,6 +48,21 @@ const html: CreateElement<string> = (type, props, ...children) => {
 		? `<${type}${attrs}/>`
 		: `<${type}${attrs}>${inner}</${type}>`;
 };
+/** A picture as the reader gives it: a web size of 400 × 200 from an original twice as big. */
+const picture = (over: Partial<SiteMedia> = {}): SiteMedia => ({
+	id: "m1",
+	name: "cat.jpg",
+	kind: "image",
+	mime: "image/jpeg",
+	size: 1,
+	url: "/media/m1",
+	width: 400,
+	height: 200,
+	original: { url: "/media/m1-original", width: 800, height: 400 },
+	placeholder: null,
+	...over,
+});
+
 const draw = (body: Doc, options: Partial<Parameters<typeof renderDocument<string>>[1]> = {}) =>
 	renderDocument(body, { createElement: html, ...options }).join("");
 
@@ -181,8 +196,8 @@ describe("one definition", () => {
 			{ id: "b_5", type: "image", attrs: { media: "m1", alt: "A cat" } },
 			{ id: "b_6", type: "removedPluginBlock" },
 		);
-		expect(draw(body, { mediaUrl: (id) => `/media/${id}` })).toBe(
-			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat" style="width:100%"/></figure>',
+		expect(draw(body, { media: { m1: picture() } })).toBe(
+			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat" width="400" height="200" style="width:400px;maxWidth:100%;height:auto"/></figure>',
 		);
 	});
 });
@@ -212,21 +227,69 @@ describe("one check", () => {
 		);
 	});
 
-	it("09-1 T122 an image's width is its share of the body in percent, as a table's columns; with none it fills the body", () => {
+	it("09-1 an image is drawn at its own size or the width it was given, in px or as a share of the body; a narrower body shrinks it", () => {
 		const image = (attrs: Record<string, unknown>) =>
 			draw(doc({ id: "b_1", type: "image", attrs: { media: "m1", alt: "A cat", ...attrs } }), {
-				mediaUrl: (id) => `/media/${id}`,
-				mediaSize: () => ({ width: 400, height: 200 }),
+				media: { m1: picture() },
 			});
-		expect(image({ width: 50 })).toContain('<img src="/media/m1" alt="A cat" style="width:50%"/>');
-		expect(image({})).toContain('<img src="/media/m1" alt="A cat" style="width:100%"/>');
-		// A turned or cut picture is a frame holding a placed picture: with no share it still takes the whole body, not nothing.
-		expect(image({ rotate: 90 })).toMatch(/<span style="display:block;[^"]*width:100%"/);
-		expect(image({ rotate: 90, width: 40 })).toMatch(/<span style="display:block;[^"]*width:40%"/);
-		// A pixel width from before is no share: it is refused.
+		// No size of its own: the picture's, never stretched past it.
+		expect(image({})).toContain('width="400" height="200" style="width:400px;maxWidth:100%;height:auto"');
+		expect(image({ width: 120 })).toContain('width="120" height="60" style="width:120px;maxWidth:100%;height:auto"');
+		// Never wider than the picture.
+		expect(image({ width: 900 })).toContain('width="400" height="200"');
+		expect(image({ widthPercent: 50 })).toContain(
+			'width="400" height="200" style="width:50%;maxWidth:100%;height:auto"',
+		);
+		// A turned or cut picture is a box of the shape that shows, holding the placed file: the box takes the width.
+		expect(image({ rotate: 90 })).toMatch(/<span style="display:block;[^"]*aspectRatio:0.5;width:200px;maxWidth:100%"/);
+		expect(image({ crop: { x: 0, y: 0, width: 0.5, height: 1 }, width: 100 })).toMatch(
+			/<span style="display:block;[^"]*aspectRatio:1;width:100px;maxWidth:100%"/,
+		);
+		expect(image({ rotate: 90, widthPercent: 40 })).toMatch(/<span style="display:block;[^"]*width:40%;maxWidth:100%"/);
+		// A file the entry does not have is not drawn.
+		expect(draw(doc({ id: "b_1", type: "image", attrs: { media: "m2" } }), { media: { m1: picture() } })).toBe("");
+		// A width in px or in percent, never both.
 		const attrs = coreBlocks.find((block) => block.type === "image")?.attrs;
-		expect(attrs?.safeParse({ media: "m1", width: 640 }).success).toBe(false);
-		expect(attrs?.safeParse({ media: "m1", width: 50 }).success).toBe(true);
+		expect(attrs?.safeParse({ media: "m1", width: 640 }).success).toBe(true);
+		expect(attrs?.safeParse({ media: "m1", widthPercent: 50 }).success).toBe(true);
+		expect(attrs?.safeParse({ media: "m1", widthPercent: 150 }).success).toBe(false);
+		expect(attrs?.safeParse({ media: "m1", width: 640, widthPercent: 50 }).success).toBe(false);
+	});
+
+	it("09-1 a site's own image component gets the picture ready to draw, and a field's picture comes the same way", () => {
+		const Figure: Component = ({ image }) => JSON.stringify(image);
+		const shown = draw(
+			doc({
+				id: "b_1",
+				type: "image",
+				attrs: { media: "m1", alt: "A cat", width: 100, crop: { x: 0.5, y: 0, width: 0.5, height: 1 } },
+			}),
+			{
+				blocks: coreBlocks.map((block) => (block.type === "image" ? { ...block, Site: Figure } : block)),
+				media: { m1: picture({ placeholder: "data:image/webp;base64,AAAA" }) },
+			},
+		);
+		expect(JSON.parse(shown)).toEqual({
+			src: "/media/m1",
+			width: 100,
+			height: 100,
+			widthPercent: null,
+			alt: "A cat",
+			placeholder: "data:image/webp;base64,AAAA",
+			frame: { aspectRatio: 1, image: { left: 0, top: 50, width: 200, height: 100, rotate: 0 } },
+			original: { src: "/media/m1-original", width: 800, height: 400 },
+		});
+		expect(siteImage({ media: "m1", alt: "표지", decorative: true }, { m1: picture() })).toMatchObject({
+			src: "/media/m1",
+			width: 400,
+			height: 200,
+			alt: "",
+			frame: null,
+		});
+		expect(siteImage({ media: "m9" }, { m1: picture() })).toBeNull();
+		// A block that names a file which is no picture draws nothing.
+		expect(siteImage({ media: "m1" }, { m1: picture({ kind: "file", width: null, height: null }) })).toBeNull();
+		expect(siteImage("m1", { m1: picture() })).toBeNull();
 	});
 
 	it("03-1 footnotes are numbered as their references come in the text and drawn together at the end", () => {

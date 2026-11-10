@@ -121,7 +121,12 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 		// A request that never got an answer throws: the dialog must not stay locked behind it.
 		const done = await replace
 			.run(
-				{ id: item.id, original: put.original, ...(put.web ? { web: put.web } : {}) },
+				{
+					id: item.id,
+					original: put.original,
+					...(put.web ? { web: put.web } : {}),
+					...(put.placeholder ? { placeholder: put.placeholder } : {}),
+				},
 				{ versions: { [`media:${item.id}`]: item.version } },
 			)
 			.catch(() => null);

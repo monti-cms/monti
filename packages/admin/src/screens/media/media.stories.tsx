@@ -34,7 +34,8 @@ let keys = 0;
 const nextKey = (extension: string) => `00000000-0000-4000-8000-${String(++keys).padStart(12, "0")}${extension}`;
 
 /** Puts a file in the story's storage and makes the item, as an upload ends. */
-async function addFile(
+/** A photo of two colours put in the library, as an upload would. */
+export async function addFile(
 	site: { monti: Monti; storage: StorySite["storage"] },
 	file: { name: string; from: string; to: string; width: number; height: number; folderId?: string | null },
 ) {

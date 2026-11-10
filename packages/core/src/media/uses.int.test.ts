@@ -52,7 +52,7 @@ let keys = 0;
 async function file(name = "photo.jpg") {
 	const key = `00000000-0000-4000-8000-${String(++keys).padStart(12, "0")}.jpg`;
 	await storage.put(key, new Uint8Array(10), { mime: "image/jpeg" });
-	return (await write<MediaItem>("media.upload", { name, original: { key } })).output.id;
+	return (await write<MediaItem>("media.upload", { name, original: { key, width: 10, height: 10 } })).output.id;
 }
 const image = (id: string, media: string) => ({ id, type: "image", attrs: { media, alt: "그림" } });
 const doc = (...blocks: unknown[]) => ({ type: "doc", blocks });

@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import { asDoc, type Doc } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import type { SiteMedia } from "../media/site-image";
 import type { Storage } from "../media/storage";
 import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
@@ -21,18 +22,6 @@ export type ResolvedRelation = {
 	fallback?: boolean;
 };
 
-/** A media file as the site uses it: the web size when there is one, the original when it is small enough already (doc 09). */
-export type SiteMedia = {
-	id: string;
-	name: string;
-	kind: "image" | "file";
-	mime: string;
-	size: number;
-	url: string;
-	width: number | null;
-	height: number | null;
-};
-
 /** An entry as the site reads it: only the fields the schema has now (doc 01). */
 export type SiteEntry = {
 	id: string;
@@ -41,12 +30,16 @@ export type SiteEntry = {
 	title: string;
 	slug: string;
 	values: Record<string, unknown>;
-	doc: unknown | null;
+	/** The body as the site draws it (`renderDocument`). */
+	doc: Doc | null;
 	publishedAt: Date | null;
 	relations?: Record<string, ResolvedRelation | ResolvedRelation[] | null>;
 	/** The media files its fields and body use, by id. There only when the site has a storage and the entry uses a file. */
 	media?: Record<string, SiteMedia>;
 };
+
+/** An entry as it is read from its row, before it is made the site's: its body as stored. */
+type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media"> & { doc: unknown };
 
 export type ReaderOptions = {
 	db: Kysely<Database>;
@@ -69,7 +62,7 @@ export function createReader(options: ReaderOptions) {
 	const { db, schema } = options;
 	const now = options.now ?? (() => new Date());
 
-	/** Adds the files an entry uses, so the site can draw them (`renderDocument`'s `mediaUrl` and `mediaSize`). */
+	/** Adds the files an entry uses, so the site can draw them (`renderDocument`'s `media`, `siteImage`). */
 	async function withMedia(entry: SiteEntry): Promise<SiteEntry> {
 		const { storage } = options;
 		if (!storage) return entry;
@@ -92,7 +85,9 @@ export function createReader(options: ReaderOptions) {
 						url: storage.url(row.web_key ?? row.original_key),
 						width: row.web_key ? row.web_width : row.original_width,
 						height: row.web_key ? row.web_height : row.original_height,
-					},
+						original: { url: storage.url(row.original_key), width: row.original_width, height: row.original_height },
+						placeholder: row.placeholder,
+					} satisfies SiteMedia,
 				]),
 			),
 		};
@@ -102,7 +97,7 @@ export function createReader(options: ReaderOptions) {
 	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
 	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
 	 */
-	async function forSite(entry: SiteEntry): Promise<SiteEntry> {
+	async function forSite(entry: StoredEntry): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
 		let base: SiteEntry;
 		if (entry.locale === schema.locales.source) {

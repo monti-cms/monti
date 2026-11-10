@@ -63,6 +63,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 					folderId: upload.folder,
 					original: put.original,
 					...(put.web ? { web: put.web } : {}),
+					...(put.placeholder ? { placeholder: put.placeholder } : {}),
 				})
 				.catch(() => null);
 			// Taken out while the library made it: it stays in the library, and takes no place here.

@@ -3,7 +3,7 @@ import { testDatabase } from "../__test__/database";
 import { asDoc } from "../body/doc";
 import { createReader } from "../entries/reader";
 import { createMonti, definePlugin } from "../monti";
-import { renderDocument } from "../render";
+import { renderDocument, type SiteMedia } from "../render";
 import { defineSchema } from "../schema/define";
 import type { MediaItem, MissingAlt } from "./operations";
 import { memoryStorage } from "./storage";
@@ -299,11 +299,27 @@ describe("on the site", () => {
 		props,
 		children,
 	});
+	const picture: SiteMedia = {
+		id: "m1",
+		name: "desk.jpg",
+		kind: "image",
+		mime: "image/jpeg",
+		size: 1,
+		url: "m1",
+		width: 400,
+		height: 200,
+		original: { url: "m1", width: 400, height: 200 },
+		placeholder: null,
+	};
 
-	it("09-1 the reader gives each file's web size when it has one, and the body draws from it with its crop and turn", async () => {
+	it("09-1 the reader gives each file's web size when it has one, its original and its placeholder, and the body draws from them with its crop and turn", async () => {
 		const webKey = "00000000-0000-4000-8000-00000000f001.webp";
 		await storage.put(webKey, new Uint8Array(10), { mime: "image/webp" });
-		const file = await upload("desk.jpg", "image/jpeg", ".jpg", { web: { key: webKey, width: 2400, height: 1200 } });
+		const placeholder = "data:image/webp;base64,UklGRg==";
+		const file = await upload("desk.jpg", "image/jpeg", ".jpg", {
+			web: { key: webKey, width: 2400, height: 1200 },
+			placeholder,
+		});
 		const made = await post({
 			doc: doc(image("b1", file.id, { alt: "책상", crop: { x: 0, y: 0, width: 0.5, height: 1 } })),
 		});
@@ -316,12 +332,15 @@ describe("on the site", () => {
 		});
 		if (!found || !("entry" in found)) throw new Error("not on the site");
 		const { media, doc: body } = found.entry;
-		expect(media?.[file.id]).toMatchObject({ url: storage.url(webKey), width: 2400, height: 1200, kind: "image" });
-		const [figure] = renderDocument(asDoc(body), {
-			createElement: h,
-			mediaUrl: (id) => media?.[id]?.url ?? id,
-			mediaSize: (id) => media?.[id],
-		}) as {
+		expect(media?.[file.id]).toMatchObject({
+			url: storage.url(webKey),
+			width: 2400,
+			height: 1200,
+			kind: "image",
+			original: { url: file.original.url, width: 4000, height: 2000 },
+			placeholder,
+		});
+		const [figure] = renderDocument(asDoc(body), { createElement: h, media }) as {
 			children: {
 				type: string;
 				props: { style: { aspectRatio: number } };
@@ -336,7 +355,7 @@ describe("on the site", () => {
 
 	it("09-1 a picture sits where the editor drew it: the middle unless it says otherwise", () => {
 		const draw = (attrs: Record<string, unknown>) =>
-			renderDocument(asDoc(doc(image("b1", "m1", attrs))), { createElement: h, mediaUrl: (id) => id }) as {
+			renderDocument(asDoc(doc(image("b1", "m1", attrs))), { createElement: h, media: { m1: picture } }) as {
 				props: { style?: { alignItems?: string } };
 			}[];
 		expect(draw({})[0]?.props.style?.alignItems).toBe("center");
@@ -349,8 +368,7 @@ describe("on the site", () => {
 		const draw = (attrs: Record<string, unknown>) =>
 			renderDocument(asDoc(doc({ id: "f1", type: "file", attrs: { media: "m1", ...attrs } })), {
 				createElement: h,
-				mediaUrl: (id) => id,
-				mediaName: () => "가격표.pdf",
+				media: { m1: { ...picture, kind: "file", name: "가격표.pdf" } },
 			}) as { children: unknown[] }[];
 		expect(draw({ name: "   " })[0]?.children).toEqual(["가격표.pdf"]);
 		expect(draw({})[0]?.children).toEqual(["가격표.pdf"]);
@@ -359,8 +377,8 @@ describe("on the site", () => {
 
 	it("09-1 a decorative picture has an empty alt on the site, whatever it once said", () => {
 		const [figure] = renderDocument(
-			{ type: "doc", blocks: [{ id: "b", type: "image", attrs: { media: "m", alt: "옛 글", decorative: true } }] },
-			{ createElement: h },
+			{ type: "doc", blocks: [{ id: "b", type: "image", attrs: { media: "m1", alt: "옛 글", decorative: true } }] },
+			{ createElement: h, media: { m1: picture } },
 		) as { children: { props: { alt: string } }[] }[];
 		expect(figure?.children[0]?.props.alt).toBe("");
 	});

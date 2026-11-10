@@ -8,7 +8,8 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 /**
  * The tools of a selected image: the block bar above its top left (align | edit · settings), a 2px ink line around it, and a square handle on each
- * corner that changes the width when dragged, its share of the body shown meanwhile. Delete is in the block menu, not here.
+ * corner that changes the width when dragged, its size shown meanwhile ("420 × 236", or "62%" for a picture sized as a share of the body). Delete is in
+ * the block menu, not here.
  */
 const meta = {
 	title: "Monti/EditorTools/BlockBar",
@@ -39,7 +40,22 @@ export const OnImage: Story = {
 					<Settings aria-hidden />
 				</FloatingBarButton>
 			</FloatingBar>
-			<BlockBox selected width={80} measure="80%">
+			<BlockBox selected width="420px" measure="420 × 236">
+				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
+				<ResizeCorner corner="nw" />
+				<ResizeCorner corner="ne" />
+				<ResizeCorner corner="sw" label="왼쪽에서 크기 바꾸기" />
+				<ResizeCorner corner="se" label="오른쪽에서 크기 바꾸기" />
+			</BlockBox>
+		</Stack>
+	),
+};
+
+/** A picture sized as a share of the body: the width is a percent, and so is what a dragged corner shows. */
+export const ShareOfBody: Story = {
+	render: () => (
+		<Stack gap={8} align="start" maxWidth="reading">
+			<BlockBox selected width="62%" measure="62%">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
 				<ResizeCorner corner="nw" />
 				<ResizeCorner corner="ne" />

@@ -1,7 +1,10 @@
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Block, Doc, Inline, Mark } from "./body/doc";
 import { linkedGroup } from "./body/links";
-import { ImageCropShape, ImageRotateShape, imageAlignOf, imageFrame } from "./media/frame";
+import { imageAlignOf } from "./media/frame";
+import { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
+
+export { imageFrameStyle, type SiteImage, type SiteMedia, siteImage };
 
 /**
  * The site's element factory: React's `createElement`, or any function of that shape. The core knows no framework, so the site hands it in (doc
@@ -13,8 +16,11 @@ export type CreateElement<Node> = (
 	...children: unknown[]
 ) => Node;
 
-/** What a block's `Site` component gets: the block and its attrs, with its text or child blocks already drawn as `children`. */
-export type BlockProps = { block: Block; attrs: Record<string, unknown> };
+/**
+ * What a block's `Site` component gets: the block and its attrs, with its text or child blocks already drawn as `children`. An image block's also gets its
+ * picture ready to draw (`siteImage`), or `null` when the entry does not have its file.
+ */
+export type BlockProps = { block: Block; attrs: Record<string, unknown>; image?: SiteImage | null };
 /** What a mark's `Site` component gets: the mark, with the text it wraps as `children`. */
 export type MarkProps = { mark: Mark };
 
@@ -23,12 +29,8 @@ export type RenderOptions<Node> = {
 	/** The site's block definitions, the same ones its `monti.config.ts` gives the admin. Core blocks without one are drawn as plain HTML. */
 	blocks?: AnyBlockDefinition[];
 	marks?: MarkDefinition[];
-	/** The address of a media file (doc 09) for image and file blocks; the media id itself when left out. */
-	mediaUrl?: (id: string) => string;
-	/** A media file's size (the reader's `media`): without it a cropped or turned picture is drawn whole. */
-	mediaSize?: (id: string) => { width: number | null; height: number | null } | undefined;
-	/** A media file's name in the library (the reader's `media`): what a file's link says when the entry gave it no words. */
-	mediaName?: (id: string) => string | undefined;
+	/** The files the body uses (the reader's `media`, doc 09): an image or a file block whose file is not here is not drawn. */
+	media?: Readonly<Record<string, SiteMedia>>;
 	/**
 	 * The path of a linked entry (`monti:entry/<group>`), from the reader's `linkPaths`. A link to an entry with no path (not published) is drawn as
 	 * its text alone.
@@ -56,7 +58,6 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	const h = options.createElement;
 	const blocks = new Map((options.blocks ?? []).map((block) => [block.type, block]));
 	const marks = new Map((options.marks ?? []).map((mark) => [mark.type, mark]));
-	const media = (id: unknown) => (options.mediaUrl ? options.mediaUrl(String(id)) : String(id));
 
 	// Footnotes are numbered in the order their references come in the text (doc 03, T62).
 	const numbers = new Map<string, number>();
@@ -159,43 +160,24 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 					: h("table", { key }, columns, body);
 			}
 			case "image": {
-				// A decorative picture says nothing, whatever alt text it once had (doc 09).
-				const alt = attrs.decorative === true ? "" : (text(attrs.alt) ?? "");
-				const size = options.mediaSize?.(String(attrs.media));
-				const frame = imageFrame({
-					width: size?.width,
-					height: size?.height,
-					crop: ImageCropShape.safeParse(attrs.crop).data,
-					rotate: ImageRotateShape.safeParse(attrs.rotate).data,
-				});
-				const image = frame
+				const image = siteImage(attrs, options.media);
+				if (!image) return null;
+				// Its own width, or its share of the body; a narrower body shrinks it, and its height follows its shape (doc 09).
+				const width = image.widthPercent === null ? `${image.width}px` : `${image.widthPercent}%`;
+				const frame = image.frame && imageFrameStyle(image.frame);
+				const picture = frame
 					? h(
 							"span",
-							{
-								style: {
-									display: "block",
-									position: "relative",
-									overflow: "hidden",
-									aspectRatio: frame.aspectRatio,
-									// With no share it is the whole body, as the editor draws it: a frame holding only a placed picture has no width of its own.
-									width: `${attrs.width ?? 100}%`,
-								},
-							},
-							h("img", {
-								src: media(attrs.media),
-								alt,
-								style: {
-									position: "absolute",
-									maxWidth: "none",
-									left: `${frame.image.left}%`,
-									top: `${frame.image.top}%`,
-									width: `${frame.image.width}%`,
-									height: `${frame.image.height}%`,
-									transform: `translate(-50%, -50%) rotate(${frame.image.rotate}deg)`,
-								},
-							}),
+							{ style: { ...frame.box, width, maxWidth: "100%" } },
+							h("img", { src: image.src, alt: image.alt, style: frame.picture }),
 						)
-					: h("img", { src: media(attrs.media), alt, style: { width: `${attrs.width ?? 100}%` } });
+					: h("img", {
+							src: image.src,
+							alt: image.alt,
+							width: image.width,
+							height: image.height,
+							style: { width, maxWidth: "100%", height: "auto" },
+						});
 				// In the column where the editor drew it: the middle unless it says otherwise (doc 09).
 				const place = {
 					style: {
@@ -205,15 +187,14 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 					},
 				};
 				return attrs.caption
-					? h("figure", { key, ...place }, image, h("figcaption", null, text(attrs.caption)))
-					: h("figure", { key, ...place }, image);
+					? h("figure", { key, ...place }, picture, h("figcaption", null, text(attrs.caption)))
+					: h("figure", { key, ...place }, picture);
 			}
-			case "file":
-				return h(
-					"a",
-					{ key, href: media(attrs.media), download: true },
-					text(attrs.name)?.trim() || options.mediaName?.(String(attrs.media)) || String(attrs.media),
-				);
+			case "file": {
+				const file = options.media?.[String(attrs.media)];
+				if (!file) return null;
+				return h("a", { key, href: file.url, download: true }, text(attrs.name)?.trim() || file.name);
+			}
 		}
 		return undefined;
 	};
@@ -223,7 +204,15 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			? block.children.map(draw).filter((node) => node !== null)
 			: (block.content ?? []).map(inline);
 		const Site = blocks.get(block.type)?.Site;
-		if (Site) return h(Site, { key: block.id, block, attrs: block.attrs ?? {} }, ...inner);
+		if (Site) {
+			const attrs = block.attrs ?? {};
+			const props: BlockProps = {
+				block,
+				attrs,
+				...(block.type === "image" ? { image: siteImage(attrs, options.media) } : {}),
+			};
+			return h(Site, { key: block.id, ...props }, ...inner);
+		}
 		const drawn = plain(block, inner);
 		if (drawn === undefined && process.env.NODE_ENV !== "production")
 			console.warn(`Monti: no block definition for "${block.type}" (${block.id}); it is not drawn.`);

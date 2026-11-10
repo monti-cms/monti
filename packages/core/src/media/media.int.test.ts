@@ -45,8 +45,10 @@ async function bytes(mime = "image/jpeg", extension = ".jpg") {
 	await storage.put(key, new Uint8Array(1234), { mime });
 	return key;
 }
+/** A picture's size, which an image comes up with. */
+const SIZE = { width: 10, height: 10 };
 const upload = async (name: string, more: Record<string, unknown> = {}) =>
-	(await write<MediaItem>("media.upload", { name, original: { key: await bytes() }, ...more })).output;
+	(await write<MediaItem>("media.upload", { name, original: { key: await bytes(), ...SIZE }, ...more })).output;
 const pdf = async (name: string, more: Record<string, unknown> = {}) =>
 	(
 		await write<MediaItem>("media.upload", {
@@ -97,19 +99,72 @@ describe("uploading", () => {
 		expect(output.path).toEqual([]);
 	});
 
+	it("09-1 a picture's placeholder is a small data URL kept with it, never an address, and a new file brings its own", async () => {
+		const placeholder = "data:image/webp;base64,UklGRiQAAABXRUJQ";
+		const kept = async (id: string) =>
+			(await db.selectFrom("media").select("placeholder").where("id", "=", id).executeTakeFirstOrThrow()).placeholder;
+		const { output } = await write<MediaItem>("media.upload", {
+			name: "a.jpg",
+			original: { key: await bytes(), width: 10, height: 10 },
+			placeholder,
+		});
+		expect(await kept(output.id)).toBe(placeholder);
+		await expect(
+			write("media.upload", {
+				name: "b.jpg",
+				original: { key: await bytes(), ...SIZE },
+				placeholder: "https://example.com/tiny.png",
+			}),
+		).rejects.toBeInstanceOf(InputError);
+		await expect(
+			write("media.upload", {
+				name: "c.jpg",
+				original: { key: await bytes(), ...SIZE },
+				placeholder: `data:image/webp;base64,${"A".repeat(5000)}`,
+			}),
+		).rejects.toBeInstanceOf(InputError);
+		// Base64 that does not end where it should is no picture.
+		await expect(
+			write("media.upload", {
+				name: "d.jpg",
+				original: { key: await bytes(), ...SIZE },
+				placeholder: "data:image/png;base64,A",
+			}),
+		).rejects.toBeInstanceOf(InputError);
+		const next = "data:image/png;base64,iVBORw0KGgo=";
+		await write("media.replace", { id: output.id, original: { key: await bytes(), ...SIZE }, placeholder: next });
+		expect(await kept(output.id)).toBe(next);
+		await write("media.replace", { id: output.id, original: { key: await bytes(), ...SIZE } });
+		expect(await kept(output.id)).toBeNull();
+	});
+
+	it("09-1 an image comes with its size, which the site draws it at; a file needs none", async () => {
+		await refused(write("media.upload", { name: "a.jpg", original: { key: await bytes() } }), "media.imageSize");
+		const picture = await upload("b.jpg");
+		await refused(
+			write("media.replace", { id: picture.id, original: { key: await bytes(), width: 10 } }),
+			"media.imageSize",
+		);
+		const file = await pdf("c.pdf", { placeholder: "data:image/png;base64,iVBORw0KGgo=" });
+		expect(file).toMatchObject({ kind: "file", original: { width: null, height: null } });
+		// Only a picture keeps a placeholder.
+		const row = await db.selectFrom("media").select("placeholder").where("id", "=", file.id).executeTakeFirstOrThrow();
+		expect(row.placeholder).toBeNull();
+	});
+
 	it("09-1 a PDF is a file, with no web size", async () => {
 		expect(await pdf("price-list-2026.pdf")).toMatchObject({ kind: "file", mime: "application/pdf", web: null });
 	});
 
 	it("09-1 only a person uploads and replaces: the assistant has no file to give", async () => {
 		const key = await bytes();
-		await expect(write("media.upload", { name: "a.jpg", original: { key } }, "assistant")).rejects.toBeInstanceOf(
-			ForbiddenError,
-		);
+		await expect(
+			write("media.upload", { name: "a.jpg", original: { key, ...SIZE } }, "assistant"),
+		).rejects.toBeInstanceOf(ForbiddenError);
 		const file = await upload("a.jpg");
-		await expect(write("media.replace", { id: file.id, original: { key } }, "assistant")).rejects.toBeInstanceOf(
-			ForbiddenError,
-		);
+		await expect(
+			write("media.replace", { id: file.id, original: { key, ...SIZE } }, "assistant"),
+		).rejects.toBeInstanceOf(ForbiddenError);
 	});
 
 	it("09-1 a key must have bytes behind it, belong to no other file, and be the server's own", async () => {
@@ -119,20 +174,28 @@ describe("uploading", () => {
 		);
 		await refused(write("media.upload", { name: "a.jpg", original: { key: "../../etc/passwd" } }), "media.unknownKey");
 		const key = await bytes();
-		await write("media.upload", { name: "a.jpg", original: { key } });
-		await refused(write("media.upload", { name: "b.jpg", original: { key } }), "media.keyTaken");
+		await write("media.upload", { name: "a.jpg", original: { key, ...SIZE } });
+		await refused(write("media.upload", { name: "b.jpg", original: { key, ...SIZE } }), "media.keyTaken");
 	});
 
 	it("09-1 one key cannot be both sizes, and two uploads at once cannot take each other's keys", async () => {
 		const key = await bytes();
 		await refused(
-			write("media.upload", { name: "a.jpg", original: { key }, web: { key, width: 100, height: 100 } }),
+			write("media.upload", { name: "a.jpg", original: { key, ...SIZE }, web: { key, width: 100, height: 100 } }),
 			"media.keyTaken",
 		);
 		const [first, second] = [await bytes(), await bytes()];
 		const answers = await Promise.allSettled([
-			write("media.upload", { name: "a.jpg", original: { key: first }, web: { key: second, width: 100, height: 100 } }),
-			write("media.upload", { name: "b.jpg", original: { key: second }, web: { key: first, width: 100, height: 100 } }),
+			write("media.upload", {
+				name: "a.jpg",
+				original: { key: first, ...SIZE },
+				web: { key: second, width: 100, height: 100 },
+			}),
+			write("media.upload", {
+				name: "b.jpg",
+				original: { key: second, ...SIZE },
+				web: { key: first, width: 100, height: 100 },
+			}),
 		]);
 		expect(answers.filter((answer) => answer.status === "fulfilled")).toHaveLength(1);
 	});
@@ -143,7 +206,7 @@ describe("uploading", () => {
 		await refused(
 			write("media.upload", {
 				name: "a.jpg",
-				original: { key: original },
+				original: { key: original, ...SIZE },
 				web: { key: pdfKey, width: 100, height: 100 },
 			}),
 			"media.badWeb",
@@ -152,7 +215,7 @@ describe("uploading", () => {
 		await expect(
 			write("media.upload", {
 				name: "a.jpg",
-				original: { key: original },
+				original: { key: original, ...SIZE },
 				web: { key: web, width: 9999, height: 100 },
 			}),
 		).rejects.toBeInstanceOf(InputError);
@@ -172,7 +235,7 @@ describe("uploading", () => {
 		const answer = (await bare.run("media.query", {}, { actor: "admin" })) as MediaQueryResult;
 		expect(answer.storage).toBe(false);
 		await refused(
-			bare.run("media.upload", { name: "a.jpg", original: { key: await bytes() } }, { actor: "admin" }),
+			bare.run("media.upload", { name: "a.jpg", original: { key: await bytes(), ...SIZE } }, { actor: "admin" }),
 			"media.noStorage",
 		);
 		expect((await query()).storage).toBe(true);
@@ -278,7 +341,7 @@ describe("browsing", () => {
 		const big = (
 			await write<MediaItem>("media.upload", {
 				name: "a.jpg",
-				original: { key: "00000000-0000-4000-8000-000000000a01.jpg" },
+				original: { key: "00000000-0000-4000-8000-000000000a01.jpg", ...SIZE },
 			})
 		).output;
 		expect((await query({ sort: "name" })).items.map((item) => item.id)).toEqual([big.id, small.id]);

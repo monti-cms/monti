@@ -104,7 +104,31 @@ A body is a JSON document of blocks, each with an id that never changes. A block
 import { createElement } from "react";
 import { renderDocument } from "@monti-cms/core/render";
 
-export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks, mediaUrl: (id) => `/media/${id}` });
+export const PostBody = ({ entry }) => renderDocument(entry.doc, { createElement, blocks, media: entry.media });
+```
+
+`media` is the reader's: the files the entry uses. An image is drawn at its own size, or at the width the writer gave it in px or as a share of
+the body, and a narrower body shrinks it (`max-width: 100%`). A site with its own image component gives the image block a `Site` component,
+which gets `image`: the picture ready to draw (`src`, `width`, `height`, `widthPercent`, `alt`, `placeholder`, `frame`, `original`). A media
+field's picture comes the same way from `siteImage(entry.values.cover, entry.media)`:
+
+```tsx
+import Image from "next/image";
+import { imageFrameStyle, type SiteImage } from "@monti-cms/core/render";
+
+export function Picture({ image }: { image: SiteImage }) {
+  const width = image.widthPercent === null ? image.width : `${image.widthPercent}%`;
+  const blur = image.placeholder ? { placeholder: "blur" as const, blurDataURL: image.placeholder } : {};
+  if (!image.frame)
+    return <Image src={image.src} width={image.width} height={image.height} alt={image.alt} style={{ width, maxWidth: "100%", height: "auto" }} {...blur} />;
+  // A cropped or turned picture: a box of the shape that shows, holding the whole file.
+  const style = imageFrameStyle(image.frame);
+  return (
+    <span style={{ ...style.box, width, maxWidth: "100%" }}>
+      <Image src={image.src} width={image.original.width ?? image.width} height={image.original.height ?? image.height} alt={image.alt} style={style.picture} />
+    </span>
+  );
+}
 ```
 
 The assistant reads a body with `body.read` (block ids and plain text) and changes it with `body.edit` (block operations), never by rewriting it. A

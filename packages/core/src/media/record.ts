@@ -17,6 +17,7 @@ const SnapshotShape = z.object({
 	web_key: z.string().nullable(),
 	web_width: z.number().nullable(),
 	web_height: z.number().nullable(),
+	placeholder: z.string().nullable(),
 	uploaded_at: DateShape,
 	version: z.number().int(),
 	trashed_at: DateShape.nullable(),

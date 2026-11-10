@@ -1,12 +1,14 @@
 import { acceptFile, HEAD_BYTES } from "@monti-cms/core";
 import type { Answer, Uploader } from "../operations/transport";
-import { readPicture, webSize } from "./images";
+import { placeholderOf, readPicture, webSize } from "./images";
 import type { Refusal } from "./upload-queue";
 
 /** What `media.upload` and `media.replace` take for a file that went up. */
 export type PutFile = {
 	original: { key: string; width?: number; height?: number };
 	web?: { key: string; width: number; height: number };
+	/** A picture's blurred stand-in for the site. */
+	placeholder?: string;
 };
 
 export type PutResult =
@@ -66,11 +68,13 @@ export async function putFile(
 	if (!key) return refused(up);
 	const original = { key, ...(picture ? { width: picture.width, height: picture.height } : {}) };
 	const copy = picture ? await webSize(picture, looked.mime) : null;
+	const placeholder = picture ? await placeholderOf(picture) : undefined;
 	picture?.close();
-	if (!copy) return { ok: true, original };
+	const made = { ok: true as const, original, ...(placeholder ? { placeholder } : {}) };
+	if (!copy) return made;
 
 	const webUp = await uploader(copy.blob, { name: copy.name, signal: options.signal });
 	const webKey = keyOf(webUp);
 	if (!webKey) return refused(webUp);
-	return { ok: true, original, web: { key: webKey, width: copy.width, height: copy.height } };
+	return { ...made, web: { key: webKey, width: copy.width, height: copy.height } };
 }

@@ -39,11 +39,14 @@ function ResizeCorner({
 	);
 }
 
+/** A block's width: in px, or a share of the column. */
+type BlockWidth = `${number}px` | `${number}%`;
+
 /**
- * The box of a block with a size of its own (an image): its corners and tool row hang off it. `width` is its share of the column in percent, as the site draws
- * it (2026-11-10, owner: a pixel width means nothing on another screen); with none it fills the column. `selected` draws a 2px ink line around it, as a picked
- * file block's border, so a picked picture reads as picked. `measure` is what a corner being dragged makes of it ("62%"), shown at its top right; `spoken` is
- * what a screen reader hears of its size as it changes by keys or by pointer, read from a region that is always there so the first change is heard too.
+ * The box of a block with a size of its own (an image): its corners and tool row hang off it. `width` is its width in px or a share of the column, as the
+ * site draws it, and a narrower column shrinks it; with none it fills the column. `selected` draws a 2px ink line around it, as a picked file block's
+ * border, so a picked picture reads as picked. `measure` is what a corner being dragged makes of it ("420 × 280", "62%"), shown at its top right; `spoken`
+ * is what a screen reader hears of its size as it changes by keys or by pointer, read from a region that is always there so the first change is heard too.
  */
 function BlockBox({
 	width,
@@ -53,7 +56,7 @@ function BlockBox({
 	ref,
 	children,
 }: {
-	width?: number | null;
+	width?: BlockWidth;
 	selected?: boolean;
 	measure?: string;
 	spoken?: string;
@@ -65,9 +68,9 @@ function BlockBox({
 			ref={ref}
 			data-slot="block-box"
 			data-selected={selected || undefined}
-			className="relative w-full"
-			// design-allow: the block's own share of the column, chosen by the person.
-			style={width ? { width: `${width}%` } : undefined}
+			className="relative w-full max-w-full"
+			// design-allow: the block's own width, chosen by the person or the picture's own.
+			style={width ? { width } : undefined}
 		>
 			{children}
 			<span aria-live="polite" className="sr-only">
@@ -102,4 +105,4 @@ function BlockBarPlace({ children }: { children: ReactNode }) {
 	);
 }
 
-export { BlockBarPlace, BlockBox, type BlockCorner, ResizeCorner };
+export { BlockBarPlace, BlockBox, type BlockCorner, type BlockWidth, ResizeCorner };

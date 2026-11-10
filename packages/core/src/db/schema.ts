@@ -220,6 +220,8 @@ export interface MediaTable {
 	web_key: string | null;
 	web_width: number | null;
 	web_height: number | null;
+	/** A picture 20px on its long side, as a data URL, for a site to show blurred until the picture comes (doc 09). */
+	placeholder: string | null;
 	uploaded_at: Generated<Date>;
 	version: Generated<number>;
 	trashed_at: Date | null;

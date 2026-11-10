@@ -47,7 +47,6 @@ export {
 	type ReaderOptions,
 	type ResolvedRelation,
 	type SiteEntry,
-	type SiteMedia,
 } from "./entries/reader";
 export type { Entry } from "./entries/record";
 export type { PublishCheck, PublishTask } from "./entries/tasks";
@@ -74,7 +73,16 @@ export {
 	splitName,
 	WEB_LONGEST_SIDE,
 } from "./media/accept";
-export { type ImageCrop, type ImageFrame, type ImageRotate, imageAlignOf, imageFrame } from "./media/frame";
+export {
+	type ImageAttrs,
+	type ImageCrop,
+	type ImageFrame,
+	type ImageRotate,
+	type ImageSizeAttrs,
+	imageAlignOf,
+	imageFrame,
+	imageSize,
+} from "./media/frame";
 export { localFolderStorage } from "./media/local-storage";
 export type {
 	MediaDetail,
@@ -86,6 +94,7 @@ export type {
 	MissingAlt,
 } from "./media/operations";
 export { MEDIA_QUERY_MOST } from "./media/operations";
+export { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
 export { memoryStorage, type Storage } from "./media/storage";
 export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";

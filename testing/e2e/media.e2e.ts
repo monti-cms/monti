@@ -286,6 +286,9 @@ test.describe("the editor", () => {
 		await site.goto(`/site/post/${post.slug}`);
 		const image = site.getByRole("img");
 		await expect(image).toHaveAttribute("alt", "A desk in the morning");
+		// Its own size, so the page keeps its place before it comes (doc 09).
+		await expect(image).toHaveAttribute("width", "800");
+		await expect(image).toHaveAttribute("height", "600");
 		await expect.poll(() => decoded(image)).toBe(800);
 		await site.close();
 	});

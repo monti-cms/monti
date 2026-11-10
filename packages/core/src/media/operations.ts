@@ -93,6 +93,13 @@ export type MediaTrashResult = { moved: string[]; kept: string[] };
 const Size = z.number().int().positive();
 const Original = z.object({ key: z.string(), width: Size.optional(), height: Size.optional() });
 const Web = z.object({ key: z.string(), width: Size.max(WEB_LONGEST_SIDE), height: Size.max(WEB_LONGEST_SIDE) });
+/** A picture's blurred stand-in, made by the browser that sent it (doc 09): a small data URL, never an address to fetch. */
+const Placeholder = z
+	.string()
+	.max(4096)
+	.regex(
+		/^data:image\/(webp|png|jpeg);base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$/,
+	);
 type Original = z.infer<typeof Original>;
 type Web = z.infer<typeof Web>;
 
@@ -211,6 +218,9 @@ async function statOfKeys(ctx: OperationContext, original: Original, web: Web | 
 	);
 	if (web?.key === original.key) throw new CheckError({ key: "media.keyTaken", values: { key: web.key } });
 	const stat = await statOfKey(ctx, original.key, self);
+	// A picture is drawn at its own size (doc 09): one with no size could not be drawn on the site.
+	if (kindOf(stat.mime) === "image" && !(original.width && original.height))
+		throw new CheckError({ key: "media.imageSize" });
 	if (web) {
 		const webStat = await statOfKey(ctx, web.key, self);
 		if (kindOf(stat.mime) !== "image" || kindOf(webStat.mime) !== "image")
@@ -392,6 +402,7 @@ export const mediaOperations = [
 			folderId: z.string().nullable().optional(),
 			original: Original,
 			web: Web.optional(),
+			placeholder: Placeholder.optional(),
 		}),
 		touches: (input) => (input.folderId ? [folderRef(input.folderId)] : []),
 		async run(input, ctx): Promise<MediaItem> {
@@ -414,6 +425,8 @@ export const mediaOperations = [
 					web_key: input.web?.key ?? null,
 					web_width: input.web?.width ?? null,
 					web_height: input.web?.height ?? null,
+					// Only a picture has one: a site blurs it in while the picture comes.
+					placeholder: kindOf(stat.mime) === "image" ? (input.placeholder ?? null) : null,
 					uploaded_at: ctx.now(),
 					trashed_at: null,
 				})
@@ -468,7 +481,7 @@ export const mediaOperations = [
 		humanOnly: true,
 		description:
 			"Replace a file's bytes with a new upload: every place that uses it now shows the new file, with its alt text and caption unchanged. Only a person replaces a file. The preview counts the uses.",
-		input: z.object({ id: z.string(), original: Original, web: Web.optional() }),
+		input: z.object({ id: z.string(), original: Original, web: Web.optional(), placeholder: Placeholder.optional() }),
 		touches: (input) => [mediaRef(input.id)],
 		async preview(input, ctx) {
 			const row = await liveRowOf(ctx.db, input.id);
@@ -494,6 +507,7 @@ export const mediaOperations = [
 					web_key: input.web?.key ?? null,
 					web_width: input.web?.width ?? null,
 					web_height: input.web?.height ?? null,
+					placeholder: kindOf(stat.mime) === "image" ? (input.placeholder ?? null) : null,
 					uploaded_at: ctx.now(),
 					version: eb("version", "+", 1),
 				}))
