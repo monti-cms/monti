@@ -177,7 +177,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 									position: "relative",
 									overflow: "hidden",
 									aspectRatio: frame.aspectRatio,
-									...(attrs.width ? { width: attrs.width } : {}),
+									...(attrs.width ? { width: `${attrs.width}%` } : {}),
 								},
 							},
 							h("img", {
@@ -194,7 +194,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 								},
 							}),
 						)
-					: h("img", { src: media(attrs.media), alt, width: attrs.width ?? undefined });
+					: h("img", { src: media(attrs.media), alt, ...(attrs.width ? { style: { width: `${attrs.width}%` } } : {}) });
 				// In the column where the editor drew it: the middle unless it says otherwise (doc 09).
 				const place = {
 					style: {

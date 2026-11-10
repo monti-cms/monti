@@ -7,7 +7,7 @@ import { createMonti, definePlugin } from "../monti";
 import { type CreateElement, renderDocument } from "../render";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
-import { defineBlock } from "./blocks";
+import { coreBlocks, defineBlock } from "./blocks";
 import type { Block, Doc } from "./doc";
 import { entryLink } from "./links";
 
@@ -210,6 +210,19 @@ describe("one check", () => {
 		expect(table({})).toBe(
 			"<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>",
 		);
+	});
+
+	it("09-1 T122 an image's width is its share of the body in percent, as a table's columns; with none it fills the body", () => {
+		const image = (attrs: Record<string, unknown>) =>
+			draw(doc({ id: "b_1", type: "image", attrs: { media: "m1", alt: "A cat", ...attrs } }), {
+				mediaUrl: (id) => `/media/${id}`,
+			});
+		expect(image({ width: 50 })).toContain('<img src="/media/m1" alt="A cat" style="width:50%"/>');
+		expect(image({})).toContain('<img src="/media/m1" alt="A cat"/>');
+		// A pixel width from before is no share: it is refused.
+		const attrs = coreBlocks.find((block) => block.type === "image")?.attrs;
+		expect(attrs?.safeParse({ media: "m1", width: 640 }).success).toBe(false);
+		expect(attrs?.safeParse({ media: "m1", width: 50 }).success).toBe(true);
 	});
 
 	it("03-1 footnotes are numbered as their references come in the text and drawn together at the end", () => {

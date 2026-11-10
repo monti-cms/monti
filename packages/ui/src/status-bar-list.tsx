@@ -8,7 +8,7 @@ import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts
 
 /**
  * The list that opens upward from a status bar cell ("To do 3"): a card with the group's name and its count in the head (no count once nothing is
- * left), then the rows to do (`TodoItem`) and the ones already done (`TodoDone`), and under a rule the actions that belong to the whole list
+ * left), then the rows to do (`TodoItem`), or one `TodoDone` line when nothing is, and under a rule the actions that belong to the whole list
  * (`footer`: a link to its settings, "Fix all"). `trigger` is the cell that opens it.
  */
 function StatusBarList({

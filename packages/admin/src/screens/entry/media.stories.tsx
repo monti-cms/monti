@@ -84,14 +84,14 @@ const blankImage = entry({
 /** Flow 6·06, 1·12: the picture picked, its tools and settings card open. */
 export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
-/** The crop dialog, a 16:9 part kept: the picture large, one line of tools under it. */
-export const CropDialog: Story = {
+/** The edit dialog (T122), a 16:9 part kept: the picture large, one line of tools under it (turn, shape, size). */
+export const EditDialog: Story = {
 	loaders: blankImage,
 	play: async () => {
 		await toTheImage();
 		const page = within(document.body);
 		await userEvent.keyboard("{Escape}");
-		await userEvent.click(await page.findByRole("button", { name: "자르기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "편집" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "16:9" }, wait));
 	},
 };

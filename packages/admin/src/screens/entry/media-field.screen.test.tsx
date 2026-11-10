@@ -165,7 +165,7 @@ describe("in a translation", () => {
 		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
 		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
-		await expect.element(alt()).toBeDisabled();
+		await expect.element(alt()).not.toBeInTheDocument();
 	});
 
 	it("04-5 a following cover says it follows the source, and says nothing once it is the translation's own", async () => {

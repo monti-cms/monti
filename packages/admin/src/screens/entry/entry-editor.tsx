@@ -309,15 +309,6 @@ export function EntryEditor({
 	};
 	const cell = saveCell[editor.saveState];
 
-	// The required fields that are filled: the ✓ line under the rows says what was checked.
-	const filled = Object.entries(definition?.fields ?? {})
-		.filter(
-			([field, def]) =>
-				def.required &&
-				!publish.tasks.some((task) => task.field === field) &&
-				(field === "title" ? editor.title : editor.value(field === "slug" ? "slug" : `values.${field}`)),
-		)
-		.map(([field]) => (field === "title" ? t("entry.title") : fieldLabel(field)));
 	// What changed in the source since the translation saw it: rows of the to-do list, after what stops publishing.
 	// A block new in the source is already a to-do (it stops publishing until decided): the group leaves it out, so it is listed and counted once.
 	const sourceCount =
@@ -700,11 +691,8 @@ export function EntryEditor({
 										onOpen={() => goTo(task)}
 									/>
 								))}
-								{publish.tasks.length === 0 ? (
-									<TodoDone>{t("entry.todo.none")}</TodoDone>
-								) : filled.length > 0 ? (
-									<TodoDone>{filled.join(" · ")}</TodoDone>
-								) : null}
+								{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
+								{publish.tasks.length === 0 ? <TodoDone>{t("entry.todo.none")}</TodoDone> : null}
 							</>
 						)}
 						{sourceRows && sourceOnly ? sourceRows : null}

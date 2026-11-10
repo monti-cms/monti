@@ -40,7 +40,7 @@ import {
 	UploadingImage,
 } from "@monti-cms/ui";
 import {
-	Crop,
+	Edit,
 	Image as ImageIcon,
 	Reset,
 	RotateClockwise,
@@ -80,7 +80,10 @@ const ALIGNS = [
 ] as const;
 /** The caption stands where its picture stands. */
 const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
+/** The smallest a picture is pulled to, in pixels on the screen. */
 const MIN_WIDTH = 80;
+/** A picture's share of the body: the whole of it is no width at all, so the site's own rule fills the body. */
+const shareOf = (percent: number) => (percent >= 100 ? null : percent);
 
 /**
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
@@ -253,16 +256,21 @@ function keptCrop(start: CropRect, pulled: CropRect, grip: CropCorner, share: nu
 	return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height };
 }
 
+/** The sizes "Edit" offers, as shares of the body; dragging a corner gives any other. */
+const SIZES = [25, 50, 75, 100] as const;
+
 /**
- * "Crop" (screens/editor.md): a dialog, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. The picture fills
- * most of it; one line under it turns it a quarter (icons, their names on hover), keeps a shape, starts over, and cancels or applies (2026-11-10, owner:
- * a rotation reads as its arrow everywhere, so it needs no words). The crop starts as the whole picture, its corners there to take.
+ * "Edit" (screens/editor.md): how the picture looks, in a dialog because it takes several inputs; what the entry says of it is the settings card's (2026-11-10,
+ * owner). It changes nothing of the file: the block keeps which part shows, how it is turned and how much of the body it takes. The picture fills most of it;
+ * one line under it turns it a quarter (icons, their names on hover), keeps a shape (its height), sizes it, starts over, and cancels or applies. The crop
+ * starts as the whole picture, its corners there to take.
  */
-function CropDialog({
+function EditDialog({
 	src,
 	size: known,
 	crop,
 	rotate,
+	width,
 	onApply,
 	onClose,
 	returnTo,
@@ -272,7 +280,9 @@ function CropDialog({
 	size: { width: number; height: number } | null;
 	crop?: ImageCrop;
 	rotate: ImageRotate;
-	onApply: (crop: ImageCrop | undefined, rotate: ImageRotate) => void;
+	/** Its share of the body in percent; `null` fills it. */
+	width: number | null;
+	onApply: (edit: { crop: ImageCrop | undefined; rotate: ImageRotate; width: number | null }) => void;
 	onClose: () => void;
 	/** Where the focus goes when it closes: the text, not a caption field it was opened from, so ⌘Z takes back what it did. */
 	returnTo: () => HTMLElement;
@@ -283,6 +293,7 @@ function CropDialog({
 		crop ? { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 } : WHOLE,
 	);
 	const [ratio, setRatio] = useState<Ratio>("free");
+	const [share, setShare] = useState(width ?? 100);
 	const [shown, setShown] = useState(src);
 	const stage = useRef<HTMLDivElement>(null);
 	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
@@ -365,7 +376,7 @@ function CropDialog({
 		const share = shareRatio(next, size());
 		if (share) setPart(centeredCrop(share));
 	};
-	const changed = !isWhole(part) || turn !== 0;
+	const changed = !isWhole(part) || turn !== 0 || share !== 100;
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent size="xl" finalFocus={returnTo}>
@@ -404,12 +415,21 @@ function CropDialog({
 								label: value === "free" || value === "original" ? t(`editor.crop.${value}`) : value,
 							}))}
 						/>
+						<Segmented
+							aria-label={t("editor.crop.size")}
+							size="sm"
+							inline
+							value={String(share)}
+							onValueChange={(next) => setShare(Number(next))}
+							options={SIZES.map((each) => ({ value: String(each), label: `${each}%` }))}
+						/>
 						{changed && (
 							<TextButton
 								onClick={() => {
 									setTurn(0);
 									setPart(WHOLE);
 									setRatio("free");
+									setShare(100);
 								}}
 							>
 								<Reset aria-hidden />
@@ -420,12 +440,13 @@ function CropDialog({
 					<DialogClose render={<Button variant="ghost" />}>{t("settings.cancel")}</DialogClose>
 					<Button
 						onClick={() =>
-							onApply(
-								isWhole(part)
+							onApply({
+								crop: isWhole(part)
 									? undefined
 									: { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 },
-								turn,
-							)
+								rotate: turn,
+								width: shareOf(share),
+							})
 						}
 					>
 						{t("editor.crop.apply")}
@@ -454,7 +475,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const [dragged, setDragged] = useState<number | null>(null);
 	const box = useRef<HTMLDivElement>(null);
 	const bar = useRef<HTMLDivElement>(null);
-	const widthId = useId();
 	const editable = editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
@@ -507,9 +527,14 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		event.stopPropagation();
 		const startX = event.clientX;
 		const widthOfBody = box.current?.parentElement?.getBoundingClientRect().width ?? measured.width;
+		// A share of the body in percent, never under the smallest picture.
 		const sized = (clientX: number) =>
 			Math.round(
-				clamp(measured.width + (side === "right" ? clientX - startX : startX - clientX), MIN_WIDTH, widthOfBody),
+				clamp(
+					((measured.width + (side === "right" ? clientX - startX : startX - clientX)) / widthOfBody) * 100,
+					Math.ceil((MIN_WIDTH / widthOfBody) * 100),
+					100,
+				),
 			);
 		const move = (next: PointerEvent) => setDragged(sized(next.clientX));
 		const finish = (keep: boolean) => (last: PointerEvent | KeyboardEvent) => {
@@ -517,7 +542,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("keydown", esc);
 			setDragged(null);
-			if (keep && "clientX" in last) set({ width: sized(last.clientX) });
+			if (keep && "clientX" in last) set({ width: shareOf(sized(last.clientX)) });
 		};
 		const up = finish(true);
 		const esc = (key: KeyboardEvent) => {
@@ -531,15 +556,19 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 		event.preventDefault();
 		event.stopPropagation();
-		const measured = box.current?.getBoundingClientRect().width ?? 0;
-		set({ width: Math.round(Math.max(MIN_WIDTH, (data.width ?? measured) + (event.key === "ArrowRight" ? 16 : -16))) });
+		set({ width: shareOf(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), 10, 100)) });
 	};
 
 	return (
 		<NodeViewWrapper data-block="image">
 			<Stack gap={8}>
 				<Inline justify={JUSTIFY[align]}>
-					<BlockBox ref={box} width={width} selected={selected && editable}>
+					<BlockBox
+						ref={box}
+						width={width}
+						selected={selected && editable}
+						measure={dragged === null ? undefined : `${dragged}%`}
+					>
 						{url ? (
 							<Image
 								src={url}
@@ -573,6 +602,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 											</FloatingBarButton>
 										))}
 										<Separator orientation="vertical" length="bar" />
+										{/* Edit is how the picture looks (its part, its turn, its size); settings are what the entry says of it (2026-11-10, owner). */}
+										<FloatingBarButton label={t("editor.image.crop")} onClick={() => setCropping(true)}>
+											<Edit aria-hidden />
+										</FloatingBarButton>
 										<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 											<FloatingBarButton
 												label={t("editor.image.settings")}
@@ -583,20 +616,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 											</FloatingBarButton>
 											<PopoverContent anchor={bar} align="start">
 												<Stack gap={12}>
-													<FormField>
-														<FormFieldLabel htmlFor={widthId}>{t("editor.image.width")}</FormFieldLabel>
-														<Input
-															id={widthId}
-															size="md"
-															inputMode="numeric"
-															placeholder={t("editor.image.fitBody")}
-															value={data.width ?? ""}
-															onChange={(event) => {
-																const value = Number(event.target.value);
-																set({ width: Number.isFinite(value) && value > 0 ? value : null });
-															}}
-														/>
-													</FormField>
 													<AltFields
 														value={data.alt ?? ""}
 														decorative={data.decorative === true}
@@ -611,9 +630,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 												</Stack>
 											</PopoverContent>
 										</Popover>
-										<FloatingBarButton label={t("editor.image.crop")} onClick={() => setCropping(true)}>
-											<Crop aria-hidden />
-										</FloatingBarButton>
 									</FloatingBar>
 								</BlockBarPlace>
 								{CORNERS.map((corner) => (
@@ -632,16 +648,17 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 				{captionField}
 			</Stack>
 			{cropping && url && (
-				<CropDialog
+				<EditDialog
 					src={url}
 					size={size?.width && size.height ? { width: size.width, height: size.height } : null}
 					crop={data.crop}
 					rotate={data.rotate ?? 0}
+					width={data.width ?? null}
 					returnTo={() => editor.view.dom}
 					onClose={() => setCropping(false)}
-					onApply={(crop, rotate) => {
+					onApply={({ crop, rotate, width: share }) => {
 						setCropping(false);
-						set({ crop, rotate: rotate === 0 ? undefined : rotate });
+						set({ crop, rotate: rotate === 0 ? undefined : rotate, width: share });
 					}}
 				/>
 			)}

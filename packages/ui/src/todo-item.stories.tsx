@@ -128,18 +128,11 @@ export const WithDone: Story = {
 				actionLabel="고르기"
 				onAction={noop}
 			/>
-			<TodoDone>이미지 대체 텍스트 2개</TodoDone>
-			<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
 		</>
 	),
 };
 
-/** Nothing left to fix: only the ✓ rows. */
+/** Nothing left to fix: one line that says so. Done things are not listed. */
 export const AllDone: Story = {
-	render: () => (
-		<>
-			<TodoDone>요약</TodoDone>
-			<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
-		</>
-	),
+	render: () => <TodoDone>할 일 없음</TodoDone>,
 };

@@ -425,8 +425,14 @@ describe("an image in the text", () => {
 		const alt = page.getByRole("textbox", { name: "대체 텍스트" });
 		await userEvent.clear(alt);
 		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
-		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
+		const decorative = page.getByRole("switch", { name: "장식 이미지" });
+		await userEvent.click(decorative);
 		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
+		// T122 A decorative picture has no words: the box goes, and the cursor stays on the switch; turned off, the box is back with the cursor in it.
+		await expect.element(alt).not.toBeInTheDocument();
+		await expect.element(decorative).toHaveFocus();
+		await userEvent.keyboard(" ");
+		await expect.element(alt).toHaveFocus();
 	});
 
 	it("09-1 a picked picture reads as picked: a line around it, and a handle on each corner", async () => {
@@ -469,7 +475,7 @@ describe("an image in the text", () => {
 		await expect.element(paragraph("글의 첫 문단")).toBeVisible();
 	});
 
-	it("09-1 [dragging] [dropped] a corner dragged changes the width, and stays where it was let go", async () => {
+	it("09-1 T122 [dragging] [dropped] a corner dragged changes the width, says its share of the body meanwhile, and stays where it was let go", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
 		const corner = body().getByRole("button", { name: "오른쪽에서 크기 바꾸기" });
@@ -479,10 +485,14 @@ describe("an image in the text", () => {
 		corner.element().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, ...at }));
 		window.dispatchEvent(new PointerEvent("pointermove", { clientX: at.clientX - 120, clientY: at.clientY }));
 		await expect.poll(() => image().element().getBoundingClientRect().width).toBeLessThan(before.width - 100);
+		const share = Math.round(((before.width - 120) / before.width) * 100);
+		await expect.element(body().getByText(`${share}%`)).toBeVisible();
 		window.dispatchEvent(new PointerEvent("pointerup", { clientX: at.clientX - 120, clientY: at.clientY }));
+		// Kept as a share of the body, so within a percent of where it was let go.
 		await expect
-			.poll(() => Math.round(image().element().getBoundingClientRect().width))
-			.toBe(Math.round(before.width - 120));
+			.poll(() => Math.abs(image().element().getBoundingClientRect().width - (before.width * share) / 100))
+			.toBeLessThan(1);
+		await expect.element(body().getByText(`${share}%`)).not.toBeInTheDocument();
 	});
 
 	it("[esc-cancels] Esc while dragging a corner puts it back", async () => {
@@ -506,7 +516,30 @@ describe("an image in the text", () => {
 		const before = image().element().getBoundingClientRect().width;
 		body().getByRole("button", { name: "오른쪽에서 크기 바꾸기" }).element().focus();
 		await userEvent.keyboard("{ArrowLeft}");
-		await expect.poll(() => Math.round(image().element().getBoundingClientRect().width)).toBe(Math.round(before - 16));
+		// Five percent of the body at a time.
+		await expect
+			.poll(() => Math.round(image().element().getBoundingClientRect().width))
+			.toBe(Math.round(before * 0.95));
+	});
+
+	it("09-1 T122 'Edit' sizes the picture as a share of the body; the settings card is what the entry says of it, with no size", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		const before = image().element().getBoundingClientRect().width;
+		await userEvent.click(bar().getByRole("button", { name: "설정" }));
+		await expect.element(page.getByRole("textbox", { name: "대체 텍스트" })).toBeVisible();
+		await expect.element(page.getByRole("textbox", { name: "너비" })).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
+		// The picture picked again, its tools there whatever Escape left (a toast from another test can sit over them too).
+		toast.dismiss();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
+		const dialog = page.getByRole("dialog");
+		await expect.element(dialog.getByRole("heading", { name: "편집" })).toBeVisible();
+		await userEvent.click(dialog.getByRole("button", { name: "50%" }));
+		await expect.element(dialog.getByRole("button", { name: "처음으로" })).toBeVisible();
+		await userEvent.click(dialog.getByRole("button", { name: "적용" }));
+		await expect.poll(() => Math.round(image().element().getBoundingClientRect().width)).toBe(Math.round(before / 2));
 	});
 
 	it("09-1 the crop window can be left with nothing changed", async () => {
@@ -514,17 +547,17 @@ describe("an image in the text", () => {
 		await userEvent.click(image());
 		const height = () => Math.round(image().element().getBoundingClientRect().height);
 		const before = height();
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await userEvent.click(page.getByRole("button", { name: "취소" }));
-		await expect.element(page.getByRole("heading", { name: "자르기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "편집" })).not.toBeInTheDocument();
 		expect(height()).toBe(before);
 	});
 
 	it("09-1 a crop already drawn turns with the picture: the same part of it stays kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		// The crop starts as the whole picture: its corner pulled in to 80% wide and 65% high.
 		const corner = page.getByRole("button", { name: "오른쪽 아래 모서리" });
 		corner.element().focus();
@@ -534,7 +567,7 @@ describe("an image in the text", () => {
 		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await expect.element(page.getByRole("button", { name: "자를 곳: 화살표로 옮기기" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
-		await expect.element(page.getByRole("heading", { name: "자르기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "편집" })).not.toBeInTheDocument();
 		// 80% wide and 65% high of a 3:2 picture, turned a quarter: 65% wide and 80% high of a 2:3 one.
 		await expect
 			.poll(() => {
@@ -547,7 +580,7 @@ describe("an image in the text", () => {
 	it("[keys-move] the crop is made and moved with the keyboard alone", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		// The crop starts as the whole picture: a corner pulls it in, the box moves.
 		const corner = page.getByRole("button", { name: "오른쪽 아래 모서리" });
 		corner.element().focus();
@@ -558,7 +591,7 @@ describe("an image in the text", () => {
 		box.element().focus();
 		await userEvent.keyboard("{Shift>}{ArrowRight}{ArrowRight}{/Shift}");
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
-		await expect.element(page.getByRole("heading", { name: "자르기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "편집" })).not.toBeInTheDocument();
 		// 80% wide of a 3:2 picture, 65% high.
 		await expect
 			.poll(() => {
@@ -573,7 +606,7 @@ describe("an image in the text", () => {
 		toast.dismiss();
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("button", { name: "처음으로" })).not.toBeInTheDocument();
 		// The shape is measured on the picture's size as the body frames it (the story's file is drawn at another shape, so the body is what is checked).
@@ -597,7 +630,7 @@ describe("an image in the text", () => {
 		toast.dismiss();
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		const dialog = page.getByRole("dialog");
 		await userEvent.click(dialog.getByRole("button", { name: "1:1" }));
 		const box = () =>
@@ -622,7 +655,7 @@ describe("an image in the text", () => {
 	it("09-1 a crop dragged past the picture stays inside it, and the entry still saves", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		const sheet = page.getByRole("dialog");
 		const corner = sheet.getByRole("button", { name: "오른쪽 아래 모서리" }).element();
 		const box = corner.getBoundingClientRect();
@@ -641,7 +674,7 @@ describe("an image in the text", () => {
 		const caption = body().getByRole("textbox", { name: "캡션" });
 		await userEvent.click(caption);
 		await userEvent.keyboard("캡션");
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
 		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
 		const upright = () => {
@@ -749,11 +782,11 @@ describe("an image in the text", () => {
 	it("09-1 the crop dialog turns and crops, and the body shows what is kept", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
-		await userEvent.click(bar().getByRole("button", { name: "자르기" }));
-		await expect.element(page.getByRole("heading", { name: "자르기" })).toBeVisible();
+		await userEvent.click(bar().getByRole("button", { name: "편집" }));
+		await expect.element(page.getByRole("heading", { name: "편집" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await userEvent.click(page.getByRole("button", { name: "적용" }));
-		await expect.element(page.getByRole("heading", { name: "자르기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "편집" })).not.toBeInTheDocument();
 		await expect
 			.poll(() => {
 				const { width, height } = image().element().getBoundingClientRect();

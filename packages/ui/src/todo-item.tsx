@@ -116,7 +116,10 @@ function TodoItem({
 	);
 }
 
-/** A thing that is already right: a green ✓ and one small line, under the rows to fix, set off from them by a rule. */
+/**
+ * The list's line when nothing is left to do: a green ✓ and one small line. Done things are not listed (2026-11-10, owner: a row that is done goes); set off
+ * by a rule if it ever stands under rows.
+ */
 function TodoDone({ className, children, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div

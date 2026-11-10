@@ -8,7 +8,8 @@ const ALT_MAX = 80;
 
 /**
  * What an entry says of a picture, in a settings card (screens/editor.md): a body's image and a media field write it the same way. The box takes the cursor as the card opens.
- * Enter is the place's own: an image goes on to the next one that needs words, a field closes its card.
+ * Enter is the place's own: an image goes on to the next one that needs words, a field closes its card. A decorative picture has no words, so its box is not
+ * there at all and the cursor stays on the switch; turned off, the box comes back with the cursor in it (2026-11-10, owner: the usual pattern, and no note).
  */
 export function AltFields({
 	value,
@@ -36,36 +37,38 @@ export function AltFields({
 	const alt = useComposedValue(value, onChange);
 	return (
 		<>
-			<FormField>
-				<FormFieldLabel
-					htmlFor={id}
-					action={
-						<Text variant="micro" tone="subtle">
-							{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
-						</Text>
-					}
-				>
-					{t("editor.image.alt")}
-				</FormFieldLabel>
-				<Input
-					id={id}
-					size="md"
-					autoFocus
-					disabled={readOnly || decorative}
-					maxLength={ALT_MAX}
-					placeholder={placeholder}
-					value={alt.value}
-					onChange={(event) => alt.change(event.target.value)}
-					{...alt.composition}
-					onKeyDown={(event) => {
-						if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-							event.preventDefault();
-							onEnter();
+			{!decorative && (
+				<FormField>
+					<FormFieldLabel
+						htmlFor={id}
+						action={
+							<Text variant="micro" tone="subtle">
+								{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
+							</Text>
 						}
-					}}
-				/>
-				{missing && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
-			</FormField>
+					>
+						{t("editor.image.alt")}
+					</FormFieldLabel>
+					<Input
+						id={id}
+						size="md"
+						autoFocus
+						disabled={readOnly}
+						maxLength={ALT_MAX}
+						placeholder={placeholder}
+						value={alt.value}
+						onChange={(event) => alt.change(event.target.value)}
+						{...alt.composition}
+						onKeyDown={(event) => {
+							if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+								event.preventDefault();
+								onEnter();
+							}
+						}}
+					/>
+					{missing && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
+				</FormField>
+			)}
 			<Option spread>
 				{t("editor.image.decorative")}
 				<Switch checked={decorative} disabled={readOnly} onCheckedChange={onDecorative} />

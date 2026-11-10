@@ -35,18 +35,16 @@ export const Todo: Story = {
 				<TodoItem title="표지 이미지 없음" detail="발행에 필요" blocking onOpen={() => {}} />
 				<TodoItem title="요약 · 비어 있음" proposal actionLabel="채우기" onAction={() => {}} />
 				<TodoItem title="검색 제목 60자 넘음" detail="68자" onOpen={() => {}} />
-				<TodoDone>주소 정함</TodoDone>
 			</StatusBarList>,
 		),
 };
 
-/** Nothing left: no count. */
+/** Nothing left: no count, and one line that says so. */
 export const Done: Story = {
 	render: () =>
 		bar(
 			<StatusBarList trigger={<StatusBarCell>할 일</StatusBarCell>} label="할 일" count={0} defaultOpen>
-				<TodoDone>표지 이미지 있음</TodoDone>
-				<TodoDone>요약 채움</TodoDone>
+				<TodoDone>할 일 없음</TodoDone>
 			</StatusBarList>,
 		),
 };
