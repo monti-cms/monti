@@ -479,10 +479,10 @@ function EditDialog({
 				/>
 				<Inline gap={8} justify="between" wrap>
 					<Inline gap={8}>
-						<IconButton label={t("editor.crop.turnLeft")} onClick={() => turnBy(-90)}>
+						<IconButton size="sm" label={t("editor.crop.turnLeft")} onClick={() => turnBy(-90)}>
 							<RotateCounterclockwise aria-hidden />
 						</IconButton>
-						<IconButton label={t("editor.crop.turnRight")} onClick={() => turnBy(90)}>
+						<IconButton size="sm" label={t("editor.crop.turnRight")} onClick={() => turnBy(90)}>
 							<RotateClockwise aria-hidden />
 						</IconButton>
 						<Segmented
@@ -498,27 +498,37 @@ function EditDialog({
 						/>
 					</Inline>
 					<Inline gap={8} role="group" aria-label={t("editor.edit.size")}>
-						<Text variant="note" tone="muted" aria-hidden>
+						<Text variant="note" tone="subtle" aria-hidden>
 							{t("editor.edit.size")}
 						</Text>
 						<Input
 							size="sm"
 							width="number"
+							mono
 							inputMode="numeric"
 							align="end"
 							aria-label={t("editor.edit.width")}
 							value={unit === "px" ? (widthPx ?? "") : (amount ?? "")}
-							placeholder={unit === "px" && most !== null ? String(most) : undefined}
+							placeholder={
+								most === null
+									? undefined
+									: unit === "px"
+										? String(most)
+										: column
+											? String(clamp(Math.round((Math.min(most, column) / column) * 100), 1, 100))
+											: undefined
+							}
 							onChange={(event) => typedWidth(event.target.value)}
 						/>
 						{unit === "px" && (
 							<>
-								<Text variant="note" tone="muted" aria-hidden>
+								<Text variant="note" tone="subtle" aria-hidden>
 									×
 								</Text>
 								<Input
 									size="sm"
 									width="number"
+									mono
 									inputMode="numeric"
 									align="end"
 									aria-label={t("editor.edit.height")}
@@ -661,10 +671,19 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (after) openImageCard(editor, after);
 		else media?.setCard(null);
 	};
-	/** A size as it reads on the picture while it changes and to a screen reader: "420 × 280", or "50%". */
+	/** The column the picture stands in: the box's parent, its full width. */
+	const bodyWidth = () => box.current?.parentElement?.getBoundingClientRect().width;
+	/** A size as it reads on the picture while it changes and to a screen reader: the size it is drawn at ("420 × 280", narrowed by the body), or "50%". */
 	const sizeLabel = (to: Sized) => {
 		if (to?.unit === "%") return `${to.value}%`;
-		const drawn = size && imageSize(size, { crop: data.crop, rotate: data.rotate, width: to?.value });
+		const column = bodyWidth();
+		const width = Math.min(
+			to?.value ?? Number.POSITIVE_INFINITY,
+			column ? Math.floor(column) : Number.POSITIVE_INFINITY,
+		);
+		const drawn =
+			size &&
+			imageSize(size, { crop: data.crop, rotate: data.rotate, width: Number.isFinite(width) ? width : undefined });
 		return drawn ? `${drawn.width} × ${drawn.height}` : "";
 	};
 	/** A new size, said aloud; one that is the same as now writes nothing, so undo has no empty step. */
@@ -672,15 +691,17 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		setSpoken(sizeLabel(to));
 		if (!sameSized(to, sized)) set(attrsOf(to));
 	};
-	/** The column the picture stands in: the box's parent, its full width. */
-	const bodyWidth = () => box.current?.parentElement?.getBoundingClientRect().width;
 	/**
 	 * The size a width on the screen makes, in the unit the picture keeps (px when it has none): a share of the column, or px up to what shows of the
 	 * picture, where it is its own size again.
 	 */
 	const sizedAt = (px: number, column: number): Sized => {
 		const unit: Unit = sized?.unit ?? "px";
-		if (unit === "%") return { unit, value: clamp(Math.round((px / column) * 100), 1, 100) };
+		if (unit === "%")
+			return {
+				unit,
+				value: clamp(Math.round((px / column) * 100), Math.ceil((Math.min(MIN_WIDTH, column) / column) * 100), 100),
+			};
 		const most = Math.round(Math.min(column, own?.width ?? column));
 		const value = Math.round(clamp(px, Math.min(MIN_WIDTH, most), most));
 		return value >= most ? null : { unit, value };

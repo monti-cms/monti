@@ -61,7 +61,7 @@ function Segmented<T extends string>({
 					value={option.value}
 					aria-label={option["aria-label"]}
 					className={cn(
-						"flex items-center justify-center whitespace-nowrap rounded-monti-full border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:font-semibold data-pressed:text-monti-default",
+						"flex items-center justify-center whitespace-nowrap rounded-monti-full border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset disabled:opacity-45 data-pressed:font-semibold data-pressed:text-monti-default",
 						tone === "tool"
 							? "not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-current"
 							: "data-pressed:bg-monti-selected",

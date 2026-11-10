@@ -466,10 +466,12 @@ describe("an image in the text", () => {
 		await userEvent.click(image());
 		const before = image().element().getBoundingClientRect().width;
 		body().getByRole("button", { name: "오른쪽에서 크기 바꾸기" }).element().focus();
+		const region = body().element().querySelector("[data-slot=block-box] [aria-live]");
+		// What is heard is the size it is drawn at: the 2400px desk (3:2) narrowed to the body, not its file's size.
+		const shown = Math.floor(before);
+		await expect.poll(() => region?.textContent).toBe(`${shown} × ${Math.round((shown * 2) / 3)}`);
 		await userEvent.keyboard("{ArrowLeft}");
 		const width = Math.round(before - 10);
-		const region = body().element().querySelector("[data-slot=block-box] [aria-live]");
-		// The desk is 3:2.
 		await expect.poll(() => region?.textContent).toBe(`${width} × ${Math.round((width * 2) / 3)}`);
 	});
 

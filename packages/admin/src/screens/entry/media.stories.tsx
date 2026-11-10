@@ -108,6 +108,18 @@ export const EditDialog: Story = {
 	},
 };
 
+/** The edit dialog with the size as a share of the body: one field, no height, since the body's width decides it. */
+export const EditDialogShare: Story = {
+	loaders: blankImage,
+	play: async () => {
+		await toTheImage();
+		const page = within(document.body);
+		await userEvent.keyboard("{Escape}");
+		await userEvent.click(await page.findByRole("button", { name: "편집" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "%" }, wait));
+	},
+};
+
 /** A picture smaller than the body (80 × 80): it stands at its own size, not stretched to the body. */
 export const SmallImage: Story = {
 	loaders: entry({
