@@ -33,10 +33,13 @@ const dialog = () => page.getByRole("alertdialog");
 const sidebarTrash = () => page.getByRole("navigation").getByRole("button", { name: /^휴지통/ });
 
 describe("the trash (doc 11, flow 5)", () => {
-	it("11-1 [flow 5·11] one row for each thing thrown away: a folder is one row, each says its kind and its days, in the warning tone under a week", async () => {
+	it("11-1 [flow 5·11] one row for each thing thrown away, as the lists draw theirs: an entry with its languages, a folder, a file; each says its kind and its days, in the warning tone under a week", async () => {
 		await Top.run();
-		await expect.element(row("첫 번째 글")).toHaveTextContent("KO · EN");
+		await expect.element(row("첫 번째 글")).toHaveTextContent("KO +1");
 		await expect.element(row("첫 번째 글")).toHaveTextContent("/posts/first-post");
+		// An entry is one row whenever its languages got there: the translation thrown away before its source is in its source's row.
+		await expect.element(row("리액트 19 마이그레이션")).toHaveTextContent("KO +1");
+		await expect.element(table().getByText("React 19 migration")).not.toBeInTheDocument();
 		await expect.element(row("시리즈 원고")).toHaveTextContent("글 2");
 		await expect.element(row("diagrams")).toHaveTextContent("파일 3 · Blog Assets");
 		await expect.element(row("winter-01.jpg")).toHaveTextContent("미디어");
@@ -48,16 +51,17 @@ describe("the trash (doc 11, flow 5)", () => {
 		const days = (title: string) => row(title).element().querySelector("[data-slot=trash-row-left]");
 		expect(days("임시")).toHaveClass("text-monti-warning");
 		expect(days("옛 소개 글")).not.toHaveClass("text-monti-warning");
-		await expect.element(sidebarTrash()).toHaveTextContent("9");
+		await expect.element(sidebarTrash()).toHaveTextContent("8");
 	});
 
-	it("11-1 every row is one height, and a row's actions are all in its ⋯: restore, and delete for good", async () => {
+	it("11-1 every row is one line, as high as a list's, and a row's actions are all in its ⋯: restore, and delete for good", async () => {
 		await Top.run();
 		await expect.element(row("임시")).toBeVisible();
 		const heights = [...table().element().querySelectorAll("tbody tr")].map(
 			(each) => each.getBoundingClientRect().height,
 		);
 		expect(new Set(heights).size).toBe(1);
+		expect(heights[0]).toBeLessThan(50);
 		await expect.element(row("옛 소개 글").getByRole("button", { name: "복원" })).not.toBeInTheDocument();
 		const menu = await menuOf("옛 소개 글");
 		await expect.element(menu.getByRole("menuitem", { name: "복원" })).toBeVisible();
@@ -67,7 +71,7 @@ describe("the trash (doc 11, flow 5)", () => {
 	it("11-1 [flow 5·11, 5·17] the kind column filters by kind, with a count for each; several can be on", async () => {
 		await Top.run();
 		await userEvent.click(table().getByRole("button", { name: "종류" }));
-		await expect.element(page.getByRole("menuitemcheckbox", { name: /게시글/ })).toHaveTextContent("5");
+		await expect.element(page.getByRole("menuitemcheckbox", { name: /게시글/ })).toHaveTextContent("4");
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /카테고리/ })).toHaveTextContent("0");
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /미디어/ }));
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /태그/ }));
@@ -142,17 +146,7 @@ describe("the trash (doc 11, flow 5)", () => {
 		await userEvent.click(menu.getByRole("menuitem", { name: "복원" }));
 		await expect.element(toast("초안으로 복원했습니다").getByRole("button", { name: "열기" })).toBeVisible();
 		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
-		await expect.element(sidebarTrash()).toHaveTextContent("8");
-	});
-
-	it("11-1 [flow 5·22] a translation thrown away before its source says so, and comes back only with the source", async () => {
-		await Top.run();
-		await expect.element(row("React 19 migration")).toHaveTextContent("원문이 휴지통에 있음");
-		const menu = await menuOf("React 19 migration");
-		await expect.element(menu.getByRole("menuitem", { name: "복원", exact: true })).not.toBeInTheDocument();
-		await userEvent.click(menu.getByRole("menuitem", { name: "원문 복원" }));
-		await expect.element(row("React 19 migration")).not.toBeInTheDocument();
-		await expect.element(row("리액트 19 마이그레이션")).not.toBeInTheDocument();
+		await expect.element(sidebarTrash()).toHaveTextContent("7");
 	});
 
 	it("11-3 [flow 5·23] deleting for good asks every time, says which address stays taken, and nothing stops it", async () => {
@@ -196,9 +190,9 @@ describe("the trash (doc 11, flow 5)", () => {
 		await Top.run();
 		await userEvent.click(main().getByRole("button", { name: "비우기" }));
 		await expect.element(dialog()).toHaveTextContent("휴지통을 비울까요?");
-		await expect.element(dialog()).toHaveTextContent("9개를 영구 삭제합니다.");
+		await expect.element(dialog()).toHaveTextContent("8개를 영구 삭제합니다.");
 		await userEvent.click(dialog().getByRole("button", { name: "비우기" }));
-		await expect.element(toast("9개를 영구 삭제했습니다")).toBeVisible();
+		await expect.element(toast("8개를 영구 삭제했습니다")).toBeVisible();
 		await expect.element(main().getByText("휴지통이 비었습니다.")).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "비우기" })).not.toBeInTheDocument();
 		await expect.element(main().getByRole("button", { name: "검색" })).not.toBeInTheDocument();

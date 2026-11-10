@@ -438,8 +438,7 @@ export function EntryEditor({
 					if (await restore.run([source])) await editor.reload();
 				}}
 			>
-				{/* A translation whose source is in the trash too comes back only with it, and the pill says so (flow 5·22). */}
-				{t(inTrash?.source ? "trash.restoreSource" : "trash.restore")}
+				{t("trash.restore")}
 			</Button>
 		) : archived ? (
 			<Button

@@ -32,6 +32,7 @@ import {
 	RowCheck,
 	RowLink,
 	RowMore,
+	RowTitle,
 	SearchToggle,
 	type SelectAll,
 	Table,
@@ -41,17 +42,14 @@ import {
 	Text,
 	TextButton,
 	TrashRowDate,
-	TrashRowTitle,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { formatBytes } from "../../media/file-text";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
-import { useLanguageName } from "../list/column-menu";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
 import { TrashedFilePanel } from "../media/media-panel";
@@ -87,7 +85,6 @@ export function TrashScreen({
 	go: (route: Route, options?: { replace?: boolean }) => void;
 }) {
 	const { t } = useAdmin();
-	const languageName = useLanguageName();
 	const state = useMemo(() => readTrashState(params), [params]);
 	const setState = (next: TrashState, options?: { replace?: boolean }) =>
 		go({ screen: "trash", params: writeTrashState(next) }, options);
@@ -145,7 +142,6 @@ export function TrashScreen({
 	};
 
 	const collections = schema.data?.schema.collections ?? {};
-	const sourceLocale = schema.data?.schema.locales.source;
 	const multilingual = (schema.data?.schema.locales.list.length ?? 0) > 1;
 	const collectionLabel = (collection: string) => schema.data?.adminValues[collection]?.label ?? collection;
 	const kindLabel = (kind: string) => (kind === MEDIA_KIND ? t("trash.kind.media") : collectionLabel(kind));
@@ -184,27 +180,22 @@ export function TrashScreen({
 			? href({ screen: "entry", collection: row.collection, id: row.id })
 			: undefined;
 
-	/** A row's second line: what it holds, or what stops it from coming back alone. */
-	const metaOf = (row: TrashRow): { text: string; tone: "default" | "warning" } => {
-		if (row.source) return { text: t("trash.sourceTrashed"), tone: "warning" };
+	/** What stands after a row's title, as after a list's: an entry's address, what a folder holds, and where it sat. */
+	const addressOf = (row: TrashRow): string | undefined => {
 		const parts: string[] = [];
-		// A search found it inside a thrown-away folder other than the open one: it says which.
-		const inside = row.inTrashedFolder && row.folderId !== place?.id;
-		if (inside) parts.push(t("trash.inFolder", { name: row.path.at(-1) ?? "" }));
-		const where = inside || row.path.length === 0 || row.inTrashedFolder ? null : row.path.join(" / ");
-		if (row.kind === "entry") {
-			const [own] = row.locales;
-			if (isDocument(row) && own && own !== sourceLocale && row.locales.length === 1)
-				parts.push(t("trash.translationOf", { language: languageName(own) }));
-			else if (multilingual && (isDocument(row) || row.locales.length > 1))
-				parts.push(row.locales.map((locale) => locale.toUpperCase()).join(" · "));
-		} else if (row.kind === "folder") {
+		if (row.address) parts.push(row.address);
+		if (row.kind === "folder")
 			parts.push(t(row.collection === null ? "trash.holdsFiles" : "trash.holdsEntries", { count: row.holds ?? 0 }));
-		} else if (row.file) {
-			parts.push(t(`trash.file.${row.file.kind}`), formatBytes(row.file.size));
-		}
-		if (where) parts.push(where);
-		return { text: parts.join(" · "), tone: "default" };
+		// A search found it inside a thrown-away folder other than the open one: it says which. A folder still alive is named as it is.
+		if (row.inTrashedFolder && row.folderId !== place?.id)
+			parts.push(t("trash.inFolder", { name: row.path.at(-1) ?? "" }));
+		else if (!row.inTrashedFolder && row.path.length > 0) parts.push(row.path.join(" / "));
+		return parts.join(" · ") || undefined;
+	};
+	/** An entry's languages in the trash, as a list's language cell writes them: its own, and how many more. */
+	const localesOf = (row: TrashRow) => {
+		const [own, ...more] = row.locales;
+		return own ? `${own.toUpperCase()}${more.length > 0 ? ` +${more.length}` : ""}` : "";
 	};
 
 	const menuItems = (row: TrashRow, context: boolean) => {
@@ -222,7 +213,7 @@ export function TrashScreen({
 				)}
 				<Item onClick={() => void restoreRows(list)}>
 					{!several && <Undo aria-hidden />}
-					{t(!several && row.source ? "trash.restoreSource" : "trash.restore")}
+					{t("trash.restore")}
 				</Item>
 				<Separator />
 				<Item variant="danger" onClick={() => purgeRows(list)}>
@@ -244,6 +235,8 @@ export function TrashScreen({
 	const kinds = [...Object.keys(collections), MEDIA_KIND];
 	const head: ListHeadColumn[] = [
 		{ id: "title", label: t("trash.column.title") },
+		// As in the lists: a site written in one language has no language column.
+		...(multilingual ? [{ id: "locale", label: t("list.column.locale"), size: LIST_COLUMN_SIZE.locale }] : []),
 		{
 			id: "kind",
 			label: t("trash.column.kind"),
@@ -384,7 +377,17 @@ export function TrashScreen({
 			<PageColumn width="list">
 				{header}
 				<ListScroll>
-					<Table container="none" layout="fixed" columns={[undefined, KIND_SIZE, LEFT_SIZE, LIST_COLUMN_SIZE.end]}>
+					<Table
+						container="none"
+						layout="fixed"
+						columns={[
+							undefined,
+							...(multilingual ? [LIST_COLUMN_SIZE.locale] : []),
+							KIND_SIZE,
+							LEFT_SIZE,
+							LIST_COLUMN_SIZE.end,
+						]}
+					>
 						{pickedRows.length > 0 ? (
 							<BulkBar
 								label={t("list.selected", { count: pickedRows.length })}
@@ -417,7 +420,6 @@ export function TrashScreen({
 								</TableRow>
 							)}
 							{rows.map((row) => {
-								const meta = metaOf(row);
 								const key = keyOf(row);
 								const link = entryHref(row);
 								// Inside a folder a row says its days only when they are not the folder's own: the head says those.
@@ -425,7 +427,6 @@ export function TrashScreen({
 								const line = (
 									<TableRow
 										key={key}
-										twoLine
 										selected={picked.has(key) || (panel !== null && keyOf(panel) === key)}
 										onKeyDown={onRowKey(row)}
 									>
@@ -435,7 +436,7 @@ export function TrashScreen({
 												onCheckedChange={(on) => pick(row, on)}
 												label={t("list.pick", { title: row.title })}
 											/>
-											<TrashRowTitle
+											<RowTitle
 												title={
 													link ? (
 														<RowLink href={link}>{row.title || t("list.untitled")}</RowLink>
@@ -445,12 +446,19 @@ export function TrashScreen({
 														</RowLink>
 													)
 												}
-												address={row.address ?? undefined}
+												address={addressOf(row)}
 												folder={row.kind === "folder"}
-												meta={meta.text}
-												metaTone={meta.tone}
 											/>
 										</TableCell>
+										{multilingual && (
+											<TableCell>
+												{row.kind === "entry" && (
+													<Text mono variant="meta">
+														{localesOf(row)}
+													</Text>
+												)}
+											</TableCell>
+										)}
 										<TableCell tone="subtle" truncate>
 											{kindLabel(row.collection ?? MEDIA_KIND)}
 										</TableCell>

@@ -59,7 +59,7 @@ async function nameCollections(monti: Monti) {
 
 /**
  * The reference trash (`Screens/Reference/Lists` › Trash): a post with its translation, a folder of posts, a folder of files, a file, a post published once, a
- * translation thrown away before its source, a memo, and a tag that posts point at, each thrown away on its own day. Outside it stay a published post, and a
+ * post whose translation was thrown away before it (one row all the same), a memo, and a tag that posts point at, each thrown away on its own day. Outside it stay a published post, and a
  * tag that published posts use.
  */
 export async function fillTrash(site: StorySite) {
@@ -80,7 +80,11 @@ export async function fillTrash(site: StorySite) {
 	const ago = async (table: "entries" | "folders" | "media", ids: string[], days: number) => {
 		await sql`update ${sql.table(table)} set trashed_at = now() - make_interval(days => ${days}::int)
 			where trashed_at is not null and (id in (${sql.join(ids)})
-				${table === "entries" ? sql`or trashed_with in (${sql.join(ids)})` : sql``})`.execute(db);
+				${
+					table === "entries"
+						? sql`or translation_group in (select translation_group from entries where id in (${sql.join(ids)}))`
+						: sql``
+				})`.execute(db);
 	};
 
 	// What stays: a tag in use, and the posts that use the tags.
@@ -263,12 +267,6 @@ export const PickedRightClick: Story = {
 		);
 		await body().findByText("2개 항목", {}, wait);
 	},
-};
-
-/** Flow 5·22: a translation thrown away before its source says so, and comes back only with the source. */
-export const TranslationRowMenu: Story = {
-	loaders: trash(),
-	play: async ({ canvasElement }) => openRowMenu(canvasElement, "React 19 migration"),
 };
 
 /** Flow 5·25: picked rows, with what can be done to them in the bar. */

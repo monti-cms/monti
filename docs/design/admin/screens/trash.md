@@ -21,13 +21,14 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow twoLine`, `TableCell`) | 모든 행이 두 줄 높이다. 고른 행과 패널에 열린 행은 `TableRow selected`. |
+| 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow`, `TableCell`) | 행은 게시글 목록의 행과 같은 한 줄이다(2026-11-11 소유자: 둘째 줄이 비는 행이 생기고, 휴지통만 다를 까닭이 없다). 고른 행과 패널에 열린 행은 `TableRow selected`. |
 | 행 체크 | `RowCheck` | 포인터가 행 위에 있을 때와 고른 행, 패널에 열린 행에 보인다(항목 화면과 같다). |
-| 제목 칸 | `TrashRowTitle`(`title`, `address`, `folder`, `meta`, `metaTone`) | 첫 줄은 조용한 잉크의 제목과 mono 주소(글의 공개 주소), 둘째 줄은 담은 것("KO · EN", "영어 번역", "글 2", "이미지 · 2.4 MB · Blog Assets"). 할 말이 없어도 빈 줄을 지킨다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 혼자서는 되돌아오지 못하면 `metaTone="warning"`("원문이 휴지통에 있음"). 찾은 것이 지운 폴더 안에 있으면 `meta` 앞에 "시리즈 원고 폴더 안". 언어가 하나인 사이트는 언어를 적지 않는다. |
+| 제목 칸 | `RowTitle`(`title`, `address`, `folder`) | 게시글 목록과 같은 칸이다. 제목 뒤 `address` 자리에 글은 공개 주소, 폴더는 담은 수("글 2", "파일 3"), 그리고 있던 폴더가 온다("Blog Assets"). 찾은 것이 지운 폴더 안에 있으면 "시리즈 원고 폴더 안"이다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 글 하나는 한 줄이다: 원문과 번역이 따로 버려졌어도 한 줄에 모인다. |
 | 제목을 누르면 | `RowLink` | 글은 편집기로 간다(읽기 전용). 항목과 미디어는 옆 패널이 열린다. 폴더는 그 안으로 들어간다. |
+| 언어 칸 | `Text mono variant="meta"` | 글과 항목의 줄에만: 그 줄의 언어와 휴지통에 든 나머지 언어의 수("KO +1"). 게시글 목록의 언어 칸과 같다. 언어가 하나인 사이트에는 열이 없다. 폭은 `LIST_COLUMN_SIZE.locale`. |
 | 종류 칸 | `TableCell tone="subtle"` | 컬렉션의 이름("게시글", "메모", "태그")과 "미디어". 폭은 `LIST_COLUMN_SIZE.one`. |
 | 남은 날 칸 | `TrashRowDate`(`left`, `urgent`, `byAssistant`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 7일 아래면 `urgent`로 경고 색(2026-11-11 소유자). 폴더 안의 행은 폴더와 남은 날이 같으면 비운다. 폭은 `LIST_COLUMN_SIZE.measure`. |
-| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 원문이 휴지통에 있는 번역은 "복원" 자리가 "원문 복원"이다. 영구 삭제는 `AlertDialog`로 묻는다. |
+| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 글의 줄은 휴지통에 든 그 글의 언어 모두를 함께 복원하고 함께 지운다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 `ContextMenuLabel` "2개 항목"으로 시작하고 아이콘 없이 고른 행 모두에 한다(게시글 목록과 같다). 행에서 Delete를 눌러도 영구 삭제를 묻는다. |
 | 빈 휴지통 | `Empty`(`title` "휴지통이 비었습니다.") | 열 이름 행과 표 대신 이 한 줄. 도구 화면의 빈 목록과 같은 부품이다. |
 | 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
@@ -71,7 +72,7 @@
 
 ## 흐름 5 · 휴지통
 
-단계: 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5.17, 5.19, 5.20, 5.21, 5.22, 5.23, 5.25, 5.26, 5.28. 단계마다 보이는 것은 [flows/05-trash.md](../flows/05-trash.md)에 있다. 스토리는 모두 `Screens/Trash` 아래다.
+단계: 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5.17, 5.19, 5.20, 5.21, 5.23, 5.25, 5.26, 5.28. 단계마다 보이는 것은 [flows/05-trash.md](../flows/05-trash.md)에 있다. 스토리는 모두 `Screens/Trash` 아래다.
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
@@ -83,7 +84,6 @@
 | "항목 열기" | 5.19 | 태그 행 `selected`와 항목 `SidePanel`("가리키는 글 · 4") | ItemPanel |
 | "미디어 열기" | 5.20 | 파일 행 `selected`와 미디어 `SidePanel`(미리보기, "쓰는 곳 · 0") | FilePanel |
 | "복원함" | 5.21 | 복원한 행이 빠지고 `toast` "초안으로 복원했습니다"와 `action` "열기" | |
-| "번역 막힘" | 5.22 | 번역 행 `TrashRowTitle metaTone="warning"`, ⋯의 "원문 복원" | TranslationRowMenu |
 | "삭제 확인" | 5.23 | 영구 삭제 `AlertDialog` | PurgeConfirm |
 | "선택" | 5.25 | `BulkBar`(`selectAll` 일부), 두 행 `selected` | Picked |
 | "비우기 확인" | 5.26 | 비우기 `AlertDialog` | EmptyConfirm |
