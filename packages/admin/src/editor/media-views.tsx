@@ -3,6 +3,7 @@ import {
 	type ImageAttrs,
 	type ImageCrop,
 	type ImageRotate,
+	type ImageSizeAttrs,
 	imageAlignOf,
 	imageFrame,
 	imageSize,
@@ -90,9 +91,7 @@ const sizedOf = (data: ImageData): Sized =>
 			? { unit: "px", value: data.width }
 			: null;
 /** A size as the block's attrs: one of the two widths, the other cleared. */
-const attrsOf = (
-	sized: Sized,
-): { width?: number; widthPercent?: undefined } | { widthPercent: number; width?: undefined } =>
+const attrsOf = (sized: Sized): ImageSizeAttrs =>
 	sized?.unit === "%"
 		? { widthPercent: sized.value, width: undefined }
 		: { width: sized?.value, widthPercent: undefined };
@@ -241,8 +240,14 @@ function ratioOf(part: CropRect, picture: { width: number; height: number } | nu
 	if (isWhole(part)) return "original";
 	if (!picture) return "free";
 	const pixels = (picture.width * part.width) / (picture.height * part.height);
-	return FIXED_RATIOS.find((each) => Math.abs(RATIOS[each] - pixels) < 0.01) ?? "free";
+	const near = (ratio: number) => Math.abs(ratio - pixels) < 0.01;
+	if (near(picture.width / picture.height)) return "original";
+	return FIXED_RATIOS.find((each) => near(RATIOS[each])) ?? "free";
 }
+
+/** A crop in % as the block keeps it, in parts of the picture: none for the whole picture. */
+const cropOf = (part: CropRect): ImageCrop | undefined =>
+	isWhole(part) ? undefined : { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 };
 
 /**
  * A ratio as the crop's sides in % of the picture: width % over height %. The picture's own shape is 1 there; a pixel ratio is scaled by the picture's
@@ -419,13 +424,10 @@ function EditDialog({
 		if (share) setPart(centeredCrop(share));
 	};
 
-	// What shows of the picture now, in its own px: the most a width in px can be.
-	const turned = size();
-	const visible = turned && { width: (turned.width * part.width) / 100, height: (turned.height * part.height) / 100 };
-	const most = visible ? Math.max(1, Math.round(visible.width)) : null;
+	// What shows of the picture now, at its own size (the core's sum, as the body and the site draw it): the most a width in px can be.
+	const own = upright && imageSize(upright, { crop: cropOf(part), rotate: turn });
+	const most = own?.width ?? null;
 	const widthPx = unit === "px" && amount !== null ? Math.min(amount, most ?? amount) : null;
-	const heightOf = (width: number) =>
-		visible ? Math.max(1, Math.round((width * visible.height) / visible.width)) : null;
 	const typedWidth = (text: string) => {
 		const digits = digitsOf(text);
 		setAmount(digits === "" ? null : clamp(Number(digits), 1, unit === "%" ? 100 : (most ?? Number(digits))));
@@ -433,28 +435,30 @@ function EditDialog({
 	const typedHeight = (text: string) => {
 		const digits = digitsOf(text);
 		setHeightDraft(digits);
-		if (digits === "") return setAmount(null);
-		// A kept shape: the width follows the height.
-		if (ratio !== "free" && visible && most)
-			setAmount(clamp(Math.round((Number(digits) * visible.width) / visible.height), 1, most));
+		// A free shape waits for the field to be left; a kept one moves the width with each digit.
+		if (ratio === "free" || !own) return;
+		setAmount(digits === "" ? null : clamp(Math.round((Number(digits) * own.width) / own.height), 1, own.width));
 	};
 	/** A height left typed in a free shape: the crop takes the shape of the two numbers, around where it was, and keeps the width. */
 	const heightDone = () => {
 		const digits = heightDraft;
 		setHeightDraft(null);
-		if (ratio !== "free" || !digits || !turned || !most) return;
+		const turned = size();
+		if (ratio !== "free" || !digits || !turned || !upright || !most) return;
 		const width = widthPx ?? most;
 		const next = reshapedCrop(part, ((width / Math.max(1, Number(digits))) * turned.height) / turned.width);
 		setPart(next);
-		setAmount(Math.min(width, Math.max(1, Math.round((turned.width * next.width) / 100))));
+		setAmount(Math.min(width, imageSize(upright, { crop: cropOf(next), rotate: turn })?.width ?? width));
 	};
+	/** The same width in the other unit; no size stays none, its field showing what the picture's own size is in that unit. */
 	const switchUnit = (next: Unit) => {
 		if (next === unit) return;
 		setUnit(next);
 		setHeightDraft(null);
+		if (amount === null) return;
 		if (!column || !most) return setAmount(null);
-		if (next === "%") setAmount(clamp(Math.round(((widthPx ?? Math.min(most, column)) / column) * 100), 1, 100));
-		else setAmount(amount === null ? null : Math.min(Math.max(1, Math.round((amount * column) / 100)), most));
+		if (next === "%") setAmount(clamp(Math.round(((widthPx ?? most) / column) * 100), 1, 100));
+		else setAmount(Math.min(Math.max(1, Math.round((amount * column) / 100)), most));
 	};
 	/** The size to keep: a width in px as wide as what shows is the picture's own. */
 	const sizedNow = (): Sized => {
@@ -463,7 +467,10 @@ function EditDialog({
 		return widthPx === null || (most !== null && widthPx >= most) ? null : { unit, value: widthPx };
 	};
 	const changed = !isWhole(part) || turn !== 0 || amount !== null;
-	const height = widthPx === null ? null : heightOf(widthPx);
+	const height =
+		widthPx === null || !upright
+			? null
+			: (imageSize(upright, { crop: cropOf(part), rotate: turn, width: widthPx })?.height ?? null);
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent size="xl" finalFocus={returnTo}>
@@ -539,7 +546,7 @@ function EditDialog({
 									align="end"
 									aria-label={t("editor.edit.height")}
 									value={heightDraft ?? height ?? ""}
-									placeholder={most !== null ? String(heightOf(most) ?? "") : undefined}
+									placeholder={own ? String(own.height) : undefined}
 									onChange={(event) => typedHeight(event.target.value)}
 									onBlur={heightDone}
 									onKeyDown={(event) => {
@@ -586,9 +593,7 @@ function EditDialog({
 					<Button
 						onClick={() =>
 							onApply({
-								crop: isWhole(part)
-									? undefined
-									: { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 },
+								crop: cropOf(part),
 								rotate: turn,
 								sized: sizedNow(),
 							})
@@ -708,7 +713,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 				unit,
 				value: clamp(Math.round((px / column) * 100), Math.ceil((Math.min(MIN_WIDTH, column) / column) * 100), 100),
 			};
-		const most = Math.round(Math.min(column, own?.width ?? column));
+		const most = Math.floor(Math.min(column, own?.width ?? column));
 		const value = Math.round(clamp(px, Math.min(MIN_WIDTH, most), most));
 		return value >= most ? null : { unit, value };
 	};
@@ -729,7 +734,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("keydown", esc);
 			setDragged(null);
-			if (keep && "clientX" in last) resizeTo(at(last.clientX));
+			// A corner pressed and let go where it was is no resize: it writes nothing.
+			if (keep && "clientX" in last && last.clientX !== startX) resizeTo(at(last.clientX));
 		};
 		const up = finish(true);
 		const esc = (key: KeyboardEvent) => {
@@ -744,21 +750,27 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		event.preventDefault();
 		event.stopPropagation();
 		const column = bodyWidth();
-		const measured = box.current?.getBoundingClientRect().width;
-		if (!column || !measured) return;
+		const drawn = box.current?.getBoundingClientRect().width;
+		if (!column || !drawn || !own) return;
 		const step = (event.key === "ArrowRight" ? 1 : -1) * KEY_STEP[sized?.unit ?? "px"];
-		// A share steps from the share it has; px from the width it is drawn at.
-		resizeTo(sizedAt(sized?.unit === "%" ? ((sized.value + step) / 100) * column : measured + step, column));
+		if (sized?.unit === "%") return resizeTo(sizedAt(((sized.value + step) / 100) * column, column));
+		// Its own size is as big as it gets.
+		if (sized === null && step > 0) return;
+		// A width in px steps from the width it keeps, which can be wider than this screen's body; none steps from what is drawn.
+		const now = sized ? Math.min(sized.value, own.width) : Math.floor(drawn);
+		const value = clamp(now + step, Math.min(MIN_WIDTH, own.width), own.width);
+		resizeTo(value >= own.width ? null : { unit: "px", value });
 	};
 	const shownSized = dragged ? dragged.to : sized;
+	const drawnAt =
+		size &&
+		imageSize(size, {
+			crop: data.crop,
+			rotate: data.rotate,
+			width: shownSized?.unit === "px" ? shownSized.value : undefined,
+		});
 	const width: BlockWidth | undefined =
-		shownSized?.unit === "%"
-			? `${shownSized.value}%`
-			: shownSized
-				? `${Math.min(shownSized.value, own?.width ?? shownSized.value)}px`
-				: own
-					? `${own.width}px`
-					: undefined;
+		shownSized?.unit === "%" ? `${shownSized.value}%` : drawnAt ? `${drawnAt.width}px` : undefined;
 
 	return (
 		<NodeViewWrapper data-block="image">

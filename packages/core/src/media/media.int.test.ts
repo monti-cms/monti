@@ -112,17 +112,17 @@ describe("uploading", () => {
 		await expect(
 			write("media.upload", {
 				name: "b.jpg",
-				original: { key: await bytes() },
+				original: { key: await bytes(), ...SIZE },
 				placeholder: "https://example.com/tiny.png",
 			}),
-		).rejects.toThrow();
+		).rejects.toBeInstanceOf(InputError);
 		await expect(
 			write("media.upload", {
 				name: "c.jpg",
-				original: { key: await bytes() },
+				original: { key: await bytes(), ...SIZE },
 				placeholder: `data:image/webp;base64,${"A".repeat(5000)}`,
 			}),
-		).rejects.toThrow();
+		).rejects.toBeInstanceOf(InputError);
 		// Base64 that does not end where it should is no picture.
 		await expect(
 			write("media.upload", {
@@ -130,7 +130,7 @@ describe("uploading", () => {
 				original: { key: await bytes(), ...SIZE },
 				placeholder: "data:image/png;base64,A",
 			}),
-		).rejects.toThrow();
+		).rejects.toBeInstanceOf(InputError);
 		const next = "data:image/png;base64,iVBORw0KGgo=";
 		await write("media.replace", { id: output.id, original: { key: await bytes(), ...SIZE }, placeholder: next });
 		expect(await kept(output.id)).toBe(next);
@@ -140,12 +140,16 @@ describe("uploading", () => {
 
 	it("09-1 an image comes with its size, which the site draws it at; a file needs none", async () => {
 		await refused(write("media.upload", { name: "a.jpg", original: { key: await bytes() } }), "media.imageSize");
-		const file = await upload("b.jpg");
+		const picture = await upload("b.jpg");
 		await refused(
-			write("media.replace", { id: file.id, original: { key: await bytes(), width: 10 } }),
+			write("media.replace", { id: picture.id, original: { key: await bytes(), width: 10 } }),
 			"media.imageSize",
 		);
-		expect(await pdf("c.pdf")).toMatchObject({ kind: "file", original: { width: null, height: null } });
+		const file = await pdf("c.pdf", { placeholder: "data:image/png;base64,iVBORw0KGgo=" });
+		expect(file).toMatchObject({ kind: "file", original: { width: null, height: null } });
+		// Only a picture keeps a placeholder.
+		const row = await db.selectFrom("media").select("placeholder").where("id", "=", file.id).executeTakeFirstOrThrow();
+		expect(row.placeholder).toBeNull();
 	});
 
 	it("09-1 a PDF is a file, with no web size", async () => {

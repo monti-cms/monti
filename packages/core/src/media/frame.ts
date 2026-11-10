@@ -40,9 +40,10 @@ export const ImageAttrsShape = ImageUseShape.extend({
 }).refine((attrs) => attrs.width === undefined || attrs.widthPercent === undefined, {
 	message: "An image's width is in px or in percent, not both.",
 });
+/** An image's size as its attrs hold it: a width in px, a share of the body, or neither (its own size). */
+export type ImageSizeAttrs = { width?: number; widthPercent?: undefined } | { widthPercent: number; width?: undefined };
 /** An image block's attrs as code holds them: at most one of the two widths, as the shape's check keeps it. */
-export type ImageAttrs = z.infer<typeof ImageUseShape> &
-	({ width?: number; widthPercent?: undefined } | { widthPercent: number; width?: undefined });
+export type ImageAttrs = z.infer<typeof ImageUseShape> & ImageSizeAttrs;
 
 /**
  * The size a picture is drawn at before a narrower body shrinks it, in px (doc 09): what shows of it (its crop, turned), at the width the block gives, never

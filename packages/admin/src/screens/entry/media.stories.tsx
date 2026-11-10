@@ -128,11 +128,14 @@ export const SmallImage: Story = {
 	}),
 };
 
-/** A picture given a width in px (420) and one given a share of the body (50%): each says its size while a corner is dragged. */
+/**
+ * A picture given a width in px wider than the body (1000, drawn at the body's width, as a narrower site draws it) and one given a share of the body
+ * (50%): each says its size while a corner is dragged.
+ */
 export const SizedImages: Story = {
 	loaders: entry({
 		body: ({ desk, code }) => [
-			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상", width: 420 } },
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상", width: 1000 } },
 			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드", widthPercent: 50 } },
 		],
 	}),

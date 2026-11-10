@@ -425,7 +425,8 @@ export const mediaOperations = [
 					web_key: input.web?.key ?? null,
 					web_width: input.web?.width ?? null,
 					web_height: input.web?.height ?? null,
-					placeholder: input.placeholder ?? null,
+					// Only a picture has one: a site blurs it in while the picture comes.
+					placeholder: kindOf(stat.mime) === "image" ? (input.placeholder ?? null) : null,
 					uploaded_at: ctx.now(),
 					trashed_at: null,
 				})
@@ -506,7 +507,7 @@ export const mediaOperations = [
 					web_key: input.web?.key ?? null,
 					web_width: input.web?.width ?? null,
 					web_height: input.web?.height ?? null,
-					placeholder: input.placeholder ?? null,
+					placeholder: kindOf(stat.mime) === "image" ? (input.placeholder ?? null) : null,
 					uploaded_at: ctx.now(),
 					version: eb("version", "+", 1),
 				}))

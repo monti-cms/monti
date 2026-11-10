@@ -287,6 +287,8 @@ describe("one check", () => {
 			frame: null,
 		});
 		expect(siteImage({ media: "m9" }, { m1: picture() })).toBeNull();
+		// A block that names a file which is no picture draws nothing.
+		expect(siteImage({ media: "m1" }, { m1: picture({ kind: "file", width: null, height: null }) })).toBeNull();
 		expect(siteImage("m1", { m1: picture() })).toBeNull();
 	});
 

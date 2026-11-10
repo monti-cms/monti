@@ -6,7 +6,6 @@ import {
 	createMonti,
 	createReader,
 	type Database,
-	type Doc,
 	definePlugin,
 	localFolderStorage,
 	migrateContent,
@@ -124,7 +123,7 @@ export async function startSite() {
 			"main",
 			null,
 			h("h1", null, found.entry.title),
-			...renderDocument((found.entry.doc ?? { type: "doc", blocks: [] }) as Doc, {
+			...renderDocument(found.entry.doc ?? { type: "doc", blocks: [] }, {
 				createElement: h,
 				media: found.entry.media,
 			}),

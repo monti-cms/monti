@@ -30,12 +30,16 @@ export type SiteEntry = {
 	title: string;
 	slug: string;
 	values: Record<string, unknown>;
-	doc: unknown | null;
+	/** The body as the site draws it (`renderDocument`). */
+	doc: Doc | null;
 	publishedAt: Date | null;
 	relations?: Record<string, ResolvedRelation | ResolvedRelation[] | null>;
 	/** The media files its fields and body use, by id. There only when the site has a storage and the entry uses a file. */
 	media?: Record<string, SiteMedia>;
 };
+
+/** An entry as it is read from its row, before it is made the site's: its body as stored. */
+type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media"> & { doc: unknown };
 
 export type ReaderOptions = {
 	db: Kysely<Database>;
@@ -93,7 +97,7 @@ export function createReader(options: ReaderOptions) {
 	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
 	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
 	 */
-	async function forSite(entry: SiteEntry): Promise<SiteEntry> {
+	async function forSite(entry: StoredEntry): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
 		let base: SiteEntry;
 		if (entry.locale === schema.locales.source) {

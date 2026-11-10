@@ -45,14 +45,18 @@ const PLACEHOLDER_SIDE = 20;
  * `blurDataURL`). `undefined` when the browser cannot draw one; the picture goes up without it.
  */
 export async function placeholderOf(picture: ImageBitmap): Promise<string | undefined> {
-	const size = fitLongSide(picture.width, picture.height, PLACEHOLDER_SIDE);
-	const canvas = new OffscreenCanvas(Math.max(1, size.width), Math.max(1, size.height));
-	const context = canvas.getContext("2d");
-	if (!context) return undefined;
-	context.drawImage(picture, 0, 0, canvas.width, canvas.height);
-	const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.5 }).catch(() => null);
-	if (!blob) return undefined;
-	let binary = "";
-	for (const byte of new Uint8Array(await blob.arrayBuffer())) binary += String.fromCharCode(byte);
-	return `data:${blob.type};base64,${btoa(binary)}`;
+	try {
+		const size = fitLongSide(picture.width, picture.height, PLACEHOLDER_SIDE);
+		const canvas = new OffscreenCanvas(Math.max(1, size.width), Math.max(1, size.height));
+		const context = canvas.getContext("2d");
+		if (!context) return undefined;
+		context.drawImage(picture, 0, 0, canvas.width, canvas.height);
+		const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.5 });
+		let binary = "";
+		for (const byte of new Uint8Array(await blob.arrayBuffer())) binary += String.fromCharCode(byte);
+		return `data:${blob.type};base64,${btoa(binary)}`;
+	} catch {
+		// No placeholder is no reason to stop the picture.
+		return undefined;
+	}
 }

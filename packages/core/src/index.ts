@@ -78,10 +78,10 @@ export {
 	type ImageCrop,
 	type ImageFrame,
 	type ImageRotate,
+	type ImageSizeAttrs,
 	imageAlignOf,
 	imageFrame,
 	imageSize,
-	shownPart,
 } from "./media/frame";
 export { localFolderStorage } from "./media/local-storage";
 export type {
