@@ -39,7 +39,7 @@ export const OnImage: Story = {
 					<Settings aria-hidden />
 				</FloatingBarButton>
 			</FloatingBar>
-			<BlockBox selected width={80} measure="80%">
+			<BlockBox selected width="420px" measure="420 × 236">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
 				<ResizeCorner corner="nw" />
 				<ResizeCorner corner="ne" />

@@ -33,6 +33,7 @@ type Media = {
   size: number;                       // bytes of the original
   original: { key: string; width?: number; height?: number };
   web?: { key: string; width: number; height: number };   // images: longest side ≤ 2400
+  placeholder?: string;               // images: 20px on the long side, as a data URL, for the site's blur
   uploadedAt: Date;
   version: number;
   trashedAt: Date | null;
@@ -116,6 +117,7 @@ sequenceDiagram
 ```
 
 - 웹용 크기와 치수는 브라우저가 만든다(`createImageBitmap`과 캔버스). 긴 변이 2400 이하면 웹용을 따로 두지 않고 사이트는 원본을 쓴다. GIF는 움직임을 지키려고 웹용을 만들지 않는다.
+- 흐린 미리보기(`placeholder`)도 브라우저가 같이 만든다. 긴 변 20px의 data URL이고, 사이트가 그림이 오기 전에 흐리게 띄운다(Next.js의 `blurDataURL`). 4 KB를 넘거나 주소인 값은 받지 않는다. 파일을 바꾸면 새로 만든다.
 - `key`는 서버가 정한다. 한 번 쓴 `key`는 다시 쓰지 않고, 파일을 바꾸면 새 `key`를 받는다. 그래서 캐시가 옛 그림을 내놓지 않는다.
 - `media.upload`와 `media.replace`는 없는 `key`와 다른 항목이 쓰는 `key`를 거절한다.
 - 파일을 내보낼 때 `X-Content-Type-Options: nosniff`와 `Content-Security-Policy: sandbox`를 붙이고, 이미지가 아니면 내려받기로 준다.
@@ -158,7 +160,8 @@ type Storage = {
 
 ```ts
 // an image block in a post's doc (03)
-{ id: "b_5", type: "image", attrs: { media: "m_desk", alt: "아침 책상 위 노트북과 커피", caption: "", width: null, align: "center", decorative: false, crop: { x: 0, y: 0.1, width: 1, height: 0.8 }, rotate: 0 } }
+{ id: "b_5", type: "image", attrs: { media: "m_desk", alt: "아침 책상 위 노트북과 커피", caption: "", width: 420, align: "center", decorative: false, crop: { x: 0, y: 0.1, width: 1, height: 0.8 }, rotate: 0 } }
+// or a share of the body instead of px: widthPercent: 50
 
 // a media field value in a post's values (01)
 values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피" } }
@@ -170,7 +173,9 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 - 번역(04)에서 본문 이미지는 같은 파일을 쓰고 대체 텍스트와 캡션만 번역한다.
 - 미디어 필드에서 다른 파일을 고르면 대체 텍스트는 비운다. 대체 텍스트는 그 그림이 말하는 것이어서, 옛 글이 새 그림에 붙어 나가면 안 된다. 같은 파일을 다시 고르면 그대로다. 올려서 고른 파일은 올라간 뒤에 비우고, 올라가는 동안 쓴 글은 새 그림의 것으로 둔다. 올리다 실패하면 전의 그림과 대체 텍스트가 그대로다. 라이브러리의 "파일 바꾸기"는 같은 항목이므로 그대로다(09-5).
 - 번역에서 미디어 필드는 그대로 쓸 수도, 바꿀 수도 있다. 기본 언어 방식이 "원문 따름"(`fromSource`)이다. 번역의 값이 비어 있으면 원문의 파일과 대체 텍스트를 따른다. 파일을 고르거나 대체 텍스트를 쓰면 그 번역의 값이 되고, 지우면 다시 따른다. 새 번역은 값을 복사하지 않고 비어서 시작한다.
-- 자르기와 돌리기는 원본을 건드리지 않고 블록의 `crop`(비율)과 `rotate`에 둔다. 크기는 본문 폭에 대한 퍼센트(`width`, 없으면 본문 폭)다. px는 다른 화면에서 뜻이 없다(2026-11-10 소유자). 높이는 그림의 비율이 정한다. 편집기와 사이트가 같은 값으로 그린다.
+- 자르기와 돌리기는 원본을 건드리지 않고 블록의 `crop`(비율)과 `rotate`에 둔다. 크기는 `width`(px)나 `widthPercent`(본문 폭의 %) 중 하나이고, 둘 다 없으면 그림 자기 크기(자른 부분, 돌린 뒤)다. 어느 쪽이든 본문이 더 좁으면 본문 폭까지 줄고, 높이는 그림의 비율이 정한다. px는 그림 자기 크기보다 크게 할 수 없다. 편집기와 사이트가 같은 값으로 그린다.
+- 편집의 비율은 원본 · 1:1 · 4:3 · 16:9 · 자유다. "자유"가 아니면 비율이 고정되어 가로를 쓰면 세로가, 세로를 쓰면 가로가 따라온다. "자유"에서 가로와 세로를 쓰면 자를 상자가 그 비율로 맞춰진다(80×80을 40×30으로). 크기만 바꾸면 잘리지 않는다. 그림을 늘이거나 찌그러뜨리는 맞춤은 없다.
+- 사이트는 그림마다 바로 그릴 값 한 묶음을 받는다(`siteImage`). `src`, 그려질 px인 `width`와 `height`, `widthPercent`, `alt`(장식이면 빈 값), `placeholder`, `frame`(자르거나 돌린 그림을 틀 안에 놓는 값, `imageFrameStyle`), `original`이다. `renderDocument`는 이것을 이미지 블록의 `Site` 컴포넌트에 `image`로 넘기고, 미디어 필드의 그림은 `siteImage(entry.values.cover, entry.media)`로 같은 모양을 받는다. 기본 HTML은 `<img width height>`에 `max-width: 100%; height: auto`라 그림이 오기 전에도 자리가 잡힌다. 사이트가 가진 파일이 아니면 그리지 않는다.
 
 ## 기능 목록
 
@@ -200,6 +205,10 @@ values: { cover: { media: "m_desk", alt: "아침 책상 위 노트북과 커피"
 
 ## 결정 기록
 
+- 2026-11-10, 소유자: 그림 크기는 px가 기본이고, 본문 폭의 %도 고를 수 있다. 처음에는 "px는 다른 화면에서 뜻이 없다"며 %만 두었는데, 작은 그림(80×80을 40×30으로)이 화면마다 다른 크기가 되고, 사이트는 자리를 잡을 가로·세로를 받지 못했다. 이제 그림은 px 크기가 있고 본문이 좁으면 줄어든다(WordPress, Notion과 같다). 레퍼런스: WordPress, Ghost, Notion, Sanity, Contentful, Prismic, DatoCMS, Strapi, Payload, Directus, Storyblok.
+- 2026-11-10, 소유자: 비율, 크기, 보일 자리는 따로 정한다. 크기를 바꿔도 잘리지 않고, 자르기는 비율이 바뀔 때만 생긴다. 늘이기(찌그러뜨리기)는 두지 않는다. 사진이 납작해지는 건 대개 실수다(WordPress도 자르기와 여백만 둔다).
+- 2026-11-10, 소유자: 사이트에는 계산이 끝난 그림 한 묶음을 넘긴다(DatoCMS의 `responsiveImage`처럼). 세로와 보이는 크기는 저장하지 않는다. 파일을 바꾸거나 다시 자르면 낡기 때문이다. 흐린 미리보기는 올릴 때 브라우저가 만들어 파일에 둔다(Sanity, DatoCMS처럼).
+- 2026-11-10, 소유자: 본문보다 넓은 그림(넓게 · 전체 폭, T123)은 두지 않는다. 편집기의 폭은 사이트의 본문 폭이 아니어서 글쓴이가 결과를 볼 수 없고, 넓어질지도 사이트에 달려 있다. 넓은 그림을 쓰는 사이트는 자기 블록이나 표지 필드로 만든다. 초점(focal point)도 두지 않는다. 자를 자리를 쓰는 CDN이나 미리 굽는 크기가 Monti에는 없다.
 - 2026-11-09, 소유자: 문구의 말투는 자리로 정한다. 작게 나오는 표시와 이유는 명사형, 토스트와 오류와 유의사항 안내는 `~습니다`, 요청은 `~해 주세요`, 질문은 `~할까요?`다. `~에요` · `~어요`를 쓰지 않는다. 전부 명사형으로 바꾸지 않는다(README 원칙 6, T115). 전에는 이유와 상태를 명사형으로 쓰라고만 적었고, 문장의 말투는 정하지 않았다.
 - 2026-11-09, 소유자: 미디어의 격자는 그대로 두고, 목록 보기만 게시글 표 부품으로 바꾼다. 필터와 정렬은 두 보기 모두 위쪽 도구 행에 두고, 걸린 표시는 칩 대신 버튼의 점이다. 게시글은 필터가 열 메뉴에 있지만, 격자에는 열 이름이 없고, 같은 화면에서 오가는 두 보기의 필터 자리가 달라지는 것이 더 헷갈리므로 이 차이를 예외로 둔다. 만드는 것은 다음 PR이다(T113).
 - 2026-11-09, 소유자: 번역이 대체 텍스트를 쓴 미디어 필드는 본문 이미지처럼 옛 그림을 그대로 두고, 원문의 그림이나 대체 텍스트가 바뀌면 원문 변경 표시를 한다. 자기 그림을 고른 필드도 같다. 값이 없는 필드는 원문을 따라가므로 표시가 없다(T111, 04번 문서).

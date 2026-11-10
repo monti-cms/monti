@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import { asDoc, type Doc } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import type { SiteMedia } from "../media/site-image";
 import type { Storage } from "../media/storage";
 import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
@@ -19,18 +20,6 @@ export type ResolvedRelation = {
 	title: string;
 	values: Record<string, unknown>;
 	fallback?: boolean;
-};
-
-/** A media file as the site uses it: the web size when there is one, the original when it is small enough already (doc 09). */
-export type SiteMedia = {
-	id: string;
-	name: string;
-	kind: "image" | "file";
-	mime: string;
-	size: number;
-	url: string;
-	width: number | null;
-	height: number | null;
 };
 
 /** An entry as the site reads it: only the fields the schema has now (doc 01). */
@@ -69,7 +58,7 @@ export function createReader(options: ReaderOptions) {
 	const { db, schema } = options;
 	const now = options.now ?? (() => new Date());
 
-	/** Adds the files an entry uses, so the site can draw them (`renderDocument`'s `mediaUrl` and `mediaSize`). */
+	/** Adds the files an entry uses, so the site can draw them (`renderDocument`'s `media`, `siteImage`). */
 	async function withMedia(entry: SiteEntry): Promise<SiteEntry> {
 		const { storage } = options;
 		if (!storage) return entry;
@@ -92,7 +81,9 @@ export function createReader(options: ReaderOptions) {
 						url: storage.url(row.web_key ?? row.original_key),
 						width: row.web_key ? row.web_width : row.original_width,
 						height: row.web_key ? row.web_height : row.original_height,
-					},
+						original: { url: storage.url(row.original_key), width: row.original_width, height: row.original_height },
+						placeholder: row.placeholder,
+					} satisfies SiteMedia,
 				]),
 			),
 		};

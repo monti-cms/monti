@@ -103,7 +103,31 @@ await site.entries({ collection: "post", locale: "ko" });
 import { createElement } from "react";
 import { renderDocument } from "@monti-cms/core/render";
 
-export const PostBody = ({ doc }) => renderDocument(doc, { createElement, blocks, mediaUrl: (id) => `/media/${id}` });
+export const PostBody = ({ entry }) => renderDocument(entry.doc, { createElement, blocks, media: entry.media });
+```
+
+`media`는 읽기 API가 주는, 그 글이 쓰는 파일이다. 그림은 자기 크기로, 또는 글쓴이가 px나 본문 폭의 %로 정한 너비로 그려지고, 본문이 더 좁으면
+본문에 맞춰 줄어든다(`max-width: 100%`). 자기 이미지 컴포넌트를 쓰는 사이트는 이미지 블록에 `Site` 컴포넌트를 주면 `image`를 받는다. 바로 그릴 수
+있는 그림 하나(`src`, `width`, `height`, `widthPercent`, `alt`, `placeholder`, `frame`, `original`)다. 미디어 필드의 그림도
+`siteImage(entry.values.cover, entry.media)`로 같은 모양을 받는다.
+
+```tsx
+import Image from "next/image";
+import { imageFrameStyle, type SiteImage } from "@monti-cms/core/render";
+
+export function Picture({ image }: { image: SiteImage }) {
+  const width = image.widthPercent === null ? image.width : `${image.widthPercent}%`;
+  const blur = image.placeholder ? { placeholder: "blur" as const, blurDataURL: image.placeholder } : {};
+  if (!image.frame)
+    return <Image src={image.src} width={image.width} height={image.height} alt={image.alt} style={{ width, maxWidth: "100%", height: "auto" }} {...blur} />;
+  // A cropped or turned picture: a box of the shape that shows, holding the whole file.
+  const style = imageFrameStyle(image.frame);
+  return (
+    <span style={{ ...style.box, width, maxWidth: "100%" }}>
+      <Image src={image.src} width={image.original.width ?? image.width} height={image.original.height ?? image.height} alt={image.alt} style={style.picture} />
+    </span>
+  );
+}
 ```
 
 어시스턴트는 `body.read`(블록 id와 서식 없는 글자)로 본문을 읽고 `body.edit`(블록 연산)로 고친다. 본문 전체를 다시 쓰지 않는다. 사람의 저장과

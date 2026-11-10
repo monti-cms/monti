@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
-import { fillLibrary } from "../media/media.stories";
+import { addFile, fillLibrary } from "../media/media.stories";
 import { schema } from "../story-schema";
 
 type Loaded = { site: StorySite };
-type Library = Awaited<ReturnType<typeof fillLibrary>>;
+type Library = Awaited<ReturnType<typeof fillLibrary>> & { icon?: string };
 const wait = { timeout: 15000 };
 
 const paragraph = { id: "p_1", type: "paragraph", content: [{ type: "text", text: "글의 첫 문단이에요." }] };
@@ -18,6 +18,8 @@ const entry = (
 		values?: (ids: Library) => Record<string, unknown>;
 		translate?: string;
 		storage?: null;
+		/** Puts a picture smaller than the body in the library too (80 × 80). */
+		icon?: true;
 	} = {},
 ) => [
 	async (): Promise<Loaded> => {
@@ -29,7 +31,17 @@ const entry = (
 			signedIn: true,
 			...(options.storage === null ? { storage: null } : {}),
 			setup: async (monti, storage) => {
-				const ids = storage ? await fillLibrary(monti, storage) : null;
+				const library = storage ? await fillLibrary(monti, storage) : null;
+				const ids: Library | null =
+					library && options.icon
+						? {
+								...library,
+								icon: await addFile(
+									{ monti, storage },
+									{ name: "icon.png", from: "#d8693c", to: "#7a2e12", width: 80, height: 80 },
+								),
+							}
+						: library;
 				const run = async (name: string, input: unknown) =>
 					((await monti.run(name, input, { actor: "admin" })) as { output: { id: string } }).output.id;
 				id = await run("entries.create", {
@@ -84,7 +96,7 @@ const blankImage = entry({
 /** Flow 6·06, 1·12: the picture picked, its tools and settings card open. */
 export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
-/** The edit dialog (T122), a 16:9 part kept: the picture large, one line of tools under it (turn, shape, size). */
+/** The edit dialog (T122), a 16:9 part kept: the picture large; under it turning and the shape, then the size in px or % of the body. */
 export const EditDialog: Story = {
 	loaders: blankImage,
 	play: async () => {
@@ -94,6 +106,24 @@ export const EditDialog: Story = {
 		await userEvent.click(await page.findByRole("button", { name: "편집" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "16:9" }, wait));
 	},
+};
+
+/** A picture smaller than the body (80 × 80): it stands at its own size, not stretched to the body. */
+export const SmallImage: Story = {
+	loaders: entry({
+		icon: true,
+		body: ({ icon }) => [{ id: "i_1", type: "image", attrs: { media: String(icon), alt: "아이콘" } }],
+	}),
+};
+
+/** A picture given a width in px (420) and one given a share of the body (50%): each says its size while a corner is dragged. */
+export const SizedImages: Story = {
+	loaders: entry({
+		body: ({ desk, code }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상", width: 420 } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드", widthPercent: 50 } },
+		],
+	}),
 };
 
 /** Flow 6·38: a file in the body. */

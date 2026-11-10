@@ -338,6 +338,12 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0013_media_placeholder": {
+		async up(db) {
+			// A picture's blurred stand-in for the site (doc 09), made by the browser with its web size.
+			await db.schema.alterTable("media").addColumn("placeholder", "text").execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

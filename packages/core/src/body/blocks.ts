@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { sameJson } from "../json";
-import { ImageCropShape, ImageRotateShape } from "../media/frame";
+import { ImageAttrsShape } from "../media/frame";
 import type { Message } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
@@ -136,21 +136,9 @@ export const coreBlocks: AnyBlockDefinition[] = [
 		type: "image",
 		label: label("image"),
 		description:
-			"An image from the media library, with alt text and an optional caption. `width`, when set, is its share of the body in percent (none fills the body); its height follows its shape.",
+			"An image from the media library, with alt text and an optional caption. Its size is `width` in px or `widthPercent` of the body, never both; with neither it is the picture's own size. A narrower body shrinks it, and its height follows its shape.",
 		menu: "insert",
-		attrs: z.object({
-			media: z.string(),
-			alt: z.string().optional(),
-			caption: z.string().optional(),
-			/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
-			decorative: z.boolean().optional(),
-			/** Its share of the body's width in percent, as a table's `widths`: a pixel width means nothing on another screen (2026-11-10, owner). */
-			width: z.number().int().min(1).max(100).nullable().optional(),
-			align: z.enum(["left", "center", "right"]).optional(),
-			/** What of the picture shows, and how it is turned. The original is never changed. */
-			crop: ImageCropShape.optional(),
-			rotate: ImageRotateShape.optional(),
-		}),
+		attrs: ImageAttrsShape,
 		holds: "nothing",
 		translate: { attrs: ["alt", "caption"] },
 	}),

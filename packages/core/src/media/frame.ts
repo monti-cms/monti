@@ -16,6 +16,59 @@ export type ImageCrop = z.infer<typeof ImageCropShape>;
 export const ImageRotateShape = z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]);
 export type ImageRotate = z.infer<typeof ImageRotateShape>;
 
+/**
+ * An image block's attrs (doc 09). The picture's size is a width in px (`width`) or a share of the body (`widthPercent`), never both; with neither it is its
+ * own size. Either way a body narrower than it shrinks it, and its height follows its shape.
+ */
+export const ImageAttrsShape = z
+	.object({
+		media: z.string(),
+		alt: z.string().optional(),
+		caption: z.string().optional(),
+		/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
+		decorative: z.boolean().optional(),
+		/** Its width in px. Never wider than what shows of the picture: a wider one is drawn at the picture's own. */
+		width: z.number().int().positive().optional(),
+		/** Its width in % of the body, for a picture that follows the body's width. */
+		widthPercent: z.number().int().min(1).max(100).optional(),
+		align: z.enum(["left", "center", "right"]).optional(),
+		/** What of the picture shows, and how it is turned. The original is never changed. */
+		crop: ImageCropShape.optional(),
+		rotate: ImageRotateShape.optional(),
+	})
+	.refine((attrs) => attrs.width === undefined || attrs.widthPercent === undefined, {
+		message: "An image's width is in px or in percent, not both.",
+	});
+export type ImageAttrs = z.infer<typeof ImageAttrsShape>;
+
+/**
+ * The size a picture is drawn at before a narrower body shrinks it, in px (doc 09): what shows of it (its crop, turned), at the width the block gives, never
+ * wider than that. `null` when the picture's size is not known.
+ */
+export function imageSize(
+	file: { width: number | null | undefined; height: number | null | undefined },
+	use: { crop?: ImageCrop | null; rotate?: ImageRotate | null; width?: number | null },
+): { width: number; height: number } | null {
+	const shown = shownPart(file, use);
+	if (!shown) return null;
+	const width = Math.max(1, Math.round(Math.min(use.width ?? shown.width, shown.width)));
+	return { width, height: Math.max(1, Math.round((width * shown.height) / shown.width)) };
+}
+
+/** What shows of a picture, in its own pixels: the part its crop keeps, after it is turned. `null` when its size is not known. */
+export function shownPart(
+	file: { width: number | null | undefined; height: number | null | undefined },
+	use: { crop?: ImageCrop | null; rotate?: ImageRotate | null },
+): { width: number; height: number } | null {
+	if (!file.width || !file.height) return null;
+	const sideways = use.rotate === 90 || use.rotate === 270;
+	const part = use.crop ?? { width: 1, height: 1 };
+	return {
+		width: (sideways ? file.height : file.width) * part.width,
+		height: (sideways ? file.width : file.height) * part.height,
+	};
+}
+
 /** How to draw a cropped or turned picture: a box of this shape that hides what is outside it, and the picture placed in it, in % of the box. */
 export type ImageFrame = {
 	aspectRatio: number;

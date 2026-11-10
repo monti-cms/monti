@@ -97,6 +97,34 @@ describe("uploading", () => {
 		expect(output.path).toEqual([]);
 	});
 
+	it("09-1 a picture's placeholder is a small data URL kept with it, never an address, and a new file brings its own", async () => {
+		const placeholder = "data:image/webp;base64,UklGRiQAAABXRUJQ";
+		const kept = async (id: string) =>
+			(await db.selectFrom("media").select("placeholder").where("id", "=", id).executeTakeFirstOrThrow()).placeholder;
+		const { output } = await write<MediaItem>("media.upload", {
+			name: "a.jpg",
+			original: { key: await bytes(), width: 10, height: 10 },
+			placeholder,
+		});
+		expect(await kept(output.id)).toBe(placeholder);
+		await expect(
+			write("media.upload", {
+				name: "b.jpg",
+				original: { key: await bytes() },
+				placeholder: "https://example.com/tiny.png",
+			}),
+		).rejects.toThrow();
+		await expect(
+			write("media.upload", {
+				name: "c.jpg",
+				original: { key: await bytes() },
+				placeholder: `data:image/webp;base64,${"A".repeat(5000)}`,
+			}),
+		).rejects.toThrow();
+		await write("media.replace", { id: output.id, original: { key: await bytes(), width: 10, height: 10 } });
+		expect(await kept(output.id)).toBeNull();
+	});
+
 	it("09-1 a PDF is a file, with no web size", async () => {
 		expect(await pdf("price-list-2026.pdf")).toMatchObject({ kind: "file", mime: "application/pdf", web: null });
 	});

@@ -126,9 +126,7 @@ export async function startSite() {
 			h("h1", null, found.entry.title),
 			...renderDocument((found.entry.doc ?? { type: "doc", blocks: [] }) as Doc, {
 				createElement: h,
-				mediaUrl: (id) => found.entry.media?.[id]?.url ?? id,
-				mediaSize: (id) => found.entry.media?.[id],
-				mediaName: (id) => found.entry.media?.[id]?.name,
+				media: found.entry.media,
 			}),
 		);
 		return new Response(`<!doctype html>${renderToStaticMarkup(page)}`, {
