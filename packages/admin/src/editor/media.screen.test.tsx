@@ -485,7 +485,8 @@ describe("an image in the text", () => {
 		corner.element().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, ...at }));
 		window.dispatchEvent(new PointerEvent("pointermove", { clientX: at.clientX - 120, clientY: at.clientY }));
 		await expect.poll(() => image().element().getBoundingClientRect().width).toBeLessThan(before.width - 100);
-		const share = Math.round(((before.width - 120) / before.width) * 100);
+		// A picture in the middle grows on both sides: the corner follows the pointer, so the width moves twice as far.
+		const share = Math.round(((before.width - 240) / before.width) * 100);
 		await expect.element(body().getByText(`${share}%`)).toBeVisible();
 		window.dispatchEvent(new PointerEvent("pointerup", { clientX: at.clientX - 120, clientY: at.clientY }));
 		// Kept as a share of the body, so within a percent of where it was let go.
@@ -520,6 +521,9 @@ describe("an image in the text", () => {
 		await expect
 			.poll(() => Math.round(image().element().getBoundingClientRect().width))
 			.toBe(Math.round(before * 0.95));
+		// Never under the smallest picture the pointer can make (80px), however many times.
+		for (let press = 0; press < 25; press++) await userEvent.keyboard("{ArrowLeft}");
+		await expect.poll(() => image().element().getBoundingClientRect().width).toBeGreaterThanOrEqual(80);
 	});
 
 	it("09-1 T122 'Edit' sizes the picture as a share of the body; the settings card is what the entry says of it, with no size", async () => {

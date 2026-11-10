@@ -182,7 +182,7 @@ describe("one definition", () => {
 			{ id: "b_6", type: "removedPluginBlock" },
 		);
 		expect(draw(body, { mediaUrl: (id) => `/media/${id}` })).toBe(
-			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat"/></figure>',
+			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat" style="width:100%"/></figure>',
 		);
 	});
 });
@@ -216,9 +216,13 @@ describe("one check", () => {
 		const image = (attrs: Record<string, unknown>) =>
 			draw(doc({ id: "b_1", type: "image", attrs: { media: "m1", alt: "A cat", ...attrs } }), {
 				mediaUrl: (id) => `/media/${id}`,
+				mediaSize: () => ({ width: 400, height: 200 }),
 			});
 		expect(image({ width: 50 })).toContain('<img src="/media/m1" alt="A cat" style="width:50%"/>');
-		expect(image({})).toContain('<img src="/media/m1" alt="A cat"/>');
+		expect(image({})).toContain('<img src="/media/m1" alt="A cat" style="width:100%"/>');
+		// A turned or cut picture is a frame holding a placed picture: with no share it still takes the whole body, not nothing.
+		expect(image({ rotate: 90 })).toMatch(/<span style="display:block;[^"]*width:100%"/);
+		expect(image({ rotate: 90, width: 40 })).toMatch(/<span style="display:block;[^"]*width:40%"/);
 		// A pixel width from before is no share: it is refused.
 		const attrs = coreBlocks.find((block) => block.type === "image")?.attrs;
 		expect(attrs?.safeParse({ media: "m1", width: 640 }).success).toBe(false);

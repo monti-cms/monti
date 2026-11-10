@@ -82,8 +82,10 @@ const ALIGNS = [
 const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
 /** The smallest a picture is pulled to, in pixels on the screen. */
 const MIN_WIDTH = 80;
-/** A picture's share of the body: the whole of it is no width at all, so the site's own rule fills the body. */
+/** A picture's share of the body: the whole of it is no width at all (the body, as the site draws it too). */
 const shareOf = (percent: number) => (percent >= 100 ? null : percent);
+/** The smallest share a picture is pulled to in a body this wide. */
+const leastShare = (body: number) => Math.ceil((MIN_WIDTH / body) * 100);
 
 /**
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
@@ -520,19 +522,23 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (after) openImageCard(editor, after);
 		else media?.setCard(null);
 	};
+	/** The column the picture stands in: the box's parent, its full width. */
+	const bodyWidth = () => box.current?.parentElement?.getBoundingClientRect().width;
 	const resize = (side: "left" | "right") => (event: React.PointerEvent) => {
 		const measured = box.current?.getBoundingClientRect();
 		if (!measured) return;
 		event.preventDefault();
 		event.stopPropagation();
 		const startX = event.clientX;
-		const widthOfBody = box.current?.parentElement?.getBoundingClientRect().width ?? measured.width;
+		const widthOfBody = bodyWidth() ?? measured.width;
+		// A picture in the middle grows on both sides, so the corner under the pointer moves half of what the width does: it follows the pointer.
+		const pull = align === "center" ? 2 : 1;
 		// A share of the body in percent, never under the smallest picture.
 		const sized = (clientX: number) =>
 			Math.round(
 				clamp(
-					((measured.width + (side === "right" ? clientX - startX : startX - clientX)) / widthOfBody) * 100,
-					Math.ceil((MIN_WIDTH / widthOfBody) * 100),
+					((measured.width + pull * (side === "right" ? clientX - startX : startX - clientX)) / widthOfBody) * 100,
+					leastShare(widthOfBody),
 					100,
 				),
 			);
@@ -556,7 +562,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 		event.preventDefault();
 		event.stopPropagation();
-		set({ width: shareOf(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), 10, 100)) });
+		const widthOfBody = bodyWidth();
+		const least = widthOfBody ? leastShare(widthOfBody) : 10;
+		set({ width: shareOf(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), least, 100)) });
 	};
 
 	return (

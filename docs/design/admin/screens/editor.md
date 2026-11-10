@@ -71,7 +71,7 @@
 |---|---|---|
 | 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
 | 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌" · "로그인 풀림". 누를 일이 있으면 칸이 버튼이다(저장 전 변경사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 `StatusBarAnnouncer`. |
-| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 끝난 것은 행이 사라질 뿐 따로 적지 않는다. 남은 것이 없으면 `TodoDone` "할 일 없음" 한 줄만(2026-11-10 소유자). |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, 할 일이 없을 때만 `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 끝난 것은 행이 사라질 뿐 따로 적지 않는다. 남은 것이 없으면 `TodoDone` "할 일 없음" 한 줄만(2026-11-10 소유자). |
 | 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
 
@@ -127,7 +127,7 @@
 | `dialog` "편집 충돌" · "임시 저장본 복구" | 1.16, 1.18 | 해당 `Banner` | Patterns/Frame/Banner |
 | `fix` "요약" | 1.11 | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" | Controls/Field/Textarea |
 | `fix` "대체 텍스트" | 1.12 | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="micro"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). | Monti/EditorTools/BlockHandle, Controls/Overlay/Popover, Controls/Button/TextButton |
-| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 | `pluginOpen` | 1.06 | 플러그인 칸의 `StatusBarList` | Patterns/Frame/StatusBarList |
 | `panel` · `panelTab` | 1.08 | `PropertyPanel`과 고른 탭 | Monti/Proposal/PropertyPanel |
 | `seriesPending` | 1.07 | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") | Controls/Button/TextButton |
@@ -148,7 +148,7 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `langMenu` "열림" · "언어 하나뿐" | 3.01, 3.14 | "+ 언어" `DropdownMenu` | Controls/Menu/DropdownMenu |
-| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 | `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없습니다 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
 
 ## 흐름 5 · 휴지통
@@ -158,7 +158,7 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `trashed` | 5.18 | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) | Patterns/Frame/Banner |
-| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 
 ## 흐름 6 · 미디어
 
@@ -167,4 +167,4 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `img` "올리는 중" · "설정" · "파일" | 6.05, 6.06, 6.38 | `UploadingImage` · `FloatingBar`와 설정 `Popover` · `FileBlock` | Patterns/Frame/UploadingImage, Monti/EditorTools/FloatingBar, Controls/Overlay/Popover, Patterns/Frame/FileBlock |
-| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
