@@ -1,7 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { Kysely, PostgresDialect } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 import { afterAll, describe, expect, inject, it } from "vitest";
+import type { Block } from "../body/doc";
+import { fingerprint } from "../bytes";
+import { canonical } from "../json";
+import { blockHash } from "../translations/links";
 import { migrateToLatest } from "./migrations";
 import type { Database } from "./schema";
 
@@ -42,4 +46,78 @@ describe("migrating while another site changes its tables", () => {
 			await churn;
 		}
 	}, 60_000);
+});
+
+describe("0013: block hashes without empty parts", () => {
+	it("04-2 T120 the hashes kept before move to the new measure: published, kept source blocks, and what a translation has seen", async () => {
+		if (!URL) throw new Error("Set CMS_TEST_DATABASE_URL (postgres://localhost/monti_test) to run the core tests.");
+		const schema = `${inject("testRun")}${randomBytes(6).toString("hex")}`;
+		const admin = new Pool({ connectionString: URL, max: 1 });
+		await admin.query(`create schema ${schema}`);
+		await admin.end();
+		const db = new Kysely<Database>({
+			dialect: new PostgresDialect({ pool: new Pool({ connectionString: URL, options: `-c search_path=${schema}` }) }),
+		});
+		try {
+			await migrateToLatest(db, "0012_translation_seen");
+			// As 0012 measured: empty parts and all, without the id and the link.
+			const oldHash = ({ id: _id, link: _link, ...rest }: Block) => fingerprint(JSON.stringify(canonical(rest)));
+			const now: Block = {
+				id: "s1",
+				type: "paragraph",
+				attrs: {},
+				content: [{ type: "text", text: "하나", marks: [] }],
+			};
+			const earlier: Block = { id: "s1", type: "paragraph", attrs: {}, content: [{ type: "text", text: "하나였다" }] };
+			const gone = "a hash no block is left for";
+			await sql`insert into entries (id, collection, translation_group, locale, slug, doc) values
+				('ko', 'post', 'g', 'ko', 'one', ${JSON.stringify({ type: "doc", blocks: [now] })}::jsonb),
+				('en', 'post', 'g', 'en', 'one', ${JSON.stringify({
+					type: "doc",
+					blocks: [
+						{
+							id: "t1",
+							type: "paragraph",
+							content: [{ type: "text", text: "One" }],
+							link: { from: "s1", seen: oldHash(now), state: "translated" },
+						},
+						{
+							id: "t2",
+							type: "paragraph",
+							content: [{ type: "text", text: "Was one" }],
+							link: { from: "s1", seen: oldHash(earlier), state: "translated" },
+						},
+						{
+							id: "t3",
+							type: "paragraph",
+							content: [{ type: "text", text: "Old" }],
+							link: { from: "s9", seen: gone, state: "translated" },
+						},
+					],
+				})}::jsonb)`.execute(db);
+			await sql`insert into entry_published (entry_id, collection, locale, title, slug, values, doc, published_at, from_version, block_hashes)
+				values ('ko', 'post', 'ko', '하나', 'one', '{}'::jsonb, ${JSON.stringify({ type: "doc", blocks: [now] })}::jsonb, now(), 1,
+				${JSON.stringify({ s1: oldHash(now) })}::jsonb)`.execute(db);
+			await sql`insert into source_blocks (hash, block) values (${oldHash(earlier)}, ${JSON.stringify(earlier)}::jsonb)`.execute(
+				db,
+			);
+
+			await migrateToLatest(db);
+			const published = await sql<{
+				block_hashes: Record<string, string>;
+			}>`select block_hashes from entry_published`.execute(db);
+			expect(published.rows[0]?.block_hashes).toEqual({ s1: blockHash(now) });
+			const kept = await sql<{ hash: string }>`select hash from source_blocks`.execute(db);
+			expect(kept.rows.map((row) => row.hash)).toEqual([blockHash(earlier)]);
+			const translation = await sql<{ doc: { blocks: Block[] } }>`select doc from entries where id = 'en'`.execute(db);
+			expect(translation.rows[0]?.doc.blocks.map((block) => block.link?.seen)).toEqual([
+				blockHash(now),
+				blockHash(earlier),
+				gone,
+			]);
+			expect(blockHash(now)).not.toBe(oldHash(now));
+		} finally {
+			await db.destroy();
+		}
+	});
 });

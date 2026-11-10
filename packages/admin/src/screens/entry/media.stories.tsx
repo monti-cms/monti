@@ -224,6 +224,7 @@ export const TranslationCoverChanged: Story = {
 			return { site: made };
 		},
 	],
+	play: TranslationCover.play,
 };
 
 /** A site with no storage (flow 6·31). */

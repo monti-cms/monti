@@ -1,7 +1,9 @@
 import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";
-import type { Doc } from "../body/doc";
-import { blockHashes } from "../translations/links";
+import type { Block, Doc } from "../body/doc";
+import { fingerprint } from "../bytes";
+import { canonical } from "../json";
+import { blockHash, blockHashes } from "../translations/links";
 import type { Database } from "./schema";
 
 /** The core's tables, step by step. A step that reached the base branch is never renamed or changed; a change is a new step. */
@@ -361,13 +363,70 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0013_block_hashes": {
+		async up(db) {
+			// A block's hash no longer counts its empty parts (T120). Every hash kept so far moves to the new one: the published hashes, the source blocks
+			// kept by hash, and what each translation has seen. A hash with no block left to measure stays, as an old block's mark did.
+			const moved = new Map<string, string>();
+			const measure = (block: Block) => moved.set(hashBefore0013(block), blockHash(block));
+			const kept = await sql<{ hash: string; block: Block }>`select hash, block from source_blocks`.execute(db);
+			for (const row of kept.rows) measure(row.block);
+			const published = await sql<{
+				entry_id: string;
+				doc: Doc | null;
+			}>`select entry_id, doc from entry_published`.execute(db);
+			for (const row of published.rows) for (const block of row.doc?.blocks ?? []) measure(block);
+			for (const row of published.rows)
+				await sql`update entry_published set block_hashes = ${JSON.stringify(blockHashes(row.doc))}::jsonb,
+					doc = ${JSON.stringify(seenMoved(row.doc, moved))}::jsonb where entry_id = ${row.entry_id}`.execute(db);
+			for (const row of kept.rows) {
+				const hash = moved.get(row.hash) ?? row.hash;
+				if (hash === row.hash) continue;
+				await sql`insert into source_blocks (hash, block) values (${hash}, ${JSON.stringify(row.block)}::jsonb) on conflict (hash) do nothing`.execute(
+					db,
+				);
+				await sql`delete from source_blocks where hash = ${row.hash}`.execute(db);
+			}
+			const entries = await sql<{
+				id: string;
+				doc: Doc | null;
+			}>`select id, doc from entries where doc is not null`.execute(db);
+			for (const row of entries.rows) {
+				const next = seenMoved(row.doc, moved);
+				if (next !== row.doc)
+					await sql`update entries set doc = ${JSON.stringify(next)}::jsonb where id = ${row.id}`.execute(db);
+			}
+		},
+	},
+};
+
+/** A block's hash as steps up to 0012 measured it, empty parts and all. Kept here as it was, so 0013 can find the hashes it measured. */
+const hashBefore0013 = (block: Block): string => {
+	const bare = ({ id: _id, link: _link, children, ...rest }: Block): unknown => ({
+		...rest,
+		...(children ? { children: children.map(bare) } : {}),
+	});
+	return fingerprint(JSON.stringify(canonical(bare(block))));
+};
+
+/** The doc with each block's `link.seen` moved to its new hash; the same doc when nothing moved. */
+const seenMoved = (doc: Doc | null, moved: Map<string, string>): Doc | null => {
+	const to = (block: Block) => (block.link ? moved.get(block.link.seen) : undefined);
+	if (!doc?.blocks.some((block) => to(block) !== undefined)) return doc;
+	return {
+		...doc,
+		blocks: doc.blocks.map((block) => {
+			const seen = to(block);
+			return block.link && seen !== undefined ? { ...block, link: { ...block.link, seen } } : block;
+		}),
+	};
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
 const RACE_TRIES = 30;
 
-/** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */
-export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
+/** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`), or only up to step `until` (a test of one step's data). */
+export async function migrateToLatest(db: Kysely<Database>, until?: keyof typeof MIGRATIONS): Promise<void> {
 	// Named, because the migrator otherwise looks for its tables in every schema and takes another schema's (a second site in the same database).
 	const { rows } = await sql<{ schema: string }>`select current_schema() as schema`.execute(db);
 	const migrator = new Migrator({
@@ -383,7 +442,7 @@ export async function migrateToLatest(db: Kysely<Database>): Promise<void> {
 	// database holds, the longer the list takes and the likelier the race (CI's shared database lost five tries in a row), so the tries are many and
 	// spread out a little.
 	for (let attempt = 1; ; attempt++) {
-		const { error, results } = await migrator.migrateToLatest();
+		const { error, results } = await (until ? migrator.migrateTo(until) : migrator.migrateToLatest());
 		const failed = results?.find((result) => result.status === "Error");
 		if (!error && !failed) return;
 		if (!failed && attempt < RACE_TRIES && racedWithAnotherSchema(error, rows[0].schema)) {

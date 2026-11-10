@@ -679,6 +679,19 @@ describe("when the source changes", () => {
 		expect((await compare(id)).marks.map((mark) => mark.block)).toEqual(before);
 	});
 
+	it("04-2 T120 a source saved again without its empty parts, the words the same, marks nothing in its translation", async () => {
+		const { source, id } = await publishedPair();
+		const padded = (doc: Doc): Doc => ({
+			...doc,
+			blocks: doc.blocks.map((block) => ({ ...block, attrs: {}, marks: [] }) as Block),
+		});
+		const words = body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷"));
+		await republish(source, padded(words));
+		expect(await marks(id)).toEqual([]);
+		await republish(source, words);
+		expect(await marks(id)).toEqual([]);
+	});
+
 	it("04-2 rewriting a block whose source block is gone takes its mark away: the block stays, on its own", async () => {
 		const { source, id } = await publishedPair();
 		await republish(source, body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i")));

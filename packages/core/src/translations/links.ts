@@ -9,13 +9,6 @@ const bare = ({ id: _id, link: _link, children, ...block }: Block): unknown => (
 	...(children ? { children: children.map(bare) } : {}),
 });
 
-/** A source block's hash: a translation keeps it in `link.seen` and compares it with the block the source publishes later. */
-export const blockHash = (block: Block) => fingerprint(JSON.stringify(canonical(bare(block))));
-
-/** Each top-level block's hash by id. */
-export const blockHashes = (doc: Doc | null): Record<string, string> =>
-	Object.fromEntries((doc?.blocks ?? []).map((block) => [block.id, blockHash(block)]));
-
 /** A value without its empty parts (`attrs: {}`, `marks: []`): the editor drops them on its way through, and they say nothing. */
 const trimmed = (value: unknown): unknown => {
 	if (Array.isArray(value)) return value.map(trimmed);
@@ -34,6 +27,16 @@ const trimmed = (value: unknown): unknown => {
 
 /** Whether two blocks hold the same words and attrs, whatever their ids, links and empty parts. */
 export const sameBlock = (a: Block, b: Block) => sameJson(trimmed(bare(a)), trimmed(bare(b)));
+
+/**
+ * A source block's hash: a translation keeps it in `link.seen` and compares it with the block the source publishes later. Measured without the
+ * empty parts, as {@link sameBlock} compares, so a block the editor saves again unchanged is not a change (T120).
+ */
+export const blockHash = (block: Block) => fingerprint(JSON.stringify(canonical(trimmed(bare(block)))));
+
+/** Each top-level block's hash by id. */
+export const blockHashes = (doc: Doc | null): Record<string, string> =>
+	Object.fromEntries((doc?.blocks ?? []).map((block) => [block.id, blockHash(block)]));
 
 const hasText = (value: unknown): boolean =>
 	typeof value === "string" ? value.trim() !== "" : Array.isArray(value) ? value.some(hasText) : false;
