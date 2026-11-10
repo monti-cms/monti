@@ -145,8 +145,8 @@ describe("folders in the list", () => {
 		await userEvent.click(menu.getByRole("menuitem", { name: "폴더 지우기" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folderLink("임시")).not.toBeInTheDocument();
-		// This removal's toast (an earlier test's toast may still be on the page).
-		const toast = page.getByRole("listitem").filter({ hasText: "임시 폴더를 휴지통으로 옮겼습니다" });
+		// This removal's toast: the newest is first (an earlier test's may still be on the page, and they all say the same).
+		const toast = page.getByRole("listitem").filter({ hasText: "휴지통으로 옮겼습니다" }).first();
 		await userEvent.click(toast.getByRole("button", { name: "되돌리기" }));
 		await expect.element(folderLink("임시")).toBeVisible();
 		await userEvent.click(folderLink("임시"));

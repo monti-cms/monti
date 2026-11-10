@@ -135,7 +135,7 @@
 | (빠짐, 2026-11-05) `mode` "필터 열기" | 6.22 | "대체 텍스트 ▾" `DropdownMenu` | Controls/Menu/DropdownMenu |
 | `mode` "새 폴더" | 6.09 | 폴더 행 끝 `FolderTile` + `RenameField` | Patterns/List/Tile, Patterns/List/RenameField |
 | `mode` "폴더 우클릭" | 6.10 | 폴더 `ContextMenu` | Controls/Menu/ContextMenu |
-| `mode` "폴더 지움" | 6.11 | 폴더가 빠지고 `toast` "…휴지통으로 옮겼습니다" + "되돌리기" | Controls/Status/Toast |
+| `mode` "폴더 지움" | 6.11 | 폴더가 빠지고 `toast` "휴지통으로 옮겼습니다" + "되돌리기" | Controls/Status/Toast |
 | `mode` "폴더 일부 남김" | 6.12 | `toast` "…4개는 쓰는 곳이 있어 남겼습니다" + "보기" | Controls/Status/Toast |
 | `mode` "빈 곳 우클릭" | 6.13 | 빈 곳 `ContextMenu` | Controls/Menu/ContextMenu |
 | `mode` "파일 메뉴" | 6.17 | 파일 `ContextMenu`와 "쓰는 곳" `ContextMenuSub` | Controls/Menu/ContextMenu |

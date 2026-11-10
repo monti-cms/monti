@@ -11,6 +11,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -48,11 +49,12 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { FolderAdd, Template } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { useTrashMove } from "../../trash/use-trash";
 import { ColumnMenu, useLanguageName } from "./column-menu";
 import {
 	FolderMenuItems,
@@ -288,6 +290,7 @@ function DocumentListScreen({
 		moveFolder: useOperation("folders.move"),
 	};
 	const removeFolder = useRemoveFolder();
+	const trash = useTrashMove();
 	const folderName = useFolderNaming({ collection }, state.folder);
 	const { naming } = folderName;
 	const goFolder = (folder: string | null) =>
@@ -336,6 +339,18 @@ function DocumentListScreen({
 			download(`${collection}-${new Date().toISOString().slice(0, 10)}.json`, result.body);
 			toast(t("list.exported", { count: list.length }));
 		},
+		trash: (list) =>
+			void trash.start({
+				rows: list.map((row) => ({ kind: "entry", id: row.id })),
+				title: list.length === 1 ? list[0]?.title : undefined,
+				onMoved: () => setPicked(new Map()),
+			}),
+	};
+	/** Delete on a row puts it in the trash, with the other picked rows when it is one of them (flow 5·07, 5·08). */
+	const onRowKey = (row: ListRow) => (event: KeyboardEvent<HTMLTableRowElement>) => {
+		if (event.key !== "Delete" || (event.target as HTMLElement).closest("input, textarea, [role=menu]")) return;
+		event.preventDefault();
+		actions.trash(picked.has(row.id) && pickedRows.length > 1 ? pickedRows : [row]);
 	};
 	const create = async (template?: string) => {
 		const result = await run.create.run({ collection, locale: language, ...(template ? { template } : {}) });
@@ -773,6 +788,7 @@ function DocumentListScreen({
 	return (
 		<PageColumn width="list">
 			{removeFolder.dialog}
+			{trash.dialog}
 			{header}
 			{aiChips.length > 0 && (
 				<PageToolbar inset>
@@ -800,9 +816,15 @@ function DocumentListScreen({
 							more={{
 								label: t("list.more"),
 								children: (
-									<DropdownMenuItem onClick={() => void actions.exportRows(pickedRows)}>
-										{t("list.export")}
-									</DropdownMenuItem>
+									<>
+										<DropdownMenuItem onClick={() => void actions.exportRows(pickedRows)}>
+											{t("list.export")}
+										</DropdownMenuItem>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem variant="danger" onClick={() => actions.trash(pickedRows)}>
+											{t("trash.toTrash")}
+										</DropdownMenuItem>
+									</>
 								),
 							}}
 						>
@@ -896,7 +918,12 @@ function DocumentListScreen({
 						{(rows ?? []).map((row) => {
 							const mine = picked.get(row.id);
 							const line = (
-								<TableRow key={row.id} selected={mine !== undefined} proposal={mine?.proposal}>
+								<TableRow
+									key={row.id}
+									selected={mine !== undefined}
+									proposal={mine?.proposal}
+									onKeyDown={onRowKey(row)}
+								>
 									{shown.map((column, index) => cell(row, column, index === 0))}
 									<TableCell align="end">
 										<RowActions>

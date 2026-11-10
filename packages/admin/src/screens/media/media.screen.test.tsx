@@ -12,7 +12,8 @@ const main = () => page.getByRole("main");
 const heading = () => main().getByRole("heading", { level: 1 });
 const tile = (name: string) => main().getByRole("button", { name: new RegExp(name) });
 const folder = (name: string) => main().getByRole("button", { name: new RegExp(`^${name}`) });
-const toast = (text: string) => page.getByRole("listitem").filter({ hasText: text });
+/** The newest toast that says this: earlier tests' toasts may still be on the page, and the newest is first. */
+const toast = (text: string) => page.getByRole("listitem").filter({ hasText: text }).first();
 
 /** Files from outside dropped on an element, as the browser hands them over. The OS's own drag is L5's. */
 function dropFiles(on: Element, files: File[]) {
@@ -505,7 +506,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
-		await userEvent.click(toast("1개를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(tile("seoul-night.jpg")).toBeVisible();
 	});
 
@@ -568,7 +569,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folder("Wallpapers")).not.toBeInTheDocument();
-		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(folder("Wallpapers")).toBeVisible();
 	});
 

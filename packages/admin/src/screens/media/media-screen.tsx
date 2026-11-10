@@ -552,7 +552,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					setPicked(new Set());
 				}}
 			>
-				{t("library.toTrash")}
+				{t("trash.toTrash")}
 			</TextButton>
 		</BulkBar>
 	);

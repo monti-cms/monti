@@ -1,13 +1,5 @@
-import type { FolderNode, FolderRemoval } from "@monti-cms/core";
+import type { FolderNode } from "@monti-cms/core";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
 	ContextMenuItem,
 	ContextMenuSeparator,
 	ContextMenuSub,
@@ -25,6 +17,7 @@ import { Edit, Folder, Launch, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
+import { useTrashMove } from "../../trash/use-trash";
 
 /** Whose folders (doc 07, principle 2: one shape for both): a collection's entries, or the media library's files. */
 export type FolderScope = { collection: string } | "media";
@@ -208,45 +201,17 @@ export function FolderMenuItems({
 }
 
 /**
- * Removing a folder (doc 07, flow 5·05–06): a folder with published entries asks first, saying how many go off the site; a folder of drafts goes
- * at once. Either way the toast takes it back. A media folder never asks (flow 6·11), and files in use stay with it: then the toast shows it (`onKept`, flow 6·12).
+ * Removing a folder (doc 07, flow 5·05–06): through the trash like everything else (doc 11). A folder with published entries asks first, saying how many go off the
+ * site; a folder of drafts goes at once. Either way the toast takes it back. A media folder never asks (flow 6·11), and files in use stay with it: then the toast
+ * shows it (`onKept`, flow 6·12).
  */
 export function useRemoveFolder({ onKept }: { onKept?: (folder: FolderNode) => void } = {}) {
-	const { t } = useAdmin();
-	const remove = useOperation<{ activityId: string; output: FolderRemoval }>("folders.remove");
-	const undo = useOperation("activity.undo");
-	const [asking, setAsking] = useState<FolderNode | null>(null);
-	const run = async (folder: FolderNode) => {
-		setAsking(null);
-		const result = await remove.run({ id: folder.id });
-		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
-		const { activityId, output } = result.body;
-		if (output.kept > 0)
-			return void toast(t("library.keptFolder", { moved: output.moved, kept: output.kept }), {
-				action: { label: t("library.show"), onClick: () => onKept?.(folder) },
-			});
-		toast(t("folders.removed", { name: folder.name }), {
-			action: { label: t("settings.undo"), onClick: () => void undo.run({ id: activityId }) },
+	const trash = useTrashMove();
+	const start = (folder: FolderNode) =>
+		void trash.start({
+			rows: [{ kind: "folder", id: folder.id }],
+			folder: { name: folder.name, count: folder.count },
+			onKept: () => onKept?.(folder),
 		});
-	};
-	const start = (folder: FolderNode) => (folder.published > 0 ? setAsking(folder) : void run(folder));
-	const dialog = (
-		<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>{t("folders.removeTitle", { name: asking?.name ?? "" })}</AlertDialogTitle>
-					<AlertDialogDescription>
-						{t("folders.removeText", { count: asking?.count ?? 0, published: asking?.published ?? 0 })}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>{t("ui.cancel")}</AlertDialogCancel>
-					<AlertDialogAction variant="danger" onClick={() => asking && void run(asking)}>
-						{t("folders.toTrash")}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
-	);
-	return { start, dialog };
+	return { start, dialog: trash.dialog };
 }

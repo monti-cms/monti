@@ -26,7 +26,7 @@
 | 이름 · 주소 | `RowTitle` + `RowLink` | Uses the same single-line row as the document list. The secondary value is always the bare slug (`react`), not the full public path. Descriptions are edited in the side panel and never change list-row height. A missing translated name remains an inline warning. |
 | "글 3" · "쓰는 글 없음" | `TextButton variant="underline"`(`href` 그 항목으로 거른 글 목록) | The usage column is right-aligned. An unused item is faint text. |
 | ⋯ | `RowActions` + `DropdownMenu` | 모든 행에 늘 보인다. 보드는 열린 행에만 그렸지만 [list.md](../components/list.md)를 따른다. |
-| 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `colSpan`) | 동작은 "합치기" · "휴지통으로"(`TextButton`) 둘이다. 합치기는 둘 이상 골랐을 때 보인다. |
+| 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `colSpan`) | 동작은 "합치기" · "휴지통으로"(`TextButton`) 둘이다. 합치기는 둘 이상 골랐을 때 보인다. 발행된 글이 가리키는 항목을 휴지통으로 보낼 때만 `AlertDialog`로 묻는다("발행된 글 3편에서 이 태그가 빠집니다.", 2026-11-11 소유자). 행의 ⋯와 패널의 ⋯의 "휴지통으로"(`variant="danger"`)도 같다. |
 
 #### 합치기
 

@@ -6,8 +6,9 @@ import {
 	ContextMenuSeparator,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
+	MenuShortcut,
 } from "@monti-cms/ui";
-import { Archive, Copy, Launch } from "@monti-cms/ui/icons";
+import { Archive, Copy, Launch, TrashCan } from "@monti-cms/ui/icons";
 import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 
@@ -20,6 +21,8 @@ export type RowActions = {
 	unarchive: (rows: ListRow[]) => void;
 	publish: (rows: ListRow[]) => void;
 	exportRows: (rows: ListRow[]) => void;
+	/** To the trash (doc 11): it asks first when a published entry goes off the site. */
+	trash: (rows: ListRow[]) => void;
 };
 
 /** Only drafts and entries edited since publishing have something to publish (components/list.md, bulk bar). */
@@ -27,8 +30,8 @@ export const publishable = (rows: ListRow[]) => rows.filter((row) => row.state =
 export const allArchived = (rows: ListRow[]) => rows.length > 0 && rows.every((row) => row.state === "archived");
 
 /**
- * One row's menu, the same from its ⋯ and from a right click: open, open in a new tab, duplicate | to a folder | archive. The rows of docs 08 and 11
- * (category, tag, to the trash) join with those docs (T55, T56).
+ * One row's menu, the same from its ⋯ and from a right click: open, open in a new tab, duplicate | to a folder, relations | archive | to the trash
+ * (flow 5·07). A right click shows the key that does the same on the row.
  */
 export function RowMenuItems({
 	row,
@@ -80,6 +83,13 @@ export function RowMenuItems({
 					{t("list.archive")}
 				</Item>
 			)}
+			{/* With "Archive" where there is one: what takes a row out of the list (screens/list.md, right click). */}
+			{!document && <Separator />}
+			<Item variant="danger" onClick={() => actions.trash([row])}>
+				<TrashCan aria-hidden />
+				{t("trash.toTrash")}
+				{context && <MenuShortcut>Del</MenuShortcut>}
+			</Item>
 		</>
 	);
 }
@@ -117,6 +127,11 @@ export function RowsMenuItems({
 			{relations}
 			{document && <ContextMenuSeparator />}
 			<ContextMenuItem onClick={() => actions.exportRows(rows)}>{t("list.export")}</ContextMenuItem>
+			<ContextMenuSeparator />
+			<ContextMenuItem variant="danger" onClick={() => actions.trash(rows)}>
+				{t("trash.toTrash")}
+				<MenuShortcut>Del</MenuShortcut>
+			</ContextMenuItem>
 		</>
 	);
 }

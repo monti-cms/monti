@@ -18,7 +18,7 @@
 | 속성 | `IconButton pressed` | 속성 패널을 열고 닫는다. 열린 동안 눌린 바탕. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록" · "복제" · "보관" · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기", "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. |
 | 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | 발행 알약 뒤, 화면 도구(속성 · ⋯ · ✦) 앞. 주 동작 알약은 혼자 서고, 화면 도구는 선 너머 오른쪽 끝에 한 묶음으로 선다. ⋯의 행은 발행의 변형이 아니므로 `발행하기 ▾` 안에 넣지 않는다(2026-11-05, 소유자). |
-| 휴지통 글의 머리 | `TextButton variant="danger"` "영구 삭제", `Button variant="primary"` "복원" | 저장 · 미리보기 · 발행 · ⋯ 대신 보인다. 영구 삭제는 `AlertDialog`로 묻는다. |
+| 휴지통 글의 머리 | `Button variant="primary"` "복원", ⋯ `DropdownMenu`에 "영구 삭제"(`variant="danger"`) 하나 | 저장 · 미리보기 · 발행 대신 "복원"이 그 자리에 온다(보관 글의 "보관 풀기"와 같은 자리). 영구 삭제는 ⋯ 안에 있고 `AlertDialog`로 묻는다(2026-11-11 소유자). 돌아가기는 "휴지통"이고 휴지통 화면으로 간다. 복원하면 그 자리에서 초안으로 열린다. |
 
 ### 글 단
 
@@ -157,7 +157,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| `trashed` | 5.18 | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) | Patterns/Frame/Banner |
+| `trashed` | 5.18 | 휴지통 머리와 `Banner`(남은 날), 본문과 속성은 읽기 전용(입력 부품 `disabled`). 가리키는 항목이 휴지통에 있으면 관계 필드가 "임시 · 휴지통에 있음"으로 그 이름을 보인다 | Patterns/Frame/Banner, Screens/Trash › TrashedEntry |
 | `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 
 ## 흐름 6 · 미디어

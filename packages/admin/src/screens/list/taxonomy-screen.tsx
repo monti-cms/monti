@@ -44,11 +44,12 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
+import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import type { Route } from "../../route";
+import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
 import { endsClosed } from "./format";
@@ -76,6 +77,7 @@ function TaxonomySidePanel({
 	hasPublicPage,
 	onClose,
 	onMerge,
+	onTrash,
 	onSaved,
 }: {
 	collection: string;
@@ -88,6 +90,7 @@ function TaxonomySidePanel({
 	hasPublicPage: boolean;
 	onClose: () => void;
 	onMerge: () => void;
+	onTrash: () => void;
 	onSaved: (savedGroup: string) => void;
 }) {
 	const { t } = useAdmin();
@@ -162,6 +165,11 @@ function TaxonomySidePanel({
 						/>
 						<DropdownMenuContent align="end">
 							<DropdownMenuItem onClick={onMerge}>{t("taxonomy.mergeWith")}</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem variant="danger" onClick={onTrash}>
+								<TrashCan aria-hidden />
+								{t("trash.toTrash")}
+							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				) : undefined
@@ -301,6 +309,7 @@ export function TaxonomyScreen({
 	const [mergeGroups, setMergeGroups] = useState<string[] | null>(null);
 
 	useCoverCorner(openGroup !== null);
+	const trash = useTrashMove();
 
 	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
 	const path = schema.data?.schema.collections[collection]?.path;
@@ -336,6 +345,20 @@ export function TaxonomyScreen({
 		if (!openGroup || openGroup === "__new__") return null;
 		return allItems.find((i) => i.group === openGroup) ?? null;
 	}, [allItems, openGroup]);
+
+	/** Items to the trash (doc 11): every language of each goes; it asks first when published entries point at one. */
+	const trashItems = (list: UsageItem[]) =>
+		void trash.start({
+			rows: list.flatMap((item) => {
+				const id = (item.locales[sourceLocale] ?? Object.values(item.locales)[0])?.id;
+				return id ? [{ kind: "entry" as const, id }] : [];
+			}),
+			item: collectionName,
+			onMoved: () => {
+				setPicked(new Set());
+				if (list.some((item) => item.group === openGroup)) setOpenGroup(null);
+			},
+		});
 
 	const togglePick = (group: string, checked: boolean) => {
 		setPicked((prev) => {
@@ -400,6 +423,7 @@ export function TaxonomyScreen({
 
 	return (
 		<Inline align="stretch" gap={0} grow minHeight={0}>
+			{trash.dialog}
 			<PageColumn width="list">
 				<PageHeader title={collectionName} meta={path}>
 					<SearchToggle
@@ -432,6 +456,9 @@ export function TaxonomyScreen({
 								{picked.size >= 2 && (
 									<TextButton onClick={() => setMergeGroups([...picked])}>{t("taxonomy.merge")}</TextButton>
 								)}
+								<TextButton onClick={() => trashItems(allItems.filter((item) => picked.has(item.group)))}>
+									{t("trash.toTrash")}
+								</TextButton>
 							</BulkBar>
 						)}
 						<TableBody>
@@ -500,6 +527,11 @@ export function TaxonomyScreen({
 																{t("taxonomy.viewUsage")}
 															</DropdownMenuItem>
 														)}
+														<DropdownMenuSeparator />
+														<DropdownMenuItem variant="danger" onClick={() => trashItems([item])}>
+															<TrashCan aria-hidden />
+															{t("trash.toTrash")}
+														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</RowActions>
@@ -523,6 +555,7 @@ export function TaxonomyScreen({
 					hasPublicPage={path !== undefined}
 					onClose={() => setOpenGroup(null)}
 					onMerge={() => currentItem && setMergeGroups([currentItem.group])}
+					onTrash={() => currentItem && trashItems([currentItem])}
 					onSaved={(newGroup) => {
 						if (openGroup === "__new__") setOpenGroup(newGroup);
 					}}
