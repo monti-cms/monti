@@ -144,20 +144,18 @@ function MediaPicker({
 				</div>
 				{/* One height, whatever a folder holds: the tiles scroll inside it, under the path. */}
 				<div className="flex h-[min(36rem,70vh)] min-w-0 flex-col gap-monti-16">
-					<nav
-						aria-label={pathLabel}
-						className="flex min-w-0 shrink-0 items-baseline gap-monti-6 overflow-hidden text-monti-note"
-					>
+					<nav aria-label={pathLabel} className="flex min-w-0 shrink-0 items-baseline gap-monti-6 text-monti-note">
 						{path.map((up) => (
 							<React.Fragment key={up.id ?? "top"}>
-								{/* A long name above gives way before the open one: each step keeps at most 160px. */}
+								{/* A long name above gives way before the open one: each step keeps at most 160px. The words are cut, not the button, so its hit
+								    area and its focus ring stay whole. */}
 								<TextButton
 									variant="underline"
 									quiet
-									className="min-w-0 max-w-40 shrink truncate"
+									className="min-w-0 max-w-40 shrink"
 									onClick={() => onFolderChange(up.id)}
 								>
-									{up.name}
+									<span className="block truncate">{up.name}</span>
 								</TextButton>
 								<span aria-hidden="true" className="text-monti-faint">
 									/

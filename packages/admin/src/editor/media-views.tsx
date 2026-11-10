@@ -295,7 +295,7 @@ function EditDialog({
 		crop ? { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 } : WHOLE,
 	);
 	const [ratio, setRatio] = useState<Ratio>("free");
-	const [share, setShare] = useState(width ?? 100);
+	const [bodyShare, setBodyShare] = useState(width ?? 100);
 	const [shown, setShown] = useState(src);
 	const stage = useRef<HTMLDivElement>(null);
 	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
@@ -378,11 +378,11 @@ function EditDialog({
 		const share = shareRatio(next, size());
 		if (share) setPart(centeredCrop(share));
 	};
-	const changed = !isWhole(part) || turn !== 0 || share !== 100;
+	const changed = !isWhole(part) || turn !== 0 || bodyShare !== 100;
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent size="xl" finalFocus={returnTo}>
-				<DialogTitle>{t("editor.crop.title")}</DialogTitle>
+				<DialogTitle>{t("editor.edit.title")}</DialogTitle>
 				<CropStage
 					src={shown}
 					alt=""
@@ -418,11 +418,11 @@ function EditDialog({
 							}))}
 						/>
 						<Segmented
-							aria-label={t("editor.crop.size")}
+							aria-label={t("editor.edit.size")}
 							size="sm"
 							inline
-							value={String(share)}
-							onValueChange={(next) => setShare(Number(next))}
+							value={String(bodyShare)}
+							onValueChange={(next) => setBodyShare(Number(next))}
 							options={SIZES.map((each) => ({ value: String(each), label: `${each}%` }))}
 						/>
 						{changed && (
@@ -431,7 +431,7 @@ function EditDialog({
 									setTurn(0);
 									setPart(WHOLE);
 									setRatio("free");
-									setShare(100);
+									setBodyShare(100);
 								}}
 							>
 								<Reset aria-hidden />
@@ -447,7 +447,7 @@ function EditDialog({
 									? undefined
 									: { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 },
 								rotate: turn,
-								width: shareOf(share),
+								width: shareOf(bodyShare),
 							})
 						}
 					>
@@ -459,8 +459,15 @@ function EditDialog({
 	);
 }
 
-/** A selected picture's handles: one on each corner, the left two pulling the left edge. */
-const CORNERS = ["nw", "ne", "sw", "se"] as const satisfies readonly BlockCorner[];
+/**
+ * A selected picture's handles, by where it stands: each one moves the edge under it. A picture in the middle grows both ways, so it has all four; one held
+ * to a side cannot move that side, so it has the two on the other.
+ */
+const CORNERS: Record<"left" | "center" | "right", readonly BlockCorner[]> = {
+	left: ["ne", "se"],
+	center: ["nw", "ne", "sw", "se"],
+	right: ["nw", "sw"],
+};
 
 /** An image in the body (doc 09, screens/editor.md): the picture, its tool row while it is picked, its settings card and the caption under it. */
 function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: NodeViewProps) {
@@ -473,8 +480,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const file = useBodyFile(data.media || undefined);
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));
-	const [cropping, setCropping] = useState(false);
+	const [editing, setEditing] = useState(false);
 	const [dragged, setDragged] = useState<number | null>(null);
+	/** What a screen reader hears of the size as it changes. */
+	const [spoken, setSpoken] = useState<string>();
 	const box = useRef<HTMLDivElement>(null);
 	const bar = useRef<HTMLDivElement>(null);
 	const editable = editor.isEditable;
@@ -522,6 +531,11 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (after) openImageCard(editor, after);
 		else media?.setCard(null);
 	};
+	/** A new share, said aloud; one that is the same as now writes nothing, so undo has no empty step. */
+	const resizeTo = (percent: number) => {
+		setSpoken(`${percent}%`);
+		if (shareOf(percent) !== (data.width ?? null)) set({ width: shareOf(percent) });
+	};
 	/** The column the picture stands in: the box's parent, its full width. */
 	const bodyWidth = () => box.current?.parentElement?.getBoundingClientRect().width;
 	const resize = (side: "left" | "right") => (event: React.PointerEvent) => {
@@ -548,7 +562,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("keydown", esc);
 			setDragged(null);
-			if (keep && "clientX" in last) set({ width: shareOf(sized(last.clientX)) });
+			if (keep && "clientX" in last) resizeTo(sized(last.clientX));
 		};
 		const up = finish(true);
 		const esc = (key: KeyboardEvent) => {
@@ -564,7 +578,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		event.stopPropagation();
 		const widthOfBody = bodyWidth();
 		const least = widthOfBody ? leastShare(widthOfBody) : 10;
-		set({ width: shareOf(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), least, 100)) });
+		resizeTo(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), least, 100));
 	};
 
 	return (
@@ -576,6 +590,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						width={width}
 						selected={selected && editable}
 						measure={dragged === null ? undefined : `${dragged}%`}
+						spoken={spoken}
 					>
 						{url ? (
 							<Image
@@ -611,7 +626,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 										))}
 										<Separator orientation="vertical" length="bar" />
 										{/* Edit is how the picture looks (its part, its turn, its size); settings are what the entry says of it (2026-11-10, owner). */}
-										<FloatingBarButton label={t("editor.image.crop")} onClick={() => setCropping(true)}>
+										<FloatingBarButton label={t("editor.image.edit")} onClick={() => setEditing(true)}>
 											<Edit aria-hidden />
 										</FloatingBarButton>
 										<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
@@ -640,22 +655,31 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 										</Popover>
 									</FloatingBar>
 								</BlockBarPlace>
-								{CORNERS.map((corner) => (
-									<ResizeCorner
-										key={corner}
-										corner={corner}
-										label={t(corner.endsWith("w") ? "editor.image.resizeLeft" : "editor.image.resizeRight")}
-										onPointerDown={resize(corner.endsWith("w") ? "left" : "right")}
-										onKeyDown={resizeKeys}
-									/>
-								))}
+								{CORNERS[align].map((corner) =>
+									corner === "nw" || corner === "ne" ? (
+										<ResizeCorner
+											key={corner}
+											corner={corner}
+											onPointerDown={resize(corner === "nw" ? "left" : "right")}
+										/>
+									) : (
+										<ResizeCorner
+											key={corner}
+											corner={corner}
+											label={t(corner === "sw" ? "editor.image.resizeLeft" : "editor.image.resizeRight")}
+											onPointerDown={resize(corner === "sw" ? "left" : "right")}
+											onKeyDown={resizeKeys}
+											onFocus={() => setSpoken(`${data.width ?? 100}%`)}
+										/>
+									),
+								)}
 							</>
 						)}
 					</BlockBox>
 				</Inline>
 				{captionField}
 			</Stack>
-			{cropping && url && (
+			{editing && url && (
 				<EditDialog
 					src={url}
 					size={size?.width && size.height ? { width: size.width, height: size.height } : null}
@@ -663,10 +687,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					rotate={data.rotate ?? 0}
 					width={data.width ?? null}
 					returnTo={() => editor.view.dom}
-					onClose={() => setCropping(false)}
-					onApply={({ crop, rotate, width: share }) => {
-						setCropping(false);
-						set({ crop, rotate: rotate === 0 ? undefined : rotate, width: share });
+					onClose={() => setEditing(false)}
+					onApply={({ crop, rotate, width: bodyShare }) => {
+						setEditing(false);
+						set({ crop, rotate: rotate === 0 ? undefined : rotate, width: bodyShare });
 					}}
 				/>
 			)}

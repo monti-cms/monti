@@ -139,7 +139,6 @@ export function EntryEditor({
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
-	const definition = schema.data?.schema.collections[collection];
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");

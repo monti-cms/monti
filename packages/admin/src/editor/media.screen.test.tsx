@@ -449,6 +449,27 @@ describe("an image in the text", () => {
 		expect(page.getByRole("button", { name: /크기 바꾸기/ }).elements()).toHaveLength(2);
 	});
 
+	it("09-1 T122 each handle moves the edge under it: a picture held to the left has handles only on its right", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		await userEvent.click(bar().getByRole("button", { name: "왼쪽 정렬" }));
+		await userEvent.click(image());
+		const corners = () =>
+			[...(body().element().querySelectorAll("[data-slot=resize-corner]") ?? [])].map((corner) =>
+				corner.getAttribute("data-corner"),
+			);
+		await expect.poll(corners).toEqual(["ne", "se"]);
+	});
+
+	it("09-1 T122 the size is heard as it changes by the keyboard", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		body().getByRole("button", { name: "오른쪽에서 크기 바꾸기" }).element().focus();
+		await userEvent.keyboard("{ArrowLeft}");
+		const region = body().element().querySelector("[data-slot=block-box] [aria-live]");
+		await expect.poll(() => region?.textContent).toBe("95%");
+	});
+
 	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {
 		await WithImage.run();
 		await userEvent.click(image());
@@ -493,7 +514,12 @@ describe("an image in the text", () => {
 		await expect
 			.poll(() => Math.abs(image().element().getBoundingClientRect().width - (before.width * share) / 100))
 			.toBeLessThan(1);
-		await expect.element(body().getByText(`${share}%`)).not.toBeInTheDocument();
+		// The badge goes once it is let go; the size stays only in what a screen reader hears.
+		const badge = () =>
+			[...body().element().querySelectorAll("[data-slot=block-box] span[aria-hidden=true]")].some(
+				(span) => span.textContent === `${share}%`,
+			);
+		await expect.poll(badge).toBe(false);
 	});
 
 	it("[esc-cancels] Esc while dragging a corner puts it back", async () => {

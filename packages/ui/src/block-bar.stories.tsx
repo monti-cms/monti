@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
+import { Edit, Settings, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
 import { BlockBox, FloatingBar, FloatingBarButton, Image, ResizeCorner, Separator, Stack } from "./index";
 
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -7,13 +7,13 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /**
- * The tools of a selected image: the block bar above its top left (align | settings · crop), a 2px ink line around it, and a square handle on each
- * corner that changes the width when dragged. Delete is in the block menu, not here.
+ * The tools of a selected image: the block bar above its top left (align | edit · settings), a 2px ink line around it, and a square handle on each
+ * corner that changes the width when dragged, its share of the body shown meanwhile. Delete is in the block menu, not here.
  */
 const meta = {
 	title: "Monti/EditorTools/BlockBar",
 	component: ResizeCorner,
-	args: { corner: "se", label: "폭 바꾸기" },
+	args: { corner: "se", label: "오른쪽에서 크기 바꾸기" },
 } satisfies Meta<typeof ResizeCorner>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -32,19 +32,19 @@ export const OnImage: Story = {
 					<TextAlignRight aria-hidden />
 				</FloatingBarButton>
 				<Separator orientation="vertical" length="bar" />
-				<FloatingBarButton label="설정">
-					<SettingsAdjust aria-hidden />
+				<FloatingBarButton label="편집">
+					<Edit aria-hidden />
 				</FloatingBarButton>
-				<FloatingBarButton label="자르기">
-					<Crop aria-hidden />
+				<FloatingBarButton label="설정">
+					<Settings aria-hidden />
 				</FloatingBarButton>
 			</FloatingBar>
-			<BlockBox selected>
+			<BlockBox selected width={80} measure="80%">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
-				<ResizeCorner corner="nw" label="왼쪽 폭 바꾸기" />
-				<ResizeCorner corner="ne" label="오른쪽 폭 바꾸기" />
-				<ResizeCorner corner="sw" label="왼쪽 폭 바꾸기" />
-				<ResizeCorner corner="se" label="오른쪽 폭 바꾸기" />
+				<ResizeCorner corner="nw" />
+				<ResizeCorner corner="ne" />
+				<ResizeCorner corner="sw" label="왼쪽에서 크기 바꾸기" />
+				<ResizeCorner corner="se" label="오른쪽에서 크기 바꾸기" />
 			</BlockBox>
 		</Stack>
 	),

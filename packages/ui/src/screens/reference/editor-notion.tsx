@@ -61,7 +61,6 @@ import {
 	Text,
 	Textarea,
 	TextButton,
-	TodoDone,
 	TodoItem,
 } from "../../index";
 

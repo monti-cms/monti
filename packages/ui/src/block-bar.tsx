@@ -9,17 +9,15 @@ type BlockCorner = "nw" | "ne" | "sw" | "se";
 /**
  * A square handle on a corner of a selected block (an image); dragging it changes the block's width. Each of the four corners has one, so the nearest
  * is at hand from wherever the pointer comes (2026-11-10, owner). The parent is `relative`; the handle sits half outside its corner. The editor reads the
- * drag from the pointer events. The top two answer the pointer only: the bottom two take the keyboard, so a screen reader hears each side once.
+ * drag from the pointer events. The top two answer the pointer only, with no name: the bottom two take the keyboard, so a screen reader hears each side once.
  */
 function ResizeCorner({
 	corner,
 	label,
 	className,
 	...props
-}: Omit<ComponentProps<"button">, "aria-label" | "children"> & {
-	corner: BlockCorner;
-	label: string;
-}) {
+}: Omit<ComponentProps<"button">, "aria-label" | "children"> &
+	({ corner: "nw" | "ne"; label?: never } | { corner: "sw" | "se"; label: string })) {
 	const top = corner === "nw" || corner === "ne";
 	return (
 		<button
@@ -44,18 +42,21 @@ function ResizeCorner({
 /**
  * The box of a block with a size of its own (an image): its corners and tool row hang off it. `width` is its share of the column in percent, as the site draws
  * it (2026-11-10, owner: a pixel width means nothing on another screen); with none it fills the column. `selected` draws a 2px ink line around it, as a picked
- * file block's border, so a picked picture reads as picked. `measure` is what a corner being dragged makes of it ("62%"), shown at its top right.
+ * file block's border, so a picked picture reads as picked. `measure` is what a corner being dragged makes of it ("62%"), shown at its top right; `spoken` is
+ * what a screen reader hears of its size as it changes by keys or by pointer, read from a region that is always there so the first change is heard too.
  */
 function BlockBox({
 	width,
 	selected = false,
 	measure,
+	spoken,
 	ref,
 	children,
 }: {
 	width?: number | null;
 	selected?: boolean;
 	measure?: string;
+	spoken?: string;
 	ref?: Ref<HTMLDivElement>;
 	children: ReactNode;
 }) {
@@ -69,9 +70,12 @@ function BlockBox({
 			style={width ? { width: `${width}%` } : undefined}
 		>
 			{children}
+			<span aria-live="polite" className="sr-only">
+				{spoken}
+			</span>
 			{measure && (
 				<span
-					aria-live="polite"
+					aria-hidden="true"
 					className="pointer-events-none absolute top-monti-8 right-monti-8 z-1 rounded-monti-md bg-monti-emphasis px-monti-8 py-monti-4 font-mono text-monti-caption text-monti-on-emphasis"
 				>
 					{measure}
