@@ -367,6 +367,8 @@ export type TrashedEntry = {
 	pointing: { id: string; collection: string; title: string; trashed: boolean }[];
 	/** Public paths a permanent delete keeps from every other entry. */
 	reserves: string[];
+	/** A translation thrown away alone whose source is in the trash too: restoring it brings that source back. */
+	source: { id: string; title: string } | null;
 };
 
 export async function trashedEntry(ctx: OperationContext, id: string): Promise<TrashedEntry> {
@@ -413,11 +415,25 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 			rows.map((row) => row.id),
 		)
 		.execute();
+	const alone =
+		entry.locale !== schema.locales.source &&
+		entry.trashed_with === null &&
+		schema.collections[entry.collection]?.kind === "document";
+	const source = !alone
+		? undefined
+		: await db
+				.selectFrom("entries")
+				.select(["id", "title"])
+				.where("translation_group", "=", entry.translation_group)
+				.where("locale", "=", schema.locales.source)
+				.where("trashed_at", "is not", null)
+				.executeTakeFirst();
 	return {
 		id: entry.id,
 		collection: entry.collection,
 		version: entry.version,
 		daysLeft: daysLeft(entry.trashed_at, ctx.now()),
+		source: source ?? null,
 		reserves: paths.flatMap((path) => publicPath(schema, path.collection, path.slug, path.locale) ?? []),
 		locales: [entry, ...rows.filter((row) => row.id !== id)].map((row) => ({
 			locale: row.locale,

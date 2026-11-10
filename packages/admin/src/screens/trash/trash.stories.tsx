@@ -218,6 +218,22 @@ export const OnlyMedia: Story = { loaders: trash("#/trash?kind=media") };
 /** Flow 5·12: inside a thrown-away folder, with the way back above its name and the folder's own actions in the head. */
 export const InFolder: Story = { loaders: trash((ids) => `#/trash?folder=${ids.series}`) };
 
+/** Flow 5·12: the folder's own ⋯ holds what cannot be undone. */
+export const FolderMenu: Story = {
+	loaders: trash((ids) => `#/trash?folder=${ids.series}`),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더 보기" }, wait));
+	},
+};
+
+/** Flow 5·14: inside a folder the chip in the search box says where it looks: that folder, or every folder. */
+export const SearchingInFolder: Story = {
+	loaders: trash((ids) => `#/trash?folder=${ids.series}&q=${encodeURIComponent("리액트")}`),
+};
+
+/** A search or a filter that finds nothing says so, with the way out. */
+export const NoMatch: Story = { loaders: trash(`#/trash?q=${encodeURIComponent("없는 말")}`) };
+
 /** Flow 5·14: a search looks inside thrown-away folders and says which folder a row sits in. */
 export const Searching: Story = { loaders: trash(`#/trash?q=${encodeURIComponent("리액트")}`) };
 
@@ -225,6 +241,28 @@ export const Searching: Story = { loaders: trash(`#/trash?q=${encodeURIComponent
 export const RowMenu: Story = {
 	loaders: trash(),
 	play: async ({ canvasElement }) => openRowMenu(canvasElement, "옛 소개 글"),
+};
+
+/** Flow 5·16: a right click opens the same rows, with the key that deletes; on picked rows it starts with how many they are and has no icons. */
+export const PickedRightClick: Story = {
+	loaders: trash(),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("checkbox", { name: "옛 소개 글 고르기" }, wait));
+		await userEvent.click(page.getByRole("checkbox", { name: "연습장 고르기" }));
+		// The menu opens where the pointer is: over the row, as a person would press.
+		const row = await rowOf(canvasElement, "연습장");
+		const box = row.getBoundingClientRect();
+		row.dispatchEvent(
+			new MouseEvent("contextmenu", {
+				bubbles: true,
+				cancelable: true,
+				clientX: box.left + 320,
+				clientY: box.top + box.height / 2,
+			}),
+		);
+		await body().findByText("2개 항목", {}, wait);
+	},
 };
 
 /** Flow 5·22: a translation thrown away before its source says so, and comes back only with the source. */

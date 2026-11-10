@@ -77,29 +77,33 @@ export function TrashedItemPanel({
 			}
 		>
 			<Stack gap={32}>
-				<DotNote>{t("trash.readOnly", { days: item.daysLeft })}</DotNote>
-				<DescriptionList>
-					<DescriptionItem label={t("trash.collection")}>{collectionLabel(item.collection)}</DescriptionItem>
-					{item.locales.map((each) => (
-						<DescriptionItem
-							key={`name:${each.locale}`}
-							label={several ? `${t("trash.name")} · ${languageName(each.locale)}` : t("trash.name")}
-						>
-							{each.title}
-						</DescriptionItem>
-					))}
-					{item.locales.map((each) =>
-						each.address ? (
-							<DescriptionItem
-								key={`address:${each.locale}`}
-								label={several ? `${t("trash.address")} · ${languageName(each.locale)}` : t("trash.address")}
-								mono
-							>
-								{each.address}
-							</DescriptionItem>
-						) : null,
-					)}
-				</DescriptionList>
+				<Stack gap={12}>
+					<DotNote>{t("trash.readOnly", { days: item.daysLeft })}</DotNote>
+					<DescriptionList>
+						<DescriptionItem label={t("trash.collection")}>{collectionLabel(item.collection)}</DescriptionItem>
+						{/* The panel's title is its name already: only an item with several languages lists them. */}
+						{several &&
+							item.locales.map((each) => (
+								<DescriptionItem
+									key={`name:${each.locale}`}
+									label={`${t("trash.name")} · ${languageName(each.locale)}`}
+								>
+									{each.title}
+								</DescriptionItem>
+							))}
+						{item.locales.map((each) =>
+							each.address ? (
+								<DescriptionItem
+									key={`address:${each.locale}`}
+									label={several ? `${t("trash.address")} · ${languageName(each.locale)}` : t("trash.address")}
+									mono
+								>
+									{each.address}
+								</DescriptionItem>
+							) : null,
+						)}
+					</DescriptionList>
+				</Stack>
 				<FormField>
 					<FormFieldLabel>{t("trash.pointing", { count: item.pointing.length })}</FormFieldLabel>
 					{item.pointing.length === 0 ? (

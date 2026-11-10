@@ -325,6 +325,9 @@ describe("restoring", () => {
 			source: { id: source, title: "리액트 19 마이그레이션" },
 			daysLeft: 28,
 		});
+		// Opened on its own, it says the same: its source is what restoring it brings back.
+		expect(await read<TrashedEntry>("trash.get", { id: english })).toMatchObject({ source: { id: source } });
+		expect(await read<TrashedEntry>("trash.get", { id: source })).toMatchObject({ source: null });
 		await restore(entryRow(english));
 
 		expect((await entry(source)).trashed_at).toBeNull();

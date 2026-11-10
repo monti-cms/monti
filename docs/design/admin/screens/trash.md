@@ -11,7 +11,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 제목 행 | `PageHeader`(`title` "휴지통") | 폴더 안에서는 `title`이 폴더 이름, `meta`가 "30일 남음". |
+| 제목 행 | `PageHeader`(`title` "휴지통") | 폴더 안에서는 `title`이 폴더 이름, `meta`가 "30일 남음"(7일 아래면 `Text tone="warning"`). |
 | 폴더 경로 "휴지통 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 휴지통 안의 폴더에서만 있다. 위로 가는 길은 이것 하나다. 목록 맨 위의 "상위 폴더로" 행은 두지 않는다(2026-11-05 소유자, 원칙 8). |
 | "검색" | `SearchToggle`(`label` "검색", `targets` 없음) | 그 자리에서 `SearchBox`가 열린다. 지운 폴더 안의 것도 찾는다. 지운 폴더 안에서는 게시글 목록처럼 상자 앞 칩(`scopes`)이 그 폴더와 "모든 폴더" 가운데 고른다(2026-11-11 소유자). |
 | "비우기" | `TextButton variant="danger"` | 누르면 `AlertDialog`로 묻는다. 휴지통이 비었으면 "검색"과 함께 없다. |
@@ -22,13 +22,13 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow twoLine`, `TableCell`) | 모든 행이 두 줄 높이다. 고른 행과 패널에 열린 행은 `TableRow selected`. |
-| 행 체크 | `RowCheck` | 포인터가 행 위에 있을 때와 고른 행에만 보인다. |
+| 행 체크 | `RowCheck` | 포인터가 행 위에 있을 때와 고른 행, 패널에 열린 행에 보인다(항목 화면과 같다). |
 | 제목 칸 | `TrashRowTitle`(`title`, `address`, `folder`, `meta`, `metaTone`) | 첫 줄은 조용한 잉크의 제목과 mono 주소(글의 공개 주소), 둘째 줄은 담은 것("KO · EN", "영어 번역", "글 2", "이미지 · 2.4 MB · Blog Assets"). 할 말이 없어도 빈 줄을 지킨다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 혼자서는 되돌아오지 못하면 `metaTone="warning"`("원문이 휴지통에 있음"). 찾은 것이 지운 폴더 안에 있으면 `meta` 앞에 "시리즈 원고 폴더 안". 언어가 하나인 사이트는 언어를 적지 않는다. |
 | 제목을 누르면 | `RowLink` | 글은 편집기로 간다(읽기 전용). 항목과 미디어는 옆 패널이 열린다. 폴더는 그 안으로 들어간다. |
 | 종류 칸 | `TableCell tone="subtle"` | 컬렉션의 이름("게시글", "메모", "태그")과 "미디어". 폭은 `LIST_COLUMN_SIZE.one`. |
 | 남은 날 칸 | `TrashRowDate`(`left`, `urgent`, `byAssistant`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 7일 아래면 `urgent`로 경고 색(2026-11-11 소유자). 폴더 안의 행은 폴더와 남은 날이 같으면 비운다. 폭은 `LIST_COLUMN_SIZE.measure`. |
-| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`) | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 원문이 휴지통에 있는 번역은 "복원" 자리가 "원문 복원"이다. 영구 삭제는 `AlertDialog`로 묻는다. |
-| 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 고른 행 모두에 한다. 행에서 Delete를 눌러도 영구 삭제를 묻는다. |
+| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 원문이 휴지통에 있는 번역은 "복원" 자리가 "원문 복원"이다. 영구 삭제는 `AlertDialog`로 묻는다. |
+| 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 `ContextMenuLabel` "2개 항목"으로 시작하고 아이콘 없이 고른 행 모두에 한다(게시글 목록과 같다). 행에서 Delete를 눌러도 영구 삭제를 묻는다. |
 | 빈 휴지통 | `Empty`(`title` "휴지통이 비었습니다.") | 열 이름 행과 표 대신 이 한 줄. 도구 화면의 빈 목록과 같은 부품이다. |
 | 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
 | 쪽 | `ListFooter`(`Count`, `ListPages`) | 50줄이 넘을 때만 있다. |
@@ -58,7 +58,7 @@
 | ⋯ | `SidePanel`의 `actions`에 `IconButton` + `DropdownMenu`("영구 삭제" `variant="danger"`) | 영구 삭제는 `AlertDialog`로 묻는다. |
 | 상태 줄 | `DotNote` "3일 남음 · 읽기 전용" | 휴지통 화면 안이므로 "휴지통"은 되풀이하지 않는다(원칙 8). |
 | 미리보기 (미디어) | `Image`(4:3), 파일이면 `FilePreview framed` | |
-| 정보 | `DescriptionList` + `DescriptionItem` | 미디어: 파일 이름 · 폴더 · 종류 · 크기 · 올린 날. 대체 텍스트는 없다(09). 항목: 컬렉션 · 이름 · 주소(언어가 여럿이면 언어마다). 값은 글자이고 입력 부품이 아니다. |
+| 정보 | `DescriptionList` + `DescriptionItem` | 미디어: 폴더 · 종류 · 크기 · 올린 날. 대체 텍스트는 없다(09). 항목: 컬렉션 · 주소. 이름은 패널 제목이 이미 말하므로 되풀이하지 않는다(원칙 8). 언어가 여럿인 항목만 언어마다 이름과 주소를 적는다. 값은 글자이고 입력 부품이 아니다. 상태 줄과 그 아래 것 사이는 두 패널 모두 12px이다. |
 | "쓰는 곳 · 0" / "가리키는 글 · 4" | `FormFieldLabel`, 아래 글마다 `FileUseRow`(글 이름 링크, 끝에 컬렉션. 휴지통의 글은 "휴지통 · 게시글") | 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". 많으면 패널이 스크롤한다. |
 | 발 | `SidePanel`의 `footer`: `Button variant="primary"` "복원" | 알약은 복원 하나다. |
 
@@ -66,7 +66,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 발행된 적이 있으면 남길 주소를 적는다("되돌릴 수 없습니다. 주소 /posts/about-old는 다시 쓸 수 없습니다."). 가리키는 글이 있어도 막지 않는다(2026-11-11 소유자). |
+| 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 발행된 적이 있으면 남길 주소를 적는다("되돌릴 수 없습니다. 주소 /posts/about-old는 다시 쓸 수 없습니다."). 여럿이면 몇 개인지("2개를 영구 삭제합니다."), 폴더면 안의 것도 간다고("폴더 안의 것도 함께 삭제합니다.") 먼저 말한다. 가리키는 글이 있어도 막지 않는다(2026-11-11 소유자). |
 | 휴지통 비우기 확인 | `AlertDialog`(`AlertDialogTitle` "휴지통을 비울까요?", "9개를 영구 삭제합니다."), `AlertDialogAction variant="danger"` "비우기" | |
 
 ## 흐름 5 · 휴지통
@@ -77,7 +77,7 @@
 |---|---|---|---|
 | "보통" | 5.11 | 표와 행 | Top |
 | "종류 메뉴" | 5.11 | "종류" 열의 `DropdownMenuCheckboxItem`과 개수 | KindMenu |
-| "행 메뉴" | 5.16 | 행의 ⋯ `DropdownMenu`("복원" · "영구 삭제") | RowMenu |
+| "행 메뉴" | 5.16 | 행의 ⋯ `DropdownMenu`("복원" · "영구 삭제"), 고른 행의 `ContextMenu` | RowMenu, PickedRightClick |
 | "어시스턴트" | 5.15 | 어시스턴트가 버린 행은 `TrashRowDate byAssistant`: 남은 날이 파란 ✦와 함께 선다 | ByAssistant |
 | "미디어" | 5.17 | "종류" 열 `filtered`, 미디어 행만. 칩 줄은 없다 | OnlyMedia |
 | "항목 열기" | 5.19 | 태그 행 `selected`와 항목 `SidePanel`("가리키는 글 · 4") | ItemPanel |
@@ -88,6 +88,6 @@
 | "선택" | 5.25 | `BulkBar`(`selectAll` 일부), 두 행 `selected` | Picked |
 | "비우기 확인" | 5.26 | 비우기 `AlertDialog` | EmptyConfirm |
 | "빔" | 5.28 | 빈 휴지통 한 줄, 머리 동작 없음, 사이드바 개수 없음 | Empty |
-| "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `meta`, "폴더 복원"과 ⋯, 남은 날 칸이 빈 안쪽 행 | InFolder |
+| "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `meta`, "폴더 복원"과 ⋯, 남은 날 칸이 빈 안쪽 행 | InFolder, FolderMenu |
 | "폴더에서 하나 복원" | 5.13 | 폴더가 휴지통을 떠나 화면이 휴지통 맨 위로 돌아오고, 남은 글은 폴더 이름과 함께 한 줄이 된다. `toast` "시리즈 원고 폴더와 함께 복원했습니다"와 "열기" | |
-| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 `meta` 앞에 "시리즈 원고 폴더 안" | Searching |
+| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 `meta` 앞에 "시리즈 원고 폴더 안". 지운 폴더 안에서는 찾는 곳 칩. 맞는 것이 없으면 한 줄과 "필터 해제" | Searching, SearchingInFolder, NoMatch |

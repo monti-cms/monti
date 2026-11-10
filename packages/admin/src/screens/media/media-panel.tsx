@@ -301,8 +301,8 @@ export function TrashedFilePanel({
 						<FilePreview ext={extensionLabel(item.name)} framed />
 					)}
 				</Stack>
+				{/* The panel's title is the file's name already; the folder is the one row the library edits and the trash only reads. */}
 				<FileFacts item={item}>
-					<DescriptionItem label={t("library.name")}>{item.name}</DescriptionItem>
 					<DescriptionItem label={t("library.folder")}>{item.path.join(" / ") || t("folders.top")}</DescriptionItem>
 				</FileFacts>
 				<FileUses uses={uses} go={go} />

@@ -3,7 +3,9 @@ import {
 	BulkBar,
 	ContextMenu,
 	ContextMenuContent,
+	ContextMenuGroup,
 	ContextMenuItem,
+	ContextMenuLabel,
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 	Count,
@@ -41,7 +43,7 @@ import {
 	TrashRowDate,
 	TrashRowTitle,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
+import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { formatBytes } from "../../media/file-text";
 import { useAdmin } from "../../operations/admin-context";
@@ -209,13 +211,22 @@ export function TrashScreen({
 		const Item = context ? ContextMenuItem : DropdownMenuItem;
 		const Separator = context ? ContextMenuSeparator : DropdownMenuSeparator;
 		const list = context ? rowsFor(row) : [row];
+		// One row's menu has an icon on each row; the picked rows' menu starts with how many they are and has none (components/menu.md).
+		const several = list.length > 1;
 		return (
 			<>
+				{several && (
+					<ContextMenuGroup>
+						<ContextMenuLabel>{t("list.items", { count: list.length })}</ContextMenuLabel>
+					</ContextMenuGroup>
+				)}
 				<Item onClick={() => void restoreRows(list)}>
-					{t(list.length === 1 && row.source ? "trash.restoreSource" : "trash.restore")}
+					{!several && <Undo aria-hidden />}
+					{t(!several && row.source ? "trash.restoreSource" : "trash.restore")}
 				</Item>
 				<Separator />
 				<Item variant="danger" onClick={() => purgeRows(list)}>
+					{!several && <TrashCan aria-hidden />}
 					{t("trash.purge")}
 					{context && <MenuShortcut>Del</MenuShortcut>}
 				</Item>
@@ -286,7 +297,13 @@ export function TrashScreen({
 	const header = (
 		<PageHeader
 			title={place?.name ?? t("frame.trash")}
-			meta={place ? t("trash.left", { days: place.daysLeft }) : undefined}
+			meta={
+				!place ? undefined : place.daysLeft < URGENT_DAYS ? (
+					<Text tone="warning">{t("trash.left", { days: place.daysLeft })}</Text>
+				) : (
+					t("trash.left", { days: place.daysLeft })
+				)
+			}
 			trail={
 				place ? (
 					<Inline gap={4}>
@@ -336,6 +353,7 @@ export function TrashScreen({
 								variant="danger"
 								onClick={() => purge.start({ rows: [{ kind: "folder", id: place.id }] })}
 							>
+								<TrashCan aria-hidden />
 								{t("trash.purge")}
 							</DropdownMenuItem>
 						</DropdownMenuContent>

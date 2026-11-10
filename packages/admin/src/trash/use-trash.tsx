@@ -82,7 +82,7 @@ export function useTrashMove() {
 		if (effects.pointing > 0) {
 			const label = ask.item ?? t("trash.item");
 			said.push(
-				t("trash.askPointing", {
+				t(ask.rows.length === 1 ? "trash.askPointing" : "trash.askPointingMany", {
 					count: effects.pointing,
 					label,
 					subject: t(endsClosed(label) ? "list.subjectFinal" : "list.subjectOpen", { name: label }),
@@ -181,6 +181,12 @@ export function usePurge() {
 		asking && "all" in asking
 			? t("trash.emptyText", { count: asking.all })
 			: [
+					// How much goes, where the question's title does not say: several rows, or a folder with what it holds.
+					asking && asking.rows.length > 1
+						? t("trash.purgeCount", { count: asking.rows.length })
+						: asking?.rows[0]?.kind === "folder"
+							? t("trash.purgeFolder")
+							: "",
 					t("trash.purgeText"),
 					reserves.length === 1 && address
 						? t(endsClosed(address) ? "trash.purgeAddressFinal" : "trash.purgeAddressOpen", { address })

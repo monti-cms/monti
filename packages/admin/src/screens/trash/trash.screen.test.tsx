@@ -3,8 +3,22 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as stories from "./trash.stories";
 
-const { Top, InFolder, Searching, ItemPanel, FilePanel, Empty, ByAssistant, TrashedEntry, AskPublished, AskPointedAt } =
-	composeStories(stories);
+const {
+	Top,
+	InFolder,
+	Searching,
+	SearchingInFolder,
+	NoMatch,
+	PickedRightClick,
+	FolderMenu,
+	ItemPanel,
+	FilePanel,
+	Empty,
+	ByAssistant,
+	TrashedEntry,
+	AskPublished,
+	AskPointedAt,
+} = composeStories(stories);
 
 const main = () => page.getByRole("main");
 const table = () => main().getByRole("table");
@@ -88,6 +102,40 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(row("연습장")).not.toBeInTheDocument();
 	});
 
+	it("11-1 [flow 5·14] inside a folder the search box says where it looks, and looks through the whole trash on request", async () => {
+		await SearchingInFolder.run();
+		await expect.element(row("시리즈 2: 리액트로 옮기기")).toBeVisible();
+		await expect.element(row("리액트 19 마이그레이션")).not.toBeInTheDocument();
+		await userEvent.click(main().getByRole("button", { name: /시리즈 원고/ }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
+		await expect.element(row("리액트 19 마이그레이션")).toBeVisible();
+	});
+
+	it("11-1 a search that finds nothing says so, and clears on request", async () => {
+		await NoMatch.run();
+		await expect.element(table().getByText("맞는 것이 없습니다.")).toBeVisible();
+		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await expect.element(row("첫 번째 글")).toBeVisible();
+	});
+
+	it("11-1 [flow 5·16] a right click on picked rows starts with how many they are and acts on them all", async () => {
+		await PickedRightClick.run();
+		const menu = page.getByRole("menu");
+		await expect.element(menu).toHaveTextContent("2개 항목");
+		await userEvent.click(menu.getByRole("menuitem", { name: "복원" }));
+		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
+		await expect.element(row("연습장")).not.toBeInTheDocument();
+	});
+
+	it("11-3 [flow 5·12] a folder deleted for good from its own menu says what goes with it", async () => {
+		await FolderMenu.run();
+		await userEvent.click(page.getByRole("menuitem", { name: "영구 삭제" }));
+		await expect.element(dialog()).toHaveTextContent("폴더 안의 것도 함께 삭제합니다. 되돌릴 수 없습니다.");
+		await userEvent.click(dialog().getByRole("button", { name: "영구 삭제" }));
+		await expect.element(main().getByRole("heading", { name: "휴지통" })).toBeVisible();
+		await expect.element(row("시리즈 원고")).not.toBeInTheDocument();
+	});
+
 	it("11-1 [flow 5·21] a restored post leaves the trash as a draft, and the toast opens it", async () => {
 		await Top.run();
 		const menu = await menuOf("옛 소개 글");
@@ -135,6 +183,8 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(table().getByRole("button", { name: "복원" })).toBeVisible();
 		await userEvent.keyboard("{Delete}");
 		await expect.element(dialog()).toHaveTextContent("영구 삭제할까요?");
+		// Several rows: the question says how many go, and names no one address.
+		await expect.element(dialog()).toHaveTextContent("2개를 영구 삭제합니다. 되돌릴 수 없습니다.");
 		await userEvent.click(dialog().getByRole("button", { name: "취소" }));
 		await userEvent.click(table().getByRole("button", { name: "복원" }));
 		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();

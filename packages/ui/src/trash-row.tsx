@@ -50,7 +50,8 @@ function TrashRowTitle({
  * The date cell of a trash row, at the end of its cell: how long it stays ("30 days left"), and over it the day it was discarded when `date` is
  * given ("10. 27"; the column's name says what the day is). The trash list gives only the days left: the day it was thrown away says the same
  * thing twice. The days turn to the warning tone when `urgent` (under a week, the screen decides): the purge is near. What the assistant discarded is blue after
- * a ✦ (`byAssistant`, on the day, or on the days left when there is no day); with `onOpen` it is a button that opens the conversation.
+ * a ✦ (`byAssistant`, on the day, or on the days left when there is no day); with `onOpen` it is a button that opens the conversation. Without it the ✦
+ * alone is blue when the days are `urgent`: they keep the warning tone.
  */
 function TrashRowDate({
 	date,
@@ -89,7 +90,8 @@ function TrashRowDate({
 		) : (
 			<span data-slot="trash-row-left" className={MARK}>
 				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs" />
-				{words}
+				{/* The mark says who; the days still say how near the purge is. */}
+				<span className={cn(urgent && date === undefined && "text-monti-warning")}>{words}</span>
 			</span>
 		);
 	return (

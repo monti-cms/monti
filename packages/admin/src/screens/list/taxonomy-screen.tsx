@@ -44,7 +44,7 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
+import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
@@ -164,7 +164,10 @@ function TaxonomySidePanel({
 							}
 						/>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={onMerge}>{t("taxonomy.mergeWith")}</DropdownMenuItem>
+							<DropdownMenuItem onClick={onMerge}>
+								<Merge aria-hidden />
+								{t("taxonomy.mergeWith")}
+							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem variant="danger" onClick={onTrash}>
 								<TrashCan aria-hidden />
@@ -517,13 +520,16 @@ export function TaxonomyScreen({
 													/>
 													<DropdownMenuContent align="end">
 														<DropdownMenuItem onClick={() => setOpenGroup(item.group)}>
+															<Edit aria-hidden />
 															{t("taxonomy.edit")}
 														</DropdownMenuItem>
 														<DropdownMenuItem onClick={() => setMergeGroups([item.group])}>
+															<Merge aria-hidden />
 															{t("taxonomy.mergeWith")}
 														</DropdownMenuItem>
 														{item.firstRef && item.usageCount > 0 && (
 															<DropdownMenuItem onClick={() => onFilterUsage(item)}>
+																<List aria-hidden />
 																{t("taxonomy.viewUsage")}
 															</DropdownMenuItem>
 														)}

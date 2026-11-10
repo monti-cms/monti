@@ -88,6 +88,14 @@ export const DaysLeftOnly: Story = {
 				</TableRow>
 				<TableRow twoLine>
 					<TableCell>
+						<TrashRowTitle title="임시" />
+					</TableCell>
+					<TableCell align="end">
+						<TrashRowDate left="2일 남음" urgent byAssistant={{ label: "어시스턴트가 버림" }} />
+					</TableCell>
+				</TableRow>
+				<TableRow twoLine>
+					<TableCell>
 						<TrashRowTitle title="뷰" />
 					</TableCell>
 					<TableCell align="end">
