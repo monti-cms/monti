@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
+import { checkMediaValues } from "../media/uses";
 import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind } from "../records";
 import { AdminValues } from "./admin-values";
@@ -66,9 +67,13 @@ export async function checkApply(ctx: OperationContext, draft: Schema, renames: 
 	if (checkSchema(draft).length > 0) throw new CheckError({ key: "schema.hasProblems" });
 	const state = await readSchemaState(ctx.db);
 	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
-	const { missing } = stepsFor(changes, answers);
+	const { missing, steps } = stepsFor(changes, answers);
 	if (missing.length > 0)
 		throw new CheckError({ key: "schema.choicesMissing", values: { changes: missing.join(", ") } });
+	// A media field filled for every empty entry takes a file the library has, as a save does.
+	for (const step of steps)
+		if (step.do === "fillField")
+			await checkMediaValues(ctx.db, draft, step.collection, { [step.field]: step.value }, { missing: "refuse" });
 }
 
 /**

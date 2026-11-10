@@ -43,14 +43,16 @@ export async function usedOf(db: Db, ids: string[]): Promise<Map<string, number>
 }
 
 /**
- * What every write of a field's value checks of a media field: it holds a file and what it says of it, and a field that takes images takes no other file. A file the
- * library does not have is refused with every other use (`rewriteUses`). `null` clears the field.
+ * What every write of a field's value checks of a media field: it holds a file and what it says of it, and a field that takes images takes no other file. `null`
+ * clears the field. A file the library does not have is the write's to refuse when it brings it in (`rewriteUses`); a schema's fill, written by no save, refuses
+ * it here (`missing`).
  */
 export async function checkMediaValues(
 	db: Db,
 	schema: Schema,
 	collection: string,
 	values: Record<string, unknown> | undefined,
+	{ missing = "let be" }: { missing?: "let be" | "refuse" } = {},
 ): Promise<void> {
 	const fields = schema.collections[collection]?.fields ?? {};
 	for (const [field, given] of Object.entries(values ?? {})) {
@@ -58,9 +60,10 @@ export async function checkMediaValues(
 		if (definition?.kind !== "media" || given === null) continue;
 		const value = mediaValueOf(given);
 		if (!value) throw new CheckError({ key: "entries.badMedia", values: { field } });
-		if (definition.accept === "any") continue;
 		const file = await db.selectFrom("media").select("kind").where("id", "=", value.media).executeTakeFirst();
-		if (file?.kind === "file") throw new CheckError({ key: "entries.badMediaKind", values: { field } });
+		if (!file && missing === "refuse") throw new CheckError({ key: "media.unknown", values: { id: value.media } });
+		if (definition.accept !== "any" && file?.kind === "file")
+			throw new CheckError({ key: "entries.badMediaKind", values: { field } });
 	}
 }
 
@@ -73,19 +76,53 @@ type Owner = { entry_id: string; template_id: null } | { entry_id: null; templat
  * Each file named is locked first, so this and `media.trash` take turns: a save that starts using a file either waits for the trash to finish and brings the file
  * back out, or makes the trash see the use and leave the file. Either way a file in use is never in the trash (09-4).
  *
- * A write (`refuseMissing`) that leaves a body or a field naming a file the library does not have is refused: an import, an agent or the API cannot put in a
- * file that is not there (2026-11-10, owner). An undo or a schema change puts back what was, and writes the uses it can.
+ * A write that brings a file the library does not have into a body or a field is refused (`named`: the files these records named before it): an import, an
+ * agent or the API cannot put in a file that is not there (2026-11-10, owner). One named already is let be, so a write can still take it out, publish or archive
+ * around it. An undo or a schema change puts back what was, and writes the uses it can.
  */
 export async function rewriteUses(
 	db: Db,
 	schema: Schema,
 	refs: RecordRef[],
-	{ refuseMissing = false }: { refuseMissing?: boolean } = {},
+	{ named: before }: { named?: ReadonlySet<string> } = {},
 ): Promise<void> {
 	const entryIds = refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
 	const templateIds = refs.filter((ref) => ref.kind === "template").map((ref) => ref.id);
 	if (entryIds.length === 0 && templateIds.length === 0) return;
 
+	const wanted = await usesNow(db, schema, entryIds, templateIds);
+	const named = [...new Set([...wanted.values()].map((use) => use.media))];
+	await lockRecords(
+		db,
+		named.map((id) => ({ kind: "media", id })),
+	);
+	const existing =
+		named.length === 0
+			? new Set<string>()
+			: new Set((await db.selectFrom("media").select("id").where("id", "in", named).execute()).map((row) => row.id));
+	const brought = before ? named.find((id) => !existing.has(id) && !before.has(id)) : undefined;
+	if (brought !== undefined) throw new CheckError({ key: "media.unknown", values: { id: brought } });
+
+	if (entryIds.length > 0) await db.deleteFrom("media_uses").where("entry_id", "in", entryIds).execute();
+	if (templateIds.length > 0) await db.deleteFrom("media_uses").where("template_id", "in", templateIds).execute();
+	const rows = [...wanted.values()]
+		.filter((use) => existing.has(use.media))
+		.map((use) => ({ media_id: use.media, place: use.place, ...use.owner }));
+	if (rows.length === 0) return;
+	await db.insertInto("media_uses").values(rows).execute();
+	await bringBack(db, [...existing]);
+}
+
+/** The files these entries and templates name now: for `rewriteUses`, and before a write so it knows which it brings in. */
+export async function mediaNamed(db: Db, schema: Schema, refs: RecordRef[]): Promise<Set<string>> {
+	const entryIds = refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
+	const templateIds = refs.filter((ref) => ref.kind === "template").map((ref) => ref.id);
+	if (entryIds.length === 0 && templateIds.length === 0) return new Set();
+	return new Set([...(await usesNow(db, schema, entryIds, templateIds)).values()].map((use) => use.media));
+}
+
+/** Each use these entries and templates make, from their working and published copies, by file, owner and place. */
+async function usesNow(db: Db, schema: Schema, entryIds: string[], templateIds: string[]) {
 	const wanted = new Map<string, { media: string; owner: Owner; place: string }>();
 	const want = (owner: Owner, uses: Use[]) => {
 		for (const { media, place } of uses) {
@@ -115,27 +152,7 @@ export async function rewriteUses(
 		for (const template of templates) want({ entry_id: null, template_id: template.id }, usesInDoc(template.doc));
 	}
 
-	const named = [...new Set([...wanted.values()].map((use) => use.media))];
-	await lockRecords(
-		db,
-		named.map((id) => ({ kind: "media", id })),
-	);
-	const existing =
-		named.length === 0
-			? new Set<string>()
-			: new Set((await db.selectFrom("media").select("id").where("id", "in", named).execute()).map((row) => row.id));
-
-	const missing = refuseMissing ? named.find((id) => !existing.has(id)) : undefined;
-	if (missing !== undefined) throw new CheckError({ key: "media.unknown", values: { id: missing } });
-
-	if (entryIds.length > 0) await db.deleteFrom("media_uses").where("entry_id", "in", entryIds).execute();
-	if (templateIds.length > 0) await db.deleteFrom("media_uses").where("template_id", "in", templateIds).execute();
-	const rows = [...wanted.values()]
-		.filter((use) => existing.has(use.media))
-		.map((use) => ({ media_id: use.media, place: use.place, ...use.owner }));
-	if (rows.length === 0) return;
-	await db.insertInto("media_uses").values(rows).execute();
-	await bringBack(db, [...existing]);
+	return wanted;
 }
 
 /** A file in the trash that is used again (an undo, a proposal written before it was trashed) comes back out. */

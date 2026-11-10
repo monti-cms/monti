@@ -259,6 +259,41 @@ describe("every way a body or a field changes writes the uses again", () => {
 	});
 });
 
+describe("a file the library does not have, already named", () => {
+	/** A published post whose cover names a file no write could put in now (one deleted from storage by hand, say). */
+	async function stranded() {
+		const { output } = await post({ values: { cover: { media: await file(), alt: "표지" } } });
+		await write("entries.publish", { ids: [output.id] });
+		for (const table of ["entries", "entry_published"] as const)
+			await db
+				.updateTable(table)
+				.set({ values: JSON.stringify({ cover: { media: "gone", alt: "표지" } }) })
+				.where(table === "entries" ? "id" : "entry_id", "=", output.id)
+				.execute();
+		return output.id;
+	}
+
+	it("09-4 a write that does not bring it in goes through: another field, archiving, and taking it out", async () => {
+		const id = await stranded();
+		await write("entries.save", { id, version: await versionOf(id), title: "고친 글" });
+		await write("entries.archive", { ids: [id] });
+		await write("entries.unarchive", { ids: [id] });
+		await write("entries.save", { id, version: await versionOf(id), values: { cover: null } });
+		await write("entries.publish", { ids: [id] });
+		expect(await rows()).toEqual([]);
+	});
+
+	it("09-4 a write may move it, but a missing file it names for the first time is refused", async () => {
+		const id = await stranded();
+		await expect(
+			write("entries.save", { id, version: await versionOf(id), doc: doc(image("b1", "gone")) }),
+		).resolves.toBeDefined();
+		await expect(
+			write("entries.save", { id, version: await versionOf(id), doc: doc(image("b2", "also-gone")) }),
+		).rejects.toMatchObject({ reason: { key: "media.unknown", values: { id: "also-gone" } } });
+	});
+});
+
 describe("a file in use stays out of the trash", () => {
 	const trash = async (ids: string[]) => (await write<MediaTrashResult>("media.trash", { ids })).output;
 	const trashed = async (id: string) =>

@@ -808,3 +808,31 @@ describe("opening a body with files", () => {
 		await expect.element(body().getByText("파일 없음")).toBeVisible();
 	});
 });
+
+describe("a save the server refuses", () => {
+	it("09-4 the reason shows, not an entry left unsaved with no word", async () => {
+		const [load] = media.FileInBody.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.FileInBody,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site;
+						loaded.site.transport = async (name, input, options) =>
+							name === "entries.save"
+								? { status: 422, body: { error: "check", reason: { key: "media.unknown", values: { id: "gone" } } } }
+								: transport(name, input, options);
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await userEvent.click(body().getByText("글의 첫 문단이에요."));
+		await userEvent.keyboard("{End} 더");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("없는 파일입니다.")).toBeVisible();
+	});
+});
