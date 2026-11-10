@@ -600,7 +600,7 @@ test.describe("a cover and what goes up for it", () => {
 		await writing(admin);
 		await cover(admin).click();
 		const dialog = admin.getByRole("dialog");
-		await dialog.getByRole("navigation").getByRole("button", { name }).click();
+		await dialog.locator("button[data-slot=folder-tile]", { hasText: name }).click();
 		const chooser = admin.waitForEvent("filechooser");
 		await dialog.getByRole("button", { name: "올리기" }).click();
 		await (await chooser).setFiles(file);
@@ -625,7 +625,7 @@ test.describe("a cover and what goes up for it", () => {
 		await admin.keyboard.type("/이미지");
 		await admin.keyboard.press("Enter");
 		const dialog = admin.getByRole("dialog");
-		await dialog.getByRole("navigation").getByRole("button", { name }).click();
+		await dialog.locator("button[data-slot=folder-tile]", { hasText: name }).click();
 		const chooser = admin.waitForEvent("filechooser");
 		await dialog.getByRole("button", { name: "올리기" }).click();
 		await (await chooser).setFiles(file);

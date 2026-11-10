@@ -393,7 +393,7 @@
 					"kind": "data",
 					"fields": ["id", "name", "depth"]
 				},
-				"foldersLabel": {
+				"pathLabel": {
 					"kind": "text",
 					"type": "string"
 				},

@@ -133,9 +133,8 @@ export const LibraryInFolder: Story = {
 	play: async (context) => {
 		await LibraryWindow.play?.(context);
 		const dialog = within(within(document.body).getByRole("dialog"));
-		await userEvent.click(
-			await within(dialog.getByRole("navigation")).findByRole("button", { name: /^Blog Assets/ }, wait),
-		);
+		// At the top, the only "Blog Assets" button is its folder's card.
+		await userEvent.click(await dialog.findByRole("button", { name: /^Blog Assets/ }, wait));
 		await dialog.findByRole("button", { name: /desk-morning/ }, wait);
 	},
 };

@@ -13,13 +13,11 @@ const openCard = () => userEvent.click(settings());
 const closeCard = () => userEvent.keyboard("{Escape}");
 const body = () => page.getByRole("textbox", { name: "본문" });
 /** The window opens at the top of the library: the story's files are in a folder. */
-const openAssets = () =>
-	userEvent.click(
-		page
-			.getByRole("dialog")
-			.getByRole("navigation")
-			.getByRole("button", { name: /^Blog Assets/ }),
-	);
+const openAssets = async () => {
+	const card = () => document.querySelector<HTMLElement>("[role=dialog] button[data-slot=folder-tile]");
+	await expect.poll(card).not.toBeNull();
+	await userEvent.click(page.elementLocator(card() as HTMLElement));
+};
 const properties = async () => {
 	const open = page.getByRole("button", { name: "속성" });
 	if (open.elements().length > 0 && open.element().getAttribute("aria-pressed") !== "true") await userEvent.click(open);

@@ -40,10 +40,16 @@ const canvasFile = async (name: string) => {
 	return new File([await canvas.convertToBlob({ type: "image/png" })], name, { type: "image/png" });
 };
 
-/** The window's folder list, and the folders it shows beside the files. */
-const folderRow = (dialog: Locator, name: RegExp) => dialog.getByRole("navigation").getByRole("button", { name });
+/** The window's path over the files, and the folders it shows over them. */
+const pathOf = (dialog: Locator) => dialog.getByRole("navigation", { name: "경로" });
 const folderCards = (dialog: Locator) => [...dialog.element().querySelectorAll("button[data-slot=folder-tile]")];
-const openAssets = (dialog: Locator) => userEvent.click(folderRow(dialog, /^Blog Assets/));
+/** A folder's card, once the open place shows it. */
+async function folderCard(dialog: Locator, name: string) {
+	const find = () => folderCards(dialog).find((card) => card.textContent === name) as HTMLElement | undefined;
+	await expect.poll(() => find()).toBeDefined();
+	return page.elementLocator(find() as HTMLElement);
+}
+const openAssets = async (dialog: Locator) => userEvent.click(await folderCard(dialog, "Blog Assets"));
 
 describe("from the library", () => {
 	it("09-3 [flow 6·29] [line-start] '/ 이미지' on an empty line opens the library's images, and the pick goes in", async () => {
@@ -54,7 +60,7 @@ describe("from the library", () => {
 		await userEvent.keyboard("{Enter}");
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("heading", { name: "라이브러리" })).toBeVisible();
-		await expect.element(folderRow(dialog, /^미디어/)).toHaveAttribute("aria-current", "page");
+		await expect.element(pathOf(dialog)).toHaveTextContent("미디어");
 		await expect.element(dialog.getByRole("button", { name: "넣기" })).not.toBeInTheDocument();
 		await openAssets(dialog);
 		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
@@ -63,18 +69,15 @@ describe("from the library", () => {
 		await expect.element(body().getByRole("textbox", { name: "캡션" })).toBeVisible();
 	});
 
-	it("09-3 the window keeps its height from folder to folder, and its folders read as the tree they are", async () => {
+	it("09-3 the window keeps its height from folder to folder", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 		// The laid-out height: the window scales as it opens.
 		const height = () => (dialog.element() as HTMLElement).offsetHeight;
 		const all = height();
-		const left = (name: RegExp) =>
-			folderRow(dialog, name).element().querySelector("span:not([aria-hidden])")?.getBoundingClientRect().left ?? 0;
-		expect(left(/^미디어/)).toBeLessThan(left(/^Blog Assets/));
-		expect(left(/^Blog Assets/)).toBeLessThan(left(/^covers/));
-		await userEvent.click(folderRow(dialog, /^diagrams/));
+		await openAssets(dialog);
+		await userEvent.click(await folderCard(dialog, "diagrams"));
 		await expect.element(dialog.getByText("여기에는 파일이 없습니다.")).toBeVisible();
 		expect(height()).toBe(all);
 	});
@@ -98,14 +101,15 @@ describe("from the library", () => {
 		await userEvent.click(card("covers"));
 		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toBeVisible();
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
-		await expect.element(folderRow(dialog, /^covers/)).toHaveAttribute("aria-current", "page");
+		await expect.element(pathOf(dialog)).toHaveTextContent("미디어/Blog Assets/covers");
 	});
 
-	it("09-3 inside a folder its path is over the tiles, and each step of it goes back up; the top has none", async () => {
+	it("09-3 the path over the tiles is the way up: each step of it goes there; at the top it is the top's name alone", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
-		const path = dialog.getByRole("navigation", { name: "경로" });
-		await expect.element(path).not.toBeInTheDocument();
+		const path = pathOf(dialog);
+		await expect.element(path).toHaveTextContent("미디어");
+		expect(path.getByRole("button").elements()).toEqual([]);
 		const card = (name: string) => folderCards(dialog).find((each) => each.textContent === name) as HTMLElement;
 		await userEvent.click(card("Blog Assets"));
 		await userEvent.click(card("covers"));
@@ -114,7 +118,7 @@ describe("from the library", () => {
 		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
 		await expect.element(path).toHaveTextContent("미디어/Blog Assets");
 		await userEvent.click(path.getByRole("button", { name: "미디어" }));
-		await expect.element(path).not.toBeInTheDocument();
+		await expect.poll(() => path.getByRole("button").elements().length).toBe(0);
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 	});
 
@@ -145,25 +149,26 @@ describe("from the library", () => {
 		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
 	});
 
-	it("09-3 T117 [keys-move] Enter on a folder's card goes in, and the keyboard goes on from its row in the list", async () => {
+	it("09-3 T117 [keys-move] Enter on a folder's card goes in, and the keyboard goes on from the new place's first card", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 		(folderCards(dialog)[0] as HTMLElement).focus();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
-		await expect.element(folderRow(dialog, /^Blog Assets/)).toHaveFocus();
+		await expect.element(await folderCard(dialog, "covers")).toHaveFocus();
 	});
 
 	it("09-3 T117 going to another folder ends the search", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
 		const search = dialog.getByRole("searchbox", { name: "파일 이름 검색" });
-		await userEvent.fill(search, "desk");
-		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
-		await userEvent.click(folderRow(dialog, /^covers/));
-		await expect.element(search).toHaveValue("");
+		await openAssets(dialog);
+		await userEvent.fill(search, "cafe");
 		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toBeVisible();
+		await userEvent.click(pathOf(dialog).getByRole("button", { name: "미디어" }));
+		await expect.element(search).toHaveValue("");
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
 	});
 
 	it("09-3 searching drops what was picked: what goes in is always a file in sight", async () => {

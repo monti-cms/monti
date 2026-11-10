@@ -2402,15 +2402,15 @@ function ProposalDock({
 }
 
 /**
- * The library as a picker, open over the screen (an image to insert): its `title`, the folders at the left (from the data: each one's `id`, `name` and
- * `depth`; `folder` the open one), the search box, the files (`MediaTile`s) and the buttons.
+ * The library as a picker, open over the screen (an image to insert): its `title`, the open place's path over the files (from the data: each folder's `id`,
+ * `name` and `depth`; `folder` the open one), the search box, the files (`MediaTile`s) and the buttons.
  */
 function PickerDialog({
 	title,
 	topLabel,
 	folders,
 	folder,
-	foldersLabel,
+	pathLabel,
 	searchLabel,
 	uploadLabel,
 	confirmLabel,
@@ -2420,7 +2420,7 @@ function PickerDialog({
 	topLabel?: string;
 	folders?: readonly { id: string; name: string; depth: number }[];
 	folder?: string;
-	foldersLabel?: string;
+	pathLabel?: string;
 	searchLabel?: string;
 	uploadLabel?: string;
 	confirmLabel?: string;
@@ -2436,8 +2436,7 @@ function PickerDialog({
 			folders={folders ?? []}
 			folder={folder ?? null}
 			onFolderChange={none}
-			foldersLabel={foldersLabel ?? ""}
-			pathLabel="Path"
+			pathLabel={pathLabel ?? ""}
 			search=""
 			onSearchChange={none}
 			searchLabel={searchLabel ?? ""}
@@ -3021,7 +3020,7 @@ export const CATALOG = {
 			topLabel: "text",
 			folders: "data:id,name,depth",
 			folder: "state",
-			foldersLabel: "text",
+			pathLabel: "text",
 			searchLabel: "text",
 			uploadLabel: "text",
 			confirmLabel: "text",

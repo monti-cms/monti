@@ -8,8 +8,8 @@ const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 /**
- * The library as a picker and a file browser: a 1040px modal, the search on the title's line, the folders at the left (the top entry for the top level, sub-folders indented),
- * the open folder's folders and its files as four columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
+ * The library as a picker and a file browser: an 896px modal, the search on the title's line, the open place's path (each folder above goes back up), its folders
+ * and its files as four columns of tiles, "Upload" at the bottom left, Cancel and the one pill at the bottom right.
  */
 const meta = {
 	title: "Patterns/Sheet/MediaPicker",
@@ -48,7 +48,6 @@ function Picker({ files = false, searching = false }: { files?: boolean; searchi
 			folders={FOLDERS}
 			folder={folder}
 			onFolderChange={setFolder}
-			foldersLabel="폴더"
 			pathLabel="경로"
 			search={searching ? "2026" : ""}
 			onSearchChange={() => {}}

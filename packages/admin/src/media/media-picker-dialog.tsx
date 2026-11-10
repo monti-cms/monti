@@ -77,7 +77,6 @@ export function MediaPickerDialog({
 			folders={folders.list.map((each) => ({ id: each.id, name: each.name, depth: each.depth }))}
 			folder={folder}
 			onFolderChange={go}
-			foldersLabel={t("folders.tree")}
 			pathLabel={t("library.path")}
 			search={search}
 			onSearchChange={(next) => {

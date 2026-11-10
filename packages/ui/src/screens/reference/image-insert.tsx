@@ -68,7 +68,6 @@ export function ImageInsertScreen() {
 				]}
 				folder={null}
 				onFolderChange={still}
-				foldersLabel="폴더"
 				pathLabel="경로"
 				search=""
 				onSearchChange={still}
