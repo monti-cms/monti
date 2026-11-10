@@ -27,7 +27,7 @@ export const EditorMedia = createContext<EditorMediaValue | null>(null);
 type BodyFiles = {
 	/** The library's files the body's blocks show, by id: null for one the library does not have. One not here yet is being read. */
 	files: ReadonlyMap<string, MediaItem | null>;
-	/** Asks for a file; those asked in the same moment are read together. */
+	/** Asks for a file, read again if known; those asked in the same moment are read together. */
 	want: (id: string) => void;
 };
 
@@ -36,35 +36,40 @@ const MOST = 1000;
 
 /**
  * The files a body's image and file blocks show, read together: the blocks that appear at once ask in the same moment, and one `media.query` reads them all,
- * not a read for each block (T110). A file read once stays known while the editor is open, as a block's own read did.
+ * not a read for each block (T110). A block that comes back (undo, the same file picked again) reads its file again, as its own read did, and shows what it
+ * knew meanwhile.
  */
 export function useBodyFiles(): BodyFiles {
 	const { run } = useOperation<MediaQueryResult>("media.query");
 	const [files, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map());
-	const asked = useRef(new Set<string>());
-	const waiting = useRef<string[]>([]);
+	const waiting = useRef(new Set<string>());
 	const read = useCallback(
 		async (ids: string[]) => {
-			const result = await run({ ids, pageSize: ids.length });
-			// Not read (signed out, the network): asked again when a block comes back.
-			if (!result.ok) {
-				for (const id of ids) asked.current.delete(id);
-				return;
-			}
-			const found = new Map(result.body.items.map((item) => [item.id, item]));
-			setFiles((known) => new Map([...known, ...ids.map((id) => [id, found.get(id) ?? null] as const)]));
+			const result = await run({ ids, pageSize: ids.length }).catch(() => null);
+			const found = result?.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
+			setFiles(
+				(known) =>
+					new Map([
+						...known,
+						// Not read (refused, the network): a file already shown stays; one never shown says it is not there, as a block's own read did. The
+						// block reads again when it comes back.
+						...ids.flatMap((id) =>
+							found ? [[id, found.get(id) ?? null] as const] : known.has(id) ? [] : [[id, null] as const],
+						),
+					]),
+			);
 		},
 		[run],
 	);
 	const want = useCallback(
 		(id: string) => {
-			if (asked.current.has(id)) return;
-			asked.current.add(id);
-			waiting.current.push(id);
-			if (waiting.current.length > 1) return;
+			if (waiting.current.has(id)) return;
+			waiting.current.add(id);
+			if (waiting.current.size > 1) return;
 			// The blocks of an opened body mount one after another in the same task: the read waits for the last of them.
 			setTimeout(() => {
-				const ids = waiting.current.splice(0);
+				const ids = [...waiting.current];
+				waiting.current.clear();
 				for (let start = 0; start < ids.length; start += MOST) void read(ids.slice(start, start + MOST));
 			});
 		},

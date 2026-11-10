@@ -723,37 +723,67 @@ describe("an image in the text", () => {
 	});
 });
 
+type Call = { name: string; input: unknown };
+const bodyRead = (call: Call) =>
+	call.name === "media.query" && ((call.input as { ids?: string[] }).ids ?? []).length > 0;
+
+/** `ManyInBody` with the operations the page runs written down; `refuse` turns the body's reads of its files away, as a server error would. */
+function recorded({ refuse = false } = {}) {
+	const calls: Call[] = [];
+	const [load] = media.ManyInBody.loaders as [() => Promise<{ site: StorySite }>];
+	const story = composeStory(
+		{
+			...media.ManyInBody,
+			loaders: [
+				async () => {
+					const loaded = await load();
+					const { transport } = loaded.site;
+					loaded.site.transport = async (name, input, options) => {
+						const call = { name, input };
+						calls.push(call);
+						if (refuse && bodyRead(call)) return { status: 500, body: { error: "unexpected" } };
+						return transport(name, input, options);
+					};
+					return loaded;
+				},
+			],
+		},
+		media.default,
+	);
+	return { run: () => story.run(), calls, reads: () => calls.filter(bodyRead) };
+}
+
 describe("opening a body with files", () => {
 	it("09-1 T110 the body's pictures and files are read together, once, and one the library no longer has says so", async () => {
-		const calls: { name: string; input: unknown }[] = [];
-		const [load] = media.ManyInBody.loaders as [() => Promise<{ site: StorySite }>];
-		const story = composeStory(
-			{
-				...media.ManyInBody,
-				loaders: [
-					async () => {
-						const loaded = await load();
-						const { transport } = loaded.site;
-						loaded.site.transport = (name, input, options) => {
-							calls.push({ name, input });
-							return transport(name, input, options);
-						};
-						return loaded;
-					},
-				],
-			},
-			media.default,
-		);
+		const story = recorded();
 		await story.run();
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
 		await expect.element(body().getByText("라이브러리에 없는 파일")).toBeVisible();
-		expect(calls.filter((call) => call.name === "media.get")).toEqual([]);
-		const reads = calls.filter(
-			(call) => call.name === "media.query" && ((call.input as { ids?: string[] }).ids ?? []).length > 0,
-		);
-		expect(reads).toHaveLength(1);
-		expect((reads[0]?.input as { ids: string[] }).ids).toHaveLength(4);
+		expect(story.calls.filter((call) => call.name === "media.get")).toEqual([]);
+		expect(story.reads()).toHaveLength(1);
+		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(4);
+	});
+
+	it("09-1 T110 a block that comes back (undo) reads its file again, alone", async () => {
+		const story = recorded();
+		await story.run();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		const fileBlocks = () => body().element().querySelectorAll("[data-block=file]");
+		const [first] = fileBlocks();
+		if (!first) throw new Error("no file block");
+		await userEvent.click(page.elementLocator(first));
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlocks().length).toBe(1);
+		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		await expect.poll(() => story.reads().length).toBe(2);
+		expect((story.reads()[1]?.input as { ids: string[] }).ids).toHaveLength(1);
+	});
+
+	it("09-1 T110 a read turned away leaves no file blank: each says it is not there, as a block's own read did", async () => {
+		await recorded({ refuse: true }).run();
+		await expect.poll(() => body().getByText("라이브러리에 없는 파일").elements().length).toBe(2);
 	});
 });

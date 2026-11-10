@@ -239,7 +239,10 @@ const Query = z.object({
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
 	pageSize: z.number().int().min(1).max(1000).default(MEDIA_PAGE_SIZE),
-	/** These files, wherever they are. An empty list asks for no file: it is how a body learns `storage`, whether the site can take uploads. */
+	/**
+	 * These files, wherever they are, the trash too (as `media.get`): a body shows the files it holds, and a draft can hold one trashed since. An empty list asks
+	 * for no file: it is how a body learns `storage`, whether the site can take uploads.
+	 */
 	ids: z.array(z.string()).optional(),
 });
 
@@ -256,7 +259,10 @@ export const mediaOperations = [
 			const looking = search !== "" || input.kinds.length > 0 || input.used.length > 0;
 			const live = ctx.db.selectFrom("media").where("trashed_at", "is", null);
 			const asked =
-				input.ids && (input.ids.length > 0 ? live.where("id", "in", input.ids) : live.where(sql<boolean>`false`));
+				input.ids &&
+				(input.ids.length > 0
+					? ctx.db.selectFrom("media").where("id", "in", input.ids)
+					: live.where(sql<boolean>`false`));
 			let filtered = asked ?? live;
 			if (!asked && input.folder !== undefined && input.scope === "here") {
 				// A folder lists what sits right in it; a search or a filter looks for files, so it goes through the subfolders (as the entry list, doc 07).
