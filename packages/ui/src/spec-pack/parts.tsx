@@ -2437,6 +2437,7 @@ function PickerDialog({
 			folder={folder ?? null}
 			onFolderChange={none}
 			foldersLabel={foldersLabel ?? ""}
+			pathLabel="Path"
 			search=""
 			onSearchChange={none}
 			searchLabel={searchLabel ?? ""}

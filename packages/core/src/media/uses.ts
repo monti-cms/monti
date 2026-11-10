@@ -44,7 +44,7 @@ export async function usedOf(db: Db, ids: string[]): Promise<Map<string, number>
 
 /**
  * What every write of a field's value checks of a media field: it holds a file and what it says of it, and a field that takes images takes no other file. A file the
- * library does not have is the save's to keep: its use is simply not written. `null` clears the field.
+ * library does not have is refused with every other use (`rewriteUses`). `null` clears the field.
  */
 export async function checkMediaValues(
 	db: Db,
@@ -72,8 +72,16 @@ type Owner = { entry_id: string; template_id: null } | { entry_id: null; templat
  *
  * Each file named is locked first, so this and `media.trash` take turns: a save that starts using a file either waits for the trash to finish and brings the file
  * back out, or makes the trash see the use and leave the file. Either way a file in use is never in the trash (09-4).
+ *
+ * A write (`refuseMissing`) that leaves a body or a field naming a file the library does not have is refused: an import, an agent or the API cannot put in a
+ * file that is not there (2026-11-10, owner). An undo or a schema change puts back what was, and writes the uses it can.
  */
-export async function rewriteUses(db: Db, schema: Schema, refs: RecordRef[]): Promise<void> {
+export async function rewriteUses(
+	db: Db,
+	schema: Schema,
+	refs: RecordRef[],
+	{ refuseMissing = false }: { refuseMissing?: boolean } = {},
+): Promise<void> {
 	const entryIds = refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
 	const templateIds = refs.filter((ref) => ref.kind === "template").map((ref) => ref.id);
 	if (entryIds.length === 0 && templateIds.length === 0) return;
@@ -116,6 +124,9 @@ export async function rewriteUses(db: Db, schema: Schema, refs: RecordRef[]): Pr
 		named.length === 0
 			? new Set<string>()
 			: new Set((await db.selectFrom("media").select("id").where("id", "in", named).execute()).map((row) => row.id));
+
+	const missing = refuseMissing ? named.find((id) => !existing.has(id)) : undefined;
+	if (missing !== undefined) throw new CheckError({ key: "media.unknown", values: { id: missing } });
 
 	if (entryIds.length > 0) await db.deleteFrom("media_uses").where("entry_id", "in", entryIds).execute();
 	if (templateIds.length > 0) await db.deleteFrom("media_uses").where("template_id", "in", templateIds).execute();

@@ -77,6 +77,15 @@ describe("browsing", () => {
 		await expect.element(heading()).toHaveTextContent("배경");
 	});
 
+	it('09-1 [flow 6·16] a file\'s right-click menu says "상세": its panel opens beside the grid, on the same screen', async () => {
+		await Top.run();
+		await userEvent.click(tile("top-level-photo.jpg"), { button: "right" });
+		await expect.element(page.getByRole("menuitem", { name: "열기" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("menuitem", { name: "상세" }));
+		await expect.element(page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		await expect.element(heading()).toHaveTextContent("미디어");
+	});
+
 	it("09-1 [flow 6·13] a right click on empty ground offers uploading and a new folder", async () => {
 		await Top.run();
 		await expect.element(folder("Blog Assets")).toBeVisible();

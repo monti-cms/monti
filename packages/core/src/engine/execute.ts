@@ -140,7 +140,7 @@ export async function runWrite<Output>(
 
 		const records = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
-		await rewriteUses(trx, engine.site.schema(), records);
+		await rewriteUses(trx, engine.site.schema(), records, { refuseMissing: true });
 		const after = await loadRecords(engine, trx, records);
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();

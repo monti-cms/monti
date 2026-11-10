@@ -64,7 +64,7 @@ import {
 	Document,
 	Folder,
 	FolderAdd,
-	Launch,
+	Information,
 	OverflowMenuHorizontal,
 	TrashCan,
 	Upload as UploadIcon,
@@ -269,9 +269,10 @@ function FileMenuItems({
 	const Content = context ? ContextMenuSubContent : DropdownMenuSubContent;
 	return (
 		<>
+			{/* It opens the file's panel beside the list, not another screen (2026-11-10, owner). */}
 			<Item onClick={onOpen}>
-				<Launch aria-hidden />
-				{t("list.open")}
+				<Information aria-hidden />
+				{t("library.details")}
 			</Item>
 			{item.uses > 0 && (
 				<Sub>

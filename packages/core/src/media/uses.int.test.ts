@@ -245,10 +245,17 @@ describe("every way a body or a field changes writes the uses again", () => {
 		await migrateContent(db, schema, []);
 	});
 
-	it("09-4 a file the library does not have writes no use, and the save still goes through", async () => {
-		const { output } = await post({ values: { cover: { media: "no-such-file", alt: "표지" } } });
-		expect(output.id).toBeTypeOf("string");
+	it("09-4 a file the library does not have is refused, in a field or in the body: nothing is written", async () => {
+		const entries = async () => (await db.selectFrom("entries").select("id").execute()).length;
+		const before = await entries();
+		await expect(post({ values: { cover: { media: "no-such-file", alt: "표지" } } })).rejects.toMatchObject({
+			reason: { key: "media.unknown", values: { id: "no-such-file" } },
+		});
+		await expect(
+			post({ doc: { type: "doc", blocks: [{ id: "b1", type: "image", attrs: { media: "no-such-file" } }] } }),
+		).rejects.toMatchObject({ reason: { key: "media.unknown" } });
 		expect(await rows()).toEqual([]);
+		expect(await entries()).toBe(before);
 	});
 });
 

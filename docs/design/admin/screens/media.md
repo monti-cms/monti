@@ -88,7 +88,7 @@
 |---|---|---|
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · "옮기기"(`ContextMenuSub`) │ "폴더 지우기"(`variant="danger"`) | 열린 동안 그 타일은 선택 바탕을 유지한다. 폴더 지우기는 곧바로 옮기고 `toast`에 "되돌리기", 쓰는 곳이 있는 파일이 남으면 "보기". |
 | 빈 곳 오른쪽 클릭 | `ContextMenu`: "올리기" · "새 폴더" | |
-| 파일 오른쪽 클릭 | `ContextMenu`: "열기" · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. Del 키는 타일의 버튼, 체크, ⋯에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
+| 파일 오른쪽 클릭 | `ContextMenu`: "상세"(옆 패널을 연다. 다른 화면으로 가는 글 목록의 "열기"와 다르다) · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. Del 키는 타일의 버튼, 체크, ⋯에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
 | 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Controls/Choice/Segmented, Patterns/List/BulkBar, Patterns/List/FileUseRow, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBar, Patterns/List/Table, Controls/Status/Count, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
@@ -176,6 +176,7 @@
 | 폴더 목록 | `MediaPicker`의 `folders`(`depth`), `topLabel` "미디어", `folder` | 사이드바의 트리를 그대로 쓴다(2026-11-09 소유자): 맨 위 행은 `NAV_ROW`(아이콘 없음. 창 자체가 라이브러리다), 그 아래는 `SidebarMenuSub`와 `SidebarMenuSubButton`이다. 깊이, 선, 고른 폴더의 모양(잉크와 굵은 글자, 바탕 없음)이 사이드바와 같다. 개수는 없다. 폴더가 세는 파일과 창이 보이는 파일이 다르기 때문이다. 열 너비는 176px이다(2026-11-10 소유자). 긴 이름은 말줄임. "미디어"는 최상위이고 창은 여기서 열린다. |
 | 검색 | `MediaPicker`의 `search`, `onSearchChange`, `searchLabel` "파일 이름 검색"(`SearchBox`) | 제목 줄 오른쪽의 늘 열린 입력 칸이다. 라이브러리 화면과 같게 찾는다: 최상위에서는 전부, 폴더 안에서는 그 폴더와 하위. 끝의 ×로 비우면 연 곳으로 돌아간다. 폴더를 옮기면 검색이 끝난다. |
 | 찾는 곳 칩 "Blog Assets ▾" | `MediaPicker`의 `scopes` · `scope` · `onScopeChange` · `scopeLabel` "찾는 곳" | 폴더 안에서 검색 칸 앞에 있다. 메뉴에서 "모든 폴더"로 넓힌다. 라이브러리 화면과 같다. |
+| 경로 "미디어 / Blog Assets / covers" | `MediaPicker`가 `folders`와 `folder`로 그린다(`pathLabel` "경로"). 위 폴더마다 `TextButton variant="underline" quiet`, 연 폴더는 글자 | 폴더 안에서만 타일 위에 있다. 누르면 그 폴더로 간다. 라이브러리 화면의 경로와 같이 위로 가는 길이다. "상위 폴더로" 타일은 두지 않는다(2026-11-10 소유자). |
 | 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 네 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
 | 빈 곳 | `MediaPicker`의 `notice`에 `Text variant="note" tone="subtle"` | 폴더도 파일도 없으면 "여기에는 파일이 없습니다.", 찾은 것이 없으면 "맞는 파일이 없습니다." |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |

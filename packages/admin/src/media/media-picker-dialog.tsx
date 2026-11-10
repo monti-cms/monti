@@ -78,6 +78,7 @@ export function MediaPickerDialog({
 			folder={folder}
 			onFolderChange={go}
 			foldersLabel={t("folders.tree")}
+			pathLabel={t("library.path")}
 			search={search}
 			onSearchChange={(next) => {
 				startOver();

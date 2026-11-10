@@ -9,6 +9,7 @@ import { useUiLabels } from "./labels";
 import { NAV_ROW } from "./nav-link";
 import { SearchBox, type SearchTarget } from "./search-box";
 import { folderTree, SidebarMenuSub, SidebarMenuSubButton } from "./sidebar";
+import { TextButton } from "./text-button";
 
 /** One place in the folder list of the picker. `depth` 0 is a folder at the top, 1 one inside it. */
 interface MediaPickerFolder {
@@ -20,13 +21,28 @@ interface MediaPickerFolder {
 /** The deepest a folder is drawn, as in the sidebar's tree. */
 const DEEPEST = 3;
 
+/** The folders above the one at `index` in a list drawn depth first, the top one first. */
+function aboveOf(folders: readonly MediaPickerFolder[], index: number): MediaPickerFolder[] {
+	const above: MediaPickerFolder[] = [];
+	let depth = folders[index]?.depth ?? 0;
+	for (let at = index - 1; at >= 0 && depth > 0; at--) {
+		const item = folders[at];
+		if (item && item.depth < depth) {
+			above.unshift(item);
+			depth = item.depth;
+		}
+	}
+	return above;
+}
+
 /**
  * The library as a picker (images to insert, a cover image, files to attach), and a file browser: a 1040px modal (2026-11-10, owner: room for four columns, as the library's own
  * grid) with the search at the right of the title's line, as the library screen has it, the folders in a 176px column at the left, and at the right what the open place holds:
  * its `subfolders` (a `FolderTile` each) over its files as four columns of tiles (`children`: a `Tile` each, `FilePreview` for a file). "Upload" is at the bottom left, Cancel and
  * the one pill at the bottom right. Choosing and then pressing the pill puts the file in at once; there is no step after it. Until a file is picked the pill is not there
  * (`confirmHidden`). The folder list is `folders` under the top entry `topLabel`, drawn with the sidebar's own rows (no icon: the window is the library already); `folder` is the
- * open one, `null` for the top. While a search looks inside a folder, `scopes` is the chip in the search box that says where it looks (this folder, or all of them).
+ * open one, `null` for the top. Inside a folder its path is over the tiles, as on the library's page: the top and each folder above it go there when pressed, the only
+ * way up besides the list (2026-11-10, owner). While a search looks inside a folder, `scopes` is the chip in the search box that says where it looks (this folder, or all of them).
  */
 function MediaPicker({
 	open,
@@ -37,6 +53,7 @@ function MediaPicker({
 	folder,
 	onFolderChange,
 	foldersLabel,
+	pathLabel,
 	search,
 	onSearchChange,
 	searchLabel,
@@ -64,6 +81,8 @@ function MediaPicker({
 	onFolderChange: (id: string | null) => void;
 	/** The name of the folder list, for screen readers. */
 	foldersLabel: string;
+	/** The name of the open folder's path, for screen readers. */
+	pathLabel: string;
 	search: string;
 	onSearchChange: (search: string) => void;
 	/** The name and the placeholder of the search box. */
@@ -91,6 +110,8 @@ function MediaPicker({
 	const labels = useUiLabels();
 	const depths = folders.map((item) => Math.min(item.depth, DEEPEST) as 0 | 1 | 2 | 3);
 	const tree = folderTree(depths);
+	const openIndex = folders.findIndex((item) => item.id === folder);
+	const openFolder = openIndex < 0 ? null : folders[openIndex];
 	// A folder's card goes with the place it was in: the keyboard goes on from the open row, not from the window's first.
 	const list = React.useRef<HTMLElement>(null);
 	const lastFolder = React.useRef(folder);
@@ -147,7 +168,24 @@ function MediaPicker({
 							))}
 						</SidebarMenuSub>
 					</nav>
-					<div className="flex min-h-0 min-w-0 flex-col">
+					<div className="flex min-h-0 min-w-0 flex-col gap-monti-16">
+						{openFolder && (
+							<nav aria-label={pathLabel} className="flex min-w-0 shrink-0 items-baseline gap-monti-6 text-monti-note">
+								{[{ id: null, name: topLabel }, ...aboveOf(folders, openIndex)].map((up) => (
+									<React.Fragment key={up.id ?? "top"}>
+										<TextButton variant="underline" quiet onClick={() => onFolderChange(up.id)}>
+											{up.name}
+										</TextButton>
+										<span aria-hidden="true" className="text-monti-faint">
+											/
+										</span>
+									</React.Fragment>
+								))}
+								<span aria-current="page" className="min-w-0 truncate text-monti-default">
+									{openFolder.name}
+								</span>
+							</nav>
+						)}
 						{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
 						<div className="-m-monti-4 flex min-h-0 flex-1 scroll-py-monti-8 flex-col gap-monti-24 overflow-y-auto p-monti-4">
 							{subfolders ? <div className="grid shrink-0 grid-cols-4 gap-monti-12">{subfolders}</div> : null}

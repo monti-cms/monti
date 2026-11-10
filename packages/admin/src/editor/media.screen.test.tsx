@@ -101,6 +101,23 @@ describe("from the library", () => {
 		await expect.element(folderRow(dialog, /^covers/)).toHaveAttribute("aria-current", "page");
 	});
 
+	it("09-3 inside a folder its path is over the tiles, and each step of it goes back up; the top has none", async () => {
+		await LibraryWindow.run();
+		const dialog = page.getByRole("dialog");
+		const path = dialog.getByRole("navigation", { name: "경로" });
+		await expect.element(path).not.toBeInTheDocument();
+		const card = (name: string) => folderCards(dialog).find((each) => each.textContent === name) as HTMLElement;
+		await userEvent.click(card("Blog Assets"));
+		await userEvent.click(card("covers"));
+		await expect.element(path).toHaveTextContent("미디어/Blog Assets/covers");
+		await userEvent.click(path.getByRole("button", { name: "Blog Assets" }));
+		expect(folderCards(dialog).map((each) => each.textContent)).toEqual(["covers", "diagrams"]);
+		await expect.element(path).toHaveTextContent("미디어/Blog Assets");
+		await userEvent.click(path.getByRole("button", { name: "미디어" }));
+		await expect.element(path).not.toBeInTheDocument();
+		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
+	});
+
 	it("09-3 T117 a search looks as the library's does: through the folder's subfolders, saying where each file is, and through all of them on request", async () => {
 		await LibraryWindow.run();
 		const dialog = page.getByRole("dialog");
@@ -754,16 +771,15 @@ function recorded({ refuse = false } = {}) {
 }
 
 describe("opening a body with files", () => {
-	it("09-1 T110 the body's pictures and files are read together, once, and one the library no longer has says so", async () => {
+	it("09-1 T110 the body's pictures and files are read together, once", async () => {
 		const story = recorded();
 		await story.run();
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
-		await expect.element(body().getByText("라이브러리에 없는 파일")).toBeVisible();
 		expect(story.calls.filter((call) => call.name === "media.get")).toEqual([]);
 		expect(story.reads()).toHaveLength(1);
-		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(4);
+		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(3);
 	});
 
 	it("09-1 T110 a block that comes back (undo) reads its file again, alone", async () => {
@@ -775,7 +791,7 @@ describe("opening a body with files", () => {
 		if (!first) throw new Error("no file block");
 		await userEvent.click(page.elementLocator(first));
 		await userEvent.keyboard("{Backspace}");
-		await expect.poll(() => fileBlocks().length).toBe(1);
+		await expect.poll(() => fileBlocks().length).toBe(0);
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.poll(() => story.reads().length).toBe(2);
@@ -784,6 +800,6 @@ describe("opening a body with files", () => {
 
 	it("09-1 T110 a read turned away leaves no file blank: each says it is not there, as a block's own read did", async () => {
 		await recorded({ refuse: true }).run();
-		await expect.poll(() => body().getByText("라이브러리에 없는 파일").elements().length).toBe(2);
+		await expect.element(body().getByText("파일 없음")).toBeVisible();
 	});
 });

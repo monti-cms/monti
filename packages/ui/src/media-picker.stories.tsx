@@ -49,6 +49,7 @@ function Picker({ files = false, searching = false }: { files?: boolean; searchi
 			folder={folder}
 			onFolderChange={setFolder}
 			foldersLabel="폴더"
+			pathLabel="경로"
 			search={searching ? "2026" : ""}
 			onSearchChange={() => {}}
 			searchLabel="파일 이름 검색"

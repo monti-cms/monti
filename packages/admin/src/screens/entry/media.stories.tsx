@@ -103,14 +103,13 @@ export const FileInBody: Story = {
 	}),
 };
 
-/** A body of several pictures and files, one of them no longer in the library: read together when the entry opens (T110). */
+/** A body of several pictures and files: read together when the entry opens (T110). */
 export const ManyInBody: Story = {
 	loaders: entry({
 		body: ({ desk, code, notes }) => [
 			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
 			{ id: "f_1", type: "file", attrs: { media: notes } },
 			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
-			{ id: "f_2", type: "file", attrs: { media: "gone", name: "old-notes.pdf" } },
 		],
 	}),
 };

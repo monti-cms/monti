@@ -204,7 +204,7 @@ describe("in a translation", () => {
 		await userEvent.click(mark);
 		await expect.element(page.getByText("desk-morning.jpg · 아침 책상")).toBeVisible();
 		await expect.element(page.getByText("cybersecurity-code.jpg · 화면에 뜬 코드")).toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "그대로 두기", exact: true }));
+		await userEvent.click(page.getByRole("button", { name: "번역 유지", exact: true }));
 		await expect.element(mark).not.toBeInTheDocument();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await expect.element(page.getByText("원문 따름", { exact: true })).not.toBeInTheDocument();

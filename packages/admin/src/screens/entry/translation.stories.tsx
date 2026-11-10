@@ -237,7 +237,7 @@ export const FieldsChanged: Story = {
 	},
 };
 
-/** The title's card: the source's title before and after, and "그대로 두기" (T111). */
+/** The title's card: the source's title before and after, and "번역 유지" (T111). */
 export const TitleCard: Story = {
 	loaders: site("fieldsChanged", "english"),
 	play: async (context) => {
@@ -263,7 +263,7 @@ export const FieldsInTheList: Story = {
 	},
 };
 
-/** A changed block's card: the source before and after, and "그대로 두기" (flow 3, step 10). */
+/** A changed block's card: the source before and after, and "번역 유지" (flow 3, step 10). */
 export const ChangedCard: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {

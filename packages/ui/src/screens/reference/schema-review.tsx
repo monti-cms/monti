@@ -68,7 +68,7 @@ export function SchemaReviewScreen() {
 											label="빈 글 148편 채우기"
 											control={<ShownSelect value="메모" size="md" width="fit" />}
 										/>
-										<RadioItem value="leave" label="그대로 두기" />
+										<RadioItem value="leave" label="비워 두기" />
 									</RadioGroup>
 								</ChangeGroup>
 							</Stack>

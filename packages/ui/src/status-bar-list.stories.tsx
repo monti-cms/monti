@@ -63,7 +63,7 @@ export const WithSourceChanges: Story = {
 			>
 				<TodoItem title="본문" detail="흐린 블록 1" blocking onOpen={() => {}} />
 				<StatusBarListGroup label="원문 변경" count={2}>
-					<TodoItem title="제목" tag="변경" actionLabel="그대로 두기" onAction={() => {}} onOpen={() => {}} />
+					<TodoItem title="제목" tag="변경" actionLabel="번역 유지" onAction={() => {}} onOpen={() => {}} />
 					<TodoItem
 						title="What I took out"
 						tag="삭제"

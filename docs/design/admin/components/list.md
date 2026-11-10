@@ -139,7 +139,7 @@
 
 ### 코드
 
-`MediaPicker`는 패널 전체다. `topLabel`(폴더 목록의 맨 위), `folders`(각각 `depth`), `folder`(최상위는 `null`), 검색(제목 줄의 `SearchBox`, 폴더 안에서는 `scopes` · `scope` · `onScopeChange` · `scopeLabel`로 찾는 곳 칩), `onUpload`, `confirmLabel`(아무것도 고르지 않은 동안은 `confirmHidden`으로 알약이 없다. 흐린 알약은 왜 못 누르는지 말하지 않는다, 원칙 7), `subfolders`(연 곳의 `FolderTile`들, 파일 위에 네 열), `children`인 타일(각각 `Tile`, 파일은 `FilePreview`)을 받는다. 오른쪽은 패널 안에서 스크롤한다. 폴더 목록은 사이드바의 행을 그대로 쓴다(`NAV_ROW`, `SidebarMenuSub`, `SidebarMenuSubButton`).
+`MediaPicker`는 패널 전체다. `topLabel`(폴더 목록의 맨 위), `folders`(각각 `depth`), `folder`(최상위는 `null`. 폴더 안이면 타일 위에 경로가 있고, 위 폴더마다 누르면 그리로 간다. 이름은 `pathLabel`), 검색(제목 줄의 `SearchBox`, 폴더 안에서는 `scopes` · `scope` · `onScopeChange` · `scopeLabel`로 찾는 곳 칩), `onUpload`, `confirmLabel`(아무것도 고르지 않은 동안은 `confirmHidden`으로 알약이 없다. 흐린 알약은 왜 못 누르는지 말하지 않는다, 원칙 7), `subfolders`(연 곳의 `FolderTile`들, 파일 위에 네 열), `children`인 타일(각각 `Tile`, 파일은 `FilePreview`)을 받는다. 오른쪽은 패널 안에서 스크롤한다. 폴더 목록은 사이드바의 행을 그대로 쓴다(`NAV_ROW`, `SidebarMenuSub`, `SidebarMenuSubButton`).
 
 `FileUseRow`는 파일 패널의 쓰는 곳 한 행이다. `title`(누르면 그리로 간다), 끝에 `places`(그 안의 자리, "대표 이미지 · 본문"). 제목이 길어도 한 줄이다: 제목이 …로 잘리고 자리는 줄어들지 않는다.
 
