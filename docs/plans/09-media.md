@@ -329,7 +329,7 @@ pnpm lint && pnpm check:korean && pnpm check:design && pnpm gen:tokens --check \
 ```
 
 - tracker: T33, T59, T25, T67, T99를 "끝낸 일"로, 09를 "통합 대기"(흐름 6·06의 ✦ 채우기인 T104가 남으므로)로, PR 번호를 적는다. README가 바뀌면 `README.ko.md`도 함께.
-- PR 본문: 끝 조건 09-1~5와 다섯 T의 표, 결정 1~9, 사용성 보고서, 리뷰에서 고친 것과 받지 않은 지적의 이유. 화면이 든 PR이므로 소유자가 Storybook을 본 뒤 병합한다(build.md 규칙 8).
+- PR 본문: 끝 조건 09-1~5와 다섯 T의 표, 결정 1~9, 사용성 보고서, 리뷰에서 고친 것과 받지 않은 지적의 이유. 화면이 든 PR이므로 소유자가 Storybook을 본 뒤 병합한다(build.md 규칙 9).
 
 ## 3부. 코드 리뷰
 

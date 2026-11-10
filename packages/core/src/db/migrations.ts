@@ -1,10 +1,11 @@
 import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";
-import type { Doc } from "../body/doc";
-import { blockHashes } from "../translations/links";
 import type { Database } from "./schema";
 
-/** The core's tables, step by step. A step that reached the base branch is never renamed or changed; a change is a new step. */
+/**
+ * The core's tables, step by step. A step that reached the base branch is never renamed or removed (a database records the names it ran); a change is a new step.
+ * Monti has no users yet, so a step only shapes tables: it moves no stored data and fixes nothing an earlier version left (2026-11-10, owner).
+ */
 const MIGRATIONS: Record<string, Migration> = {
 	"0001_kernel": {
 		async up(db) {
@@ -254,13 +255,6 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("hash", "text", (column) => column.primaryKey())
 				.addColumn("block", "jsonb", (column) => column.notNull())
 				.execute();
-			const published = await sql<{
-				entry_id: string;
-				doc: Doc | null;
-			}>`select entry_id, doc from entry_published`.execute(db);
-			for (const row of published.rows)
-				await sql`update entry_published set block_hashes = ${JSON.stringify(blockHashes(row.doc))}::jsonb
-					where entry_id = ${row.entry_id}`.execute(db);
 		},
 	},
 	"0008_folders": {
@@ -292,24 +286,7 @@ const MIGRATIONS: Record<string, Migration> = {
 	},
 	"0010_folder_names": {
 		async up(db) {
-			// Older databases could contain duplicate live sibling names. Keep the oldest and suffix the rest before adding the invariant.
-			const rows = await db
-				.selectFrom("folders")
-				.select(["id", "collection", "parent_id", "name"])
-				.where("trashed_at", "is", null)
-				.orderBy("created_at")
-				.orderBy("id")
-				.execute();
-			const names = new Map<string, Set<string>>();
-			for (const row of rows) {
-				const scope = `${row.collection ?? "\u0000"}\n${row.parent_id ?? "\u0000"}`;
-				const taken = names.get(scope) ?? new Set<string>();
-				let name = row.name;
-				for (let suffix = 2; taken.has(name); suffix++) name = `${row.name} ${suffix}`;
-				if (name !== row.name) await db.updateTable("folders").set({ name }).where("id", "=", row.id).execute();
-				taken.add(name);
-				names.set(scope, taken);
-			}
+			// Two live folders side by side never share a name.
 			await sql`create unique index folders_live_sibling_name
 				on folders (coalesce(collection, ''), coalesce(parent_id, ''), name)
 				where trashed_at is null`.execute(db);
@@ -354,7 +331,7 @@ const MIGRATIONS: Record<string, Migration> = {
 	},
 	"0012_translation_seen": {
 		async up(db) {
-			// What a translation has seen of its source's fields (T111). It fills in at a translation's next save: a mark needs a value it saw.
+			// What a translation has seen of its source's fields (T111): a mark needs a value it saw.
 			await db.schema
 				.alterTable("entries")
 				.addColumn("translation_seen", "jsonb", (column) => column.notNull().defaultTo(sql`'{}'::jsonb`))
