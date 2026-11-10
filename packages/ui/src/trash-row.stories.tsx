@@ -83,6 +83,14 @@ export const DaysLeftOnly: Story = {
 						<TrashRowTitle title="리액트" />
 					</TableCell>
 					<TableCell align="end">
+						<TrashRowDate left="29일 남음" byAssistant={{ label: "어시스턴트가 버림" }} />
+					</TableCell>
+				</TableRow>
+				<TableRow twoLine>
+					<TableCell>
+						<TrashRowTitle title="뷰" />
+					</TableCell>
+					<TableCell align="end">
 						<TrashRowDate left="29일 남음" byAssistant={{ label: "버린 대화 열기", onOpen: () => {} }} />
 					</TableCell>
 				</TableRow>

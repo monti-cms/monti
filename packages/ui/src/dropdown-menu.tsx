@@ -97,6 +97,7 @@ function DropdownMenuItem({
 	variant = "default",
 	swatch = false,
 	caption,
+	icon,
 	children,
 	...props
 }: MenuPrimitive.Item.Props & {
@@ -105,6 +106,8 @@ function DropdownMenuItem({
 	swatch?: boolean;
 	/** A second line under the name that says what the row leaves alone ("The Korean original stays"), small and faint. The row is then two lines tall, 7px above and below. */
 	caption?: React.ReactNode;
+	/** The icon of a row with a `caption`: it stands beside the name's line, and the caption starts under the name. A row without a caption has its icon in `children`. */
+	icon?: React.ReactNode;
 }) {
 	return (
 		<MenuPrimitive.Item
@@ -114,12 +117,22 @@ function DropdownMenuItem({
 			{...props}
 		>
 			{caption ? (
-				<span className="flex min-w-0 flex-col items-start gap-monti-2">
-					<span>{children}</span>
-					<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
-						{caption}
+				<>
+					{icon && (
+						<span
+							data-slot="menu-icon"
+							className="flex h-lh shrink-0 items-center in-data-[variant=danger]:text-monti-danger text-monti-subtle [&>svg]:size-4"
+						>
+							{icon}
+						</span>
+					)}
+					<span className="flex min-w-0 flex-col items-start gap-monti-2">
+						<span>{children}</span>
+						<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
+							{caption}
+						</span>
 					</span>
-				</span>
+				</>
 			) : (
 				children
 			)}
