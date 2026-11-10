@@ -850,6 +850,9 @@ describe("opening a body with files", () => {
 		const [first] = fileBlocks();
 		if (!first) throw new Error("no file block");
 		await userEvent.click(page.elementLocator(first));
+		// Picked whole before Backspace, as the file block's own test waits for.
+		await expect.element(body().getByRole("toolbar")).toBeVisible();
+		await expect.element(body()).toHaveFocus();
 		await userEvent.keyboard("{Backspace}");
 		await expect.poll(() => fileBlocks().length).toBe(0);
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
