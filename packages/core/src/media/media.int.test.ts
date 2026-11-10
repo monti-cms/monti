@@ -287,12 +287,14 @@ describe("browsing", () => {
 		expect(empty).toMatchObject({ items: [], total: 2, page: 2, pageSize: 100 });
 	});
 
-	it("09-1 ids find those files wherever they are, and nothing for none", async () => {
+	it("09-1 T110 ids find those files wherever they are, counted among themselves, and nothing for none", async () => {
 		const assets = await folder("Blog Assets");
 		const one = await upload("one.jpg", { folderId: assets });
 		await upload("two.jpg");
 		expect(await names({ ids: [one.id] })).toEqual(["one.jpg"]);
+		expect((await query({ ids: [one.id] })).counts).toEqual({ image: 1, file: 0, used: 0, unused: 1 });
 		expect(await names({ ids: [] })).toEqual([]);
+		expect((await query({ ids: [] })).counts).toEqual({ image: 0, file: 0, used: 0, unused: 0 });
 	});
 });
 

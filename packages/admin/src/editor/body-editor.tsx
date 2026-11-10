@@ -17,6 +17,7 @@ import {
 	onImageCard,
 	placeFiles,
 	placeLibraryFile,
+	useBodyFiles,
 } from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { nodeName } from "./schema";
@@ -127,6 +128,7 @@ export function BodyEditor({
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 	const [card, setCard] = useState<string | null>(null);
+	const bodyFiles = useBodyFiles();
 	useEffect(() => (editor ? onImageCard(editor, setCard) : undefined), [editor]);
 	const media = useMemo<EditorMediaValue>(
 		() => ({
@@ -136,8 +138,10 @@ export function BodyEditor({
 			finished: (id) => finished.current.get(id),
 			card,
 			setCard,
+			files: bodyFiles.files,
+			want: bodyFiles.want,
 		}),
-		[upload.uploads, upload.retry, upload.holds, card],
+		[upload.uploads, upload.retry, upload.holds, card, bodyFiles.files, bodyFiles.want],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);

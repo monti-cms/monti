@@ -14,9 +14,9 @@ export function writtenValue(fields: Fields, field: string): unknown {
 
 /**
  * The fields a translation holds a value of its own in, so that the source moving on is news to it (T111): per language, or following the source with a value written here. A
- * field the same in every language has none. The address has one, but it is the translation's own: a source's new address makes nothing in the translation wrong. An item's
- * languages are written together in one panel, which has no marks, and a relation's value is rewritten by merges and bulk edits that are no one's translation: none are kept for
- * either (T119).
+ * field the same in every language has none. The address has one, but it is the translation's own: a source's new address makes nothing in the translation wrong. An item is
+ * kept in its own screen, not the entry editor, and whoever renames it sees its languages side by side in one panel; a relation picks entries and holds no words to translate,
+ * and merges and bulk edits rewrite it too: none are kept for either (T119, 2026-11-10, owner).
  */
 export function trackedFields(schema: Schema, collection: string): string[] {
 	const definition = schema.collections[collection];

@@ -4,7 +4,6 @@ import {
 	type ImageRotate,
 	imageAlignOf,
 	imageFrame,
-	type MediaDetail,
 	type MediaItem,
 } from "@monti-cms/core";
 import {
@@ -56,9 +55,8 @@ import { type ComponentType, useContext, useEffect, useId, useRef, useState } fr
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
-import { useRead } from "../operations/use-operation";
 import { AltFields } from "./alt-fields";
-import { EditorMedia, fileBlock, nextBlankImage, openImageCard } from "./media-context";
+import { EditorMedia, fileBlock, nextBlankImage, openImageCard, useBodyFile } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
 type ImageData = {
@@ -445,7 +443,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const blockId = String(node.attrs.blockId ?? "");
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
 	const stopped = uploading ? media?.uploads.find((each) => each.id === uploading)?.status === "failed" : false;
-	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
+	const file = useBodyFile(data.media || undefined);
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));
 	const [cropping, setCropping] = useState(false);
@@ -487,7 +485,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			</NodeViewWrapper>
 		);
 
-	const item = file.data;
+	const { item } = file;
 	const url = item ? previewUrl(item) : null;
 	const size = item ? (item.web ?? item.original) : null;
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
@@ -551,7 +549,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 							// While it loads, and for a file the library does not have: the frame with nothing in it (editor-tools.md).
 							<Image
 								src={null}
-								alt={file.refusal ? t("editor.image.notFound") : ""}
+								alt={file.missing ? t("editor.image.notFound") : ""}
 								fallback={ImageIcon}
 								ratio="wide"
 							/>
@@ -660,7 +658,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	const nameId = useId();
 	const bar = useRef<HTMLDivElement>(null);
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
-	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
+	const file = useBodyFile(data.media || undefined);
 	const shownName = useComposedValue(data.name ?? "", (name) => updateAttributes({ data: { ...data, name } }));
 	if (uploading)
 		return (
@@ -674,7 +672,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 				/>
 			</NodeViewWrapper>
 		);
-	const item = file.data;
+	const { item } = file;
 	return (
 		<NodeViewWrapper data-block="file">
 			<BlockBox>
@@ -709,9 +707,9 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 				<FileBlock
 					name={shownName.value || item?.name || ""}
 					selected={selected}
-					tone={file.refusal ? "danger" : "default"}
+					tone={file.missing ? "danger" : "default"}
 					meta={
-						file.refusal
+						file.missing
 							? t("editor.image.notFound")
 							: item
 								? `${extensionLabel(item.name)} · ${formatBytes(item.size)}`

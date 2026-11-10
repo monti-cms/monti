@@ -255,10 +255,10 @@ export const mediaOperations = [
 			// A search or a filter looks for files, so it goes through folders; a folder on its own lists what sits right in it (2026-11-09, owner).
 			const looking = search !== "" || input.kinds.length > 0 || input.used.length > 0;
 			const live = ctx.db.selectFrom("media").where("trashed_at", "is", null);
-			let filtered = live;
-			if (input.ids)
-				filtered = input.ids.length > 0 ? filtered.where("id", "in", input.ids) : filtered.where(sql<boolean>`false`);
-			else if (input.folder !== undefined && input.scope === "here") {
+			const asked =
+				input.ids && (input.ids.length > 0 ? live.where("id", "in", input.ids) : live.where(sql<boolean>`false`));
+			let filtered = asked ?? live;
+			if (!asked && input.folder !== undefined && input.scope === "here") {
 				// A folder lists what sits right in it; a search or a filter looks for files, so it goes through the subfolders (as the entry list, doc 07).
 				if (input.folder !== null && looking)
 					filtered = filtered.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))]);
@@ -287,11 +287,13 @@ export const mediaOperations = [
 				.limit(input.pageSize)
 				.offset((input.page - 1) * input.pageSize)
 				.execute();
-			// A menu's count is what picking it would find from here: the open folder and those under it, or everything.
+			// A menu's count is what picking it would find from here: the open folder and those under it, or everything. Files asked for by id are
+			// counted among themselves: a body reading its pictures does not count the whole library (T110).
 			const reach =
-				input.scope === "here" && input.folder
+				asked ??
+				(input.scope === "here" && input.folder
 					? live.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))])
-					: live;
+					: live);
 			const counted = await reach
 				.select([
 					sql<number>`count(*) filter (where kind = 'image')::int`.as("image"),

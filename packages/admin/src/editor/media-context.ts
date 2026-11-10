@@ -1,10 +1,11 @@
-import type { MediaItem } from "@monti-cms/core";
+import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
 import { altIsMissing } from "@monti-cms/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { createContext } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Upload } from "../media/upload-queue";
+import { useOperation } from "../operations/use-operation";
 import { caretPast, insertBlocks, inTableCell } from "./commands";
 import { nodeName } from "./schema";
 
@@ -19,9 +20,69 @@ export type EditorMediaValue = {
 	/** The block whose settings card is open. */
 	card: string | null;
 	setCard: (blockId: string | null) => void;
-};
+} & BodyFiles;
 
 export const EditorMedia = createContext<EditorMediaValue | null>(null);
+
+type BodyFiles = {
+	/** The library's files the body's blocks show, by id: null for one the library does not have. One not here yet is being read. */
+	files: ReadonlyMap<string, MediaItem | null>;
+	/** Asks for a file; those asked in the same moment are read together. */
+	want: (id: string) => void;
+};
+
+/** The most files one `media.query` returns. */
+const MOST = 1000;
+
+/**
+ * The files a body's image and file blocks show, read together: the blocks that appear at once ask in the same moment, and one `media.query` reads them all,
+ * not a read for each block (T110). A file read once stays known while the editor is open, as a block's own read did.
+ */
+export function useBodyFiles(): BodyFiles {
+	const { run } = useOperation<MediaQueryResult>("media.query");
+	const [files, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map());
+	const asked = useRef(new Set<string>());
+	const waiting = useRef<string[]>([]);
+	const read = useCallback(
+		async (ids: string[]) => {
+			const result = await run({ ids, pageSize: ids.length });
+			// Not read (signed out, the network): asked again when a block comes back.
+			if (!result.ok) {
+				for (const id of ids) asked.current.delete(id);
+				return;
+			}
+			const found = new Map(result.body.items.map((item) => [item.id, item]));
+			setFiles((known) => new Map([...known, ...ids.map((id) => [id, found.get(id) ?? null] as const)]));
+		},
+		[run],
+	);
+	const want = useCallback(
+		(id: string) => {
+			if (asked.current.has(id)) return;
+			asked.current.add(id);
+			waiting.current.push(id);
+			if (waiting.current.length > 1) return;
+			// The blocks of an opened body mount one after another in the same task: the read waits for the last of them.
+			setTimeout(() => {
+				const ids = waiting.current.splice(0);
+				for (let start = 0; start < ids.length; start += MOST) void read(ids.slice(start, start + MOST));
+			});
+		},
+		[read],
+	);
+	return { files, want };
+}
+
+/** The library's file a body block shows: `item` once read, `missing` when the library does not have it. */
+export function useBodyFile(id: string | undefined): { item: MediaItem | null; missing: boolean } {
+	const media = useContext(EditorMedia);
+	const want = media?.want;
+	useEffect(() => {
+		if (id) want?.(id);
+	}, [id, want]);
+	const known = id ? media?.files.get(id) : undefined;
+	return { item: known ?? null, missing: known === null };
+}
 
 /** The block's attrs for a file the library has. Alt text and caption start empty: they are this entry's to write (doc 09). */
 export const fileBlock = (item: Pick<MediaItem, "id" | "kind" | "name">) =>

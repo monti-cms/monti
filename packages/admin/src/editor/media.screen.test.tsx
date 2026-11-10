@@ -1,8 +1,9 @@
 import { toast } from "@monti-cms/ui";
-import { composeStories } from "@storybook/react-vite";
+import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { type Locator, page, userEvent } from "vitest/browser";
 import { pointerPath, typeKorean } from "../../../../testing/input";
+import type { StorySite } from "../../.storybook/pglite-site";
 import * as media from "../screens/entry/media.stories";
 
 const { Draft, WithImage, NoStorage, LibraryWindow, FileInBody } = composeStories(media);
@@ -719,5 +720,40 @@ describe("an image in the text", () => {
 				return width < height;
 			})
 			.toBe(true);
+	});
+});
+
+describe("opening a body with files", () => {
+	it("09-1 T110 the body's pictures and files are read together, once, and one the library no longer has says so", async () => {
+		const calls: { name: string; input: unknown }[] = [];
+		const [load] = media.ManyInBody.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.ManyInBody,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site;
+						loaded.site.transport = (name, input, options) => {
+							calls.push({ name, input });
+							return transport(name, input, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
+		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
+		await expect.element(body().getByText("라이브러리에 없는 파일")).toBeVisible();
+		expect(calls.filter((call) => call.name === "media.get")).toEqual([]);
+		const reads = calls.filter(
+			(call) => call.name === "media.query" && ((call.input as { ids?: string[] }).ids ?? []).length > 0,
+		);
+		expect(reads).toHaveLength(1);
+		expect((reads[0]?.input as { ids: string[] }).ids).toHaveLength(4);
 	});
 });
